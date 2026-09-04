@@ -284,7 +284,15 @@ single result the `ci` aggregate reads.
 
 ### The `ci` aggregate is the only required context
 
-Branch protection requires exactly one check: **`ci`**. It reaches a verdict from
+A **ruleset** requires exactly one check: **`ci`**. Not classic branch
+protection — there is none (`GET /branches/main/protection` answers 404), and the
+distinction is worth keeping because the two are configured in different places
+and only one of them is in use here. `main-required-status-checks` is the active
+ruleset that names it; `main-required-ai-reviewers` names CodeRabbit and is
+**disabled**. Nothing else is required, the SonarCloud scan included
+(margince/margince#2544, where three comments in `ci.yml` said otherwise).
+
+It reaches a verdict from
 `needs.*.result` through [`scripts/ci-verdict.sh`](../scripts/ci-verdict.sh),
 which is unit-tested by `make test-ci-verdict` and wired into `check-backend`.
 

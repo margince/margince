@@ -60,11 +60,27 @@ import (
 //
 // The colleague filter is the live-member join every other read of this table
 // carries — a departed colleague's silences are not the reader's work.
+// ExcludeEdges renders a predicate that removes candidates before the LIMIT,
+// over the alias `e` this projection gives the edge row.
+//
+// A HOLE rather than a join, because the rows that decide it belong to another
+// module and this one never imports a sibling. The caller supplies the SQL and
+// the arguments through the same `arg` counter, so the fragment is numbered
+// against this statement's own list.
+//
+// It runs before the cut, which is the whole reason it exists here rather than
+// over the returned rows. This read originates the candidate set and takes the
+// oldest silences up to a bound; a contact filtered afterwards has already
+// spent a slot, so a rep who set several aside would lose real lapses off the
+// bottom of their lane and nothing would say so.
+type ExcludeEdges func(arg func(any) int) (string, error)
+
 func QuietEdgesForUser(
 	ctx context.Context,
 	tx pgx.Tx,
 	quietBefore time.Time,
 	limit int,
+	exclude ExcludeEdges,
 ) ([]InteractionEdge, error) {
 	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
 		return nil, err
@@ -90,6 +106,18 @@ func QuietEdgesForUser(
 	if scope == "" {
 		scope = "TRUE"
 	}
+	// Nothing excluded is the honest default: a caller with no rows to filter
+	// on passes nil and gets every candidate.
+	excluded := "TRUE"
+	if exclude != nil {
+		got, err := exclude(arg)
+		if err != nil {
+			return nil, err
+		}
+		if got != "" {
+			excluded = got
+		}
+	}
 	limitPos := arg(limit)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT e.user_id, e.person_id, e.last_at, e.last_inbound_at, e.last_outbound_at,
@@ -102,9 +130,11 @@ func QuietEdgesForUser(
 		                     %s
 		                    WHERE later.person_id = e.person_id AND later.last_at >= $%d)
 		   AND (%s)
+		   -- Before the cap, like every rule above it.
+		   AND (%s)
 		 ORDER BY e.last_at ASC, e.person_id
 		 LIMIT $%d`, liveMemberJoin, userPos, beforePos,
-		laterMemberJoin, beforePos, scope, limitPos), args...)
+		laterMemberJoin, beforePos, scope, excluded, limitPos), args...)
 	if err != nil {
 		return nil, fmt.Errorf("search: reading a rep's own quiet relationships: %w", err)
 	}

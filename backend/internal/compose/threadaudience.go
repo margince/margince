@@ -110,6 +110,38 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 		if err := s.threads.DecideAsOwner(ctx, tx, threadKey, share); err != nil {
 			return err
 		}
+		// A hold a CLASSIFIER placed is the owner's to disagree with, and the
+		// row carries it independently of the ledger: the derivation below reads
+		// `audience_reason` off the activity, and a row-carried hold outranks an
+		// opening contribution. Without this the share was inert — the ledger
+		// said shared_by_owner, the recompute read the verdict's own reason off
+		// the row, and the message stayed held however often it was pressed.
+		//
+		// The two modules answer the halves each owns: capture reads its ledger
+		// to say whether a CLASSIFIER is what judged this thread — a verdict
+		// records the kind it concluded, a sender's marking records none — and
+		// activities writes the column. Neither can do the other's half, which
+		// is what makes this a seam rather than indirection.
+		//
+		// Only when SHARING. Re-holding a thread removes nothing, and the
+		// reasons this leaves alone — a sender's own subject marking, a
+		// counterparty hold, the workspace floor — are not a recipient's to
+		// lift. ClearConfidentialityVerdictHoldTx enumerates them.
+		if share {
+			judged, err := capture.ThreadJudgedByClassifierTx(ctx, tx, threadKey, actor.UserID)
+			if err != nil {
+				return err
+			}
+			if judged {
+				activityIDs := make([]ids.ActivityID, 0, len(messages))
+				for _, id := range messages {
+					activityIDs = append(activityIDs, ids.From[ids.ActivityKind](id))
+				}
+				if err := activities.ClearConfidentialityVerdictHoldTx(ctx, tx, activityIDs); err != nil {
+					return err
+				}
+			}
+		}
 		for _, id := range messages {
 			if err := activities.RecomputeAudienceTx(ctx, tx, ids.From[ids.ActivityKind](id)); err != nil {
 				return err

@@ -61,6 +61,10 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 		s := string(*params.Status)
 		in.Status = &s
 	}
+	if params.ForecastCategory != nil {
+		category := string(*params.ForecastCategory)
+		in.ForecastCategory = &category
+	}
 
 	deals, page, err := h.store.ListDeals(r.Context(), in)
 	if err != nil {

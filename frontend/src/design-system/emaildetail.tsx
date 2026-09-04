@@ -43,11 +43,22 @@ export function EmailDetail({
   onClose,
   formatWhen,
   renderAccess,
+  renderAccessMarkers,
 }: Readonly<{
   activityId: string;
   onClose: () => void;
   /** The caller owns the reader's timezone, so it owns the formatting. */
   formatWhen: (iso: string) => string;
+  /**
+   * What this message's access IS, as markers beside the subject.
+   *
+   * Separate from `renderAccess` because the two answer different questions at
+   * different moments: this is the glance a reader takes before reading, and
+   * that is the sentence and the control they reach for after. Splitting them
+   * is also what keeps the header short — a paragraph beside a subject line
+   * pushes the message itself below the fold.
+   */
+  renderAccessMarkers?: (access: EmailPresentation["access"]) => ReactNode;
   /**
    * Who reads this message, and the control to change it.
    *
@@ -116,9 +127,22 @@ export function EmailDetail({
           Modal builds for keyboard users becomes a trap in the ordinary sense
           without this. */}
       <div className="emaildetail__head">
-        <h2 id={titleId} className="emaildetail__title">
-          {title}
-        </h2>
+        <div className="emaildetail__heading">
+          <h2 id={titleId} className="emaildetail__title">
+            {title}
+          </h2>
+          {/* WHAT this message's access is, beside its subject. A limit is a
+              fact about a message like its date, and a reader wants it before
+              they read rather than after: under the body these markers sat
+              below the attachments, so on anything longer than a screen the
+              first sign a message was confidential arrived once the reader had
+              already finished it.
+
+              Drawn from the read the drawer has already made, so a header with
+              no markers is a message whose access block did not arrive — never
+              one whose access nobody asked about. */}
+          {read.data && renderAccessMarkers?.(read.data.access)}
+        </div>
         <Button
           small
           iconOnly

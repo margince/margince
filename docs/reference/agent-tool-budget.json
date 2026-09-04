@@ -6,7 +6,7 @@
   "catalog": {
     "tools": 72,
     "system_frame_tokens": 353,
-    "tokens": 20865,
+    "tokens": 20888,
     "median_tool_tokens": 262,
     "mean_tool_tokens": 289
   },
@@ -21,9 +21,9 @@
         "read_brief",
         "read_record"
       ],
-      "tokens": 1621,
+      "tokens": 1634,
       "percent_of_ceiling": 6,
-      "headroom_tokens": 15787,
+      "headroom_tokens": 15774,
       "dangling_cross_references": [
         "annotate_brief → log_activity",
         "catch_me_up_on → prep_for_meeting",
@@ -46,9 +46,9 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "tokens": 2453,
-      "percent_of_ceiling": 9,
-      "headroom_tokens": 14955,
+      "tokens": 2467,
+      "percent_of_ceiling": 10,
+      "headroom_tokens": 14941,
       "dangling_cross_references": [
         "at_risk_relationships → account_coverage",
         "at_risk_relationships → intro_path_to",
@@ -95,12 +95,12 @@
       "tokens": 572
     },
     {
-      "name": "resolve_entities",
-      "tokens": 498
+      "name": "list_records",
+      "tokens": 508
     },
     {
-      "name": "list_records",
-      "tokens": 494
+      "name": "resolve_entities",
+      "tokens": 498
     },
     {
       "name": "query_workspace",
@@ -160,7 +160,7 @@
     },
     {
       "name": "forecast_readings",
-      "tokens": 327
+      "tokens": 337
     },
     {
       "name": "prep_for_meeting",
