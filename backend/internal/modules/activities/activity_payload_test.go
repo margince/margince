@@ -237,3 +237,37 @@ func TestRelinkedChangedFields(t *testing.T) {
 		t.Errorf("got %v, want %v", decoded, payload)
 	}
 }
+
+// The meeting's outcome reaches the delta a subscriber reads.
+//
+// activity.updated is a BOUNDED delta with a fixed key set, so a field the
+// update can write and the payload omits is a change no consumer can see. That
+// failure is silent in both directions: the write lands, the event fires, and
+// the subscriber is told the fields it already knew about.
+func TestActivityUpdatedChangedFields_MeetingStatus(t *testing.T) {
+	held := "held"
+	fields := activityUpdatedChangedFields(UpdateActivityInput{MeetingStatus: &held})
+
+	if fields.MeetingStatus == nil {
+		t.Fatal("recording how a meeting went reached no subscriber")
+	}
+	if string(*fields.MeetingStatus) != held {
+		t.Errorf("the delta says %q, want %q", *fields.MeetingStatus, held)
+	}
+	// Untouched fields stay omitted rather than nulled, like every other field
+	// on this payload: a key present at null says the update cleared it.
+	if fields.Subject != nil || fields.IsDone != nil {
+		t.Errorf("a meeting-status patch claimed other fields moved: %+v", fields)
+	}
+}
+
+// And an update that says nothing about it carries nothing.
+func TestActivityUpdatedChangedFields_MeetingStatusUntouched(t *testing.T) {
+	subject := "Renamed"
+	fields := activityUpdatedChangedFields(UpdateActivityInput{Subject: &subject})
+
+	if fields.MeetingStatus != nil {
+		t.Errorf("a rename told subscribers the meeting outcome changed: %v",
+			*fields.MeetingStatus)
+	}
+}

@@ -602,6 +602,67 @@ describe("ComposeModal", () => {
     expect(screen.getByText("Provisional voice")).toBeTruthy();
   });
 
+  it("warns when the sender's voice could not be loaded for the draft", async () => {
+    stubRoutes({
+      "POST /activities/act-1/draft-email": () =>
+        jsonResponse({
+          subject: "Re: Q3 numbers",
+          body: "Thanks for the note.",
+          ai_generated: true,
+          ai_disclosure: "AI-assisted draft (Art. 50).",
+          voice_profile_version: null,
+          draft_ref: null,
+          voice_degraded: true,
+        }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Draft with AI" }),
+    );
+
+    expect(await screen.findByText(/not written in your voice/)).toBeTruthy();
+  });
+
+  it("stays quiet about the voice when a draft simply has no profile behind it", async () => {
+    stubRoutes({
+      "POST /activities/act-1/draft-email": () =>
+        jsonResponse({
+          subject: "Re: Q3 numbers",
+          body: "Thanks for the note.",
+          ai_generated: true,
+          ai_disclosure: "AI-assisted draft (Art. 50).",
+          voice_profile_version: null,
+          draft_ref: null,
+          voice_degraded: false,
+        }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Draft with AI" }),
+    );
+
+    expect(await screen.findByDisplayValue("Re: Q3 numbers")).toBeTruthy();
+    expect(screen.queryByText(/not written in your voice/)).toBeNull();
+  });
+
   it("flags nothing provisional when the profile is past that band", async () => {
     stubRoutes({
       "GET /voice-profiles": () =>

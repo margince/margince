@@ -173,3 +173,10 @@
   font-size: var(--fs-sm);
   margin: 0 0 var(--space-3);
 }
+
+/* WHICH message the ladder below is about. Not muted like the two lines above
+   it: those describe the surface, while this names the correspondence the
+   reader came to check and is the one line here they can act on. */
+.capture-activity__drawer-message {
+  margin: 0 0 var(--space-3);
+}

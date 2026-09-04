@@ -2422,6 +2422,11 @@ function CompanyOverviewStack({
             // is one of ours, and the account's own people are the other side
             // of it.
             nameOf={nameOf}
+            // The page's own router, which already sends an `activity` to the
+            // email drawer for every cited chip on this account
+            // (citationOpensEmail). The thread takes that same door rather
+            // than a second opener somebody would have to keep in step.
+            onOpenEmail={(activityId) => onOpenRecord("activity", activityId)}
           />
           <ThreadFold
             view={view}

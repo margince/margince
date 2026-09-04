@@ -30,6 +30,30 @@ func (e PublicEventActivityChangedFieldsAudience) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityChangedFieldsMeetingStatus.
+const (
+	MeetingWasBooked   PublicEventActivityChangedFieldsMeetingStatus = "booked"
+	MeetingWasCanceled PublicEventActivityChangedFieldsMeetingStatus = "canceled"
+	MeetingWasHeld     PublicEventActivityChangedFieldsMeetingStatus = "held"
+	MeetingWasNoShow   PublicEventActivityChangedFieldsMeetingStatus = "no_show"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsMeetingStatus enum.
+func (e PublicEventActivityChangedFieldsMeetingStatus) Valid() bool {
+	switch e {
+	case MeetingWasBooked:
+		return true
+	case MeetingWasCanceled:
+		return true
+	case MeetingWasHeld:
+		return true
+	case MeetingWasNoShow:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventActivityDispositionRecordedDisposition.
 const (
 	NotMine    PublicEventActivityDispositionRecordedDisposition = "not_mine"
@@ -720,7 +744,7 @@ type PublicEventActivityCaptured struct {
 	SourceSystem *string `json:"source_system,omitempty"`
 }
 
-// PublicEventActivityChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike person/organization/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
+// PublicEventActivityChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike person/organization/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
 type PublicEventActivityChangedFields struct {
 	// AssigneeId The activity's new assignee (absent when this update did not touch it).
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
@@ -737,6 +761,9 @@ type PublicEventActivityChangedFields struct {
 	// IsDone The activity's new completion state (absent when this update did not touch it).
 	IsDone *bool `json:"is_done,omitempty"`
 
+	// MeetingStatus How the meeting went, once somebody recorded it (absent when this update did not touch it). Meeting rows only; the update refuses the field on any other kind.
+	MeetingStatus *PublicEventActivityChangedFieldsMeetingStatus `json:"meeting_status,omitempty"`
+
 	// OccurredAt The activity's new occurred_at (absent when this update did not touch it).
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
 
@@ -752,6 +779,9 @@ type PublicEventActivityChangedFields struct {
 
 // PublicEventActivityChangedFieldsAudience The activity's new audience (absent when this update did not touch it). Who is named is not carried: a subscriber that must know re-reads the row under its own audience, exactly as a human does.
 type PublicEventActivityChangedFieldsAudience string
+
+// PublicEventActivityChangedFieldsMeetingStatus How the meeting went, once somebody recorded it (absent when this update did not touch it). Meeting rows only; the update refuses the field on any other kind.
+type PublicEventActivityChangedFieldsMeetingStatus string
 
 // PublicEventActivityDispositionRecorded Payload for activity.disposition_recorded — somebody decided what to do about a waiting message and the Worklist stopped showing it (activities/disposition.go). WHO it stopped showing it to is not on the wire, and the omission is deliberate: `not_sales` settles what the message is and holds for everybody, while `snoozed` and `not_mine` belong to the one reader who set them. A consumer reading this as a workspace-wide fact would report a colleague's private set-aside as the thread's own state. The reader stays on the row, for a caller entitled to it.
 type PublicEventActivityDispositionRecorded struct {
@@ -775,7 +805,7 @@ type PublicEventActivityRelinkedRef struct {
 
 // PublicEventActivityUpdated Payload for activity.updated — a BOUNDED delta (unlike the person/organization/deal/lead family's genuinely open patch): UpdateActivity and RelinkActivity together cover a fixed, KNOWN set of inner keys, so changed_fields is a typed struct here, not an open map.
 type PublicEventActivityUpdated struct {
-	// ChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike person/organization/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
+	// ChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike person/organization/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
 	ChangedFields PublicEventActivityChangedFields `json:"changed_fields"`
 }
 
@@ -2366,7 +2396,7 @@ func (PublicEventEngagementReply) EntityType() string { return "activity" }
 
 func (PublicEventForecastAssuranceCreated) EventType() string { return "forecast.assurance_created" }
 
-func (PublicEventForecastAssuranceCreated) EntityType() string { return "user" }
+func (PublicEventForecastAssuranceCreated) EntityType() string { return "assurance_run" }
 
 func (PublicEventForecastCreated) EventType() string { return "forecast.created" }
 

@@ -110,6 +110,8 @@ export const vi = {
   "history.field.amount_minor": "Giá trị",
   "history.field.assignee_id": "Người phụ trách",
   "history.field.body": "Ghi chú",
+  "history.field.emails": "Địa chỉ email",
+  "history.field.meeting_status": "Kết quả cuộc họp",
   "history.field.candidate_org_key": "Công ty khớp",
   "history.field.company_name": "Tên công ty",
   "history.field.currency": "Tiền tệ",
@@ -327,7 +329,7 @@ export const vi = {
   "share.downgradeConfirm": "Giảm xuống {to}",
   "share.seatCeiling":
     "Chỗ ngồi này chỉ đọc nên không thể nhận quyền ghi trên một bản ghi. Hãy nâng cấp chỗ ngồi trước, hoặc chỉ cấp quyền đọc.",
-  "share.whoHasAccess": "Ai có quyền truy cập",
+  "share.whoHasAccess": "Chia sẻ cụ thể",
   "share.grantedBy": "cấp bởi",
   "share.revoke": "Thu hồi",
   "share.revokeConfirm":
@@ -3026,7 +3028,15 @@ export const vi = {
   "log.save": "Ghi nhận",
   "log.saving": "Đang ghi nhận…",
 
+  "personAccess.title": "Ai xem được liên hệ này",
+  "personAccess.privateToYou":
+    "Riêng của bạn. Hộp thư của bạn đã tạo liên hệ này, và không ai khác trong tổ chức xem được — kể cả nhóm của bạn và quản trị viên.",
+  "personAccess.organization":
+    "Mọi người trong tổ chức đều xem được liên hệ này.",
+  "personAccess.share": "Chia sẻ với tổ chức",
+  "personAccess.published": "Tổ chức đã xem được liên hệ này.",
   "compose.reply": "Trả lời",
+  "compose.writeEmail": "Viết email",
   "compose.relink": "Liên kết lại",
   "compose.draftWithAi": "Soạn bằng AI",
   "compose.drafting": "Đang soạn…",
@@ -3037,6 +3047,8 @@ export const vi = {
   "compose.aiDisclosureFallback":
     "Bản nháp này do AI tạo. Hãy đọc và sửa trước khi gửi.",
   "compose.voiceVersion": "Dựng từ kho văn bản của bạn · v{n}",
+  "compose.voiceDegraded":
+    "Không tải được hồ sơ giọng văn của bạn, nên bản nháp này không viết theo giọng của bạn. Hãy soạn lại bản nháp hoặc chỉnh sửa trước khi gửi.",
   "compose.provisional": "Giọng tạm thời",
   "compose.provisionalHint":
     "Voice DNA của bạn vẫn đang được dựng. Giọng đó đã định hình bản nháp này y như một bản đã hoàn thiện — không giữ lại gì cả.",
@@ -3200,6 +3212,8 @@ export const vi = {
   "review.allSourcesRead": "Đã đọc mọi nguồn.",
   "review.sourcesUnread":
     "Chưa đọc: {sources}. Các phát hiện bên dưới chỉ bao gồm những gì kiểm tra được.",
+  "review.notCheckedYet":
+    "Chưa có gì được kiểm tra — chưa có lần chạy hằng đêm nào hoàn tất cho bản cài đặt này. Các số liệu ở trên dựa trên dữ liệu hiện có.",
   "review.nothingToCheck": "Không có gì để kiểm tra.",
   "review.answer": "Trả lời",
   "review.closePast": "Ngày chốt đã qua",
@@ -6170,7 +6184,7 @@ export const vi = {
   "users.deactivateConfirmBody":
     "Người đó sẽ bị đăng xuất ở mọi nơi và mọi passport Agent của họ bị thu hồi ngay. Bạn có thể kích hoạt lại sau, nhưng họ sẽ phải đăng nhập lại.",
   "users.deactivateAgentConfirmBody":
-    "Đây là danh tính Agent của tổ chức. Vô hiệu hoá nó sẽ dừng mọi tác vụ chạy mà không có người đứng sau, kể cả tiện ích mở rộng, cho đến khi bạn kích hoạt lại. Không ai mất quyền truy cập — nó không đăng nhập ở đâu cả.",
+    "Đây là danh tính Agent của tổ chức. Nó không đăng nhập ở đâu cả và không ai mất quyền truy cập. Các tác vụ định kỳ của tiện ích mở rộng vẫn chạy: mỗi tác vụ hành động với tư cách chính nó, và thu thập dữ liệu theo quyền của thành viên có kết nối tạo ra bản ghi đó.",
   "users.agentSeat": "Agent",
   "users.agentSeatRole": "Hành động theo passport, không theo vai trò",
   "users.roleLabel": "Vai trò cho người dùng mới",
@@ -7920,6 +7934,7 @@ export const vi = {
   "worklist.because.unassigned": "chưa có ai phụ trách",
   "worklist.because.stale": "đã chờ rất lâu",
   "worklist.because.no_reply_history": "chưa từng trao đổi",
+  "worklist.because.asks_nothing": "không yêu cầu gì ở ta",
   "worklist.above.pin": "Trên mục kế vì bạn đã ghim.",
   "worklist.above.level": "Trên mục kế vì đây là loại việc gấp hơn.",
   "worklist.above.deadline": "Trên mục kế nhờ ngày hạn.",

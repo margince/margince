@@ -145,8 +145,21 @@ func activityUpdateInput(req crmcontracts.UpdateActivityRequest, ifVersion *int6
 		RemindAt:   req.RemindAt,
 		AssigneeID: idArg[ids.UserKind](req.AssigneeId),
 		IsDone:     req.IsDone,
-		IfVersion:  ifVersion,
+		// Carried, not checked here: the kind this must pair with belongs to the
+		// stored row, and only the store has read it. UpdateActivity refuses the
+		// mismatch with the same MeetingStatusKindError create raises.
+		MeetingStatus: meetingStatusArg(req.MeetingStatus),
+		IfVersion:     ifVersion,
 	}
+}
+
+// meetingStatusArg unwraps the contract's enum into the store's plain string.
+func meetingStatusArg(status *crmcontracts.UpdateActivityRequestMeetingStatus) *string {
+	if status == nil {
+		return nil
+	}
+	s := string(*status)
+	return &s
 }
 
 // LogActivityInputFrom maps the contract's create request onto the store's

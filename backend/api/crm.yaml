@@ -23450,14 +23450,7 @@ components:
         address: { $ref: '#/components/schemas/Address' }
         emails:
           type: array
-          items:
-            type: object
-            required: [email]
-            properties:
-              email: { type: string, format: email }
-              email_type: { type: string, enum: [work, personal, other], default: work }
-              is_primary: { type: boolean, default: false }
-              position: { type: integer, default: 0 }
+          items: { $ref: '#/components/schemas/PersonEmailInput' }
         phones:
           type: array
           items:
@@ -23559,6 +23552,18 @@ components:
           type: [string, 'null']
           description: Why a card was skipped, in words a reader can act on.
 
+    PersonEmailInput:
+      type: object
+      description: |
+        One address on a person, as a writer supplies it. One schema for create and update,
+        so the two cannot describe an address differently.
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+        email_type: { type: string, enum: [work, personal, other], default: work }
+        is_primary: { type: boolean, default: false }
+        position: { type: integer, default: 0 }
+
     UpdatePersonRequest:
       type: object
       description: Partial update. Omitted fields are unchanged.
@@ -23570,6 +23575,21 @@ components:
         owner_id: { type: [string, 'null'], format: uuid }
         social: { type: object, additionalProperties: true }
         address: { $ref: '#/components/schemas/Address' }
+        emails:
+          type: array
+          items: { $ref: '#/components/schemas/PersonEmailInput' }
+          description: |
+            REPLACES the person's addresses with exactly this list, which is what a
+            correction needs: a bounced address is fixed by sending the set that should
+            stand, and an append-only field could never remove the one that is dead.
+
+            Omitting the field leaves the addresses untouched, like every other field
+            here. Sending an empty array removes them all, which is a real answer — a
+            contact who no longer has a working address is a fact worth recording.
+
+            `Person360.dead_addresses` already names which address bounced; until now the
+            contract's own remedy for that was to visit the person page, because the write
+            existed on create and nowhere else.
       additionalProperties: true
       x-extension: true
       x-consent-note: |
@@ -29167,6 +29187,24 @@ components:
         assignee_id: { type: [string, 'null'], format: uuid }
         remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. Set/clear the reminder; PATCH target for B-E16.2/.3. The reminder scan (B-E16.6) fires on this.' }
         is_done: { type: boolean, description: 'Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family).' }
+        meeting_status:
+          type: [string, 'null']
+          enum: [null, booked, held, no_show, canceled]
+          description: |
+            How the meeting went, set AFTER it happened. Meeting only, and 422 with a
+            `field_not_valid_for_kind` fault on the field otherwise — the same refusal create
+            gives, held against the kind the row already carries rather than one the
+            patch names, because a patch cannot change a kind.
+
+            Contracted on create since the field existed, and absent here, so the one
+            moment a human actually knows the answer — the meeting is over — was the one
+            moment the API could not be told.
+
+            An omitted field is unchanged, like every other field on this patch. Sending
+            an explicit `null` is also unchanged rather than a clear: this request maps
+            onto the same coalescing update `due_at` and `remind_at` take, which cannot
+            tell an absent field from a null one. Recording the wrong outcome is fixed by
+            sending the right one.
 
     ActivityListResponse:
       type: object
@@ -29421,6 +29459,7 @@ components:
         ai_disclosure: { type: [string, 'null'], readOnly: true, description: 'The machine-readable Art. 50 disclosure line; non-null iff ai_generated=true.' }
         voice_profile_version: { type: [integer, 'null'], readOnly: true, minimum: 1, description: 'The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it.' }
         draft_ref: { type: [string, 'null'], readOnly: true, description: 'Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.' }
+        voice_degraded: { type: boolean, readOnly: true, description: 'True when the sender''s voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.' }
 
     ReplyRecipient:
       type: object
@@ -29504,6 +29543,14 @@ components:
           description: >-
             Opaque reference identifying this served draft. Null here: recording a draft for
             voice learning is a WRITE, and this operation performs none.
+        voice_degraded:
+          type: boolean
+          readOnly: true
+          description: >-
+            True when the sender's voice could not even be looked up, so this draft may be
+            missing a voice its sender built. Distinct from voice_profile_version being null,
+            which also covers the ordinary no-profile case. A client should say so: the sender
+            cannot detect a missing voice by reading the text. Absent reads as false.
 
     AccountDraftReason:
       type: object
@@ -38519,7 +38566,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, meeting_soon, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history]
+          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, meeting_soon, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing]
           description: 'Which fact this is. The client writes the phrase.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 

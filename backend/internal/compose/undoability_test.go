@@ -112,21 +112,26 @@ func TestAnImageThatFiltersToNothingIsRefusedAsNoBeforeImage(t *testing.T) {
 }
 
 // An image key the record's update shape cannot spell is NAMED, never dropped.
-// A person's update that replaced their email addresses records `emails`, and
-// UpdatePersonRequest declares no such field. Quietly restoring the title
-// beside it would put half the change back and report success — worse than
-// refusing, because the person reads the confirmation and stops looking.
+// Quietly restoring the title beside it would put half the change back and
+// report success — worse than refusing, because the person reads the
+// confirmation and stops looking.
 //
-// The address columns are NOT an example of this any more: they fold into the
-// structured `address` the shape does declare, which is what makes an address
-// edit reversible at all.
+// `consent_status` is the durable example. Consent is not mutable through a
+// person update at all: it moves only through the consent endpoint, which
+// writes an append-only proof row, so no widening of UpdatePersonRequest can
+// make this key spellable.
+//
+// The address columns are NOT an example, and neither is `emails`. Both are
+// spellable — addresses fold into the structured `address` the shape declares,
+// and `emails` is a field on the update request — which is what makes an edit
+// to either reversible.
 func TestAnImageTheShapeCannotSpellIsRefusedByNamingTheField(t *testing.T) {
 	answer := evaluateWithoutTheTrail(t, Evaluator{},
-		personRow(`{"title":"CTO","emails":[{"email":"a@b.test"}]}`))
+		personRow(`{"title":"CTO","consent_status":"granted"}`))
 	if answer.Reason != ReasonNotRestorableByThisPath {
 		t.Fatalf("reason = %q, want %q", answer.Reason, ReasonNotRestorableByThisPath)
 	}
-	if !strings.Contains(answer.Detail, "emails") {
+	if !strings.Contains(answer.Detail, "consent_status") {
 		t.Errorf("the refusal does not name the field it could not spell: %q", answer.Detail)
 	}
 }

@@ -44,6 +44,10 @@ const view: Person360 = {
   person: {
     id: "p-1",
     full_name: "Dana Buyer",
+    // The server's own per-row answer, which every edit affordance on this
+    // page asks for. Absent it the fixture describes a contact this reader
+    // may not write, and the controls correctly disappear.
+    writable: true,
     emails: [
       {
         id: "pe-1",

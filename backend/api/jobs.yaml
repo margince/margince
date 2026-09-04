@@ -590,6 +590,41 @@ kinds:
       today: the worker records its own failure and returns nil, so the ladder
       is walked only for a fault the sidecar's backoff does not own.
 
+  assurance_sweep:
+    role: dispatcher
+    go_type: AssuranceSweepArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 24h
+    fans_out_to: assurance_workspace
+    fan_out_unit: workspace
+    reason: >-
+      Daily, because the check is what the Forecast tab's readiness verdict,
+      coverage line and findings are all read from, and a check that never runs
+      leaves every one of them with nothing to say. Run at boot like the other
+      passes here, and for a sharper reason than most: until the first run
+      exists the read answers 404, which the tab renders as a failed panel — so
+      the gap between an install starting and its first check is time a person
+      spends looking at what reads like a broken page.
+
+  assurance_workspace:
+    role: worker
+    go_type: AssuranceWorkspaceArgs
+    queue: default
+    timeout: 5m
+    max_attempts: 3
+    opts_owner: fan_out
+    args:
+      Workspace: id
+    reason: >-
+      One tenant's input check: every rule asked of every live open deal, with
+      the sources the run could reach recorded beside the findings. Three
+      attempts, the house number — a run that could not read an upstream
+      finishes as `incomplete` rather than failing, so a retry here is for a
+      pass that did not finish at all, and the next daily tick supersedes
+      whatever the last one came to.
+
   close_date_sweep:
     role: dispatcher
     go_type: CloseDateSweepArgs

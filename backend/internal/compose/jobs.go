@@ -399,6 +399,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		// cadence, the configuration it needs, and what an absent dependency
 		// costs it — so every one of them is named here whether or not this
 		// boot ends up placing it.
+		periodicFor(cfg, AssuranceSweepArgs{}),
 		periodicFor(cfg, CloseDateSweepArgs{}),
 		periodicFor(cfg, FollowUpReconcileArgs{}),
 		periodicFor(cfg, ForecastSnapshotSweepArgs{}),

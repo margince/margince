@@ -104,6 +104,8 @@ export const de = {
   "history.field.amount_minor": "Wert",
   "history.field.assignee_id": "Zuständig",
   "history.field.body": "Notizen",
+  "history.field.emails": "E-Mail-Adressen",
+  "history.field.meeting_status": "Ergebnis des Termins",
   "history.field.candidate_org_key": "Zugeordnetes Unternehmen",
   "history.field.company_name": "Firmenname",
   "history.field.currency": "Währung",
@@ -320,7 +322,7 @@ export const de = {
   "share.downgradeConfirm": "Auf {to} reduzieren",
   "share.seatCeiling":
     "Dieser Sitzplatz ist nur lesend und kann daher keinen Schreibzugriff auf einen Datensatz erhalten. Erhöhen Sie zuerst die Sitzplatzstufe, oder gewähren Sie Lesezugriff.",
-  "share.whoHasAccess": "Wer hat Zugriff",
+  "share.whoHasAccess": "Ausdrücklich geteilt",
   "share.grantedBy": "gewährt von",
   "share.revoke": "Widerrufen",
   "share.revokeConfirm":
@@ -3058,7 +3060,14 @@ export const de = {
   "log.save": "Erfassen",
   "log.saving": "Wird erfasst…",
 
+  "personAccess.title": "Wer diesen Kontakt sieht",
+  "personAccess.privateToYou":
+    "Nur für Sie. Ihr Postfach hat diesen Kontakt angelegt, und niemand sonst im Unternehmen sieht ihn — auch nicht Ihr Team und keine Administration.",
+  "personAccess.organization": "Alle im Unternehmen sehen diesen Kontakt.",
+  "personAccess.share": "Mit dem Unternehmen teilen",
+  "personAccess.published": "Das Unternehmen sieht diesen Kontakt jetzt.",
   "compose.reply": "Antworten",
+  "compose.writeEmail": "E-Mail schreiben",
   "compose.relink": "Neu verknüpfen",
   "compose.draftWithAi": "Mit KI entwerfen",
   "compose.drafting": "Wird entworfen…",
@@ -3069,6 +3078,8 @@ export const de = {
   "compose.aiDisclosureFallback":
     "Dieser Entwurf stammt von einer KI. Lesen und überarbeiten Sie ihn, bevor Sie senden.",
   "compose.voiceVersion": "Aus Ihrem Korpus gebaut · v{n}",
+  "compose.voiceDegraded":
+    "Ihr Stimmprofil konnte nicht geladen werden – dieser Entwurf ist nicht in Ihrer Stimme geschrieben. Erstellen Sie den Entwurf neu oder überarbeiten Sie ihn vor dem Senden.",
   "compose.provisional": "Vorläufige Stimme",
   "compose.provisionalHint":
     "Ihre Voice DNA wird noch aufgebaut. Sie prägt diesen Entwurf schon genauso wie eine fertige — es wird nichts zurückgehalten.",
@@ -3235,6 +3246,8 @@ export const de = {
   "review.allSourcesRead": "Alle Quellen wurden gelesen.",
   "review.sourcesUnread":
     "Nicht gelesen: {sources}. Die Befunde unten decken nur ab, was geprüft werden konnte.",
+  "review.notCheckedYet":
+    "Es wurde noch nichts geprüft — für diese Installation ist noch kein nächtlicher Lauf abgeschlossen. Die Werte oben beruhen auf den Daten, wie sie sind.",
   "review.nothingToCheck": "Nichts zu prüfen.",
   "review.answer": "Prüfen",
   "review.closePast": "Abschlussdatum ist verstrichen",
@@ -6239,7 +6252,7 @@ export const de = {
   "users.deactivateConfirmBody":
     "Die Person wird überall abgemeldet und ihre Agent-Pässe werden sofort widerrufen. Du kannst sie später reaktivieren, aber sie muss sich dann neu anmelden.",
   "users.deactivateAgentConfirmBody":
-    "Das ist die Agent-Identität dieser Organisation. Wird sie deaktiviert, laufen alle Jobs ohne Person dahinter nicht mehr — Erweiterungen eingeschlossen — bis du sie reaktivierst. Kein Mensch verliert Zugriff: Sie meldet sich nirgends an.",
+    "Das ist die Agent-Identität dieser Organisation. Sie meldet sich nirgends an, und kein Mensch verliert Zugriff. Geplante Erweiterungs-Jobs laufen weiter: Jeder handelt als der Job, der er ist, und erfasst unter der Berechtigung des Mitglieds, dessen Verbindung den Datensatz erzeugt hat.",
   "users.agentSeat": "Agent",
   "users.agentSeatRole": "Handelt mit einem Pass, nicht mit einer Rolle",
   "users.roleLabel": "Rolle für den neuen Benutzer",
@@ -8011,6 +8024,7 @@ export const de = {
   "worklist.because.unassigned": "niemand zuständig",
   "worklist.because.stale": "wartet schon lange",
   "worklist.because.no_reply_history": "kein Schriftwechsel bisher",
+  "worklist.because.asks_nothing": "verlangt nichts von uns",
   "worklist.above.pin": "Über dem Nächsten, weil du es angeheftet hast.",
   "worklist.above.level": "Über dem Nächsten, weil es dringlichere Arbeit ist.",
   "worklist.above.deadline": "Über dem Nächsten wegen des Datums.",

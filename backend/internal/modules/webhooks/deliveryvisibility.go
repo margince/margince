@@ -100,6 +100,14 @@ var workspaceLevelEntities = map[string]struct{}{
 	// they were summed from. A receiver reads the detail back under its own
 	// scope, which is what this list is for.
 	"forecast_snapshot": {},
+	// A nightly input check is a fact about the whole pipeline, not about any
+	// owner's slice of it: the run examines every live open deal, and its
+	// envelope carries only the counts and the readiness verdict. The FINDINGS
+	// deliberately do not ride along — they are a read away, under the
+	// reader's own row scope — which is exactly the bare-ref justification this
+	// list is for. A run keyed to an owner would also be a lie about what was
+	// checked.
+	"assurance_run": {},
 }
 
 // deferredDeliveryEvents are subscribable events whose subject cannot be

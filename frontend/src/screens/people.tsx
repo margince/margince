@@ -684,7 +684,9 @@ function PersonTabPanels({
       {/* Consent renders on a thin record too: it is not an absence
           but a guard — what you may send is a live fact whether or
           not anyone has written to them yet. */}
-      {tab === "overview" && <ConsentSection personId={person.id} />}
+      {tab === "overview" && (
+        <ConsentSection personId={person.id} person={person} />
+      )}
       {tab === "overview" && view && (
         <EnrichedFields personId={id} view={view} />
       )}

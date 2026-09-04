@@ -39,6 +39,10 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	addDeclaredWorker[CloseDateWorkspaceArgs](reg, &closeDateWorkspaceWorker{corrector: NewCloseDateCorrector(pool, log)})
 	addDeclaredWorker[FollowUpReconcileArgs](reg, &followUpReconcileWorker{pool: pool})
 	addDeclaredWorker[FollowUpWorkspaceArgs](reg, &followUpWorkspaceWorker{reconciler: NewFollowUpReconciler(pool, log)})
+	addDeclaredWorker[AssuranceSweepArgs](reg, &assuranceSweepWorker{pool: pool})
+	addDeclaredWorker[AssuranceWorkspaceArgs](reg, &assuranceWorkspaceWorker{
+		pool: pool, now: func() time.Time { return time.Now().UTC() }, log: log,
+	})
 	addDeclaredWorker[ForecastSnapshotSweepArgs](reg, &forecastSnapshotSweepWorker{pool: pool})
 	addDeclaredWorker[ForecastSnapshotWorkspaceArgs](reg, &forecastSnapshotWorkspaceWorker{
 		pool: pool, now: func() time.Time { return time.Now().UTC() }, log: log,

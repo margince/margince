@@ -9,6 +9,7 @@ import {
   cleanup,
   render as rtlRender,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -42,6 +43,46 @@ function windowBody(over: Record<string, unknown> = {}) {
     payload_capture_enabled: false,
     window_hours: 24,
     ...over,
+  };
+}
+
+// The message a trace's citation opens, in the shape the presentation read
+// answers with.
+function presentationBody() {
+  return {
+    id: "01930000-0000-7000-8000-00000000d001",
+    lifecycle: "delivered",
+    occurred_at: "2026-08-15T09:12:00Z",
+    summary: {
+      activity_id: "01930000-0000-7000-8000-00000000d001",
+      occurred_at: "2026-08-15T09:12:00Z",
+      version: 1,
+      subject: "Re: the pilot",
+      preview: "they wrote",
+      display_status: "team",
+      move: "none",
+      attachment_count: 0,
+    },
+    body: "they wrote",
+    thread_key: null,
+    from: [],
+    to: [],
+    cc: [],
+    bcc: [],
+    bcc_withheld: false,
+    attachments: [],
+    links: [],
+    thread: { members: [], next_cursor: null },
+    access: {
+      content_state: "available",
+      display_status: "team",
+      audience: "workspace",
+      can_change: false,
+      change_mode: "none",
+    },
+    can_reply: false,
+    can_relink: false,
+    version: 1,
   };
 }
 
@@ -135,6 +176,12 @@ function renderTab(
       }
       if (key.startsWith("GET /capture/traces/")) {
         return jsonResponse(ladderBody());
+      }
+      // The message a trace's citation opens. Answered here rather than left
+      // to the catch-all below, because `{}` is not an EmailPresentation and
+      // the drawer would throw on a shape the server never sends.
+      if (key.includes("/email-presentation")) {
+        return jsonResponse(presentationBody());
       }
       return jsonResponse({});
     }),
@@ -483,5 +530,76 @@ describe("the pipeline drill-down", () => {
     expect(
       await screen.findByText(/turned payload capture off/i),
     ).toBeInTheDocument();
+  });
+
+  // A trace is read to reconcile what the pipeline did against a message the
+  // reader remembers sending. Naming that message, and opening it, is what
+  // turns the ladder from a diagnostic into an answer.
+  it("names the traced message and opens it", async () => {
+    const user = userEvent.setup();
+    renderTab(
+      windowBody({
+        payload_capture_enabled: true,
+        data: [
+          {
+            ...ROW,
+            outcome: "captured",
+            reason: null,
+            activity_id: "01930000-0000-7000-8000-00000000d001",
+            counterparty: "dana@acme.test",
+            subject: "Re: the pilot",
+          },
+        ],
+      }),
+    );
+    await openLog();
+    await user.click(
+      screen.getByRole("button", { name: /every step this message/i }),
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: /Re: the pilot/ }),
+    );
+
+    // The trace drawer gives way rather than stacking: two right-anchored
+    // sheets at once are two focus traps and two Escape handlers over one
+    // another, so the reader moves from the trace to the message.
+    await waitFor(() =>
+      expect(screen.queryByText("Sentiment scoring")).not.toBeInTheDocument(),
+    );
+  });
+
+  // `activity_id` is the server's gate — set only where a timeline row exists
+  // AND this caller may read it. An entry whose message is out of their scope
+  // names itself and offers nothing to press, rather than handing back a
+  // control that would prove the row exists.
+  it("names a traced message it cannot open, without offering to", async () => {
+    const user = userEvent.setup();
+    renderTab(
+      windowBody({
+        payload_capture_enabled: true,
+        data: [
+          {
+            ...ROW,
+            outcome: "captured",
+            reason: null,
+            activity_id: null,
+            counterparty: "dana@acme.test",
+            subject: "Re: the pilot",
+          },
+        ],
+      }),
+    );
+    await openLog();
+    await user.click(
+      screen.getByRole("button", { name: /every step this message/i }),
+    );
+
+    // The ladder is open, so the absence below is the gate rather than a
+    // drawer that never rendered.
+    await screen.findByText("Sentiment scoring");
+    expect(
+      screen.queryByRole("button", { name: /Re: the pilot/ }),
+    ).not.toBeInTheDocument();
   });
 });

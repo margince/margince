@@ -104,6 +104,8 @@ export const en = {
   "history.field.amount_minor": "Value",
   "history.field.assignee_id": "Assignee",
   "history.field.body": "Notes",
+  "history.field.emails": "Email addresses",
+  "history.field.meeting_status": "Meeting outcome",
   "history.field.candidate_org_key": "Matched company",
   "history.field.company_name": "Company name",
   "history.field.currency": "Currency",
@@ -343,7 +345,7 @@ export const en = {
   "share.downgradeConfirm": "Reduce to {to}",
   "share.seatCeiling":
     "This seat is read-only, so it cannot hold write access to a record. Raise the seat first, or grant read.",
-  "share.whoHasAccess": "Who has access",
+  "share.whoHasAccess": "Explicit shares",
   "share.grantedBy": "granted by",
   "share.revoke": "Revoke",
   "share.revokeConfirm":
@@ -3101,7 +3103,15 @@ export const en = {
   "log.save": "Log",
   "log.saving": "Logging…",
 
+  "personAccess.title": "Who can see this contact",
+  "personAccess.privateToYou":
+    "Private to you. Your mailbox created this contact, and nobody else in the organization can see it — not your team, and not an admin.",
+  "personAccess.organization":
+    "Everyone in the organization can see this contact.",
+  "personAccess.share": "Share with the organization",
+  "personAccess.published": "The organization can see this contact now.",
   "compose.reply": "Reply",
+  "compose.writeEmail": "Write email",
   "compose.relink": "Relink",
   "compose.draftWithAi": "Draft with AI",
   "compose.drafting": "Drafting…",
@@ -3112,6 +3122,8 @@ export const en = {
   "compose.aiDisclosureFallback":
     "This draft was produced by AI. Read it and edit it before you send.",
   "compose.voiceVersion": "Built from your corpus · v{n}",
+  "compose.voiceDegraded":
+    "Your voice profile couldn't be loaded, so this draft is not written in your voice. Draft again, or edit before sending.",
   "compose.provisional": "Provisional voice",
   "compose.provisionalHint":
     "Your Voice DNA is still being built. It already shapes this draft exactly as a finished one would — nothing is held back.",
@@ -3283,6 +3295,8 @@ export const en = {
   "review.allSourcesRead": "Every source was read.",
   "review.sourcesUnread":
     "Not read: {sources}. Findings below cover only what could be checked.",
+  "review.notCheckedYet":
+    "Nothing has been checked yet — no nightly run has completed for this installation. The readings above stand on the records as they are.",
   "review.nothingToCheck": "Nothing to check.",
   "review.answer": "Answer",
   "review.closePast": "Close date has passed",
@@ -6298,7 +6312,7 @@ export const en = {
   "users.deactivateConfirmBody":
     "They'll be signed out everywhere and their agent passports revoked immediately. You can reactivate them later, but they'll need to sign in again.",
   "users.deactivateAgentConfirmBody":
-    "This is the organization's agent identity. Deactivating it stops every job that runs with nobody behind it, extensions included, until you reactivate it. No person loses access — it signs in nowhere.",
+    "This is the organization's agent identity. It signs in nowhere and no person loses access. Scheduled extension jobs keep running: each one acts as the job it is, and captures under the authority of the member whose connection produced the record.",
   "users.agentSeat": "Agent",
   "users.agentSeatRole": "Acts under a passport, not a role",
   "users.roleLabel": "Role for the new user",
@@ -8094,6 +8108,7 @@ export const en = {
   "worklist.because.unassigned": "nobody owns it",
   "worklist.because.stale": "waiting a long time",
   "worklist.because.no_reply_history": "no reply history",
+  "worklist.because.asks_nothing": "asks nothing of us",
   "worklist.above.pin": "Above the next because you pinned it.",
   "worklist.above.level":
     "Above the next because it is a more pressing kind of work.",

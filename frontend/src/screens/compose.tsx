@@ -92,7 +92,7 @@ type VoiceProfile = components["schemas"]["VoiceProfile"];
 // output on this surface, whatever the human then does to the words.
 type DraftProvenance = Pick<
   EmailDraft,
-  "ai_generated" | "ai_disclosure" | "voice_profile_version"
+  "ai_generated" | "ai_disclosure" | "voice_profile_version" | "voice_degraded"
 >;
 
 // The link targets a relink can point at (relinkActivity's entity_type enum,
@@ -377,6 +377,7 @@ function fillFromDraft(
       ai_generated: drafted.ai_generated ?? false,
       ai_disclosure: drafted.ai_disclosure,
       voice_profile_version: drafted.voice_profile_version,
+      voice_degraded: drafted.voice_degraded ?? false,
     });
     form.setReasoning(result.reasoning ?? []);
     form.setScope(result.scope);
@@ -802,6 +803,7 @@ type DraftResult =
             | "ai_generated"
             | "ai_disclosure"
             | "voice_profile_version"
+            | "voice_degraded"
           >
         >;
       // Present only on the account-started path; a reply explains itself by
@@ -1528,6 +1530,13 @@ function DraftBand({
         {provenance.ai_disclosure || t("compose.aiDisclosureFallback")}
       </p>
       <DraftReasons reasons={reasons} onOpenRecord={openCited} />
+      {provenance.voice_degraded && (
+        // The one loss a sender cannot see in the text: their own voice is
+        // the register nobody proofreads for.
+        <Callout tone="warn" live="status">
+          {t("compose.voiceDegraded")}
+        </Callout>
+      )}
       {provenance.voice_profile_version != null && (
         <>
           <p className="t-caption">
@@ -3204,6 +3213,7 @@ export function ChannelReplyAction({
   entityType,
   entityId,
   personId,
+  contentWithheld,
 }: Readonly<{
   activityId: string;
   kind: Activity["kind"];
@@ -3211,6 +3221,10 @@ export function ChannelReplyAction({
   entityType: RelinkKind;
   entityId: string;
   personId?: string;
+  // The row's content is not this reader's to see. The verb still works —
+  // writing to the contact is not reading their mail — but it is not a REPLY,
+  // and calling it one claims access to the message being answered.
+  contentWithheld?: boolean;
 }>) {
   const t = useT();
   const [reply, setReply] = useState(false);
@@ -3225,7 +3239,7 @@ export function ChannelReplyAction({
   return (
     <>
       <Button small onClick={() => setReply(true)}>
-        {t("compose.reply")}
+        {contentWithheld ? t("compose.writeEmail") : t("compose.reply")}
       </Button>
       {reply && (
         <ComposeModal

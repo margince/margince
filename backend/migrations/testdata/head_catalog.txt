@@ -16,6 +16,8 @@ public.activity.activity_meeting_status_check CHECK (((meeting_status IS NULL) O
 public.activity.activity_message_has_provider CHECK (((kind = 'message'::text) = (channel_provider IS NOT NULL)))
 public.activity.activity_no_company_meeting_on_rekind CREATE TRIGGER activity_no_company_meeting_on_rekind BEFORE UPDATE OF kind ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()
 public.activity.activity_origin_check CHECK ((origin = ANY (ARRAY['human'::text, 'agent'::text, 'system_remediation'::text])))
+public.activity.activity_owed_verdict_check CHECK (((owed_verdict IS NULL) OR (owed_verdict = ANY (ARRAY['asks_us'::text, 'informs_us'::text]))))
+public.activity.activity_owed_verdict_stamped CHECK (((owed_verdict IS NULL) = (owed_verdict_at IS NULL)))
 public.activity.activity_pkey PRIMARY KEY (id)
 public.activity.activity_project_last_activity CREATE TRIGGER activity_project_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin))) EXECUTE FUNCTION trg_activity_project_last_activity()
 public.activity.activity_refuse_restricted_mutation CREATE TRIGGER activity_refuse_restricted_mutation BEFORE DELETE OR UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_refuse_restricted_mutation()
@@ -52,6 +54,8 @@ public.activity.language text gen=- def=-
 public.activity.meeting_status text gen=- def=-
 public.activity.occurred_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity.origin text NOT NULL gen=- def='human'::text
+public.activity.owed_verdict text gen=- def=-
+public.activity.owed_verdict_at timestamp with time zone gen=- def=-
 public.activity.raw jsonb gen=- def=-
 public.activity.redacted_fields text[] NOT NULL gen=- def='{}'::text[]
 public.activity.remind_at timestamp with time zone gen=- def=-
@@ -2463,6 +2467,7 @@ public.idx_activity_search CREATE INDEX idx_activity_search ON public.activity U
 public.idx_activity_tasks CREATE INDEX idx_activity_tasks ON public.activity USING btree (assignee_id, due_at) WHERE ((kind = 'task'::text) AND (is_done = false) AND (archived_at IS NULL))
 public.idx_activity_thread CREATE INDEX idx_activity_thread ON public.activity USING btree (thread_key) WHERE (thread_key IS NOT NULL)
 public.idx_activity_thread_reply_seek CREATE INDEX idx_activity_thread_reply_seek ON public.activity USING btree (thread_key, kind, channel_provider, direction, occurred_at, id) WHERE ((thread_key IS NOT NULL) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL))
+public.idx_activity_unjudged CREATE INDEX idx_activity_unjudged ON public.activity USING btree (occurred_at) WHERE ((owed_verdict IS NULL) AND (direction = 'inbound'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL) AND (audience = 'workspace'::text) AND (restricted_at IS NULL))
 public.idx_activity_unlabeled CREATE INDEX idx_activity_unlabeled ON public.activity USING btree (occurred_at) WHERE ((capture_label IS NULL) AND (captured_by ~~ 'connector:%'::text) AND (kind = 'email'::text))
 public.idx_activity_ws_time CREATE INDEX idx_activity_ws_time ON public.activity USING btree (occurred_at DESC) WHERE (archived_at IS NULL)
 public.idx_agent_run_awaiting CREATE INDEX idx_agent_run_awaiting ON public.agent_run USING btree (approval_id) WHERE (status = 'awaiting_approval'::text)

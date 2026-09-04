@@ -16329,19 +16329,7 @@ export interface components {
                 [key: string]: unknown;
             };
             address?: components["schemas"]["Address"];
-            emails?: {
-                /** Format: email */
-                email: string;
-                /**
-                 * @default work
-                 * @enum {string}
-                 */
-                email_type: "work" | "personal" | "other";
-                /** @default false */
-                is_primary: boolean;
-                /** @default 0 */
-                position: number;
-            }[];
+            emails?: components["schemas"]["PersonEmailInput"][];
             phones?: {
                 phone: string;
                 /**
@@ -16421,6 +16409,23 @@ export interface components {
             /** @description Why a card was skipped, in words a reader can act on. */
             reason?: string | null;
         };
+        /**
+         * @description One address on a person, as a writer supplies it. One schema for create and update,
+         *     so the two cannot describe an address differently.
+         */
+        PersonEmailInput: {
+            /** Format: email */
+            email: string;
+            /**
+             * @default work
+             * @enum {string}
+             */
+            email_type: "work" | "personal" | "other";
+            /** @default false */
+            is_primary: boolean;
+            /** @default 0 */
+            position: number;
+        };
         /** @description Partial update. Omitted fields are unchanged. */
         UpdatePersonRequest: {
             full_name?: string;
@@ -16433,6 +16438,20 @@ export interface components {
                 [key: string]: unknown;
             };
             address?: components["schemas"]["Address"];
+            /**
+             * @description REPLACES the person's addresses with exactly this list, which is what a
+             *     correction needs: a bounced address is fixed by sending the set that should
+             *     stand, and an append-only field could never remove the one that is dead.
+             *
+             *     Omitting the field leaves the addresses untouched, like every other field
+             *     here. Sending an empty array removes them all, which is a real answer — a
+             *     contact who no longer has a working address is a fact worth recording.
+             *
+             *     `Person360.dead_addresses` already names which address bounced; until now the
+             *     contract's own remedy for that was to visit the person page, because the write
+             *     existed on create and nowhere else.
+             */
+            emails?: components["schemas"]["PersonEmailInput"][];
         } & {
             [key: string]: unknown;
         };
@@ -20962,6 +20981,24 @@ export interface components {
             remind_at?: string | null;
             /** @description Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family). */
             is_done?: boolean;
+            /**
+             * @description How the meeting went, set AFTER it happened. Meeting only, and 422 with a
+             *     `field_not_valid_for_kind` fault on the field otherwise — the same refusal create
+             *     gives, held against the kind the row already carries rather than one the
+             *     patch names, because a patch cannot change a kind.
+             *
+             *     Contracted on create since the field existed, and absent here, so the one
+             *     moment a human actually knows the answer — the meeting is over — was the one
+             *     moment the API could not be told.
+             *
+             *     An omitted field is unchanged, like every other field on this patch. Sending
+             *     an explicit `null` is also unchanged rather than a clear: this request maps
+             *     onto the same coalescing update `due_at` and `remind_at` take, which cannot
+             *     tell an absent field from a null one. Recording the wrong outcome is fixed by
+             *     sending the right one.
+             * @enum {string|null}
+             */
+            meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
         };
         ActivityListResponse: {
             data: components["schemas"]["Activity"][];
@@ -21191,6 +21228,8 @@ export interface components {
             readonly voice_profile_version?: number | null;
             /** @description Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it. */
             readonly draft_ref: string | null;
+            /** @description True when the sender's voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false. */
+            readonly voice_degraded?: boolean;
         };
         /**
          * @description Who a reply to a message is addressed to: one person, resolved from the
@@ -21243,6 +21282,8 @@ export interface components {
             readonly voice_profile_version?: number | null;
             /** @description Opaque reference identifying this served draft. Null here: recording a draft for voice learning is a WRITE, and this operation performs none. */
             readonly draft_ref?: string | null;
+            /** @description True when the sender's voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false. */
+            readonly voice_degraded?: boolean;
         };
         /**
          * @description One thing the draft was written from, named so the reader can check it rather than
@@ -29101,7 +29142,7 @@ export interface components {
              * @description Which fact this is. The client writes the phrase.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history";
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
