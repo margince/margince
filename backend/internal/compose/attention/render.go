@@ -51,7 +51,7 @@ const actionOpen crmcontracts.AttentionItemActions = "open"
 // button refused every press on a pair whose two records had different owners,
 // and the surface then advised trying again.
 func (s *Service) duplicateItem(
-	pair DuplicatePair, known pairFaces, decidable pairAuthority,
+	pair DuplicatePair, known pairFaces, decidable pairAuthority, settleable map[ids.UUID]bool,
 ) crmcontracts.AttentionItem {
 	kind := pair.EntityType
 	confidence := float32(pair.Confidence)
@@ -72,7 +72,11 @@ func (s *Service) duplicateItem(
 		Right:    right,
 		Evidence: evidenceRows(pair.Evidence),
 	}
-	if decidable.both(pair.EntityType, pair.LeftID, pair.RightID) {
+	// Both questions, and they are different. Authority asks whether this
+	// reader could change these records; settleable asks whether the merge
+	// would be accepted from anyone. A button offered on either alone is one
+	// that refuses after the press.
+	if decidable.both(pair.EntityType, pair.LeftID, pair.RightID) && settleable[pair.ID] {
 		item.Actions = []crmcontracts.AttentionItemActions{"merge"}
 	}
 	return item
