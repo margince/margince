@@ -5326,6 +5326,10 @@ export interface paths {
          *     source ends up carrying the target, the source is archived, and its NAME IS RELEASED
          *     — a later create may reuse it, and links to the old tag stop working.
          *
+         *     Send `into_tag_version` to pin the surviving word. This is a two-row act and the id
+         *     in the path pins only the row it destroys, so a caller that decided to fold into a
+         *     named tag should say which version of it they read.
+         *
          *     The answer separates `moved` from `collapsed` because they are different facts: a
          *     record that carried only the source is moved, and one that already carried both
          *     collapses into a single tagging. An admin reading "12 moved, 3 collapsed" knows the
@@ -6228,7 +6232,9 @@ export interface paths {
          *
          *     `business` readmits a sender: they are a counterparty after all, and their mail belongs in
          *     the CRM like anyone else's. `keep_out` ends it — no record, and the mail this sender
-         *     already brought in is destroyed.
+         *     already brought in is destroyed. A contact capture had already minted for you from their
+         *     mail is withdrawn too; a record you have edited, or a sender your workspace genuinely
+         *     corresponds with, stays.
          *
          *     Your own mailbox only. A sender is personal to the person who knows them: one rep's family
          *     member is another rep's customer.
@@ -22936,6 +22942,20 @@ export interface components {
              * @description The tag that survives. Must be live, and must not be this tag.
              */
             into_tag_id: string;
+            /**
+             * Format: int64
+             * @description The version the surviving tag was read at, refusing the merge with 409 if it has
+             *     moved since. A merge is a TWO-row operation and the routed id pins only one of
+             *     them, so without this the word a caller decided to fold INTO can be renamed
+             *     between the decision and the act, and the merge still runs as though it had not
+             *     been.
+             *
+             *     Optional, and absent means unpinned — the same reading `If-Match` has everywhere
+             *     else here. It belongs in the body rather than in `If-Match` because it qualifies
+             *     the id beside it, not the resource in the path: `If-Match` on this route would
+             *     pin the tag being retired, which is a different precondition.
+             */
+            into_tag_version?: number;
         };
         /** @description What the merge did, in the two numbers that differ. */
         MergeTagsResult: {
@@ -24373,7 +24393,11 @@ export interface components {
             as_of: string;
             /** @description The installation's reporting zone, as an IANA name. Day and period boundaries in this result are cut in it, never in UTC and never in the reader's own zone. */
             timezone: string;
-            /** @description The installation's configured base currency, as an ISO-4217 code. It labels the frame, not the columns: a money column carries each record's OWN currency, which is why every money report groups by `currency`. Converting to this one is the frozen-FX roll-up, a capability this endpoint does not serve. */
+            /**
+             * @description The installation's configured base currency, as an ISO-4217 code.
+             *     WHICH COLUMNS IT DENOMINATES DEPENDS ON THE REPORT. A native money measure (`amount_minor`, `weighted_amount_minor`) carries each record's OWN currency, so a report offering one groups by `currency` and this code labels the frame rather than those columns. A BASE measure (`amount_base_minor`, `weighted_base_minor`) is already converted per record before summing, and this code is its denomination.
+             *     `pipeline-current` is the first report of the second kind: it offers base measures only, precisely so a plan cannot ask it for a sum of minor units across currencies.
+             */
             base_currency: string;
             /** @description The month the installation's financial year opens, so a quarter in this result can be placed without assuming it starts in January. */
             fiscal_year_start_month: number;

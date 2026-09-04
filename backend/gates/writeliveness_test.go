@@ -152,15 +152,20 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/customfields:Retire":            "the catalog field's own retirement, which moves `status` and not archived_at; lockField holds the row from before the decision read, and a repeat converges on the same status",
 	"internal/modules/identity:UpdateTeam":            "the team's archive and restore arms are this function, so both directions have to reach a row on the far side of the transition. The row is held FOR UPDATE from before the state is read",
 
+	// The organization column writers are deliberately NOT here. They used to be:
+	// three near-identical statement lists, each relying on a probe an entry
+	// point three frames up had taken. They now share one table, and every
+	// statement in it carries `archived_at IS NULL` — the same rule where it
+	// cannot be skipped, since a probe and its write are two statements with a
+	// window between them and those four columns are the most contended in the
+	// product.
+
 	// THE LIVENESS IS ONE FRAME UP, OR ONE HOP ACROSS. Each of these is reached
 	// only through a caller or a helper that has already resolved the row live,
 	// and each entry names it — the scan reads one function at a time and cannot
 	// follow either edge.
 	"internal/modules/people:resolveOrCreateAnchor":        "guarded in its helper: anchorOrganization carries `WHERE is_anchor AND archived_at IS NULL FOR UPDATE`, so the row this renames was resolved live and is held for the rest of the transaction",
 	"internal/modules/people:recordGeocodeAfter":           "guarded by addressHashInTx, which re-reads the address `WHERE id = $1 AND archived_at IS NULL`: an archived company yields no hash, the comparison fails, and the function returns without writing. The liveness and the address-moved check are one test",
-	"internal/modules/people:writeOrgColumn":               "the read-back's column writer, reached only through applyEvidenceFieldsWithOverwrite from three entry points that each take auth.EnsureWritableLive on the organization first: the cold-start accept (gateResolvedColdStartTarget), ApplyDeepReadTx, and Enrich",
-	"internal/modules/people:applyUnclaimedOrgColumn":      "the fill arm of writeOrgColumn and reached only through it, so it inherits the same three live-probed entry points",
-	"internal/modules/people:writeCompanyFields":           "the company form's writer, reached only after resolveOrCreateAnchor has resolved the anchor through anchorOrganization's `archived_at IS NULL` and locked it for the transaction",
 	"internal/modules/people:touchRevertedPerson":          "the aggregate bump after a revert removed a child row. RevertProviderFills holds this contact FOR UPDATE with IncludeArchived from the top of its transaction — deliberately, because the subject of a bought-data revert may be archived — so re-taking liveness here would refuse the case the function exists for",
 	"internal/modules/activities:finalizeRelinkedActivity": "the row is already held FOR UPDATE by relinkActivityRow, its only caller, through lockActivityForWrite — two hops past what a per-function scan follows, and the same indirection updateguard ratifies for this function",
 	"internal/modules/deals:recomputeOfferTotals":          "every caller holds the offer row lock through visibleOfferLocked, except createOfferTx where the offer was inserted in the same transaction",

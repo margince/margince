@@ -98,11 +98,7 @@ func (s *Store) SetOrganizationLogo(ctx context.Context, id ids.OrganizationID, 
 		// supersedes. Reading it separately afterwards would name whatever the
 		// NEXT resolve had since put there.
 		var previous, previousOrigin *string
-		err = tx.QueryRow(ctx, `
-			UPDATE organization SET logo_object_key = $2, logo_origin = $3
-			WHERE id = $1 AND archived_at IS NULL
-			RETURNING (SELECT o.logo_object_key FROM organization o WHERE o.id = $1),
-			          (SELECT o.logo_origin FROM organization o WHERE o.id = $1)`,
+		err = tx.QueryRow(ctx, orgLogoWrite,
 			id, objectKey, originURL).Scan(&previous, &previousOrigin)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Visible above but not updatable here: the row was archived
@@ -302,11 +298,7 @@ func bindSiteReadLogo(ctx context.Context, tx pgx.Tx, readID ids.UUID, orgID ids
 	// new mark is what makes the old one unreferenced — and the caller is the
 	// only side that can collect bytes.
 	var previousKey, previousOrigin *string
-	err = tx.QueryRow(ctx, `
-		UPDATE organization SET logo_object_key = $2, logo_origin = $3
-		WHERE id = $1 AND archived_at IS NULL
-		RETURNING (SELECT o.logo_object_key FROM organization o WHERE o.id = $1),
-		          (SELECT o.logo_origin FROM organization o WHERE o.id = $1)`,
+	err = tx.QueryRow(ctx, orgLogoWrite,
 		orgID, *objectKey, *originURL).Scan(&previousKey, &previousOrigin)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Archived under this confirmation: nothing to wear a mark, and the
@@ -409,31 +401,28 @@ func (s *Store) LogoHeldByHuman(ctx context.Context, id ids.OrganizationID) (boo
 }
 
 // logoHeldByHuman reports whether a person's own mark is on this organization
-// right now. It reads the same field_provenance layer the provenance display
-// reads, so "a human owns this field" has one answer in the product, not two.
+// right now.
 //
-// What holds a read off is a mark a person chose, not the fact that a person
-// once touched the field: someone who REMOVES a logo has asked for the record
-// to have none, and leaving their removal standing as a hold would mean the
-// company could never be given a face again by any later read. So the row's own
-// state is part of the question — an empty field is held by nobody.
+// TWO questions, because the logo's provenance can outlive the logo. What holds
+// a read off is a mark a person chose, not the fact that a person once touched
+// the field: someone who REMOVES a logo has asked for the record to have none,
+// and leaving their removal standing as a hold would mean the company could
+// never be given a face again by any later read. So the field's own answer —
+// orgFieldHeldByHuman, shared with the description — is narrowed by whether
+// there is a mark at all. The description needs no such arm: its column and its
+// provenance move together.
 func logoHeldByHuman(ctx context.Context, tx pgx.Tx, id ids.OrganizationID) (bool, error) {
-	var human bool
-	err := tx.QueryRow(ctx, `
-		SELECT p.captured_by LIKE 'human:%'
-		FROM field_provenance p
-		WHERE p.object_type = 'organization' AND p.object_id = $1 AND p.field_name = $2
-		  AND EXISTS (SELECT 1 FROM organization o
-		               WHERE o.id = $1 AND o.logo_object_key IS NOT NULL)
-		ORDER BY p.captured_at DESC, p.id DESC
-		LIMIT 1`, id, logoFieldName).Scan(&human)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil // no logo provenance yet — nobody holds the field
+	human, err := orgFieldHeldByHuman(ctx, tx, id, logoFieldName)
+	if err != nil || !human {
+		return false, err
 	}
-	if err != nil {
-		return false, fmt.Errorf("read organization logo provenance: %w", err)
+	var wearsMark bool
+	if err := tx.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM organization WHERE id = $1 AND logo_object_key IS NOT NULL)`,
+		id).Scan(&wearsMark); err != nil {
+		return false, fmt.Errorf("read whether the organization wears a mark: %w", err)
 	}
-	return human, nil
+	return wearsMark, nil
 }
 
 // OrganizationLogoKey answers where one organization's logo bytes live, for a

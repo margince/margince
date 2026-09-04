@@ -106,14 +106,22 @@ func resetFlush(path compose.ModelPath) func(ids.UUID) {
 // and resolves what the runner then needs from them, in the order an operator
 // reads at boot.
 //
-// It returns a JOINABLE value on every path, error included: background and stop
-// are both set before the first possible return, because goroutines the earlier
-// lanes started are already reading the bus and the pool, and a zero value would
-// make join() a nil dereference in a deferred call during a failing boot — a
-// stack trace where the boot error belongs.
-func startEventLanes(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, rdb *redis.Client, vault keyvault.Vault, modelPath compose.ModelPath, logger *slog.Logger, stdout io.Writer) (workerLanes, error) {
-	laneCtx, stopLanes := context.WithCancel(ctx)
-	lanes := workerLanes{background: &sync.WaitGroup{}, stop: stopLanes, ctx: laneCtx, logger: logger}
+// IT DOES NOT OWN THEIR LIFETIME. The context that ends them and the group that
+// waits for them are created by run() and passed in, already deferred, before
+// this is called — so the first lane cannot start ahead of its own shutdown.
+// The obligation is structural rather than remembered.
+//
+// It used to create both here and return them on a value the caller had to
+// remember to join, which worked and could be silently undone: deleting
+// `defer lanes.join()`, or hoisting the call above the pool so LIFO reversed,
+// left every test in the repository passing. margince/margince#454.
+//
+// The value it returns is still joinable on every path including the error one,
+// and that still matters — the goroutines earlier lanes started are already
+// reading the bus and the pool when a later one fails. What changed is that
+// nothing has to notice.
+func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg workerConfig, pool *pgxpool.Pool, rdb *redis.Client, vault keyvault.Vault, modelPath compose.ModelPath, logger *slog.Logger, stdout io.Writer) (workerLanes, error) {
+	lanes := workerLanes{background: background, ctx: laneCtx, logger: logger}
 
 	if err := startRunnerLane(laneCtx, cfg, pool, rdb, vault, modelPath, &lanes, logger, stdout); err != nil {
 		return lanes, err
@@ -125,7 +133,7 @@ func startEventLanes(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 	logger.Info("data reset", "armed", cfg.allowDataReset)
 	startResetLane(laneCtx, cfg.allowDataReset, rdb, modelPath, lanes.background, logger)
 
-	blob, blobConfigured, err := blobstore.FromEnv(ctx, config.FromOS)
+	blob, blobConfigured, err := blobstore.FromEnv(laneCtx, config.FromOS)
 	if err != nil {
 		return lanes, fmt.Errorf("worker: blobstore: %w", err)
 	}
@@ -144,7 +152,7 @@ func startEventLanes(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 		_, _ = fmt.Fprintf(stdout, "worker executing provider enrichment runs (%s)\n", strings.Join(providers.Names(), ", "))
 	}
 	lanes.providers = providers
-	backfillConnectorCredentials(ctx, pool, vault, stdout, logger)
+	backfillConnectorCredentials(laneCtx, pool, vault, stdout, logger)
 	// Automatic enrichment on create, which needs BOTH halves the run lanes
 	// need: an adapter to call and the vault that unseals its credential.
 	if err := startPersonDataEnrich(laneCtx, pool, rdb, providers, vault, lanes.background, logger, stdout); err != nil {

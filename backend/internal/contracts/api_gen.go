@@ -24286,6 +24286,18 @@ type MeetingPlanUnknownKind string
 type MergeTagsRequest struct {
 	// IntoTagId The tag that survives. Must be live, and must not be this tag.
 	IntoTagId openapi_types.UUID `json:"into_tag_id"`
+
+	// IntoTagVersion The version the surviving tag was read at, refusing the merge with 409 if it has
+	// moved since. A merge is a TWO-row operation and the routed id pins only one of
+	// them, so without this the word a caller decided to fold INTO can be renamed
+	// between the decision and the act, and the merge still runs as though it had not
+	// been.
+	//
+	// Optional, and absent means unpinned — the same reading `If-Match` has everywhere
+	// else here. It belongs in the body rather than in `If-Match` because it qualifies
+	// the id beside it, not the resource in the path: `If-Match` on this route would
+	// pin the tag being retired, which is a different precondition.
+	IntoTagVersion *int64 `json:"into_tag_version,omitempty"`
 }
 
 // MergeTagsResult What the merge did, in the two numbers that differ.
@@ -29438,7 +29450,9 @@ type ReportResult struct {
 	// AsOf The instant this result was computed. A report is a reading taken at a time, and without it two screens showing different numbers look like a bug rather than two moments.
 	AsOf time.Time `json:"as_of"`
 
-	// BaseCurrency The installation's configured base currency, as an ISO-4217 code. It labels the frame, not the columns: a money column carries each record's OWN currency, which is why every money report groups by `currency`. Converting to this one is the frozen-FX roll-up, a capability this endpoint does not serve.
+	// BaseCurrency The installation's configured base currency, as an ISO-4217 code.
+	// WHICH COLUMNS IT DENOMINATES DEPENDS ON THE REPORT. A native money measure (`amount_minor`, `weighted_amount_minor`) carries each record's OWN currency, so a report offering one groups by `currency` and this code labels the frame rather than those columns. A BASE measure (`amount_base_minor`, `weighted_base_minor`) is already converted per record before summing, and this code is its denomination.
+	// `pipeline-current` is the first report of the second kind: it offers base measures only, precisely so a plan cannot ask it for a sum of minor units across currencies.
 	BaseCurrency string   `json:"base_currency"`
 	Columns      []string `json:"columns"`
 

@@ -32,7 +32,7 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1634 | 6% | 15774 | 6 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2467 | 10% | 14941 | 15 | 8 |
-| _whole served catalog, for scale_ | 72 | 20888 | 84% | — | — | — |
+| _whole served catalog, for scale_ | 72 | 20932 | 85% | — | — | — |
 
 ### `morning_brief`
 
@@ -129,7 +129,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 262 tokens, mean 289, across 72 served tools.
+Median 262 tokens, mean 290, across 72 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -138,7 +138,7 @@ a term in an addition.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_report` | 786 | 3 scenarios |
+| `run_report` | 830 | 3 scenarios |
 | `preview_import` | 677 | — |
 | `send_account_email` | 655 | — |
 | `log_activity` | 635 | 1 scenario |

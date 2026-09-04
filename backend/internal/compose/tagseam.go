@@ -191,7 +191,10 @@ func (a tagAdapter) CreateTag(ctx context.Context, name string, color *string) (
 // store owns every refusal that remains (a self-merge, an archived target, a
 // word the caller may not read).
 func (a tagAdapter) MergeTags(ctx context.Context, source, target ids.UUID) (agents.TagMergeResult, error) {
-	out, err := a.store.MergeTags(ctx, ids.From[ids.TagKind](source), ids.From[ids.TagKind](target))
+	// Unpinned on the agent path. The staged row carries ONE pinned version and
+	// it is the source's, so there is nothing here to check the survivor
+	// against yet — closing that needs approvals to carry a second pin.
+	out, err := a.store.MergeTags(ctx, ids.From[ids.TagKind](source), ids.From[ids.TagKind](target), 0)
 	if err != nil {
 		return agents.TagMergeResult{}, err
 	}

@@ -958,6 +958,15 @@ export const en = {
   "co.health.dim.relationship": "Relationship",
   "co.health.dim.commercial": "Commercial",
   "co.health.dim.payment": "Payment",
+  // What each dimension weighs. Three words on a card cannot say what
+  // "Commercial · Good" was read from, and a rating a reader cannot interpret
+  // is one they have to take on trust.
+  "co.health.means.relationship":
+    "Whether the people here are still in touch — who wrote, how recently, and which side started it.",
+  "co.health.means.commercial":
+    "Whether the work in flight is moving — the open deals, the stage they sit at, and how long they have stood still.",
+  "co.health.means.payment":
+    "Whether invoices are settled on time — what is overdue now, and how late this account usually runs.",
   "co.health.rating.atRisk": "At risk",
   "co.health.rating.good": "Good",
   "co.health.rating.strong": "Strong",
@@ -991,8 +1000,7 @@ export const en = {
   "record.restsOn.source_one": "source",
   "record.restsOn.source_other": "sources",
   "record.tabs": "Parts of this record",
-  "record.panel.show": "Show panel",
-  "record.panel.hide": "Hide panel",
+  "record.panel.details": "Details",
   // The Deal Room aside on a deal. `room.` rather than `dealroom.` for the
   // reason the other abbreviated namespaces give: the surface is named once at
   // the top of the panel and every key under it is read in that context.
@@ -3279,14 +3287,15 @@ export const en = {
   "tasks.isDone": "Completed",
   "tasks.logged": "Logged",
 
-  "analytics.sub": "deals by stage — unweighted next to weighted",
+  "analytics.sub":
+    "open deals only, each converted into {currency} — unweighted next to weighted",
   "analytics.currency": "Currency",
   "analytics.count": "Deals",
   "analytics.unweighted": "Unweighted",
   "analytics.weighted": "Weighted",
   "analytics.planNote":
     "the executed plan and the rows this number reconciles to",
-  "analytics.reportDeals": "Deals by stage",
+  "analytics.reportDeals": "Open pipeline by stage",
   "analytics.sections": "Analytics sections",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
