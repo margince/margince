@@ -69,7 +69,7 @@ func forecastDeals(t *testing.T, e *Env, at time.Time) []forecasting.Deal {
 		if err != nil {
 			return err
 		}
-		deals, _, err := compose.ForecastDeals(e.Admin(), tx, period,
+		deals, _, _, err := compose.ForecastDeals(e.Admin(), tx, period,
 			forecasting.Scope{Kind: forecasting.ScopeWorkspace}, at, base)
 		out = deals
 		return err
@@ -80,11 +80,23 @@ func forecastDeals(t *testing.T, e *Env, at time.Time) []forecasting.Deal {
 	return out
 }
 
+// midQuarter is the as-of these cases read at, and the day their deals close.
+//
+// FIXED, not `time.Now()`. ForecastDeals answers for the period containing its
+// as-of, so a close date three days out crosses into the next quarter on the
+// last three days of every quarter — and both deals drop out of the answer.
+// The tests then fail on the count, before reaching the conversion they exist
+// to check, roughly one run in thirty and never on the day anybody looks.
+//
+// Mid-February: far from either edge of its quarter, and comfortably after the
+// 2020 rate row below, which has to be on or before the as-of day to be found.
+var midQuarter = time.Date(2026, 2, 16, 12, 0, 0, 0, time.UTC)
+
 func TestTheForecastsDealsCarryTheirMoneyInTheBaseCurrency(t *testing.T) {
 	e := Setup(t)
 	st := seedForecastFXPipeline(t, e)
-	at := time.Now().UTC()
-	closing := at.AddDate(0, 0, 3)
+	at := midQuarter
+	closing := midQuarter
 
 	// One in the base currency, which needs no rate, and one in USD, which
 	// does. Both must arrive with a base amount: the first is the case a
@@ -132,9 +144,9 @@ func TestTheForecastsDealsCarryTheirMoneyInTheBaseCurrency(t *testing.T) {
 func TestADealWithNoRateArrivesWithNoBaseAmountRatherThanAGuess(t *testing.T) {
 	e := Setup(t)
 	st := seedForecastFXPipeline(t, e)
-	at := time.Now().UTC()
+	at := midQuarter
 
-	seedForecastFXDeal(t, e, st, 50_000, "JPY", at.AddDate(0, 0, 3))
+	seedForecastFXDeal(t, e, st, 50_000, "JPY", midQuarter)
 
 	deals := forecastDeals(t, e, at)
 	if len(deals) != 1 {
