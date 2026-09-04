@@ -66,6 +66,16 @@ type searchBranch struct {
 	snippetFor func(ctx context.Context, fallback string, arg func(any) int) (string, error)
 }
 
+// mayRead answers the object gate as a yes or a no, because that is what this
+// module does with it. A denial is NOT an error to propagate: a type the caller
+// cannot read contributes no branch at all, so search can never out-see the
+// per-entity lists, and a refusal here would disclose which types exist. Named
+// rather than inlined so the discard is a decision with a reason on it instead
+// of an error value that goes quietly missing.
+func mayRead(ctx context.Context, entity string) bool {
+	return auth.Require(ctx, entity, principal.ActionRead) == nil
+}
+
 // projectSnippet is `key · company`, with the company named only to a caller
 // who may read that organization: naming the account behind a project is a
 // read of the organization row, and a searcher with no organization grant,
@@ -121,7 +131,7 @@ func (b searchBranch) narrowing(alias string) string {
 // organization behind it, is a visibility rule answering about a
 // different row.
 func branchScope(ctx context.Context, branch searchBranch, alias string, arg func(any) int) (scope string, admitted bool, err error) {
-	if auth.Require(ctx, branch.entity, principal.ActionRead) != nil {
+	if !mayRead(ctx, branch.entity) {
 		return "", false, nil
 	}
 	switch {
@@ -137,16 +147,26 @@ func branchScope(ctx context.Context, branch searchBranch, alias string, arg fun
 	return scope, true, err
 }
 
+// noSnippet is the excerpt expression for a branch that has none to draw. It is
+// SQL rather than Go's nil — every branch contributes the same column list to
+// the union, so a branch with nothing to say in it says NULL there.
+const noSnippet = "NULL"
+
+// The column most branches title themselves from. A literal per branch reads
+// fine and counts as one repeated string to the linter; naming it says the five
+// are the same column rather than five coincidences.
+const columnName = "name"
+
 var searchBranches = []searchBranch{
-	{entity: "person", table: "person", title: "full_name", snippet: "NULL"},
-	{entity: "organization", table: "organization", title: "display_name", snippet: "NULL", extraWhere: "NOT %s.is_anchor"},
-	{entity: "deal", table: "deal", title: "name", snippet: "NULL"},
-	{entity: "lead", table: "lead", title: "coalesce(full_name, company_name, email)", snippet: "NULL"},
+	{entity: "person", table: entityPerson, title: "full_name", snippet: noSnippet},
+	{entity: "organization", table: entityOrganization, title: "display_name", snippet: noSnippet, extraWhere: "NOT %s.is_anchor"},
+	{entity: "deal", table: entityDeal, title: columnName, snippet: noSnippet},
+	{entity: "lead", table: entityLead, title: "coalesce(full_name, company_name, email)", snippet: noSnippet},
 	// A project's name alone does not say which account's work it is, and two
 	// accounts can run a "Phase 2". The excerpt is the key and the company,
 	// which is how a person tells the hits apart; see projectSnippet for the
 	// gate the company name passes first.
-	{entity: "project", table: "project", title: "name", snippet: "t.key", snippetFor: projectSnippet},
+	{entity: "project", table: entityProject, title: columnName, snippet: "t.key", snippetFor: projectSnippet},
 	// The catalog a quote is priced from. A rep reaching for a line item knows
 	// it by its name or by the sku printed on the offer in front of them, so the
 	// sku is the excerpt as well as an 'A'-weighted match arm — a hit showing
@@ -160,12 +180,12 @@ var searchBranches = []searchBranch{
 	// quarter's offers, and a rep looking one up is usually holding one of
 	// them. archived_at, which the union applies to every branch, is the
 	// liveness question that does bear on discovery.
-	{entity: "product", table: "product", title: "name", snippet: "t.sku", workspaceWide: true},
+	{entity: "product", table: entityProduct, title: columnName, snippet: "t.sku", workspaceWide: true},
 	// The layouts an offer is built from. `name` is the only text this table
 	// holds — `layout` is jsonb, and a template's body is authored structure
 	// rather than prose anybody would search for — so there is no excerpt to
 	// draw and the branch says NULL rather than inventing one.
-	{entity: "offer_template", table: "offer_template", title: "name", snippet: "NULL", workspaceWide: true},
+	{entity: "offer_template", table: entityOfferTemplate, title: columnName, snippet: noSnippet, workspaceWide: true},
 	// `entity` stays a literal and `table` takes the constant, which looks
 	// inconsistent and is not: TestContextAnchorEnumMatchesTheSearchableEntities
 	// AST-parses the `entity` values and can only read literals, while goconst
@@ -182,7 +202,7 @@ var searchBranches = []searchBranch{
 	//
 	// Archived words are excluded: a retired tag is not in the picker, so a hit
 	// on one leads to a page that cannot be acted on.
-	{entity: "tag", table: "tag", title: "name", snippet: "NULL", workspaceWide: true, textOnly: true, extraWhere: "%s.archived_at IS NULL"},
+	{entity: "tag", table: entityTag, title: columnName, snippet: noSnippet, workspaceWide: true, textOnly: true, extraWhere: "%s.archived_at IS NULL"},
 	{entity: "activity", table: entityActivity, title: "coalesce(subject, channel_provider, kind)", snippet: "left(coalesce(body, ''), 200)", activityWalk: true},
 }
 

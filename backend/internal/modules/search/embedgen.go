@@ -39,6 +39,10 @@ const (
 	entityProject       = "project"
 	entityProduct       = "product"
 	entityOfferTemplate = "offer_template"
+	// Not embeddable — a word has no prose to embed — but named here with the
+	// rest because branches.go keys its table off the same identifiers, and one
+	// vocabulary is what stops a branch and its index describing two tables.
+	entityTag = "tag"
 )
 
 // embedText mirrors each entity's search_tsv source columns — the
