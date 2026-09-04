@@ -238,7 +238,18 @@ function rowInHand(
   if (chosen) {
     return chosen;
   }
-  return selectedId === "" ? queue[0] : undefined;
+  if (selectedId !== "") {
+    return undefined;
+  }
+  // Only a row that HAS a pane is taken up by default. A row without one draws
+  // no aside and offers no rank button, so marking it selected would leave the
+  // accent stripe on a row the reader cannot open and cannot put down — a
+  // highlight that means nothing and never clears.
+  //
+  // The FIRST such row rather than the first row: a day led by a deal still has
+  // a person further down whose context is worth standing open, and skipping to
+  // it keeps the pane useful without moving the queue's own order.
+  return queue.find(hasPane);
 }
 
 // Everything a row needs that is the same for every row on the page.

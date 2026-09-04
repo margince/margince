@@ -409,11 +409,6 @@ function NoticeAcknowledge({ id }: Readonly<{ id: string }>) {
 // control labelled "Done" that opens a page leaves the task open, and the reader
 // believes otherwise. The mutation exists and every other surface already uses
 // it, so the row completes the task rather than renaming the promise down.
-//
-// This lived on the focus card while that card existed. The card was the only
-// surface in the whole queue that could finish a task in one press, so folding
-// the card into the queue had to bring the verb with it or take the capability
-// away.
 function TaskComplete({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const toast = useToast();

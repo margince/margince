@@ -80,6 +80,88 @@ describe("the day is one panel", () => {
     const lists = document.querySelectorAll("ol.worklist-list");
     expect(lists.length).toBe(1);
   });
+  // A row with no pane is not taken up by default.
+  //
+  // The accent stripe says "this is the row in hand". A deal row draws no aside
+  // and offers no rank button, so a stripe on one would be a mark the reader
+  // can neither open nor clear — it would simply sit there for the life of the
+  // page saying something untrue.
+  it("marks no row when the first one has no context to show", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "d1",
+            title: "Northstar renewal",
+            band: "now",
+            source: "deal_at_risk",
+            category: "deals_at_risk",
+            subject: {
+              type: "deal",
+              id: "01a05500-0000-7000-8000-0000000000bb",
+              label: "Northstar",
+            },
+          }),
+        ],
+        summary: { urgent: 1, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    const { container } = renderWorklist();
+    await screen.findByText(/Northstar renewal/);
+
+    expect(container.querySelectorAll(".worklist-row-selected")).toHaveLength(
+      0,
+    );
+    expect(screen.queryByRole("complementary")).toBeNull();
+  });
+
+  // And a day whose FIRST row has no pane still stands its context open on the
+  // first row that does: skipping to it keeps the pane useful without moving
+  // the queue's own order.
+  it("takes up the first row that has context, not the first row", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "d1",
+            title: "Northstar renewal",
+            band: "now",
+            source: "deal_at_risk",
+            category: "deals_at_risk",
+            subject: {
+              type: "deal",
+              id: "01a05500-0000-7000-8000-0000000000bb",
+              label: "Northstar",
+            },
+          }),
+          row({
+            id: "p1",
+            title: "Kirsten replied",
+            band: "now",
+            source: "customer_waiting",
+            category: "customer_waiting",
+            subject: {
+              type: "person",
+              id: "01a05500-0000-7000-8000-0000000000aa",
+              label: "Kirsten Vogel",
+            },
+          }),
+        ],
+        summary: { urgent: 2, due: 0, lower_priority: 0, total: 2 },
+      }),
+    );
+    const { container } = renderWorklist();
+    await screen.findByText(/Kirsten replied/);
+
+    await waitFor(() => {
+      expect(screen.getByRole("complementary")).toBeTruthy();
+    });
+    // Exactly one row marked, and it is the person row rather than the deal.
+    const marked = container.querySelectorAll(".worklist-row-selected");
+    expect(marked).toHaveLength(1);
+    expect(marked[0].textContent).toContain("Kirsten replied");
+  });
+
   // A clear day has no first row to put in hand, and asking for one must not
   // draw an aside describing nothing.
   it("draws no context pane on a day with no rows", async () => {
@@ -143,12 +225,12 @@ describe("a task is finished where the reader is standing", () => {
     // ONE write, however many presses. `Button` drops its `onClick` while
     // `pending`, and the mutation stays pending until the refetch it triggered
     // has settled — so the finished row is never both on screen and pressable.
+    // ONE write, and exactly one: `toBe(1)` excludes the second press getting
+    // through AND excludes neither press landing, so a button wired to nothing
+    // fails here just as a double-submitting one does.
     await waitFor(() => {
       expect(patches).toBe(1);
     });
-    // And the write did land: an assertion that only counts PATCHes passes just
-    // as well against a button that never fired at all.
-    expect(patches).toBe(1);
   });
 
   it("completes it rather than navigating to it", async () => {
