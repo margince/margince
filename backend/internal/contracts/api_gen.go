@@ -22620,6 +22620,30 @@ type GrowthFitSubScore struct {
 // GrowthFitSubScoreDimension The four the assessment decomposes into. A closed enum rather than free text, so a surface can label and order them and a model cannot invent a fifth.
 type GrowthFitSubScoreDimension string
 
+// HandledForYou What the product did on this reader's behalf, reported rather than asked about.
+//
+// The queue is a list of obligations; this is the opposite surface — work that is
+// already finished, and the only place a reader can check what was done without
+// being asked to do anything. A product that acts autonomously and never says what
+// it acted on asks for trust it has not earned.
+//
+// NEVER AN OBLIGATION. A receipt carries no verb and never returns to the day: the
+// lane it is drawn from is deliberately absent from the worklist's own sources, so a
+// completed act cannot reappear as something to do.
+//
+// Bounded and newest first. `truncated` says when the read stopped at its own bound,
+// the same admission every manager figure on this surface makes.
+type HandledForYou struct {
+	// AsOf The instant these were read at.
+	AsOf time.Time `json:"as_of"`
+
+	// Receipts What was done, newest first. Empty is the honest common case.
+	Receipts []Receipt `json:"receipts"`
+
+	// Truncated True when more was done than was read. The list is a floor, not a total.
+	Truncated bool `json:"truncated"`
+}
+
 // HealthDimension One named part of the relationship's health, with the reason for its rating.
 //
 // The reason is REQUIRED. A rating with no sentence behind it is the unexplainable score
@@ -29455,6 +29479,28 @@ type RbacObjectGrant struct {
 	Delete bool `json:"delete"`
 	Read   bool `json:"read"`
 	Update bool `json:"update"`
+}
+
+// Receipt One completed act, and the record it was about.
+//
+// `subject` is present only where the act named a record. Not every approval is
+// about one, and an empty subject is a real state rather than a missing field — a
+// client draws the summary alone rather than inventing something to open.
+type Receipt struct {
+	// Id The completed act, as its own surface spells it.
+	Id openapi_types.UUID `json:"id"`
+
+	// Kind The producer's own sub-type — for the label, never for authority.
+	Kind string `json:"kind"`
+
+	// OccurredAt When it happened.
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// Subject The record this item is about, named so a reader knows who it concerns before opening anything.
+	Subject *AttentionSubject `json:"subject,omitempty"`
+
+	// Summary What was done, in the words the act itself recorded.
+	Summary string `json:"summary"`
 }
 
 // RecordClaim defines model for RecordClaim.
@@ -49060,6 +49106,9 @@ type ServerInterface interface {
 	// What is going wrong on this lead's team, and what it was judged against.
 	// (GET /worklist/exceptions)
 	GetTeamExceptions(w http.ResponseWriter, r *http.Request)
+	// What the product did on your behalf, so you can check it.
+	// (GET /worklist/handled)
+	GetHandledForYou(w http.ResponseWriter, r *http.Request)
 	// What the queue is not showing, and which rule is holding it back.
 	// (GET /worklist/hidden)
 	GetHiddenBacklog(w http.ResponseWriter, r *http.Request)
@@ -52576,6 +52625,12 @@ func (_ Unimplemented) GetWorklist(w http.ResponseWriter, r *http.Request, param
 // What is going wrong on this lead's team, and what it was judged against.
 // (GET /worklist/exceptions)
 func (_ Unimplemented) GetTeamExceptions(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What the product did on your behalf, so you can check it.
+// (GET /worklist/handled)
+func (_ Unimplemented) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -77634,6 +77689,28 @@ func (siw *ServerInterfaceWrapper) GetTeamExceptions(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// GetHandledForYou operation middleware
+func (siw *ServerInterfaceWrapper) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHandledForYou(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetHiddenBacklog operation middleware
 func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
 
@@ -79652,6 +79729,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/exceptions", wrapper.GetTeamExceptions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist/handled", wrapper.GetHandledForYou)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/hidden", wrapper.GetHiddenBacklog)

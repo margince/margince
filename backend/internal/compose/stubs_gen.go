@@ -2355,6 +2355,10 @@ func (stubs) GetTeamExceptions(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetTeamExceptions")
 }
 
+func (stubs) GetHandledForYou(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetHandledForYou")
+}
+
 func (stubs) GetHiddenBacklog(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetHiddenBacklog")
 }
