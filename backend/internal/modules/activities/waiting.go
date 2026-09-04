@@ -60,6 +60,16 @@ type WaitingReply struct {
 	// exists". The looser reading would let somebody learn a deal is there by
 	// watching a row they can see decline to go stale.
 	HasOpenDeal bool
+	// Engaged reports that this workspace wrote on this thread BEFORE the
+	// message arrived — the evidence that a conversation is one we are already
+	// in, rather than one that merely reached a mailbox.
+	//
+	// Reported, never used to hide. Thread identity comes from the reply
+	// headers, and a client that strips them gives every message its own
+	// thread: an exclusion keyed on this would drop a live customer silently,
+	// which is the one failure this queue must not have. A caller demotes an
+	// unengaged wait instead, so being wrong costs a scroll.
+	Engaged bool
 	// OwnerID is who owes this reply, resolved from the record the thread is
 	// filed under. Zero when no record on it names an owner.
 	//
@@ -222,6 +232,12 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		// has nothing hidden from it, which is the honest answer: a background
 		// job has set nothing aside.
 		reader := arg(readerOrNobody(ctx))
+		// One snapshot for this read. Passed as a list rather than tested in Go
+		// so the clause runs before the scan cap — see OwnDomains.
+		ownDomains, err := s.ownDomainList(ctx, tx)
+		if err != nil {
+			return err
+		}
 		rows, err := tx.Query(ctx,
 			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 				waitingHorizonDays,
@@ -231,7 +247,8 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 				liveRecord(openDealPredicate, "fd"),
 				reader,
 				scopeUnbounded,
-				neverRelaxed, neverRelaxed), args...)
+				neverRelaxed, neverRelaxed,
+				neverRelaxed, arg(ownDomains)), args...)
 		if err != nil {
 			return err
 		}
@@ -241,7 +258,7 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 			var row WaitingReply
 			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.PersonID, &row.OrganizationID, &row.DealID,
-				&row.HasOpenDeal, &row.OwnerID); err != nil {
+				&row.HasOpenDeal, &row.Engaged, &row.OwnerID); err != nil {
 				return err
 			}
 			waiting = append(waiting, row)
@@ -252,4 +269,57 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		return nil, fmt.Errorf("activities: reading who is waiting for a reply: %w", err)
 	}
 	return waiting, nil
+}
+
+// OwnDomains reports the email domains this installation's own people write
+// from — the set a message's sender is tested against to tell a colleague from
+// a customer.
+//
+// A seam rather than a query here because the domains are capture's to define:
+// it owns workspace_email_domain and the rule for which entries count as
+// vouched-for, and a module may not read a sibling's tables. What this returns
+// is DATA the queue tests against in SQL, not a Go predicate, because the test
+// has to run before the scan cap — a predicate applied to the rows that came
+// back would let two hundred colleague threads fill the scan and push a real
+// customer past it, which is the failure every other rule in waitingsql.go is
+// ordered to avoid.
+//
+// The domains are read inside the CALLER's transaction, so the strict read and
+// every relaxed read beside it see one snapshot. A seam that opened its own
+// would let the set change between two counts that are meant to differ by
+// exactly one rule.
+type OwnDomains interface {
+	Domains(ctx context.Context, tx pgx.Tx) ([]string, error)
+}
+
+// WithOwnDomains wires the colleague-domain reader the waiting queue needs.
+//
+// Unbound, the queue admits every sender: a deployment that cannot say which
+// domains are its own must not guess, and the honest failure is a queue with
+// colleagues in it rather than one that silently drops a customer whose domain
+// resembles ours.
+func (s *Store) WithOwnDomains(own OwnDomains) *Store {
+	s.ownDomains = own
+	return s
+}
+
+// WithOwnDomains on Handlers wires the same reader the store needs, so the
+// timeline's `waiting_reply=true` filter answers with the queue's rule rather
+// than a looser one.
+func (h Handlers) WithOwnDomains(own OwnDomains) Handlers {
+	h.store = h.store.WithOwnDomains(own)
+	return h
+}
+
+// ownDomainList reads the colleague domains for one query, or none when no
+// reader is wired.
+func (s *Store) ownDomainList(ctx context.Context, tx pgx.Tx) ([]string, error) {
+	if s.ownDomains == nil {
+		return nil, nil
+	}
+	domains, err := s.ownDomains.Domains(ctx, tx)
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading which domains are our own: %w", err)
+	}
+	return domains, nil
 }

@@ -8017,6 +8017,9 @@ export const en = {
   "worklist.hidden.unlinked": "Attached to no record",
   "worklist.hidden.unlinked.detail":
     "Usually not sales. Sometimes a customer nobody managed to file.",
+  "worklist.hidden.colleagues": "From one of our own domains",
+  "worklist.hidden.colleagues.detail":
+    "A colleague, not a customer. A mistyped domain hides a real one.",
   "worklist.hidden.notSales": "Judged not sales work",
   "worklist.hidden.notSales.detail":
     "Hidden from the whole organization, and it does not lift.",
@@ -8073,6 +8076,7 @@ export const en = {
   "worklist.because.response_due_soon.value": "reply due by {value}",
   "worklist.because.unassigned": "nobody owns it",
   "worklist.because.stale": "waiting a long time",
+  "worklist.because.no_reply_history": "no reply history",
   "worklist.above.pin": "Above the next because you pinned it.",
   "worklist.above.level":
     "Above the next because it is a more pressing kind of work.",

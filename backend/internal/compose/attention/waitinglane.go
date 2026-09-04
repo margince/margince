@@ -76,6 +76,7 @@ type HiddenWork struct {
 	NotSales    int
 	PastHorizon int
 	Unlinked    int
+	Colleagues  int
 	// Truncated says a read stopped at its own scan bound, which makes every
 	// figure a floor. The module states why it is fatal to Clear rather than
 	// merely noted beside it.
@@ -85,7 +86,8 @@ type HiddenWork struct {
 // Clear reports that nothing is being held back — the guardrail's target.
 func (h HiddenWork) Clear() bool {
 	return !h.Truncated &&
-		h.SetAside == 0 && h.NotSales == 0 && h.PastHorizon == 0 && h.Unlinked == 0
+		h.SetAside == 0 && h.NotSales == 0 && h.PastHorizon == 0 && h.Unlinked == 0 &&
+		h.Colleagues == 0
 }
 
 // WaitingCustomer is one message nobody has answered.
@@ -111,6 +113,11 @@ type WaitingCustomer struct {
 	// thread. It is what keeps a long wait in execution instead of sending it
 	// to review.
 	HasOpenDeal bool
+	// Engaged says the workspace wrote on this thread before the message
+	// arrived. False means unproven, not absent: a client that strips reply
+	// headers gives each message its own thread, so this demotes rather than
+	// hides.
+	Engaged bool
 	// OwnerID is who owes this reply, resolved by the module from the record
 	// the thread is filed under. Zero when nothing on it names an owner, which
 	// is an unowned customer rather than a missing answer.
@@ -189,6 +196,7 @@ func (s *Service) HiddenBacklog(ctx context.Context) (crmcontracts.HiddenBacklog
 		NotSales:    work.NotSales,
 		PastHorizon: work.PastHorizon,
 		Unlinked:    work.Unlinked,
+		Colleagues:  work.Colleagues,
 		Truncated:   work.Truncated,
 		// Derived from the same struct the figures came from, so the flag and
 		// the numbers cannot disagree — a client reading `clear` over four

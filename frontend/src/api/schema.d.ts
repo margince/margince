@@ -28716,6 +28716,13 @@ export interface components {
          * @description How much waiting work each hiding rule is keeping off one reader's queue, at one
          *     instant. Every count is of THREADS, matching what the queue counts: a customer who
          *     wrote three times is waiting once.
+         *
+         *     THE FIGURES DO NOT ADD UP, and that is deliberate. Each is the difference made by
+         *     relaxing ONE rule with the others still in force, because a reader needs to know
+         *     which rule to look at rather than a total they cannot act on. A thread held back
+         *     by two rules therefore appears in NEITHER figure: relaxing either one alone still
+         *     leaves the other hiding it. Summing these to estimate the hidden total
+         *     under-reports it.
          */
         HiddenBacklog: {
             /**
@@ -28762,6 +28769,17 @@ export interface components {
              *     that reason rather than folded into a total.
              */
             unlinked: number;
+            /**
+             * @description Mail from one of the workspace's own email domains. ALSO NOBODY'S CHOICE, and
+             *     watched because the rule is only as good as the domain list behind it: a
+             *     domain entered by mistake suppresses a real customer's correspondence for
+             *     everybody, and this is the figure that would show it.
+             *
+             *     The domains are the vouched-for ones — those the company claims and those an
+             *     administrator confirmed — never every domain a connected mailbox happened to
+             *     see. A contractor's genuine account at a customer must not read as internal.
+             */
+            colleagues: number;
             /**
              * @description True when a read stopped at its own scan bound, which makes every figure above
              *     it a FLOOR rather than a count.
@@ -28985,7 +29003,7 @@ export interface components {
              * @description Which fact this is. The client writes the phrase.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale";
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history";
             value?: components["schemas"]["WorklistValue"];
         };
         /**

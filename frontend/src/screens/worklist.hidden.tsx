@@ -106,6 +106,13 @@ export function HiddenFigures({
           t={t}
         />
         <Reading
+          count={backlog.colleagues}
+          label={t("worklist.hidden.colleagues")}
+          detail={t("worklist.hidden.colleagues.detail")}
+          locale={locale}
+          t={t}
+        />
+        <Reading
           count={backlog.not_sales}
           label={t("worklist.hidden.notSales")}
           detail={t("worklist.hidden.notSales.detail")}

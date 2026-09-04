@@ -53,6 +53,7 @@ func moved(before, after HiddenBacklog) HiddenBacklog {
 		NotSales:    after.NotSales - before.NotSales,
 		PastHorizon: after.PastHorizon - before.PastHorizon,
 		Unlinked:    after.Unlinked - before.Unlinked,
+		Colleagues:  after.Colleagues - before.Colleagues,
 	}
 }
 
@@ -220,6 +221,45 @@ func TestUnlinkedInboundIsCountedSeparately(t *testing.T) {
 	if got.PastHorizon != 0 {
 		t.Fatalf("unlinked mail was also counted against the horizon: %+v", got)
 	}
+}
+
+// The colleague rule gets a figure, because the rule is only as good as the
+// domain list behind it.
+//
+// A domain entered by mistake suppresses a real customer's correspondence for
+// the whole workspace, silently — the queue simply gets shorter. This figure is
+// the only thing that would show it, so it has to move when the rule fires and
+// stay still when another rule does the hiding.
+func TestMailFromOurOwnDomainIsCountedSeparately(t *testing.T) {
+	e := setupLoad(t)
+	person := e.buyer(t)
+	before := hiddenKnowing(t, e, "ourco.test")
+	e.waitingFrom(t, "A real customer", "buyer@customer.test", person)
+	e.waitingFrom(t, "Outstanding invoices", "eric@ourco.test", person)
+
+	got := moved(before, hiddenKnowing(t, e, "ourco.test"))
+
+	if got.Shown != 1 {
+		t.Fatalf("the queue gained %d waits, wanted only the customer's", got.Shown)
+	}
+	if got.Colleagues != 1 {
+		t.Fatalf("counted %d colleague waits, wanted the one (%+v)", got.Colleagues, got)
+	}
+	// The figures are marginal, so a colleague's message must not also show up
+	// as unlinked or past the horizon — it qualifies on both.
+	if got.Unlinked != 0 || got.PastHorizon != 0 {
+		t.Fatalf("the colleague's message was counted against another rule too: %+v", got)
+	}
+}
+
+// hiddenKnowing reads the guardrail with a colleague-domain answer bound.
+func hiddenKnowing(t *testing.T, e *loadEnv, domains ...string) HiddenBacklog {
+	t.Helper()
+	got, err := storeKnowing(e, domains...).HiddenWaiting(e.as(), time.Now())
+	if err != nil {
+		t.Fatalf("reading the hidden backlog: %v", err)
+	}
+	return got
 }
 
 // The property every figure rests on: a relaxed read is a SUPERSET of the

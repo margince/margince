@@ -38100,7 +38100,14 @@ components:
         How much waiting work each hiding rule is keeping off one reader's queue, at one
         instant. Every count is of THREADS, matching what the queue counts: a customer who
         wrote three times is waiting once.
-      required: [as_of, shown, set_aside, not_sales, past_horizon, unlinked, truncated, clear]
+
+        THE FIGURES DO NOT ADD UP, and that is deliberate. Each is the difference made by
+        relaxing ONE rule with the others still in force, because a reader needs to know
+        which rule to look at rather than a total they cannot act on. A thread held back
+        by two rules therefore appears in NEITHER figure: relaxing either one alone still
+        leaves the other hiding it. Summing these to estimate the hidden total
+        under-reports it.
+      required: [as_of, shown, set_aside, not_sales, past_horizon, unlinked, colleagues, truncated, clear]
       properties:
         as_of: { type: string, format: date-time, description: 'The instant every figure below was read at.' }
         shown:
@@ -38147,6 +38154,18 @@ components:
             is right — a rep's dentist is not a customer — and it is also where a real
             customer lands when capture failed to link their thread. Its own figure for
             that reason rather than folded into a total.
+        colleagues:
+          type: integer
+          minimum: 0
+          description: |
+            Mail from one of the workspace's own email domains. ALSO NOBODY'S CHOICE, and
+            watched because the rule is only as good as the domain list behind it: a
+            domain entered by mistake suppresses a real customer's correspondence for
+            everybody, and this is the figure that would show it.
+
+            The domains are the vouched-for ones — those the company claims and those an
+            administrator confirmed — never every domain a connected mailbox happened to
+            see. A contractor's genuine account at a customer must not read as internal.
         truncated:
           type: boolean
           description: |
@@ -38386,7 +38405,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, meeting_soon, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale]
+          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, meeting_soon, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history]
           description: 'Which fact this is. The client writes the phrase.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 

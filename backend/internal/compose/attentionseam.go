@@ -378,7 +378,11 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// due-dated lanes. Unbound it would be UTC's, which is nobody's day
 		// outside one timezone.
 		attention.WithZone(attentionZone(pool)),
-	).WithWaiting(attentionWaiting{store: activities.NewStore(db), now: now}).
+	).WithWaiting(attentionWaiting{
+		store: activities.NewStore(db).WithOwnDomains(
+			ownDomainReader{store: capture.NewOwnDomainStore(db)}),
+		now: now,
+	}).
 		// The asks waiting on this colleague to answer. Until this lane existed
 		// a colleague learned they had been asked only by opening that
 		// contact's Network tab, so an ask nobody went looking for expired

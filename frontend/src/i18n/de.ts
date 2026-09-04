@@ -7935,6 +7935,9 @@ export const de = {
   "worklist.hidden.unlinked": "Keinem Datensatz zugeordnet",
   "worklist.hidden.unlinked.detail":
     "Meist kein Vertrieb. Manchmal ein Kunde, den niemand zuordnen konnte.",
+  "worklist.hidden.colleagues": "Von einer unserer eigenen Domains",
+  "worklist.hidden.colleagues.detail":
+    "Kolleginnen und Kollegen, keine Kundschaft. Eine falsch eingetragene Domain verbirgt echte Post.",
   "worklist.hidden.notSales": "Als vertriebsfremd eingestuft",
   "worklist.hidden.notSales.detail":
     "Für die gesamte Organisation verborgen, und es hebt sich nicht auf.",
@@ -7992,6 +7995,7 @@ export const de = {
   "worklist.because.response_due_soon.value": "Antwort fällig bis {value}",
   "worklist.because.unassigned": "niemand zuständig",
   "worklist.because.stale": "wartet schon lange",
+  "worklist.because.no_reply_history": "kein Schriftwechsel bisher",
   "worklist.above.pin": "Über dem Nächsten, weil du es angeheftet hast.",
   "worklist.above.level": "Über dem Nächsten, weil es dringlichere Arbeit ist.",
   "worklist.above.deadline": "Über dem Nächsten wegen des Datums.",

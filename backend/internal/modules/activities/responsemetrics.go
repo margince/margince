@@ -109,7 +109,20 @@ const firstResponseSQL = `
 	   AND inbound.occurred_at >= $1
 	   AND inbound.occurred_at < $2
 	   AND %[1]s
-	   -- A SALES thread, by the same three arms waitingRepliesSQL qualifies on.
+	   -- A COLLEAGUE's message is not a customer waiting, and this reading
+	   -- answers "how fast do we answer customers". Without the same exclusion
+	   -- the queue applies, an internal thread nobody replies to would drag the
+	   -- rate down over work the queue never showed anybody.
+	   AND NOT EXISTS (
+	         SELECT 1 FROM activity_participant ours
+	          WHERE ours.activity_id = inbound.id
+	            AND ours.role = 'from'
+	            AND EXISTS (
+	                  SELECT 1 FROM unnest($%[4]d::text[]) AS own(domain)
+	                   WHERE lower(split_part(ours.address, '@', 2)) = own.domain
+	                      OR lower(split_part(ours.address, '@', 2))
+	                         LIKE '%%.' || own.domain))
+	   -- A SALES thread, by the same four arms waitingRepliesSQL qualifies on.
 	   -- Restated rather than shared because this query has no wl join to hang
 	   -- them off; what must not drift is the DEFINITION, and a test feeding
 	   -- both readers one timeline holds that better than a shared fragment
@@ -175,10 +188,18 @@ func (s *Store) ResponseWindow(ctx context.Context, from, to time.Time) (Respons
 		if err != nil {
 			return err
 		}
+		// The SAME colleague-domain snapshot the queue judges by, read in this
+		// transaction. Two readings of one rule taken from two snapshots would
+		// disagree the moment an administrator added a domain between them.
+		ownDomains, err := s.ownDomainList(ctx, tx)
+		if err != nil {
+			return err
+		}
 		if err := tx.QueryRow(ctx, fmt.Sprintf(firstResponseSQL,
 			content,
 			liveRecord(openDealPredicate, "d"),
-			liveRecord(workingLeadPredicate, "ld")),
+			liveRecord(workingLeadPredicate, "ld"),
+			arg(ownDomains)),
 			args...).Scan(&out.Answered, &out.MedianMinutes); err != nil {
 			return fmt.Errorf("activities: reading first-response times: %w", err)
 		}
