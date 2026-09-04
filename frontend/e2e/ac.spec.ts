@@ -3,6 +3,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
 import { mockApi } from "./seed";
+import { textsOf } from "./waits";
 
 /**
  * Settle the page's motion before measuring the colours it paints.
@@ -726,9 +727,11 @@ test("AC-book-public (B-EP09.14): consent gates booking and the policy passes th
   await expect(slot).toBeDisabled();
   await page.getByRole("checkbox").check();
   await expect(slot).toBeEnabled();
-  const shownWording = await page
-    .locator("[data-consent-wording]")
-    .textContent();
+  const wording = page.locator("[data-consent-wording]");
+  // The assert above waited on the SLOT; this is a different element, and a
+  // bare textContent would answer null on the tick before it paints.
+  await expect(wording).toBeVisible();
+  const shownWording = await wording.textContent();
   const requestPromise = page.waitForRequest(
     (request) =>
       request.method() === "POST" &&
@@ -818,10 +821,9 @@ test("AC-create-2: the palette's New-deal action opens the create form; only ope
   // The choices exist only while the popup is open, and the popup is portalled
   // to the body — so it is located from the page, not from inside the dialog.
   await stageSelect.click();
-  const stageNames = await page
-    .locator('[role="listbox"]')
-    .getByRole("option")
-    .allTextContents();
+  const stageNames = await textsOf(
+    page.locator('[role="listbox"]').getByRole("option"),
+  );
   expect(stageNames.filter(Boolean)).toEqual([
     "Qualify",
     "Proposal",
@@ -2297,7 +2299,7 @@ test.describe("filters and views", () => {
     // is an EXISTS over a join rather than a column, and none of them is
     // spelled anywhere in the frontend.
     await page.getByRole("combobox", { name: "Feld" }).click();
-    expect(await page.getByRole("option").allTextContents()).toEqual([
+    expect(await textsOf(page.getByRole("option"))).toEqual([
       "owner id",
       "industry",
       "lifecycle",
@@ -2311,7 +2313,7 @@ test.describe("filters and views", () => {
     // And the operator set is the FIELD's. `industry` is text, so `enthält` is
     // offered; the tag clause in AC-4 proves the narrowing by its absence.
     await page.getByRole("combobox", { name: "Operator" }).click();
-    expect(await page.getByRole("option").allTextContents()).toEqual([
+    expect(await textsOf(page.getByRole("option"))).toEqual([
       "ist",
       "ist nicht",
       "ist eines von",
@@ -2350,7 +2352,7 @@ test.describe("filters and views", () => {
     // `enthält` does not. A picker that offered a fixed set here would produce
     // a 422 the reader could not interpret.
     await page.getByRole("combobox", { name: "Operator" }).click();
-    expect(await page.getByRole("option").allTextContents()).toEqual([
+    expect(await textsOf(page.getByRole("option"))).toEqual([
       "ist",
       "ist nicht",
       "ist größer als",
@@ -2392,7 +2394,7 @@ test.describe("filters and views", () => {
     await page.getByRole("combobox", { name: "Feld" }).first().click();
     await page.getByRole("option", { name: "tag" }).click();
     await page.getByRole("combobox", { name: "Operator" }).first().click();
-    expect(await page.getByRole("option").allTextContents()).toEqual([
+    expect(await textsOf(page.getByRole("option"))).toEqual([
       "ist",
       "ist nicht",
       "ist eines von",

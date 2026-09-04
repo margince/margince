@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { mockApi } from "./seed";
+import { itemsOf } from "./waits";
 
 /**
  * A record's tab strip stays inside the work column, whatever stands beside it.
@@ -61,7 +62,7 @@ test.describe("the record tab strip", () => {
         await openRecord(page, record.route);
 
         const aside = await page.locator(".record-aside").boundingBox();
-        const tabs = await page.locator(".recordtabs-tab").all();
+        const tabs = await itemsOf(page.locator(".recordtabs-tab"));
         expect(tabs.length).toBeGreaterThan(0);
         if (!aside) {
           throw new Error("the details pane is visible but has no box");

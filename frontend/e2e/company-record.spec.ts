@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { itemsOf, signIn } from "./waits";
 
 /**
  * The company record page against the design's glance (DESIGN.md §7).
@@ -54,34 +55,6 @@ const SHOTS = process.env.E2E_SHOT_DIR ?? "/tmp/e2e-company";
 // row too — or name a screen class that only exists to be selected. The test id
 // names THIS row on THIS page, which is what these assertions are about.
 const STRIP = '[data-testid="company-strip"]';
-
-/**
- * Sign in as the dev bootstrap admin, unless the session is already up.
- *
- * A dev stack that has been logged into already redirects /#/login straight to
- * the app, so the form is ABSENT on the happy path — waiting for a navigation
- * that never happens is a 30s timeout, not a login failure. The form is filled
- * only when it is actually rendered.
- */
-async function signIn(page: Page) {
-  await page.goto("/#/login", { waitUntil: "networkidle" });
-  const email = page
-    .locator('input[type="email"], input[name="email"]')
-    .first();
-  if ((await email.count()) === 0) {
-    return;
-  }
-  await email.fill(process.env.E2E_EMAIL ?? "admin@demo.test");
-  await page
-    .locator('input[type="password"], input[name="password"]')
-    .first()
-    .fill(process.env.E2E_PASSWORD ?? "demo-password-123");
-  await page.locator('button[type="submit"]').first().click();
-  // The nav is what "signed in" looks like, and it is what every assertion
-  // below depends on — anchoring here rather than on a URL change means the
-  // wait describes the state the tests need.
-  await expect(page.locator("nav.rail").first()).toBeVisible();
-}
 
 /**
  * Open a company and wait for the 360 to settle.
@@ -265,12 +238,16 @@ test.describe("company record — the glance's page shape", () => {
       .click();
     await expect(rail).toBeVisible();
 
-    expect(await rail.locator("> .panel").count()).toBe(1);
+    // Waited for, not counted straight away: the rail's own visibility says its
+    // frame has painted, and a bare count on what is inside it reads whatever
+    // has mounted by that instant.
+    await expect(rail.locator("> .panel")).toHaveCount(1);
     const sections = rail.locator("> .panel > details");
     // Four on every account, five where the account has a domain to hold.
+    await expect(sections.first()).toBeVisible();
     expect(await sections.count()).toBeGreaterThanOrEqual(4);
     expect(await sections.count()).toBeLessThanOrEqual(5);
-    for (const summary of await sections.locator("> summary").all()) {
+    for (const summary of await itemsOf(sections.locator("> summary"))) {
       expect((await summary.textContent())?.trim()).not.toBe("");
     }
 
@@ -427,9 +404,9 @@ test.describe("company record — the mockup's visual weight", () => {
         Boolean(org?.[field]),
       ).length;
     });
-    expect(
-      await page.locator(".record-sub .chip").count(),
-    ).toBeGreaterThanOrEqual(recorded);
+    await expect
+      .poll(() => page.locator(".record-sub .chip").count())
+      .toBeGreaterThanOrEqual(recorded);
   });
 
   test("a card reads as a card against the page behind it", async ({
