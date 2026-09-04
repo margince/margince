@@ -28,9 +28,9 @@ func demoteToRep(t *testing.T, e *apptest.AppEnv) {
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	// is_agent = false, not merely the earliest row: bootstrap writes the admin
-	// and the Agent Runner seat in ONE transaction, so now() gives them the
-	// same created_at and "first by created_at" is a coin flip between them.
+	// is_agent = false, not merely the earliest row: what this lookup wants is a
+	// PERSON, and saying so is cheaper than depending on how many kinds of row
+	// the installation happens to hold.
 	var userID, repRoleID string
 	if err := tx.QueryRow(ctx,
 		`SELECT id FROM app_user WHERE is_agent = false ORDER BY created_at LIMIT 1`).Scan(&userID); err != nil {
