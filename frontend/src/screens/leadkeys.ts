@@ -21,6 +21,30 @@ import type { QueryKey } from "@tanstack/react-query";
 /** The list and the board. Their read key is `["leads", query]`; this prefix reaches both. */
 export const LEAD_LIST_KEY: QueryKey = ["leads"];
 
+/**
+ * How many leads each status holds, from the leads-by-status report.
+ *
+ * Under LEAD_LIST_KEY's prefix on purpose: the figures and the cards go stale
+ * together. A qualified lead has to leave the open column and arrive in the
+ * terminal count in the same beat, and the ONE invalidation every lead write
+ * already fires is what makes that true.
+ */
+export const LEAD_STATUS_COUNTS_KEY: QueryKey = [
+  ...LEAD_LIST_KEY,
+  "by-status-counts",
+];
+
+/**
+ * The archived leads in ONE terminal column, read only while it is open.
+ *
+ * Under the same prefix, for the same reason: qualifying a lead adds a row to
+ * this list, and a column left holding its old page would be missing the lead
+ * the reader just put there.
+ */
+export function leadTerminalKey(status: string): QueryKey {
+  return [...LEAD_LIST_KEY, "terminal", status];
+}
+
 /** The detail page. Its children — the score and the manual signals below — are prefix-reached from here. */
 export function leadKey(id: string): QueryKey {
   return ["lead", id];

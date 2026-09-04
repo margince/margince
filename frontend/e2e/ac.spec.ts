@@ -3,6 +3,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
 import { mockApi } from "./seed";
+import { textsOf } from "./waits";
 
 /**
  * Settle the page's motion before measuring the colours it paints.
@@ -265,7 +266,7 @@ test("AC-shell-1: the rail renders the canonical 10 items in order", async ({
     );
   expect(labels).toEqual([
     "Briefing",
-    "Kontakte",
+    "Personen",
     "Firmen",
     "Leads",
     "Filter & Ansichten",
@@ -303,7 +304,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   page,
 }) => {
   await page.goto("/#/contacts");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Kontakte");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Personen");
 
   await page.goto("/#/contacts/p-anna");
   const heading = page.getByRole("heading", { level: 1 });
@@ -312,7 +313,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   await expect(page.locator(".record-head h1")).toHaveText("Anna Weber");
   // The trail that leads back to the list stands in the top bar, where it is
   // true of the page rather than part of the document the reader is reading.
-  await expect(page.locator(".topbar .crumbs a").last()).toHaveText("Kontakte");
+  await expect(page.locator(".topbar .crumbs a").last()).toHaveText("Personen");
   await expect(page.locator('.topbar [aria-current="page"]')).toHaveText(
     "Anna Weber",
   );
@@ -404,7 +405,7 @@ test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   page,
 }) => {
   await page.goto("/#/home");
-  await expect(page.locator('nav.rail a[aria-label="Kontakte"]')).toBeVisible();
+  await expect(page.locator('nav.rail a[aria-label="Personen"]')).toBeVisible();
   // The language is a preference of this person rather than a destination, so it
   // lives on Settings → Account; the account block at the sidebar foot carries
   // the three places it can take you and nothing that changes a setting. Three
@@ -726,9 +727,11 @@ test("AC-book-public (B-EP09.14): consent gates booking and the policy passes th
   await expect(slot).toBeDisabled();
   await page.getByRole("checkbox").check();
   await expect(slot).toBeEnabled();
-  const shownWording = await page
-    .locator("[data-consent-wording]")
-    .textContent();
+  const wording = page.locator("[data-consent-wording]");
+  // The assert above waited on the SLOT; this is a different element, and a
+  // bare textContent would answer null on the tick before it paints.
+  await expect(wording).toBeVisible();
+  const shownWording = await wording.textContent();
   const requestPromise = page.waitForRequest(
     (request) =>
       request.method() === "POST" &&
@@ -818,10 +821,9 @@ test("AC-create-2: the palette's New-deal action opens the create form; only ope
   // The choices exist only while the popup is open, and the popup is portalled
   // to the body — so it is located from the page, not from inside the dialog.
   await stageSelect.click();
-  const stageNames = await page
-    .locator('[role="listbox"]')
-    .getByRole("option")
-    .allTextContents();
+  const stageNames = await textsOf(
+    page.locator('[role="listbox"]').getByRole("option"),
+  );
   expect(stageNames.filter(Boolean)).toEqual([
     "Qualify",
     "Proposal",
@@ -2281,7 +2283,7 @@ test.describe("filters and views", () => {
     // is an EXISTS over a join rather than a column, and none of them is
     // spelled anywhere in the frontend.
     await page.getByRole("combobox", { name: "Feld" }).click();
-    expect(await page.getByRole("option").allTextContents()).toEqual([
+    expect(await textsOf(page.getByRole("option"))).toEqual([
       "owner id",
       "industry",
       "lifecycle",
@@ -2295,7 +2297,7 @@ test.describe("filters and views", () => {
     // And the operator set is the FIELD's. `industry` is text, so `enthält` is
     // offered; the tag clause in AC-4 proves the narrowing by its absence.
     await page.getByRole("combobox", { name: "Operator" }).click();
-    expect(await page.getByRole("option").allTextContents()).toEqual([
+    expect(await textsOf(page.getByRole("option"))).toEqual([
       "ist",
       "ist nicht",
       "ist eines von",
@@ -2334,7 +2336,7 @@ test.describe("filters and views", () => {
     // `enthält` does not. A picker that offered a fixed set here would produce
     // a 422 the reader could not interpret.
     await page.getByRole("combobox", { name: "Operator" }).click();
-    expect(await page.getByRole("option").allTextContents()).toEqual([
+    expect(await textsOf(page.getByRole("option"))).toEqual([
       "ist",
       "ist nicht",
       "ist größer als",
@@ -2376,7 +2378,7 @@ test.describe("filters and views", () => {
     await page.getByRole("combobox", { name: "Feld" }).first().click();
     await page.getByRole("option", { name: "tag" }).click();
     await page.getByRole("combobox", { name: "Operator" }).first().click();
-    expect(await page.getByRole("option").allTextContents()).toEqual([
+    expect(await textsOf(page.getByRole("option"))).toEqual([
       "ist",
       "ist nicht",
       "ist eines von",
@@ -2437,6 +2439,9 @@ test.describe("filters and views", () => {
       objects.getByRole("button", { name: "Geschäfte", pressed: true }),
     ).toBeVisible();
 
+    // "Kontakte", not "Personen": these tabs read `filters.tab.contacts`,
+    // which is a different key from the nav's and is not one the People ruling
+    // moved. Noted on the ticket as a surface its inventory did not reach.
     await objects.getByRole("button", { name: "Kontakte" }).click();
     await expect(page).toHaveURL(/#\/filters\/contacts$/);
 

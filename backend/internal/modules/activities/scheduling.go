@@ -308,8 +308,19 @@ func (s *Store) BookMeeting(ctx context.Context, in BookMeetingInput) (crmcontra
 	if _, excluded := storekit.ExclusionViolation(err); excluded {
 		return crmcontracts.Activity{}, &SlotTakenError{Start: in.Start}
 	}
-	// Invite delivery rides the deployment's calendar/mail seam; the
-	// governed, audited fact is the meeting on the timeline.
+	// NO INVITE IS SENT, and in.AttendeeEmails is not carried anywhere — not
+	// onto the activity, not into a queue, not to a transport. This build has
+	// none: the calendar integrations are capture-only, and platform/mailer is
+	// the password-reset seam.
+	//
+	// The comment that stood here said delivery "rides the deployment's
+	// calendar/mail seam", which read as configuration and was not: no
+	// deployment of this build can make it send. The screen and the contract
+	// both said an invite was on its way, so a rep watched a client never hear
+	// about a meeting with nothing anywhere reporting it.
+	//
+	// Both now say who has to tell the attendee. Wiring a real transport is a
+	// feature and needs one to exist first.
 	return activity, err
 }
 

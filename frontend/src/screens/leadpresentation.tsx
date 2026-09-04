@@ -1,5 +1,10 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef } from "react";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -15,7 +20,13 @@ import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
-import { leadWriteKeys } from "./leadkeys";
+import {
+  LEAD_STATUS_COUNTS_KEY,
+  leadTerminalKey,
+  leadWriteKeys,
+} from "./leadkeys";
+import { DisqualifyDialog } from "./leads.disqualify";
+import { QualifyDialog } from "./leads.qualify";
 import { sourceLabelFor } from "./leadsources";
 
 type Lead = components["schemas"]["Lead"];
@@ -82,6 +93,96 @@ const LEAD_BOARD_STAGES = [
   { stage: "contacted", label: "lead.statusContacted" },
   { stage: "engaged", label: "lead.statusEngaged" },
 ] as const;
+
+// The two ends of the pipeline. A lead reaching either is ARCHIVED, which is
+// why they are not in the list above: the board's own page excludes archived
+// rows, so these columns have no cards to count and their figures come from
+// the leads-by-status report instead.
+//
+// They are not statuses a card can simply be MOVED to. Qualifying promotes the
+// lead into a person (and maybe a deal) and disqualifying records a reason, so
+// each drop opens the dialog that collects what the transition needs — the
+// server refuses a bare status PATCH into either, and rightly.
+const LEAD_TERMINAL_STAGES = [
+  { stage: "promoted", label: "lead.statusPromoted", dialog: "qualify" },
+  {
+    stage: "disqualified",
+    label: "lead.statusDisqualified",
+    dialog: "disqualify",
+  },
+] as const;
+
+type TerminalDialog = (typeof LEAD_TERMINAL_STAGES)[number]["dialog"];
+
+// How many leads each status holds, INCLUDING the archived terminal ones.
+//
+// The board's own page cannot answer this: it excludes archived rows, so the
+// two terminal columns would read zero however many leads had passed through
+// them. The report is the one lead read that counts them (leads-by-status).
+//
+// Keyed under ["leads"] so the invalidation every lead mutation already fires
+// refreshes these figures with the cards — a qualified lead has to leave the
+// open count and arrive in the terminal one in the same beat, or the board
+// shows a card that is gone and a count that never moved.
+function useLeadStatusCounts() {
+  return useQuery({
+    queryKey: LEAD_STATUS_COUNTS_KEY,
+    queryFn: async () => {
+      const { data, error } = await api.POST("/reports/{report}", {
+        params: { path: { report: "leads-by-status" } },
+        body: {
+          group_by: ["status"],
+          aggregates: [{ fn: "count", as: "leads" }],
+        },
+      });
+      if (error) throwProblem(error);
+      const counts = new Map<string, number>();
+      for (const row of data.rows) {
+        const status = row.status;
+        const leads = row.leads;
+        if (typeof status === "string" && typeof leads === "number") {
+          counts.set(status, leads);
+        }
+      }
+      return counts;
+    },
+  });
+}
+
+// The leads sitting in ONE terminal column, fetched only while it is open.
+//
+// A collapsed column states a figure and needs no rows; an expanded one that
+// showed none would be a column claiming twelve leads and displaying nothing.
+// So the rows are fetched when the reader opens it and not before — these are
+// archived leads, and every other read on this screen is right to hide them.
+type TerminalStatus = (typeof LEAD_TERMINAL_STAGES)[number]["stage"];
+
+function useTerminalLeads(status: TerminalStatus, enabled: boolean) {
+  return useInfiniteQuery({
+    queryKey: leadTerminalKey(status),
+    enabled,
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam }) => {
+      const { data, error } = await api.GET("/leads", {
+        params: {
+          query: {
+            status,
+            include_archived: true,
+            limit: 50,
+            cursor: pageParam ?? undefined,
+          },
+        },
+      });
+      if (error) throwProblem(error);
+      return data;
+    },
+    // The cursor the page hands back, so a column whose count runs to
+    // thousands is reachable past its first fifty. A list that stopped there
+    // while its own head stated 12,000 would be a page contradicting itself.
+    getNextPageParam: (last) =>
+      last.page.has_more ? (last.page.next_cursor ?? null) : null,
+  });
+}
 
 function LeadCard({
   lead,
@@ -152,6 +253,19 @@ export function LeadBoard({
   const queryClient = useQueryClient();
   const dragging = useRef<string | null>(null);
   const lastDragEnd = useRef(0);
+  // Collapsed by DEFAULT, and the two of them together. These columns are
+  // where leads go to stop being work: a reader opening the board wants the
+  // three they still act on, and the terminal pair folded to a count each.
+  const [openTerminal, setOpenTerminal] = useState<TerminalStatus | null>(null);
+  const [pending, setPending] = useState<{
+    lead: Lead;
+    dialog: TerminalDialog;
+  } | null>(null);
+  const counts = useLeadStatusCounts();
+  const terminalRows = useTerminalLeads(
+    openTerminal ?? "promoted",
+    openTerminal !== null,
+  );
   const move = useMutation({
     // No single record: one mutation instance serves every card on the board,
     // and which lead is moving is known only at mutate() time, not here.
@@ -208,7 +322,58 @@ export function LeadBoard({
       deals: held.map((lead) => ({ id: lead.id, name: "" })),
     };
   });
-  const leadsById = new Map(live.map((lead) => [lead.id, lead]));
+  // The terminal pair, whose count comes from the report and whose cards are
+  // fetched only for the one that is open.
+  const opened =
+    openTerminal !== null
+      ? (terminalRows.data?.pages.flatMap((page) => page.data) ?? [])
+      : [];
+  for (const stage of LEAD_TERMINAL_STAGES) {
+    const isOpen = openTerminal === stage.stage;
+    const held = isOpen
+      ? opened.filter((lead) => lead.status === stage.stage)
+      : [];
+    columns.push({
+      stage: stage.stage,
+      label: t(stage.label),
+      // The REPORT's figure, not the rows'. A collapsed column has no rows at
+      // all, and an open one holds only the page that was fetched — either
+      // would understate a column whose whole population is archived.
+      count: counts.data?.get(stage.stage) ?? 0,
+      collapsed: !isOpen,
+      deals: held.map((lead) => ({ id: lead.id, name: "" })),
+    });
+  }
+  const leadsById = new Map(
+    [...live, ...opened].map((lead) => [lead.id, lead]),
+  );
+
+  // WHERE a dropped card lands, as one decision.
+  //
+  // A terminal column FIRST. Neither of those transitions is a status change:
+  // qualifying promotes the lead into a person and maybe a deal, disqualifying
+  // records a reason, and the server refuses a bare status PATCH into either.
+  // The drop opens the dialog that collects what the transition needs; only an
+  // open stage is a move.
+  function dropLeadOn(stage: string, lead: Lead) {
+    // The SOURCE has to be a live lead. The cards refuse to drag a terminal
+    // one, and this refuses to act on one anyway — a drop carries an id
+    // through a dataTransfer string, so the guard belongs where the decision
+    // is taken and not only where the gesture starts.
+    if (!isOpenStatus(lead.status)) return;
+    const terminal = LEAD_TERMINAL_STAGES.find((s) => s.stage === stage);
+    if (terminal) {
+      // No "is it already there" test: the guard above has already ruled out
+      // every terminal status, and the compiler says so — the comparison this
+      // replaced was dead code once the source had to be live.
+      setPending({ lead, dialog: terminal.dialog });
+      return;
+    }
+    const target = LEAD_BOARD_STAGES.find((s) => s.stage === stage);
+    if (target && lead.status !== target.stage) {
+      move.mutate({ id: lead.id, version: lead.version, status: target.stage });
+    }
+  }
 
   return (
     <>
@@ -220,9 +385,35 @@ export function LeadBoard({
       {rows.length > 0 && live.length === 0 && (
         <p className="t-caption">{t("lead.boardTerminalOnly")}</p>
       )}
+      {/* The two reads behind the terminal columns, when they fail. A failed
+          report renders as 0 and a failed row read as an empty column, and
+          both read as fact — "nobody was ever disqualified" is a very
+          different statement from "we could not ask". */}
+      {counts.isError && (
+        <p className="t-caption" style={{ color: "var(--danger)" }}>
+          {t("lead.boardCountsUnavailable")}
+        </p>
+      )}
+      {terminalRows.isError && (
+        <p className="t-caption" style={{ color: "var(--danger)" }}>
+          {t("lead.boardTerminalRowsUnavailable")}
+        </p>
+      )}
       <PipelineBoard
         variant="plain"
         columns={columns}
+        columnExtras={(column) =>
+          column.stage === openTerminal && terminalRows.hasNextPage ? (
+            <Button
+              small
+              onClick={() => {
+                terminalRows.fetchNextPage();
+              }}
+            >
+              {t("list.loadMore")}
+            </Button>
+          ) : null
+        }
         countLabel={(count) =>
           t("lead.boardCount", { count: formatNumber(count, locale) })
         }
@@ -237,18 +428,39 @@ export function LeadBoard({
                   navigate({ screen: "leads", id: opened.id });
                 }
               }}
-              dragHandlers={{
-                draggable: true,
-                onDragStart: (event) => {
-                  dragging.current = lead.id;
-                  event.dataTransfer.setData("text/plain", lead.id);
-                },
-                onDragEnd: () => {
-                  dragging.current = null;
-                  lastDragEnd.current = Date.now();
-                },
-              }}
+              // A TERMINAL lead does not drag. It is archived, and every
+              // destination refuses it: UpdateLead reads live rows only, so a
+              // drop on an open stage 409s, and the other terminal dialog's
+              // own mutation rejects it too. Offering the gesture and then
+              // failing it is worse than not offering it.
+              dragHandlers={
+                isOpenStatus(lead.status)
+                  ? {
+                      draggable: true,
+                      onDragStart: (event) => {
+                        dragging.current = lead.id;
+                        event.dataTransfer.setData("text/plain", lead.id);
+                      },
+                      onDragEnd: () => {
+                        dragging.current = null;
+                        lastDragEnd.current = Date.now();
+                      },
+                    }
+                  : undefined
+              }
             />
+          );
+        }}
+        onToggleColumn={(column) => {
+          // Only the terminal pair folds. Clicking an open stage's head must
+          // not collapse a column the reader works out of — and finding the
+          // stage rather than casting is what keeps the state's type honest.
+          const terminal = LEAD_TERMINAL_STAGES.find(
+            (stage) => stage.stage === column.stage,
+          );
+          if (!terminal) return;
+          setOpenTerminal((open) =>
+            open === terminal.stage ? null : terminal.stage,
           );
         }}
         columnDropHandlers={(column) => ({
@@ -267,16 +479,7 @@ export function LeadBoard({
             dragging.current = null;
             lastDragEnd.current = Date.now();
             const lead = id ? leadsById.get(id) : undefined;
-            const target = LEAD_BOARD_STAGES.find(
-              (stage) => stage.stage === column.stage,
-            );
-            if (lead && target && lead.status !== target.stage) {
-              move.mutate({
-                id: lead.id,
-                version: lead.version,
-                status: target.stage,
-              });
-            }
+            if (lead) dropLeadOn(column.stage, lead);
           },
         })}
       />
@@ -284,6 +487,32 @@ export function LeadBoard({
         <Button small onClick={loadMore}>
           {t("list.loadMore")}
         </Button>
+      )}
+      {/* Keyed by lead so a half-filled deal block for one never carries to
+          the next, the same reason the detail screen keys its pair. */}
+      {pending?.dialog === "qualify" && (
+        <QualifyDialog
+          key={`qualify-${pending.lead.id}`}
+          lead={pending.lead}
+          open
+          onClose={() => setPending(null)}
+          onQualified={() => {
+            setPending(null);
+            onMoved();
+          }}
+        />
+      )}
+      {pending?.dialog === "disqualify" && (
+        <DisqualifyDialog
+          key={`disqualify-${pending.lead.id}`}
+          lead={pending.lead}
+          open
+          onClose={() => setPending(null)}
+          onDisqualified={() => {
+            setPending(null);
+            onMoved();
+          }}
+        />
       )}
     </>
   );

@@ -85,6 +85,8 @@ components:
         - lead.merged
         - lead.sla_breached
         - lead.updated
+        - lead_source.changed
+        - lead_disqualify_reason.changed
         - activity.captured
         - activity.archived
         - activity.updated
@@ -1534,6 +1536,68 @@ components:
       description: Payload for lead.disqualified — a lead was disqualified. Carries no data.
       additionalProperties: false
 
+    PublicEventLeadSourceChanged:
+      type: object
+      x-event-type: lead_source.changed
+      x-entity-type: lead_source
+      x-version: 1
+      description: >-
+        Payload for lead_source.changed — a lead source was added, edited or
+        removed (people/leadsource.go). It rides the lead stream because the
+        source is a value every lead carries, so a subscriber that renders or
+        groups by source re-reads the catalog on this.
+
+        `key` and not `label`: the key is what leads carry and what a
+        subscriber keys its own cache by, and it is the only thing left to
+        identify the entry once `deleted` has removed it. The label is
+        mutable and still readable while the entry exists, so publishing it
+        here would invite a subscriber to trust a copy that can go stale.
+      required:
+        - source_id
+        - change
+        - key
+      properties:
+        source_id:
+          type: string
+          format: uuid
+        change:
+          type: string
+          enum: [created, updated, deleted]
+        key:
+          type: string
+          description: The stable key leads carry, which never changes for a given source.
+      additionalProperties: false
+
+    PublicEventLeadDisqualifyReasonChanged:
+      type: object
+      x-event-type: lead_disqualify_reason.changed
+      x-entity-type: lead_disqualify_reason
+      x-version: 1
+      description: >-
+        Payload for lead_disqualify_reason.changed — a disqualification reason
+        was added, edited or removed (people/leaddisqualifyreason.go). It rides
+        the lead stream for the reason its source sibling does: a subscriber
+        reporting on why leads were disqualified re-reads the catalog on this.
+
+        It carries `label` where the source carries `key`, because a reason has
+        no key — the label IS its identity, and after `deleted` it is the only
+        thing naming what went away.
+      required:
+        - reason_id
+        - change
+        - label
+      properties:
+        reason_id:
+          type: string
+          format: uuid
+        change:
+          type: string
+          enum: [created, updated, deleted]
+        label:
+          type: string
+          description: The reason's label, which is its only identifier.
+      additionalProperties: false
+
     PublicEventLeadPromoted:
       type: object
       x-event-type: lead.promoted
@@ -1978,7 +2042,7 @@ components:
     PublicEventForecastSnapshotCreated:
       type: object
       x-event-type: forecast.snapshot_created
-      x-entity-type: user
+      x-entity-type: forecast_snapshot
       x-version: 1
       description: >-
         Payload for forecast.snapshot_created — a set of readings was frozen, with the

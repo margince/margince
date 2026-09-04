@@ -134,6 +134,12 @@ func (h analyticsQueryHandlers) GetReportRun(
 // would drift the first time a measure was added.
 func queryFromWire(in crmcontracts.AnalyticsQuery) analyticsquery.Query {
 	out := analyticsquery.Query{Entity: in.Entity}
+	if in.ScopeKind != nil {
+		out.ScopeKind = *in.ScopeKind
+	}
+	if in.ScopeId != nil {
+		out.ScopeID = in.ScopeId.String()
+	}
 	if in.GroupBy != nil {
 		out.GroupBy = *in.GroupBy
 	}

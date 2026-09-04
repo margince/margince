@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { signIn } from "./waits";
 
 /**
  * The contact page against a LIVE stack, loaded in a real browser.
@@ -28,23 +29,6 @@ if (BASE_URL && !PERSON) {
 }
 
 const live = test.describe[BASE_URL ? "serial" : "skip"];
-
-async function signIn(page: Page) {
-  await page.goto("/#/login", { waitUntil: "networkidle" });
-  const email = page
-    .locator('input[type="email"], input[name="email"]')
-    .first();
-  if ((await email.count()) === 0) {
-    return;
-  }
-  await email.fill(process.env.E2E_EMAIL ?? "admin@demo.test");
-  await page
-    .locator('input[type="password"], input[name="password"]')
-    .first()
-    .fill(process.env.E2E_PASSWORD ?? "demo-password-123");
-  await page.locator('button[type="submit"]').first().click();
-  await expect(page.locator("nav.rail").first()).toBeVisible();
-}
 
 live("the contact page on live data", () => {
   test("loads without falling over", async ({ page }) => {

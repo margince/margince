@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/config"
 )
 
@@ -290,4 +291,25 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// other write on this server does.
 	s.wireReversal(pool)
 	s.wireProject360(pool)
+}
+
+// newConsentHandlers binds the consent surface to the four edges it cannot
+// reach for itself.
+//
+// DSR fulfillment executes privacy's erase path, and the subject-access export
+// assembles rows from every module that holds them — injected here so consent
+// never imports a sibling.
+//
+// The guard endpoint previews the same verdict the send path takes, so it
+// resolves the same jurisdiction windows. Without the country seam it would
+// answer on the core defaults while a pack shortened the real ones, and tell a
+// rep a send is allowed that the engine then refuses.
+func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
+	return consent.NewHandlers(InstallationDB(pool)).
+		WithEraser(privacy.NewEraser(InstallationDB(pool))).
+		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
+		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
+			return identity.InstallationNameForPublicPage(ctx, pool)
+		})).
+		WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf))
 }

@@ -39,17 +39,25 @@ type DealsFunc func(ctx context.Context, tx pgx.Tx, period Period, scope Scope, 
 // to identity.
 type PeriodFunc func(ctx context.Context, tx pgx.Tx, kind PeriodKind, at time.Time) (Period, string, error)
 
+// ResolveScopeFunc answers the population this caller may measure, refusing one
+// they may not. Injected, because deciding it reads teams and seats and this
+// module owns neither.
+type ResolveScopeFunc func(ctx context.Context, tx pgx.Tx, requested Scope) (Scope, error)
+
 // Handlers is the forecast's HTTP surface.
 type Handlers struct {
-	store  *Store
-	deals  DealsFunc
-	period PeriodFunc
-	now    func() time.Time
+	store   *Store
+	deals   DealsFunc
+	period  PeriodFunc
+	resolve ResolveScopeFunc
+	now     func() time.Time
 }
 
-// NewHandlers binds the routes to the store and its two seams.
-func NewHandlers(store *Store, deals DealsFunc, period PeriodFunc, now func() time.Time) Handlers {
-	return Handlers{store: store, deals: deals, period: period, now: now}
+// NewHandlers binds the routes to the store and its seams.
+func NewHandlers(
+	store *Store, deals DealsFunc, period PeriodFunc, resolve ResolveScopeFunc, now func() time.Time,
+) Handlers {
+	return Handlers{store: store, deals: deals, period: period, resolve: resolve, now: now}
 }
 
 // GetForecast answers the readings for one period.
@@ -149,8 +157,24 @@ func (h Handlers) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return err
 		}
+		// WHICH population this call is about, resolved against the caller's
+		// own authority rather than taken from the body.
+		//
+		// The RBAC gate asks whether this seat may create a forecast call, not
+		// which population they may assert one for — and `scope_kind` defaults
+		// to workspace, so a team-lens manager who sent no scope at all was
+		// creating the whole installation's standing forecast, and superseding
+		// whatever management had asserted. The editor is hidden for them in
+		// the app, which is a courtesy and not a check.
+		//
+		// Inside the transaction, so the authority that admitted the write is
+		// the authority that held when it committed.
+		allowed, err := h.resolve(ctx, tx, scope)
+		if err != nil {
+			return err
+		}
 		out, err = h.store.RecordCallTx(ctx, tx, NewCall{
-			Period: period, Scope: scope, AmountMinor: body.AmountMinor,
+			Period: period, Scope: allowed, AmountMinor: body.AmountMinor,
 			Currency: body.Currency, Note: derefString(body.Note),
 		})
 		return err

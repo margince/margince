@@ -113,6 +113,30 @@ func (s *AnalyticsShareStore) Issue(
 	if err := checkShareKind(in); err != nil {
 		return Share{}, "", err
 	}
+	// The ISSUER's authority over the population they are minting a link for.
+	//
+	// The kind check above asks only whether the scope's shape is coherent — a
+	// workspace scope names no subject, a team scope names one. It never asked
+	// whether this seat may measure the team it named, so a team-lens manager
+	// could issue a link to the whole installation's forecast and hand it to
+	// anybody. `forecast.create` does not answer that: it says they may make a
+	// share, not which population they may make one about.
+	//
+	// The answer replaces what was asked rather than only vetting it, so a
+	// scope resolved to something narrower is what the row records — a link
+	// must not say it is about a population its own reader never measured.
+	allowed, err := ForecastWritableScope(ctx, tx, in.Scope)
+	if err != nil {
+		return Share{}, "", err
+	}
+	in.Scope = allowed
+	// A snapshot share serves a FROZEN reading, and that reading was taken over
+	// one population. A link whose scope named a different one would label the
+	// stored numbers with a population nobody computed them for, and the
+	// recipient has no way to tell.
+	if err := checkSnapshotScope(ctx, tx, in); err != nil {
+		return Share{}, "", err
+	}
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return Share{}, "", err
@@ -211,6 +235,41 @@ func checkShareKind(in NewShare) error {
 			apperrors.ErrInvalidArgument, in.Kind)
 	}
 	return nil
+}
+
+// checkSnapshotScope holds a snapshot share's scope to the snapshot's own.
+//
+// Only for a snapshot share: a live share re-runs the reading under whoever
+// opens it, so its scope is a request rather than a claim about stored numbers.
+func checkSnapshotScope(ctx context.Context, tx pgx.Tx, in NewShare) error {
+	if in.Kind != shareKindSnapshot || in.SnapshotID == nil {
+		return nil
+	}
+	var kind string
+	var id *ids.UUID
+	if err := tx.QueryRow(ctx, `
+		SELECT scope_kind, scope_id FROM forecast_snapshot WHERE id = $1`,
+		*in.SnapshotID).Scan(&kind, &id); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		return fmt.Errorf("compose: reading the snapshot a share names: %w", err)
+	}
+	if kind != in.Scope.Kind || !sameScopeSubject(id, in.Scope.ID) {
+		return fmt.Errorf(
+			"%w: this snapshot was taken over a different population than the link claims",
+			apperrors.ErrInvalidArgument)
+	}
+	return nil
+}
+
+// sameScopeSubject compares two optional scope subjects, where absent is a
+// value — the workspace names none — rather than a missing one.
+func sameScopeSubject(a, b *ids.UUID) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
 }
 
 // Resolve turns a raw token into the share it opens, or answers not-found.

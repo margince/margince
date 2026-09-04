@@ -13,6 +13,7 @@ package people
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -288,5 +289,85 @@ func TestDisqualifyRecordsAnActiveReason(t *testing.T) {
 	}
 	if err := e.store.DeleteLeadDisqualifyReason(e.ctx, ids.UUID(custom.Id)); err != nil {
 		t.Errorf("deleting an unused custom reason err = %v, want nil", err)
+	}
+}
+
+// Every one of the six vocabulary mutations publishes, in the transaction that
+// writes the row.
+//
+// The audit row alone was the state before this: the change was recorded and
+// nothing downstream was told, so a subscriber caching the source list to
+// render or group by it kept serving an entry an admin had deleted. events.md
+// §5.3b — config changes are first-class facts, which is why pipeline.created
+// exists for the same kind of edit.
+//
+// It asserts the KEY on the wire and not just a row count. The count alone
+// passes if all three verbs publish the same payload, and `deleted` is exactly
+// the case where the key has to be right: the row is gone, so the event is the
+// only thing naming what a subscriber should drop.
+func TestEveryLeadVocabularyMutationPublishesItsChange(t *testing.T) {
+	e := setupPromoteConsent(t)
+
+	published := func(eventType string) []string {
+		t.Helper()
+		rows, err := e.store.db.Pool().Query(e.ctx, `
+			SELECT (envelope->'payload'->>'change') || ':' ||
+			       coalesce(envelope->'payload'->>'key', envelope->'payload'->>'label')
+			FROM event_outbox
+			WHERE envelope->>'type' = $1
+			ORDER BY id`, eventType)
+		if err != nil {
+			t.Fatalf("read outbox: %v", err)
+		}
+		defer rows.Close()
+		var out []string
+		for rows.Next() {
+			var s string
+			if err := rows.Scan(&s); err != nil {
+				t.Fatalf("scan: %v", err)
+			}
+			out = append(out, s)
+		}
+		if err := rows.Err(); err != nil {
+			t.Fatalf("rows: %v", err)
+		}
+		return out
+	}
+
+	source, err := e.store.CreateLeadSource(e.ctx, CreateLeadSourceInput{Label: "Webinar"})
+	if err != nil {
+		t.Fatalf("create source: %v", err)
+	}
+	renamed := "Webinar EMEA"
+	if _, err := e.store.UpdateLeadSource(e.ctx, ids.UUID(source.Id), UpdateLeadSourceInput{Label: &renamed}); err != nil {
+		t.Fatalf("update source: %v", err)
+	}
+	if err := e.store.DeleteLeadSource(e.ctx, ids.UUID(source.Id)); err != nil {
+		t.Fatalf("delete source: %v", err)
+	}
+	// The key, not the label, and unchanged by the rename: it is what a lead
+	// carries and what a subscriber has cached the entry under.
+	wantSources := []string{"created:webinar", "updated:webinar", "deleted:webinar"}
+	if got := published("lead_source.changed"); !slices.Equal(got, wantSources) {
+		t.Errorf("lead_source.changed = %v, want %v", got, wantSources)
+	}
+
+	reason, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: "No budget"})
+	if err != nil {
+		t.Fatalf("create reason: %v", err)
+	}
+	relabelled := "Budget withdrawn"
+	if _, err := e.store.UpdateLeadDisqualifyReason(e.ctx, ids.UUID(reason.Id), UpdateLeadDisqualifyReasonInput{Label: &relabelled}); err != nil {
+		t.Fatalf("update reason: %v", err)
+	}
+	if err := e.store.DeleteLeadDisqualifyReason(e.ctx, ids.UUID(reason.Id)); err != nil {
+		t.Fatalf("delete reason: %v", err)
+	}
+	// The label FOLLOWS the rename here, where the source's key did not: a
+	// reason has no key, so the label is its identity and a stale one would
+	// name something that no longer exists.
+	wantReasons := []string{"created:No budget", "updated:Budget withdrawn", "deleted:Budget withdrawn"}
+	if got := published("lead_disqualify_reason.changed"); !slices.Equal(got, wantReasons) {
+		t.Errorf("lead_disqualify_reason.changed = %v, want %v", got, wantReasons)
 	}
 }

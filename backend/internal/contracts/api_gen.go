@@ -16744,6 +16744,22 @@ type AnalyticsQuery struct {
 	// Save Keep this answer so a report sentence can cite it, returning `run_id`. Opt-in rather than automatic: most queries are somebody exploring, and saving every one would fill the table with results nothing will ever point at.
 	// A saved run fixes WHAT WAS ASKED, not who may see it — reading one re-asks the question under the reader's own authority.
 	Save *bool `json:"save,omitempty"`
+
+	// ScopeId The team or seat to measure, for `scope_kind` `team` or `owner`.
+	ScopeId *openapi_types.UUID `json:"scope_id,omitempty"`
+
+	// ScopeKind `workspace`, `team` or `owner` — the same vocabulary `AnalyticsScope.kind` answers in,
+	// minus `managed_teams`, which is RESOLVED and never requested (a caller names one team,
+	// or names nothing and is given it). No enum here on purpose: the resolver is the
+	// authority on what this seat may measure, and a second list would be a second answer to
+	// that, refusing on shape what it should refuse on authority.
+	//
+	// Which population to measure, resolved against the caller's own lens. Omitted asks for
+	// their default — a rep's own records, a manager's teams — never the whole installation.
+	//
+	// A scope wider than the caller may measure is REFUSED rather than narrowed, so an answer
+	// never quietly means something other than what was asked.
+	ScopeKind *string `json:"scope_kind,omitempty"`
 }
 
 // AnalyticsSchema The populations and fields one caller may ask about.
@@ -18379,6 +18395,21 @@ type CaptureActivityResponse struct {
 	WindowHours int `json:"window_hours"`
 }
 
+// CaptureClassifierHealth The sender queue as a whole, across every mailbox.
+type CaptureClassifierHealth struct {
+	// Exhausted Out of attempts, so nothing will ask again without a human.
+	Exhausted               int  `json:"exhausted"`
+	OldestPendingAgeSeconds *int `json:"oldest_pending_age_seconds,omitempty"`
+
+	// Pending Asked and not yet answered.
+	Pending int `json:"pending"`
+
+	// Unsure Answered "cannot tell" and waiting for a human. An installation with no model
+	// configured retires every row here, so a large number beside a small `pending`
+	// says the machine is not running rather than that the mail is hard.
+	Unsure int `json:"unsure"`
+}
+
 // CaptureConnection A per-user mail/calendar capture connection + sync state (capture.md CAP-DDL-2). The
 // credential itself is NEVER in this shape — it lives encrypted in the vault, referenced only
 // server-side by `credential_ref`.
@@ -18537,6 +18568,45 @@ type CaptureExclusionListResponse struct {
 
 // CaptureExclusionScope Whose rule it is — the installation's, or the caller's own for the mailbox they connected.
 type CaptureExclusionScope string
+
+// CaptureHealth What capture's judgement queues are holding, for an administrator asking whether
+// anything is stuck.
+//
+// COUNTS AND AGES ONLY. Never a subject, a body, or the reason a thread was held —
+// those describe the correspondence, which is what the capture-privacy boundary
+// exists to protect, and an operational page is not an exemption from it. A mailbox
+// is named because an administrator cannot act on "somewhere in the installation";
+// what is waiting inside it is not named at all.
+type CaptureHealth struct {
+	// Classifier The sender queue as a whole, across every mailbox.
+	Classifier  CaptureClassifierHealth `json:"classifier"`
+	GeneratedAt time.Time               `json:"generated_at"`
+
+	// Mailboxes One row per mailbox owner with anything waiting. A mailbox with a clear queue is absent.
+	Mailboxes []CaptureMailboxHealth `json:"mailboxes"`
+}
+
+// CaptureMailboxHealth defines model for CaptureMailboxHealth.
+type CaptureMailboxHealth struct {
+	// ContactsAwaitingDecision Captured contacts that are still owner-private because nothing has answered the
+	// sender question about them. These are invisible to everyone but their owner —
+	// not even an administrator — so a count is the only thing this page can say, and
+	// a growing one is the signal that nobody is answering.
+	ContactsAwaitingDecision int `json:"contacts_awaiting_decision"`
+
+	// DisplayName The owner's name; absent if the caller may not read it.
+	DisplayName *string `json:"display_name,omitempty"`
+
+	// OldestContactAgeSeconds How long the oldest of them has been waiting. Null when none are.
+	OldestContactAgeSeconds *int `json:"oldest_contact_age_seconds,omitempty"`
+	OldestThreadAgeSeconds  *int `json:"oldest_thread_age_seconds,omitempty"`
+
+	// ThreadsAwaitingVerdict Threads whose confidentiality question is still open, so their messages stay held.
+	ThreadsAwaitingVerdict int `json:"threads_awaiting_verdict"`
+
+	// UserId The mailbox owner.
+	UserId openapi_types.UUID `json:"user_id"`
+}
 
 // CaptureOwnerIdentity defines model for CaptureOwnerIdentity.
 type CaptureOwnerIdentity struct {
@@ -29796,7 +29866,23 @@ type ReportCell struct {
 type ReportDerivation struct {
 	// Aggregates The requested aggregates recomputed over exactly these source rows — equals the explained cell.
 	Aggregates *map[string]interface{} `json:"aggregates,omitempty"`
-	Columns    []string                `json:"columns"`
+
+	// AsOf The instant these figures were computed at — the moment any currency conversion read the
+	// rate sheet, not the moment this response was assembled (`generated_at`).
+	//
+	// When the handle pinned an instant this is the one the explained number was computed at, so
+	// the detail reconciles to its headline. When it did not, this is a fresh reading and
+	// `as_of_pinned` is false.
+	AsOf *time.Time `json:"as_of,omitempty"`
+
+	// AsOfPinned Whether the handle carried the instant the explained number was computed at.
+	//
+	// False means the link predates that key, so these figures were recomputed at a NEW moment
+	// and a rate sheet effective in between will make them disagree with the number they explain.
+	// A reader opening a drill-through is checking a figure they already doubt, so a detail set
+	// that quietly reconciles to something else is worse than none.
+	AsOfPinned *bool    `json:"as_of_pinned,omitempty"`
+	Columns    []string `json:"columns"`
 
 	// Definition Plain-language reading of the exact filter + group + aggregate that produced the number.
 	Definition string `json:"definition"`
@@ -34583,6 +34669,10 @@ type GetAvailabilityParams struct {
 
 // BookMeetingJSONBody defines parameters for BookMeeting.
 type BookMeetingJSONBody struct {
+	// AttendeeEmails Who the meeting is with. **Accepted and not delivered to**: nothing in this
+	// build emails these addresses or adds them to a calendar event, and the
+	// created activity does not carry them either. Supply them for the caller's
+	// own record of intent, and tell the attendee yourself.
 	AttendeeEmails *[]openapi_types.Email `json:"attendee_emails,omitempty"`
 
 	// Consent The consent passthrough every capture surface (booking, public forms, imports) must carry
@@ -47170,6 +47260,9 @@ type ServerInterface interface {
 	// One reading's progress and outcome — how many lines it addressed, what it staged, and why it produced nothing.
 	// (GET /activities/{id}/transcript-proposals/{readId})
 	GetTranscriptRead(w http.ResponseWriter, r *http.Request, id Id, readId openapi_types.UUID)
+	// What capture's judgement queues are holding, and in whose mailbox.
+	// (GET /admin/capture-health)
+	GetCaptureHealth(w http.ResponseWriter, r *http.Request)
 	// What the background system is holding, and whose work failed.
 	// (GET /admin/job-health)
 	GetJobHealth(w http.ResponseWriter, r *http.Request)
@@ -49000,6 +49093,12 @@ func (_ Unimplemented) GetLatestTranscriptRead(w http.ResponseWriter, r *http.Re
 // One reading's progress and outcome — how many lines it addressed, what it staged, and why it produced nothing.
 // (GET /activities/{id}/transcript-proposals/{readId})
 func (_ Unimplemented) GetTranscriptRead(w http.ResponseWriter, r *http.Request, id Id, readId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What capture's judgement queues are holding, and in whose mailbox.
+// (GET /admin/capture-health)
+func (_ Unimplemented) GetCaptureHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -53662,6 +53761,26 @@ func (siw *ServerInterfaceWrapper) GetTranscriptRead(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetTranscriptRead(w, r, id, readId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCaptureHealth operation middleware
+func (siw *ServerInterfaceWrapper) GetCaptureHealth(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCaptureHealth(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -77702,6 +77821,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activities/{id}/transcript-proposals/{readId}", wrapper.GetTranscriptRead)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/capture-health", wrapper.GetCaptureHealth)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/job-health", wrapper.GetJobHealth)

@@ -62,7 +62,9 @@ describe("a band holding nothing says so", () => {
     renderWorklist("en");
 
     expect(await screen.findByText("Nothing needs you today.")).toBeTruthy();
-    expect(screen.getByText("Nothing to review.")).toBeTruthy();
+    // A band that stays in the day. `review` is drawn in its own panel below
+    // now, so it declares no empty run here.
+    expect(screen.getByText("No new pipeline work waiting.")).toBeTruthy();
   });
 
   // And the heading above it, so the line is attributed. A line saying
@@ -74,7 +76,7 @@ describe("a band holding nothing says so", () => {
 
     await screen.findByText("Nothing needs you today.");
     expect(headings()).toContain("Now");
-    expect(headings()).toContain("Review");
+    expect(headings()).toContain("Build pipeline");
   });
 
   // Each band says what the reader is clear OF. Four copies of one generic
@@ -84,12 +86,13 @@ describe("a band holding nothing says so", () => {
     renderWorklist("en");
 
     await screen.findByText("Nothing needs you today.");
-    for (const line of [
-      "No new pipeline work waiting.",
-      "Nothing to review.",
-    ]) {
+    for (const line of ["No new pipeline work waiting."]) {
       expect(screen.queryByText(line)).toBeTruthy();
     }
+    // NOT the review band's line, and this is the split rather than a gap:
+    // judgements are drawn in their own panel below the day, so a heading for
+    // them inside it would stand over nothing while that work sits underneath.
+    expect(screen.queryByText("Nothing to review.")).toBeNull();
     // And NOT the line for the band that holds a row.
     expect(screen.queryByText("Nothing agreed is drifting.")).toBeNull();
   });

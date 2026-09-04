@@ -799,6 +799,15 @@ function ExplainCard({
           </div>
         </>
       )}
+      {/* A link minted before the handle carried an instant — an old one, or one
+          a reader saved. The figures below were recomputed at a NEW moment, so
+          a rate sheet effective in between makes them disagree with the number
+          they explain. Said plainly: this is opened by someone checking a
+          figure they already doubt, and a detail that quietly reconciles to
+          something else reads as proof rather than as a discrepancy. */}
+      {query.data?.as_of_pinned === false && (
+        <p className="surfacestate-stale">{t("explain.mayHaveMoved")}</p>
+      )}
       {query.data && (
         <DerivationRows derivation={query.data} baseCurrency={baseCurrency} />
       )}

@@ -161,7 +161,7 @@ export const en = {
   "autonomy.confirm": "confirm-first",
 
   "nav.home": "Brief",
-  "nav.contacts": "Contacts",
+  "nav.contacts": "People",
   "nav.companies": "Companies",
   "nav.leads": "Leads",
   "nav.deals": "Pipeline",
@@ -283,6 +283,8 @@ export const en = {
   "common.close": "Close",
 
   "explain.open": "Explain this number",
+  "explain.mayHaveMoved":
+    "This link does not say when the number was worked out, so these figures were recalculated just now. If an exchange rate changed in between, they may not add up to the number you clicked.",
   "explain.title": "How this number is built",
   "explain.rate": "rate {rate} on {date}",
 
@@ -622,7 +624,7 @@ export const en = {
   "table.none": "No {unit} yet.",
   "table.actions": "Actions",
   "table.rangeLoaded": "{first}–{last} of {count} {unit} loaded so far",
-  "unit.contacts": "contacts",
+  "unit.contacts": "people",
   "unit.companies": "companies",
   "unit.deals": "deals",
   "unit.leads": "leads",
@@ -821,6 +823,7 @@ export const en = {
   "consent.noPurposes": "This organization tracks no consent purposes yet.",
   "consent.defaultDeny":
     "Outbound is default-deny per purpose: a send is blocked unless an active, proven grant exists for that purpose. A grant for one purpose never authorizes another.",
+  "consent.basis": "Basis: {basis}",
   "consent.proofLog": "Proof log",
   "consent.proofEmpty":
     "No consent decision recorded for this purpose. An empty log is honest, not a gap.",
@@ -836,7 +839,7 @@ export const en = {
   "org.name": "Company",
   "org.description": "What they do",
   "org.website": "Website",
-  "org.contactCount": "Contacts",
+  "org.contactCount": "People",
   "org.openDealCount": "Open deals",
   // Offered only where there is no partner programme yet: the tab that holds
   // the form appears once one exists, so this is how the first one is made.
@@ -2114,8 +2117,12 @@ export const en = {
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
   "lead.callNotInOverlay":
     "This lead is a mirror of the system of record, which takes no activity from here \u2014 log the call where the record lives.",
+  "lead.boardCountsUnavailable":
+    "The Qualified and Disqualified counts could not be read.",
+  "lead.boardTerminalRowsUnavailable":
+    "These leads could not be read. The count above still stands.",
   "lead.boardTerminalOnly":
-    "The board shows open leads only. These leads are promoted or disqualified.",
+    "None of these leads are still open \u2014 they are counted under Qualified and Disqualified.",
   "person.fromLead": "From lead",
   "lead.promotedTitle": "Promoted to a contact",
   "lead.promotedMerged":
@@ -3645,7 +3652,7 @@ export const en = {
   "import.objectLabel": "What the rows are",
   "import.object.lead": "Prospects",
   "import.object.organization": "Companies",
-  "import.object.person": "Contacts",
+  "import.object.person": "People",
   "import.objectHint.lead":
     "An unworked list lands as leads for a human to qualify before anyone treats them as contacts.",
   "import.objectHint.organization":
@@ -5466,7 +5473,9 @@ export const en = {
   "book.attendee": "Attendee email",
   "book.welcomeBack": "Recognized: {name}",
   "book.subject": "Meeting via Margince",
-  "book.confirmed": "Booked. The invite is on its way.",
+  "book.confirmed": "Booked.",
+  "book.tellThemYourself":
+    "Margince does not send the invite — tell your attendee the time yourself.",
   "book.failed": "Booking didn't go through — nothing was scheduled.",
   "book.publicSub": "pick a slot — no account needed",
   "book.name": "Your name",
@@ -6339,7 +6348,7 @@ export const en = {
   "users.createTeam": "Create team",
   "users.access.title": "What this user sees",
   "users.access.identity":
-    "Reads every contact, company, lead and deal in the organization.",
+    "Reads every person, company, lead and deal in the organization.",
   "users.access.writesAll": "Edits every record.",
   "users.access.writesTeam":
     "Edits their own records and those of the teams {teams}.",
@@ -6350,7 +6359,7 @@ export const en = {
   "users.access.read": "read",
   "users.access.write": "write",
   "users.access.delete": "delete",
-  "users.access.object.person": "Contacts",
+  "users.access.object.person": "People",
   "users.access.object.organization": "Companies",
   "users.access.object.lead": "Leads",
   "users.access.object.deal": "Deals",
@@ -7743,7 +7752,7 @@ export const en = {
   "filters.subtitle":
     "Build a filter, watch what it selects, and save it as a view.",
   "filters.objectLabel": "Which records to filter",
-  "filters.tab.contacts": "Contacts",
+  "filters.tab.contacts": "People",
   "filters.tab.companies": "Companies",
   "filters.tab.deals": "Deals",
   "filters.builderTitle": "Filter",
@@ -7982,6 +7991,7 @@ export const en = {
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Reading your day…",
   "worklist.queue": "Today",
+  "worklist.review": "To review",
   "worklist.more": "Show more",
   "worklist.more.failed": "Could not load more. Try again.",
   "worklist.summary":
@@ -8251,6 +8261,9 @@ export const en = {
   "worklist.verb.acknowledge": "Got it",
   "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
   "worklist.verb.completeFailed": "That task could not be completed.",
+  "worklist.verb.completed": "Task done.",
+  "worklist.verb.completeUndo": "Undo",
+  "worklist.verb.completeUndoFailed": "That task could not be reopened.",
   // The frame states the fact and the source follows it, rather than the
   // source standing as the subject. `sourceName` returns a row TITLE — "A
   // mailbox connection needs attention", "Two records look like the same one"

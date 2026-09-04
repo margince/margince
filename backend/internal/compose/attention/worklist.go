@@ -18,6 +18,7 @@ package attention
 import (
 	"context"
 	"sort"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -180,71 +181,6 @@ func (s *Service) Worklist(
 	return out, nil
 }
 
-// candidateRows gathers what the day could show, from the three sources that
-// feed it, each with the crowding mark it applies past its own lead.
-//
-// Lifted out of worklistFrom because it is the part with no page in view:
-// nothing here reads the filter, the limit or the cursor, and nothing after it
-// ADDS a row. Everything that follows narrows — dedupe, pins, scope, category,
-// the cut — over a set this decides once.
-func (s *Service) candidateRows(
-	ctx context.Context, day crmcontracts.Attention, scope string,
-	waiting waitingRead, leads leadRead,
-) []ranked {
-	rows := classifyDay(day, day.AsOf, s.money)
-	// Longest wait first, so the few that LEAD are the ones most likely to have
-	// been forgotten rather than whichever the database returned first.
-	waits := make([]ranked, 0, len(waiting.rows))
-	for _, customer := range waiting.rows {
-		waits = append(waits, classifyWaiting(customer, day.AsOf))
-	}
-	sort.SliceStable(waits, func(i, j int) bool {
-		return waits[i].occurredAt.Before(waits[j].occurredAt)
-	})
-	// Narrowed BEFORE the crowding mark, through the same filters every other
-	// source is narrowed by. Crowding is a fact about position — the ninth wait
-	// on THIS page — so marking it over rows the scope then removes would demote
-	// a reader's second waiting customer for standing behind seven of a
-	// colleague's.
-	//
-	// One spelling for one rule. This loop used to judge ownership itself, in
-	// terms of the WaitingCustomer rather than the ranked row, which is how the
-	// two ended up disagreeing: a named owner's queue dropped every wait because
-	// the filter below could not see an owner this loop could.
-	waits = s.narrowToScope(ctx, waits, scope, s.taskOwner)
-	for i, row := range waits {
-		// Past the lead, a wait sorts BELOW the other kinds without ceasing to
-		// be one: its level still says a customer is waiting, because that is
-		// what it is and the summary counts on it. What changes is only where
-		// it sits, through the ordering's own last tiebreak.
-		//
-		// Rewriting the level instead would have told the reader the ninth
-		// waiting customer was agreed work, while the row went on saying a
-		// buyer wrote last — the page contradicting itself.
-		if i >= waitingLead {
-			row.crowded = true
-		}
-		rows = append(rows, row)
-	}
-	// The leads still owed a first reply, ranked among everything else rather
-	// than in a queue of their own. Longest overdue first, so the few that LEAD
-	// are the ones most likely to have been forgotten.
-	sort.SliceStable(leads.rows, func(i, j int) bool {
-		return leads.rows[i].DeadlineAt.Before(leads.rows[j].DeadlineAt)
-	})
-	for i, lead := range leads.rows {
-		row := classifyLead(lead, day.AsOf)
-		// Past the lead, an overdue lead sorts BELOW the other kinds without
-		// ceasing to be one — the same treatment a ninth waiting customer gets,
-		// and for the same reason: its level still states the fact.
-		if i >= leadLead {
-			row.crowded = true
-		}
-		rows = append(rows, row)
-	}
-	return rows
-}
-
 // worklistFrom projects an already-assembled day, so a test can drive the
 // ranking, the paging and the summary without standing up every lane's reader.
 func (s *Service) worklistFrom(
@@ -262,7 +198,9 @@ func (s *Service) worklistFrom(
 	if limit > worklistMaxPage {
 		limit = worklistMaxPage
 	}
-	rows := s.candidateRows(ctx, day, scope, waiting, leads)
+	rows := classifyDay(day, day.AsOf, s.money)
+	rows = append(rows, s.rankedWaits(ctx, waiting, day.AsOf, scope)...)
+	rows = append(rows, rankedLeads(leads, day.AsOf)...)
 	// One unanswered message is one row: the deal it belongs to does not also
 	// appear as drifting.
 	rows = dropDealsAlreadyWaiting(rows)
@@ -437,6 +375,68 @@ func (s *Service) worklistFrom(
 	// would be a claim about a walk that does not exist.
 	if state := walk.state(); state != nil {
 		out.Walk = state
+	}
+	return out
+}
+
+// rankedWaits ranks the customers waiting on us, newest wait last.
+//
+// Longest wait first, so the few that LEAD are the ones most likely to have
+// been forgotten rather than whichever the database returned first.
+//
+// NARROWED BEFORE THE CROWDING MARK, through the same filters every other
+// source is narrowed by. Crowding is a fact about position — the ninth wait on
+// THIS page — so marking it over rows the scope then removes would demote a
+// reader's second waiting customer for standing behind seven of a colleague's.
+//
+// One spelling for one rule. This used to judge ownership itself, in terms of
+// the WaitingCustomer rather than the ranked row, which is how the two ended up
+// disagreeing: a named owner's queue dropped every wait because the caller's
+// filter could not see an owner this loop could.
+func (s *Service) rankedWaits(
+	ctx context.Context, waiting waitingRead, asOf time.Time, scope string,
+) []ranked {
+	waits := make([]ranked, 0, len(waiting.rows))
+	for _, customer := range waiting.rows {
+		waits = append(waits, classifyWaiting(customer, asOf))
+	}
+	sort.SliceStable(waits, func(i, j int) bool {
+		return waits[i].occurredAt.Before(waits[j].occurredAt)
+	})
+	waits = s.narrowToScope(ctx, waits, scope, s.taskOwner)
+	for i := range waits {
+		// Past the lead, a wait sorts BELOW the other kinds without ceasing to
+		// be one: its level still says a customer is waiting, because that is
+		// what it is and the summary counts on it. What changes is only where
+		// it sits, through the ordering's own last tiebreak.
+		//
+		// Rewriting the level instead would have told the reader the ninth
+		// waiting customer was agreed work, while the row went on saying a
+		// buyer wrote last — the page contradicting itself.
+		if i >= waitingLead {
+			waits[i].crowded = true
+		}
+	}
+	return waits
+}
+
+// rankedLeads ranks the leads still owed a first reply, among everything else
+// rather than in a queue of their own. Longest overdue first, so the few that
+// LEAD are the ones most likely to have been forgotten.
+func rankedLeads(leads leadRead, asOf time.Time) []ranked {
+	sort.SliceStable(leads.rows, func(i, j int) bool {
+		return leads.rows[i].DeadlineAt.Before(leads.rows[j].DeadlineAt)
+	})
+	out := make([]ranked, 0, len(leads.rows))
+	for i, lead := range leads.rows {
+		row := classifyLead(lead, asOf)
+		// Past the lead, an overdue lead sorts BELOW the other kinds without
+		// ceasing to be one — the same treatment a ninth waiting customer gets,
+		// and for the same reason: its level still states the fact.
+		if i >= leadLead {
+			row.crowded = true
+		}
+		out = append(out, row)
 	}
 	return out
 }

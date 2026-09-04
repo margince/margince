@@ -276,6 +276,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/capture-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What capture's judgement queues are holding, and in whose mailbox.
+         * @description Admin-only. Reports how much is waiting on a sender decision or a thread verdict, by mailbox, plus the classifier queue as a whole. COUNTS AND AGES ONLY — never a subject, a body, or the reason a thread was held: those describe the correspondence, and an operational page is not an exemption from the capture-privacy boundary.
+         *
+         *     The contacts it counts are owner-private and invisible to an administrator by design (the importing user only, not even Admin) — which is exactly why a count is worth serving: nobody could otherwise tell that a backlog exists. Human session only (x-agent-access: human-only).
+         */
+        get: operations["getCaptureHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/passports": {
         parameters: {
             query?: never;
@@ -3980,7 +4002,11 @@ export interface paths {
         put?: never;
         /**
          * Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
-         * @description Creates a calendar event and sends an invite. It RUNS DIRECTLY (ADR-0055), on the
+         * @description Records the meeting on the timeline. **No invite is sent — this build has no outbound
+         *     calendar or mail transport behind a booking**, so whoever books it has to tell the
+         *     attendee themselves. The calendar integrations are capture-only (inbound import).
+         *
+         *     It RUNS DIRECTLY (ADR-0055), on the
          *     passport holder's own authority; booking onto ANOTHER host's calendar still takes admin,
          *     the same check the app applies. An installation that wants bookings confirmed sets a
          *     tier floor on `book_meeting`. On success a
@@ -23995,6 +24021,25 @@ export interface components {
         AnalyticsQuery: {
             /** @description The population, by name. */
             entity: string;
+            /**
+             * @description `workspace`, `team` or `owner` — the same vocabulary `AnalyticsScope.kind` answers in,
+             *     minus `managed_teams`, which is RESOLVED and never requested (a caller names one team,
+             *     or names nothing and is given it). No enum here on purpose: the resolver is the
+             *     authority on what this seat may measure, and a second list would be a second answer to
+             *     that, refusing on shape what it should refuse on authority.
+             *
+             *     Which population to measure, resolved against the caller's own lens. Omitted asks for
+             *     their default — a rep's own records, a manager's teams — never the whole installation.
+             *
+             *     A scope wider than the caller may measure is REFUSED rather than narrowed, so an answer
+             *     never quietly means something other than what was asked.
+             */
+            scope_kind?: string;
+            /**
+             * Format: uuid
+             * @description The team or seat to measure, for `scope_kind` `team` or `owner`.
+             */
+            scope_id?: string;
             /** @description The dimensions. Omitted is a single-row answer over the whole population, which is a real question rather than a missing one. */
             group_by?: string[];
             /** @description What to compute. At least one — a query with none asks for group keys and nothing beside them, which is a list rather than an analytic question. */
@@ -24313,6 +24358,58 @@ export interface components {
         /** @description The composed extension set, sorted by name. Not paginated, for the same reason `RoleDirectory` is not: the set is fixed at build time and small by construction. */
         ExtensionDirectory: {
             extensions: components["schemas"]["ComposedExtension"][];
+        };
+        /**
+         * @description What capture's judgement queues are holding, for an administrator asking whether
+         *     anything is stuck.
+         *
+         *     COUNTS AND AGES ONLY. Never a subject, a body, or the reason a thread was held —
+         *     those describe the correspondence, which is what the capture-privacy boundary
+         *     exists to protect, and an operational page is not an exemption from it. A mailbox
+         *     is named because an administrator cannot act on "somewhere in the installation";
+         *     what is waiting inside it is not named at all.
+         */
+        CaptureHealth: {
+            /** Format: date-time */
+            generated_at: string;
+            /** @description One row per mailbox owner with anything waiting. A mailbox with a clear queue is absent. */
+            mailboxes: components["schemas"]["CaptureMailboxHealth"][];
+            classifier: components["schemas"]["CaptureClassifierHealth"];
+        };
+        CaptureMailboxHealth: {
+            /**
+             * Format: uuid
+             * @description The mailbox owner.
+             */
+            user_id: string;
+            /** @description The owner's name; absent if the caller may not read it. */
+            display_name?: string;
+            /**
+             * @description Captured contacts that are still owner-private because nothing has answered the
+             *     sender question about them. These are invisible to everyone but their owner —
+             *     not even an administrator — so a count is the only thing this page can say, and
+             *     a growing one is the signal that nobody is answering.
+             */
+            contacts_awaiting_decision: number;
+            /** @description How long the oldest of them has been waiting. Null when none are. */
+            oldest_contact_age_seconds?: number | null;
+            /** @description Threads whose confidentiality question is still open, so their messages stay held. */
+            threads_awaiting_verdict: number;
+            oldest_thread_age_seconds?: number | null;
+        };
+        /** @description The sender queue as a whole, across every mailbox. */
+        CaptureClassifierHealth: {
+            /** @description Asked and not yet answered. */
+            pending: number;
+            /**
+             * @description Answered "cannot tell" and waiting for a human. An installation with no model
+             *     configured retires every row here, so a large number beside a small `pending`
+             *     says the machine is not running rather than that the mail is hard.
+             */
+            unsure: number;
+            /** @description Out of attempts, so nothing will ask again without a human. */
+            exhausted: number;
+            oldest_pending_age_seconds?: number | null;
         };
         JobHealth: {
             /** Format: date-time */
@@ -24750,6 +24847,25 @@ export interface components {
             excluded_by_permission?: number | null;
             /** Format: date-time */
             generated_at?: string;
+            /**
+             * Format: date-time
+             * @description The instant these figures were computed at — the moment any currency conversion read the
+             *     rate sheet, not the moment this response was assembled (`generated_at`).
+             *
+             *     When the handle pinned an instant this is the one the explained number was computed at, so
+             *     the detail reconciles to its headline. When it did not, this is a fresh reading and
+             *     `as_of_pinned` is false.
+             */
+            as_of?: string;
+            /**
+             * @description Whether the handle carried the instant the explained number was computed at.
+             *
+             *     False means the link predates that key, so these figures were recomputed at a NEW moment
+             *     and a rate sheet effective in between will make them disagree with the number they explain.
+             *     A reader opening a drill-through is checking a figure they already doubt, so a detail set
+             *     that quietly reconciles to something else is worse than none.
+             */
+            as_of_pinned?: boolean;
         };
         SearchResult: {
             /** @enum {string} */
@@ -30831,6 +30947,36 @@ export interface operations {
             };
         };
     };
+    getCaptureHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The workspace's capture-queue health. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureHealth"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a human without the admin role. Not an object/action RBAC grant denial. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listPassports: {
         parameters: {
             query?: never;
@@ -36725,6 +36871,12 @@ export interface operations {
                     /** Format: date-time */
                     end: string;
                     subject?: string;
+                    /**
+                     * @description Who the meeting is with. **Accepted and not delivered to**: nothing in this
+                     *     build emails these addresses or adds them to a calendar event, and the
+                     *     created activity does not carry them either. Supply them for the caller's
+                     *     own record of intent, and tell the attendee yourself.
+                     */
                     attendee_emails?: string[];
                     /**
                      * @description Entities to associate the resulting meeting activity with. Each one is

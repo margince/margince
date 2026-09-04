@@ -115,6 +115,10 @@ func (stubs) GetTranscriptRead(w nethttp.ResponseWriter, r *nethttp.Request, id 
 	httperr.NotImplemented(w, r, "GetTranscriptRead")
 }
 
+func (stubs) GetCaptureHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetCaptureHealth")
+}
+
 func (stubs) GetJobHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetJobHealth")
 }

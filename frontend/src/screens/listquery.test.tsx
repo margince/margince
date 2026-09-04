@@ -566,7 +566,7 @@ describe("ListTable: pending, error and empty states", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
 
-    await screen.findByRole("cell", { name: "No Contacts yet." });
+    await screen.findByRole("cell", { name: "No People yet." });
   });
 
   it("renders the table's own empty state once the list loads with no rows", async () => {
@@ -575,7 +575,7 @@ describe("ListTable: pending, error and empty states", () => {
     );
     render(<ListTableHarness fetchPage={fetchPage} />);
 
-    await screen.findByRole("cell", { name: "No Contacts yet." });
+    await screen.findByRole("cell", { name: "No People yet." });
   });
 });
 

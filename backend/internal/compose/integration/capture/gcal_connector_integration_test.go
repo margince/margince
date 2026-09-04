@@ -30,12 +30,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// gcalStubAttendee is the external party on the stub's captured meeting. Named
-// because a second suite reads the meeting this stub lands and has to be talking
-// about the same person: the capture ladder's proof that a guest becomes a
-// contact turns on the address the calendar wrote.
-const gcalStubAttendee = "buyer@acme.com"
-
 // gcalStub answers the Calendar endpoints the connector calls with one external
 // meeting (captured) and one all-internal meeting (skipped), plus a syncToken —
 // so a first sync captures exactly one activity and the cursor advances.
@@ -68,7 +62,7 @@ func gcalStub(t *testing.T, owner string) *httptest.Server {
 					// bare address is ever given a full name.
 					"attendees": []map[string]string{
 						{"email": owner},
-						{"email": gcalStubAttendee, "displayName": "Robin Buyer"},
+						{"email": "buyer@acme.com", "displayName": "Robin Buyer"},
 					},
 				},
 				{

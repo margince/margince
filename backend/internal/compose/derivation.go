@@ -88,6 +88,18 @@ type derivationOutcome struct {
 	// nil when no mask applied, exactly like the report envelope it explains.
 	ExcludedByPermission *int
 	GeneratedAt          time.Time
+	// AsOf is the instant these figures were computed at: the headline's when
+	// the handle pinned one, and a fresh reading when it did not.
+	AsOf time.Time
+	// AsOfPinned says which of those it was.
+	//
+	// The pin makes a detail reconcile to its headline. It cannot do that for a
+	// link minted before the key existed, or saved before it — and there is no
+	// way to recover the instant such a link was made at. Recomputing is the
+	// only thing left, so the answer says it recomputed. Silence here is the
+	// failure the pin exists to prevent, arriving by a different route: figures
+	// that do not add up to the number above them, presented as though they do.
+	AsOfPinned bool
 }
 
 // derivationURL mints the handle for one aggregate row (or, with a nil
@@ -268,6 +280,7 @@ func (e *reportEngine) Derive(ctx context.Context, report string, q derivationQu
 		Columns:     slices.Clone(plan.columns),
 		Aggregates:  map[string]any{},
 		GeneratedAt: time.Now().UTC(),
+		AsOfPinned:  !q.AsOf.IsZero(),
 	}
 	if err := e.fetchDerivation(ctx, report, spec, plan, &out); err != nil {
 		return derivationOutcome{}, err

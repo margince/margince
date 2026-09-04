@@ -242,6 +242,13 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, sin
 // forges by choosing a string: attendance is a list, and the calendar mapper is
 // what leaves the field unset.
 //
+// Capture's read of the same rows answers the forged word differently, and the
+// difference is structural rather than a disagreement: it runs inside the
+// capture transaction, so it can leave the row under judgement out of the answer
+// that outranks a judgement (capture's metInPersonTx). This one reads long after
+// that row was written and has nothing to leave out, so the shape is what it
+// has.
+//
 // The meeting must not have been DECLINED or abandoned. meeting_status carries
 // `no_show` and `canceled`, and neither is a meeting that happened: an invitation
 // somebody declined is the opposite of evidence they welcome contact. NULL is

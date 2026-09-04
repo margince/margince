@@ -162,4 +162,189 @@ describe("lead work-board presentation", () => {
     await waitFor(() => expect(invalidated).toContainEqual(["lead", lead.id]));
     expect(await screen.findByText(/moved this lead/)).toBeTruthy();
   });
+  // The two terminal columns exist, are folded, and state a figure the board's
+  // own page cannot see.
+  //
+  // A promoted or disqualified lead is ARCHIVED, and `rows` never contains
+  // one — so a column counting its cards would read 0 however many leads had
+  // passed through. The figure comes from the leads-by-status report, which is
+  // the only lead read that counts archived rows.
+  it("folds the terminal columns and counts them from the report, not the page", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonOk({
+          rows: [
+            { status: "promoted", leads: 12 },
+            { status: "disqualified", leads: 7 },
+          ],
+        }),
+      ),
+    );
+    renderBoard(
+      <LeadBoard
+        rows={[lead]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+
+    const qualified = await waitFor(() => {
+      const column = document.querySelector(
+        '.board-col[data-stage="promoted"]',
+      );
+      if (column === null) throw new Error("no Qualified column");
+      if (!column.textContent?.includes("12")) {
+        throw new Error(`Qualified reads ${column.textContent}`);
+      }
+      return column;
+    });
+    // Folded, and holding no cards: `rows` has none to give it.
+    expect(qualified.classList.contains("board-col-collapsed")).toBe(true);
+    expect(qualified.querySelector(".deal-card")).toBeNull();
+
+    const disqualified = document.querySelector(
+      '.board-col[data-stage="disqualified"]',
+    );
+    expect(disqualified?.textContent).toContain("7");
+    expect(disqualified?.classList.contains("board-col-collapsed")).toBe(true);
+  });
+
+  // Dropping on a terminal column opens its DIALOG and sends no PATCH.
+  //
+  // Neither transition is a status change: qualifying promotes the lead into a
+  // person and maybe a deal, disqualifying records a reason. The server refuses
+  // a bare status PATCH into either, so a board that sent one would put a
+  // refusal in front of a reader who did the ordinary thing.
+  it("opens the qualify dialog on a drop, instead of patching the status", async () => {
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, _init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes("/reports/")) {
+          return jsonOk({ rows: [{ status: "promoted", leads: 3 }] });
+        }
+        return jsonOk({ data: [] });
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderBoard(
+      <LeadBoard
+        rows={[lead]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+
+    dropOn("promoted", lead.id);
+
+    // The dialog is up.
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+    // And nothing was PATCHed. A status PATCH here is the defect: the board
+    // would be asking the server for a transition it refuses by design.
+    for (const call of fetchMock.mock.calls) {
+      const init = call[1] as RequestInit | undefined;
+      expect(String(init?.method ?? "GET").toUpperCase()).not.toBe("PATCH");
+    }
+  });
+
+  // A collapsed column is still a DROP TARGET, which is the whole reason it
+  // keeps its height. Folded to a strip it would still have to take a card.
+  it("keeps the folded column droppable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonOk({ rows: [{ status: "disqualified", leads: 1 }] }),
+      ),
+    );
+    renderBoard(
+      <LeadBoard
+        rows={[lead]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      const column = document.querySelector(
+        '.board-col[data-stage="disqualified"]',
+      );
+      if (column === null) throw new Error("no Disqualified column");
+      if (!column.classList.contains("board-col-collapsed")) {
+        throw new Error("Disqualified is not folded");
+      }
+    });
+    dropOn("disqualified", lead.id);
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+  });
+
+  // An archived lead does not drag, and is not acted on if one arrives anyway.
+  //
+  // Every destination refuses it: UpdateLead reads live rows only, so a drop on
+  // an open stage would 409, and the other terminal dialog's own mutation
+  // rejects it too. Offering the gesture and then failing it is worse than not
+  // offering it — so the card carries no drag handlers AND the drop decision
+  // refuses a terminal source, because a drop carries an id through a
+  // dataTransfer string that no card had to originate.
+  it("neither drags a terminal lead nor acts on one that is dropped", async () => {
+    const terminal: Lead = { ...lead, status: "disqualified" };
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, _init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes("/reports/")) {
+          return jsonOk({ rows: [{ status: "disqualified", leads: 1 }] });
+        }
+        return jsonOk({
+          data: [terminal],
+          page: { has_more: false, next_cursor: null },
+        });
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderBoard(
+      <LeadBoard
+        rows={[]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+
+    const head = await waitFor(() => {
+      const found = document.querySelector(
+        '.board-col[data-stage="disqualified"] .board-col-head',
+      );
+      if (found === null) throw new Error("no Disqualified head");
+      return found;
+    });
+    fireEvent.click(head);
+
+    const card = await waitFor(() => {
+      const found = document.querySelector(
+        `.deal-card[data-lead="${terminal.id}"]`,
+      );
+      if (found === null) throw new Error("the opened column drew no card");
+      return found;
+    });
+    expect(card.getAttribute("draggable")).not.toBe("true");
+
+    // And a drop naming it anyway moves nothing: no PATCH, no dialog.
+    dropOn("contacted", terminal.id);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    for (const call of fetchMock.mock.calls) {
+      const init = call[1] as RequestInit | undefined;
+      expect(String(init?.method ?? "GET").toUpperCase()).not.toBe("PATCH");
+    }
+  });
 });
+
+// jsonOk is one JSON 200, spelled once — every stub in the new tests answers
+// the same shape and a second spelling is a second thing to keep in step.
+function jsonOk(body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  });
+}

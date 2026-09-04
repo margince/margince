@@ -162,10 +162,20 @@ func ReadReportRun(
 	out.AskedBy = storedBy
 
 	// Re-asked, never replayed. RunAnalyticsQuery re-derives the schema under
-	// this caller's grants, re-applies the population's read gate and re-floors
-	// the groups — so a reader who may not see the population gets the same
-	// refusal they would get asking directly, and a reader who may see less of
-	// it gets less.
+	// this caller's grants, re-applies the population's read gate, re-resolves
+	// the POPULATION against this reader's own lens and re-floors the groups —
+	// so a reader who may not see the population gets the same refusal they
+	// would get asking directly, and a reader who may see less of it gets less.
+	//
+	// The stored question carries the scope that was ASKED for, never the one
+	// that was resolved. A manager's run opened by a rep answers about the
+	// rep's own records: storing the resolution would have made a saved link a
+	// way to read someone else's numbers, which is the same defect as a stored
+	// floor deciding this answer.
+	//
+	// A run saved before the question carried a scope names none, which
+	// resolves to the reader's own default rather than to the workspace — the
+	// safe direction, and the same answer they would get asking today.
 	//
 	// The floor is the CALLER's, not the stored one. A run saved under a floor
 	// of 1 must not serve unfloored rows to a reader this installation floors

@@ -119,6 +119,20 @@ export type BoardColumn<Record extends BoardRecord = BoardDeal> = {
    * zero that reads as an empty stage.
    */
   sumHidden?: boolean;
+  /**
+   * Draw the column narrow: its head and its count, and none of its cards.
+   *
+   * For a stage that is a DESTINATION more than a queue — a lead board's
+   * Qualified and Disqualified hold every lead that ever left the pipeline, so
+   * expanded they would be the longest columns on the board and the least read.
+   * Collapsed they still state their count and still take a drop, which is what
+   * they are there for.
+   *
+   * The cards are not rendered at all rather than hidden with CSS: a column
+   * nobody can see should not cost a render, and `count` already carries the
+   * figure the head states without them.
+   */
+  collapsed?: boolean;
 };
 
 /**
@@ -256,6 +270,12 @@ export function DealCard({
 
 type BoardHandlers<Record extends BoardRecord> = {
   countLabel?: (count: number) => string;
+  /**
+   * Fold or unfold one column. Given only by a board that HAS a collapsed
+   * column: without it the head is inert text, so a board with no such column
+   * grows no button a reader can press to no effect.
+   */
+  onToggleColumn?: (column: BoardColumn<Record>) => void;
   columnExtras?: (column: BoardColumn<Record>) => ReactNode;
   cardDragHandlers?: (
     record: Record,
@@ -302,10 +322,29 @@ function BoardLayout<Record extends BoardRecord>({
   countLabel,
   columnExtras,
   columnDropHandlers,
+  onToggleColumn,
   moneyFor,
 }: Readonly<BoardLayoutProps<Record>>) {
   const t = useT();
   const { locale } = useLocale();
+  // The head's interactive half, or nothing at all. Written as a function so
+  // the column's JSX stays one line of props rather than a spread conditional
+  // the reader has to unpick.
+  function foldProps(column: BoardColumn<Record>) {
+    if (!onToggleColumn || column.collapsed === undefined) return {};
+    return {
+      role: "button",
+      tabIndex: 0,
+      "aria-expanded": !column.collapsed,
+      onClick: () => onToggleColumn(column),
+      onKeyDown: (event: React.KeyboardEvent) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onToggleColumn(column);
+        }
+      },
+    };
+  }
   return (
     <div className="board">
       {columns.map((column) => {
@@ -313,7 +352,9 @@ function BoardLayout<Record extends BoardRecord>({
         return (
           <section
             key={column.stage}
-            className="board-col"
+            className={
+              column.collapsed ? "board-col board-col-collapsed" : "board-col"
+            }
             data-stage={column.stage}
             aria-label={column.label}
             {...columnDropHandlers?.(column)}
@@ -325,7 +366,14 @@ function BoardLayout<Record extends BoardRecord>({
                 its place. The count moved up here with it: it is the figure a
                 reader compares ACROSS the board, and under the money totals it
                 was the third figure on a two-line sub. */}
-            <div className="board-col-head">
+            {/* A BUTTON only where there is something to press, and that is
+                per COLUMN rather than per board. A column says it can fold by
+                carrying `collapsed` at all; one that never folds keeps the
+                plain div it has always been, even on a board that has a
+                foldable column beside it. A control that does nothing is worse
+                than no control, and a lead board would otherwise have made its
+                three open stages focusable to no effect. */}
+            <div className="board-col-head" {...foldProps(column)}>
               <span className="stage">{column.label}</span>
               {/* TWO SPANS, not one composed string. The name is data of
                   unbounded length and truncates; the count is three characters
@@ -396,10 +444,13 @@ function BoardLayout<Record extends BoardRecord>({
                 </span>
               )}
             </div>
-            {column.deals.map((record) => (
-              <Fragment key={record.id}>{renderCard(record, column)}</Fragment>
-            ))}
-            {columnExtras?.(column)}
+            {!column.collapsed &&
+              column.deals.map((record) => (
+                <Fragment key={record.id}>
+                  {renderCard(record, column)}
+                </Fragment>
+              ))}
+            {!column.collapsed && columnExtras?.(column)}
           </section>
         );
       })}
