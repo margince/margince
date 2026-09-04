@@ -201,6 +201,7 @@
    is square already, so the rule that has to be stated is the round one. */
 .avatar-xl:not(.avatar-org) {
   border-radius: var(--r-full);
+  corner-shape: round;
 }
 
 /* An avatar beside its label on one line — a list cell, a search hit, a node
