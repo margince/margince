@@ -160,7 +160,10 @@ export const RoundAgainstSquircle: Story = {
       <div style={row}>
         <div
           style={{
-            ...swatch("var(--r-lg)", "round"),
+            // The rung's PLAIN value, written out: `var(--r-lg)` resolves to the
+            // doubled 40px wherever corner-shape exists, so reading the token
+            // here would draw a 40px circular corner and compare nothing.
+            ...swatch("20px", "round"),
             width: "180px",
             height: "110px",
           }}
