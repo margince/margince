@@ -73,6 +73,10 @@ type ProvenanceEmailDrafter interface {
 	DraftEmailWithProvenance(ctx context.Context, anchor ids.UUID, intent string) (DraftResult, error)
 }
 
+// DraftEmail serves a reply draft for the anchored activity, with its
+// provenance: the Art. 50 disclosure, the voice version that styled it, and
+// whether the sender's voice was lost on the way (voice_degraded). Drafting
+// never sends; the send endpoint stays a separate consent-gated operation.
 func (h Handlers) DraftEmail(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	var req struct {
 		Intent *string `json:"intent"`
