@@ -70,6 +70,11 @@ func TestTheStaleBoundaryIsWhereItSaysItIs(t *testing.T) {
 		return classifyWaiting(WaitingCustomer{
 			ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000c3"),
 			Since:      rankInstant.Add(-time.Duration(days) * 24 * time.Hour),
+			// Engaged, so the ONE thing varying across this boundary is age.
+			// The unproven-engagement rule demotes to the same level, and a
+			// fixture leaving it false would measure both rules at once and
+			// report the boundary as wherever the other one fired.
+			Engaged: true,
 		}, rankInstant)
 	}
 
@@ -221,5 +226,65 @@ func TestADayWithNoPricedDealsStatesNoBar(t *testing.T) {
 
 	if out.Summary.MaterialThresholdMinor != nil {
 		t.Fatalf("a pipeline with no prices stated a bar of %d", *out.Summary.MaterialThresholdMinor)
+	}
+}
+
+// A wait nobody here ever answered on is demoted, not dropped.
+//
+// The evidence behind Engaged is thread identity, and thread identity comes
+// from headers the SENDER chose to send. A client that strips References gives
+// every message its own thread, so a live conversation can arrive looking like
+// a stranger's first mail. Hiding on that would lose a customer with nothing on
+// the page to say so; demoting costs a scroll.
+func TestAWaitWithNoReplyHistoryIsDemotedRatherThanDropped(t *testing.T) {
+	cold := classifyWaiting(WaitingCustomer{
+		ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000d1"),
+		Subject:    "Cold approach",
+		Since:      rankInstant.Add(-2 * 24 * time.Hour),
+	}, rankInstant)
+
+	if cold.item.Level == levelWaiting {
+		t.Error("a thread with no reply history led the day")
+	}
+	if cold.item.Id == "" {
+		t.Fatal("the row was dropped — this rule may only demote")
+	}
+	if !hasReason(cold.item, "no_reply_history") {
+		t.Error("the row does not say why it was demoted")
+	}
+}
+
+// Money outranks the missing history, exactly as it does staleness.
+//
+// An open deal on the thread is a stronger claim than any header a sender chose
+// to send, so a funded wait keeps the top band even with nothing written back.
+func TestAnOpenDealKeepsAnUnengagedWaitInTheTopBand(t *testing.T) {
+	funded := classifyWaiting(WaitingCustomer{
+		ActivityID:  ids.MustParse("01a05500-0000-7000-8000-0000000000d2"),
+		Subject:     "Re: the contract",
+		Since:       rankInstant.Add(-2 * 24 * time.Hour),
+		HasOpenDeal: true,
+	}, rankInstant)
+
+	if funded.item.Level != levelWaiting {
+		t.Errorf("a funded wait was demoted to level %d for want of reply history",
+			funded.item.Level)
+	}
+}
+
+// The admit case: an engaged wait keeps the band and says nothing about history.
+func TestAnEngagedWaitLeadsAndClaimsNoMissingHistory(t *testing.T) {
+	engaged := classifyWaiting(WaitingCustomer{
+		ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000d3"),
+		Subject:    "Re: pricing",
+		Since:      rankInstant.Add(-2 * 24 * time.Hour),
+		Engaged:    true,
+	}, rankInstant)
+
+	if engaged.item.Level != levelWaiting {
+		t.Errorf("an engaged wait was demoted to level %d", engaged.item.Level)
+	}
+	if hasReason(engaged.item, "no_reply_history") {
+		t.Error("an engaged wait claimed it had no reply history")
 	}
 }

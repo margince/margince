@@ -13488,6 +13488,7 @@ const (
 	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
 	WorklistReasonKindMeetingUnprepared  WorklistReasonKind = "meeting_unprepared"
 	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
+	WorklistReasonKindNoReplyHistory     WorklistReasonKind = "no_reply_history"
 	WorklistReasonKindOverdue            WorklistReasonKind = "overdue"
 	WorklistReasonKindPinned             WorklistReasonKind = "pinned"
 	WorklistReasonKindPromised           WorklistReasonKind = "promised"
@@ -13527,6 +13528,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindMeetingUnprepared:
 		return true
 	case WorklistReasonKindNoChampion:
+		return true
+	case WorklistReasonKindNoReplyHistory:
 		return true
 	case WorklistReasonKindOverdue:
 		return true
@@ -22114,6 +22117,13 @@ type HeldThreadListResponse struct {
 // HiddenBacklog How much waiting work each hiding rule is keeping off one reader's queue, at one
 // instant. Every count is of THREADS, matching what the queue counts: a customer who
 // wrote three times is waiting once.
+//
+// THE FIGURES DO NOT ADD UP, and that is deliberate. Each is the difference made by
+// relaxing ONE rule with the others still in force, because a reader needs to know
+// which rule to look at rather than a total they cannot act on. A thread held back
+// by two rules therefore appears in NEITHER figure: relaxing either one alone still
+// leaves the other hiding it. Summing these to estimate the hidden total
+// under-reports it.
 type HiddenBacklog struct {
 	// AsOf The instant every figure below was read at.
 	AsOf time.Time `json:"as_of"`
@@ -22122,6 +22132,16 @@ type HiddenBacklog struct {
 	// guardrail's target, sent as its own field because a number only ever read beside
 	// other numbers becomes decoration — this is what a check asserts on.
 	Clear bool `json:"clear"`
+
+	// Colleagues Mail from one of the workspace's own email domains. ALSO NOBODY'S CHOICE, and
+	// watched because the rule is only as good as the domain list behind it: a
+	// domain entered by mistake suppresses a real customer's correspondence for
+	// everybody, and this is the figure that would show it.
+	//
+	// The domains are the vouched-for ones — those the company claims and those an
+	// administrator confirmed — never every domain a connected mailbox happened to
+	// see. A contractor's genuine account at a customer must not read as internal.
+	Colleagues int `json:"colleagues"`
 
 	// NotSales Work somebody judged to be no business of the queue's. SOMEBODY'S CHOICE, and
 	// the judgement worth watching: it hides the thread from the WHOLE workspace and

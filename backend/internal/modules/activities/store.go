@@ -23,6 +23,10 @@ import (
 type Store struct {
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db *database.DB
+	// ownDomains tells a colleague's message from a customer's for the waiting
+	// queue. Nil in a deployment that has not wired it, and then no sender is
+	// excluded for being one of ours (WithOwnDomains).
+	ownDomains OwnDomains
 	// transcriptEnqueue starts the reading of a transcript the moment it
 	// lands, in the same transaction that stores it. Nil in a deployment with
 	// no transcript brain wired, and then a transcript is simply stored —
