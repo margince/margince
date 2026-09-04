@@ -256,7 +256,10 @@ type UpdatePersonInput struct {
 	// supplied" and leaves the stored rows standing, exactly as Social is —
 	// the distinction matters for an import whose file carried no email
 	// column at all, which must not read as "this person now has none".
-	Emails    []PersonEmailInput
+	Emails []PersonEmailInput
+	// Phones replaces the person's live numbers when non-nil, with the same
+	// nil-vs-empty distinction Emails carries.
+	Phones    []PersonPhoneInput
 	IfVersion *int64
 	Source    string
 	// CustomFields carries the request body's extra top-level keys
@@ -288,15 +291,16 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 			return err
 		}
 		storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
-		if in.Social != nil || in.Emails != nil {
+		if in.Social != nil || in.Emails != nil || in.Phones != nil {
 			// The relation replacement rides the person row's version
 			// bump (updated_at below), so If-Match still guards it and
 			// the audit row still records the transition.
 			//
-			// Emails is in this condition for a second reason: without it a
-			// row whose ONLY change is an address hits p.Empty() below and
-			// returns having written nothing, so a corrected export would
-			// report success and drop every email edit in the file.
+			// Emails and Phones are in this condition for a second reason:
+			// without it a row whose ONLY change is an address or a number
+			// hits p.Empty() below and returns having written nothing, so a
+			// corrected export would report success and drop every such edit
+			// in the file.
 			p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
 		}
 		if p.Empty() {
@@ -312,12 +316,15 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 				return err
 			}
 		}
-		if in.Emails != nil {
+		if in.Emails != nil || in.Phones != nil {
 			by, err := storekit.CapturedBy(ctx)
 			if err != nil {
 				return err
 			}
 			if err := replacePersonEmails(ctx, tx, workspaceID(ctx), id, in.Source, by, in.Emails); err != nil {
+				return err
+			}
+			if err := replacePersonPhones(ctx, tx, id, in.Source, by, in.Phones); err != nil {
 				return err
 			}
 		}
@@ -329,6 +336,10 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 		if in.Emails != nil {
 			before["emails"] = current.Emails
 			after["emails"] = in.Emails
+		}
+		if in.Phones != nil {
+			before["phones"] = current.Phones
+			after["phones"] = in.Phones
 		}
 		auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "person", id.UUID, before, after)
 		if err != nil {

@@ -105,6 +105,7 @@ export const en = {
   "history.field.assignee_id": "Assignee",
   "history.field.body": "Notes",
   "history.field.emails": "Email addresses",
+  "history.field.phones": "Phone numbers",
   "history.field.meeting_status": "Meeting outcome",
   "history.field.candidate_org_key": "Matched company",
   "history.field.company_name": "Company name",

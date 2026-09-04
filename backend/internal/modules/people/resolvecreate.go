@@ -144,7 +144,7 @@ func createPerson(ctx context.Context, tx pgx.Tx, match PersonResolution, spec P
 	if err := insertPersonEmails(ctx, tx, wsID, id, spec.Source, spec.CapturedBy, spec.Emails); err != nil {
 		return ids.PersonID{}, err
 	}
-	if err := insertPersonPhones(ctx, tx, wsID, id, spec.Source, spec.CapturedBy, spec.Phones); err != nil {
+	if err := insertPersonPhones(ctx, tx, id, spec.Source, spec.CapturedBy, spec.Phones); err != nil {
 		return ids.PersonID{}, err
 	}
 	// Why this contact exists, written beside the contact itself.

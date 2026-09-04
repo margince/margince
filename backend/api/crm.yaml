@@ -23980,14 +23980,7 @@ components:
           items: { $ref: '#/components/schemas/PersonEmailInput' }
         phones:
           type: array
-          items:
-            type: object
-            required: [phone]
-            properties:
-              phone: { type: string }
-              phone_type: { type: string, enum: [work, mobile, home, other], default: work }
-              is_primary: { type: boolean, default: false }
-              position: { type: integer, default: 0 }
+          items: { $ref: '#/components/schemas/PersonPhoneInput' }
         source: { type: string }
       additionalProperties: true
       x-extension: true
@@ -24091,6 +24084,18 @@ components:
         is_primary: { type: boolean, default: false }
         position: { type: integer, default: 0 }
 
+    PersonPhoneInput:
+      type: object
+      description: |
+        One phone number on a person, as a writer supplies it. One schema for create and
+        update, so the two cannot describe a number differently.
+      required: [phone]
+      properties:
+        phone: { type: string }
+        phone_type: { type: string, enum: [work, mobile, home, other], default: work }
+        is_primary: { type: boolean, default: false }
+        position: { type: integer, default: 0 }
+
     UpdatePersonRequest:
       type: object
       description: Partial update. Omitted fields are unchanged.
@@ -24113,6 +24118,17 @@ components:
             Omitting the field leaves the addresses untouched, like every other field
             here. Sending an empty array removes them all, which is a real answer — a
             contact who no longer has a working address is a fact worth recording.
+        phones:
+          type: array
+          items: { $ref: '#/components/schemas/PersonPhoneInput' }
+          description: |
+            REPLACES the person's numbers with exactly this list, the same way `emails`
+            replaces addresses. A number that has been reassigned is corrected by sending
+            the set that should stand; an append-only field could never remove the one
+            that now reaches somebody else.
+
+            Omitting the field leaves the numbers untouched. Sending an empty array
+            removes them all.
 
             `Person360.dead_addresses` already names which address bounced; until now the
             contract's own remedy for that was to visit the person page, because the write

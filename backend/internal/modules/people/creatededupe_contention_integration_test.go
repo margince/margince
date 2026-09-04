@@ -69,7 +69,7 @@ func (e *dedupeEnv) beginHeldPhoneCreate(ctx context.Context, t *testing.T, name
 		id, name, by); err != nil {
 		t.Fatalf("inserting the in-flight person: %v", err)
 	}
-	if err := insertPersonPhones(ctx, tx, workspaceID(ctx), id, "manual", by,
+	if err := insertPersonPhones(ctx, tx, id, "manual", by,
 		[]PersonPhoneInput{{Phone: phone, PhoneType: "mobile", IsPrimary: true, Position: 1}}); err != nil {
 		t.Fatalf("inserting the in-flight person's number: %v", err)
 	}

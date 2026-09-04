@@ -4339,30 +4339,6 @@ func (e CreateOrganizationRequestSizeBand) Valid() bool {
 	}
 }
 
-// Defines values for CreatePersonRequestPhonesPhoneType.
-const (
-	CreatePersonRequestPhonesPhoneTypeHome   CreatePersonRequestPhonesPhoneType = "home"
-	CreatePersonRequestPhonesPhoneTypeMobile CreatePersonRequestPhonesPhoneType = "mobile"
-	CreatePersonRequestPhonesPhoneTypeOther  CreatePersonRequestPhonesPhoneType = "other"
-	CreatePersonRequestPhonesPhoneTypeWork   CreatePersonRequestPhonesPhoneType = "work"
-)
-
-// Valid indicates whether the value is a known member of the CreatePersonRequestPhonesPhoneType enum.
-func (e CreatePersonRequestPhonesPhoneType) Valid() bool {
-	switch e {
-	case CreatePersonRequestPhonesPhoneTypeHome:
-		return true
-	case CreatePersonRequestPhonesPhoneTypeMobile:
-		return true
-	case CreatePersonRequestPhonesPhoneTypeOther:
-		return true
-	case CreatePersonRequestPhonesPhoneTypeWork:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for CreateRecordGrantRequestAccess.
 const (
 	CreateRecordGrantRequestAccessRead  CreateRecordGrantRequestAccess = "read"
@@ -9283,6 +9259,30 @@ func (e PersonPhonePhoneType) Valid() bool {
 	case PersonPhonePhoneTypeOther:
 		return true
 	case PersonPhonePhoneTypeWork:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PersonPhoneInputPhoneType.
+const (
+	PersonPhoneInputPhoneTypeHome   PersonPhoneInputPhoneType = "home"
+	PersonPhoneInputPhoneTypeMobile PersonPhoneInputPhoneType = "mobile"
+	PersonPhoneInputPhoneTypeOther  PersonPhoneInputPhoneType = "other"
+	PersonPhoneInputPhoneTypeWork   PersonPhoneInputPhoneType = "work"
+)
+
+// Valid indicates whether the value is a known member of the PersonPhoneInputPhoneType enum.
+func (e PersonPhoneInputPhoneType) Valid() bool {
+	switch e {
+	case PersonPhoneInputPhoneTypeHome:
+		return true
+	case PersonPhoneInputPhoneTypeMobile:
+		return true
+	case PersonPhoneInputPhoneTypeOther:
+		return true
+	case PersonPhoneInputPhoneTypeWork:
 		return true
 	default:
 		return false
@@ -14934,31 +14934,31 @@ func (e ListOrganizationsParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListOrganizationsParamsLifecycle.
 const (
-	Customer       ListOrganizationsParamsLifecycle = "customer"
-	Disqualified   ListOrganizationsParamsLifecycle = "disqualified"
-	FormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
-	Opportunity    ListOrganizationsParamsLifecycle = "opportunity"
-	Prospect       ListOrganizationsParamsLifecycle = "prospect"
-	Target         ListOrganizationsParamsLifecycle = "target"
-	Unknown        ListOrganizationsParamsLifecycle = "unknown"
+	ListOrganizationsParamsLifecycleCustomer       ListOrganizationsParamsLifecycle = "customer"
+	ListOrganizationsParamsLifecycleDisqualified   ListOrganizationsParamsLifecycle = "disqualified"
+	ListOrganizationsParamsLifecycleFormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
+	ListOrganizationsParamsLifecycleOpportunity    ListOrganizationsParamsLifecycle = "opportunity"
+	ListOrganizationsParamsLifecycleProspect       ListOrganizationsParamsLifecycle = "prospect"
+	ListOrganizationsParamsLifecycleTarget         ListOrganizationsParamsLifecycle = "target"
+	ListOrganizationsParamsLifecycleUnknown        ListOrganizationsParamsLifecycle = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationsParamsLifecycle enum.
 func (e ListOrganizationsParamsLifecycle) Valid() bool {
 	switch e {
-	case Customer:
+	case ListOrganizationsParamsLifecycleCustomer:
 		return true
-	case Disqualified:
+	case ListOrganizationsParamsLifecycleDisqualified:
 		return true
-	case FormerCustomer:
+	case ListOrganizationsParamsLifecycleFormerCustomer:
 		return true
-	case Opportunity:
+	case ListOrganizationsParamsLifecycleOpportunity:
 		return true
-	case Prospect:
+	case ListOrganizationsParamsLifecycleProspect:
 		return true
-	case Target:
+	case ListOrganizationsParamsLifecycleTarget:
 		return true
-	case Unknown:
+	case ListOrganizationsParamsLifecycleUnknown:
 		return true
 	default:
 		return false
@@ -15252,19 +15252,19 @@ func (e ListPeopleParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListPeopleParamsTagMode.
 const (
-	ListPeopleParamsTagModeAll  ListPeopleParamsTagMode = "all"
-	ListPeopleParamsTagModeAny  ListPeopleParamsTagMode = "any"
-	ListPeopleParamsTagModeNone ListPeopleParamsTagMode = "none"
+	All  ListPeopleParamsTagMode = "all"
+	Any  ListPeopleParamsTagMode = "any"
+	None ListPeopleParamsTagMode = "none"
 )
 
 // Valid indicates whether the value is a known member of the ListPeopleParamsTagMode enum.
 func (e ListPeopleParamsTagMode) Valid() bool {
 	switch e {
-	case ListPeopleParamsTagModeAll:
+	case All:
 		return true
-	case ListPeopleParamsTagModeAny:
+	case Any:
 		return true
-	case ListPeopleParamsTagModeNone:
+	case None:
 		return true
 	default:
 		return false
@@ -20657,26 +20657,18 @@ type CreatePersonEnrichmentRunRequest struct {
 // CreatePersonRequest defines model for CreatePersonRequest.
 type CreatePersonRequest struct {
 	// Address Structured postal address.
-	Address   *Address            `json:"address,omitempty"`
-	Emails    *[]PersonEmailInput `json:"emails,omitempty"`
-	FirstName *string             `json:"first_name,omitempty"`
-	FullName  string              `json:"full_name"`
-	LastName  *string             `json:"last_name,omitempty"`
-	OwnerId   *openapi_types.UUID `json:"owner_id,omitempty"`
-	Phones    *[]struct {
-		IsPrimary *bool                               `json:"is_primary,omitempty"`
-		Phone     string                              `json:"phone"`
-		PhoneType *CreatePersonRequestPhonesPhoneType `json:"phone_type,omitempty"`
-		Position  *int                                `json:"position,omitempty"`
-	} `json:"phones,omitempty"`
+	Address              *Address                `json:"address,omitempty"`
+	Emails               *[]PersonEmailInput     `json:"emails,omitempty"`
+	FirstName            *string                 `json:"first_name,omitempty"`
+	FullName             string                  `json:"full_name"`
+	LastName             *string                 `json:"last_name,omitempty"`
+	OwnerId              *openapi_types.UUID     `json:"owner_id,omitempty"`
+	Phones               *[]PersonPhoneInput     `json:"phones,omitempty"`
 	Social               *map[string]interface{} `json:"social,omitempty"`
 	Source               string                  `json:"source"`
 	Title                *string                 `json:"title,omitempty"`
 	AdditionalProperties map[string]interface{}  `json:"-"`
 }
-
-// CreatePersonRequestPhonesPhoneType defines model for CreatePersonRequest.Phones.PhoneType.
-type CreatePersonRequestPhonesPhoneType string
 
 // CreatePipelineRequest defines model for CreatePipelineRequest.
 type CreatePipelineRequest struct {
@@ -28192,6 +28184,18 @@ type PersonPhone struct {
 // PersonPhonePhoneType defines model for PersonPhone.PhoneType.
 type PersonPhonePhoneType string
 
+// PersonPhoneInput One phone number on a person, as a writer supplies it. One schema for create and
+// update, so the two cannot describe a number differently.
+type PersonPhoneInput struct {
+	IsPrimary *bool                      `json:"is_primary,omitempty"`
+	Phone     string                     `json:"phone"`
+	PhoneType *PersonPhoneInputPhoneType `json:"phone_type,omitempty"`
+	Position  *int                       `json:"position,omitempty"`
+}
+
+// PersonPhoneInputPhoneType defines model for PersonPhoneInput.PhoneType.
+type PersonPhoneInputPhoneType string
+
 // PersonProfileField One enriched field with the evidence it was read from. Evidence-or-omit: a row
 // exists only where a verbatim snippet was captured.
 type PersonProfileField struct {
@@ -32131,15 +32135,24 @@ type UpdatePersonRequest struct {
 	// Omitting the field leaves the addresses untouched, like every other field
 	// here. Sending an empty array removes them all, which is a real answer — a
 	// contact who no longer has a working address is a fact worth recording.
+	Emails    *[]PersonEmailInput `json:"emails,omitempty"`
+	FirstName *string             `json:"first_name,omitempty"`
+	FullName  *string             `json:"full_name,omitempty"`
+	LastName  *string             `json:"last_name,omitempty"`
+	OwnerId   *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// Phones REPLACES the person's numbers with exactly this list, the same way `emails`
+	// replaces addresses. A number that has been reassigned is corrected by sending
+	// the set that should stand; an append-only field could never remove the one
+	// that now reaches somebody else.
+	//
+	// Omitting the field leaves the numbers untouched. Sending an empty array
+	// removes them all.
 	//
 	// `Person360.dead_addresses` already names which address bounced; until now the
 	// contract's own remedy for that was to visit the person page, because the write
 	// existed on create and nowhere else.
-	Emails               *[]PersonEmailInput     `json:"emails,omitempty"`
-	FirstName            *string                 `json:"first_name,omitempty"`
-	FullName             *string                 `json:"full_name,omitempty"`
-	LastName             *string                 `json:"last_name,omitempty"`
-	OwnerId              *openapi_types.UUID     `json:"owner_id,omitempty"`
+	Phones               *[]PersonPhoneInput     `json:"phones,omitempty"`
 	Social               *map[string]interface{} `json:"social,omitempty"`
 	Title                *string                 `json:"title,omitempty"`
 	AdditionalProperties map[string]interface{}  `json:"-"`
@@ -46623,6 +46636,14 @@ func (a *UpdatePersonRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "owner_id")
 	}
 
+	if raw, found := object["phones"]; found {
+		err = json.Unmarshal(raw, &a.Phones)
+		if err != nil {
+			return fmt.Errorf("error reading 'phones': %w", err)
+		}
+		delete(object, "phones")
+	}
+
 	if raw, found := object["social"]; found {
 		err = json.Unmarshal(raw, &a.Social)
 		if err != nil {
@@ -46697,6 +46718,13 @@ func (a UpdatePersonRequest) MarshalJSON() ([]byte, error) {
 		object["owner_id"], err = json.Marshal(a.OwnerId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.Phones != nil {
+		object["phones"], err = json.Marshal(a.Phones)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phones': %w", err)
 		}
 	}
 
