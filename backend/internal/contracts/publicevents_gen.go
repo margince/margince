@@ -2456,7 +2456,7 @@ func (PublicEventForecastShareRevoked) EntityType() string { return "user" }
 
 func (PublicEventForecastSnapshotCreated) EventType() string { return "forecast.snapshot_created" }
 
-func (PublicEventForecastSnapshotCreated) EntityType() string { return "user" }
+func (PublicEventForecastSnapshotCreated) EntityType() string { return "forecast_snapshot" }
 
 func (PublicEventIncumbentConnected) EventType() string { return "incumbent.connected" }
 
