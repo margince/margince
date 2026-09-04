@@ -369,3 +369,50 @@ func TestAnUnboundSeamCarriesNoExpectedMinorBase(t *testing.T) {
 		t.Fatalf("expected_minor_base = %v with no FX seam bound at all", *deal.ExpectedMinorBase)
 	}
 }
+
+// margince#3653: the overnight brief's own lane (classifyBriefItem) never ran
+// its item through the same pricing classifyRisk gives the identical fact for
+// a "deals_at_risk" row in the sibling lane — the SAME category, since a brief
+// item is a drifting deal too. A client reading the brief row found
+// ExpectedMinorBase always null, and had no way to state or total what the
+// morning's suggested-first deal was worth.
+func TestTheBriefItemLaneAlsoCarriesTheConvertedExpectedRevenue(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		ThisMorning: []crmcontracts.AttentionItem{
+			item("brief-yen", "brief_item", withPricedDeal(fiveMillionYen)),
+		},
+	}
+	fx := stubFX{base: "EUR", answers: map[CurrencyAmount]int64{fiveMillionYen: 3_000_000}}
+
+	out := pricedWorklist(t, fx, day)
+
+	deal := out.Queue[0].Deal
+	if deal == nil {
+		t.Fatal("the row carries no deal facts at all")
+	}
+	if deal.ExpectedMinorBase == nil || *deal.ExpectedMinorBase != 3_000_000 {
+		t.Fatalf("expected_minor_base = %v, wanted 3000000 (the converted €30,000)", deal.ExpectedMinorBase)
+	}
+}
+
+// The same fix must also reach the day's revenue-at-risk reading: it sums
+// every row of the "deals_at_risk" category regardless of which lane produced
+// it (readingsOf), so a brief item priced but never marked hasExpected would
+// silently vanish from a total the strip states as complete.
+func TestTheBriefItemLaneCountsTowardRevenueAtRisk(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		ThisMorning: []crmcontracts.AttentionItem{
+			item("brief-yen", "brief_item", withPricedDeal(fiveMillionYen)),
+		},
+	}
+	fx := stubFX{base: "EUR", answers: map[CurrencyAmount]int64{fiveMillionYen: 3_000_000}}
+
+	out := pricedWorklist(t, fx, day)
+
+	if out.Readings.RevenueAtRiskMinor == nil || *out.Readings.RevenueAtRiskMinor != 3_000_000 {
+		t.Fatalf("revenue_at_risk_minor = %v, wanted 3000000 — the brief item's own priced amount",
+			out.Readings.RevenueAtRiskMinor)
+	}
+}

@@ -30,15 +30,29 @@ import (
 // stating deals.CloseIsOverdue's own verdict, the identical rule the sibling
 // "deals_at_risk" row for the same deal is judged by. base() already carries
 // item.Overdue onto row.Overdue; there is nothing left to set here.
-func classifyBriefItem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
+//
+// Priced the same way classifyRisk prices its own "deals_at_risk" row for the
+// identical deal — money is a property of the DEAL, not of which lane put it
+// on the queue today. Without this a client reading a brief row found
+// ExpectedMinorBase always null and the day's revenue-at-risk reading
+// (readingsOf, which sums every "deals_at_risk" row regardless of lane)
+// silently dropped whatever the morning's suggested-first deal was worth.
+func classifyBriefItem(item crmcontracts.AttentionItem, asOf time.Time, money dayMoney) ranked {
 	row := base(item, levelAgreed, "deals_at_risk", "deal_drifts")
 	if item.DueAt != nil {
 		row.Because = append(row.Because, reason("closing_soon", nil))
 	}
+	expected, known := expectedRevenue(item, money)
+	if row.Deal != nil && money.converted() && known {
+		row.Deal.ExpectedMinorBase = &expected
+	}
 	return ranked{
-		item:       row,
-		deadlineAt: deadlineOf(item.DueAt),
-		overdue:    item.Overdue != nil && *item.Overdue,
-		occurredAt: occurredOf(item, asOf),
+		item:             row,
+		deadlineAt:       deadlineOf(item.DueAt),
+		overdue:          item.Overdue != nil && *item.Overdue,
+		expectedBase:     expected,
+		hasExpected:      known,
+		expectedCurrency: money.base,
+		occurredAt:       occurredOf(item, asOf),
 	}
 }

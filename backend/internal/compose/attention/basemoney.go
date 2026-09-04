@@ -118,16 +118,23 @@ func (s *Service) priceDayOnto(ctx context.Context, day crmcontracts.Attention) 
 
 // priceTheDay converts the amounts the ordering is about to compare.
 //
-// Only the at-risk lane feeds the expected-revenue tie-break and the material
-// bar, so only its amounts are priced. An unbound seam, or a day with nothing
-// to price, answers the zero dayMoney and costs no read.
+// The at-risk lane and the overnight brief both carry a drifting deal under
+// the same "deals_at_risk" category (classifyRisk, classifyBriefItem) — money
+// is a property of the DEAL, not of which lane happened to put it on the
+// queue today, so both are priced here in one batch. An unbound seam, or a
+// day with nothing to price, answers the zero dayMoney and costs no read.
 func (s *Service) priceTheDay(ctx context.Context, day crmcontracts.Attention) (dayMoney, error) {
-	if s.fx == nil || day.AtRisk == nil {
+	if s.fx == nil {
 		return dayMoney{}, nil
 	}
-	items := make([]string, 0, len(*day.AtRisk))
-	amounts := make([]CurrencyAmount, 0, len(*day.AtRisk))
-	for _, item := range *day.AtRisk {
+	var lanes []crmcontracts.AttentionItem
+	if day.AtRisk != nil {
+		lanes = append(lanes, *day.AtRisk...)
+	}
+	lanes = append(lanes, day.ThisMorning...)
+	items := make([]string, 0, len(lanes))
+	amounts := make([]CurrencyAmount, 0, len(lanes))
+	for _, item := range lanes {
 		// An amount with no currency cannot be converted, and under a bound
 		// seam it cannot be compared either: it is left out here, so the item
 		// ranks as unpriced rather than as a number in unknowable units.
