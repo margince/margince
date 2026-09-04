@@ -1737,7 +1737,7 @@ components:
       description: >-
         activity.updated's BOUNDED delta: UpdateActivity's known mutable
         fields (subject, body, occurred_at, due_at, remind_at,
-        assignee_id, is_done) each carried only when this update touched
+        assignee_id, is_done, meeting_status) each carried only when this update touched
         them, plus RelinkActivity's relinked target and SetActivityAudience's
         audience — a fixed, KNOWN key
         set (unlike person/organization/deal/lead.updated's genuinely
@@ -1771,6 +1771,22 @@ components:
         is_done:
           type: boolean
           description: The activity's new completion state (absent when this update did not touch it).
+        meeting_status:
+          type: string
+          enum: [booked, held, no_show, canceled]
+          # Named explicitly: `held` generates a constant `Held`, which already
+          # exists for another schema's state — and a collision there silently
+          # renames THAT enum's constants and breaks modules with no connection
+          # to this one.
+          x-enum-varnames:
+            - MeetingWasBooked
+            - MeetingWasHeld
+            - MeetingWasNoShow
+            - MeetingWasCanceled
+          description: >-
+            How the meeting went, once somebody recorded it (absent when this
+            update did not touch it). Meeting rows only; the update refuses the
+            field on any other kind.
         relinked:
           $ref: '#/components/schemas/PublicEventActivityRelinkedRef'
         audience:

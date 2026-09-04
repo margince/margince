@@ -104,6 +104,8 @@ export const de = {
   "history.field.amount_minor": "Wert",
   "history.field.assignee_id": "Zuständig",
   "history.field.body": "Notizen",
+  "history.field.emails": "E-Mail-Adressen",
+  "history.field.meeting_status": "Ergebnis des Termins",
   "history.field.candidate_org_key": "Zugeordnetes Unternehmen",
   "history.field.company_name": "Firmenname",
   "history.field.currency": "Währung",

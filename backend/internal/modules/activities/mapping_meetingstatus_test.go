@@ -50,3 +50,34 @@ func TestLogActivityInputRefusesAMeetingStatusOnANote(t *testing.T) {
 		t.Fatalf("FieldFault = (%q, %q), want (meeting_status, %s)", field, code, faultNotValidForKind)
 	}
 }
+
+// The same field on the PATCH, which is where a human actually knows the
+// answer: the meeting is over.
+//
+// The kind is NOT checked here, and that is the difference between the two
+// mappings. A patch cannot change a kind, so the only honest thing to hold the
+// field against is the kind the stored row carries — which the store reads
+// under its own row lock. This mapping's job is to carry the value there
+// without deciding anything.
+func TestActivityUpdateInputCarriesAMeetingsStatus(t *testing.T) {
+	status := crmcontracts.UpdateActivityRequestMeetingStatusNoShow
+
+	in := activityUpdateInput(crmcontracts.UpdateActivityRequest{MeetingStatus: &status}, nil)
+
+	if in.MeetingStatus == nil || *in.MeetingStatus != "no_show" {
+		t.Fatalf("MeetingStatus = %v, want no_show — dropped here, the one moment a "+
+			"human knows how the meeting went reaches no column", in.MeetingStatus)
+	}
+}
+
+// And a patch that says nothing about it carries nothing, so the coalescing
+// update leaves the stored value alone.
+func TestActivityUpdateInputLeavesAnUnmentionedMeetingStatusAlone(t *testing.T) {
+	subject := "Renamed"
+
+	in := activityUpdateInput(crmcontracts.UpdateActivityRequest{Subject: &subject}, nil)
+
+	if in.MeetingStatus != nil {
+		t.Fatalf("a rename carried a meeting status of %q", *in.MeetingStatus)
+	}
+}

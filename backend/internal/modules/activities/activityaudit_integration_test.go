@@ -14,6 +14,7 @@ package activities
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -275,4 +276,99 @@ func imageMembers(t *testing.T, image map[string]any) []string {
 		members = append(members, word)
 	}
 	return members
+}
+
+// loggedMeeting is a meeting with nothing recorded about how it went, which is
+// every meeting until somebody says otherwise.
+func loggedMeeting(ctx context.Context, t *testing.T, e *sendEnv) crmcontracts.Activity {
+	t.Helper()
+	subject := "Quarterly review"
+	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
+		Kind: "meeting", Subject: &subject, Source: "ui",
+	})
+	if err != nil {
+		t.Fatalf("LogActivityInputFrom: %v", err)
+	}
+	activity, _, err := e.store(nil).LogActivity(ctx, in)
+	if err != nil {
+		t.Fatalf("LogActivity: %v", err)
+	}
+	return activity
+}
+
+// How a meeting went, recorded after it happened.
+//
+// The field was contracted on CREATE since it existed and absent from the
+// patch, so the one moment a human actually knows the answer — the meeting is
+// over — was the one moment the API could not be told. A rep whose meeting was
+// a no-show had to log a second activity saying so in prose.
+func TestHowAMeetingWentCanBeRecordedAfterIt(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	meeting := loggedMeeting(ctx, t, e)
+	if meeting.MeetingStatus != nil {
+		t.Fatalf("a freshly logged meeting already reports %v", *meeting.MeetingStatus)
+	}
+
+	held := string(crmcontracts.ActivityMeetingStatusHeld)
+	out, err := e.store(nil).UpdateActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)),
+		UpdateActivityInput{MeetingStatus: &held})
+	if err != nil {
+		t.Fatalf("UpdateActivity: %v", err)
+	}
+
+	if out.MeetingStatus == nil || string(*out.MeetingStatus) != held {
+		t.Fatalf("the meeting reports %v, want %q", out.MeetingStatus, held)
+	}
+}
+
+// And the trail says who recorded it, which is the question that trail is read
+// for. A column the update can change and the diff cannot see leaves an audit
+// row saying nothing happened.
+func TestRecordingAMeetingsOutcomeReachesTheAuditImages(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	meeting := loggedMeeting(ctx, t, e)
+
+	noShow := string(crmcontracts.ActivityMeetingStatusNoShow)
+	if _, err := e.store(nil).UpdateActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)),
+		UpdateActivityInput{MeetingStatus: &noShow}); err != nil {
+		t.Fatalf("UpdateActivity: %v", err)
+	}
+
+	before, after := auditImagesFor(t, e, ids.UUID(meeting.Id))
+	if before["meeting_status"] != nil {
+		t.Errorf("before[meeting_status] = %v, want the nothing that was recorded",
+			before["meeting_status"])
+	}
+	if after["meeting_status"] != noShow {
+		t.Errorf("after[meeting_status] = %v, want %q — a write the trail cannot see "+
+			"is a write nobody can attribute", after["meeting_status"], noShow)
+	}
+}
+
+// Only a meeting has one, held against the kind the ROW carries.
+//
+// A patch cannot change a kind, so the stored one is the only honest thing to
+// check. Without this a note given `held` would store silently and read back as
+// a meeting-shaped fact about something that was not one — the pairing create
+// already refuses, and which the database CHECK does not constrain.
+func TestOnlyAMeetingMayBeToldHowItWent(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	note := loggedNote(ctx, t, e)
+
+	held := string(crmcontracts.ActivityMeetingStatusHeld)
+	_, err := e.store(nil).UpdateActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(note.Id)),
+		UpdateActivityInput{MeetingStatus: &held})
+
+	var kindErr *MeetingStatusKindError
+	if !errors.As(err, &kindErr) {
+		t.Fatalf("a note was told how it went and answered %v", err)
+	}
+	field, code, _ := kindErr.FieldFault()
+	if field != "meeting_status" || code != faultNotValidForKind {
+		t.Errorf("the fault names %q/%q, want the field the caller has to drop",
+			field, code)
+	}
 }

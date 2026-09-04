@@ -34,6 +34,11 @@ func activityColumnImage(a crmcontracts.Activity) map[string]any {
 		"assignee_id": derefOrNil(a.AssigneeId),
 		"is_done":     derefOrNil(a.IsDone),
 		"done_at":     derefOrNil(a.DoneAt),
+		// Writable on the patch, so it belongs in the image: a column the update
+		// can change and the diff cannot see leaves an audit row saying nothing
+		// happened. "Who recorded that the meeting was a no-show" is exactly the
+		// question the trail is read for.
+		"meeting_status": derefOrNil(a.MeetingStatus),
 	}
 }
 
