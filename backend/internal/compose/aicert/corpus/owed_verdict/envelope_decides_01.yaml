@@ -12,18 +12,22 @@ fixture:
     body: |
       The invoices below remain unpaid and work is suspended until they are
       settled. Please advise on timing.
-    to: ['lars@ourco.test']
+    to: ['j.weber@nordwind.test']
   - subject: 'Re: outstanding invoices'
     body: |
       The invoices below remain unpaid and work is suspended until they are
       settled. Please advise on timing.
-    to: ['accounts@customer.test']
-    cc: ['lars@ourco.test']
+    to: ['buchhaltung@steinbach.test']
+    cc: ['j.weber@nordwind.test']
 expect:
   outcome: accepted
   answer: [asks_us, informs_us]
   rubric: >
-    Identical bodies, different envelopes. The first is addressed to our reader
+    Identical bodies, and the SAME address on both — only its position moves.
+    That is deliberate: with a domain like "ourco" in play a model can answer
+    from the domain and never read the envelope at all, and this scenario would
+    then pass a model that cannot do the thing it exists to measure.
+    Different envelopes: The first is addressed to our reader
     and asks them to advise: asks_us. The second is addressed to the customer's
     own accounts desk with our reader copied — the request is being made of
     somebody else and we are watching: informs_us.

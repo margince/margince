@@ -13,13 +13,13 @@ fixture:
       Thanks for sending this through. Before I take it to the board on Friday,
       can you confirm whether the price holds if we push the start date to
       April?
-    to: ['sales@ourco.test']
+    to: ['j.weber@nordwind.test']
   - subject: 'Monatsreporting Juli'
     body: |
       Attached is the July report for your records. Figures are final and no
       action is needed from your side.
-    to: ['reporting@customer.test']
-    cc: ['lars@ourco.test']
+    to: ['reporting@steinbach.test']
+    cc: ['j.weber@nordwind.test']
 expect:
   outcome: accepted
   answer: [asks_us, informs_us]

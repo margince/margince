@@ -7,17 +7,17 @@ sanitized_by: hand_authored/claude-opus-5
 # The distinction matters because an invite arrives on a real thread with a real
 # sender and looks, to the waiting queue, exactly like an unanswered message.
 fixture:
-  - subject: 'coffee with Lars @1500'
+  - subject: 'coffee @1500'
     body: |
       When: Thursday 15:00-15:30
       Where: the cafe on the corner
-    to: ['lars@ourco.test']
+    to: ['j.weber@nordwind.test']
     has_calendar_part: true
   - subject: 'workshop Tuesday — agenda?'
     body: |
       I have put a hold in the diary for Tuesday. Before then, could you send
       over the three topics you want covered so I can brief the team?
-    to: ['lars@ourco.test']
+    to: ['j.weber@nordwind.test']
     has_calendar_part: true
 expect:
   outcome: accepted

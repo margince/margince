@@ -2565,7 +2565,7 @@
       "task": "owed_verdict",
       "site": "owed",
       "key": "owed_verdict/owed",
-      "scope": "full_invocation",
+      "scope": "single_call",
       "missing_context_scopes": [],
       "best_state": "absent",
       "recommended": null,

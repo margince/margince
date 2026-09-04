@@ -20,19 +20,19 @@ package compose
 
 import "fmt"
 
-// batchAnswer is one result as this contract sees it: which message it answers,
-// and how sure the model was.
+// batchAnswer is one result as this contract sees it: which message it answers.
 type batchAnswer interface {
 	answeredID() string
-	confidence() float64
 }
 
 // checkBatchFidelity names the first id-contract violation, or "" when the
 // results answer each requested message and no other.
 //
-// The confidence range is here rather than beside each vocabulary because it is
-// the same claim in both places — a number outside [0,1] is not a hedge, it is a
-// reply that did not understand what was asked.
+// It checks the IDS and stops. Each site then walks the same results for its own
+// vocabulary and its confidence range, in that order — which is the order the
+// two sites already had, and the order matters: the message reaches the model's
+// bounded repair attempt, so telling it "that is not a verdict" where it used to
+// hear "that confidence is out of range" changes what it tries next.
 func checkBatchFidelity[T batchAnswer](results []T, requestedIDs []string) string {
 	seen := map[string]bool{}
 	want := make(map[string]bool, len(requestedIDs))
@@ -51,9 +51,6 @@ func checkBatchFidelity[T batchAnswer](results []T, requestedIDs []string) strin
 			return fmt.Sprintf("result id %q appears twice", clampToken(id))
 		}
 		seen[id] = true
-		if c := r.confidence(); c < 0 || c > 1 {
-			return fmt.Sprintf("confidence %v is outside [0,1]", c)
-		}
 	}
 	for _, id := range requestedIDs {
 		if !seen[id] {

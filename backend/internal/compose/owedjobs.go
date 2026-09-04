@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // OwedVerdictArgs runs one catch-up pass over every workspace.
@@ -66,5 +67,21 @@ func (w *owedVerdictWorkspaceWorker) Work(ctx context.Context, job *river.Job[Ow
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
+	// The workspace binding alone is not enough here, and the difference is the
+	// whole reason this is spelled out: the backlog read and the verdict write
+	// are both RBAC-gated, so an unbound context fails them with "no actor bound
+	// to context" and the pass writes nothing on every tick. The capture-label
+	// worker beside this one needs none because its store methods carry no gate.
+	//
+	// A SYSTEM principal, which is what this is: nobody asked for the pass and
+	// no seat is acting through it. auth.Require admits a system principal
+	// before it reads any object grant, so the grants are deliberately absent —
+	// RowScopeAll is what the row clauses need, and listing objects as well
+	// would suggest they were consulted.
+	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
+	wsCtx = principal.WithActor(wsCtx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:owed_verdict",
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
 	return jobs.FaultContext(ctx, w.classifier.RunWorkspace(wsCtx, 0))
 }

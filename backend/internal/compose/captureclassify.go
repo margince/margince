@@ -271,12 +271,14 @@ func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) 
 		if !classifyLabels[r.Label] {
 			return fmt.Sprintf("label %q is not commitment|meeting|noise", clampToken(r.Label))
 		}
+		if r.Confidence < 0 || r.Confidence > 1 {
+			return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
+		}
 	}
 	return ""
 }
 
-func (r classifyResult) answeredID() string  { return r.ID }
-func (r classifyResult) confidence() float64 { return float64(r.Confidence) }
+func (r classifyResult) answeredID() string { return r.ID }
 
 // classifySchema is the generation-time shape guardrail (§2.8).
 func classifySchema() json.RawMessage {

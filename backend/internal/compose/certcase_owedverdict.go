@@ -61,15 +61,14 @@ func (owedVerdictCases) Site() aitasks.Site {
 	}
 }
 
-// CertifiedScope is the whole invocation, because this case IS the whole
-// invocation for the answer it measures.
+// CertifiedScope narrows the record to the ONE call this case makes, because
+// judging a batch is not always one call.
 //
-// The engine re-asks a below-floor message solo on the next rung, but that is a
-// second call about an answer this one already produced: what a run here
-// certifies — the request the site sends and the fidelity of the reply — is
-// complete in the one call. Narrowing the scope would claim the record measures
-// less than it does.
-func (owedVerdictCases) CertifiedScope() string { return aitasks.ScopeFullInvocation }
+// The engine re-asks every below-floor message solo on the next routing rung,
+// and the verdict a row ends up wearing — or the decision to leave it unjudged —
+// can come from that second answer. A run here measures the first, so claiming
+// the whole invocation would overstate what the record covers.
+func (owedVerdictCases) CertifiedScope() string { return aitasks.ScopeSingleCall }
 
 // Prepare turns one batch and the verdicts the scenario expects into a runnable
 // case, MINTING an activity id per message rather than reading it from either.

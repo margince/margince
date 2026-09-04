@@ -159,7 +159,18 @@ func (c *OwedClassifier) RunWorkspace(ctx context.Context, maxVerdicts int) erro
 		maxVerdicts = owedCatchUpCap
 	}
 	judged := 0
-	for judged < maxVerdicts {
+	// Bounded by CALLS as well as by verdicts written, and the second bound is
+	// the one that has to exist.
+	//
+	// A message the model will not commit to stays unjudged, which is the right
+	// answer — and it therefore stays in the backlog, which the next read
+	// returns again. A batch mixing one confident row with nine abstentions
+	// makes progress by the verdict count and re-asks the same nine every
+	// iteration, so a cap on writes alone lets one stubborn tenant spend
+	// thousands of calls. The call bound is what makes the pass end.
+	calls := 0
+	maxCalls := maxVerdicts/owedBatchSize + 1
+	for judged < maxVerdicts && calls < maxCalls {
 		batch, err := c.store.UnjudgedInbound(ctx, c.now(), owedBatchSize, owedBodyLimit)
 		if err != nil {
 			return fmt.Errorf("owed classify: reading backlog: %w", err)
@@ -167,6 +178,7 @@ func (c *OwedClassifier) RunWorkspace(ctx context.Context, maxVerdicts int) erro
 		if len(batch) == 0 {
 			return nil
 		}
+		calls++
 		n, err := c.judgeBatch(ctx, batch)
 		judged += n
 		if errors.Is(err, ai.ErrBudgetDeferred) {
@@ -331,12 +343,14 @@ func validateOwedPayload(payload owedPayload, batch []owedCandidate) string {
 		if !owedVerdicts[r.Verdict] {
 			return fmt.Sprintf("verdict %q is not asks_us|informs_us", clampToken(r.Verdict))
 		}
+		if r.Confidence < 0 || r.Confidence > 1 {
+			return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
+		}
 	}
 	return ""
 }
 
-func (r owedResult) answeredID() string  { return r.ID }
-func (r owedResult) confidence() float64 { return float64(r.Confidence) }
+func (r owedResult) answeredID() string { return r.ID }
 
 // owedSchema is the generation-time shape guardrail.
 func owedSchema() json.RawMessage {

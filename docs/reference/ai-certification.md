@@ -704,7 +704,7 @@ Records (3):
 
 #### `owed_verdict/owed`
 
-Scope a run of it can claim: `full_invocation`.
+Scope a run of it can claim: `single_call`.
 
 Scenarios (3):
 
