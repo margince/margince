@@ -422,6 +422,14 @@ done
 # Matched on the QUERY STRING, not on the words: both of these appear in the
 # comments explaining them, and a check that matched prose would pass with the
 # code gone — which is the failure mode these exist to prevent, one level up.
+if ! grep -qF 'gh api --paginate --slurp' "$attest"; then
+	echo "FAIL: merge-attest reads check runs without --paginate --slurp. per_page caps at 100 and"
+	echo "      filter=all counts every ATTEMPT, so a re-run pull request passes it — and the tail"
+	echo "      that gets dropped is the OLDEST attempt, which is the one the judge reads."
+	failures=$((failures + 1))
+else
+	echo "ok: the check-run query is paginated, so a re-run pull request does not truncate"
+fi
 if ! grep -qF 'check-runs?per_page=100&filter=all' "$attest"; then
 	echo "FAIL: merge-attest asks for check runs without filter=all. The endpoint defaults to"
 	echo "      filter=latest, which returns only the most recent attempt per check — and the judge"
