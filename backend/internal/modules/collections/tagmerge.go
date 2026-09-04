@@ -91,10 +91,7 @@ func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID, expecte
 		if err := checkTargetVersion(ctx, tx, target, expectedTargetVersion); err != nil {
 			return err
 		}
-		sourceRow, err := scanTag(tx.QueryRow(ctx, "SELECT "+tagColumns+" FROM tag WHERE id = $1", source))
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
+		sourceRow, err := liveSourceTag(ctx, tx, source)
 		if err != nil {
 			return err
 		}
@@ -140,6 +137,32 @@ func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID, expecte
 		return err
 	})
 	return out, err
+}
+
+// liveSourceTag reads the tag being RETIRED and refuses one already folded away.
+//
+// Live, not merely present. Both rows are locked with IncludeArchived — a merge
+// has to be, or it could not archive the source — so an already-merged source
+// reached the statements rather than being refused, and every one of them was a
+// no-op: nothing to count, nothing to move, nothing left to archive. The write
+// shape still committed an audit row and an event, so a replayed request minted
+// a `tag.merged` per attempt over a word folded away long ago, each reading as
+// a real merge.
+//
+// Not-found rather than a refusal naming the state, which is how `applyTagTx`
+// answers for an archived tag reached by id: the source arrives as a path id,
+// and an archived one stops being addressable rather than becoming a different
+// kind of error.
+func liveSourceTag(ctx context.Context, tx pgx.Tx, source ids.TagID) (tagRow, error) {
+	row, err := scanTag(tx.QueryRow(ctx,
+		"SELECT "+tagColumns+" FROM tag WHERE id = $1", source))
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && row.ArchivedAt != nil) {
+		return tagRow{}, apperrors.ErrNotFound
+	}
+	if err != nil {
+		return tagRow{}, err
+	}
+	return row, nil
 }
 
 // requireLiveTag refuses a tag that is missing or retired, naming the field
