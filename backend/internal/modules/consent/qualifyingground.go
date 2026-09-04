@@ -62,6 +62,18 @@ func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, sinc
 	if found {
 		return event, sourceDerived, nil
 	}
+	// And a MEETING, last of the three because it is the newest arm rather than
+	// the weakest — a meeting is stronger evidence than an inbound message. The
+	// order costs nothing: each arm answers about a different record, so at most
+	// one of them describes any given fact, and reaching this one means neither
+	// a human nor the mail timeline had already answered.
+	event, found, err = meetingQualifyingEvent(ctx, tx, personID, since)
+	if err != nil {
+		return QualifyingEvent{}, sourceNone, err
+	}
+	if found {
+		return event, sourceDerived, nil
+	}
 	return QualifyingEvent{}, sourceNone, nil
 }
 
@@ -188,6 +200,54 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, sin
 		return QualifyingEvent{}, false, fmt.Errorf("read the inbound qualifying message: %w", err)
 	}
 	event.Kind = "inbound_message"
+	event.SourceEntityType = "activity"
+	event.SourceEntityID = activityID
+	return event, true, nil
+}
+
+// meetingQualifyingEvent derives the event from a meeting the subject was in.
+//
+// A meeting is stronger evidence than an inbound message, and the product could
+// not see one. An email can be unsolicited — anybody may write to us — while a
+// meeting means both sides put time in a calendar. So a partner we had invited,
+// and were meeting next week, was refused as somebody who "has never written to
+// you", and the invitation itself made it worse: the classifier read a machine
+// generated calendar mail as transactional and judged the person noise on it.
+//
+// ATTENDANCE, from the participant rows, not the counterparty. A meeting names
+// no counterparty at all — attendance is a LIST, so the calendar mapper leaves
+// the field unset — which is exactly why the mail-shaped derivation above could
+// never answer for one.
+//
+// No authorship test here, and that is the difference from the inbound arm
+// rather than an omission. That arm needs role 'from' because a filing link
+// says only that a message belongs on somebody's record, and being copied on
+// somebody else's mail initiates nothing. Attendance carries no such ambiguity:
+// every attendee of a meeting is a party to it, and the organizer is the one
+// party who might not be the counterparty.
+//
+// A FUTURE meeting counts. `since` bounds how far BACK evidence stays good, and
+// a meeting in the diary is the clearest possible statement that a relationship
+// is live — refusing to write to somebody we are meeting on Tuesday is the
+// defect this exists to fix, not a case to guard against.
+func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, personID string, since time.Time) (QualifyingEvent, bool, error) {
+	var event QualifyingEvent
+	var activityID string
+	err := tx.QueryRow(ctx, `
+		SELECT a.id, a.occurred_at
+		FROM activity a
+		JOIN activity_participant p ON p.activity_id = a.id AND p.person_id = $1::uuid
+		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
+		  AND a.occurred_at >= $2
+		ORDER BY a.occurred_at DESC
+		LIMIT 1`, personID, since).Scan(&activityID, &event.OccurredAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return QualifyingEvent{}, false, nil
+	}
+	if err != nil {
+		return QualifyingEvent{}, false, fmt.Errorf("read the qualifying meeting: %w", err)
+	}
+	event.Kind = KindMeeting
 	event.SourceEntityType = "activity"
 	event.SourceEntityID = activityID
 	return event, true, nil

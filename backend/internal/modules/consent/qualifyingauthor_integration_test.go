@@ -24,7 +24,9 @@ package consent
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -115,5 +117,79 @@ func TestTheAuthorOfAnInboundMessageStillMakesCorrespondenceLawful(t *testing.T)
 	if got.Qualifying == nil || got.Qualifying.Kind != "inbound_message" {
 		t.Errorf("qualifying event %+v, want an inbound_message — the basis has to name the "+
 			"message it was read from, or nothing can be stamped for Art 5(2)", got.Qualifying)
+	}
+}
+
+// attendedMeeting plants a meeting the subject was in, at the given offset from
+// now — negative for one that has happened, positive for one in the diary.
+//
+// A meeting names no counterparty, so there is nothing to set: attendance is the
+// whole fact, and the participant row is where it lives.
+func (e *qualifyingEnv) attendedMeeting(t *testing.T, offset time.Duration, role string) {
+	t.Helper()
+	id := ids.NewV7()
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO activity (id, kind, source, occurred_at, captured_by)
+			VALUES ($1, 'meeting', 'gcal', now() + $2::interval, 'connector:gcal:x')`,
+			id, fmt.Sprintf("%d seconds", int(offset.Seconds()))); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_participant (activity_id, person_id, role)
+			VALUES ($1, $2, $3)`, id, e.person, role)
+		return err
+	}); err != nil {
+		t.Fatalf("planting a meeting at %s: %v", offset, err)
+	}
+}
+
+// A meeting we are about to have makes correspondence lawful.
+//
+// This is the case the whole arm exists for. A partner invited to a demo next
+// week was refused as somebody who "has never written to you" — and the
+// invitation made it worse, because the classifier read the machine-generated
+// calendar mail as transactional and judged the person noise on it.
+//
+// Mutation: drop the meetingQualifyingEvent arm from latestQualifyingEvent and
+// this fails, the verdict still unknown.
+func TestAMeetingInTheDiaryMakesCorrespondenceLawful(t *testing.T) {
+	e := setupQualifying(t)
+
+	e.attendedMeeting(t, 4*24*time.Hour, "attendee")
+
+	got := e.verdict(t)
+	if got.State != VerdictAllowed {
+		t.Fatalf("verdict %q (%s) for somebody we are meeting in four days, want allowed — "+
+			"a meeting means both sides put time in a calendar, which is stronger evidence of a "+
+			"relationship than an email anybody may send unsolicited", got.State, got.Reason)
+	}
+	if got.Qualifying == nil || got.Qualifying.Kind != KindMeeting {
+		t.Fatalf("qualifying event %+v, want a %s — the basis has to name the meeting it was read "+
+			"from, or nothing can be stamped for Art 5(2)", got.Qualifying, KindMeeting)
+	}
+}
+
+// A meeting that already happened counts too, while it is inside the window.
+func TestAMeetingThatHappenedMakesCorrespondenceLawful(t *testing.T) {
+	e := setupQualifying(t)
+
+	e.attendedMeeting(t, -24*time.Hour, "attendee")
+
+	if got := e.verdict(t); got.State != VerdictAllowed {
+		t.Fatalf("verdict %q (%s) for somebody we met yesterday, want allowed", got.State, got.Reason)
+	}
+}
+
+// Somebody with no meeting and nothing else on the record is still refused.
+//
+// Without this the two tests above are satisfied by an arm that allows
+// everybody, which is the failure mode a default-deny gate hides best.
+func TestSomebodyWithNoMeetingIsStillRefused(t *testing.T) {
+	e := setupQualifying(t)
+
+	if got := e.verdict(t); got.State == VerdictAllowed {
+		t.Fatalf("verdict %q (%s) for somebody with nothing on the record, want not allowed — "+
+			"default-deny is the whole posture", got.State, got.Reason)
 	}
 }

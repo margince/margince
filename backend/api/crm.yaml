@@ -26578,7 +26578,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [inbound_message, inquiry, active_deal, in_person]
+          enum: [inbound_message, inquiry, active_deal, in_person, meeting]
         occurred_at: { type: string, format: date-time }
         source_entity_type: { type: [string, 'null'], enum: [activity, deal, null] }
         source_entity_id: { type: [string, 'null'], format: uuid }
@@ -30957,9 +30957,10 @@ components:
           type: string
           enum: [in_person]
           description: |
-            Only `in_person` is accepted here. The other three kinds — inbound_message, inquiry,
-            active_deal — are DERIVED from records the product already holds, and a hand-written
-            one would be a second, unbacked answer to a question the data already settles.
+            Only `in_person` is accepted here. Every other kind — inbound_message, inquiry,
+            active_deal, meeting — is DERIVED from records the product already holds, and a
+            hand-written one would be a second, unbacked answer to a question the data already
+            settles.
         note:
           type: string
           minLength: 1
@@ -30975,7 +30976,7 @@ components:
       required: [kind, occurred_at, note]
       description: A recorded exchange, as it now stands on the person.
       properties:
-        kind: { type: string, enum: [inbound_message, inquiry, active_deal, in_person] }
+        kind: { type: string, enum: [inbound_message, inquiry, active_deal, in_person, meeting] }
         note: { type: [string, 'null'] }
         occurred_at: { type: string, format: date-time }
 
