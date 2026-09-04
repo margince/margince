@@ -112,7 +112,10 @@ export function InboundList({ canRead }: Readonly<{ canRead: boolean }>) {
         sub={t("extOpenchannel.inbound.sub")}
       />
       {canRead ? (
-        <QueryStates query={inbound}>
+        <QueryStates
+          query={inbound}
+          pendingLabel={t("extOpenchannel.inbound.title")}
+        >
           {inbound.data && inbound.data.length > 0 ? (
             <DataTable<InboundEntry>
               label={t("extOpenchannel.inbound.title")}
@@ -199,7 +202,10 @@ export function OutboundList({ canRead }: Readonly<{ canRead: boolean }>) {
         sub={t("extOpenchannel.outboundList.sub")}
       />
       {canRead ? (
-        <QueryStates query={outbound}>
+        <QueryStates
+          query={outbound}
+          pendingLabel={t("extOpenchannel.outboundList.title")}
+        >
           {outbound.data && outbound.data.length > 0 ? (
             <DataTable<OutboundAttempt>
               label={t("extOpenchannel.outboundList.title")}

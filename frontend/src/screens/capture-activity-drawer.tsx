@@ -118,6 +118,7 @@ export function CaptureActivityDrawer({
         // this state; it names what there would be none OF, if the state were
         // ever `empty`.
         <SurfaceState
+          loadingLabel={t("pipeline.title")}
           state="unavailable"
           emptyLabel={t("pipeline.unavailable")}
         >

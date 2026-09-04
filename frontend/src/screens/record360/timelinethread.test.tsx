@@ -3,8 +3,8 @@
 
 /** @vitest-environment jsdom */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
 import type { components } from "../../api/schema";
 import type { RecordTimeline } from "../../design-system/recordtimeline";
 import { LocaleProvider } from "../../i18n";
@@ -30,6 +30,21 @@ function row(extra: Partial<Activity>): Activity {
   };
 }
 
+// A complete email summary, so the fixture keeps describing the wire: a cast
+// one can drop a required field and go on compiling after the shape moves.
+function summary(
+  displayStatus: "team" | "withheld",
+): NonNullable<Activity["email_summary"]> {
+  return {
+    activity_id: "a1",
+    occurred_at: "2026-08-01T09:00:00Z",
+    attachment_count: 0,
+    move: "none",
+    version: 1,
+    display_status: displayStatus,
+  };
+}
+
 function thread(overrides: Partial<RecordTimeline> = {}): RecordTimeline {
   return {
     activities: [],
@@ -44,10 +59,13 @@ function thread(overrides: Partial<RecordTimeline> = {}): RecordTimeline {
   };
 }
 
-function draw(source: RecordTimeline) {
+function draw(
+  source: RecordTimeline,
+  onOpenEmail?: (activityId: string) => void,
+) {
   render(
     <LocaleProvider initial="en">
-      <TimelineThread thread={source} />
+      <TimelineThread thread={source} onOpenEmail={onOpenEmail} />
     </LocaleProvider>,
   );
 }
@@ -85,5 +103,52 @@ describe("TimelineThread", () => {
     expect(screen.queryByText(FAILED)).toBeNull();
     expect(screen.getByText("Today")).toBeTruthy();
     expect(screen.getByText("More conversations before this")).toBeTruthy();
+  });
+
+  // The spine names each past conversation by its subject. Naming one without
+  // a way in is the thing #3824 is about — it reads as the analytics being a
+  // different kind of object from the mail they describe — and the deal and
+  // the lead reach the spine through here, so this is where the opener has to
+  // arrive.
+  it("opens a conversation it names, through the page's own drawer", async () => {
+    const opened: string[] = [];
+    draw(
+      thread({
+        activities: [
+          row({
+            id: "a1",
+            subject: "Renewal terms",
+            email_summary: summary("team"),
+          }),
+        ],
+      }),
+      (id) => opened.push(id),
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /Renewal terms/ }),
+    );
+    expect(opened).toEqual(["a1"]);
+  });
+
+  // A message outside the reader's audience is NAMED and not offered: a
+  // control that draws a placeholder teaches a reader that citations do not
+  // work, which costs more than the press it saves.
+  it("names a withheld conversation without offering to open it", () => {
+    draw(
+      thread({
+        activities: [
+          row({
+            id: "a2",
+            subject: "Renewal terms",
+            email_summary: summary("withheld"),
+          }),
+        ],
+      }),
+      () => undefined,
+    );
+
+    expect(screen.getByText(/Renewal terms/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Renewal terms/ })).toBeNull();
   });
 });

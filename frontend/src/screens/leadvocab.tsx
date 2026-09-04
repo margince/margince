@@ -386,7 +386,10 @@ export function LeadSourcesCard() {
             label={t("leadSources.listLabel")}
             layout="stack"
             control={
-              <QueryGate query={query}>
+              <QueryGate
+                query={query}
+                pendingLabel={t("leadSources.listLabel")}
+              >
                 {(list) => (
                   <ul
                     className="lead-vocab-list"
@@ -594,7 +597,7 @@ export function LeadDisqualifyReasonsCard() {
             label={t("leadReasons.listLabel")}
             layout="stack"
             control={
-              <QueryGate query={query}>
+              <QueryGate query={query} pendingLabel={t("leadReasons.title")}>
                 {(reasons) => (
                   <ul
                     className="lead-vocab-list"
@@ -771,7 +774,7 @@ export function LeadHandlingCard() {
       {/* Plain body, for the reason the sources card carries in full. */}
       <PanelBody>
         <p className="settings-panel-sub">{t("leadHandling.sub")}</p>
-        <QueryGate query={query}>
+        <QueryGate query={query} pendingLabel={t("leadHandling.title")}>
           {(settings) => {
             const shown =
               draft ?? String(settings.first_response_target_minutes);

@@ -319,7 +319,11 @@ function WorkGroup({
             {emptyDetail}
           </EmptyState>
         ) : (
-          <SurfaceState state={state} emptyLabel={emptyLabel}>
+          <SurfaceState
+            state={state}
+            emptyLabel={emptyLabel}
+            loadingLabel={label}
+          >
             {null}
           </SurfaceState>
         )}

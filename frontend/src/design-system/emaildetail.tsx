@@ -165,6 +165,7 @@ export function EmailDetail({
         // asked again, and a failure with nothing to press is the same as
         // being told the message is not there.
         <SurfaceState
+          loadingLabel={t("email.detail.loading")}
           state="failed"
           emptyLabel={t("email.detail.none")}
           detail={{ onRetry: () => void read.refetch() }}
@@ -197,6 +198,7 @@ function EmailBody({
     // message is limited describes what it is about.
     return (
       <SurfaceState
+        loadingLabel={t("email.detail.loading")}
         state="withheld"
         emptyLabel={t("email.detail.none")}
         // The generic sentence says "your role cannot read this", and an

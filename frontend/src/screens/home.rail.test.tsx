@@ -200,8 +200,10 @@ describe("HomeScreen — the context rail", () => {
     const user = userEvent.setup();
     render(<HomeScreen />);
 
-    await screen.findByText("Overnight");
-    expect(screen.getByText("Emails synced")).toBeTruthy();
+    // Waited on CONTENT, not on the panel's name: the name is also what the
+    // pending state announces now that a wait says what it is waiting for, so
+    // finding it proves the panel exists rather than that the digest arrived.
+    await screen.findByText("Emails synced");
     expect(screen.getByText("People created")).toBeTruthy();
     expect(screen.getByText("Companies created")).toBeTruthy();
     expect(

@@ -118,7 +118,10 @@ export default function OpenchannelScreen() {
           // undefined both while the read is in flight and when it failed, and
           // rendering either as "no endpoint" states something the read did
           // not establish.
-          <QueryStates query={endpoint}>
+          <QueryStates
+            query={endpoint}
+            pendingLabel={t("extOpenchannel.endpoint.title")}
+          >
             <EndpointCard endpoint={endpoint.data?.endpoint} />
           </QueryStates>
         ) : (

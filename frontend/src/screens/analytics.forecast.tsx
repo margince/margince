@@ -50,7 +50,7 @@ export function ForecastView({
   });
 
   return (
-    <QueryGate query={readings}>
+    <QueryGate query={readings} pendingLabel={t("forecast.updateCall")}>
       {(data) => (
         <>
           <ForecastAnswer readings={data} locale={locale} />

@@ -184,6 +184,7 @@ export function AutonomySettingsCard() {
             is also what keeps noneDecidedYet from having to speak for a set
             that does not exist. */}
         <QueryGate
+          pendingLabel={t("autonomy.title")}
           query={query}
           empty={(settings) => settings.data.length === 0}
         >

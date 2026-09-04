@@ -261,7 +261,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
     <Panel title={t(copy.title)}>
       <PanelBody>
         <p className="t-body">{t(copy.sub)}</p>
-        <QueryGate query={app}>
+        <QueryGate query={app} pendingLabel={t(copy.title)}>
           {(status) => (
             <>
               {failure && (

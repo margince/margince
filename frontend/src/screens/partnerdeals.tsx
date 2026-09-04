@@ -66,7 +66,7 @@ export function PartnerDeals({
       title={t("partnerDeals.panelTitle")}
       sub={t("partnerDeals.panelSub")}
     >
-      <QueryGate query={query}>
+      <QueryGate query={query} pendingLabel={t("partnerDeals.panelTitle")}>
         {(deals) => (
           <PanelBody>
             {deals.length === 0 ? (

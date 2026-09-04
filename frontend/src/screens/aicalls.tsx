@@ -46,7 +46,7 @@ export function CallDetailPanel({
     },
   });
   return (
-    <QueryStates query={query}>
+    <QueryStates query={query} pendingLabel={t("aicalls.title")}>
       {query.data && (
         <Card as="div" inset className="aicalls-detail">
           <p>
@@ -224,7 +224,7 @@ export function AiCallsCard() {
       <Panel title={t("aicalls.title")}>
         <PanelBody>
           <p className="settings-panel-sub">{t("aicalls.sub")}</p>
-          <QueryGate query={me}>
+          <QueryGate query={me} pendingLabel={t("aicalls.title")}>
             {() => <EmptyState>{t("aicalls.withheld")}</EmptyState>}
           </QueryGate>
         </PanelBody>
@@ -237,7 +237,7 @@ export function AiCallsCard() {
     <Panel title={t("aicalls.title")}>
       <PanelBody>
         <p className="settings-panel-sub">{t("aicalls.sub")}</p>
-        <QueryStates query={query}>
+        <QueryStates query={query} pendingLabel={t("aicalls.title")}>
           <SettingList>
             <SettingRow
               label={t("aicalls.col.task")}

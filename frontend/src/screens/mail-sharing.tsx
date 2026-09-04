@@ -83,7 +83,7 @@ export function MailSharingCard() {
     <Panel title={t("mailSharing.title")}>
       <PanelBody>
         <p className="settings-panel-sub">{t("mailSharing.sub")}</p>
-        <QueryGate query={query}>
+        <QueryGate query={query} pendingLabel={t("mailSharing.title")}>
           {(settings) => {
             const shown = pending ?? settings.mail_sharing;
             const dirty = pending !== null && pending !== settings.mail_sharing;

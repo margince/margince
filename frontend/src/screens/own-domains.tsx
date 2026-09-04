@@ -174,7 +174,10 @@ export function OwnDomainsCard() {
             description={t("ownDomains.irreversible")}
             layout="stack"
             control={
-              <QueryGate query={query}>
+              <QueryGate
+                query={query}
+                pendingLabel={t("ownDomains.curatedTitle")}
+              >
                 {(list) => (
                   <CuratedDomains
                     list={list.data}

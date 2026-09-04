@@ -76,7 +76,11 @@ function SectionPanel({
         children
       ) : (
         <PanelBody>
-          <SurfaceState state={state} emptyLabel={emptyLabel}>
+          <SurfaceState
+            state={state}
+            emptyLabel={emptyLabel}
+            loadingLabel={title}
+          >
             {null}
           </SurfaceState>
         </PanelBody>
