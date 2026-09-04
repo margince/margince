@@ -369,7 +369,7 @@ func relinkOrgEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Organ
 // show it is a button that is offered and then refuses.
 //
 // Held by: TestTheCardAndTheMergeAgreeOnWhoCarriesProjects
-// (backend/internal/compose/integration/project_integration_test.go)
+// (backend/internal/compose/integration/projectmerge_integration_test.go)
 const liveProjectEdge = `FROM relationship c
 		  JOIN project p ON p.id = c.project_id AND p.archived_at IS NULL
 		 WHERE c.kind = 'project_company' AND c.archived_at IS NULL`
