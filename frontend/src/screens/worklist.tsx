@@ -30,6 +30,7 @@ import {
   sellerWork,
 } from "./worklist.destinations";
 import { TeamExceptionsPanel } from "./worklist.exceptions";
+import { HandledForYouPanel } from "./worklist.handled";
 import { HiddenBacklogPanel } from "./worklist.hidden";
 import { CoachControl, OwnerPicker } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
@@ -596,6 +597,12 @@ function WorklistBody({
           Below, and never hidden — this work is somebody's, and a screen that
           swallowed it would be the reason it went undone. */}
       <ReviewPanel items={review} shortfall={reviewMissing} rows={rowProps} />
+      {/* LAST, and folded shut. A reader opens this page to find what to do
+          next; what is already finished answers a different question — worth
+          having, and not worth leading with. It is also the only panel here
+          that asks for nothing: the receipt is why the acts above it are safe
+          to take. */}
+      <HandledForYouPanel />
     </>
   );
 }

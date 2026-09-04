@@ -37,6 +37,8 @@ export type WorklistDisposition = NonNullable<
 >[number];
 export type TeamBoard = components["schemas"]["TeamBoard"];
 export type TeamExceptions = components["schemas"]["TeamExceptions"];
+export type HandledForYou = components["schemas"]["HandledForYou"];
+export type Receipt = components["schemas"]["Receipt"];
 export type TeamException = components["schemas"]["TeamException"];
 export type TeamBoardMember = components["schemas"]["TeamBoardMember"];
 export type HiddenBacklog = components["schemas"]["HiddenBacklog"];
@@ -120,6 +122,27 @@ export function loadedQueue(pages: readonly Worklist[]): WorklistItem[] {
 // so the two cannot disagree. A seat that may not ask for `team` is refused this
 // endpoint as well, and fetching anyway would put a 403 behind a surface the
 // reader was never shown a way into.
+/**
+ * What the product did on this reader's behalf.
+ *
+ * No `enabled` gate, unlike the manager reads beside it: a receipt is the
+ * reader's own and every act it reports was taken for them, so there is no tier
+ * to hold. The server refuses a caller with no human behind it, which is the
+ * only refusal this read has.
+ */
+export function useHandledForYou() {
+  return useQuery({
+    queryKey: [...worklistKey, "handled"],
+    queryFn: async (): Promise<HandledForYou> => {
+      const { data, error } = await api.GET("/worklist/handled", {});
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+}
+
 /**
  * What is going wrong on this lead's team.
  *
