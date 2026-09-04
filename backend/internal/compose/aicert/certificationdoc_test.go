@@ -21,6 +21,7 @@ package aicert_test
 
 import (
 	"encoding/json"
+	"math"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -152,9 +153,8 @@ type aiCertUnclaimed struct {
 	Reason  string           `json:"reason"`
 }
 
-// unclaimedReason is why a committed record reaches no row. The page and the
-// document both render it, so it is a constant rather than a sentence written
-// into each of them, which is how the two would come to word it differently.
+// unclaimedReason is why a committed record reaches no row: it is a field of
+// the document, which the page renders, rather than prose in the renderer.
 const unclaimedReason = "it names no scenario of any site its task ships, so no row above can attribute it"
 
 // buildAICertDoc folds the three trees into the document both files are written
@@ -166,7 +166,7 @@ func buildAICertDoc(rows []aicert.ReadinessRow, unclaimed []aicert.Record,
 ) aiCertDoc {
 	scenarios := scenariosBySite(corpus)
 	tasks, byTask := aiCertTaskGroups(rows)
-	doc := aiCertDoc{Bindings: foldAICertBindings(rows)}
+	doc := aiCertDoc{Bindings: foldAICertBindings(rows), Sites: []aiCertSite{}, Unclaimed: []aiCertUnclaimed{}}
 	for _, task := range tasks {
 		for _, siteKey := range siteKeysOf(byTask[task]) {
 			doc.Sites = append(doc.Sites, buildAICertSite(siteKey, byTask[task], scenarios[siteKey]))
@@ -216,19 +216,21 @@ func buildAICertSite(siteKey string, taskRows []aicert.ReadinessRow, cases []aic
 		if !row.Certified {
 			continue
 		}
-		if !row.Record.ContextApplied && len(row.Record.ContextScopes) > 0 {
-			site.MissingContextScopes = row.Record.ContextScopes
-		}
-		site.Records = append(site.Records, buildAICertRecord(row))
+		site.MissingContextScopes = foldContextScopes(site.MissingContextScopes, row.Record)
+		site.Records = append(site.Records, buildAICertRecord(row, len(site.Scenarios)))
 	}
 	site.Recommended = pickAICertRecord(site.Records)
 	return site
 }
 
-func buildAICertRecord(row aicert.ReadinessRow) aiCertRecord {
+// buildAICertRecord takes the denominator from the site's corpus rather than
+// from the record's own Standing: a record written before per-scenario stamps
+// reports no counts at all, and publishing its zero would say the site ships no
+// test cases three fields above the list of them.
+func buildAICertRecord(row aicert.ReadinessRow, siteScenarios int) aiCertRecord {
 	rec := aiCertRecord{
 		Binding: bindingRefOf(row.Record), State: row.Status(), Band: row.Tally.Verdict,
-		ScenariosTotal: row.Standing.Total, Runs: row.Tally.Runs, Passed: row.Tally.Passed,
+		ScenariosTotal: siteScenarios, Runs: row.Tally.Runs, Passed: row.Tally.Passed,
 		Reliability:  ratio(row.Tally.Passed, row.Tally.Runs),
 		LatencyP50MS: measuredMS(row.Record.LatencyP50), LatencyP95MS: measuredMS(row.Record.LatencyP95),
 		Reported: aiCertOutcomes{
@@ -237,11 +239,33 @@ func buildAICertRecord(row aicert.ReadinessRow) aiCertRecord {
 		},
 		StaleReason: row.Standing.Reason(),
 	}
-	if !row.Standing.TaskStampOnly && row.Standing.Total > 0 {
+	if row.Standing.Total > 0 {
 		measured := row.Standing.Measured
 		rec.ScenariosMeasured = &measured
 	}
 	return rec
+}
+
+// foldContextScopes unions what a task's records say production prepends and
+// their runs were not served. They agree whenever both read the same contract;
+// an older record that disagrees is folded in rather than overwritten, because
+// a scope that silently disappeared from both files is the one nobody would
+// think to look for.
+func foldContextScopes(held []string, rec aicert.Record) []string {
+	if rec.ContextApplied {
+		return held
+	}
+	seen := map[string]bool{}
+	for _, scope := range held {
+		seen[scope] = true
+	}
+	for _, scope := range rec.ContextScopes {
+		if !seen[scope] {
+			seen[scope] = true
+			held = append(held, scope)
+		}
+	}
+	return held
 }
 
 // pickAICertRecord is the strongest record that still describes what ships.
@@ -271,8 +295,8 @@ func beatsAICertRecord(rec, held aiCertRecord) bool {
 	if bandRank(rec.Band) != bandRank(held.Band) {
 		return bandRank(rec.Band) > bandRank(held.Band)
 	}
-	if value(rec.Reliability) != value(held.Reliability) {
-		return value(rec.Reliability) > value(held.Reliability)
+	if reliabilityOrZero(rec.Reliability) != reliabilityOrZero(held.Reliability) {
+		return reliabilityOrZero(rec.Reliability) > reliabilityOrZero(held.Reliability)
 	}
 	if slowness(rec.LatencyP95MS) != slowness(held.LatencyP95MS) {
 		return slowness(rec.LatencyP95MS) < slowness(held.LatencyP95MS)
@@ -391,7 +415,7 @@ func measuredMS(ms int64) *int64 {
 	return &ms
 }
 
-func value(rate *float64) float64 {
+func reliabilityOrZero(rate *float64) float64 {
 	if rate == nil {
 		return 0
 	}
@@ -402,7 +426,7 @@ func value(rate *float64) float64 {
 // timed nothing never wins the recommendation for being infinitely fast.
 func slowness(ms *int64) int64 {
 	if ms == nil {
-		return int64(^uint64(0) >> 1)
+		return math.MaxInt64
 	}
 	return *ms
 }

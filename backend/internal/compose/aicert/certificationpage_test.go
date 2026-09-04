@@ -88,7 +88,7 @@ func TestAICertificationPage(t *testing.T) {
 	)
 
 	doc := buildAICertDoc(rows, unclaimed, corpus, records)
-	assertAICertDocCoversEverything(t, doc, rows, corpus)
+	assertAICertDocCoversEverything(t, doc, rows, corpus, records)
 	encoded, err := marshalAICertDoc(doc)
 	if err != nil {
 		t.Fatalf("encoding the certification document: %v", err)
@@ -107,17 +107,21 @@ func TestAICertificationPage(t *testing.T) {
 // So the document is checked against the trees rather than against itself:
 // every shipped site, every scenario with a path that resolves, and a stated
 // reason on every stale record.
-func assertAICertDocCoversEverything(t *testing.T, doc aiCertDoc, rows []aicert.ReadinessRow, corpus []aicert.Scenario) {
+func assertAICertDocCoversEverything(t *testing.T, doc aiCertDoc,
+	rows []aicert.ReadinessRow, corpus []aicert.Scenario, records []aicert.Record,
+) {
 	t.Helper()
-	held := map[string]aiCertSite{}
+	sites := map[string]aiCertSite{}
 	for _, site := range doc.Sites {
-		held[site.Key] = site
+		sites[site.Key] = site
 	}
 	for _, row := range rows {
-		if _, carried := held[row.SiteKey()]; !carried {
+		if _, carried := sites[row.SiteKey()]; !carried {
 			t.Errorf("the document has no entry for shipped site %s", row.SiteKey())
 		}
 	}
+	assertAICertRecordsAllAccountedFor(t, doc, records)
+	assertAICertCoverageMatchesTheLibrary(t, doc, rows)
 	for _, site := range doc.Sites {
 		for _, rec := range site.Records {
 			if rec.State == aicert.StatusStale && rec.StaleReason == "" {
@@ -125,21 +129,74 @@ func assertAICertDocCoversEverything(t *testing.T, doc aiCertDoc, rows []aicert.
 			}
 		}
 	}
+	// Keyed by site AND name: a name is unique within its task and nothing makes
+	// it unique across the corpus, so keying by name alone would let one task's
+	// scenario stand in for another's — the census would then read a dropped
+	// case as present and check the wrong file for it.
 	carried := map[string]aiCertScenario{}
 	for _, site := range doc.Sites {
 		for _, sc := range site.Scenarios {
-			carried[sc.Name] = sc
+			carried[site.Key+"/"+sc.Name] = sc
 		}
 	}
 	for _, sc := range corpus {
-		held, listed := carried[sc.Name]
-		if !listed {
-			t.Errorf("scenario %s is in the corpus but not in the document", sc.Name)
+		listed, carries := carried[sc.Task+"/"+sc.Site+"/"+sc.Name]
+		if !carries {
+			t.Errorf("scenario %s of %s/%s is in the corpus but not in the document", sc.Name, sc.Task, sc.Site)
 			continue
 		}
-		if _, err := os.Stat(filepath.Join("..", "..", "..", "..", held.File)); err != nil {
+		if _, err := os.Stat(filepath.Join("..", "..", "..", "..", listed.File)); err != nil {
 			t.Errorf("scenario %s is filed at %s, which does not resolve from the repository root: %v",
-				sc.Name, held.File, err)
+				sc.Name, listed.File, err)
+		}
+	}
+}
+
+// assertAICertRecordsAllAccountedFor holds the headline "Committed records" to
+// what the tables below it enumerate. The total counts the tree; the tables
+// carry a record only where it measured a shipped site, or as unclaimed. A
+// record reaching neither would leave the page claiming more than it shows, and
+// nothing else in this file would notice.
+func assertAICertRecordsAllAccountedFor(t *testing.T, doc aiCertDoc, records []aicert.Record) {
+	t.Helper()
+	shown := map[string]bool{}
+	for _, site := range doc.Sites {
+		for _, rec := range site.Records {
+			shown[site.Task+"/"+rec.Binding.Provider+"/"+rec.Binding.Model+"/"+rec.Binding.Env] = true
+		}
+	}
+	for _, rec := range doc.Unclaimed {
+		shown[rec.Task+"/"+rec.Binding.Provider+"/"+rec.Binding.Model+"/"+rec.Binding.Env] = true
+	}
+	for _, rec := range records {
+		if !shown[aicert.RecordKey(rec)] {
+			t.Errorf("committed record %s is counted in the totals but appears in no table", aicert.RecordKey(rec))
+		}
+	}
+	if doc.Totals.Records != len(records) {
+		t.Errorf("the totals claim %d committed records, and the tree holds %d", doc.Totals.Records, len(records))
+	}
+}
+
+// assertAICertCoverageMatchesTheLibrary holds this file's scenario cell to
+// aicert.ReadinessRow.Coverage(), which is what `make e2e-ai-report` prints for
+// the same record. The document keeps numbers and the page renders them, so the
+// cell is spelled twice; this is what keeps the two from drifting apart.
+func assertAICertCoverageMatchesTheLibrary(t *testing.T, doc aiCertDoc, rows []aicert.ReadinessRow) {
+	t.Helper()
+	rendered := map[string]string{}
+	for _, site := range doc.Sites {
+		for _, rec := range site.Records {
+			rendered[site.Key+" "+rec.Binding.label()] = coverageCell(rec)
+		}
+	}
+	for _, row := range rows {
+		if !row.Certified {
+			continue
+		}
+		key := row.SiteKey() + " " + row.Binding()
+		if got, shown := rendered[key]; shown && got != row.Coverage() {
+			t.Errorf("%s renders coverage %s where the report command prints %s", key, got, row.Coverage())
 		}
 	}
 }
@@ -206,10 +263,10 @@ func writeAICertHead(page *strings.Builder) {
 	page.WriteString("How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.md).\n\n")
 }
 
-// writeAICertGlossary states in one place what every table below means. Each
-// caveat here used to sit above the table it qualified — which put the same
-// four lines about record latency above all 38 site tables, and left a reader
-// who started in the middle with no word for `binding` at all.
+// writeAICertGlossary defines every state word, every column and every dash
+// once, here. The page carries one table per shipped site and a reader arrives
+// in the middle of it, so a caveat kept beside the table it qualifies is either
+// repeated as many times as there are sites or missed.
 func writeAICertGlossary(page *strings.Builder) {
 	page.WriteString("## How to read this page\n\n")
 	page.WriteString("| Word | What it means |\n|---|---|\n")
@@ -291,14 +348,10 @@ func aiCertPickCells(pick *aiCertPick) string {
 	return fmt.Sprintf("`%s` | `%s` | %s", pick.Binding.label(), pick.Band, reliabilityCell(pick.Reliability))
 }
 
-// aiCertSiteAnchor is the fragment GitHub derives from a site's heading:
-// lowercased, with anything that is not a letter, digit, hyphen or underscore
-// dropped — so `cold_start/acts` is reached as #cold_startacts.
-//
-// mcpinfomarkdown_test.go computes the same fragment for the MCP surface page.
-// The two are not shared because they are helpers of two `_test` packages,
-// which cannot import each other; the rule they both encode belongs to GitHub's
-// renderer, not to this tree.
+// aiCertSiteAnchor is the fragment GitHub derives from a site's heading. A site
+// key is `task/variant` over the identifier characters a Go package name allows,
+// so lowercasing and dropping the slash is the whole of the rule here: the
+// section `cold_start/acts` is reached as #cold_startacts.
 func aiCertSiteAnchor(siteKey string) string {
 	var fragment strings.Builder
 	for _, r := range strings.ToLower(siteKey) {
@@ -485,10 +538,12 @@ func writeAICertUnclaimed(page *strings.Builder, unclaimed []aiCertUnclaimed) {
 		return
 	}
 	page.WriteString("## Records no shipped site claims\n\n")
-	page.WriteString("| Record | Why no row carries it |\n|---|---|\n")
+	// The task and the binding, not a filename: a model name carrying a slash is
+	// folded differently on disk than in a binding, and a path spelled here that
+	// nothing opens is worse than no path at all.
+	page.WriteString("| Task | Binding | Why no row carries it |\n|---|---|---|\n")
 	for _, rec := range unclaimed {
-		fmt.Fprintf(page, "| `%s/%s_%s_%s` | %s |\n",
-			rec.Task, rec.Binding.Provider, rec.Binding.Model, rec.Binding.Env, rec.Reason)
+		fmt.Fprintf(page, "| `%s` | `%s` | %s |\n", rec.Task, rec.Binding.label(), rec.Reason)
 	}
 	page.WriteString("\n")
 }
