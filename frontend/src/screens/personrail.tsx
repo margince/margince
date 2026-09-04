@@ -1,5 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, Mail, Phone } from "lucide-react";
+import {
+  BriefcaseBusiness,
+  ChevronRight,
+  Link as LinkIcon,
+  Mail,
+  MapPin,
+  Phone,
+  User,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { api } from "../api/client";
@@ -329,7 +337,7 @@ type DetailsRowProps = Readonly<{
 function NameRow({ person, canEdit, readOnlyReason, patch }: DetailsRowProps) {
   const t = useT();
   return (
-    <FieldRow label={t("create.fullName")}>
+    <FieldRow label={t("create.fullName")} icon={<User />}>
       <InlineText
         label={t("create.fullName")}
         value={person.full_name}
@@ -345,7 +353,7 @@ function NameRow({ person, canEdit, readOnlyReason, patch }: DetailsRowProps) {
 function TitleRow({ person, canEdit, readOnlyReason, patch }: DetailsRowProps) {
   const t = useT();
   return (
-    <FieldRow label={t("create.personTitle")}>
+    <FieldRow label={t("create.personTitle")} icon={<BriefcaseBusiness />}>
       <InlineText
         label={t("create.personTitle")}
         value={person.title ?? ""}
@@ -381,7 +389,7 @@ function LinkedinRow({
   const t = useT();
   const linkedin = linkedinOf(person);
   return (
-    <FieldRow label={t("person.page.linkedin")}>
+    <FieldRow label={t("person.page.linkedin")} icon={<LinkIcon />}>
       <span className="pe-linkedin">
         <InlineText
           label={t("person.page.linkedin")}
@@ -421,7 +429,7 @@ function LinkedinRow({
 function CityRow({ person, canEdit, readOnlyReason, patch }: DetailsRowProps) {
   const t = useT();
   return (
-    <FieldRow label={t("create.city")}>
+    <FieldRow label={t("create.city")} icon={<MapPin />}>
       <InlineText
         label={t("create.city")}
         value={person.address?.city ?? ""}
@@ -444,7 +452,7 @@ function EmailRow({ person }: Readonly<{ person: Person }>) {
   const t = useT();
   const email = person.emails?.[0]?.email;
   return (
-    <FieldRow label={t("person.rail.email")}>
+    <FieldRow label={t("person.rail.email")} icon={<Mail />}>
       {email ? (
         <ContactLink kind="email" value={email} className="pe-meta-link" />
       ) : (
@@ -458,7 +466,7 @@ function PhoneRow({ person }: Readonly<{ person: Person }>) {
   const t = useT();
   const phone = person.phones?.[0]?.phone;
   return (
-    <FieldRow label={t("person.rail.phone")}>
+    <FieldRow label={t("person.rail.phone")} icon={<Phone />}>
       {phone ? (
         <ContactLink kind="phone" value={phone} className="pe-meta-link" />
       ) : (
@@ -491,7 +499,7 @@ function DetailsGrid({ view }: Readonly<{ view: Person360 }>) {
   return (
     <Panel title={t("person.rail.detailsTitle")}>
       <PanelBody>
-        <FieldGrid>
+        <FieldGrid icons>
           <NameRow {...row} />
           <TitleRow {...row} />
           <EmailRow person={person} />

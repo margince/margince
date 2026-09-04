@@ -203,9 +203,8 @@ func (s *PendingStore) NoiseJudgedContacts(ctx context.Context, limit int) ([]No
 // cannot drift into asking different questions. Both arguments are
 // compile-time SQL expressions, never caller data.
 //
-// Held by: TestTheNoiseVerdictQuestionHasOneSpelling (backend/gates/noiseverdictclaim_test.go)
-// — a second statement pairing the override with a ledger verdict is a second
-// answer to this question, and the write it guards archives somebody's contact.
+// Held by: TestTheNoiseJudgedPredicateHasOneSpelling
+// (backend/gates/noisejudgedspelling_test.go)
 func noiseJudgedStandsSQL(emailExpr, ownerExpr string) string {
 	return `((EXISTS (SELECT 1 FROM capture_pending_counterparty q
 	                   WHERE q.email = ` + emailExpr + `

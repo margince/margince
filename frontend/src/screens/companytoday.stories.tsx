@@ -3,7 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { TodayOnThisAccount } from "./companytoday";
+import {
+  Company360Call,
+  TodayOnThisAccount,
+  useTodayReading,
+} from "./companytoday";
 import { StoryProviders } from "./story-utils";
 
 // The daily brief, above the tab bar: a context band read off the account's
@@ -113,6 +117,22 @@ const populated = {
   },
 } as unknown as View;
 
+// Two of the three dimensions rated, each with the reading its rating was made
+// from: what the chips' asides carry.
+const rated = {
+  ...populated,
+  health: {
+    relationship: {
+      rating: "strong",
+      reason: "They last wrote 2 days ago, and started the thread.",
+    },
+    commercial: {
+      rating: "at_risk",
+      reason: "The depot pilot has not moved in 18 days.",
+    },
+  },
+} as unknown as View;
+
 // state_strip and people withheld — the two readings no seeded demo account
 // ever omits, so this is the only place the brief's own withheld path for
 // either one renders.
@@ -144,6 +164,30 @@ function Brief({
 }
 
 export const Populated: Story = { render: () => <Brief view={populated} /> };
+
+// The call, with the three rated dimensions under it. Payment is unrated here
+// on purpose: the finance read the rating comes from is not stubbed, which is
+// the state a fresh account is actually in — and it is the chip whose aside
+// has a definition and no working to show.
+function Call({ view }: Readonly<{ view: View }>) {
+  const reading = useTodayReading({
+    orgId: "o-1",
+    view,
+    loading: false,
+    failed: false,
+  });
+  return <Company360Call reading={reading} name={org.display_name} />;
+}
+
+export const Reading: Story = {
+  render: () => (
+    <StoryProviders>
+      <div style={{ maxWidth: 720 }}>
+        <Call view={rated} />
+      </div>
+    </StoryProviders>
+  ),
+};
 
 export const SectionWithheld: Story = {
   render: () => <Brief view={withheld} />,

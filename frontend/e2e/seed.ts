@@ -1140,29 +1140,6 @@ export async function mockApi(
             ],
       });
     }
-    if (path === "/analytics/context" && method === "GET") {
-      // Analytics reads its frame before it draws anything: which population
-      // these numbers cover, which others this reader may ask for, and whether
-      // the manager forecast is theirs to publish. The catch-all would answer
-      // it with a list envelope — a 200 carrying no `capabilities` — and the
-      // screen reads that field, so every analytics route rendered the error
-      // boundary instead of a page, and the axe sweeps and the one-h1 checks
-      // failed on a screen that had crashed rather than on anything they test.
-      //
-      // The whole workspace, because the seeded session is an admin: a rep
-      // would be offered one population and get a line instead of the picker.
-      return json({
-        default_scope: { kind: "workspace", label: "Whole workspace" },
-        allowed_scopes: [{ kind: "workspace", label: "Whole workspace" }],
-        capabilities: {
-          view_manager_forecast: true,
-          submit_manager_forecast: true,
-        },
-        as_of: "2026-09-04T00:00:00Z",
-        timezone: "Europe/Berlin",
-        base_currency: "EUR",
-      });
-    }
     if (path === "/installation/settings" && method === "GET") {
       // The authenticated shell holds its first paint on this read, because
       // `installation.timezone` is the clock every record date is rendered in
@@ -2296,6 +2273,25 @@ export async function mockApi(
         aggregated_account_count: 1,
         restricted_excluded: [],
         computed_at: "2026-07-13T00:00:00Z",
+      });
+    }
+    // Analytics' frame, BEFORE the record-context match below: that one tests
+    // a substring, so it answered this route with a 360's envelope — a body
+    // with no `default_scope`, which took every analytics screen to the error
+    // boundary and the rail with it. Named in full here because the two share
+    // a word and nothing else.
+    if (path === "/analytics/context") {
+      const workspace = { kind: "workspace", label: "Whole workspace" };
+      return json({
+        default_scope: workspace,
+        allowed_scopes: [workspace],
+        capabilities: {
+          view_manager_forecast: true,
+          submit_manager_forecast: true,
+        },
+        as_of: "2026-07-13T00:00:00Z",
+        timezone: "Europe/Berlin",
+        base_currency: "EUR",
       });
     }
     // RS-3's context panel and the IT-1 tool console both read fixed-shape

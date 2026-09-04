@@ -388,9 +388,22 @@ func writeAuthorityIndex(t *testing.T, tables map[string]bool) map[string]map[st
 			dirConsts[dir][name] = value
 		}
 	}
+	// The statements each package holds in its package-level vars and consts,
+	// read once per package. A statement hoisted out of a function body is
+	// executed by whoever NAMES it, and the write is that function's — reading
+	// only body literals left the organization column writers, the company
+	// form's and the cold-start fill's alike, outside this census entirely.
+	// Not reported as a gap: silently absent, which is the one way a census must
+	// not fail. updateguard folded the same shape in for the same reason.
+	heldCache := map[string]map[string][]string{}
 	for _, src := range files {
 		dir := filepath.ToSlash(filepath.Dir(src.Path))
 		consts := packageStringConsts(src)
+		held := heldStatements(t, heldCache, dir)
+		var imported []map[string][]string
+		for _, importDir := range inModuleImportDirs(src.File) {
+			imported = append(imported, heldStatements(t, heldCache, importDir))
+		}
 		for name, value := range dirConsts[dir] {
 			if _, local := consts[name]; !local {
 				consts[name] = value
@@ -415,6 +428,7 @@ func writeAuthorityIndex(t *testing.T, tables map[string]bool) map[string]map[st
 			}
 			at := probeSite{dir: dir, recv: recv, fn: fn.Name.Name, file: src.Path}
 			indexWriteAuthorityBody(fn, info, tables, consts, at, src)
+			indexHeldStatements(statementsJudged(fn, held, imported), info)
 		}
 	}
 	if len(pkgs) == 0 {
@@ -472,6 +486,25 @@ func indexWriteAuthorityBody(fn *ast.FuncDecl, info *writeAuthorityFn, tables ma
 		}
 		return true
 	})
+}
+
+// indexHeldStatements folds the statements a function NAMES but does not spell —
+// a package-level table of UPDATEs it indexes by column, which is how three of
+// the organization writers send theirs. Read exactly as a body literal is, so a
+// statement moved out of a body does not change what this census believes about
+// the function that runs it.
+func indexHeldStatements(statements []string, info *writeAuthorityFn) {
+	for _, text := range statements {
+		if writesSQL(text) {
+			info.mutates = true
+		}
+		written, dynamic := mutatedTables(text)
+		for _, table := range written {
+			info.mutates = true
+			info.noteWrite(table)
+		}
+		info.dynamicWrite = append(info.dynamicWrite, dynamic...)
+	}
 }
 
 func indexWriteAuthorityCall(call *ast.CallExpr, info *writeAuthorityFn, tables map[string]bool,

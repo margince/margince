@@ -86,14 +86,11 @@ test.describe("the record's details pane", () => {
   const BESIDE = 1440;
   const STACKED = [900, 390];
 
-  // The switch at the end of the tab row: the one pressed control with a glyph
-  // and no word.
+  // The switch at the end of the tab row: the one control there that SETS
+  // rather than does, so `aria-pressed` is what names it structurally — the
+  // word on it is copy this suite does not pin.
   function detailsSwitch(page: Page) {
-    return page
-      .locator(".recordtabs-trailing")
-      .locator("button[aria-label]")
-      .filter({ has: page.locator("svg") })
-      .and(page.locator("[aria-pressed]"));
+    return page.locator(".recordtabs-trailing button[aria-pressed]");
   }
 
   test(`opens beside the work column, under the tab row, at ${BESIDE}px`, async ({

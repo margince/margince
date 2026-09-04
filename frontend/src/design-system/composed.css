@@ -355,6 +355,24 @@
 .record-actions:has(.btn-with-reason) {
   align-items: flex-start;
 }
+/* A caption the CALLER puts in the row, rather than one `Button` hangs under a
+   verb, is a sentence about the whole row. It takes its own line inside it, for
+   the reason above: at a sentence's natural width it set the group's width, and
+   a group that wide wrapped the verbs off the identity's line — leaving the
+   record's name alone across the header with its verbs on a row of their own. */
+.record-actions > .t-caption {
+  flex-basis: 100%;
+  order: 1;
+  margin: 0;
+  text-align: end;
+}
+/* And the verbs keep the row's far end whatever else is in the group: the
+   caption above sets the group's width, so without this the buttons sat at the
+   start of a group as wide as a sentence — adrift in the middle of the header
+   rather than at its edge. */
+.record-actions-inline {
+  justify-content: flex-end;
+}
 
 /* On a phone the record's verbs stick to the bottom of the viewport (plan
  * §10.3). A rep scrolling an account's story is several screens from the
