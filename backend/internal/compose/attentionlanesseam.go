@@ -167,6 +167,12 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 			ctx, tx,
 			now.AddDate(0, 0, -relstrength.QuietDays),
 			decayCandidateCap,
+			// Contacts this reader set aside, removed BEFORE the cap. The
+			// people module owns the rows and renders the predicate; search
+			// never imports a sibling, so the projection takes it as a hole.
+			func(arg func(any) int) (string, error) {
+				return people.NotDismissedClause(ctx, "e", now, arg)
+			},
 		)
 		if err != nil {
 			return err

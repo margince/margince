@@ -206,7 +206,10 @@ func (s *Store) RevokeParticipant(ctx context.Context, roomID ids.DealRoomID, pa
 		if err != nil {
 			return err
 		}
-		if err := ensureDealWritable(ctx, tx, room); err != nil {
+		// Retractable, not writable: the doc above promises this works in every
+		// room state, and a deal archived under the room is the state it is
+		// promised for.
+		if err := ensureDealRetractable(ctx, tx, room); err != nil {
 			return err
 		}
 		if err := lockParticipant(ctx, tx, participantID); err != nil {

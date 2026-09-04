@@ -247,7 +247,16 @@ func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *tim
 		if err != nil {
 			return err
 		}
-		if err := ensureDealWritable(ctx, tx, current); err != nil {
+		// The probe follows the DIRECTION of the change, not the method. Pulling
+		// an expiry in is the retraction this method's own doc describes, and an
+		// archived deal must not freeze it; pushing one out or removing it hands
+		// more buyer access out, which an archived deal must refuse.
+		if cutsAccessShort(current.ExpiresAt, expiresAt) {
+			err = ensureDealRetractable(ctx, tx, current)
+		} else {
+			err = ensureDealWritable(ctx, tx, current)
+		}
+		if err != nil {
 			return err
 		}
 		p := storekit.NewPatch()
@@ -272,6 +281,16 @@ func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *tim
 	return out, err
 }
 
+// cutsAccessShort reports whether the new expiry ends buyer access sooner than
+// the standing one. Removing the bound never does; setting one where there was
+// none always does.
+func cutsAccessShort(standing, next *time.Time) bool {
+	if next == nil {
+		return false
+	}
+	return standing == nil || next.Before(*standing)
+}
+
 // changedFields names the editorial columns this patch moved, sorted so a
 // subscriber comparing two events is not reading map iteration order.
 //
@@ -288,6 +307,21 @@ func changedFields(p *storekit.Patch) []string {
 // ensureDealWritable holds the rule that authority over a room follows
 // authority over its deal: reading the room proved the deal is visible, and a
 // mutation additionally needs write authority on it.
+//
+// LIVE, because everything gated on this ADDS to the room — an invitation, a
+// release, a preview seat, a longer term. An archived deal takes nothing new,
+// and a room is the sharpest form of that: it is buyer-facing access, and
+// handing out more of it after the deal was retired is what retiring the deal
+// meant to stop.
 func ensureDealWritable(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom) error {
-	return auth.EnsureWritable(ctx, tx, dealTable, ids.UUID(room.DealId))
+	return auth.EnsureWritableLive(ctx, tx, dealTable, ids.UUID(room.DealId))
+}
+
+// ensureDealRetractable is its twin for the moves that TAKE ACCESS AWAY —
+// revoking a seat, pausing or closing the room, archiving it. Same authority,
+// no liveness, because archiving the deal is the moment somebody most wants to
+// cut off a buyer who is still reading its room. auth.EnsureRetractable states
+// the rule the pair implements.
+func ensureDealRetractable(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom) error {
+	return auth.EnsureRetractable(ctx, tx, dealTable, ids.UUID(room.DealId))
 }
