@@ -62,11 +62,7 @@ func (s *Store) SetCompanyLogo(ctx context.Context, objectKey, named string) (su
 		// it read: the column records where a mark came from, and it is the
 		// value the NEXT write's before-image carries. Written empty here, that
 		// before-image would say the record wore nothing.
-		if err := tx.QueryRow(ctx, `
-			UPDATE organization SET logo_object_key = $2, logo_origin = $3
-			WHERE id = $1 AND archived_at IS NULL
-			RETURNING (SELECT o.logo_object_key FROM organization o WHERE o.id = $1),
-			          (SELECT o.logo_origin FROM organization o WHERE o.id = $1)`,
+		if err := tx.QueryRow(ctx, orgLogoWrite,
 			orgID, objectKey, named).Scan(&previous, &previousOrigin); err != nil {
 			return fmt.Errorf("set the company logo: %w", err)
 		}
@@ -103,12 +99,10 @@ func (s *Store) ClearCompanyLogo(ctx context.Context) (supersededKey *string, er
 			return err
 		}
 		var previous, previousOrigin *string
-		if err := tx.QueryRow(ctx, `
-			UPDATE organization SET logo_object_key = NULL, logo_origin = NULL
-			WHERE id = $1 AND archived_at IS NULL
-			RETURNING (SELECT o.logo_object_key FROM organization o WHERE o.id = $1),
-			          (SELECT o.logo_origin FROM organization o WHERE o.id = $1)`,
-			orgID).Scan(&previous, &previousOrigin); err != nil {
+		if err := tx.QueryRow(ctx, orgLogoWrite,
+			// Clearing IS setting the mark to nothing: same statement, no key
+			// and no origin. orgLogoWrite says why that is one write and not two.
+			orgID, nil, nil).Scan(&previous, &previousOrigin); err != nil {
 			return fmt.Errorf("clear the company logo: %w", err)
 		}
 		if previous == nil || *previous == "" {

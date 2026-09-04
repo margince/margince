@@ -80,15 +80,37 @@ func (s *Store) Decide(ctx context.Context, id ids.CommissionEntryID, in DecideI
 func decideTx(ctx context.Context, tx pgx.Tx, id ids.CommissionEntryID, in DecideInput, by string) (crmcontracts.CommissionEntry, error) {
 	// Read under the caller's scope first: a row they cannot see must read as
 	// not-found rather than as a refusal that confirms it exists.
-	current, err := readEntry(ctx, tx, id)
+	//
+	// The scope follows the decision for the same reason the probe below does. A
+	// void has to reach an entry whose deal has since been archived, and the
+	// default read refuses one — so gating the write without widening the read
+	// would leave the void answering not-found before any probe ran.
+	void := in.Decision == DecisionVoid
+	var (
+		current crmcontracts.CommissionEntry
+		err     error
+	)
+	if void {
+		current, err = readRetractableEntry(ctx, tx, id)
+	} else {
+		current, err = readEntry(ctx, tx, id)
+	}
 	if err != nil {
 		return crmcontracts.CommissionEntry{}, err
 	}
-	// Then the WRITE probe on the deal the entry hangs off. Approving and
-	// paying commit money and voiding takes it back, and a manual share widens
-	// VISIBILITY at either access level — so without this a `read` share of the
-	// deal would carry authority over its partner's money.
-	if err := WritableEntriesForDeal(ctx, tx, ids.From[ids.DealKind](ids.UUID(current.DealId))); err != nil {
+	// Then the WRITE probe on the deal the entry hangs off, chosen by what this
+	// decision DOES: approving and paying commit money, which an archived deal
+	// admits no more of, while voiding takes money back and must stay reachable
+	// on one. A manual share widens VISIBILITY at either access level, so
+	// without either probe a `read` share of the deal would carry authority over
+	// its partner's money.
+	deal := ids.From[ids.DealKind](ids.UUID(current.DealId))
+	if void {
+		err = RetractableEntriesForDeal(ctx, tx, deal)
+	} else {
+		err = WritableEntriesForDeal(ctx, tx, deal)
+	}
+	if err != nil {
 		return crmcontracts.CommissionEntry{}, err
 	}
 
@@ -108,7 +130,12 @@ func decideTx(ctx context.Context, tx pgx.Tx, id ids.CommissionEntryID, in Decid
 	if in.Decision == DecisionVoid {
 		p.Set("void_reason", current.VoidReason, *in.Reason)
 	}
-	if err := p.ApplyGuarded(ctx, tx, "commission_entry", ids.UUID(current.Id), in.IfVersion); err != nil {
+	// NoArchiveColumn for the reason voidOne states one screen down: the ledger
+	// has no archived_at, an entry is voided rather than archived, and the
+	// LiveOnly default renders a predicate naming a column this table does not
+	// have — so every decision failed on it.
+	if err := p.ApplyGuardedIn(ctx, tx, "commission_entry", ids.UUID(current.Id), in.IfVersion,
+		storekit.NoArchiveColumn); err != nil {
 		return crmcontracts.CommissionEntry{}, fmt.Errorf("apply commission decision: %w", err)
 	}
 	if in.Decision == DecisionVoid {
@@ -130,6 +157,11 @@ func decideTx(ctx context.Context, tx pgx.Tx, id ids.CommissionEntryID, in Decid
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, ids.UUID(current.Id), decided); err != nil {
 		return crmcontracts.CommissionEntry{}, fmt.Errorf("emit commission.decided: %w", err)
+	}
+	// The same scope the read at the top took: a void's own answer must not be
+	// the not-found its subject would read as through the default clause.
+	if void {
+		return readRetractableEntry(ctx, tx, id)
 	}
 	return readEntry(ctx, tx, id)
 }
@@ -244,9 +276,10 @@ func (s *Store) ReverseForDeal(ctx context.Context, deal ids.DealID, reason stri
 //
 // Gated on WRITE authority over the deal, not read: voiding a partner's money
 // is a change, and a manual share widens visibility at either access level — so
-// a read clause here would let a `read` share reverse an accrual.
+// a read clause here would let a `read` share reverse an accrual. Retractable
+// rather than live, because a reopen sweeping an archived deal is the case.
 func liveEntriesForDeal(ctx context.Context, tx pgx.Tx, deal ids.DealID) ([]crmcontracts.CommissionEntry, error) {
-	if err := WritableEntriesForDeal(ctx, tx, deal); err != nil {
+	if err := RetractableEntriesForDeal(ctx, tx, deal); err != nil {
 		return nil, err
 	}
 	var args []any
@@ -280,10 +313,11 @@ func liveEntriesForDeal(ctx context.Context, tx pgx.Tx, deal ids.DealID) ([]crmc
 // pair a human's void produces, so a reopened deal and a cancelled entry leave
 // the ledger in the same shape.
 func voidOne(ctx context.Context, tx pgx.Tx, entry crmcontracts.CommissionEntry, reason, by string) error {
-	// IncludeArchived because the ledger has no archived_at: an entry is never
-	// archived, it is voided, and LiveOnly would render a predicate naming a
-	// column this table deliberately does not have.
-	lock, err := storekit.LockRow(ctx, tx, "commission_entry", ids.UUID(entry.Id), storekit.IncludeArchived)
+	// NoArchiveColumn, not IncludeArchived: the ledger has no archived_at at all,
+	// an entry is voided rather than archived, and IncludeArchived would claim
+	// this lock deliberately reaches archived rows that cannot exist. Both
+	// render the same empty predicate; only one says the true thing.
+	lock, err := storekit.LockRow(ctx, tx, "commission_entry", ids.UUID(entry.Id), storekit.NoArchiveColumn)
 	if err != nil {
 		return fmt.Errorf("lock commission entry: %w", err)
 	}

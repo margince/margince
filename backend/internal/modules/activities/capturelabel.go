@@ -69,10 +69,15 @@ func (s *Store) UnlabeledCaptureEmails(ctx context.Context, limit, bodyLimit int
 // earlier verdict stands, never an overwrite.
 func (s *Store) SetCaptureLabel(ctx context.Context, id ids.UUID, label string) (applied bool, err error) {
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Both exclusions are re-tested at WRITE time, not only in the backlog
-		// that selected this row. The classifier reads a batch, spends a model
-		// call per message and writes the answers back, and the row can change
-		// inside that window.
+		// All THREE exclusions are re-tested at WRITE time, not only in the
+		// backlog that selected this row. The classifier reads a batch, spends a
+		// model call per message and writes the answers back, and the row can
+		// change inside that window.
+		//
+		// The archive: a noise disposition or the retention sweep takes the
+		// message off the timeline, and a label landing afterwards puts a
+		// hidden message back on a shared worklist. Nothing would clear it —
+		// the backlog excludes archived rows, so no later pass revisits one.
 		//
 		// The audience: a human or a verdict limits the message, and without
 		// this clause the write lands after the narrowing and re-labels a
@@ -88,7 +93,7 @@ func (s *Store) SetCaptureLabel(ctx context.Context, id ids.UUID, label string) 
 		// attempt to remove it.
 		tag, err := tx.Exec(ctx, `
 			UPDATE activity SET capture_label = $2, capture_labeled_at = now()
-			WHERE id = $1 AND capture_label IS NULL
+			WHERE id = $1 AND capture_label IS NULL AND archived_at IS NULL
 			  AND audience = 'workspace' AND restricted_at IS NULL`, id, label)
 		if err != nil {
 			return fmt.Errorf("activities: setting capture label: %w", err)

@@ -24,8 +24,21 @@ import (
 
 // confidentialMarkers are the whole-word subject markers that hold a message.
 //
-// Whole-word, so "NDA" does not fire on "AGENDA" and "vertraulich" does not
-// fire inside a longer compound the sender did not mean as a marker. The
+// Every word here is one a sender writes IN ORDER TO MARK the message. That is
+// the test this list is kept to, and it is why the names of agreements are not
+// on it.
+//
+// "NDA" and "non-disclosure" were, and they are the wrong kind of word. An NDA
+// is a routine agreement between two COMPANIES — signed by the company rather
+// than by a person — and that one exists is not itself a secret. "Re: NDA",
+// "NDA signed" and "NDA für das Projekt" are threads ABOUT ordinary
+// contracting, so holding them took a deal's own paperwork away from the team
+// doing the deal. Naming a document is not asking for confidence: the material
+// the document covers may well be, and a sender who wants that held writes one
+// of the words below.
+//
+// Whole-word, so "vertraulich" does not fire inside a longer compound the
+// sender did not mean as a marker. The
 // German words carry their inflected endings because a subject reads
 // "Vertrauliche Unterlagen" as readily as "[Vertraulich]".
 // The German endings are the full set a subject line uses, not a sample: -en is
@@ -33,11 +46,16 @@ import (
 // vertraulichen Behandlung" dative), and each ending missing here is a message
 // its sender explicitly marked that publishes to the workspace.
 //
+// "Vertraulichkeitsvereinbarung" is the German for an NDA and stays, which is
+// not the exception it looks like: a sender typing it has written "vertraulich"
+// at the front of the word, and it is what a DACH sender reaches for when
+// marking. The English abbreviation carries no such marking sense.
+//
 // No separate arm for "[Vertraulich]" or "streng vertraulich": a bracket and a
 // space are both word boundaries, so the inflected arm already matches them.
 var confidentialMarkers = regexp.MustCompile(
 	`(?i)(\bvertraulich(e|en|em|er|es)?\b|\bvertraulichkeitsvereinbarung\b|` +
-		`\bconfidential\b|\bprivileged\b|\bnon-disclosure\b|\bNDA\b)`)
+		`\bconfidential\b|\bprivileged\b)`)
 
 // explicitlyConfidential answers whether a subject line carries a marker its
 // sender meant as one.

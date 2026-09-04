@@ -38,6 +38,7 @@ import {
   type WorklistItem,
   worklistKey,
 } from "./worklist.queries";
+import { syncHealthDetail } from "./worklist.synchealth";
 
 /**
  * A grouped row's named members, each ONCE.
@@ -99,6 +100,13 @@ export function WorklistRow({
   // began in four minutes or in fifty, and a task said "Overdue" without saying
   // by how long — on the two rows whose whole claim is a moment.
   const when = whenText(item, t, locale, zone, new Date());
+  // The supporting line. Every source but one sends a sentence already;
+  // sync_health sends its condition's facts in its own vocabulary, so its line
+  // is written from `kind` and `detail` together.
+  const detail =
+    item.source === "sync_health"
+      ? syncHealthDetail(item.kind, item.detail, t)
+      : item.detail;
   // The badged reasons are drawn as badges above and left out here, so one
   // meeting does not report the same finding twice in two registers.
   const because = phrasedReasons(item)
@@ -158,20 +166,12 @@ export function WorklistRow({
             which rule failed and how. That is the decisive line on most of these
             rows, and a reader was reading around it.
 
-            `sync_health` is the one still held back, and deliberately. Its own
-            renderer says it carries "that condition's facts in the producer's
-            own vocabulary — the affected object classes, the failure class, or
-            the budget band — and the client writes the sentence": internal words
-            like `shed` or `deal, person`. The client never wrote that sentence,
-            so drawing the field raw would put the vocabulary on screen. Writing
-            it is real work on a lane this change is not about; until then the
-            row says its title, which is what it said before.
-
-            Held by: "draws no supporting line for a source that sends its own
-            vocabulary" (worklist.detail.test.tsx). */}
-        {item.detail && item.source !== "sync_health" && (
-          <p className="t-caption worklist-row-detail">{item.detail}</p>
-        )}
+            `sync_health` sends its facts in the producer's own vocabulary —
+            `shed`, `rate_limited`, `deals, contacts` — so its line is WRITTEN
+            from that pair rather than drawn, by worklist.synchealth.ts. A value
+            that build does not recognise draws nothing, which is what this row
+            did for every sync value before. */}
+        {detail && <p className="t-caption worklist-row-detail">{detail}</p>}
         {sample.length > 0 && (
           // A group nobody can see into is a group nobody trusts, and an
           // untrusted group is worse than the pile it replaced.

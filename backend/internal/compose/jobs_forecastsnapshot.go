@@ -129,7 +129,13 @@ func (w *forecastSnapshotWorkspaceWorker) freeze(ctx context.Context, ws ids.UUI
 		// rather than stored: a snapshot taken by the fleet is of the whole
 		// workspace by construction, and recording "nothing was withheld" would
 		// be recording a fact about a reader this pass does not have.
-		deals, _, err := ForecastDeals(ctx, tx, period, scope, at, baseCurrency)
+		// `resolved` is the scope the read MEASURED, which is what a snapshot
+		// records. A fleet pass names the workspace and the system principal
+		// narrows nothing, so it answers the workspace here — but storing the
+		// requested scope on that reasoning would file a measurement under a
+		// population nobody had checked it against, and the seam is the only
+		// thing that knows which it was.
+		deals, resolved, _, err := ForecastDeals(ctx, tx, period, scope, at, baseCurrency)
 		if err != nil {
 			return fmt.Errorf("reading the period's deals: %w", err)
 		}
@@ -142,7 +148,7 @@ func (w *forecastSnapshotWorkspaceWorker) freeze(ctx context.Context, ws ids.UUI
 		frozenDay = period.LocalDay(at)
 		if _, err := store.TakeSnapshot(ctx, tx, forecasting.NewSnapshot{
 			Period:       period,
-			Scope:        scope,
+			Scope:        resolved,
 			Trigger:      forecasting.TriggerDaily,
 			BaseCurrency: baseCurrency,
 			Readings:     readings,

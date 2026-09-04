@@ -697,6 +697,28 @@ kinds:
       may run the connector's prior-send lookup, and then transmits — four
       network round trips, each of which can be slow before it is wrong.
 
+  comms_authz_disagreement:
+    role: worker
+    go_type: AuthzDisagreementArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 24h
+    args: {}
+    reason: >-
+      The outbound engine has run in observe mode since it shipped: it decides,
+      records, and the old purpose gate rules. Ending that is a decision
+      somebody has to make on evidence, and this pass is what produces the
+      evidence without anybody remembering to ask for it. Daily, because the
+      question it answers moves at the speed of a rollout rather than a request,
+      and because the window it reads is a day: each pass reports what the two
+      authorities did differently SINCE THE LAST ONE, so two consecutive lines
+      can be compared. Unbounded the reading only ever grows, and a
+      disagreement that appeared this week disappears under the weight of one
+      fixed months ago. Cheap: one grouped read over an index on decided_at,
+      and on an installation whose authorities agree it finds nothing and says
+      so once.
+
   comms_scheduled_send_recovery:
     role: worker
     go_type: ScheduledSendRecoveryArgs

@@ -262,6 +262,30 @@ function withDialSet(params: UrlParams, key: string, value: string): UrlParams {
   return next;
 }
 
+// FORECAST_FILTER_VALUES are the four buckets a deal's own column can hold.
+// `slipped` is the report's derivation from a claimed category and a close
+// date, so it is a dimension of the forecast tiles and never a filter here.
+const FORECAST_FILTER_VALUES = [
+  "commit",
+  "best_case",
+  "pipeline",
+  "omitted",
+] as const;
+
+// forecastCategoryFilter narrows a stored dial to what the wire admits.
+//
+// The value arrives as a bare string because a SAVED VIEW carries it, and a
+// view written before a category was renamed — or by hand — can hold anything.
+// An unadmitted value selects nothing rather than being sent: the request
+// would be refused, and a list that fails to load says less than one that
+// simply is not narrowed. Same reading `tag_mode` takes of a stored mode its
+// own enum no longer admits.
+function forecastCategoryFilter(
+  value: string | undefined,
+): (typeof FORECAST_FILTER_VALUES)[number] | undefined {
+  return FORECAST_FILTER_VALUES.find((admitted) => admitted === value);
+}
+
 // dealsQueryParams builds the native board's /deals query — the full dial
 // set (pipeline/stage/owner/org filters + sort). It is never called in
 // overlay mode (useDeals is disabled there and OverlayDealsTable sends its
@@ -278,6 +302,7 @@ function dealsQueryParams(f: DealFilters) {
     organization_id: filters.organization_id || undefined,
     partner_org_id: filters.partner_org_id || undefined,
     stalled: filters.stalled === "true" ? true : undefined,
+    forecast_category: forecastCategoryFilter(filters.forecast_category),
     partner_sourced: filters.partner_sourced === "true" ? true : undefined,
     // Several ids and their mode, out of the one comma-joined string the
     // address carries them in. Spelled by the shared encoder rather than here,
@@ -2104,6 +2129,24 @@ function dealSurfaceChips({
       label: "deals.filterPartnerSourced",
       allLabel: "deals.filterPartnerAll",
       options: [{ value: "true", label: "deals.filterPartnerSourced" }],
+    },
+    // The forecast's own buckets, in the order the tiles read them. Four, not
+    // five: `slipped` is derived by the report from a claimed category and a
+    // close date, so there is no column to filter on and a chip offering it
+    // would narrow to nothing.
+    //
+    // Unconditional, unlike the two above: the vocabulary is the schema's, so
+    // there is no moment when the options are not yet known.
+    {
+      key: "forecast_category",
+      label: "deals.filterForecast",
+      allLabel: "deals.filterForecastAll",
+      options: [
+        { value: "commit", label: "deal.fcCommit" },
+        { value: "best_case", label: "deal.fcBestCase" },
+        { value: "pipeline", label: "deal.fcPipeline" },
+        { value: "omitted", label: "deal.fcOmitted" },
+      ],
     },
     // Which partner, not just whether there is one. Absent entirely
     // when the installation has made no company a partner: a picker
@@ -4053,7 +4096,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                     openStages={openStages}
                     archivedReasonId={archivedReasonId}
                   />
-                  <PageAsideToggle />
                 </>
               }
               band={dealBand({ deal, reasonId: archivedReasonId, t })}
@@ -4098,6 +4140,13 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   files: t("tab.documents"),
                   history: t("tab.history"),
                 }}
+                // The switch for the deal's details column, at the end of the
+                // tab row: it chooses what the page shows BESIDE the work, so
+                // it stands with the controls that choose what the work column
+                // shows. In the head it sat among the deal's own verbs — write,
+                // edit, the overflow — and read as one more thing to do to the
+                // record rather than as a way to see more of it.
+                trailing={<PageAsideToggle />}
               />
               {tab === "overview" && (
                 <DealOverviewPane

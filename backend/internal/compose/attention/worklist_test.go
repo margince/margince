@@ -288,6 +288,14 @@ func withOverdue(past bool) func(*crmcontracts.AttentionItem) {
 	return func(i *crmcontracts.AttentionItem) { i.Overdue = &past }
 }
 
+// withDealSubject names the deal a row is ABOUT, the way riskItem and
+// briefItem both set it in production (render.go, rendersilence.go) — the one
+// field that identifies the same deal across two rows with different ids and
+// different sources.
+func withDealSubject(deal ids.UUID) func(*crmcontracts.AttentionItem) {
+	return func(i *crmcontracts.AttentionItem) { i.Subject = subjectOf(subjectDeal, deal) }
+}
+
 // The deal's own figures have to reach the row, or the client reads a second
 // endpoint per line to draw a card this one could have completed.
 func TestARiskRowCarriesTheDealsFigures(t *testing.T) {

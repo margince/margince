@@ -4425,6 +4425,18 @@ public.relationship.started_at date gen=- def=-
 public.relationship.trg_relationship_updated CREATE TRIGGER trg_relationship_updated BEFORE UPDATE ON public.relationship FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.relationship.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.relationship.version bigint NOT NULL gen=- def=1
+public.relationship_nudge_dismissal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.relationship_nudge_dismissal.dismissed_until timestamp with time zone NOT NULL gen=- def=-
+public.relationship_nudge_dismissal.person_id uuid NOT NULL gen=- def=-
+public.relationship_nudge_dismissal.reader_id uuid NOT NULL gen=- def=-
+public.relationship_nudge_dismissal.relationship_nudge_dismissal_forward CHECK ((dismissed_until > set_at))
+public.relationship_nudge_dismissal.relationship_nudge_dismissal_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
+public.relationship_nudge_dismissal.relationship_nudge_dismissal_pkey PRIMARY KEY (person_id, reader_id)
+public.relationship_nudge_dismissal.relationship_nudge_dismissal_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.relationship_nudge_dismissal.set_at timestamp with time zone NOT NULL gen=- def=now()
+public.relationship_nudge_dismissal.set_by text NOT NULL gen=- def=-
+public.relationship_nudge_dismissal_by_reader CREATE INDEX relationship_nudge_dismissal_by_reader ON public.relationship_nudge_dismissal USING btree (reader_id, person_id)
+public.relationship_nudge_dismissal_pkey CREATE UNIQUE INDEX relationship_nudge_dismissal_pkey ON public.relationship_nudge_dismissal USING btree (person_id, reader_id)
 public.relationship_pkey CREATE UNIQUE INDEX relationship_pkey ON public.relationship USING btree (id)
 public.report_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.report_run.asked_by uuid NOT NULL gen=- def=-
@@ -5480,6 +5492,16 @@ public.workflow_run.workflow_run_unique UNIQUE (handler, idempotency_key)
 public.workflow_run_pkey CREATE UNIQUE INDEX workflow_run_pkey ON public.workflow_run USING btree (id)
 public.workflow_run_troubled CREATE INDEX workflow_run_troubled ON public.workflow_run USING btree (created_at DESC, id DESC) WHERE (status = ANY (ARRAY['failed'::text, 'blocked'::text]))
 public.workflow_run_unique CREATE UNIQUE INDEX workflow_run_unique ON public.workflow_run USING btree (handler, idempotency_key)
+public.worklist_pin acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.worklist_pin.pinned_at timestamp with time zone NOT NULL gen=- def=now()
+public.worklist_pin.reader_id uuid NOT NULL gen=- def=-
+public.worklist_pin.row_id text NOT NULL gen=- def=-
+public.worklist_pin.set_by text NOT NULL gen=- def=-
+public.worklist_pin.source text NOT NULL gen=- def=-
+public.worklist_pin.worklist_pin_identified CHECK (((row_id <> ''::text) AND (source <> ''::text)))
+public.worklist_pin.worklist_pin_pkey PRIMARY KEY (reader_id, source, row_id)
+public.worklist_pin.worklist_pin_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.worklist_pin_pkey CREATE UNIQUE INDEX worklist_pin_pkey ON public.worklist_pin USING btree (reader_id, source, row_id)
 public.workspace acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.workspace.archived_at timestamp with time zone gen=- def=-
 public.workspace.created_at timestamp with time zone NOT NULL gen=- def=now()

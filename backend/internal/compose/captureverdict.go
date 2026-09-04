@@ -329,12 +329,25 @@ func (e *CounterpartyVerdictEngine) apply(
 			// The mail hide still runs: it is what "keep out" means, and the
 			// noise scope already excludes anything a colleague corresponded
 			// with.
+			corresponds, err := e.pending.CorrespondsWith(ctx, tx, row.Email)
+			if err != nil {
+				return err
+			}
 			if !ownerSaidSo {
-				if err := e.suppressSenderDomain(ctx, tx, row, kind); err != nil {
+				if err := e.suppressSenderDomain(ctx, tx, row, kind, corresponds); err != nil {
 					return err
 				}
 			}
-			return e.hideNoise(ctx, tx, row)
+			if err := e.hideNoise(ctx, tx, row); err != nil {
+				return err
+			}
+			// An address the workspace has provably written to keeps its
+			// record whatever the classifier called one message — the same
+			// bound the domain suppression draws, read once for both.
+			if corresponds {
+				return nil
+			}
+			return e.retractSendersContacts(ctx, tx, row, ownerSaidSo)
 		case capture.KindAdvisor:
 			// A genuine contact who is the OWNER's. The record is made — a
 			// founder's lawyer is somebody they correspond with — and stays
@@ -439,13 +452,13 @@ func (e *CounterpartyVerdictEngine) releaseBatch(ctx context.Context, batch []ca
 // This guard became load-bearing when the create tiers started raising verdict
 // questions of their own — before that only unjudged strangers reached the
 // ledger, and correspondence was already excluded by construction.
-func (e *CounterpartyVerdictEngine) suppressSenderDomain(ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, kind string) error {
+//
+// corresponds is CorrespondsWith's answer for this sender, read once by the
+// noise arm because the record retraction beside this call is bounded by the
+// same fact — two reads could not disagree, but one read says so structurally.
+func (e *CounterpartyVerdictEngine) suppressSenderDomain(ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, kind string, corresponds bool) error {
 	if row.Domain == "" {
 		return nil
-	}
-	corresponds, err := e.pending.CorrespondsWith(ctx, tx, row.Email)
-	if err != nil {
-		return err
 	}
 	if corresponds {
 		return nil

@@ -66,8 +66,14 @@ func (h Handlers) MergeTags(w http.ResponseWriter, r *http.Request, id crmcontra
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// Absent is the unpinned merge, which is what every caller sent before this
+	// field existed.
+	var pinned int64
+	if req.IntoTagVersion != nil {
+		pinned = *req.IntoTagVersion
+	}
 	result, err := h.store.MergeTags(r.Context(),
-		pathID[ids.TagKind](id), ids.From[ids.TagKind](ids.UUID(req.IntoTagId)))
+		pathID[ids.TagKind](id), ids.From[ids.TagKind](ids.UUID(req.IntoTagId)), pinned)
 	if err != nil {
 		writeErr(w, r, err)
 		return

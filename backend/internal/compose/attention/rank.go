@@ -101,10 +101,25 @@ type ranked struct {
 	// both published the bounded number as though it were the real one: a row
 	// saying "waiting 180 days" while its own explanation compared 30 against
 	// 20, which is a reason nobody can check.
-	waitingDays int
-	waitingRank int
-	strength    int
-	occurredAt  time.Time
+	// pinned says the reader put this row at the top, and semanticLevel is the
+	// level its own classifier gave it before the pin overwrote item.Level.
+	//
+	// A flag rather than reading semanticLevel for both facts, because the pin
+	// level IS zero: a row whose classifier level was somehow zero would be
+	// indistinguishable from an unpinned one, and the reasoning that this
+	// cannot happen is exactly the kind that stops being true quietly.
+	//
+	// The pair exists because a pin moves where a row SORTS and says nothing
+	// about what it is. The summary's `urgent` counts rows where somebody is
+	// waiting or a promise is breaking, and a rep pinning a piece of hygiene
+	// has made neither true — reading one field for both questions let one
+	// reader's ordering preference move a figure their manager reads.
+	pinned        bool
+	semanticLevel int
+	waitingDays   int
+	waitingRank   int
+	strength      int
+	occurredAt    time.Time
 	// asOf is the one instant every row in the same page was classified
 	// against, carried onto the row rather than threaded through every step
 	// signature. The occurrence step reads it to turn occurredAt into how many

@@ -165,6 +165,7 @@ type Server struct {
 	// it. In compose because the vocabulary is derived from the report catalog
 	// and narrowed by the caller's grants, both of which live here.
 	analyticsQueryHandlers
+	analyticsContextHandlers
 	assuranceHandlers
 	// The introductions transport: one rep asking a colleague to open a door,
 	// the colleague's bounded answer, and what came of it.

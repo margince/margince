@@ -958,6 +958,15 @@ export const en = {
   "co.health.dim.relationship": "Relationship",
   "co.health.dim.commercial": "Commercial",
   "co.health.dim.payment": "Payment",
+  // What each dimension weighs. Three words on a card cannot say what
+  // "Commercial · Good" was read from, and a rating a reader cannot interpret
+  // is one they have to take on trust.
+  "co.health.means.relationship":
+    "Whether the people here are still in touch — who wrote, how recently, and which side started it.",
+  "co.health.means.commercial":
+    "Whether the work in flight is moving — the open deals, the stage they sit at, and how long they have stood still.",
+  "co.health.means.payment":
+    "Whether invoices are settled on time — what is overdue now, and how late this account usually runs.",
   "co.health.rating.atRisk": "At risk",
   "co.health.rating.good": "Good",
   "co.health.rating.strong": "Strong",
@@ -991,8 +1000,7 @@ export const en = {
   "record.restsOn.source_one": "source",
   "record.restsOn.source_other": "sources",
   "record.tabs": "Parts of this record",
-  "record.panel.show": "Show panel",
-  "record.panel.hide": "Hide panel",
+  "record.panel.details": "Details",
   // The Deal Room aside on a deal. `room.` rather than `dealroom.` for the
   // reason the other abbreviated namespaces give: the surface is named once at
   // the top of the panel and every key under it is read in that context.
@@ -1201,6 +1209,28 @@ export const en = {
   "contracts.form.errTermOrder": "A term cannot end before it starts.",
   "contracts.add": "Add a contract",
   "contracts.rowMenu": "Contract actions",
+  "contracts.renew.title": "Renew this agreement",
+  "contracts.renew.hint":
+    "Creates a new agreement and marks this one superseded. Its own terms — nothing carries over but the counterparty.",
+  "contracts.renew.submit": "Renew",
+  "contracts.statusChange.title": "Change status",
+  "contracts.statusChange.label": "New status",
+  "contracts.statusChange.submit": "Change status",
+  "contracts.statusChange.errSame": "Already at this status.",
+  "contracts.cancel.title": "Record cancellation",
+  "contracts.cancel.hint":
+    "The customer stays under contract until the effective date — this records notice, not a state change.",
+  "contracts.cancel.noticeOn": "Notice given",
+  "contracts.cancel.effectiveOn": "Takes effect",
+  "contracts.cancel.effectiveOnHint":
+    "Not after the term ends, and not before the notice date.",
+  "contracts.cancel.submit": "Record cancellation",
+  "contracts.cancel.menuLabel": "Cancel agreement",
+  "contracts.cancel.errIncomplete": "Both dates are needed.",
+  "contracts.cancel.errOrder":
+    "Cancellation cannot take effect before notice was given.",
+  "contracts.cancel.errTermEnd":
+    "Cancellation cannot take effect after the term already ends.",
   "contracts.value.perYear": "per year",
   "contracts.value.total": "for the whole term",
   "contracts.files": "Files",
@@ -2344,6 +2374,8 @@ export const en = {
   "deals.filterOwnerMe": "My deals",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Any partner",
+  "deals.filterForecast": "Forecast",
+  "deals.filterForecastAll": "Any forecast category",
   "deals.filterPartnerSourced": "Partner-sourced",
   "deals.filterStageAll": "All stages",
   "deals.filterOrgAll": "All companies",
@@ -3255,14 +3287,15 @@ export const en = {
   "tasks.isDone": "Completed",
   "tasks.logged": "Logged",
 
-  "analytics.sub": "deals by stage — unweighted next to weighted",
+  "analytics.sub":
+    "open deals only, each converted into {currency} — unweighted next to weighted",
   "analytics.currency": "Currency",
   "analytics.count": "Deals",
   "analytics.unweighted": "Unweighted",
   "analytics.weighted": "Weighted",
   "analytics.planNote":
     "the executed plan and the rows this number reconciles to",
-  "analytics.reportDeals": "Deals by stage",
+  "analytics.reportDeals": "Open pipeline by stage",
   "analytics.sections": "Analytics sections",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
@@ -3290,7 +3323,7 @@ export const en = {
   "analytics.share.copyFailed":
     "The link could not be copied. Select it above and copy it by hand.",
   "analytics.share.done": "Done",
-  "analytics.frame": "As of {asOf} · {zone} · {currency}",
+  "analytics.frame": "As of {asOf} · {zone}",
   "review.title": "What should be checked before the call?",
   "review.ready": "Ready",
   "review.readyWithExceptions": "Ready, with notes",
@@ -3349,6 +3382,8 @@ export const en = {
   "forecast.supportingNote": "Supporting note",
   "forecast.cancel": "Cancel",
   "forecast.saveCall": "Save call",
+  "analytics.scopeLabel": "Which records these numbers cover",
+  "analytics.scopeFixed": "These numbers cover {scope}.",
   "forecast.receipt": "Data and evidence checked",
   "forecast.eligible": "Eligible deals",
   "forecast.priced": "Priced",
@@ -7944,6 +7979,12 @@ export const en = {
   "worklist.pair.notDuplicate": "Not the same",
   "worklist.pair.related": "{count} linked",
   "worklist.pair.failed": "Could not settle the pair. Try again.",
+  "worklist.pair.refused":
+    "You cannot settle this pair. Both records have to be yours to change, so an admin or a sales lead can settle it.",
+  "worklist.pair.alreadySettled":
+    "This pair could not be settled the way you asked — somebody may have decided it first, or the records changed under you. Reload the list to see where it stands.",
+  "worklist.pair.stewardOnly":
+    "Only somebody who can change both records can settle this — an admin or a sales lead.",
   "worklist.needsPrep": "Needs prep",
   "worklist.pane.title": "About this record",
   "worklist.pane.openRow": "Show what {position}, {title}, is about",
@@ -8160,6 +8201,31 @@ export const en = {
   "worklist.untitled.failed_approval": "Something you approved did not run",
   "worklist.untitled.dsr": "An open privacy request",
   "worklist.untitled.sync_health": "The CRM sync needs attention",
+  "worklist.sync.class.contacts": "contacts",
+  "worklist.sync.class.companies": "companies",
+  "worklist.sync.class.deals": "deals",
+  "worklist.sync.class.leads": "prospects",
+  "worklist.sync.class.calls": "calls",
+  "worklist.sync.class.meetings": "meetings",
+  "worklist.sync.class.emails": "emails",
+  "worklist.sync.class.notes": "notes",
+  "worklist.sync.class.tasks": "tasks",
+  "worklist.sync.error.rate_limited":
+    "the other system is limiting how often we may ask",
+  "worklist.sync.error.unreachable": "the other system cannot be reached",
+  "worklist.sync.error.auth": "the connection needs signing in again",
+  "worklist.sync.error.history_gone":
+    "the other system no longer holds that history",
+  "worklist.sync.error.internal": "something on our side went wrong",
+  "worklist.sync.band.warn":
+    "Close to the read budget, so some reads may be served from the copy.",
+  "worklist.sync.band.shed":
+    "Over the read budget: reads are being served from the copy rather than live.",
+  "worklist.sync.failing": "Not syncing — {reason}.",
+  "worklist.sync.objects_stale": "Out of date here: {classes}.",
+  "worklist.sync.backfill_incomplete": "Still importing: {classes}.",
+  "worklist.sync.records_overwritten":
+    "Changed here and overwritten by the other system: {classes}.",
   "worklist.untitled.capture_health": "A mailbox connection needs attention",
   "worklist.untitled.ai_work_health": "AI work needs a look",
   "worklist.untitled.bounce": "An email did not arrive",
