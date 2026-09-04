@@ -85,7 +85,15 @@ const dynamicObjectCeiling = 106
 // warns about. A new dynamic-action call site adds no resolved pair, so no pair
 // assertion fires; it removes none either, so `requireSitesFloor` does not
 // fall. The blind spot grew and everything reported PASS.
-const dynamicActionCeiling = 6
+//
+// 7 since the tag vocabulary gained one gate for its four authoring writes.
+// requireVocabularyAuthority takes the verb as a parameter because rename,
+// retire, restore and fold pass through it — one gate rather than four checks
+// is what stops the fifth vocabulary write shipping without one, and it costs
+// this scan the verb. The four verbs are pinned instead by
+// compose/integration/tagvocabscope_integration_test.go, which drives each of
+// the four writes through the gate.
+const dynamicActionCeiling = 7
 
 // requireSitesFloor is the fail-short guard. The scan walking a smaller tree
 // than it thinks — a moved directory, a parser error swallowed — would report
