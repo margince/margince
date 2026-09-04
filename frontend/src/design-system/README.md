@@ -27,6 +27,54 @@ If what you need is genuinely not here, add it **here**, with a story and a
 spec, and it becomes the one spelling. Copy never lives in a primitive: words
 arrive through props, translated by the caller with `t()`.
 
+## Type comes from the ramp
+
+**Nine fixed rungs and two fluid ones, and a `font-size` names one of them.**
+`--fs-eyebrow` 10.5 (uppercase kickers, a monogram), `--fs-meta` 12 (counts,
+timestamps, provenance), `--fs-sm` 13 (chips, table cells, helper text),
+`--fs-body` 13.5 (the default), `--fs-lead` 15 (the paragraph under a heading,
+and inputs), `--fs-h3` 17 (a card title), `--fs-h2` 20 (a section title),
+`--fs-h1` 24 (a step title, a record's head), `--fs-display` 32 (a
+full-viewport moment); plus `--fs-display-fluid` and `--fs-hero-fluid` for the
+first-run and signed-out surfaces.
+
+**Pick by ROLE, not by how big the text should look.** A card title is
+`--fs-h3` on every screen that has one, which is what makes the card title
+moveable at all. Reading a number off this table and typing it is the drift:
+the tree ran 25 values beside the scale before this was one ramp — `12.5px` in
+25 places, `11px` in 22, `11.5px` in 10 — and none of them was a size anybody
+had chosen. `12.5px` beside `13px` is invisible in review, which is why this is
+a gate rather than a convention.
+
+A `clamp()` is the ramp made fluid and takes rungs at its ends:
+
+```css
+.auth-card h1 {
+  font-size: clamp(var(--fs-h1), 2.2vw, var(--fs-display));
+}
+```
+
+A raw length at either end fails the same way a bare `27px` does — it is a rung
+nobody declared wearing a responsive coat.
+
+**Tracking is a family of three**, and the same rule: `--tracking-eyebrow`
+0.08em on an uppercase label, `--tracking-display` -0.03em on the display face,
+`--tracking-normal` everywhere else. The eyebrow ran 0.02em to 0.14em across
+eighteen sheets while the token said 0.08em, so the same label was a different
+label depending on which sheet drew it.
+
+`design-system/type.test.ts` holds all of it, reads an inline `fontSize` in a
+component as well as a stylesheet's, and derives the canon from `tokens.css` so
+the gate cannot become a second copy of the ramp. Two waivers live in the tree
+and both are a PLATFORM fact rather than a design choice — iOS zooms the
+viewport on any field under 16px, and the RBAC mask glyph's dot gap is a picture
+rather than a label's tracking. Spell one as
+`/* ds:ignore <reason> */` on the declaration's own line; a waiver with no
+reason is itself a finding.
+
+`Design System/Type` in Storybook draws the ramp, the two fluid rungs and the
+three trackings — read it there before adding a size.
+
 ## Corners come from the ladder, and they are smooth
 
 Every radius in the tree reads one of six tokens — `--r-xs` 4, `--r-sm` 8,
@@ -449,6 +497,7 @@ the shell script it replaced could not.
 | `frontend/scripts/check-ds-spacing.sh` | New raw-px margin/padding/gap outside this tier (diff-scoped) |
 | `design-system/conformance.test.ts` | Hard-coded user-facing copy, the same colour and font rules, one stylesheet per class namespace; a reduced-motion rule a later plain rule of equal specificity beats; an infinite animation with no reduced-motion answer; a second home for the pending announcement or the placeholder pulse; a focus ring that spells its own width and colour |
 | `design-system/tokens.test.ts` | A token whose value drifted from the design canon |
+| `design-system/type.test.ts` | A `font-size` or inline `fontSize` that names a length instead of a rung of the ramp, including a `clamp()` with a raw end (waivable in line, with a reason — the two live waivers are the iOS 16px field floor and the mask glyph's dot gap); a `letter-spacing` outside the three-token tracking family; a ramp whose rungs do not ascend, or whose two rungs share a size |
 | `design-system/corners.test.ts` | A `border-radius` that names a length instead of a rung of the ladder (waivable in line, with a reason); a `--r-full` or `50%` corner that does not cancel the squircle with `corner-shape: round`; a second `corner-shape: squircle` outside `tokens.css`; a rung that is not a multiple of four, or has no doubled twin in the `@supports` block |
 | `design-system/catalog.test.ts` | A component in this directory that this table never names; a row claiming a story of its own where no story file exists; a story anywhere under `src/` filed under a root the sidebar table above does not document |
 | `e2e/` (axe) | WCAG 2.2 AA on every core screen, plus the 390px no-horizontal-scroll sweep |

@@ -226,6 +226,23 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
   short.
 - **Type at rest is 13.5px on 1.55**, so a row's second line does not touch
   its first; prose is 14px on 1.65 at 72 characters.
+- **Sizes by role, and there are nine.** `--fs-eyebrow` 10.5 (uppercase
+  kickers, monograms), `--fs-meta` 12 (counts, timestamps, provenance),
+  `--fs-sm` 13 (chips, table cells, helper text), `--fs-body` 13.5 (the
+  default), `--fs-lead` 15 (the paragraph under a heading, and inputs),
+  `--fs-h3` 17 (a card title), `--fs-h2` 20 (a section title), `--fs-h1` 24 (a
+  step title, a record's head), `--fs-display` 32 (a full-viewport moment),
+  plus the two fluid rungs `--fs-display-fluid` and `--fs-hero-fluid` for the
+  first-run surfaces. Nothing in the tree names a length instead — a size half
+  a pixel off a rung is a decision nobody made, and the tree carried 25 of
+  them. `design-system/type.test.ts` fails a tenth value, and a genuine
+  platform floor (iOS zooms a field under 16px) is waived in line with its
+  reason.
+- **Tracking is a family of three.** `--tracking-eyebrow` 0.08em on an
+  uppercase label, `--tracking-display` -0.03em on the display face,
+  `--tracking-normal` everywhere else. The eyebrow ran 0.02em to 0.14em across
+  eighteen sheets while the token said 0.08em, which is a label that looks
+  different depending on which screen drew it.
 - **Radii by role**: 20px for a pane, the details panel and a reading card;
   16px for a board card and the agent's row; 12px for a control; 8px for a chip
   and 4px for a keycap; full for a pill and a monogram.

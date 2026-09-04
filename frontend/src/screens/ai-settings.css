@@ -78,7 +78,7 @@
  * reads straight past it. */
 .ai-lane-gloss {
   color: var(--textMeta);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   line-height: 1.35;
 }
 
@@ -87,7 +87,7 @@
  * binding's identity. */
 .ai-lane-price {
   color: var(--textMeta);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   white-space: nowrap;
 }
 

@@ -59,7 +59,7 @@
   background: transparent;
   color: var(--textSecondary);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--r-full);
@@ -81,7 +81,7 @@
   /* Holds its line while the rows are loading, so the header does not resize
    * under the reader when the count appears. */
   min-height: 1em;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
   white-space: nowrap;
 }
@@ -90,7 +90,7 @@
   margin: 0;
   padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--borderSubtle);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--textMeta);
 }
 
@@ -132,7 +132,7 @@
   outline: 0;
   background: transparent;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--textPrimary);
   width: 180px;
 }
@@ -157,14 +157,14 @@
   width: auto;
   height: 30px;
   padding: 0 var(--space-3);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   border-radius: var(--r-full);
   corner-shape: round;
   border-color: var(--borderSubtle);
 }
 
 .lt-note {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
 }
 
@@ -172,7 +172,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textSecondary);
   cursor: pointer;
 }
@@ -206,7 +206,7 @@
   border-radius: var(--r-full);
   corner-shape: round;
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--textSecondary);
   cursor: pointer;
   white-space: nowrap;
@@ -243,7 +243,7 @@
    * open inside it and are simply never seen. The end segments carry the
    * rounding instead, so the row still reads as one control. */
   overflow: visible;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
 }
 .lt-frow > :first-child {
   border-top-left-radius: var(--r-full);
@@ -275,7 +275,7 @@
   border-left: 1px solid var(--borderSubtle);
   background: transparent;
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--textSecondary);
   cursor: pointer;
   white-space: nowrap;
@@ -315,7 +315,7 @@
 .lt-fvalue-status {
   margin: 0;
   padding: var(--space-2) var(--space-2);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--textMeta);
 }
 .lt-fvalue-status.error {
@@ -361,10 +361,10 @@
 
 .lt-mhead {
   padding: var(--space-1) var(--space-2);
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-eyebrow);
   color: var(--textMeta);
 }
 
@@ -382,7 +382,7 @@
   border-radius: var(--r-sm);
   background: var(--bgPage);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
 .lt-fsearch-input:focus {
@@ -400,7 +400,7 @@
   background: transparent;
   border-radius: var(--r-sm);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--textContent);
   text-align: left;
   cursor: pointer;
@@ -544,7 +544,7 @@
    * scrolls under it. Zero spacing keeps the grid looking the same. */
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 13.5px;
+  font-size: var(--fs-body);
 }
 
 /* With explicit widths in play a cell clips rather than growing a row: the row
@@ -566,7 +566,7 @@
   top: 0;
   z-index: 1;
   text-align: left;
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
   font-weight: var(--fw-medium);
   color: var(--textMeta);
   padding: var(--space-2) var(--space-3);
@@ -746,7 +746,7 @@
 .lt-table.dense .avatar {
   width: 20px;
   height: 20px;
-  font-size: 9px;
+  font-size: var(--fs-eyebrow);
 }
 
 /* Compact: the rows tighten, the type does not. Shrinking the text too would
@@ -866,7 +866,7 @@
   padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--borderSubtle);
   background: var(--bgPage);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--textSecondary);
 }
 
@@ -903,7 +903,7 @@
   border: 0;
   background: none;
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--textSecondary);
   border-radius: var(--r-sm);
   cursor: pointer;
@@ -932,7 +932,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--textTertiary);
   user-select: none;
 }
@@ -946,13 +946,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--textTertiary);
 }
 
 .lt-perpage .select-control {
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textSecondary);
   background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
@@ -1035,9 +1035,9 @@
   .lt-table td::before {
     content: attr(data-label);
     flex: 0 0 38%;
-    font-size: 11px;
+    font-size: var(--fs-eyebrow);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: var(--tracking-eyebrow);
     color: var(--textMeta);
   }
 
@@ -1046,7 +1046,7 @@
   .lt-table td.lt-identity {
     display: block;
     padding-bottom: var(--space-2);
-    font-size: 15px;
+    font-size: var(--fs-lead);
     font-weight: 600;
     color: var(--textPrimary);
   }
