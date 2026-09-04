@@ -50,6 +50,11 @@
   display: grid;
   grid-row: span 4;
   grid-template-rows: subgrid;
+  /* The one column is pinned to the stop's own stretch of the axis. Left
+     implicit it is sized `auto`, which is max-content: a stop whose subject
+     ran long grew its column past the cell the track gave it and printed the
+     subject straight across the stops to its right. */
+  grid-template-columns: minmax(0, 1fr);
   min-inline-size: 0;
 }
 
@@ -109,6 +114,10 @@
   line-height: 1.4;
   color: var(--textPrimary);
   text-wrap: pretty;
+  /* A subject is not prose: mail carries tracking ids and reference strings
+     with no space in them, and a token wider than the stop has nowhere to
+     break unless it is told it may break anywhere. */
+  overflow-wrap: anywhere;
 }
 
 .co-spine-detail {
@@ -118,6 +127,7 @@
   margin-block-start: var(--space-1);
   color: var(--textMeta);
   text-wrap: pretty;
+  overflow-wrap: anywhere;
 }
 
 /* THE WAITING — the one stop with no record behind it, and the reason this
@@ -133,7 +143,7 @@
      and compared with nothing, so it takes the display face at the size the
      reading's own figures use. */
   font-family: var(--f-display);
-  font-size: 26px;
+  font-size: var(--fs-h1);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--tracking-display);
   color: var(--warn);
@@ -251,7 +261,7 @@
 .co-spine-now-word {
   font-size: var(--fs-eyebrow);
   font-weight: var(--fw-semibold);
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
   color: var(--textPrimary);
 }

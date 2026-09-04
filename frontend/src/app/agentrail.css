@@ -197,7 +197,7 @@
    move the figure under it every time a record has a long name. */
 .artool {
   max-width: 100%;
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   line-height: 1.3;
   color: var(--textMeta);
   white-space: nowrap;
@@ -244,7 +244,7 @@
   min-width: 0;
   font-family: var(--f-body);
   font-variant-numeric: tabular-nums;
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   color: var(--textMeta);
   white-space: nowrap;
 }
@@ -259,8 +259,8 @@
    column this narrow is three frames deep. */
 .arscope {
   max-width: 100%;
-  font-size: 10px;
-  letter-spacing: 0.06em;
+  font-size: var(--fs-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
   color: var(--textMeta);
   white-space: nowrap;
   overflow: hidden;
@@ -289,7 +289,7 @@
   border-radius: var(--r-sm);
   background: var(--accent);
   color: var(--textOnAccentControl);
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
   font-weight: var(--fw-medium);
   text-align: center;
   text-decoration: none;
@@ -659,8 +659,8 @@
   align-items: center;
   gap: 5px; /* ds:ignore pip-to-word optics inside one label */
   font-family: var(--f-body);
-  font-size: 9.5px;
-  letter-spacing: 0.12em;
+  font-size: var(--fs-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
   color: var(--textMeta);
 }
@@ -674,7 +674,7 @@
 }
 .arptitle {
   grid-column: 1;
-  font-size: 15.5px;
+  font-size: var(--fs-lead);
   font-weight: var(--fw-semibold);
   line-height: 1.25;
   color: var(--textPrimary);
@@ -690,7 +690,7 @@
   align-items: flex-end;
   font-family: var(--f-body);
   font-variant-numeric: tabular-nums;
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   white-space: nowrap;
 }
 .arpmoney b {
@@ -699,7 +699,7 @@
 }
 .arpmoney i {
   font-style: normal;
-  font-size: 10px;
+  font-size: var(--fs-eyebrow);
   color: var(--textMeta);
 }
 
@@ -727,9 +727,9 @@
   align-items: baseline;
   gap: var(--space-2);
   margin-bottom: var(--space-2);
-  font-size: 9.5px;
+  font-size: var(--fs-eyebrow);
   font-weight: var(--fw-semibold);
-  letter-spacing: 0.12em;
+  letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
   color: var(--textMeta);
 }
@@ -737,9 +737,9 @@
 .arplain {
   margin-left: auto;
   color: var(--accentText);
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   font-weight: var(--fw-medium);
-  letter-spacing: 0;
+  letter-spacing: var(--tracking-normal);
   text-transform: none;
   text-decoration: none;
 }
@@ -772,7 +772,7 @@
   gap: var(--space-2);
   min-width: 0;
   color: var(--textMeta);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   line-height: 1.15;
   text-decoration: none;
   transition:
@@ -785,9 +785,9 @@
 }
 .artile b {
   flex: none;
-  font-size: 26px;
+  font-size: var(--fs-h1);
   font-weight: var(--fw-medium);
-  letter-spacing: -0.03em;
+  letter-spacing: var(--tracking-display);
   line-height: 1;
   color: var(--accentText);
 }
@@ -798,7 +798,7 @@
   padding: var(--space-3);
   border: 1px dashed var(--borderSubtle);
   border-radius: var(--r-md);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--textMeta);
 }
 
@@ -823,7 +823,7 @@
   padding: var(--space-1) var(--space-2);
   margin: 0 calc(-1 * var(--space-2));
   border-radius: var(--r-sm);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--textPrimary);
   transition: background 0.16s ease-out;
 }
@@ -874,7 +874,7 @@
   display: inline-block;
   margin-top: var(--space-1);
   color: var(--accentText);
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
   text-decoration: none;
 }
 .armore:hover {
@@ -898,7 +898,7 @@
      the strip fits more of the sentence in the same rail. */
   font-family: var(--f-body);
   font-variant-numeric: tabular-nums;
-  font-size: 10px;
+  font-size: var(--fs-eyebrow);
   color: var(--textMeta);
   white-space: nowrap;
 }
@@ -912,7 +912,7 @@
      `<i>` inside it. Same reason as `.armuted` above. */
   font-family: var(--f-body);
   font-variant-numeric: tabular-nums;
-  font-size: 10px;
+  font-size: var(--fs-eyebrow);
   color: var(--textMeta);
 }
 /* The licence, and any other standing fault, as a pill in the strip: it is the
@@ -970,6 +970,6 @@
 }
 .arrunline {
   color: var(--textPrimary);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.35;
 }

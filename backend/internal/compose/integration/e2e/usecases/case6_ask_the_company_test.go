@@ -55,7 +55,7 @@ const (
 	// sharedAccountWord is what the sweep matches all three accounts on.
 	//
 	// It sits in the DISPLAY NAME because that is the only organization text
-	// the lexical lane reads (search/store.go's searchBranches), and this
+	// the lexical lane reads (search/branches.go's searchBranches), and this
 	// harness binds no embedding lane — so the answer degrades to lexical and
 	// ranks on literal words. A query phrased as a complaint would rank
 	// nothing, which is a fact about how this deployment is composed rather

@@ -82,7 +82,7 @@
   corner-shape: round;
   background: var(--bgElevated);
   color: var(--textPrimary);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.2;
   white-space: nowrap;
 }

@@ -25,7 +25,7 @@
   align-items: center;
   gap: 6px;
   font-family: var(--f-mono);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
   background: var(--bgCard);
   border: 1px solid var(--borderSubtle);
@@ -84,7 +84,7 @@ button.evidence-chip:hover {
   display: block;
   max-width: 100%;
   font-family: var(--f-mono);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
   overflow-wrap: anywhere;
 }
@@ -93,7 +93,7 @@ button.evidence-chip:hover {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
 }
 .confidence-high .dot {
@@ -110,7 +110,7 @@ button.evidence-chip:hover {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
   font-weight: 600;
   padding: 1px 8px;
   border-radius: var(--r-full);
@@ -173,7 +173,7 @@ button.evidence-chip:hover {
   font-family: var(--f-display);
   font-size: var(--fs-body);
   font-weight: var(--fw-semibold);
-  letter-spacing: -0.01em;
+  letter-spacing: var(--tracking-display);
 }
 /* The sentence explaining the headline above it — why this is staged, not what
    it says. Close to what it explains: a full line's air between the two would
@@ -208,7 +208,7 @@ button.evidence-chip:hover {
 
 .staged-edit {
   font-family: var(--f-body);
-  font-size: 14px;
+  font-size: var(--fs-body);
   color: var(--textPrimary);
   background: var(--bgElevated);
   border: 1px solid var(--accent);
@@ -227,7 +227,7 @@ button.evidence-chip:hover {
   gap: 6px;
   flex-wrap: wrap;
   font-family: var(--f-mono);
-  font-size: 12px;
+  font-size: var(--fs-meta);
 }
 
 /* Either side of a diff can be a whole jsonb document — a scraped fact set
@@ -302,7 +302,7 @@ button.evidence-chip:hover {
   display: inline-flex;
   align-items: center;
   font-family: var(--f-mono);
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   color: var(--aiText);
   background: var(--aiLight);
   border-radius: var(--r-full);

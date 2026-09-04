@@ -288,8 +288,15 @@ describe("BuyerRoomScreen", () => {
     vi.spyOn(URL, "createObjectURL").mockImplementation(createObjectURL);
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(revokeObjectURL);
     stubRoom({
+      // BYTES, never a Blob. This file runs in jsdom, so `Blob` is jsdom's
+      // while `Response` is Node's own — and undici builds a response body by
+      // calling `.stream()` on what it is handed, which jsdom's Blob does not
+      // have. The two realms only meet here, in a fixture, so the failure read
+      // as the download refusing rather than as the stub never constructing.
+      // The type still reaches the reader: `parseAs: "blob"` takes it from the
+      // Content-Type header below, which is the same header a server sends.
       "GET /public/rooms/documents/d-1/file": () =>
-        new Response(new Blob(["%PDF-1.7"], { type: "application/pdf" }), {
+        new Response(new TextEncoder().encode("%PDF-1.7"), {
           status: 200,
           headers: { "Content-Type": "application/pdf" },
         }),

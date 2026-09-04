@@ -18,6 +18,7 @@ package attention
 // it has in common with the rest.
 
 import (
+	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
@@ -298,11 +299,17 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 		},
 		Actions: []crmcontracts.WorklistItemActions{},
 		// The members' own screen, carried onto the row that stands for them.
-		// The fold has already refused to group rows that disagree, so the first
-		// member answers for all of them — and deriving it from the word `batch`
-		// instead would put a pile of approvals wherever `batch` was mapped
-		// rather than where its members belong.
-		Destination: destinationPtr(destinationOf(members[0])),
+		// Deriving it from the word `batch` instead would put a pile of
+		// approvals wherever `batch` was mapped rather than where its members
+		// belong.
+		//
+		// Read the same way the OWNER below is read — from the members, and only
+		// where they agree. The fold refuses to group rows bound for different
+		// screens, so today this can only be the one they share; asking the
+		// members rather than trusting that keeps the two answers from drifting
+		// apart if a second caller ever reaches this function without the
+		// guard in front of it.
+		Destination: destinationPtr(destinationOfGroup(members)),
 	}
 	if cause != "" {
 		row.Batch.Cause = &cause
@@ -326,5 +333,56 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 			occurred = member.occurredAt
 		}
 	}
-	return ranked{item: row, foldedFrom: from, occurredAt: occurred}
+	return ranked{
+		item:       row,
+		foldedFrom: from,
+		// The members' own identities, so a walk freezes THEM rather than the
+		// synthetic id above: this row exists only while the fold produces it.
+		members:    memberIdentities(members),
+		occurredAt: occurred,
+		// The group's own answer, from the members it stands for. A fold is one
+		// row in place of many, so it can only name an owner where the many
+		// AGREE — a pile of duplicate pairs nobody holds is unassigned, and a
+		// pile whose members answer differently names nobody rather than
+		// picking one member's owner and reporting it as the group's.
+		ownerRef: ownerOfTheGroup(members),
+	}
+}
+
+// ownerOfTheGroup is the one answer a folded row may give.
+//
+// A batch is not a record and has no owner of its own; it stands for members
+// that do. Where they agree the group says what they say. Where they disagree
+// it says nothing — not the first member's answer, which would report one
+// person as holding a pile most of which is somebody else's, and not
+// `unassigned`, which would claim nobody holds work several people do.
+//
+// Silence here is the honest answer AND a visible one: the row reaches the wire
+// with no owner, which the contract already means as "nothing is being said
+// about this", rather than as a claim a reader would act on.
+func ownerOfTheGroup(members []ranked) ownerRef {
+	if len(members) == 0 {
+		return ownerRef{}
+	}
+	first := members[0].ownerRef
+	for _, member := range members[1:] {
+		if member.ownerRef != first {
+			return ownerRef{}
+		}
+	}
+	return first
+}
+
+// memberIdentities names the rows a group stands for.
+//
+// A walk freezes these rather than the group's own id, which is minted from the
+// key and cause and therefore exists only while the fold produces this group.
+// Freezing the synthetic id lost the whole group the moment one member was
+// dealt with and the rest fell below the floor.
+func memberIdentities(members []ranked) []worklistsnap.Row {
+	out := make([]worklistsnap.Row, 0, len(members))
+	for _, member := range members {
+		out = append(out, rowIdentity(member))
+	}
+	return out
 }

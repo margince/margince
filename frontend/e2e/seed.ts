@@ -2179,6 +2179,11 @@ export async function mockApi(
     if (path === "/search") {
       // Cross-object: the relink picker searches projects by name alongside
       // the seeded person, so a spec can file an activity under one.
+      //
+      // A hit of every OTHER kind rides along because the results screen groups
+      // by type and offers a filter over those groups — swept for axe and at
+      // 390px — and a fixture answering two kinds would let both passes report
+      // a clean screen they had mostly not drawn.
       const q = (url.searchParams.get("q") ?? "").toLowerCase();
       const projectHits = projectState.projects
         .filter((project) => project.name.toLowerCase().includes(q))
@@ -2188,11 +2193,41 @@ export async function mockApi(
           title: project.name,
           score: 0.8,
         }));
+      const hits = [
+        { type: "person", id: "p-anna", title: "Anna Weber", score: 0.9 },
+        ...projectHits,
+        {
+          type: "organization",
+          id: "o-brandt",
+          title: "Brandt Automotive",
+          score: 0.86,
+        },
+        { type: "deal", id: "d-fleet", title: "Fleet renewal", score: 0.8 },
+        {
+          type: "product",
+          id: "pr-1",
+          title: "Diagnostic audit",
+          snippet: "GR-AUDIT",
+          score: 0.7,
+        },
+        {
+          type: "offer_template",
+          id: "ot-1",
+          title: "Fleet renewal quote",
+          score: 0.66,
+        },
+        { type: "lead", id: "l-1", title: "Bettina Krause", score: 0.6 },
+        { type: "tag", id: "t-1", title: "Key account", carried_by: 4 },
+      ];
+      // The pills are a WIRE dial, so the fixture narrows the way the server
+      // does rather than answering the same page whatever was asked.
+      const wanted = url.searchParams.getAll("types");
       return json(
-        page([
-          { type: "person", id: "p-anna", title: "Anna Weber", score: 0.9 },
-          ...projectHits,
-        ]),
+        page(
+          wanted.length === 0
+            ? hits
+            : hits.filter((hit) => wanted.includes(hit.type)),
+        ),
       );
     }
     // The frame every Analytics answer is placed in. Without it the screen's

@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
@@ -396,6 +397,12 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// it was written and nothing could set it, so the one control that says
 		// "I know, and I want this first anyway" did not exist.
 		WithPins(attentionPins{pool: pool, store: activities.NewStore(db)}).
+		// One reader's walk, held still while they page it. Without it the
+		// cursor is an offset into a ranking rebuilt on every read, so the
+		// count above the queue climbs as work arrives behind somebody who is
+		// still paging and a row crossing the page boundary is served twice or
+		// not at all.
+		WithWalks(worklistsnap.New(pool, now)).
 		// The asks waiting on this colleague to answer. Until this lane existed
 		// a colleague learned they had been asked only by opening that
 		// contact's Network tab, so an ask nobody went looking for expired

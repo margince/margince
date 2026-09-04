@@ -102,9 +102,11 @@ export function TimelineActions({
           and not the summary a twenty-row page ships. What removes the guess is
           having somewhere better to ask, and the drawer is that.
 
-          Every other kind keeps its control. A note, a call or a meeting has no
-          drawer to be sent to, and its audience is never derived — there was
-          never a question to guess at for those, only the one write. */}
+          Every other kind is offered it, and AudienceAction itself withholds
+          it where the server says the audience was derived. That claim used to
+          live here as "its audience is never derived", which was false for a
+          connector-captured `message` and is the defect this comment now
+          records rather than repeats. */}
       {activity.kind !== "email" && (
         <AudienceAction
           activity={activity}
@@ -169,6 +171,22 @@ export function AudienceAction({
   if (activity.content_state === "withheld") {
     return null;
   }
+  // A DERIVED audience is not this dialog's to change, and offering it anyway
+  // is what made a member press a control that opened, took their answer and
+  // then refused it — naming a thread-level control the page does not have.
+  //
+  // Asked of `audience_reason`, which is the server saying so, rather than
+  // inferred from the kind. The dispatch below used to read `kind !== "email"`
+  // on the belief that only mail derives an audience; a connector-captured
+  // `message` derives one exactly the same way, and the next kind that does
+  // would have been missed the same way again.
+  //
+  // `manual` is a human's own answer and stays editable. Null is a row nothing
+  // derived. The field is withheld with the content, which is why this sits
+  // BELOW the withheld guard — above it, a held row would read as editable.
+  if (audienceIsDerived(activity)) {
+    return null;
+  }
   return (
     <>
       <Button
@@ -228,4 +246,19 @@ export function AudienceAction({
       )}
     </>
   );
+}
+
+// audienceIsDerived reports whether the SYSTEM decided who may read this row.
+//
+// `audience_reason` is the server's own word for it, and reading it is what
+// stops this being guessed from the kind again: `posture` (a mailbox asked for
+// it), `workspace_floor`, `no_record`, `pending_verdict`. `manual` is a human's
+// answer and is still theirs to change; null is a row nothing derived.
+//
+// Null is also what a WITHHELD row reports, because the reason describes what
+// the message is about — so callers must fail closed on withheld first, or a
+// held row reads as editable here.
+export function audienceIsDerived(activity: Activity): boolean {
+  const reason = activity.audience_reason;
+  return reason != null && reason !== "manual";
 }
