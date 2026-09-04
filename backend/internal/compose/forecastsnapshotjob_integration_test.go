@@ -47,18 +47,24 @@ func setupSnapshotJob(t *testing.T) *snapshotJobEnv {
 	t.Helper()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
-	at := time.Now().UTC()
+	// FIXED, and the worker reads it as its clock below. `time.Now()` with a
+	// close date three days out crosses into the next quarter on the last three
+	// days of every quarter: the pass then resolves a period the fixture's deal
+	// is not in, freezes a snapshot of nothing, and the contribution assertion
+	// fails for a reason that has nothing to do with snapshots. Mid-February
+	// sits far from either edge.
+	at := time.Date(2026, 2, 16, 12, 0, 0, 0, time.UTC)
 
-	// A deal with money and a close date inside the current quarter, so the
-	// readings the pass freezes are not all zero — a snapshot of an empty
-	// pipeline would be written by a pass that read nothing at all, and this
-	// suite could not tell the two apart.
+	// A deal with money, closing on the as-of day itself, so the readings the
+	// pass freezes are not all zero — a snapshot of an empty pipeline would be
+	// written by a pass that read nothing at all, and this suite could not tell
+	// the two apart.
 	owner := integration.OwnerConn(t)
 	if _, err := owner.Exec(context.Background(), `
 		INSERT INTO deal (pipeline_id, stage_id, name, owner_id, status, source, captured_by,
 		                  amount_minor, currency, expected_close_date)
 		VALUES ($1, $2, 'Snapshot Fixture', $3, 'open', 'manual', 'test', 4200000, 'EUR', $4)`,
-		pipeline, open, e.Rep1, at.AddDate(0, 0, 3)); err != nil {
+		pipeline, open, e.Rep1, at); err != nil {
 		t.Fatalf("seeding the deal the snapshot sums: %v", err)
 	}
 	return &snapshotJobEnv{
