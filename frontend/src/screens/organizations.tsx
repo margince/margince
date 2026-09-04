@@ -2423,7 +2423,13 @@ function CompanyOverviewStack({
             // of it.
             nameOf={nameOf}
           />
+          {/* Keyed on the account, so its fold is the account's own. The page
+              stays mounted while the route swaps organizations, and without
+              this a thread a reader folded on one company arrives folded on
+              the next — which contradicts the promise that the thread the
+              call was read from is open when the reader gets there. */}
           <ThreadFold
+            key={org.id}
             view={view}
             loading={loading}
             onOpenHistory={onOpenHistory}

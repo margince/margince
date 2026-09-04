@@ -21,6 +21,11 @@
     gap: var(--space-3);
     justify-items: start;
   }
+  /* One column here, so the named third would open an implicit track beside
+     it and put the control off the card. */
+  .r360-rests-toggle {
+    grid-column: 1;
+  }
 }
 
 /* The call, as a WORD and not a colour alone: a reader who cannot tell the
@@ -85,6 +90,10 @@
    the call and the sentence read left to right and the working waits past
    them rather than taking a line under the claim it grounds. */
 .r360-rests-toggle {
+  /* Column three by name rather than by counting: `because` is optional, and
+     auto-placement put the working in the middle column whenever the sentence
+     was missing — the far end of the head is where it belongs either way. */
+  grid-column: 3;
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
