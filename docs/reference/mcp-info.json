@@ -10,16 +10,16 @@
   "totals": {
     "tools": 72,
     "resources": 11,
-    "tool_catalog_bytes": 204350,
+    "tool_catalog_bytes": 204388,
     "resource_catalog_bytes": 4251,
-    "approx_wire_tokens_total": 52150,
+    "approx_wire_tokens_total": 52159,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 49898,
-      "input_schema_bytes": 41280,
+      "input_schema_bytes": 41318,
       "output_schema_bytes": 97625,
-      "description_plus_input_schema_bytes": 91178
+      "description_plus_input_schema_bytes": 91216
     }
   },
   "tools": {
@@ -4518,7 +4518,7 @@
               "type": "string"
             },
             "scope_kind": {
-              "description": "Whose forecast. Defaults to the whole workspace.",
+              "description": "Whose forecast. Omit for this caller's own default population; a wider one is refused.",
               "enum": [
                 "workspace",
                 "team",

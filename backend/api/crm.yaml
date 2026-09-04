@@ -16464,6 +16464,38 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /analytics/context:
+    get:
+      tags: [Reports]
+      operationId: getAnalyticsContext
+      summary: Which population this caller measures by default, and which they may choose.
+      description: |
+        The frame every analytics answer is placed in: the population this caller measures
+        when they ask for nothing, the populations they may ask for instead, the base
+        currency and zone their money and days are counted in, and what the screen may
+        offer them.
+
+        The POPULATION is not the same question as which records the caller may open.
+        Deals are workspace-readable so two reps do not call the same buyer, so a rep's row
+        scope narrows nothing — and a rep handed the workspace total has been answered a
+        question nobody asked. `default_scope` is what their own lens measures.
+
+        Every `label` here is written by the server. A client resolving a team or user id
+        into a name would be naming a subject it may not read, and the two would disagree
+        the first time a grant changed.
+
+        `allowed_scopes` is what the screen may OFFER, not what it may send unchecked:
+        every data route validates a requested population again. A control built from this
+        list simply never offers one that would be refused.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The caller's analytics frame.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyticsContext' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /analytics/schema:
     get:
       tags: [Reports]
@@ -31708,7 +31740,15 @@ components:
           type: string
           format: date
           description: The last day INSIDE the period, not an exclusive bound.
-        scope_kind: { type: string, enum: [workspace, team, owner] }
+        scope_kind:
+          type: string
+          enum: [workspace, managed_teams, team, owner]
+          description: >-
+            Which population these readings cover. `managed_teams` is what an omitted
+            scope resolves to for a team manager — their teams and themselves — and is a
+            RESULT only: it names no single subject, so no forecast can be recorded
+            against it and no standing call is looked up for it. The write schemas keep
+            the three nameable scopes.
         scope_id: { type: string, format: uuid }
         won_minor:
           type: integer
@@ -32081,6 +32121,75 @@ components:
           description: >-
             Whether anything was kept back from this reader. A boolean and never a count:
             a count of what somebody may not see states how much of it there is.
+      additionalProperties: false
+    AnalyticsScope:
+      type: object
+      description: >-
+        One population an answer can be about. `label` is written by the server, because a
+        client resolving an id into a name would be naming a subject it may not read.
+      required: [kind, label]
+      properties:
+        kind:
+          type: string
+          enum: [workspace, managed_teams, team, owner]
+          description: >-
+            `managed_teams` is a team manager's own default — their teams and themselves.
+            It is RESOLVED, never requested: a caller names one team, or names nothing and
+            is given this.
+
+        id:
+          type: string
+          format: uuid
+          description: >-
+            The team or person measured. Absent for workspace and managed_teams, which name
+            no single subject.
+        label: { type: string, description: "What to call this population on screen." }
+      additionalProperties: false
+    AnalyticsCapabilities:
+      type: object
+      description: >-
+        What this caller may actually do, so a screen never offers a control the server will
+        refuse.
+      required: [view_manager_forecast, submit_manager_forecast]
+      properties:
+        view_manager_forecast:
+          type: boolean
+          description: Whether the manager forecast is a destination for this caller at all.
+        submit_manager_forecast:
+          type: boolean
+          description: >-
+            Whether this caller may publish a forecast for the population they are
+            measuring. False hides the action rather than letting the save fail.
+      additionalProperties: false
+    AnalyticsContext:
+      type: object
+      description: The frame every analytics answer for this caller is placed in.
+      required:
+        - default_scope
+        - allowed_scopes
+        - capabilities
+        - as_of
+        - timezone
+        - base_currency
+      properties:
+        default_scope: { $ref: '#/components/schemas/AnalyticsScope' }
+        allowed_scopes:
+          type: array
+          items: { $ref: '#/components/schemas/AnalyticsScope' }
+          description: >-
+            What the screen may offer. Every data route validates a requested population
+            again; this list only keeps a control from offering a refusal.
+        capabilities: { $ref: '#/components/schemas/AnalyticsCapabilities' }
+        as_of:
+          type: string
+          format: date-time
+          description: The instant this frame was resolved.
+        timezone:
+          type: string
+          description: The zone whose days a period is cut in.
+        base_currency:
+          type: string
+          description: The currency money readings are counted in.
       additionalProperties: false
     AnalyticsSchema:
       type: object

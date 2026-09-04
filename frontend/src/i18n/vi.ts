@@ -3291,6 +3291,8 @@ export const vi = {
   "forecast.supportingNote": "Ghi chú kèm theo",
   "forecast.cancel": "Hủy",
   "forecast.saveCall": "Lưu cam kết",
+  "analytics.scopeLabel": "Những bản ghi nào nằm trong các số liệu này",
+  "analytics.scopeFixed": "Các số liệu này bao gồm {scope}.",
   "forecast.receipt": "Đã kiểm tra dữ liệu và bằng chứng",
   "forecast.eligible": "Deal được tính",
   "forecast.priced": "Có số tiền",

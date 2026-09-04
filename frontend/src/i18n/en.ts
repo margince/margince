@@ -3373,6 +3373,8 @@ export const en = {
   "forecast.supportingNote": "Supporting note",
   "forecast.cancel": "Cancel",
   "forecast.saveCall": "Save call",
+  "analytics.scopeLabel": "Which records these numbers cover",
+  "analytics.scopeFixed": "These numbers cover {scope}.",
   "forecast.receipt": "Data and evidence checked",
   "forecast.eligible": "Eligible deals",
   "forecast.priced": "Priced",
