@@ -1853,7 +1853,7 @@ components:
     PublicEventForecastAssuranceCreated:
       type: object
       x-event-type: forecast.assurance_created
-      x-entity-type: user
+      x-entity-type: assurance_run
       x-version: 1
       description: >-
         Payload for forecast.assurance_created — a nightly input check finished, and

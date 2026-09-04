@@ -144,6 +144,9 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		VCardIngestArgs{}.Kind(): func(ctx context.Context) error {
 			return (&vcardIngestWorker{}).Work(ctx, &river.Job[VCardIngestArgs]{})
 		},
+		AssuranceWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
+			return (&assuranceWorkspaceWorker{}).Work(ctx, &river.Job[AssuranceWorkspaceArgs]{})
+		},
 		CloseDateWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&closeDateWorkspaceWorker{}).Work(ctx, &river.Job[CloseDateWorkspaceArgs]{})
 		},

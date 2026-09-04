@@ -2366,7 +2366,7 @@ func (PublicEventEngagementReply) EntityType() string { return "activity" }
 
 func (PublicEventForecastAssuranceCreated) EventType() string { return "forecast.assurance_created" }
 
-func (PublicEventForecastAssuranceCreated) EntityType() string { return "user" }
+func (PublicEventForecastAssuranceCreated) EntityType() string { return "assurance_run" }
 
 func (PublicEventForecastCreated) EventType() string { return "forecast.created" }
 

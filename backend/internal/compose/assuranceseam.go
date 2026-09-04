@@ -34,6 +34,13 @@ import (
 // caller's own row scope before rendering — the list endpoint, the headline
 // counts, the brief candidate, the worklist row and the task subject line. A
 // finding about a deal the reader cannot open is a finding they never see.
+//
+// The deal a message is filed against is `activity_link.deal_id`, not a generic
+// `entity_id` — that column does not exist, and `entity_type` only says which
+// of the five id columns is the populated one (the `activity_link_shape` check
+// enforces exactly one). The query named a column the table has never had, and
+// nothing failed: this seam had no caller, and the scanner's own suite passes a
+// SubjectsFunc of its own, so the real one was never once executed.
 func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT d.id, d.owner_id, d.amount_minor, d.currency,
@@ -42,7 +49,7 @@ func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, err
 		       (SELECT max(a.occurred_at)
 		          FROM activity a
 		          JOIN activity_link al ON al.activity_id = a.id
-		         WHERE al.entity_type = 'deal' AND al.entity_id = d.id
+		         WHERE al.deal_id = d.id
 		           AND a.direction = 'inbound'
 		           AND a.archived_at IS NULL) AS last_inbound_at
 		FROM deal d
