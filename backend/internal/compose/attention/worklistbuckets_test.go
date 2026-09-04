@@ -124,6 +124,41 @@ func TestAnOverdueTaskIsDueRatherThanPlanned(t *testing.T) {
 	}
 }
 
+// TestAPinnedRowIsCountedAtWhatItMeans holds the partition to the same rule the
+// figure beside it keeps.
+//
+// A pin sorts a row to the top by overwriting its level, and `urgent` beside
+// this reads the SEMANTIC level for exactly that reason: a rep pinning hygiene
+// to the top of their morning has not made somebody wait. The buckets are drawn
+// in the same sentence, so a pin that moved `urgent` there and not here would
+// make the sentence disagree with itself — and the two figures are computed in
+// one loop, so nothing else would notice.
+func TestAPinnedRowIsCountedAtWhatItMeans(t *testing.T) {
+	t.Parallel()
+	hygiene := ranked{
+		item: crmcontracts.WorklistItem{
+			Source: crmcontracts.WorklistItemSourceTask,
+			// What the pin overwrote it with: the sort level.
+			Level: levelPinned,
+		},
+		pinned:        true,
+		semanticLevel: levelRoutine,
+	}
+	summary := summarize([]ranked{hygiene}, materialBar{})
+
+	if summary.Buckets == nil {
+		t.Fatal("the summary carries no buckets")
+	}
+	if summary.Buckets.Urgent != 0 {
+		t.Errorf("a pinned piece of hygiene was counted urgent in the partition: %+v", *summary.Buckets)
+	}
+	// And the two halves of the one sentence agree about it.
+	if summary.Urgent != summary.Buckets.Urgent {
+		t.Errorf("the sentence says %d urgent beside %d urgent in its own partition",
+			summary.Urgent, summary.Buckets.Urgent)
+	}
+}
+
 // mixedDestinationsDay is a day holding both seller work and judgements, so a
 // partition over it can be told from a single bucket.
 //
