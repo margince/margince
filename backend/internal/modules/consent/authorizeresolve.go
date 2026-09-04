@@ -20,13 +20,13 @@ package consent
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // resolution is what the engine concluded a message is, and why.
@@ -62,6 +62,16 @@ type resolution struct {
 // Nothing here consults the caller's word before the record. A claim is
 // evidence about intent and never about lawfulness, so it is checked against
 // the tables rather than believed.
+//
+// WHERE THE ANCHOR AND LINKS COME FROM matters, because both admit a message on
+// their own. They are not raw request fields by the time they reach here: the
+// send path resolves them through SendOrigin.resolve, which reads the anchor
+// with GetActivity under the caller's row scope and puts every named record
+// through auth.EnsureLinkTarget — deliberately BEFORE the consent gate, so a
+// caller naming a record they cannot see is refused there rather than reaching
+// a gate that answers about recipients. A future caller that reaches this
+// without that probe would be handing the engine unvalidated ids, and both
+// supported arms would then be reachable by naming a stranger's deal.
 func (g *Gate) resolveCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	if req.AnchorActivityID != (ids.UUID{}) {
 		replied, err := repliesToTheSubject(ctx, tx, req.AnchorActivityID, subject)
@@ -161,54 +171,64 @@ func resolutionForClass(class Class) resolution {
 	}
 }
 
-// stagedRequest rebuilds enough of the original question for the transmit phase
-// to re-ask it.
+// stagedClaims recovers what each recipient's message was CLAIMED to be, so
+// the transmit phase can re-ask the same question.
 //
 // The transmit request carries no anchor, no links and no claimed context — the
 // dispatcher holds a delivery row, not the compose window that produced it. So
-// the staging decision is read back: it recorded what the caller claimed and
-// what the engine resolved, keyed by this delivery.
+// the staging decisions are read back, and they are read back PER RECIPIENT:
+// AuthorizeStagingTx writes one row each, and one message can be several things
+// at once. A single row taken for the whole delivery would judge every
+// recipient by whichever one the query happened to return.
 //
-// Re-asking rather than trusting the stored answer is the point. A staging
-// decision says the message WAS a reply when it was written; between then and
-// now the thread can be archived, the deal can close, the stakeholder can be
-// removed. The category is carried forward as the claim, and the evidence is
-// looked at again — so a message that stopped being what it was gets a fresh
-// review rather than riding an answer that has expired.
-func stagedRequest(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest) (commsauthz.Request, error) {
-	out := commsauthz.Request{
-		Recipients:       req.Recipients,
+// Only the CLAIM is carried forward, never the engine's earlier resolution.
+// Carrying the resolution would let a message ride an answer the record no
+// longer supports — a thread can be archived and a deal can close while a
+// delivery waits in the queue — and it would carry one recipient's answer onto
+// another's.
+func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[string]commsauthz.Category, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT ON (recipient_address) recipient_address, requested_category
+		  FROM communication_decision
+		 WHERE delivery_id = $1 AND phase = 'staging'
+		 -- id, not decided_at: every row of one staging transaction carries the
+		 -- SAME now(), so ordering by time is a tie the planner breaks however
+		 -- it likes. uuidv7 is monotonic, so this names the newest row.
+		 ORDER BY recipient_address, id DESC`, deliveryID)
+	if err != nil {
+		return nil, fmt.Errorf("consent: read what this delivery was staged as: %w", err)
+	}
+	defer rows.Close()
+
+	claims := map[string]commsauthz.Category{}
+	for rows.Next() {
+		var address string
+		var claimed *string
+		if err := rows.Scan(&address, &claimed); err != nil {
+			return nil, fmt.Errorf("consent: read what this delivery was staged as: %w", err)
+		}
+		if claimed != nil {
+			claims[address] = commsauthz.Category(*claimed)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("consent: read what this delivery was staged as: %w", err)
+	}
+	return claims, nil
+}
+
+// stagedRequestFor is the question to ask about ONE recipient at transmit.
+//
+// A recipient with no staged claim gets none: the purpose key is all there is,
+// which is exactly what the engine had before resolution existed. That is the
+// right answer for a delivery staged before this code shipped, and it refuses
+// nothing that used to send.
+func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, claims map[string]commsauthz.Category) commsauthz.Request {
+	return commsauthz.Request{
+		Recipients:       []connector.Recipient{r},
+		Context:          claims[decisionRecipientKey(r)],
 		LegacyPurposeKey: req.PurposeKey,
 		Subject:          req.Subject,
 		Body:             req.Body,
 	}
-	var claimed, resolved *string
-	err := tx.QueryRow(ctx, `
-		SELECT requested_category, resolved_category
-		  FROM communication_decision
-		 WHERE delivery_id = $1 AND phase = 'staging'
-		 ORDER BY decided_at DESC
-		 LIMIT 1`, req.DeliveryID).Scan(&claimed, &resolved)
-	if errors.Is(err, pgx.ErrNoRows) {
-		// No staging row: a delivery staged before the engine existed, or one
-		// whose staging decision was never written. The purpose key is all
-		// there is, which is exactly what the engine had before resolution —
-		// so it answers on that rather than refusing a message for the sake of
-		// a row that predates the question.
-		return out, nil
-	}
-	if err != nil {
-		return commsauthz.Request{}, fmt.Errorf("consent: read what this delivery was staged as: %w", err)
-	}
-	// The CLAIM is carried forward, and the resolution is not. Carrying the
-	// resolution would let the transmit phase inherit an allow the record no
-	// longer supports; carrying the claim asks the same question again.
-	if claimed != nil {
-		out.Context = commsauthz.Category(*claimed)
-	} else if resolved != nil {
-		// Nothing was claimed, so the engine's own earlier reading stands in as
-		// the claim. It is still only a claim here: the evidence decides.
-		out.Context = commsauthz.Category(*resolved)
-	}
-	return out, nil
 }

@@ -115,9 +115,10 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 	}
 	set := commsauthz.DecisionSet{}
 	now := g.store.now().UTC()
-	// What this delivery was staged as, so the transmit phase asks about the
-	// same message rather than about a purpose key.
-	staged, err := stagedRequest(ctx, tx, req)
+	// What each recipient's message was staged as, so the transmit phase asks
+	// about the same message rather than about a purpose key. Per recipient,
+	// because one message can be several things at once.
+	claims, err := stagedClaims(ctx, tx, req.DeliveryID)
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
@@ -128,7 +129,7 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 		return commsauthz.DecisionSet{}, err
 	}
 	for _, r := range req.Recipients {
-		d, err := g.decideOne(ctx, tx, r, staged)
+		d, err := g.decideOne(ctx, tx, r, stagedRequestFor(req, r, claims))
 		if err != nil {
 			return commsauthz.DecisionSet{}, err
 		}
@@ -199,74 +200,6 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	return g.decideResolved(ctx, tx, req, subjectRef{
 		Kind: entityPerson, ID: personID, Address: r.Email,
 	}, d)
-}
-
-// decideResolved answers about a person once nothing suppresses them: what the
-// record says this message is, and whether that is supported.
-//
-// The resolution decides the CATEGORY and the legacy verdict decides the
-// PERMISSION, and both are recorded. Keeping them separate is what makes the
-// engine measurable: a row can say "this is a reply, and the old gate refused
-// it", which is exactly the disagreement a rollout needs to see before anybody
-// flips a mode.
-func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, d commsauthz.Decision) (commsauthz.Decision, error) {
-	res, err := g.resolveCategory(ctx, tx, req, subject)
-	if err != nil {
-		return commsauthz.Decision{}, err
-	}
-	d.Resolved = res.Category
-	if res.Supported {
-		// The record bears the category out on its own evidence, so the engine
-		// allows on that ground and names it. This is the arm the old model had
-		// no way to reach: a reply to a thread the subject started needed no
-		// consent row, and the purpose gate had no way to know it was a reply.
-		d.Verdict = commsauthz.VerdictAllow
-		d.ReasonCode = commsauthz.ReasonAllowed
-		d.Basis = res.Basis
-		return d, nil
-	}
-	return legacyVerdictFor(ctx, tx, subject.ID, req.LegacyPurposeKey, res, d)
-}
-
-// legacyVerdictFor answers on the old purpose model when the record supports no
-// category on its own.
-//
-// It calls VerdictForPerson rather than reimplementing the class model, which
-// is what keeps the engine, the legacy transmit gate and the guard endpoint
-// answering with one body of code about one person. A second implementation
-// here would be a second answer, and the one that stopped matching would look
-// exactly like the one that still did.
-func legacyVerdictFor(ctx context.Context, tx pgx.Tx, personID, purposeKey string, res resolution, d commsauthz.Decision) (commsauthz.Decision, error) {
-	purpose, defined, err := purposeRowFor(ctx, tx, purposeKey)
-	if err != nil {
-		return commsauthz.Decision{}, err
-	}
-	if !defined {
-		d.Verdict = commsauthz.VerdictDeny
-		d.ReasonCode = commsauthz.ReasonUnknownPurpose
-		return d, nil
-	}
-	verdict, err := VerdictForPerson(ctx, tx, personID, purpose)
-	if err != nil {
-		return commsauthz.Decision{}, err
-	}
-	switch verdict.State {
-	case VerdictAllowed:
-		d.Verdict = commsauthz.VerdictAllow
-		d.ReasonCode = commsauthz.ReasonAllowed
-		d.Basis = basisForClass(purpose.Class)
-	case VerdictBlocked:
-		d.Verdict = commsauthz.VerdictDeny
-		d.ReasonCode = blockedReasonCode(verdict)
-	default:
-		// The resolution's own reason, not a blanket "no marketing consent".
-		// An unevidenced operational claim and an unconsented marketing send
-		// are different problems with different fixes, and a reader who is
-		// told the wrong one goes looking in the wrong place.
-		d.Verdict = commsauthz.VerdictReview
-		d.ReasonCode = res.Reason
-	}
-	return d, nil
 }
 
 // blockedReasonCode translates the verdict's own code into the engine's

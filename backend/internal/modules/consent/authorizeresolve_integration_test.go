@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 type resolveEnv struct {
@@ -202,6 +203,34 @@ func (e *resolveEnv) openDeal(t *testing.T, status string, stakeholder bool) ids
 		}
 	}
 	return dealID
+}
+
+// seedPurpose plants a legacy consent purpose of a named class.
+func (e *resolveEnv) seedPurpose(t *testing.T, key, class string) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO consent_purpose (id, key, label, class, requires_double_opt_in)
+		VALUES ($1, $2, $2, $3, false)`,
+		ids.New[ids.PurposeKind](), key, class); err != nil {
+		t.Fatalf("planting the purpose: %v", err)
+	}
+}
+
+// decide runs the WHOLE per-recipient decision, not just the resolution — which
+// is what the Resolved/Requested split has to be asserted through, because the
+// split happens in decideResolved rather than in the resolver.
+func (e *resolveEnv) decide(t *testing.T, req commsauthz.Request) commsauthz.Decision {
+	t.Helper()
+	var out commsauthz.Decision
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = e.gate.decideOne(context.Background(), tx,
+			connector.Recipient{Email: e.address}, req)
+		return err
+	}); err != nil {
+		t.Fatalf("deciding: %v", err)
+	}
+	return out
 }
 
 // resolve asks the engine what a message is, for this env's subject.
@@ -472,5 +501,212 @@ func TestTwoRecipientsOnOneMessageGetTheirOwnAnswers(t *testing.T) {
 	}
 	if stranger.Supported {
 		t.Fatal("somebody who never wrote into the thread was supported by it")
+	}
+}
+
+// A CLAIM MUST NOT STEER AUTHORITY. Decision.Resolved selects which rollout
+// mode applies and whether the jurisdiction's advertising ceiling is counted at
+// all, so a caller whose claim set it would hold both: a marketing send
+// claiming active_deal_followup would skip the ceiling, and its own decision row
+// would then not count against the next send either — degrading the ceiling for
+// that address permanently.
+//
+// The claim is recorded in Requested, which is the column that exists for it.
+// Resolved stays with what the engine worked out for itself.
+//
+// Mutation: revert BOTH guards together — assign d.Resolved from the resolution
+// before checking Supported, AND drop legacyVerdictFor's own assignment from
+// the purpose class. Either alone leaves this green, because the other covers
+// it; that is deliberate defence in depth rather than a redundant line, and it
+// is written here so a reader who deletes one and sees a green suite knows the
+// second is now the only thing holding it.
+func TestAnUnsupportedClaimIsRecordedButNeverResolvedTo(t *testing.T) {
+	e := setupResolve(t)
+	e.seedPurpose(t, "newsletter", "marketing")
+
+	d := e.decide(t, commsauthz.Request{
+		LegacyPurposeKey: "newsletter",
+		Context:          commsauthz.CategoryActiveDealFollowup,
+	})
+
+	if d.Resolved == commsauthz.CategoryActiveDealFollowup {
+		t.Fatal("the caller's unproven claim became the resolved category, which is what the ceiling and the rollout mode key off")
+	}
+	if d.Resolved != commsauthz.CategoryMarketing {
+		t.Errorf("resolved %q, want the engine's own reading of the purpose: marketing", d.Resolved)
+	}
+	if d.Requested != commsauthz.CategoryActiveDealFollowup {
+		t.Errorf("requested = %q, want the claim recorded for the reader", d.Requested)
+	}
+}
+
+// A SUPPORTED resolution does set Resolved — it is the engine's own conclusion
+// from the record, not a claim. Without this the test above would pass with an
+// engine that never resolved anything.
+func TestASupportedResolutionSetsTheResolvedCategory(t *testing.T) {
+	e := setupResolve(t)
+	anchor := e.inboundFrom(t, "thread-1", e.address, time.Now().Add(-time.Hour))
+
+	d := e.decide(t, commsauthz.Request{AnchorActivityID: anchor})
+
+	if d.Resolved != commsauthz.CategoryReplyToInbound {
+		t.Fatalf("resolved %q, want reply_to_inbound from the thread itself", d.Resolved)
+	}
+	if d.Verdict != commsauthz.VerdictAllow {
+		t.Errorf("verdict = %q, want an allow on the subject's own message", d.Verdict)
+	}
+}
+
+// A STAKEHOLDER WHO WAS REMOVED supports nothing. Removing a contact from a
+// deal writes archived_at; ended_at is a business date somebody types and stays
+// NULL. Checking only ended_at would let a removed stakeholder keep supporting
+// mail about the opportunity they are no longer on.
+//
+// Mutation: drop `r.archived_at IS NULL` and this fails.
+func TestARemovedStakeholderSupportsNoFollowUp(t *testing.T) {
+	e := setupResolve(t)
+	deal := e.openDeal(t, "open", true)
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE relationship SET archived_at = now() WHERE deal_id = $1`, deal); err != nil {
+		t.Fatal(err)
+	}
+
+	got := e.resolve(t, commsauthz.Request{Links: []ids.UUID{deal}})
+
+	if got.Supported {
+		t.Fatal("a stakeholder edge that was archived still supported a follow-up")
+	}
+}
+
+// A ROLE MAILBOX THAT MOVED does not carry its previous holder's thread. The
+// bare-address arm exists for a participant capture never resolved to a record;
+// without a person_id IS NULL guard it matches ANY row carrying the address, so
+// info@ re-pointed from one contact to another would let the first person's
+// messages support writing to the second — past their own withdrawal.
+//
+// Mutation: drop `p.person_id IS NULL` from the address arm and this fails.
+func TestAReassignedAddressDoesNotInheritTheThread(t *testing.T) {
+	e := setupResolve(t)
+	// Somebody ELSE wrote into the thread from the address our subject now holds.
+	previous := ids.New[ids.PersonKind]()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO person (id, full_name, source, captured_by)
+		VALUES ($1, 'Previous Holder', 'manual', 'human:x')`, previous); err != nil {
+		t.Fatal(err)
+	}
+	id := ids.NewV7()
+	ctx := context.Background()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO activity (id, kind, direction, thread_key, occurred_at, source, captured_by)
+		VALUES ($1, 'email', 'inbound', 'thread-1', now(), 'gmail', 'human:x')`, id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO activity_participant (activity_id, person_id, address, role)
+		VALUES ($1, $2, $3, 'from')`, id, previous, e.address); err != nil {
+		t.Fatal(err)
+	}
+	anchor := e.outboundTo(t, "thread-1", e.address, time.Now())
+
+	got := e.resolve(t, commsauthz.Request{AnchorActivityID: anchor})
+
+	if got.Supported {
+		t.Fatal("the previous holder's message supported writing to the address's new owner")
+	}
+}
+
+// EACH RECIPIENT'S CLAIM IS THEIR OWN. Staging writes one decision per
+// recipient, all in one transaction, so every row carries the same decided_at —
+// a single row taken for the whole delivery is a tie the planner breaks however
+// it likes, and one recipient's claim would then judge everybody.
+//
+// Mutation: read one row for the delivery (ORDER BY decided_at DESC LIMIT 1)
+// instead of DISTINCT ON the recipient, and this fails.
+func TestEachRecipientsStagedClaimIsRecoveredSeparately(t *testing.T) {
+	e := setupResolve(t)
+	delivery := e.plantDelivery(t)
+	// Two recipients on one delivery, staged in one transaction with different
+	// claims — exactly what AuthorizeStagingTx writes.
+	e.plantStagingDecision(t, delivery, "first@corp.test", commsauthz.CategoryInvoiceOrPayment)
+	e.plantStagingDecision(t, delivery, "second@corp.test", commsauthz.CategoryMarketing)
+
+	var claims map[string]commsauthz.Category
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		var err error
+		claims, err = stagedClaims(context.Background(), tx, delivery)
+		return err
+	}); err != nil {
+		t.Fatalf("reading the staged claims: %v", err)
+	}
+
+	if got := claims["first@corp.test"]; got != commsauthz.CategoryInvoiceOrPayment {
+		t.Errorf("first recipient's claim = %q, want invoice_or_payment", got)
+	}
+	if got := claims["second@corp.test"]; got != commsauthz.CategoryMarketing {
+		t.Errorf("second recipient's claim = %q, want marketing — not the other recipient's", got)
+	}
+}
+
+// A recipient with no staged claim gets none, rather than inheriting somebody
+// else's. This is also the shape of a delivery staged before the engine
+// existed, which must keep sending exactly as it did.
+func TestARecipientWithNoStagedClaimInheritsNothing(t *testing.T) {
+	e := setupResolve(t)
+	delivery := e.plantDelivery(t)
+	e.plantStagingDecision(t, delivery, "first@corp.test", commsauthz.CategoryInvoiceOrPayment)
+
+	var claims map[string]commsauthz.Category
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		var err error
+		claims, err = stagedClaims(context.Background(), tx, delivery)
+		return err
+	}); err != nil {
+		t.Fatalf("reading the staged claims: %v", err)
+	}
+
+	req := stagedRequestFor(commsauthz.TransmitRequest{PurposeKey: "newsletter"},
+		connector.Recipient{Email: "nobody@corp.test"}, claims)
+	if req.Context != "" {
+		t.Fatalf("an unstaged recipient inherited the claim %q", req.Context)
+	}
+	if req.LegacyPurposeKey != "newsletter" {
+		t.Errorf("purpose key = %q, want the delivery's own", req.LegacyPurposeKey)
+	}
+}
+
+// plantDelivery makes a delivery row for decisions to hang off.
+func (e *resolveEnv) plantDelivery(t *testing.T) ids.UUID {
+	t.Helper()
+	ctx := context.Background()
+	activityID := ids.NewV7()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO activity (id, kind, direction, source, occurred_at, captured_by)
+		VALUES ($1, 'email', 'outbound', 'manual', now(), 'human:x')`, activityID); err != nil {
+		t.Fatal(err)
+	}
+	id := ids.NewV7()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO comms_outbound
+		  (id, activity_id, user_id, provider, message_id, recipients, cc, subject, body,
+		   consent_purpose, references_chain, status)
+		VALUES ($1, $2, $3, 'gmail', $4, '[]'::jsonb, '[]'::jsonb, 'S', 'b',
+		        'newsletter', '[]'::jsonb, 'pending')`,
+		id, activityID, e.user, "msg-"+id.String()); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// plantStagingDecision writes one staging row the way AuthorizeStagingTx does:
+// attempt 0, and now() for decided_at, so every row of one delivery ties.
+func (e *resolveEnv) plantStagingDecision(t *testing.T, delivery ids.UUID, address string, claimed commsauthz.Category) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO communication_decision
+		  (delivery_id, attempt, decision_set_id, recipient_address, phase,
+		   requested_category, resolved_category, verdict, reason_code, mode, actor)
+		VALUES ($1, 0, $2, $3, 'staging', $4, 'marketing', 'review', 'no_compatible_evidence', 'observe', 'test')`,
+		delivery, ids.NewV7(), address, string(claimed)); err != nil {
+		t.Fatalf("planting the staging decision: %v", err)
 	}
 }

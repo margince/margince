@@ -66,7 +66,14 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 			   AND p.role = 'from'
 			   AND (
 			         ($2 = 'person' AND p.person_id = $3::uuid)
-			      OR ($4 <> '' AND lower(p.address) = lower($4))
+			         -- The bare-address arm is for a participant the capture
+			         -- never resolved to a record, which is why it requires
+			         -- person_id IS NULL. Without that it matches ANY row
+			         -- carrying the address, and a role mailbox (info@, sales@)
+			         -- re-pointed from one contact to another would let the
+			         -- previous holder's messages support writing to the new
+			         -- one — past their own withdrawal.
+			      OR ($4 <> '' AND p.person_id IS NULL AND lower(p.address) = lower($4))
 			       )
 		)`, anchor, subject.Kind, subject.ID, subject.Address).Scan(&found)
 	if err != nil {
@@ -102,7 +109,14 @@ func liveDealInLinks(ctx context.Context, tx pgx.Tx, links []ids.UUID, subject s
 			   AND d.archived_at IS NULL
 			   AND r.kind = 'deal_stakeholder'
 			   AND r.person_id = $2::uuid
+			   -- BOTH, and they are different facts. ended_at is a business
+			   -- date somebody types; archived_at is how the edge is actually
+			   -- removed — every delete and every cascade (person archive,
+			   -- merge, deal archive) writes archived_at and leaves ended_at
+			   -- alone. Checking only ended_at would let a stakeholder who was
+			   -- REMOVED from the deal keep supporting mail about it.
 			   AND r.ended_at IS NULL
+			   AND r.archived_at IS NULL
 		)`, links, subject.ID).Scan(&found)
 	if err != nil {
 		return false, fmt.Errorf("consent: read the opportunity this message follows up: %w", err)
