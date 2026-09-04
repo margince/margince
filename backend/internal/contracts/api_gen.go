@@ -7824,19 +7824,19 @@ func (e OrganizationBriefSectionKind) Valid() bool {
 
 // Defines values for OrganizationBriefSentenceNature.
 const (
-	Assessment     OrganizationBriefSentenceNature = "assessment"
-	Fact           OrganizationBriefSentenceNature = "fact"
-	Recommendation OrganizationBriefSentenceNature = "recommendation"
+	OrganizationBriefSentenceNatureAssessment     OrganizationBriefSentenceNature = "assessment"
+	OrganizationBriefSentenceNatureFact           OrganizationBriefSentenceNature = "fact"
+	OrganizationBriefSentenceNatureRecommendation OrganizationBriefSentenceNature = "recommendation"
 )
 
 // Valid indicates whether the value is a known member of the OrganizationBriefSentenceNature enum.
 func (e OrganizationBriefSentenceNature) Valid() bool {
 	switch e {
-	case Assessment:
+	case OrganizationBriefSentenceNatureAssessment:
 		return true
-	case Fact:
+	case OrganizationBriefSentenceNatureFact:
 		return true
-	case Recommendation:
+	case OrganizationBriefSentenceNatureRecommendation:
 		return true
 	default:
 		return false
@@ -14790,31 +14790,31 @@ func (e ListOrganizationsParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListOrganizationsParamsLifecycle.
 const (
-	ListOrganizationsParamsLifecycleCustomer       ListOrganizationsParamsLifecycle = "customer"
-	ListOrganizationsParamsLifecycleDisqualified   ListOrganizationsParamsLifecycle = "disqualified"
-	ListOrganizationsParamsLifecycleFormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
-	ListOrganizationsParamsLifecycleOpportunity    ListOrganizationsParamsLifecycle = "opportunity"
-	ListOrganizationsParamsLifecycleProspect       ListOrganizationsParamsLifecycle = "prospect"
-	ListOrganizationsParamsLifecycleTarget         ListOrganizationsParamsLifecycle = "target"
-	ListOrganizationsParamsLifecycleUnknown        ListOrganizationsParamsLifecycle = "unknown"
+	Customer       ListOrganizationsParamsLifecycle = "customer"
+	Disqualified   ListOrganizationsParamsLifecycle = "disqualified"
+	FormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
+	Opportunity    ListOrganizationsParamsLifecycle = "opportunity"
+	Prospect       ListOrganizationsParamsLifecycle = "prospect"
+	Target         ListOrganizationsParamsLifecycle = "target"
+	Unknown        ListOrganizationsParamsLifecycle = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationsParamsLifecycle enum.
 func (e ListOrganizationsParamsLifecycle) Valid() bool {
 	switch e {
-	case ListOrganizationsParamsLifecycleCustomer:
+	case Customer:
 		return true
-	case ListOrganizationsParamsLifecycleDisqualified:
+	case Disqualified:
 		return true
-	case ListOrganizationsParamsLifecycleFormerCustomer:
+	case FormerCustomer:
 		return true
-	case ListOrganizationsParamsLifecycleOpportunity:
+	case Opportunity:
 		return true
-	case ListOrganizationsParamsLifecycleProspect:
+	case Prospect:
 		return true
-	case ListOrganizationsParamsLifecycleTarget:
+	case Target:
 		return true
-	case ListOrganizationsParamsLifecycleUnknown:
+	case Unknown:
 		return true
 	default:
 		return false
