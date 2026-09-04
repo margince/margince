@@ -97,7 +97,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 
-## Census (102)
+## Census (103)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -203,6 +203,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `validatedreplypath_test.go` | H2 | A model reply this tree can REFUSE must be asked for through the validated lane, so the refusal reaches the model that can act on it. |
 | `vaultwriters_test.go` | H2 | Every writer of the installation's ciphertext store records its act somewhere. |
 | `worklistdestination_test.go` | H2 | Every source the worklist can emit has one screen it belongs on. |
+| `worklistreasonkinds_test.go` | H2 | Every reason a row gives is one the contract declares and a client can render. |
 
 ## Reachability (16)
 
