@@ -318,13 +318,26 @@ func TestConcurrentLastAdminDeactivationsKeepOneAdmin(t *testing.T) {
 	}
 }
 
-// agentSeatOf answers the workspace's agent seat, the one bootstrap wrote.
+// agentSeatOf writes an agent identity and answers it.
+//
+// It used to READ the one bootstrap wrote. Bootstrap writes none any more — the
+// row's only consumer was the extension-job dispatcher, and a tick now answers
+// as the job it is — so a suite whose subject is what an agent identity may NOT
+// do has to create one.
+//
+// The refusals under test are not retired with the seed. `is_agent` is still a
+// supported column, still filtered on by overlay and federatedidentity, and a
+// resident runner will land under it; these tests are what keep its doors shut
+// in the meantime. Written through the owner connection because no writer in the
+// product creates one, which is exactly the state being asserted elsewhere.
 func agentSeatOf(t *testing.T, e *revocationEnv) ids.UserID {
 	t.Helper()
-	var seat ids.UserID
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT id FROM app_user WHERE is_agent`).Scan(&seat); err != nil {
-		t.Fatalf("reading the workspace's agent seat: %v", err)
+	seat := ids.New[ids.UserKind]()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO app_user (id, email, display_name, is_agent, seat_type, status)
+		 VALUES ($1, $2, 'Margince Agent', true, 'full', 'active')`,
+		seat, "agent@"+seat.String()+".gradion.local"); err != nil {
+		t.Fatalf("seeding an agent identity: %v", err)
 	}
 	return seat
 }
@@ -561,11 +574,7 @@ func TestAnInvitedAdminIsNotAnotherActiveAdmin(t *testing.T) {
 func TestReactivatingTheAgentSeatRestoresItToActive(t *testing.T) {
 	e := setupRevocationEnv(t, "reactivate-agent-seat")
 
-	var agentID ids.UserID
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT id FROM app_user WHERE is_agent`).Scan(&agentID); err != nil {
-		t.Fatalf("the installation has no agent seat, so this proves nothing: %v", err)
-	}
+	agentID := agentSeatOf(t, e)
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, agentID); err != nil {
 		t.Fatal(err)

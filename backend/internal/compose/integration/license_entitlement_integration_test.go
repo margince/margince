@@ -22,11 +22,13 @@ package integration
 // resident runner that will land under `is_agent`, not to a row the product
 // creates.
 //
-// A unit test cannot see any of it, and a hand-inserted row would prove nothing
-// about the writer: the seats here are the ones bootstrap and the members
-// surface actually create.
+// A unit test cannot see any of it: what is real here is the predicate running
+// against rows a real database holds, and the verdict the server reaches with
+// it. The seats come from bootstrap and the members surface wherever they can —
+// one row below is written directly, and says why it has to be.
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"testing"
@@ -55,9 +57,9 @@ func TestLicenseEntitlementCountsTheSeatsThatAct(t *testing.T) {
 	// accepted by the bundled keyset. What is REAL here is the seat count and
 	// the verdict the server reaches with it — the half a fixture cannot fake.
 	//
-	// One granted seat, against an installation that bootstraps at least two:
-	// the admin and the Agent Runner. So over_limit is proven from rows the
-	// product actually wrote rather than from a number a test chose.
+	// One granted seat, against two people. So over_limit is proven from a count
+	// the predicate reached over real rows rather than from a number a test
+	// chose.
 	e := apptest.SetupAppWithOptions(t, compose.WithLicensePosture(func() licensecheck.Posture {
 		return licensecheck.Posture{
 			State:     licensecheck.StateValid,
@@ -69,14 +71,31 @@ func TestLicenseEntitlementCountsTheSeatsThatAct(t *testing.T) {
 	}))
 	e.BootstrapWorkspace(t)
 
+	// A SECOND person, written directly, and the directness is the point.
+	//
+	// Over-limit used to be reached for free: a bootstrapped installation held
+	// the admin plus a seeded Agent Runner seat, two seats against a grant of
+	// one. Bootstrap seeds no agent identity any more, so a fresh installation
+	// sits exactly AT a grant of one and the over-limit arm below had nothing to
+	// report.
+	//
+	// The invite endpoint cannot produce this state either — the seat ceiling
+	// refuses a seat the entitlement does not cover, which is the product working
+	// — so the only way an installation is over its limit is that the rows
+	// existed before the grant shrank. That is what this row models.
+	if _, err := e.Owner.Exec(context.Background(),
+		`INSERT INTO app_user (email, display_name) VALUES ($1, 'Second Person')`,
+		"second@example.com"); err != nil {
+		t.Fatalf("seeding a second full seat: %v", err)
+	}
+
 	var seeded entitlement
 	if status := e.Call(t, "GET", "/v1/installation/license", nil, nil, &seeded); status != http.StatusOK {
 		t.Fatalf("read the entitlement → %d", status)
 	}
-	// A bootstrapped installation holds the admin plus the Agent Runner seat
-	// (core 0216). Both act, so both count.
-	if seeded.SeatsUsed < 1 {
-		t.Fatalf("seats in use = %d on a bootstrapped installation", seeded.SeatsUsed)
+	if seeded.SeatsUsed != 2 {
+		t.Fatalf("seats in use = %d, want 2 (the admin and the second person) — the count is what "+
+			"the over-limit verdict below is computed from", seeded.SeatsUsed)
 	}
 	if seeded.State != "valid" {
 		t.Errorf("state = %q, want valid", seeded.State)
