@@ -17,6 +17,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -45,6 +46,15 @@ type reportFrame struct {
 	Timezone             string
 	BaseCurrency         string
 	FiscalYearStartMonth int
+	// AsOf is the ONE instant this answer is true at, read from the database
+	// so every figure in it converts at the same moment.
+	//
+	// Read here rather than taken from a clock at each expression: two
+	// conversions a few milliseconds apart can straddle a rate sheet's
+	// effective date, and the stage totals would then sum to a headline
+	// nobody can reproduce. It is also what the answer is LABELLED with, so
+	// the label and the arithmetic cannot disagree.
+	AsOf time.Time
 }
 
 // readReportFrame reads the three installation settings that place a number.
@@ -64,6 +74,12 @@ func readReportFrame(ctx context.Context, tx pgx.Tx) (reportFrame, error) {
 	}
 	if frame.FiscalYearStartMonth, err = identity.FiscalYearStartMonthOf(ctx, tx); err != nil {
 		return reportFrame{}, err
+	}
+	// The transaction's own start, not the wall clock: inside one READ
+	// COMMITTED transaction this is fixed, so every statement assembled from
+	// this frame converts at one instant even when they run milliseconds apart.
+	if err = tx.QueryRow(ctx, `SELECT now()`).Scan(&frame.AsOf); err != nil {
+		return reportFrame{}, fmt.Errorf("compose: reading the report's as-of: %w", err)
 	}
 	return frame, nil
 }
@@ -380,6 +396,9 @@ const (
 	// reportActivityScopeToken stands in for the caller's activity content
 	// clause over an activity subquery aliased a, for the same reason.
 	reportActivityScopeToken = "<<activity-scope:a>>"
+	// reportAsOfToken stands in for the instant the answer is true at — the
+	// date an open deal's exchange rate is looked up on or before.
+	reportAsOfToken = "<<report-as-of>>"
 )
 
 // bindReportTokens substitutes every token the assembled statement carries
@@ -414,6 +433,7 @@ func bindReportTokens(
 	bindValue(reportZoneToken, frame.Timezone)
 	bindValue(reportBaseCurrencyToken, frame.BaseCurrency)
 	bindValue(reportFiscalStartMonthToken, frame.FiscalYearStartMonth)
+	bindValue(reportAsOfToken, frame.AsOf)
 	bindScope := func(token string, resolve func() (string, error)) error {
 		if !strings.Contains(sql, token) {
 			return nil

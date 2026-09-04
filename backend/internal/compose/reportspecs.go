@@ -237,6 +237,11 @@ var prebuiltReports = map[string]reportSpec{
 	// rather than spelled inline: it carries the period-bucket vocabulary with
 	// it, and that vocabulary belongs beside the buckets it names.
 	"win-loss": winLossSpec(),
+	// What is still in play, converted per deal into one currency
+	// (reportspecs_pipeline.go). Beside deals-by-stage rather than replacing
+	// it: that report is the board's own totals, where a won deal still
+	// belongs to the stage it was won in.
+	"pipeline-current": pipelineCurrentSpec(),
 	// The project keys (reportprojects.go): what a delivery manager asks of
 	// the bodies of work in flight.
 	"projects-by-phase":   projectsByPhaseSpec(),
