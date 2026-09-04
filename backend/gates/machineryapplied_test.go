@@ -62,6 +62,8 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 	// The reads, as entry name -> where, so a failure names the call site
 	// rather than only the entry.
 	read := map[string]string{}
+	// The call sites whose entry expression this walk could not name at all.
+	var unreadable []string
 
 	for _, file := range files {
 		pkg := ""
@@ -81,9 +83,18 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 				if calleeName(node) != "ApplyTx" || len(node.Args) != 3 {
 					return true
 				}
-				if entry := entryName(node.Args[2], pkg, aliases); entry != "" {
-					read[entry] = fset.Position(node.Pos()).String()
+				entry := entryName(node.Args[2], pkg, aliases)
+				if entry == "" {
+					// The other half of the same rule. An entry whose EXPRESSION
+					// this walk cannot name — one handed through a call, an
+					// index, a conversion — was dropped here, and a dropped
+					// entry is one the gate agrees with while ApplyTx refuses it
+					// at runtime. Aliases are resolved above; this is what is
+					// left when the shape itself is unreadable.
+					unreadable = append(unreadable, fset.Position(node.Pos()).String())
+					return true
 				}
+				read[entry] = fset.Position(node.Pos()).String()
 			}
 			return true
 		})
@@ -100,6 +111,12 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 	}
 	if len(declared) == 0 {
 		t.Fatal("found no settings.Define declarations at all, so nothing below could have been judged")
+	}
+
+	for _, where := range unreadable {
+		t.Errorf("%s: this gate cannot name the entry passed to settings.ApplyTx here, so it cannot "+
+			"check that entry's declaration — and one it cannot check is one it agrees with. Pass "+
+			"the entry as a plain identifier or a qualified one.", where)
 	}
 
 	for entry, where := range read {
