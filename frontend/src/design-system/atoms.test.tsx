@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -11,6 +11,7 @@ import {
   DataTable,
   Field,
   OverflowMenu,
+  PendingBody,
   Radio,
   SegmentedControl,
   Textarea,
@@ -478,4 +479,44 @@ it("draws no mark when no option carries one", () => {
     />,
   );
   expect(container.querySelectorAll(".segmented-mark").length).toBe(0);
+});
+
+// `delayMs` is for a surface that re-reads as a reader types. Without it a
+// placeholder flashes on every keystroke, reporting work that was already done
+// — and it flashes in the accessibility tree too, which is why the spoken line
+// is held back with the bars rather than announced early.
+//
+// Fake timers throughout: a real 300ms wait in a unit test is a test whose
+// verdict depends on how busy the machine is.
+it("holds a delayed pending body back until the wait is real", async () => {
+  vi.useFakeTimers();
+  try {
+    const { container } = render(
+      <PendingBody label="Searching…" lines={1} delayMs={300} />,
+    );
+    expect(container.querySelector(".pending")).toBeNull();
+    expect(screen.queryByText("Searching…")).toBeNull();
+
+    await act(async () => {
+      vi.advanceTimersByTime(299);
+    });
+    expect(container.querySelector(".pending")).toBeNull();
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(container.querySelector(".pending")).not.toBeNull();
+    expect(screen.getByText("Searching…")).toBeTruthy();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+// Unset, the pending state is immediate — right for a surface a reader opened
+// rather than one they are typing into. The default must not become "delayed by
+// zero", which renders a frame late and makes every existing caller flicker.
+it("shows an undelayed pending body on the first render", () => {
+  const { container } = render(<PendingBody label="Loading…" lines={2} />);
+  expect(container.querySelector(".pending")).not.toBeNull();
+  expect(container.querySelectorAll(".pending-line").length).toBe(2);
 });

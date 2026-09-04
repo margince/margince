@@ -1,12 +1,16 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { CornerDownLeft, Search, Sparkles } from "lucide-react";
+import { CornerDownLeft, Sparkles } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
+import { EmptyState, PendingBody, SearchField } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
 import { useDialogFocus } from "../design-system/dialogfocus";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
 import {
+  SETTINGS_TABS,
+  type SettingsTabId,
   settingsAddress,
   useSettingsEntryVisibility,
 } from "../screens/settings";
@@ -15,9 +19,13 @@ import {
   customPaletteScreens,
   resolveCustomLabel,
 } from "./custom";
-import { ENTITY, ENTITY_KINDS, type EntityKind } from "./entity";
 import { NAV } from "./nav";
 import { navigate, type Route } from "./router";
+import {
+  SEARCH_HIT_KIND_KEY,
+  type SearchHitType,
+  searchHitRoute,
+} from "./searchkinds";
 
 // ⌘K command palette (B-EP09.5, AC-shell-3..7). The command set carries a
 // type tag (screen / action / record); record entries are fed by the search
@@ -37,9 +45,42 @@ export type Command = {
   route: Route;
 };
 
-// The settings entries this palette offers a shortcut to. Narrower than the full
-// entry set on purpose — only these two lost an address of their own.
-type AdminEntry = "data-model" | "ai";
+// The words a settings entry answers to beyond its own label. A reader types the
+// THING they are looking for — "webhook", "products", "password" — and almost
+// never the name of the page it was filed under, which is a shelving decision
+// they were not present for.
+//
+// Three of these carry words the product no longer prints anywhere: three
+// screens of their own collapsed into the data-model page and the automations
+// editor into the AI page, and somebody who learned "custom fields" or
+// "automations" must not be told the product no longer has one.
+const SETTINGS_ALIASES: Readonly<
+  Partial<Record<SettingsTabId, readonly string[]>>
+> = {
+  account: ["password", "profile", "language", "theme"],
+  voice: ["tone", "writing style"],
+  agents: ["passport", "api key", "token"],
+  connections: ["oauth", "mailbox", "calendar"],
+  "capture-activity": ["capture log", "trace"],
+  general: ["company", "currency", "workspace"],
+  users: ["roles", "permissions", "seats", "team"],
+  integrations: ["webhook", "api", "overlay"],
+  capture: ["email capture", "inbox"],
+  "data-model": [
+    "custom-fields",
+    "products",
+    "price list",
+    "rate card",
+    "offer-templates",
+    "pipelines",
+    "tags",
+  ],
+  ai: ["automations", "models", "routing", "embeddings"],
+  knowledge: ["handbook", "corpus", "documents"],
+  privacy: ["gdpr", "consent", "retention", "erasure"],
+  license: ["billing", "plan", "subscription"],
+  maintenance: ["reset", "jobs", "health"],
+};
 
 export function useBuiltinCommands(): Command[] {
   const t = useT();
@@ -93,37 +134,27 @@ export function useBuiltinCommands(): Command[] {
         route: { screen: "book" },
       },
     ];
-    // Settings surfaces that are not rail destinations, added explicitly so ⌘K
-    // still reaches them. Each carries the words it USED to be addressed by:
-    // three screens of their own collapsed into the data-model page and the
-    // automations editor into the AI page, and somebody who learned "custom
-    // fields" or "automations" must not be told the product no longer has one.
+    // Every settings entry, derived from the register rather than hand-listed.
+    // Two of them used to be named here and the rest were left out on the
+    // grounds that "the rail door beside them" reached them — which was never
+    // true of settings: no settings entry is a rail row, so an entry this list
+    // omits is an entry only a reader who already knows the shelving can open.
+    // Deriving also means a tab added to the register arrives here, instead of
+    // being the third one somebody notices is missing.
     //
-    // Gated on the SAME predicates the settings level uses, because the settings
-    // screen falls back to Account for an entry the principal may not open — so an
-    // ungated command here would be a shortcut that silently goes somewhere else.
-    // Deliberately still not the whole level: only these two lost their own
-    // address, and the rest are reachable by the rail door beside them.
-    // Each carries the entry it opens, so the gate below reads the same answer the
-    // settings level does rather than a second copy of the predicate.
-    const settingsShortcuts: readonly (Command & { entry: AdminEntry })[] = [
-      {
-        entry: "data-model",
-        id: "screen:settings-data-model",
-        label: t("settings.tab.data-model"),
-        keywords: ["custom-fields", "products", "offer-templates", "pipelines"],
-        type: "screen",
-        route: settingsAddress("data-model"),
-      },
-      {
-        entry: "ai",
-        id: "screen:settings-ai",
-        label: t("settings.tab.ai"),
-        keywords: ["automations"],
-        type: "screen",
-        route: settingsAddress("ai"),
-      },
-    ];
+    // Gated on the SAME predicate the settings level uses, because that level
+    // falls back to Account for an entry the principal may not open — so an
+    // ungated command would be a shortcut that silently goes somewhere else.
+    // Only the admin half has a predicate; the `you` half is every reader's.
+    const settingsScreens: Command[] = SETTINGS_TABS.filter(
+      (entry) => entry.group !== "admin" || visible[entry.id],
+    ).map((entry) => ({
+      id: `screen:settings-${entry.id}`,
+      label: t(`settings.tab.${entry.id}`),
+      keywords: [entry.id, ...(SETTINGS_ALIASES[entry.id] ?? [])],
+      type: "screen",
+      route: settingsAddress(entry.id),
+    }));
     // The scheduled queue, which is off the rail deliberately — a queue of one
     // person's own unsent mail is not an eleventh destination (pagemeta.ts says
     // so) — and was therefore reachable only by typing the address. The
@@ -150,9 +181,6 @@ export function useBuiltinCommands(): Command[] {
         route: { screen: SCHEDULED_SCREEN },
       },
     ];
-    const settingsScreens: Command[] = settingsShortcuts.filter(
-      (shortcut) => visible[shortcut.entry],
-    );
     return [
       ...screens,
       ...forkScreens,
@@ -163,64 +191,87 @@ export function useBuiltinCommands(): Command[] {
   }, [t, visible, locale]);
 }
 
-// The record kinds a search hit can route to (activity is a valid
-// SearchResult type but has no 360 to land on — see entity.ts).
-//
-// An EMAIL hit is findable and openable on the search screen, which owns a
-// drawer. The palette owns no page and every Command must carry a route, so it
-// cannot open one; issue #3850 holds what that would take.
-const RECORD_KINDS = new Set<EntityKind>(ENTITY_KINDS);
+// How long a palette search may take before the wait is worth reporting. Below
+// this the answer is quicker than a keystroke and a placeholder would flash on
+// every letter typed; above it, an unchanged list reads as a palette that has
+// stopped listening.
+const SEARCH_PENDING_DELAY_MS = 300;
+
+// What the live search arm has to say: the rows it found, and whether it is
+// still working or gave up. The two flags are returned rather than swallowed —
+// the palette used to answer a failed search with an empty array, which is the
+// same shape as "no matches" and told the reader the workspace holds nothing
+// when the truth was that nobody had asked it.
+type SearchArm = Readonly<{
+  commands: Command[];
+  pending: boolean;
+  failed: boolean;
+}>;
 
 // Live record hits for the palette (RS-1): debounced via useDeferredValue
 // rather than a timer (craft: no real-clock waits in the render path), and
 // gated on a 2-char floor so single keystrokes don't fire a query per key.
-function useSearchCommands(query: string): Command[] {
+function useSearchCommands(query: string): SearchArm {
+  const t = useT();
   const deferred = useDeferredValue(query.trim());
+  const enabled = deferred.length >= 2;
   const result = useQuery({
     queryKey: ["palette-search", deferred],
-    enabled: deferred.length >= 2,
+    enabled,
     queryFn: async () => {
       const { data, error } = await api.GET("/search", {
         params: { query: { q: deferred, limit: 5 } },
       });
       if (error) {
-        // A palette search failure must degrade to the builtin commands,
-        // never break the palette itself — this is a deliberate fallback,
-        // not a swallowed error (the search screen still surfaces it).
-        return [];
+        // Thrown rather than flattened to an empty list: react-query carries it
+        // to `isError`, and the palette says the search failed instead of
+        // reporting an empty workspace. The builtin commands keep working
+        // beside it, which is the degradation that was wanted — losing the
+        // sentence was not.
+        throw new Error(t("palette.searchFailed"));
       }
       return data.data;
     },
   });
-  // A tag rides alongside the records rather than being filtered out with the
-  // types that have no page. It is not an ENTITY kind — there is no tag 360 —
-  // but it has a page of its own, and reaching it is the point of typing a word
-  // into the palette: the tag page is where the records carrying it are listed.
-  const hits = (result.data ?? []).filter(
-    (hit) => RECORD_KINDS.has(hit.type as EntityKind) || hit.type === "tag",
-  );
+  // Every hit with somewhere to go. `searchHitRoute` is the one place that
+  // knows where each kind lives, so a type the server learns to return is
+  // routable here the moment it is routable anywhere — and an activity, which
+  // has no page, drops out by answering null rather than by being named in a
+  // second list that has to be kept in step.
+  //
+  // An EMAIL hit is findable and openable on the search SCREEN, which owns a
+  // drawer. The palette owns no page and every Command must carry a route, so
+  // it cannot open one; issue #3850 holds what that would take.
+  const hits = (result.data ?? []).flatMap((hit) => {
+    const route = searchHitRoute(hit.type as SearchHitType, hit.id);
+    return route ? [{ hit, route }] : [];
+  });
   const projectLines = useProjectHitLines(
-    hits.filter((hit) => hit.type === "project").map((hit) => hit.id),
+    hits.filter(({ hit }) => hit.type === "project").map(({ hit }) => hit.id),
   );
-  return hits.map((hit) => ({
-    id: `record:${hit.type}:${hit.id}`,
-    label: hit.title ?? hit.id,
-    // A project's secondary line is its key or its company, not the word
-    // "project": a search hit for one carries no snippet, and two projects
-    // called "Rollout" are told apart by the key a rep already types into
-    // subject lines. Every other kind keeps the kind.
-    subtitle:
-      hit.type === "project"
-        ? (projectLines.get(hit.id) ?? hit.type)
-        : hit.type,
-    type: "record" as const,
-    // A tag's page is not in the ENTITY registry, which maps record kinds to
-    // their 360; reading it for a tag would throw on a missing entry.
-    route:
-      hit.type === "tag"
-        ? { screen: "tags" as const, id: hit.id }
-        : ENTITY[hit.type as EntityKind].route(hit.id),
-  }));
+  return {
+    commands: hits.map(({ hit, route }) => ({
+      id: `record:${hit.type}:${hit.id}`,
+      label: hit.title ?? hit.id,
+      // A project's secondary line is its key or its company, not the word
+      // "project": a search hit for one carries no snippet, and two projects
+      // called "Rollout" are told apart by the key a rep already types into
+      // subject lines. Every other kind names the kind — TRANSLATED, because
+      // this line used to print the wire word and showed a German reader
+      // "organization" where the rest of the product says Firma.
+      subtitle:
+        hit.type === "project"
+          ? (projectLines.get(hit.id) ??
+            t(SEARCH_HIT_KIND_KEY[hit.type as SearchHitType]))
+          : t(SEARCH_HIT_KIND_KEY[hit.type as SearchHitType]),
+      type: "record" as const,
+      route,
+    })),
+    // `isFetching` rather than `isPending`: a disabled query reports pending
+    // forever, and the palette opens with an empty box every time.
+    pending: enabled && result.isFetching,
+    failed: enabled && result.isError,
+  };
 }
 
 /**
@@ -310,8 +361,6 @@ export function CommandPalette({
   const t = useT();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
 
   // What every dialog in this product owes the keyboard, from the one place it
@@ -349,7 +398,7 @@ export function CommandPalette({
   // RS-1: live record hits from /search, plus a "see all" row that lands
   // on the full results screen. Row order: builtin matches, then records,
   // then see-all, then the Ask-AI row last.
-  const records = useSearchCommands(query);
+  const search = useSearchCommands(query);
   const seeAll: Command | null = query.trim()
     ? {
         id: "search:all",
@@ -370,7 +419,7 @@ export function CommandPalette({
     : null;
   const rows = [
     ...filtered,
-    ...records,
+    ...search.commands,
     ...(seeAll ? [seeAll] : []),
     ...(askRow ? [askRow] : []),
   ];
@@ -414,9 +463,7 @@ export function CommandPalette({
         tabIndex={-1}
       >
         <div className="palette-input">
-          <Search aria-hidden />
-          <input
-            ref={inputRef}
+          <SearchField
             value={query}
             placeholder={t("palette.placeholder")}
             aria-label={t("palette.aria")}
@@ -442,9 +489,26 @@ export function CommandPalette({
           />
           <span className="kbd">{"esc"}</span>
         </div>
-        <div className="palette-list" ref={listRef}>
-          {rows.length === 0 && (
-            <div className="empty">{t("palette.empty")}</div>
+        <div className="palette-list">
+          {/* A failed search says so and keeps the builtin commands beside it.
+              It is not an EmptyState: the list is not empty, and the one thing
+              a reader must not conclude is that the workspace holds nothing. */}
+          {search.failed && (
+            <Callout tone="warn" live="status" className="palette-notice">
+              {t("palette.searchFailed")}
+            </Callout>
+          )}
+          {/* Held back until the wait is real (SEARCH_PENDING_DELAY_MS): a bar
+              that flashed on every keystroke would report work already done. */}
+          {search.pending && (
+            <PendingBody
+              label={t("palette.searching")}
+              lines={1}
+              delayMs={SEARCH_PENDING_DELAY_MS}
+            />
+          )}
+          {rows.length === 0 && !search.pending && !search.failed && (
+            <EmptyState>{t("palette.empty")}</EmptyState>
           )}
           {rows.map((command, index) => (
             <button

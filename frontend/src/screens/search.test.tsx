@@ -215,8 +215,13 @@ describe("SearchScreen", () => {
       ),
     );
     render(<SearchScreen q="acme" />);
-    await waitFor(() => expect(screen.getByText("People")).toBeTruthy());
-    expect(screen.getByText("Deals")).toBeTruthy();
+    // By ROLE, not by text: the type filter above the results names the same
+    // groups the headings do, so a bare getByText("People") matches the pill —
+    // which renders before the read settles, and would wait out nothing.
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "People" })).toBeTruthy(),
+    );
+    expect(screen.getByRole("heading", { name: "Deals" })).toBeTruthy();
     expect(screen.getByText(/Dana at Acme/)).toBeTruthy();
     // The hit title renders straight from the search result (no per-hit
     // record fetch) as a link to the record's 360.
@@ -391,5 +396,123 @@ describe("SearchScreen", () => {
 
     expect(await screen.findByText("Key Account")).toBeTruthy();
     expect(screen.queryByText(/On \d+ records/)).toBeNull();
+  });
+});
+
+// The results screen dropped `project` hits for months: the server ranked and
+// returned them, and the group list here — a hand-kept literal — never named
+// the type, so they were filtered out on the way to the screen. Both new
+// catalog types would have landed the same way. The list is derived now, and
+// this is the assertion that says so for every member of it.
+describe("SearchScreen — every hit type the contract can return", () => {
+  const KINDS = [
+    { type: "person", heading: "People" },
+    { type: "organization", heading: "Organizations" },
+    { type: "deal", heading: "Deals" },
+    { type: "project", heading: "Projects" },
+    { type: "product", heading: "Products" },
+    { type: "offer_template", heading: "Offer templates" },
+    { type: "lead", heading: "Leads" },
+    { type: "tag", heading: "Tags" },
+  ] as const;
+
+  it.each(KINDS)(
+    "groups a $type hit under $heading",
+    async ({ type, heading }) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () =>
+          jsonResponse({
+            data: [
+              {
+                type,
+                id: "01a05ebd-b03d-7183-b2fb-c00bcb58b419",
+                title: "Findable thing",
+                score: 0.5,
+                trust_tier: "authoritative",
+              },
+            ],
+            page: { next_cursor: null, has_more: false },
+          }),
+        ),
+      );
+      render(<SearchScreen q="findable" />);
+      expect(
+        await screen.findByRole("heading", { name: heading }),
+      ).toBeTruthy();
+      expect(screen.getByText("Findable thing")).toBeTruthy();
+    },
+  );
+});
+
+describe("SearchScreen — narrowing by type", () => {
+  // The pills are a SERVER dial: they put `types` on the wire rather than
+  // hiding rows already drawn, so a narrowed search is a different answer and
+  // not a smaller view of the same one.
+  it("sends the narrowed type to the server and puts it in the address", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
+      jsonResponse({
+        data: [],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SearchScreen q="acme" />);
+
+    await user.click(screen.getByRole("button", { name: "Products" }));
+
+    await waitFor(() => {
+      // openapi-fetch hands fetch a Request, so the URL is on the object rather
+      // than being the first argument.
+      const asked = fetchMock.mock.calls.map(([input]) =>
+        input instanceof Request ? input.url : String(input),
+      );
+      expect(asked.some((url) => url.includes("types=product"))).toBe(true);
+    });
+    expect(globalThis.location.hash).toContain("type=product");
+  });
+
+  // The default is spelled by ABSENCE, so one view has exactly one address and
+  // "everything" cannot be reached by two different links.
+  it("clears the parameter rather than naming the default", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="acme" />);
+
+    await user.click(screen.getByRole("button", { name: "Products" }));
+    await waitFor(() =>
+      expect(globalThis.location.hash).toContain("type=product"),
+    );
+    await user.click(screen.getByRole("button", { name: "Everything" }));
+    await waitFor(() =>
+      expect(globalThis.location.hash).not.toContain("type="),
+    );
+  });
+
+  // A narrowing that found nothing keeps the control that got the reader there.
+  // Losing it would leave them on an empty page with no way back but the
+  // address bar.
+  it("keeps the pills when the narrowed search finds nothing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    render(<SearchScreen q="zzz" />);
+    expect(await screen.findByText(/No matches/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Everything" })).toBeTruthy();
   });
 });

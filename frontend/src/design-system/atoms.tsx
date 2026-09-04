@@ -1133,12 +1133,43 @@ const PENDING_LINES = [
  * seconds cold. It is a flag rather than a second string because the sentence is
  * the same sentence: two of them is how a screen reader ends up hearing the wait
  * announced twice.
+ *
+ * `delayMs` holds the whole thing back until the wait has actually been long
+ * enough to be worth reporting. It is for a surface that re-reads as a reader
+ * types, where the usual answer arrives faster than a person can perceive: a
+ * placeholder that flashes on every keystroke is noise, and it reports work
+ * that was already done. Nothing renders before the delay elapses — the spoken
+ * line included, deliberately, because announcing a wait that is about to end
+ * is the same interruption in the accessibility tree that the flash is on
+ * screen. Unset, the pending state shows immediately, which is right for a
+ * surface a reader opened rather than one they are typing into.
  */
 export function PendingBody({
   label,
   lines = 3,
   visible,
-}: Readonly<{ label: string; lines?: number; visible?: boolean }>) {
+  delayMs,
+}: Readonly<{
+  label: string;
+  lines?: number;
+  visible?: boolean;
+  delayMs?: number;
+}>) {
+  const [waited, setWaited] = useState(delayMs === undefined);
+  useEffect(() => {
+    if (delayMs === undefined) {
+      return;
+    }
+    // Re-armed per mount, so a surface that swaps one pending body for another
+    // (a new query key on a new keystroke) starts the clock again rather than
+    // inheriting a window the previous read already spent.
+    setWaited(false);
+    const timer = setTimeout(() => setWaited(true), delayMs);
+    return () => clearTimeout(timer);
+  }, [delayMs]);
+  if (!waited) {
+    return null;
+  }
   return (
     <div className="pending" role="status" aria-busy="true">
       {/* The label lands EITHER on the page or in the accessibility tree alone,
