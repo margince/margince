@@ -1213,7 +1213,7 @@ describe("AgentRail", () => {
     const { container } = render(ROUTE);
     await openPanel(user, container);
     await waitFor(() => expect(runLines()).toEqual([BRIEF_RUNNING]));
-    const headings = [...panel().querySelectorAll(".arsect h4")].map(
+    const headings = [...panel().querySelectorAll(".arsect h2")].map(
       (el) => el.textContent,
     );
     expect(headings[0]).toBe("Running now");
