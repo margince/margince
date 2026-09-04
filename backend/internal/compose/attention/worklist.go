@@ -180,7 +180,7 @@ func (s *Service) Worklist(
 	return out, nil
 }
 
-// candidateRows is every row the day could show, from the three sources that
+// candidateRows gathers what the day could show, from the three sources that
 // feed it, each with the crowding mark it applies past its own lead.
 //
 // Lifted out of worklistFrom because it is the part with no page in view:
