@@ -28,12 +28,31 @@ package attention
 import (
 	"context"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // requireLeadTier refuses a reader below a row scope of `team`.
+//
+// The KIND check first, through platform/auth, and it is not decoration. A
+// tier test answers from `Permissions`, and a Deal Room buyer is minted
+// carrying none — so it would be refused here by the accident of an empty
+// struct rather than by a rule, and the first constructor to give a buyer any
+// permissions would hand an external person with a room link the seller's team
+// roster. `RequireHuman` states that refusal where every other gate in this
+// tree inherits it, and it turns away an agent passport too, which matches the
+// `human-only` these three endpoints already declare in the contract.
+//
+// A system principal passes RequireHuman and then answers on its row scope,
+// which is two different answers depending on which constructor made it. No
+// job reaches these three — the only callers are the HTTP handlers — and this
+// gate is written for a human reader. A background pass that wanted these
+// figures would need to say so here rather than arriving by default.
 func requireLeadTier(ctx context.Context) error {
+	if err := auth.RequireHuman(ctx); err != nil {
+		return err
+	}
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return apperrors.ErrPermissionDenied

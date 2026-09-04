@@ -405,6 +405,13 @@ function WorklistBody({
       {focus && <NextUp items={next} />}
       {queue.length === 0 ? (
         // One line, not a panel. No card is drawn to report a zero.
+        //
+        // And ONE line rather than the four per-band ones below, which is a
+        // deliberate difference. Those exist because a reader whose Now band is
+        // empty cannot otherwise tell that from a page that simply starts lower
+        // — a question only worth answering when there IS a page. A wholly
+        // clear day has nothing to distinguish, and four headings each saying
+        // nothing is under them says less than the sentence that says so once.
         <p className="t-body worklist-clear">
           {missing.length > 0
             ? t("worklist.clearOfWhatWasRead")

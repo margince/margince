@@ -167,3 +167,52 @@ func TestRefusedMetricsCarryNoWindow(t *testing.T) {
 		t.Errorf("the refusal named the window it would have measured: %+v", got)
 	}
 }
+
+// A Deal Room buyer is refused even carrying a tier that would admit a seat.
+//
+// The gate answers from Permissions, and a buyer is minted with none — so an
+// empty struct refuses it by accident rather than by rule, and the first
+// constructor to give a buyer any permissions would hand an external person
+// with a room link the seller's team roster. The tier is set to the widest one
+// here precisely so the Permissions arm cannot be what refuses.
+func TestADealRoomBuyerIsRefusedEveryLeadReading(t *testing.T) {
+	t.Parallel()
+
+	buyer := principal.WithActor(context.Background(), principal.Principal{
+		Type:        principal.PrincipalBuyer,
+		ID:          "buyer:" + theReader.String(),
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+	for _, reading := range leadReadings() {
+		t.Run(reading.name, func(t *testing.T) {
+			t.Parallel()
+
+			if err := reading.ask(tierService(), buyer); err == nil {
+				t.Fatal("an external person with a Deal Room link was given a lead's " +
+					"reading of the seller's own work")
+			}
+		})
+	}
+}
+
+// And an agent passport, which is what these three endpoints already declare
+// in the contract: every one of them is x-agent-access human-only.
+func TestAnAgentIsRefusedEveryLeadReading(t *testing.T) {
+	t.Parallel()
+
+	agent := principal.WithActor(context.Background(), principal.Principal{
+		Type:        principal.PrincipalAgent,
+		ID:          "agent:" + theReader.String(),
+		UserID:      theReader,
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+	for _, reading := range leadReadings() {
+		t.Run(reading.name, func(t *testing.T) {
+			t.Parallel()
+
+			if err := reading.ask(tierService(), agent); err == nil {
+				t.Fatal("an agent was given a reading its own contract calls human-only")
+			}
+		})
+	}
+}

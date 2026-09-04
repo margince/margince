@@ -121,11 +121,15 @@ describe("a page with more to load claims no band is empty", () => {
   });
 });
 
-describe("the headings follow the server's order", () => {
-  // The page draws the bands in the order the SERVER listed them, not the order
-  // its rows arrived in. Two rows whose bands are listed the other way round
-  // are the case that tells the two rules apart.
-  it("draws a band before one the server listed after it", async () => {
+describe("the headings follow the QUEUE", () => {
+  // The page never re-sorts. The server sends the rows already ordered with
+  // each band contiguous, and the rank numbers are positions in THAT order — so
+  // a page that walked `bands` and collected each one's rows would reorder them
+  // whenever the two disagreed, and print rank 2 above rank 1.
+  //
+  // This fixture is that disagreement: the declared order says now-then-review
+  // and the queue arrives review-first. The queue wins, and the ranks stay 1, 2.
+  it("keeps the queue's order when the declared order disagrees", async () => {
     stub(
       day({
         bands: [
@@ -133,8 +137,8 @@ describe("the headings follow the server's order", () => {
           { band: "review", shown: 1 },
         ],
         queue: [
-          row({ id: "later", title: "A duplicate to judge", band: "review" }),
-          row({ id: "first", title: "A buyer waiting", band: "now" }),
+          row({ id: "first", title: "A duplicate to judge", band: "review" }),
+          row({ id: "second", title: "A buyer waiting", band: "now" }),
         ],
         summary: { urgent: 1, due: 0, lower_priority: 1, total: 2 },
       }),
@@ -142,6 +146,36 @@ describe("the headings follow the server's order", () => {
     renderWorklist("en");
 
     await screen.findByText("A buyer waiting");
+    const drawn = headings();
+    expect(drawn.indexOf("Review")).toBeLessThan(drawn.indexOf("Now"));
+    // And the ranks still ascend down the page, which is the defect this rule
+    // exists to prevent rather than a second assertion about the same thing.
+    expect(
+      [...document.querySelectorAll(".worklist-rank")].map(
+        (n) => n.textContent,
+      ),
+    ).toEqual(["1", "2"]);
+  });
+
+  // A band the server declared and the loaded rows never reach keeps the
+  // server's own position rather than being appended after everything: an empty
+  // Now belongs above a drawn Review, not below it.
+  it("slots a declared empty band into its own place", async () => {
+    stub(
+      day({
+        bands: [
+          { band: "now", shown: 0 },
+          { band: "review", shown: 1 },
+        ],
+        queue: [
+          row({ id: "one", title: "A duplicate to judge", band: "review" }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+      }),
+    );
+    renderWorklist("en");
+
+    await screen.findByText("Nothing needs you today.");
     const drawn = headings();
     expect(drawn.indexOf("Now")).toBeLessThan(drawn.indexOf("Review"));
   });

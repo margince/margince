@@ -163,16 +163,21 @@ const firstResponseSQL = `
 // afterwards does not unmake it. Counting only unarchived ones would make the
 // figure fall as a workspace tidied up — the same defect reading from
 // activity_reader_state had, taking a different route.
+// Every placeholder is derived from the argument slice rather than typed, which
+// the rulebook asks of any statement whose arguments are built beside it.
+// Nothing checks that a hand-typed $N still names the value a caller appends,
+// and the content clause below numbers itself from wherever this query's own
+// arguments end — so a literal here would be a second place to keep in step.
 const dispositionsSQL = `
-	SELECT count(*) FILTER (WHERE a.after->>'disposition' = ANY($3)),
-	       count(*) FILTER (WHERE a.after->>'disposition' = $4)
+	SELECT count(*) FILTER (WHERE a.after->>'disposition' = ANY($%[3]d)),
+	       count(*) FILTER (WHERE a.after->>'disposition' = $%[4]d)
 	  FROM audit_log a
 	  JOIN activity act ON act.id = a.entity_id
 	 WHERE a.entity_type = 'activity'
 	   AND a.action = 'update'
-	   AND a.occurred_at >= $1
-	   AND a.occurred_at < $2
-	   AND %[1]s`
+	   AND a.occurred_at >= $%[1]d
+	   AND a.occurred_at < $%[2]d
+	   AND %[5]s`
 
 // puttingDown is the set of verbs that PUT a row down, as against the two that
 // pick one back up.
@@ -228,12 +233,14 @@ func (s *Store) ResponseWindow(ctx context.Context, from, to time.Time) (Respons
 			args...).Scan(&out.Answered, &out.MedianMinutes); err != nil {
 			return fmt.Errorf("activities: reading first-response times: %w", err)
 		}
-		// Its own argument list, because this statement's placeholders start
-		// over at $1 — the content clause below is rendered against THESE
-		// positions, and reusing the median's slice would number it past the
-		// end of what this query is given.
-		putArgs := []any{from, to, puttingDown(), stateNotSales}
+		// A second statement, so a second argument list. Each value takes the
+		// position `putArg` gives it and the statement is rendered against those
+		// positions, so nothing here depends on how many arguments the median
+		// above happened to take.
+		var putArgs []any
 		putArg := func(v any) int { putArgs = append(putArgs, v); return len(putArgs) }
+		windowFrom, windowTo := putArg(from), putArg(to)
+		down, wholeWorkspace := putArg(puttingDown()), putArg(stateNotSales)
 		// The same gate the median above carries, on the activity the audit row
 		// names. A judgement made on a conversation this reader may not open
 		// counts for nobody here.
@@ -241,7 +248,8 @@ func (s *Store) ResponseWindow(ctx context.Context, from, to time.Time) (Respons
 		if err != nil {
 			return err
 		}
-		if err := tx.QueryRow(ctx, fmt.Sprintf(dispositionsSQL, putContent), putArgs...).
+		if err := tx.QueryRow(ctx, fmt.Sprintf(dispositionsSQL,
+			windowFrom, windowTo, down, wholeWorkspace, putContent), putArgs...).
 			Scan(&out.Disposed, &out.DisposedNotSales); err != nil {
 			return fmt.Errorf("activities: reading disposition counts: %w", err)
 		}

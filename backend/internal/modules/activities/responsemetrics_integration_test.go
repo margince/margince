@@ -15,12 +15,34 @@ package activities
 // and simply report a different number.
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// asOther is the SECOND seat, for a judgement this file's own reader must not
+// see. Same grants and the same row scope — what differs is only who it is,
+// which is what the audience arm answers on.
+func asOther(e *loadEnv) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.other.String(), UserID: e.other,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"manager"},
+			Objects: map[string]principal.ObjectGrant{
+				"activity": {Read: true, Update: true}, "person": {Read: true},
+				"deal": {Read: true}, "organization": {Read: true},
+				"lead": {Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
 
 func metricsStore(e *loadEnv) *Store {
 	return NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
@@ -446,10 +468,14 @@ func TestAJudgementOnAnUnreadableConversationCountsForNobody(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// The other seat judges it, audited the way recordDisposition writes it.
-	e.exec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, after)
-		VALUES ('human', $2, 'update', 'activity', $1, '{"disposition":"not_sales"}'::jsonb)`,
-		activity, "human:"+e.other.String())
+	// The OTHER seat judges it, through the real writer — which is the only way
+	// to produce this fixture honestly: `e.rep` cannot judge a conversation they
+	// cannot open, so a hand-written audit row would be modelling a write that
+	// could not have happened.
+	if err := metricsStore(e).SetThreadNotSales(
+		asOther(e), ids.From[ids.ActivityKind](activity)); err != nil {
+		t.Fatalf("the other seat could not judge its own conversation: %v", err)
+	}
 
 	after, err := metricsStore(e).ResponseWindow(e.as(), from, to)
 	if err != nil {
@@ -481,9 +507,12 @@ func TestAJudgementOnAReadableConversationIsStillCounted(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	e.exec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, after)
-		VALUES ('human', 'human:seed', 'update', 'activity', $1, '{"disposition":"not_sales"}'::jsonb)`,
-		activity)
+	// Through the real writer, so the audit shape this reader matches on is the
+	// one production writes rather than one the test invented.
+	if err := metricsStore(e).SetThreadNotSales(
+		e.as(), ids.From[ids.ActivityKind](activity)); err != nil {
+		t.Fatalf("judging the thread: %v", err)
+	}
 
 	after, err := metricsStore(e).ResponseWindow(e.as(), from, to)
 	if err != nil {
@@ -517,9 +546,10 @@ func TestArchivingAThreadDoesNotUnmakeTheJudgementOnIt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	e.exec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, after)
-		VALUES ('human', 'human:seed', 'update', 'activity', $1, '{"disposition":"not_sales"}'::jsonb)`,
-		activity)
+	if err := metricsStore(e).SetThreadNotSales(
+		e.as(), ids.From[ids.ActivityKind](activity)); err != nil {
+		t.Fatalf("judging the thread: %v", err)
+	}
 	e.exec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, activity)
 
 	after, err := metricsStore(e).ResponseWindow(e.as(), from, to)
