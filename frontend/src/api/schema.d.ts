@@ -3691,6 +3691,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/send-email:preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Would this reply be allowed, and on what ground — asked before a word is typed.
+         * @description The message-level twin of `GET /people/{id}/consent/guard`. That one answers about a
+         *     PERSON per purpose; this one answers about the message a composer is about to write —
+         *     its recipients, the thread it answers and the records it names — because those are what
+         *     the engine actually reads.
+         *
+         *     **The same code answers twice.** It runs the per-recipient decision the staging gate
+         *     runs, from the same resolver, so a preview and the refusal that follows cannot disagree
+         *     about an unchanged record.
+         *
+         *     **It authorizes nothing and records nothing.** No decision rows, no lawful basis: a
+         *     basis is the ground a SEND relies on, and nothing has been sent. The send re-asks, and
+         *     state that changed in between refuses with the newer answer.
+         *
+         *     Answers only about recipients on records the caller may read, and never returns another
+         *     subject's consent history — the reason a message is refused, not the person's file.
+         */
+        post: operations["previewSendAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/emails:preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Would this account-started message be allowed, and on what ground.
+         * @description The account-started twin of `POST /activities/{id}/send-email:preview`, for a message
+         *     with no anchor to derive a category from. It names its own `links`, exactly as the send
+         *     it previews does.
+         *
+         *     Everything the anchored preview says applies here: it runs the staging decision's own
+         *     code, authorizes nothing and records nothing.
+         */
+        post: operations["previewAccountSendAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/send-email": {
         parameters: {
             query?: never;
@@ -8346,7 +8408,7 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
+                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "product" | "offer_template" | "activity";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
             };
@@ -11118,7 +11180,33 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * What this period's forecast has been called, newest first.
+         * @description The calls made for one period and scope, newest first — not just the one standing now.
+         *
+         *     Capped at the most recent 500. Nothing bounds how often a period may be called, so an
+         *     uncapped answer could grow without limit; the cap sits far above what a period
+         *     accumulates in practice, and takes the NEWEST entries, which are the ones a reader
+         *     reviewing a period is asking about.
+         *
+         *     A call supersedes rather than overwrites, so the table already holds what was
+         *     believed on the day it was believed. This is how that gets read: the sequence is the
+         *     record of how a period's expectation moved, and who moved it, which is what anyone
+         *     reviewing how forecasting went is actually asking for.
+         *
+         *     The chain is linear per period and scope. Each entry names the call it replaced in
+         *     `supersedes_id`, and the first call of a period names none — a different fact from
+         *     replacing nothing.
+         *
+         *     Answers the same scope the readings do, resolved the same way and refused the same
+         *     way: asking for a wider tier than the caller's seat is `403`, and naming a team or
+         *     person outside their lens is `404` — naming it at all would confirm the subject
+         *     exists.
+         *
+         *     A period nobody has called yet is an empty list, not a `404`. That a period has no
+         *     calls is a real answer about a period the caller may read.
+         */
+        get: operations["listForecastCalls"];
         put?: never;
         /**
          * Record what somebody believes will close.
@@ -18564,7 +18652,7 @@ export interface components {
          */
         ConsentQualifyingEvent: {
             /** @enum {string} */
-            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person";
+            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person" | "meeting";
             /** Format: date-time */
             occurred_at: string;
             /** @enum {string|null} */
@@ -21614,11 +21702,16 @@ export interface components {
             /** @description Records the caller names in support of this send. Checked, never trusted. */
             evidence?: components["schemas"]["CommunicationEvidence"];
             /**
-             * @description The consent purpose this send falls under (e.g. `transactional`, `marketing_email`).
-             *     The send is suppressed (409 `consent_not_granted`) unless every recipient has an active
-             *     `granted` `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
+             * @description DEPRECATED, and no longer required. The engine resolves what a message is from
+             *     the record — the thread it answers, the deal or invoice it names, the evidence
+             *     supplied in `evidence` — and a purpose key is not that. Send
+             *     `communication_context` instead.
+             *
+             *     A key that is still supplied is recorded as the caller's claim and is consulted
+             *     only where the record supports no category on its own. An unknown or archived
+             *     key authorizes nothing.
              */
-            consent_purpose: string;
+            consent_purpose?: string;
             /**
              * Format: date-time
              * @description Send this message at this instant instead of now (ADR-0104/A155). Absolute
@@ -21743,6 +21836,124 @@ export interface components {
             scheduled_tz: string;
         };
         /**
+         * @description What kind of communication a message is — the closed vocabulary the engine resolves
+         *     to. A caller CLAIMS one and the engine checks it against the record.
+         *
+         *     NAMED rather than repeated inline, because an inline enum that collides with another
+         *     schema's silently renames that one's generated constants. The send requests still
+         *     spell theirs inline with a nullable variant; this is the non-null shape the preview
+         *     and its answer share.
+         *
+         *     The five controller-only categories (`security_notice`, `privacy_notice`,
+         *     `record_confirmation`, `consent_confirmation`, `optout_confirmation`) are absent by
+         *     design: they serve the recipient, are reserved for the installation's own mail behind
+         *     a registered template, and a caller that could claim one could dress marketing as a
+         *     security warning.
+         * @enum {string}
+         */
+        CommunicationContext: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing";
+        /**
+         * @description What a composer is about to write, in the shape the engine judges. It carries no
+         *     `body` and no `subject`: neither reaches a consent decision, and sending an unwritten
+         *     draft to the server to be told whether it may exist would be the wrong way round.
+         */
+        PreviewSendRequest: {
+            /**
+             * @description The addressees. Cc and Bcc join this list at send, and both are asked about
+             *     exactly as a To is — a blind copy is blind to the RECIPIENTS and never to the
+             *     engine — so a composer previewing a message with copies passes them all here.
+             */
+            to: string[];
+            /**
+             * @description What the sender says this message is. Checked against the record, never believed:
+             *     a claim the record does not bear out comes back as `review` naming what is
+             *     missing, rather than a quiet downgrade to something weaker that happens to be
+             *     allowed.
+             */
+            communication_context?: components["schemas"]["CommunicationContext"];
+            /** @description Which marketing purpose, when the context is `marketing`. */
+            marketing_purpose?: string;
+            /**
+             * @description The deprecated purpose key, when the composer still has one. It authorizes
+             *     nothing on its own, and it is accepted here for one reason: the SEND still
+             *     consults it where the record supports no category, so a preview that could not
+             *     pass it would answer a different question than the send and disagree with it.
+             *     Omit it and the answer is about the record alone.
+             */
+            consent_purpose?: string;
+            /** @description Records the caller names in support of this message. Checked, never trusted. */
+            evidence?: components["schemas"]["CommunicationEvidence"];
+        };
+        /**
+         * @description PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
+         *     records this new conversation would belong to.
+         */
+        PreviewAccountSendRequest: {
+            to: string[];
+            /**
+             * @description The records the message would be filed under. They are read through the caller's
+             *     own row scope before the engine sees them, so naming a record the caller cannot
+             *     open is refused here rather than answered about.
+             */
+            links: components["schemas"]["ActivityLinkInput"][];
+            communication_context?: components["schemas"]["CommunicationContext"];
+            marketing_purpose?: string;
+            /**
+             * @description The deprecated purpose key, when the composer still has one. It authorizes
+             *     nothing on its own, and it is accepted here for one reason: the SEND still
+             *     consults it where the record supports no category, so a preview that could not
+             *     pass it would answer a different question than the send and disagree with it.
+             *     Omit it and the answer is about the record alone.
+             */
+            consent_purpose?: string;
+            evidence?: components["schemas"]["CommunicationEvidence"];
+        };
+        /**
+         * @description What the engine would decide, per recipient, for a message nobody has sent.
+         *
+         *     ADVISORY AND NOT A PROMISE. The send re-asks at staging, and a withdrawal, an
+         *     objection or a bounce between the two refuses with the newer answer. Nothing here is
+         *     recorded: no decision rows, no lawful basis.
+         */
+        SendAuthorizationPreview: {
+            /**
+             * @description Whether the whole message would go. A CONJUNCTION: one refused recipient refuses
+             *     the message, because a rep who wrote to four people and reached three without
+             *     being told which has been lied to about what happened.
+             */
+            allowed: boolean;
+            recipients: components["schemas"]["SendAuthorizationPreviewRecipient"][];
+        };
+        /** @description One recipient's answer. It describes the MESSAGE, never the person's file. */
+        SendAuthorizationPreviewRecipient: {
+            /** Format: email */
+            address: string;
+            /**
+             * @description `allow` would send. `deny` would refuse. `review` is not a soft allow — it means
+             *     the record does not carry this message on its own and names what is missing.
+             * @enum {string}
+             */
+            verdict: "allow" | "deny" | "review";
+            /**
+             * @description Why, in the engine's own vocabulary — `allowed`, `no_compatible_evidence`,
+             *     `marketing_objection`, `no_marketing_consent` and the rest. A composer maps it to
+             *     the lawful next action it can offer; it is deliberately not a sentence about the
+             *     recipient.
+             */
+            reason_code: string;
+            /** @description What the engine worked out this message is, which may differ from the claim. */
+            resolved_category?: components["schemas"]["CommunicationContext"];
+            /** @description The lawful ground an allow would rest on. */
+            basis?: string;
+            /**
+             * @description How much authority the engine's answer carries for this category on this
+             *     installation. Under `observe` a `deny` here still sends, and a composer that
+             *     showed it as a refusal would be describing a rollout position as a rule.
+             * @enum {string}
+             */
+            mode?: "observe" | "warn" | "enforce";
+        };
+        /**
          * @description One account-started send. It is SendEmailRequest plus the `links` an anchor would
          *     otherwise have supplied — the records this new conversation belongs to.
          */
@@ -21836,11 +22047,16 @@ export interface components {
             /** @description Records the caller names in support of this send. Checked, never trusted. */
             evidence?: components["schemas"]["CommunicationEvidence"];
             /**
-             * @description The consent purpose this send falls under. Default-deny per purpose (A22/ADR-0011):
-             *     suppressed 409 `consent_not_granted` unless every recipient has an active `granted`
-             *     `person_consent` for THIS purpose.
+             * @description DEPRECATED, and no longer required. The engine resolves what a message is from
+             *     the record — the thread it answers, the deal or invoice it names, the evidence
+             *     supplied in `evidence` — and a purpose key is not that. Send
+             *     `communication_context` instead.
+             *
+             *     A key that is still supplied is recorded as the caller's claim and is consulted
+             *     only where the record supports no category on its own. An unknown or archived
+             *     key authorizes nothing.
              */
-            consent_purpose: string;
+            consent_purpose?: string;
             /**
              * Format: date-time
              * @description Send this message at this instant instead of now (ADR-0104/A155). Absolute
@@ -21926,11 +22142,16 @@ export interface components {
             /** @description Records the caller names in support of this send. Checked, never trusted. */
             evidence?: components["schemas"]["CommunicationEvidence"];
             /**
-             * @description The consent purpose this send falls under (e.g. `transactional`). The send is
-             *     suppressed (409 `consent_not_granted`) unless the recipient has an active `granted`
-             *     `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
+             * @description DEPRECATED, and no longer required. The engine resolves what a message is from
+             *     the record — the thread it answers, the deal or invoice it names, the evidence
+             *     supplied in `evidence` — and a purpose key is not that. Send
+             *     `communication_context` instead.
+             *
+             *     A key that is still supplied is recorded as the caller's claim and is consulted
+             *     only where the record supports no category on its own. An unknown or archived
+             *     key authorizes nothing.
              */
-            consent_purpose: string;
+            consent_purpose?: string;
             /**
              * @description Files already in the record library to send with this message, named by id
              *     — never uploaded here. Each is snapshotted at staging (ADR-0086/A131 §4) so
@@ -22524,9 +22745,10 @@ export interface components {
         /** @description One exchange that makes ordinary business correspondence lawful. */
         RecordQualifyingEventRequest: {
             /**
-             * @description Only `in_person` is accepted here. The other three kinds — inbound_message, inquiry,
-             *     active_deal — are DERIVED from records the product already holds, and a hand-written
-             *     one would be a second, unbacked answer to a question the data already settles.
+             * @description Only `in_person` is accepted here. Every other kind — inbound_message, inquiry,
+             *     active_deal, meeting — is DERIVED from records the product already holds, and a
+             *     hand-written one would be a second, unbacked answer to a question the data already
+             *     settles.
              * @enum {string}
              */
             kind: "in_person";
@@ -22541,7 +22763,7 @@ export interface components {
         /** @description A recorded exchange, as it now stands on the person. */
         QualifyingEventRecord: {
             /** @enum {string} */
-            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person";
+            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person" | "meeting";
             note: string | null;
             /** Format: date-time */
             occurred_at: string;
@@ -24457,7 +24679,7 @@ export interface components {
         };
         SearchResult: {
             /** @enum {string} */
-            type: "person" | "organization" | "deal" | "activity" | "lead" | "project" | "tag";
+            type: "person" | "organization" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag";
             /** Format: uuid */
             id: string;
             /** @description Display label (name/subject). */
@@ -24490,7 +24712,7 @@ export interface components {
              *     response echoes the anchor back as one of these refs.
              * @enum {string}
              */
-            type: "person" | "organization" | "deal" | "lead" | "project" | "activity" | "user";
+            type: "person" | "organization" | "deal" | "lead" | "project" | "product" | "offer_template" | "activity" | "user";
             /** Format: uuid */
             id: string;
         };
@@ -28763,6 +28985,7 @@ export interface components {
             queue: components["schemas"]["WorklistItem"][];
             /** @description Sources that could not be included, and why. Empty is the honest common case. */
             sources_unavailable: components["schemas"]["WorklistSourceUnavailable"][];
+            walk?: components["schemas"]["WorklistWalk"];
             /**
              * @description Send this back as `cursor` to continue past the last row of this page. See that
              *     parameter for what a walk does and does not guarantee.
@@ -28964,6 +29187,13 @@ export interface components {
          *     `due` is asked of every item whatever its level, so an overdue promise counts in
          *     both `urgent` and `due` — deliberately, because a reader wants both answers about
          *     it. Read them as four questions about one day rather than four slices of it.
+         *
+         *     `buckets` IS the partition, and it is the one to render an additive sentence from.
+         *     The figures above it answer four questions about the day; the four inside it slice
+         *     that day into parts that sum to `total`. Both are sent because both are wanted: a
+         *     reader asking "how much is overdue" wants `due` counted across every level, and a
+         *     reader reading "3 urgent · 5 due today · 4 planned · 5 review — 17 total" needs the
+         *     parts to add up to the whole they are shown beside.
          */
         WorklistSummary: {
             /** @description Items at the top two levels: somebody is waiting, or a promise is breaking. */
@@ -28983,6 +29213,7 @@ export interface components {
             lower_priority: number;
             /** @description How many candidates the day holds. The same population the per-category `considered` figures are counted over, so the two agree. */
             total: number;
+            buckets?: components["schemas"]["WorklistBuckets"];
             /**
              * Format: int64
              * @description The expected-revenue bar a deal must clear to count as material, in the
@@ -28993,6 +29224,130 @@ export interface components {
             material_threshold_minor?: number | null;
             /** @description The currency every expected-revenue figure here is converted to. */
             base_currency?: string | null;
+        };
+        /**
+         * @description Who this row answers to.
+         *
+         *     RESPONSIBILITY, not visibility. The two are different facts and reading one
+         *     for the other is how a rep's queue fills with a colleague's work: a notice
+         *     addressed to somebody else may be unreadable, and a shared deal may be
+         *     readable by a whole team while exactly one person owes the next move.
+         *
+         *     Stated by the PRODUCER that raised the row, never inferred downstream. A
+         *     reader who can see a row is not thereby its owner; a row surviving a `mine`
+         *     filter is not evidence either, because several lanes take the scope as a
+         *     query argument and answer it in SQL. Both of those inferences were available
+         *     here and both are wrong in the same direction — they would make every row a
+         *     reader can see look like a row a reader owes.
+         *
+         *     `kind: unassigned` is a real answer and the honest one for work nobody has
+         *     taken. It is what the `unassigned` scope surfaces, and a row that reached a
+         *     rep's Mine queue while answering `unassigned` is a bug in the lane that
+         *     produced it rather than a display choice here.
+         */
+        WorklistOwner: {
+            /**
+             * @description Whether a person answers for this row, or nobody does yet.
+             * @enum {string}
+             */
+            kind: "user" | "unassigned";
+            /**
+             * Format: uuid
+             * @description The owning user. Present when `kind` is `user`.
+             */
+            id?: string;
+            /**
+             * @description The owner's display name, resolved under the CALLER's own grants.
+             *
+             *     Absent where the caller may not resolve it — the same refusal shape the
+             *     rest of this response uses for a name it cannot read. A client draws the
+             *     row without a name rather than inventing one, and never treats an absent
+             *     label as an absent owner: `kind` is what says whether anybody answers.
+             */
+            label?: string;
+        };
+        /**
+         * @description What has happened to this walk since it started.
+         *
+         *     A walk is frozen at its first page: the rows it covers and the order they sit in
+         *     are fixed, so a reader paging their morning is not overtaken by their own queue.
+         *     The two figures here are what that freezing cannot hide, and both are reported
+         *     rather than silently absorbed.
+         *
+         *     MEMBERSHIP MOVES ONE WAY. New work does NOT join a walk in progress — it waits
+         *     for the reader to refresh, which is what keeps the headline still while they page.
+         *     Work that was resolved, deleted, or is no longer visible LEAVES immediately, so
+         *     the remaining count can fall. A frozen figure over work somebody can no longer see
+         *     or act on would be steadier and false.
+         *
+         *     A client draws these as two different offers: `new_available` invites a refresh,
+         *     `changed_since_snapshot` explains why the count moved. Neither is an error.
+         */
+        WorklistWalk: {
+            /**
+             * Format: date-time
+             * @description When this walk was assembled — the instant its order was decided.
+             *
+             *     On a first page it equals the response's own `as_of`. On later pages it is
+             *     OLDER, and deliberately so: it is what lets a client say how stale the walk
+             *     being paged has become, rather than presenting a resumed page as freshly read.
+             */
+            as_of: string;
+            /**
+             * @description How many rows this walk started with that are no longer here — resolved,
+             *     deleted, or no longer visible to this reader.
+             *
+             *     Counted so the reader is told WHY the total fell rather than watching it move.
+             *     It answers over the WHOLE walk rather than over the last page: the question a
+             *     reader has is how much of their morning is already dealt with, not how much
+             *     went between two clicks.
+             *
+             *     It is not monotonic, and the exception is real rather than theoretical. Each
+             *     page asks the question afresh against the walk's frozen list, so a row that
+             *     comes BACK — a task reopened, a record whose visibility is restored — stops
+             *     counting as gone and this figure falls. That is the honest answer: the row is
+             *     on the reader's queue again, and reporting it as dealt with because it once
+             *     was would be the number lying in the harder direction.
+             *
+             *     A row missing because its own SOURCE could not be read is never counted here.
+             *     The queue has no news about it, which is not the same as it being handled, and
+             *     `sources_unavailable` is where that is said.
+             */
+            changed_since_snapshot: number;
+            /**
+             * @description How much work has arrived since this walk started, and is deliberately not in
+             *     it.
+             *
+             *     Absent on a first page, where the question has no meaning — the walk was just
+             *     assembled, so nothing can have arrived behind it yet. A client draws this as
+             *     an offer to refresh, never as a count of rows the reader can reach right now:
+             *     reaching them means starting a new walk.
+             */
+            new_available?: number;
+        };
+        /**
+         * @description The day cut into four parts that SUM TO `total`. Every candidate the read weighed
+         *     lands in exactly one of them.
+         *
+         *     The order below is the order they are read in, and it is a precedence rather than a
+         *     set of independent tests: an overdue promise is urgent, not due-today, because the
+         *     first arm that matches takes the row. Without a precedence the same item would be
+         *     counted twice and the sentence would add up to more than the day holds.
+         *
+         *     `review` is every row whose `destination` is not `today` — a judgement to make, a
+         *     source to restore, a receipt to read. It is counted from that field rather than from
+         *     the source, so the sentence and the screens cannot disagree about which rows are
+         *     seller work.
+         */
+        WorklistBuckets: {
+            /** @description Seller work at the top two levels: somebody is waiting, or a promise is breaking. The same rule as the sibling `urgent`, narrowed to `today` rows. */
+            urgent: number;
+            /** @description Seller work not already counted urgent, carrying a date that has arrived or passed, or falling due before this installation day ends. */
+            due_today: number;
+            /** @description The rest of the seller work: a task to do, a meeting to prepare, a lead to reach, a deal drifting below the material bar. */
+            planned: number;
+            /** @description Everything that is not seller work — the `review`, `system_health` and `receipt` destinations together, because the one line above the queue says how much is waiting on judgement rather than which of the three kinds it is. */
+            review: number;
         };
         /**
          * @description The day's four OUTCOME figures, for the strip above the queue: what money is
@@ -29252,6 +29607,24 @@ export interface components {
              * @enum {string}
              */
             category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+            owner?: components["schemas"]["WorklistOwner"];
+            /**
+             * @description Which SCREEN this row belongs on. The server decides it once, and every count,
+             *     fold and page in this response is computed from the same value the row carries,
+             *     so a client that groups by it cannot disagree with the figures above it.
+             *
+             *     `today` is work a seller executes. `review` is a judgement somebody must make
+             *     before work continues — an approval, a duplicate pair, an introduction.
+             *     `system_health` is a source or automation an administrator must restore.
+             *     `receipt` is completed work, reported so the reader can see it happened.
+             *
+             *     A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
+             *     `source` that a browser could recompute: two rows of one source can differ,
+             *     and the mapping is a product decision that moves. A client that re-derived it
+             *     would put a row on one screen while the count above it put the row on another.
+             * @enum {string}
+             */
+            destination?: "today" | "review" | "system_health" | "receipt";
             /**
              * @description The hard priority band, and the whole of the product rule: 0 pinned by the
              *     reader, 1 a customer waiting or a deadline arriving, 2 a promise due or an
@@ -35725,6 +36098,65 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    previewSendAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewSendRequest"];
+            };
+        };
+        responses: {
+            /** @description What the engine would decide, per recipient. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendAuthorizationPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewAccountSendAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewAccountSendRequest"];
+            };
+        };
+        responses: {
+            /** @description What the engine would decide, per recipient. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendAuthorizationPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     sendEmail: {
         parameters: {
             query?: never;
@@ -39258,7 +39690,7 @@ export interface operations {
                 /** @description The search query. */
                 q: string;
                 /** @description Restrict to these object types (default all). */
-                types?: ("person" | "organization" | "deal" | "activity" | "lead" | "project" | "tag")[];
+                types?: ("person" | "organization" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag")[];
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -40881,11 +41313,16 @@ export interface operations {
                  *     bounded, so no arrangement of arrivals, answers and reprioritisations makes a
                  *     client paging to exhaustion loop.
                  *
-                 *     Not guaranteed: a stable snapshot, which a set re-assembled and re-ranked on every
-                 *     read cannot offer. One consequence, and it is the whole cost of this design: A ROW
-                 *     THAT CROSSES THE PAGE BOUNDARY BETWEEN TWO READS IS SERVED TWICE OR NOT AT ALL ON
-                 *     THIS WALK. A deal that turns urgent moves up past where you have got to; one that
-                 *     is answered lets everything below it move up by one.
+                 *     A walk is FROZEN at its first page: the rows it covers and the order they sit in
+                 *     are fixed, so paging does not race the day. `walk` on the response says what has
+                 *     happened since — how many of those rows have gone, and how much has arrived that is
+                 *     deliberately not in this walk. Membership moves one way: new work waits for a fresh
+                 *     read, work that was resolved or is no longer visible leaves at once.
+                 *
+                 *     An installation that does not hold walks pages the older way instead, and there the
+                 *     cost is real and worth stating: A ROW THAT CROSSES THE PAGE BOUNDARY BETWEEN TWO
+                 *     READS IS SERVED TWICE OR NOT AT ALL. A deal that turns urgent moves up past where
+                 *     you have got to; one that is answered lets everything below it move up by one.
                  *
                  *     Such a row is not lost from the product — the next read of the queue ranks it
                  *     afresh and shows it — so treat a walk as a way to reach a backlog you already know
@@ -42664,7 +43101,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
+                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "product" | "offer_template" | "activity";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
             };
@@ -47600,6 +48037,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ForecastMovement"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listForecastCalls: {
+        parameters: {
+            query?: {
+                /** @description The window length. Quarters follow the installation's financial year. */
+                period?: "quarter" | "month";
+                /** @description Which period to read, named by a day inside it. Defaults to today, so a caller who names nothing asks about the period they are in. */
+                as_of?: string;
+                scope_kind?: "workspace" | "team" | "owner";
+                /** @description Whose forecast, for a team or owner scope. A workspace scope names none. */
+                scope_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The calls made for that period and scope, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        calls: components["schemas"]["ForecastCall"][];
+                    };
                 };
             };
             401: components["responses"]["Unauthorized"];

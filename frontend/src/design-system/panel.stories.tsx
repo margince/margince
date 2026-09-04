@@ -190,7 +190,7 @@ export const WarnTone: Story = {
 export const AiTone: Story = {
   args: {
     tone: "ai",
-    title: "Margince read this record",
+    title: "Brandt Automotive GmbH · 360",
     children: (
       <>
         <PanelRow>

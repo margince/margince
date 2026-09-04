@@ -735,7 +735,6 @@ export function RecordView({
   pulse,
   actions,
   controls,
-  wide,
   markShape = "person",
   actionsInline,
   band,
@@ -782,11 +781,6 @@ export function RecordView({
   // like a face or as a rounded square like a logo. Defaults to `person`,
   // which is what every record but an organization is.
   markShape?: "person" | "organization";
-  // Forces the record-head-wide sizing (display-size name, the page's own
-  // mark, wrapping identity block) independent of `controls`. For a record whose standing
-  // lives inside `pulse` itself rather than in a stacked controls column —
-  // the company page's shape — and still wants the same scale.
-  wide?: boolean;
   // Puts `actions` on the SAME row as the identity block, right-aligned,
   // instead of the default full-width row underneath the header (or the
   // stacked column `controls` produces). An explicit opt-in: every other
@@ -851,7 +845,14 @@ export function RecordView({
   // a name over a description, a chip row and a meta line, and centring the
   // mark against a stack that tall floats it to the middle of the chips
   // instead of beside the name it belongs to.
-  const headerWide = Boolean(controls) || Boolean(actionsInline) || wide;
+  //
+  // These are the SAME two slots `actionsPlacement` reads, which is what makes
+  // "a wide head never puts its verbs in the row below it" a fact about the
+  // component rather than a convention its callers keep: a head is wide only
+  // if it was handed `controls` or `actionsInline`, and either of those places
+  // the verbs inside the header. The record-head-wide rules in composed.css
+  // rest on that.
+  const headerWide = Boolean(controls) || Boolean(actionsInline);
   const actionsAt = actionsPlacement(actions, actionsInline, controls);
   return (
     /* The record's own blocks arrive in order — head, then actions, then the
@@ -1161,6 +1162,14 @@ function conversationDirection(
 
 function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
   const t = useT();
+  // A withheld row claims no move, in either direction. "Your move" over
+  // content the reader may not read tells them they owe a reply to words they
+  // are not allowed to see, and the row's own per-message move label is
+  // already suppressed for exactly that reason — leaving this one unsuppressed
+  // made the two disagree about one row, and this is the one on screen.
+  if (entry.withheld) {
+    return null;
+  }
   const direction = conversationDirection(entry);
   if (direction === "inbound") {
     return <Badge tone="warn">{t("convo.yourMove")}</Badge>;

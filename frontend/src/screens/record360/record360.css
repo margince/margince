@@ -37,7 +37,7 @@
      sentence that says why. A word rather than a pill, because a pill reads
      as a status somebody applied and this is the reading itself. */
   font-family: var(--f-display);
-  font-size: 34px;
+  font-size: var(--fs-display);
   font-weight: var(--fw-semibold);
   line-height: 1.05;
   letter-spacing: var(--tracking-display);
@@ -80,7 +80,7 @@
   /* The because-sentence is prose beside the word, not a second headline:
      at reading size the word stays the one loud thing and the sentence is
      what a reader goes on to. */
-  font-size: 15px;
+  font-size: var(--fs-lead);
   line-height: 1.5;
   color: var(--textContent);
   text-wrap: pretty;
@@ -145,7 +145,7 @@
    wording, and a bordered card here would be a card inside a card. */
 .r360-rests-item {
   border-left: 2px solid var(--aiMed);
-  border-radius: 1px;
+  border-radius: var(--r-xs);
   padding-left: var(--space-2);
   min-width: 0;
 }

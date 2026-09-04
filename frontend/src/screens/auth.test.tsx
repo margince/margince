@@ -158,7 +158,7 @@ describe("AuthScreen login", () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        "And don’t worry: I’ll never send an email or message without asking you first.",
+        "And I only ever act with the permission you gave me — never more than you can do yourself.",
       ),
     ).toBeTruthy();
     expect(

@@ -117,13 +117,33 @@ func (s DecisionSet) Effective(modeFor func(Category) Mode, legacyAllowed bool) 
 		// recipient is not a message that may go out.
 		return false
 	}
+	enforced := false
 	for _, d := range s.Decisions {
 		if modeFor(d.Resolved) != ModeEnforce {
 			continue
 		}
+		enforced = true
 		if d.Verdict != VerdictAllow {
 			return false
 		}
+	}
+	// THE ENGINE ALONE DECIDES A RECIPIENT IT ENFORCES.
+	//
+	// While every category observed, this returned legacyAllowed and the old
+	// purpose gate ruled. Under enforce that conjunction is not caution, it is
+	// the old gate's defects kept alive: it answers on a caller-supplied
+	// purpose key, and its business-correspondence arm reads qualifying events
+	// only — so an ordinary reply to a thread the subject started is refused
+	// for want of a consent row nobody ever had reason to record. The engine
+	// resolves that reply from the thread itself, which is the strongest ground
+	// a message can have, and being overruled by a weaker authority is the
+	// regression this rollout exists to end.
+	//
+	// A set with NO enforced recipient still defers. That is not a fallback: it
+	// is a category still being observed, and the old gate is what decides
+	// there until it is not.
+	if enforced {
+		return true
 	}
 	return legacyAllowed
 }

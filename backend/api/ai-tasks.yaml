@@ -75,6 +75,7 @@ tiers: [local_small, cheap_cloud, premium, frontier, local_large]
 
 tasks:
   capture_classify:
+    display_name: "Message classification"
     ladder: [local_small, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -85,6 +86,7 @@ tasks:
     no_payload: true
 
   owed_verdict:
+    display_name: "Unanswered-message triage"
     ladder: [local_small, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -95,6 +97,7 @@ tasks:
     doc: "Whether an unanswered inbound message actually asks its recipient side for something — asks_us or informs_us. The waiting queue can prove somebody wrote and nobody replied; it cannot tell a question from a report, a receipt or a monthly statement, which is most of what a rep wanted to know. Judged over what SURVIVES the queue's own rules rather than over all unjudged mail, so the pass costs one call per ten messages a rep would otherwise have read. The prompt carries the recipient line and whether a calendar part came with it, because a report sent to a desk address with the reader merely copied reads exactly like a direct request without them. Below the confidence floor after a solo re-ask the message stays UNJUDGED, and unjudged is a real answer: the queue ranks such a row exactly as it did before this pass existed, so there is never a reason to guess. A verdict may only DEMOTE a row within the queue — never delete, archive or hide one (ADR-0063 §3.2, the floor the capture label sits under). The reason is sharper here than there: this is one model call's opinion about a customer's mail, so being wrong has to cost a rep a scroll rather than a customer. No cost_unit, and the omission is a decision rather than a gap: cost_unit names a task the connect-time backfill prices, and this pass deliberately does not run at backfill. Its candidates are the LIVE waiting queue, so judging a mailbox's history would spend a call per message on years of mail nobody will ever be shown — the hourly pass reaches everything the queue can surface, and reaches it when a rep is actually looking at it."
 
   capture_counterparty_verdict:
+    display_name: "First-time sender check"
     ladder: [local_small]
     execution_mode: background
     on_budget_exhausted: queue
@@ -105,6 +108,7 @@ tasks:
     doc: "ADR-0072/A118: the ambiguous first-time-sender creation gate. Exactly one KIND per address from a closed vocabulary — person, role_mailbox, organization_sender, newsletter, transactional, spam, personal, advisor — each resolving to a real|noise lifecycle status. ASYMMETRIC floor: a CREATING answer (person, advisor) needs 0.85 and every other kind needs 0.7, because the two mistakes are not the same size — refusing a contact leaves the mail visible and the question answerable by a person, while creating one puts a record in a shared CRM. Below its floor → unsure, never noise. Two kinds create a contact and they differ in WHO can see it: `person` becomes an ordinary workspace contact, and `advisor` becomes an owner-scoped one — a founder's lawyer is a genuine contact whose existence is not the workspace's business. Every other kind creates none. The question is WHO WROTE, because the older yes/no gate grouped a person and a company under one `real` answer and so named a contact after the company that sent the mail. `unsure` is deliberately not answerable — abstention is derived from the floor, not self-reported, so a model cannot talk its way past it by claiming certainty about its own uncertainty. Release-blocking false-noise eval threshold. The no-payload posture is the `no_payload` field above (ADR-0074); it was formerly asserted in this prose and matched by substring. Local-only ladder: the prompt carries subject and body, and this is the task that decides whether a sender is personal — a cloud rung would send a founder's family mail off the machine to ask whether it was family mail."
 
   capture_confidentiality_verdict:
+    display_name: "Thread confidentiality check"
     ladder: [local_small]
     execution_mode: background
     on_budget_exhausted: queue
@@ -115,6 +119,7 @@ tasks:
     doc: "Decides what one email THREAD is about, so a classified mailbox can open the ordinary ones instead of holding everything. Closed vocabulary; exactly one kind (ordinary) opens a thread and every other kind holds it, so a wrong answer, an outage and a budget stop all fail towards privacy. Asymmetric floor: an opening answer below 0.8 resolves to unsure, which holds; a holding answer needs no floor, because requiring confidence to hold would publish the threads the model found hardest. Local-only ladder for the same reason as the sender verdict: the prompt carries subject, body and attachment names, and this is the task that decides whether a thread is private."
 
   signal_extract:
+    display_name: "Signal extraction"
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -125,6 +130,7 @@ tasks:
     doc: "SIG-F-3: read the material events out of a settled thread — contract_ended, new_opportunity, commitment_made — each citing the message it came from. Floor 0.7; below it the event is dropped, never guessed. An event is an OBSERVATION and is written directly; what follows from one is a structural claim and stages for a human."
 
   transcript_propose:
+    display_name: "Meeting follow-up extraction"
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -134,6 +140,7 @@ tasks:
     doc: "S-E04.3 / MEET-AC-3/4: read the next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from (ADR-0058). Floor 0.7; below it the proposal is dropped, never guessed, and a transcript stating none yields no proposal at all. Every proposal is a structural claim, so it STAGES for a human (approval kind transcript_proposal) and writes nothing until confirmed."
 
   propose_roles:
+    display_name: "Buying-role reading"
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -143,6 +150,7 @@ tasks:
     doc: "Read the buying roles out of what a contact has actually written - who signs, who carries it inside, who can stop it. Floor 0.75, higher than enrich's 0.6 because a wrong role misdirects a whole deal while a wrong phone number is a typo. A job title is NEVER evidence: the contract says a role is recorded and never inferred from one, so a proposal citing only a title is dropped. Every proposal quotes the message it was read from, verbatim, and the person who WROTE that message must be the person the role is proposed for - both contacts sit in one prompt, so evidence unbound from its author lets one sender hand a role to a colleague they have never spoken for. Written DIRECTLY as a seat, attributed to agent:propose_roles and reversible, per the installation's auto-write posture; the evidence lives on the audit row so a reader can check it, and the ai_suggested mark stays until a human confirms. Degrade is the budget answer but there is no deterministic floor: with no lane the endpoint declares 501 rather than guessing a role from a title."
 
   enrich:
+    display_name: "Signature enrichment"
     ladder: [local_small, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -152,6 +160,7 @@ tasks:
     cost_unit: per_person
 
   summarize:
+    display_name: "Record summary"
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -161,6 +170,7 @@ tasks:
     doc: "Five grounded-prose sites, all over what the VIEWER can already see, assembled per viewer because visibility is per viewer. org_brief — the standing account brief: what this account is, where it stands, what changed. Its operation is deprecated and the company record page no longer renders it — the page's lead card is now the account's work in flight, spelled from the records — but the assembly stays, because org_ask is served from the same handlers. org_ask — the prepared questions behind Ask Margince: the question is chosen from a fixed list rather than typed, because each one names the records its answer must be written from, which is what lets every sentence cite a record the reader could open themselves. org_dossier — what the COMPANY is, from its own recorded facts: deliberately not the account composite, because a dossier that could see the pipeline would describe the pipeline and the separation from the brief would collapse on the first prompt revision. meeting_plan — what to DO in one booked meeting: the outcome to earn, the opener, the one risk with its response, what the other side is likely to ask and what to ask them. It rides this lane rather than its own because it is the same task — grounded prose over records the caller can already see — but it reads a different projection: the account arc with the excerpts behind it, rather than the whole assembled input, because the specificity of every question comes from what people actually wrote. person_brief — the person page's standing relationship brief: who this contact is commercially, what they have said they care about, what changed, and the one move that follows. It rides this lane for meeting_plan's reason — the same task over a different projection — and reads the claims extracted from conversations with the contact's own words behind them, what CHANGED about the relationship, and each recent message through the server's own one-line summary of what was written, rather than the timeline's subjects and directions: a brief written from transport events says only that mail was exchanged, which is true of every contact in the system."
 
   growth_fit:
+    display_name: "Company fit assessment"
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -170,6 +180,7 @@ tasks:
     doc: "How well one company fits what we sell. The only site on the company view that must read OUR offering as well as theirs — a fit is a claim about two companies, and judging one against a guess about the other is what the DOSS-AC-13 band cap exists to stop. Our own context is never citable: evidence is target-side only, so a factor drawn from what we sell is labelled an assessment and still cites their records, or the grounding filter drops it (DOSS-AC-6). The band the model proposes is not the band served — the deterministic completeness gate can lower it to `unknown` or cap it at `moderate`, and never raises it."
 
   draft_reply:
+    display_name: "Reply drafting"
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -179,6 +190,7 @@ tasks:
     doc: "Six sites, one task: the reply to an activity, the person page's composer, the company page's first-touch outbound, the message that opens a conversation from a stated intent alone, the ask a rep sends a COLLEAGUE for an introduction (the only one written to somebody on our own side, which is why it carries its own phrasing), and the note that colleague then FORWARDS to the contact (draft_email over MCP, which names records to file under rather than records to write from). The last two are one workflow and two registers: the ask is internal and its overclaim is falsifiable by the teammate reading it, while the note goes out over that colleague's own name to a customer who cannot check it — which is why they carry separate prompts, separate wording tables and separate scenarios rather than one site with a flag. They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site alone has two system variants (voice-enabled and plain), selected per call from the workspace's Voice DNA state — a variant, not a site of its own; the composers and the first-message site gain theirs when Voice DNA reaches them."
 
   nl_search:
+    display_name: "Natural-language search"
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -187,6 +199,7 @@ tasks:
     doc: "Declared, not built (ADR-0074)."
 
   cold_start:
+    display_name: "Onboarding read"
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -200,6 +213,7 @@ tasks:
     doc: "Four sites, not one: three conversational onboarding lanes plus the evidence-extraction pass the read-back rides. The extraction site is the consequential one and had no name before ADR-0074."
 
   transcript:
+    display_name: "Transcript reading"
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -208,6 +222,7 @@ tasks:
     doc: "Declared, not built (ADR-0074). Pasted transcript text is T2/untrusted per ai-operational-spec §1 when a site lands."
 
   corpus_ask:
+    display_name: "Document corpus question"
     ladder: [premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -217,6 +232,7 @@ tasks:
     doc: "corpus_ask — one bounded document corpus, asked in free text and answered only from what the workspace filed in it. Everything a REFUSAL rests on is decided before this task is reached: readiness, the embed binding, and the grounding floor are settled deterministically, so the model is asked only when passages already cleared the floor. Its whole job is prose, and its answer is a list of claims each carrying a citation and a verbatim quote checked against the retrieved text — a claim whose quote is not found is dropped, and an answer with no surviving claim is not_covered. The ladder leads premium as a PREFERENCE and not a contract, because the guardrail is verbatim quoting and cheaper tiers paraphrase; a demoted rung is not trusted, it is checked like any other and falls back only if it actually fails. A missing chat lane, or a reply the guardrail refuses, degrades to the retrieved passages themselves with generated_by saying deterministic — deal_health's rule, for deal_health's reason, and honest because the grounded part of a grounded answer was never the prose. Over budget is NOT a separate outcome: an interactive task is never refused on budget, it is pinned to the on-box rung and asked, and whichever answer survives the quote check is what generated_by reports. What is invariant, and what the test asserts, is narrower: an over-budget ask never refuses and never spends a cloud rung."
 
   deal_health:
+    display_name: "Deal status card"
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -226,6 +242,7 @@ tasks:
     doc: "deal_status — the deal page's one written card: where the deal stands, what could lose it, and why the recommended move is the right one. The model reads the deal's own facts (its fields, its health factors with the sentence behind each, its timeline, its open tasks and its Deal Room conversation — all assembled under the CALLER's row scope, with a withheld row contributing its date but not its words) and writes the sentences. The VERB never moves: which action the card offers is decided by rules from records and handed to the model in recommended_move, so a reader clicking Draft the reply reaches the mail the rules picked. A missing lane, an over-budget call or a reply the grounding filter refuses degrades to the same card composed deterministically, with generated_by saying so. The card is CACHED per reader on a fingerprint of its input plus the prompt and routing versions, so a deal nobody touched costs one call ever."
 
   weekly_review:
+    display_name: "Weekly review narrative"
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -235,6 +252,7 @@ tasks:
     doc: "weekly_review/narrative — one or two sentences over a week's own counts and deal lines, for the rep reading them on Monday. It adds nothing: every fact it may state is already in the deterministic review beside it, which is what makes the whole thing safe to lose. A rep with no lane, an exhausted budget or a provider outage reads the same counts and the same lines, and the screen says which."
 
   brief_ranking:
+    display_name: "Morning brief ranking"
     ladder: [premium, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -244,6 +262,7 @@ tasks:
     doc: "the one Premium-frontier default (§1.2 RATIFY): genuinely multi-hop reasoning"
 
   agent_loop:
+    display_name: "Agent reasoning loop"
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -260,6 +279,7 @@ tasks:
     doc: "The Surface-B reason-act loop: a cumulative, tool-fed message window, not a request factory. ADR-0074 names it the open risk for fixture-driven certification — if it cannot be certified honestly the census needs a `not_certifiable` kind."
 
   offer_draft:
+    display_name: "Offer drafting"
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
@@ -268,6 +288,7 @@ tasks:
     company_context: {scopes: [offer, positioning, proof], token_budget: 1600}
 
   document_extract:
+    display_name: "Document extraction"
     ladder: [premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -278,6 +299,7 @@ tasks:
     doc: "read ONE attached document — a scanned form, an invoice, an order confirmation — for the four deal facts a human may then accept onto the deal (records-depth RD-PARAM-N-3), each carrying the quote it was read from. premium-only BY CONTRACT for site_extract's reason and one of its own: a rung that cannot carry the document is not a degraded answer to this question, it is a different question, so there is no rung to degrade to. no_payload BY CONTRACT: a scanned contract or invoice is exactly the content that must never reach ai_call_payload, whatever the deployment's capture posture says. A reading takes seconds and can fail, so it is a durable record its surface polls (records-depth RD-DDL-4), never work done inside the request that asks for it."
 
   site_extract:
+    display_name: "Website deep read"
     ladder: [premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -287,6 +309,7 @@ tasks:
     doc: "premium-only BY CONTRACT: the no-guess gate demands verbatim quotes cheap tiers paraphrase; no fallback rung. Its response schema is built PER CALL (the citation enum is that call's passage ids), which is why ADR-0074 leaves answer schemas in code."
 
   site_fact_extract:
+    display_name: "Website fact extraction"
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -296,6 +319,7 @@ tasks:
     doc: "the deep read's page-parallel fact lane: tiny snippet-id-cited records a fast cheap tier serves reliably — its latency IS the read time, so the fast tier leads. Its response schema varies in SHAPE per call with the page menu (ADR-0074)."
 
   site_triage:
+    display_name: "Website triage"
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -305,6 +329,7 @@ tasks:
     doc: "what a mail domain's own site says it IS, before any organization is created from it: a company, one person's site, or a mailbox vendor selling addresses to the public. Runs on the SEED PAGE ALONE and leads with a fast tier because its whole job is to stop the crawl early — a personal page answered here costs one page instead of twelve. The provider class is the live.fr trap: that site belongs to a real company (Microsoft's) which is emphatically not the sender's employer."
 
   cert_judge:
+    display_name: "Certification judging"
     ladder: [premium, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
@@ -314,6 +339,7 @@ tasks:
     doc: "the aicert quality judge — pinned to its own router in the cert lane, never the candidate's binding"
 
   voice_build:
+    display_name: "Voice DNA build"
     ladder: [cheap_cloud, premium]
     execution_mode: background
     on_budget_exhausted: queue
@@ -323,6 +349,7 @@ tasks:
     doc: "owner-requested or automatic durable Voice DNA candidate build; own-authored corpus only, CompanyContext none (ADR-0066). Three sites: the derive pass plus the two evaluation passes."
 
   rate_extract:
+    display_name: "Model pricing extraction"
     ladder: [premium, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue

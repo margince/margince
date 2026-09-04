@@ -42,7 +42,10 @@ func classifyBriefItem(item crmcontracts.AttentionItem, asOf time.Time, money da
 	expected, known := expectedRevenue(item, money)
 	priceDealsAtRiskRow(&row, expected, known, money)
 	return ranked{
-		item:             row,
+		item: row,
+		// Deferred to the deal for the reason the at-risk lane defers: the owner
+		// arrives with the facts pass, after this runs.
+		ownerRef:         deferredToTheDeal(),
 		deadlineAt:       deadlineOf(item.DueAt),
 		overdue:          item.Overdue != nil && *item.Overdue,
 		expectedBase:     expected,

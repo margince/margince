@@ -6,6 +6,7 @@ package consent
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -20,10 +21,6 @@ import (
 // different purpose authorizes nothing.
 type Gate struct {
 	store *Store
-	// country selects which jurisdiction's messaging rules a decision is taken
-	// under. Injected by compose because the setting lives in identity
-	// (installationcountry.go).
-	country InstallationCountryReader
 }
 
 func NewGate(store *Store) *Gate {
@@ -73,8 +70,16 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 			// Unknown purpose ⇒ nothing can be granted under it.
 			return fmt.Errorf("consent: purpose %q is not defined: %w", purposeKey, apperrors.ErrConsentNotGranted)
 		}
+		// The window a qualifying event still supports an unprompted message
+		// within, resolved once for the whole set so two recipients of one
+		// message cannot be judged against different spans.
+		w, err := g.store.windowsFor(ctx, tx)
+		if err != nil {
+			return err
+		}
+		since := time.Now().Add(-w.reply)
 		for _, r := range recipients {
-			granted, err := grantedForRecipient(ctx, tx, r, purpose)
+			granted, err := grantedForRecipient(ctx, tx, r, purpose, since)
 			if err != nil {
 				return err
 			}
@@ -106,7 +111,7 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 // grant predicate below. A lead carries no qualifying events and no §7(3) flag
 // — those hang off a person — so for a lead the class model has nothing extra
 // to say and the recorded grant IS the whole answer.
-func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, purpose PurposeRow) (bool, error) {
+func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, purpose PurposeRow, since time.Time) (bool, error) {
 	personID, found, err := resolvePerson(ctx, tx, r)
 	if err != nil {
 		return false, err
@@ -114,7 +119,7 @@ func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	if !found {
 		return grantedForLead(ctx, tx, r, purpose.ID, purpose.RequiresDOI)
 	}
-	verdict, err := VerdictForPerson(ctx, tx, personID, purpose)
+	verdict, err := VerdictForPerson(ctx, tx, personID, purpose, since)
 	if err != nil {
 		return false, err
 	}

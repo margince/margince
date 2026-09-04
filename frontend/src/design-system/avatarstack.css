@@ -14,6 +14,7 @@
 .avatar-stack-item {
   display: block;
   border-radius: var(--r-full);
+  corner-shape: round;
   box-shadow: 0 0 0 2px var(--bgElevated);
 }
 /* Half the previous pull, because the ring stopped costing the chip 4px of its

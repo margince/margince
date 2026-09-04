@@ -2752,6 +2752,45 @@ func (e CommissionStatus) Valid() bool {
 	}
 }
 
+// Defines values for CommunicationContext.
+const (
+	CommunicationContextAccountNotice      CommunicationContext = "account_notice"
+	CommunicationContextActiveDealFollowup CommunicationContext = "active_deal_followup"
+	CommunicationContextContractNotice     CommunicationContext = "contract_notice"
+	CommunicationContextCustomerService    CommunicationContext = "customer_service"
+	CommunicationContextInvoiceOrPayment   CommunicationContext = "invoice_or_payment"
+	CommunicationContextMarketing          CommunicationContext = "marketing"
+	CommunicationContextPrecontractQuote   CommunicationContext = "precontract_quote"
+	CommunicationContextReplyToInbound     CommunicationContext = "reply_to_inbound"
+	CommunicationContextRequestedFollowup  CommunicationContext = "requested_followup"
+)
+
+// Valid indicates whether the value is a known member of the CommunicationContext enum.
+func (e CommunicationContext) Valid() bool {
+	switch e {
+	case CommunicationContextAccountNotice:
+		return true
+	case CommunicationContextActiveDealFollowup:
+		return true
+	case CommunicationContextContractNotice:
+		return true
+	case CommunicationContextCustomerService:
+		return true
+	case CommunicationContextInvoiceOrPayment:
+		return true
+	case CommunicationContextMarketing:
+		return true
+	case CommunicationContextPrecontractQuote:
+		return true
+	case CommunicationContextReplyToInbound:
+		return true
+	case CommunicationContextRequestedFollowup:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CompanyContextSchemaVersion.
 const (
 	N1 CompanyContextSchemaVersion = 1
@@ -3607,6 +3646,7 @@ const (
 	ConsentQualifyingEventKindInPerson       ConsentQualifyingEventKind = "in_person"
 	ConsentQualifyingEventKindInboundMessage ConsentQualifyingEventKind = "inbound_message"
 	ConsentQualifyingEventKindInquiry        ConsentQualifyingEventKind = "inquiry"
+	ConsentQualifyingEventKindMeeting        ConsentQualifyingEventKind = "meeting"
 )
 
 // Valid indicates whether the value is a known member of the ConsentQualifyingEventKind enum.
@@ -3619,6 +3659,8 @@ func (e ConsentQualifyingEventKind) Valid() bool {
 	case ConsentQualifyingEventKindInboundMessage:
 		return true
 	case ConsentQualifyingEventKindInquiry:
+		return true
+	case ConsentQualifyingEventKindMeeting:
 		return true
 	default:
 		return false
@@ -3714,13 +3756,15 @@ func (e ContactEngagement) Valid() bool {
 
 // Defines values for ContextEntityRefType.
 const (
-	ContextEntityRefTypeActivity     ContextEntityRefType = "activity"
-	ContextEntityRefTypeDeal         ContextEntityRefType = "deal"
-	ContextEntityRefTypeLead         ContextEntityRefType = "lead"
-	ContextEntityRefTypeOrganization ContextEntityRefType = "organization"
-	ContextEntityRefTypePerson       ContextEntityRefType = "person"
-	ContextEntityRefTypeProject      ContextEntityRefType = "project"
-	ContextEntityRefTypeUser         ContextEntityRefType = "user"
+	ContextEntityRefTypeActivity      ContextEntityRefType = "activity"
+	ContextEntityRefTypeDeal          ContextEntityRefType = "deal"
+	ContextEntityRefTypeLead          ContextEntityRefType = "lead"
+	ContextEntityRefTypeOfferTemplate ContextEntityRefType = "offer_template"
+	ContextEntityRefTypeOrganization  ContextEntityRefType = "organization"
+	ContextEntityRefTypePerson        ContextEntityRefType = "person"
+	ContextEntityRefTypeProduct       ContextEntityRefType = "product"
+	ContextEntityRefTypeProject       ContextEntityRefType = "project"
+	ContextEntityRefTypeUser          ContextEntityRefType = "user"
 )
 
 // Valid indicates whether the value is a known member of the ContextEntityRefType enum.
@@ -3732,9 +3776,13 @@ func (e ContextEntityRefType) Valid() bool {
 		return true
 	case ContextEntityRefTypeLead:
 		return true
+	case ContextEntityRefTypeOfferTemplate:
+		return true
 	case ContextEntityRefTypeOrganization:
 		return true
 	case ContextEntityRefTypePerson:
+		return true
+	case ContextEntityRefTypeProduct:
 		return true
 	case ContextEntityRefTypeProject:
 		return true
@@ -7818,19 +7866,19 @@ func (e OrganizationBriefSectionKind) Valid() bool {
 
 // Defines values for OrganizationBriefSentenceNature.
 const (
-	Assessment     OrganizationBriefSentenceNature = "assessment"
-	Fact           OrganizationBriefSentenceNature = "fact"
-	Recommendation OrganizationBriefSentenceNature = "recommendation"
+	OrganizationBriefSentenceNatureAssessment     OrganizationBriefSentenceNature = "assessment"
+	OrganizationBriefSentenceNatureFact           OrganizationBriefSentenceNature = "fact"
+	OrganizationBriefSentenceNatureRecommendation OrganizationBriefSentenceNature = "recommendation"
 )
 
 // Valid indicates whether the value is a known member of the OrganizationBriefSentenceNature enum.
 func (e OrganizationBriefSentenceNature) Valid() bool {
 	switch e {
-	case Assessment:
+	case OrganizationBriefSentenceNatureAssessment:
 		return true
-	case Fact:
+	case OrganizationBriefSentenceNatureFact:
 		return true
-	case Recommendation:
+	case OrganizationBriefSentenceNatureRecommendation:
 		return true
 	default:
 		return false
@@ -9889,6 +9937,7 @@ const (
 	QualifyingEventRecordKindInPerson       QualifyingEventRecordKind = "in_person"
 	QualifyingEventRecordKindInboundMessage QualifyingEventRecordKind = "inbound_message"
 	QualifyingEventRecordKindInquiry        QualifyingEventRecordKind = "inquiry"
+	QualifyingEventRecordKindMeeting        QualifyingEventRecordKind = "meeting"
 )
 
 // Valid indicates whether the value is a known member of the QualifyingEventRecordKind enum.
@@ -9901,6 +9950,8 @@ func (e QualifyingEventRecordKind) Valid() bool {
 	case QualifyingEventRecordKindInboundMessage:
 		return true
 	case QualifyingEventRecordKindInquiry:
+		return true
+	case QualifyingEventRecordKindMeeting:
 		return true
 	default:
 		return false
@@ -10014,13 +10065,13 @@ func (e RecordGrantSubjectType) Valid() bool {
 
 // Defines values for RecordQualifyingEventRequestKind.
 const (
-	InPerson RecordQualifyingEventRequestKind = "in_person"
+	RecordQualifyingEventRequestKindInPerson RecordQualifyingEventRequestKind = "in_person"
 )
 
 // Valid indicates whether the value is a known member of the RecordQualifyingEventRequestKind enum.
 func (e RecordQualifyingEventRequestKind) Valid() bool {
 	switch e {
-	case InPerson:
+	case RecordQualifyingEventRequestKindInPerson:
 		return true
 	default:
 		return false
@@ -10635,13 +10686,15 @@ func (e SearchResultTrustTier) Valid() bool {
 
 // Defines values for SearchResultType.
 const (
-	SearchResultTypeActivity     SearchResultType = "activity"
-	SearchResultTypeDeal         SearchResultType = "deal"
-	SearchResultTypeLead         SearchResultType = "lead"
-	SearchResultTypeOrganization SearchResultType = "organization"
-	SearchResultTypePerson       SearchResultType = "person"
-	SearchResultTypeProject      SearchResultType = "project"
-	SearchResultTypeTag          SearchResultType = "tag"
+	SearchResultTypeActivity      SearchResultType = "activity"
+	SearchResultTypeDeal          SearchResultType = "deal"
+	SearchResultTypeLead          SearchResultType = "lead"
+	SearchResultTypeOfferTemplate SearchResultType = "offer_template"
+	SearchResultTypeOrganization  SearchResultType = "organization"
+	SearchResultTypePerson        SearchResultType = "person"
+	SearchResultTypeProduct       SearchResultType = "product"
+	SearchResultTypeProject       SearchResultType = "project"
+	SearchResultTypeTag           SearchResultType = "tag"
 )
 
 // Valid indicates whether the value is a known member of the SearchResultType enum.
@@ -10653,9 +10706,13 @@ func (e SearchResultType) Valid() bool {
 		return true
 	case SearchResultTypeLead:
 		return true
+	case SearchResultTypeOfferTemplate:
+		return true
 	case SearchResultTypeOrganization:
 		return true
 	case SearchResultTypePerson:
+		return true
+	case SearchResultTypeProduct:
 		return true
 	case SearchResultTypeProject:
 		return true
@@ -10705,6 +10762,48 @@ func (e SendAccountEmailRequestCommunicationContext) Valid() bool {
 	}
 }
 
+// Defines values for SendAuthorizationPreviewRecipientMode.
+const (
+	SendAuthorizationPreviewRecipientModeEnforce SendAuthorizationPreviewRecipientMode = "enforce"
+	SendAuthorizationPreviewRecipientModeObserve SendAuthorizationPreviewRecipientMode = "observe"
+	SendAuthorizationPreviewRecipientModeWarn    SendAuthorizationPreviewRecipientMode = "warn"
+)
+
+// Valid indicates whether the value is a known member of the SendAuthorizationPreviewRecipientMode enum.
+func (e SendAuthorizationPreviewRecipientMode) Valid() bool {
+	switch e {
+	case SendAuthorizationPreviewRecipientModeEnforce:
+		return true
+	case SendAuthorizationPreviewRecipientModeObserve:
+		return true
+	case SendAuthorizationPreviewRecipientModeWarn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SendAuthorizationPreviewRecipientVerdict.
+const (
+	SendAuthorizationPreviewRecipientVerdictAllow  SendAuthorizationPreviewRecipientVerdict = "allow"
+	SendAuthorizationPreviewRecipientVerdictDeny   SendAuthorizationPreviewRecipientVerdict = "deny"
+	SendAuthorizationPreviewRecipientVerdictReview SendAuthorizationPreviewRecipientVerdict = "review"
+)
+
+// Valid indicates whether the value is a known member of the SendAuthorizationPreviewRecipientVerdict enum.
+func (e SendAuthorizationPreviewRecipientVerdict) Valid() bool {
+	switch e {
+	case SendAuthorizationPreviewRecipientVerdictAllow:
+		return true
+	case SendAuthorizationPreviewRecipientVerdictDeny:
+		return true
+	case SendAuthorizationPreviewRecipientVerdictReview:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SendEmailRequestCommunicationContext.
 const (
 	SendEmailRequestCommunicationContextAccountNotice      SendEmailRequestCommunicationContext = "account_notice"
@@ -10746,37 +10845,37 @@ func (e SendEmailRequestCommunicationContext) Valid() bool {
 
 // Defines values for SendMessageRequestCommunicationContext.
 const (
-	SendMessageRequestCommunicationContextAccountNotice      SendMessageRequestCommunicationContext = "account_notice"
-	SendMessageRequestCommunicationContextActiveDealFollowup SendMessageRequestCommunicationContext = "active_deal_followup"
-	SendMessageRequestCommunicationContextContractNotice     SendMessageRequestCommunicationContext = "contract_notice"
-	SendMessageRequestCommunicationContextCustomerService    SendMessageRequestCommunicationContext = "customer_service"
-	SendMessageRequestCommunicationContextInvoiceOrPayment   SendMessageRequestCommunicationContext = "invoice_or_payment"
-	SendMessageRequestCommunicationContextMarketing          SendMessageRequestCommunicationContext = "marketing"
-	SendMessageRequestCommunicationContextPrecontractQuote   SendMessageRequestCommunicationContext = "precontract_quote"
-	SendMessageRequestCommunicationContextReplyToInbound     SendMessageRequestCommunicationContext = "reply_to_inbound"
-	SendMessageRequestCommunicationContextRequestedFollowup  SendMessageRequestCommunicationContext = "requested_followup"
+	AccountNotice      SendMessageRequestCommunicationContext = "account_notice"
+	ActiveDealFollowup SendMessageRequestCommunicationContext = "active_deal_followup"
+	ContractNotice     SendMessageRequestCommunicationContext = "contract_notice"
+	CustomerService    SendMessageRequestCommunicationContext = "customer_service"
+	InvoiceOrPayment   SendMessageRequestCommunicationContext = "invoice_or_payment"
+	Marketing          SendMessageRequestCommunicationContext = "marketing"
+	PrecontractQuote   SendMessageRequestCommunicationContext = "precontract_quote"
+	ReplyToInbound     SendMessageRequestCommunicationContext = "reply_to_inbound"
+	RequestedFollowup  SendMessageRequestCommunicationContext = "requested_followup"
 )
 
 // Valid indicates whether the value is a known member of the SendMessageRequestCommunicationContext enum.
 func (e SendMessageRequestCommunicationContext) Valid() bool {
 	switch e {
-	case SendMessageRequestCommunicationContextAccountNotice:
+	case AccountNotice:
 		return true
-	case SendMessageRequestCommunicationContextActiveDealFollowup:
+	case ActiveDealFollowup:
 		return true
-	case SendMessageRequestCommunicationContextContractNotice:
+	case ContractNotice:
 		return true
-	case SendMessageRequestCommunicationContextCustomerService:
+	case CustomerService:
 		return true
-	case SendMessageRequestCommunicationContextInvoiceOrPayment:
+	case InvoiceOrPayment:
 		return true
-	case SendMessageRequestCommunicationContextMarketing:
+	case Marketing:
 		return true
-	case SendMessageRequestCommunicationContextPrecontractQuote:
+	case PrecontractQuote:
 		return true
-	case SendMessageRequestCommunicationContextReplyToInbound:
+	case ReplyToInbound:
 		return true
-	case SendMessageRequestCommunicationContextRequestedFollowup:
+	case RequestedFollowup:
 		return true
 	default:
 		return false
@@ -11472,22 +11571,22 @@ func (e TagColor) Valid() bool {
 
 // Defines values for TagDetailColor.
 const (
-	TagDetailColorAmber TagDetailColor = "amber"
-	TagDetailColorRose  TagDetailColor = "rose"
-	TagDetailColorSlate TagDetailColor = "slate"
-	TagDetailColorTeal  TagDetailColor = "teal"
+	Amber TagDetailColor = "amber"
+	Rose  TagDetailColor = "rose"
+	Slate TagDetailColor = "slate"
+	Teal  TagDetailColor = "teal"
 )
 
 // Valid indicates whether the value is a known member of the TagDetailColor enum.
 func (e TagDetailColor) Valid() bool {
 	switch e {
-	case TagDetailColorAmber:
+	case Amber:
 		return true
-	case TagDetailColorRose:
+	case Rose:
 		return true
-	case TagDetailColorSlate:
+	case Slate:
 		return true
-	case TagDetailColorTeal:
+	case Teal:
 		return true
 	default:
 		return false
@@ -12042,19 +12141,19 @@ func (e UpdateOrganizationRequestSizeBand) Valid() bool {
 
 // Defines values for UpdateSignalRequestSeverity.
 const (
-	Info   UpdateSignalRequestSeverity = "info"
-	Urgent UpdateSignalRequestSeverity = "urgent"
-	Warn   UpdateSignalRequestSeverity = "warn"
+	UpdateSignalRequestSeverityInfo   UpdateSignalRequestSeverity = "info"
+	UpdateSignalRequestSeverityUrgent UpdateSignalRequestSeverity = "urgent"
+	UpdateSignalRequestSeverityWarn   UpdateSignalRequestSeverity = "warn"
 )
 
 // Valid indicates whether the value is a known member of the UpdateSignalRequestSeverity enum.
 func (e UpdateSignalRequestSeverity) Valid() bool {
 	switch e {
-	case Info:
+	case UpdateSignalRequestSeverityInfo:
 		return true
-	case Urgent:
+	case UpdateSignalRequestSeverityUrgent:
 		return true
-	case Warn:
+	case UpdateSignalRequestSeverityWarn:
 		return true
 	default:
 		return false
@@ -13218,22 +13317,22 @@ func (e WorklistItemActions) Valid() bool {
 
 // Defines values for WorklistItemBand.
 const (
-	WorklistItemBandBuildPipeline WorklistItemBand = "build_pipeline"
-	WorklistItemBandKeepMomentum  WorklistItemBand = "keep_momentum"
-	WorklistItemBandNow           WorklistItemBand = "now"
-	WorklistItemBandReview        WorklistItemBand = "review"
+	BuildPipeline WorklistItemBand = "build_pipeline"
+	KeepMomentum  WorklistItemBand = "keep_momentum"
+	Now           WorklistItemBand = "now"
+	Review        WorklistItemBand = "review"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemBand enum.
 func (e WorklistItemBand) Valid() bool {
 	switch e {
-	case WorklistItemBandBuildPipeline:
+	case BuildPipeline:
 		return true
-	case WorklistItemBandKeepMomentum:
+	case KeepMomentum:
 		return true
-	case WorklistItemBandNow:
+	case Now:
 		return true
-	case WorklistItemBandReview:
+	case Review:
 		return true
 	default:
 		return false
@@ -13318,6 +13417,30 @@ func (e WorklistItemConsequence) Valid() bool {
 	case WorklistItemConsequenceWorkBlocked:
 		return true
 	case WorklistItemConsequenceYouBelieveItHappened:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistItemDestination.
+const (
+	WorklistDestinationReceipt      WorklistItemDestination = "receipt"
+	WorklistDestinationReview       WorklistItemDestination = "review"
+	WorklistDestinationSystemHealth WorklistItemDestination = "system_health"
+	WorklistDestinationToday        WorklistItemDestination = "today"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemDestination enum.
+func (e WorklistItemDestination) Valid() bool {
+	switch e {
+	case WorklistDestinationReceipt:
+		return true
+	case WorklistDestinationReview:
+		return true
+	case WorklistDestinationSystemHealth:
+		return true
+	case WorklistDestinationToday:
 		return true
 	default:
 		return false
@@ -13483,6 +13606,24 @@ func (e WorklistMoveAction) Valid() bool {
 	case WorklistMoveActionOpenMeetingBrief:
 		return true
 	case WorklistMoveActionReconnect:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistOwnerKind.
+const (
+	WorklistOwnerUnassigned WorklistOwnerKind = "unassigned"
+	WorklistOwnerUser       WorklistOwnerKind = "user"
+)
+
+// Valid indicates whether the value is a known member of the WorklistOwnerKind enum.
+func (e WorklistOwnerKind) Valid() bool {
+	switch e {
+	case WorklistOwnerUnassigned:
+		return true
+	case WorklistOwnerUser:
 		return true
 	default:
 		return false
@@ -14554,6 +14695,45 @@ func (e GetForecastParamsScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for ListForecastCallsParamsPeriod.
+const (
+	ForecastCallsPeriodMonth   ListForecastCallsParamsPeriod = "month"
+	ForecastCallsPeriodQuarter ListForecastCallsParamsPeriod = "quarter"
+)
+
+// Valid indicates whether the value is a known member of the ListForecastCallsParamsPeriod enum.
+func (e ListForecastCallsParamsPeriod) Valid() bool {
+	switch e {
+	case ForecastCallsPeriodMonth:
+		return true
+	case ForecastCallsPeriodQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListForecastCallsParamsScopeKind.
+const (
+	ListForecastCallsParamsScopeKindOwner     ListForecastCallsParamsScopeKind = "owner"
+	ListForecastCallsParamsScopeKindTeam      ListForecastCallsParamsScopeKind = "team"
+	ListForecastCallsParamsScopeKindWorkspace ListForecastCallsParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ListForecastCallsParamsScopeKind enum.
+func (e ListForecastCallsParamsScopeKind) Valid() bool {
+	switch e {
+	case ListForecastCallsParamsScopeKindOwner:
+		return true
+	case ListForecastCallsParamsScopeKindTeam:
+		return true
+	case ListForecastCallsParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetForecastMovementParamsReading.
 const (
 	GetForecastMovementParamsReadingBestCase GetForecastMovementParamsReading = "best_case"
@@ -14697,31 +14877,31 @@ func (e ListOrganizationsParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListOrganizationsParamsLifecycle.
 const (
-	ListOrganizationsParamsLifecycleCustomer       ListOrganizationsParamsLifecycle = "customer"
-	ListOrganizationsParamsLifecycleDisqualified   ListOrganizationsParamsLifecycle = "disqualified"
-	ListOrganizationsParamsLifecycleFormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
-	ListOrganizationsParamsLifecycleOpportunity    ListOrganizationsParamsLifecycle = "opportunity"
-	ListOrganizationsParamsLifecycleProspect       ListOrganizationsParamsLifecycle = "prospect"
-	ListOrganizationsParamsLifecycleTarget         ListOrganizationsParamsLifecycle = "target"
-	ListOrganizationsParamsLifecycleUnknown        ListOrganizationsParamsLifecycle = "unknown"
+	Customer       ListOrganizationsParamsLifecycle = "customer"
+	Disqualified   ListOrganizationsParamsLifecycle = "disqualified"
+	FormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
+	Opportunity    ListOrganizationsParamsLifecycle = "opportunity"
+	Prospect       ListOrganizationsParamsLifecycle = "prospect"
+	Target         ListOrganizationsParamsLifecycle = "target"
+	Unknown        ListOrganizationsParamsLifecycle = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationsParamsLifecycle enum.
 func (e ListOrganizationsParamsLifecycle) Valid() bool {
 	switch e {
-	case ListOrganizationsParamsLifecycleCustomer:
+	case Customer:
 		return true
-	case ListOrganizationsParamsLifecycleDisqualified:
+	case Disqualified:
 		return true
-	case ListOrganizationsParamsLifecycleFormerCustomer:
+	case FormerCustomer:
 		return true
-	case ListOrganizationsParamsLifecycleOpportunity:
+	case Opportunity:
 		return true
-	case ListOrganizationsParamsLifecycleProspect:
+	case Prospect:
 		return true
-	case ListOrganizationsParamsLifecycleTarget:
+	case Target:
 		return true
-	case ListOrganizationsParamsLifecycleUnknown:
+	case Unknown:
 		return true
 	default:
 		return false
@@ -15243,13 +15423,15 @@ func (e ListScheduledSendsParamsStatus) Valid() bool {
 
 // Defines values for SearchParamsTypes.
 const (
-	SearchParamsTypesActivity     SearchParamsTypes = "activity"
-	SearchParamsTypesDeal         SearchParamsTypes = "deal"
-	SearchParamsTypesLead         SearchParamsTypes = "lead"
-	SearchParamsTypesOrganization SearchParamsTypes = "organization"
-	SearchParamsTypesPerson       SearchParamsTypes = "person"
-	SearchParamsTypesProject      SearchParamsTypes = "project"
-	SearchParamsTypesTag          SearchParamsTypes = "tag"
+	SearchParamsTypesActivity      SearchParamsTypes = "activity"
+	SearchParamsTypesDeal          SearchParamsTypes = "deal"
+	SearchParamsTypesLead          SearchParamsTypes = "lead"
+	SearchParamsTypesOfferTemplate SearchParamsTypes = "offer_template"
+	SearchParamsTypesOrganization  SearchParamsTypes = "organization"
+	SearchParamsTypesPerson        SearchParamsTypes = "person"
+	SearchParamsTypesProduct       SearchParamsTypes = "product"
+	SearchParamsTypesProject       SearchParamsTypes = "project"
+	SearchParamsTypesTag           SearchParamsTypes = "tag"
 )
 
 // Valid indicates whether the value is a known member of the SearchParamsTypes enum.
@@ -15261,9 +15443,13 @@ func (e SearchParamsTypes) Valid() bool {
 		return true
 	case SearchParamsTypesLead:
 		return true
+	case SearchParamsTypesOfferTemplate:
+		return true
 	case SearchParamsTypesOrganization:
 		return true
 	case SearchParamsTypesPerson:
+		return true
+	case SearchParamsTypesProduct:
 		return true
 	case SearchParamsTypesProject:
 		return true
@@ -18807,6 +18993,21 @@ type CommissionSummaryRow struct {
 	// Status accrued → approved → paid, with void as the exit at any point.
 	Status CommissionStatus `json:"status"`
 }
+
+// CommunicationContext What kind of communication a message is — the closed vocabulary the engine resolves
+// to. A caller CLAIMS one and the engine checks it against the record.
+//
+// NAMED rather than repeated inline, because an inline enum that collides with another
+// schema's silently renames that one's generated constants. The send requests still
+// spell theirs inline with a nullable variant; this is the non-null shape the preview
+// and its answer share.
+//
+// The five controller-only categories (`security_notice`, `privacy_notice`,
+// `record_confirmation`, `consent_confirmation`, `optout_confirmation`) are absent by
+// design: they serve the recipient, are reserved for the installation's own mail behind
+// a registered template, and a caller that could claim one could dress marketing as a
+// security warning.
+type CommunicationContext string
 
 // CommunicationEvidence Records the caller can name in support of a send, each by id. Evidence is
 // CHECKED, never trusted: the engine reads the named record and asks whether it
@@ -28181,6 +28382,56 @@ type PreferenceCenterPurposesState string
 // PreferenceCenterRefusedReason cannot_grant: the subject is archived, so a fresh grant would re-open a capability their erasure destroyed.
 type PreferenceCenterRefusedReason string
 
+// PreviewAccountSendRequest PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
+// records this new conversation would belong to.
+type PreviewAccountSendRequest struct {
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
+
+	// ConsentPurpose The deprecated purpose key, when the composer still has one. It authorizes
+	// nothing on its own, and it is accepted here for one reason: the SEND still
+	// consults it where the record supports no category, so a preview that could not
+	// pass it would answer a different question than the send and disagree with it.
+	// Omit it and the answer is about the record alone.
+	ConsentPurpose *string                `json:"consent_purpose,omitempty"`
+	Evidence       *CommunicationEvidence `json:"evidence,omitempty"`
+
+	// Links The records the message would be filed under. They are read through the caller's
+	// own row scope before the engine sees them, so naming a record the caller cannot
+	// open is refused here rather than answered about.
+	Links            []ActivityLinkInput   `json:"links"`
+	MarketingPurpose *string               `json:"marketing_purpose,omitempty"`
+	To               []openapi_types.Email `json:"to"`
+}
+
+// PreviewSendRequest What a composer is about to write, in the shape the engine judges. It carries no
+// `body` and no `subject`: neither reaches a consent decision, and sending an unwritten
+// draft to the server to be told whether it may exist would be the wrong way round.
+type PreviewSendRequest struct {
+	// CommunicationContext What the sender says this message is. Checked against the record, never believed:
+	// a claim the record does not bear out comes back as `review` naming what is
+	// missing, rather than a quiet downgrade to something weaker that happens to be
+	// allowed.
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
+
+	// ConsentPurpose The deprecated purpose key, when the composer still has one. It authorizes
+	// nothing on its own, and it is accepted here for one reason: the SEND still
+	// consults it where the record supports no category, so a preview that could not
+	// pass it would answer a different question than the send and disagree with it.
+	// Omit it and the answer is about the record alone.
+	ConsentPurpose *string `json:"consent_purpose,omitempty"`
+
+	// Evidence Records the caller names in support of this message. Checked, never trusted.
+	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
+
+	// MarketingPurpose Which marketing purpose, when the context is `marketing`.
+	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// To The addressees. Cc and Bcc join this list at send, and both are asked about
+	// exactly as a To is — a blind copy is blind to the RECIPIENTS and never to the
+	// engine — so a composer previewing a message with copies passes them all here.
+	To []openapi_types.Email `json:"to"`
+}
+
 // Problem RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Problem struct {
 	// Code Stable machine-readable error code (e.g. duplicate_email, validation_error).
@@ -29088,9 +29339,10 @@ type RecordGrantSubjectType string
 
 // RecordQualifyingEventRequest One exchange that makes ordinary business correspondence lawful.
 type RecordQualifyingEventRequest struct {
-	// Kind Only `in_person` is accepted here. The other three kinds — inbound_message, inquiry,
-	// active_deal — are DERIVED from records the product already holds, and a hand-written
-	// one would be a second, unbacked answer to a question the data already settles.
+	// Kind Only `in_person` is accepted here. Every other kind — inbound_message, inquiry,
+	// active_deal, meeting — is DERIVED from records the product already holds, and a
+	// hand-written one would be a second, unbacked answer to a question the data already
+	// settles.
 	Kind RecordQualifyingEventRequestKind `json:"kind"`
 
 	// Note What happened, in the words of whoever was there. Required — it is the only evidence an in-person exchange has.
@@ -29100,9 +29352,10 @@ type RecordQualifyingEventRequest struct {
 	OccurredAt time.Time `json:"occurred_at"`
 }
 
-// RecordQualifyingEventRequestKind Only `in_person` is accepted here. The other three kinds — inbound_message, inquiry,
-// active_deal — are DERIVED from records the product already holds, and a hand-written
-// one would be a second, unbacked answer to a question the data already settles.
+// RecordQualifyingEventRequestKind Only `in_person` is accepted here. Every other kind — inbound_message, inquiry,
+// active_deal, meeting — is DERIVED from records the product already holds, and a
+// hand-written one would be a second, unbacked answer to a question the data already
+// settles.
 type RecordQualifyingEventRequestKind string
 
 // RecordTag One tag on one record, with the assignment that put it there.
@@ -29991,10 +30244,15 @@ type SendAccountEmailRequest struct {
 	// objected, so naming one here is refused (422 `invalid`).
 	CommunicationContext *SendAccountEmailRequestCommunicationContext `json:"communication_context,omitempty"`
 
-	// ConsentPurpose The consent purpose this send falls under. Default-deny per purpose (A22/ADR-0011):
-	// suppressed 409 `consent_not_granted` unless every recipient has an active `granted`
-	// `person_consent` for THIS purpose.
-	ConsentPurpose string `json:"consent_purpose"`
+	// ConsentPurpose DEPRECATED, and no longer required. The engine resolves what a message is from
+	// the record — the thread it answers, the deal or invoice it names, the evidence
+	// supplied in `evidence` — and a purpose key is not that. Send
+	// `communication_context` instead.
+	//
+	// A key that is still supplied is recorded as the caller's claim and is consulted
+	// only where the record supports no category on its own. An unknown or archived
+	// key authorizes nothing.
+	ConsentPurpose *string `json:"consent_purpose,omitempty"`
 
 	// DraftRef Opaque reference returned by the drafting operation, exactly as on `send_email`.
 	// Omit for independently composed mail.
@@ -30076,6 +30334,54 @@ type SendAccountEmailRequest struct {
 // objected, so naming one here is refused (422 `invalid`).
 type SendAccountEmailRequestCommunicationContext string
 
+// SendAuthorizationPreview What the engine would decide, per recipient, for a message nobody has sent.
+//
+// ADVISORY AND NOT A PROMISE. The send re-asks at staging, and a withdrawal, an
+// objection or a bounce between the two refuses with the newer answer. Nothing here is
+// recorded: no decision rows, no lawful basis.
+type SendAuthorizationPreview struct {
+	// Allowed Whether the whole message would go. A CONJUNCTION: one refused recipient refuses
+	// the message, because a rep who wrote to four people and reached three without
+	// being told which has been lied to about what happened.
+	Allowed    bool                                `json:"allowed"`
+	Recipients []SendAuthorizationPreviewRecipient `json:"recipients"`
+}
+
+// SendAuthorizationPreviewRecipient One recipient's answer. It describes the MESSAGE, never the person's file.
+type SendAuthorizationPreviewRecipient struct {
+	Address openapi_types.Email `json:"address"`
+
+	// Basis The lawful ground an allow would rest on.
+	Basis *string `json:"basis,omitempty"`
+
+	// Mode How much authority the engine's answer carries for this category on this
+	// installation. Under `observe` a `deny` here still sends, and a composer that
+	// showed it as a refusal would be describing a rollout position as a rule.
+	Mode *SendAuthorizationPreviewRecipientMode `json:"mode,omitempty"`
+
+	// ReasonCode Why, in the engine's own vocabulary — `allowed`, `no_compatible_evidence`,
+	// `marketing_objection`, `no_marketing_consent` and the rest. A composer maps it to
+	// the lawful next action it can offer; it is deliberately not a sentence about the
+	// recipient.
+	ReasonCode string `json:"reason_code"`
+
+	// ResolvedCategory What the engine worked out this message is, which may differ from the claim.
+	ResolvedCategory *CommunicationContext `json:"resolved_category,omitempty"`
+
+	// Verdict `allow` would send. `deny` would refuse. `review` is not a soft allow — it means
+	// the record does not carry this message on its own and names what is missing.
+	Verdict SendAuthorizationPreviewRecipientVerdict `json:"verdict"`
+}
+
+// SendAuthorizationPreviewRecipientMode How much authority the engine's answer carries for this category on this
+// installation. Under `observe` a `deny` here still sends, and a composer that
+// showed it as a refusal would be describing a rollout position as a rule.
+type SendAuthorizationPreviewRecipientMode string
+
+// SendAuthorizationPreviewRecipientVerdict `allow` would send. `deny` would refuse. `review` is not a soft allow — it means
+// the record does not carry this message on its own and names what is missing.
+type SendAuthorizationPreviewRecipientVerdict string
+
 // SendEmailRequest defines model for SendEmailRequest.
 type SendEmailRequest struct {
 	// AlsoLinks Records to file this reply under IN ADDITION to the ones it inherits from the
@@ -30156,10 +30462,15 @@ type SendEmailRequest struct {
 	// objected, so naming one here is refused (422 `invalid`).
 	CommunicationContext *SendEmailRequestCommunicationContext `json:"communication_context,omitempty"`
 
-	// ConsentPurpose The consent purpose this send falls under (e.g. `transactional`, `marketing_email`).
-	// The send is suppressed (409 `consent_not_granted`) unless every recipient has an active
-	// `granted` `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
-	ConsentPurpose string `json:"consent_purpose"`
+	// ConsentPurpose DEPRECATED, and no longer required. The engine resolves what a message is from
+	// the record — the thread it answers, the deal or invoice it names, the evidence
+	// supplied in `evidence` — and a purpose key is not that. Send
+	// `communication_context` instead.
+	//
+	// A key that is still supplied is recorded as the caller's claim and is consulted
+	// only where the record supports no category on its own. An unknown or archived
+	// key authorizes nothing.
+	ConsentPurpose *string `json:"consent_purpose,omitempty"`
 
 	// DraftRef Opaque reference returned by the drafting operation. After a successful send, the
 	// server compares this protected original with the final body and records accepted or
@@ -30282,10 +30593,15 @@ type SendMessageRequest struct {
 	// objected, so naming one here is refused (422 `invalid`).
 	CommunicationContext *SendMessageRequestCommunicationContext `json:"communication_context,omitempty"`
 
-	// ConsentPurpose The consent purpose this send falls under (e.g. `transactional`). The send is
-	// suppressed (409 `consent_not_granted`) unless the recipient has an active `granted`
-	// `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
-	ConsentPurpose string `json:"consent_purpose"`
+	// ConsentPurpose DEPRECATED, and no longer required. The engine resolves what a message is from
+	// the record — the thread it answers, the deal or invoice it names, the evidence
+	// supplied in `evidence` — and a purpose key is not that. Send
+	// `communication_context` instead.
+	//
+	// A key that is still supplied is recorded as the caller's claim and is consulted
+	// only where the record supports no category on its own. An unknown or archived
+	// key authorizes nothing.
+	ConsentPurpose *string `json:"consent_purpose,omitempty"`
 
 	// Evidence Records the caller names in support of this send. Checked, never trusted.
 	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
@@ -32565,7 +32881,31 @@ type Worklist struct {
 	// `due` is asked of every item whatever its level, so an overdue promise counts in
 	// both `urgent` and `due` — deliberately, because a reader wants both answers about
 	// it. Read them as four questions about one day rather than four slices of it.
+	//
+	// `buckets` IS the partition, and it is the one to render an additive sentence from.
+	// The figures above it answer four questions about the day; the four inside it slice
+	// that day into parts that sum to `total`. Both are sent because both are wanted: a
+	// reader asking "how much is overdue" wants `due` counted across every level, and a
+	// reader reading "3 urgent · 5 due today · 4 planned · 5 review — 17 total" needs the
+	// parts to add up to the whole they are shown beside.
 	Summary WorklistSummary `json:"summary"`
+
+	// Walk What has happened to this walk since it started.
+	//
+	// A walk is frozen at its first page: the rows it covers and the order they sit in
+	// are fixed, so a reader paging their morning is not overtaken by their own queue.
+	// The two figures here are what that freezing cannot hide, and both are reported
+	// rather than silently absorbed.
+	//
+	// MEMBERSHIP MOVES ONE WAY. New work does NOT join a walk in progress — it waits
+	// for the reader to refresh, which is what keeps the headline still while they page.
+	// Work that was resolved, deleted, or is no longer visible LEAVES immediately, so
+	// the remaining count can fall. A frozen figure over work somebody can no longer see
+	// or act on would be steadier and false.
+	//
+	// A client draws these as two different offers: `new_available` invites a refresh,
+	// `changed_since_snapshot` explains why the count moved. Neither is an error.
+	Walk *WorklistWalk `json:"walk,omitempty"`
 }
 
 // WorklistFilter The narrowing this read applied.
@@ -32659,6 +32999,32 @@ type WorklistBatch struct {
 // is broken, and repeating it eight times is aggregation failure rather than
 // urgency.
 type WorklistBatchKey string
+
+// WorklistBuckets The day cut into four parts that SUM TO `total`. Every candidate the read weighed
+// lands in exactly one of them.
+//
+// The order below is the order they are read in, and it is a precedence rather than a
+// set of independent tests: an overdue promise is urgent, not due-today, because the
+// first arm that matches takes the row. Without a precedence the same item would be
+// counted twice and the sentence would add up to more than the day holds.
+//
+// `review` is every row whose `destination` is not `today` — a judgement to make, a
+// source to restore, a receipt to read. It is counted from that field rather than from
+// the source, so the sentence and the screens cannot disagree about which rows are
+// seller work.
+type WorklistBuckets struct {
+	// DueToday Seller work not already counted urgent, carrying a date that has arrived or passed, or falling due before this installation day ends.
+	DueToday int `json:"due_today"`
+
+	// Planned The rest of the seller work: a task to do, a meeting to prepare, a lead to reach, a deal drifting below the material bar.
+	Planned int `json:"planned"`
+
+	// Review Everything that is not seller work — the `review`, `system_health` and `receipt` destinations together, because the one line above the queue says how much is waiting on judgement rather than which of the three kinds it is.
+	Review int `json:"review"`
+
+	// Urgent Seller work at the top two levels: somebody is waiting, or a promise is breaking. The same rule as the sibling `urgent`, narrowed to `today` rows.
+	Urgent int `json:"urgent"`
+}
 
 // WorklistComparison The first tie-break at which this item beat the one below it, with both sides'
 // values — so a row can say "above the next because it closes sooner" instead of
@@ -32827,6 +33193,21 @@ type WorklistItem struct {
 	// risk-adjusted figure the API does not compute.
 	Deal *WorklistDealFacts `json:"deal,omitempty"`
 
+	// Destination Which SCREEN this row belongs on. The server decides it once, and every count,
+	// fold and page in this response is computed from the same value the row carries,
+	// so a client that groups by it cannot disagree with the figures above it.
+	//
+	// `today` is work a seller executes. `review` is a judgement somebody must make
+	// before work continues — an approval, a duplicate pair, an introduction.
+	// `system_health` is a source or automation an administrator must restore.
+	// `receipt` is completed work, reported so the reader can see it happened.
+	//
+	// A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
+	// `source` that a browser could recompute: two rows of one source can differ,
+	// and the mapping is a product decision that moves. A client that re-derived it
+	// would put a row on one screen while the count above it put the row on another.
+	Destination *WorklistItemDestination `json:"destination,omitempty"`
+
 	// Detail One supporting line, in PROSE — a bounce reason, a park reason, the mailbox that
 	// stopped, what an AI task was about.
 	//
@@ -32899,6 +33280,26 @@ type WorklistItem struct {
 	// Overdue Past due at the read instant, resolved server-side so every surface agrees.
 	Overdue *bool `json:"overdue,omitempty"`
 
+	// Owner Who this row answers to.
+	//
+	// RESPONSIBILITY, not visibility. The two are different facts and reading one
+	// for the other is how a rep's queue fills with a colleague's work: a notice
+	// addressed to somebody else may be unreadable, and a shared deal may be
+	// readable by a whole team while exactly one person owes the next move.
+	//
+	// Stated by the PRODUCER that raised the row, never inferred downstream. A
+	// reader who can see a row is not thereby its owner; a row surviving a `mine`
+	// filter is not evidence either, because several lanes take the scope as a
+	// query argument and answer it in SQL. Both of those inferences were available
+	// here and both are wrong in the same direction — they would make every row a
+	// reader can see look like a row a reader owes.
+	//
+	// `kind: unassigned` is a real answer and the honest one for work nobody has
+	// taken. It is what the `unassigned` scope surfaces, and a row that reached a
+	// rep's Mine queue while answering `unassigned` is a bug in the lane that
+	// produced it rather than a display choice here.
+	Owner *WorklistOwner `json:"owner,omitempty"`
+
 	// Pair The two records a `dedupe_candidate` proposes to merge, and the evidence that
 	// raised it — the same payload the lane feed carries, forwarded so the decision
 	// can be MADE where it is shown rather than sent somewhere to be made.
@@ -32955,6 +33356,21 @@ type WorklistItemCategory string
 // source, because one source has several honest answers: a deal past its close
 // date slips, one merely idle drifts.
 type WorklistItemConsequence string
+
+// WorklistItemDestination Which SCREEN this row belongs on. The server decides it once, and every count,
+// fold and page in this response is computed from the same value the row carries,
+// so a client that groups by it cannot disagree with the figures above it.
+//
+// `today` is work a seller executes. `review` is a judgement somebody must make
+// before work continues — an approval, a duplicate pair, an introduction.
+// `system_health` is a source or automation an administrator must restore.
+// `receipt` is completed work, reported so the reader can see it happened.
+//
+// A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
+// `source` that a browser could recompute: two rows of one source can differ,
+// and the mapping is a product decision that moves. A client that re-derived it
+// would put a row on one screen while the count above it put the row on another.
+type WorklistItemDestination string
 
 // WorklistItemDispositions defines model for WorklistItem.Dispositions.
 type WorklistItemDispositions string
@@ -33051,6 +33467,43 @@ type WorklistMove struct {
 // read the same to a reader, so the producers drop it and send no `move`. A
 // client that meets one anyway draws nothing, which is the same outcome.
 type WorklistMoveAction string
+
+// WorklistOwner Who this row answers to.
+//
+// RESPONSIBILITY, not visibility. The two are different facts and reading one
+// for the other is how a rep's queue fills with a colleague's work: a notice
+// addressed to somebody else may be unreadable, and a shared deal may be
+// readable by a whole team while exactly one person owes the next move.
+//
+// Stated by the PRODUCER that raised the row, never inferred downstream. A
+// reader who can see a row is not thereby its owner; a row surviving a `mine`
+// filter is not evidence either, because several lanes take the scope as a
+// query argument and answer it in SQL. Both of those inferences were available
+// here and both are wrong in the same direction — they would make every row a
+// reader can see look like a row a reader owes.
+//
+// `kind: unassigned` is a real answer and the honest one for work nobody has
+// taken. It is what the `unassigned` scope surfaces, and a row that reached a
+// rep's Mine queue while answering `unassigned` is a bug in the lane that
+// produced it rather than a display choice here.
+type WorklistOwner struct {
+	// Id The owning user. Present when `kind` is `user`.
+	Id *openapi_types.UUID `json:"id,omitempty"`
+
+	// Kind Whether a person answers for this row, or nobody does yet.
+	Kind WorklistOwnerKind `json:"kind"`
+
+	// Label The owner's display name, resolved under the CALLER's own grants.
+	//
+	// Absent where the caller may not resolve it — the same refusal shape the
+	// rest of this response uses for a name it cannot read. A client draws the
+	// row without a name rather than inventing one, and never treats an absent
+	// label as an absent owner: `kind` is what says whether anybody answers.
+	Label *string `json:"label,omitempty"`
+}
+
+// WorklistOwnerKind Whether a person answers for this row, or nobody does yet.
+type WorklistOwnerKind string
 
 // WorklistPinRequest defines model for WorklistPinRequest.
 type WorklistPinRequest struct {
@@ -33203,9 +33656,30 @@ type WorklistSourceUnavailableReason string
 // `due` is asked of every item whatever its level, so an overdue promise counts in
 // both `urgent` and `due` — deliberately, because a reader wants both answers about
 // it. Read them as four questions about one day rather than four slices of it.
+//
+// `buckets` IS the partition, and it is the one to render an additive sentence from.
+// The figures above it answer four questions about the day; the four inside it slice
+// that day into parts that sum to `total`. Both are sent because both are wanted: a
+// reader asking "how much is overdue" wants `due` counted across every level, and a
+// reader reading "3 urgent · 5 due today · 4 planned · 5 review — 17 total" needs the
+// parts to add up to the whole they are shown beside.
 type WorklistSummary struct {
 	// BaseCurrency The currency every expected-revenue figure here is converted to.
 	BaseCurrency *string `json:"base_currency,omitempty"`
+
+	// Buckets The day cut into four parts that SUM TO `total`. Every candidate the read weighed
+	// lands in exactly one of them.
+	//
+	// The order below is the order they are read in, and it is a precedence rather than a
+	// set of independent tests: an overdue promise is urgent, not due-today, because the
+	// first arm that matches takes the row. Without a precedence the same item would be
+	// counted twice and the sentence would add up to more than the day holds.
+	//
+	// `review` is every row whose `destination` is not `today` — a judgement to make, a
+	// source to restore, a receipt to read. It is counted from that field rather than from
+	// the source, so the sentence and the screens cannot disagree about which rows are
+	// seller work.
+	Buckets *WorklistBuckets `json:"buckets,omitempty"`
 
 	// Due Items carrying a date that has arrived or passed.
 	Due int `json:"due"`
@@ -33250,6 +33724,59 @@ type WorklistValue struct {
 
 // WorklistValueKind defines model for WorklistValue.Kind.
 type WorklistValueKind string
+
+// WorklistWalk What has happened to this walk since it started.
+//
+// A walk is frozen at its first page: the rows it covers and the order they sit in
+// are fixed, so a reader paging their morning is not overtaken by their own queue.
+// The two figures here are what that freezing cannot hide, and both are reported
+// rather than silently absorbed.
+//
+// MEMBERSHIP MOVES ONE WAY. New work does NOT join a walk in progress — it waits
+// for the reader to refresh, which is what keeps the headline still while they page.
+// Work that was resolved, deleted, or is no longer visible LEAVES immediately, so
+// the remaining count can fall. A frozen figure over work somebody can no longer see
+// or act on would be steadier and false.
+//
+// A client draws these as two different offers: `new_available` invites a refresh,
+// `changed_since_snapshot` explains why the count moved. Neither is an error.
+type WorklistWalk struct {
+	// AsOf When this walk was assembled — the instant its order was decided.
+	//
+	// On a first page it equals the response's own `as_of`. On later pages it is
+	// OLDER, and deliberately so: it is what lets a client say how stale the walk
+	// being paged has become, rather than presenting a resumed page as freshly read.
+	AsOf time.Time `json:"as_of"`
+
+	// ChangedSinceSnapshot How many rows this walk started with that are no longer here — resolved,
+	// deleted, or no longer visible to this reader.
+	//
+	// Counted so the reader is told WHY the total fell rather than watching it move.
+	// It answers over the WHOLE walk rather than over the last page: the question a
+	// reader has is how much of their morning is already dealt with, not how much
+	// went between two clicks.
+	//
+	// It is not monotonic, and the exception is real rather than theoretical. Each
+	// page asks the question afresh against the walk's frozen list, so a row that
+	// comes BACK — a task reopened, a record whose visibility is restored — stops
+	// counting as gone and this figure falls. That is the honest answer: the row is
+	// on the reader's queue again, and reporting it as dealt with because it once
+	// was would be the number lying in the harder direction.
+	//
+	// A row missing because its own SOURCE could not be read is never counted here.
+	// The queue has no news about it, which is not the same as it being handled, and
+	// `sources_unavailable` is where that is said.
+	ChangedSinceSnapshot int `json:"changed_since_snapshot"`
+
+	// NewAvailable How much work has arrived since this walk started, and is deliberately not in
+	// it.
+	//
+	// Absent on a first page, where the question has no meaning — the walk was just
+	// assembled, so nothing can have arrived behind it yet. A client draws this as
+	// an offer to refresh, never as a count of rows the reader can reach right now:
+	// reaching them means starting a new walk.
+	NewAvailable *int `json:"new_available,omitempty"`
+}
 
 // WorkspaceEmailDomain defines model for WorkspaceEmailDomain.
 type WorkspaceEmailDomain struct {
@@ -34861,6 +35388,25 @@ type GetForecastParamsPeriod string
 
 // GetForecastParamsScopeKind defines parameters for GetForecast.
 type GetForecastParamsScopeKind string
+
+// ListForecastCallsParams defines parameters for ListForecastCalls.
+type ListForecastCallsParams struct {
+	// Period The window length. Quarters follow the installation's financial year.
+	Period *ListForecastCallsParamsPeriod `form:"period,omitempty" json:"period,omitempty"`
+
+	// AsOf Which period to read, named by a day inside it. Defaults to today, so a caller who names nothing asks about the period they are in.
+	AsOf      *openapi_types.Date               `form:"as_of,omitempty" json:"as_of,omitempty"`
+	ScopeKind *ListForecastCallsParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId Whose forecast, for a team or owner scope. A workspace scope names none.
+	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+}
+
+// ListForecastCallsParamsPeriod defines parameters for ListForecastCalls.
+type ListForecastCallsParamsPeriod string
+
+// ListForecastCallsParamsScopeKind defines parameters for ListForecastCalls.
+type ListForecastCallsParamsScopeKind string
 
 // GetForecastMovementParams defines parameters for GetForecastMovement.
 type GetForecastMovementParams struct {
@@ -37888,11 +38434,16 @@ type GetWorklistParams struct {
 	// bounded, so no arrangement of arrivals, answers and reprioritisations makes a
 	// client paging to exhaustion loop.
 	//
-	// Not guaranteed: a stable snapshot, which a set re-assembled and re-ranked on every
-	// read cannot offer. One consequence, and it is the whole cost of this design: A ROW
-	// THAT CROSSES THE PAGE BOUNDARY BETWEEN TWO READS IS SERVED TWICE OR NOT AT ALL ON
-	// THIS WALK. A deal that turns urgent moves up past where you have got to; one that
-	// is answered lets everything below it move up by one.
+	// A walk is FROZEN at its first page: the rows it covers and the order they sit in
+	// are fixed, so paging does not race the day. `walk` on the response says what has
+	// happened since — how many of those rows have gone, and how much has arrived that is
+	// deliberately not in this walk. Membership moves one way: new work waits for a fresh
+	// read, work that was resolved or is no longer visible leaves at once.
+	//
+	// An installation that does not hold walks pages the older way instead, and there the
+	// cost is real and worth stating: A ROW THAT CROSSES THE PAGE BOUNDARY BETWEEN TWO
+	// READS IS SERVED TWICE OR NOT AT ALL. A deal that turns urgent moves up past where
+	// you have got to; one that is answered lets everything below it move up by one.
 	//
 	// Such a row is not lost from the product — the next read of the queue ranks it
 	// afresh and shows it — so treat a walk as a way to reach a backlog you already know
@@ -37987,6 +38538,9 @@ type RelinkActivityJSONRequestBody RelinkActivityJSONBody
 
 // SendEmailJSONRequestBody defines body for SendEmail for application/json ContentType.
 type SendEmailJSONRequestBody = SendEmailRequest
+
+// PreviewSendAuthorizationJSONRequestBody defines body for PreviewSendAuthorization for application/json ContentType.
+type PreviewSendAuthorizationJSONRequestBody = PreviewSendRequest
 
 // SendMessageJSONRequestBody defines body for SendMessage for application/json ContentType.
 type SendMessageJSONRequestBody = SendMessageRequest
@@ -38218,6 +38772,9 @@ type DisposeDedupeCandidateJSONRequestBody = DedupeDispositionRequest
 
 // SendAccountEmailJSONRequestBody defines body for SendAccountEmail for application/json ContentType.
 type SendAccountEmailJSONRequestBody = SendAccountEmailRequest
+
+// PreviewAccountSendAuthorizationJSONRequestBody defines body for PreviewAccountSendAuthorization for application/json ContentType.
+type PreviewAccountSendAuthorizationJSONRequestBody = PreviewAccountSendRequest
 
 // EmbedReindexStartJSONRequestBody defines body for EmbedReindexStart for application/json ContentType.
 type EmbedReindexStartJSONRequestBody = EmbedReindexStartRequest
@@ -46480,6 +47037,9 @@ type ServerInterface interface {
 	// Send a (possibly edited) email draft — runs directly, consent-gated.
 	// (POST /activities/{id}/send-email)
 	SendEmail(w http.ResponseWriter, r *http.Request, id Id, params SendEmailParams)
+	// Would this reply be allowed, and on what ground — asked before a word is typed.
+	// (POST /activities/{id}/send-email:preview)
+	PreviewSendAuthorization(w http.ResponseWriter, r *http.Request, id Id)
 	// Reply on a captured messaging-channel conversation — runs directly, consent-gated.
 	// (POST /activities/{id}/send-message)
 	SendMessage(w http.ResponseWriter, r *http.Request, id Id, params SendMessageParams)
@@ -47068,6 +47628,9 @@ type ServerInterface interface {
 	// Start a new email conversation from a record — runs directly, consent-gated.
 	// (POST /emails)
 	SendAccountEmail(w http.ResponseWriter, r *http.Request, params SendAccountEmailParams)
+	// Would this account-started message be allowed, and on what ground.
+	// (POST /emails:preview)
+	PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request)
 	// Confirm and start a fleet-wide reindex.
 	// (POST /embeddings/reindex)
 	EmbedReindexStart(w http.ResponseWriter, r *http.Request)
@@ -47104,6 +47667,9 @@ type ServerInterface interface {
 	// Answer a finding from the nightly input check.
 	// (POST /forecast/assurance/exceptions/{id}/resolve)
 	ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// What this period's forecast has been called, newest first.
+	// (GET /forecast/calls)
+	ListForecastCalls(w http.ResponseWriter, r *http.Request, params ListForecastCallsParams)
 	// Record what somebody believes will close.
 	// (POST /forecast/calls)
 	RecordForecastCall(w http.ResponseWriter, r *http.Request)
@@ -48286,6 +48852,12 @@ func (_ Unimplemented) SendEmail(w http.ResponseWriter, r *http.Request, id Id, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Would this reply be allowed, and on what ground — asked before a word is typed.
+// (POST /activities/{id}/send-email:preview)
+func (_ Unimplemented) PreviewSendAuthorization(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Reply on a captured messaging-channel conversation — runs directly, consent-gated.
 // (POST /activities/{id}/send-message)
 func (_ Unimplemented) SendMessage(w http.ResponseWriter, r *http.Request, id Id, params SendMessageParams) {
@@ -49462,6 +50034,12 @@ func (_ Unimplemented) SendAccountEmail(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Would this account-started message be allowed, and on what ground.
+// (POST /emails:preview)
+func (_ Unimplemented) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Confirm and start a fleet-wide reindex.
 // (POST /embeddings/reindex)
 func (_ Unimplemented) EmbedReindexStart(w http.ResponseWriter, r *http.Request) {
@@ -49531,6 +50109,12 @@ func (_ Unimplemented) ListInputChecks(w http.ResponseWriter, r *http.Request) {
 // Answer a finding from the nightly input check.
 // (POST /forecast/assurance/exceptions/{id}/resolve)
 func (_ Unimplemented) ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What this period's forecast has been called, newest first.
+// (GET /forecast/calls)
+func (_ Unimplemented) ListForecastCalls(w http.ResponseWriter, r *http.Request, params ListForecastCallsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -52731,6 +53315,38 @@ func (siw *ServerInterfaceWrapper) SendEmail(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SendEmail(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewSendAuthorization operation middleware
+func (siw *ServerInterfaceWrapper) PreviewSendAuthorization(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewSendAuthorization(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -60513,6 +61129,26 @@ func (siw *ServerInterfaceWrapper) SendAccountEmail(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// PreviewAccountSendAuthorization operation middleware
+func (siw *ServerInterfaceWrapper) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewAccountSendAuthorization(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // EmbedReindexStart operation middleware
 func (siw *ServerInterfaceWrapper) EmbedReindexStart(w http.ResponseWriter, r *http.Request) {
 
@@ -60927,6 +61563,86 @@ func (siw *ServerInterfaceWrapper) ResolveInputCheck(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ResolveInputCheck(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListForecastCalls operation middleware
+func (siw *ServerInterfaceWrapper) ListForecastCalls(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListForecastCallsParams
+
+	// ------------- Optional query parameter "period" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period", r.URL.Query(), &params.Period, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "as_of" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "as_of", r.URL.Query(), &params.AsOf, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "as_of"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "as_of", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListForecastCalls(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -76801,6 +77517,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/activities/{id}/send-email", wrapper.SendEmail)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/send-email:preview", wrapper.PreviewSendAuthorization)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/send-message", wrapper.SendMessage)
 	})
 	r.Group(func(r chi.Router) {
@@ -77389,6 +78108,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/emails", wrapper.SendAccountEmail)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/emails:preview", wrapper.PreviewAccountSendAuthorization)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/embeddings/reindex", wrapper.EmbedReindexStart)
 	})
 	r.Group(func(r chi.Router) {
@@ -77423,6 +78145,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/assurance/exceptions/{id}/resolve", wrapper.ResolveInputCheck)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/calls", wrapper.ListForecastCalls)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/calls", wrapper.RecordForecastCall)

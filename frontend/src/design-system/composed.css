@@ -53,7 +53,7 @@
   background: var(--bgCard);
 }
 .board-col-head .stage {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--textPrimary);
   flex: 1;
@@ -72,13 +72,13 @@
    any length. `flex: none` is what keeps the name's ellipsis from eating it. */
 .board-col-head .board-col-count {
   flex: none;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--textPrimary);
 }
 .board-col-head .prob {
   font-family: var(--f-mono);
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   color: var(--textMeta);
 }
 /* Two lines rather than three figures fighting for one: a stage column is
@@ -87,7 +87,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
   padding: 0 4px 4px;
 }
@@ -136,7 +136,7 @@
   border-style: dashed;
 }
 .deal-card .deal-name {
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--textPrimary);
 }
@@ -144,7 +144,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
   min-width: 0;
 }
@@ -166,7 +166,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-1) 7px;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
 }
 .deal-card .deal-meta > * {
@@ -174,7 +174,7 @@
 }
 .deal-card .deal-value {
   font-family: var(--f-mono);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
 
@@ -196,6 +196,10 @@
  * beside the chips rather than beside the name it belongs to. */
 .record-head-wide {
   align-items: flex-start;
+  /* The name's rung answers to THIS row's width rather than the window's, so
+     the row has to be measurable. It is the record page's own width — the
+     details pane sits below it and does not narrow it, the nav rail does. */
+  container-type: inline-size;
 }
 .record-head-wide .record-controls {
   display: flex;
@@ -230,6 +234,13 @@
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
+  /* The floor the h1's own ellipsis needs to mean anything. A flex item's
+     minimum is its min-content, and a name set `nowrap` has no break in it —
+     so without this the row's minimum is the whole name, the identity block
+     inherits it, and the verbs beside it are pushed to a row of their own
+     rather than the name being cut. It is the name that gives way: the verbs
+     are the same four whatever the record is called. */
+  min-width: 0;
 }
 /* Small and tinted rather than the button-sized accent badge every other
    inline choice draws elsewhere on the page — beside a 22-34px name it
@@ -238,8 +249,8 @@
    case for every other reader of the same translation key (aria-label,
    the edit form). */
 .record-name-row .badge {
-  font-size: 11px;
-  letter-spacing: 0.02em;
+  font-size: var(--fs-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
 }
 /* One line, cut with an ellipsis. A name long enough to wrap would push the
@@ -250,7 +261,7 @@
    standing badge beside it on the same row. */
 .record-head h1 {
   font-family: var(--f-display);
-  font-size: 22px;
+  font-size: var(--fs-h1);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
@@ -264,11 +275,33 @@
    than the list-row avatar it shares a component with. The list keeps its own
    compact sizes — this applies only where the header runs wide. */
 .record-head-wide h1 {
-  font-size: var(--fs-display);
-  line-height: 1.1;
+  font-size: var(--fs-record-fluid);
+  line-height: 1.05;
+  /* Tighter than the display rung's tracking: a name set this large wears the
+     scale's own spacing as gaps between its letters. */
+  letter-spacing: -0.035em; /* ds:ignore optical, at the record rung's fluid size: --tracking-display reads as gaps between letters this large */
+}
+/* The record page's verbs are the page's own rather than a toolbar's: one rung
+   taller than a control in a form, beside a name at the record rung. Below
+   that they read as chrome that happens to sit near the name.
+
+   Set on the ROW's rung variable rather than on each button, because
+   `.record-actions` spends that one variable on both shapes it holds: raising
+   the labelled buttons alone is exactly how the ellipsis square came to be 32
+   wide beside 40-tall neighbours once already.
+
+   A descendant selector reaches every verb a wide head has: `RecordView` draws
+   this header wide only when it was handed `controls` or `actionsInline`, and
+   both of those place the verbs INSIDE it. The row below the header belongs to
+   the narrow head, which keeps the form rung. */
+.record-head-wide .record-actions {
+  --control-h: var(--control-h-lg);
+}
+.record-head-wide .record-actions > .btn {
+  padding-inline: var(--space-4);
 }
 .record-head .record-sub {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.5;
   color: var(--textMeta);
 }
@@ -292,7 +325,7 @@
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 4px;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--textMeta);
 }
 /* A wide header's pulse is a STACK, not a row: the record page puts two blocks
@@ -627,6 +660,7 @@
   inline-size: 0.5rem;
   block-size: 0.5rem;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--textMeta);
   border: 1px solid var(--textMeta);
 }
@@ -648,7 +682,7 @@
    pill on every row read as a column of statuses. */
 .timeline .tl-head .badge {
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-eyebrow);
   font-size: var(--fs-eyebrow);
   font-weight: var(--fw-semibold);
   background: none;
@@ -686,6 +720,7 @@
   width: 24px;
   height: 24px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
   display: grid;
@@ -709,7 +744,7 @@
    with, what changed — qualifies this line, and set at the same weight as its
    qualifiers the reader had to read all four to find out what happened. */
 .timeline .tl-title {
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   font-weight: var(--fw-semibold);
   line-height: 1.35;
   color: var(--textPrimary);
@@ -732,7 +767,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
 }
 
@@ -755,7 +790,7 @@
 /* The term in a firmographics pair is an eyebrow: the markup carries
    .t-eyebrow, so this sheet no longer keeps its own near-copy of that type. */
 .firmo dd {
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   color: var(--textContent);
 }
 
@@ -768,14 +803,14 @@
   gap: 8px 16px;
 }
 .detail-grid dt {
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: var(--tracking-eyebrow);
   color: var(--textMeta);
 }
 .detail-grid dd {
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   color: var(--textContent);
 }
 
@@ -796,11 +831,12 @@
   margin: 0;
 }
 .stepper .step {
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--textMeta);
   background: var(--bgCard);
   border-radius: var(--r-full);
+  corner-shape: round;
   padding: 4px 12px;
   border: 0;
   font-family: var(--f-body);
@@ -870,7 +906,7 @@
   overflow: hidden;
   white-space: pre-wrap;
   color: var(--textMeta);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.45;
 }
 
@@ -878,7 +914,7 @@
   display: block;
   white-space: pre-wrap;
   color: var(--textPrimary);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.45;
 }
 
@@ -888,7 +924,7 @@
   padding: 0;
   margin-top: var(--space-1);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--accentText);
   cursor: pointer;
 }
@@ -914,7 +950,7 @@
   border-inline-start: 2px solid var(--borderSubtle);
   white-space: pre-wrap;
   color: var(--textMeta);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.45;
 }
 
@@ -933,8 +969,8 @@
    row still declares its direction for anything else reading it. */
 
 .tl-direction {
-  font-size: 11px;
-  letter-spacing: 0.04em;
+  font-size: var(--fs-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
   color: var(--textMeta);
 }

@@ -415,7 +415,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
         section={fixtureSection("account")}
       />,
     );
-    // The destinations are GONE, not pushed below a second list: 64px cannot
+    // The destinations are GONE, not pushed below a second list: 56px cannot
     // carry two levels and 224px carrying both is a list of twenty places to go.
     expect(screen.queryByRole("link", { name: "Pipeline" })).toBeNull();
     expect(levelLabels()).toEqual(["Account", "Privacy & audit"]);
