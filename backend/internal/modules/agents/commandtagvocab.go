@@ -40,9 +40,15 @@ func NewMergeTagsCall(tags Tags, cmd MergeTagsCommand) GovernedCall {
 
 type mergeTagsResolver struct{ tags Tags }
 
-// Subject names the SOURCE tag, which is the row the merge destroys: the
-// target survives the act unchanged in every column, so an approval bound to
-// it would pin a version nothing is about to move.
+// Subject names the SOURCE tag as the target — the row the merge destroys —
+// and the SURVIVOR as the co-target.
+//
+// Both are pinned, because both are the decision. The survivor comes through
+// the act unchanged in every column, which is why it looked like it needed no
+// pin; the pin is not there to catch what the merge writes, it is there to
+// catch what somebody ELSE writes while the card waits. A survivor renamed
+// between the staging and the release turns "fold A into B" into "fold A into
+// whatever B is called now", and the human approved the first sentence.
 //
 // The summary spells BOTH words, because the two tags are the whole of the
 // decision and the inbox shows nothing else about them. A human releasing
@@ -65,8 +71,10 @@ func (r *mergeTagsResolver) Subject(ctx context.Context, cmd MergeTagsCommand) (
 		return StageInfo{}, err
 	}
 	return StageInfo{
-		TargetType: tagRecordType,
-		TargetID:   cmd.SourceID,
+		TargetType:   tagRecordType,
+		TargetID:     cmd.SourceID,
+		CoTargetType: tagRecordType,
+		CoTargetID:   cmd.TargetID,
 		Summary: fmt.Sprintf("Fold tag %q into %q, releasing the name %q",
 			source.Name, target.Name, source.Name),
 	}, nil

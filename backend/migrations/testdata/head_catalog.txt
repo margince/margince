@@ -665,6 +665,7 @@ public.app_user.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.app_user.weekly_delivery text gen=- def=-
 public.app_user_pkey CREATE UNIQUE INDEX app_user_pkey ON public.app_user USING btree (id)
 public.approval acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.approval.approval_co_target_whole CHECK ((((co_target_entity_type IS NULL) AND (co_target_entity_id IS NULL) AND (co_target_version IS NULL)) OR ((co_target_entity_type IS NOT NULL) AND (co_target_entity_id IS NOT NULL) AND (co_target_version IS NOT NULL))))
 public.approval.approval_decided CHECK ((((status = 'pending'::text) AND (decided_at IS NULL)) OR (status = 'expired'::text) OR ((status = ANY (ARRAY['approved'::text, 'rejected'::text])) AND (decided_at IS NOT NULL))))
 public.approval.approval_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES app_user(id) ON DELETE SET NULL (decided_by)
 public.approval.approval_effect_failure_is_stated CHECK (((effect_failed_at IS NULL) = (effect_failure IS NULL))) NOT VALID
@@ -673,6 +674,9 @@ public.approval.approval_passport_id_fkey FOREIGN KEY (passport_id) REFERENCES p
 public.approval.approval_pkey PRIMARY KEY (id)
 public.approval.approval_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'expired'::text])))
 public.approval.bundle_id uuid gen=- def=-
+public.approval.co_target_entity_id uuid gen=- def=-
+public.approval.co_target_entity_type text gen=- def=-
+public.approval.co_target_version bigint gen=- def=-
 public.approval.consumed_at timestamp with time zone gen=- def=-
 public.approval.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.approval.decided_at timestamp with time zone gen=- def=-

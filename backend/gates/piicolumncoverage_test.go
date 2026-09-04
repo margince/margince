@@ -112,7 +112,12 @@ var erasureColumnBaseline = map[string][]string{
 		"effect_failure",
 		"kind",
 		"proposed_by",
+		// Both are a TABLE NAME — "tag", "deal" — naming which kind of row the
+		// approval pins, never anything a subject wrote or anything written
+		// about them. The ids and versions beside them are not text and are
+		// outside this gate's subject.
 		"target_entity_type",
+		"co_target_entity_type",
 	},
 	"comms_outbound": {
 		// The controller lane's vocabulary: which kind of sender, and which
