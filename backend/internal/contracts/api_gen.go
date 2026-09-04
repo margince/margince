@@ -7372,6 +7372,24 @@ func (e OrganizationSizeBand) Valid() bool {
 	}
 }
 
+// Defines values for OrganizationVisibility.
+const (
+	OrganizationVisibilityOwner     OrganizationVisibility = "owner"
+	OrganizationVisibilityWorkspace OrganizationVisibility = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the OrganizationVisibility enum.
+func (e OrganizationVisibility) Valid() bool {
+	switch e {
+	case OrganizationVisibilityOwner:
+		return true
+	case OrganizationVisibilityWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Organization360SectionsOmitted.
 const (
 	Organization360SectionsOmittedActivities       Organization360SectionsOmitted = "activities"
@@ -8518,6 +8536,24 @@ func (e PartnerRelationshipStage) Valid() bool {
 	case PartnerRelationshipStageNoFit:
 		return true
 	case PartnerRelationshipStageResearch:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PersonVisibility.
+const (
+	PersonVisibilityOwner     PersonVisibility = "owner"
+	PersonVisibilityWorkspace PersonVisibility = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the PersonVisibility enum.
+func (e PersonVisibility) Valid() bool {
+	switch e {
+	case PersonVisibilityOwner:
+		return true
+	case PersonVisibilityWorkspace:
 		return true
 	default:
 		return false
@@ -13488,6 +13524,7 @@ const (
 	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
 	WorklistReasonKindMeetingUnprepared  WorklistReasonKind = "meeting_unprepared"
 	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
+	WorklistReasonKindNoReplyHistory     WorklistReasonKind = "no_reply_history"
 	WorklistReasonKindOverdue            WorklistReasonKind = "overdue"
 	WorklistReasonKindPinned             WorklistReasonKind = "pinned"
 	WorklistReasonKindPromised           WorklistReasonKind = "promised"
@@ -13527,6 +13564,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindMeetingUnprepared:
 		return true
 	case WorklistReasonKindNoChampion:
+		return true
+	case WorklistReasonKindNoReplyHistory:
 		return true
 	case WorklistReasonKindOverdue:
 		return true
@@ -14895,19 +14934,19 @@ func (e ListPeopleParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListPeopleParamsTagMode.
 const (
-	ListPeopleParamsTagModeAll  ListPeopleParamsTagMode = "all"
-	ListPeopleParamsTagModeAny  ListPeopleParamsTagMode = "any"
-	ListPeopleParamsTagModeNone ListPeopleParamsTagMode = "none"
+	All  ListPeopleParamsTagMode = "all"
+	Any  ListPeopleParamsTagMode = "any"
+	None ListPeopleParamsTagMode = "none"
 )
 
 // Valid indicates whether the value is a known member of the ListPeopleParamsTagMode enum.
 func (e ListPeopleParamsTagMode) Valid() bool {
 	switch e {
-	case ListPeopleParamsTagModeAll:
+	case All:
 		return true
-	case ListPeopleParamsTagModeAny:
+	case Any:
 		return true
-	case ListPeopleParamsTagModeNone:
+	case None:
 		return true
 	default:
 		return false
@@ -22114,6 +22153,13 @@ type HeldThreadListResponse struct {
 // HiddenBacklog How much waiting work each hiding rule is keeping off one reader's queue, at one
 // instant. Every count is of THREADS, matching what the queue counts: a customer who
 // wrote three times is waiting once.
+//
+// THE FIGURES DO NOT ADD UP, and that is deliberate. Each is the difference made by
+// relaxing ONE rule with the others still in force, because a reader needs to know
+// which rule to look at rather than a total they cannot act on. A thread held back
+// by two rules therefore appears in NEITHER figure: relaxing either one alone still
+// leaves the other hiding it. Summing these to estimate the hidden total
+// under-reports it.
 type HiddenBacklog struct {
 	// AsOf The instant every figure below was read at.
 	AsOf time.Time `json:"as_of"`
@@ -22122,6 +22168,16 @@ type HiddenBacklog struct {
 	// guardrail's target, sent as its own field because a number only ever read beside
 	// other numbers becomes decoration — this is what a check asserts on.
 	Clear bool `json:"clear"`
+
+	// Colleagues Mail from one of the workspace's own email domains. ALSO NOBODY'S CHOICE, and
+	// watched because the rule is only as good as the domain list behind it: a
+	// domain entered by mistake suppresses a real customer's correspondence for
+	// everybody, and this is the figure that would show it.
+	//
+	// The domains are the vouched-for ones — those the company claims and those an
+	// administrator confirmed — never every domain a connected mailbox happened to
+	// see. A contractor's genuine account at a customer must not read as internal.
+	Colleagues int `json:"colleagues"`
 
 	// NotSales Work somebody judged to be no business of the queue's. SOMEBODY'S CHOICE, and
 	// the judgement worth watching: it hides the thread from the WHOLE workspace and
@@ -24924,6 +24980,9 @@ type Organization struct {
 	// not only overlay mode.
 	Version *RowVersion `json:"version,omitempty"`
 
+	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for an organization: `POST /people/{id}/publish` is a person's.
+	Visibility *OrganizationVisibility `json:"visibility,omitempty"`
+
 	// WebsiteUrl The company's readable website, DERIVED from its primary domain row. There is deliberately no website column — a second store for a fact organization_domain already owns is the duplication ADR-0085 closes. Not accepted on write.
 	WebsiteUrl *string `json:"website_url,omitempty"`
 
@@ -24943,6 +25002,9 @@ type OrganizationRelationshipTypes string
 
 // OrganizationSizeBand defines model for Organization.SizeBand.
 type OrganizationSizeBand string
+
+// OrganizationVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for an organization: `POST /people/{id}/publish` is a person's.
+type OrganizationVisibility string
 
 // Organization360 The company record page in one payload. Every section except `organization` is
 // optional: absent means the caller lacks its grant, and `sections_omitted` names it.
@@ -26906,10 +26968,16 @@ type Person struct {
 	// not only overlay mode.
 	Version *RowVersion `json:"version,omitempty"`
 
+	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /people/{id}/publish`, and never travels back.
+	Visibility *PersonVisibility `json:"visibility,omitempty"`
+
 	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// PersonVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /people/{id}/publish`, and never travels back.
+type PersonVisibility string
 
 // Person360 The person record page in one payload (PO-EXT-3). Every section except `person` is
 // optional: absent means the caller lacks its grant, and `sections_omitted` names it.
@@ -42941,6 +43009,14 @@ func (a *Organization) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["visibility"]; found {
+		err = json.Unmarshal(raw, &a.Visibility)
+		if err != nil {
+			return fmt.Errorf("error reading 'visibility': %w", err)
+		}
+		delete(object, "visibility")
+	}
+
 	if raw, found := object["website_url"]; found {
 		err = json.Unmarshal(raw, &a.WebsiteUrl)
 		if err != nil {
@@ -43178,6 +43254,13 @@ func (a Organization) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.Visibility != nil {
+		object["visibility"], err = json.Marshal(a.Visibility)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'visibility': %w", err)
 		}
 	}
 
@@ -43421,6 +43504,14 @@ func (a *Person) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["visibility"]; found {
+		err = json.Unmarshal(raw, &a.Visibility)
+		if err != nil {
+			return fmt.Errorf("error reading 'visibility': %w", err)
+		}
+		delete(object, "visibility")
+	}
+
 	if raw, found := object["writable"]; found {
 		err = json.Unmarshal(raw, &a.Writable)
 		if err != nil {
@@ -43601,6 +43692,13 @@ func (a Person) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.Visibility != nil {
+		object["visibility"], err = json.Marshal(a.Visibility)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'visibility': %w", err)
 		}
 	}
 
@@ -47279,6 +47377,9 @@ type ServerInterface interface {
 	// Put back the value a newer statement replaced.
 	// (POST /people/{id}/profile-fields/{field}/restore)
 	RestorePersonProfileField(w http.ResponseWriter, r *http.Request, id Id, field PersonProfileFieldKey)
+	// Share a contact your mailbox created with the rest of the organization.
+	// (POST /people/{id}/publish)
+	PublishCapturedPerson(w http.ResponseWriter, r *http.Request, id Id)
 	// Ask the connected provider what is publicly known about this person.
 	// (POST /people/{id}/research)
 	RunPersonResearch(w http.ResponseWriter, r *http.Request, id Id)
@@ -50252,6 +50353,12 @@ func (_ Unimplemented) GetPersonProfileFields(w http.ResponseWriter, r *http.Req
 // Put back the value a newer statement replaced.
 // (POST /people/{id}/profile-fields/{field}/restore)
 func (_ Unimplemented) RestorePersonProfileField(w http.ResponseWriter, r *http.Request, id Id, field PersonProfileFieldKey) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Share a contact your mailbox created with the rest of the organization.
+// (POST /people/{id}/publish)
+func (_ Unimplemented) PublishCapturedPerson(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -68539,6 +68646,38 @@ func (siw *ServerInterfaceWrapper) RestorePersonProfileField(w http.ResponseWrit
 	handler.ServeHTTP(w, r)
 }
 
+// PublishCapturedPerson operation middleware
+func (siw *ServerInterfaceWrapper) PublishCapturedPerson(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PublishCapturedPerson(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RunPersonResearch operation middleware
 func (siw *ServerInterfaceWrapper) RunPersonResearch(w http.ResponseWriter, r *http.Request) {
 
@@ -77341,6 +77480,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/profile-fields/{field}/restore", wrapper.RestorePersonProfileField)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/people/{id}/publish", wrapper.PublishCapturedPerson)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/research", wrapper.RunPersonResearch)

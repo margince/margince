@@ -100,6 +100,11 @@ type HiddenBacklog struct {
 	// customer lands when capture failed to link their thread. That ambiguity is
 	// why it is its own figure rather than folded into a total.
 	Unlinked int
+	// Colleagues is mail from our own email domains. Nobody's choice either,
+	// and the figure matters because the rule is only as good as the domain
+	// list behind it: a domain entered by mistake suppresses a real customer's
+	// correspondence workspace-wide, and this is the number that would show it.
+	Colleagues int
 }
 
 // Clear reports whether nothing is being held back.
@@ -112,7 +117,8 @@ type HiddenBacklog struct {
 // when the scan stopped before the question was settled.
 func (h HiddenBacklog) Clear() bool {
 	return !h.Truncated &&
-		h.SetAside == 0 && h.NotSales == 0 && h.PastHorizon == 0 && h.Unlinked == 0
+		h.SetAside == 0 && h.NotSales == 0 && h.PastHorizon == 0 && h.Unlinked == 0 &&
+		h.Colleagues == 0
 }
 
 // HiddenWaiting counts what each hiding rule is keeping off this reader's queue.
@@ -160,6 +166,7 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 			{&out.NotSales, waitingRelaxation{reader: reader, keepNotSales: true}},
 			{&out.PastHorizon, waitingRelaxation{reader: reader, wholeHorizon: true}},
 			{&out.Unlinked, waitingRelaxation{reader: reader, keepUnlinked: true}},
+			{&out.Colleagues, waitingRelaxation{reader: reader, keepColleagues: true}},
 		} {
 			widened, err := s.countWaiting(ctx, tx, asOf, relaxed.with)
 			if err != nil {
@@ -204,6 +211,8 @@ type waitingRelaxation struct {
 	wholeHorizon bool
 	// keepUnlinked admits inbound mail attached to no sales record.
 	keepUnlinked bool
+	// keepColleagues admits mail from our own email domains.
+	keepColleagues bool
 }
 
 // countWaiting runs the waiting query under one relaxation and counts its rows.
@@ -235,12 +244,19 @@ func (s *Store) countWaiting(
 	// it is the right one here: a relaxation admits every row the clause would
 	// have removed, which is the same "no bound applies" this constant already
 	// spells everywhere a scope is absent.
-	notSales, unlinked := neverRelaxed, neverRelaxed
+	notSales, unlinked, colleague := neverRelaxed, neverRelaxed, neverRelaxed
 	if relax.keepNotSales {
 		notSales = scopeUnbounded
 	}
 	if relax.keepUnlinked {
 		unlinked = scopeUnbounded
+	}
+	if relax.keepColleagues {
+		colleague = scopeUnbounded
+	}
+	ownDomains, err := s.ownDomainList(ctx, tx)
+	if err != nil {
+		return 0, err
 	}
 	inner := fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 		horizon,
@@ -250,7 +266,8 @@ func (s *Store) countWaiting(
 		liveRecord(openDealPredicate, "fd"),
 		arg(relax.reader),
 		scopeUnbounded,
-		notSales, unlinked)
+		notSales, unlinked,
+		colleague, ownDomainSenderSQL("a", arg(ownDomains)))
 	var count int
 	// Counted around the whole statement rather than by replacing its SELECT
 	// list: the query GROUPs and LIMITs, so the row count IS the answer and a

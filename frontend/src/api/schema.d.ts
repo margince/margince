@@ -8688,6 +8688,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Share a contact your mailbox created with the rest of the organization.
+         * @description A contact a connector created from a message nothing had judged yet is yours alone until
+         *     something judges it. Usually that is the sender classifier. This is the door for when it
+         *     never will: the ceiling on open questions refused to ask and the correspondence went quiet,
+         *     or the answer was `advisor` and you disagree, or you simply know who this is.
+         *
+         *     The OWNER is taken from your session, never from the request. That is what ties the
+         *     authority to the row: naming somebody else's capture-private contact answers 404, the same
+         *     as a contact that does not exist, because existence is what capture privacy hides. It is
+         *     also why an admin cannot do this on your behalf — the boundary is the importing user's, and
+         *     a seniority override would be the disclosure it exists to prevent.
+         *
+         *     The contact's own mail and meetings follow it, so a colleague opening the record finds the
+         *     history rather than a name nobody has ever spoken to. Individual messages keep their own
+         *     audience: publishing the CONTACT is not publishing the correspondence.
+         *
+         *     One direction only. A contact the organization can see is not narrowed back by this door or
+         *     any other, because a colleague may already have written to them on the strength of seeing
+         *     them.
+         */
+        post: operations["publishCapturedPerson"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{id}/consent/confirm-request": {
         parameters: {
             query?: never;
@@ -16216,6 +16256,11 @@ export interface components {
             title?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
+            /**
+             * @description Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /people/{id}/publish`, and never travels back.
+             * @enum {string}
+             */
+            readonly visibility?: "workspace" | "owner";
             /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
             /** @description { linkedin, twitter, github, ... } */
@@ -16465,6 +16510,11 @@ export interface components {
             address?: components["schemas"]["Address"];
             /** Format: uuid */
             owner_id?: string | null;
+            /**
+             * @description Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for an organization: `POST /people/{id}/publish` is a person's.
+             * @enum {string}
+             */
+            readonly visibility?: "workspace" | "owner";
             /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
             /**
@@ -28743,6 +28793,13 @@ export interface components {
          * @description How much waiting work each hiding rule is keeping off one reader's queue, at one
          *     instant. Every count is of THREADS, matching what the queue counts: a customer who
          *     wrote three times is waiting once.
+         *
+         *     THE FIGURES DO NOT ADD UP, and that is deliberate. Each is the difference made by
+         *     relaxing ONE rule with the others still in force, because a reader needs to know
+         *     which rule to look at rather than a total they cannot act on. A thread held back
+         *     by two rules therefore appears in NEITHER figure: relaxing either one alone still
+         *     leaves the other hiding it. Summing these to estimate the hidden total
+         *     under-reports it.
          */
         HiddenBacklog: {
             /**
@@ -28806,6 +28863,17 @@ export interface components {
              *     that reason rather than folded into a total.
              */
             unlinked: number;
+            /**
+             * @description Mail from one of the workspace's own email domains. ALSO NOBODY'S CHOICE, and
+             *     watched because the rule is only as good as the domain list behind it: a
+             *     domain entered by mistake suppresses a real customer's correspondence for
+             *     everybody, and this is the figure that would show it.
+             *
+             *     The domains are the vouched-for ones — those the company claims and those an
+             *     administrator confirmed — never every domain a connected mailbox happened to
+             *     see. A contractor's genuine account at a customer must not read as internal.
+             */
+            colleagues: number;
             /**
              * @description True when a read stopped at its own scan bound, which makes every figure above
              *     it a FLOOR rather than a count.
@@ -29033,7 +29101,7 @@ export interface components {
              * @description Which fact this is. The client writes the phrase.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale";
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
@@ -43086,6 +43154,30 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    publishCapturedPerson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The contact is the organization's. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     requestDetailsConfirmation: {

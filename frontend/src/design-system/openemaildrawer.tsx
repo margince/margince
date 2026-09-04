@@ -3,6 +3,7 @@
 
 import { formatDateTime } from "../format/format";
 import { useLocale } from "../i18n";
+import { EmailAccessEditor } from "../screens/emailaccesseditor";
 import { EmailDetail } from "./emaildetail";
 
 /**
@@ -12,6 +13,11 @@ import { EmailDetail } from "./emaildetail";
  * mount the same three lines, and `{openEmail && <EmailDetail …/>}` spends a
  * branch inside render callbacks that are already at the complexity ceiling.
  * Nothing is drawn when no message is open.
+ *
+ * This is also where the access editor is bound, so every page that mounts the
+ * drawer gets it. `EmailDetail` takes it as a render prop and never imports it:
+ * the editor performs writes and reads the roster, which is screen work, and
+ * the catalog component stays something a story can draw with no API behind it.
  */
 export function OpenEmailDrawer({
   activityId,
@@ -32,6 +38,9 @@ export function OpenEmailDrawer({
       activityId={activityId}
       onClose={onClose}
       formatWhen={(iso) => formatDateTime(iso, locale, zone)}
+      renderAccess={(presentation) => (
+        <EmailAccessEditor presentation={presentation} />
+      )}
     />
   );
 }

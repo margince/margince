@@ -1572,6 +1572,13 @@ export const en = {
   "email.access.participants": "Participants",
   "email.access.selected": "Selected",
   "email.access.withheld": "Withheld",
+  "email.access.sentence.team": "Everyone in the organization can read this.",
+  "email.access.sentence.participants":
+    "Only the people on this message can read it.",
+  "email.access.sentence.selected":
+    "Only the people named below can read this.",
+  "email.access.sentence.withheld": "This message is not shared with you.",
+  "email.access.unnamedMember": "Someone no longer here",
   "email.move.needsReply": "Needs reply",
   "email.move.waitingForThem": "Waiting for them",
   "email.detail.loading": "Opening the message",
@@ -8027,6 +8034,9 @@ export const en = {
   "worklist.hidden.unlinked": "Attached to no record",
   "worklist.hidden.unlinked.detail":
     "Usually not sales. Sometimes a customer nobody managed to file.",
+  "worklist.hidden.colleagues": "From one of our own domains",
+  "worklist.hidden.colleagues.detail":
+    "A colleague, not a customer. A mistyped domain hides a real one.",
   "worklist.hidden.notSales": "Judged not sales work",
   "worklist.hidden.notSales.detail":
     "Hidden from the whole organization, and it does not lift.",
@@ -8083,6 +8093,7 @@ export const en = {
   "worklist.because.response_due_soon.value": "reply due by {value}",
   "worklist.because.unassigned": "nobody owns it",
   "worklist.because.stale": "waiting a long time",
+  "worklist.because.no_reply_history": "no reply history",
   "worklist.above.pin": "Above the next because you pinned it.",
   "worklist.above.level":
     "Above the next because it is a more pressing kind of work.",
