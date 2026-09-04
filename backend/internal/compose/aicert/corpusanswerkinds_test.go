@@ -86,6 +86,11 @@ var recognisedOwners = []string{
 	"capture_confidentiality_verdict/thread",
 	"capture_counterparty_verdict/verdict",
 	"cold_start/acts, cold_start/company_message, cold_start/sitereadmessage",
+	// asks_us | informs_us. An ANSWER vocabulary rather than a set of field
+	// names: the site's whole output is one of these two words per message, so
+	// every kind wants a scenario that scores it — and both do, in
+	// corpus/owed_verdict.
+	"owed_verdict/owed",
 	"propose_roles/committee",
 	"signal_extract/thread_events",
 	"site_triage/triage",

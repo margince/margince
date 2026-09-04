@@ -24,12 +24,12 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 
 | | |
 |---|---:|
-| Shipped invocation sites | 38 |
+| Shipped invocation sites | 39 |
 | … best state `current` | 35 |
 | … best state `partial` | 0 |
 | … best state `stale` | 3 |
-| … `absent` on every binding | 0 |
-| Scenarios in the corpus | 130 |
+| … `absent` on every binding | 1 |
+| Scenarios in the corpus | 133 |
 | Committed records | 59 |
 | Bindings measured | 10 |
 
@@ -74,7 +74,7 @@ today. It says nothing about how well the model did — that is the band.
 
 ## Index
 
-### Sites (38)
+### Sites (39)
 
 Which model to run each site on, and what that choice rests on.
 
@@ -102,6 +102,7 @@ Which model to run each site on, and what that choice rests on.
 | [`enrich/signature`](#enrichsignature) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 1 | 3 |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `not_supported` | 0.00 | `current` | 1 | 1 |
 | [`offer_draft/draft`](#offer_draftdraft) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `not_supported` | 0.80 | `current` | 5 | 3 |
+| [`owed_verdict/owed`](#owed_verdictowed) | - | - | - | `absent` | 3 | 0 |
 | [`propose_roles/committee`](#propose_rolescommittee) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `not_supported` | 0.78 | `current` | 3 | 1 |
 | [`rate_extract/fx`](#rate_extractfx) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `certified` | 1.00 | `current` | 2 | 4 |
 | [`rate_extract/pricing`](#rate_extractpricing) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
@@ -698,6 +699,22 @@ Records (3):
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 5/5 | `not_supported` | 15 | 9 | 0.60 | 850ms | 1634ms | 6 | 3 | 0 | 6 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `not_supported` | 15 | 12 | 0.80 | 3394ms | 8447ms | 9 | 3 | 0 | 3 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 5/5 | `not_supported` | 15 | 12 | 0.80 | 816ms | 1904ms | 9 | 2 | 1 | 3 |
+
+### `owed_verdict`
+
+#### `owed_verdict/owed`
+
+Scope a run of it can claim: `single_call`.
+
+Scenarios (3):
+
+| Scenario | Expects | Case |
+|---|---|---|
+| `a_direct_question_asks_us_and_a_report_does_not` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/basic_01.yaml) |
+| `an_invitation_asks_nothing_a_calendar_reply_cannot_settle` | `accepted` | [invitation_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/invitation_01.yaml) |
+| `the_recipient_line_separates_a_request_from_a_copy` | `accepted` | [envelope_decides_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/envelope_decides_01.yaml) |
+
+No record: this site has never been certified on any binding.
 
 ### `propose_roles`
 

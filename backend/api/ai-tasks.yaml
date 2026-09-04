@@ -84,6 +84,16 @@ tasks:
     cost_unit: per_message
     no_payload: true
 
+  owed_verdict:
+    ladder: [local_small, cheap_cloud]
+    execution_mode: background
+    on_budget_exhausted: queue
+    status: shipped
+    sites: [owed]
+    company_context: none
+    no_payload: true
+    doc: "Whether an unanswered inbound message actually asks its recipient side for something — asks_us or informs_us. The waiting queue can prove somebody wrote and nobody replied; it cannot tell a question from a report, a receipt or a monthly statement, which is most of what a rep wanted to know. Judged over what SURVIVES the queue's own rules rather than over all unjudged mail, so the pass costs one call per ten messages a rep would otherwise have read. The prompt carries the recipient line and whether a calendar part came with it, because a report sent to a desk address with the reader merely copied reads exactly like a direct request without them. Below the confidence floor after a solo re-ask the message stays UNJUDGED, and unjudged is a real answer: the queue ranks such a row exactly as it did before this pass existed, so there is never a reason to guess. A verdict may only DEMOTE a row within the queue — never delete, archive or hide one (ADR-0063 §3.2, the floor the capture label sits under). The reason is sharper here than there: this is one model call's opinion about a customer's mail, so being wrong has to cost a rep a scroll rather than a customer. No cost_unit, and the omission is a decision rather than a gap: cost_unit names a task the connect-time backfill prices, and this pass deliberately does not run at backfill. Its candidates are the LIVE waiting queue, so judging a mailbox's history would spend a call per message on years of mail nobody will ever be shown — the hourly pass reaches everything the queue can surface, and reaches it when a rep is actually looking at it."
+
   capture_counterparty_verdict:
     ladder: [local_small]
     execution_mode: background
