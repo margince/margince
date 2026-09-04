@@ -193,7 +193,18 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 			return err
 		}
-		lapsed = quietRelationships(quiet, changed, funded, now)
+		// Which of them THIS reader has already set aside. In the same
+		// transaction as the derivation, so a dismissal written mid-read cannot
+		// leave the lane raising a contact the rep has just put down.
+		//
+		// Expiry lives in that query rather than in a sweep, so a dismissal
+		// returns the contact on the moment the rep chose and not on whenever a
+		// job next ran.
+		dismissed, err := d.store.DismissedNudges(ctx, tx, candidates, now)
+		if err != nil {
+			return err
+		}
+		lapsed = quietRelationships(quiet, changed, funded, dismissed, now)
 		return nil
 	})
 	if err != nil {
@@ -218,6 +229,7 @@ func quietRelationships(
 	quiet []search.InteractionEdge,
 	changed []people.PersonChanges,
 	funded map[ids.UUID]bool,
+	dismissed map[ids.UUID]bool,
 	now time.Time,
 ) []attention.QuietRelationship {
 	byPerson := make(map[ids.UUID]people.PersonChanges, len(changed))
@@ -226,6 +238,13 @@ func quietRelationships(
 	}
 	lapsed := make([]attention.QuietRelationship, 0, len(changed))
 	for _, edge := range quiet {
+		// A contact this reader put down is not on their lane until the moment
+		// they chose. Dropped HERE rather than filtered out of the candidates
+		// above, so the derivation still runs over the whole set and the lane's
+		// verdict does not depend on who dismissed what.
+		if dismissed[edge.PersonID] {
+			continue
+		}
 		row, ok := byPerson[edge.PersonID]
 		if !ok {
 			continue

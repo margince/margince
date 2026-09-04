@@ -340,14 +340,15 @@ var tableOwners = map[string]string{
 	// means and how it renders, while integrations owns the run that bought
 	// it. That split is what lets a person page show a bought email beside a
 	// canonical one and say which is which.
-	"provider_applied_field":    "internal/modules/people",
-	"person_provider_claim":     "internal/modules/people",
-	"finance_external_customer": "internal/modules/finance",
-	"finance_customer_link":     "internal/modules/finance",
-	"finance_invoice":           "internal/modules/finance",
-	"finance_payment":           "internal/modules/finance",
-	"signal":                    "internal/modules/signals",
-	"signal_resolution":         "internal/modules/signals",
+	"provider_applied_field":       "internal/modules/people",
+	"person_provider_claim":        "internal/modules/people",
+	"relationship_nudge_dismissal": "internal/modules/people",
+	"finance_external_customer":    "internal/modules/finance",
+	"finance_customer_link":        "internal/modules/finance",
+	"finance_invoice":              "internal/modules/finance",
+	"finance_payment":              "internal/modules/finance",
+	"signal":                       "internal/modules/signals",
+	"signal_resolution":            "internal/modules/signals",
 	// collections
 	"list":        "internal/modules/collections",
 	"list_member": "internal/modules/collections",

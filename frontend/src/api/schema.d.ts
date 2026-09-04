@@ -601,6 +601,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/{id}/nudge-dismissal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set a lapsed contact aside, so the Worklist stops raising them for a while.
+         * @description The decay lane names contacts who have gone quiet. Nobody is waiting on the reader
+         *     for any of them, which is exactly why they go unnoticed — and also why a rep needs
+         *     a way to say "not this one, not now". Until this verb there was none: the row
+         *     offered `open` and nothing else, so a contact the rep had deliberately decided to
+         *     leave alone came back every morning.
+         *
+         *     PER READER. A rep setting a contact aside is judging their own day, and applying
+         *     that to a colleague would take somebody off a queue whose owner never made the
+         *     call. Contrast `not_sales` on a message, which is a fact about the thread and
+         *     holds for everybody.
+         *
+         *     NEVER PERMANENT. `days` is capped, and there is no value meaning forever: a
+         *     permanent dismissal would silently delete a person from a rep's attention and
+         *     leave nothing to notice it — the same failure the hidden-backlog guardrail exists
+         *     to catch, reached by a door that guardrail cannot see. A relationship worth
+         *     raising once is worth raising again.
+         *
+         *     Reading the person is the licence to set them aside: an id the caller cannot read
+         *     answers 404, the same as one that does not exist.
+         */
+        put: operations["dismissRelationshipNudge"];
+        post?: never;
+        /**
+         * Put a set-aside contact back on the lane — the undo behind the dismiss verb.
+         * @description Clears what THIS reader set aside. Idempotent: restoring a contact nobody dismissed
+         *     is the same success, because the reader's goal state already holds.
+         */
+        delete: operations["restoreRelationshipNudge"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{id}/brief": {
         parameters: {
             query?: never;
@@ -20931,6 +20977,20 @@ export interface components {
          * @enum {string}
          */
         ActivityAudience: "workspace" | "participants" | "selected";
+        DismissRelationshipNudgeRequest: {
+            /**
+             * @description How long the contact stays off the lane, counted from now. A COUNT rather than
+             *     a moment, because the server owns "now" — a client computing an instant from a
+             *     clock that is minutes out writes a dismissal that expires early or late for a
+             *     reason nobody can see.
+             *
+             *     Capped at 90 days, and there is no value meaning forever. A quarter is the
+             *     longest a rep can honestly say "not this one" about a relationship without
+             *     that being a decision to drop the person, which is a different act with its
+             *     own record.
+             */
+            days: number;
+        };
         SetActivityDispositionRequest: {
             /**
              * @description What the reader decided. `not_sales` binds the thread for everybody; `snooze` and
@@ -30770,6 +30830,59 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    dismissRelationshipNudge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DismissRelationshipNudgeRequest"];
+            };
+        };
+        responses: {
+            /** @description Set aside. Dismissing an already-dismissed contact replaces the moment. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreRelationshipNudge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Back on the lane, or was never off it. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getPersonBrief: {

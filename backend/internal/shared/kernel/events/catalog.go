@@ -304,6 +304,11 @@ var catalog = map[string]struct {
 	// about it, and a consumer counting edits to correspondence must not read a
 	// rep clearing their queue as the customer's mail being rewritten.
 	"activity.disposition_recorded": {activityStreamEntity, 1},
+	// A rep set a lapsed CONTACT aside so their own decay lane stops raising
+	// them, or put them back. The entity is the person, which is what the
+	// judgement is about — the relationship's silence is a fact about them
+	// rather than about any one message.
+	"relationship_nudge.dismissed": {personStreamEntity, 1},
 	// §5.11: a thread-matched inbound is an activity-family fact, emitted
 	// by capture alongside activity.captured (EVT-SEM-14 — idempotent per
 	// reply; a duplicate inbound for the same reply does not re-emit).

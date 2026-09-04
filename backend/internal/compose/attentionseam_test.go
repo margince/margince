@@ -160,6 +160,8 @@ func TestOnlyADerivedSilenceReachesTheDecayLane(t *testing.T) {
 			},
 		},
 		map[ids.UUID]bool{oldest: true},
+		// Nobody set aside, so this case is about the derivation alone.
+		map[ids.UUID]bool{},
 		readInstantForDecay,
 	)
 
@@ -226,9 +228,54 @@ var readInstantForDecay = time.Date(2026, 6, 15, 9, 0, 0, 0, time.UTC)
 func TestTheDecayLaneReportsNothingItCannotDerive(t *testing.T) {
 	edge := search.InteractionEdge{PersonID: ids.NewV7(), LastAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)}
 	quiet := quietRelationships(
-		[]search.InteractionEdge{edge}, nil, map[ids.UUID]bool{}, readInstantForDecay,
+		[]search.InteractionEdge{edge}, nil, map[ids.UUID]bool{}, map[ids.UUID]bool{},
+		readInstantForDecay,
 	)
 	if len(quiet) != 0 {
 		t.Errorf("the lane invented %d relationships from an empty derivation", len(quiet))
+	}
+}
+
+// A contact this reader set aside is off their lane, even while the derivation
+// still calls the silence real.
+//
+// The two answers are deliberately different here: the derivation says "gone
+// quiet" and the reader has said "not this one, not now". Dropping the row is
+// what the dismissal is FOR, and doing it after the derivation rather than
+// before it is what keeps the lane's verdict independent of who dismissed what.
+func TestADismissedContactIsNotOnTheDecayLane(t *testing.T) {
+	setAside := ids.NewV7()
+	standing := ids.NewV7()
+	spoke := time.Date(2026, 5, 12, 9, 0, 0, 0, time.UTC)
+
+	quiet := quietRelationships(
+		[]search.InteractionEdge{
+			{PersonID: setAside, LastAt: spoke},
+			{PersonID: standing, LastAt: spoke},
+		},
+		[]people.PersonChanges{
+			{
+				PersonID:    ids.From[ids.PersonKind](setAside),
+				DisplayName: "Dana Weiss",
+				Changes:     []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, At: spoke, Days: 63}},
+			},
+			{
+				PersonID:    ids.From[ids.PersonKind](standing),
+				DisplayName: "Ines Sommer",
+				Changes:     []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, At: spoke, Days: 63}},
+			},
+		},
+		map[ids.UUID]bool{},
+		map[ids.UUID]bool{setAside: true},
+		readInstantForDecay,
+	)
+
+	if len(quiet) != 1 {
+		t.Fatalf("the lane carries %d relationships, want only the one not set aside", len(quiet))
+	}
+	// The one that SURVIVES is named, not just counted: a filter dropping the
+	// wrong row leaves the same count.
+	if quiet[0].Name != "Ines Sommer" {
+		t.Errorf("the lane kept %q, want the contact nobody dismissed", quiet[0].Name)
 	}
 }

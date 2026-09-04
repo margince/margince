@@ -101,6 +101,7 @@ components:
         - weekly_plan.updated
         - weekly_plan.help_requested
         - activity.disposition_recorded
+        - relationship_nudge.dismissed
         - notice.read
         - intro_request.created
         - intro_request.decided
@@ -2157,6 +2158,47 @@ components:
             `not_sales` and of the two reader states — a decision withdrawn is
             itself a decision, and a consumer counting dispositions has to see
             it happen rather than infer it from a row going quiet.
+      additionalProperties: false
+
+    PublicEventRelationshipNudgeDismissed:
+      type: object
+      x-event-type: relationship_nudge.dismissed
+      x-entity-type: person
+      x-version: 1
+      description: >-
+        Payload for relationship_nudge.dismissed — a rep set a lapsed contact
+        aside so their own Worklist stops raising them, or put them back
+        (people's nudge dismissal). The entity is the CONTACT, which is what
+        the judgement is about.
+
+        WHOSE morning it was is not on the wire, and the omission is the same
+        one activity.disposition_recorded makes: a dismissal binds ONE reader,
+        and a consumer reading this as a workspace-wide fact would report one
+        rep's private decision as the contact's own state. The reader stays on
+        the row, for a caller entitled to it.
+      required:
+        - person_id
+        - action
+      properties:
+        person_id:
+          type: string
+          format: uuid
+        action:
+          type: string
+          enum: [dismissed, restored]
+          description: >-
+            What was decided. `restored` is the undo, carried rather than left
+            to be inferred from a row going quiet: a decision withdrawn is
+            itself a decision, and a consumer counting how often reps put
+            relationships down has to see it happen.
+        dismissed_until:
+          type: string
+          format: date-time
+          description: >-
+            When the contact comes back to the lane. Present on `dismissed` and
+            absent on `restored`, which carries no moment because a restore
+            takes effect now. It is never absent on a dismissal: a dismissal
+            with no end is the shape this feature refuses to have.
       additionalProperties: false
 
     PublicEventIntroRequestCreated:
