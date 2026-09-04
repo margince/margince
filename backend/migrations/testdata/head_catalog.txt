@@ -1600,7 +1600,7 @@ public.consent_purpose_pkey CREATE UNIQUE INDEX consent_purpose_pkey ON public.c
 public.consent_qualifying_event acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.consent_qualifying_event.captured_by text NOT NULL gen=- def=-
 public.consent_qualifying_event.consent_qualifying_event_evidence CHECK ((((kind = 'in_person'::text) AND (note IS NOT NULL)) OR ((kind <> 'in_person'::text) AND (source_entity_type IS NOT NULL) AND (source_entity_id IS NOT NULL))))
-public.consent_qualifying_event.consent_qualifying_event_kind_check CHECK ((kind = ANY (ARRAY['inbound_message'::text, 'inquiry'::text, 'active_deal'::text, 'in_person'::text])))
+public.consent_qualifying_event.consent_qualifying_event_kind_check CHECK ((kind = ANY (ARRAY['inbound_message'::text, 'inquiry'::text, 'active_deal'::text, 'in_person'::text, 'meeting'::text])))
 public.consent_qualifying_event.consent_qualifying_event_person_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.consent_qualifying_event.consent_qualifying_event_pkey PRIMARY KEY (id)
 public.consent_qualifying_event.consent_qualifying_event_source_entity_type_check CHECK ((source_entity_type = ANY (ARRAY['activity'::text, 'deal'::text])))

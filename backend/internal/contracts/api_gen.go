@@ -3607,6 +3607,7 @@ const (
 	ConsentQualifyingEventKindInPerson       ConsentQualifyingEventKind = "in_person"
 	ConsentQualifyingEventKindInboundMessage ConsentQualifyingEventKind = "inbound_message"
 	ConsentQualifyingEventKindInquiry        ConsentQualifyingEventKind = "inquiry"
+	ConsentQualifyingEventKindMeeting        ConsentQualifyingEventKind = "meeting"
 )
 
 // Valid indicates whether the value is a known member of the ConsentQualifyingEventKind enum.
@@ -3619,6 +3620,8 @@ func (e ConsentQualifyingEventKind) Valid() bool {
 	case ConsentQualifyingEventKindInboundMessage:
 		return true
 	case ConsentQualifyingEventKindInquiry:
+		return true
+	case ConsentQualifyingEventKindMeeting:
 		return true
 	default:
 		return false
@@ -9895,6 +9898,7 @@ const (
 	QualifyingEventRecordKindInPerson       QualifyingEventRecordKind = "in_person"
 	QualifyingEventRecordKindInboundMessage QualifyingEventRecordKind = "inbound_message"
 	QualifyingEventRecordKindInquiry        QualifyingEventRecordKind = "inquiry"
+	QualifyingEventRecordKindMeeting        QualifyingEventRecordKind = "meeting"
 )
 
 // Valid indicates whether the value is a known member of the QualifyingEventRecordKind enum.
@@ -9907,6 +9911,8 @@ func (e QualifyingEventRecordKind) Valid() bool {
 	case QualifyingEventRecordKindInboundMessage:
 		return true
 	case QualifyingEventRecordKindInquiry:
+		return true
+	case QualifyingEventRecordKindMeeting:
 		return true
 	default:
 		return false
@@ -10020,13 +10026,13 @@ func (e RecordGrantSubjectType) Valid() bool {
 
 // Defines values for RecordQualifyingEventRequestKind.
 const (
-	InPerson RecordQualifyingEventRequestKind = "in_person"
+	RecordQualifyingEventRequestKindInPerson RecordQualifyingEventRequestKind = "in_person"
 )
 
 // Valid indicates whether the value is a known member of the RecordQualifyingEventRequestKind enum.
 func (e RecordQualifyingEventRequestKind) Valid() bool {
 	switch e {
-	case InPerson:
+	case RecordQualifyingEventRequestKindInPerson:
 		return true
 	default:
 		return false
@@ -11484,22 +11490,22 @@ func (e TagColor) Valid() bool {
 
 // Defines values for TagDetailColor.
 const (
-	TagDetailColorAmber TagDetailColor = "amber"
-	TagDetailColorRose  TagDetailColor = "rose"
-	TagDetailColorSlate TagDetailColor = "slate"
-	TagDetailColorTeal  TagDetailColor = "teal"
+	Amber TagDetailColor = "amber"
+	Rose  TagDetailColor = "rose"
+	Slate TagDetailColor = "slate"
+	Teal  TagDetailColor = "teal"
 )
 
 // Valid indicates whether the value is a known member of the TagDetailColor enum.
 func (e TagDetailColor) Valid() bool {
 	switch e {
-	case TagDetailColorAmber:
+	case Amber:
 		return true
-	case TagDetailColorRose:
+	case Rose:
 		return true
-	case TagDetailColorSlate:
+	case Slate:
 		return true
-	case TagDetailColorTeal:
+	case Teal:
 		return true
 	default:
 		return false
@@ -29187,9 +29193,10 @@ type RecordGrantSubjectType string
 
 // RecordQualifyingEventRequest One exchange that makes ordinary business correspondence lawful.
 type RecordQualifyingEventRequest struct {
-	// Kind Only `in_person` is accepted here. The other three kinds — inbound_message, inquiry,
-	// active_deal — are DERIVED from records the product already holds, and a hand-written
-	// one would be a second, unbacked answer to a question the data already settles.
+	// Kind Only `in_person` is accepted here. Every other kind — inbound_message, inquiry,
+	// active_deal, meeting — is DERIVED from records the product already holds, and a
+	// hand-written one would be a second, unbacked answer to a question the data already
+	// settles.
 	Kind RecordQualifyingEventRequestKind `json:"kind"`
 
 	// Note What happened, in the words of whoever was there. Required — it is the only evidence an in-person exchange has.
@@ -29199,9 +29206,10 @@ type RecordQualifyingEventRequest struct {
 	OccurredAt time.Time `json:"occurred_at"`
 }
 
-// RecordQualifyingEventRequestKind Only `in_person` is accepted here. The other three kinds — inbound_message, inquiry,
-// active_deal — are DERIVED from records the product already holds, and a hand-written
-// one would be a second, unbacked answer to a question the data already settles.
+// RecordQualifyingEventRequestKind Only `in_person` is accepted here. Every other kind — inbound_message, inquiry,
+// active_deal, meeting — is DERIVED from records the product already holds, and a
+// hand-written one would be a second, unbacked answer to a question the data already
+// settles.
 type RecordQualifyingEventRequestKind string
 
 // RecordTag One tag on one record, with the assignment that put it there.

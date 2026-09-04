@@ -18590,7 +18590,7 @@ export interface components {
          */
         ConsentQualifyingEvent: {
             /** @enum {string} */
-            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person";
+            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person" | "meeting";
             /** Format: date-time */
             occurred_at: string;
             /** @enum {string|null} */
@@ -22565,9 +22565,10 @@ export interface components {
         /** @description One exchange that makes ordinary business correspondence lawful. */
         RecordQualifyingEventRequest: {
             /**
-             * @description Only `in_person` is accepted here. The other three kinds — inbound_message, inquiry,
-             *     active_deal — are DERIVED from records the product already holds, and a hand-written
-             *     one would be a second, unbacked answer to a question the data already settles.
+             * @description Only `in_person` is accepted here. Every other kind — inbound_message, inquiry,
+             *     active_deal, meeting — is DERIVED from records the product already holds, and a
+             *     hand-written one would be a second, unbacked answer to a question the data already
+             *     settles.
              * @enum {string}
              */
             kind: "in_person";
@@ -22582,7 +22583,7 @@ export interface components {
         /** @description A recorded exchange, as it now stands on the person. */
         QualifyingEventRecord: {
             /** @enum {string} */
-            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person";
+            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person" | "meeting";
             note: string | null;
             /** Format: date-time */
             occurred_at: string;
