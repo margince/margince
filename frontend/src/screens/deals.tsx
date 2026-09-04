@@ -47,6 +47,11 @@ import {
   PipelineBoard,
   RecordView,
 } from "../design-system/composed";
+import {
+  IdentityFact,
+  IdentityLine,
+  IdentityMeta,
+} from "../design-system/identityline";
 import type { ListChip } from "../design-system/listsurface";
 import type { ListColumn, ListSelection } from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
@@ -98,7 +103,6 @@ import {
   useObjectCustomFields,
 } from "./customfields.form";
 import { DealCommitteeMap } from "./deal360/dealcommittee";
-import { DealFacts } from "./deal360/dealfacts";
 import { DealPulse } from "./deal360/dealpulse";
 import { DealSeats } from "./deal360/dealseats";
 import { DealStrip } from "./deal360/dealstrip";
@@ -117,7 +121,13 @@ import {
 import { DealRoomAside } from "./dealroom";
 import { DealStatusCardPanel, useDealStatusCard } from "./dealstatus";
 import { EditAction } from "./edit";
-import { EntityRef, useEntityName } from "./entityref";
+import {
+  EntityRef,
+  rosterOwnerName,
+  useEntityName,
+  useRoster,
+  useRosterPartial,
+} from "./entityref";
 import { RecordHistoryTab } from "./history";
 import {
   type FilterSpec,
@@ -3589,9 +3599,30 @@ type DealTab = (typeof DEAL_TABS)[number];
 // doesn't push the render-prop closure over the cognitive-complexity budget.
 // Every prop here is a value already resolved by DealScreen — no new
 // fetches, no behavior change from the pre-tab layout.
+// What the identity line reads off a deal. Every field is optional because
+// every one of them is a fact a deal can lack or a reader can be refused.
+type DealIdentity = Pick<
+  Deal,
+  | "amount_minor"
+  | "currency"
+  | "stage_id"
+  | "owner_id"
+  | "organization_id"
+  | "partner_org_id"
+  | "partner_attribution"
+  | "masked_fields"
+>;
+
 /**
- * The one line of joined facts under a deal's name: what it is worth, whose
- * deal it is, and — when one brought it — which partner.
+ * The one line of facts under a deal's name: what it is worth, where it sits
+ * on the board, whose deal it is, and — when one brought it — which partner.
+ *
+ * It is the design system's `IdentityLine`, the same row the account and the
+ * contact draw under their own names, so the three records read the same way.
+ * These facts used to stand in a labelled box beside the verbs instead
+ * (`DealFacts`), which made the deal the only record whose head answered "what
+ * is this" in a different shape from every other — and cost the verbs the room
+ * they need beside a name at the record rung.
  *
  * The partner was editable in the form and rendered nowhere, so a deal that a
  * partner sourced looked identical to one we won alone. That is the fact the
@@ -3600,71 +3631,107 @@ type DealTab = (typeof DEAL_TABS)[number];
  *
  * Each reference goes through EntityRef, which resolves the name and links to
  * the record — and withholds both when the reader may not open it, which is
- * why the ids are not printed as a fallback.
+ * why the ids are not printed as a fallback. A withheld fact NAMES the field
+ * it withholds: on a line of joined facts a bare mask says only "something
+ * here is hidden", and the amount, the company and the partner are three
+ * different things to be refused.
  */
-function DealSubtitle({ deal }: Readonly<{ deal: Deal }>) {
+export function DealIdentityLine({
+  deal,
+  stages,
+  locale,
+}: Readonly<{
+  // The facts this line draws and no more. A presentational row does not need
+  // a whole `Deal` to say what one is worth, and asking for one makes every
+  // story and test that draws the line assemble a record it does not read.
+  deal: DealIdentity;
+  // The stages the PAGE already sorted for the board, not a second read.
+  stages: readonly { id: string; name: string }[];
+  locale: Locale;
+}>) {
   const t = useT();
-  // Joined with a visible separator rather than left as bare adjacent spans:
-  // record-sub is a plain text line with no gap of its own, so three spans
-  // render as one run-on string ("€48,000.00Acme Corpvia Northgate"). The
-  // facts are assembled first so only the ones that exist are separated —
-  // a leading or doubled "·" is how an absent company announces itself.
-  //
-  // A withheld fact NAMES the field it withholds. On a line of joined facts a
-  // bare mask says only "something here is hidden", and the amount, the company
-  // and the partner are three different things to be refused.
+  // Only asked for when there is an owner to name: an unowned deal needs no
+  // roster read to say so.
+  const roster = useRoster("user", Boolean(deal.owner_id));
+  const partial = useRosterPartial("user", Boolean(deal.owner_id));
   const masked = deal.masked_fields ?? [];
-  const facts: ReactNode[] = [];
-  // The amount is NOT here. It has a labelled row in DealFacts beside the
-  // name, and it was previously rendered twice in one header — unlabelled
-  // here and again as THE MONEY reading.
-  if (masked.includes("organization_id")) {
-    facts.push(
-      <>
-        {t("create.organization")} <FieldGuard mode="masked" />
-      </>,
-    );
-  } else if (deal.organization_id) {
-    facts.push(<EntityRef kind="organization" id={deal.organization_id} />);
-  }
-  if (masked.includes("partner_org_id")) {
-    // No attribution word here: what the partner did is withheld WITH the
-    // partner, so naming one would decide what a partner nobody could see is
-    // owed.
-    facts.push(
-      <>
-        {t("deal.partnerOrg")} <FieldGuard mode="masked" />
-      </>,
-    );
-  } else if (deal.partner_org_id) {
-    facts.push(
-      <>
-        {/* Sourced and influenced are paid differently, so the line says
-            which one rather than a neutral "partner: X" that hides the
-            distinction the commission turns on. */}
-        {t(
-          deal.partner_attribution === "influenced"
-            ? "deal.partnerInfluenced"
-            : "deal.partnerSourced",
-        )}{" "}
-        <EntityRef kind="organization" id={deal.partner_org_id} />
-      </>,
-    );
-  }
+  // An em dash rather than the stage id: a deal in overlay mode carries no
+  // native pipeline row, and printing a UUID where a stage name goes reads as
+  // a fault.
+  const stage = stages.find((candidate) => candidate.id === deal.stage_id);
   return (
-    <>
-      {facts.map((fact, i) => (
-        // The index is the identity here: these are positional facts about one
-        // deal, not a reorderable list, and two of them can render the same
-        // company when a partner sells to itself.
-        // biome-ignore lint/suspicious/noArrayIndexKey: positional facts, never reordered
-        <span key={i}>
-          {i > 0 && <span aria-hidden="true"> · </span>}
-          {fact}
-        </span>
-      ))}
-    </>
+    <IdentityMeta>
+      <IdentityLine>
+        {masked.includes("organization_id") ? (
+          <IdentityFact>
+            {t("create.organization")} <FieldGuard mode="masked" />
+          </IdentityFact>
+        ) : (
+          deal.organization_id && (
+            <IdentityFact>
+              <EntityRef kind="organization" id={deal.organization_id} />
+            </IdentityFact>
+          )
+        )}
+        <IdentityFact>
+          {/* A masked amount NAMES the field, like every other refusal on this
+              line: a lone lock among joined facts says only that something
+              here is hidden, and "no value recorded" and "you may not see the
+              value" are different statements about a deal. */}
+          {masked.includes("amount_minor") ? (
+            <>
+              {t("deals.amount")} <FieldGuard mode="masked" />
+            </>
+          ) : (
+            dealAmount(deal, locale)
+          )}
+        </IdentityFact>
+        <IdentityFact>{stage?.name ?? "—"}</IdentityFact>
+        <IdentityFact quiet>
+          {t("list.owner")}:{" "}
+          {rosterOwnerName(
+            deal.owner_id,
+            roster,
+            partial,
+            t,
+            t("co.pulse.unowned"),
+          )}
+        </IdentityFact>
+        {masked.includes("partner_org_id") ? (
+          // No attribution word here: what the partner did is withheld WITH
+          // the partner, so naming one would decide what a partner nobody
+          // could see is owed.
+          <IdentityFact>
+            {t("deal.partnerOrg")} <FieldGuard mode="masked" />
+          </IdentityFact>
+        ) : (
+          deal.partner_org_id && (
+            <IdentityFact>
+              {/* Sourced and influenced are paid differently, so the line says
+                  which one rather than a neutral "partner: X" that hides the
+                  distinction the commission turns on. */}
+              {t(
+                deal.partner_attribution === "influenced"
+                  ? "deal.partnerInfluenced"
+                  : "deal.partnerSourced",
+              )}{" "}
+              <EntityRef kind="organization" id={deal.partner_org_id} />
+            </IdentityFact>
+          )
+        )}
+      </IdentityLine>
+    </IdentityMeta>
   );
+}
+
+// The value, or an em dash when the deal carries none. The masked case is the
+// caller's, because a refusal on this line is written as the field's name
+// beside the mark rather than as the mark alone.
+function dealAmount(deal: DealIdentity, locale: Locale): ReactNode {
+  if (deal.amount_minor == null || !deal.currency) {
+    return "—";
+  }
+  return formatMoney(deal.amount_minor, deal.currency, locale);
 }
 
 // Deal360 leads the page. It is absent on an overlay-backed deal: the briefing
@@ -4073,11 +4140,10 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               // memory of it.
               aside={dealContext(deal)}
               name={deal.name}
-              subtitle={<DealSubtitle deal={deal} />}
-              zone={recordZone}
-              controls={
-                <DealFacts deal={deal} stages={stages} locale={locale} />
+              pulse={
+                <DealIdentityLine deal={deal} stages={stages} locale={locale} />
               }
+              zone={recordZone}
               actionsInline
               badges={
                 <>
