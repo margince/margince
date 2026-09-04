@@ -1,0 +1,3884 @@
+{
+  "totals": {
+    "sites": 38,
+    "sites_best_current": 35,
+    "sites_best_partial": 0,
+    "sites_best_stale": 3,
+    "sites_absent": 0,
+    "scenarios": 129,
+    "records": 59,
+    "bindings": 10
+  },
+  "bindings": [
+    {
+      "binding": {
+        "provider": "gemini",
+        "model": "gemini-3.1-flash-lite",
+        "env": "eu_hosted"
+      },
+      "sites": 20,
+      "sites_current": 16,
+      "sites_partial": 1,
+      "sites_stale": 3,
+      "runs": 249,
+      "passed": 225,
+      "reliability": 0.9036144578313253,
+      "slowest_p95_ms": 3370,
+      "bands": {
+        "certified": 12,
+        "supported_degraded": 1,
+        "not_supported": 7
+      }
+    },
+    {
+      "binding": {
+        "provider": "gemini",
+        "model": "gemini-3.1-pro-preview",
+        "env": "eu_hosted"
+      },
+      "sites": 3,
+      "sites_current": 0,
+      "sites_partial": 0,
+      "sites_stale": 3,
+      "runs": 18,
+      "passed": 18,
+      "reliability": 1,
+      "slowest_p95_ms": 44515,
+      "bands": {
+        "certified": 2,
+        "supported_degraded": 0,
+        "not_supported": 1
+      }
+    },
+    {
+      "binding": {
+        "provider": "gemini",
+        "model": "gemini-3.5-flash",
+        "env": "eu_hosted"
+      },
+      "sites": 9,
+      "sites_current": 6,
+      "sites_partial": 0,
+      "sites_stale": 3,
+      "runs": 63,
+      "passed": 59,
+      "reliability": 0.9365079365079365,
+      "slowest_p95_ms": 20319,
+      "bands": {
+        "certified": 7,
+        "supported_degraded": 0,
+        "not_supported": 2
+      }
+    },
+    {
+      "binding": {
+        "provider": "openai_compatible",
+        "model": "anthropic/claude-haiku-4.5",
+        "env": "eu_hosted"
+      },
+      "sites": 1,
+      "sites_current": 1,
+      "sites_partial": 0,
+      "sites_stale": 0,
+      "runs": 15,
+      "passed": 9,
+      "reliability": 0.6,
+      "slowest_p95_ms": 3731,
+      "bands": {
+        "certified": 0,
+        "supported_degraded": 0,
+        "not_supported": 1
+      }
+    },
+    {
+      "binding": {
+        "provider": "openai_compatible",
+        "model": "mistralai/ministral-14b-2512",
+        "env": "cloud_frontier"
+      },
+      "sites": 11,
+      "sites_current": 0,
+      "sites_partial": 0,
+      "sites_stale": 11,
+      "runs": 160,
+      "passed": 113,
+      "reliability": 0.70625,
+      "slowest_p95_ms": 20620,
+      "bands": {
+        "certified": 8,
+        "supported_degraded": 0,
+        "not_supported": 3
+      }
+    },
+    {
+      "binding": {
+        "provider": "openai_compatible",
+        "model": "mistralai/ministral-8b-2512",
+        "env": "cloud_frontier"
+      },
+      "sites": 3,
+      "sites_current": 0,
+      "sites_partial": 0,
+      "sites_stale": 3,
+      "runs": 15,
+      "passed": 14,
+      "reliability": 0.9333333333333333,
+      "slowest_p95_ms": 22390,
+      "bands": {
+        "certified": 1,
+        "supported_degraded": 2,
+        "not_supported": 0
+      }
+    },
+    {
+      "binding": {
+        "provider": "openai_compatible",
+        "model": "mistralai/mistral-large-2512",
+        "env": "cloud_frontier"
+      },
+      "sites": 5,
+      "sites_current": 4,
+      "sites_partial": 0,
+      "sites_stale": 1,
+      "runs": 30,
+      "passed": 27,
+      "reliability": 0.9,
+      "slowest_p95_ms": 4574,
+      "bands": {
+        "certified": 4,
+        "supported_degraded": 0,
+        "not_supported": 1
+      }
+    },
+    {
+      "binding": {
+        "provider": "openai_compatible",
+        "model": "mistralai/mistral-large-2512",
+        "env": "eu_hosted"
+      },
+      "sites": 6,
+      "sites_current": 6,
+      "sites_partial": 0,
+      "sites_stale": 0,
+      "runs": 42,
+      "passed": 39,
+      "reliability": 0.9285714285714286,
+      "slowest_p95_ms": 4477,
+      "bands": {
+        "certified": 5,
+        "supported_degraded": 0,
+        "not_supported": 1
+      }
+    },
+    {
+      "binding": {
+        "provider": "openai_compatible",
+        "model": "openai/gpt-oss-120b",
+        "env": "eu_hosted"
+      },
+      "sites": 31,
+      "sites_current": 28,
+      "sites_partial": 0,
+      "sites_stale": 3,
+      "runs": 333,
+      "passed": 269,
+      "reliability": 0.8078078078078078,
+      "slowest_p95_ms": 68516,
+      "bands": {
+        "certified": 12,
+        "supported_degraded": 7,
+        "not_supported": 12
+      }
+    },
+    {
+      "binding": {
+        "provider": "openai_compatible",
+        "model": "z-ai/glm-5.2",
+        "env": "cloud_frontier"
+      },
+      "sites": 5,
+      "sites_current": 4,
+      "sites_partial": 0,
+      "sites_stale": 1,
+      "runs": 30,
+      "passed": 28,
+      "reliability": 0.9333333333333333,
+      "slowest_p95_ms": 18372,
+      "bands": {
+        "certified": 4,
+        "supported_degraded": 0,
+        "not_supported": 1
+      }
+    }
+  ],
+  "sites": [
+    {
+      "task": "agent_loop",
+      "site": "loop",
+      "key": "agent_loop/loop",
+      "scope": "single_turn",
+      "missing_context_scopes": [
+        "identity",
+        "positioning",
+        "sales",
+        "offer"
+      ],
+      "best_state": "stale",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "a_description_is_not_a_name",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_description_is_not_a_name.yaml"
+        },
+        {
+          "name": "a_draft_precedes_a_send",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_draft_precedes_a_send.yaml"
+        },
+        {
+          "name": "a_goal_no_tool_can_serve_ends_the_turn",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_goal_no_tool_can_serve_ends_the_turn.yaml"
+        },
+        {
+          "name": "a_name_alone_is_still_a_search",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_name_alone_is_still_a_search.yaml"
+        },
+        {
+          "name": "a_promise_is_not_a_slipping_deal",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_promise_is_not_a_slipping_deal.yaml"
+        },
+        {
+          "name": "a_structured_question_is_not_a_text_search",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_structured_question_is_not_a_text_search.yaml"
+        },
+        {
+          "name": "a_thin_relationship_is_not_a_slipping_deal",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_thin_relationship_is_not_a_slipping_deal.yaml"
+        },
+        {
+          "name": "a_total_is_still_a_report",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_total_is_still_a_report.yaml"
+        },
+        {
+          "name": "a_warm_path_is_not_a_search",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_warm_path_is_not_a_search.yaml"
+        },
+        {
+          "name": "ambiguity_ends_the_turn",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/ambiguity_ends_the_turn.yaml"
+        },
+        {
+          "name": "catchup_over_raw_reads",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/catchup_over_raw_reads.yaml"
+        },
+        {
+          "name": "coverage_names_the_gap",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/coverage_names_the_gap.yaml"
+        },
+        {
+          "name": "enrichment_is_not_search",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/enrichment_is_not_search.yaml"
+        },
+        {
+          "name": "goal_already_answered_by_seed_context",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/basic_02_final.yaml"
+        },
+        {
+          "name": "goal_needs_a_tool_call",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/basic_01.yaml"
+        },
+        {
+          "name": "identity_is_checked_before_a_record_is_created",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/identity_is_checked_before_a_record_is_created.yaml"
+        },
+        {
+          "name": "logging_what_happened_changes_nothing_else",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/logging_what_happened_changes_nothing_else.yaml"
+        },
+        {
+          "name": "meeting_prep_is_not_a_catchup",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/meeting_prep_is_not_a_catchup.yaml"
+        },
+        {
+          "name": "slipping_is_its_own_question",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/slipping_is_its_own_question.yaml"
+        },
+        {
+          "name": "the_calendar_event_is_the_anchor",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/the_calendar_event_is_the_anchor.yaml"
+        },
+        {
+          "name": "the_record_is_found_before_it_is_changed",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/the_record_is_found_before_it_is_changed.yaml"
+        },
+        {
+          "name": "the_stage_id_comes_from_the_pipeline",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/the_stage_id_comes_from_the_pipeline.yaml"
+        },
+        {
+          "name": "who_knows_needs_the_person",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/who_knows_needs_the_person.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 23,
+          "runs": 69,
+          "passed": 59,
+          "reliability": 0.855072463768116,
+          "latency_p50_ms": 955,
+          "latency_p95_ms": 1314,
+          "reported": {
+            "accepted": 59,
+            "wrong_answer": 10,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "23 scenarios it scored have changed since, or the prompts built from them have: a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_structured_question_is_not_a_text_search and 17 more"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 115,
+          "passed": 74,
+          "reliability": 0.6434782608695652,
+          "latency_p50_ms": 1804,
+          "latency_p95_ms": 2954,
+          "reported": {
+            "accepted": 74,
+            "wrong_answer": 40,
+            "invalid": 1,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": 0,
+          "scenarios_total": 23,
+          "runs": 69,
+          "passed": 39,
+          "reliability": 0.5652173913043478,
+          "latency_p50_ms": 7242,
+          "latency_p95_ms": 39483,
+          "reported": {
+            "accepted": 39,
+            "wrong_answer": 19,
+            "invalid": 11,
+            "abstained": 0
+          },
+          "stale_reason": "23 scenarios it scored have changed since, or the prompts built from them have: a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_structured_question_is_not_a_text_search and 17 more"
+        }
+      ]
+    },
+    {
+      "task": "brief_ranking",
+      "site": "rank",
+      "key": "brief_ranking/rank",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "mistralai/mistral-large-2512",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "reorder_two_candidates_by_momentum",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/brief_ranking/basic_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 2865,
+          "latency_p95_ms": 3003,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-large-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1856,
+          "latency_p95_ms": 1899,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-large-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1607,
+          "latency_p95_ms": 1821,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "z-ai/glm-5.2",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 9126,
+          "latency_p95_ms": 18372,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "capture_classify",
+      "site": "classify",
+      "key": "capture_classify/classify",
+      "scope": "single_call",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "a_message_that_is_both_is_labelled_commitment",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_classify/commitment_beats_meeting_01.yaml"
+        },
+        {
+          "name": "a_mixed_batch_keeps_every_label_on_its_own_message",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_classify/batch_keeps_ids_aligned_01.yaml"
+        },
+        {
+          "name": "a_stated_promise_is_a_commitment",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_classify/commitment_01.yaml"
+        },
+        {
+          "name": "an_auto_reply_carries_no_commitment_and_no_meeting",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_classify/noise_01.yaml"
+        },
+        {
+          "name": "meeting_request_from_reply",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_classify/basic_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 1094,
+          "latency_p95_ms": 2464,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "stale",
+          "band": "supported_degraded",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 1407,
+          "latency_p95_ms": 1467,
+          "reported": {
+            "accepted": 2,
+            "wrong_answer": 0,
+            "invalid": 1,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 810,
+          "latency_p95_ms": 1755,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "capture_confidentiality_verdict",
+      "site": "thread",
+      "key": "capture_confidentiality_verdict/thread",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "a_live_dispute_with_counsel_stays_private",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/legal_01.yaml"
+        },
+        {
+          "name": "a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_01.yaml"
+        },
+        {
+          "name": "a_termination_agreement_stays_private_whatever_the_attachment_note_says",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personnel_01.yaml"
+        },
+        {
+          "name": "an_nda_marked_thread_is_held_on_its_own_request",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/explicitly_confidential_01.yaml"
+        },
+        {
+          "name": "an_ordinary_customer_thread_is_opened_for_the_team",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/ordinary_01.yaml"
+        },
+        {
+          "name": "an_unpatched_vulnerability_is_held_until_it_is_closed",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/security_incident_01.yaml"
+        },
+        {
+          "name": "text_claiming_the_thread_was_cleared_does_not_open_it",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/forged_clearance_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 7,
+          "scenarios_total": 7,
+          "runs": 21,
+          "passed": 18,
+          "reliability": 0.8571428571428571,
+          "latency_p50_ms": 1024,
+          "latency_p95_ms": 1337,
+          "reported": {
+            "accepted": 18,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 7,
+          "scenarios_total": 7,
+          "runs": 21,
+          "passed": 21,
+          "reliability": 1,
+          "latency_p50_ms": 662,
+          "latency_p95_ms": 1376,
+          "reported": {
+            "accepted": 21,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "capture_counterparty_verdict",
+      "site": "verdict",
+      "key": "capture_counterparty_verdict/verdict",
+      "scope": "single_call",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "partial"
+      },
+      "scenarios": [
+        {
+          "name": "a_chased_cold_pitch_is_still_spam",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_02.yaml"
+        },
+        {
+          "name": "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/organization_sender_01.yaml"
+        },
+        {
+          "name": "a_department_display_name_is_not_somebodys_name",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_display_name_billing_01.yaml"
+        },
+        {
+          "name": "a_fluent_machine_written_pitch_is_still_spam",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_bot_written_01.yaml"
+        },
+        {
+          "name": "a_private_correspondent_is_not_a_business_contact",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_01.yaml"
+        },
+        {
+          "name": "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_01.yaml"
+        },
+        {
+          "name": "a_trade_offices_city_mailbox_names_a_place_not_a_person",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/organization_city_mailbox_01.yaml"
+        },
+        {
+          "name": "a_two_sided_thread_is_a_conversation",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_spam_02.yaml"
+        },
+        {
+          "name": "an_automated_invoice_notice_is_not_a_contact",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/transactional_01.yaml"
+        },
+        {
+          "name": "bulk_marketing_is_noise",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/noise_01.yaml"
+        },
+        {
+          "name": "courteous_cold_pitch_is_spam",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_01.yaml"
+        },
+        {
+          "name": "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_family_freemail_01.yaml"
+        },
+        {
+          "name": "forged_fence_marker_is_data_not_authority",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/forged_fence_01.yaml"
+        },
+        {
+          "name": "invited_supplier_must_not_be_spam",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_spam_01.yaml"
+        },
+        {
+          "name": "real_prospect_must_not_be_noise",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/false_noise_01.yaml"
+        },
+        {
+          "name": "the_owners_own_lawyer_is_not_the_workspaces_contact",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/advisor_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "partial",
+          "band": "certified",
+          "scenarios_measured": 13,
+          "scenarios_total": 16,
+          "runs": 39,
+          "passed": 39,
+          "reliability": 1,
+          "latency_p50_ms": 904,
+          "latency_p95_ms": 1210,
+          "reported": {
+            "accepted": 39,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 1856,
+          "latency_p95_ms": 22390,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 16,
+          "scenarios_total": 16,
+          "runs": 48,
+          "passed": 38,
+          "reliability": 0.7916666666666666,
+          "latency_p50_ms": 710,
+          "latency_p95_ms": 1544,
+          "reported": {
+            "accepted": 38,
+            "wrong_answer": 8,
+            "invalid": 2,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "cert_judge",
+      "site": "judge",
+      "key": "cert_judge/judge",
+      "scope": "single_call",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "mistralai/mistral-large-2512",
+          "env": "cloud_frontier"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "grades_a_fabricated_answer_poorly",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/cert_judge/basic_02_low_score.yaml"
+        },
+        {
+          "name": "grades_a_well_grounded_answer_highly",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/cert_judge/basic_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 1906,
+          "latency_p95_ms": 2180,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-large-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 1319,
+          "latency_p95_ms": 1966,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-large-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 1380,
+          "latency_p95_ms": 3738,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "z-ai/glm-5.2",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 2425,
+          "latency_p95_ms": 2800,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "cold_start",
+      "site": "acts",
+      "key": "cold_start/acts",
+      "scope": "single_turn",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "a_factual_question_about_connecting_is_answered",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/cold_start/acts_answer_01.yaml"
+        },
+        {
+          "name": "a_progress_question_is_answered_as_status",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/cold_start/acts_status_01.yaml"
+        },
+        {
+          "name": "an_ambiguous_reference_is_asked_about_rather_than_guessed",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/cold_start/acts_clarification_01.yaml"
+        },
+        {
+          "name": "asking_what_to_do_next_is_answered_as_a_recommendation",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/cold_start/acts_recommendation_01.yaml"
+        },
+        {
+          "name": "results_act_keeps_an_off_topic_request_in_scope",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/cold_start/acts_off_topic_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 1098,
+          "latency_p95_ms": 1568,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1609,
+          "latency_p95_ms": 5612,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 1032,
+          "latency_p95_ms": 3618,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "cold_start",
+      "site": "company_message",
+      "key": "cold_start/company_message",
+      "scope": "single_turn",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "bare_answer_corrects_the_field_the_wizard_asked_for",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/cold_start/company_message_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1098,
+          "latency_p95_ms": 1568,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1609,
+          "latency_p95_ms": 5612,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1032,
+          "latency_p95_ms": 3618,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "cold_start",
+      "site": "field_extract",
+      "key": "cold_start/field_extract",
+      "scope": "single_call",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "onboarding_readback_from_landing_page",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/cold_start/field_extract_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1098,
+          "latency_p95_ms": 1568,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1609,
+          "latency_p95_ms": 5612,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1032,
+          "latency_p95_ms": 3618,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "cold_start",
+      "site": "sitereadmessage",
+      "key": "cold_start/sitereadmessage",
+      "scope": "single_turn",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "supported_degraded",
+        "reliability": 0.8333333333333334,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "an_administrator_agreeing_confirms_and_changes_nothing_further",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_confirmation_01.yaml"
+        },
+        {
+          "name": "dossier_correction_the_administrator_asked_for",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_correction_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 3,
+          "reliability": 0.5,
+          "latency_p50_ms": 1098,
+          "latency_p95_ms": 1568,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 3,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1609,
+          "latency_p95_ms": 5612,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 5,
+          "reliability": 0.8333333333333334,
+          "latency_p50_ms": 1032,
+          "latency_p95_ms": 3618,
+          "reported": {
+            "accepted": 5,
+            "wrong_answer": 0,
+            "invalid": 1,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "corpus_ask",
+      "site": "corpus_ask",
+      "key": "corpus_ask/corpus_ask",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "corpus_ask_answers_only_from_the_passage_that_says_it",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_answers_from_the_passages_01.yaml"
+        },
+        {
+          "name": "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_02.yaml"
+        },
+        {
+          "name": "corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 895,
+          "latency_p95_ms": 1457,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-large-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 1366,
+          "latency_p95_ms": 4299,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "deal_health",
+      "site": "deal_status",
+      "key": "deal_health/deal_status",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "deal_status_offer_left_hanging",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/deal_health/deal_status_offer_left_hanging_01.yaml"
+        },
+        {
+          "name": "deal_status_says_nothing_is_wrong_when_nothing_is",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/deal_health/deal_status_quiet_after_proposal_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 1139,
+          "latency_p95_ms": 1778,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "document_extract",
+      "site": "fields",
+      "key": "document_extract/fields",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.5-flash",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "attached_document_states_none_of_them",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/document_extract/states_nothing_03.yaml"
+        },
+        {
+          "name": "order_form_states_all_four",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/document_extract/order_form_01.yaml"
+        },
+        {
+          "name": "pdf_agreement_read_as_a_document_part",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/document_extract/pdf_agreement_04.yaml"
+        },
+        {
+          "name": "quote_states_money_but_no_close_date",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/document_extract/partial_02.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 7387,
+          "latency_p95_ms": 9456,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "draft_reply",
+      "site": "account",
+      "key": "draft_reply/account",
+      "scope": "full_invocation",
+      "missing_context_scopes": [
+        "positioning",
+        "sales",
+        "proof",
+        "market"
+      ],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "account_first_touch_with_a_deal_in_flight",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/account_en_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1565,
+          "latency_p95_ms": 3014,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-pro-preview",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 20957,
+          "latency_p95_ms": 44515,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 8077,
+          "latency_p95_ms": 20319,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 18392,
+          "latency_p95_ms": 68516,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "draft_reply",
+      "site": "first",
+      "key": "draft_reply/first",
+      "scope": "full_invocation",
+      "missing_context_scopes": [
+        "positioning",
+        "sales",
+        "proof",
+        "market"
+      ],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "supported_degraded",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "first_message_from_an_intent_alone",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/first_message_from_intent_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1565,
+          "latency_p95_ms": 3014,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 18392,
+          "latency_p95_ms": 68516,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "draft_reply",
+      "site": "intro",
+      "key": "draft_reply/intro",
+      "scope": "full_invocation",
+      "missing_context_scopes": [
+        "positioning",
+        "sales",
+        "proof",
+        "market"
+      ],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "not_supported",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "intro_request_asks_a_colleague_without_overclaiming",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/intro_warm_route_01.yaml"
+        },
+        {
+          "name": "intro_request_claims_no_more_warmth_than_the_record_holds",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/intro_cold_stale_route_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 1565,
+          "latency_p95_ms": 3014,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 18392,
+          "latency_p95_ms": 68516,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "draft_reply",
+      "site": "intro_note",
+      "key": "draft_reply/intro_note",
+      "scope": "full_invocation",
+      "missing_context_scopes": [
+        "positioning",
+        "sales",
+        "proof",
+        "market"
+      ],
+      "best_state": "stale",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "an_instruction_inside_the_stated_reason_is_data_not_a_command",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/intro_note_injected_reason_01.yaml"
+        },
+        {
+          "name": "intro_note_claims_no_more_warmth_than_the_record_holds",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/intro_note_cold_stale_indirect_01.yaml"
+        },
+        {
+          "name": "intro_note_is_written_to_the_customer_not_about_the_request",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/intro_note_warm_direct_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 8,
+          "reliability": 0.8888888888888888,
+          "latency_p50_ms": 18392,
+          "latency_p95_ms": 68516,
+          "reported": {
+            "accepted": 8,
+            "wrong_answer": 0,
+            "invalid": 1,
+            "abstained": 0
+          },
+          "stale_reason": "scenario intro_note_is_written_to_the_customer_not_about_the_request — or the prompt this build now builds from it — has changed since the record scored it"
+        }
+      ]
+    },
+    {
+      "task": "draft_reply",
+      "site": "person",
+      "key": "draft_reply/person",
+      "scope": "full_invocation",
+      "missing_context_scopes": [
+        "positioning",
+        "sales",
+        "proof",
+        "market"
+      ],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "supported_degraded",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "person_first_touch_in_german",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/person_first_touch_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1565,
+          "latency_p95_ms": 3014,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-pro-preview",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 20957,
+          "latency_p95_ms": 44515,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 8077,
+          "latency_p95_ms": 20319,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 18392,
+          "latency_p95_ms": 68516,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "draft_reply",
+      "site": "reply",
+      "key": "draft_reply/reply",
+      "scope": "full_invocation",
+      "missing_context_scopes": [
+        "positioning",
+        "sales",
+        "proof",
+        "market"
+      ],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "german_thread_with_an_introduction_in_it",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/german_intro_01.yaml"
+        },
+        {
+          "name": "reply_to_pricing_question",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/basic_01.yaml"
+        },
+        {
+          "name": "replying_to_a_thread_eight_months_old",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/stale_months_01.yaml"
+        },
+        {
+          "name": "rich_german_thread_with_a_long_ask",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/rich_thread_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 1565,
+          "latency_p95_ms": 3014,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-pro-preview",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 20957,
+          "latency_p95_ms": 44515,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 8077,
+          "latency_p95_ms": 20319,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 2508,
+          "latency_p95_ms": 2685,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 18392,
+          "latency_p95_ms": 68516,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "enrich",
+      "site": "signature",
+      "key": "enrich/signature",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "contact_fields_from_a_mail_signature",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/enrich/basic_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "latency_p50_ms": 1350,
+          "latency_p95_ms": 1413,
+          "reported": {
+            "accepted": 1,
+            "wrong_answer": 2,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "stale",
+          "band": "supported_degraded",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 2469,
+          "latency_p95_ms": 2500,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 904,
+          "latency_p95_ms": 904,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "growth_fit",
+      "site": "growth_fit",
+      "key": "growth_fit/growth_fit",
+      "scope": "full_invocation",
+      "missing_context_scopes": [
+        "offer",
+        "positioning",
+        "proof"
+      ],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "not_supported",
+        "reliability": 0,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "growth_fit_reads_their_facts_against_our_offering",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/growth_fit/clear_fit_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 2088,
+          "latency_p95_ms": 2730,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "offer_draft",
+      "site": "draft",
+      "key": "offer_draft/draft",
+      "scope": "full_invocation",
+      "missing_context_scopes": [
+        "offer",
+        "positioning",
+        "proof"
+      ],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "not_supported",
+        "reliability": 0.8,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "grounded_draft_from_a_conversation_price",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/offer_draft/grounded_draft.yaml"
+        },
+        {
+          "name": "injected_instruction_inside_evidence_is_ignored",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/offer_draft/injection_attempt.yaml"
+        },
+        {
+          "name": "no_captured_context_yields_no_lines",
+          "expects": "abstained",
+          "file": "backend/internal/compose/aicert/corpus/offer_draft/empty_evidence_abstention.yaml"
+        },
+        {
+          "name": "rich_context_under_a_tight_token_cap",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/offer_draft/token_cap.yaml"
+        },
+        {
+          "name": "two_sources_disagree_on_price",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/offer_draft/contradictory_sources.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 9,
+          "reliability": 0.6,
+          "latency_p50_ms": 850,
+          "latency_p95_ms": 1634,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 6
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 15,
+          "passed": 12,
+          "reliability": 0.8,
+          "latency_p50_ms": 3394,
+          "latency_p95_ms": 8447,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 3
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 12,
+          "reliability": 0.8,
+          "latency_p50_ms": 816,
+          "latency_p95_ms": 1904,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 2,
+            "invalid": 1,
+            "abstained": 3
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "propose_roles",
+      "site": "committee",
+      "key": "propose_roles/committee",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "not_supported",
+        "reliability": 0.7777777777777778,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "a_committee_where_four_people_state_their_own_roles",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/propose_roles/committee_four_roles_01.yaml"
+        },
+        {
+          "name": "propose_roles_reads_a_buyer_out_of_their_own_words",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/propose_roles/committee_evidenced_buyer_01.yaml"
+        },
+        {
+          "name": "propose_roles_reads_no_role_out_of_a_title",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/propose_roles/committee_title_only_restraint_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 7,
+          "reliability": 0.7777777777777778,
+          "latency_p50_ms": 1010,
+          "latency_p95_ms": 2660,
+          "reported": {
+            "accepted": 7,
+            "wrong_answer": 2,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "rate_extract",
+      "site": "fx",
+      "key": "rate_extract/fx",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "mistralai/mistral-large-2512",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "fx_rates_json_api_grounded",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/rate_extract/fx_json_grounded.yaml"
+        },
+        {
+          "name": "fx_rates_two_pairs_grounded",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/rate_extract/fx_grounded.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 2598,
+          "latency_p95_ms": 5144,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-large-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 2384,
+          "latency_p95_ms": 3001,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-large-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 1757,
+          "latency_p95_ms": 2632,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "z-ai/glm-5.2",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 4206,
+          "latency_p95_ms": 5262,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "rate_extract",
+      "site": "pricing",
+      "key": "rate_extract/pricing",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "mistralai/mistral-large-2512",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "pricing_table_two_models_grounded",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/rate_extract/pricing_grounded.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 2598,
+          "latency_p95_ms": 5144,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-large-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 2384,
+          "latency_p95_ms": 3001,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-large-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1757,
+          "latency_p95_ms": 2632,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "z-ai/glm-5.2",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 4206,
+          "latency_p95_ms": 5262,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "signal_extract",
+      "site": "thread_events",
+      "key": "signal_extract/thread_events",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "supported_degraded",
+        "reliability": 0.9166666666666666,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "both_sides_promise_something",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/signal_extract/commitment_01.yaml"
+        },
+        {
+          "name": "nothing_material_was_said",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/signal_extract/quiet_thread_01.yaml"
+        },
+        {
+          "name": "notice_served_in_a_polite_reply",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/signal_extract/contract_ended_01.yaml"
+        },
+        {
+          "name": "the_mail_tries_to_write_the_record",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/signal_extract/injection_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 11,
+          "reliability": 0.9166666666666666,
+          "latency_p50_ms": 704,
+          "latency_p95_ms": 1513,
+          "reported": {
+            "accepted": 11,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "site_extract",
+      "site": "profile",
+      "key": "site_extract/profile",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "mistralai/mistral-large-2512",
+          "env": "eu_hosted"
+        },
+        "band": "not_supported",
+        "reliability": 0.8,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "an_impressum_grounds_the_legal_trio",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/site_extract/legal_trio_grounded.yaml"
+        },
+        {
+          "name": "home_page_profile_fields_grounded",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/site_extract/fields_grounded.yaml"
+        },
+        {
+          "name": "js_only_page_yields_no_fabrication",
+          "expects": "abstained",
+          "file": "backend/internal/compose/aicert/corpus/site_extract/empty_page.yaml"
+        },
+        {
+          "name": "one_legal_page_naming_two_entities",
+          "expects": "abstained",
+          "file": "backend/internal/compose/aicert/corpus/site_extract/legal_abstention.yaml"
+        },
+        {
+          "name": "services_page_profile_fields_grounded",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/site_extract/offering_facts.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 11,
+          "reliability": 0.7333333333333333,
+          "latency_p50_ms": 4492,
+          "latency_p95_ms": 6458,
+          "reported": {
+            "accepted": 11,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 3
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "anthropic/claude-haiku-4.5",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 9,
+          "reliability": 0.6,
+          "latency_p50_ms": 2566,
+          "latency_p95_ms": 3731,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 6,
+            "invalid": 0,
+            "abstained": 3
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-large-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 12,
+          "passed": 9,
+          "reliability": 0.75,
+          "latency_p50_ms": 2481,
+          "latency_p95_ms": 4574,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 3
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-large-2512",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 12,
+          "reliability": 0.8,
+          "latency_p50_ms": 3036,
+          "latency_p95_ms": 4477,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 3
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "z-ai/glm-5.2",
+            "env": "cloud_frontier"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 12,
+          "passed": 10,
+          "reliability": 0.8333333333333334,
+          "latency_p50_ms": 7831,
+          "latency_p95_ms": 17213,
+          "reported": {
+            "accepted": 4,
+            "wrong_answer": 2,
+            "invalid": 0,
+            "abstained": 6
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        }
+      ]
+    },
+    {
+      "task": "site_fact_extract",
+      "site": "page_facts",
+      "key": "site_fact_extract/page_facts",
+      "scope": "single_call",
+      "missing_context_scopes": [],
+      "best_state": "stale",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "customer_story_credits_the_customer_not_the_reader",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/site_fact_extract/customer_story_01.yaml"
+        },
+        {
+          "name": "impressum_page_company_facts_and_entities",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/site_fact_extract/basic_02.yaml"
+        },
+        {
+          "name": "services_page_offering_facts",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/site_fact_extract/basic_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 3,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 1203,
+          "latency_p95_ms": 2380,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "scenario customer_story_credits_the_customer_not_the_reader — or the prompt this build now builds from it — has changed since the record scored it"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 2547,
+          "latency_p95_ms": 3532,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 839,
+          "latency_p95_ms": 9128,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "scenario customer_story_credits_the_customer_not_the_reader — or the prompt this build now builds from it — has changed since the record scored it"
+        }
+      ]
+    },
+    {
+      "task": "site_triage",
+      "site": "triage",
+      "key": "site_triage/triage",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/site_triage/unclear_01.yaml"
+        },
+        {
+          "name": "a_mailbox_vendor_is_not_the_senders_employer",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/site_triage/mailbox_provider_01.yaml"
+        },
+        {
+          "name": "a_one_person_consultancy_is_still_a_company",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/site_triage/false_refusal_01.yaml"
+        },
+        {
+          "name": "a_parked_domain_identifies_nobody",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/site_triage/parked_domain_01.yaml"
+        },
+        {
+          "name": "a_personal_domain_is_not_a_company",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/site_triage/personal_domain_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 591,
+          "latency_p95_ms": 1148,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "summarize",
+      "site": "meeting_plan",
+      "key": "summarize/meeting_plan",
+      "scope": "full_invocation",
+      "missing_context_scopes": [
+        "identity"
+      ],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "supported_degraded",
+        "reliability": 0.6666666666666666,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "meeting_plan_reads_the_thread_that_matters",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/summarize/meeting_plan_reads_the_thread_that_matters_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 1270,
+          "latency_p95_ms": 1950,
+          "reported": {
+            "accepted": 2,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "summarize",
+      "site": "org_ask",
+      "key": "summarize/org_ask",
+      "scope": "full_invocation",
+      "missing_context_scopes": [
+        "identity"
+      ],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "ask_meeting_prep_stays_silent_about_a_withheld_section",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/summarize/ask_meeting_prep_restricted_01.yaml"
+        },
+        {
+          "name": "ask_whats_open_answers_the_pipeline_not_the_history",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/summarize/ask_whats_open_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 1270,
+          "latency_p95_ms": 1950,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "summarize",
+      "site": "org_brief",
+      "key": "summarize/org_brief",
+      "scope": "full_invocation",
+      "missing_context_scopes": [
+        "identity"
+      ],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "not_supported",
+        "reliability": 0,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "brief_names_the_stalled_deal_and_the_last_touch",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/summarize/stalled_account_01.yaml"
+        },
+        {
+          "name": "brief_stays_silent_about_a_withheld_section",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/summarize/restricted_reader_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 1270,
+          "latency_p95_ms": 1950,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 6
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "summarize",
+      "site": "org_dossier",
+      "key": "summarize/org_dossier",
+      "scope": "full_invocation",
+      "missing_context_scopes": [
+        "identity"
+      ],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "dossier_describes_the_company_not_the_relationship",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/summarize/dossier_describes_the_company_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1270,
+          "latency_p95_ms": 1950,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "transcript_propose",
+      "site": "next_steps",
+      "key": "transcript_propose/next_steps",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "supported_degraded",
+        "reliability": 0.8888888888888888,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "a_meeting_that_promised_nothing",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/transcript_propose/nothing_groundable_01.yaml"
+        },
+        {
+          "name": "a_speaker_tries_to_write_the_record",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/transcript_propose/injection_01.yaml"
+        },
+        {
+          "name": "one_side_promises_revised_pricing",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/transcript_propose/commitment_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 8,
+          "reliability": 0.8888888888888888,
+          "latency_p50_ms": 616,
+          "latency_p95_ms": 1128,
+          "reported": {
+            "accepted": 8,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "voice_build",
+      "site": "derive",
+      "key": "voice_build/derive",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "owner_voice_candidate_from_authored_messages",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/voice_build/derive_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 963,
+          "latency_p95_ms": 3370,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "stale",
+          "band": "not_supported",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 1358,
+          "latency_p95_ms": 20620,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 0,
+            "invalid": 3,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 848,
+          "latency_p95_ms": 1991,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "voice_build",
+      "site": "eval_draft",
+      "key": "voice_build/eval_draft",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "held_out_draft_sits_close_to_the_author",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/voice_build/eval_draft_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 963,
+          "latency_p95_ms": 3370,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1358,
+          "latency_p95_ms": 20620,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 848,
+          "latency_p95_ms": 1991,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "voice_build",
+      "site": "eval_scores",
+      "key": "voice_build/eval_scores",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "judge_ranks_the_author_rhythm_above_generic_ai_prose",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/voice_build/eval_scores_01.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": 0,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 963,
+          "latency_p95_ms": 3370,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "scenario judge_ranks_the_author_rhythm_above_generic_ai_prose — or the prompt this build now builds from it — has changed since the record scored it"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "state": "stale",
+          "band": "certified",
+          "scenarios_measured": null,
+          "scenarios_total": 0,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1358,
+          "latency_p95_ms": 20620,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 848,
+          "latency_p95_ms": 1991,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    },
+    {
+      "task": "weekly_review",
+      "site": "narrative",
+      "key": "weekly_review/narrative",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "not_supported",
+        "reliability": 0.4444444444444444,
+        "state": "current"
+      },
+      "scenarios": [
+        {
+          "name": "a_deal_named_like_an_instruction_is_read_as_a_name",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/weekly_review/a_deal_name_is_not_an_instruction.yaml"
+        },
+        {
+          "name": "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/weekly_review/a_quiet_week_is_said_to_be_quiet.yaml"
+        },
+        {
+          "name": "the_sentence_leads_with_what_changed_not_with_a_count",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/weekly_review/a_week_with_one_thing_worth_saying.yaml"
+        }
+      ],
+      "records": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 4,
+          "reliability": 0.4444444444444444,
+          "latency_p50_ms": 779,
+          "latency_p95_ms": 1315,
+          "reported": {
+            "accepted": 4,
+            "wrong_answer": 5,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
+    }
+  ],
+  "unclaimed_records": null
+}
