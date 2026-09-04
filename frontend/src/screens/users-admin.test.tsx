@@ -64,9 +64,11 @@ const ROSTER = {
       is_agent: false,
       roles: [],
     },
-    // The workspace's agent identity, which bootstrap writes into every
-    // installation — so every case in this suite renders the roster a real
-    // admin sees, rather than a people-only one that no longer exists.
+    // An agent identity. Bootstrap no longer seeds one, so a fresh installation
+    // shows a people-only roster — but the roster still LISTS such a row where
+    // one exists (an installation that has not run the retirement migration, or
+    // a resident runner later), and this screen's agent-specific branches are
+    // what that row renders. The fixture keeps it so those branches stay tested.
     {
       id: "u-agent",
       email: "agent@acme.gradion.local",

@@ -403,7 +403,8 @@
   gap: var(--space-2);
   padding: 2px var(--space-2); /* ds:ignore a pill's optical vertical padding */
   border: 1px solid var(--borderSubtle);
-  border-radius: 999px;
+  border-radius: var(--r-full);
+  corner-shape: round;
   font-size: 12px;
   color: var(--textSecondary);
   white-space: nowrap;
@@ -647,6 +648,7 @@
   height: 8px;
   margin-top: 5px; /* ds:ignore optical centring of an 8px dot on a 13px line */
   border-radius: 50%;
+  corner-shape: round;
   background: var(--textTertiary);
 }
 
@@ -775,7 +777,7 @@
   margin-top: var(--space-5);
   padding: var(--space-4);
   background: var(--bgCard);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
 }
 
 .pe-why-list {
@@ -816,7 +818,7 @@
   margin: 0 0 var(--space-4);
   padding: var(--space-3) var(--space-4);
   background: var(--accentLight);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   font-size: 13px;
   line-height: 1.5;
   color: var(--textContent);
@@ -839,6 +841,7 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--accentLight);
   font-size: 12px;
   font-weight: 600;

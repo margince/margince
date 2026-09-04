@@ -3239,7 +3239,7 @@ export const vi = {
     "Không thể sao chép liên kết. Hãy chọn ở trên và sao chép thủ công.",
   "analytics.share.done": "Xong",
   "analytics.frame": "Tính đến {asOf} · {zone}",
-  "review.title": "Cần kiểm tra gì trước cuộc gọi?",
+  "review.title": "Cần kiểm tra gì trước khi chốt cam kết?",
   "review.ready": "Sẵn sàng",
   "review.readyWithExceptions": "Sẵn sàng, có lưu ý",
   "review.needsReview": "Cần xem lại",

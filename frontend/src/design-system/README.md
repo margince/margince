@@ -27,6 +27,39 @@ If what you need is genuinely not here, add it **here**, with a story and a
 spec, and it becomes the one spelling. Copy never lives in a primitive: words
 arrive through props, translated by the caller with `t()`.
 
+## Corners come from the ladder, and they are smooth
+
+Every radius in the tree reads one of six tokens — `--r-xs` 4, `--r-sm` 8,
+`--r-control` 12, `--r-md` 16, `--r-lg` 20, `--r-full` the pill. A raw px corner
+is a seventh value nobody chose, and the tree already ran 3, 5, 6, 9, 10, 11 and
+28px side by side before this was one ladder.
+
+`tokens.css` also declares `corner-shape: squircle` on `:where(*)` inside an
+`@supports` query, and doubles the ladder inside it: a superellipse of radius R
+reads about as round as a circular corner of R/2, so a corner keeps its apparent
+size and gives up its two points. Nothing at a call site opts in.
+
+**A genuinely round thing opts OUT**, beside its own radius:
+
+```css
+.badge {
+  border-radius: var(--r-full);
+  corner-shape: round;
+}
+```
+
+`:where(*)` carries zero specificity, so that one line always wins. Write it
+wherever you write `--r-full` or `50%` — a superellipse at full radius is a
+lozenge, and on an avatar it is a squircle tile.
+
+A generated box takes the shape too: `*` matches elements and not
+pseudo-elements, so `::before`, `::after` and `::backdrop` are named beside it
+in that rule. They have to be — the doubled tokens reach a pseudo-element
+anyway, because a custom property inherits and `corner-shape` does not, so an
+unlisted one would draw a ROUND corner at twice the radius its author asked
+for. `corners.test.ts` holds the list against the pseudo-elements the tree
+actually gives a corner to, so a fourth kind cannot arrive unnamed.
+
 ## Indigo says a machine did it
 
 **`--ai` is the AI hue, and it is not decoration.** An indigo tint on a surface
@@ -420,5 +453,6 @@ the shell script it replaced could not.
 | `frontend/scripts/check-ds-spacing.sh` | New raw-px margin/padding/gap outside this tier (diff-scoped) |
 | `design-system/conformance.test.ts` | Hard-coded user-facing copy, the same colour and font rules, one stylesheet per class namespace; a reduced-motion rule a later plain rule of equal specificity beats; an infinite animation with no reduced-motion answer; a second home for the pending announcement or the placeholder pulse; a focus ring that spells its own width and colour |
 | `design-system/tokens.test.ts` | A token whose value drifted from the design canon |
+| `design-system/corners.test.ts` | A `border-radius` that names a length instead of a rung of the ladder (waivable in line, with a reason); a `--r-full` or `50%` corner that does not cancel the squircle with `corner-shape: round`; a second `corner-shape: squircle` outside `tokens.css`; a rung that is not a multiple of four, or has no doubled twin in the `@supports` block |
 | `design-system/catalog.test.ts` | A component in this directory that this table never names; a row claiming a story of its own where no story file exists; a story anywhere under `src/` filed under a root the sidebar table above does not document |
 | `e2e/` (axe) | WCAG 2.2 AA on every core screen, plus the 390px no-horizontal-scroll sweep |

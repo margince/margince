@@ -32,6 +32,9 @@ func summarize(rows []ranked, bar materialBar) crmcontracts.WorklistSummary {
 	// server does not answer that".
 	inPlay := 0
 	summary := crmcontracts.WorklistSummary{Total: len(rows), InPlay: &inPlay}
+	// The partition, counted in the same walk as the four signals beside it so
+	// the two cannot be taken over different populations.
+	buckets := crmcontracts.WorklistBuckets{}
 	bar.stateOn(&summary)
 	for _, row := range rows {
 		item := row.item
@@ -63,6 +66,59 @@ func summarize(rows []ranked, bar materialBar) crmcontracts.WorklistSummary {
 		if item.Overdue != nil && *item.Overdue {
 			summary.Due++
 		}
+		bucketOf(row, level, &buckets)
 	}
+	summary.Buckets = &buckets
 	return summary
+}
+
+// bucketOf puts one row in exactly one bucket.
+//
+// A PRECEDENCE, not four tests. The figures beside it ask four independent
+// questions about the day and deliberately double-count — an overdue promise is
+// both urgent and due. These four slice the day instead, so the first arm that
+// matches takes the row and the four sum to `total`. Written as one switch
+// because that is the shape the property needs: no row can fall through, and no
+// row can be taken twice.
+//
+// DESTINATION LEADS, because "is this seller work" outranks "how soon". A
+// duplicate pair somebody must judge is not urgent seller work however long it
+// has waited, and counting it as urgent would put it in a sentence a rep reads
+// as their morning.
+//
+// Held by TestTheBucketsPartitionTheDay.
+func bucketOf(row ranked, level int, buckets *crmcontracts.WorklistBuckets) {
+	if destinationOf(row) != destinationToday {
+		buckets.Review++
+		return
+	}
+	switch {
+	case level <= levelPromise:
+		buckets.Urgent++
+	case dueToday(row):
+		buckets.DueToday++
+	default:
+		buckets.Planned++
+	}
+}
+
+// dueToday is whether this row's clock runs out before the day does.
+//
+// The DEADLINE, not the overdue flag. Reading `overdue` alone answered the
+// bucket's own name wrongly in the direction that hurts: a task due at 14:00 is
+// not yet overdue, so it fell into `planned`, and the sentence told a rep
+// nothing was due today while a deadline sat in their afternoon.
+//
+// A non-zero deadline is enough, and that is a fact about the assembly rather
+// than a shortcut. Every due-dated lane is read to `endOfDay` — one instant,
+// resolved once per assembly in the installation's own timezone — so a row that
+// reached this queue carrying a deadline has a deadline inside today. Asking
+// the boundary again here would need a context and a second resolution, and two
+// resolutions of one fact are how one lane gets yesterday's midnight and the
+// next gets today's inside a single response.
+func dueToday(row ranked) bool {
+	if !row.deadlineAt.IsZero() {
+		return true
+	}
+	return row.item.Overdue != nil && *row.item.Overdue
 }

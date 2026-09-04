@@ -145,7 +145,7 @@
    wording, and a bordered card here would be a card inside a card. */
 .r360-rests-item {
   border-left: 2px solid var(--aiMed);
-  border-radius: 1px;
+  border-radius: var(--r-xs);
   padding-left: var(--space-2);
   min-width: 0;
 }

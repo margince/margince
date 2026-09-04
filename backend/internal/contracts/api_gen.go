@@ -13381,6 +13381,30 @@ func (e WorklistItemConsequence) Valid() bool {
 	}
 }
 
+// Defines values for WorklistItemDestination.
+const (
+	WorklistDestinationReceipt      WorklistItemDestination = "receipt"
+	WorklistDestinationReview       WorklistItemDestination = "review"
+	WorklistDestinationSystemHealth WorklistItemDestination = "system_health"
+	WorklistDestinationToday        WorklistItemDestination = "today"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemDestination enum.
+func (e WorklistItemDestination) Valid() bool {
+	switch e {
+	case WorklistDestinationReceipt:
+		return true
+	case WorklistDestinationReview:
+		return true
+	case WorklistDestinationSystemHealth:
+		return true
+	case WorklistDestinationToday:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistItemDispositions.
 const (
 	WorklistDispositionNotMine  WorklistItemDispositions = "not_mine"
@@ -14605,6 +14629,45 @@ func (e GetForecastParamsScopeKind) Valid() bool {
 	case GetForecastParamsScopeKindTeam:
 		return true
 	case GetForecastParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListForecastCallsParamsPeriod.
+const (
+	ForecastCallsPeriodMonth   ListForecastCallsParamsPeriod = "month"
+	ForecastCallsPeriodQuarter ListForecastCallsParamsPeriod = "quarter"
+)
+
+// Valid indicates whether the value is a known member of the ListForecastCallsParamsPeriod enum.
+func (e ListForecastCallsParamsPeriod) Valid() bool {
+	switch e {
+	case ForecastCallsPeriodMonth:
+		return true
+	case ForecastCallsPeriodQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListForecastCallsParamsScopeKind.
+const (
+	ListForecastCallsParamsScopeKindOwner     ListForecastCallsParamsScopeKind = "owner"
+	ListForecastCallsParamsScopeKindTeam      ListForecastCallsParamsScopeKind = "team"
+	ListForecastCallsParamsScopeKindWorkspace ListForecastCallsParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ListForecastCallsParamsScopeKind enum.
+func (e ListForecastCallsParamsScopeKind) Valid() bool {
+	switch e {
+	case ListForecastCallsParamsScopeKindOwner:
+		return true
+	case ListForecastCallsParamsScopeKindTeam:
+		return true
+	case ListForecastCallsParamsScopeKindWorkspace:
 		return true
 	default:
 		return false
@@ -32679,6 +32742,13 @@ type Worklist struct {
 	// `due` is asked of every item whatever its level, so an overdue promise counts in
 	// both `urgent` and `due` — deliberately, because a reader wants both answers about
 	// it. Read them as four questions about one day rather than four slices of it.
+	//
+	// `buckets` IS the partition, and it is the one to render an additive sentence from.
+	// The figures above it answer four questions about the day; the four inside it slice
+	// that day into parts that sum to `total`. Both are sent because both are wanted: a
+	// reader asking "how much is overdue" wants `due` counted across every level, and a
+	// reader reading "3 urgent · 5 due today · 4 planned · 5 review — 17 total" needs the
+	// parts to add up to the whole they are shown beside.
 	Summary WorklistSummary `json:"summary"`
 }
 
@@ -32773,6 +32843,32 @@ type WorklistBatch struct {
 // is broken, and repeating it eight times is aggregation failure rather than
 // urgency.
 type WorklistBatchKey string
+
+// WorklistBuckets The day cut into four parts that SUM TO `total`. Every candidate the read weighed
+// lands in exactly one of them.
+//
+// The order below is the order they are read in, and it is a precedence rather than a
+// set of independent tests: an overdue promise is urgent, not due-today, because the
+// first arm that matches takes the row. Without a precedence the same item would be
+// counted twice and the sentence would add up to more than the day holds.
+//
+// `review` is every row whose `destination` is not `today` — a judgement to make, a
+// source to restore, a receipt to read. It is counted from that field rather than from
+// the source, so the sentence and the screens cannot disagree about which rows are
+// seller work.
+type WorklistBuckets struct {
+	// DueToday Seller work not already counted urgent, carrying a date that has arrived or passed, or falling due before this installation day ends.
+	DueToday int `json:"due_today"`
+
+	// Planned The rest of the seller work: a task to do, a meeting to prepare, a lead to reach, a deal drifting below the material bar.
+	Planned int `json:"planned"`
+
+	// Review Everything that is not seller work — the `review`, `system_health` and `receipt` destinations together, because the one line above the queue says how much is waiting on judgement rather than which of the three kinds it is.
+	Review int `json:"review"`
+
+	// Urgent Seller work at the top two levels: somebody is waiting, or a promise is breaking. The same rule as the sibling `urgent`, narrowed to `today` rows.
+	Urgent int `json:"urgent"`
+}
 
 // WorklistComparison The first tie-break at which this item beat the one below it, with both sides'
 // values — so a row can say "above the next because it closes sooner" instead of
@@ -32941,6 +33037,21 @@ type WorklistItem struct {
 	// risk-adjusted figure the API does not compute.
 	Deal *WorklistDealFacts `json:"deal,omitempty"`
 
+	// Destination Which SCREEN this row belongs on. The server decides it once, and every count,
+	// fold and page in this response is computed from the same value the row carries,
+	// so a client that groups by it cannot disagree with the figures above it.
+	//
+	// `today` is work a seller executes. `review` is a judgement somebody must make
+	// before work continues — an approval, a duplicate pair, an introduction.
+	// `system_health` is a source or automation an administrator must restore.
+	// `receipt` is completed work, reported so the reader can see it happened.
+	//
+	// A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
+	// `source` that a browser could recompute: two rows of one source can differ,
+	// and the mapping is a product decision that moves. A client that re-derived it
+	// would put a row on one screen while the count above it put the row on another.
+	Destination *WorklistItemDestination `json:"destination,omitempty"`
+
 	// Detail One supporting line, in PROSE — a bounce reason, a park reason, the mailbox that
 	// stopped, what an AI task was about.
 	//
@@ -33069,6 +33180,21 @@ type WorklistItemCategory string
 // source, because one source has several honest answers: a deal past its close
 // date slips, one merely idle drifts.
 type WorklistItemConsequence string
+
+// WorklistItemDestination Which SCREEN this row belongs on. The server decides it once, and every count,
+// fold and page in this response is computed from the same value the row carries,
+// so a client that groups by it cannot disagree with the figures above it.
+//
+// `today` is work a seller executes. `review` is a judgement somebody must make
+// before work continues — an approval, a duplicate pair, an introduction.
+// `system_health` is a source or automation an administrator must restore.
+// `receipt` is completed work, reported so the reader can see it happened.
+//
+// A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
+// `source` that a browser could recompute: two rows of one source can differ,
+// and the mapping is a product decision that moves. A client that re-derived it
+// would put a row on one screen while the count above it put the row on another.
+type WorklistItemDestination string
 
 // WorklistItemDispositions defines model for WorklistItem.Dispositions.
 type WorklistItemDispositions string
@@ -33317,9 +33443,30 @@ type WorklistSourceUnavailableReason string
 // `due` is asked of every item whatever its level, so an overdue promise counts in
 // both `urgent` and `due` — deliberately, because a reader wants both answers about
 // it. Read them as four questions about one day rather than four slices of it.
+//
+// `buckets` IS the partition, and it is the one to render an additive sentence from.
+// The figures above it answer four questions about the day; the four inside it slice
+// that day into parts that sum to `total`. Both are sent because both are wanted: a
+// reader asking "how much is overdue" wants `due` counted across every level, and a
+// reader reading "3 urgent · 5 due today · 4 planned · 5 review — 17 total" needs the
+// parts to add up to the whole they are shown beside.
 type WorklistSummary struct {
 	// BaseCurrency The currency every expected-revenue figure here is converted to.
 	BaseCurrency *string `json:"base_currency,omitempty"`
+
+	// Buckets The day cut into four parts that SUM TO `total`. Every candidate the read weighed
+	// lands in exactly one of them.
+	//
+	// The order below is the order they are read in, and it is a precedence rather than a
+	// set of independent tests: an overdue promise is urgent, not due-today, because the
+	// first arm that matches takes the row. Without a precedence the same item would be
+	// counted twice and the sentence would add up to more than the day holds.
+	//
+	// `review` is every row whose `destination` is not `today` — a judgement to make, a
+	// source to restore, a receipt to read. It is counted from that field rather than from
+	// the source, so the sentence and the screens cannot disagree about which rows are
+	// seller work.
+	Buckets *WorklistBuckets `json:"buckets,omitempty"`
 
 	// Due Items carrying a date that has arrived or passed.
 	Due int `json:"due"`
@@ -34979,6 +35126,25 @@ type GetForecastParamsPeriod string
 
 // GetForecastParamsScopeKind defines parameters for GetForecast.
 type GetForecastParamsScopeKind string
+
+// ListForecastCallsParams defines parameters for ListForecastCalls.
+type ListForecastCallsParams struct {
+	// Period The window length. Quarters follow the installation's financial year.
+	Period *ListForecastCallsParamsPeriod `form:"period,omitempty" json:"period,omitempty"`
+
+	// AsOf Which period to read, named by a day inside it. Defaults to today, so a caller who names nothing asks about the period they are in.
+	AsOf      *openapi_types.Date               `form:"as_of,omitempty" json:"as_of,omitempty"`
+	ScopeKind *ListForecastCallsParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId Whose forecast, for a team or owner scope. A workspace scope names none.
+	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+}
+
+// ListForecastCallsParamsPeriod defines parameters for ListForecastCalls.
+type ListForecastCallsParamsPeriod string
+
+// ListForecastCallsParamsScopeKind defines parameters for ListForecastCalls.
+type ListForecastCallsParamsScopeKind string
 
 // GetForecastMovementParams defines parameters for GetForecastMovement.
 type GetForecastMovementParams struct {
@@ -47225,6 +47391,9 @@ type ServerInterface interface {
 	// Answer a finding from the nightly input check.
 	// (POST /forecast/assurance/exceptions/{id}/resolve)
 	ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// What this period's forecast has been called, newest first.
+	// (GET /forecast/calls)
+	ListForecastCalls(w http.ResponseWriter, r *http.Request, params ListForecastCallsParams)
 	// Record what somebody believes will close.
 	// (POST /forecast/calls)
 	RecordForecastCall(w http.ResponseWriter, r *http.Request)
@@ -49658,6 +49827,12 @@ func (_ Unimplemented) ListInputChecks(w http.ResponseWriter, r *http.Request) {
 // Answer a finding from the nightly input check.
 // (POST /forecast/assurance/exceptions/{id}/resolve)
 func (_ Unimplemented) ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What this period's forecast has been called, newest first.
+// (GET /forecast/calls)
+func (_ Unimplemented) ListForecastCalls(w http.ResponseWriter, r *http.Request, params ListForecastCallsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -61099,6 +61274,86 @@ func (siw *ServerInterfaceWrapper) ResolveInputCheck(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ResolveInputCheck(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListForecastCalls operation middleware
+func (siw *ServerInterfaceWrapper) ListForecastCalls(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListForecastCallsParams
+
+	// ------------- Optional query parameter "period" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period", r.URL.Query(), &params.Period, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "as_of" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "as_of", r.URL.Query(), &params.AsOf, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "as_of"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "as_of", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListForecastCalls(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -77598,6 +77853,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/assurance/exceptions/{id}/resolve", wrapper.ResolveInputCheck)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/calls", wrapper.ListForecastCalls)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/calls", wrapper.RecordForecastCall)

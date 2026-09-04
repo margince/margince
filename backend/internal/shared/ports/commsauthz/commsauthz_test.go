@@ -64,12 +64,42 @@ func TestAnOrdinaryDenialDefersToTheModeWhileObserving(t *testing.T) {
 	}
 }
 
-// Enforce narrows, never widens: an engine allow cannot rescue a send the old
-// gate refused while both still run.
-func TestEnforceNeverOutranksTheOldGate(t *testing.T) {
+// UNDER ENFORCE THE ENGINE ALONE DECIDES, and this is the case that says so:
+// an engine allow sends a message the old purpose gate refused.
+//
+// That is the point of enforcing rather than an accident of it. The old gate
+// answers on a caller-supplied purpose key and its business-correspondence arm
+// reads qualifying events only, so an ordinary reply to a thread the subject
+// started is refused for want of a consent row nobody had reason to record.
+// The engine resolves that reply from the thread itself. Keeping the
+// conjunction would leave the weaker authority able to overrule the stronger
+// one, which is the regression this rollout exists to end.
+//
+// The test previously asserted the opposite — correctly, while every category
+// still observed and both authorities ran together.
+func TestUnderEnforceTheEngineAloneDecides(t *testing.T) {
 	set := DecisionSet{Decisions: []Decision{{Verdict: VerdictAllow, ReasonCode: ReasonAllowed}}}
-	if set.Effective(everywhere(ModeEnforce), false) {
-		t.Error("an engine allow must not send what the legacy gate refused")
+	if !set.Effective(everywhere(ModeEnforce), false) {
+		t.Error("an engine allow was overruled by the old gate under enforce")
+	}
+	// And an engine denial still refuses, or the line above would be a bypass
+	// rather than an authority.
+	denied := DecisionSet{Decisions: []Decision{{Verdict: VerdictDeny, ReasonCode: ReasonNoEvidence}}}
+	if denied.Effective(everywhere(ModeEnforce), true) {
+		t.Error("an engine denial was overruled by the old gate under enforce")
+	}
+}
+
+// A CATEGORY STILL OBSERVING DEFERS, which is what keeps enforce a per-category
+// rollout rather than a switch. A set with no enforced recipient takes the old
+// gate's answer in both directions.
+func TestAnObservedCategoryStillDefersToTheOldGate(t *testing.T) {
+	set := DecisionSet{Decisions: []Decision{{Verdict: VerdictAllow, ReasonCode: ReasonAllowed}}}
+	if set.Effective(everywhere(ModeObserve), false) {
+		t.Error("an observed category sent what the old gate refused")
+	}
+	if !set.Effective(everywhere(ModeObserve), true) {
+		t.Error("an observed category refused what the old gate allowed")
 	}
 }
 

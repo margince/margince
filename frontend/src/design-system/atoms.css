@@ -12,6 +12,7 @@
   min-block-size: 20px;
   padding: 0 8px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgCard);
   color: var(--textMeta);
 }
@@ -73,6 +74,7 @@
   width: 6px;
   height: 6px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: currentColor;
   flex: none;
 }
@@ -138,6 +140,7 @@
    happened to drop the chip into. */
 .avatar {
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--accentMed);
   color: var(--accentText);
   display: inline-flex;
@@ -253,6 +256,7 @@
   height: calc(100% - 4px);
   object-fit: contain;
   border-radius: var(--r-full);
+  corner-shape: round;
 }
 
 /* A company's mark clips to the chip's OWN corner, not to a circle. The
@@ -637,7 +641,7 @@
   background: transparent;
   color: var(--textMeta);
   padding: 5px 12px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   cursor: pointer;
 }
 .segmented button[aria-pressed="true"] {
@@ -666,6 +670,7 @@
   margin-left: 5px;
   vertical-align: 2px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--accent);
 }
 /* Keyboard focus reads an accent-token ring (matches .input/.textarea) rather
@@ -686,7 +691,7 @@
   background: transparent;
   border: 0;
   padding: 2px 4px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   cursor: pointer;
   /* A flex line rather than inline text, so an icon and its label share one row
      and one vertical centre. Inline, the glyph sat on the text baseline with a
@@ -730,7 +735,7 @@
   background: var(--bgCard);
   border: 1px solid var(--borderStrong);
   border-bottom-width: 2px;
-  border-radius: 5px;
+  border-radius: var(--r-xs);
   padding: 1px 5px;
 }
 
@@ -1481,7 +1486,7 @@
   min-block-size: 0;
   min-inline-size: 0;
   border-color: transparent;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: none;
   box-shadow: none;
   font-size: 13.5px;
@@ -1750,6 +1755,7 @@
   display: block;
   block-size: 4px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgHover);
   overflow: hidden;
 }
@@ -1810,6 +1816,7 @@
   height: 7px;
   margin-right: 0.35rem;
   border-radius: 50%;
+  corner-shape: round;
 }
 .stat-card-dot-good {
   background: var(--success);

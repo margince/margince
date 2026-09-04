@@ -356,7 +356,7 @@
 
 /* ===== The collapsed rail =====
  *
- * At 64px the orb IS the report, and it keeps as much of that width as the rail
+ * At 56px the orb IS the report, and it keeps as much of that width as the rail
  * will give it. The words, the chevron and the CTA go; the count stays, because a
  * number waiting for a person is the one thing that still has to get through at
  * this width. The button keeps its accessible name, so nothing is lost to a
@@ -415,6 +415,7 @@
     padding: 0;
     border: 1px solid var(--borderSubtle);
     border-radius: 50%;
+    corner-shape: round;
     /* The bar's ground, not the page's: the well is the bar rising, and a
        different fill would read as an object resting on it. Solid where the bar
        is glass, because a translucent circle over the content it floats above
@@ -561,7 +562,7 @@
     rotate: 45deg;
     border-right: 1px solid var(--borderSubtle);
     border-bottom: 1px solid var(--borderSubtle);
-    border-bottom-right-radius: 3px; /* ds:ignore the notch's own tip */
+    border-bottom-right-radius: var(--r-xs); /* the notch's own tip */
     background: var(--bgElevated);
     z-index: 28;
     /* Opacity alone. The notch already carries `rotate` and `translate` of its
@@ -667,6 +668,7 @@
   width: 5px;
   height: 5px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--arTone);
   box-shadow: 0 0 6px -1px var(--arTone);
 }
@@ -839,6 +841,7 @@
   height: 5px;
   margin-top: 5px; /* ds:ignore drops the 5px mark onto the first line's baseline */
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--arTone);
   /* The mark is a light rather than a dot: the same tone the orb is running,
      with its own small halo, so the panel and the ball are visibly one
@@ -936,6 +939,7 @@
   width: 5px;
   height: 5px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--success);
 }
 /* A source it cannot reach is `error`, so the dot beside it is the error tone.

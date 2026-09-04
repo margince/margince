@@ -238,7 +238,8 @@
 
 .vdna-pill {
   border: 1px solid currentColor;
-  border-radius: 999px;
+  border-radius: var(--r-full);
+  corner-shape: round;
   padding: 0 var(--space-2);
   font-size: 0.78em;
   white-space: nowrap;

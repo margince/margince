@@ -56,7 +56,7 @@
 .ob-conv-narration p {
   margin: 0;
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--space-1) var(--r-lg) var(--r-lg) var(--r-lg);
+  border-radius: var(--r-xs) var(--r-lg) var(--r-lg) var(--r-lg);
   background: var(--bgCard);
   color: var(--textContent);
   font: var(--fw-regular) var(--fs-body) / var(--lh-relaxed) var(--f-body);
@@ -69,6 +69,7 @@
   inline-size: var(--mw-avatar);
   block-size: var(--mw-avatar);
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--aiLight);
   color: var(--aiText);
 }
@@ -114,7 +115,7 @@
 .ob-conv-user p {
   margin: 0;
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--r-md) var(--r-lg) var(--space-1) var(--r-lg);
+  border-radius: var(--r-md) var(--r-lg) var(--r-xs) var(--r-lg);
   background: var(--accent);
   color: var(--textOnAccentControl);
   font: var(--fw-medium) var(--fs-body) / var(--lh-relaxed) var(--f-body);
@@ -673,6 +674,7 @@
   margin-top: 1px;
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgElevated);
   color: var(--textOnAccentControl);
 }
@@ -1221,6 +1223,7 @@
   height: 20px;
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-full);
+  corner-shape: round;
   color: var(--textOnAccentControl);
 }
 
@@ -1440,6 +1443,7 @@
   position: relative;
   height: 4px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--borderSubtle);
 }
 
@@ -1451,6 +1455,7 @@
   width: 10px;
   height: 10px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--accent);
   transform: translate(-50%, -50%);
 }
@@ -1579,6 +1584,7 @@
   width: 6px;
   height: 6px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--aiText);
 }
 
@@ -1772,6 +1778,7 @@
   width: 20px;
   height: 20px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--success);
   color: var(--textOnStatusControl);
 }
@@ -1976,6 +1983,7 @@
   height: 6px;
   flex: none;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--aiText);
 }
 
@@ -2485,6 +2493,7 @@
   inset-inline-start: 0;
   inline-size: 3px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--accent);
 }
 
@@ -2503,6 +2512,7 @@
   min-width: 16px;
   padding: 0 5px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--dangerBg);
   color: var(--dangerText);
   font-family: var(--f-body);
@@ -2778,6 +2788,7 @@
   align-items: center;
   padding: 1px var(--space-2);
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgCard);
   color: var(--textMeta);
   font-size: var(--fs-meta);
@@ -3059,6 +3070,7 @@
   margin-inline-start: auto;
   padding: 0 var(--space-2);
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgCard);
   color: var(--textMeta);
   font-size: var(--fs-meta);
@@ -3254,6 +3266,7 @@
 .ob-conv-meter-bar {
   block-size: var(--space-2);
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgCard);
   overflow: hidden;
 }
@@ -3262,6 +3275,7 @@
   display: block;
   block-size: 100%;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--aiMed);
 }
 
@@ -3324,6 +3338,7 @@
 .ob-conv-nextstep button {
   border: 1px solid var(--aiMed);
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--aiLight);
   color: var(--aiText);
   padding: var(--space-1) var(--space-3);

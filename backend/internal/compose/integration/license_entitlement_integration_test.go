@@ -16,11 +16,12 @@ package integration
 //   a deactivated seat is not counted   the access is already gone
 //   an agent seat IS counted            it acts on the estate like a human
 //
-// A unit test cannot see any of it, and a hand-inserted row would prove nothing
-// about the writer: the seats here are the ones bootstrap and the members
-// surface actually create.
+// A unit test cannot see any of it: what is real here is the predicate running
+// against rows a real database holds, and the verdict the server reaches with
+// it.
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"testing"
@@ -49,13 +50,17 @@ func TestLicenseEntitlementCountsTheSeatsThatAct(t *testing.T) {
 	// accepted by the bundled keyset. What is REAL here is the seat count and
 	// the verdict the server reaches with it — the half a fixture cannot fake.
 	//
-	// One granted seat, against an installation that bootstraps at least two:
-	// the admin and the Agent Runner. So over_limit is proven from rows the
-	// product actually wrote rather than from a number a test chose.
+	// The grant is a VARIABLE the posture closes over, because the posture is a
+	// func the surface calls per request. That is what lets both seats be written
+	// by the product: an installation cannot be invited past its entitlement —
+	// the seat ceiling refuses that, correctly — so the only way to be over the
+	// limit is for the rows to predate the grant shrinking, and this reproduces
+	// that in the order it really happens.
+	seats := 5
 	e := apptest.SetupAppWithOptions(t, compose.WithLicensePosture(func() licensecheck.Posture {
 		return licensecheck.Posture{
 			State:     licensecheck.StateValid,
-			Grants:    licensecheck.Grants{licensecheck.SeatsAttribute: float64(1)},
+			Grants:    licensecheck.Grants{licensecheck.SeatsAttribute: float64(seats)},
 			Issuer:    licensecheck.ProductionIssuer,
 			License:   licensecheck.License{ID: "0199-integration", Subject: "integration", Expiry: time.Now().AddDate(1, 0, 0)},
 			CheckedAt: time.Now(),
@@ -63,14 +68,23 @@ func TestLicenseEntitlementCountsTheSeatsThatAct(t *testing.T) {
 	}))
 	e.BootstrapWorkspace(t)
 
+	// A second person, through the members surface — the writer, not an insert.
+	if status := e.Call(t, "POST", "/v1/users", map[string]any{
+		"email": "second@example.com", "display_name": "Second Person", "role": "rep",
+	}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("invite a second member → %d, want 201", status)
+	}
+
+	// Now the licence shrinks under them.
+	seats = 1
+
 	var seeded entitlement
 	if status := e.Call(t, "GET", "/v1/installation/license", nil, nil, &seeded); status != http.StatusOK {
 		t.Fatalf("read the entitlement → %d", status)
 	}
-	// A bootstrapped installation holds the admin plus the Agent Runner seat
-	// (core 0216). Both act, so both count.
-	if seeded.SeatsUsed < 1 {
-		t.Fatalf("seats in use = %d on a bootstrapped installation", seeded.SeatsUsed)
+	if seeded.SeatsUsed != 2 {
+		t.Fatalf("seats in use = %d, want 2 (the admin and the invited member) — the count is what "+
+			"the over-limit verdict below is computed from", seeded.SeatsUsed)
 	}
 	if seeded.State != "valid" {
 		t.Errorf("state = %q, want valid", seeded.State)
@@ -98,11 +112,38 @@ func TestLicenseEntitlementCountsTheSeatsThatAct(t *testing.T) {
 		t.Errorf("seats in use = %d after every human became a read seat, was %d — read seats are being counted",
 			afterDemotion.SeatsUsed, before)
 	}
-	// The agent seat survives the demotion (app_user_agent_is_full refuses to
-	// demote it) and still counts, which is what stops an installation from
-	// acting without limit through agents.
-	if afterDemotion.SeatsUsed < 1 {
-		t.Errorf("seats in use = %d; the agent seat stopped counting", afterDemotion.SeatsUsed)
+	// And it reaches ZERO: every metered seat on this installation belongs to a
+	// person, and no product path creates anything else.
+	if afterDemotion.SeatsUsed != 0 {
+		t.Errorf("seats in use = %d after every human became a read seat, want 0 — something is "+
+			"metered that no person uses", afterDemotion.SeatsUsed)
+	}
+
+	// THE THIRD RULE, and this is the only place that holds it: an agent seat IS
+	// counted. It used to be held by accident — bootstrap seeded an agent row, so
+	// the count after this demotion could not reach zero — and retiring that seed
+	// took the assertion with it.
+	//
+	// Written through the owner connection because nothing in the product creates
+	// an agent row any more, which is what TestBootstrapMintsNoAgentSeat asserts.
+	// A resident runner will land under this flag, and it must arrive metered:
+	// excluding agents is what would let an installation act without limit
+	// through them. `full` and `active` are spelled out because
+	// app_user_agent_is_full admits no other seat type for an agent — the same
+	// constraint that makes this row survive the demotion above.
+	if _, err := e.Owner.Exec(context.Background(),
+		`INSERT INTO app_user (email, display_name, is_agent, seat_type, status)
+		 VALUES ('runner@example.com', 'A Runner', true, 'full', 'active')`); err != nil {
+		t.Fatalf("seeding an agent identity: %v", err)
+	}
+	var withAgent entitlement
+	if status := e.Call(t, "GET", "/v1/installation/license", nil, nil, &withAgent); status != http.StatusOK {
+		t.Fatalf("read the entitlement with an agent identity → %d", status)
+	}
+	if withAgent.SeatsUsed != 1 {
+		t.Errorf("seats in use = %d with one agent identity and every human demoted, want 1 — an "+
+			"agent that is not counted is an installation acting without limit through agents",
+			withAgent.SeatsUsed)
 	}
 }
 

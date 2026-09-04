@@ -176,6 +176,7 @@
   width: 84%;
   height: 11%;
   border-radius: var(--r-full);
+  corner-shape: round;
   pointer-events: none;
   background: radial-gradient(circle, var(--coreContact), transparent 70%);
   filter: blur(10px);
@@ -192,6 +193,7 @@
   width: 100%;
   height: 100%;
   border-radius: var(--r-full);
+  corner-shape: round;
   overflow: hidden;
   pointer-events: none;
 }
@@ -201,6 +203,7 @@
   position: absolute;
   inset: 0;
   border-radius: var(--r-full);
+  corner-shape: round;
   pointer-events: none;
   transition: opacity 0.3s ease;
   background: radial-gradient(
@@ -219,6 +222,7 @@
   position: absolute;
   inset: 0;
   border-radius: var(--r-full);
+  corner-shape: round;
   pointer-events: none;
   transition: opacity 0.3s ease;
   background:
@@ -251,6 +255,7 @@
   position: absolute;
   inset: 6%;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: linear-gradient(
     210deg,
     transparent 66%,
@@ -270,6 +275,7 @@
   width: 76%;
   height: 16%;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: radial-gradient(circle, var(--coreLight), transparent 68%);
   filter: blur(9px);
   opacity: 0.34;
@@ -351,6 +357,7 @@
   height: calc(var(--coreSize) * 1.39);
   margin: calc(var(--coreSize) * -0.695) 0 0 calc(var(--coreSize) * -0.695);
   border-radius: var(--r-full);
+  corner-shape: round;
   pointer-events: none;
   z-index: 0;
   /* TWO layers: a tight bloom hugging the glass, over the wide falloff that

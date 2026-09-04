@@ -63,6 +63,7 @@
   font-weight: 500;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--r-full);
+  corner-shape: round;
   cursor: pointer;
 }
 .lt-vtab:hover {
@@ -118,6 +119,7 @@
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
+  corner-shape: round;
   color: var(--textTertiary);
 }
 .lt-search:focus-within {
@@ -157,6 +159,7 @@
   padding: 0 var(--space-3);
   font-size: 12.5px;
   border-radius: var(--r-full);
+  corner-shape: round;
   border-color: var(--borderSubtle);
 }
 
@@ -201,6 +204,7 @@
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
+  corner-shape: round;
   font: inherit;
   font-size: 12.5px;
   color: var(--textSecondary);
@@ -233,6 +237,7 @@
   background: var(--bgElevated);
   border: 1px solid var(--accentMed);
   border-radius: var(--r-full);
+  corner-shape: round;
   /* NOT clipped: the row hosts the popups for its own condition, value and
    * delete steps, and a pill that clips its contents clips those too — they
    * open inside it and are simply never seen. The end segments carry the
@@ -243,10 +248,12 @@
 .lt-frow > :first-child {
   border-top-left-radius: var(--r-full);
   border-bottom-left-radius: var(--r-full);
+  corner-shape: round;
 }
 .lt-frow-more {
   border-top-right-radius: var(--r-full);
   border-bottom-right-radius: var(--r-full);
+  corner-shape: round;
 }
 
 .lt-frow-attr {
@@ -438,7 +445,7 @@
   height: 14px;
   flex: none;
   border: 1px solid var(--borderStrong);
-  border-radius: 4px;
+  border-radius: var(--r-xs);
   color: var(--textOnAccent);
 }
 .lt-mi .lt-cb > svg {
@@ -628,6 +635,7 @@
   display: block;
   height: 10px;
   border-radius: var(--r-full);
+  corner-shape: round;
 }
 .lt-loading td {
   border-bottom: 1px solid var(--borderSubtle);

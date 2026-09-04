@@ -5,20 +5,21 @@
 
 package identity
 
-// The first-party Agent Runner identity bootstrap writes (seed-and-fixtures
-// §1.5) — the app_user a resident runner will answer as when it lands.
+// Agent identities: that bootstrap writes NONE, and that the one endpoint which
+// could give one a password still refuses.
 //
-// Nothing in the running product acts on it today: scheduled extension ticks
-// used to, and now answer as the job they are. What these still hold is the
-// SHAPE of the row bootstrap writes, because it is a full seat an operator sees
-// in the roster and can act on.
+// Bootstrap used to seed a first-party runner seat (seed-and-fixtures §1.5) for
+// a single consumer — the extension-job dispatcher, which resolved it to name a
+// tick's initiator. The tick now answers as the job it is, so the row's only
+// remaining effects were a full licence seat on every installation and a row in
+// the admin roster nobody could act on correctly. It is not seeded any more.
 //
-// What the row must NOT carry matters as much as what it must, so both halves
-// are asserted: a seat that acquired a password would be a login with no person
-// to administer it, and one that acquired a role would be a standing grant no
-// passport ever bounded — which is precisely the ambient authority "agent ≤
-// human" exists to deny. The second test holds the first of those closed
-// against the one endpoint that can still open it.
+// The REFUSALS stay, and this file is where that decision is held. `is_agent`
+// remains a supported column — overlay's mappable-seat predicate and
+// federatedidentity's sign-in refusal both filter on it, and a resident runner
+// will land under it — so the rules about what an agent row may carry are still
+// live rules. They are simply no longer exercised by a row the product creates,
+// which is why the fixture below writes its own.
 
 import (
 	"context"
@@ -35,26 +36,24 @@ import (
 
 const agentSeatAdminPassword = "a bootstrap password!"
 
-// agentSeatRow is the seat as the schema holds it. The password is asked about
-// rather than read out because absence is the assertion — a hash must not be
-// selected into a test's memory to be tested for.
+// agentSeatRow is what these suites actually ask of an agent identity. The
+// password is asked ABOUT rather than read out, because absence is the
+// assertion and a hash must not be selected into a test's memory to be tested
+// for.
 type agentSeatRow struct {
 	id          ids.UUID
 	email       string
-	displayName string
-	status      string
-	seatType    string
 	hasPassword bool
-	archived    bool
 }
 
 // bootstrapForAgentSeat creates one installation through the real writer and
-// returns it with the slug the seat's address derives from.
+// returns it with the label its addresses derive from.
 func bootstrapForAgentSeat(t *testing.T, pool *pgxpool.Pool) (ids.WorkspaceID, string) {
 	t.Helper()
 	ctx := context.Background()
-	// The test database persists across binary runs, so the slug — and the seat
-	// address derived from it — carries the id's random tail to stay unique.
+	// Unique within the run: setupIdentityDB resets the database per test, so
+	// this guards against two installations in ONE test rather than against
+	// anything left behind by a previous one.
 	slug := "agentseat-" + ids.NewV7().String()[24:]
 	var wsID ids.WorkspaceID
 	err := database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
@@ -73,22 +72,21 @@ func bootstrapForAgentSeat(t *testing.T, pool *pgxpool.Pool) (ids.WorkspaceID, s
 	return wsID, slug
 }
 
-// readAgentSeats reads one workspace's agent seats, naming the workspace
-// explicitly: the owner connection is a superuser, which row-level security
-// does not filter, so an unqualified read answers with every workspace's rows.
-func readAgentSeats(t *testing.T, owner *pgx.Conn, wsID ids.WorkspaceID) []agentSeatRow {
+// readAgentSeats reads every agent identity in the database.
+//
+// Unqualified on purpose, and safe because setupIdentityDB gives each test its
+// own reset database: no table here carries a workspace column to filter on, and
+// no policy would narrow the owner connection if it did.
+func readAgentSeats(t *testing.T, owner *pgx.Conn) []agentSeatRow {
 	t.Helper()
 	rows, err := owner.Query(context.Background(),
-		`SELECT id, email, display_name, status, seat_type,
-		        password_hash IS NOT NULL, archived_at IS NOT NULL
-		   FROM app_user WHERE is_agent`)
+		`SELECT id, email, password_hash IS NOT NULL FROM app_user WHERE is_agent`)
 	if err != nil {
 		t.Fatalf("reading the agent seats: %v", err)
 	}
 	seats, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (agentSeatRow, error) {
 		var s agentSeatRow
-		return s, r.Scan(&s.id, &s.email, &s.displayName, &s.status,
-			&s.seatType, &s.hasPassword, &s.archived)
+		return s, r.Scan(&s.id, &s.email, &s.hasPassword)
 	})
 	if err != nil {
 		t.Fatalf("collecting the agent seats: %v", err)
@@ -96,67 +94,74 @@ func readAgentSeats(t *testing.T, owner *pgx.Conn, wsID ids.WorkspaceID) []agent
 	return seats
 }
 
-// theAgentSeat asserts the workspace holds exactly one and returns it.
-func theAgentSeat(t *testing.T, owner *pgx.Conn, wsID ids.WorkspaceID) agentSeatRow {
+// seedAgentIdentity writes one agent identity at email and answers its id — the
+// one fixture for an agent row in this package.
+//
+// A direct insert rather than a seam, because no writer in the product creates
+// an agent row, which is itself what TestBootstrapMintsNoAgentSeat asserts. What
+// these suites test are the schema's and the service's rules about a row SHAPE,
+// so the fixture's job is to produce that shape.
+//
+// 'full' and 'active' are spelled out because app_user_agent_is_full admits no
+// other seat type for an agent, so the row states the constraint it is subject
+// to rather than satisfying it by accident.
+func seedAgentIdentity(t *testing.T, owner *pgx.Conn, email string) ids.UserID {
 	t.Helper()
-	seats := readAgentSeats(t, owner, wsID)
+	id := ids.New[ids.UserKind]()
+	if _, err := owner.Exec(context.Background(),
+		`INSERT INTO app_user (id, email, display_name, is_agent, seat_type, status)
+		 VALUES ($1, $2, 'Margince Agent', true, 'full', 'active')`,
+		id, email); err != nil {
+		t.Fatalf("seeding an agent identity at %s: %v", email, err)
+	}
+	return id
+}
+
+// theAgentSeat asserts exactly one agent identity is present and returns it.
+func theAgentSeat(t *testing.T, owner *pgx.Conn) agentSeatRow {
+	t.Helper()
+	seats := readAgentSeats(t, owner)
 	if len(seats) != 1 {
-		t.Fatalf("the workspace holds %d agent seat(s), want exactly 1 — bootstrap writes one, and a "+
-			"second is a second full seat on the licence with nothing to distinguish which is the "+
-			"installation's own", len(seats))
+		t.Fatalf("%d agent identity/identities present, want exactly 1 — this suite seeds its own, "+
+			"so any other count means the fixture did not land or bootstrap started seeding one again",
+			len(seats))
 	}
 	return seats[0]
 }
 
-func TestBootstrapMintsAnAgentSeatThatCarriesNoAuthorityOfItsOwn(t *testing.T) {
+// TestBootstrapMintsNoAgentSeat: a fresh installation holds no agent identity.
+//
+// The absence is the point. A seeded agent is a full seat metered against the
+// licence on every installation, for a row nothing in the product reads.
+func TestBootstrapMintsNoAgentSeat(t *testing.T) {
 	owner, pool := setupIdentityDB(t)
-	wsID, slug := bootstrapForAgentSeat(t, pool)
-	seat := theAgentSeat(t, owner, wsID)
+	bootstrapForAgentSeat(t, pool)
 
-	if want := agentSeatEmail(slug); seat.email != want {
-		t.Errorf("seat address = %q, want %q (seed-and-fixtures §1.5)", seat.email, want)
-	}
-	if seat.displayName != "Margince Agent" {
-		t.Errorf("seat display name = %q, want %q — it is what a human reads beside a record the "+
-			"runner owns", seat.displayName, "Margince Agent")
-	}
-	if seat.status != "active" || seat.archived {
-		t.Errorf("seat status = %q, archived = %v; bootstrap must write a LIVE identity — every "+
-			"reader treats deactivated-or-archived as absent (LiveMemberSQL), so either would ship "+
-			"a seat that is in the table and nowhere else", seat.status, seat.archived)
-	}
-	if seat.seatType != "full" {
-		t.Errorf("seat type = %q, want \"full\" — the schema admits no other value for an agent "+
-			"(app_user_agent_is_full); a read ceiling reaches an agent through the human it acts "+
-			"for, never through its own row", seat.seatType)
-	}
-	if seat.hasPassword {
-		t.Error("the agent seat carries a password hash, which makes an identity with no person " +
-			"behind it a set of credentials somebody must administer and rotate")
-	}
-
-	var grants int
-	if err := owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM role_assignment WHERE user_id = $1`,
-		seat.id).Scan(&grants); err != nil {
-		t.Fatalf("counting the seat's role assignments: %v", err)
-	}
-	if grants != 0 {
-		t.Errorf("the agent seat holds %d role assignment(s). The seat is an identity, not an "+
-			"authority: what an agent may do is the passport granting it intersected with the human "+
-			"that passport names, so a role here is a standing grant nobody asked for and nothing "+
-			"revokes", grants)
+	if seats := readAgentSeats(t, owner); len(seats) != 0 {
+		t.Fatalf("bootstrap wrote %d agent identity/identities (%q), want none — a seeded agent is a "+
+			"full seat metered against the licence on every installation, for a row nothing reads",
+			len(seats), seats[0].email)
 	}
 }
 
-// The seat is listed in the roster, so an admin can reach it with every member
-// action — and one of them mints a credential. Login already refuses a seat with
-// no hash and forgot-password cannot even find it (that lookup requires an
-// existing hash), which leaves the admin-issued link as the only way a machine
-// identity could come to hold a password.
-func TestNoSetPasswordLinkCanBeIssuedForTheAgentSeat(t *testing.T) {
+// TestNoSetPasswordLinkCanBeIssuedForAnAgentIdentity holds the refusal that
+// outlives the seeded row.
+//
+// An agent identity, wherever it comes from, is listed in the roster, so an
+// admin can reach it with every member action — and one of them mints a
+// credential. Login already refuses a row with no hash and forgot-password
+// cannot even find it (that lookup requires an existing hash), which leaves the
+// admin-issued link as the only way a machine identity could come to hold a
+// password.
+//
+// The fixture seeds its own agent row now. The refusal is NOT retired with the
+// seed: `is_agent` is still a supported column, and a resident runner landing
+// under it must arrive with this door already shut rather than have it re-opened
+// and re-closed.
+func TestNoSetPasswordLinkCanBeIssuedForAnAgentIdentity(t *testing.T) {
 	owner, pool := setupIdentityDB(t)
 	wsID, slug := bootstrapForAgentSeat(t, pool)
+	seedAgentIdentity(t, owner, "agent@"+slug+".gradion.local")
 	// Bound to the workspace this test just bootstrapped: the suite seeds one
 	// per test, so there is no installation singleton to resolve.
 	svc := NewServiceFor(database.BindTo(pool, wsID))
@@ -173,27 +178,27 @@ func TestNoSetPasswordLinkCanBeIssuedForTheAgentSeat(t *testing.T) {
 	if err != nil {
 		t.Fatalf("admin login: %v", err)
 	}
-	seat := theAgentSeat(t, owner, wsID)
+	seat := theAgentSeat(t, owner)
 
 	_, _, err = svc.IssuePasswordLink(wsCtx, admin, ids.From[ids.UserKind](seat.id))
 	if !errors.Is(err, errAgentSeatHasNoPassword) {
-		t.Fatalf("issuing a set-password link for the agent seat returned %v, want the agent-seat "+
+		t.Fatalf("issuing a set-password link for an agent identity returned %v, want the agent-seat "+
 			"refusal. Redeeming that link would give an identity with no person behind it a working "+
 			"credential, and every session opened with it would read as the agent", err)
 	}
 
 	// And nothing was written on the way to the refusal: no token to redeem
-	// later, and the seat still holds no password.
+	// later, and the row still holds no password.
 	var tokens int
 	if err := owner.QueryRow(context.Background(),
 		`SELECT count(*) FROM auth_token WHERE user_id = $1 AND used_at IS NULL`, seat.id).Scan(&tokens); err != nil {
 		t.Fatalf("counting the seat's live tokens: %v", err)
 	}
 	if tokens != 0 {
-		t.Errorf("the refused issue left %d live token(s) for the agent seat; a refusal that still "+
-			"mints the credential refuses nothing", tokens)
+		t.Errorf("the refused issue left %d live token(s) for the agent identity; a refusal that "+
+			"still mints the credential refuses nothing", tokens)
 	}
-	if theAgentSeat(t, owner, wsID).hasPassword {
-		t.Error("the agent seat acquired a password hash during a refused issue")
+	if theAgentSeat(t, owner).hasPassword {
+		t.Error("the agent identity acquired a password hash during a refused issue")
 	}
 }

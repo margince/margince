@@ -28,10 +28,10 @@
 @property --railW {
   syntax: "<length>";
   inherits: true;
-  initial-value: 64px;
+  initial-value: 56px;
 }
 
-/* App shell — a labeled sidebar collapsing to the canonical 64px rail, and the
+/* App shell — a labeled sidebar collapsing to the canonical 56px rail, and the
  * content column beside it. The chrome is GLASS over the lit ground (DESIGN.md
  * §6), not §2b's deep ink-green field: the sidebar and the strip are the page's
  * own pane with a blur behind it, so rail icons read as ordinary theme tokens
@@ -94,7 +94,7 @@
      one column of cards — see .main-record. */
   --recordColumn: 1400px;
 
-  --railW: 64px;
+  --railW: 56px;
   display: grid;
   grid-template-columns: var(--railW) 1fr;
   height: 100vh;
@@ -301,7 +301,7 @@
 }
 /* ===== sidebar =====
  * The ground is the pane — glass over the emerald light — in BOTH states. The
- * collapsed state matches the canonical rail's geometry — 64px, the logomark
+ * collapsed state matches the canonical rail's geometry — 56px, the logomark
  * chip, the same rows — but not its ink-green field: a sidebar that changed
  * colour on collapse would read as two shells.
  *
@@ -324,18 +324,18 @@
   overflow-y: auto;
   /* Vertically it scrolls; horizontally it never does. Leaving overflow-x at its
      initial `visible` is not neutral — a scroller resolves the other axis to
-     `auto` — and expanding the sidebar animates the grid column from 64px while
+     `auto` — and expanding the sidebar animates the grid column from 56px while
      the labels are already at full width, so for those few frames the panel
      overflowed itself and flashed a horizontal scrollbar across the navigation.
      Nothing in the expanded state needs to paint outside the panel; the tooltips
      that do belong to the collapsed one, which opts out of clipping below. */
   overflow-x: hidden;
 }
-/* The collapsed panel must NOT clip: its tooltips sit outside the 64px box, and
+/* The collapsed panel must NOT clip: its tooltips sit outside the 56px box, and
    each label clips itself.
    The cost is that it cannot scroll either — `overflow-y: auto` resolves the
    other axis to `auto` too, and a tooltip is then clipped or drags a horizontal
-   scrollbar across a 64px column. On a window shorter than the panel is tall
+   scrollbar across a 56px column. On a window shorter than the panel is tall
    (measured: 774px of rows against a 583px viewport at 1280x720) its own foot
    therefore sits below the fold with nothing to scroll. Fixing that properly
    means portalling this tooltip the way design-system/tooltip.tsx already
@@ -406,8 +406,8 @@
   gap: var(--space-2);
   text-decoration: none;
   color: var(--textPrimary);
-  border-radius: 9px;
-  padding: 2px 7px 2px 1px; /* ds:ignore 1 + the rail's 8px inset centres the 44px chip on the rows' own 18px glyph axis */
+  border-radius: var(--r-sm);
+  padding: var(--space-1);
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -459,14 +459,14 @@
   color: var(--textPrimary);
 }
 .rail.collapsed .ws-logo {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   flex: none;
   padding: var(--space-1);
 }
 .rail.collapsed .ws-logo .company-logo {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
 }
 .rail.collapsed .ws-logo-powered,
 .rail.leveled .ws-logo-powered {
@@ -474,13 +474,13 @@
 }
 .rail .ws-chip {
   /* The workspace's mark is the one picture in the chrome, and at 32px it read
-     as one more row glyph. 44px is the head's height less a 2px inset on each
-     side: the head is the strip's height to the pixel, so this is as large as
-     the mark can be without touching the rail's edge or the rule under it. */
-  width: 44px;
-  height: 44px;
+     as one more row glyph. 40px is the collapsed column's own width less the
+     rail's 8px inset either side, so this is as large as the mark can be
+     without touching the rail's edge. */
+  width: 40px;
+  height: 40px;
   flex: none;
-  border-radius: 11px;
+  border-radius: var(--r-control);
   /* Flat brand emerald, no gradient and no lift: the mark is the one filled
      thing in the chrome, and a lit, shadowed chip beside quiet rows was the
      loudest object on the screen. */
@@ -493,7 +493,7 @@
    stands here is a logo drawn for its own background, or the monogram Avatar
    tints from the record's identity, and either one on the brand emerald would
    be a second surface behind a finished mark. The avatar fills the slot so the
-   collapsed rail keeps centring the same 44px box on the rows' glyph axis. */
+   collapsed rail keeps centring the same 40px box on the rows' glyph axis. */
 .rail .ws-chip-company {
   background: none;
 }
@@ -579,11 +579,7 @@
    a heading and a divider do the same job, and stacking both says it twice. */
 .rail .navheading {
   position: relative;
-  font-size: 11px;
-  font-weight: var(--fw-medium);
-  color: var(--textMeta);
-  margin: 0 0 var(--space-1);
-  padding: 0 14px; /* ds:ignore the nav rows' own inset, which this label stands on */
+  padding: 0 var(--space-2);
   /* It is a label, not a place to go. Sitting in a column of links it inherited
      the text cursor, which offers a selection nobody wants over a word that
      answers no press. */
@@ -617,6 +613,9 @@
    here, the gap has ONE spelling and the sheet cannot fall out of step with it. */
 .rail.collapsed:not(.sheetopen) .ws {
   gap: 0;
+  /* The chip is the only thing left, so the box's own inset would push it off
+     the axis every glyph below it stands on. */
+  padding: 0;
   /* The words have no width here, so nothing else centres the chip: `flex: 1`
      makes this box the head's full width and the mark would sit at its left
      edge, off the axis every glyph below it stands on. */
@@ -632,28 +631,19 @@
   align-items: center;
   gap: var(--space-2);
   flex: 1;
-  /* 38px rows, the mock's pitch: ten places read at a glance, each with room
-     to be pressed. Past the 24x24 floor of WCAG 2.2 2.5.8 (AA) at 46x38; the
-     44px targets of 2.5.5 (AAA) are the phone bar's, where a thumb is the
-     pointer. The foot's agent card is compact enough that the column still
-     fits a laptop at this pitch. */
-  min-height: 38px;
-  /* 13 and not 14, with the transparent border below making up the difference:
-     the active row is a PLATE with an edge, and a border that appears only when
-     the row is current would shift its glyph and its label by a pixel on every
-     navigation. Held at every state instead, and coloured by one. */
-  /* Optical, not rhythm: 13 + the 1px edge is the 14 this row has always had,
-     and the --space-* rung either side of it moves every glyph in the rail off
-     the axis the collapsed and expanded states share. */
-  padding: 0 13px; /* ds:ignore 13 + the 1px edge is one 14px inset, not a rung */
-  border: 1px solid transparent;
-  border-radius: 8px;
+  /* 32px rows: ten places read at a glance in a column a laptop still fits.
+     Past the 24x24 floor of WCAG 2.2 2.5.8 (AA) at 34x32 expanded and 32x32
+     collapsed; the 44px targets of 2.5.5 (AAA) are the phone bar's, where a
+     thumb is the pointer. */
+  min-height: 32px;
+  /* The inset the label is positioned off: 8 + the 18px glyph + the 8px gap is
+     the 34px `.navlabel` stands at, so the two cannot drift apart. */
+  padding: 0 var(--space-2);
+  border-radius: var(--r-sm);
   /* A pointer-tracked highlight reads as lag past ~200ms; Carbon times this
-     class of change at 70–110ms. The border-colour is in the same transition:
-     the plate's edge arrives with its fill or the two read as separate events. */
+     class of change at 70–110ms. */
   transition:
     background var(--dur-state) var(--ease-in-out),
-    border-color var(--dur-state) var(--ease-in-out),
     color var(--dur-state) var(--ease-in-out);
   cursor: pointer;
   background: transparent;
@@ -663,31 +653,37 @@
      from further away than a paragraph. */
   font-size: 14px;
 }
-/* Collapsed keeps the SAME row height as expanded, and the 13px padding plus the
-   1px edge centres the 18px icon either way (1 + 13 + 18 + 13 + 1 = 46), so no
-   icon moves on either axis across the collapse, and none moves when a row
-   becomes the current one. */
-/* A pointer resting on a row takes the page's own hover step — the glass is the
-   page's pane, so the page's ladder is the rail's ladder too. */
+/* Collapsed, a row IS its target: a 32x32 square centred in the 56px column,
+   with the glyph centred in it. The height is the expanded row's, so nothing
+   moves vertically across the collapse. */
+.rail.collapsed .navwrap {
+  justify-content: center;
+}
+.rail.collapsed .navitem {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  justify-content: center;
+}
+/* A pointer resting on a row takes the accent wash the current row is painted
+   in, one step quieter: hover and current are then one gesture read at two
+   strengths rather than two unrelated tints. */
 .rail .navitem:hover {
-  background: var(--bgHover);
+  background: color-mix(in srgb, var(--accentLight) 50%, transparent);
   color: var(--textPrimary);
 }
 /* The current row is one more pane on the glass: the pane's ground with the
    pane's hairline as an EDGE, which is what makes it a surface with a boundary
    rather than a smudge, and quieter than hover's tint so the two states are
    never the same gesture read twice.
-   Four signals, because a ground alone is colour-only (WCAG 1.4.1, Level A):
-   the SOLID elevated ground — the pane's glass over the rail's glass was two
-   tints of one thing, and the current row did not stand out from its
-   neighbours — a real hairline edge, semibold weight, and the accent on the
-   glyph. The INK stays neutral: the accent as 14px text measures under the
-   4.5:1 AA needs on the dark theme, and weight does not rescue that below
-   18.66px. The glyph is where the accent goes, and at 3:1 non-text (1.4.11)
-   it clears. */
+   Three signals, because a ground alone is colour-only (WCAG 1.4.1, Level A):
+   the accent wash, semibold weight, and the accent on the glyph. The INK stays
+   neutral: the accent as 14px text measures under the 4.5:1 AA needs on the
+   dark theme, and weight does not rescue that below 18.66px. The glyph is where
+   the accent goes, and at 3:1 non-text (1.4.11) it clears. */
 .rail .navitem.active {
-  background: var(--bgElevated);
-  border-color: var(--borderSubtle);
+  background: var(--accentLight);
   color: var(--textPrimary);
   font-weight: var(--fw-semibold);
 }
@@ -696,7 +692,7 @@
 }
 /* One icon size in both states. Animating the glyph's box relayouts the whole
    sidebar every frame, and a resizing icon is the jitter — 18px reads correctly
-   beside a 13.5px label and alone on the 64px rail. */
+   beside a 13.5px label and alone on the 56px rail. */
 .rail .navitem svg {
   width: 18px;
   height: 18px;
@@ -706,7 +702,7 @@
    and collapsing is one continuous movement. */
 .rail .navlabel {
   position: absolute;
-  left: 41px;
+  left: 34px;
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
@@ -727,6 +723,7 @@
   min-width: 18px;
   height: 18px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--accent);
   color: var(--textOnAccentControl);
   font-size: 10.5px;
@@ -766,7 +763,7 @@
 
 /* ===== a navigation level =====
  * The panel shows ONE level at a time: on a section route the ten destinations
- * step aside for that section's entries, with the way back up above them. 64px
+ * step aside for that section's entries, with the way back up above them. 56px
  * cannot carry two levels, and 224px carrying both reads as a list of twenty
  * places to go.
  *
@@ -901,7 +898,7 @@
    is never a dead box. The level's own name stands a row below, where the words
    would have been.
    One selector serves both sidebar widths: nothing more specific than `.rail …`
-   claims `display` on the brand's words, so the 64px rail follows without being
+   claims `display` on the brand's words, so the 56px rail follows without being
    named. */
 .rail.leveled .ws-name {
   display: none;
@@ -935,7 +932,7 @@
 }
 /* WHICH BUILD THIS IS, at the foot of the column.
    Centred in both rail states, because it names the whole panel rather than
-   standing on the rows' text column — and at 64px there is no text column to
+   standing on the rows' text column — and at 56px there is no text column to
    stand on. It reads in the brand block's own small face: the one other line in
    this panel that is a label about the installation rather than a place to go,
    which is why the two share a declaration rather than each spelling 9px.
@@ -948,6 +945,12 @@
   margin: var(--space-3) 0 0;
   text-align: center;
   color: var(--textMeta);
+  /* One line, whatever the marker says: the collapsed column is 56px and a
+     build name is unbounded, so a wrapping marker was two lines of 9px type
+     under the agent's card. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 /* The More control belongs to the phone-width bottom bar only. */
 .rail .railmore {
@@ -1189,6 +1192,7 @@
   color: var(--textMeta);
   background: var(--bgCard);
   border-radius: var(--r-full);
+  corner-shape: round;
   padding: 1px var(--space-2); /* ds:ignore a cap-height band on a 10.5px label, not spaced content */
 }
 
@@ -1346,7 +1350,7 @@
      reached from the page head instead (`.pageswitch` below).
      Every `.rail.collapsed …` variant is restated here: the desktop preference
      survives a resize and `.rail.collapsed …` outranks a bare `.rail …`
-     selector, so a phone would otherwise inherit the 64px sidebar's geometry. */
+     selector, so a phone would otherwise inherit the 56px sidebar's geometry. */
   .rail .navlevel,
   .rail.expanded .navlevel,
   .rail.collapsed .navlevel {
@@ -1399,7 +1403,7 @@
     width: 100%;
     min-height: 48px;
     border: 0;
-    border-radius: 10px;
+    border-radius: var(--r-control);
     background: transparent;
     color: var(--textMeta);
     cursor: pointer;
@@ -1583,7 +1587,7 @@
   .rail.sheetopen .navheading {
     display: block;
     /* The sheet is 600px wide even when the desktop preference it inherits is
-       the 64px rail, so the group names are spelled out here rather than
+       the 56px rail, so the group names are spelled out here rather than
        standing in as the collapsed rail's hairline. */
     color: var(--textMeta);
   }
