@@ -729,8 +729,15 @@ describe("an introduction ask on the queue", () => {
   });
 });
 
-describe("the one thing to do next", () => {
-  it("says what the top row is, rather than leaving a reader to work it out", async () => {
+describe("one obligation is drawn once", () => {
+  // The top row IS the one thing to do next, and the page no longer says so a
+  // second time. A focus card above the queue drew that row whole and a Next-up
+  // list drew the three after it as titles, so a reader counting their morning
+  // off this screen counted the first four rows twice.
+  //
+  // What replaced it: the first row is selected on arrival, which puts it in
+  // the context pane without drawing it again.
+  it("draws the top row once, not once on a card and once in the queue", async () => {
     stub(
       day({
         queue: [
@@ -742,9 +749,6 @@ describe("the one thing to do next", () => {
             source: "deal_at_risk",
             category: "deals_at_risk",
             level: 3,
-            // The record the verb goes to. Without it the row has no address
-            // at all, and the card is correctly withheld — which is a
-            // different case, tested below.
             subject: {
               type: "deal",
               id: "01a05500-0000-7000-8000-0000000000cc",
@@ -757,14 +761,12 @@ describe("the one thing to do next", () => {
     );
     renderWorklist();
 
-    // The card names the row and offers ONE verb. Both are drawn twice — once
-    // on the card, once on the row it was lifted from — because the row stays
-    // in the queue so the ranks and counts keep agreeing with the page.
-    await screen.findByText("Do this next");
-    expect(await screen.findAllByText("Northstar renewal")).toHaveLength(2);
+    expect(await screen.findAllByText(/Northstar renewal/)).toHaveLength(1);
   });
 
-  it("promotes no card when the day's top row is review work", async () => {
+  // Review work is judgement the queue collects, not a rep's next action. It
+  // still belongs on the page — what it must not do is claim the top of it.
+  it("keeps review work on the page without promoting it", async () => {
     stub(
       day({
         queue: [
@@ -783,13 +785,12 @@ describe("the one thing to do next", () => {
     );
     renderWorklist();
 
-    // The row is there; the card is not. A page headed "do this next" over a
-    // duplicate-merge suggestion tells a rep something false about their day.
-    await screen.findByText("Two Acme records");
-    expect(screen.queryByText("Do this next")).toBeNull();
+    expect(await screen.findAllByText(/Two Acme records/)).toHaveLength(1);
   });
 
-  it("promotes no card when the server named no verb for the top row", async () => {
+  // A row the server named no verb for is still real work and still drawn. It
+  // simply has nothing to press, which the row says by drawing no control.
+  it("draws a row the server named no verb for", async () => {
     stub(
       day({
         queue: [
@@ -800,38 +801,7 @@ describe("the one thing to do next", () => {
     );
     renderWorklist();
 
-    await screen.findByText("Something happened");
-    expect(screen.queryByText("Do this next")).toBeNull();
-  });
-  it("promotes no card when the row has nowhere for its verb to go", async () => {
-    stub(
-      day({
-        // Filed under nothing, so rowHref falls through SOURCE_QUEUE and finds
-        // no address. The server named a verb and the page has nowhere to send
-        // it.
-        //
-        // Deliberately NOT a task: a task's `complete` acts on the row itself
-        // and needs no address, so this case would be asserting the opposite
-        // rule with a task fixture.
-        queue: [
-          row({
-            id: "unfiled",
-            source: "sync_health",
-            category: "system",
-            title: "Something to do",
-            band: "keep_momentum",
-            primary_action: "open",
-          }),
-        ],
-        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
-      }),
-    );
-    renderWorklist();
-
-    await screen.findByText("Something to do");
-    // A card with a headline and no way to act is worse than no card: it
-    // occupies the place a reader looks for their next step.
-    expect(screen.queryByText("Do this next")).toBeNull();
+    expect(await screen.findAllByText(/Something happened/)).toHaveLength(1);
   });
 });
 
@@ -927,5 +897,47 @@ describe("the draft_reply verb says what the click does", () => {
         name: en["worklist.verb.draft_reply_now"],
       }),
     ).toBeNull();
+  });
+});
+
+// One obligation, drawn once.
+//
+// The page used to render its first item up to three times — as a focus card,
+// as the head of a "next up" strip, and again as a row in the queue. Three
+// drawings of one thing is not emphasis; it is a reader counting their morning
+// wrong, and a rep who answers the focus card then meets the same customer
+// twice on the way down.
+//
+// Asserted over the ROW IDENTITY rather than over visible text, because two
+// rows can honestly share a title — two tasks called "Follow up" are two
+// obligations — while `source-id` is what the page itself uses as a key and
+// what a duplicate would collide on.
+describe("every obligation is drawn once", () => {
+  it("renders no row twice, including the one at the top", async () => {
+    stub(
+      day({
+        queue: [
+          row({ id: "a", source: "customer_waiting", title: "Kirsten replied" }),
+          row({ id: "b", source: "task", title: "Send the quote" }),
+          row({ id: "c", source: "meeting", title: "Quarterly review" }),
+        ],
+        summary: { urgent: 1, due: 1, lower_priority: 1, total: 3 },
+      }),
+    );
+
+    const { container } = renderWorklist();
+    await screen.findByText("Kirsten replied");
+
+    const drawn = [...container.querySelectorAll("li")].map(
+      (item) => item.querySelector(".worklist-row-title")?.textContent ?? "",
+    );
+    const seen = new Map<string, number>();
+    for (const title of drawn.filter(Boolean)) {
+      seen.set(title, (seen.get(title) ?? 0) + 1);
+    }
+
+    const twice = [...seen.entries()].filter(([, times]) => times > 1);
+    expect(twice).toEqual([]);
+    expect(seen.size).toBe(3);
   });
 });
