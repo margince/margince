@@ -4,10 +4,29 @@
    It is the only thing on the card allowed this much weight — a page where
    three things shout has no emphasis at all. */
 .r360-verdict {
+  /* The word, then everything it is a call about: two columns, the first as
+     wide as the word and the second taking the rest. A row of three items let
+     the working drift to the far margin and the sentence fall under the word
+     at any width narrower than both together. */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+/* Under the fold the word takes its own row: a 34px display word and a
+   sentence beside it need a column each, and below that the two share one. */
+@container work (max-width: 34rem) {
+  .r360-verdict {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+}
+.r360-verdict-body {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-4);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
 }
 
 /* The call, as a WORD and not a colour alone: a reader who cannot tell the
@@ -58,8 +77,6 @@
    either side of it are both fixed, so anything the head cannot fit comes out
    of the sentence, and a sentence that wraps still reads. */
 .r360-because {
-  flex: 1 1 22rem;
-  min-width: 0;
   margin: 0;
   /* The because-sentence is prose beside the word, not a second headline:
      at reading size the word stays the one loud thing and the sentence is
@@ -70,13 +87,13 @@
   text-wrap: pretty;
 }
 
-/* The disclosure sits at the far end of the head, so the call and the
-   sentence stay one uninterrupted line to read left to right. */
+/* The disclosure sits under the sentence it grounds, at the start of the
+   column: a reader who doubts the call looks for the working where the claim
+   ended, not at the opposite margin of the head. */
 .r360-rests-toggle {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  margin-left: auto;
   flex-shrink: 0;
   padding: var(--space-2) var(--space-3);
   /* A bordered control, not a link: it is the one thing in the head a reader

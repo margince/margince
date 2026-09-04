@@ -93,8 +93,16 @@ export function VerdictHead({
     <PanelBody>
       <div className="r360-verdict">
         <span className={`r360-standing r360-standing-${tone}`}>{label}</span>
-        {because ? <span className="r360-because">{because}</span> : null}
-        {restsOn && restsOn.length > 0 ? <RestsOn items={restsOn} /> : null}
+        {/* The sentence and its working are ONE column beside the word, not two
+            more items in a row with it. Laid out as three siblings, the working
+            was pushed to the far end of the head and the sentence wrapped
+            underneath the word rather than beside it — the call read as a
+            headline with a caption below instead of a word a reader takes the
+            record in by and the line that says why. */}
+        <div className="r360-verdict-body">
+          {because ? <span className="r360-because">{because}</span> : null}
+          {restsOn && restsOn.length > 0 ? <RestsOn items={restsOn} /> : null}
+        </div>
       </div>
     </PanelBody>
   );

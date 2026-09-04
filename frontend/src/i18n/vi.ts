@@ -890,6 +890,12 @@ export const vi = {
   "co.health.dim.relationship": "Quan hệ",
   "co.health.dim.commercial": "Thương mại",
   "co.health.dim.payment": "Thanh toán",
+  "co.health.means.relationship":
+    "Hai bên còn liên lạc hay không — ai đã viết, cách đây bao lâu và bên nào chủ động trước.",
+  "co.health.means.commercial":
+    "Công việc đang chạy có tiến triển không — các thương vụ đang mở, giai đoạn của chúng và đã đứng yên bao lâu.",
+  "co.health.means.payment":
+    "Hóa đơn có được thanh toán đúng hạn không — hiện đang quá hạn những gì và tài khoản này thường trả trễ bao lâu.",
   "co.health.rating.atRisk": "Có rủi ro",
   "co.health.rating.good": "Tốt",
   "co.health.rating.strong": "Mạnh",
@@ -923,8 +929,7 @@ export const vi = {
   "record.restsOn.source_one": "nguồn",
   "record.restsOn.source_other": "nguồn",
   "record.tabs": "Các phần của bản ghi",
-  "record.panel.show": "Hiện bảng",
-  "record.panel.hide": "Ẩn bảng",
+  "record.panel.details": "Chi tiết",
   "room.editorial": "Tài liệu bạn thêm được chia sẻ ngay, bình luận cũng vậy.",
   "room.readOnly": "Bạn có thể xem phòng này nhưng không thể thay đổi.",
   "room.finished":

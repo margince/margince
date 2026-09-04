@@ -142,9 +142,9 @@ export function MoneyPane({
       title={t("co.commercial.title")}
       titleAction={
         present ? (
-          <Button small variant="ghost" onClick={onAllDeals}>
+          <button type="button" className="link-button" onClick={onAllDeals}>
             {t("co.commercial.allDeals")}
-          </Button>
+          </button>
         ) : undefined
       }
     >
@@ -217,11 +217,15 @@ export function PeopleChips({
       title={t("co.rail.people.title")}
       titleAction={
         state === "ready" && onOpenTab ? (
-          <Button small variant="ghost" onClick={() => onOpenTab("people")}>
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => onOpenTab("people")}
+          >
             {count != null
               ? t("co.rail.all", { count: formatNumber(count, locale) })
               : t("co.rail.allUncounted")}
-          </Button>
+          </button>
         ) : undefined
       }
     >

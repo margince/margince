@@ -10,7 +10,7 @@ import {
   useEffect,
   useState,
 } from "react";
-import { IconAction } from "../design-system/iconaction";
+import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
 
 /**
@@ -140,21 +140,19 @@ export function PageAsideToggle() {
   if (!filled) {
     return null;
   }
-  const label = collapsed ? t("record.panel.show") : t("record.panel.hide");
-  // The glyph carries it, through the catalog's own square: a panel icon says
-  // which region this governs without the words, and the words were competing
-  // with the tabs for the row's width. `IconAction` is what keeps the sentence
-  // reachable for both readers at once, one string spoken as the name and
-  // shown as the tip.
+  // Named, not a bare glyph: this control ends a row of words and a lone
+  // square at the end of a tab strip reads as chrome rather than as the way to
+  // the record's own details. It names the REGION it governs — the panel icon
+  // and "Details" together — and `aria-pressed` carries which way it is set,
+  // because folded away and standing open look identical otherwise.
   return (
-    <IconAction
-      label={label}
-      icon={<PanelRight aria-hidden="true" />}
-      // The switch says which way it is set: folded away and standing open look
-      // identical otherwise, and a reader cannot tell a control they have used
-      // from one they have not.
-      pressed={!collapsed}
+    <Button
+      className="record-details-toggle"
+      aria-pressed={!collapsed}
       onClick={toggle}
-    />
+    >
+      <PanelRight aria-hidden="true" />
+      {t("record.panel.details")}
+    </Button>
   );
 }

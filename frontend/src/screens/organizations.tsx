@@ -2492,7 +2492,7 @@ function CompanyOverviewStack({
             {/* What Margince noticed on this account that nobody asked it to
                 look for — promises made, blockers named, risks read out of
                 meetings, mail and invoices. */}
-            <Panel>
+            <Panel className="co-signals">
               <SignalsSection orgId={org.id} />
             </Panel>
             <PeopleChips view={view} loading={loading} onOpenTab={onOpenTab} />

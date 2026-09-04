@@ -1602,6 +1602,89 @@
   padding-top: var(--space-6);
   padding-bottom: var(--space-2);
 }
+/* The three rated dimensions under the verdict: a dot in the dimension's
+   tone, the dimension, its rating. Inline, because they qualify the word
+   above them rather than standing as readings of their own. */
+.co-360-dims {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  padding-top: var(--space-3);
+}
+/* And no seam over them, which is the other half of the same point: the
+   panel's rule between two bodies divides one section of a card from the next,
+   and these are not a section — they qualify the call above them. Drawn, the
+   rule landed on the chips' own top edge (the row pays no padding above a
+   line it should not have had) and read as three readings crushed against a
+   divider. */
+.panel-body + .panel-body.co-360-dims::before {
+  content: none;
+}
+.co-dim {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--textSecondary);
+}
+/* A chip is the trigger for its own aside, so it restates the face that
+   `.popover-trigger` strips — that reset exists so a trigger inherits the line
+   it is seated in, and this one is seated in a row of its own. Specific enough
+   to out-weigh the reset wherever the two sheets land in the bundle. */
+.co-360-dims .popover-trigger.co-dim {
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--textSecondary);
+  border-radius: var(--r-sm);
+}
+/* Pressable, and said so before it is pressed: a chip that answers a resting
+   pointer has to look like something worth resting on. The underline is the
+   product's one mark for "there is more behind this" (design-system §4's
+   evidence mark), dotted for the same reason — it offers rather than links. */
+.co-360-dims .popover-trigger.co-dim {
+  text-decoration: underline dotted var(--borderStrong);
+  text-underline-offset: 4px;
+}
+.co-360-dims .popover-trigger.co-dim:hover,
+.co-360-dims .popover-trigger.co-dim[aria-expanded="true"] {
+  color: var(--textPrimary);
+  text-decoration-color: var(--textMeta);
+}
+
+/* The aside behind a chip: what the dimension weighs, then the reading its
+   rating was made from. Two blocks and not one paragraph — the definition is
+   the product's and the quote is this account's, and a reader has to be able
+   to tell which is which. */
+.co-dim-means {
+  margin: 0;
+}
+/* Spacing only: the label's own face is `Eyebrow`'s, which is the product's
+   one spelling of uppercase micro-type (design-system/eyebrow.tsx). */
+.co-dim-restson {
+  display: block;
+  margin: var(--space-3) 0 var(--space-1);
+}
+.co-dim-quote {
+  margin: 0;
+  color: var(--textPrimary);
+}
+.co-dim::before {
+  content: "";
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: var(--r-full);
+  background: var(--textTertiary);
+}
+.co-dim-calm::before {
+  background: var(--success);
+}
+.co-dim-warn::before {
+  background: var(--warn);
+}
+.co-dim-danger::before {
+  background: var(--danger);
+}
+
 /* The head's name and the count beside it, on one baseline. */
 .co-360-headtext {
   display: inline-flex;
