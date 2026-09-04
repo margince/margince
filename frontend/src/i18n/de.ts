@@ -8177,6 +8177,10 @@ export const de = {
     "Das konnte nicht als gelesen markiert werden.",
   "worklist.verb.completeFailed":
     "Diese Aufgabe konnte nicht abgeschlossen werden.",
+  "worklist.verb.completed": "Aufgabe erledigt.",
+  "worklist.verb.completeUndo": "Rückgängig",
+  "worklist.verb.completeUndoFailed":
+    "Diese Aufgabe konnte nicht wieder geöffnet werden.",
   "worklist.source.failed": "Eine Quelle konnte nicht gelesen werden: {source}",
   "worklist.source.withheld":
     "Eine Quelle ist für dein Konto nicht sichtbar: {source}",
