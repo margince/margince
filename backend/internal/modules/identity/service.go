@@ -123,20 +123,21 @@ var systemRoles = []struct{ key, name string }{
 // BootstrapInput creates the tenant root and its first admin.
 type BootstrapInput struct {
 	WorkspaceName string
-	Slug          string
 	AdminEmail    string
 	AdminName     string
 	AdminPassword string
 	Timezone      string
 }
 
-// normalize parse-don't-validates the tenant-root inputs in place. The slug
-// names the agent seat's address and the timezone drives every date-boundary
-// sweep — a malformed value here would haunt the whole installation's
-// lifetime, so it is rejected before any row is written. The slug is no longer
-// a subdomain, and since ADR-0091 it is not stored either; it is still parsed
-// here because the address built from it outlives the bootstrap that derived
-// it.
+// normalize parse-don't-validates the tenant-root inputs in place. The timezone
+// drives every date-boundary sweep, so a malformed value here would haunt the
+// whole installation's lifetime and is rejected before any row is written.
+//
+// There is no slug any more. It was parsed here long after ADR-0091 stopped
+// storing it, for one reader: the seeded agent seat's local address. That seat
+// is retired, so the derived value, its validation and the shape that carried
+// it went together — a field nothing reads is a field that cannot be wrong in a
+// way anyone notices.
 // The password bound, shared by every path that accepts one. Counted in RUNES:
 // a four-emoji password is sixteen bytes and would clear a byte floor of twelve
 // while being a quarter of the length the floor intends. Named here
@@ -169,11 +170,6 @@ func (in *BootstrapInput) normalize() error {
 	if in.Timezone == "" {
 		in.Timezone = "UTC"
 	}
-	slug, err := values.ParseSlug(in.Slug)
-	if err != nil {
-		return err
-	}
-	in.Slug = slug.String()
 	tz, err := values.ParseTimezone(in.Timezone)
 	if err != nil {
 		return err

@@ -16,6 +16,12 @@ package integration
 //   a deactivated seat is not counted   the access is already gone
 //   an agent seat IS counted            it acts on the estate like a human
 //
+// The third rule is unchanged and untested here, for a reason worth stating:
+// bootstrap no longer seeds an agent identity, so a fresh installation has none
+// to count. The rule belongs to the predicate (identity/seatusage.go) and to the
+// resident runner that will land under `is_agent`, not to a row the product
+// creates.
+//
 // A unit test cannot see any of it, and a hand-inserted row would prove nothing
 // about the writer: the seats here are the ones bootstrap and the members
 // surface actually create.
@@ -98,11 +104,15 @@ func TestLicenseEntitlementCountsTheSeatsThatAct(t *testing.T) {
 		t.Errorf("seats in use = %d after every human became a read seat, was %d — read seats are being counted",
 			afterDemotion.SeatsUsed, before)
 	}
-	// The agent seat survives the demotion (app_user_agent_is_full refuses to
-	// demote it) and still counts, which is what stops an installation from
-	// acting without limit through agents.
-	if afterDemotion.SeatsUsed < 1 {
-		t.Errorf("seats in use = %d; the agent seat stopped counting", afterDemotion.SeatsUsed)
+	// And it reaches ZERO, because every seat on a fresh installation belongs to
+	// a person. This asserted `>= 1` while bootstrap seeded an agent identity —
+	// the seat that survived the demotion, since app_user_agent_is_full refuses
+	// to demote one, and whose counting is what stops an installation acting
+	// without limit through agents. That rule is unchanged and still holds for
+	// any agent row; there is simply no longer one nobody asked for.
+	if afterDemotion.SeatsUsed != 0 {
+		t.Errorf("seats in use = %d after every human became a read seat, want 0 — something is "+
+			"metered that no person uses", afterDemotion.SeatsUsed)
 	}
 }
 

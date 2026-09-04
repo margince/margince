@@ -183,10 +183,14 @@ func TestResolveFederatedUserRefusesAnUnactivatedInvite(t *testing.T) {
 	}
 }
 
-// TestResolveFederatedUserRefusesTheAgentSeat holds the same refusal for the
-// agent seat (installation.go's seedAgentSeat): it too is `status = 'active'`
-// with no password_hash, and is not an authority a federated sign-in may
-// stand up an interactive session for.
+// TestResolveFederatedUserRefusesTheAgentSeat holds the same refusal for an
+// agent identity: it too is `status = 'active'` with no password_hash, and is
+// not an authority a federated sign-in may stand up an interactive session for.
+//
+// The row is seeded here rather than read back from bootstrap, which writes no
+// agent seat. The `NOT is_agent` arms in federatedidentity.go are what this
+// pins, and they stay: a resident runner will land under that flag and must not
+// become a sign-in.
 func TestResolveFederatedUserRefusesTheAgentSeat(t *testing.T) {
 	svc, conn, _, _ := seedSSOEnv(t, "sso-agent-seat")
 	agentEmail := "agent@sso-agent-seat.gradion.local"

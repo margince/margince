@@ -521,15 +521,22 @@ func TestAnOperatorResetHoldsTheSameLengthFloorAsEveryOtherRoute(t *testing.T) {
 }
 
 func TestAnOperatorResetRefusesTheAgentSeat(t *testing.T) {
-	// The agent seat carries an address, so it is reachable by the email
+	// An agent identity carries an address, so it is reachable by the email
 	// lookup, but it holds no password. Refused by name — letting the write
 	// reach the database would answer a reasonable question with a constraint
 	// violation.
+	//
+	// The row is SEEDED here. It used to be read back from bootstrap, which no
+	// longer writes one; the refusal is not retired with the seed, because
+	// `is_agent` remains a supported column and a resident runner will land
+	// under it.
 	e := setupRevocationEnv(t, "operator-reset-agent")
-	var agentEmail string
+	agentEmail := "agent@operator-reset-agent.gradion.local"
 	if err := database.WithInfraTx(context.Background(), e.svc.db.Pool(), func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(),
-			`SELECT email FROM app_user WHERE is_agent = true`).Scan(&agentEmail)
+		_, err := tx.Exec(context.Background(),
+			`INSERT INTO app_user (email, display_name, is_agent, seat_type, status)
+			 VALUES ($1, 'Margince Agent', true, 'full', 'active')`, agentEmail)
+		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
