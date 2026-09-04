@@ -29438,7 +29438,9 @@ type ReportResult struct {
 	// AsOf The instant this result was computed. A report is a reading taken at a time, and without it two screens showing different numbers look like a bug rather than two moments.
 	AsOf time.Time `json:"as_of"`
 
-	// BaseCurrency The installation's configured base currency, as an ISO-4217 code. It labels the frame, not the columns: a money column carries each record's OWN currency, which is why every money report groups by `currency`. Converting to this one is the frozen-FX roll-up, a capability this endpoint does not serve.
+	// BaseCurrency The installation's configured base currency, as an ISO-4217 code.
+	// WHICH COLUMNS IT DENOMINATES DEPENDS ON THE REPORT. A native money measure (`amount_minor`, `weighted_amount_minor`) carries each record's OWN currency, so a report offering one groups by `currency` and this code labels the frame rather than those columns. A BASE measure (`amount_base_minor`, `weighted_base_minor`) is already converted per record before summing, and this code is its denomination.
+	// `pipeline-current` is the first report of the second kind: it offers base measures only, precisely so a plan cannot ask it for a sum of minor units across currencies.
 	BaseCurrency string   `json:"base_currency"`
 	Columns      []string `json:"columns"`
 

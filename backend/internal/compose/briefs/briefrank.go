@@ -94,16 +94,16 @@ func (e *BriefEngine) WithL2Ranker(brain briefBrain, log *slog.Logger) *BriefEng
 // This package cannot call it — compose imports briefs, so the reverse is a
 // cycle — so the two are held character-identical by
 // TestOneSpellingOfADealsBaseValue rather than left to drift.
-func briefBaseValueSQL(asOfPos, basePos int) string {
+func briefBaseValueSQL(asOfSQL, baseSQL, alias string) string {
 	return fmt.Sprintf(`CASE
-		WHEN d.amount_minor IS NULL THEN NULL
-		WHEN d.currency IS NULL OR d.currency = $%[2]d THEN d.amount_minor
-		WHEN d.fx_rate_to_base IS NOT NULL THEN d.amount_minor_base
-		ELSE (SELECT round(d.amount_minor * fr.rate)::bigint FROM fx_rate fr
-		      WHERE fr.from_currency = d.currency AND fr.to_currency = $%[2]d
-		        AND fr.rate_date <= $%[1]d::date
+		WHEN %[3]s.amount_minor IS NULL THEN NULL
+		WHEN %[3]s.currency IS NULL OR %[3]s.currency = %[2]s THEN %[3]s.amount_minor
+		WHEN %[3]s.fx_rate_to_base IS NOT NULL THEN %[3]s.amount_minor_base
+		ELSE (SELECT round(%[3]s.amount_minor * fr.rate)::bigint FROM fx_rate fr
+		      WHERE fr.from_currency = %[3]s.currency AND fr.to_currency = %[2]s
+		        AND fr.rate_date <= %[1]s::date
 		      ORDER BY fr.rate_date DESC LIMIT 1)
-	END`, asOfPos, basePos)
+	END`, asOfSQL, baseSQL, alias)
 }
 
 // briefFacts is everything ONE transaction gathers for a rank: the candidates
@@ -293,7 +293,7 @@ func briefRevenueNorm(ctx context.Context, tx pgx.Tx, now time.Time, base string
 		)
 		SELECT count(*), percentile_cont(%v) WITHIN GROUP (ORDER BY base_value::double precision)
 		FROM sized WHERE base_value IS NOT NULL`,
-		briefBaseValueSQL(1, 2), briefRevenueNormPercentile), now.UTC(), base).Scan(&valued, &p90)
+		briefBaseValueSQL("$1", "$2", "d"), briefRevenueNormPercentile), now.UTC(), base).Scan(&valued, &p90)
 	if err != nil {
 		return 0, err
 	}
@@ -344,7 +344,7 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 				  -- lineage read bounds itself the same way, so an unbounded
 				  -- one here would return deals whose card can say nothing.
 				  AND a.occurred_at <= $%d) END)`,
-		briefBaseValueSQL(asOfPos, basePos), userPos, asOfPos, asOfPos)
+		briefBaseValueSQL(fmt.Sprintf("$%d", asOfPos), fmt.Sprintf("$%d", basePos), "d"), userPos, asOfPos, asOfPos)
 	if scope != "" {
 		q += " AND " + scope
 	}
