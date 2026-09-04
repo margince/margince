@@ -1,5 +1,5 @@
-/* The company's logo and what can be done to it. A wide preview makes the
-   actual stored wordmark inspectable; a row-sized avatar made a healthy wide
+/* The company's two marks and what can be done to each. A wide preview makes
+   the actual stored wordmark inspectable; a row-sized avatar made a healthy wide
    logo look absent because its lettering was squeezed into a few pixels. */
 .company-mark {
   padding-bottom: var(--space-4);
@@ -11,6 +11,27 @@
   gap: var(--space-2);
   min-width: 0;
   flex: 1;
+}
+
+/* The two slots side by side while there is room, stacked when there is not.
+   Side by side is the arrangement that says they are two answers to one
+   question — which picture, at which width — rather than two settings that
+   happen to sit near each other. */
+.company-mark-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  align-items: flex-start;
+}
+
+.company-mark-slot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  /* Wide enough for the 360px preview plus its own inset, and free to shrink
+     below that on a narrow column rather than forcing the card to scroll. */
+  flex: 1 1 320px;
 }
 
 .company-logo-preview {
@@ -28,10 +49,23 @@
   height: 100%;
 }
 
+/* The square slot's preview is square, because the shape IS the thing this
+   field is asking for: a person looking at a 360 × 112 box has been shown the
+   wrong question, and a wide file dropped here would look correct in it. */
+.company-logo-preview-square {
+  width: 112px;
+}
+
 .company-logo-preview-empty {
   width: 80px;
   height: 80px;
   padding: var(--space-3);
+}
+
+/* Both shapes collapse to the same monogram box when there is no mark, and the
+   square rule above would otherwise widen it back out. */
+.company-logo-preview-empty.company-logo-preview-square {
+  width: 80px;
 }
 
 /* The two verbs sit on one line and wrap together on a narrow column. */

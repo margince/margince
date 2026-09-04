@@ -1587,6 +1587,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/organizations/{id}/logo/icon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Stream an organization's square logo icon.
+         * @description The bytes behind `CompanyProfile.logo_icon_url`: the square badge a collapsed
+         *     sidebar draws, normalized once at store time to PNG on exactly the terms
+         *     `getOrganizationLogo` describes for the wide mark.
+         *
+         *     Only the installation's own company wears an icon today — no website read resolves
+         *     one, and `uploadCompanyLogoIcon` is its one writer — so every other record answers
+         *     the same 404 it answers for a mark it does not have. 404 also when the organization
+         *     is invisible to the caller or does not exist; a client falls back to the wide mark,
+         *     or to the deterministic monogram, for all of them alike. 501 when the deployment
+         *     has no object store configured.
+         */
+        get: operations["getOrganizationLogoIcon"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/organizations/{id}/360": {
         parameters: {
             query?: never;
@@ -5880,6 +5912,48 @@ export interface paths {
          *     caller asked for is the outcome they get.
          */
         delete: operations["deleteCompanyLogo"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/company/logo/icon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replace the installation's own square logo icon with an uploaded image.
+         * @description The companion to `uploadCompanyLogo`. A company is drawn at two widths and one
+         *     picture cannot serve both: the wide mark is the lockup an expanded sidebar has
+         *     room for, and this one is the square badge a collapsed 56px rail draws, where a
+         *     wordmark would be a row of illegible strokes. Upload a square image; the aspect
+         *     ratio is preserved rather than cropped, so a wide file stays wide and simply
+         *     letterboxes itself into the square slot.
+         *
+         *     Multipart upload, decoded and re-encoded exactly as the wide mark is: PNG, JPEG,
+         *     GIF, WebP, ICO and SVG are accepted, what is served from `logo_icon_url` is always
+         *     this origin's own bytes, and anything that will not decode is refused as 415.
+         *
+         *     `DELETE` takes the icon off. The two slots are independent: a company with only a
+         *     wide mark keeps drawing that mark in the collapsed rail, which is what every
+         *     installation did before this endpoint existed.
+         */
+        post: operations["uploadCompanyLogoIcon"];
+        /**
+         * Take the installation's own square logo icon off the record.
+         * @description The stored object is collected and the collapsed rail falls back to the wide mark,
+         *     or to the deterministic monogram when there is none. The wide mark is untouched:
+         *     the two slots are chosen and cleared separately.
+         *
+         *     Removing an icon the installation never had is not an error — the outcome the
+         *     caller asked for is the outcome they get.
+         */
+        delete: operations["deleteCompanyLogoIcon"];
         options?: never;
         head?: never;
         patch?: never;
@@ -25389,6 +25463,15 @@ export interface components {
              *     is never an error: a client draws the deterministic monogram then.
              */
             readonly logo_url?: string | null;
+            /**
+             * @description Where to fetch the installation's own SQUARE logo icon — the `getOrganizationLogoIcon`
+             *     path, cookie-authenticated and same-origin, carrying a revision query on the same terms
+             *     as `logo_url`. This is the badge a collapsed sidebar draws, where the wide mark above
+             *     would be unreadable; the two are chosen separately and only `uploadCompanyLogoIcon`
+             *     ever fills this one. ABSENT entirely (not null) when the company has no icon, which is
+             *     never an error: a client falls back to `logo_url`, then to the deterministic monogram.
+             */
+            readonly logo_icon_url?: string | null;
             /** @description The registered legal entity, when it differs from display_name. */
             legal_name?: string | null;
             /** @description The registered address as one formatted line. */
@@ -33224,6 +33307,41 @@ export interface operations {
             };
         };
     };
+    getOrganizationLogoIcon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The normalized icon bytes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The deployment has no object store configured, so no logo can be stored or served. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getOrganization360: {
         parameters: {
             query?: {
@@ -40598,6 +40716,95 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description The company, with no `logo_url`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyProfile"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description No company saved yet. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    uploadCompanyLogoIcon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The company, carrying the `logo_icon_url` the upload now answers. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyProfile"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description No company saved yet — there is no record to give a mark to. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            413: components["responses"]["PayloadTooLarge"];
+            /** @description The upload is not an image this server can decode and re-encode. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description The deployment has no object store configured, so no logo can be stored or served. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteCompanyLogoIcon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The company, with no `logo_icon_url`. */
             200: {
                 headers: {
                     [name: string]: unknown;

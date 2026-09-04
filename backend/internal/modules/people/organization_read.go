@@ -173,7 +173,7 @@ func scanOrganization(row pgx.Row, active []fieldcatalog.Column, extra ...any) (
 	o.Classification = &cls
 	lc := crmcontracts.OrganizationLifecycle(lifecycle)
 	o.Lifecycle = &lc
-	o.LogoUrl = LogoURL(id, logoObjectKey)
+	o.LogoUrl = LogoURL(id, logoObjectKey, LogoWide)
 	o.LinkedinUrl = linkedinURL
 	if a := addressOrNil(addr); a != nil {
 		o.Address = a

@@ -99,7 +99,13 @@ function writeStored(key: string, value: string): void {
   }
 }
 
-function BrandBlock() {
+// `narrow` is the panel at its 56px width — the caller's own `collapsed &&
+// !sheetOpen`, which is the condition shell.css already uses for every rule that
+// means "this is a rail and not a column". The phone sheet is 600px wide
+// whatever the desktop preference was left at, so a block reading `collapsed`
+// alone would put the square badge in front of a reader with room for the
+// wordmark.
+function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
   const t = useT();
   // The installation's own organization (A107/ADR-0061: one installation, one
   // organization), OBSERVED on the entry the onboarding gate already filled.
@@ -127,7 +133,18 @@ function BrandBlock() {
       </a>
     );
   }
-  if (installation.logo_url) {
+  // Which of the company's two marks this width can carry. Collapsed the panel
+  // is a 56px rail with a 32px square to put a face in, where a wordmark is a
+  // row of illegible strokes — so the square icon wins there and the wide mark
+  // wins expanded. An installation that uploaded only a wide mark keeps drawing
+  // it in both, which is exactly what the rail did before the icon existed: a
+  // company's real logo squeezed small still reads as that company, where
+  // falling back to initials would not.
+  const mark =
+    narrow && installation.logo_icon_url
+      ? installation.logo_icon_url
+      : installation.logo_url;
+  if (mark) {
     return (
       <a
         className="ws ws-logo"
@@ -138,7 +155,7 @@ function BrandBlock() {
       >
         <CompanyLogo
           name={installation.display_name}
-          src={installation.logo_url}
+          src={mark}
           fallback={<b>{installation.display_name}</b>}
         />
         <span className="ws-org ws-logo-powered">
@@ -376,7 +393,7 @@ export function WorkspaceRail({
         onKeyDown={dismissTip}
       >
         <div className="railhead">
-          <BrandBlock />
+          <BrandBlock narrow={collapsed && !sheetOpen} />
         </div>
         {/* Keyed by depth so a level that arrives is a new element and plays its
             entrance; two addresses at the SAME depth are the same level with

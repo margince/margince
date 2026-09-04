@@ -417,21 +417,29 @@
    exactly as one lockup. The no-logo path below keeps the compact monogram and
    company name because initials do not identify a company on their own. */
 .rail.expanded .railhead:has(.ws-logo) {
-  height: 92px;
+  height: 80px;
   margin-top: 0;
 }
 .rail .ws-logo {
   flex-direction: column;
   align-items: stretch;
-  justify-content: flex-start;
-  gap: var(--space-2);
+  justify-content: center;
+  gap: var(--space-1);
   height: 100%;
   box-sizing: border-box;
-  padding: var(--space-1) var(--space-2);
+  /* Breathing room on all four sides. The lockup used to run edge to edge of
+     the head, which read as a banner pasted over the panel rather than as the
+     company's mark standing in it — and left the wordmark's own whitespace
+     touching the first nav row. */
+  padding: var(--space-2);
 }
 .rail .ws-logo .company-logo {
   width: 100%;
-  height: 56px;
+  /* The mark is the panel's identity, not its headline. At 56px it was the
+     largest object on the screen and out-weighed the destinations underneath,
+     which are what the panel is for; 40px is still comfortably above the 20px
+     row glyphs and leaves the padding above room to be seen. */
+  height: 40px;
 }
 .rail .ws-logo .company-logo-img {
   object-position: left center;
@@ -467,6 +475,14 @@
 .rail.collapsed .ws-logo .company-logo {
   width: 32px;
   height: 32px;
+}
+/* What stands here is the square badge (app/shell.tsx picks it), so it is
+   centred rather than flush left: the wide mark's left alignment is what lines
+   a wordmark up with the labels beside it, and a square has nothing to line up
+   with. An installation that uploaded no badge lands its wide mark here, and
+   centred is the better of the two for that too. */
+.rail.collapsed .ws-logo .company-logo-img {
+  object-position: center;
 }
 .rail.collapsed .ws-logo-powered,
 .rail.leveled .ws-logo-powered {

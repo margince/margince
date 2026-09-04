@@ -6358,17 +6358,33 @@ export const de = {
     "Nur bestätigtes Wissen — Website-Texte werden nie zu Anweisungen.",
   "settings.companyConfirmed": "bestätigte Aussagen",
   "settings.companyMark": "Firmenlogo",
-  "settings.companyMarkPresent":
-    "Wird hier und als Hauptmarke oben in der Seitenleiste gezeigt.",
-  "settings.companyMarkNone":
+  "settings.companyMarkIntro":
+    "Zwei Marken, denn die Seitenleiste zeigt Ihr Unternehmen in zwei Breiten. Füllen Sie die breite, nutzt die eingeklappte Seitenleiste sie ebenfalls — bis Sie ein quadratisches Symbol hinzufügen.",
+  "settings.companyMarkWide": "Breites Logo",
+  "settings.companyMarkWidePresent":
+    "Wird hier und als Hauptmarke oben in der geöffneten Seitenleiste gezeigt.",
+  "settings.companyMarkWideNone":
     "Noch kein Logo, deshalb stehen die Initialen dafür. Ein Website-Auslesen kann es ergänzen, oder Sie laden hier eines hoch.",
-  "settings.companyMarkAdd": "Logo hinzufügen",
+  "settings.companyMarkIcon": "Quadratisches Symbol",
+  "settings.companyMarkIconPresent":
+    "Wird in der eingeklappten Seitenleiste gezeigt, wo das breite Logo zu klein zum Lesen wäre.",
+  "settings.companyMarkIconNone":
+    "Noch kein Symbol, deshalb greift die eingeklappte Seitenleiste auf das breite Logo zurück.",
+  "settings.companyMarkAdd": "Hinzufügen",
   "settings.companyMarkReplace": "Ersetzen",
   "settings.companyMarkRemove": "Entfernen",
-  "settings.companyMarkPick": "Firmenlogo",
-  "settings.companyMarkHint":
+  "settings.companyMarkAddWide": "Breites Logo hinzufügen",
+  "settings.companyMarkReplaceWide": "Breites Logo ersetzen",
+  "settings.companyMarkRemoveWide": "Breites Logo entfernen",
+  "settings.companyMarkAddIcon": "Quadratisches Symbol hinzufügen",
+  "settings.companyMarkReplaceIcon": "Quadratisches Symbol ersetzen",
+  "settings.companyMarkRemoveIcon": "Quadratisches Symbol entfernen",
+  "settings.companyMarkWideHint":
     "Am besten: SVG oder transparentes PNG mit etwa 800 × 240 px (bis 4:1), unter 5 MB. JPEG, GIF, WebP und ICO funktionieren ebenfalls. Die Proportionen bleiben erhalten.",
+  "settings.companyMarkIconHint":
+    "Am besten: SVG oder transparentes PNG mit etwa 256 × 256 px, quadratisch, unter 5 MB. Eine breite Datei wird nicht beschnitten — sie behält ihre Proportionen und steht einfach klein im Quadrat.",
   "settings.companyMarkEmpty": "Logo hierher ziehen oder Datei auswählen",
+  "settings.companyMarkIconEmpty": "Symbol hierher ziehen oder Datei auswählen",
   "settings.companyWebsite": "Öffentliche Unternehmenswebsite",
   "settings.companyWebsiteHint":
     "Die öffentliche Website, von der jede Website-Lesung ausgeht.",

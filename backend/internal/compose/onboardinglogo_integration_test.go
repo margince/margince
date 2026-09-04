@@ -190,7 +190,7 @@ func TestOnboardingReadResolvesTheLogoTheConfirmedAnchorWears(t *testing.T) {
 
 	company := confirmTheAnchor(t, e, args)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	boundKey, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID)
+	boundKey, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("the confirmed anchor has no logo: %v", err)
 	}
@@ -201,7 +201,7 @@ func TestOnboardingReadResolvesTheLogoTheConfirmedAnchorWears(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read the anchor: %v", err)
 	}
-	wantURL := *people.LogoURL(company.OrganizationID.UUID, &boundKey)
+	wantURL := *people.LogoURL(company.OrganizationID.UUID, &boundKey, people.LogoWide)
 	if org.LogoUrl == nil || *org.LogoUrl != wantURL {
 		t.Fatalf("logo_url = %v, want %q — the face the SPA renders", org.LogoUrl, wantURL)
 	}
@@ -279,7 +279,7 @@ func TestAdoptingTheParkedMarkLeavesTheCompanyItsOnlyReference(t *testing.T) {
 		t.Fatalf("the confirmed dossier still names the asset URL %q it handed over", *leftOrigin)
 	}
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	boundKey, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID)
+	boundKey, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("the confirmed anchor has no logo: %v", err)
 	}
@@ -360,7 +360,7 @@ func TestConfirmingAnOnboardingReadSurvivesALogoThatNeverResolved(t *testing.T) 
 	}
 	company := confirmTheAnchor(t, e, args)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	if _, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID, people.LogoWide); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("an anchor with no resolved logo answers %v, want not-found so the monogram renders", err)
 	}
 	org, err := e.People.GetOrganization(ctx, company.OrganizationID, storekit.LiveOnly)
@@ -750,7 +750,7 @@ func TestConfirmingAnOnboardingReadKeepsTheLogoAPersonGaveTheAnchor(t *testing.T
 	engine := &deepReadEngine{people: e.People, blob: blob, log: slog.New(slog.DiscardHandler)}
 	orgID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
 
-	boundKey, err := e.People.OrganizationLogoKey(human, orgID)
+	boundKey, err := e.People.OrganizationLogoKey(human, orgID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("the anchor lost its logo: %v", err)
 	}
@@ -783,7 +783,7 @@ func TestConfirmingAnOnboardingReadCollectsNothingWhenTheAnchorAdoptsTheMark(t *
 	engine := &deepReadEngine{people: e.People, blob: blob, log: slog.New(slog.DiscardHandler)}
 	orgID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
 
-	boundKey, err := e.People.OrganizationLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), orgID)
+	boundKey, err := e.People.OrganizationLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), orgID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("the confirmed anchor has no logo: %v", err)
 	}
@@ -814,7 +814,7 @@ func TestAConfirmationSurvivesAnObjectStoreThatWillNotCollect(t *testing.T) {
 	}
 	orgID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
 
-	boundKey, err := e.People.OrganizationLogoKey(human, orgID)
+	boundKey, err := e.People.OrganizationLogoKey(human, orgID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("the anchor lost its logo: %v", err)
 	}

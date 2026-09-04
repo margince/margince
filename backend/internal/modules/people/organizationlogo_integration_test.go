@@ -46,7 +46,7 @@ func TestSetOrganizationLogoRecordsTheMarkItsProvenanceAndItsURL(t *testing.T) {
 	if before.LogoUrl != nil {
 		t.Fatalf("a fresh organization has no logo, got %q", *before.LogoUrl)
 	}
-	if _, err := e.store.OrganizationLogoKey(ctx, orgID); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.store.OrganizationLogoKey(ctx, orgID, LogoWide); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("an organization with no logo must answer not-found, got %v", err)
 	}
 
@@ -66,7 +66,7 @@ func TestSetOrganizationLogoRecordsTheMarkItsProvenanceAndItsURL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read after: %v", err)
 	}
-	wantURL := *LogoURL(orgID.UUID, &key)
+	wantURL := *LogoURL(orgID.UUID, &key, LogoWide)
 	if after.LogoUrl == nil || *after.LogoUrl != wantURL {
 		t.Fatalf("logo_url = %v, want %q", after.LogoUrl, wantURL)
 	}
@@ -74,7 +74,7 @@ func TestSetOrganizationLogoRecordsTheMarkItsProvenanceAndItsURL(t *testing.T) {
 	if after.LogoUrl != nil && *after.LogoUrl == key {
 		t.Fatal("the storage key leaked onto the wire")
 	}
-	gotKey, err := e.store.OrganizationLogoKey(ctx, orgID)
+	gotKey, err := e.store.OrganizationLogoKey(ctx, orgID, LogoWide)
 	if err != nil {
 		t.Fatalf("OrganizationLogoKey: %v", err)
 	}
@@ -156,7 +156,7 @@ func TestSetOrganizationLogoNeverReplacesTheOneAPersonSet(t *testing.T) {
 	if written {
 		t.Fatal("a resolved logo replaced a human's own without a confirm")
 	}
-	gotKey, err := e.store.OrganizationLogoKey(ctx, orgID)
+	gotKey, err := e.store.OrganizationLogoKey(ctx, orgID, LogoWide)
 	if err != nil {
 		t.Fatalf("OrganizationLogoKey: %v", err)
 	}
@@ -195,7 +195,7 @@ func TestSetOrganizationLogoHandsBackTheObjectItSuperseded(t *testing.T) {
 	if superseded == nil || *superseded != first {
 		t.Fatalf("superseded key = %v, want the first attempt's %q", superseded, first)
 	}
-	gotKey, err := e.store.OrganizationLogoKey(ctx, orgID)
+	gotKey, err := e.store.OrganizationLogoKey(ctx, orgID, LogoWide)
 	if err != nil {
 		t.Fatalf("OrganizationLogoKey: %v", err)
 	}
@@ -226,7 +226,7 @@ func TestOrganizationLogoIsRowScopedLikeEveryOtherRead(t *testing.T) {
 	// rep's private capture, so both the location read and the write answer
 	// not-found rather than confirming it exists.
 	stranger := e.asOwnScoped(ids.NewV7())
-	if _, err := e.store.OrganizationLogoKey(stranger, orgID); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.store.OrganizationLogoKey(stranger, orgID, LogoWide); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("an out-of-scope logo read must be existence-hidden, got %v", err)
 	}
 	if _, err := e.store.LogoHeldByHuman(stranger, orgID); !errors.Is(err, apperrors.ErrNotFound) {

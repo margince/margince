@@ -173,16 +173,19 @@ type Company struct {
 	OrganizationSource     string
 	OrganizationCapturedBy string
 	Website                *string
-	// The bucket path of the mark the record is wearing — one a website read
-	// resolved, or one a person uploaded (SetCompanyLogo) — and nil when it
-	// wears none. It never reaches the wire: LogoURL turns it into the endpoint
-	// that streams the bytes.
-	LogoObjectKey   *string
-	Fields          map[string]string
-	ProfileFields   []CompanyProfileField
-	Facts           []CompanyFact
-	MinimumComplete bool
-	UpdatedAt       time.Time
+	// The bucket path of the WIDE mark the record is wearing — one a website
+	// read resolved, or one a person uploaded (SetCompanyLogo) — and nil when
+	// it wears none. It never reaches the wire: LogoURL turns it into the
+	// endpoint that streams the bytes.
+	LogoObjectKey *string
+	// The square badge the collapsed sidebar draws, on the same terms. Only an
+	// upload ever fills it: no website read resolves a second picture.
+	LogoIconObjectKey *string
+	Fields            map[string]string
+	ProfileFields     []CompanyProfileField
+	Facts             []CompanyFact
+	MinimumComplete   bool
+	UpdatedAt         time.Time
 }
 
 // SaveCompanyInput is one submission of the company form. A nil field was not

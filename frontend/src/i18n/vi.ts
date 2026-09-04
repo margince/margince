@@ -6294,17 +6294,33 @@ export const vi = {
     "Chỉ tri thức đã xác nhận — văn bản website không bao giờ trở thành chỉ dẫn.",
   "settings.companyConfirmed": "nhận định đã xác nhận",
   "settings.companyMark": "Logo công ty",
-  "settings.companyMarkPresent":
-    "Hiển thị tại đây và là thương hiệu chính ở đầu thanh bên.",
-  "settings.companyMarkNone":
+  "settings.companyMarkIntro":
+    "Hai dấu hiệu, vì thanh bên hiển thị công ty của bạn ở hai độ rộng. Điền dấu hiệu rộng thì thanh bên thu gọn cũng dùng nó, cho đến khi bạn thêm biểu tượng vuông.",
+  "settings.companyMarkWide": "Logo rộng",
+  "settings.companyMarkWidePresent":
+    "Hiển thị tại đây và là thương hiệu chính ở đầu thanh bên khi mở.",
+  "settings.companyMarkWideNone":
     "Chưa có logo nên chữ viết tắt đứng thay. Một lượt đọc website có thể bổ sung, hoặc bạn thêm tại đây.",
-  "settings.companyMarkAdd": "Thêm logo",
+  "settings.companyMarkIcon": "Biểu tượng vuông",
+  "settings.companyMarkIconPresent":
+    "Hiển thị trong thanh bên thu gọn, nơi logo rộng sẽ quá nhỏ để đọc.",
+  "settings.companyMarkIconNone":
+    "Chưa có biểu tượng nên thanh bên thu gọn dùng tạm logo rộng.",
+  "settings.companyMarkAdd": "Thêm",
   "settings.companyMarkReplace": "Thay",
   "settings.companyMarkRemove": "Gỡ",
-  "settings.companyMarkPick": "Logo công ty",
-  "settings.companyMarkHint":
+  "settings.companyMarkAddWide": "Thêm logo rộng",
+  "settings.companyMarkReplaceWide": "Thay logo rộng",
+  "settings.companyMarkRemoveWide": "Gỡ logo rộng",
+  "settings.companyMarkAddIcon": "Thêm biểu tượng vuông",
+  "settings.companyMarkReplaceIcon": "Thay biểu tượng vuông",
+  "settings.companyMarkRemoveIcon": "Gỡ biểu tượng vuông",
+  "settings.companyMarkWideHint":
     "Tốt nhất: SVG hoặc PNG nền trong suốt khoảng 800 × 240 px (tối đa 4:1), dưới 5 MB. JPEG, GIF, WebP và ICO cũng dùng được. Logo giữ nguyên tỷ lệ.",
+  "settings.companyMarkIconHint":
+    "Tốt nhất: SVG hoặc PNG nền trong suốt khoảng 256 × 256 px, hình vuông, dưới 5 MB. Tệp rộng không bị cắt — nó giữ nguyên tỷ lệ và chỉ nằm nhỏ trong ô vuông.",
   "settings.companyMarkEmpty": "Kéo logo vào đây, hoặc chọn tệp",
+  "settings.companyMarkIconEmpty": "Kéo biểu tượng vào đây, hoặc chọn tệp",
   "settings.companyWebsite": "Website công khai của công ty",
   "settings.companyWebsiteHint":
     "Website công khai mà mỗi lần đọc website đều bắt đầu từ đó.",
