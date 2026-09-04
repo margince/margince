@@ -11,8 +11,6 @@ import (
 	"strings"
 	"time"
 
-	openapi_types "github.com/oapi-codegen/runtime/types"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/agentgrant"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -20,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // SessionCookieName is the cookie a signed-in human's browser carries. It is
@@ -351,78 +348,4 @@ func clearSessionCookie(w http.ResponseWriter) {
 		Name: SessionCookieName, Value: "", MaxAge: -1,
 		Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode,
 	})
-}
-
-// meResponse renders /me for one principal. It is a method rather than a
-// function because every posture it reports beyond the identity itself — the
-// deployment posture, whether this caller may issue set-password links — is
-// wiring the composition root injected onto Handlers, so passing them
-// alongside would be a row of anonymous booleans at each call site.
-func (h Handlers) meResponse(
-	id Identity,
-	sorMode crmcontracts.MeResponseSystemOfRecordMode,
-) crmcontracts.MeResponse {
-	adminPasswordLink := h.canIssuePasswordLink(id)
-	roles := id.Roles
-	if roles == nil {
-		roles = []string{}
-	}
-	teams := make([]openapi_types.UUID, len(id.Teams))
-	for i, t := range id.Teams {
-		teams[i] = openapi_types.UUID(t.UUID)
-	}
-	return crmcontracts.MeResponse{
-		User: crmcontracts.User{
-			Id:          openapi_types.UUID(id.UserID.UUID),
-			Email:       openapi_types.Email(id.Email),
-			DisplayName: id.DisplayName,
-			Status:      "active",
-			Locale:      contractLocale(id.Locale),
-		},
-		Roles:         roles,
-		Teams:         teams,
-		WorkspaceName: id.WorkspaceName,
-		SystemOfRecord: &struct {
-			Mode crmcontracts.MeResponseSystemOfRecordMode `json:"mode"`
-		}{Mode: sorMode},
-		NonProduction:      h.nonProduction,
-		DataResetAvailable: &h.dataResetAvailable,
-		AdminPasswordLink:  adminPasswordLink,
-		Authorization: &crmcontracts.Authorization{
-			SeatType: contractSeatType(id.SeatType),
-			Objects:  contractObjectGrants(id.Permissions.Objects),
-		},
-	}
-}
-
-// contractSeatType maps the stored seat onto the contract enum through the
-// kernel's own predicate rather than a cast. Two properties follow that a cast
-// would not give: the response can only ever carry a value the enum declares,
-// and a seat the kernel does not recognize reports the ceiling that denies
-// instead of the one that admits.
-func contractSeatType(seat string) crmcontracts.AuthorizationSeatType {
-	if principal.SeatType(seat).CanMutate() {
-		return crmcontracts.AuthorizationSeatTypeFull
-	}
-	return crmcontracts.AuthorizationSeatTypeRead
-}
-
-// contractObjectGrants maps the merged permissions onto the wire shape.
-//
-// The field-by-field mapping is deliberate: principal.ObjectGrant carries no
-// JSON tags, so handing it to the encoder would emit Create/Read/Update/Delete
-// and every client check — which asks for the lowercase names the contract
-// declares — would read absent and silently deny. That failure looks exactly
-// like a correctly withheld permission, so it is worth the explicit copy.
-func contractObjectGrants(objects map[string]principal.ObjectGrant) map[string]crmcontracts.RbacObjectGrant {
-	grants := make(map[string]crmcontracts.RbacObjectGrant, len(objects))
-	for object, grant := range objects {
-		grants[object] = crmcontracts.RbacObjectGrant{
-			Create: grant.Create,
-			Read:   grant.Read,
-			Update: grant.Update,
-			Delete: grant.Delete,
-		}
-	}
-	return grants
 }

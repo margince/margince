@@ -15,15 +15,21 @@
      partner. Centring instead floats the shorter side into the middle of the
      taller one, and the pair stops reading as one row. */
   align-items: start;
-  /* A dense reference surface reads as a compact block, not a spaced-out
-     form — the row gap matches the prototype's tighter rhythm rather than
-     the wider `--space-2`/`--space-3` this grid used before it carried the
-     Details panel's full field set. */
-  gap: 6px var(--space-3);
+  /* A dense reference surface reads as a compact block rather than a
+     spaced-out form — but compact is not cramped. The reference draws each
+     attribute with 7px of air above and below it, which is this rung between
+     one row and the next; at 6px the labels ran together into one grey block
+     with no rows in it. */
+  gap: var(--space-3);
   font-size: var(--fs-sm);
 }
 .fieldgrid-label {
   color: var(--textMeta);
+  /* The label column is a fixed rung, and a label longer than it — which
+     German reaches on half this panel's fields — has to wrap inside it rather
+     than run on across its own value. */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .fieldgrid-value {
   color: var(--textContent);
@@ -83,4 +89,38 @@
      sits below the filled values, which is what the paragraph above asks of
      it — the invitation is the hover fill, never the colour. */
   color: var(--textMeta);
+}
+
+/* The glyph column, opened only by a grid that asked for one. Its own track
+   rather than room taken from the label rung: the rung has nothing to give,
+   and a glyph inside it breaks a German label across two lines to buy a
+   picture. The row gap opens with it — ten rows each carrying
+   a glyph and a name read as a list only if the rows are apart. */
+.fieldgrid--icons {
+  /* A wider label rung than the plain grid's 112px. This variant draws a
+     record's own attributes, whose names are nouns rather than form labels —
+     "Unternehmensgröße" measures past 112 and broke mid-syllable, and a rung
+     that cannot hold its longest name is not a rung. It stops at 132 rather
+     than at that one name's full width: the pane is finite, and paying the
+     last twelve pixels for the longest label in one locale wrapped every
+     value in the grid instead. */
+  grid-template-columns: auto 132px minmax(0, 1fr);
+  row-gap: var(--space-4);
+}
+
+/* The kind-of-fact glyph. A rung quieter than the label beside it: it is what
+   a reader's eye lands on while scanning, and at the label's own tone ten
+   glyphs compete with the ten names they introduce. Held to the label's line
+   box, so it centres on the first line of a name that wraps rather than on
+   the whole block. */
+.fieldgrid-icon {
+  display: inline-flex;
+  align-items: center;
+  block-size: calc(var(--fs-sm) * 1.5);
+  color: var(--textTertiary);
+}
+
+.fieldgrid-icon svg {
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
 }

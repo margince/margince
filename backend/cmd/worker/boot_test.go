@@ -28,25 +28,25 @@ import (
 // lanes' context and does not return until each goroutine has left its handler.
 func TestJoinCancelsTheLanesAndWaitsForThem(t *testing.T) {
 	ctx, stop := context.WithCancel(context.Background())
-	lanes := workerLanes{background: &sync.WaitGroup{}, stop: stop, logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	var background sync.WaitGroup
 
 	// Two lanes, each ending only on cancellation — no sleep and no clock, so
 	// the test can only pass by the cancel actually reaching them.
 	left := make(chan struct{}, 2)
 	for range 2 {
-		lanes.background.Go(func() {
+		background.Go(func() {
 			<-ctx.Done()
 			left <- struct{}{}
 		})
 	}
 
-	lanes.join()
+	joinLanes(stop, &background, slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	if len(left) != 2 {
-		t.Fatalf("join() returned with %d of 2 lanes finished — it must cancel them and wait", len(left))
+		t.Fatalf("the lane join returned with %d of 2 lanes finished — it must cancel them and wait", len(left))
 	}
 	if ctx.Err() == nil {
-		t.Error("join() returned without cancelling the lanes' context")
+		t.Error("the lane join returned without cancelling the lanes' context")
 	}
 }
 

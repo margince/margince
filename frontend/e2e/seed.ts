@@ -2298,6 +2298,25 @@ export async function mockApi(
         computed_at: "2026-07-13T00:00:00Z",
       });
     }
+    // Analytics' frame, BEFORE the record-context match below: that one tests
+    // a substring, so it answered this route with a 360's envelope — a body
+    // with no `default_scope`, which took every analytics screen to the error
+    // boundary and the rail with it. Named in full here because the two share
+    // a word and nothing else.
+    if (path === "/analytics/context") {
+      const workspace = { kind: "workspace", label: "Whole workspace" };
+      return json({
+        default_scope: workspace,
+        allowed_scopes: [workspace],
+        capabilities: {
+          view_manager_forecast: true,
+          submit_manager_forecast: true,
+        },
+        as_of: "2026-07-13T00:00:00Z",
+        timezone: "Europe/Berlin",
+        base_currency: "EUR",
+      });
+    }
     // RS-3's context panel and the IT-1 tool console both read fixed-shape
     // envelopes the list catch-all below doesn't produce (`{sections:[]}`,
     // `{data:[AgentTool]}` vs `{data:[],page}`) — mock them explicitly so a

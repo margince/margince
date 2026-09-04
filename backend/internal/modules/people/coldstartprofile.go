@@ -275,27 +275,6 @@ func resolveOrCreateColdStartOrg(ctx context.Context, tx pgx.Tx, host, by string
 	return orgID, true, nil
 }
 
-// coldStartColumns whitelists the identifier an applyUnclaimedOrgColumn UPDATE
-// may name — values are bind parameters, the column never is.
-var coldStartColumns = map[string]string{
-	columnLegalName: `UPDATE organization SET legal_name = $2 WHERE id = $1 AND legal_name IS NULL`,
-	"industry":      `UPDATE organization SET industry = $2 WHERE id = $1 AND industry IS NULL`,
-	// A scraped registered address arrives as one formatted line; it
-	// fills line1 only when no structured address exists yet.
-	"address": `UPDATE organization SET address_line1 = $2 WHERE id = $1 AND address_line1 IS NULL
-	            AND address_city IS NULL AND address_postal_code IS NULL`,
-	// The length guard mirrors organization_description_length (0203): a
-	// summary the CHECK would reject skips the write instead of aborting the
-	// whole apply — the evidence row still lands, and the column stays writable
-	// by a shorter later read.
-	//
-	// Unlike its siblings this arm REPLACES rather than fills; who is allowed to
-	// be replaced is decided by descriptionHeldByHuman, and
-	// organizationdescriptionowner.go says why.
-	"description": `UPDATE organization SET description = $2
-	            WHERE id = $1 AND description IS DISTINCT FROM $2 AND length($2) <= 500`,
-}
-
 // applyEvidenceFields fills the column-backed fields (only when empty) and
 // upserts the evidence row for EVERY field, returning what was applied. Shared
 // by the cold-start read-back and per-org enrichment so both write provenance
@@ -360,15 +339,7 @@ func applyEvidenceFieldsWithOverwrite(
 		// The evidence row lands for every accepted field; a re-accept
 		// refreshes an agent-captured row and never touches one a human has
 		// since claimed.
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO organization_profile_field (organization_id, field, value, evidence_snippet, source_url, confidence, source, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-			ON CONFLICT (organization_id, field)
-			DO UPDATE SET value = EXCLUDED.value, evidence_snippet = EXCLUDED.evidence_snippet,
-			              source_url = EXCLUDED.source_url, confidence = EXCLUDED.confidence,
-			              source = EXCLUDED.source,
-			              captured_by = EXCLUDED.captured_by, captured_at = now()
-			WHERE $9 OR organization_profile_field.captured_by NOT LIKE 'human:%'`,
+		if _, err := tx.Exec(ctx, upsertOrgProfileField,
 			orgID, f.Field, f.Value, f.EvidenceSnippet, f.SourceURL, f.Confidence, source, by, overwrite[f.Field]); err != nil {
 			return nil, fmt.Errorf("upsert profile field %s: %w", f.Field, err)
 		}

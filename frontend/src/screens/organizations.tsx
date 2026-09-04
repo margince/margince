@@ -2428,7 +2428,13 @@ function CompanyOverviewStack({
             // than a second opener somebody would have to keep in step.
             onOpenEmail={(activityId) => onOpenRecord("activity", activityId)}
           />
+          {/* Keyed on the account, so its fold is the account's own. The page
+              stays mounted while the route swaps organizations, and without
+              this a thread a reader folded on one company arrives folded on
+              the next — which contradicts the promise that the thread the
+              call was read from is open when the reader gets there. */}
           <ThreadFold
+            key={org.id}
             view={view}
             loading={loading}
             onOpenHistory={onOpenHistory}
@@ -2497,7 +2503,7 @@ function CompanyOverviewStack({
             {/* What Margince noticed on this account that nobody asked it to
                 look for — promises made, blockers named, risks read out of
                 meetings, mail and invoices. */}
-            <Panel>
+            <Panel className="co-signals">
               <SignalsSection orgId={org.id} />
             </Panel>
             <PeopleChips view={view} loading={loading} onOpenTab={onOpenTab} />

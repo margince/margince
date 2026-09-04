@@ -1,4 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  BriefcaseBusiness,
+  Building2,
+  FolderKanban,
+  Link as LinkIcon,
+  Mail,
+  Rss,
+  User,
+} from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -655,8 +664,8 @@ function LeadIdentityFields({
   return (
     <Panel title={t("lead.details")}>
       <PanelBody>
-        <FieldGrid>
-          <FieldRow label={t("create.fullName")}>
+        <FieldGrid icons>
+          <FieldRow label={t("create.fullName")} icon={<User />}>
             <InlineText
               label={t("create.fullName")}
               value={lead.full_name ?? ""}
@@ -666,7 +675,10 @@ function LeadIdentityFields({
               onSave={(next) => save({ full_name: next.trim() || null })}
             />
           </FieldRow>
-          <FieldRow label={t("create.personTitle")}>
+          <FieldRow
+            label={t("create.personTitle")}
+            icon={<BriefcaseBusiness />}
+          >
             <InlineText
               label={t("create.personTitle")}
               value={lead.title ?? ""}
@@ -676,7 +688,7 @@ function LeadIdentityFields({
               onSave={(next) => save({ title: next.trim() || null })}
             />
           </FieldRow>
-          <FieldRow label={t("create.companyName")}>
+          <FieldRow label={t("create.companyName")} icon={<Building2 />}>
             <InlineText
               label={t("create.companyName")}
               value={lead.company_name ?? ""}
@@ -686,10 +698,10 @@ function LeadIdentityFields({
               onSave={(next) => save({ company_name: next.trim() || null })}
             />
           </FieldRow>
-          <FieldRow label={t("create.email")}>
+          <FieldRow label={t("create.email")} icon={<Mail />}>
             {lead.email ?? t("lead.detailsUnset")}
           </FieldRow>
-          <FieldRow label={t("create.linkedinUrl")}>
+          <FieldRow label={t("create.linkedinUrl")} icon={<LinkIcon />}>
             {lead.linkedin_url ? (
               <OffsiteLink href={lead.linkedin_url}>
                 {t("lead.openLinkedIn")}
@@ -698,7 +710,7 @@ function LeadIdentityFields({
               t("lead.detailsUnset")
             )}
           </FieldRow>
-          <FieldRow label={t("lead.source")}>
+          <FieldRow label={t("lead.source")} icon={<Rss />}>
             <InlineChoice
               label={t("lead.source")}
               hideLabel
@@ -715,7 +727,7 @@ function LeadIdentityFields({
             />
           </FieldRow>
           {lead.project_id && (
-            <FieldRow label={t("lead.project")}>
+            <FieldRow label={t("lead.project")} icon={<FolderKanban />}>
               <EntityRef kind="project" id={lead.project_id} />
             </FieldRow>
           )}
