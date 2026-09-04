@@ -380,18 +380,27 @@
   --fs-h2: 20px; /* section title */
   --fs-h1: 24px; /* the title of a step */
   --fs-display: 32px; /* the title of a full-viewport moment */
-  /* Three fluid rungs, for the surfaces that own their width and therefore
-     have room to answer to it: the gate, the handoff scene, and a RECORD's
-     own name. A record's name is the largest thing on its page, so it is the
-     first thing to stop being a name and start being a banner when the header
-     narrows — which happens whenever a reader opens the nav rail.
-     Measured in `cqi` and not `vw` for that reason: the window does not
-     change when the rail does, and the header is what the name has to fit.
-     `.record-head-wide` declares the container; with none in the tree the
-     unit falls back to the viewport, which is the pre-container answer. */
+  /* Four fluid rungs, for the surfaces that own their width and therefore have
+     room to answer to it: the gate, the handoff scene, a RECORD's own name, and
+     the greeting.
+
+     A record's name is the largest thing on its page, so it is the first thing
+     to stop being a name and start being a banner when the header narrows —
+     which happens whenever a reader opens the nav rail. Measured in `cqi` and
+     not `vw` for that reason: the window does not change when the rail does,
+     and the header is what the name has to fit. `.record-head-wide` declares
+     the container; with none in the tree the unit falls back to the viewport,
+     which is the pre-container answer.
+
+     The greeting takes a rung of its own rather than the hero one set larger,
+     because it is the one line in the product with nothing else competing for
+     the screen: no form beside it, no step above it, no ladder of rows below.
+     Reusing the hero rung there would either leave the greeting undersized or
+     drag every hero on a working surface up with it. */
   --fs-display-fluid: clamp(24px, 2.6vw, 32px);
   --fs-hero-fluid: clamp(30px, 6vw, 46px);
   --fs-record-fluid: clamp(26px, 3.7cqi, 44px);
+  --fs-greeting-fluid: clamp(32px, 4.6vw, 54px);
 
   /* Four weights. Outfit and DM Sans are both variable, so 550/560/580/600/620/
      650 rendered as six genuinely different weights for one "emphasis" role —

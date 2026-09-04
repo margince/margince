@@ -251,21 +251,11 @@ export function OAuthReturnPanel({
   outcome,
   provider,
   onComplete,
-  onConfirmedChange,
 }: Readonly<{
   outcome?: string;
   /** The provider the consent returned for, from the deep-link route. */
   provider?: string;
   onComplete: (skipped: boolean) => Promise<void>;
-  /**
-   * Told whenever this trip's confirmation settles: true only once a live
-   * mailbox for the returning provider is verified in the roster, false for
-   * every other state (still loading, denied, unresolved, or verified
-   * absent). The caller uses it to keep the honest skip/retry exit open
-   * until a mailbox is actually confirmed — an unconfirmed return is not a
-   * finished one, whatever this panel's own "enter" fallback offers.
-   */
-  onConfirmedChange?: (confirmed: boolean) => void;
 }>) {
   const t = useT();
   const connections = useQuery({
@@ -291,23 +281,14 @@ export function OAuthReturnPanel({
   // different fact — a landing URL minted before the provider rode the route —
   // and the roster's first live OAuth mailbox is the best answer there.
   const unresolvedProvider = provider !== undefined && returning === null;
-  // Computed unconditionally (ahead of every early return below) because the
-  // `useEffect` below is a hook and must run on every render before any early
-  // return, so `confirmed` (and the `live` value it derives from) has to be
-  // computed here too, to keep hook order stable. Every outcome besides a
-  // resolved "ok" is `undefined` roster data away from ever finding a live
-  // row, so `live` stays safely undefined for them rather than throwing.
+  // Every outcome besides a resolved "ok" is `undefined` roster data away
+  // from ever finding a live row, so `live` stays safely undefined for them
+  // rather than throwing.
   const live = connections.data?.data.find((c) =>
     returning === null
       ? asOAuthProvider(c.provider) !== null && c.status === "connected"
       : c.provider === returning && c.status === "connected",
   );
-  const confirmed =
-    outcome === "ok" && !unresolvedProvider && live !== undefined;
-  useEffect(() => {
-    onConfirmedChange?.(confirmed);
-  }, [confirmed, onConfirmedChange]);
-
   if (outcome === "denied") {
     return (
       <ConnectWarn
@@ -392,8 +373,18 @@ export function OAuthReturnPanel({
           body={t("ob.s4.connectRetry")}
         />
       )}
-      {!connections.isPending && live === undefined && (
-        <Button variant="primary" onClick={() => void onComplete(false)}>
+      {/* A roster that ANSWERED and showed no connected mailbox is a fact: the
+        consent came back, nothing is connected, and leaving records `skipped`.
+        (The false this once sent wrote "a mailbox was connected" for a step the
+        warning above had just called unconfirmable, and scheduled an overnight
+        import for a mailbox that is not there.)
+
+        A roster that FAILED is not a fact in either direction, so this exit is
+        withheld: the reader still leaves, through the stage's own "continue
+        without a mailbox", where the answer is theirs rather than one this
+        panel invented from a request that never came back. */}
+      {!connections.isPending && !connections.isError && live === undefined && (
+        <Button variant="primary" onClick={() => void onComplete(true)}>
           {t("ob.s4.enterCrm")} <ArrowRight aria-hidden />
         </Button>
       )}

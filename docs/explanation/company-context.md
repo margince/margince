@@ -136,7 +136,7 @@ The safety frame:
 | Provider + prompt block | `internal/compose/companycontextprompt.go` |
 | Rollout switch | `company_context.rollout` (`margince.yaml`, `platform/deployconfig`, migration `0105`) |
 | Trace provenance | `ai_call` context columns (migration `0102`) — see [ai-runtime.md](ai-runtime.md) |
-| The UI | `frontend/src/screens/onboarding-conversation/` (the machine + acts), the scene modules `onboarding-gate.tsx` / `onboarding-backread.tsx` / `onboarding-payoff.tsx`, and `company-context.tsx` (the settings screen). `onboarding.tsx` is the entry point and the journey's shared vocabulary, not a screen |
+| The UI | `frontend/src/screens/onboarding-conversation/` (the machine + acts), the scene modules `onboarding-gate.tsx` / `onboarding-backread.tsx`, and `company-context.tsx` (the settings screen). `onboarding.tsx` is the entry point and the journey's shared vocabulary, not a screen |
 | Deep read (existing orgs) | `POST /organizations/{id}/deep-read` — same engine, approval-staged |
 
 **Related:** [ai-runtime.md](ai-runtime.md) (the Router, tracing, budget) ·

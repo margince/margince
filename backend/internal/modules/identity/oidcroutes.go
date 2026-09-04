@@ -56,19 +56,16 @@ func (h Handlers) callbackURI(provider string) string {
 	return SignInRedirectURI(h.oidcRoutes.RedirectBase, provider)
 }
 
-// WithOIDCProviders injects the configured external identity providers and
-// their verifiers/exchangers for the /auth/oidc/{provider}/start and
-// /callback routes. Keyed by provider key ("google").
+// WithOIDCProviders injects the external identity providers the deployment
+// composed for the /auth/oidc/{provider}/start and /callback routes, keyed by
+// provider key ("google"). Each is a source rather than a value because the
+// client behind it is read when a flow runs — see OIDCProviderSource.
 func (h Handlers) WithOIDCProviders(
-	providers map[string]OIDCProviderConfig,
-	verifiers map[string]OIDCVerifier,
-	exchangers map[string]OIDCExchanger,
+	providers map[string]OIDCProviderSource,
 	signer OIDCStateSigner,
 	routes OIDCRoutes,
 ) Handlers {
 	h.oidcProviders = providers
-	h.oidcVerifiers = verifiers
-	h.oidcExchangers = exchangers
 	h.stateSigner = signer
 	h.oidcRoutes = routes
 	if h.oidcPerIP == nil {

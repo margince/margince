@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -181,5 +182,29 @@ func TestOnboardingSiteReadHandlersStayExplicitWithoutAConfiguredEngine(t *testi
 		if rec.Code != http.StatusNotImplemented {
 			t.Fatalf("unconfigured handler %d → %d, want 501", i, rec.Code)
 		}
+	}
+}
+
+// The mark a read resolves is parked on the dossier until a confirmation
+// binds it, and the review has to be able to show it before then: the report
+// says where to fetch it — the dossier's own route, never the storage key —
+// and says nothing at all while none was resolved.
+func TestCompanySiteReadPointsAtTheMarkItResolved(t *testing.T) {
+	key := "logos/site-read/abc.png"
+	read := people.SiteRead{ID: ids.NewV7(), SeedURL: seedURL, Status: "done", LogoObjectKey: &key}
+	got := companySiteRead(read, nil, nil)
+	if got.LogoUrl == nil {
+		t.Fatal("a resolved mark never reached the wire")
+	}
+	if want := "/v1/company/site-reads/" + read.ID.String() + "/logo"; *got.LogoUrl != want {
+		t.Errorf("logo_url = %q, want the dossier's own route %q", *got.LogoUrl, want)
+	}
+	if strings.Contains(*got.LogoUrl, key) {
+		t.Error("the storage key reached the wire")
+	}
+
+	none := companySiteRead(people.SiteRead{SeedURL: seedURL, Status: "done"}, nil, nil)
+	if none.LogoUrl != nil {
+		t.Errorf("a read that resolved no mark claims one: %q", *none.LogoUrl)
 	}
 }

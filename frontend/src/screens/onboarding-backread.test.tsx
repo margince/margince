@@ -489,9 +489,7 @@ describe("outcomes", () => {
     expect(
       await screen.findByText(/import status can't be read right now/),
     ).toBeInTheDocument();
-    await userEvent.click(
-      screen.getByRole("button", { name: /enter your crm/i }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: /^continue$/i }));
     expect(onFinish).toHaveBeenCalledTimes(1);
   });
 });
@@ -513,7 +511,7 @@ describe("leaving", () => {
     });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Explore Margince meanwhile" }),
+      screen.getByRole("button", { name: "Continue while it reads" }),
     );
     // The mailbox is connected on this path, so the CONNECT step is not
     // skipped — only the history read would have been.

@@ -255,7 +255,7 @@ describe("the read conclusion ordering contract", () => {
     expect(
       await screen.findByRole(
         "button",
-        { name: /Continue/ },
+        { name: "Confirm the profile" },
         {
           timeout: 8000,
         },
@@ -288,7 +288,7 @@ describe("the read conclusion ordering contract", () => {
     expect(
       await screen.findByRole(
         "button",
-        { name: /Continue/ },
+        { name: "Confirm the profile" },
         {
           timeout: 8000,
         },
@@ -308,7 +308,7 @@ describe("the read conclusion ordering contract", () => {
     expect(
       await screen.findByRole(
         "button",
-        { name: /Continue/ },
+        { name: "Confirm the profile" },
         {
           timeout: 8000,
         },
@@ -333,7 +333,7 @@ describe("the read conclusion ordering contract", () => {
     expect(
       await screen.findByRole(
         "button",
-        { name: /Continue/ },
+        { name: "Confirm the profile" },
         { timeout: 8000 },
       ),
     ).toBeTruthy();

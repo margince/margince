@@ -6,7 +6,6 @@ package identity
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net/http"
 	"slices"
 	"strings"
@@ -19,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/buildinfo"
 )
 
 // SessionCookieName is the cookie a signed-in human's browser carries. It is
@@ -126,16 +124,15 @@ type Handlers struct {
 	// re-issues for 30 days is not short-lived.
 	oauthAccessTokenTTL time.Duration
 
-	// oidcProviders/oidcVerifiers/oidcExchangers/stateSigner/oidcRoutes wire
-	// /auth/oidc/{provider}/start and /callback (WithOIDCProviders). Absent
-	// from oidcProviders means unconfigured, and Start/Callback both 404 for
-	// it. oidcRoutes carries the fixed external base and SPA routes the flow
-	// redirects through — never derived from the request Host.
-	oidcProviders  map[string]OIDCProviderConfig
-	oidcVerifiers  map[string]OIDCVerifier
-	oidcExchangers map[string]OIDCExchanger
-	stateSigner    OIDCStateSigner
-	oidcRoutes     OIDCRoutes
+	// oidcProviders/stateSigner/oidcRoutes wire /auth/oidc/{provider}/start
+	// and /callback (WithOIDCProviders). Absent from oidcProviders means the
+	// deployment never composed the provider, and a source that answers "no
+	// client right now" means the same thing to a caller: Start/Callback both
+	// 404 for either. oidcRoutes carries the fixed external base and SPA routes
+	// the flow redirects through — never derived from the request Host.
+	oidcProviders map[string]OIDCProviderSource
+	stateSigner   OIDCStateSigner
+	oidcRoutes    OIDCRoutes
 	// oidcPerIP throttles the two unauthenticated OIDC edges — an exchange
 	// failure on /callback still drives one outbound token-exchange POST
 	// carrying the shared Gmail-capture client credentials, so an uncapped
@@ -155,6 +152,13 @@ type Handlers struct {
 	// limiter for the same reason, and the OIDC routes spend theirs before the
 	// identical read.
 	capabilitiesPerIP *ratelimit.Limiter
+	// firstRunFn answers AuthCapabilities.first_run: whether this
+	// installation has not yet finished setup. Wired by the composition root
+	// (WithFirstRunFn) over the SAME steps /installation/setup reads, so this
+	// module never recomputes what that one already owns. Nil reports false —
+	// the ordinary sign-in screen — which is the safe default for a handler
+	// set built outside the composition root.
+	firstRunFn func(context.Context) (bool, error)
 }
 
 // NewHandlers builds the identity transport surface over its service.
@@ -264,80 +268,6 @@ func (h Handlers) resolveSorMode(ctx context.Context) crmcontracts.MeResponseSys
 		return crmcontracts.Native
 	}
 	return crmcontracts.Overlay
-}
-
-// GetAuthCapabilities implements (GET /auth/capabilities): the anonymous
-// probe the login UI renders from (A107/ADR-0061). It reports exactly the
-// operational methods — a disabled provider button or a dead
-// "Forgot password?" link is a misleading affordance — and discloses
-// nothing beyond what the login UI needs.
-//
-// The release version is part of what the login UI needs, because the web tier
-// cannot compare without it (compose/releaseversion.go carries why there is
-// anything to compare). An unstamped build reports NOTHING rather than an empty
-// string: absence is what the contract gives a client permission to ignore, and
-// an empty value would be a version the client then has to know is not one.
-func (h Handlers) GetAuthCapabilities(w http.ResponseWriter, r *http.Request) {
-	caps := crmcontracts.AuthCapabilities{
-		Password:      true,
-		PasswordReset: h.canSendPasswordLink(),
-	}
-	if buildinfo.Comparable(buildinfo.ReleaseVersion) {
-		// A local copy because the contract field is optional and therefore a
-		// pointer; absence is the answer for an unstamped build.
-		release := buildinfo.ReleaseVersion
-		caps.ReleaseVersion = &release
-	}
-	caps.OidcProviders = make([]struct {
-		Key   string `json:"key"`
-		Label string `json:"label"`
-	}, 0)
-	if h.oidcProvidersEnabledFn != nil && h.capabilitiesAllowed(r) {
-		// A failed read reports NO providers rather than refusing the request.
-		// This endpoint is what the login screen renders from, so an error here
-		// must degrade to the method every installation always has — password —
-		// instead of leaving a reader with no way in at all. The routes
-		// themselves fail closed separately (StartOidcSignIn), so reporting a
-		// short list can never admit a sign-in the policy would refuse.
-		enabled, err := h.oidcProvidersEnabledFn(r.Context())
-		if err != nil {
-			slog.WarnContext(r.Context(), "the enabled sign-in providers could not be read; this login screen offers password only",
-				"reason", err)
-		}
-		for _, p := range enabled {
-			caps.OidcProviders = append(caps.OidcProviders, struct {
-				Key   string `json:"key"`
-				Label string `json:"label"`
-			}{Key: p.Key, Label: p.Label})
-		}
-	}
-	// NO-STORE, and the release version is what makes it mandatory rather than
-	// tidy. This response is not per-principal, so a shared cache leaks nothing —
-	// but the SPA refuses to render at all when the release it reads here differs
-	// from its own, so one stale copy held by any cache on this origin turns a
-	// healthy installation into the mixed-release screen for every reader served
-	// from it, and reloading cannot clear it. A validator-less 200 GET is exactly
-	// what an intermediary assigns heuristic freshness to.
-	w.Header().Set("Cache-Control", "no-store")
-	httperr.WriteJSON(w, http.StatusOK, caps)
-}
-
-// capabilitiesAllowed spends this caller's capabilities budget, and reports
-// whether the provider policy may be read for them.
-//
-// Exceeding it withholds the PROVIDER list rather than refusing the request:
-// the login screen still has to render, and password is the method that always
-// remains. A flood therefore costs an attacker the buttons and costs the
-// installation no pool connection — which is the whole point, since this route
-// is anonymous and the read behind it is a transaction.
-//
-// An unwired limiter allows, so a handler set built outside NewHandlers keeps
-// working exactly as it did.
-func (h Handlers) capabilitiesAllowed(r *http.Request) bool {
-	if h.capabilitiesPerIP == nil {
-		return true
-	}
-	return h.capabilitiesPerIP.Allow(httpserver.ClientIP(r))
 }
 
 // Login implements (POST /auth/login). The route is public; the singleton

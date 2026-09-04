@@ -4,10 +4,12 @@
 package compose
 
 // Wires Microsoft sign-in (login) on the SAME Microsoft app the Graph capture
-// connector already uses (MARGINCE_GRAPH_CLIENT_ID/SECRET) — no second Entra
-// registration, the same economy googlesignin.go makes with the Gmail pair.
-// Self-gates like WithGraphCapture: an incomplete cfg mounts nothing and the
-// provider simply never appears among oidc_providers.
+// connector uses — no second Entra registration, the same economy
+// googlesignin.go makes with the Gmail pair, and the same resolution: the app
+// the installation stored under Settings, else the pair the deployment composed
+// (MARGINCE_GRAPH_CLIENT_ID/SECRET), decided when a flow runs. The deployment
+// alone decides whether the routes are mounted; a mounted provider with no
+// client, or no directory, answers as an absent one.
 //
 // WHY THIS ONE NAMES ITS DIRECTORIES AND CAPTURE DOES NOT. The two flows read
 // the same token from the same vendor and mean opposite things by it. Capture's
@@ -35,16 +37,20 @@ package compose
 // below — that one rests on a custom domain a tenant proved by DNS, and a
 // consumer account has no tenant to have proved anything.
 //
-// Same reason a Settings-stored app is not served here as the Google flow's is:
-// the state-signing key and the public redirect base are deployment properties,
-// so Enabled() is the one condition that both mounts the routes and drives the
-// capability.
+// WHICH DIRECTORIES A STORED APP VOUCHES FOR. The list the deployment names
+// (--microsoft-signin-tenant) is an operator's explicit decision and wins
+// whenever it is set. Without one, a stored app pinned to a directory names
+// that directory — the admin who pinned it said whose mailboxes may connect,
+// and that is the same organization whose people sign in — while a stored app
+// left on `common` names nothing and cannot sign anyone in, for the reason
+// above.
 
 import (
 	"context"
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -93,18 +99,20 @@ const (
 
 // MicrosoftSignInConfig carries what WithMicrosoftSignIn needs.
 // ClientID/Secret are the existing Graph-capture pair (see
-// cmd/api/microsoftsignin.go); Tenant is the directory id sign-in is pinned to
-// — see the file comment for why nothing else is accepted. StateKey signs the
-// login flow's own state/PKCE cookie (oidcloginstate.go).
+// cmd/api/microsoftsignin.go) and the FALLBACK behind the installation's stored
+// app; Tenant is the directory list sign-in is pinned to — see the file comment
+// for why nothing else is accepted. StateKey signs the login flow's own
+// state/PKCE cookie (oidcloginstate.go).
 type MicrosoftSignInConfig struct {
 	ClientID     string
 	ClientSecret string
-	// Tenant is the Entra DIRECTORY ID (a GUID) this installation's people sign
-	// in from. Deliberately not the authority aliases Microsoft also accepts in
-	// this position (`common`, `organizations`, `consumers`) and not a domain
-	// name: the value is compared against the token's `tid` claim, which is
-	// always a GUID, so anything else would be a comparison that can only fail
-	// — or, worse, a check somebody later "fixes" by dropping.
+	// Tenant is the Entra DIRECTORY IDS (GUIDs, comma-separated) this
+	// installation's people sign in from. Deliberately not the authority aliases
+	// Microsoft also accepts in this position (`common`, `organizations`,
+	// `consumers`) and not a domain name: the value is compared against the
+	// token's `tid` claim, which is always a GUID, so anything else would be a
+	// comparison that can only fail — or, worse, a check somebody later "fixes"
+	// by dropping. Empty leaves the question to the stored app's own pin.
 	Tenant   string
 	StateKey string
 	// RedirectBase is where MICROSOFT sends the browser back — the api's own
@@ -118,22 +126,40 @@ type MicrosoftSignInConfig struct {
 	FailureURL   string
 }
 
-// Enabled reports whether cfg is complete enough for WithMicrosoftSignIn to
-// mount the routes and report the capability.
+// Enabled reports whether the DEPLOYMENT is complete enough for
+// WithMicrosoftSignIn to mount the routes. Whether a button then appears is
+// the client's question, answered per request.
 func (cfg MicrosoftSignInConfig) Enabled() bool { return len(cfg.MissingFields()) == 0 }
 
+// HasEnvClient reports whether the deployment composed a client that can sign
+// somebody in on its own: the pair, and a directory list to bind it to.
+func (cfg MicrosoftSignInConfig) HasEnvClient() bool {
+	return cfg.ClientID != "" && cfg.ClientSecret != "" && len(tenantsOf(cfg.Tenant)) > 0
+}
+
+// envClient is the deployment's pair as the resolver's fallback, carrying the
+// deployment's directory list, and the zero client when it could not sign
+// anyone in: a pair with no directory resolves to nothing rather than to a
+// flow refused after the round trip.
+func (cfg MicrosoftSignInConfig) envClient() signInClient {
+	if !cfg.HasEnvClient() {
+		return signInClient{}
+	}
+	return signInClient{ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, Tenant: cfg.Tenant}
+}
+
 // MissingFields names what's absent or refused — used by
-// cmd/api/microsoftsignin.go for the three-state boot-log line. A refused
-// tenant is reported HERE rather than swallowed, because "sign-in is off" and
-// "sign-in is off because your authority is multi-tenant" send an operator to
-// two different places.
-// tenants is the directory list, split from the operator's comma-separated
+// cmd/api/microsoftsignin.go for the boot-log line. A refused tenant is
+// reported HERE rather than swallowed, because "sign-in is off" and "sign-in
+// is off because your authority is multi-tenant" send an operator to two
+// different places.
+// tenantsOf is the directory list, split from the operator's comma-separated
 // value and lowercased for comparison. Duplicates and blanks are dropped so a
 // trailing comma or a repeated id is a typo rather than a different policy.
-func (cfg MicrosoftSignInConfig) tenants() []string {
+func tenantsOf(raw string) []string {
 	seen := map[string]bool{}
 	var out []string
-	for _, raw := range strings.Split(cfg.Tenant, ",") {
+	for _, raw := range strings.Split(raw, ",") {
 		id := strings.ToLower(strings.TrimSpace(raw))
 		if id == "" || seen[id] {
 			continue
@@ -144,8 +170,8 @@ func (cfg MicrosoftSignInConfig) tenants() []string {
 	return out
 }
 
-// routingAuthority is the authority segment the AUTHORIZE, TOKEN and JWKS URLs
-// are built on — where the browser is sent, not what is accepted back.
+// routingAuthorityFor is the authority segment the AUTHORIZE, TOKEN and JWKS
+// URLs are built on — where the browser is sent, not what is accepted back.
 //
 // One directory keeps its own authority, so Microsoft shows that tenant's
 // branding and turns away everybody else before a round trip. Several need a
@@ -157,8 +183,7 @@ func (cfg MicrosoftSignInConfig) tenants() []string {
 // Widening this widens NOTHING about what is accepted: microsoftIssuer checks
 // the `tid` against the list either way, and a token from an unlisted directory
 // is refused however it was routed.
-func (cfg MicrosoftSignInConfig) routingAuthority() string {
-	ids := cfg.tenants()
+func routingAuthorityFor(ids []string) string {
 	if len(ids) == 1 {
 		// The consumer tenant alone takes its ALIAS. It is one id like any
 		// other, so the rule above would route through the guid — which
@@ -179,23 +204,42 @@ func (cfg MicrosoftSignInConfig) routingAuthority() string {
 
 func (cfg MicrosoftSignInConfig) MissingFields() []string {
 	missing := signInFields{
-		ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret, StateKey: cfg.StateKey,
-		RedirectBase: cfg.RedirectBase, PostLoginURL: cfg.PostLoginURL, FailureURL: cfg.FailureURL,
+		StateKey: cfg.StateKey, RedirectBase: cfg.RedirectBase,
+		PostLoginURL: cfg.PostLoginURL, FailureURL: cfg.FailureURL,
 	}.missingSignInFields()
-	// EVERY entry, and at least one. A list with a bad id is refused whole
-	// rather than quietly served by its good half: an operator who mistyped one
-	// directory would otherwise get a working sign-in that silently turns away
-	// the people that entry was for.
-	ids := cfg.tenants()
-	if len(ids) == 0 {
-		missing = append(missing, "tenant (one or more Entra directory ids — sign-in cannot run on common/organizations/consumers)")
-	}
-	for _, id := range ids {
+	// EVERY entry. A list with a bad id is refused whole rather than quietly
+	// served by its good half: an operator who mistyped one directory would
+	// otherwise get a working sign-in that silently turns away the people that
+	// entry was for. An EMPTY list is not refused: it leaves the directory to
+	// the stored app's pin, and the boot log says what that means for the
+	// environment's own pair.
+	for _, id := range tenantsOf(cfg.Tenant) {
 		if !isDirectoryID(id) {
 			missing = append(missing, "tenant "+id+" (not an Entra directory id — sign-in cannot run on common/organizations/consumers)")
 		}
 	}
 	return missing
+}
+
+// directoriesFor names the directories one flow trusts: the deployment's list
+// where the operator set one, else the client's own pin. Nothing vouches for a
+// directory when both are empty or the pin is not a directory id, and the
+// answer is ok=false — the provider is withheld rather than run on `common`.
+func directoriesFor(deployment string, client signInClient) ([]string, bool) {
+	raw := deployment
+	if raw == "" {
+		raw = client.Tenant
+	}
+	ids := tenantsOf(raw)
+	if len(ids) == 0 {
+		return nil, false
+	}
+	for _, id := range ids {
+		if !isDirectoryID(id) {
+			return nil, false
+		}
+	}
+	return ids, true
 }
 
 // isDirectoryID reports whether s is shaped like the Entra directory id the
@@ -268,10 +312,17 @@ func microsoftIssuer(tenants []string) func(oidcClaims) error {
 // address that arrives here IS verified, and the honest reading of "verified"
 // for this provider is "there is an address at all" — a token naming none
 // resolves to nobody rather than to the empty-string account.
-type microsoftOIDCVerifierAdapter struct{ v *oidcTokenVerifier }
+//
+// The identity check rides the adapter for the reason Google's does: it binds
+// the token to a client and to directories that are resolved per request,
+// while the verifier beneath is one JWKS cache per authority.
+type microsoftOIDCVerifierAdapter struct {
+	v             *oidcTokenVerifier
+	matchIdentity func(oidcClaims) error
+}
 
 func (a microsoftOIDCVerifierAdapter) Verify(ctx context.Context, idToken string) (email, sub string, emailVerified bool, err error) {
-	claims, err := a.v.Verify(ctx, idToken)
+	claims, err := a.v.verifyAs(ctx, idToken, a.matchIdentity)
 	if err != nil {
 		return "", "", false, err
 	}
@@ -296,6 +347,76 @@ func microsoftAuthorityURL(tenant, path string) string {
 	return microsoftIdentityHost + tenant + path
 }
 
+// microsoftHostIssuer is the issuer check a verifier is BUILT with: the token
+// must come from Microsoft's identity platform at all. Which directory it must
+// name is decided per flow by microsoftIssuer, since the directories are
+// resolved with the client; this one stays at construction so no verifier
+// exists without an issuer check, as oidcverify.go requires.
+func microsoftHostIssuer(c oidcClaims) error {
+	if !strings.HasPrefix(c.Iss, microsoftIdentityHost) {
+		return fmt.Errorf("%w: iss %q is not Microsoft's", errOIDCRejected, c.Iss)
+	}
+	return nil
+}
+
+// microsoftSignInSource resolves the provider for one flow: the client from the
+// stored app or the environment, the directories it vouches for, and the
+// endpoints, verifier and exchanger built on that directory's authority.
+type microsoftSignInSource struct {
+	env         signInClient
+	directories string
+	stored      appResolver
+
+	// verifiers is one JWKS cache per routing authority. Cached because a
+	// verifier's worth is the keys it has already fetched; keyed by authority
+	// because a stored app's directory and the environment's need not agree,
+	// and one verifier cannot hold two key endpoints.
+	mu        sync.Mutex
+	verifiers map[string]*oidcTokenVerifier
+}
+
+func (m *microsoftSignInSource) verifierFor(authority string) *oidcTokenVerifier {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if v, ok := m.verifiers[authority]; ok {
+		return v
+	}
+	if m.verifiers == nil {
+		m.verifiers = map[string]*oidcTokenVerifier{}
+	}
+	v := newOIDCVerifier(
+		microsoftAuthorityURL(authority, "/discovery/v2.0/keys"), microsoftHostIssuer, identityResolvedPerRequest,
+	)
+	m.verifiers[authority] = v
+	return v
+}
+
+func (m *microsoftSignInSource) provider(ctx context.Context) (identity.OIDCProvider, bool, error) {
+	client, ok, err := resolveSignInClient(ctx, m.stored, m.env)
+	if !ok || err != nil {
+		return identity.OIDCProvider{}, false, err
+	}
+	directories, ok := directoriesFor(m.directories, client)
+	if !ok {
+		return identity.OIDCProvider{}, false, nil
+	}
+	authority := routingAuthorityFor(directories)
+	return identity.OIDCProvider{
+		Config: identity.OIDCProviderConfig{
+			Key: microsoftProviderKey, Label: microsoftProviderLabel, ClientID: client.ClientID,
+			AuthURL: microsoftAuthorityURL(authority, "/oauth2/v2.0/authorize"),
+		},
+		Verifier: microsoftOIDCVerifierAdapter{
+			v:             m.verifierFor(authority),
+			matchIdentity: allOf(microsoftIssuer(directories), audienceIs(client.ClientID)),
+		},
+		Exchanger: oidcExchangerAdapter{ex: oidcCodeExchanger{
+			ClientID: client.ClientID, ClientSecret: client.ClientSecret,
+			TokenURL: microsoftAuthorityURL(authority, "/oauth2/v2.0/token"),
+		}},
+	}, true, nil
+}
+
 // MicrosoftSignInRedirectURI is the callback URL an operator must register on
 // the Entra app. Exported because it is knowable before any credential is —
 // it is a property of this deployment's own origin — and an operator needs it
@@ -306,9 +427,11 @@ func MicrosoftSignInRedirectURI(redirectBase string) string {
 }
 
 // WithMicrosoftSignIn wires /auth/oidc/microsoft/* into identity.Handlers when
-// cfg is complete; an incomplete cfg still returns a valid Option, it just
-// registers nothing, so the provider never reaches oidc_providers and its
-// routes 404 (identity's own per-provider lookup).
+// the deployment half of cfg is complete; an incomplete cfg still returns a
+// valid Option, it just registers nothing, so the provider never reaches
+// oidc_providers and its routes 404 (identity's own per-provider lookup). It
+// reads the stored-app resolver WithKeyvault built, so it follows that option
+// in cmd/api, as the capture transports do.
 func WithMicrosoftSignIn(cfg MicrosoftSignInConfig) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		// Published BEFORE the completeness gate, exactly as the Google twin
@@ -324,20 +447,14 @@ func WithMicrosoftSignIn(cfg MicrosoftSignInConfig) Option {
 		if !cfg.Enabled() {
 			return
 		}
+		source := &microsoftSignInSource{
+			env:         cfg.envClient(),
+			directories: cfg.Tenant,
+			stored:      installationSignInApp(pool, s.microsoftAppResolver),
+		}
 		registerSignInProvider(s, pool, signInProvider{
-			config: identity.OIDCProviderConfig{
-				Key: microsoftProviderKey, Label: microsoftProviderLabel, ClientID: cfg.ClientID,
-				AuthURL: microsoftAuthorityURL(cfg.routingAuthority(), "/oauth2/v2.0/authorize"),
-			},
-			verifier: microsoftOIDCVerifierAdapter{v: newOIDCVerifier(
-				microsoftAuthorityURL(cfg.routingAuthority(), "/discovery/v2.0/keys"),
-				microsoftIssuer(cfg.tenants()),
-				audienceIs(cfg.ClientID),
-			)},
-			exchanger: oidcExchangerAdapter{ex: oidcCodeExchanger{
-				ClientID: cfg.ClientID, ClientSecret: cfg.ClientSecret,
-				TokenURL: microsoftAuthorityURL(cfg.routingAuthority(), "/oauth2/v2.0/token"),
-			}},
+			config: identity.OIDCProviderConfig{Key: microsoftProviderKey, Label: microsoftProviderLabel},
+			source: source.provider,
 		}, identity.OIDCRoutes{
 			RedirectBase: signInRedirectBase(cfg.RedirectBase),
 			PostLoginURL: cfg.PostLoginURL,

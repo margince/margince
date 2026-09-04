@@ -70,6 +70,18 @@ export function factFieldLabelKey(field: FactField): MessageKey {
   return FACT_FIELD_LABELS[field];
 }
 
+/** FACT_CATEGORY_LABELS names every fact category in the reader's language. */
+const FACT_CATEGORY_LABELS: Record<FactCategory, MessageKey> = {
+  company: "org.factCategory.company",
+  offering: "org.factCategory.offering",
+  market: "org.factCategory.market",
+  signal: "org.factCategory.signal",
+};
+
+export function factCategoryLabelKey(category: FactCategory): MessageKey {
+  return FACT_CATEGORY_LABELS[category];
+}
+
 /**
  * OFFERING_RANK breaks the tie when one offering is filed under several fields.
  *
@@ -88,7 +100,8 @@ export type FactGroup = {
   facts: OrganizationFact[];
 };
 
-const CATEGORY_ORDER: FactCategory[] = [
+/** The order every category-grouped fact list reads in, company outward. */
+export const FACT_CATEGORY_ORDER: FactCategory[] = [
   "company",
   "offering",
   "market",
@@ -150,7 +163,7 @@ export function listFacts(
   for (const fact of facts) {
     groups.set(fact.category, [...(groups.get(fact.category) ?? []), fact]);
   }
-  return CATEGORY_ORDER.filter((category) => groups.has(category)).map(
+  return FACT_CATEGORY_ORDER.filter((category) => groups.has(category)).map(
     (category) => ({
       category,
       facts: [...(groups.get(category) ?? [])].sort((a, b) =>
@@ -186,7 +199,7 @@ export function groupFacts(
       byKey.set(key, fact);
     }
   }
-  return CATEGORY_ORDER.filter((category) => groups.has(category)).map(
+  return FACT_CATEGORY_ORDER.filter((category) => groups.has(category)).map(
     (category) => ({
       category,
       facts: [...(groups.get(category) ?? new Map()).values()].sort((a, b) =>

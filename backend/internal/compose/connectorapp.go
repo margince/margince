@@ -18,6 +18,7 @@ import (
 	"errors"
 	"net/http"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
@@ -40,6 +41,14 @@ func writeConnectorAppFailure(w http.ResponseWriter, r *http.Request, err error)
 		return
 	}
 	httperr.Write(w, r, err)
+}
+
+// oauthApp is one composed OAuth provider seen through the shared
+// connect/callback flow: the consent-URL builder and the code-for-credential
+// exchange, so the flow itself stays provider-agnostic.
+type oauthApp struct {
+	authCodeURL  func(state, redirectURI string) string
+	authenticate func(ctx context.Context, code, redirectURI string) (connector.Auth, error)
 }
 
 // providerWired reports whether this deployment serves a provider's OAuth flow
@@ -111,6 +120,102 @@ func storedApp(ctx context.Context, resolve appResolver) (capture.ConnectorApp, 
 		return capture.ConnectorApp{}, false, nil
 	}
 	return resolve(ctx)
+}
+
+// connectResult is the closed vocabulary ListConnectors reports per provider
+// and ConnectConnector's status code collapses to. The wire values live on
+// CaptureProviderAvailability.Reason in crm.yaml; this is its Go mirror.
+type connectResult string
+
+const (
+	// connectReady: a connect started right now would proceed.
+	connectReady connectResult = "ready"
+	// connectAppMissing: this installation has registered no OAuth app for the
+	// vendor (or, for imap/an unrecognised provider, the registry itself is
+	// not wired).
+	connectAppMissing connectResult = "app_missing"
+	// connectAppUnusable: an app IS stored and its secret would not open, which
+	// is a different fix from registering one.
+	connectAppUnusable connectResult = "app_unusable"
+	// connectUnsupported: this deployment does not serve the provider at all.
+	connectUnsupported connectResult = "unsupported"
+)
+
+// connectAvailability is what connectability reports for one provider.
+type connectAvailability struct {
+	reason connectResult
+	// app is the resolved OAuth app, valid only when reason is connectReady
+	// for an OAuth provider. Carried so ConnectConnector does not resolve
+	// (and unseal) the same credential a second time after asking whether it
+	// could.
+	app oauthApp
+	// err is the resolution failure behind an app_unusable reason, nil for
+	// every other reason. ConnectConnector needs it, since writeConnectorAppFailure
+	// keeps its 500-vs-503 distinction on it, but ListConnectors' roster has
+	// no HTTP response to carry a status onto, so it reports the reason alone
+	// and a per-provider failure there does not fail the read of the others.
+	err error
+}
+
+// connectability reports whether a connect started right now would proceed
+// for one provider: the one question ConnectConnector answers with a status
+// code and ListConnectors answers with a reason on the roster. Both call this
+// rather than each carrying its own copy of the decision, so a refusal a
+// click gives can never surprise a screen that just reported readiness.
+func (h connectorHandlers) connectability(ctx context.Context, provider string) connectAvailability {
+	if provider == providerIMAP {
+		// IMAP never needs an OAuth app: its credentials are per-connection,
+		// vault-sealed, so the registry alone decides.
+		if h.registry == nil {
+			return connectAvailability{reason: connectUnsupported}
+		}
+		return connectAvailability{reason: connectReady}
+	}
+	if !isOAuthProvider(provider) {
+		return connectAvailability{reason: connectUnsupported}
+	}
+	// Whether this DEPLOYMENT serves the provider at all, asked before anything
+	// is read. It is a different question from what the installation stored,
+	// and collapsing the two is how an admin who had just registered their app
+	// was told they had not: without the OAuth transport (no state key, no
+	// public base URL) a stored app cannot run its consent flow, so `oauthApp`
+	// answers "none" for an installation that plainly has one — and the card
+	// then sent them to Settings to register a second app against a gap no
+	// setting there can close.
+	if !h.providerWired(provider) {
+		return connectAvailability{reason: connectUnsupported}
+	}
+	app, ok, err := h.oauthApp(ctx, provider)
+	if err != nil {
+		return connectAvailability{reason: connectAppUnusable, err: err}
+	}
+	if h.registry == nil || !ok {
+		return connectAvailability{reason: connectAppMissing}
+	}
+	return connectAvailability{reason: connectReady, app: app}
+}
+
+// providerAvailability answers, for every mail provider the connect screen
+// offers, whether a connect started right now would proceed.
+//
+// The per-provider resolution error is discarded here, not swallowed:
+// connectability already classified it as app_unusable, which is all a roster
+// entry can carry. There is no HTTP response on this path for
+// ConnectConnector's own 500-vs-503 distinction to land on, and one provider's
+// failure must not cost the reader the cards for the others.
+// Returns the contract's own optional field rather than a bare slice: the
+// field is optional so that an older server can stay silent, and this one
+// never is, so the pointer is always the answer and never a decision the
+// caller has to make.
+func (h connectorHandlers) providerAvailability(ctx context.Context) *[]crmcontracts.CaptureProviderAvailability {
+	out := make([]crmcontracts.CaptureProviderAvailability, 0, len(listedProviders))
+	for _, p := range listedProviders {
+		out = append(out, crmcontracts.CaptureProviderAvailability{
+			Provider: crmcontracts.CaptureProviderAvailabilityProvider(p),
+			Reason:   crmcontracts.CaptureProviderAvailabilityReason(h.connectability(ctx, p).reason),
+		})
+	}
+	return &out
 }
 
 // oauthApp resolves the OAuth app for a provider; false when this installation

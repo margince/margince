@@ -106,17 +106,31 @@ export function isWork(state: RowState): boolean {
   return STATE_RANK[state] < STATE_RANK.high;
 }
 
-// The four field groups in one fixed order, flattened: confirm-card.tsx's
-// board and the rail's to-do list both walk this exact list through
-// `rowFor` and `isWork`, so a field can never turn up outstanding on one
-// surface and absent from the other.
-export function reviewFields(): readonly CompanyFieldName[] {
+export type ReviewGroupKey = "identity" | "offer" | "customer" | "sales";
+
+// The four field groups in one fixed order: what belongs where, whichever
+// surface is doing the reviewing. The form's board and the whole-record
+// article each put their own words over these keys, so the two can never
+// disagree about which field sits under which heading. A function rather
+// than a module-level const for the reason the file's opening note gives:
+// the group arrays only exist by the time a render asks.
+export function reviewGroups(): readonly Readonly<{
+  key: ReviewGroupKey;
+  fields: readonly CompanyFieldName[];
+}>[] {
   return [
-    ...LEGAL_IDENTITY_FIELDS,
-    ...OFFER_FIELDS,
-    ...CUSTOMER_FIELDS,
-    ...SALES_FIELDS,
+    { key: "identity", fields: LEGAL_IDENTITY_FIELDS },
+    { key: "offer", fields: OFFER_FIELDS },
+    { key: "customer", fields: CUSTOMER_FIELDS },
+    { key: "sales", fields: SALES_FIELDS },
   ];
+}
+
+// The same groups flattened: confirm-card.tsx's board and the rail's to-do
+// list both walk this exact list through `rowFor` and `isWork`, so a field
+// can never turn up outstanding on one surface and absent from the other.
+export function reviewFields(): readonly CompanyFieldName[] {
+  return reviewGroups().flatMap((group) => group.fields);
 }
 
 // What a row with no value says for itself, when the read can say anything

@@ -91,8 +91,13 @@ func TestValidateOnboardingAdvancePinsCreatorAndMemberPaths(t *testing.T) {
 	if err := validateOnboardingAdvance(OnboardingPathCreator, OnboardingStepVoice, true); err != nil {
 		t.Fatalf("complete creator advance: %v", err)
 	}
-	if err := validateOnboardingAdvance(OnboardingPathMember, OnboardingStepConfirm, true); err == nil {
-		t.Fatal("member was allowed into the creator-only confirm step")
+	// Every creator-only step, from the set the validator reads, so a step
+	// added before Voice is covered here the day it is declared rather than
+	// the day somebody remembers to add a line.
+	for step := range creatorSteps {
+		if err := validateOnboardingAdvance(OnboardingPathMember, step, true); err == nil {
+			t.Errorf("member was allowed into the creator-only %q step", step)
+		}
 	}
 	if err := validateOnboardingAdvance(OnboardingPathMember, OnboardingStepConnect, true); err != nil {
 		t.Fatalf("member connect advance: %v", err)

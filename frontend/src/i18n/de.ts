@@ -4043,9 +4043,6 @@ export const de = {
   "ob.factsSelected": "{selected} von {total} ausgewählt",
   "ob.factsSub":
     "Wähle ab, was nicht Teil des Firmenkontexts werden soll — bis zu 100 Angaben können ausgewählt sein.",
-  "ob.nowUnderstands": "Ich verstehe jetzt",
-  "ob.contextReady":
-    "Ich nutze diesen Kontext für Entwürfe, Suche, Agenten und Voice DNA — mit Herkunft.",
 
   // Keine Schrittzahl: wie viele Stationen ein Leser bekommt, entscheidet die
   // Leiste, also gehört die Zählung zu ob.conv.scene.step, das sie von dort
@@ -4160,40 +4157,77 @@ export const de = {
   "ob.field.industry": "Branche",
   "ob.field.history": "Firmengeschichte",
 
-  "ob.s3.title": "Sieh, was du gebaut hast —",
-  "ob.s3.titleEm": "ganz ohne Anbindung.",
-  "ob.s3.sub":
-    "Deine Organisation kennt dein Geschäft und deine Stimme. Verbinde dein Postfach, es füllt sich.",
-  "ob.s3.subNoVoice":
-    "Deine Organisation kennt dein Geschäft. Verbinde dein Postfach, es füllt sich.",
-  "ob.s3.cardProfile": "Geschäftsprofil",
-  "ob.s3.cardProfileBody":
-    "Bestätigt und auf deiner Firmenseite gespeichert. Gelesene Felder behalten ihre Quelle.",
-  "ob.s3.cardProfileSkippedBody":
-    "Gelesen, aber nicht gespeichert: du hast Bestätigen übersprungen. Geh zurück und bestätige.",
-  "ob.s3.cardVoice": "Deine Schreibstimme",
-  "ob.s3.cardVoiceBody":
-    "Gebaut aus dem Korpus, den du uns gerade gegeben hast. Entwürfe klingen ab Tag eins nach dir.",
-  "ob.s3.cardVoiceSkippedBody":
-    "Übersprungen — Entwürfe nutzen eine neutrale Stimme. Deine baust du in den Einstellungen.",
-  "ob.s3.cardPipeline": "Vertriebs-Pipeline",
-  "ob.s3.cardPipelineBody":
-    "Die Standard-B2B-Vorlage mit 7 Stufen, auf deine Branche gestimmt. Leer, bis du verbindest.",
-  "ob.s3.cardDraft": "Ein Beispiel-Entwurf, in deiner Stimme",
-  "ob.s3.cardDraftExample": "Ein Beispiel-Entwurf",
-  "ob.s3.cardDraftBody": "Sieh ihn unten.",
-  "ob.s3.originLabel": "Woher diese Pipeline kommt",
-  "ob.s3.originBody":
-    "Die Standard-B2B-Vorlage, aus dem Read auf deine Branche gestimmt. Leer, bis du verbindest. Du gibst frei, was ein Deal wird.",
-  "ob.s3.stillNothing":
-    "Noch immer nichts verbunden. Du bestimmst, wann sich das ändert.",
+  "ob.fieldHint.display_name":
+    "Der Name, den Kunden tatsächlich für dich verwenden, nicht der rechtliche. Er erscheint überall in Margince.",
+  "ob.fieldHint.offer_summary":
+    "Ein bis zwei klare Sätze, was du verkaufst, damit Margince das Geschäft erklären kann, ohne noch einmal zu fragen.",
+  "ob.fieldHint.icp":
+    "Wer am meisten profitiert, nach Größe, Branche oder Situation, damit Ansprache gezielt statt allgemein bleibt.",
+  "ob.fieldHint.buying_center":
+    "Die Rollen, die prüfen oder freigeben, damit ein Vertriebler weiß, wen er sonst noch einbeziehen muss.",
+  "ob.fieldHint.value_proposition":
+    "Das Ergebnis, das der Kunde bekommt, nicht die Produktfunktion, klar genug für einen eigenständigen Satz im Pitch.",
+  "ob.fieldHint.usp":
+    "Der eine Unterschied, der eine Entscheidung wirklich verändert, keine Stärke, die jeder Wettbewerber auch beansprucht.",
+  "ob.fieldHint.customer_pains":
+    "Das Problem in den eigenen Worten des Kunden, so wie er es beschreiben würde, bevor er dich gefunden hat.",
+  "ob.fieldHint.desired_outcomes":
+    "Was der Kunde erreichen will, in geschäftlichen Begriffen statt in Produktbegriffen.",
+  "ob.fieldHint.buying_intents":
+    "Das Signal, das meist bedeutet, dass jemand kurz vor dem Kauf steht, etwa eine Neueinstellung oder eine Frist.",
+  "ob.fieldHint.common_objections":
+    "Der Einwand, der einen Kauf am häufigsten verzögert oder stoppt, damit ein Vertriebler früh vorbereitet ist.",
+  "ob.fieldHint.sales_motion":
+    "Der Weg vom ersten Gespräch bis zum unterschriebenen Vertrag, samt Testphase oder Einkaufsprozess.",
+  "ob.fieldHint.legal_name":
+    "Der Name, wie er im Register steht, inklusive Rechtsform, denn das gehört auf eine Rechnung.",
+  "ob.fieldHint.registered_address":
+    "Die Adresse aus dem Impressum, keine Postfach- oder Showroom-Adresse.",
+  "ob.fieldHint.register_vat":
+    "Beide Kennungen genau wie ausgegeben, denn sie stehen zusammen auf Rechnungen und Verträgen.",
+  "ob.fieldHint.legal_form":
+    "Die Rechtsform genau wie im Register geführt, denn davon hängt ab, wie das Unternehmen in Verträgen heißt.",
+  "ob.fieldHint.register_court":
+    "Das im Impressum genannte Gericht, das den Registereintrag führt.",
+  "ob.fieldHint.register_number":
+    "Nur der Registereintrag, ohne die USt-IdNr., die ihr eigenes Feld darüber hat.",
+  "ob.fieldHint.industry":
+    "Die Beschreibung, die deine eigenen Kunden sofort erkennen würden, kein interner Klassifizierungscode.",
+  "ob.fieldHint.history":
+    "Nur eintragen, wenn es verändert, wie das Unternehmen gelesen wird, etwa Gründungsjahr oder eine große Wende.",
+
+  "ob.fieldEg.display_name": "Northwind Robotics",
+  "ob.fieldEg.offer_summary":
+    "Cloud-Software für die Lagerverwaltung mittelgroßer Händler.",
+  "ob.fieldEg.icp": "Handelsketten mit 20 bis 200 Filialen.",
+  "ob.fieldEg.buying_center":
+    "Leitung Operations, mit Freigabe durch die Finanzabteilung.",
+  "ob.fieldEg.value_proposition":
+    "Halbiert Fehlbestände innerhalb eines Quartals.",
+  "ob.fieldEg.usp": "Einziger Anbieter mit Vor-Ort-Support am selben Tag.",
+  "ob.fieldEg.customer_pains":
+    "Wir merken zu spät, dass etwas ausverkauft ist.",
+  "ob.fieldEg.desired_outcomes": "Nie wieder eine Nachbestellfrist verpassen.",
+  "ob.fieldEg.buying_intents":
+    "Eröffnung eines neuen Lagers innerhalb von 90 Tagen.",
+  "ob.fieldEg.common_objections": "Sorge vor dem Umstieg vom alten System.",
+  "ob.fieldEg.sales_motion": "Demo, zweiwöchiger Test, dann ein Jahresvertrag.",
+  "ob.fieldEg.legal_name": "Northwind Robotics GmbH",
+  "ob.fieldEg.registered_address": "Musterstraße 12, 10115 Berlin",
+  "ob.fieldEg.register_vat": "DE123456789",
+  "ob.fieldEg.legal_form": "GmbH",
+  "ob.fieldEg.register_court": "Amtsgericht Charlottenburg",
+  "ob.fieldEg.register_number": "HRB 12345 B",
+  "ob.fieldEg.industry": "E-Commerce-Logistik",
+  "ob.fieldEg.history":
+    "Gegründet 2015, ausgegliedert aus einem Logistik-Startup.",
 
   "ob.s4.provGoogle": "Google",
   "ob.s4.provMicrosoft": "Microsoft",
-  "ob.s4.provImap": "Beliebiges Postfach (IMAP)",
+  "ob.s4.provImap": "Anderes Postfach (IMAP/SMTP)",
   "ob.s4.microsoftBtn": "Zugriff auf mein Microsoft erlauben",
   "ob.s4.microsoftHint":
-    "Nur-Lese-Zugriff auf E-Mails. Du kannst die Verbindung jederzeit in den Einstellungen trennen.",
+    "Liest deine Mails und kann daraus senden. Beides bestätigst du bei Microsoft, und du kannst jederzeit trennen.",
   "ob.s4.microsoftUnverified":
     "Eventuell erscheint ein Hinweis „nicht verifizierte App“ — das ist diese selbstgehostete Installation, kein Dritter.",
   "ob.s4.microsoftFailed":
@@ -4522,6 +4556,8 @@ export const de = {
   "connectors.imapSecretHint":
     "Verwende ein App-Passwort. Wir versiegeln es im Credential-Vault und lesen deine Mails nach Zeitplan, bis du trennst — beim Trennen wird es gelöscht.",
   "connectors.imapSubmitCta": "Verbinden",
+  "connectors.imapNeeded": "Nötig zum Verbinden",
+  "connectors.imapStillNeeded": "Fehlt noch: {fields}",
   "connectors.imapLoginRejected":
     "Das Postfach hat diese Zugangsdaten abgelehnt. Prüfe Server, E-Mail und App-Passwort.",
   "connectors.imapUnreachable": "Der Mailserver konnte nicht erreicht werden.",
@@ -4646,15 +4682,11 @@ export const de = {
   "ob.s4.capturedTitle": "Postfach verbunden",
   "ob.s4.capturedBody":
     "Dein CRM baut sich selbst. Neue Post landet hier, sobald der erste Durchlauf läuft, meist in Minuten.",
-  "ob.s4.enterCrm": "Ins CRM",
+  "ob.s4.enterCrm": "Weiter",
   "ob.s4.connectFailed": "Dieses Postfach ließ sich nicht verbinden",
   "ob.s4.notNow": "Nicht jetzt",
 
   "ob.conv.threadLabel": "Einrichtungsgespräch",
-  "ob.conv.welcome":
-    "Hallo, ich bin Margince. Ich baue dein CRM aus dem, was schon da ist, und zeige jede Quelle.",
-  "ob.conv.welcomeMember":
-    "Hallo, ich bin Margince. Dein Team ist schon eingerichtet. Zwei kurze Schritte, dann bist du drin.",
   "ob.conv.read.started": "Ich lese jetzt {host}. Ich sage dir, was ich finde.",
   "ob.conv.read.pages": "Bisher gelesene Seiten: {pages}.",
   "ob.conv.read.learnedField": "{field} gelernt: {value}",
@@ -4677,8 +4709,6 @@ export const de = {
   "ob.conv.voice.speakerQuestion":
     "Dieses Transkript hat mehrere Sprecher. Wer davon bist du? Nur deine eigenen Worte zählen.",
   "ob.conv.voice.speakerOptionDetail": "Wörter: {words} · Beiträge: {turns}",
-  "ob.conv.voice.guideSpeaker":
-    "Rechts wartet eine Sprecherwahl — wähle, welche Person du bist.",
   "ob.conv.voice.speakerFoot": "Deine Wahl gilt nur für diese Datei.",
   "ob.conv.voice.speakerContinue": "Diese Person bin ich",
   "ob.conv.voice.continueSkippedStatus":
@@ -4687,8 +4717,6 @@ export const de = {
     "Deine Materialien sind sicher — versuch es erneut oder mach weiter und komm später zurück.",
   "ob.conv.voice.continueDeferredStatus":
     "Hier ist nichts zu tun — mach weiter, der Rest läuft von selbst.",
-  "ob.conv.voice.collectAsk":
-    "Schick mir eigene Texte. Gesprächs-Transkripte sind am besten, Dokumente gehen auch.",
   "ob.conv.voice.composer": "Füge hier deinen Text ein",
   "ob.conv.voice.dropHint":
     "Du kannst Dateien auch überall in dieses Gespräch ziehen.",
@@ -4713,10 +4741,6 @@ export const de = {
   "ob.conv.voice.pasteAdd": "Ja, in meinen Korpus.",
   "ob.conv.voice.pasteDiscard": "Nein, verwerfen.",
   "ob.conv.voice.pasteSource": "Eingefügter Text",
-  "ob.conv.voice.buildFloor":
-    "Eigene Wörter bisher: {words}. Ich brauche mindestens {min}, bevor ich bauen kann.",
-  "ob.conv.voice.buildNudge":
-    "Ich habe genug zum Bauen. Ab 4.000 Wörtern wird deine Stimme deutlich schärfer.",
   "ob.conv.voice.buildChip": "Mein Stimmprofil bauen",
   "ob.conv.voice.retryBuild": "Aufbau erneut versuchen",
   "ob.conv.voice.buildPollFailed":
@@ -4751,10 +4775,6 @@ export const de = {
     "Der Aufbau wartet auf Budget. Er läuft automatisch an.",
   "ob.conv.build.failed":
     "Der Aufbau wurde nicht fertig. Deine Texte bleiben erhalten, du kannst es jederzeit erneut versuchen.",
-  "ob.conv.recap":
-    "Das weiß dein CRM jetzt, mit einer Quelle zu jedem Eintrag.",
-  "ob.conv.consent":
-    "Letzter Schritt: Was darf ich erfassen, und zu welchem Zweck? Nichts ist standardmäßig aktiv.",
   "ob.conv.done": "Einrichtung abgeschlossen. Dein CRM ist bereit.",
   "ob.conv.clarify.question": "{question}",
   "ob.conv.clarify.optionDetail": "{detail}",
@@ -4814,14 +4834,12 @@ export const de = {
   "ob.conv.triage.peopleEmpty": "Keine Personen auf deiner Website gefunden.",
   "ob.conv.triage.factsLabel": "Fakten",
   "ob.conv.triage.factsCount": "{count} gefunden",
-  "ob.rail.spend": "Tokens für dieses Setup",
   "ob.rail.tokensUnit": "Tok.",
   "ob.conv.scene.step": "Schritt {n} von {m} · {label}",
   "ob.conv.scene.detour": "Ein kurzer Umweg",
   "ob.conv.scene.decisionSub":
     "Deine Website nennt mehrere Gesellschaften. Die gewählte steht auf jeder Rechnung.",
   "ob.conv.scene.continue": "Weiter",
-  "ob.conv.scene.candidates": "{count} Kandidaten",
   "ob.conv.connect.sceneTitle": "Verbinde deine Konten.",
   "ob.conv.connect.sceneSub":
     "Ich baue Kontakte, Firmen und Historie aus dem, was schon im Postfach liegt.",
@@ -4833,23 +4851,28 @@ export const de = {
     "Optional, aber lohnend. Macht aus Bekannten Accounts und beobachtet sie auf Trigger.",
   "ob.conv.connect.required": "erforderlich",
   "ob.conv.connect.recommended": "empfohlen",
-  "ob.conv.connect.gmailBrings": "Mail, Kontakte und Kalender von Google",
-  "ob.conv.connect.microsoftBrings":
-    "Mail, Kontakte und Kalender über die Graph-API",
-  "ob.conv.connect.imapBrings": "Jeder andere Mail-Host, mit App-Passwort",
+  "ob.conv.connect.gmailBrings": "Mail über Google gelesen und gesendet",
+  "ob.conv.connect.microsoftBrings": "Mail über Microsoft gelesen und gesendet",
+  "ob.conv.connect.imapBrings":
+    "Mail von jedem Host, mit E-Mail-Adresse und App-Passwort",
   "ob.conv.connect.linkedinAuth": "Profillink, nur lesend",
   "ob.conv.connect.scopeGoogle": "OAuth, Lese- und Sendeberechtigung",
   "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",
-  "ob.conv.connect.scopeImap": "Jeder andere Anbieter, App-Passwort",
+  "ob.conv.connect.scopeImap": "E-Mail-Adresse und Passwort",
   "ob.conv.connect.connectCta": "verbinden →",
   "ob.conv.connect.connectedCta": "verbunden",
   "ob.conv.connect.blockedCard":
     "Du hast schon ein Postfach gewählt. Trenne es in den Einstellungen, um zu wechseln.",
   "ob.conv.connect.guaranteesToggle": "Was Verbinden tatsächlich bedeutet",
-  "ob.conv.connect.railPromise":
-    "Wir lesen deine Mail, und wir können daraus senden, sobald du das erlaubst.",
   "ob.conv.connect.dialogHeadlineAccess": "Zugriff auf {name} nötig",
   "ob.conv.connect.dialogHeadlineImap": "Verbinde deinen Mail-Host",
+  "ob.conv.connect.appMissingCard":
+    "Deine Organisation hat ihre {name}-App noch nicht registriert.",
+  "ob.conv.connect.appUnusableCard":
+    "Die {name}-App deiner Organisation lässt sich gerade nicht öffnen. Sie braucht einen Admin, keine neue App.",
+  "ob.conv.connect.unsupportedCard":
+    "Diese Installation bietet {name} nicht an.",
+  "ob.conv.connect.appSetupLink": "In den Einstellungen einrichten",
   "ob.conv.connect.dialogIntro":
     "{brings}. Ich lese es einmal, um deine Kontakte und Historie aufzubauen, und halte es danach synchron.",
   "ob.conv.connect.dialogClose": "Schließen",
@@ -4886,8 +4909,14 @@ export const de = {
   "ob.conv.voice.resultSub":
     "Lies zuerst das Beispiel. Passt es, bestätige. Passt es nicht, gib mir mehr Quellen und ich baue neu.",
   "ob.conv.voice.resultSubNoSample":
-    "Dein Korpus reicht noch nicht für ein Beispiel. Das hat der Aufbau gelernt. Füg Quellen hinzu.",
+    "F\u00fcr diesen Build kam kein Beispielentwurf zur\u00fcck. Hier ist, was er gelernt hat \u2014 f\u00fcge mehr von deinen Texten hinzu, dann versuche ich es erneut.",
   "ob.conv.voice.resultContinue": "Das bin ich",
+  "ob.conv.voice.revise": "Nicht ganz ich — mehr Text hinzufügen",
+  "ob.conv.voice.distilling": "Destilliert",
+  "ob.conv.voice.hears": "hört",
+  "ob.conv.voice.hearsWords": "{words} eigene Wörter aus {sources} Quellen",
+  "ob.conv.voice.hearsBand": "bisher ein Korpus der Stufe {band}",
+  "ob.conv.voice.hearsRegister": "{words} Wörter im Register {register}",
   "ob.conv.voice.sampleEyebrow": "Beispiel, nicht gesendet",
   "ob.conv.voice.sampleAnother": "Anderes Szenario",
   "ob.conv.voice.sampleSubjectLabel": "Betreff",
@@ -4903,26 +4932,6 @@ export const de = {
   "ob.conv.scene.hideEvidence": "Beleg ausblenden",
   "ob.conv.scene.whyThis": "Was ich gelesen habe",
   "ob.conv.scene.foundOn": "Gefunden auf",
-  "ob.conv.guide.decision":
-    "Ich brauche eine Entscheidung von dir: {question} Sie steht rechts, mit den Belegen zu jeder Option.",
-  "ob.conv.guide.reviewBlocked_one":
-    "Deine Prüfung ist rechts bereit. {count} Feld blockiert die Übernahme.",
-  "ob.conv.guide.reviewBlocked_other":
-    "Deine Prüfung ist rechts bereit. {count} Felder blockieren die Übernahme.",
-  "ob.conv.guide.reviewAdvisory_one":
-    "Deine Prüfung ist rechts bereit. Nichts blockiert dich; {count} Punkt ist einen Blick wert.",
-  "ob.conv.guide.reviewAdvisory_other":
-    "Deine Prüfung ist rechts bereit. Nichts blockiert dich; {count} Punkte sind einen Blick wert.",
-  "ob.conv.guide.reviewClean":
-    "Deine Prüfung ist rechts bereit. Sie sieht sauber aus, prüfe was du willst und übernimm, wenn du bereit bist.",
-  "ob.conv.guide.attentionHeading": "Diese brauchen deine Eingabe",
-  "ob.conv.guide.attentionGroup.blocking": "Nötig, um fortzufahren",
-  "ob.conv.guide.attentionGroup.decisions": "Braucht eine Entscheidung",
-  "ob.conv.guide.attentionGroup.advisory": "Einen Blick wert",
-  "ob.conv.guide.attentionStatus.blocks": "nötig zum Fortfahren",
-  "ob.conv.guide.attentionStatus.empty": "noch leer",
-  "ob.conv.guide.attentionStatus.decision": "braucht eine Entscheidung",
-  "ob.conv.guide.attentionStatus.check": "einen Blick wert",
   "ob.conv.activity.steps_one": "{count} Schritt",
   "ob.conv.activity.steps_other": "{count} Schritte",
   "ob.conv.showField": "Zeig mir",
@@ -4943,17 +4952,6 @@ export const de = {
   "ob.conv.artifact.empty":
     "Noch nichts gelesen. Nenn mir eine Website und dieses Panel füllt sich mit belegten Funden.",
   "ob.conv.results.continue": "Weiter",
-  "ob.conv.results.artifactTitle": "Einrichtung im Überblick",
-  "ob.conv.results.artifactBody":
-    "Womit dein CRM startet. Hier steht nichts, das nicht wirklich passiert ist.",
-  "ob.conv.results.company":
-    "Firmenprofil für {name} bestätigt. Alles Gespeicherte trägt seine Quelle.",
-  "ob.conv.results.companyUnsaved":
-    "Deine Firmendaten sind noch nicht gespeichert. Du kannst sie später in den Einstellungen vervollständigen.",
-  "ob.conv.results.voiceBuilt":
-    "Dein Stimmprofil ist gebaut. Entwürfe klingen nach dir.",
-  "ob.conv.results.voiceSkipped":
-    "Noch kein Stimmprofil. Entwürfe nutzen eine neutrale Startstimme; deins kannst du später in den Einstellungen bauen.",
   "ob.conv.recap.back": "Willkommen zurück. Hier stehen wir.",
   "ob.conv.recap.company": "Dein Firmenprofil für {name} ist bestätigt.",
   "ob.conv.recap.companyUnsaved":
@@ -4972,8 +4970,6 @@ export const de = {
     "Willkommen zurück. Mein früherer Lesevorgang von {host} wurde nicht fertig. Nenn mir wieder eine Website oder erzähl es mir direkt.",
   "ob.conv.recap.readDeferred":
     "Willkommen zurück. Mein Lesevorgang von {host} pausiert gerade. Nenn mir wieder eine Website oder erzähl es mir direkt.",
-  "ob.conv.connect.pick":
-    "Wähle einen Anbieter, um genau zu sehen, was das Verbinden tut. Oder überspringe es und verbinde später in den Einstellungen.",
   "ob.conv.linkedin.cardBody":
     "Macht aus deinem Netzwerk Firmen und Kontakte, und meldet, wenn jemand aus deinem Netzwerk den Job wechselt.",
   "ob.conv.linkedin.limitsToggle": "Was Margince sehen kann und was nicht",
@@ -5003,15 +4999,54 @@ export const de = {
     "LinkedIn autorisiert. Deine Kontakte werden synchronisiert, sobald die App freigegeben ist.",
   "ob.conv.linkedin.skipped":
     "LinkedIn \u00fcbersprungen. Du kannst es jederzeit in den Einstellungen verbinden.",
-  "ob.conv.connect.skip": "Verbinden vorerst überspringen",
+  "ob.conv.connect.skip": "Ohne Postfach weiter",
+  "ob.conv.connect.continue": "Weiter",
+  "ob.conv.connect.mailboxNeeded":
+    "Ein Postfach fehlt noch: Mail ist, was gelesen und entworfen wird. Verbinde oben eines, oder gehe vorerst ohne weiter.",
 
   // Die Setup-Leiste: fünf Stationen, je ein Wort. Lang genug, den Schritt zu
   // benennen, kurz genug, dass fünf davon bei 10px in eine Spalte passen.
   "ob.rail.read": "Lesen",
   "ob.rail.confirm": "Bestätigen",
   "ob.rail.voice": "Stimme",
-  "ob.rail.ready": "Fertig",
   "ob.rail.connect": "Verbinden",
+  "ob.rail.prefs": "Einstellungen",
+
+  "ob.conv.invite.title": "Wirst du selbst in Margince arbeiten?",
+  "ob.conv.invite.body":
+    "Das Unternehmen ist eingerichtet. Zwei weitere Schritte drehen sich um dich, und sie ergeben nur Sinn, wenn du Margince auch selbst nutzt.",
+  "ob.conv.invite.yes": "Ja, ich arbeite in Margince",
+  "ob.conv.invite.yesBody":
+    "Trainiere deine Stimme und verbinde Postfach und Kalender: zwei kurze Schritte, beide über dich.",
+  "ob.conv.invite.no": "Nein, ich richte nur ein",
+  "ob.conv.invite.noBody":
+    "Lade stattdessen die erste Person ein, die hier arbeiten wird, und du bist fertig.",
+  "ob.conv.invite.foot":
+    "So oder so lassen sich Stimme und Konten später in den Einstellungen einrichten.",
+  "ob.conv.invite.continue": "Weiter",
+  "ob.conv.invite.accepted": "Ja, ich arbeite selbst damit.",
+  "ob.conv.invite.declined": "Nein, ich richte nur ein.",
+
+  "ob.conv.team.title": "Lade die erste Person ein.",
+  "ob.conv.team.body":
+    "Jemand muss die erste Person sein, die in Margince arbeitet. Füge sie jetzt hinzu oder später unter Einstellungen → Personen.",
+  "ob.conv.team.invitedLabel": "Bisher eingeladen",
+  "ob.conv.team.invitedLine": "{name} ist eingeladen.",
+  "ob.conv.team.skip": "Vorerst überspringen",
+  "ob.conv.team.finish": "Einrichtung abschließen",
+  "ob.conv.team.done":
+    "Die Einrichtung ist abgeschlossen. Wen du hinzufügst, kann Stimme und Konten in den Einstellungen selbst einrichten.",
+  "ob.conv.prefs.title": "Zum Schluss ein paar Einstellungen.",
+  "ob.conv.prefs.body":
+    "Alles hier ist mit bereits hinterlegten Angaben vorausgefüllt und lässt sich später in den Einstellungen ändern. Drücke Fertig, wenn alles stimmt.",
+  "ob.conv.prefs.reportingTitle": "Wie die Zahlen berichtet werden",
+  "ob.conv.prefs.timezoneNeeded": "Eine Berichtszeitzone wird benötigt.",
+  "ob.conv.prefs.autonomyTitle": "Was es eigenständig ändern darf",
+  "ob.conv.prefs.autonomyBody":
+    "Jede Art von Änderung unten wird dir zuerst vorgeschlagen. Schalte eine ein, und sie gilt ohne Rückfrage; jederzeit wieder abschaltbar.",
+  "ob.conv.prefs.done": "Fertig",
+  "ob.conv.prefs.persistFailed":
+    "Ich konnte nicht festhalten, dass die Einrichtung abgeschlossen ist. Versuche es noch einmal oder schließe sie später in den Einstellungen ab.",
 
   // --- das Tor: der erste Screen nach der Anmeldung ----------------------
   // Eine Frage und sonst nichts. Niemand soll das ganze Werkzeug auf dem
@@ -5061,13 +5096,12 @@ export const de = {
   "ob.scan.phaseDeferred": "Vorerst pausiert",
   "ob.scan.pagesRead": "{pages} Seiten gelesen",
   "ob.scan.pagesSkipped": "{count} übersprungen",
-  "ob.scan.factsSoFar": "{count} Fakten bisher",
   "ob.scan.stillReading": "lese noch",
   "ob.scan.pageStripLabel": "Bisher gelesene Seiten",
   "ob.scan.logLabel": "Die Seiten, die ich gerade durchgehe, neueste zuerst",
-  "ob.scan.pageFetched": "{url} — gelesen",
-  "ob.scan.pageSkipped": "{url} — übersprungen: {reason}",
-  "ob.scan.pageFailed": "{url} — nicht lesbar: {reason}",
+  "ob.scan.pageFetched": "{url}: gelesen",
+  "ob.scan.pageSkipped": "{url}: übersprungen, {reason}",
+  "ob.scan.pageFailed": "{url}: nicht lesbar, {reason}",
   "ob.scan.pageNoReason": "kein Grund erfasst",
   "ob.scan.pageStatusFetched": "gelesen",
   "ob.scan.pageStatusSkipped": "übersprungen: {reason}",
@@ -5116,28 +5150,8 @@ export const de = {
   // Zahlen, kein Applaus. Jede Zelle ist eine echte Zahl von der
   // Schnittstelle, und eine Zelle ohne Zahl sagt das, statt eine Null zu
   // zeigen, die wie ein Ergebnis aussieht.
-  "ob.payoff.lead": "Vor wenigen Minuten war das eine leere Installation.",
-  "ob.payoff.leadResumed": "Das hier hat als leere Installation angefangen.",
-  "ob.payoff.factsRead": "Fakten gelesen",
-  "ob.payoff.factsConfirmed": "Fakten bestätigt",
-  "ob.payoff.peopleFound": "Personen gefunden",
-  "ob.payoff.profileFields": "Profilfelder",
-  "ob.payoff.voiceWords": "Wörter deiner Stimme",
-  "ob.payoff.pagesRead": "Seiten gelesen",
-  "ob.payoff.voiceNotTrained": "Stimme noch nicht trainiert",
-  "ob.payoff.body":
-    "Alles darin kannst du korrigieren, und jeder Wert zeigt weiter auf die Seite, von der er kommt.",
-  "ob.payoff.defaults":
-    "Ich warte auf dein Ja und überschreibe nie deine Eingaben. Beides in Einstellungen → Autonomie.",
-  "ob.payoff.seats":
-    "Es fehlen nur noch deine Kollegen. Sitze sind kostenpflichtig, deshalb legst du sie unter Einstellungen → Nutzer selbst an.",
-  "ob.payoff.understood": "Verstanden",
-  "ob.payoff.projects":
-    "Wird aus einem Deal Arbeit, leg dafür ein Projekt an: Ein Projekt beginnt während des Deals und bleibt nach dem Gewinn bestehen, damit die Lieferung ihre eigene Chronik behält.",
-  "ob.payoff.projectsLink": "Projekte ansehen",
 
   // --- die Übergabe in die App ------------------------------------------
-  "ob.enter.cta": "Margince öffnen",
   "ob.enter.assembling": "Deine Organisation wird zusammengestellt",
 
   // --- das Zurücklesen des Postfachs -------------------------------------
@@ -5186,7 +5200,7 @@ export const de = {
     "Ich konnte das Lesen nicht stoppen: {detail} Versuch es erneut — es läuft in der Zwischenzeit weiter.",
   "ob.backread.detailUnavailable": "Etwas ist unerwartet schiefgelaufen.",
   "ob.backread.cancel": "Lesen stoppen",
-  "ob.backread.explore": "In der Zeit Margince erkunden",
+  "ob.backread.explore": "Weiter, während gelesen wird",
   "ob.backread.skip": "Verlauf jetzt nicht lesen",
 
   "auth.title": "Margince",
@@ -5199,36 +5213,14 @@ export const de = {
   // statt des Nominalstils ("Eine Selbstregistrierung gibt es nicht").
   "auth.loginSub":
     "Konten legt eine Admin-Person an. Selbst registrieren kannst du dich nicht.",
-  "auth.coreDisclosure": "Margince · KI-System",
   "auth.coreGreeting": "Hallo, ich bin Margince.",
   "auth.corePurpose": "Ich kümmere mich um die Arbeit rund um deine Arbeit.",
-  // Gedankenstrich mit Leerzeichen, nicht der englische Geviertstrich ohne:
-  // im Deutschen ist das die einzige Setzung, die nicht wie ein Bindestrich
-  // zwischen zwei Wörtern liest.
-  "auth.coreWork":
-    "Ich halte dein CRM aktuell, erkenne, was Aufmerksamkeit braucht, und bereite den nächsten Schritt vor – damit du dich um Kunden kümmern kannst.",
-  "auth.corePromise":
-    "Und ich handle nur mit der Berechtigung, die du mir gegeben hast — nie mehr, als du selbst darfst.",
-  "auth.coreHandover": "Zuerst stelle ich sicher, dass du es wirklich bist …",
-  "auth.coreConfigured": "Konfiguriert",
-  "auth.coreUnconfigured": "KI nicht konfiguriert",
   // "auch ohne", nicht "weiterhin": "weiterhin" ist zeitlich und liest sich neben
   // dem Hinweis "KI nicht konfiguriert" wie "noch, aber nicht mehr lange".
-  "auth.coreStillWorks": "Das CRM funktioniert auch ohne.",
   "auth.coreDevelopment": "Entwicklungs-KI",
-  "auth.coreModeCloud": "Cloud-Routing",
-  "auth.coreModeLocal": "lokales Routing",
-  "auth.coreModeHybrid": "hybrides Routing",
-  "auth.coreModeNone": "kein Modell-Routing",
   // Die Nachbarwerte sind alle Betriebsarten; "Modus" ist dafür das deutsche
   // Wort, "Pfad" die Übersetzung von "path".
   "auth.coreModeDevelopment": "Offline-Entwicklungsmodus",
-  "auth.coreProviderAnthropic": "Anthropic",
-  "auth.coreProviderGemini": "Gemini",
-  "auth.coreProviderOllama": "Ollama",
-  "auth.coreProviderOpenAI": "OpenAI",
-  "auth.coreProviderCompatible": "kompatibler Anbieter",
-  "auth.coreProviderVllm": "vLLM",
   "auth.email": "E-Mail",
   // Der lokale Teil einer Adresse ist nie ein Pronomen — "du@" ist "you@"
   // Zeichen für Zeichen. "beispiel.de" ist im Deutschen, was "example.com" im
@@ -6636,19 +6628,19 @@ export const de = {
   "oauthApp.clientSecret": "Client-Secret",
   "oauthApp.tenant": "Verzeichnis-ID (Mandant)",
   "oauthApp.tenantHint":
-    "Optional. Bindet die App an ein einzelnes Entra-Verzeichnis, sodass nur dessen Mitglieder zustimmen können. Leer lassen, um jede Organisation zuzulassen.",
+    "Optional. Bindet die App an ein einzelnes Entra-Verzeichnis: Nur dessen Mitglieder können ein Postfach verbinden, und die Microsoft-Anmeldung läuft darüber. Leer lassen, damit jede Organisation verbinden kann; die Anmeldung wartet dann darauf, dass der Server Ihre Verzeichnisse benennt.",
   "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter wählen",
   "firstRun.ai.sub":
-    "Margince stellt keine eigene Inferenz bereit und arbeitet über Ihr Anbieterkonto. Alles davon lässt sich später unter Einstellungen → KI ändern.",
+    "Margince hat keine eigene KI. Das Denken läuft über Ihr Anbieterkonto, und alles davon lässt sich später unter Einstellungen → KI ändern.",
   "firstRun.ai.provider": "Anbieter",
   "firstRun.ai.key": "API-Schlüssel",
   "firstRun.ai.keyHint":
-    "Einmal gesendet und im Schlüsseltresor versiegelt. Ist stattdessen {envVar} in der Umgebung gesetzt, liest der Server ihn von dort.",
+    "Im Schlüsseltresor versiegelt, danach nie wieder sichtbar.",
   "firstRun.ai.chatModel": "Modell",
   "firstRun.ai.modelHint":
-    "Ein Ausgangspunkt. Die angezeigten Preise gelten je Million Token, Eingabe → Ausgabe; jede Modell-ID, die Ihr Anbieter bedient, ist möglich.",
+    "Ein Ausgangspunkt. Jedes Modell, das Ihr Anbieter bedient, ist möglich.",
   "firstRun.ai.embedModel": "Embedding-Modell",
   "aiSettings.sub":
     "Wohin der Text dieser Installation geht und was er kostet.",
@@ -8217,6 +8209,157 @@ export const de = {
   "worklist.when.due": "fällig {when}",
   "worklist.batch.system_incident": "{cause} ist {count}-mal fehlgeschlagen",
   "worklist.batch.unnamedCause": "Etwas",
+
+  "ob.conv.scene.settleEyebrow":
+    "Hier hängt es an etwas, das nur du entscheiden kannst",
+  "ob.conv.review.boardSub":
+    "Jede Zeile nennt ihre Quelle. Geschrieben wird erst, wenn du bestätigst.",
+  "ob.conv.manual.boardTitle": "Trag es selbst ein.",
+  "ob.conv.scene.writes": "Schreibt",
+  "ob.core.idle": "core · in Ruhe",
+  "ob.core.ingest": "core · nimmt auf",
+  "ob.core.working": "core · arbeitet es aus",
+  "ob.core.warning": "core · etwas will angesehen werden",
+  "ob.core.error": "core · gestoppt",
+  "ob.scan.tallyPages": "Seiten gelesen",
+  "ob.scan.tallyFacts": "Fakten gefunden",
+  "ob.scan.tallyUncertain": "unsicher, kein Rateversuch",
+  "ob.scan.tickerFact": "{field}: {value}",
+  "ob.digest.where": "Was Margince über dich weiß",
+  "ob.digest.written": "{n} von {m} Zeilen geschrieben",
+  "ob.digest.companyLine":
+    "Firmenprofil, geschrieben aus {n} Seiten von {host}",
+  "ob.digest.citedCaption": "Zeilen, jede mit Quelle",
+  "ob.digest.openCaption": "noch offen",
+  "ob.digest.section.identity": "Identität",
+  "ob.digest.section.offer": "Was sie verkaufen",
+  "ob.digest.section.customer": "An wen sie verkaufen",
+  "ob.digest.section.sales": "Wie sie schreiben",
+  "ob.digest.facts": "Belege",
+  "ob.digest.people": "Personen",
+  "ob.digest.sources": "Quellen",
+  "ob.digest.blank": "noch nicht geschrieben",
+  "ob.digest.notWritten": "nicht eingetragen",
+  "ob.digest.settle": "Jetzt klären",
+  "ob.digest.deciding": "das entscheidest du gerade",
+  "ob.digest.yours": "von dir",
+  "ob.digest.editLine": "{label} bearbeiten",
+  "ob.digest.saveChanges": "Änderungen speichern",
+  "ob.digest.changed": "{count} Zeilen geändert, noch nicht gespeichert",
+  "ob.digest.pickFacts": "Fakten auswählen, die bleiben sollen",
+  "ob.digest.referenceNote":
+    "Ein späteres erneutes Lesen kann Änderungen an diesem Datensatz vorschlagen. Eine Zeile, die du schon bearbeitet hast, wird dabei nie überschrieben.",
+  "ob.digest.sidebarLabel": "Fakten zum Unternehmen",
+  "ob.digest.sidebar.legalName": "Rechtlicher Name",
+  "ob.digest.sidebar.founded": "Gegründet",
+  "ob.digest.sidebar.headquarters": "Hauptsitz",
+  "ob.digest.sidebar.offices": "Standorte",
+  "ob.digest.sidebar.employees": "Mitarbeitende",
+  "ob.digest.sidebar.certifications": "Zertifizierungen",
+  "ob.digest.pageKind.home": "Startseite",
+  "ob.digest.pageKind.impressum": "Impressum",
+  "ob.digest.pageKind.about": "Über-uns-Seite",
+  "ob.digest.pageKind.team": "Team-Seite",
+  "ob.digest.pageKind.services": "Leistungsseite",
+  "ob.digest.pageKind.products": "Produktseite",
+  "ob.digest.pageKind.contact": "Kontaktseite",
+  "ob.digest.pageKind.other": "Seite",
+  "ob.deck.counter": "{n} von {m}",
+  "ob.deck.left": "Noch {n} von {m}",
+  "ob.deck.settled": "{count} Fakten kamen belegt herein, ohne dich",
+  "ob.deck.needed": "Zum Weitermachen nötig",
+  "ob.deck.optional": "Einen Blick wert",
+  "ob.deck.next": "Weiter",
+  "ob.deck.leaveOut": "Weglassen",
+  "ob.deck.readWhole": "Das ganze Profil lesen",
+  "ob.deck.backToOpen": "Zurück zu den offenen Punkten",
+  "ob.deck.backToRecord": "Zurück zum Eintrag",
+  "ob.deck.confirm": "Profil bestätigen",
+  "ob.deck.stillNeeded": "Fehlt noch: {fields}",
+  "ob.deck.openLeft":
+    "Unbeantwortete Fragen: {count}. Der Eintrag wird ohne sie gespeichert.",
+  "ob.conv.invite.pickOne": "Wählen Sie eine der beiden, um weiterzugehen.",
+  "ob.conv.voice.speakerPick": "Wählen Sie einen Sprecher, um weiterzugehen.",
+  "ob.deck.clear": "Nichts mehr zu klären. {count} Fakten stehen im Profil.",
+  "ob.deck.eyebrow": "Alles andere kam belegt herein",
+  "ob.deck.title": "Hier rät es nicht.",
+  "ob.stage.flow": "Einrichtung",
+  "ob.stop.read": "Website lesen",
+  "firstRun.ai.rankedHint":
+    "Dazu die zehn am höchsten bewerteten Modelle, die OpenRouter gerade bedient, sortiert nach {rankedBy}, mit den Preisen des Anbieters.",
+  "firstRun.ai.rankedUnavailable":
+    "Die aktuelle Modell-Liste von OpenRouter war gerade nicht lesbar, deshalb steht hier, was Ihre Preisliste hergibt.",
+  "firstRun.ignite.title": "Es hat einen Puls.",
+  "firstRun.ignite.sub":
+    "Der Schlüssel ist versiegelt und das Modell hat geantwortet. Was sich damit ändert:",
+  "firstRun.ignite.sealed": "im Tresor versiegelt · {vendor}",
+  "firstRun.ignite.reaching": "erreiche das Modell zum ersten Mal…",
+  "firstRun.ignite.canNow": "kann jetzt",
+  "firstRun.ignite.cannot": "kann nicht",
+  "firstRun.ignite.read": "Ihre Website lesen und sagen, was sie gefunden hat",
+  "firstRun.ignite.draft":
+    "in einer Stimme schreiben, die Sie ihr beigebracht haben",
+  "firstRun.ignite.act":
+    "etwas senden oder einen Datensatz ändern, solange Sie es nicht sagen",
+  "firstRun.ignite.carryOn": "Weiter",
+  "firstRun.step.model": "Das Modell",
+  "firstRun.step.platform": "Ihre Plattform",
+  "firstRun.google.eyebrow": "Es denkt. Erreichen kann es noch niemanden",
+  "firstRun.platform.title": "Womit arbeitet Ihre Organisation?",
+  "firstRun.platform.sub":
+    "Eine Antwort entscheidet, wie Mail zu Margince kommt und wie sich Leute anmelden. Später unter Einstellungen änderbar.",
+  "firstRun.platform.legend": "Die Plattform dieser Organisation",
+  "firstRun.platform.google": "Google Workspace",
+  "firstRun.platform.googleWhat":
+    "Mail, Kalender und Anmeldung über eine eigene Google-App.",
+  "firstRun.platform.microsoft": "Microsoft 365",
+  "firstRun.platform.microsoftWhat":
+    "Mail, Kalender und Anmeldung über eine eigene Entra-App.",
+  "firstRun.platform.imap": "IMAP",
+  "firstRun.platform.imapWhat":
+    "Jedes Postfach verbindet sich mit einem eigenen IMAP-App-Passwort. Anmeldung per E-Mail und Passwort.",
+  "firstRun.platform.redirectTitle":
+    "Registrieren Sie diese Weiterleitungs-URIs in der App",
+  "firstRun.platform.redirectHint":
+    "Kopieren Sie jede in die App, bevor Sie hier speichern. Anmeldung bringt den Anmelde-Button für alle Eingeladenen auf die Anmeldeseite; Postfach und Kalender lassen die Leute ihre verbinden. Fehlt eine, scheitert es auf der Zustimmungsseite des Anbieters, nicht hier.",
+  "firstRun.google.helpToggle": "Woher bekomme ich das?",
+  "firstRun.google.helpStep1":
+    "In der Google Cloud Console ein Projekt öffnen und zu APIs und Dienste → Anmeldedaten → Anmeldedaten erstellen → OAuth-Client-ID gehen, dann Webanwendung wählen.",
+  "firstRun.google.helpStep2":
+    "Die Gmail API aktivieren und beide Bereiche gmail.readonly und gmail.send auf den Zustimmungsbildschirm setzen. Sie gehören absichtlich in eine Zustimmung: Google ergänzt einen Bereich nicht nachträglich an einem bereits ausgegebenen Refresh-Token, ein späteres Senden-Recht bedeutet also, das Postfach zweimal zu verbinden.",
+  "firstRun.google.helpStep3":
+    "Unter „Autorisierte Weiterleitungs-URIs“ die oben aufgeführten hinterlegen. Postfach braucht es für Mail; Kalender und Anmeldung tun, was ihr Name sagt.",
+  "firstRun.google.helpStep4":
+    "Client-ID und Client-Secret aus Google in die beiden Felder unten kopieren. Das Secret wird einmal gesendet und im Schlüsseltresor versiegelt; es ist danach nirgends mehr lesbar.",
+  "firstRun.google.helpConsole": "Google Cloud Console für Anmeldedaten",
+  "firstRun.google.helpDocs":
+    "Alle Voraussetzungen, Microsoft und IMAP eingeschlossen: docs/how-to/connect-a-mailbox.md",
+  "firstRun.platform.imapNote":
+    "Für die ganze Installation wird nichts eingerichtet. Verbinden Sie Ihr eigenes Postfach jetzt oder später; jedes weitere Postfach wird unter Einstellungen → Integrationen mit eigenem App-Passwort verbunden.",
+  "firstRun.platform.skip": "Jetzt nicht",
+  "firstRun.needed": "Nötig, um weiterzugehen",
+  "firstRun.stillNeeded": "Fehlt noch: {fields}",
+  "firstRun.platform.foot":
+    "Was Sie hier antworten, lässt sich später unter Einstellungen → Admin ändern.",
+  "firstRun.microsoft.note":
+    "Registrieren Sie in Microsoft Entra eine App mit den Weiterleitungs-URIs oben und fügen Sie hier Client-ID und Secret ein. Binden Sie sie an Ihr Verzeichnis: Dessen Postfächer verbinden sich darüber, und dessen Mitglieder melden sich damit an.",
+  "firstRun.microsoft.helpSignIn":
+    "Das Verzeichnis ist es, was Microsoft auf die Anmeldeseite bringt — deshalb wird hier danach gefragt, statt es dem Zufall zu überlassen. Eine App ohne Verzeichnis — jede Organisation darf ein Postfach verbinden, und niemand meldet sich mit Microsoft an — richtest du stattdessen in den Einstellungen ein.",
+  "firstRun.microsoft.tenantHint":
+    "Das Entra-Verzeichnis, in dem eure Leute sind. Postfächer verbinden sich darüber, und darauf läuft die Microsoft-Anmeldung.",
+  "firstRun.ai.eyebrow": "Hier kann noch nichts denken",
+  "aiRates.chatLane": "Womit es denkt",
+  "aiRates.embedLane": "Womit es sich erinnert",
+  "aiRates.perMTokInOut": "pro Million Token, rein → raus",
+  "aiRates.perMTok": "pro Million Token",
+  "aiRates.unpriced": "Kein Preis hinterlegt",
+  "aiRates.unpricedDetail":
+    "Aufrufe laufen trotzdem. Sie werden als nicht bepreist gemeldet und fehlen damit in Verbrauch und Kosten, bis jemand unter Einstellungen → KI einen Satz hinterlegt.",
+  "aiRates.priced": "Preis gültig ab {date}",
+  "aiRates.proposed": "Preis von OpenRouter",
+  "aiRates.proposedDetail":
+    "Gerade beim Anbieter gelesen, nicht aus deiner Preisliste. Beim Binden landet er in deinem Freigabe-Eingang, damit Verbrauch und Kosten ihn nach deiner Bestätigung bepreisen können.",
+  "firstRun.ai.foot": "Vor dem Klick auf Weiter geht nichts an Ihren Anbieter.",
   "person.readings.title": "Wo dieser Kontakt steht",
   "person.readings.move": "Wer ist am Zug",
   "person.readings.yourMove": "Du",

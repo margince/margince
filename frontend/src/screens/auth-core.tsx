@@ -1,14 +1,12 @@
-import { Check, ShieldCheck } from "lucide-react";
-import { type ReactNode, useId } from "react";
-import type { components } from "../api/schema";
+import type { ReactNode } from "react";
 import { ThemeToggle } from "../app/theme-toggle";
+import { AmbientWaves } from "../design-system/ambient-waves";
 import {
   MarginceCoreScene,
   type MarginceCoreState,
 } from "../design-system/margince-core";
 import { useDocumentIntro, useTypeStream } from "../design-system/motion";
 import { useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 
 /**
  * The unauthenticated surface: two regions (ADR-0076 Decision 1).
@@ -25,7 +23,6 @@ import type { MessageKey } from "../i18n/en";
  * password reset, connection problem, installation unavailable — so a reviewer
  * sees the same screen shape whatever went wrong.
  */
-export type AssistantProfile = components["schemas"]["AssistantProfile"];
 export type AuthPhase =
   | "idle"
   | "signing-in"
@@ -58,24 +55,6 @@ function coreState(phase: AuthPhase): MarginceCoreState {
   // them — the agent reads captured activity, it holds no conversation.
   return "idle";
 }
-
-const providerKeys: Record<AssistantProfile["providers"][number], MessageKey> =
-  {
-    anthropic: "auth.coreProviderAnthropic",
-    gemini: "auth.coreProviderGemini",
-    ollama: "auth.coreProviderOllama",
-    openai: "auth.coreProviderOpenAI",
-    openai_compatible: "auth.coreProviderCompatible",
-    vllm: "auth.coreProviderVllm",
-  };
-
-const modeKeys: Record<AssistantProfile["inference_mode"], MessageKey> = {
-  cloud: "auth.coreModeCloud",
-  local: "auth.coreModeLocal",
-  hybrid: "auth.coreModeHybrid",
-  none: "auth.coreModeNone",
-  development: "auth.coreModeDevelopment",
-};
 
 /**
  * The motion budget, in one place (ADR-0076 Decision 5): the statement reaches
@@ -111,11 +90,9 @@ export function typeSpeedFor(text: string): number {
 
 export function AuthExperience({
   children,
-  profile,
   phase,
 }: Readonly<{
   children: ReactNode;
-  profile?: AssistantProfile;
   phase: AuthPhase;
 }>) {
   // The entry choreography belongs to the page load, not to this mount: every
@@ -128,6 +105,13 @@ export function AuthExperience({
       data-auth-phase={phase}
       data-auth-intro={intro ? "play" : "done"}
     >
+      {/* The ground, on EVERY sign-in and behind everything on it. Signing in
+          is the one moment in the product that is a place rather than a task:
+          there is nothing on this surface to get through, and the reader is
+          arriving. It is `aria-hidden` and carries no copy, so the DOM order
+          the task/identity split depends on is untouched by it standing
+          first. */}
+      <AmbientWaves />
       {/* A div, NOT a <main>. The frame that hosts this surface already opens a
           <main> (App.tsx's RaillessFrame), and a nested main is invalid HTML that
           puts two "main" entries in a screen reader's landmark rotor — so the
@@ -138,7 +122,7 @@ export function AuthExperience({
         <div className="auth-task-in">{children}</div>
         <LegalFooter />
       </div>
-      <IdentityRegion profile={profile} phase={phase} />
+      <IdentityRegion phase={phase} />
     </div>
   );
 }
@@ -192,89 +176,57 @@ function LegalFooter() {
  * The identity region: the system introducing itself, in its own voice.
  *
  * ORDER, top to bottom, and every row of it is load-bearing: the Core, the
- * disclosure, the greeting, what the system is for, what it does, the one
- * promise, the handover, then the server-read runtime line. The Core leads
- * because it is the thing that is PRESENT; the copy explains what is present. An
- * earlier order opened with a sentence and buried the Core in the middle, which
- * is a paragraph with an illustration rather than a system introducing itself.
+ * disclosure, the greeting, what the system is for, the one promise, the
+ * handover, then the server-read runtime line. The Core leads because it is
+ * the thing that is PRESENT; the copy explains what is present. An earlier
+ * order opened with a sentence and buried the Core in the middle, which is a
+ * paragraph with an illustration rather than a system introducing itself.
  *
- * The five copy rows are ONE paragraph somebody is saying, not a list of claims,
- * so they are read in sequence or not at all — the greeting means nothing after
- * the promise. That is why they are five sibling paragraphs in a fixed order
- * rather than a collection something could reorder or filter.
+ * The four copy rows are ONE paragraph somebody is saying, not a list of
+ * claims, so they are read in sequence or not at all — the greeting means
+ * nothing after the promise. That is why they are four sibling paragraphs in
+ * a fixed order rather than a collection something could reorder or filter.
+ * What the system does all day is deliberately not among them: on a screen
+ * whose whole job is the introduction and the field, it was the fourth
+ * sentence read while a form waited underneath. The reader meets that at the
+ * first connector, where it is load-bearing.
  *
  * Two bounds this region used to hold and deliberately no longer does: it
  * admitted only limits on the system's own behaviour plus server-read facts
  * about the installation, so there was no greeting; and it carried no copy the
  * task depended on, so there was no handover. The handover line's whole job is
- * to point at the form in the other half of the screen, which is why it is the
- * last thing said.
+ * to point at the form under it, which is why it is the last thing said.
  *
  * STILL NO CONTROLS. That is what keeps the region from competing with the form,
  * and it is structural rather than a matter of taste.
  */
-export function IdentityRegion({
-  profile,
-  phase,
-}: Readonly<{ profile?: AssistantProfile; phase: AuthPhase }>) {
+export function IdentityRegion({ phase }: Readonly<{ phase: AuthPhase }>) {
   const t = useT();
-  const identityId = useId();
   return (
     /*
-     * The column is a plain wrapper and the ASIDE is the region — the split is
-     * what lets the mobile layout put the Core above the form and the words below
-     * it. Below 960 the wrapper becomes `display: contents`, so the Core and the
-     * aside become rows of the surface grid and the task can sit between them. A
-     * wrapper with no role can dissolve like that; the aside cannot, because a
-     * landmark that stops being a box stops being reliably reported.
-     *
-     * The Core moving out of the aside costs nothing semantically: it is
-     * decoration (WDS-CORE-4, `aria-hidden`), and every state it shows is also
-     * stated in words inside the region.
+     * A plain wrapper, and no landmark. The region held a named set of claims
+     * — the disclosure kicker that named it, the promise, the handover, the
+     * installation's runtime posture — and an <aside> was worth a screen
+     * reader's rotor while it did. What is left is a greeting and one line
+     * about what the product is for: an introduction beside the form, not a
+     * region anybody needs to jump to, and an unnamed landmark is worse than
+     * none. The Core stays decoration (WDS-CORE-4, `aria-hidden`).
      */
     <div className="auth-identity-col">
       <MarginceCoreScene state={coreState(phase)} />
 
-      <aside className="auth-identity" aria-labelledby={identityId}>
+      <div className="auth-identity">
         <div className="auth-identity-copy">
-          <p className="auth-kicker" id={identityId}>
-            {t("auth.coreDisclosure")}
-          </p>
-
           {/* The greeting is what gets typed, and it is the only row that does:
               a system saying its own name as it arrives is what the motion is
-              ABOUT. Everything under it fades up complete, so a reader who looks
-              down mid-reveal finds finished sentences rather than four
+              ABOUT. The line under it fades up complete, so a reader who looks
+              down mid-reveal finds a finished sentence rather than two
               paragraphs assembling themselves. */}
           <TypedStatement text={t("auth.coreGreeting")} />
 
           <p className="auth-purpose">{t("auth.corePurpose")}</p>
-
-          <p className="auth-scope">{t("auth.coreWork")}</p>
-
-          {/* The badge marks the promise as the one absolute on this screen, and
-              it is the treatment the region's older list of limits carried,
-              because this sentence is that same register. A paragraph rather
-              than a one-item list: a <ul> of one tells a screen reader there is
-              a list to walk when there is a sentence to read. */}
-          <p className="auth-promise">
-            <span className="auth-promise-icon" aria-hidden>
-              <ShieldCheck />
-            </span>
-            {t("auth.corePromise")}
-          </p>
-
-          <p className="auth-handover">{t("auth.coreHandover")}</p>
         </div>
-
-        {/* Absent rather than guessed: a runtime line the frontend invented is
-            the one thing Decision 2c forbids, so an in-flight or failed probe
-            renders nothing. The row reserves its height in CSS so the column
-            does not jump when it arrives. */}
-        <div className="auth-identity-foot">
-          {profile && <RuntimePosture profile={profile} />}
-        </div>
-      </aside>
+      </div>
     </div>
   );
 }
@@ -329,40 +281,5 @@ function TypedStatement({ text }: Readonly<{ text: string }>) {
         {done ? null : <span className="auth-caret" />}
       </span>
     </p>
-  );
-}
-
-function RuntimePosture({ profile }: Readonly<{ profile: AssistantProfile }>) {
-  const t = useT();
-  if (profile.state === "unconfigured") {
-    return (
-      <div className="auth-runtime">
-        <span className="auth-runtime-state">{t("auth.coreUnconfigured")}</span>
-        <span>{t("auth.coreStillWorks")}</span>
-      </div>
-    );
-  }
-  if (profile.state === "development") {
-    return (
-      <div className="auth-runtime">
-        <span className="auth-runtime-state">{t("auth.coreDevelopment")}</span>
-        <span>{t(modeKeys[profile.inference_mode])}</span>
-      </div>
-    );
-  }
-  const providers = profile.providers
-    .map((provider) => t(providerKeys[provider]))
-    .join(" + ");
-  return (
-    <div className="auth-runtime">
-      <span className="auth-runtime-state">
-        <Check aria-hidden /> {t("auth.coreConfigured")}
-      </span>
-      <span>
-        {[providers, t(modeKeys[profile.inference_mode])]
-          .filter(Boolean)
-          .join(" · ")}
-      </span>
-    </div>
   );
 }
