@@ -165,7 +165,7 @@ export const vi = {
   "autonomy.confirm": "xác nhận trước",
 
   "nav.home": "Bản tóm tắt",
-  "nav.contacts": "Contact",
+  "nav.contacts": "Người",
   "nav.companies": "Công ty",
   "nav.leads": "Lead",
   "nav.deals": "Pipeline",
@@ -268,6 +268,8 @@ export const vi = {
   "common.close": "Đóng",
 
   "explain.open": "Giải thích con số này",
+  "explain.mayHaveMoved":
+    "Liên kết này không ghi con số được tính vào lúc nào, nên các số dưới đây vừa được tính lại. Nếu tỷ giá đã thay đổi trong khoảng đó, chúng có thể không khớp với con số bạn đã bấm.",
   "explain.title": "Con số này được dựng thế nào",
   "explain.rate": "tỷ giá {rate} ngày {date}",
 
@@ -569,7 +571,7 @@ export const vi = {
   "table.none": "Chưa có {unit} nào.",
   "table.actions": "Thao tác",
   "table.rangeLoaded": "{first}–{last} trong {count} {unit} đã tải",
-  "unit.contacts": "liên hệ",
+  "unit.contacts": "người",
   "unit.companies": "công ty",
   "unit.deals": "thương vụ",
   "unit.leads": "khách hàng tiềm năng",
@@ -765,6 +767,7 @@ export const vi = {
   "consent.noPurposes": "Tổ chức này chưa theo dõi mục đích chấp thuận nào.",
   "consent.defaultDeny":
     "Việc gửi ra mặc định bị từ chối theo từng mục đích: một lượt gửi bị chặn trừ khi có sự chấp thuận đang hiệu lực và có bằng chứng cho đúng mục đích đó. Chấp thuận cho một mục đích không bao giờ cho phép một mục đích khác.",
+  "consent.basis": "Căn cứ: {basis}",
   "consent.proofLog": "Nhật ký bằng chứng",
   "consent.proofEmpty":
     "Chưa ghi nhận quyết định chấp thuận nào cho mục đích này. Nhật ký trống là trung thực, không phải thiếu sót.",
@@ -780,7 +783,7 @@ export const vi = {
   "org.name": "Công ty",
   "org.description": "Họ làm gì",
   "org.website": "Trang web",
-  "org.contactCount": "Liên hệ",
+  "org.contactCount": "Người",
   "org.openDealCount": "Deal đang mở",
   // Offered only where there is no partner programme yet: the tab that holds
   // the form appears once one exists, so this is how the first one is made.
@@ -3553,7 +3556,7 @@ export const vi = {
   "import.objectLabel": "Các dòng là gì",
   "import.object.lead": "Khách hàng tiềm năng",
   "import.object.organization": "Công ty",
-  "import.object.person": "Liên hệ",
+  "import.object.person": "Người",
   "import.objectHint.lead":
     "Danh sách chưa xử lý vào dạng lead để người thẩm định trước khi được xem là liên hệ.",
   "import.objectHint.organization":
@@ -5338,7 +5341,9 @@ export const vi = {
   "book.attendee": "Email người tham dự",
   "book.welcomeBack": "Đã nhận ra: {name}",
   "book.subject": "Cuộc họp qua Margince",
-  "book.confirmed": "Đã đặt lịch. Thư mời đang trên đường tới.",
+  "book.confirmed": "Đã đặt lịch.",
+  "book.tellThemYourself":
+    "Margince không gửi thư mời — bạn hãy tự báo giờ hẹn cho người tham dự.",
   "book.failed": "Việc đặt lịch không thành — không có gì được lên lịch.",
   "book.publicSub": "chọn một khung giờ — không cần tài khoản",
   "book.name": "Tên của bạn",
@@ -6213,7 +6218,7 @@ export const vi = {
   "users.createTeam": "Tạo nhóm",
   "users.access.title": "Người dùng này thấy gì",
   "users.access.identity":
-    "Đọc mọi liên hệ, công ty, lead và deal của tổ chức.",
+    "Đọc mọi công ty, lead, deal và người trong tổ chức.",
   "users.access.writesAll": "Sửa mọi bản ghi.",
   "users.access.writesTeam": "Sửa bản ghi của mình và của các nhóm {teams}.",
   "users.access.writesTeamNone":
@@ -6223,7 +6228,7 @@ export const vi = {
   "users.access.read": "đọc",
   "users.access.write": "ghi",
   "users.access.delete": "xóa",
-  "users.access.object.person": "Liên hệ",
+  "users.access.object.person": "Người",
   "users.access.object.organization": "Công ty",
   "users.access.object.lead": "Lead",
   "users.access.object.deal": "Deal",
@@ -7582,7 +7587,7 @@ export const vi = {
   "filters.subtitle":
     "T\u1ea1o b\u1ed9 l\u1ecdc, xem n\u00f3 ch\u1ecdn nh\u1eefng g\u00ec, r\u1ed3i l\u01b0u th\u00e0nh ch\u1ee7 \u0111\u1ec1.",
   "filters.objectLabel": "L\u1ecdc lo\u1ea1i b\u1ea3n ghi n\u00e0o",
-  "filters.tab.contacts": "Li\u00ean h\u1ec7",
+  "filters.tab.contacts": "Ng\u01b0\u1eddi",
   "filters.tab.companies": "C\u00f4ng ty",
   "filters.tab.deals": "Th\u01b0\u01a1ng v\u1ee5",
   "filters.builderTitle": "B\u1ed9 l\u1ecdc",
@@ -7810,6 +7815,7 @@ export const vi = {
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Đang đọc ngày của bạn…",
   "worklist.queue": "Hôm nay",
+  "worklist.review": "Cần xem xét",
   "worklist.more": "Xem thêm",
   "worklist.more.failed": "Không tải thêm được. Hãy thử lại.",
   "worklist.summary":

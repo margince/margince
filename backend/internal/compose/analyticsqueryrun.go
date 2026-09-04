@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -66,7 +67,7 @@ func RunAnalyticsQuery(
 	}
 
 	schema := AnalyticsSchemaFor(ctx)
-	plan, err := analyticsquery.Compile(q, schema, analyticsScope(ctx, spec))
+	plan, err := analyticsquery.Compile(q, schema, analyticsScope(ctx, tx, spec, requestedFromQuery(q)))
 	if err != nil {
 		return AnalyticsAnswer{}, err
 	}
@@ -153,10 +154,28 @@ func refuseIfTheFilterHidesTooLittle(
 // style: the gate holding this rule walks function declarations, and a closure
 // is invisible to it. Written inline, swapping the whole composer for its scope
 // half passed the gate — which is the defect the gate exists to catch.
-func analyticsScope(ctx context.Context, spec reportSpec) analyticsquery.ScopeClauses {
+func analyticsScope(
+	ctx context.Context, tx pgx.Tx, spec reportSpec, requested RequestedScope,
+) analyticsquery.ScopeClauses {
 	return func(arg func(any) int) ([]string, error) {
-		return specNarrowings(ctx, spec, arg)
+		return specNarrowings(ctx, tx, spec, requested, arg)
 	}
+}
+
+// requestedFromQuery carries the stored question's scope words across to the
+// resolver's vocabulary.
+//
+// An unparseable id is passed on as absent rather than refused here: the
+// resolver decides what this seat may measure, and a shape check in front of it
+// would refuse on the wrong grounds and with the wrong message.
+func requestedFromQuery(q analyticsquery.Query) RequestedScope {
+	requested := RequestedScope{Kind: q.ScopeKind}
+	if q.ScopeID != "" {
+		if id, err := ids.Parse(q.ScopeID); err == nil {
+			requested.ID = &id
+		}
+	}
+	return requested
 }
 
 // withheldAnswer applies the floor and drops the count column.

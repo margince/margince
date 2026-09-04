@@ -47,6 +47,9 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		if !plan.asOf.IsZero() {
 			frame.AsOf = plan.asOf
 		}
+		// Reported either way, because "which instant" is the question a reader
+		// doubting this detail is actually asking.
+		out.AsOf = frame.AsOf
 		maskClauses, masked, err := maskExclusionClauses(ctx, spec, arg)
 		if err != nil {
 			return err

@@ -5955,7 +5955,11 @@ paths:
       operationId: bookMeeting
       summary: Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
       description: |
-        Creates a calendar event and sends an invite. It RUNS DIRECTLY (ADR-0055), on the
+        Records the meeting on the timeline. **No invite is sent — this build has no outbound
+        calendar or mail transport behind a booking**, so whoever books it has to tell the
+        attendee themselves. The calendar integrations are capture-only (inbound import).
+
+        It RUNS DIRECTLY (ADR-0055), on the
         passport holder's own authority; booking onto ANOTHER host's calendar still takes admin,
         the same check the app applies. An installation that wants bookings confirmed sets a
         tier floor on `book_meeting`. On success a
@@ -5977,7 +5981,14 @@ paths:
                 start: { type: string, format: date-time }
                 end:   { type: string, format: date-time }
                 subject: { type: string }
-                attendee_emails: { type: array, items: { type: string, format: email } }
+                attendee_emails:
+                  type: array
+                  items: { type: string, format: email }
+                  description: |
+                    Who the meeting is with. **Accepted and not delivered to**: nothing in this
+                    build emails these addresses or adds them to a calendar event, and the
+                    created activity does not carry them either. Supply them for the caller's
+                    own record of intent, and tell the attendee yourself.
                 links:
                   type: array
                   maxItems: 25
@@ -32678,6 +32689,24 @@ components:
       required: [entity, measures]
       properties:
         entity: { type: string, description: "The population, by name." }
+        scope_kind:
+          type: string
+          description: |
+            `workspace`, `team` or `owner` — the same vocabulary `AnalyticsScope.kind` answers in,
+            minus `managed_teams`, which is RESOLVED and never requested (a caller names one team,
+            or names nothing and is given it). No enum here on purpose: the resolver is the
+            authority on what this seat may measure, and a second list would be a second answer to
+            that, refusing on shape what it should refuse on authority.
+
+            Which population to measure, resolved against the caller's own lens. Omitted asks for
+            their default — a rep's own records, a manager's teams — never the whole installation.
+
+            A scope wider than the caller may measure is REFUSED rather than narrowed, so an answer
+            never quietly means something other than what was asked.
+        scope_id:
+          type: string
+          format: uuid
+          description: The team or seat to measure, for `scope_kind` `team` or `owner`.
         group_by:
           type: array
           items: { type: string }
@@ -33909,6 +33938,25 @@ components:
         total_rows: { type: integer, description: Source rows matched (rows is capped at the report row limit). }
         excluded_by_permission: { type: [integer, 'null'], description: 'Visible rows a field mask withheld — the same exclusion the explained report applied, so the drill-through reconciles exactly.' }
         generated_at: { type: string, format: date-time }
+        as_of:
+          type: string
+          format: date-time
+          description: |
+            The instant these figures were computed at — the moment any currency conversion read the
+            rate sheet, not the moment this response was assembled (`generated_at`).
+
+            When the handle pinned an instant this is the one the explained number was computed at, so
+            the detail reconciles to its headline. When it did not, this is a fresh reading and
+            `as_of_pinned` is false.
+        as_of_pinned:
+          type: boolean
+          description: |
+            Whether the handle carried the instant the explained number was computed at.
+
+            False means the link predates that key, so these figures were recomputed at a NEW moment
+            and a rate sheet effective in between will make them disagree with the number they explain.
+            A reader opening a drill-through is checking a figure they already doubt, so a detail set
+            that quietly reconciles to something else is worse than none.
 
     # ---- Search ----
     SearchResult:

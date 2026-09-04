@@ -71,7 +71,7 @@ func ReadSharedSnapshot(
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	args = append(args, snapshotID)
 
-	visible, err := sharedVisibilityClause(ctx, arg)
+	visible, err := sharedVisibilityClause(ctx, tx, arg)
 	if err != nil {
 		return SharedSnapshot{}, err
 	}
@@ -130,7 +130,25 @@ func ReadSharedSnapshot(
 //
 // An archived deal is NOT excluded: it was in the pipeline when the state was
 // frozen, and dropping it now would make a frozen number change after the fact.
-func sharedVisibilityClause(ctx context.Context, arg func(any) int) (string, error) {
+func sharedVisibilityClause(ctx context.Context, tx pgx.Tx, arg func(any) int) (string, error) {
+	// The POPULATION this recipient may measure, resolved against their own
+	// lens and never against the link's.
+	//
+	// Row scope does not answer it: a deal is an identity table read by every
+	// seat, so the clause above renders TRUE and a rep opening a workspace
+	// snapshot was handed the whole installation's contributions — and the CSV
+	// export served the same wider set. A link may narrow what its opener sees
+	// and must not widen it, or issuing one becomes a way to lend authority.
+	//
+	// Requested is deliberately EMPTY: the recipient asked for nothing, so this
+	// resolves to their own default, which is the most they may see.
+	_, population, err := AnalyticsPopulationClause(ctx, tx, RequestedScope{}, "d", arg)
+	if err != nil {
+		return "", err
+	}
+	if population == "" {
+		population = sqlUnnarrowed
+	}
 	scopeClause, err := auth.ScopeClauseFor(ctx, tableDeal, "d", arg)
 	if err != nil {
 		return "", err
@@ -145,7 +163,7 @@ func sharedVisibilityClause(ctx context.Context, arg func(any) int) (string, err
 	if !masked || maskClause == "" {
 		maskClause = sqlUnnarrowed
 	}
-	return fmt.Sprintf("(%s AND %s)", scopeClause, maskClause), nil
+	return fmt.Sprintf("(%s AND %s AND %s)", scopeClause, maskClause, population), nil
 }
 
 // SharedContribution is one deal's row as one recipient may read it.
@@ -177,7 +195,7 @@ func SharedSnapshotRows(
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	args = append(args, snapshotID)
 
-	visible, err := sharedVisibilityClause(ctx, arg)
+	visible, err := sharedVisibilityClause(ctx, tx, arg)
 	if err != nil {
 		return nil, err
 	}

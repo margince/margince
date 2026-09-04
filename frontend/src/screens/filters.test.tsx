@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { FiltersScreen } from "./filters";
 
 // What this screen owns is the WIRING and one judgement: how a count that is a
@@ -538,5 +539,7 @@ it("leaves the page's own name to the shell", async () => {
   ).toBeNull();
   // The object choice stays, because it is the screen's own state rather than
   // the page's name: everything below it reads from it.
-  expect(screen.getByRole("button", { name: "Contacts" })).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: en["filters.tab.contacts"] }),
+  ).toBeTruthy();
 });

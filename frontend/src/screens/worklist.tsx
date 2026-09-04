@@ -24,6 +24,7 @@ import {
   pillCount,
   sourceUnavailableText,
 } from "./worklist.copy";
+import { reviewWork, sellerWork } from "./worklist.destinations";
 import { HiddenBacklogPanel } from "./worklist.hidden";
 import { CoachControl, OwnerPicker } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
@@ -363,10 +364,31 @@ function WorklistBody({
 }>) {
   const t = useT();
   const missing = day.sources_unavailable;
-  const selected = rowInHand(queue, selectedId);
+  // The pane belongs to the DAY, so only a row in the day can fill it. A review
+  // row selected here would draw its context beside the Today panel while the
+  // highlighted row sat in the panel below — the two halves of one answer, a
+  // screen apart, with nothing joining them.
+  const selected = rowInHand(sellerWork(queue), selectedId);
+  // The day cut into the two jobs it holds. `destination` says which, and the
+  // server decides it — the counts above the queue are computed from the same
+  // field, so a split derived here from `source` or `category` would drift
+  // from the figures it is drawn beside.
+  const today = sellerWork(queue);
+  const review = reviewWork(queue);
 
   const rowProps: RowContext = {
-    positions: new Map(queue.map((item, at) => [rowIdentity(item), at])),
+    // Numbered WITHIN the panel each row is drawn in, not across the day.
+    //
+    // Ranking over the whole queue is arithmetically honest and reads as a
+    // fault: the split puts 1, 4, 7 in one panel and 2, 3, 5 in the other on
+    // one screen, and a reader meeting a list that starts at 4 and skips 5 has
+    // no way to know they are seeing a correct number rather than a broken one.
+    // A rank says WHERE IN THIS LIST, which is the only question the number is
+    // asked, and the day's own order is what put the rows in these lists.
+    positions: new Map([
+      ...sellerWork(queue).map((item, at) => [rowIdentity(item), at] as const),
+      ...reviewWork(queue).map((item, at) => [rowIdentity(item), at] as const),
+    ]),
     owner,
     // The RESOLVED selection, not the raw state. The pane falls back to the
     // first row when the reader has chosen nothing, and a highlight reading
@@ -492,7 +514,7 @@ function WorklistBody({
                   band holding nothing can say so. Ranks are still counted over
                   the whole queue, so a row's number is its place on the page
                   and not its place within its heading. */}
-              {bandSections(day, queue).map((section) =>
+              {bandSections(day, today).map((section) =>
                 section.items.length === 0 ? (
                   canReportEmptyBands(hasMore) && (
                     <div key={section.band} className="worklist-queue-band">
@@ -517,8 +539,8 @@ function WorklistBody({
               )}
               {/* Rows an older server sent with no band. Real work, drawn under
                   no heading rather than dropped to keep the sections tidy. */}
-              {unbandedRows(queue).length > 0 && (
-                <QueueRows items={unbandedRows(queue)} {...rowProps} />
+              {unbandedRows(today).length > 0 && (
+                <QueueRows items={unbandedRows(today)} {...rowProps} />
               )}
               {/* The way to the rest of the backlog.
                   Acceptance asks that the queue's counts be reachable, and
@@ -543,6 +565,19 @@ function WorklistBody({
             </Panel>
           }
         />
+      )}
+      {/* What is NOT the seller's to execute, below their day rather than
+          inside it.
+          A duplicate pair, a stopped mailbox and an approval somebody owes are
+          three different jobs, and none of them is the next call to make. Drawn
+          in the queue they competed with it: a rep scanning for their next
+          customer stepped over the product's own housekeeping to find one.
+          Below, and never hidden — this work is somebody's, and a screen that
+          swallowed it would be the reason it went undone. */}
+      {review.length > 0 && (
+        <Panel title={t("worklist.review")}>
+          <QueueRows items={review} {...rowProps} />
+        </Panel>
       )}
     </>
   );

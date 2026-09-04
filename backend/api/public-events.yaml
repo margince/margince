@@ -1978,7 +1978,7 @@ components:
     PublicEventForecastSnapshotCreated:
       type: object
       x-event-type: forecast.snapshot_created
-      x-entity-type: user
+      x-entity-type: forecast_snapshot
       x-version: 1
       description: >-
         Payload for forecast.snapshot_created — a set of readings was frozen, with the

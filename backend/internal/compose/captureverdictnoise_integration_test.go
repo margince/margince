@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // A disposition covers the SENDER, so its effects cover every message that
@@ -422,5 +423,152 @@ func fileUnderAs(t *testing.T, e *integration.Env, activity, person ids.UUID, ro
 		return err
 	}); err != nil {
 		t.Fatalf("filing the message under the person as %q: %v", role, err)
+	}
+}
+
+// decidingBrain records the owner's decision WHILE it answers, which is exactly
+// the window the defect lives in: judgeOne reads the override in a transaction
+// of its own, then spends a model call, and only then does apply open the
+// transaction that runs the effects.
+//
+// A brain rather than a goroutine and a sleep. The race is real but its window
+// is milliseconds wide, so a timing test would be the flake this rulebook
+// forbids; hooking the one call that HAPPENS in the window makes the ordering a
+// fact of the test rather than a hope.
+type decidingBrain struct {
+	inner  *scriptedVerdictBrain
+	record func()
+	once   bool
+}
+
+func (d *decidingBrain) Complete(ctx context.Context, req model.Request) (model.Response, error) {
+	if !d.once {
+		d.once = true
+		d.record()
+	}
+	return d.inner.Complete(ctx, req)
+}
+
+// The owner answers during the model call, and the answer counts.
+//
+// The contact half already re-checked under the person row lock. The MAIL half
+// did not: the hide and the workspace-wide domain suppression both ran on what
+// judgeOne read before the seat spoke — so a person who said "this is business"
+// watched the sender's whole domain get suppressed for every colleague, on the
+// strength of a read that was already stale when it was used.
+func TestAnOwnerDecidingDuringTheModelCallIsNotOverruled(t *testing.T) {
+	e := integration.Setup(t)
+	first := seedBulkCapturedMail(t, e, "dana.olsen@partner.example", "quarterly note")
+	dispositionID := seedPendingDisposition(t, e, "dana.olsen@partner.example", "partner.example", first)
+
+	scripted := &scriptedVerdictBrain{
+		verdicts: map[string]string{dispositionID.String(): capture.KindNewsletter},
+	}
+	brain := &decidingBrain{inner: scripted, record: func() {
+		seedSenderOverride(t, e, e.Rep1, "dana.olsen@partner.example", capture.OverrideBusiness)
+	}}
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("verdict pass: %v", err)
+	}
+
+	// The model was actually asked, which is what puts the decision inside the
+	// window. Without this the case passes vacuously on any address that short
+	// -circuits before the model — a role mailbox does, and an earlier draft of
+	// this test used `hello@` and proved nothing at all.
+	if !brain.once {
+		t.Fatal("no model call, so the owner never decided mid-flight and this case " +
+			"asserts nothing about the window it exists for")
+	}
+
+	// The mail stays visible. This is the half that was broken.
+	if n := countIn(t, e,
+		`SELECT count(*) FROM activity WHERE id = $1 AND archived_at IS NOT NULL`, first); n != 0 {
+		t.Errorf("the sender's mail was hidden after their owner called them business — " +
+			"the effects ran on a read taken before the decision existed")
+	}
+	// And no domain suppression, which is the workspace-wide one: a colleague
+	// would otherwise stop receiving a company this seat just vouched for.
+	if n := countIn(t, e,
+		`SELECT count(*) FROM organization_domain_disposition
+		  WHERE domain = 'partner.example' AND admission = 'suppressed'`); n != 0 {
+		t.Errorf("partner.example was suppressed for the whole workspace on one seat's " +
+			"stale read, after that seat said the sender is business")
+	}
+	// The ledger carries the OWNER's answer, in this pass. Leaving the row open
+	// for a later one would have been a stall: it was already leased under a
+	// backoff, so "the next tick will fix it" means minutes, and until then the
+	// sender sits unjudged with a decision on file.
+	if got := dispositionStatus(t, e, dispositionID); got != "real" {
+		t.Errorf("the disposition settled as %q, want real — the seat called this "+
+			"sender business, and that is the answer the ledger should carry", got)
+	}
+}
+
+// The lock, proved by making a concurrent writer WAIT for it.
+//
+// The re-read narrowed the window; it did not close it. A Set() committing
+// between the read and the effects is still a stale answer acted on, and under
+// READ COMMITTED no amount of re-reading fixes that — the two paths have to
+// serialize on one key.
+//
+// Deterministic rather than timed: the test holds the lock in a transaction of
+// its own and asserts the second attempt cannot take it while the first is
+// open, then that it succeeds the moment the first commits. No sleeps, no
+// goroutine racing a goroutine, and it fails when the lock is absent rather
+// than when a machine is slow.
+func TestASenderDecisionAndItsReaderSerializeOnOneKey(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+
+	held := make(chan struct{})
+	release := make(chan struct{})
+	done := make(chan error, 1)
+
+	// One transaction takes the decision's lock and holds it open.
+	go func() {
+		done <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if _, err := capture.OverrideForTx(ctx, tx, e.Rep1, "dana.olsen@partner.example"); err != nil {
+				return err
+			}
+			close(held)
+			<-release
+			return nil
+		})
+	}()
+	<-held
+
+	// A second one cannot take it. try_advisory asks the same question the
+	// blocking lock does without waiting for the answer, so the assertion is
+	// "the key is held", not "this call was slow".
+	var free bool
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT pg_try_advisory_xact_lock(hashtextextended($1 || ':' || $2, 0))`,
+			"capture_sender_override_write", e.Rep1.String()+":dana.olsen@partner.example").Scan(&free)
+	}); err != nil {
+		t.Fatalf("probing the decision's lock: %v", err)
+	}
+	if free {
+		t.Error("a second transaction took the decision's key while a reader held it — " +
+			"the read and the act it drives are not serialized against a seat " +
+			"recording a decision between them")
+	}
+
+	close(release)
+	if err := <-done; err != nil {
+		t.Fatalf("the holding transaction: %v", err)
+	}
+
+	// And it is released on commit, so this serializes writers rather than
+	// wedging them.
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT pg_try_advisory_xact_lock(hashtextextended($1 || ':' || $2, 0))`,
+			"capture_sender_override_write", e.Rep1.String()+":dana.olsen@partner.example").Scan(&free)
+	}); err != nil {
+		t.Fatalf("re-probing the decision's lock: %v", err)
+	}
+	if !free {
+		t.Error("the key stayed held after the transaction committed — an xact lock " +
+			"that outlives its transaction would stall every later booking of this seat")
 	}
 }

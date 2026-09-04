@@ -21,6 +21,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -190,6 +191,8 @@ type derivationWire struct {
 	Aggregates           map[string]any   `json:"aggregates"`
 	TotalRows            int              `json:"total_rows"`
 	ExcludedByPermission *int             `json:"excluded_by_permission"`
+	AsOf                 *time.Time       `json:"as_of"`
+	AsOfPinned           *bool            `json:"as_of_pinned"`
 }
 
 //craft:ignore naked-any decodeWire is the one JSON unmarshal seam; the wire structs above give it shape

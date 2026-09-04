@@ -3980,7 +3980,11 @@ export interface paths {
         put?: never;
         /**
          * Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
-         * @description Creates a calendar event and sends an invite. It RUNS DIRECTLY (ADR-0055), on the
+         * @description Records the meeting on the timeline. **No invite is sent — this build has no outbound
+         *     calendar or mail transport behind a booking**, so whoever books it has to tell the
+         *     attendee themselves. The calendar integrations are capture-only (inbound import).
+         *
+         *     It RUNS DIRECTLY (ADR-0055), on the
          *     passport holder's own authority; booking onto ANOTHER host's calendar still takes admin,
          *     the same check the app applies. An installation that wants bookings confirmed sets a
          *     tier floor on `book_meeting`. On success a
@@ -23921,6 +23925,25 @@ export interface components {
         AnalyticsQuery: {
             /** @description The population, by name. */
             entity: string;
+            /**
+             * @description `workspace`, `team` or `owner` — the same vocabulary `AnalyticsScope.kind` answers in,
+             *     minus `managed_teams`, which is RESOLVED and never requested (a caller names one team,
+             *     or names nothing and is given it). No enum here on purpose: the resolver is the
+             *     authority on what this seat may measure, and a second list would be a second answer to
+             *     that, refusing on shape what it should refuse on authority.
+             *
+             *     Which population to measure, resolved against the caller's own lens. Omitted asks for
+             *     their default — a rep's own records, a manager's teams — never the whole installation.
+             *
+             *     A scope wider than the caller may measure is REFUSED rather than narrowed, so an answer
+             *     never quietly means something other than what was asked.
+             */
+            scope_kind?: string;
+            /**
+             * Format: uuid
+             * @description The team or seat to measure, for `scope_kind` `team` or `owner`.
+             */
+            scope_id?: string;
             /** @description The dimensions. Omitted is a single-row answer over the whole population, which is a real question rather than a missing one. */
             group_by?: string[];
             /** @description What to compute. At least one — a query with none asks for group keys and nothing beside them, which is a list rather than an analytic question. */
@@ -24676,6 +24699,25 @@ export interface components {
             excluded_by_permission?: number | null;
             /** Format: date-time */
             generated_at?: string;
+            /**
+             * Format: date-time
+             * @description The instant these figures were computed at — the moment any currency conversion read the
+             *     rate sheet, not the moment this response was assembled (`generated_at`).
+             *
+             *     When the handle pinned an instant this is the one the explained number was computed at, so
+             *     the detail reconciles to its headline. When it did not, this is a fresh reading and
+             *     `as_of_pinned` is false.
+             */
+            as_of?: string;
+            /**
+             * @description Whether the handle carried the instant the explained number was computed at.
+             *
+             *     False means the link predates that key, so these figures were recomputed at a NEW moment
+             *     and a rate sheet effective in between will make them disagree with the number they explain.
+             *     A reader opening a drill-through is checking a figure they already doubt, so a detail set
+             *     that quietly reconciles to something else is worse than none.
+             */
+            as_of_pinned?: boolean;
         };
         SearchResult: {
             /** @enum {string} */
@@ -36640,6 +36682,12 @@ export interface operations {
                     /** Format: date-time */
                     end: string;
                     subject?: string;
+                    /**
+                     * @description Who the meeting is with. **Accepted and not delivered to**: nothing in this
+                     *     build emails these addresses or adds them to a calendar event, and the
+                     *     created activity does not carry them either. Supply them for the caller's
+                     *     own record of intent, and tell the attendee yourself.
+                     */
                     attendee_emails?: string[];
                     /**
                      * @description Entities to associate the resulting meeting activity with. Each one is

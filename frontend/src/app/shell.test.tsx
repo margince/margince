@@ -372,7 +372,7 @@ describe("Shell", () => {
     expect(claims).toHaveLength(1);
     expect(claims[0].textContent).toBe("Anna Weber");
     const row = container.querySelector("nav.rail a.navitem.active");
-    expect(row?.textContent).toBe("Contacts");
+    expect(row?.textContent).toBe("People");
     expect(row?.getAttribute("aria-current")).toBe("true");
   });
 
@@ -387,12 +387,12 @@ describe("Shell", () => {
     );
     const claims = [...container.querySelectorAll('[aria-current="page"]')];
     expect(claims.map((claim) => claim.textContent)).toEqual([
-      "Contacts",
-      "Contacts",
+      "People",
+      "People",
     ]);
     expect(
       container.querySelector("nav.rail a.navitem.active")?.textContent,
-    ).toBe("Contacts");
+    ).toBe("People");
   });
 
   // The a11y hole this restructure closes: the page's name used to be a span in
@@ -499,9 +499,7 @@ describe("Shell", () => {
     // topbar.test.tsx; that the shell still shows one here is the shell's.
     const trail = screen.getByRole("navigation", { name: "Breadcrumb" });
     expect(
-      within(trail)
-        .getByRole("link", { name: "Contacts" })
-        .getAttribute("href"),
+      within(trail).getByRole("link", { name: "People" }).getAttribute("href"),
     ).toBe("#/contacts");
   });
 
