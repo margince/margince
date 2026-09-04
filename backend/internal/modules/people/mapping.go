@@ -122,6 +122,16 @@ func personEmailInputs(emails *[]crmcontracts.PersonEmailInput) []PersonEmailInp
 	return out
 }
 
+// manualSource is this schema's word for "a person did this", as against an
+// import or a capture run.
+//
+// It is what a patch's own children are stamped with: `source` is required on
+// every PersonEmail the response carries, and UpdatePersonRequest has no field
+// to carry one, so a child written through the patch needs an origin from
+// somewhere. The create path takes the caller's `source` because its request
+// has one; if the patch ever gains the field, read it instead of this.
+const manualSource = "manual"
+
 func personUpdateInput(req crmcontracts.UpdatePersonRequest, ifVersion *int64) UpdatePersonInput {
 	in := UpdatePersonInput{
 		FullName:     req.FullName,
@@ -137,6 +147,7 @@ func personUpdateInput(req crmcontracts.UpdatePersonRequest, ifVersion *int64) U
 	}
 	in.Address = req.Address
 	in.Emails = personEmailInputs(req.Emails)
+	in.Source = manualSource
 	return in
 }
 

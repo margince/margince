@@ -27300,10 +27300,8 @@ type PersonEmail struct {
 // PersonEmailEmailType defines model for PersonEmail.EmailType.
 type PersonEmailEmailType string
 
-// PersonEmailInput One address on a person, as a writer supplies it. Named rather than spelled inline
-// on each request, because create and update must not be able to describe an address
-// differently — the generator mints a separate Go struct per inline copy, and a
-// helper serving both is what stops the two drifting.
+// PersonEmailInput One address on a person, as a writer supplies it. One schema for create and update,
+// so the two cannot describe an address differently.
 type PersonEmailInput struct {
 	Email     openapi_types.Email        `json:"email"`
 	EmailType *PersonEmailInputEmailType `json:"email_type,omitempty"`
@@ -31072,7 +31070,7 @@ type UpdateActivityRequest struct {
 	IsDone *bool `json:"is_done,omitempty"`
 
 	// MeetingStatus How the meeting went, set AFTER it happened. Meeting only, and 422 with a
-	// `not_valid_for_kind` fault on the field otherwise — the same refusal create
+	// `field_not_valid_for_kind` fault on the field otherwise — the same refusal create
 	// gives, held against the kind the row already carries rather than one the
 	// patch names, because a patch cannot change a kind.
 	//
@@ -31094,7 +31092,7 @@ type UpdateActivityRequest struct {
 }
 
 // UpdateActivityRequestMeetingStatus How the meeting went, set AFTER it happened. Meeting only, and 422 with a
-// `not_valid_for_kind` fault on the field otherwise — the same refusal create
+// `field_not_valid_for_kind` fault on the field otherwise — the same refusal create
 // gives, held against the kind the row already carries rather than one the
 // patch names, because a patch cannot change a kind.
 //

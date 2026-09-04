@@ -116,16 +116,15 @@ func TestAnImageThatFiltersToNothingIsRefusedAsNoBeforeImage(t *testing.T) {
 // report success — worse than refusing, because the person reads the
 // confirmation and stops looking.
 //
-// `consent_status` is the durable example: consent is deliberately NOT mutable
-// through a person update (A22/ADR-0011 — it moves only through the consent
-// endpoint, which writes an append-only proof row), so no widening of
-// UpdatePersonRequest will ever make this key spellable.
+// `consent_status` is the durable example. Consent is not mutable through a
+// person update at all: it moves only through the consent endpoint, which
+// writes an append-only proof row, so no widening of UpdatePersonRequest can
+// make this key spellable.
 //
-// Two fields that USED to be examples are not any more, and both stopped being
-// so by being fixed rather than by this rule weakening. The address columns
-// fold into the structured `address` the shape declares, which is what makes an
-// address edit reversible at all; and `emails` is now on the update request,
-// because a bounced address needed a way to be corrected.
+// The address columns are NOT an example, and neither is `emails`. Both are
+// spellable — addresses fold into the structured `address` the shape declares,
+// and `emails` is a field on the update request — which is what makes an edit
+// to either reversible.
 func TestAnImageTheShapeCannotSpellIsRefusedByNamingTheField(t *testing.T) {
 	answer := evaluateWithoutTheTrail(t, Evaluator{},
 		personRow(`{"title":"CTO","consent_status":"granted"}`))

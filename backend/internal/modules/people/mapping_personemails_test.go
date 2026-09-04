@@ -88,3 +88,22 @@ func TestCreateAndUpdateMapAnAddressTheSameWay(t *testing.T) {
 			made.Emails[0], patched.Emails[0])
 	}
 }
+
+// An address added through the patch carries an origin.
+//
+// `source` is required on every PersonEmail the response returns, and
+// UpdatePersonRequest has no field to carry one — so without a default here the
+// row lands with blank provenance and the response breaks its own contract.
+//
+// The integration tests next door cannot catch this: they call the store
+// directly and pass `Source: "test"` themselves, which is the request mapper's
+// job and exactly the step they skip.
+func TestAnAddressAddedByPatchCarriesItsOrigin(t *testing.T) {
+	var req crmcontracts.UpdatePersonRequest
+	decodeInto(t, `{"emails":[{"email":"ada@new.example"}]}`, &req)
+
+	if got := personUpdateInput(req, nil).Source; got != "manual" {
+		t.Fatalf("the patch stamps its addresses %q, want the word this schema "+
+			"uses for a person doing something", got)
+	}
+}
