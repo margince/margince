@@ -37,6 +37,7 @@ import { hasPane, WorklistPane } from "./worklist.pane";
 import {
   loadedQueue,
   UNASSIGNED,
+  useRefreshWalk,
   useWorklist,
   type Worklist,
   type WorklistFilter,
@@ -751,6 +752,7 @@ export function WorklistScreen({
       set(next);
     };
   const day = useWorklist(scope, filter, owner === "" ? undefined : owner);
+  const refreshWalk = useRefreshWalk();
   // A failed SHOW MORE is not a failed page. `isError` covers both, and
   // treating them alike would replace a screen of rows the reader is working
   // through with an error panel because one extra page did not arrive. The
@@ -797,10 +799,10 @@ export function WorklistScreen({
             day={first}
             walk={walk}
             // Refreshing starts a NEW walk, which is what brings in the work
-            // that arrived behind the reader. Refetching the query is exactly
-            // that: the first page is fetched without a cursor, so the server
-            // freezes a fresh snapshot over today's rows.
-            onRefresh={() => void day.refetch()}
+            // that arrived behind the reader — and a refetch is NOT that: it
+            // re-runs every loaded page with its own cursor, so a reader who
+            // had paged once resumed the walk they were asking to leave.
+            onRefresh={refreshWalk}
             queue={queue}
             scope={scope}
             filter={filter}

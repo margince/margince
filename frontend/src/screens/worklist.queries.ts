@@ -390,3 +390,23 @@ export function usePinRow() {
     },
   });
 }
+
+/**
+ * Start a NEW walk over today's rows.
+ *
+ * `refetch` is not this. An infinite query refetches every page it holds, each
+ * with the cursor it was loaded under — and every page past the first carries
+ * the SNAPSHOT. So a reader who had paged once and then pressed the refresh
+ * this notice offers resumed the very walk they were asking to leave: the work
+ * that arrived behind them stayed absent, and the notice sat there telling them
+ * to do what they had just done.
+ *
+ * Resetting drops the loaded pages, so the next fetch is a first page with no
+ * cursor and the server freezes a fresh snapshot over the day as it stands now.
+ */
+export function useRefreshWalk() {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.resetQueries({ queryKey: worklistKey });
+  };
+}
