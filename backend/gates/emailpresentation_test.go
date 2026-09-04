@@ -111,6 +111,7 @@ var emailPassthroughs = gatekit.Waive(map[string]string{
 	"screens/recordchronology.tsx":       "wires onOpenEmail onto the entries it hands to the timeline; the rendering is composed.tsx's",
 	"screens/worklist.row.tsx":           "same branch as the focus card, for the list row",
 	"screens/emailaccesseditor.tsx":      "draws the ACCESS block and no part of the message: who may read it, the named members, and the control to change that. No subject, no body, no party, no attachment. It takes the whole presentation because the audience write needs the id and version off it",
+	"app/searchkinds.ts":                 "answers WHERE a search hit goes. It reads email_summary for one thing — an activity carrying one is a message, and a message has a destination — and returns a Route. No markup at all: the file is .ts and holds no component",
 })
 
 // entrySchemas reads the schemas the contract marks as an email.
