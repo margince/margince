@@ -294,16 +294,21 @@ function NudgeDismiss({ personId }: Readonly<{ personId: string }>) {
                     // The toast dismisses itself the moment the action is
                     // pressed, so a failed undo leaves the contact set aside
                     // with the only way back already off the screen.
-                    onAct: () =>
-                      restore.mutate(
-                        { personId },
-                        {
-                          onError: () =>
-                            toast.show(t("worklist.verb.dismissUndoFailed"), {
-                              mark: false,
-                            }),
-                        },
-                      ),
+                    //
+                    // mutateAsync and a catch, for the reason TaskComplete
+                    // gives above: the dismissal REMOVES the row, so by the
+                    // time the reader presses Undo this component is unmounted
+                    // and React Query has dropped the observer that per-call
+                    // callbacks hang off. A refused undo would say nothing at
+                    // all — the reader presses the one control that undoes
+                    // their misclick, it fails, and the screen is silent.
+                    onAct: () => {
+                      restore.mutateAsync({ personId }).catch(() =>
+                        toast.show(t("worklist.verb.dismissUndoFailed"), {
+                          mark: false,
+                        }),
+                      );
+                    },
                   },
                 }),
               onError: () =>
@@ -593,40 +598,59 @@ function BriefVerbs({ item }: Readonly<{ item: WorklistItem }>) {
       // A refused answer otherwise leaves the row exactly as an unpressed one,
       // and the reader has no reason to try again — the same reason
       // NoticeAcknowledge and TaskComplete both say so.
-      onError: () =>
-        toast.show(problemMessageOf(mark.error, t), { mark: false }),
+      //
+      // The error the CALLBACK was handed, not `mark.error`: that field holds
+      // the state React last rendered, which on the first failure is still
+      // null. The reader would be told "no cause reported" while the server
+      // had named a conflict, and the retry it invites hits the same 409.
+      onError: (failure) =>
+        toast.show(problemMessageOf(failure, t), {
+          mark: false,
+        }),
     });
   };
+  // Each verb is drawn only where the SERVER offered it. The lane sends all
+  // three today, and a client that assumed so would keep drawing three the day
+  // one is withheld — posting an answer the server did not authorise, which is
+  // the failure `RowAnswer` gates every other verb against.
+  const offered = (action: WorklistItem["actions"][number]) =>
+    item.actions.includes(action);
   return (
     <div className="worklist-row-verbs">
-      <Button
-        small
-        variant="primary"
-        pending={working}
-        onClick={() => answer({ itemId: item.id, mark: "act" })}
-      >
-        {t("home.act")}
-      </Button>
-      <Button
-        small
-        pending={working}
-        onClick={() =>
-          answer({
-            itemId: item.id,
-            mark: "snooze",
-            snoozedUntil: tomorrowMorning(Date.now()),
-          })
-        }
-      >
-        {t("home.snooze")}
-      </Button>
-      <Button
-        small
-        pending={working}
-        onClick={() => answer({ itemId: item.id, mark: "dismiss" })}
-      >
-        {t("home.dismiss")}
-      </Button>
+      {offered("act") && (
+        <Button
+          small
+          variant="primary"
+          pending={working}
+          onClick={() => answer({ itemId: item.id, mark: "act" })}
+        >
+          {t("home.act")}
+        </Button>
+      )}
+      {offered("set_aside") && (
+        <Button
+          small
+          pending={working}
+          onClick={() =>
+            answer({
+              itemId: item.id,
+              mark: "snooze",
+              snoozedUntil: tomorrowMorning(Date.now()),
+            })
+          }
+        >
+          {t("home.snooze")}
+        </Button>
+      )}
+      {offered("dismiss") && (
+        <Button
+          small
+          pending={working}
+          onClick={() => answer({ itemId: item.id, mark: "dismiss" })}
+        >
+          {t("home.dismiss")}
+        </Button>
+      )}
     </div>
   );
 }

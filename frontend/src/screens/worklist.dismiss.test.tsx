@@ -11,7 +11,7 @@ import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { WorklistScreen } from "./worklist";
-import { day, row, stub } from "./worklist.testkit";
+import { day, jsonResponse, row, stub } from "./worklist.testkit";
 
 afterEach(() => {
   cleanup();
@@ -93,6 +93,86 @@ describe("a contact the reader is not chasing", () => {
       screen.queryByRole("button", { name: en["worklist.verb.dismiss"] }),
     ).toBeNull();
   });
+
+  // A REFUSED undo has to say so, and the row is gone by the time it is
+  // pressed.
+  //
+  // The dismissal removes the contact from the lane, so the component that
+  // owns the Undo button is unmounted before the reader can press it. A
+  // per-call `onError` hangs off that component's React Query observer and is
+  // dropped with it, so the failure reached nobody: the reader pressed the one
+  // control that undoes their misclick, it was refused, and the screen said
+  // nothing while the contact stayed hidden for a month.
+  //
+  // The test above cannot see this — its stub answers the same row forever, so
+  // the component never unmounts and the dropped callback still fires.
+  it("says so when the undo is refused after the row has gone", async () => {
+    stubVanishingContact();
+    const user = userEvent.setup();
+    renderUnderAToastRegion();
+
+    await user.click(
+      await screen.findByRole("button", { name: en["worklist.verb.dismiss"] }),
+    );
+    // The row is gone: the second read answers an empty day, which is what
+    // unmounts the component the callback would have hung off.
+    await waitFor(() => {
+      expect(screen.queryByText("Kirsten Vogel")).toBeNull();
+    });
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["worklist.verb.dismissUndo"],
+      }),
+    );
+
+    expect(
+      await screen.findByText(en["worklist.verb.dismissUndoFailed"]),
+    ).toBeTruthy();
+  });
+});
+
+// stubVanishingContact answers the way the server does around a dismissal: the
+// contact is on the lane until they are set aside and gone afterwards, and the
+// undo is refused.
+function stubVanishingContact() {
+  let dismissed = false;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      const method = input instanceof Request ? input.method : "GET";
+      if (url.includes("nudge-dismissal")) {
+        if (method === "DELETE") {
+          // A problem body, the way the server refuses: an empty 403 leaves
+          // openapi-fetch nothing to parse into `error`, so the client would
+          // read a refusal as a success and the test would prove nothing.
+          return new Response(
+            JSON.stringify({ title: "Forbidden", status: 403 }),
+            { status: 403, headers: { "content-type": "application/json" } },
+          );
+        }
+        dismissed = true;
+        return new Response(null, { status: 204 });
+      }
+      if (url.split("?")[0].endsWith("/worklist")) {
+        return jsonResponse(dismissed ? day() : DAY_WITH_THE_CONTACT);
+      }
+      return jsonResponse({ data: [] });
+    }),
+  );
+}
+
+const DAY_WITH_THE_CONTACT = day({
+  queue: [
+    row({
+      id: "0199f5c0-0000-7000-8000-000000000d01",
+      source: "relationship_decay",
+      title: "Kirsten Vogel",
+      actions: ["open", "dismiss"],
+    }),
+  ],
+  summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
 });
 
 // renderUnderAToastRegion draws the screen the way the shell draws it.
@@ -106,7 +186,19 @@ function renderUnderAToastRegion() {
   return render(
     <QueryClientProvider
       client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        new QueryClient({
+          defaultOptions: {
+            queries: { retry: false },
+            // The removed mutation is reclaimed at once rather than after the
+            // five-minute default. A reader takes seconds to read the
+            // confirmation and press Undo, so by then the observer the
+            // dismissal ran under is long gone; holding it for the length of
+            // the test instead would keep a per-call `onError` alive that
+            // production has already dropped, and the refused-undo test below
+            // would pass against the bug it exists to catch.
+            mutations: { gcTime: 0 },
+          },
+        })
       }
     >
       <LocaleProvider initial="en">

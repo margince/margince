@@ -105,12 +105,18 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 // Derived from the lanes rather than listed, so a fourth joins the check by
 // existing.
 func TestNoOptionalLaneOffersAnActionTheSurfaceCannotPerform(t *testing.T) {
-	// `dismiss` joined this set when the worklist row grew a control for it:
-	// NudgeDismiss puts a lapsed contact aside through the person's own
-	// dismissal endpoint, which takes exactly the id a decay row carries.
 	performable := map[crmcontracts.AttentionItemActions]bool{
 		"complete": true, "snooze": true, "open": true, "acknowledge": true,
-		"dismiss": true,
+	}
+	// `dismiss` is performable on a LANE, not everywhere, and that is why it
+	// is not in the set above. Its endpoint depends on the source: a decay row
+	// posts to the person's nudge dismissal, a brief item to the brief's own
+	// mark, and the client dispatches on `item.source` for exactly that
+	// reason. A lane-blind entry would pass this gate for a lane the client
+	// has no route for, and the advertised verb would simply not be drawn —
+	// which is the failure this whole gate exists to catch.
+	performableOn := map[string]map[crmcontracts.AttentionItemActions]bool{
+		"relationship_decay": {"dismiss": true},
 	}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
@@ -145,10 +151,11 @@ func TestNoOptionalLaneOffersAnActionTheSurfaceCannotPerform(t *testing.T) {
 		}
 		for _, item := range *lane {
 			for _, action := range item.Actions {
-				if !performable[action] {
-					t.Errorf("%s offers %q, which no control on this surface performs",
-						name, action)
+				if performable[action] || performableOn[name][action] {
+					continue
 				}
+				t.Errorf("%s offers %q, which no control on this surface performs",
+					name, action)
 			}
 		}
 	}

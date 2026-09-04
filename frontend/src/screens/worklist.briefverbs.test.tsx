@@ -2,10 +2,20 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment jsdom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { day, renderWorklist, row, stub } from "./worklist.testkit";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { LocaleProvider } from "../i18n";
+import { WorklistScreen } from "./worklist";
+import {
+  day,
+  jsonResponse,
+  renderWorklist,
+  row,
+  stub,
+} from "./worklist.testkit";
 
 // A brief item is seller work, and it is answerable where it is ranked.
 //
@@ -152,20 +162,51 @@ describe("a brief item is answerable from the queue", () => {
     });
   });
 
+  // Two presses while the FIRST IS STILL IN FLIGHT.
+  //
+  // The write is held open here rather than answered at once, and that is the
+  // whole point: against an instant stub the first POST has already succeeded
+  // by the time the second press lands, so `isSuccess` alone stops it and the
+  // `isPending` half of the guard can be deleted with every test still green.
+  // A real POST takes long enough for a rep to press twice.
   it("submits once however fast the reader presses", async () => {
-    const fetched = stubWrites();
+    const held = stubHeldWrite();
     renderWorklist();
 
     const done = await screen.findByRole("button", { name: "Done" });
     await userEvent.click(done);
     await userEvent.click(done);
+    held.release();
 
     await waitFor(() => {
-      expect(writes(fetched)).toHaveLength(1);
+      expect(writes(held.fetched)).toHaveLength(1);
     });
   });
 
-  // A folded group stands for a pile and names no single brief item, so it
+  // A press AFTER the write settles, before the refetch replaces the row.
+  //
+  // This is the window `isSuccess` exists for, and it is the reason a pending
+  // check alone is not enough: a completed task LEAVES the queue and takes its
+  // button with it, while an answered brief item is patched in place and the
+  // row is still on screen. Hold the refetch open and the row keeps its live
+  // buttons over an item that has already been answered.
+  it("submits once when the reader presses again before the row refreshes", async () => {
+    const held = stubHeldRefetch();
+    renderWorklist();
+
+    const done = await screen.findByRole("button", { name: "Done" });
+    await userEvent.click(done);
+    // The write has settled: one POST is on the record.
+    await waitFor(() => {
+      expect(writes(held.fetched)).toHaveLength(1);
+    });
+    await userEvent.click(done);
+    held.release();
+
+    await waitFor(() => {
+      expect(writes(held.fetched)).toHaveLength(1);
+    });
+  });
   // gets no verb that would answer one of them.
   it("draws no verb on a folded group", async () => {
     stub(
@@ -192,4 +233,153 @@ describe("a brief item is answerable from the queue", () => {
     expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
   });
+
+  // The SERVER decides which of the three a row gets.
+  //
+  // Every other case here sends all three, so none of them can tell a client
+  // reading `actions` from one that assumes the lane always sends the full
+  // set. The day one is withheld, the assuming client keeps drawing it and
+  // posts an answer the server did not offer.
+  it("draws only the verbs the row was given", async () => {
+    stub(
+      day({
+        queue: [aBriefItem({ actions: ["act"], primary_action: "act" })],
+        summary: { urgent: 1, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    expect(await screen.findByRole("button", { name: "Done" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Snooze" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
+  });
+
+  // A refusal names its CAUSE.
+  //
+  // The failure handler used to read `mark.error`, which is the state React
+  // last rendered rather than the error the callback was handed — on a first
+  // failure that field is still null. So a rep whose colleague had already
+  // answered the item in another tab was told "no cause reported", and the
+  // retry that invites hits the same conflict every time.
+  it("names why an answer was refused", async () => {
+    stubRefusedAnswer();
+    renderUnderAToastRegion();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Done" }));
+
+    expect(await screen.findByText(A_CONFLICT)).toBeTruthy();
+  });
 });
+
+const A_CONFLICT = "Somebody already answered this item.";
+
+// stubRefusedAnswer serves the row, then refuses the answer with a cause.
+//
+// The cause is what makes this test able to fail: a handler reading the stale
+// `mark.error` falls back to the catalog's "no cause reported", which is a
+// different string from this one.
+function stubRefusedAnswer() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes("/brief/items/")) {
+        return new Response(
+          JSON.stringify({
+            title: "Conflict",
+            status: 409,
+            detail: A_CONFLICT,
+          }),
+          { status: 409, headers: { "content-type": "application/json" } },
+        );
+      }
+      if (url.split("?")[0].endsWith("/worklist")) {
+        return jsonResponse(
+          day({
+            queue: [aBriefItem()],
+            summary: { urgent: 1, due: 0, lower_priority: 0, total: 1 },
+          }),
+        );
+      }
+      return jsonResponse({ data: [] });
+    }),
+  );
+}
+
+// renderUnderAToastRegion draws the screen the way the shell draws it: the
+// refusal above appears in a toast, and `renderWorklist` mounts no region —
+// deliberately, since the conformance gate allows exactly one and names
+// main.tsx as its home. A test file the gate does not scan is where it goes.
+function renderUnderAToastRegion() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <WorklistScreen />
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+
+// stubHeldRefetch answers the POST at once and holds the worklist read that
+// FOLLOWS it, so the row stays on screen with its answer already recorded.
+function stubHeldRefetch(): {
+  fetched: ReturnType<typeof vi.fn>;
+  release: () => void;
+} {
+  let release = () => {};
+  const refetched = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let written = false;
+  const fetched = vi.fn(async (input: RequestInfo | URL) => {
+    const request = input instanceof Request ? input : undefined;
+    const url = String(request?.url ?? input);
+    if (request?.method === "POST") {
+      written = true;
+      return jsonResponse({ id: "01a05500-0000-7000-8000-0000000000b1" });
+    }
+    if (url.includes("/worklist")) {
+      if (written) {
+        await refetched;
+      }
+      return jsonResponse(aDayOfOneBriefItem());
+    }
+    return jsonResponse({ data: [] });
+  });
+  vi.stubGlobal("fetch", fetched);
+  return { fetched, release };
+}
+
+// stubHeldWrite answers reads at once and holds the POST until released, so a
+// second press lands while the first write is still in flight.
+function stubHeldWrite(): {
+  fetched: ReturnType<typeof vi.fn>;
+  release: () => void;
+} {
+  let release = () => {};
+  const inFlight = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const fetched = vi.fn(async (input: RequestInfo | URL) => {
+    const request = input instanceof Request ? input : undefined;
+    const url = String(request?.url ?? input);
+    if (request?.method === "POST") {
+      await inFlight;
+      return jsonResponse({ id: "01a05500-0000-7000-8000-0000000000b1" });
+    }
+    if (url.includes("/worklist")) {
+      return jsonResponse(aDayOfOneBriefItem());
+    }
+    return jsonResponse({ data: [] });
+  });
+  vi.stubGlobal("fetch", fetched);
+  return { fetched, release };
+}
+
+// A folded group stands for a pile and names no single brief item, so it
