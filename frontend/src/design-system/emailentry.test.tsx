@@ -129,6 +129,46 @@ describe("EmailEntry", () => {
     expect(screen.queryByText("2")).not.toBeInTheDocument();
   });
 
+  // The defect this file exists to stop coming back: the direction line was
+  // glued to the counterparty in the browser, so a row with no name to glue
+  // ended on the preposition — "Received from", with nothing after it. That
+  // was every withheld row and every row whose summary carries no
+  // counterparty, on every 360 timeline.
+  it("never ends the direction on a preposition", () => {
+    wrap(<EmailEntry summary={WITHHELD} timestamp="1 Sep 09:12" />);
+    expect(screen.getByText("Received")).toBeInTheDocument();
+    expect(screen.queryByText("Received from")).not.toBeInTheDocument();
+  });
+
+  it("says the direction WITH the name when there is one", () => {
+    wrap(<EmailEntry summary={READABLE} timestamp="1 Sep 09:12" />);
+    // One sentence from one string, so the two forms cannot drift and a
+    // locale can put the name where its grammar wants it.
+    expect(screen.getByText(/^Received from Ana Sommer/)).toBeInTheDocument();
+  });
+
+  // An outbound row takes the same pair, and the name-less form has to be the
+  // OUTBOUND word: a row saying "Received" about a message this workspace sent
+  // is worse than the dangling preposition it replaced.
+  it("keeps the direction right on an outbound row with no name", () => {
+    wrap(
+      <EmailEntry
+        summary={{ ...WITHHELD, direction: "outbound" }}
+        timestamp="1 Sep 09:12"
+      />,
+    );
+    expect(screen.getByText("Sent")).toBeInTheDocument();
+    expect(screen.queryByText(/^Received/)).not.toBeInTheDocument();
+  });
+
+  // Every other timeline kind announces itself through a Badge. This one said
+  // "email" in an icon alone, so a screen reader was told what happened
+  // without being told what kind of thing it was.
+  it("announces that the row is an email", () => {
+    wrap(<EmailEntry summary={READABLE} timestamp="1 Sep 09:12" />);
+    expect(screen.getByText("Email")).toBeInTheDocument();
+  });
+
   it("opens on Enter and on Space, and says it opens a dialog", async () => {
     const user = userEvent.setup();
     const onOpen = vi.fn();
