@@ -1,0 +1,363 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//gate:kind census H2
+
+package gates
+
+import (
+	"go/ast"
+	"go/token"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"testing"
+)
+
+// Every setting read through settings.ApplyTx is declared MachineryApplied.
+//
+// The store enforces this already — ApplyTx refuses an undeclared entry — but it
+// refuses at RUNTIME, inside whatever machinery was applying the posture. That
+// is the worst place to find out. installation.country landed read through
+// ApplyTx and not declared (#3976), and the failure surfaced as every outbound
+// send job dying with "installation.country is not declared MachineryApplied"
+// — a dead send lane on main, discovered by a channel round-trip test timing
+// out sixty seconds at a time rather than by anything naming the cause.
+//
+// A declaration and its reader are two lines in two files, and nothing but this
+// held them together. Here they fail at build.
+//
+// WHAT IT DOES NOT CHECK, and cannot from the AST alone: whether the entry
+// SHOULD be machinery-applied. That is a disclosure judgement — the flag lets
+// machinery read a value ungated, so declaring one to silence this gate would
+// be exactly the "never to skip a read gate for convenience" its own doc warns
+// against. This asks only that the two agree; whether they agree on the right
+// answer is the reviewer's.
+func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
+	t.Parallel()
+
+	fset, files := parseGoFilesUnder(t, "internal")
+
+	// Which package each import path actually declares, so an ALIAS cannot
+	// hide an entry. `identitymod "…/identity"` makes a call read
+	// identitymod.Country while the declaration is identity.Country, and a gate
+	// comparing the two strings finds no match — which used to mean the entry
+	// was logged and accepted, i.e. exactly the case this exists to catch
+	// slipping through under a rename.
+	//
+	// Read from the parsed files rather than assumed from the path's last
+	// segment, because those differ in this tree (contracts declares
+	// crmcontracts).
+	packageOfDir := map[string]string{}
+	for _, path := range goFilePaths(t, "internal") {
+		if file, ok := parsedByPath(files, fset, path); ok && file.Name != nil {
+			packageOfDir[filepath.ToSlash(filepath.Dir(path))] = file.Name.Name
+		}
+	}
+
+	// entry name -> declared MachineryApplied. Keyed by the VAR name because
+	// that is what a call site names; the key string lives on the entry and is
+	// not resolvable from the call.
+	declared := map[string]bool{}
+	// The reads, as entry name -> where, so a failure names the call site
+	// rather than only the entry.
+	read := map[string]string{}
+	// The call sites whose entry expression this walk could not name at all.
+	var unreadable []string
+
+	for _, file := range files {
+		pkg := ""
+		if file.Name != nil {
+			pkg = file.Name.Name
+		}
+		aliases := aliasesOf(file, packageOfDir)
+		// The identifiers each function declares for itself. A local, a
+		// parameter or a receiver may share a name with an imported package and
+		// SHADOWS it inside that function — Go says so, and the gate would
+		// otherwise map the qualifier to the package's declarations and match
+		// one, while ApplyTx receives something else entirely and refuses it at
+		// runtime. That is the one direction this gate must not fail in.
+		//
+		// Resolved from the syntax rather than through go/types: a gate that
+		// loaded and type-checked the tree to answer one qualifier would cost
+		// the whole build for a question this answers. It over-refuses instead —
+		// a function holding an unrelated local named like an import makes its
+		// ApplyTx call unreadable — which is a loud, fixable failure rather than
+		// a silent pass, and no call site in the tree hits it today.
+		shadowed := shadowedNamesByFunc(file)
+		ast.Inspect(file, func(n ast.Node) bool {
+			switch node := n.(type) {
+			case *ast.ValueSpec:
+				for i, name := range node.Names {
+					if i < len(node.Values) && definesASetting(node.Values[i]) {
+						declared[pkg+"."+name.Name] = hasMachineryApplied(node.Values[i])
+					}
+				}
+			case *ast.CallExpr:
+				if calleeName(node) != "ApplyTx" || len(node.Args) != 3 {
+					return true
+				}
+				entry := entryName(node.Args[2], pkg, aliases, shadowed[enclosingFunc(file, node.Pos())])
+				if entry == "" {
+					// The other half of the same rule. An entry whose EXPRESSION
+					// this walk cannot name — one handed through a call, an
+					// index, a conversion — was dropped here, and a dropped
+					// entry is one the gate agrees with while ApplyTx refuses it
+					// at runtime. Aliases are resolved above; this is what is
+					// left when the shape itself is unreadable.
+					unreadable = append(unreadable, fset.Position(node.Pos()).String())
+					return true
+				}
+				read[entry] = fset.Position(node.Pos()).String()
+			}
+			return true
+		})
+	}
+
+	// The floor. This is a prohibition, so an empty walk reads exactly like a
+	// clean tree — and the walk is the part most likely to break silently, since
+	// it depends on Define staying a call and ApplyTx staying a three-argument
+	// one.
+	const readFloor = 4
+	if len(read) < readFloor {
+		t.Fatalf("found %d settings.ApplyTx call site(s), fewer than the %d this gate assumes — "+
+			"the walk stopped matching rather than the tree stopping doing it", len(read), readFloor)
+	}
+	if len(declared) == 0 {
+		t.Fatal("found no settings.Define declarations at all, so nothing below could have been judged")
+	}
+
+	for _, where := range unreadable {
+		t.Errorf("%s: this gate cannot name the entry passed to settings.ApplyTx here, so it cannot "+
+			"check that entry's declaration — and one it cannot check is one it agrees with. Pass "+
+			"the entry as a plain identifier or a qualified one.", where)
+	}
+
+	for entry, where := range read {
+		isDeclared, found := declared[entry]
+		switch {
+		case !found:
+			// A FAILURE, not a note. Aliases are resolved above, so an entry
+			// this walk cannot place is one the gate genuinely cannot see —
+			// and accepting it would mean the one shape that hides a missing
+			// declaration is the one shape that passes.
+			t.Errorf("%s reads %s through settings.ApplyTx and this gate cannot find its "+
+				"declaration. Either the entry is declared outside internal/, or the walk "+
+				"stopped recognising a declaration shape — both leave a MachineryApplied "+
+				"omission unable to fail here, which is what this gate is for.", where, entry)
+		case !isDeclared:
+			t.Errorf("%s reads %s through settings.ApplyTx, which refuses an entry not declared "+
+				"MachineryApplied — at runtime, inside the machinery. Declare it where it is defined, "+
+				"or read it through Get/GetTx and its gate.", where, entry)
+		}
+	}
+}
+
+// definesASetting reports whether the expression is a settings.Define call,
+// possibly wrapped in the builder methods an entry chains.
+func definesASetting(expr ast.Expr) bool {
+	for {
+		call, ok := expr.(*ast.CallExpr)
+		if !ok {
+			return false
+		}
+		if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+			if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "settings" && strings.HasPrefix(sel.Sel.Name, "Define") {
+				return true
+			}
+			// A builder method — unwrap and keep looking for the Define under it.
+			expr = sel.X
+			continue
+		}
+		// Define[T] renders its type argument as an IndexExpr around the
+		// selector, so the generic form arrives here rather than above.
+		if idx, ok := call.Fun.(*ast.IndexExpr); ok {
+			expr = &ast.CallExpr{Fun: idx.X}
+			continue
+		}
+		return false
+	}
+}
+
+// hasMachineryApplied reports whether the chain carries the declaration.
+func hasMachineryApplied(expr ast.Expr) bool {
+	for {
+		call, ok := expr.(*ast.CallExpr)
+		if !ok {
+			return false
+		}
+		sel, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok {
+			return false
+		}
+		if sel.Sel.Name == "MachineryApplied" {
+			return true
+		}
+		expr = sel.X
+	}
+}
+
+// entryName renders the entry argument as declaringPackage.Name.
+//
+// A bare identifier resolves against the file's own package; a qualified one
+// resolves the QUALIFIER through the file's imports, so an alias names the
+// package that actually declares the entry rather than whatever the importer
+// chose to call it.
+func entryName(expr ast.Expr, pkg string, aliases map[string]string, shadowed map[string]bool) string {
+	switch e := expr.(type) {
+	case *ast.Ident:
+		// The SAME rule the selector arm applies below, and it is needed on
+		// this arm too: a local named for the package-level entry it shadows —
+		// `Country := somethingElse` — would otherwise resolve to the
+		// declaration while ApplyTx receives the local. Unreadable is the only
+		// safe answer here for the reason given there.
+		if shadowed[e.Name] {
+			return ""
+		}
+		return pkg + "." + e.Name
+	case *ast.SelectorExpr:
+		qualifier, ok := e.X.(*ast.Ident)
+		if !ok {
+			return ""
+		}
+		name := qualifier.Name
+		// A qualifier the enclosing function declares for itself is NOT the
+		// package it looks like. Answering "" makes the call site unreadable
+		// and fails, which is the only safe answer: mapping it through the
+		// aliases would name a package's entry the call never passed.
+		if shadowed[name] {
+			return ""
+		}
+		if declared, found := aliases[name]; found {
+			name = declared
+		}
+		return name + "." + e.Sel.Name
+	}
+	return ""
+}
+
+// enclosingFunc names the function declaration a position falls inside, or ""
+// for a call at file scope. The NAME rather than the node, because it is only
+// ever used to look one set up.
+func enclosingFunc(file *ast.File, pos token.Pos) string {
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Body == nil {
+			continue
+		}
+		if pos >= fn.Pos() && pos <= fn.End() {
+			return fn.Name.Name
+		}
+	}
+	return ""
+}
+
+// shadowedNamesByFunc collects, per function, every identifier that function
+// binds — receiver, parameters, named results, short declarations, var specs
+// and range bindings.
+//
+// Deliberately coarse: it does not model block scope, so a name bound anywhere
+// in a function counts as shadowed throughout it. That over-refuses and cannot
+// under-refuse, which is the direction a gate is allowed to be wrong in.
+func shadowedNamesByFunc(file *ast.File) map[string]map[string]bool {
+	out := map[string]map[string]bool{}
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Body == nil {
+			continue
+		}
+		bound := map[string]bool{}
+		for _, field := range fieldsOf(fn) {
+			for _, name := range field.Names {
+				bound[name.Name] = true
+			}
+		}
+		ast.Inspect(fn.Body, func(n ast.Node) bool {
+			switch node := n.(type) {
+			case *ast.AssignStmt:
+				if node.Tok != token.DEFINE {
+					return true
+				}
+				for _, lhs := range node.Lhs {
+					if ident, ok := lhs.(*ast.Ident); ok {
+						bound[ident.Name] = true
+					}
+				}
+			case *ast.ValueSpec:
+				for _, name := range node.Names {
+					bound[name.Name] = true
+				}
+			case *ast.RangeStmt:
+				for _, expr := range []ast.Expr{node.Key, node.Value} {
+					if ident, ok := expr.(*ast.Ident); ok {
+						bound[ident.Name] = true
+					}
+				}
+			}
+			return true
+		})
+		out[fn.Name.Name] = bound
+	}
+	return out
+}
+
+// fieldsOf is a function's receiver, parameters and named results together.
+func fieldsOf(fn *ast.FuncDecl) []*ast.Field {
+	var out []*ast.Field
+	if fn.Recv != nil {
+		out = append(out, fn.Recv.List...)
+	}
+	if fn.Type.Params != nil {
+		out = append(out, fn.Type.Params.List...)
+	}
+	if fn.Type.Results != nil {
+		out = append(out, fn.Type.Results.List...)
+	}
+	return out
+}
+
+// aliasesOf maps each import qualifier in this file to the package name that
+// import path actually declares.
+func aliasesOf(file *ast.File, packageOfDir map[string]string) map[string]string {
+	out := map[string]string{}
+	for _, spec := range file.Imports {
+		path, err := strconv.Unquote(spec.Path.Value)
+		if err != nil {
+			continue
+		}
+		// The tree's own packages only. A third-party import can never be the
+		// qualifier on a settings entry, and guessing its package name from a
+		// module path is how a resolver starts inventing answers.
+		declared, known := packageOfDir[strings.TrimPrefix(path, modulePath+"/")]
+		if !known {
+			continue
+		}
+		qualifier := declared
+		if spec.Name != nil {
+			qualifier = spec.Name.Name
+		}
+		out[qualifier] = declared
+	}
+	return out
+}
+
+// goFilePaths is goFilesUnder with the walk error turned into a test failure.
+func goFilePaths(t *testing.T, dir string) []string {
+	t.Helper()
+	paths, err := goFilesUnder(dir)
+	if err != nil {
+		t.Fatalf("walking %s: %v", dir, err)
+	}
+	return paths
+}
+
+// parsedByPath finds the already-parsed file for one path, so the walk is not
+// repeated just to learn package names.
+func parsedByPath(files []*ast.File, fset *token.FileSet, path string) (*ast.File, bool) {
+	for _, file := range files {
+		if fset.Position(file.Pos()).Filename == path {
+			return file, true
+		}
+	}
+	return nil, false
+}

@@ -41,7 +41,13 @@ type Writes = {
 function coverageBody(coverage: Partial<Coverage>): Coverage {
   return {
     as_of: "2026-08-31T09:00:00Z",
-    summary: { contacts_total: 3, answered: 1, no_reply: 0, untried: 2 },
+    summary: {
+      contacts_total: 3,
+      waiting: 0,
+      answered: 1,
+      no_reply: 0,
+      untried: 2,
+    },
     deals: [],
     completeness: { committee_read: true },
     ...coverage,
@@ -104,7 +110,13 @@ test("names the person worth writing to", async () => {
 // opening, which is the one thing this reading must not do.
 test("says nobody has answered rather than naming a fallback", async () => {
   stub({
-    summary: { contacts_total: 2, answered: 0, no_reply: 2, untried: 0 },
+    summary: {
+      contacts_total: 2,
+      waiting: 0,
+      answered: 0,
+      no_reply: 2,
+      untried: 0,
+    },
   });
   render(
     <CoverageBand orgId="o-1" accountName="Brandt GmbH" onNarrow={() => {}} />,

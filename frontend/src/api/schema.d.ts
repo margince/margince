@@ -1747,16 +1747,18 @@ export interface paths {
          *     would make every 360 pay for them.
          *
          *     **The default order is a recommendation, not an alphabet.** `recommended` puts
-         *     whoever has answered first, because they are the way in; then whoever nobody has
-         *     tried, because on an account where everyone has gone quiet they are the only move
-         *     that is not a fourth follow-up; then whoever we wrote to and heard nothing from.
-         *     Within a state the stronger relationship leads. This is the one ranking, shared
-         *     with the 360's section — a client that re-sorts is answering a different question
-         *     than the server did.
+         *     whoever is waiting on a reply from us first, because answering them is the one
+         *     move that is already owed; then whoever we replied to, because that conversation
+         *     is alive; then whoever nobody has tried, because on an account where everyone has
+         *     gone quiet they are the only move that is not a fourth follow-up; then whoever we
+         *     wrote to and heard nothing from. Within a state the stronger relationship leads.
+         *     This is the one ranking, shared with the 360's section — a client that re-sorts
+         *     is answering a different question than the server did.
          *
-         *     **Engagement is three states and they are not degrees of one thing.** `answered`
-         *     means they have written back inside the 90-day window. `no_reply` means we wrote
-         *     and heard nothing. `untried` means nobody has written to them at all. Untried and
+         *     **Engagement is four states and they are not degrees of one thing.** `waiting`
+         *     means their latest message has no reply from us. `answered` means we replied to
+         *     their latest message, inside the 90-day window. `no_reply` means we wrote and
+         *     heard nothing. `untried` means nobody has written to them at all. Untried and
          *     no-reply look alike in a roster and call for opposite next actions, which is why
          *     they are separate values rather than a boolean plus a date.
          *
@@ -6804,6 +6806,14 @@ export interface paths {
          *     access to. So this answers "how much is hidden from YOU", which is the only
          *     honest reading available without giving one person a licence to read another's
          *     records.
+         *
+         *     Read by a LEAD, and refused below a row scope of `team` — the same tier
+         *     `/worklist/team` and `/worklist/response` take. Not a confinement: the figures are
+         *     already the caller's own and an ungated read would disclose no row they cannot
+         *     open. It is that two of the five rules are a horizon somebody configured and a
+         *     reader who works the queue cannot change either, so the surface belongs to whoever
+         *     can. A rep asking whether their own day is honest is a real question and a
+         *     different endpoint from this one.
          */
         get: operations["getHiddenBacklog"];
         put?: never;
@@ -6832,18 +6842,26 @@ export interface paths {
          *     number taken from today would swing on one slow afternoon. The window defaults to
          *     the last 14 days.
          *
-         *     Counted under the CALLER's own visibility — but only on the INBOUND side, and the
-         *     difference is worth stating rather than glossing. A message the caller may not read
-         *     contributes to no figure here. The REPLY that answered it is not gated: the waiting
-         *     lane deliberately ignores the audience arm on its own reply anti-join, because a
-         *     reply somebody else may see still answered the customer, and skipping it would
-         *     report an answered message as waiting.
+         *     Counted under the CALLER's own visibility, all four figures. A conversation this
+         *     caller may not open contributes to no median, and a judgement recorded against one
+         *     counts in neither disposal figure.
+         *
+         *     With ONE exception, on the reply side of the median, worth stating rather than
+         *     glossing. The REPLY that answered an inbound is not gated: the waiting lane
+         *     deliberately ignores the audience arm on its own reply anti-join, because a reply
+         *     somebody else may see still answered the customer, and skipping it would report an
+         *     answered message as waiting.
          *
          *     So a caller who can read an inbound but not the audience-limited reply to it learns
          *     WHEN a colleague answered, to the minute, folded into the median. That is a
          *     timestamp rather than content, and it is the price of the two readers agreeing
          *     about which threads were answered — but it is a real disclosure and this is where
          *     it is written down.
+         *
+         *     Read by a LEAD, and refused below a row scope of `team`, the same tier
+         *     `/worklist/team` and `/worklist/hidden` take. "How fast does the workspace answer"
+         *     is a question about how the work is going rather than about what to do next, and
+         *     the rep answering the queue is not the person who changes the answer.
          */
         get: operations["getResponseMetrics"];
         put?: never;
@@ -19292,7 +19310,9 @@ export interface components {
         OrganizationCoverageSummary: {
             /** @description Every contact the caller may see at this account, not a page of them. */
             contacts_total: number;
-            /** @description Contacts who have written back inside the 90-day window. */
+            /** @description Contacts whose latest message we have not replied to. */
+            waiting: number;
+            /** @description Contacts whose latest message we replied to inside the 90-day window. */
             answered: number;
             /** @description Contacts we have written to with nothing back. */
             no_reply: number;
@@ -19437,17 +19457,24 @@ export interface components {
         };
         /**
          * @description Where one contact stands with us, over the same 90-day window the relationship
-         *     score uses.
+         *     score uses. What decides between the two conversational states is who wrote
+         *     LAST, not whether both directions have traffic.
          *
-         *     `answered` — they have written back inside the window. The way in.
+         *     `waiting` — their latest message has no reply from us. They are waiting on us,
+         *     and answering is the obvious next move.
+         *     `answered` — we replied to their latest message. The conversation is current
+         *     from our side; the ball is with them.
          *     `no_reply` — we have written and had nothing back. Writing again is a decision.
          *     `untried` — nobody has written to them at all. Free to approach.
          *
-         *     Untried is deliberately not folded into no-reply: "never asked" and "asked and
-         *     ignored" look identical in a roster and call for opposite next actions.
+         *     Waiting is deliberately not folded into answered: one inbound mail nobody has
+         *     replied to is not a success, and showing it as one hides the account's most
+         *     urgent row. Untried is likewise not folded into no-reply: "never asked" and
+         *     "asked and ignored" look identical in a roster and call for opposite next
+         *     actions.
          * @enum {string}
          */
-        ContactEngagement: "answered" | "no_reply" | "untried";
+        ContactEngagement: "waiting" | "answered" | "no_reply" | "untried";
         OrganizationContact: {
             /** Format: uuid */
             person_id: string;
@@ -28724,9 +28751,26 @@ export interface components {
              */
             as_of: string;
             /**
-             * @description What the queue itself would carry. Here so the others read as a proportion
-             *     rather than as bare volumes — three hidden against four shown is a broken
-             *     queue, and three against three hundred is a rep tidying up.
+             * @description What the eligibility query FOUND under the rules as they stand. Here so the
+             *     others read as a proportion rather than as bare volumes — three hidden against
+             *     four found is a broken queue, and three against three hundred is a rep tidying
+             *     up.
+             *
+             *     Not quite what the queue draws, and the difference is stated rather than
+             *     glossed. Machine senders are filtered TWICE, deliberately: the query removes
+             *     the obvious ones before its scan cap, because two hundred notification threads
+             *     would otherwise fill the scan and push a real customer past it, and the queue
+             *     then applies a fuller address rule over the survivors — a baseline of
+             *     transactional relay domains no pattern list could stand in for. A repeat thread
+             *     from one sender is folded there too, statefully across rows.
+             *
+             *     So a mail relayed by one of those domains is counted here and absent from the
+             *     page. Measuring it here would mean a second copy of that baseline inside the
+             *     database, drifting from the first.
+             *
+             *     The four hidden figures are differences between runs of THIS query, so they
+             *     are counted the same way and the proportions hold. It is the absolute figure
+             *     that is a near neighbour of the page's own count rather than equal to it.
              */
             shown: number;
             /**
@@ -28824,6 +28868,10 @@ export interface components {
              *     that lifted and a not_mine somebody withdrew leave no trace in the current
              *     state, so a figure read from there would FALL as readers tidied up — reporting
              *     less judgement the more of it happened.
+             *
+             *     Over the conversations THIS caller may open, like every figure beside it. Two
+             *     readers of the same workspace can therefore see different totals here, and each
+             *     is answering "how much of the work I can see is being put down".
              */
             disposed: number;
             /**

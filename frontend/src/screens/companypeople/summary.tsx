@@ -25,6 +25,7 @@ import {
   throwProblem,
 } from "../common";
 import { EntityRef } from "../entityref";
+import { ENGAGEMENT_LABELS, ENGAGEMENT_TONES } from "./contacts";
 import { IntroRequestModal, type IntroTarget } from "./introrequest";
 import { ASK_INTRO, introTargetFor, mapModelFromCoverage } from "./mapmodel";
 import "./companypeople.css";
@@ -96,7 +97,7 @@ export function CoverageBand({
   orgId: string;
   accountName: string;
   /** Each statement is a door: it narrows the list below to what it describes. */
-  onNarrow: (status: "answered" | "untried" | null) => void;
+  onNarrow: (status: "waiting" | "answered" | "untried" | null) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -136,8 +137,14 @@ export function CoverageBand({
         <CommitteeReading coverage={coverage} />
         <StatCard
           label={t("co.people.band.coverage")}
+          // Everyone who has written to us in the window, whichever side wrote
+          // last: the band answers "is anybody here talking to us", and a
+          // contact whose mail we still owe a reply is talking to us.
           value={t("co.people.band.reachable", {
-            count: formatNumber(coverage.summary.answered, locale),
+            count: formatNumber(
+              coverage.summary.answered + coverage.summary.waiting,
+              locale,
+            ),
           })}
           detail={t("co.people.band.untried", {
             count: formatNumber(coverage.summary.untried, locale),
@@ -167,7 +174,7 @@ function WayIn({
   onNarrow,
 }: Readonly<{
   coverage: Coverage;
-  onNarrow: (status: "answered" | "untried" | null) => void;
+  onNarrow: (status: "waiting" | "answered" | "untried" | null) => void;
 }>) {
   const t = useT();
   const way = coverage.best_way_in;
@@ -180,6 +187,15 @@ function WayIn({
       />
     );
   }
+  const stateLabel = ENGAGEMENT_LABELS[way.engagement];
+  // The label names what the press DOES. A door for a conversational state
+  // narrows to that state; a way in nobody has approached narrows to nothing
+  // in particular, so its door says "show everyone" rather than promising a
+  // list and clearing the filter instead.
+  const door: "waiting" | "answered" | null =
+    way.engagement === "waiting" || way.engagement === "answered"
+      ? way.engagement
+      : null;
   return (
     <StatCard
       label={t("co.people.band.wayIn")}
@@ -187,23 +203,17 @@ function WayIn({
       detail={
         <span>
           {way.title ? `${way.title} · ` : ""}
-          {t(
-            way.engagement === "answered"
-              ? "co.reach.answered"
-              : "co.reach.untried",
-          )}
+          {t(stateLabel)}
         </span>
       }
-      // The label names what the press DOES. A way in who has not answered
-      // yet narrows to nothing in particular, so the door says "show everyone"
-      // rather than promising a list of people who answered and clearing the
-      // filter instead.
       openLabel={t(
-        way.engagement === "answered"
-          ? "co.people.band.showAnswered"
-          : "co.people.band.showAll",
+        door === "waiting"
+          ? "co.people.band.showWaiting"
+          : door === "answered"
+            ? "co.people.band.showAnswered"
+            : "co.people.band.showAll",
       )}
-      onOpen={() => onNarrow(way.engagement === "answered" ? "answered" : null)}
+      onOpen={() => onNarrow(door)}
     />
   );
 }
@@ -496,11 +506,13 @@ function mapCopy(t: ReturnType<typeof useT>) {
     missing: (role: string) => t("co.people.map.missing", { role }),
     assign: t("co.people.map.assignHint"),
     engagement: {
+      waiting: t("co.reach.waiting"),
       answered: t("co.reach.answered"),
       no_reply: t("co.reach.silent"),
       untried: t("co.reach.untried"),
     },
     awaitingReply: t("co.people.map.awaiting"),
+    replyOwed: t("co.people.map.owed"),
     theyReplied: t("co.people.map.replied"),
     neverWritten: t("co.people.map.never"),
     onDeal: t("co.people.map.onDeal"),
@@ -540,22 +552,8 @@ function SeatCard({
       )}
       <EntityRef kind="person" id={seat.person_id} name={seat.full_name} />
       {seat.engagement && (
-        <Badge
-          tone={
-            seat.engagement === "answered"
-              ? "success"
-              : seat.engagement === "no_reply"
-                ? "warn"
-                : undefined
-          }
-        >
-          {t(
-            seat.engagement === "answered"
-              ? "co.reach.answered"
-              : seat.engagement === "no_reply"
-                ? "co.reach.silent"
-                : "co.reach.untried",
-          )}
+        <Badge tone={ENGAGEMENT_TONES[seat.engagement]}>
+          {t(ENGAGEMENT_LABELS[seat.engagement])}
         </Badge>
       )}
       {/* Only an UNCONFIRMED seat offers the two verbs, and only when the

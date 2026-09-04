@@ -4,11 +4,11 @@
   "per_agent_listing_budget": 17408,
   "whole_catalog_floor": 21504,
   "catalog": {
-    "tools": 70,
+    "tools": 72,
     "system_frame_tokens": 353,
-    "tokens": 20230,
+    "tokens": 20865,
     "median_tool_tokens": 262,
-    "mean_tool_tokens": 288
+    "mean_tool_tokens": 289
   },
   "agents": [
     {
@@ -139,6 +139,10 @@
       "tokens": 393
     },
     {
+      "name": "compose_analytics_report",
+      "tokens": 389
+    },
+    {
       "name": "search_records",
       "tokens": 385
     },
@@ -220,6 +224,10 @@
     },
     {
       "name": "account_coverage",
+      "tokens": 245
+    },
+    {
+      "name": "describe_report_blocks",
       "tokens": 245
     },
     {

@@ -75,6 +75,14 @@ const FULL: RelationshipMapModel = {
       engagement: "no_reply",
       engagementLabel: "No reply",
     },
+    {
+      id: "p-4",
+      kind: "person",
+      label: "Sabine Vogel",
+      sublabel: "Head of Partnerships",
+      engagement: "waiting",
+      engagementLabel: "Needs reply",
+    },
   ],
   lanes: [
     {
@@ -96,7 +104,7 @@ const FULL: RelationshipMapModel = {
       label: "Influencers",
       nodeIds: ["p-2"],
     },
-    { id: "user", column: "right", label: "Users", nodeIds: ["p-3"] },
+    { id: "user", column: "right", label: "Users", nodeIds: ["p-3", "p-4"] },
   ],
   edges: [
     {

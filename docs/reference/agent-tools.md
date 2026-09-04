@@ -156,6 +156,7 @@ Columns:
 | `remove_tag` | 🟢 | `write` | — | Takes a tag off a record; native, for the reason `apply_tag` gives |
 | `review_commitments` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard): the mirror holds no task projection |
 | `run_report` | 🟢 | `read` | — | `unsupported_by_sor` (no incumbent analogue) |
+| `compose_analytics_report` | 🟢 | `read` | — | Renders a document whose every figure cites a saved analytics run; it writes no number of its own and stores nothing |
 | `forecast_readings` | 🟢 | `read` | — | Reads deals, stages and the installation's fiscal settings, so it answers only where those live |
 | `forecast_movement` | 🟢 | `read` | — | Diffs two stored snapshots, so it answers only where snapshots exist |
 | `forecast_input_checks` | 🟢 | `read` | — | Reads the nightly run's own record, so it answers only where a run has completed |

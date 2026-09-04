@@ -34,7 +34,7 @@ function render(ui: ReactNode, locale: "en" | "de" = "en") {
   );
 }
 
-// The list exists so a rep can tell three states apart at a glance. These tests
+// The list exists so a rep can tell four states apart at a glance. These tests
 // hold the part a payload cannot: that the states reach the screen as different
 // words, and that the wire call carries the dials the server actually declares.
 
@@ -42,10 +42,13 @@ test("names each engagement state in its own words", async () => {
   stubContacts(contactsFixture());
   render(<CompanyPeopleList orgId="o-1" />);
 
-  // Three different words, because "they replied", "we wrote and heard
-  // nothing" and "nobody has tried" are three different next moves. A single
-  // label for two of them is the roster this list replaced.
-  expect(await screen.findByText("Answered")).not.toBeNull();
+  // Four different words, because "their mail sits unanswered", "we replied",
+  // "we wrote and heard nothing" and "nobody has tried" are four different
+  // next moves. A single label for two of them is the roster this list
+  // replaced — and an unanswered inbound wearing "Answered" was the worst of
+  // those collapses.
+  expect(await screen.findByText("Needs reply")).not.toBeNull();
+  expect(screen.getByText("Answered")).not.toBeNull();
   expect(screen.getByText("No reply")).not.toBeNull();
   expect(screen.getByText("Not approached")).not.toBeNull();
 });
@@ -56,7 +59,7 @@ test("says which side the conversation is owed, not just when it moved", async (
 
   // A date alone reads the same whoever sent it. The direction is the fact.
   expect(await screen.findByText(/They wrote/)).not.toBeNull();
-  expect(screen.getByText(/We wrote/)).not.toBeNull();
+  expect(screen.getAllByText(/We wrote/).length).toBeGreaterThan(0);
   expect(screen.getByText("No exchange yet")).not.toBeNull();
 });
 
@@ -78,7 +81,8 @@ test("renders the German words under a German locale", async () => {
 
   // The engagement WORDS, not the column head: "Kontaktstand" labels both the
   // column and its filter, and asserting it would pass on the chrome alone.
-  await waitFor(() => expect(screen.getByText("Antwortet")).not.toBeNull());
+  await waitFor(() => expect(screen.getByText("Beantwortet")).not.toBeNull());
+  expect(screen.getByText("Antwort fällig")).not.toBeNull();
 });
 
 test("a second press on a column asks for the reverse, and the server accepts it", async () => {

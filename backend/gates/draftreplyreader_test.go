@@ -73,14 +73,14 @@ var statedReasons = gatekit.Waive(map[string]string{
 		"leaves the subject un-normalized because the caller sends it as typed, and splits parse from validate " +
 		"so the retry validator judges the answer the caller will get. draftreply.Parse would trim and " +
 		"plain-text the subject and drop both refusals.",
-	"internal/compose/accountdraft/write.go": "an outward customer draft carries its greeting INSIDE the body, " +
+	"internal/compose/draftcore/writer.go": "an outward customer draft carries its greeting INSIDE the body, " +
 		"and the model runs it into the first line often enough that reading the reply means splitting it " +
 		"(draftfloor.SplitGreetingLine over the recipient's name) before anything can ask whether the body is " +
 		"empty. What counts as the body differs, so the refusal cannot be shared until the helper can express " +
-		"that transform — a candidate for adoption, not a difference of taste.",
-	"internal/compose/persondraft/write.go": "the same outward-draft contract as accountdraft: the greeting is " +
-		"split out of the body before the empty check, so what the refusal judges is not the text the model " +
-		"returned. These two are also each other's copy, which is its own finding and its own change.",
+		"that transform — a candidate for adoption, not a difference of taste. " +
+		"This was TWO waivers, on accountdraft/write.go and persondraft/write.go, and the second one said " +
+		"of the pair: these two are also each other's copy, which is its own finding and its own change. " +
+		"That change landed — the reader is one file now, and so is this waiver.",
 })
 
 // contractsPrefix is generated from backend/api/crm.yaml. Its envelopes are the

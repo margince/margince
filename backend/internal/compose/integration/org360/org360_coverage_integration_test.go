@@ -28,15 +28,17 @@ func TestCoverageCountsTheWholeAccount(t *testing.T) {
 
 	org := e.SeedOrg(t, "Brandt GmbH", nil)
 	const contacts = 30
-	var answered ids.UUID
+	var waiting ids.UUID
 	for i := range contacts {
 		person := e.SeedPerson(t, fmt.Sprintf("Contact %02d", i), nil)
 		employ(t, e, person, org, "Fleet")
-		answered = person
+		waiting = person
 	}
+	// One inbound with no reply from us: the contact is waiting, not answered —
+	// receiving mail is not the same fact as having answered it.
 	mail := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: proposal",
 		"inbound", org360Clock.AddDate(0, 0, -3))
-	integration.LinkActivity(t, owner, mail, "person", answered)
+	integration.LinkActivity(t, owner, mail, "person", waiting)
 
 	got, err := svc.Coverage(ctx, ids.OrganizationID{UUID: org})
 	if err != nil {
@@ -46,16 +48,17 @@ func TestCoverageCountsTheWholeAccount(t *testing.T) {
 		t.Fatalf("counted %d contacts, want %d — the summary is reading a page",
 			got.Summary.ContactsTotal, contacts)
 	}
-	if got.Summary.Answered != 1 || got.Summary.Untried != contacts-1 {
-		t.Fatalf("answered=%d untried=%d, want 1 and %d",
-			got.Summary.Answered, got.Summary.Untried, contacts-1)
+	if got.Summary.Waiting != 1 || got.Summary.Answered != 0 || got.Summary.Untried != contacts-1 {
+		t.Fatalf("waiting=%d answered=%d untried=%d, want 1, 0 and %d",
+			got.Summary.Waiting, got.Summary.Answered, got.Summary.Untried, contacts-1)
 	}
-	// The way in is the contact who answered, by the same ranking the list uses.
+	// The way in is the contact waiting on our reply, by the same ranking the
+	// list uses.
 	if got.BestWayIn == nil {
-		t.Fatal("no way in named on an account where somebody answered")
+		t.Fatal("no way in named on an account where somebody is waiting on us")
 	}
-	if id := ids.UUID(got.BestWayIn.PersonId); id != answered {
-		t.Fatalf("the way in is %s, want the contact who answered (%s)", id, answered)
+	if id := ids.UUID(got.BestWayIn.PersonId); id != waiting {
+		t.Fatalf("the way in is %s, want the contact waiting on a reply (%s)", id, waiting)
 	}
 }
 
