@@ -488,6 +488,7 @@ export function PersonPageV2({
               brief={brief.data}
               loading={brief.isLoading}
               view={view.data}
+              onOpenEmail={setOpenEmail}
             />
             {(hasCommercial(view.data) || hasMatters(view.data)) && (
               <RecordReadingPair>
