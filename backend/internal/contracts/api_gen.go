@@ -32687,6 +32687,23 @@ type Worklist struct {
 	// reader reading "3 urgent · 5 due today · 4 planned · 5 review — 17 total" needs the
 	// parts to add up to the whole they are shown beside.
 	Summary WorklistSummary `json:"summary"`
+
+	// Walk What has happened to this walk since it started.
+	//
+	// A walk is frozen at its first page: the rows it covers and the order they sit in
+	// are fixed, so a reader paging their morning is not overtaken by their own queue.
+	// The two figures here are what that freezing cannot hide, and both are reported
+	// rather than silently absorbed.
+	//
+	// MEMBERSHIP MOVES ONE WAY. New work does NOT join a walk in progress — it waits
+	// for the reader to refresh, which is what keeps the headline still while they page.
+	// Work that was resolved, deleted, or is no longer visible LEAVES immediately, so
+	// the remaining count can fall. A frozen figure over work somebody can no longer see
+	// or act on would be steadier and false.
+	//
+	// A client draws these as two different offers: `new_available` invites a refresh,
+	// `changed_since_snapshot` explains why the count moved. Neither is an error.
+	Walk *WorklistWalk `json:"walk,omitempty"`
 }
 
 // WorklistFilter The narrowing this read applied.
@@ -33505,6 +33522,48 @@ type WorklistValue struct {
 
 // WorklistValueKind defines model for WorklistValue.Kind.
 type WorklistValueKind string
+
+// WorklistWalk What has happened to this walk since it started.
+//
+// A walk is frozen at its first page: the rows it covers and the order they sit in
+// are fixed, so a reader paging their morning is not overtaken by their own queue.
+// The two figures here are what that freezing cannot hide, and both are reported
+// rather than silently absorbed.
+//
+// MEMBERSHIP MOVES ONE WAY. New work does NOT join a walk in progress — it waits
+// for the reader to refresh, which is what keeps the headline still while they page.
+// Work that was resolved, deleted, or is no longer visible LEAVES immediately, so
+// the remaining count can fall. A frozen figure over work somebody can no longer see
+// or act on would be steadier and false.
+//
+// A client draws these as two different offers: `new_available` invites a refresh,
+// `changed_since_snapshot` explains why the count moved. Neither is an error.
+type WorklistWalk struct {
+	// AsOf When this walk was assembled — the instant its order was decided.
+	//
+	// On a first page it equals the response's own `as_of`. On later pages it is
+	// OLDER, and deliberately so: it is what lets a client say how stale the walk
+	// being paged has become, rather than presenting a resumed page as freshly read.
+	AsOf time.Time `json:"as_of"`
+
+	// ChangedSinceSnapshot How many rows this walk started with that are no longer here — resolved,
+	// deleted, or no longer visible to this reader.
+	//
+	// Counted so the reader is told WHY the total fell rather than watching it move.
+	// It is cumulative over the walk, not per page: the question a reader has is how
+	// much of their morning has already been dealt with, not how much went between
+	// two clicks.
+	ChangedSinceSnapshot int `json:"changed_since_snapshot"`
+
+	// NewAvailable How much work has arrived since this walk started, and is deliberately not in
+	// it.
+	//
+	// Absent on a first page, where the question has no meaning — the walk was just
+	// assembled, so nothing can have arrived behind it yet. A client draws this as
+	// an offer to refresh, never as a count of rows the reader can reach right now:
+	// reaching them means starting a new walk.
+	NewAvailable *int `json:"new_available,omitempty"`
+}
 
 // WorkspaceEmailDomain defines model for WorkspaceEmailDomain.
 type WorkspaceEmailDomain struct {

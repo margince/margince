@@ -312,8 +312,17 @@ func (s *Service) worklistFrom(
 	// candidate order does not depend on `limit` — crowding is marked above, over
 	// the whole narrowed set — so page two weighs exactly what page one weighed
 	// and continues it rather than re-deciding it.
-	shown, more, reached := pageFrom(rows, limit, cursor)
-	ordered := rankAllFor(stampAsOf(shown, day.AsOf), readerOf(ctx))
+	// Ranked ONCE, here, whichever way this page is served. A frozen walk takes
+	// its sequence from the snapshot and a fresh read takes it from this sort,
+	// but both need the comparator to have run: the snapshot's order IS a
+	// previous run of it, and the identities it stores were minted from one.
+	sortByRank(rows)
+	shown, more, reached, walk := s.pageOf(ctx, rows, limit, cursor, scope, filter)
+	// RENDERED IN THE ORDER THE PAGER CHOSE, never re-sorted. A fresh page was
+	// cut from the ranking above; a frozen walk's sequence is a previous run of
+	// that same comparator, and running it again here would return the reader's
+	// own rows in today's order rather than the one they were shown.
+	ordered := renderInOrder(stampAsOf(shown, day.AsOf), readerOf(ctx))
 	bands := bandsOf(ordered)
 	// What never answered, assembled ONCE and used twice: the page names these
 	// lanes to the reader, and the readings below refuse to state exact figures
@@ -386,8 +395,14 @@ func (s *Service) worklistFrom(
 	// moment the day moves between pages, and a running total would push the
 	// offset past the work still owed.
 	if more && len(shown) > 0 {
-		token := encodeCursor(reached, scope, filter, s.taskOwner)
+		token := encodeCursor(reached, scope, filter, s.taskOwner, walk.id)
 		out.NextCursor = &token
+	}
+	// What has happened to this walk since it started, where there is a walk to
+	// say it about. A first page that froze nothing states nothing: the fields
+	// would be a claim about a walk that does not exist.
+	if state := walk.state(); state != nil {
+		out.Walk = state
 	}
 	return out
 }

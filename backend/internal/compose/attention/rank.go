@@ -22,7 +22,6 @@ package attention
 // can wait a day, and a smaller one closing tomorrow cannot.
 
 import (
-	"sort"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -195,9 +194,25 @@ func stampAsOf(rows []ranked, asOf time.Time) []ranked {
 // on the client: the tie-breaks depend on the base-currency conversion and the
 // material threshold, both of which the server holds and the browser does not.
 func rankAllFor(rows []ranked, reader ids.UUID) []crmcontracts.WorklistItem {
-	sort.SliceStable(rows, func(i, j int) bool {
-		return less(rows[i], rows[j])
-	})
+	sortByRank(rows)
+	return renderInOrder(rows, reader)
+}
+
+// renderInOrder stamps the wire fields onto rows ALREADY in the order they are
+// to be drawn.
+//
+// Split from the sort above because a frozen walk arrives pre-ordered and must
+// stay that way: its sequence is a previous run of the comparator, and running
+// the comparator again returns the same rows in today's order instead of the
+// one the reader was shown. That was a real defect and not a hypothetical —
+// the walk's own pager kept its order correctly and this function undid it two
+// lines later, which the acceptance test caught only once its fixture used a
+// day whose ranking actually moves.
+//
+// Everything below is a function of a row's POSITION among the rows given, so
+// it is correct for either caller: the comparison names the row that follows,
+// and the band describes where this row sits on the page it is on.
+func renderInOrder(rows []ranked, reader ids.UUID) []crmcontracts.WorklistItem {
 	out := make([]crmcontracts.WorklistItem, 0, len(rows))
 	for i, row := range rows {
 		item := row.item

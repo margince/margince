@@ -44,10 +44,7 @@ func summarize(rows []ranked, bar materialBar) crmcontracts.WorklistSummary {
 		// hygiene to the top of their morning has made neither true. Counting
 		// the sort level here let one reader's ordering preference move a
 		// number their manager reads.
-		level := item.Level
-		if row.pinned {
-			level = row.semanticLevel
-		}
+		level := semanticLevelOf(row)
 		// Every level reaches one of the three arms, so no row is missing from
 		// the line. Without the default, levels 3 to 5 — material risk, agreed
 		// work, blocking decisions — fell between the two and a queue holding
@@ -70,6 +67,41 @@ func summarize(rows []ranked, bar materialBar) crmcontracts.WorklistSummary {
 	}
 	summary.Buckets = &buckets
 	return summary
+}
+
+// bucketsOf is the partition alone, over the same rows and the same precedence.
+//
+// A walk freezes what the day STARTED with, and that is this figure rather than
+// the whole summary: the sibling signals are questions about the day, which a
+// resumed page answers freshly, while the partition is the headline a reader
+// watches and must not see climb behind them.
+//
+// It runs the same bucketOf the summary does rather than a second reading of
+// the same rule — two spellings of one precedence would put a different
+// headline on a frozen walk than on the read that froze it.
+func bucketsOf(rows []ranked) crmcontracts.WorklistBuckets {
+	buckets := crmcontracts.WorklistBuckets{}
+	for _, row := range rows {
+		bucketOf(row, semanticLevelOf(row), &buckets)
+	}
+	return buckets
+}
+
+// semanticLevelOf is what a row MEANS, as against where a pin sorts it.
+//
+// A pin overwrites item.Level to lift a row to the top, and every figure that
+// answers "what does the day hold" reads underneath it: `urgent` means somebody
+// is waiting or a promise is breaking, and a rep pinning hygiene to the top of
+// their morning has made neither true.
+//
+// Spelled once because three readers now want it — the summary's bands, its
+// partition, and the partition a walk freezes — and three copies of a rule this
+// subtle is how one of them quietly stops agreeing with the others.
+func semanticLevelOf(row ranked) int {
+	if row.pinned {
+		return row.semanticLevel
+	}
+	return row.item.Level
 }
 
 // bucketOf puts one row in exactly one bucket.

@@ -1,0 +1,313 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package attention
+
+// What a frozen walk promises, and the two things it deliberately does not.
+//
+// The promise: the rows a reader started with are the rows they finish with, in
+// the order they started in, however the day moves behind them. The two
+// exceptions are both reported rather than hidden — work that LEAVES goes
+// immediately, because a frozen headline over rows somebody can no longer see
+// would be steadier and false, and work that ARRIVES waits for a refresh.
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/margince/margince/backend/internal/compose/worklistsnap"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// TestAWalkKeepsItsRowsWhileTheDayMovesUnderIt is the acceptance case.
+//
+// A day of eight rows, walked two pages deep, with work inserted and the
+// ranking disturbed in between. The walk returns its original eight exactly
+// once and in its original order — which the unfrozen pager cannot promise,
+// and says so in its own contract.
+func TestAWalkKeepsItsRowsWhileTheDayMovesUnderIt(t *testing.T) {
+	t.Parallel()
+	walks := &walkStore{}
+	started := rankInstant
+	svc := (&Service{now: func() time.Time { return started }}).WithWalks(walks)
+	day := aDayOfTasks(8)
+
+	first := svc.worklistFrom(context.Background(), day, scopeAll, "", 3,
+		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	if first.NextCursor == nil {
+		t.Fatal("a day of eight rows paged three at a time minted no cursor")
+	}
+	if first.Walk == nil {
+		t.Fatal("the first page froze no walk, so there is nothing to hold still")
+	}
+
+	// The day moves, and the RANKING with it: every surviving task's deadline is
+	// reversed, so a re-rank would return the same eight rows back to front.
+	// Without that the fixture cannot tell a frozen order from a fresh one — a
+	// day whose ranking is stable ranks the same either way, and a walk that
+	// re-sorted its survivors passed this test until the deadlines moved.
+	moved := aDayReordered(8)
+	moved.Planned = append(moved.Planned,
+		item("z-newcomer", "task", withDue(rankInstant.Add(-time.Hour))))
+
+	seen := map[string]int{}
+	order := []string{}
+	for _, row := range first.Queue {
+		seen[row.Id]++
+		order = append(order, row.Id)
+	}
+	cursor := decodedCursor(t, *first.NextCursor, scopeAll, "")
+	for page := 0; page < 4 && cursor.At > 0; page++ {
+		next := svc.worklistFrom(context.Background(), moved, scopeAll, "", 3,
+			waitingRead{}, leadRead{}, cursor, nil)
+		for _, row := range next.Queue {
+			seen[row.Id]++
+			order = append(order, row.Id)
+		}
+		if next.NextCursor == nil {
+			break
+		}
+		cursor = decodedCursor(t, *next.NextCursor, scopeAll, "")
+	}
+
+	if len(seen) != 8 {
+		t.Errorf("the walk covered %d distinct rows, want the eight it started with", len(seen))
+	}
+	for id, times := range seen {
+		if times != 1 {
+			t.Errorf("row %q was served %d times on one walk", id, times)
+		}
+	}
+	if _, arrived := seen["z-newcomer"]; arrived {
+		t.Error("work that arrived mid-walk joined it, so the reader's day grew under them")
+	}
+	// And in the SEQUENCE it started in, which is the promise the row set alone
+	// does not carry: a walk that re-ranked its survivors would return the same
+	// eight rows in an order the reader had not been shown.
+	want := frozenOrderOf(svc, day)
+	if len(order) != len(want) {
+		t.Fatalf("the walk served %d rows, want the %d it froze", len(order), len(want))
+	}
+	for i := range want {
+		if order[i] != want[i] {
+			t.Fatalf("the walk served %v, want the order it froze: %v", order, want)
+		}
+	}
+}
+
+// frozenOrderOf is the sequence a first page over this day would freeze.
+//
+// Read from the store rather than restated here, so the assertion is about the
+// walk KEEPING its order rather than about a list somebody typed twice.
+func frozenOrderOf(svc *Service, day crmcontracts.Attention) []string {
+	store, held := svc.walks.(*walkStore)
+	if !held {
+		return nil
+	}
+	for _, walk := range store.kept {
+		out := make([]string, 0, len(walk.Rows))
+		for _, at := range walk.Rows {
+			out = append(out, at.RowID)
+		}
+		return out
+	}
+	return nil
+}
+
+// TestWorkThatArrivesWaitsForARefreshAndSaysSo.
+//
+// New rows must not join a walk in progress — that is what keeps the headline
+// still — but the reader has to be told there is something to refresh for, or
+// the queue silently withholds work it knows about.
+func TestWorkThatArrivesWaitsForARefreshAndSaysSo(t *testing.T) {
+	t.Parallel()
+	walks := &walkStore{}
+	svc := (&Service{now: func() time.Time { return rankInstant }}).WithWalks(walks)
+
+	first := svc.worklistFrom(context.Background(), aDayOfTasks(4), scopeAll, "", 2,
+		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	if first.Walk == nil || first.NextCursor == nil {
+		t.Fatal("the first page froze no walk to resume")
+	}
+	// A first page cannot have work behind it, so it says nothing about any.
+	if first.Walk.NewAvailable != nil {
+		t.Errorf("a first page reported %d rows waiting, before anything could arrive",
+			*first.Walk.NewAvailable)
+	}
+
+	busier := aDayOfTasks(4)
+	busier.Planned = append(busier.Planned,
+		item("newcomer-one", "task"), item("newcomer-two", "task"))
+
+	next := svc.worklistFrom(context.Background(), busier, scopeAll, "", 2,
+		waitingRead{}, leadRead{}, decodedCursor(t, *first.NextCursor, scopeAll, ""), nil)
+
+	if next.Walk == nil || next.Walk.NewAvailable == nil {
+		t.Fatal("a resumed page said nothing about work waiting behind the walk")
+	}
+	if *next.Walk.NewAvailable != 2 {
+		t.Errorf("the page reports %d rows waiting, want the two that arrived",
+			*next.Walk.NewAvailable)
+	}
+}
+
+// TestWorkThatLeavesGoesImmediatelyAndIsCounted.
+//
+// The one direction membership moves the other way. A row that was answered,
+// deleted or withdrawn is not served from the walk — it no longer exists to
+// serve — and the count that falls is explained rather than left to move.
+func TestWorkThatLeavesGoesImmediatelyAndIsCounted(t *testing.T) {
+	t.Parallel()
+	walks := &walkStore{}
+	svc := (&Service{now: func() time.Time { return rankInstant }}).WithWalks(walks)
+
+	first := svc.worklistFrom(context.Background(), aDayOfTasks(6), scopeAll, "", 2,
+		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	if first.NextCursor == nil {
+		t.Fatal("the first page minted no cursor")
+	}
+	// Two of the six are dealt with between pages.
+	thinner := aDayOfTasks(6)
+	thinner.Planned = thinner.Planned[:4]
+
+	next := svc.worklistFrom(context.Background(), thinner, scopeAll, "", 10,
+		waitingRead{}, leadRead{}, decodedCursor(t, *first.NextCursor, scopeAll, ""), nil)
+
+	if next.Walk == nil {
+		t.Fatal("a resumed page carried no walk state")
+	}
+	if next.Walk.ChangedSinceSnapshot != 2 {
+		t.Errorf("the page reports %d rows gone, want the two that were dealt with",
+			next.Walk.ChangedSinceSnapshot)
+	}
+	for _, row := range next.Queue {
+		if row.Id == "task-4" || row.Id == "task-5" {
+			t.Errorf("row %q was served from the walk after it left the day", row.Id)
+		}
+	}
+}
+
+// TestAWalkThatCannotBeResumedIsRefusedRatherThanRestarted.
+//
+// Silently serving a fresh page under a resumed token would hand the reader
+// rows they have already seen, in a new order, with nothing saying the walk
+// they were on had ended. The refusal is what makes the client start a new one
+// deliberately.
+func TestAWalkThatCannotBeResumedIsRefusedRatherThanRestarted(t *testing.T) {
+	t.Parallel()
+	svc := (&Service{now: func() time.Time { return rankInstant }}).
+		WithWalks(&walkStore{refuse: true})
+
+	out := svc.worklistFrom(context.Background(), aDayOfTasks(6), scopeAll, "", 2,
+		waitingRead{}, leadRead{},
+		worklistCursor{At: 2, Params: fingerprint(scopeAll, "", ids.UUID{}), Snapshot: ids.NewV7()},
+		nil)
+
+	if len(out.Queue) != 0 {
+		t.Errorf("a refused walk served %d rows, want none — a fresh page under a resumed "+
+			"token repeats rows the reader has already seen", len(out.Queue))
+	}
+	if out.Walk != nil {
+		t.Error("a refused walk reported walk state, which claims a walk that is not there")
+	}
+}
+
+// TestWithoutAStoreTheQueuePagesTheWayItAlwaysDid.
+//
+// An installation that wires no snapshot store gets the offset pager, not a
+// degraded version of something else — and no walk on the response, because
+// there is none to describe.
+func TestWithoutAStoreTheQueuePagesTheWayItAlwaysDid(t *testing.T) {
+	t.Parallel()
+	svc := &Service{now: func() time.Time { return rankInstant }}
+
+	out := svc.worklistFrom(context.Background(), aDayOfTasks(6), scopeAll, "", 2,
+		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+
+	if len(out.Queue) != 2 {
+		t.Errorf("an unwired queue drew %d rows, want the page it was asked for", len(out.Queue))
+	}
+	if out.Walk != nil {
+		t.Error("an unwired queue reported a walk it never froze")
+	}
+	if out.NextCursor == nil {
+		t.Error("an unwired queue minted no cursor, so its walk cannot continue at all")
+	}
+}
+
+// decodedCursor reads a minted token back the way the handler does.
+func decodedCursor(t *testing.T, token, scope, filter string) worklistCursor {
+	t.Helper()
+	cursor, err := decodeCursor(token, scope, filter, ids.UUID{})
+	if err != nil {
+		t.Fatalf("decoding the cursor this server just minted: %v", err)
+	}
+	return cursor
+}
+
+// aDayReordered is the same n tasks with their deadlines reversed, so the
+// comparator puts them in the opposite sequence.
+//
+// The fixture a frozen walk needs: over a day that ranks the same on every read
+// there is nothing for freezing to protect, and a test built on one cannot see
+// the difference it exists to prove.
+func aDayReordered(n int) crmcontracts.Attention {
+	tasks := make([]crmcontracts.AttentionItem, 0, n)
+	for i := 0; i < n; i++ {
+		tasks = append(tasks, item(
+			"task-"+string(rune('0'+i)), "task",
+			withDue(rankInstant.Add(time.Duration(n-i)*time.Hour))))
+	}
+	return crmcontracts.Attention{AsOf: rankInstant, Planned: tasks}
+}
+
+// aDayOfTasks is n agreed tasks, each with its own deadline so the ranking has
+// something to order by and the sequence is stable across reads.
+func aDayOfTasks(n int) crmcontracts.Attention {
+	tasks := make([]crmcontracts.AttentionItem, 0, n)
+	for i := 0; i < n; i++ {
+		tasks = append(tasks, item(
+			"task-"+string(rune('0'+i)), "task",
+			withDue(rankInstant.Add(time.Duration(i)*time.Hour))))
+	}
+	return crmcontracts.Attention{AsOf: rankInstant, Planned: tasks}
+}
+
+// walkStore is the seam, in memory.
+//
+// A real store would prove the same behaviour and cost a database; what these
+// tests are about is the ASSEMBLER's use of a walk — which rows it freezes,
+// which it serves, what it reports — and the store's own refusals are held
+// against real Postgres in worklistsnap_integration_test.go.
+type walkStore struct {
+	kept   map[ids.UUID]worklistsnap.Snapshot
+	refuse bool
+}
+
+func (w *walkStore) Freeze(
+	_ context.Context, _ string, asOf time.Time,
+	buckets worklistsnap.Buckets, rows []worklistsnap.Row,
+) (ids.UUID, error) {
+	if w.kept == nil {
+		w.kept = map[ids.UUID]worklistsnap.Snapshot{}
+	}
+	id := ids.NewV7()
+	w.kept[id] = worklistsnap.Snapshot{ID: id, AsOf: asOf, Buckets: buckets, Rows: rows}
+	return id, nil
+}
+
+func (w *walkStore) Resume(
+	_ context.Context, id ids.UUID, _ string,
+) (worklistsnap.Snapshot, error) {
+	if w.refuse {
+		return worklistsnap.Snapshot{}, apperrors.ErrNotFound
+	}
+	walk, held := w.kept[id]
+	if !held {
+		return worklistsnap.Snapshot{}, apperrors.ErrNotFound
+	}
+	return walk, nil
+}
