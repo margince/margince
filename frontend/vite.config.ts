@@ -248,6 +248,24 @@ export default defineConfig({
     // consumes it. frontend/scripts/check-lcov-paths.sh holds the invariant.
     coverage: {
       provider: "v8",
+      // Written for the same one reader, and the rule is the same: every record
+      // has to name a file the scanner can open as source. The v8 provider
+      // reports whatever the run loaded, which is wider than that in two ways.
+      //
+      // src/assets/** — Vite turns an imported asset into a module, so a .png
+      // that a screen imports gets a record of its own (LF:0: there is no line
+      // in it to have covered). The scanner opens each SF: path as UTF-8 text to
+      // map those lines and warns that the file is not valid UTF-8, which is
+      // true and says nothing about the code.
+      //
+      // scripts/** — build tooling, and sonar-project.properties excludes it
+      // from analysis. The scanner cannot resolve a record for a file that is
+      // not in the project, so it drops it and reports the count it dropped.
+      //
+      // Both are noise rather than error, and both are the report claiming to
+      // measure something it did not. Vitest's own default here is [], so this
+      // list replaces nothing.
+      exclude: ["src/assets/**", "scripts/**"],
       reporter: [["lcov", { projectRoot: resolve(frontendRoot, "..") }]],
     },
   },
