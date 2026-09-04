@@ -97,7 +97,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 
-## Census (102)
+## Census (103)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -171,6 +171,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `parallelgates_test.go` | H3 | Every gate here runs in parallel with the others, and this is what keeps that true as gates are added. |
 | `passportlessagents_test.go` | H1 | An agent principal carrying no passport is a principal nobody can revoke. |
 | `passportmint_test.go` | H1 | A passport is minted for the session user, and for nobody else. |
+| `pendingwriter_test.go` | H2 | A "no writer yet" classification stops being true the moment a writer lands. |
 | `personattachlock_test.go` | H2 | A relationship carrying a person is written under that person's row lock. |
 | `personprofilefieldwriter_test.go` | H2 | people.writePersonProfileField is the one writer of person\_profile\_field, and the one place the precedence rule lives: a machine fill claims an unanswered field, a human's acceptance replaces what is there. |
 | `piicolumncoverage_test.go` | H2 | The Art. 17 redaction, judged by COLUMN rather than by table. |

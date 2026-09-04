@@ -38,7 +38,6 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -481,30 +480,17 @@ var tableOwners = map[string]string{
 	"system_log":       storekitOwned,
 }
 
-// sqlWriteTargets extracts write-statement table names from one SQL (or
-// SQL-carrying format) string. UPDATE requires a SET clause so prose and
-// `DO UPDATE SET`/`FOR UPDATE` never match; INSERT/DELETE are unambiguous.
-var (
-	insertRe = regexp.MustCompile(`(?is)\binsert\s+into\s+([a-z_][a-z0-9_]*)`)
-	deleteRe = regexp.MustCompile(`(?is)\bdelete\s+from\s+([a-z_][a-z0-9_]*)`)
-	updateRe = regexp.MustCompile(`(?is)\b(do\s+|for\s+)?update\s+([a-z_][a-z0-9_]*)\s+(?:[a-z_][a-z0-9_]*\s+)?set\b`)
-)
-
-func sqlWriteTargets(literal string) []string {
-	var tables []string
-	for _, m := range insertRe.FindAllStringSubmatch(literal, -1) {
-		tables = append(tables, strings.ToLower(m[1]))
-	}
-	for _, m := range deleteRe.FindAllStringSubmatch(literal, -1) {
-		tables = append(tables, strings.ToLower(m[1]))
-	}
-	for _, m := range updateRe.FindAllStringSubmatch(literal, -1) {
-		if m[1] != "" { // ON CONFLICT … DO UPDATE / SELECT … FOR UPDATE — not a new target
-			continue
-		}
-		tables = append(tables, strings.ToLower(m[2]))
-	}
-	return tables
+// sqlTarget is one write a literal performs: which table, by which verb, and
+// which columns it names.
+//
+// cols is best-effort and only ever a FLOOR: an INSERT's parenthesised column
+// list and an UPDATE's SET targets are read, and anything else — a fragment
+// assembled at runtime, an INSERT … SELECT with no list — contributes none.
+// Every reader of it has to treat an empty list as "unknown", never as "writes
+// nothing".
+type sqlTarget struct {
+	table, verb string
+	cols        []string
 }
 
 // owningDir normalizes a package dir to its ownership unit: the module root
@@ -618,6 +604,18 @@ func stringConstsByPackage(t *testing.T, fset *token.FileSet, roots []string) ma
 type tableWrite struct {
 	pos   string // file:line for the finding
 	table string
+	// verb is which write this is — "insert", "delete" or "update".
+	//
+	// cols carries the columns the statement names, where they can be read.
+	//
+	// Ownership does not care: writing a table you do not own is the same
+	// finding whichever verb does it. It is recorded because a SECOND gate
+	// asks a question ownership cannot — whether a column classified as
+	// having no writer yet has gained one — and "a row was created here" is
+	// not the same claim as "privacy deletes from this table", which it
+	// already does for both communication tables.
+	verb string
+	cols []string
 	// site is the write's INSTANCE — "path/to/file.go:enclosingFunc" — and it
 	// is what a waiver ratifies. The enclosing FUNCTION rather than the line:
 	// a line moves whenever anything above it does, so a line-keyed waiver
@@ -685,11 +683,13 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 			// walk: ast.Inspect is flat, and a stack maintained by hand here
 			// would be a second traversal to keep correct.
 			enclosing := unnamedDeclSite
-			record := func(pos token.Pos, tables []string) {
-				for _, table := range tables {
+			record := func(pos token.Pos, tables []sqlTarget) {
+				for _, target := range tables {
 					writes[owner] = append(writes[owner], tableWrite{
 						pos:   fset.Position(pos).String(),
-						table: table,
+						table: target.table,
+						verb:  target.verb,
+						cols:  target.cols,
 						// Relative to the owner, which the key already names:
 						// the absolute path would repeat that prefix in every
 						// entry and push the part a reader is actually
@@ -708,7 +708,7 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 					if err != nil {
 						return
 					}
-					record(node.Pos(), sqlWriteTargets(text))
+					record(node.Pos(), sqlWrites(text))
 				case *ast.CallExpr:
 					sel, ok := node.Fun.(*ast.SelectorExpr)
 					if !ok || !storekitTableArg[sel.Sel.Name] || len(node.Args) < 4 {
@@ -729,7 +729,12 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 							fset.Position(node.Pos()), exprText(fset, sel.X), sel.Sel.Name)
 						return
 					}
-					record(node.Pos(), []string{strings.ToLower(table)})
+					// Not "insert", and that is checkable rather than assumed:
+					// storekitTableArg holds Apply* and Lock* only, and none
+					// of them creates a row. TestNoPendingWriterHasAWriter
+					// leans on that — an INSERT cannot arrive through this arm
+					// and be read as an update.
+					record(node.Pos(), []sqlTarget{{table: strings.ToLower(table), verb: "storekit"}})
 					storekitWrites++
 				}
 			}
