@@ -52,6 +52,14 @@ size and gives up its two points. Nothing at a call site opts in.
 wherever you write `--r-full` or `50%` — a superellipse at full radius is a
 lozenge, and on an avatar it is a squircle tile.
 
+A generated box takes the shape too: `*` matches elements and not
+pseudo-elements, so `::before`, `::after` and `::backdrop` are named beside it
+in that rule. They have to be — the doubled tokens reach a pseudo-element
+anyway, because a custom property inherits and `corner-shape` does not, so an
+unlisted one would draw a ROUND corner at twice the radius its author asked
+for. `corners.test.ts` holds the list against the pseudo-elements the tree
+actually gives a corner to, so a fourth kind cannot arrive unnamed.
+
 ## Indigo says a machine did it
 
 **`--ai` is the AI hue, and it is not decoration.** An indigo tint on a surface

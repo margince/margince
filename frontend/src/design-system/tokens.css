@@ -780,7 +780,16 @@
  * beside its own `border-radius`, wherever that rule happens to sit. A
  * superellipse at --r-full is a lozenge and at 50% a squircle tile, and neither
  * is what an avatar or a status pill means. --r-full is therefore NOT doubled:
- * it is already larger than any box it lands on. */
+ * it is already larger than any box it lands on.
+ *
+ * The generated boxes are listed BESIDE the universal selector, because `*`
+ * matches elements and not pseudo-elements — while the doubled tokens reach
+ * them anyway, since a custom property inherits and `corner-shape` does not.
+ * Left off the list, `::before` and `::after` would keep the initial round
+ * shape and draw a corner at twice the radius its author asked for: a dot, a
+ * notch or a drawn separator visibly rounder than the box it belongs to. The
+ * pseudo-elements a stylesheet in this tree gives a corner to are held against
+ * this list by `corners.test.ts`, so a new one cannot arrive unlisted. */
 @supports (corner-shape: squircle) {
   :root {
     --r-xs: 8px;
@@ -789,7 +798,10 @@
     --r-md: 32px;
     --r-lg: 40px;
   }
-  :where(*) {
+  :where(*),
+  :where(*)::before,
+  :where(*)::after,
+  :where(*)::backdrop {
     corner-shape: squircle;
   }
 }

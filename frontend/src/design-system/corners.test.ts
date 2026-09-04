@@ -200,6 +200,27 @@ function namedRungs(text: string, rungs: Set<string>): string[] {
   return out;
 }
 
+/**
+ * The pseudo-elements a rule gives a corner to. `*` matches elements only, so
+ * each generated box that carries a radius has to be named beside the universal
+ * selector in the squircle rule — the doubled tokens reach it regardless, since
+ * a custom property inherits and `corner-shape` does not.
+ */
+function corneredPseudoElements(text: string): string[] {
+  const out = new Set<string>();
+  const rule = /([^{}]*)\{([^{}]*)\}/g;
+  for (let m = rule.exec(text); m; m = rule.exec(text)) {
+    const selector = m[1].replace(/\/\*[\s\S]*?\*\//g, "");
+    if (!selector.includes("::") || radii(m[2]).length === 0) {
+      continue;
+    }
+    for (const pseudo of selector.match(/::[a-z-]+/g) ?? []) {
+      out.add(pseudo);
+    }
+  }
+  return [...out];
+}
+
 /** A corner that is genuinely round, and so has to cancel the squircle. */
 function isRound(value: string): boolean {
   return /var\(--r-full\)|50%/.test(value);
@@ -260,6 +281,31 @@ describe("every corner in the tree reads one ladder", () => {
         `round;\` beside the radius — :where(*) carries no specificity, so that ` +
         `one line always wins.\n` +
         missing.join("\n"),
+    ).toEqual([]);
+  });
+
+  it("names every cornered pseudo-element beside the universal selector", () => {
+    const tokens = readFileSync(tokensFile, "utf8");
+    const squircleRule = tokens
+      .slice(tokens.indexOf("@supports (corner-shape: squircle)"))
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    const unlisted: string[] = [];
+    for (const file of sheets) {
+      for (const pseudo of corneredPseudoElements(readFileSync(file, "utf8"))) {
+        if (!squircleRule.includes(`::${pseudo.slice(2)}`)) {
+          unlisted.push(`${relative(frontendRoot, file)}: \`${pseudo}\``);
+        }
+      }
+    }
+    expect(
+      [...new Set(unlisted)],
+      `a stylesheet gives a corner to a pseudo-element the squircle rule does ` +
+        `not name. \`*\` matches elements and not pseudo-elements, but the ` +
+        `doubled tokens reach one anyway — a custom property inherits and ` +
+        `corner-shape does not — so an unlisted generated box draws a ROUND ` +
+        `corner at twice the radius its author asked for. Add ` +
+        `\`:where(*)<pseudo>\` to the rule in design-system/tokens.css.\n` +
+        unlisted.join("\n"),
     ).toEqual([]);
   });
 
@@ -404,6 +450,18 @@ describe("the corner detector sees what it claims to", () => {
       expect(strays).toHaveLength(probe.strays);
     });
   }
+
+  it("sees a cornered pseudo-element, and ignores one with no corner", () => {
+    expect(
+      corneredPseudoElements(".a::after { border-radius: var(--r-sm); }"),
+    ).toEqual(["::after"]);
+    expect(
+      corneredPseudoElements('.a::before { content: ""; opacity: 0.5; }'),
+    ).toEqual([]);
+    expect(
+      corneredPseudoElements(".a::marker { border-radius: 50%; }"),
+    ).toEqual(["::marker"]);
+  });
 
   it("reads a round corner in every spelling it is written in", () => {
     expect(isRound("var(--r-full)")).toBe(true);
