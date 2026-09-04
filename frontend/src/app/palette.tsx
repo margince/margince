@@ -500,7 +500,11 @@ export function CommandPalette({
             </Callout>
           )}
           {/* Held back until the wait is real (SEARCH_PENDING_DELAY_MS): a bar
-              that flashed on every keystroke would report work already done. */}
+              that flashed on every keystroke would report work already done.
+              The clock runs from the moment the bar appears and is NOT restarted
+              when one query replaces another under it — a reader typing through
+              a slow search should see one steady bar, not one that blinks out
+              and returns per letter. */}
           {search.pending && (
             <PendingBody
               label={t("palette.searching")}

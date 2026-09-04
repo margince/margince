@@ -1174,11 +1174,16 @@ export function PendingBody({
   const [waited, setWaited] = useState(delayMs === undefined);
   useEffect(() => {
     if (delayMs === undefined) {
+      // A caller that drops the delay wants the pending state NOW, and the
+      // effect has to say so: leaving `waited` where the previous delay left it
+      // hides the body for good, since nothing re-runs to release it.
+      setWaited(true);
       return;
     }
-    // Re-armed per mount, so a surface that swaps one pending body for another
-    // (a new query key on a new keystroke) starts the clock again rather than
-    // inheriting a window the previous read already spent.
+    // The clock is per MOUNT and per delay, not per read. A pending body that
+    // stays mounted while one query replaces another keeps the time it has
+    // already served — a reader typing through a slow search watches one bar
+    // rather than a bar that blinks out on every keystroke.
     setWaited(false);
     const timer = setTimeout(() => setWaited(true), delayMs);
     return () => clearTimeout(timer);

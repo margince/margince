@@ -520,3 +520,51 @@ it("shows an undelayed pending body on the first render", () => {
   expect(container.querySelector(".pending")).not.toBeNull();
   expect(container.querySelectorAll(".pending-line").length).toBe(2);
 });
+
+// A caller that drops the delay wants the pending state now. The effect used to
+// return early on `undefined` without releasing `waited`, so a body that had
+// been delayed stayed hidden for the rest of its life — no timer left to fire
+// and nothing else to set it.
+it("shows a delayed pending body at once when the delay is dropped", async () => {
+  vi.useFakeTimers();
+  try {
+    const { container, rerender } = render(
+      <PendingBody label="Searching…" lines={1} delayMs={300} />,
+    );
+    expect(container.querySelector(".pending")).toBeNull();
+
+    await act(async () => {
+      rerender(<PendingBody label="Searching…" lines={1} />);
+    });
+    expect(container.querySelector(".pending")).not.toBeNull();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+// The clock is per mount and per delay, not per read: a pending body that stays
+// mounted while one query replaces another keeps the time it has already
+// served. Re-arming there is what makes a bar blink out on every keystroke of a
+// slow search, which is the flicker the delay exists to prevent.
+it("keeps a delayed pending body up while it stays mounted", async () => {
+  vi.useFakeTimers();
+  try {
+    const { container, rerender } = render(
+      <PendingBody label="Searching…" lines={1} delayMs={300} />,
+    );
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(container.querySelector(".pending")).not.toBeNull();
+
+    // A new read under the same bar — same delay, same mount.
+    await act(async () => {
+      rerender(
+        <PendingBody label="Still searching…" lines={1} delayMs={300} />,
+      );
+    });
+    expect(container.querySelector(".pending")).not.toBeNull();
+  } finally {
+    vi.useRealTimers();
+  }
+});
