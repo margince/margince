@@ -48,6 +48,8 @@ const wantMinimumShareableWriters = 15
 // merely inconvenient: where the probe is simply a no-op today it was added
 // instead, because a no-op costs nothing and closes the drift.
 var writesWithoutARowProbe = gatekit.Waive(map[string]string{
+	"internal/modules/people:PromoteOwnCapturedPerson": "the mailbox owner publishing a contact their own capture made. A row probe would be the WRONG test and a wider one: EnsureWritable answers \"may this caller edit this record\", which a write grant or a team scope satisfies — and neither is authority to publish somebody else's private correspondence. Capture privacy is the importing user's alone and does not yield to row scope (auth/rowscope.go), so the row test here is OWNERSHIP, and it is in the UPDATE's own predicate (owner_id = the authenticated principal) where nothing can route around it. A miss is ErrNotFound rather than a permission error, because existence is what the boundary hides. The object grant is still taken, through auth.Require",
+
 	// Rows chosen by a CLOCK, not by a caller. A row-scope probe would narrow
 	// each sweep to whichever seat's rows the running principal could write and
 	// leave every other subject's record untouched — for retention that is the

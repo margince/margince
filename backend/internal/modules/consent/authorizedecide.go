@@ -27,12 +27,32 @@ import (
 // engine measurable: a row can say "this is a reply, and the old gate refused
 // it", which is exactly the disagreement a rollout needs to see before anybody
 // flips a mode.
-func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, d commsauthz.Decision) (commsauthz.Decision, error) {
+func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, d commsauthz.Decision, phase commsauthz.Phase) (commsauthz.Decision, error) {
 	res, err := g.resolveCategory(ctx, tx, req, subject)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
 	if res.Supported {
+		// The ground goes on the record BEFORE the message is permitted on it.
+		// A basis written afterwards would be describing a send that already
+		// happened, and one never written at all is the gap that made the
+		// subject-access export answer "we relied on nothing".
+		// RECORDED AT STAGING ONLY, and the phase is why. A basis is scoped
+		// to the conversation it was earned on, and that scope comes from the
+		// anchor — which communication_decision does not store, so the transmit
+		// phase cannot recover it. A transmit-phase write would therefore be an
+		// UNSCOPED row matching every other unscoped one, collapsing the thread
+		// separation staging established. Transmit still re-checks the
+		// evidence; what it does not do is write a second, weaker record of it.
+		if phase == commsauthz.PhaseStaging {
+			w, err := g.windowsFor(ctx, tx)
+			if err != nil {
+				return commsauthz.Decision{}, err
+			}
+			if err := recordBasis(ctx, tx, subject, res, req, w); err != nil {
+				return commsauthz.Decision{}, err
+			}
+		}
 		// The record bears the category out on its own evidence, so the engine
 		// allows on that ground and names it. This is the arm the old model had
 		// no way to reach: a reply to a thread the subject started needed no

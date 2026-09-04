@@ -68,6 +68,7 @@ func (w attentionWaiting) Hidden(
 		NotSales:    got.NotSales,
 		PastHorizon: got.PastHorizon,
 		Unlinked:    got.Unlinked,
+		Colleagues:  got.Colleagues,
 		Truncated:   got.Truncated,
 	}, nil
 }
@@ -110,6 +111,7 @@ func (w attentionWaiting) Unanswered(
 			OrganizationID: row.OrganizationID,
 			DealID:         row.DealID,
 			HasOpenDeal:    row.HasOpenDeal,
+			Engaged:        row.Engaged,
 			OwnerID:        row.OwnerID,
 		})
 	}

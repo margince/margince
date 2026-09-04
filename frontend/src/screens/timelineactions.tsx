@@ -1,23 +1,32 @@
 // The per-row action cluster the 360 timelines mount in each entry's action
-// slot, and the two audience controls behind it.
+// slot, and the audience control behind it.
 //
 // Lifted out of compose.tsx, which is 3,459 lines and was answering two
 // unrelated questions: how a person writes a message, and what a reader may do
-// to one already on a timeline. Nothing here changed in the move — the writes
-// now go through the shared audience service, which is where the thread
-// decision was already spelled a second time.
+// to one already on a timeline. The writes go through the shared audience
+// service, which is where the thread decision was already spelled a second
+// time.
+//
+// An EMAIL's audience is not changed from here. It is changed in the drawer,
+// which loads the access block and is told by the server which write it may
+// perform — so the row no longer guesses that from `captured_by`.
 
 import { type ReactNode, useState } from "react";
 
 import type { components } from "../api/schema";
-import { Badge, Button } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { entityTimelineKeys } from "./activitykeys";
-import { AudienceMembers, useAudienceCandidates } from "./audiencemembers";
-import { useMessageAudience, useThreadAudience } from "./audienceservice";
+import {
+  AUDIENCE_CHOICES,
+  AUDIENCE_HINT,
+  AUDIENCE_LABEL,
+  AudienceMembers,
+  useAudienceCandidates,
+} from "./audiencemembers";
+import { useMessageAudience } from "./audienceservice";
 import { problemMessageOf } from "./common";
 // Reply and Relink stay in compose.tsx for now: they are the composer's own
 // verbs, and moving them too would make a behaviour-preserving extraction into
@@ -79,34 +88,23 @@ export function TimelineActions({
       <Button small onClick={() => setRelink(true)}>
         {t("compose.relink")}
       </Button>
-      {/* Captured mail's audience is derived, never a direct write, and
-          ThreadAudienceAction's own endpoint refuses a thread_key with no
-          capture_import row behind it (capture/threadverdict.go). A hand-typed
-          REPLY carries a thread_key too — outboundmessage.go stamps every send
-          with the RFC822 thread it answers, imported or not — so thread_key
-          alone would route a rep's own threaded reply to the one control that
-          404s on it. `audience_reason` is no better a signal: it is null on an
-          untouched captured row (the wrong per-message dialog offered first)
-          and non-null on a narrowed hand-typed one, whose missing
-          capture_import row makes ThreadAudienceAction disappear for good.
-          captured_by's own prefix is what actually says "capture wrote this"
-          — `connector:<name>:<uuid>`, never `human:<uuid>` or `agent:<id>` —
-          so it is the one signal correct in every direction.
+      {/* An EMAIL's audience is changed from the message, in the drawer, where
+          the server states which write it would accept as `change_mode` and the
+          editor opens on the set already standing. The row used to decide that
+          here by testing `captured_by` for a `connector:` prefix — a backend
+          ownership rule spelled in display code, in a second language, where
+          the next change to what makes an audience derived would not find it.
 
-          This inference is display code holding a backend ownership rule. The
-          server answers the same question properly as `change_mode`, but on
-          the email PRESENTATION rather than on the summary a list row carries
-          — so the honest place to spend it is the drawer's own access editor,
-          where the presentation is already loaded. Deleting the inference here
-          before that editor exists would take the audience control off every
-          timeline row and give nothing back (margince#3811). */}
-      {(activity.captured_by ?? "").startsWith("connector:") ? (
-        <ThreadAudienceAction
-          activity={activity}
-          entityType={entityType}
-          entityId={entityId}
-        />
-      ) : (
+          It could not simply be deleted: `change_mode` costs two per-row
+          authorization queries (EnsureActivityWritable and callerIsSenderSeat
+          in activities/emailaccess.go), which is why it rides the presentation
+          and not the summary a twenty-row page ships. What removes the guess is
+          having somewhere better to ask, and the drawer is that.
+
+          Every other kind keeps its control. A note, a call or a meeting has no
+          drawer to be sent to, and its audience is never derived — there was
+          never a question to guess at for those, only the one write. */}
+      {activity.kind !== "email" && (
         <AudienceAction
           activity={activity}
           entityType={entityType}
@@ -128,108 +126,15 @@ export function TimelineActions({
   );
 }
 
-// The audiences the dialog offers — all three the API takes. `selected` waited
-// for a member picker, because offering it without one would be a choice the
-// reader cannot complete; AudienceMembers is that picker.
-const AUDIENCE_CHOICES: readonly ActivityAudience[] = [
-  "workspace",
-  "participants",
-  "selected",
-];
-
-// What each audience is called and what it means, in one place: the label and
-// the hint were a pair of ternaries that a third value would have made a pair
-// of nested ones.
-const AUDIENCE_LABEL: Record<ActivityAudience, MessageKey> = {
-  workspace: "compose.audienceWorkspace",
-  participants: "compose.audienceParticipants",
-  selected: "compose.audienceSelected",
-};
-const AUDIENCE_HINT: Record<ActivityAudience, MessageKey> = {
-  workspace: "compose.audienceWorkspaceHint",
-  participants: "compose.audienceParticipantsHint",
-  selected: "compose.audienceSelectedHint",
-};
-
-// Why a captured message is held, in the reader's words. A reason the server
-// learned to give and this map has not falls back to nothing rather than to the
-// raw token: a badge reading `financial_corporate` beside a customer's mail is
-// worse than no badge at all.
-const audienceReasonLabel: Record<string, MessageKey> = {
-  posture: "compose.reason.posture",
-  workspace_floor: "compose.reason.workspaceFloor",
-  no_record: "compose.reason.noRecord",
-  pending_verdict: "compose.reason.pendingVerdict",
-  manual: "compose.reason.manual",
-};
-
-// ThreadAudienceAction shares or keeps back a whole THREAD, for a message that
-// came from a mailbox.
+// AudienceAction limits (or re-opens) who may read ONE row's content — a note,
+// a call, a meeting, a channel message. Per row on purpose: a thread is not a
+// unit of trust, and the contact stays visible to everyone either way. Absent
+// on a row the reader cannot read in full: somebody who is not in the audience
+// has no standing to change it.
 //
-// Captured mail does not take the per-message dialog: its audience is derived
-// from what every importing mailbox asks for, so a direct write is refused
-// (`audience_is_derived`) and pointed here. The unit is the thread rather than
-// the message because that is what a person decides about — nobody shares the
-// third reply and keeps the fourth.
-//
-// The decision releases only the CALLER's hold. A thread two colleagues
-// imported opens when both allow it, so the outcome reports how many other
-// seats still hold it — a count and never a name, because whose mail a person
-// keeps private is itself private.
-function ThreadAudienceAction({
-  activity,
-  entityType,
-  entityId,
-}: Readonly<{
-  activity: Activity;
-  entityType: RelinkKind;
-  entityId: string;
-}>) {
-  const t = useT();
-  const [held, setHeld] = useState<number | null>(null);
-  const shared = activity.audience === "workspace";
-  const threadKey = activity.thread_key;
-  const mutation = useThreadAudience({
-    invalidate: () => entityTimelineKeys(entityType, entityId),
-    onSettled: ({ outcome }) => {
-      // A share that did not open the thread means somebody else still holds
-      // it. Saying so is the difference between a control that looks broken
-      // and one that reports what actually happened.
-      setHeld(outcome && !outcome.shared ? outcome.held_by_others : null);
-    },
-  });
-  // Withheld content carries no reason either, so there is nothing to draw and
-  // no standing to change it.
-  if (activity.content_state === "withheld" || !threadKey) {
-    return null;
-  }
-  const reasonKey = audienceReasonLabel[activity.audience_reason ?? ""];
-  return (
-    <>
-      {!shared && reasonKey && <Badge tone="warn">{t(reasonKey)}</Badge>}
-      <Button
-        small
-        pending={mutation.isPending}
-        onClick={() => {
-          setHeld(null);
-          mutation.mutate({ threadKey, share: !shared });
-        }}
-      >
-        {shared ? t("compose.threadKeepPrivate") : t("compose.threadShare")}
-      </Button>
-      {held !== null && (
-        <span className="t-caption">
-          {t("compose.threadStillHeld").replace("{count}", String(held))}
-        </span>
-      )}
-    </>
-  );
-}
-
-// AudienceAction limits (or re-opens) who may read ONE message's content. Per
-// message on purpose: a thread is not a unit of trust, and the contact stays
-// visible to everyone either way. Absent on a row the reader cannot read in
-// full — somebody who is not in the audience has no standing to change it.
+// An email does not come here. Its audience may be derived from what every
+// importing mailbox asked for, which is a different write, and the drawer is
+// where the server states which one it would accept.
 export function AudienceAction({
   activity,
   entityType,
@@ -246,14 +151,12 @@ export function AudienceAction({
   // The set the reader is building. Read only when `selected` is the choice,
   // and submitted as the FULL replacement set, which is what the write takes.
   //
-  // It starts EMPTY even on a message that is already limited, and that is a
-  // boundary rather than an oversight: `selected_members` rides EmailAccess,
-  // gated on `can_change`, and a timeline row carries no access block — reading
-  // one per row would be a detail fetch per visible line. So this dialog names
-  // a new set rather than editing the standing one, and the confirm below
-  // refuses an empty set so nobody narrows a message to nobody by pressing it
-  // twice. Editing an existing set in place belongs in the drawer, which
-  // already holds the access block it would start from.
+  // It starts EMPTY even on a row that is already limited, and that is a
+  // boundary rather than an oversight: who is named rides the access block,
+  // which only an email has and only the drawer's read fetches. A note carries
+  // no such read, so this dialog names a NEW set rather than editing the
+  // standing one, and the confirm below refuses an empty set so nobody narrows
+  // a row to nobody by pressing it twice.
   const [members, setMembers] = useState<AudienceMember[]>([]);
   // Fetched only while the dialog is open: the roster is two reads, and a
   // timeline of twenty rows would otherwise fire them per row on mount.

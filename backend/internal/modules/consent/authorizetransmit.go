@@ -129,7 +129,7 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 		return commsauthz.DecisionSet{}, err
 	}
 	for _, r := range req.Recipients {
-		d, err := g.decideOne(ctx, tx, r, stagedRequestFor(req, r, claims))
+		d, err := g.decideOne(ctx, tx, r, stagedRequestFor(req, r, claims), commsauthz.PhaseTransmit)
 		if err != nil {
 			return commsauthz.DecisionSet{}, err
 		}
@@ -159,7 +159,7 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 // now RESOLVED from the anchor and the links (authorizeresolve.go) instead of
 // read off the caller's label. The purpose key is still in there and still
 // consulted, as the weakest of the four grounds.
-func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request) (commsauthz.Decision, error) {
+func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, phase commsauthz.Phase) (commsauthz.Decision, error) {
 	d := commsauthz.Decision{Recipient: r, Resolved: commsauthz.CategoryMarketing}
 	personID, found, err := resolvePerson(ctx, tx, r)
 	if err != nil {
@@ -199,7 +199,7 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	}
 	return g.decideResolved(ctx, tx, req, subjectRef{
 		Kind: entityPerson, ID: personID, Address: r.Email,
-	}, d)
+	}, d, phase)
 }
 
 // blockedReasonCode translates the verdict's own code into the engine's
