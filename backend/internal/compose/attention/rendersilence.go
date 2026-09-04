@@ -114,7 +114,11 @@ func lapsedItem(quiet QuietRelationship) crmcontracts.AttentionItem {
 		},
 		Subject:    subjectOf(subjectPerson, quiet.PersonID),
 		OccurredAt: &lastAt,
-		Actions:    []crmcontracts.AttentionItemActions{actionOpen},
+		// Open the contact, or set them aside. The second is the verb this lane
+		// has needed since it shipped: nobody is waiting on a quiet contact, so
+		// a rep who had decided not to chase this one met the same row every
+		// morning with no way to say so.
+		Actions: []crmcontracts.AttentionItemActions{actionOpen, actionDismiss},
 	}
 }
 

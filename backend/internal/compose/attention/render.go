@@ -28,6 +28,18 @@ import (
 // lanewiring_test.go refuses the rest.
 const actionOpen crmcontracts.AttentionItemActions = "open"
 
+// actionDismiss puts a lapsed contact aside for a while.
+//
+// Offered ONLY where a dismissal endpoint takes the row's own id, which today
+// is the relationship-decay lane: its rows carry the person's id, and
+// /people/{id}/nudge-dismissal is keyed on exactly that. A verb on a row whose
+// id the endpoint cannot take would be a control that 404s.
+//
+// A reader's own judgement rather than a change to the record — the contact is
+// no less quiet for being set aside — which is why the dismissal is per-reader
+// and expires rather than resolving anything.
+const actionDismiss crmcontracts.AttentionItemActions = "dismiss"
+
 // duplicateItem renders one open candidate pair, with both records named.
 //
 // The title is left EMPTY and the kind carries the record type, because this
