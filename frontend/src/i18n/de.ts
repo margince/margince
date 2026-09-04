@@ -8187,6 +8187,10 @@ export const de = {
     "Das konnte nicht als gelesen markiert werden.",
   "worklist.verb.completeFailed":
     "Diese Aufgabe konnte nicht abgeschlossen werden.",
+  "worklist.verb.pin": "Anheften",
+  "worklist.verb.unpin": "Lösen",
+  "worklist.verb.pinFailed": "Diese Zeile konnte nicht angeheftet werden.",
+  "worklist.verb.unpinFailed": "Diese Zeile konnte nicht gelöst werden.",
   "worklist.verb.completed": "Aufgabe erledigt.",
   "worklist.verb.completeUndo": "Rückgängig",
   "worklist.verb.completeUndoFailed":
