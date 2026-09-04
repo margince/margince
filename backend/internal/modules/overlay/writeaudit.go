@@ -234,8 +234,13 @@ func writePathError(err error) error {
 // read-path placeholder that always fails, and the disconnect fence is
 // engaged (WithFence) so a write landing after a Disconnect cannot
 // repopulate the purged mirror.
+// commitUpdateWriteBack ingests the incumbent's post-write record into the
+// mirror and audits what the write actually changed, in one transaction.
+//
+// It takes the BEFORE image and the returned record, not the patch: the patch
+// says what was asked for, and the record says what happened.
 func (p *Provider) commitUpdateWriteBack(ctx context.Context, inc Incumbent, rec Record,
-	ref datasource.EntityRef, before, after map[string]any,
+	ref datasource.EntityRef, before map[string]any,
 ) error {
 	if p.ms == nil {
 		return errNoMirrorStore()
@@ -247,7 +252,15 @@ func (p *Provider) commitUpdateWriteBack(ctx context.Context, inc Incumbent, rec
 		if landed, ingestErr = ms.ingestTx(ctx, tx, rec); ingestErr != nil {
 			return ingestErr
 		}
-		return auditWriteBack(ctx, tx, auditActionUpdate, ref, rec.ExternalID, before, after)
+		// Nothing moved: no audit row and no event. An Updated event with an
+		// empty changed_fields still announces an update, and a subscriber
+		// cannot tell it from one that changed something it does not read.
+		settledBefore, settledAfter := settledImages(before, rec)
+		if len(settledAfter) == 0 {
+			return nil
+		}
+		return auditWriteBack(ctx, tx, auditActionUpdate, ref, rec.ExternalID,
+			settledBefore, settledAfter)
 	})
 	if err == nil && landed {
 		mirrorSyncedTotal.Add(1)
@@ -336,4 +349,46 @@ func beforeImage(row Row, patch map[string]any) map[string]any {
 		before[k] = row.Fields[k]
 	}
 	return before
+}
+
+// settledImages narrow a write's before/after pair to the fields that ACTUALLY
+// MOVED, reading the after side off the record the incumbent returned rather
+// than off the patch that asked for it.
+//
+// The patch is a request, not an outcome. An incumbent writes only the fields
+// its mapping projects — the rest are read-only there and surfaced honestly
+// rather than guessed (mapwrite.go) — so a patch naming only read-only fields
+// wrote nothing, and one naming a mix wrote half. Auditing the request made
+// history and the outbox report a field moving that nobody moved, on a call
+// that answered 200.
+//
+// Equality is by rendered value, which is what the audit image and
+// changed_fields carry anyway: these are JSON-decoded canonical bags, so two
+// values that render identically are the same value to every reader of this
+// trail.
+func settledImages(before map[string]any, rec Record) (settledBefore, settledAfter map[string]any) {
+	settledBefore = make(map[string]any, len(before))
+	settledAfter = make(map[string]any, len(before))
+	for field, was := range before {
+		now := rec.Fields[field]
+		if sameFieldValue(was, now) {
+			continue
+		}
+		settledBefore[field] = was
+		settledAfter[field] = now
+	}
+	return settledBefore, settledAfter
+}
+
+// sameFieldValue compares two canonical field values as the audit trail renders
+// them. fmt over reflect.DeepEqual because the bags are JSON-decoded: a number
+// that arrived as float64 and one the mirror holds as json.Number are the same
+// value to a reader and different values to DeepEqual.
+//
+//craft:ignore naked-any these are the JSON-decoded canonical bags; the any is inherent to the decoded shape
+func sameFieldValue(a, b any) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
 }

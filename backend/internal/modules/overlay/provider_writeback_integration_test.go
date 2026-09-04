@@ -15,6 +15,7 @@ package overlay
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"testing"
@@ -357,4 +358,132 @@ func TestProviderArchivePurgesMirror(t *testing.T) {
 	if _, err := ms.Get(ctx, "person", "555"); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("mirror row after Archive: err = %v, want ErrNotFound (purged)", err)
 	}
+}
+
+// A patch naming only read-only fields writes nothing, and the trail says so.
+//
+// `full_name` is read-only in the HubSpot mapping — splitting a display string
+// into first/last is ambiguous and lossy — so the adapter sends no property and
+// re-reads the incumbent. The write-back audited the REQUESTED patch as the
+// after image, so history and the outbox both reported full_name moving on a
+// record nobody touched, behind a 200.
+func TestAReadOnlyPatchAuditsNoChange(t *testing.T) {
+	ctx, pool, ws := testWorkspaceCtx(t)
+	ms := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), noOwnerEmails{})
+	mapActorToOwner(ctx, t, ms)
+	seedActiveConnection(ctx, t, pool)
+
+	baseline := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+	stored := Record{
+		ObjectClass: "person", ExternalID: "556",
+		Fields:     map[string]any{"first_name": "Ada", "full_name": "Ada Lovelace"},
+		ModifiedAt: baseline, OwnerExternalID: writebackOwner,
+	}
+	if err := ms.Ingest(ctx, stored); err != nil {
+		t.Fatalf("seeding mirror: %v", err)
+	}
+
+	// The incumbent answers with the record UNCHANGED, which is what a
+	// read-only patch produces: nothing was sent, so nothing moved.
+	inc := &writeBackIncumbent{updateRec: stored}
+	p := providerFor(ms, inc)
+
+	id, _ := externalIDToUUID("556")
+	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: id}
+	if _, err := p.Update(ctx, datasource.UpdateInput{
+		Ref: ref, Patch: map[string]any{"full_name": "Ada Byron"},
+	}); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	if rows := auditRowsFor(ctx, t, pool, id); rows != 0 {
+		t.Errorf("a patch that wrote nothing left %d audit row(s); want none — "+
+			"an after image describing a write that did not happen is wrong", rows)
+	}
+	if events := outboxRowsFor(ctx, t, pool, id); events != 0 {
+		t.Errorf("a patch that wrote nothing emitted %d event(s); want none — "+
+			"an Updated event with nothing in it still announces an update", events)
+	}
+}
+
+// A patch naming a writable field AND a read-only one reports only the half
+// that landed. Auditing the whole patch here is the same defect as above, in
+// the shape that still returns a real change alongside it.
+func TestAMixedPatchAuditsOnlyWhatLanded(t *testing.T) {
+	ctx, pool, ws := testWorkspaceCtx(t)
+	ms := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), noOwnerEmails{})
+	mapActorToOwner(ctx, t, ms)
+	seedActiveConnection(ctx, t, pool)
+
+	baseline := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+	if err := ms.Ingest(ctx, Record{
+		ObjectClass: "person", ExternalID: "557",
+		Fields:     map[string]any{"first_name": "Ada", "full_name": "Ada Lovelace"},
+		ModifiedAt: baseline, OwnerExternalID: writebackOwner,
+	}); err != nil {
+		t.Fatalf("seeding mirror: %v", err)
+	}
+
+	// first_name moved; full_name is read-only there and came back as it was.
+	inc := &writeBackIncumbent{updateRec: Record{
+		ObjectClass: "person", ExternalID: "557",
+		Fields:     map[string]any{"first_name": "Grace", "full_name": "Ada Lovelace"},
+		ModifiedAt: baseline.Add(time.Hour), OwnerExternalID: writebackOwner,
+	}}
+	p := providerFor(ms, inc)
+
+	id, _ := externalIDToUUID("557")
+	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: id}
+	if _, err := p.Update(ctx, datasource.UpdateInput{Ref: ref, Patch: map[string]any{
+		"first_name": "Grace", "full_name": "Grace Hopper",
+	}}); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	after := auditAfterImage(ctx, t, pool, id)
+	if _, claimed := after["full_name"]; claimed {
+		t.Errorf("the audit after image claims full_name changed: %v — it is "+
+			"read-only in this mapping and came back as it was", after)
+	}
+	if after["first_name"] != "Grace" {
+		t.Errorf("the audit after image = %v, want first_name Grace — the half "+
+			"that DID land has to be recorded", after)
+	}
+}
+
+// auditRowsFor counts the person-update audit rows for one record.
+func auditRowsFor(ctx context.Context, t *testing.T, pool *pgxpool.Pool, id ids.UUID) int {
+	t.Helper()
+	var count int
+	queryRowWS(ctx, t, pool, `
+		SELECT count(*) FROM audit_log
+		 WHERE entity_type = 'person' AND action = 'update' AND entity_id = $1`,
+		[]any{id}, &count)
+	return count
+}
+
+// outboxRowsFor counts the events staged for one record.
+func outboxRowsFor(ctx context.Context, t *testing.T, pool *pgxpool.Pool, id ids.UUID) int {
+	t.Helper()
+	var count int
+	queryRowWS(ctx, t, pool, `
+		SELECT count(*) FROM event_outbox
+		 WHERE envelope->'payload'->>'id' = $1::text`,
+		[]any{id}, &count)
+	return count
+}
+
+// auditAfterImage reads the recorded after image of the one person update.
+func auditAfterImage(ctx context.Context, t *testing.T, pool *pgxpool.Pool, id ids.UUID) map[string]any {
+	t.Helper()
+	var raw []byte
+	queryRowWS(ctx, t, pool, `
+		SELECT after FROM audit_log
+		 WHERE entity_type = 'person' AND action = 'update' AND entity_id = $1`,
+		[]any{id}, &raw)
+	var out map[string]any
+	if err := json.Unmarshal(raw, &out); err != nil {
+		t.Fatalf("decoding the audit after image %s: %v", raw, err)
+	}
+	return out
 }
