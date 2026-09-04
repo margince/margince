@@ -99,3 +99,21 @@ func writeDisagreements(stdout io.Writer, report []consent.Disagreement) error {
 		stopping, starting)
 	return nil
 }
+
+// runDatabaseSubcommand dispatches the subcommands that need a database, and
+// reports whether it handled the arguments.
+//
+// Separate from runDebugSubcommand (boot.go) because of WHEN it runs, not what
+// it contains: those loops take no DSN and run before the worker flags, while
+// these read the installation's own rows and must run after the role and
+// release assertions — a report against a schema this binary does not agree
+// with is a report about something else.
+func runDatabaseSubcommand(ctx context.Context, pool *pgxpool.Pool, args []string, stdout io.Writer) (bool, error) {
+	if len(args) == 0 {
+		return false, nil
+	}
+	if args[0] == "authz-disagreement" {
+		return true, runAuthzDisagreement(ctx, pool, args[1:], stdout)
+	}
+	return false, nil
+}
