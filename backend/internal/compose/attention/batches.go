@@ -298,11 +298,17 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 		},
 		Actions: []crmcontracts.WorklistItemActions{},
 		// The members' own screen, carried onto the row that stands for them.
-		// The fold has already refused to group rows that disagree, so the first
-		// member answers for all of them — and deriving it from the word `batch`
-		// instead would put a pile of approvals wherever `batch` was mapped
-		// rather than where its members belong.
-		Destination: destinationPtr(destinationOf(members[0])),
+		// Deriving it from the word `batch` instead would put a pile of
+		// approvals wherever `batch` was mapped rather than where its members
+		// belong.
+		//
+		// Read the same way the OWNER below is read — from the members, and only
+		// where they agree. The fold refuses to group rows bound for different
+		// screens, so today this can only be the one they share; asking the
+		// members rather than trusting that keeps the two answers from drifting
+		// apart if a second caller ever reaches this function without the
+		// guard in front of it.
+		Destination: destinationPtr(destinationOfGroup(members)),
 	}
 	if cause != "" {
 		row.Batch.Cause = &cause
