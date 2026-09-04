@@ -932,8 +932,12 @@ describe("every obligation is drawn once", () => {
     const { container } = renderWorklist();
     await screen.findByText("Kirsten replied");
 
-    const drawn = [...container.querySelectorAll("li")].map(
-      (item) => item.querySelector(".worklist-row-title")?.textContent ?? "",
+    // Over the WHOLE page, not over its list items. The focus card this test
+    // exists to keep away drew its copy OUTSIDE any <li>, so walking list items
+    // filtered the duplicate out and the test passed while the screen showed
+    // exactly the duplication it names.
+    const drawn = [...container.querySelectorAll(".worklist-row-title")].map(
+      (title) => title.textContent ?? "",
     );
     const seen = new Map<string, number>();
     for (const title of drawn.filter(Boolean)) {

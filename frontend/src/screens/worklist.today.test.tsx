@@ -83,6 +83,59 @@ describe("the day is one panel", () => {
 });
 
 describe("a task is finished where the reader is standing", () => {
+  it("submits once however fast the reader presses", async () => {
+    let patches = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : undefined;
+        const url = String(request?.url ?? input);
+        if (request?.method === "PATCH") {
+          patches += 1;
+          // HELD, the way a real network holds it. A PATCH that resolves in
+          // the same tick never lets the button paint its busy state, so the
+          // test would be measuring the mock rather than the guard.
+          await new Promise((settle) => setTimeout(settle, 20));
+          return new Response(null, { status: 204 });
+        }
+        if (url.includes("/worklist")) {
+          return new Response(
+            JSON.stringify(
+              day({
+                queue: [aTask()],
+                summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+              }),
+            ),
+            { status: 200, headers: { "content-type": "application/json" } },
+          );
+        }
+        return new Response(JSON.stringify({ data: [] }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }),
+    );
+    renderWorklist();
+
+    const done = await screen.findByRole("button", { name: "Done" });
+    // Two presses with no wait between them. The mutation holds the button
+    // pending until the refetch it triggered has settled, so the second press
+    // lands on a disabled control — without that the row sits there finished
+    // and pressable, and the second PATCH answers for a task already done.
+    await userEvent.click(done);
+    await userEvent.click(done);
+
+    // ONE write, however many presses. `Button` drops its `onClick` while
+    // `pending`, and the mutation stays pending until the refetch it triggered
+    // has settled — so the finished row is never both on screen and pressable.
+    await waitFor(() => {
+      expect(patches).toBe(1);
+    });
+    // And the write did land: an assertion that only counts PATCHes passes just
+    // as well against a button that never fired at all.
+    expect(patches).toBe(1);
+  });
+
   it("completes it rather than navigating to it", async () => {
     const fetched = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input instanceof Request ? input.url : input);
