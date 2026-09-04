@@ -423,6 +423,29 @@ function TaskComplete({ id }: Readonly<{ id: string }>) {
           update.mutate(
             { id, body: { is_done: true } },
             {
+              // Undoable from the confirmation, the way every disposition
+              // beside it is. Done REMOVES the row, so a misclick otherwise
+              // costs the reader the only address they had for the task —
+              // they must remember what it was to find it again.
+              onSuccess: () =>
+                toast.show(t("worklist.verb.completed"), {
+                  action: {
+                    label: t("worklist.verb.completeUndo"),
+                    // The toast dismisses itself the moment the action is
+                    // pressed, so a failed undo leaves the task done with the
+                    // only way back already off the screen.
+                    onAct: () =>
+                      update.mutate(
+                        { id, body: { is_done: false } },
+                        {
+                          onError: () =>
+                            toast.show(t("worklist.verb.completeUndoFailed"), {
+                              mark: false,
+                            }),
+                        },
+                      ),
+                  },
+                }),
               // A rejected PATCH otherwise leaves the button idle with nothing
               // on screen to say so — the same rendering a click that did
               // nothing would leave, and the reader has no reason to try again.
