@@ -22,19 +22,23 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// aContact is one person for a dismissal to be about.
-func aContact(t *testing.T, e *dedupeEnv, name string) ids.PersonID {
+// aContact is one person for a dismissal to be about. The name is fixed because
+// no case here turns on it — what varies between cases is who dismissed whom.
+func aContact(t *testing.T, e *dedupeEnv) ids.PersonID {
 	t.Helper()
-	person, err := e.store.CreatePerson(e.as(), CreatePersonInput{FullName: name, Source: "test"})
+	person, err := e.store.CreatePerson(e.as(),
+		CreatePersonInput{FullName: "Dana Weiss", Source: "test"})
 	if err != nil {
-		t.Fatalf("creating %s: %v", name, err)
+		t.Fatalf("creating the contact: %v", err)
 	}
 	return ids.From[ids.PersonKind](ids.UUID(person.Id))
 }
 
 // dismissedNow asks the read side, in its own transaction, the way the decay
 // seam does.
-func dismissedNow(t *testing.T, e *dedupeEnv, ctx context.Context, people []ids.PersonID, at time.Time) map[ids.UUID]bool {
+func dismissedNow(
+	ctx context.Context, t *testing.T, e *dedupeEnv, people []ids.PersonID, at time.Time,
+) map[ids.UUID]bool {
 	t.Helper()
 	var out map[ids.UUID]bool
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
@@ -50,13 +54,13 @@ func dismissedNow(t *testing.T, e *dedupeEnv, ctx context.Context, people []ids.
 // The whole point: a contact the rep put down is off their lane.
 func TestADismissedContactIsOffTheReadersLane(t *testing.T) {
 	e := setupDedupe(t)
-	person := aContact(t, e, "Dana Weiss")
+	person := aContact(t, e)
 
 	if err := e.store.DismissRelationshipNudge(e.as(), person, 30); err != nil {
 		t.Fatalf("dismissing: %v", err)
 	}
 
-	if !dismissedNow(t, e, e.as(), []ids.PersonID{person}, time.Now())[person.UUID] {
+	if !dismissedNow(e.as(), t, e, []ids.PersonID{person}, time.Now())[person.UUID] {
 		t.Fatal("a contact the rep set aside is still on their lane")
 	}
 }
@@ -68,7 +72,7 @@ func TestADismissedContactIsOffTheReadersLane(t *testing.T) {
 // that job last ran, which is not the moment the rep picked.
 func TestADismissedContactReturnsWhenItsMomentPasses(t *testing.T) {
 	e := setupDedupe(t)
-	person := aContact(t, e, "Dana Weiss")
+	person := aContact(t, e)
 
 	if err := e.store.DismissRelationshipNudge(e.as(), person, 7); err != nil {
 		t.Fatalf("dismissing: %v", err)
@@ -77,13 +81,13 @@ func TestADismissedContactReturnsWhenItsMomentPasses(t *testing.T) {
 	// Read as of a moment past the span, rather than by waiting or by moving a
 	// clock: the read takes the instant, so the passage of time is an argument.
 	past := time.Now().AddDate(0, 0, 8)
-	if dismissedNow(t, e, e.as(), []ids.PersonID{person}, past)[person.UUID] {
+	if dismissedNow(e.as(), t, e, []ids.PersonID{person}, past)[person.UUID] {
 		t.Fatal("a dismissal outlived the moment the rep chose")
 	}
 	// And is still down before it, so the case above is the expiry rather than
 	// a read that never finds anything.
 	soon := time.Now().AddDate(0, 0, 6)
-	if !dismissedNow(t, e, e.as(), []ids.PersonID{person}, soon)[person.UUID] {
+	if !dismissedNow(e.as(), t, e, []ids.PersonID{person}, soon)[person.UUID] {
 		t.Fatal("the dismissal lapsed before the moment the rep chose")
 	}
 }
@@ -93,13 +97,13 @@ func TestADismissedContactReturnsWhenItsMomentPasses(t *testing.T) {
 // from a queue whose owner never made the call.
 func TestADismissalBindsOnlyTheReaderWhoMadeIt(t *testing.T) {
 	e := setupDedupe(t)
-	person := aContact(t, e, "Dana Weiss")
+	person := aContact(t, e)
 
 	if err := e.store.DismissRelationshipNudge(e.as(), person, 30); err != nil {
 		t.Fatalf("dismissing: %v", err)
 	}
 
-	if dismissedNow(t, e, e.asOther(), []ids.PersonID{person}, time.Now())[person.UUID] {
+	if dismissedNow(e.asOther(), t, e, []ids.PersonID{person}, time.Now())[person.UUID] {
 		t.Fatal("one rep's decision took the contact off a colleague's lane")
 	}
 }
@@ -108,7 +112,7 @@ func TestADismissalBindsOnlyTheReaderWhoMadeIt(t *testing.T) {
 // dismissal named.
 func TestRestoringPutsTheContactBackImmediately(t *testing.T) {
 	e := setupDedupe(t)
-	person := aContact(t, e, "Dana Weiss")
+	person := aContact(t, e)
 	if err := e.store.DismissRelationshipNudge(e.as(), person, 30); err != nil {
 		t.Fatalf("dismissing: %v", err)
 	}
@@ -117,7 +121,7 @@ func TestRestoringPutsTheContactBackImmediately(t *testing.T) {
 		t.Fatalf("restoring: %v", err)
 	}
 
-	if dismissedNow(t, e, e.as(), []ids.PersonID{person}, time.Now())[person.UUID] {
+	if dismissedNow(e.as(), t, e, []ids.PersonID{person}, time.Now())[person.UUID] {
 		t.Fatal("a restored contact is still off the lane")
 	}
 }
@@ -126,7 +130,7 @@ func TestRestoringPutsTheContactBackImmediately(t *testing.T) {
 // state already holds.
 func TestRestoringAContactNobodyDismissedSucceeds(t *testing.T) {
 	e := setupDedupe(t)
-	person := aContact(t, e, "Dana Weiss")
+	person := aContact(t, e)
 
 	if err := e.store.RestoreRelationshipNudge(e.as(), person); err != nil {
 		t.Fatalf("restoring a contact who was never set aside: %v", err)
@@ -137,7 +141,7 @@ func TestRestoringAContactNobodyDismissedSucceeds(t *testing.T) {
 // and then wants a month is saying one thing, not colliding with themselves.
 func TestDismissingAgainReplacesTheMoment(t *testing.T) {
 	e := setupDedupe(t)
-	person := aContact(t, e, "Dana Weiss")
+	person := aContact(t, e)
 	if err := e.store.DismissRelationshipNudge(e.as(), person, 3); err != nil {
 		t.Fatalf("dismissing: %v", err)
 	}
@@ -149,7 +153,7 @@ func TestDismissingAgainReplacesTheMoment(t *testing.T) {
 	// Past the FIRST span and inside the second, which is where the two answers
 	// differ: a write that collided or was ignored leaves the contact back.
 	between := time.Now().AddDate(0, 0, 10)
-	if !dismissedNow(t, e, e.as(), []ids.PersonID{person}, between)[person.UUID] {
+	if !dismissedNow(e.as(), t, e, []ids.PersonID{person}, between)[person.UUID] {
 		t.Fatal("the second dismissal did not extend the first")
 	}
 }
@@ -159,7 +163,7 @@ func TestDismissingAgainReplacesTheMoment(t *testing.T) {
 // them a moment they will read as the one they asked for.
 func TestASpanOutsideTheRangeIsRefused(t *testing.T) {
 	e := setupDedupe(t)
-	person := aContact(t, e, "Dana Weiss")
+	person := aContact(t, e)
 
 	for _, days := range []int{0, -1, nudgeDismissalMaxDays + 1} {
 		if err := e.store.DismissRelationshipNudge(e.as(), person, days); err == nil {
@@ -176,7 +180,7 @@ func TestASpanOutsideTheRangeIsRefused(t *testing.T) {
 // The write shape: domain row, audit row and outbox row in ONE transaction.
 func TestADismissalWritesTheAuditAndTheAnnouncement(t *testing.T) {
 	e := setupDedupe(t)
-	person := aContact(t, e, "Dana Weiss")
+	person := aContact(t, e)
 
 	if err := e.store.DismissRelationshipNudge(e.as(), person, 14); err != nil {
 		t.Fatalf("dismissing: %v", err)
@@ -198,7 +202,7 @@ func TestADismissalWritesTheAuditAndTheAnnouncement(t *testing.T) {
 // row going quiet.
 func TestARestoreIsAnnouncedRatherThanInferred(t *testing.T) {
 	e := setupDedupe(t)
-	person := aContact(t, e, "Dana Weiss")
+	person := aContact(t, e)
 	if err := e.store.DismissRelationshipNudge(e.as(), person, 14); err != nil {
 		t.Fatalf("dismissing: %v", err)
 	}
