@@ -29,6 +29,11 @@ export function StatStrip({
   floor,
 }: Readonly<{
   children: ReactNode;
+  // How the strip SITS in the layout around it — it lands on the strip's
+  // outer box, which is the element the parent lays out. Not for restyling
+  // the row of slots itself: the row's grid, gaps and fold are this
+  // component's, and a caller reaching into them is the drift the strip
+  // exists to prevent.
   className?: string;
   testId?: string;
   // The row's name as a landmark, for a screen that wants the readings
@@ -61,7 +66,7 @@ export function StatStrip({
   };
   const row = (
     <section
-      className={["stat-strip", className ?? ""].filter(Boolean).join(" ")}
+      className="stat-strip"
       style={vars}
       aria-label={label}
       data-testid={testId}
@@ -75,8 +80,15 @@ export function StatStrip({
   // window most of all, which is what the fold used to read and why five
   // readings stayed five across a work column squeezed between an open nav
   // and an open details pane.
+  //
+  // The caller's class rides the wrapper rather than the row, because it is
+  // the wrapper that is now the parent's child: a caller says how the strip
+  // SITS in the layout around it, and a rule stranded one level in stopped
+  // reaching the box being laid out.
   return (
-    <div className="stat-strip-wrap">
+    <div
+      className={["stat-strip-wrap", className ?? ""].filter(Boolean).join(" ")}
+    >
       {row}
       {floor ? <ReadingsFloor>{floor}</ReadingsFloor> : null}
     </div>
