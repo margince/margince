@@ -35,20 +35,28 @@ func pipelineCurrentSpec() reportSpec {
 			"currency — each deal converted on its own at the answer's as-of date, a closed " +
 			"rate never re-converted, and a deal whose rate is missing counted but not priced",
 		dimensions: map[string]string{
-			fieldStageID:      colStageID,
-			fieldPipelineID:   colPipelineID,
-			fieldOwnerID:      colOwnerID,
+			fieldStageID:    colStageID,
+			fieldPipelineID: colPipelineID,
+			fieldOwnerID:    colOwnerID,
+			// The currency a deal was WRITTEN in stays groupable: "how much of
+			// this pipeline is denominated abroad" is a real question, and the
+			// money answering it is still converted, so the total under each
+			// currency is comparable with the others.
 			fieldCurrency:     colCurrency,
 			fieldPartnerOrgID: colPartnerOrgID,
 		},
+		// BASE-CURRENCY measures only, and the native ones are deliberately
+		// absent.
+		//
+		// This spec's whole reason to exist is that its default grouping does
+		// NOT include currency — one stage is one row. Offering amount_minor
+		// beside that would let a caller ask for a sum of minor units across
+		// currencies and get a number with no unit: 10,000 EUR + 10,000 USD =
+		// 20,000 of nothing, where the answer is 15,000 EUR. deals-by-stage
+		// still serves the native figures, and it groups by currency.
 		measures: map[string]string{
-			// The native amount stays available: the base figure is the answer,
-			// and the native one is what a reader recognises when they open the
-			// deal.
-			fieldAmountMinor:         colAmountMinor,
-			fieldWeightedAmountMinor: weightedAmountMinorExpr,
-			fieldAmountBaseMinor:     pipelineBaseValueExpr,
-			fieldWeightedBaseMinor:   pipelineWeightedBaseExpr,
+			fieldAmountBaseMinor:   pipelineBaseValueExpr,
+			fieldWeightedBaseMinor: pipelineWeightedBaseExpr,
 		},
 		filters: map[string]string{
 			fieldPipelineID:     colPipelineID,
