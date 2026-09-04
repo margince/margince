@@ -53,7 +53,7 @@ func driftDatabase(t *testing.T, conn *pgx.Conn) {
 func replayDecisionIndexRepair(t *testing.T, conn *pgx.Conn) {
 	t.Helper()
 	up, err := os.ReadFile(filepath.Join("core",
-		"1788497182_the_decision_index_matches_what_the_send_infers_on.up.sql"))
+		"1788540101_the_decision_index_matches_what_the_send_infers_on.up.sql"))
 	if err != nil {
 		t.Fatalf("reading the repair: %v", err)
 	}
@@ -119,11 +119,11 @@ func TestTheRepairIsANoOpOnADatabaseThatWasNeverDrifted(t *testing.T) {
 	// is an exclusive lock and a full rebuild, during a migration a fresh
 	// installation is told costs nothing. Only the oid separates the two, since
 	// the name and the definition are identical either way.
-	before := indexOID(t, ctx, conn)
+	before := indexOID(ctx, t, conn)
 
 	replayDecisionIndexRepair(t, conn)
 
-	if after := indexOID(t, ctx, conn); after != before {
+	if after := indexOID(ctx, t, conn); after != before {
 		t.Errorf("the repair replaced the decision index (oid %d became %d) — it is "+
 			"meant to leave a correct one alone, and dropping it to recreate it takes "+
 			"an exclusive lock and rebuilds every row", before, after)
@@ -148,7 +148,7 @@ func TestTheRepairIsANoOpOnADatabaseThatWasNeverDrifted(t *testing.T) {
 // Fatal when it is missing rather than answering zero: a comparison of two
 // absences would be equal, and this is the one reading whose whole purpose is
 // to notice a difference.
-func indexOID(t *testing.T, ctx context.Context, conn *pgx.Conn) uint32 {
+func indexOID(ctx context.Context, t *testing.T, conn *pgx.Conn) uint32 {
 	t.Helper()
 	var oid uint32
 	if err := conn.QueryRow(ctx, `
