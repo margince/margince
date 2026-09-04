@@ -158,6 +158,12 @@ func (s *Service) Worklist(
 	if err := reader.nameTheStep(ctx, out.Queue); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
+	// And the name beside each owner id, over the same cut page and for the same
+	// reason: a label is drawn and never ranked, so resolving one for a row this
+	// caller will not receive spends a read on nothing.
+	if err := reader.nameTheOwners(ctx, out.Queue); err != nil {
+		return crmcontracts.Worklist{}, err
+	}
 	return out, nil
 }
 
@@ -307,7 +313,7 @@ func (s *Service) worklistFrom(
 	// the whole narrowed set — so page two weighs exactly what page one weighed
 	// and continues it rather than re-deciding it.
 	shown, more, reached := pageFrom(rows, limit, cursor)
-	ordered := rankAll(stampAsOf(shown, day.AsOf))
+	ordered := rankAllFor(stampAsOf(shown, day.AsOf), readerOf(ctx))
 	bands := bandsOf(ordered)
 	// What never answered, assembled ONCE and used twice: the page names these
 	// lanes to the reader, and the readings below refuse to state exact figures

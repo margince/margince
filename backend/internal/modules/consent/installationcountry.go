@@ -39,9 +39,31 @@ func (f InstallationCountryFunc) InstallationCountryTx(ctx context.Context, tx p
 }
 
 // WithInstallationCountry injects the reader behind jurisdiction resolution.
+//
+// It lands on the STORE rather than the gate because two callers need the
+// jurisdiction's windows and only one of them is a gate: the send path asks
+// through the engine, and GET /people/{id}/consent/guard asks through the
+// store. A preview that answered on a different window than the send would be
+// the second answer to one question, which is the failure this repository
+// spends most of its gates preventing.
 func (g *Gate) WithInstallationCountry(r InstallationCountryReader) *Gate {
-	g.country = r
+	g.store.country = r
 	return g
+}
+
+// WithInstallationCountry is the store-side spelling, for the surfaces that
+// hold a store and no gate.
+func (s *Store) WithInstallationCountry(r InstallationCountryReader) *Store {
+	s.country = r
+	return s
+}
+
+// WithInstallationCountry is the handlers-side spelling. The consent guard
+// endpoint reads the same windows the send path binds a decision to, so it
+// needs the same jurisdiction.
+func (h Handlers) WithInstallationCountry(r InstallationCountryReader) Handlers {
+	h.store = h.store.WithInstallationCountry(r)
+	return h
 }
 
 // installationCountry resolves the code, or empty when nothing is wired or
@@ -54,9 +76,9 @@ func (g *Gate) WithInstallationCountry(r InstallationCountryReader) *Gate {
 // is consulted — doing exactly what it did before. A reader added later that
 // RELAXES a rule on the strength of a country must not use this, because it
 // would then relax on an unstated one.
-func (g *Gate) installationCountry(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
-	if g.country == nil {
+func (s *Store) installationCountry(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
+	if s.country == nil {
 		return "", nil
 	}
-	return g.country.InstallationCountryTx(ctx, tx)
+	return s.country.InstallationCountryTx(ctx, tx)
 }

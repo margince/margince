@@ -29,7 +29,12 @@ import (
 )
 
 type qualifyingEnv struct {
-	store          *Store
+	store *Store
+	// owner seeds timeline rows the consent store does not own. Activities
+	// belong to another module, so there is no production writer this package
+	// can reach — the shape is copied from what capture writes, and the
+	// authorship test the derivation applies is what makes the copy honest.
+	owner          *pgx.Conn
 	ctx            context.Context
 	ws, user       ids.UUID
 	person         ids.PersonID
@@ -60,7 +65,7 @@ func setupQualifying(t *testing.T) *qualifyingEnv {
 		t.Fatal(err)
 	}
 
-	e := &qualifyingEnv{ws: ids.NewV7(), user: ids.NewV7(), person: ids.New[ids.PersonKind]()}
+	e := &qualifyingEnv{owner: owner, ws: ids.NewV7(), user: ids.NewV7(), person: ids.New[ids.PersonKind]()}
 	purposeID := ids.New[ids.PurposeKind]()
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
 		t.Fatal(err)
@@ -111,15 +116,51 @@ func setupQualifying(t *testing.T) *qualifyingEnv {
 // verdict reads what business correspondence to this person would answer now.
 func (e *qualifyingEnv) verdict(t *testing.T) Verdict {
 	t.Helper()
+	return e.verdictSince(t, time.Now().Add(-defaultReplyWindow))
+}
+
+// verdictSince reads the verdict against an explicit window start, which is
+// what lets a test move the window rather than the clock. The row keeps its
+// real timestamp and only the rule's reach changes, so a failure is about the
+// bound under test and not about a fixture that time-travelled.
+func (e *qualifyingEnv) verdictSince(t *testing.T, since time.Time) Verdict {
+	t.Helper()
 	var out Verdict
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = VerdictForPerson(e.ctx, tx, e.person.String(), e.correspondence)
+		out, err = VerdictForPerson(e.ctx, tx, e.person.String(), e.correspondence, since)
 		return err
 	}); err != nil {
 		t.Fatalf("reading the verdict: %v", err)
 	}
 	return out
+}
+
+// inbound files a message the PERSON wrote, the way capture files one: an
+// activity, a link putting it on their record, and a participant row naming
+// them as the author. All three, because the derivation requires all three —
+// seeding only the link would test a shape the product never produces and pass
+// against a reader that had stopped checking authorship.
+func (e *qualifyingEnv) inbound(t *testing.T, at time.Time) {
+	t.Helper()
+	activityID := ids.NewV7()
+	if _, err := e.owner.Exec(e.ctx, `
+		INSERT INTO activity (id, kind, direction, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'email', 'inbound', 'A question about your pricing', $2, 'capture', 'human:x')`,
+		activityID, at); err != nil {
+		t.Fatalf("seeding the inbound activity: %v", err)
+	}
+	if _, err := e.owner.Exec(e.ctx, `
+		INSERT INTO activity_link (activity_id, entity_type, person_id) VALUES ($1, 'person', $2)`,
+		activityID, e.person); err != nil {
+		t.Fatalf("filing the inbound activity: %v", err)
+	}
+	if _, err := e.owner.Exec(e.ctx, `
+		INSERT INTO activity_participant (activity_id, role, person_id, address)
+		VALUES ($1, 'from', $2, 'dana@metatrade.test')`,
+		activityID, e.person); err != nil {
+		t.Fatalf("naming the author of the inbound activity: %v", err)
+	}
 }
 
 func TestAnInPersonExchangeMakesCorrespondenceLawful(t *testing.T) {

@@ -196,6 +196,10 @@
  * beside the chips rather than beside the name it belongs to. */
 .record-head-wide {
   align-items: flex-start;
+  /* The name's rung answers to THIS row's width rather than the window's, so
+     the row has to be measurable. It is the record page's own width — the
+     details pane sits below it and does not narrow it, the nav rail does. */
+  container-type: inline-size;
 }
 .record-head-wide .record-controls {
   display: flex;
@@ -230,6 +234,13 @@
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
+  /* The floor the h1's own ellipsis needs to mean anything. A flex item's
+     minimum is its min-content, and a name set `nowrap` has no break in it —
+     so without this the row's minimum is the whole name, the identity block
+     inherits it, and the verbs beside it are pushed to a row of their own
+     rather than the name being cut. It is the name that gives way: the verbs
+     are the same four whatever the record is called. */
+  min-width: 0;
 }
 /* Small and tinted rather than the button-sized accent badge every other
    inline choice draws elsewhere on the page — beside a 22-34px name it
@@ -264,8 +275,30 @@
    than the list-row avatar it shares a component with. The list keeps its own
    compact sizes — this applies only where the header runs wide. */
 .record-head-wide h1 {
-  font-size: var(--fs-display);
-  line-height: 1.1;
+  font-size: var(--fs-record-fluid);
+  line-height: 1.05;
+  /* Tighter than the display rung's tracking: a name set this large wears the
+     scale's own spacing as gaps between its letters. */
+  letter-spacing: -0.035em;
+}
+/* The record page's verbs are the page's own rather than a toolbar's: one rung
+   taller than a control in a form, beside a name at the record rung. Below
+   that they read as chrome that happens to sit near the name.
+
+   Set on the ROW's rung variable rather than on each button, because
+   `.record-actions` spends that one variable on both shapes it holds: raising
+   the labelled buttons alone is exactly how the ellipsis square came to be 32
+   wide beside 40-tall neighbours once already.
+
+   A descendant selector reaches every verb a wide head has: `RecordView` draws
+   this header wide only when it was handed `controls` or `actionsInline`, and
+   both of those place the verbs INSIDE it. The row below the header belongs to
+   the narrow head, which keeps the form rung. */
+.record-head-wide .record-actions {
+  --control-h: var(--control-h-lg);
+}
+.record-head-wide .record-actions > .btn {
+  padding-inline: var(--space-4);
 }
 .record-head .record-sub {
   font-size: 13px;

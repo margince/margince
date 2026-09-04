@@ -21712,11 +21712,16 @@ export interface components {
             /** @description Records the caller names in support of this send. Checked, never trusted. */
             evidence?: components["schemas"]["CommunicationEvidence"];
             /**
-             * @description The consent purpose this send falls under (e.g. `transactional`, `marketing_email`).
-             *     The send is suppressed (409 `consent_not_granted`) unless every recipient has an active
-             *     `granted` `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
+             * @description DEPRECATED, and no longer required. The engine resolves what a message is from
+             *     the record — the thread it answers, the deal or invoice it names, the evidence
+             *     supplied in `evidence` — and a purpose key is not that. Send
+             *     `communication_context` instead.
+             *
+             *     A key that is still supplied is recorded as the caller's claim and is consulted
+             *     only where the record supports no category on its own. An unknown or archived
+             *     key authorizes nothing.
              */
-            consent_purpose: string;
+            consent_purpose?: string;
             /**
              * Format: date-time
              * @description Send this message at this instant instead of now (ADR-0104/A155). Absolute
@@ -21934,11 +21939,16 @@ export interface components {
             /** @description Records the caller names in support of this send. Checked, never trusted. */
             evidence?: components["schemas"]["CommunicationEvidence"];
             /**
-             * @description The consent purpose this send falls under. Default-deny per purpose (A22/ADR-0011):
-             *     suppressed 409 `consent_not_granted` unless every recipient has an active `granted`
-             *     `person_consent` for THIS purpose.
+             * @description DEPRECATED, and no longer required. The engine resolves what a message is from
+             *     the record — the thread it answers, the deal or invoice it names, the evidence
+             *     supplied in `evidence` — and a purpose key is not that. Send
+             *     `communication_context` instead.
+             *
+             *     A key that is still supplied is recorded as the caller's claim and is consulted
+             *     only where the record supports no category on its own. An unknown or archived
+             *     key authorizes nothing.
              */
-            consent_purpose: string;
+            consent_purpose?: string;
             /**
              * Format: date-time
              * @description Send this message at this instant instead of now (ADR-0104/A155). Absolute
@@ -22024,11 +22034,16 @@ export interface components {
             /** @description Records the caller names in support of this send. Checked, never trusted. */
             evidence?: components["schemas"]["CommunicationEvidence"];
             /**
-             * @description The consent purpose this send falls under (e.g. `transactional`). The send is
-             *     suppressed (409 `consent_not_granted`) unless the recipient has an active `granted`
-             *     `person_consent` for THIS purpose (default-deny per purpose, A22/ADR-0011).
+             * @description DEPRECATED, and no longer required. The engine resolves what a message is from
+             *     the record — the thread it answers, the deal or invoice it names, the evidence
+             *     supplied in `evidence` — and a purpose key is not that. Send
+             *     `communication_context` instead.
+             *
+             *     A key that is still supplied is recorded as the caller's claim and is consulted
+             *     only where the record supports no category on its own. An unknown or archived
+             *     key authorizes nothing.
              */
-            consent_purpose: string;
+            consent_purpose?: string;
             /**
              * @description Files already in the record library to send with this message, named by id
              *     — never uploaded here. Each is snapshotted at staging (ADR-0086/A131 §4) so
@@ -29114,6 +29129,47 @@ export interface components {
             base_currency?: string | null;
         };
         /**
+         * @description Who this row answers to.
+         *
+         *     RESPONSIBILITY, not visibility. The two are different facts and reading one
+         *     for the other is how a rep's queue fills with a colleague's work: a notice
+         *     addressed to somebody else may be unreadable, and a shared deal may be
+         *     readable by a whole team while exactly one person owes the next move.
+         *
+         *     Stated by the PRODUCER that raised the row, never inferred downstream. A
+         *     reader who can see a row is not thereby its owner; a row surviving a `mine`
+         *     filter is not evidence either, because several lanes take the scope as a
+         *     query argument and answer it in SQL. Both of those inferences were available
+         *     here and both are wrong in the same direction — they would make every row a
+         *     reader can see look like a row a reader owes.
+         *
+         *     `kind: unassigned` is a real answer and the honest one for work nobody has
+         *     taken. It is what the `unassigned` scope surfaces, and a row that reached a
+         *     rep's Mine queue while answering `unassigned` is a bug in the lane that
+         *     produced it rather than a display choice here.
+         */
+        WorklistOwner: {
+            /**
+             * @description Whether a person answers for this row, or nobody does yet.
+             * @enum {string}
+             */
+            kind: "user" | "unassigned";
+            /**
+             * Format: uuid
+             * @description The owning user. Present when `kind` is `user`.
+             */
+            id?: string;
+            /**
+             * @description The owner's display name, resolved under the CALLER's own grants.
+             *
+             *     Absent where the caller may not resolve it — the same refusal shape the
+             *     rest of this response uses for a name it cannot read. A client draws the
+             *     row without a name rather than inventing one, and never treats an absent
+             *     label as an absent owner: `kind` is what says whether anybody answers.
+             */
+            label?: string;
+        };
+        /**
          * @description The day cut into four parts that SUM TO `total`. Every candidate the read weighed
          *     lands in exactly one of them.
          *
@@ -29395,6 +29451,7 @@ export interface components {
              * @enum {string}
              */
             category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+            owner?: components["schemas"]["WorklistOwner"];
             /**
              * @description Which SCREEN this row belongs on. The server decides it once, and every count,
              *     fold and page in this response is computed from the same value the row carries,

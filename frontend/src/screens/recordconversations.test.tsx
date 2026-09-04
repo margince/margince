@@ -159,6 +159,44 @@ describe("expanding a conversation", () => {
 });
 
 describe("a withheld newest message", () => {
+  // The row has just told this reader the message is not theirs. Claiming
+  // their move on it says they owe a reply to words they are not allowed to
+  // read — and the per-message move label is already suppressed for exactly
+  // that reason, so leaving the thread's chip drawing made the two disagree
+  // about one row, with the unsuppressed one winning on screen.
+  it("claims no move on a conversation it will not show", () => {
+    // The same two-message thread the case above marks "Your move", with the
+    // newest message withheld — so the ONE thing varying is whether the reader
+    // may read what they are being told to answer.
+    draw([
+      group("withheld-1", [
+        entry("email", {
+          id: "in-2",
+          title: "Re: Contract terms",
+          atIso: "2026-07-03T10:00:00Z",
+          direction: "inbound",
+          withheld: true,
+        }),
+        entry("email", {
+          id: "in-1",
+          title: "Contract terms",
+          atIso: "2026-07-01T10:00:00Z",
+          direction: "outbound",
+        }),
+      ]),
+    ]);
+
+    const row = screen.getByText("Re: Contract terms").closest("li");
+    expect(row).toBeTruthy();
+    const badges =
+      row &&
+      Array.from(row.querySelectorAll(".badge")).map((b) => b.textContent);
+    expect(badges).not.toContain("Your move");
+    // And not the other verdict either: a withheld row claims no move in
+    // either direction, rather than quietly reporting the opposite one.
+    expect(badges).not.toContain("Waiting on them");
+  });
+
   it("keeps the collapsed preview off the newest message's body", async () => {
     const user = userEvent.setup();
     draw([
