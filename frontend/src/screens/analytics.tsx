@@ -25,7 +25,12 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import {
+  useAnalyticsContext,
+  useAnalyticsSelection,
+} from "./analytics.context";
 import { ForecastView } from "./analytics.forecast";
+import { AnalyticsScopePicker } from "./analytics.scope";
 import { ShareViewButton } from "./analytics.share";
 import {
   OverlayUnavailable,
@@ -61,10 +66,9 @@ type StageAgg = {
   count: number;
   rawMinor: number | null;
   weightedMinor: number | null;
-  currency: string | null;
 };
 
-type ReportKey = "deals-by-stage" | "forecast" | "open-deals-per-company";
+type ReportKey = "pipeline-current" | "forecast" | "open-deals-per-company";
 
 // A SECTION is what the address names and what the tabs choose between; a
 // REPORT is one result inside it. They were the same thing while every section
@@ -84,7 +88,7 @@ const SECTION_REPORTS = {
   // is a real report and still the only place a reader sees how the pipeline
   // divides by category; what it is not is the forecast, which is now an
   // answer rather than a table.
-  pipeline: ["deals-by-stage", "forecast", "open-deals-per-company"],
+  pipeline: ["pipeline-current", "forecast", "open-deals-per-company"],
 } as const satisfies Record<Section, readonly ReportKey[]>;
 
 const SECTIONS = Object.keys(SECTION_REPORTS) as readonly Section[];
@@ -96,11 +100,16 @@ function isSection(value: string | undefined): value is Section {
 
 // The old address named a report. Those links are in bookmarks and in sent
 // mail, so each one still answers, with the section that now holds it.
-const SECTION_OF_REPORT = {
+// Keyed by string rather than by ReportKey, because a RETIRED name is still an
+// address somebody saved. `deals-by-stage` names no report this screen draws
+// any more — the stage view reads pipeline-current — and the link in a
+// bookmark or a sent mail must still land on the section that answers it.
+const SECTION_OF_REPORT: Readonly<Record<string, Section>> = {
   forecast: "pipeline",
+  "pipeline-current": "pipeline",
   "deals-by-stage": "pipeline",
   "open-deals-per-company": "pipeline",
-} as const satisfies Record<ReportKey, Section>;
+};
 
 export function sectionFromAddress(segment: string | undefined): Section {
   if (isSection(segment)) {
@@ -142,14 +151,16 @@ const FIELD_CURRENCY = "currency";
 // five named categories match none of it.
 const UNCATEGORISED = "";
 
-// Every plan here sums money, so every plan groups by currency as well as by its
-// own dimension. amount_minor is a minor-unit integer in the deal's own
-// currency, so a total spanning currencies is a number with no unit — the sum
-// data-semantics §1 r4 forbids and AC-DS-FX1 fails by construction. Grouping is
-// the honest answer available today; converting to one base currency is the
-// frozen-FX roll-up, a larger capability.
+// A plan that sums NATIVE money groups by currency as well as by its own
+// dimension: amount_minor is a minor-unit integer in the deal's own currency, so
+// a total spanning currencies is a number with no unit.
+//
+// pipeline-current does not, because the server converted each deal before
+// summing. One stage is one row, denominated in the installation's base
+// currency — which is the whole point of that report and why it exists beside
+// deals-by-stage rather than replacing it.
 const REPORT_GROUP_BY: Record<ReportKey, string[]> = {
-  "deals-by-stage": ["stage_id", FIELD_CURRENCY],
+  "pipeline-current": ["stage_id"],
   forecast: ["forecast_category", FIELD_CURRENCY],
   "open-deals-per-company": ["organization_id", FIELD_CURRENCY],
 };
@@ -194,7 +205,7 @@ function byCurrency(
 // card that segment opens read the same key, so the tab and the surface behind
 // it cannot drift into two names for one report.
 const REPORT_LABEL_KEY = {
-  "deals-by-stage": "analytics.reportDeals",
+  "pipeline-current": "analytics.reportDeals",
   forecast: "analytics.reportForecast",
   "open-deals-per-company": "analytics.reportOpenByCompany",
 } as const satisfies Record<ReportKey, string>;
@@ -203,7 +214,7 @@ const REPORT_LABEL_KEY = {
 // the card's own title does not. A report absent from here gets no caption: an
 // explanation beside a report it does not describe is worse than none.
 const reportSub: Partial<Record<ReportKey, MessageKey>> = {
-  "deals-by-stage": "analytics.sub",
+  "pipeline-current": "analytics.sub",
 };
 
 type ReportAggregate = NonNullable<
@@ -215,9 +226,9 @@ type ReportAggregate = NonNullable<
 // join computes it (deals-by-stage, forecast); requesting it against
 // open-deals-per-company's narrower vocabulary would 422.
 const REPORT_AGGREGATES: Record<ReportKey, ReportAggregate[]> = {
-  "deals-by-stage": [
-    { fn: "sum", field: "amount_minor", as: "raw_minor" },
-    { fn: "sum", field: "weighted_amount_minor", as: "weighted_minor" },
+  "pipeline-current": [
+    { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
+    { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
     { fn: "count", as: "deal_count" },
   ],
   forecast: [
@@ -509,47 +520,49 @@ export function buildStageAggregates(
   stages: readonly Stage[],
 ): StageAgg[] {
   const byId = new Map(stages.map((stage) => [stage.id, stage]));
-  return rows
-    .map((row) => {
-      const stageId = String(row.stage_id ?? "");
-      const stage = byId.get(stageId);
-      return {
-        stageId,
-        stageName: stage?.name ?? stageId,
-        // A stage the pipeline no longer carries sorts last rather than first:
-        // its rows are still real deals, but they are not part of the ladder the
-        // reader is reading down.
-        stagePosition: stage?.position ?? Number.MAX_SAFE_INTEGER,
-        count: rowCount(row, "deal_count"),
-        rawMinor: rowMoney(row, "raw_minor"),
-        // AC-F1: the server's own per-deal-rounded weighted sum
-        // (weighted_amount_minor), never round(rawMinor × p / 100)
-        // — that rounds the column sum once instead of every deal.
-        weightedMinor: rowMoney(row, "weighted_minor"),
-        currency: rowCurrency(row),
-      };
-    })
-    .sort(
-      (left, right) =>
-        left.stagePosition - right.stagePosition ||
-        stable(left.currency ?? "", right.currency ?? ""),
-    );
+  return (
+    rows
+      .map((row) => {
+        const stageId = String(row.stage_id ?? "");
+        const stage = byId.get(stageId);
+        return {
+          stageId,
+          stageName: stage?.name ?? stageId,
+          // A stage the pipeline no longer carries sorts last rather than first:
+          // its rows are still real deals, but they are not part of the ladder the
+          // reader is reading down.
+          stagePosition: stage?.position ?? Number.MAX_SAFE_INTEGER,
+          count: rowCount(row, "deal_count"),
+          rawMinor: rowMoney(row, "raw_minor"),
+          // AC-F1: the server's own per-deal-rounded weighted sum
+          // (weighted_amount_minor), never round(rawMinor × p / 100)
+          // — that rounds the column sum once instead of every deal.
+          weightedMinor: rowMoney(row, "weighted_minor"),
+        };
+      })
+      // Stage position alone orders the ladder now. The old tiebreak on currency
+      // existed because one stage could be several rows; converted, it is one.
+      .sort((left, right) => left.stagePosition - right.stagePosition)
+  );
 }
 
 function StageTable({
   rows,
   stages,
   locale,
+  baseCurrency,
 }: Readonly<{
   rows: ReportRow[];
   stages: readonly Stage[];
   locale: Locale;
+  // The currency every figure in this table is denominated in. One code for
+  // the whole table rather than a column, because the server converted each
+  // deal before summing — a column would repeat the same code down the page
+  // and imply it could differ per row.
+  baseCurrency: string | null;
 }>) {
   const t = useT();
   const aggregates = buildStageAggregates(rows, stages);
-  const addressable = singleCurrencyKeys(
-    aggregates.map((aggregate) => aggregate.stageId),
-  );
   return (
     <DataTable
       label={t("analytics.reportDeals")}
@@ -560,36 +573,33 @@ function StageTable({
           render: (row: StageAgg) => row.stageName,
         },
         {
-          key: FIELD_CURRENCY,
-          header: t("analytics.currency"),
-          render: (row: StageAgg) => (
-            <span className="t-mono">{row.currency ?? MONEY_ABSENT}</span>
-          ),
-        },
-        {
           key: "count",
           header: t("analytics.count"),
-          // No `status` dial here, unlike the company table: a won or lost
-          // deal keeps the stage_id it closed in, so this report's stage rows
-          // are not open deals by construction and narrowing to `open` would
-          // hand back a shorter list than the figure counted.
-          render: (row: StageAgg) =>
-            addressable.has(row.stageId) ? (
-              <CountLink
-                count={row.count}
-                href={dealsFilteredBy("stage_id", row.stageId)}
-                title={t("analytics.openStageDeals", { stage: row.stageName })}
-              />
-            ) : (
-              formatNumber(row.count, locale)
-            ),
+          // Every row addresses its deals now. The old table linked only the
+          // stages trading in ONE currency, because a stage split across two
+          // rows had no single set to open; converted, one stage is one row
+          // and one set again.
+          //
+          // The link asks for OPEN deals, which is what this report counts —
+          // deals-by-stage could not, because a won deal keeps the stage it
+          // closed in and narrowing there would have handed back a shorter
+          // list than the figure above it.
+          render: (row: StageAgg) => (
+            <CountLink
+              count={row.count}
+              href={dealsFilteredBy("stage_id", row.stageId, {
+                status: "open",
+              })}
+              title={t("analytics.openStageDeals", { stage: row.stageName })}
+            />
+          ),
         },
         {
           key: "raw",
           header: t("analytics.unweighted"),
           render: (row: StageAgg) => (
             <span className="t-mono">
-              {formatMoneyOrAbsent(row.rawMinor, row.currency, locale)}
+              {formatMoneyOrAbsent(row.rawMinor, baseCurrency, locale)}
             </span>
           ),
         },
@@ -598,24 +608,109 @@ function StageTable({
           header: t("analytics.weighted"),
           render: (row: StageAgg) => (
             <span className="t-mono">
-              {formatMoneyOrAbsent(row.weightedMinor, row.currency, locale)}
+              {formatMoneyOrAbsent(row.weightedMinor, baseCurrency, locale)}
             </span>
           ),
         },
       ]}
       rows={aggregates}
-      // A stage holding deals in two currencies is two rows, so the stage id
-      // alone no longer identifies one.
-      rowKey={(row) => `${row.stageId}:${row.currency ?? ""}`}
+      rowKey={(row) => row.stageId}
     />
   );
+}
+
+// The vocabulary's own words for the columns a drill-through can carry.
+// A column outside it keeps its wire name, which is honest: the reader sees
+// what the plan selected rather than a guess at what it meant.
+const DERIVATION_HEADERS: Readonly<Record<string, MessageKey>> = {
+  label: "explain.col.record",
+  amount_base_minor: "analytics.unweighted",
+  weighted_base_minor: "analytics.weighted",
+  amount_minor: "analytics.unweighted",
+  currency: "analytics.currency",
+  stage_id: "explain.col.stage",
+  owner_id: "explain.col.owner",
+  pipeline_id: "explain.col.pipeline",
+  organization_id: "analytics.company",
+};
+
+// A column the vocabulary knows gets its word; anything else keeps the wire
+// name the plan selected it under.
+function derivationHeader(col: string, t: (key: MessageKey) => string): string {
+  const key = DERIVATION_HEADERS[col];
+  return key ? t(key) : col;
+}
+
+// The server names the row and the reader reads the name, so the raw id
+// becomes noise beside it — but only once EVERY row has a name.
+//
+// Labelling is per row: the seam withholds a name for a record this reader
+// may not read, and the label column appears as soon as one row was named.
+// Dropping the id on that alone would leave the withheld rows showing a blank
+// where their only identifier used to be, so the rows a reader can least
+// account for become the ones they cannot identify at all.
+export function derivationColumns(derivation: Derivation): string[] {
+  const rows = derivation.rows ?? [];
+  const everyRowNamed =
+    derivation.columns.includes("label") &&
+    rows.length > 0 &&
+    rows.every((row) => typeof row.label === "string" && row.label !== "");
+  return derivation.columns.filter((col) => !everyRowNamed || col !== "id");
+}
+
+// Which money a row's minor-unit figure is written in.
+//
+// The two are not the same column. A `_base_minor` measure was converted by
+// the server, so it is in the installation's base currency. A plain `_minor`
+// measure is the deal's OWN amount, and the forecast's rows carry the
+// currency it was written in beside it — reading the base currency there
+// would put a euro sign on a dollar deal, which is the exact misreading this
+// renderer exists to prevent.
+export function derivationCellCurrency(
+  col: string,
+  row: Record<string, unknown>,
+  baseCurrency: string | null,
+): string | null {
+  if (col.endsWith("_base_minor")) {
+    return baseCurrency;
+  }
+  const own = row.currency;
+  return typeof own === "string" && own !== "" ? own : null;
+}
+
+// Money on these rows is stored in minor units, and a minor-unit integer
+// printed raw is the single most misread thing on this screen: 500000 next
+// to €5,000.00 are the same number wearing different clothes.
+function renderDerivationCell(
+  col: string,
+  row: Record<string, unknown>,
+  baseCurrency: string | null,
+  locale: Locale,
+): string {
+  const value = row[col];
+  if (value == null) {
+    return "";
+  }
+  if (col.endsWith("_minor") && typeof value === "number") {
+    return formatMoneyOrAbsent(
+      value,
+      derivationCellCurrency(col, row, baseCurrency),
+      locale,
+    );
+  }
+  return String(value);
 }
 
 // The source rows the explained figure reconciles to. A section INSIDE the
 // explain card's own section, so its heading steps down with the outline
 // rather than reading as a peer of the card's title.
-function DerivationRows({ derivation }: Readonly<{ derivation: Derivation }>) {
+function DerivationRows({
+  derivation,
+  baseCurrency,
+}: Readonly<{ derivation: Derivation; baseCurrency: string | null }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const columns = derivationColumns(derivation);
   return (
     <>
       <SectionHeader title={t("explain.sources")} level={3} />
@@ -626,10 +721,11 @@ function DerivationRows({ derivation }: Readonly<{ derivation: Derivation }>) {
       ) : (
         <DataTable
           label={t("explain.sources")}
-          columns={derivation.columns.map((col) => ({
+          columns={columns.map((col) => ({
             key: col,
-            header: col,
-            render: (row: Record<string, unknown>) => String(row[col] ?? ""),
+            header: derivationHeader(col, t),
+            render: (row: Record<string, unknown>) =>
+              renderDerivationCell(col, row, baseCurrency, locale),
           }))}
           rows={derivation.rows}
           rowKey={(row) => derivation.rows.indexOf(row).toString()}
@@ -645,12 +741,16 @@ function ExplainCard({
   id,
   url,
   query,
+  baseCurrency,
 }: Readonly<{
   // The toggle above points `aria-controls` here, so the card has to carry the
   // id the toggle was given rather than mint one of its own.
   id: string;
   url: string | null;
   query: UseQueryResult<Derivation>;
+  // The currency the report converted into, so the source rows behind a
+  // converted total are written in the same money as the total.
+  baseCurrency: string | null;
 }>) {
   const t = useT();
   return (
@@ -683,7 +783,9 @@ function ExplainCard({
           </div>
         </>
       )}
-      {query.data && <DerivationRows derivation={query.data} />}
+      {query.data && (
+        <DerivationRows derivation={query.data} baseCurrency={baseCurrency} />
+      )}
     </Card>
   );
 }
@@ -753,28 +855,53 @@ function ReportCard({
       {(run) => (
         <>
           <Card title={t(REPORT_LABEL_KEY[report])}>
-            {reportSub[report] && <p className="sub">{t(reportSub[report])}</p>}
+            {reportSub[report] && (
+              <p className="sub">
+                {t(reportSub[report], { currency: run.base_currency ?? "" })}
+              </p>
+            )}
             {report === "forecast" && (
               <ForecastStrip rows={run.rows} locale={locale} />
             )}
             {report === "open-deals-per-company" && (
               <CompanyTable rows={run.rows} locale={locale} />
             )}
-            {report === "deals-by-stage" && (
-              <StageTable rows={run.rows} stages={stages} locale={locale} />
+            {report === "pipeline-current" && (
+              <StageTable
+                rows={run.rows}
+                stages={stages}
+                locale={locale}
+                baseCurrency={run.base_currency ?? null}
+              />
             )}
-            {/* The frame every figure above was cut in. A total with no zone
-                and no currency beside it is a number a reader places by
-                assumption, and the assumption is usually their own zone.
-                Drawn only when the server sent a whole frame: a caption
-                naming two of the three would be worse than none, and a
-                server mid-upgrade is exactly where a partial one arrives. */}
-            {run.as_of && run.timezone && run.base_currency && (
+            {/* The frame every figure above was cut in: the instant, and the
+                zone that instant is stated in. A total with no zone beside it
+                is a number a reader places by assumption, and the assumption
+                is usually their own.
+
+                It does NOT state a currency, and that is the point. Every
+                report on this tab is denominated PER CURRENCY — the stage
+                table prints a row per stage per currency, the forecast strip
+                bands its tiles by currency and labels each band with the code
+                — so the figures above are in several currencies at once and
+                none of them is the installation's base.
+
+                The frame used to end in `run.base_currency`, which read as the
+                denomination of numbers that were never converted into it: a
+                reader taking it at its word read ₫367,620,000,000 as a euro
+                figure. Whether this tab should convert instead is a product
+                question and is open; until it is answered, saying nothing
+                about currency here is the only honest option, because each
+                block already says its own.
+
+                Drawn only when the server sent both halves: a caption naming
+                one of the two would be worse than none, and a server
+                mid-upgrade is exactly where a partial one arrives. */}
+            {run.as_of && run.timezone && (
               <p className="sub analytics-frame">
                 {t("analytics.frame", {
                   asOf: formatDateTime(run.as_of, locale, run.timezone),
                   zone: run.timezone,
-                  currency: run.base_currency,
                 })}
               </p>
             )}
@@ -797,6 +924,7 @@ function ReportCard({
               id={explainId}
               url={derivationUrl}
               query={derivationQuery}
+              baseCurrency={run.base_currency ?? null}
             />
           )}
         </>
@@ -822,6 +950,11 @@ export function AnalyticsScreen() {
   // does not hold (the report endpoints answer 422 unsupported_by_sor in
   // overlay), so the sections show the honest unavailable state.
   const overlay = useSorMode() === "overlay";
+  // The server decides which population this reader measures and which ones
+  // they may choose. Read once here and handed down, so every card on the page
+  // is answering about the same set.
+  const context = useAnalyticsContext();
+  const { selection, selectScope } = useAnalyticsSelection(context.data);
 
   const pipelineQuery = useQuery({
     queryKey: ["pipelines"],
@@ -852,7 +985,16 @@ export function AnalyticsScreen() {
         }}
         label={t("analytics.sections")}
       />
-      {section === "forecast" && <ShareViewButton target="forecast" />}
+      {selection && context.data ? (
+        <AnalyticsScopePicker
+          scopes={context.data.allowed_scopes}
+          selected={selection.scope}
+          onSelect={selectScope}
+        />
+      ) : null}
+      {section === "forecast" && selection ? (
+        <ShareViewButton target="forecast" scope={selection.scope} />
+      ) : null}
     </div>
   );
 
@@ -869,7 +1011,12 @@ export function AnalyticsScreen() {
     <div className="wrap">
       {header}
       {section === "forecast" ? (
-        <ForecastView />
+        selection && context.data ? (
+          <ForecastView
+            selection={selection}
+            canSubmit={context.data.capabilities.submit_manager_forecast}
+          />
+        ) : null
       ) : (
         SECTION_REPORTS[section].map((report) => (
           <ReportCard

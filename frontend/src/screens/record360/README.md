@@ -52,9 +52,10 @@ every page that overrides one, which would bury the extraction it was mixed
 into. The names are wrong and the styles are shared; that is a rename to do on
 its own.
 
-One consequence to know about: `shells.tsx` imports `../company360.css`,
-because `SectionCard` renders `.co-card` and that rule lives there. Without the
-import the kit worked only by luck — both callers were on the company page,
-which loads the sheet anyway — and the first caller somewhere else would have
-rendered unstyled. `verdict.tsx` needs no such import; its classes are the
-kit's own and live in `record360.css`.
+No module here imports a screen stylesheet. `shells.tsx` used to, because
+`SectionCard` rendered `.co-card` and that rule lives in `company360.css` —
+that coupling is gone with the component, whose call sites moved to `RailPanel`
+and which nothing drew afterwards. `RailPanel` and `OverlayFallback` are in
+`src/design-system/` now, where `frontend/AGENTS.md` says a primitive another
+screen imports belongs. `verdict.tsx` carries no such import either; its classes
+are the kit's own and live in `record360.css`.

@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 72 |
 | Resources | 11 |
-| Tool catalog | 199.5 KB |
+| Tool catalog | 199.8 KB |
 | Resource catalog | 4.2 KB |
-| Approx. wire tokens | 52136 |
+| Approx. wire tokens | 52203 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 95.3 KB | 47% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 48.7 KB | 24% | Yes, every step |
-| Input schemas | 40.3 KB | 20% | Yes, every step |
+| Input schemas | 40.5 KB | 20% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.2 KB | 7% | Partly |
-| **Description + input schema** | **89.0 KB** | **44%** | **the recurring cost** |
+| **Description + input schema** | **89.2 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -100,7 +100,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 1.9 KB |
 | [`list_input_checks`](#list_input_checks) | What the forecast's inputs still need | yes |  | 2.1 KB |
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
-| [`list_records`](#list_records) | List records | yes |  | 3.2 KB |
+| [`list_records`](#list_records) | List records | yes |  | 3.3 KB |
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 3.8 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
@@ -124,7 +124,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve people and companies | yes |  | 3.6 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
-| [`run_report`](#run_report) | Run a report | yes |  | 4.4 KB |
+| [`run_report`](#run_report) | Run a report | yes |  | 4.6 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
 | [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
 | [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 3.9 KB |
@@ -5104,7 +5104,7 @@ What a period is expected to close, in four readings. `won` counts deals by the 
       "type": "string"
     },
     "scope_kind": {
-      "description": "Whose forecast. Defaults to the whole workspace.",
+      "description": "Whose forecast. Omit for this caller's own default population; a wider one is refused.",
       "enum": [
         "workspace",
         "team",
@@ -6634,7 +6634,7 @@ Enumerate the people, organizations, deals, leads or projects that meet exact co
       "additionalProperties": {
         "type": "string"
       },
-      "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: person — owner_id, tag_id (a), tag_mode (any|all|none) organization — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — organization_id, owner_id, partner_attribution (sourced|influenced), partner_org_id, partner_sourced (b), pipeline_id, project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — key, organization_id, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
+      "description": "Narrow the list. Every operand is a string, booleans included (\"true\"). Each record_type takes only its own: person — owner_id, tag_id (a), tag_mode (any|all|none) organization — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — forecast_category (commit|best_case|pipeline|omitted), organization_id, owner_id, partner_attribution (sourced|influenced), partner_org_id, partner_sourced (b), pipeline_id, project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified) project — key, organization_id, owner_id, phase (initiative|pursuing|delivering|closed) A pipeline_id or stage_id comes from list_pipelines; nothing else on this surface yields one.",
       "type": "object"
     },
     "limit": {
@@ -12350,12 +12350,13 @@ Answer a question about totals, counts or breakdowns — pipeline by stage, deal
       "type": "array"
     },
     "report": {
-      "description": "The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. open-deals-per-company: count as open_deals grouped by organization_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum grouped by status, currency. To narrow one instead, its `group_by`, `filters` and `aggregates` accept ONLY that report's own names, published at margince://schema/reports and answered by describe_report_vocabulary; a name outside them is refused by name, with that argument's accepted list. A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.",
+      "description": "The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. open-deals-per-company: count as open_deals grouped by organization_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum grouped by stage_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum grouped by status, currency. To narrow one instead, its `group_by`, `filters` and `aggregates` accept ONLY that report's own names, published at margince://schema/reports and answered by describe_report_vocabulary; a name outside them is refused by name, with that argument's accepted list. A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.",
       "enum": [
         "activities-by-kind",
         "deals-by-stage",
         "forecast",
         "open-deals-per-company",
+        "pipeline-current",
         "project-commitments",
         "projects-by-phase",
         "projects-gone-quiet",

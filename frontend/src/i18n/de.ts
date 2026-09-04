@@ -905,6 +905,12 @@ export const de = {
   "co.health.dim.relationship": "Beziehung",
   "co.health.dim.commercial": "Geschäftlich",
   "co.health.dim.payment": "Zahlung",
+  "co.health.means.relationship":
+    "Ob hier noch Kontakt besteht — wer geschrieben hat, wie lange das her ist und von welcher Seite es ausging.",
+  "co.health.means.commercial":
+    "Ob die laufende Arbeit vorankommt — die offenen Deals, ihre Phase und wie lange sie schon stillstehen.",
+  "co.health.means.payment":
+    "Ob Rechnungen pünktlich beglichen werden — was gerade überfällig ist und wie spät dieses Konto üblicherweise zahlt.",
   "co.health.rating.atRisk": "Gefährdet",
   "co.health.rating.good": "Gut",
   "co.health.rating.strong": "Stark",
@@ -938,8 +944,7 @@ export const de = {
   "record.restsOn.source_one": "Quelle",
   "record.restsOn.source_other": "Quellen",
   "record.tabs": "Bereiche dieses Datensatzes",
-  "record.panel.show": "Panel zeigen",
-  "record.panel.hide": "Panel ausblenden",
+  "record.panel.details": "Details",
   "room.editorial":
     "Ein Dokument, das Sie hinzufügen, ist sofort geteilt; Kommentare ebenso.",
   "room.readOnly": "Sie können diesen Raum lesen, aber nicht ändern.",
@@ -1151,6 +1156,28 @@ export const de = {
     "Eine Laufzeit kann nicht vor ihrem Beginn enden.",
   "contracts.add": "Vertrag hinzuf\u00fcgen",
   "contracts.rowMenu": "Vertragsaktionen",
+  "contracts.renew.title": "Diese Vereinbarung verlängern",
+  "contracts.renew.hint":
+    "Erstellt eine neue Vereinbarung und markiert diese als abgelöst. Eigene Bedingungen — nichts wird übernommen außer der Vertragspartei.",
+  "contracts.renew.submit": "Verlängern",
+  "contracts.statusChange.title": "Status ändern",
+  "contracts.statusChange.label": "Neuer Status",
+  "contracts.statusChange.submit": "Status ändern",
+  "contracts.statusChange.errSame": "Bereits in diesem Status.",
+  "contracts.cancel.title": "Kündigung erfassen",
+  "contracts.cancel.hint":
+    "Der Kunde bleibt bis zum Wirksamkeitsdatum unter Vertrag — dies erfasst die Kündigung, keine Statusänderung.",
+  "contracts.cancel.noticeOn": "Kündigung erklärt am",
+  "contracts.cancel.effectiveOn": "Wirksam ab",
+  "contracts.cancel.effectiveOnHint":
+    "Nicht nach Vertragsende und nicht vor dem Kündigungsdatum.",
+  "contracts.cancel.submit": "Kündigung erfassen",
+  "contracts.cancel.menuLabel": "Kündigen",
+  "contracts.cancel.errIncomplete": "Beide Daten werden benötigt.",
+  "contracts.cancel.errOrder":
+    "Eine Kündigung kann nicht vor ihrer Erklärung wirksam werden.",
+  "contracts.cancel.errTermEnd":
+    "Eine Kündigung kann nicht nach Vertragsende wirksam werden.",
   "contracts.value.perYear": "pro Jahr",
   "contracts.value.total": "für die gesamte Laufzeit",
   "contracts.files": "Dateien",
@@ -2307,6 +2334,8 @@ export const de = {
   "deals.filterOwnerMe": "Meine Deals",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Alle Partner",
+  "deals.filterForecast": "Forecast",
+  "deals.filterForecastAll": "Jede Forecast-Kategorie",
   "deals.filterPartnerSourced": "Über Partner",
   "deals.filterStageAll": "Alle Phasen",
   "deals.filterOrgAll": "Alle Firmen",
@@ -3206,14 +3235,15 @@ export const de = {
   "tasks.isDone": "Abgeschlossen",
   "tasks.logged": "Erfasst",
 
-  "analytics.sub": "Deals je Phase — ungewichtet neben gewichtet",
+  "analytics.sub":
+    "nur offene Deals, jeder einzeln in {currency} umgerechnet — ungewichtet neben gewichtet",
   "analytics.currency": "Währung",
   "analytics.count": "Deals",
   "analytics.unweighted": "Ungewichtet",
   "analytics.weighted": "Gewichtet",
   "analytics.planNote":
     "der ausgeführte Plan und die Zeilen, auf die sich die Zahl zurückrechnet",
-  "analytics.reportDeals": "Deals nach Phase",
+  "analytics.reportDeals": "Offene Pipeline nach Phase",
   "analytics.sections": "Analytics-Bereiche",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
@@ -3241,7 +3271,7 @@ export const de = {
   "analytics.share.copyFailed":
     "Der Link konnte nicht kopiert werden. Markieren Sie ihn oben und kopieren Sie ihn von Hand.",
   "analytics.share.done": "Fertig",
-  "analytics.frame": "Stand {asOf} · {zone} · {currency}",
+  "analytics.frame": "Stand {asOf} · {zone}",
   "review.title": "Was sollte vor dem Call geprüft werden?",
   "review.ready": "Bereit",
   "review.readyWithExceptions": "Bereit, mit Anmerkungen",
@@ -3300,6 +3330,8 @@ export const de = {
   "forecast.supportingNote": "Begründung",
   "forecast.cancel": "Abbrechen",
   "forecast.saveCall": "Call speichern",
+  "analytics.scopeLabel": "Welche Datensätze diese Zahlen umfassen",
+  "analytics.scopeFixed": "Diese Zahlen umfassen {scope}.",
   "forecast.receipt": "Daten und Belege geprüft",
   "forecast.eligible": "Berücksichtigte Deals",
   "forecast.priced": "Mit Betrag",
@@ -3315,6 +3347,10 @@ export const de = {
   "analytics.noCompany": "Kein Unternehmen",
   "analytics.openDeals": "Offene Deals",
   "explain.sources": "Quellzeilen",
+  "explain.col.record": "Deal",
+  "explain.col.stage": "Phase",
+  "explain.col.owner": "Zuständig",
+  "explain.col.pipeline": "Pipeline",
 
   "ai.sub": "bring deinen eigenen Agenten mit — geregelt über die zwei Stufen",
   "ai.tiers": "Was ein Agent darf",
@@ -7861,6 +7897,12 @@ export const de = {
   "worklist.pair.related": "{count} verknüpft",
   "worklist.pair.failed":
     "Paar konnte nicht entschieden werden. Bitte erneut versuchen.",
+  "worklist.pair.refused":
+    "Du kannst dieses Paar nicht entscheiden. Beide Datensätze müssten dir gehören — eine Administratorin oder eine Vertriebsleitung kann es entscheiden.",
+  "worklist.pair.alreadySettled":
+    "Das Paar konnte so nicht entschieden werden — vielleicht war jemand schneller, vielleicht haben sich die Datensätze geändert. Bitte die Liste neu laden.",
+  "worklist.pair.stewardOnly":
+    "Nur wer beide Datensätze ändern darf, kann das entscheiden — eine Administratorin oder eine Vertriebsleitung.",
   "worklist.needsPrep": "Unvorbereitet",
   "worklist.pane.title": "Zu diesem Datensatz",
   "worklist.pane.openRow": "Zeigen, worum es bei {position}, {title}, geht",
@@ -7973,9 +8015,9 @@ export const de = {
   "worklist.hidden.notSales": "Als vertriebsfremd eingestuft",
   "worklist.hidden.notSales.detail":
     "Für die gesamte Organisation verborgen, und es hebt sich nicht auf.",
-  "worklist.hidden.setAside": "Von Ihnen zurückgestellt",
+  "worklist.hidden.setAside": "Von dir zurückgestellt",
   "worklist.hidden.setAside.detail":
-    "Zurückgestellt oder als nicht Ihre markiert. Eine Zurückstellung kommt von selbst zurück.",
+    "Zurückgestellt oder als nicht deine markiert. Eine Zurückstellung kommt von selbst zurück.",
   "worklist.hidden.shown": "Die Liste selbst führt {count}.",
   "worklist.filter.label": "Art der Arbeit",
   "worklist.filter.all": "Alle",
@@ -8079,6 +8121,31 @@ export const de = {
   "worklist.untitled.dsr": "Eine offene Datenschutzanfrage",
   "worklist.untitled.sync_health":
     "Die CRM-Synchronisierung braucht Aufmerksamkeit",
+  "worklist.sync.class.contacts": "Kontakte",
+  "worklist.sync.class.companies": "Firmen",
+  "worklist.sync.class.deals": "Deals",
+  "worklist.sync.class.leads": "Interessenten",
+  "worklist.sync.class.calls": "Anrufe",
+  "worklist.sync.class.meetings": "Termine",
+  "worklist.sync.class.emails": "E-Mails",
+  "worklist.sync.class.notes": "Notizen",
+  "worklist.sync.class.tasks": "Aufgaben",
+  "worklist.sync.error.rate_limited":
+    "das andere System begrenzt, wie oft wir fragen dürfen",
+  "worklist.sync.error.unreachable": "das andere System ist nicht erreichbar",
+  "worklist.sync.error.auth": "die Verbindung muss neu angemeldet werden",
+  "worklist.sync.error.history_gone":
+    "das andere System hat diesen Verlauf nicht mehr",
+  "worklist.sync.error.internal": "auf unserer Seite ist etwas schiefgelaufen",
+  "worklist.sync.band.warn":
+    "Nahe am Lesebudget – manche Abfragen kommen aus der Kopie.",
+  "worklist.sync.band.shed":
+    "Über dem Lesebudget: Abfragen kommen aus der Kopie statt live.",
+  "worklist.sync.failing": "Kein Abgleich – {reason}.",
+  "worklist.sync.objects_stale": "Hier nicht aktuell: {classes}.",
+  "worklist.sync.backfill_incomplete": "Wird noch importiert: {classes}.",
+  "worklist.sync.records_overwritten":
+    "Hier geändert und vom anderen System überschrieben: {classes}.",
   "worklist.untitled.capture_health":
     "Eine Postfachverbindung braucht Aufmerksamkeit",
   "worklist.untitled.ai_work_health": "KI-Arbeit braucht einen Blick",

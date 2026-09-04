@@ -164,16 +164,11 @@ func TestAConvertedSumNamesTheBaseCurrency(t *testing.T) {
 	}
 }
 
-// A deal reaching the page from the overnight brief lands in `deals_at_risk`
-// and is never priced: `classifyBriefItem` sets no expected figure, and
-// `priceTheDay` converts only the at-risk lane. So its card can show an amount
-// while the strip's sum does not include it.
-//
-// The contract says this out loud — the figure is a floor, not a total — and
-// this test is what keeps the two agreeing. Widening the conversion to the brief
-// lane would change what the ORDERING weighs, not just this sum, so it is filed
-// rather than done here; when it is done, this test fails and says so.
-func TestTheSumCoversTheAtRiskLaneOnlyAndSaysSo(t *testing.T) {
+// A deal reaching the page from the overnight brief lands in the same
+// `deals_at_risk` category an at-risk row for it would: `classifyBriefItem`
+// prices it exactly the way `classifyRisk` prices the identical fact for its
+// own lane, so the strip's sum covers both.
+func TestTheSumCoversBothDealsAtRiskLanes(t *testing.T) {
 	day := crmcontracts.Attention{
 		AsOf:   rankInstant,
 		AtRisk: lane(item("priced", "deal_at_risk", withDeal(300_00))),
@@ -201,10 +196,8 @@ func TestTheSumCoversTheAtRiskLaneOnlyAndSaysSo(t *testing.T) {
 	if got.RevenueAtRiskMinor == nil {
 		t.Fatal("the at-risk deal should still be summed")
 	}
-	if *got.RevenueAtRiskMinor != 300_00 {
-		t.Fatalf(
-			"summed %d — if the brief lane is now priced too, widen this test and the contract prose with it",
-			*got.RevenueAtRiskMinor)
+	if *got.RevenueAtRiskMinor != 1_200_00 {
+		t.Fatalf("summed %d, wanted 300_00 (at-risk) + 900_00 (brief) = 1_200_00", *got.RevenueAtRiskMinor)
 	}
 }
 

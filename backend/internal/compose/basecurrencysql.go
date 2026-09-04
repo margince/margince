@@ -25,20 +25,29 @@ package compose
 
 import "fmt"
 
-// BaseValueSQL renders the expression for the deal aliased `d`.
+// BaseValueSQL renders the expression for the deal under `alias`.
 //
-// asOfPos and basePos are the bind positions of the as-of date and the base
-// currency in the caller's own argument list. Positions rather than values
-// because the caller owns the args slice, and a helper that appended to it
-// would have to be called in a particular order to be correct.
-func BaseValueSQL(asOfPos, basePos int) string {
+// asOfSQL and baseSQL are SQL EXPRESSIONS carrying the as-of date and the base
+// currency — a bind position a caller registered itself, or a token the report
+// engine substitutes one for when it assembles the statement. Expressions
+// rather than positions because the caller owns its argument slice: a helper
+// that appended to it would have to be called in a particular order to be
+// correct, and the report engine does not know its positions until the whole
+// statement is built.
+//
+// alias is interpolated into SQL, so it is a compile-time literal from the
+// calling spec and never a name off a request. It is a parameter because the
+// forecast reads the deal as `d` and the report engine as `t`, and a second
+// copy of this expression differing only in a letter is exactly the drift the
+// gate below exists to prevent.
+func BaseValueSQL(asOfSQL, baseSQL, alias string) string {
 	return fmt.Sprintf(`CASE
-		WHEN d.amount_minor IS NULL THEN NULL
-		WHEN d.currency IS NULL OR d.currency = $%[2]d THEN d.amount_minor
-		WHEN d.fx_rate_to_base IS NOT NULL THEN d.amount_minor_base
-		ELSE (SELECT round(d.amount_minor * fr.rate)::bigint FROM fx_rate fr
-		      WHERE fr.from_currency = d.currency AND fr.to_currency = $%[2]d
-		        AND fr.rate_date <= $%[1]d::date
+		WHEN %[3]s.amount_minor IS NULL THEN NULL
+		WHEN %[3]s.currency IS NULL OR %[3]s.currency = %[2]s THEN %[3]s.amount_minor
+		WHEN %[3]s.fx_rate_to_base IS NOT NULL THEN %[3]s.amount_minor_base
+		ELSE (SELECT round(%[3]s.amount_minor * fr.rate)::bigint FROM fx_rate fr
+		      WHERE fr.from_currency = %[3]s.currency AND fr.to_currency = %[2]s
+		        AND fr.rate_date <= %[1]s::date
 		      ORDER BY fr.rate_date DESC LIMIT 1)
-	END`, asOfPos, basePos)
+	END`, asOfSQL, baseSQL, alias)
 }

@@ -1,9 +1,13 @@
-/* Who reads this message, under the message itself.
+/* Who reads this message, in two places for two moments.
  *
- * Below the words rather than above them: it is the last thing a reader needs,
- * and a strip in the header would push the subject they came for down the
- * drawer. The rule above it is what separates a fact about the message from
- * the message. */
+ * The MARKERS sit in the header beside the subject, because a limit is a fact
+ * about a message like its date and a reader wants it before they read. They
+ * are badges and nothing else: a sentence up there pushes the message itself
+ * below the fold.
+ *
+ * The SENTENCE, the names and the control stay under the body, which is where
+ * a reader goes once they have read the thing and want to act on it. The rule
+ * above them separates a fact about the message from the message. */
 
 .emailaccess {
   display: flex;
@@ -14,11 +18,19 @@
   border-top: 1px solid var(--borderSubtle);
 }
 
-.emailaccess__verdict {
+/* The header's own row of badges, which wraps rather than pushing the close
+   button off the edge on a narrow drawer. */
+.emailaccess__markers {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
+}
+
+.emailaccess__sentence {
+  margin: 0;
+  color: var(--textSecondary);
+  font-size: var(--fs-sm);
 }
 
 .emailaccess__members {

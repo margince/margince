@@ -167,6 +167,12 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 			ctx, tx,
 			now.AddDate(0, 0, -relstrength.QuietDays),
 			decayCandidateCap,
+			// Contacts this reader set aside, removed BEFORE the cap. The
+			// people module owns the rows and renders the predicate; search
+			// never imports a sibling, so the projection takes it as a hole.
+			func(arg func(any) int) (string, error) {
+				return people.NotDismissedClause(ctx, "e", now, arg)
+			},
 		)
 		if err != nil {
 			return err
@@ -441,4 +447,33 @@ func (c attentionCommitments) CountDueBy(ctx context.Context, by time.Time) (int
 		return 0, apperrors.ErrPermissionDenied
 	}
 	return c.store.CountOpenCommitmentsDue(ctx, ids.From[ids.UserKind](actor.UserID), by)
+}
+
+// attentionPins reads the acting reader's own pinned rows.
+//
+// A pass-through in its own transaction: the rows are the module's and the
+// identity they carry is the client's, so nothing is translated here beyond the
+// vocabulary each side owns.
+type attentionPins struct {
+	pool  *pgxpool.Pool
+	store *activities.Store
+}
+
+func (p attentionPins) PinnedRows(ctx context.Context) (map[attention.RowRef]bool, error) {
+	var out map[attention.RowRef]bool
+	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+		pinned, err := p.store.PinnedRows(ctx, tx)
+		if err != nil {
+			return err
+		}
+		out = make(map[attention.RowRef]bool, len(pinned))
+		for ref := range pinned {
+			out[attention.RowRef{Source: ref.Source, RowID: ref.RowID}] = true
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }

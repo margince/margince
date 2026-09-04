@@ -2195,6 +2195,29 @@ export async function mockApi(
         ]),
       );
     }
+    // The frame every Analytics answer is placed in. Without it the screen's
+    // own context query throws and the whole route renders the error boundary
+    // — which is not "analytics has a defect" but "this mock does not serve an
+    // endpoint the screen now reads", and it takes the shell down with it, so
+    // every sweep over #/analytics fails on a missing nav rail rather than on
+    // anything it was measuring.
+    //
+    // One allowed scope, and it is the default: this fixture's reader measures
+    // the workspace. A second would put a population picker on screen that no
+    // AC below is about.
+    if (path === "/analytics/context") {
+      return json({
+        default_scope: { kind: "workspace", label: "Everyone" },
+        allowed_scopes: [{ kind: "workspace", label: "Everyone" }],
+        capabilities: {
+          view_manager_forecast: true,
+          submit_manager_forecast: true,
+        },
+        as_of: "2026-03-04T09:00:00Z",
+        timezone: "Europe/Berlin",
+        base_currency: "EUR",
+      });
+    }
     if (path.startsWith("/reports/")) {
       return json({
         report: "deals-by-stage",
@@ -2275,10 +2298,32 @@ export async function mockApi(
         computed_at: "2026-07-13T00:00:00Z",
       });
     }
+    // Analytics' frame, BEFORE the record-context match below: that one tests
+    // a substring, so it answered this route with a 360's envelope — a body
+    // with no `default_scope`, which took every analytics screen to the error
+    // boundary and the rail with it. Named in full here because the two share
+    // a word and nothing else.
+    if (path === "/analytics/context") {
+      const workspace = { kind: "workspace", label: "Whole workspace" };
+      return json({
+        default_scope: workspace,
+        allowed_scopes: [workspace],
+        capabilities: {
+          view_manager_forecast: true,
+          submit_manager_forecast: true,
+        },
+        as_of: "2026-07-13T00:00:00Z",
+        timezone: "Europe/Berlin",
+        base_currency: "EUR",
+      });
+    }
     // RS-3's context panel and the IT-1 tool console both read fixed-shape
     // envelopes the list catch-all below doesn't produce (`{sections:[]}`,
     // `{data:[AgentTool]}` vs `{data:[],page}`) — mock them explicitly so a
     // 360 open or the tool console doesn't crash on an undefined field.
+    // MATCHED BY PREFIX, so a route added later under any `/context` path is
+    // answered with this shape rather than its own: give it a branch of its own
+    // above, as `/analytics/context` has.
     if (path.includes("/context")) {
       return json({ anchor: { type: "person", id: "x" }, sections: [] });
     }

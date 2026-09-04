@@ -2030,14 +2030,16 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByText("Brandt Automotive GmbH");
 
-    // The thread is folded inside the 360 and names how much it holds: the
-    // one call counts, subject or not.
-    const fold = await screen.findByRole("button", {
-      name: "Read the thread · 1",
-    });
-    await userEvent.click(fold);
+    // The thread is open on arrival, and the one call is in it whether or not
+    // it has a subject.
     const stack = container.querySelector(".co-overview-stack");
     expect(stack?.textContent).not.toContain("Nothing logged with them yet");
+
+    // Folded away, it names how much it holds: that same call counts.
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Hide the thread" }),
+    );
+    await screen.findByRole("button", { name: "Read the thread · 1" });
   });
 
   // None of the reference cards comes from the 360 — each runs its own read —

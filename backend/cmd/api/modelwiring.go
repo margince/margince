@@ -178,6 +178,10 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		// deployment has been serving the deterministic floor — including the
 		// agent surface, which now shares the same service instance.
 		compose.WithMeetingBriefWriter(modelPath.Summarize),
+		// The relationship brief rides it too, for the same reason: grounded
+		// prose over records the caller can already see. It caches, so unlike
+		// the meeting brief it carries the routing version.
+		compose.WithPersonBrief(modelPath.Summarize, routingVersion),
 		compose.WithRoleProposals(modelPath.ProposeRoles),
 		// The ask to a colleague rides the drafting lane: it is the same task
 		// with a different reader, which is what a site is for.

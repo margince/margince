@@ -231,7 +231,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// UPDATE` — and that one is deliberately not what ratifies this: it names a
 	// different table from the one being written, which is exactly the free
 	// credit the table-scoped witness was narrowed to stop giving.
-	"internal/modules/people:writeCompanyFields": "runs under the row lock its callers hold on the organization being written. Both — SaveCompany and applySiteReadConfirmation — reach it through resolveOrCreateAnchor, whose anchorOrganization(ctx, tx, true) is `SELECT id FROM organization WHERE is_anchor AND archived_at IS NULL FOR UPDATE`, held for the rest of the transaction, so two company saves serialize on the row rather than racing on it. The census cannot see that lock for two reasons at once: it is taken two frames up, and anchorOrganization assembles the statement with `query += \" FOR UPDATE\"`, which no reading here folds. This function is attributed a statement by NAME rather than by execution besides — it iterates companyFields and hands each one to setCompanyColumn",
 })
 
 // guardMarkers are the identifiers whose presence in the same function

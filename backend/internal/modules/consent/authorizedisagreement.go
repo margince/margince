@@ -21,6 +21,7 @@ package consent
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -65,20 +66,45 @@ type Disagreement struct {
 // operational question about the product, and the audience is whoever decides
 // whether to enforce.
 func (s *Store) DisagreementReport(ctx context.Context) ([]Disagreement, error) {
+	return s.DisagreementReportSince(ctx, time.Time{})
+}
+
+// DisagreementReportSince is the same reading bounded to decisions taken at or
+// after `since`. A zero time means every decision on record.
+//
+// The window is what makes the reading answerable on a cadence. Unbounded, the
+// report only ever grows: a pass reads everything the last pass read plus a
+// little, so a disagreement that appeared this week is invisible under the
+// weight of one that was fixed months ago, and two consecutive runs cannot be
+// compared. Bounded, each pass answers a question with a subject — "what
+// happened since last time" — which is the only form in which a repeated
+// measurement says anything new.
+func (s *Store) DisagreementReportSince(ctx context.Context, since time.Time) ([]Disagreement, error) {
 	if err := auth.Require(ctx, authorizationModesObject, principal.ActionRead); err != nil {
 		return nil, err
 	}
 	var out []Disagreement
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// $2 is compared rather than branched on, and a ZERO time is what makes
+		// that work: Go's zero time is year 1, so `decided_at >= $2` is true for
+		// every row and the unwindowed reading needs no second query text. Two
+		// query texts would be two answers to one question, and the one nobody
+		// ran on a cadence is the one that would drift.
+		//
+		// An earlier draft mapped the zero time to SQL NULL for legibility. A
+		// mutation check killed it: removing the mapping changed no test, because
+		// year 1 and "no bound" select the same rows. An indirection no behaviour
+		// depends on is one the next reader has to verify for nothing.
 		rows, err := tx.Query(ctx, `
 			SELECT resolved_category, reason_code, verdict, legacy_verdict,
 			       count(DISTINCT delivery_id), count(*)
 			  FROM communication_decision
 			 WHERE legacy_verdict IS NOT NULL
 			   AND legacy_verdict <> verdict
+			   AND decided_at >= $2
 			 GROUP BY resolved_category, reason_code, verdict, legacy_verdict
 			 ORDER BY count(DISTINCT delivery_id) DESC, resolved_category, reason_code
-			 LIMIT $1`, disagreementLimit)
+			 LIMIT $1`, disagreementLimit, since)
 		if err != nil {
 			return fmt.Errorf("consent: read how the two authorities have differed: %w", err)
 		}

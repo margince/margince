@@ -78,7 +78,6 @@ backend/internal/compose/integration/embedreindex_integration_test.go migration 
 backend/internal/compose/integration/growthfit_e2e_integration_test.go migration 0194
 backend/internal/compose/integration/lastactivity_integration_test.go migration 1787032690
 backend/internal/compose/integration/lastactivity_integration_test.go migration 1787044474
-backend/internal/compose/integration/license_entitlement_integration_test.go core 0216
 backend/internal/compose/integration/offerstaged_integration_test.go core 0073
 backend/internal/compose/integration/project_integration_test.go migration 1787320003
 backend/internal/compose/integration/projectlastactivity_integration_test.go migration 1787320000

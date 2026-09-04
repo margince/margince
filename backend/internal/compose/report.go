@@ -18,8 +18,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -39,6 +37,12 @@ const (
 	colStatus         = "t.status"
 	colProjectID      = "t.project_id"
 	whereArchivedNull = "t.archived_at IS NULL"
+	// whereOpenDeal is the population of deals still IN PLAY: live, and not yet
+	// won or lost. Three specs measure it — the forecast, the
+	// open-deals-per-company roll-up and the pipeline composition — and a
+	// separate spelling in any of them is how one comes to mean something
+	// slightly different from the other two.
+	whereOpenDeal = whereArchivedNull + " AND t.status = 'open'"
 
 	// joinStageForWinProbability is the one join a spec adds when it needs the
 	// deal's current stage for win_probability. It is safe from BOTH directions
@@ -266,14 +270,6 @@ type reportOutcome struct {
 	FiscalYearStartMonth int
 }
 
-type reportEngine struct {
-	pool *pgxpool.Pool
-}
-
-func newReportEngine(pool *pgxpool.Pool) *reportEngine {
-	return &reportEngine{pool: pool}
-}
-
 // runSpec executes one validated vocabulary; Run (prebuilt catalog) and
 // runAdHocPlan (schema-descriptor vocabulary) both land here.
 func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSpec, req reportRequest) (reportOutcome, error) {
@@ -315,12 +311,16 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 			"group_by":   groupBy,
 			"aggregates": aggregates,
 		},
-		Filters:     req.Filters,
-		GroupBy:     groupBy,
-		Aggregates:  aggregates,
-		Columns:     columns,
-		Rows:        rows,
-		GeneratedAt: time.Now().UTC(),
+		Filters:    req.Filters,
+		GroupBy:    groupBy,
+		Aggregates: aggregates,
+		Columns:    columns,
+		Rows:       rows,
+		// The instant the SQL CONVERTED at, not the one the response was
+		// assembled at. They differ by however long the query took, and a
+		// rate sheet effective in that gap would make the label name a moment
+		// the arithmetic did not use.
+		GeneratedAt: frame.AsOf,
 
 		Timezone:             frame.Timezone,
 		BaseCurrency:         frame.BaseCurrency,

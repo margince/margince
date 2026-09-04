@@ -28,7 +28,7 @@ import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { clearAgentEdge, currentAgentEdge } from "./agent-edge-signal";
 import { AgentRail } from "./agentrail";
-import { LABELS, REVIEW_ONLY, TASK_SAID, VOCABULARY } from "./agentrail-copy";
+import { LABELS, TASK_SAID, VOCABULARY } from "./agentrail-copy";
 import { type GrantSpec, meFixture } from "./mefixture";
 import type { Route } from "./router";
 import { stubPhoneViewport } from "./testing/shellharness";
@@ -749,41 +749,6 @@ describe("AgentRail", () => {
     ).toBe("true");
   });
 
-  // The state switcher is review-only scaffolding, and it is ON by default
-  // while the surface is under design (app/ui-preview.ts). What has to stay
-  // true is that an installation can take it away, which is the posture this
-  // asserts: the switch turned off leaves no way to put the section into a
-  // state no read can reach.
-  it("carries no state switcher when the preview switch is turned off", async () => {
-    vi.stubEnv("VITE_UI_PREVIEW_TASKBAR", "0");
-    const user = userEvent.setup();
-    stubAgentRailApi();
-    const { container } = render(ROUTE);
-    await openPanel(user, container);
-    expect(panel().querySelector(".archips")).toBeNull();
-  });
-
-  it("carries the state switcher by default, so a reviewer finds it without a flag", async () => {
-    const user = userEvent.setup();
-    stubAgentRailApi();
-    const { container } = render(ROUTE);
-    await openPanel(user, container);
-    expect(panel().querySelector(".archips")).toBeTruthy();
-    expect(screen.getByRole("button", { name: LABELS.runPlay })).toBeTruthy();
-  });
-
-  it("lets a review-only chip override the derived state with its invented line, once the preview switch is on", async () => {
-    vi.stubEnv("VITE_UI_PREVIEW_TASKBAR", "1");
-    const user = userEvent.setup();
-    stubAgentRailApi();
-    const { container } = render(ROUTE);
-    await openPanel(user, container);
-
-    await user.click(screen.getByRole("button", { name: "working" }));
-    expect(block(container).getAttribute("data-core-state")).toBe("working");
-    await settlesOnLine(container, REVIEW_ONLY.working ?? "");
-  });
-
   it("renders nothing on the full Ask surface", () => {
     stubAgentRailApi();
     const { container } = render({ screen: "ai" });
@@ -946,8 +911,8 @@ describe("AgentRail", () => {
   });
 
   // The screen's margins draw what this component publishes, and they cannot
-  // work it out for themselves: the run, the switcher and the reads are all local
-  // here, so a margin that re-derived the state would report on a second agent.
+  // work it out for themselves: the reads are all local here, so a margin that
+  // re-derived the state would report on a second agent.
   it("publishes what the margins draw, and goes quiet when it unmounts", async () => {
     clearAgentEdge();
     stubAgentRailApi({
@@ -1213,7 +1178,7 @@ describe("AgentRail", () => {
     const { container } = render(ROUTE);
     await openPanel(user, container);
     await waitFor(() => expect(runLines()).toEqual([BRIEF_RUNNING]));
-    const headings = [...panel().querySelectorAll(".arsect h4")].map(
+    const headings = [...panel().querySelectorAll(".arsect h2")].map(
       (el) => el.textContent,
     );
     expect(headings[0]).toBe("Running now");

@@ -113,11 +113,12 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 		// link, which is why issuance admits an invited member at all —
 		// self-service reset refuses them, having no password to reset.
 		//
-		// EXCEPT the agent seat, which carries a NULL password_hash by
+		// EXCEPT an agent identity, which carries a NULL password_hash by
 		// construction and is never invited to anything: it holds no credential
 		// because it does not sign in, and its authority comes from the passport
-		// granting it. Sending it to 'invited' would leave extension dispatch
-		// unable to find the seat it requires, on a row nobody could redeem.
+		// granting it. 'invited' is a state a person leaves by redeeming a link,
+		// so putting a row there that nobody can redeem strands it — reactivated
+		// on paper and inert in fact, with no route back.
 		// RETURNING carries the NEW status, which is what the audit image below
 		// needs, so the branch is decided once in SQL rather than recomputed in
 		// Go from a column this function would otherwise have to re-read.

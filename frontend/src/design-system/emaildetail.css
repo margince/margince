@@ -1,9 +1,11 @@
 /* The email drawer's own chrome. The Modal supplies the surface, the edge and
  * the focus trap; this is only what a message needs inside one. */
 
+/* The flex sizing lives on the heading block around this now, so the title is
+   only type: a second `flex: 1` here would stretch it inside a column and push
+   its own markers away from it. */
 .emaildetail__title {
-  margin: 0 0 var(--space-3);
-  flex: 1;
+  margin: 0;
   min-width: 0;
   font-size: var(--fs-h3);
 }
@@ -76,6 +78,23 @@
   align-items: start;
   gap: var(--space-2);
   justify-content: space-between;
+  /* The gap under the header, which used to come from the title's own bottom
+     margin. It moved here when the markers joined the title in a block: a
+     margin on the type would have sat between the subject and its badges
+     instead of under both. */
+  margin-bottom: var(--space-3);
+}
+
+/* The subject with its access markers under it, as one block beside the close
+   button. Stacked rather than inline: a subject runs to a line and a half on a
+   narrow drawer, and badges sharing that line would sit wherever it happened
+   to end. */
+.emaildetail__heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
 }
 
 /* What came with the message. A list, not a grid: filenames run to very

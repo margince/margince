@@ -18,6 +18,8 @@ type Stage = components["schemas"]["Stage"];
 import {
   AnalyticsScreen,
   buildStageAggregates,
+  derivationCellCurrency,
+  derivationColumns,
   parseDerivationQuery,
   sectionFromAddress,
 } from "./analytics";
@@ -63,6 +65,7 @@ type ReportsStubOpts = {
   companyRows?: Record<string, unknown>[];
   derivation?: Record<string, unknown>;
   onDerivation?: (url: string) => void;
+  context?: Record<string, unknown>;
 };
 
 function reportsStub(opts: ReportsStubOpts = {}) {
@@ -70,6 +73,25 @@ function reportsStub(opts: ReportsStubOpts = {}) {
     const request = input instanceof Request ? input : null;
     const url = String(request ? request.url : input);
     const method = request ? request.method : (init?.method ?? "GET");
+    // Every Analytics surface reads its frame first: which population these
+    // numbers cover, and whether this reader may publish a forecast. A stub
+    // without it leaves the screen waiting and the assertions below looking
+    // like a rendering bug.
+    if (url.includes("/analytics/context")) {
+      return jsonResponse(
+        opts.context ?? {
+          default_scope: { kind: "workspace", label: "Whole workspace" },
+          allowed_scopes: [{ kind: "workspace", label: "Whole workspace" }],
+          capabilities: {
+            view_manager_forecast: true,
+            submit_manager_forecast: true,
+          },
+          as_of: "2026-09-04T00:00:00Z",
+          timezone: "Europe/Berlin",
+          base_currency: "EUR",
+        },
+      );
+    }
     if (method === "GET" && url.includes("/derivation")) {
       opts.onDerivation?.(url);
       return jsonResponse(opts.derivation ?? {});
@@ -223,7 +245,7 @@ describe("AnalyticsScreen", () => {
     await waitFor(() => expect(screen.getByText("Slipped")).toBeTruthy());
   });
 
-  it("deals-by-stage requests and renders the server's weighted_minor, not a client re-derivation", async () => {
+  it("renders the server's weighted figure, never a client re-derivation", async () => {
     const bodies: { key: string; body: Record<string, unknown> }[] = [];
     vi.stubGlobal(
       "fetch",
@@ -237,7 +259,6 @@ describe("AnalyticsScreen", () => {
             raw_minor: 24686,
             weighted_minor: 4938,
             deal_count: 2,
-            currency: "EUR",
           },
         ],
       }),
@@ -248,10 +269,10 @@ describe("AnalyticsScreen", () => {
     expect(
       bodies.some(
         (b) =>
-          b.key === "deals-by-stage" &&
+          b.key === "pipeline-current" &&
           Array.isArray(b.body.aggregates) &&
           (b.body.aggregates as { field?: string }[]).some(
-            (a) => a.field === "weighted_amount_minor",
+            (a) => a.field === "weighted_base_minor",
           ),
       ),
     ).toBe(true);
@@ -407,7 +428,7 @@ describe("reports never sum money across currencies", () => {
     stage("pl-s1", "Qualify", 1),
   ];
 
-  it("asks the server to group every money plan by currency", async () => {
+  it("asks the server for the CONVERTED measures, grouped by stage alone", async () => {
     const bodies: { key: string; body: Record<string, unknown> }[] = [];
     vi.stubGlobal(
       "fetch",
@@ -416,49 +437,59 @@ describe("reports never sum money across currencies", () => {
     render(<AnalyticsScreen />);
     await openPipeline();
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
-    const stagePlan = bodies.find((sent) => sent.key === "deals-by-stage");
-    expect(stagePlan?.body).toMatchObject({
-      group_by: ["stage_id", "currency"],
-    });
+    const stagePlan = bodies.find((sent) => sent.key === "pipeline-current");
+    // No currency in the grouping: the server converted each deal before
+    // summing, so a stage is one row rather than one per currency it trades in.
+    expect(stagePlan?.body).toMatchObject({ group_by: ["stage_id"] });
+    expect(stagePlan?.body.aggregates).toEqual([
+      { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
+      { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
+      { fn: "count", as: "deal_count" },
+    ]);
   });
 
-  it("renders a stage's two currencies as two rows and no combined figure", async () => {
+  // The money plans that are still NATIVE keep their currency grouping: the
+  // company table and the forecast strip sum amount_minor, and a total spanning
+  // currencies there would be a number with no unit.
+  it("still groups the native money plans by currency", async () => {
+    const bodies: { key: string; body: Record<string, unknown> }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({ onRun: (key, body) => bodies.push({ key, body }) }),
+    );
+    render(<AnalyticsScreen />);
+    await openPipeline();
+    await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
+    for (const key of ["forecast", "open-deals-per-company"]) {
+      const plan = bodies.find((sent) => sent.key === key);
+      expect(plan?.body.group_by).toContain("currency");
+    }
+  });
+
+  it("draws one row per stage, in the installation's base currency", async () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({
+        // What the converted report returns: one row for the stage, its money
+        // already added up across the currencies the deals were written in.
         stageRows: [
           {
             stage_id: "pl-s1",
-            raw_minor: 100_000,
-            weighted_minor: 20_000,
-            deal_count: 2,
-            currency: "EUR",
-          },
-          {
-            stage_id: "pl-s1",
-            raw_minor: 4_500_000_000,
-            weighted_minor: 900_000_000,
-            deal_count: 3,
-            currency: "VND",
+            raw_minor: 250_000,
+            weighted_minor: 50_000,
+            deal_count: 5,
           },
         ],
       }),
     );
     render(<AnalyticsScreen />);
     await openPipeline();
+
     expect(
-      await screen.findByText(formatMoney(100_000, "EUR", "en")),
+      await screen.findByText(formatMoney(250_000, "EUR", "en")),
     ).toBeTruthy();
-    expect(
-      screen.getByText(formatMoney(4_500_000_000, "VND", "en")),
-    ).toBeTruthy();
-    expect(screen.getAllByText("EUR").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("VND").length).toBeGreaterThan(0);
-    // The figure the old ungrouped plan printed: both currencies added and
-    // labelled with whichever one happened to arrive first.
-    expect(
-      screen.queryByText(formatMoney(4_500_100_000, "EUR", "en")),
-    ).toBeNull();
+    // One stage, one row: the count cell appears once.
+    expect(screen.getAllByText("Qualify")).toHaveLength(1);
   });
 
   it("renders an unpriced stage as absent rather than as zero euros", async () => {
@@ -471,7 +502,6 @@ describe("reports never sum money across currencies", () => {
             raw_minor: null,
             weighted_minor: null,
             deal_count: 4,
-            currency: null,
           },
         ],
       }),
@@ -495,24 +525,22 @@ describe("reports never sum money across currencies", () => {
     expect(screen.queryByText(formatMoney(0, "EUR", "en"))).toBeNull();
   });
 
-  it("orders stage rows down the pipeline, then by currency code", () => {
+  // One stage is ONE row now: the server converts each deal before summing, so
+  // there is no per-currency split left to order within a stage.
+  it("orders stage rows down the pipeline", () => {
     const rows = [
-      { stage_id: "pl-s2", currency: "VND", raw_minor: 1, deal_count: 1 },
-      { stage_id: "pl-s1", currency: "VND", raw_minor: 1, deal_count: 1 },
-      { stage_id: "pl-s2", currency: "EUR", raw_minor: 1, deal_count: 1 },
-      { stage_id: "pl-s1", currency: "EUR", raw_minor: 1, deal_count: 1 },
+      { stage_id: "pl-s2", raw_minor: 1, deal_count: 1 },
+      { stage_id: "pl-s1", raw_minor: 1, deal_count: 1 },
     ];
     expect(
-      buildStageAggregates(rows, STAGES).map(
-        (row) => `${row.stageName}/${row.currency}`,
-      ),
-    ).toEqual(["Qualify/EUR", "Qualify/VND", "Propose/EUR", "Propose/VND"]);
+      buildStageAggregates(rows, STAGES).map((row) => row.stageName),
+    ).toEqual(["Qualify", "Propose"]);
   });
 
   it("sorts a row whose stage the pipeline no longer carries to the end", () => {
     const rows = [
-      { stage_id: "gone", currency: "EUR", raw_minor: 1, deal_count: 1 },
-      { stage_id: "pl-s1", currency: "EUR", raw_minor: 1, deal_count: 1 },
+      { stage_id: "gone", raw_minor: 1, deal_count: 1 },
+      { stage_id: "pl-s1", raw_minor: 1, deal_count: 1 },
     ];
     expect(
       buildStageAggregates(rows, STAGES).map((row) => row.stageId),
@@ -524,7 +552,6 @@ describe("reports never sum money across currencies", () => {
       [
         {
           stage_id: "pl-s1",
-          currency: null,
           raw_minor: null,
           weighted_minor: null,
           deal_count: 3,
@@ -534,7 +561,6 @@ describe("reports never sum money across currencies", () => {
     );
     expect(row.rawMinor).toBeNull();
     expect(row.weightedMinor).toBeNull();
-    expect(row.currency).toBeNull();
     // A count of zero would be a claim; the server did send this one.
     expect(row.count).toBe(3);
   });
@@ -645,9 +671,9 @@ describe("sectionFromAddress", () => {
 const SECTION_REPORT_COUNT_PIPELINE = 3;
 
 describe("the report frame", () => {
-  // A total with no zone and no currency beside it is a number the reader
-  // places by assumption, and the assumption is their own zone.
-  it("names the instant, the zone and the currency the figures were cut in", async () => {
+  // A total with no zone beside it is a number the reader places by
+  // assumption, and the assumption is their own zone.
+  it("names the instant and the zone the figures were cut in", async () => {
     vi.stubGlobal("fetch", reportsStub());
     render(<AnalyticsScreen />);
     await openPipeline();
@@ -657,11 +683,41 @@ describe("the report frame", () => {
     // instant they do not.
     const captions = await screen.findAllByText(/Europe\/Berlin/);
     expect(captions).toHaveLength(SECTION_REPORT_COUNT_PIPELINE);
-    expect(captions[0].textContent).toContain("EUR");
   });
 
-  // A server mid-upgrade sends a partial frame. Naming two of the three would
-  // be worse than naming none, so the caption is drawn or it is not.
+  // And it names NO currency. Every report on this tab is denominated per
+  // currency — the stage table prints a row per stage per currency — so a
+  // code in the frame reads as the denomination of numbers that were never
+  // converted into it. The figures on screen here are EUR and USD at once,
+  // and a reader taking the old caption at its word read the USD total as
+  // euros.
+  it("claims no currency in the frame, because the blocks under it differ", async () => {
+    vi.stubGlobal("fetch", reportsStub());
+    render(<AnalyticsScreen />);
+    await openPipeline();
+
+    // The frame sits under ALL THREE blocks, and they are not in one currency:
+    // the stage table is converted into the base currency, while the forecast
+    // strip and the company table are still per-currency native sums. A code in
+    // the frame would be the denomination of only one of the three.
+    const captions = await screen.findAllByText(/Europe\/Berlin/);
+    for (const caption of captions) {
+      expect(caption.textContent).not.toMatch(/\b(EUR|USD|VND)\b/);
+    }
+  });
+
+  // The converted table says its own currency, in the line under its title,
+  // where the statement is true of every figure beneath it.
+  it("names the base currency on the converted stage table", async () => {
+    vi.stubGlobal("fetch", reportsStub());
+    render(<AnalyticsScreen />);
+    await openPipeline();
+
+    expect(await screen.findByText(/each converted into EUR/)).toBeTruthy();
+  });
+
+  // A server mid-upgrade sends a partial frame. Naming one of the two would be
+  // worse than naming none, so the caption is drawn or it is not.
   it("draws no caption at all when the server sent only part of the frame", async () => {
     vi.stubGlobal("fetch", reportsStub({ partialFrame: true }));
     render(<AnalyticsScreen />);
@@ -674,5 +730,76 @@ describe("the report frame", () => {
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
     expect(screen.queryByText(/Europe\/Berlin/)).toBeNull();
     expect(screen.queryByText(/As of/)).toBeNull();
+  });
+});
+
+// A drill-through row carries money in two different currencies at once, and
+// which one a cell is written in depends on the COLUMN.
+//
+// `pipeline-current` converts server-side and exposes `amount_base_minor`, in
+// the installation's base currency. The forecast does not convert: it exposes
+// the deal's own `amount_minor` with the currency it was written in on the
+// same row. Formatting both against the base currency puts a euro sign on a
+// dollar deal — a wrong number wearing a right-looking symbol, which is the
+// misreading the whole renderer exists to prevent.
+describe("drill-through money", () => {
+  it("writes a converted measure in the base currency", () => {
+    const row = { amount_base_minor: 500000, currency: "USD" };
+    expect(derivationCellCurrency("amount_base_minor", row, "EUR")).toBe("EUR");
+  });
+
+  it("writes an unconverted measure in the deal's own currency", () => {
+    const row = { amount_minor: 500000, currency: "USD" };
+    expect(derivationCellCurrency("amount_minor", row, "EUR")).toBe("USD");
+  });
+
+  // A row that names no currency has nothing to write the figure in. Falling
+  // back to the base currency would be a guess presented as a fact.
+  it("names no currency for an unconverted measure on a row without one", () => {
+    expect(derivationCellCurrency("amount_minor", {}, "EUR")).toBeNull();
+    expect(
+      derivationCellCurrency("amount_minor", { currency: "" }, "EUR"),
+    ).toBeNull();
+  });
+});
+
+// The id is noise beside a name — but only when every row HAS one. Labelling
+// is per row, so a reader who may not read one record gets a label column
+// with a gap in it.
+describe("drill-through columns", () => {
+  const derivation = (columns: string[], rows: Record<string, unknown>[]) =>
+    ({ columns, rows }) as unknown as Parameters<typeof derivationColumns>[0];
+
+  it("drops the id once every row is named", () => {
+    expect(
+      derivationColumns(
+        derivation(
+          ["id", "label", "amount_minor"],
+          [
+            { id: "a", label: "Acme" },
+            { id: "b", label: "Globex" },
+          ],
+        ),
+      ),
+    ).toEqual(["label", "amount_minor"]);
+  });
+
+  // The row whose name was withheld is the one a reader can least account
+  // for. Dropping the id here would leave it showing a blank and nothing else.
+  it("keeps the id when any row's name was withheld", () => {
+    expect(
+      derivationColumns(
+        derivation(
+          ["id", "label", "amount_minor"],
+          [{ id: "a", label: "Acme" }, { id: "b" }],
+        ),
+      ),
+    ).toEqual(["id", "label", "amount_minor"]);
+  });
+
+  it("keeps the id when no row could be named", () => {
+    expect(
+      derivationColumns(derivation(["id", "amount_minor"], [{ id: "a" }])),
+    ).toEqual(["id", "amount_minor"]);
   });
 });

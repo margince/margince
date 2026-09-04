@@ -31,6 +31,7 @@ const (
 	filterStageID            = "stage_id"
 	filterStalled            = "stalled"
 	filterStatus             = "status"
+	filterForecastCategory   = "forecast_category"
 	filterKey                = "key"
 	filterPhase              = "phase"
 )
@@ -59,6 +60,8 @@ var dealListFilters = storekit.FilterSet[ListDealsInput]{
 	filterStageID:        storekit.FilterID(func(in *ListDealsInput, id *ids.StageID) { in.StageID = id }),
 	filterStalled:        storekit.FilterFlag(func(in *ListDealsInput, v *bool) { in.Stalled = v }),
 	filterStatus:         storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Status = v }),
+	filterForecastCategory: storekit.FilterWord(
+		func(in *ListDealsInput, v *string) { in.ForecastCategory = v }),
 }
 
 // ListFilters names what SearchEntity can narrow one entity type by.
