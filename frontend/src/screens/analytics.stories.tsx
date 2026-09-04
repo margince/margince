@@ -70,20 +70,15 @@ function run(report: string, rows: Record<string, unknown>[]) {
   });
 }
 
+// The converted report returns one row per stage and no currency column: each
+// deal was priced into the base currency before anything was summed.
 const stageRows = [
-  {
-    stage_id: "pl-s1",
-    raw_minor: 24686,
-    weighted_minor: 4938,
-    deal_count: 2,
-    currency: "EUR",
-  },
+  { stage_id: "pl-s1", raw_minor: 24686, weighted_minor: 4938, deal_count: 2 },
   {
     stage_id: "pl-s2",
     raw_minor: 1850000,
     weighted_minor: 1110000,
     deal_count: 5,
-    currency: "EUR",
   },
 ];
 
@@ -134,8 +129,9 @@ const companyRows = [
 ];
 
 const derivation = {
-  report: "deals-by-stage",
-  definition: "Sum of open-deal amounts, grouped by stage, in Qualify",
+  report: "pipeline-current",
+  definition:
+    "Sum of open-deal amounts in the base currency, grouped by stage, in Qualify",
   plan: {},
   columns: ["deal", "amount"],
   rows: [
@@ -147,11 +143,11 @@ const derivation = {
 const routes: RouteMap = {
   "GET /me": meRoute({}),
   "GET /pipelines": () => jsonResponse(pipelines),
-  "POST /reports/deals-by-stage": () => run("deals-by-stage", stageRows),
+  "POST /reports/pipeline-current": () => run("pipeline-current", stageRows),
   "POST /reports/forecast": () => run("forecast", forecastRows),
   "POST /reports/open-deals-per-company": () =>
     run("open-deals-per-company", companyRows),
-  "GET /reports/deals-by-stage/derivation": () => jsonResponse(derivation),
+  "GET /reports/pipeline-current/derivation": () => jsonResponse(derivation),
 };
 
 function screenStory() {
