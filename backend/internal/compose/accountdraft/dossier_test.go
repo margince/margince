@@ -41,21 +41,16 @@ func TestASuppliedDossierReachesTheModel(t *testing.T) {
 // and go back to being dropped the moment nothing feeds it, or the kind is
 // reachable on an account the reader was told nothing about.
 func TestADossierReasonSurvivesOnlyWhenADossierWasSupplied(t *testing.T) {
-	reasons := []modelReason{{
-		Kind:  string(crmcontracts.AccountDraftReasonKindDossier),
-		Label: "runs its own dispatch software",
-	}}
-
 	fed := Input{
 		Recipient: RecipientIn{ID: "p1", Name: "Priya Raman"},
 		Dossier:   []string{"Runs its own dispatch software across three depots."},
 	}
-	if got := keepGroundedReasons(reasons, fed); len(got) != 1 {
+	if got := keptReasons(t, fed, crmcontracts.AccountDraftReasonKindDossier, "runs its own dispatch software"); len(got) != 1 {
 		t.Errorf("a dossier reason should survive when a dossier was supplied, got %+v", got)
 	}
 
 	starved := Input{Recipient: RecipientIn{ID: "p1", Name: "Priya Raman"}}
-	if got := keepGroundedReasons(reasons, starved); len(got) != 0 {
+	if got := keptReasons(t, starved, crmcontracts.AccountDraftReasonKindDossier, "runs its own dispatch software"); len(got) != 0 {
 		t.Errorf("a dossier reason with no dossier behind it should be dropped, got %+v", got)
 	}
 }
@@ -84,14 +79,36 @@ func TestADossierReasonMustActuallyComeFromTheDossier(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			reasons := []modelReason{{
-				Kind:  string(crmcontracts.AccountDraftReasonKindDossier),
-				Label: c.label,
-			}}
-			got := keepGroundedReasons(reasons, supplied)
+			got := keptReasons(t, supplied, crmcontracts.AccountDraftReasonKindDossier, c.label)
 			if (len(got) == 1) != c.keep {
 				t.Errorf("label %q: kept=%v, want %v", c.label, len(got) == 1, c.keep)
 			}
 		})
 	}
+}
+
+// keptReasons drives the reason filter the way the runtime does: through the
+// parse, on a real model answer.
+//
+// The filter itself is draftcore's now, and what this file tests is THIS
+// surface's dossier rule feeding it. Going through ParseDraft rather than
+// reaching for an internal also means these cases exercise the path a model
+// answer actually takes, which the direct call never did.
+func keptReasons(t *testing.T, in Input, kind crmcontracts.AccountDraftReasonKind, label string) []Reason {
+	t.Helper()
+	answer, err := json.Marshal(map[string]any{
+		"subject": "Quick question",
+		"body":    "Hallo Priya,\n\neine kurze Frage.",
+		"reasoning": []map[string]string{
+			{"kind": string(kind), "label": label},
+		},
+	})
+	if err != nil {
+		t.Fatalf("building the model answer: %v", err)
+	}
+	draft, err := ParseDraft(string(answer), in)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	return draft.Reasoning
 }

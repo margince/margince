@@ -272,7 +272,7 @@ func TestTheSnippetTravelsInsideTheFence(t *testing.T) {
 	in.Recipient = RecipientIn{ID: "p1", FirstName: "Marek"}
 	in.Envelope = envelopeAt(textlang.German, convstate.BandFresh)
 
-	req, err := buildRequest(in, draftvoice.Context{})
+	req, err := GroundedRequest(in, draftvoice.Context{})
 	if err != nil {
 		t.Fatal(err)
 	}
