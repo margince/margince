@@ -15,15 +15,21 @@
      partner. Centring instead floats the shorter side into the middle of the
      taller one, and the pair stops reading as one row. */
   align-items: start;
-  /* A dense reference surface reads as a compact block, not a spaced-out
-     form — the row gap matches the prototype's tighter rhythm rather than
-     the wider `--space-2`/`--space-3` this grid used before it carried the
-     Details panel's full field set. */
-  gap: 6px var(--space-3);
+  /* A dense reference surface reads as a compact block rather than a
+     spaced-out form — but compact is not cramped. The reference draws each
+     attribute with 7px of air above and below it, which is this rung between
+     one row and the next; at 6px the labels ran together into one grey block
+     with no rows in it. */
+  gap: var(--space-3);
   font-size: var(--fs-sm);
 }
 .fieldgrid-label {
   color: var(--textMeta);
+  /* The label column is a fixed rung, and a label longer than it — which
+     German reaches on half this panel's fields — has to wrap inside it rather
+     than run on across its own value. */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .fieldgrid-value {
   color: var(--textContent);

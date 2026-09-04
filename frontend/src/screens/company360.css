@@ -344,10 +344,19 @@
   display: flex;
   gap: var(--space-4);
   align-items: flex-start;
-  /* Indigo, because the agent wrote this row. The rule under it is the same
-     hue as the card's band above it, so a reader tracks one colour through
-     everything Margince produced rather than learning two. */
-  border-top-color: var(--aiMed);
+  /* Indigo, because the agent wrote this row — and a GROUND rather than a
+     rule, because the list mixes what Margince proposed with the account's own
+     open tasks and the two were told apart only by a hairline of a different
+     hue. The tint is the same claim the card's band above it makes: this part
+     was written for you, the rest was already yours.
+
+     Inset to the panel's own padding and given the pane's corner, so the tint
+     reads as a card inside the list rather than as a full-bleed band. */
+  margin: var(--space-2) var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--r-md);
+  border-top-color: transparent;
+  background: linear-gradient(160deg, var(--aiLight), transparent 80%);
   /* .panel-row already sets the padding and the hairline border (none on
      the first row); this only lays the row's own content out. No hover fill:
      the row is not one press target, its verbs are, and a fill behind them
@@ -438,9 +447,12 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  /* The verbs end the row, on the same margin down the whole list: a column of
+     asks each with its verb wherever its own evidence happened to stop is a
+     list a reader has to hunt through for the thing to press. */
+  justify-content: flex-end;
   gap: var(--space-2);
-  margin-top: var(--space-1);
+  margin-top: var(--space-3);
 }
 .co-move-actions {
   display: flex;
@@ -1137,7 +1149,10 @@
   margin-bottom: 0;
 }
 .co-rail .co-sect > summary {
-  padding: var(--space-3) var(--space-5);
+  /* The slice's own name, on the pane's gutter and clear of the hairline over
+     it: at the row's tighter interval the label sat against the rule and the
+     five slices read as one crowded list rather than five sections. */
+  padding: var(--space-4) var(--space-5) var(--space-3);
   font-size: var(--fs-meta);
   font-weight: var(--fw-medium);
   letter-spacing: var(--tracking-eyebrow);

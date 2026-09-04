@@ -69,25 +69,45 @@
 .arhit {
   position: relative;
   display: flex;
-  /* A CARD, the mock's shape: the ball at the rail's row scale beside two
-     lines of text, on the pane with the agent's own indigo washed over it and
-     its own edge. The ball led the rail at hero size once; it read as an
-     object placed on the sidebar rather than as one of its rows. */
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
+  /* No gap. The ball's own box already carries the air around it (the halo is
+     drawn inside it), so a gap here is a second helping of the same space and it
+     read as the caption belonging to something else. */
+  gap: 0;
   width: 100%;
-  padding: var(--space-3);
-  border: 1px solid var(--aiMed);
+  /* Tight. The ball is the biggest thing in the chrome and it needs room to be
+     read, not room around the room: with no card to hold, air above and below it
+     is just rail nobody uses. */
+  padding: 0 0 var(--space-1);
+  border: 0;
+  /* Nothing draws this corner. It is here for the focus ring, which is the one
+     time this control does take an outline and needs it to follow the shape a
+     reader expects. */
   border-radius: var(--r-md);
-  background:
-    linear-gradient(160deg, var(--aiLight), transparent 80%), var(--pane);
+  /* The light the orb spills, and nothing under it. No panel fill, because a
+     fill needs an edge to end at, an edge needs a corner, and a corner around a
+     centred figure with a caption under it is a playing card. This wash fades
+     out before it reaches anything, so a reader sees the rail lit from within
+     rather than a lit object placed on the rail. */
+  background: radial-gradient(
+    88% 58% at 50% 32%,
+    color-mix(in srgb, var(--arTone) 6%, transparent),
+    transparent 62%
+  );
   color: var(--textPrimary);
-  text-align: left;
+  text-align: center;
   cursor: pointer;
 }
+/* Hover raises the light rather than filling a shape: a tinted rectangle
+   appearing under the pointer would put the card back for as long as the pointer
+   was there. */
 .arhit:hover {
-  border-color: var(--aiText);
+  background: radial-gradient(
+    88% 58% at 50% 32%,
+    color-mix(in srgb, var(--arTone) 12%, transparent),
+    transparent 62%
+  );
 }
 .arhit:focus-visible {
   outline: var(--focus-ring);
@@ -121,13 +141,14 @@
      different diameters. 172px is a step under the width the card could give
      it — the ball leads the rail without crowding the destinations above it —
      and 18vh is what a short window can, whichever is smaller. */
-  --coreSize: 34px;
-  --coreGlass: 30px;
+  --coreSize: min(172px, 18vh);
+  --coreGlass: calc(var(--coreSize) - 6px);
   /* The viewport cap is for a hero standing in a content column; the rail's own
      width and height are the only caps this one needs. */
   --coreCap: 100%;
-  /* Nearly all of the halo off: in a card this small the ball IS the signal,
-     and a bloom would cross the words beside it. */
+  /* Nearly all of the halo off. At this size the ball IS the signal: a bloom
+     wide enough to suit a hero reaches the destinations above it, and with no
+     card edge to contain it there is nothing to stop it either. */
   --coreHalo: 0.08;
   flex: none;
 }
@@ -137,15 +158,17 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 1px; /* ds:ignore two lines of one reading, not spaced content */
   width: 100%;
   min-width: 0;
-  padding: 0;
+  /* The ball takes the rail's full width; the words take a margin back, or a
+     long line runs into the edge of the rail. */
+  padding: 0 var(--space-2);
 }
 .arline {
   max-width: 100%;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-body);
   line-height: 1.3;
   color: var(--textPrimary);
   /* Two lines, always. Not "up to two": the line changes several times a second
@@ -161,7 +184,6 @@
   min-height: 2.6em;
   overflow: hidden;
   align-content: start;
-  font-weight: var(--fw-medium);
 }
 /* What the TOOL is fetching, under the agent's line and plainly subordinate to
    it. The two are different subjects and both can be true at once, so the
@@ -216,7 +238,7 @@
 .arspend {
   display: flex;
   align-items: baseline;
-  justify-content: flex-start;
+  justify-content: center;
   gap: var(--space-1);
   width: 100%;
   min-width: 0;
@@ -246,11 +268,10 @@
 }
 
 .archev {
-  /* At the card's right edge, in the row: the card is one line of things
-     beside each other, and the chevron is the last of them. */
-  position: static;
+  position: absolute;
   z-index: 1;
-  margin-left: auto;
+  bottom: var(--space-2);
+  right: var(--space-2);
   color: var(--textMeta);
   transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -289,6 +310,41 @@
  * the same object. Last the words go and the orb reports alone, exactly as it
  * does on the collapsed rail.
  */
+@media (max-height: 860px) {
+  .arblock {
+    margin-top: var(--space-1);
+  }
+  .arhit {
+    gap: 2px; /* ds:ignore the last of the air between the ball and its line */
+    padding: 0 0 var(--space-1);
+  }
+}
+@media (max-height: 780px) {
+  .arhit {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    text-align: left;
+  }
+  .arorb {
+    --coreSize: 56px;
+    --coreGlass: 50px;
+  }
+  .arwords {
+    align-items: flex-start;
+    padding: 0;
+  }
+  .arspend {
+    justify-content: flex-start;
+  }
+  /* The corner belongs to a column. On a row the chevron sits in the flow, or
+     it lands on top of the words. */
+  .archev {
+    position: static;
+    margin-left: auto;
+  }
+}
 @media (max-height: 620px) {
   .arwords {
     display: none;
@@ -311,12 +367,12 @@
   display: none;
 }
 .rail.collapsed .arhit {
-  /* Collapsed, the card goes and the ball stands alone in the column, centred
-     on the rows' glyph axis like every other mark in the rail. */
-  justify-content: center;
   padding: var(--space-2) 0;
-  border-color: transparent;
-  background: none;
+}
+.rail.collapsed .arorb {
+  --coreSize: 56px;
+  --coreGlass: 48px;
+  --coreHalo: 0.5;
 }
 
 /* ===== The phone bar's centre cell =====

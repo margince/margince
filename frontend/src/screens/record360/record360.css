@@ -4,28 +4,23 @@
    It is the only thing on the card allowed this much weight — a page where
    three things shout has no emphasis at all. */
 .r360-verdict {
-  /* The word, then everything it is a call about: two columns, the first as
-     wide as the word and the second taking the rest. A row of three items let
-     the working drift to the far margin and the sentence fall under the word
-     at any width narrower than both together. */
+  /* The word, the line that says why, and the working: three columns, the
+     middle one taking whatever the other two leave. A wrapping row put the
+     sentence under the word and the working under the sentence, and a head
+     that stacks is a headline with captions rather than one call. */
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: var(--space-6);
   align-items: start;
 }
-/* Under the fold the word takes its own row: a 34px display word and a
-   sentence beside it need a column each, and below that the two share one. */
-@container work (max-width: 34rem) {
+/* Under the fold each takes its own row: a 34px display word, a sentence and a
+   control cannot share a line the width of a phone. */
+@container work (max-width: 40rem) {
   .r360-verdict {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-3);
+    justify-items: start;
   }
-}
-.r360-verdict-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
 }
 
 /* The call, as a WORD and not a colour alone: a reader who cannot tell the
@@ -86,17 +81,13 @@
   text-wrap: pretty;
 }
 
-/* The disclosure sits under the sentence it grounds, at the start of the
-   column: a reader who doubts the call looks for the working where the claim
-   ended, not at the opposite margin of the head. */
+/* The disclosure sits at the far end of the head, where there is room for it:
+   the call and the sentence read left to right and the working waits past
+   them rather than taking a line under the claim it grounds. */
 .r360-rests-toggle {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  /* The one item in the column that is a CONTROL and takes its own width: the
-     sentence and the working below it fill the column, and a button stretched
-     to the measure of a paragraph is a target the size of the paragraph. */
-  align-self: flex-start;
   flex-shrink: 0;
   padding: var(--space-2) var(--space-3);
   /* A bordered control, not a link: it is the one thing in the head a reader
@@ -133,6 +124,9 @@
    quotes down a full-width card is mostly empty page, and the reader is
    comparing them against each other rather than reading them in order. */
 .r360-rests {
+  /* The opened working spans the head: it is a list of quotes, not a third
+     column of it. */
+  grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
   gap: var(--space-3) var(--space-6);

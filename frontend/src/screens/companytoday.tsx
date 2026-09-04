@@ -591,8 +591,13 @@ function MomentRow({
         {target && onOpenRecord && (
           <span className="co-move-do">
             <span className="co-move-actions">
+              {/* Indigo, because pressing it hands the work to Margince: the
+                  hue is the product's one claim about who is acting, and a
+                  verb the agent performs drawn in the accent would read as
+                  the reader's own move. */}
               <Button
                 small
+                variant="ai"
                 onClick={() => onOpenRecord(target.type, target.id)}
               >
                 {moment.recommended_action.label}

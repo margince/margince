@@ -46,7 +46,11 @@ export function ThreadFold({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const [open, setOpen] = useState(false);
+  // Open on arrival. The thread is what the call above it was read FROM, so a
+  // reader who has just been told the account is waiting on them wants the
+  // last few exchanges in the same look — not behind a control that says how
+  // many there are and shows none of them.
+  const [open, setOpen] = useState(true);
   const logged = view?.activities?.data ?? [];
   const state = sectionState(
     view,

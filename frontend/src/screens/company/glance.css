@@ -45,7 +45,15 @@
    the next pane read as two kinds of pane. */
 .co-glance-cols .co-360-head {
   padding-top: var(--space-5);
-  padding-bottom: 0;
+  padding-bottom: var(--space-3);
+}
+/* And no seam under it, for the reason the dimension row has none over it: the
+   panel's rule divides one section of a card from the next, and a head is not
+   a section — it names the one below it. Drawn, the rule landed on the title's
+   own baseline. */
+.co-glance-cols .co-360-head + .panel-body::before,
+.co-glance-cols .co-360-head + .panel-row::before {
+  content: none;
 }
 .co-glance-cols .co-360-head .co-360-title-text {
   margin: 0;
@@ -88,15 +96,10 @@
 .co-move-lead .co-move-by {
   color: var(--textSecondary);
 }
-/* The lead's evidence and its one verb on one line, from the left: the row
-   reads top to bottom as a claim, why, what it rests on, what to do, and a
-   verb pushed to the far edge broke that line into two corners. */
+/* The lead's verb ends its row like every other verb in the list: one margin
+   for everything a reader can press, whichever row they are on. */
 .co-move-lead .co-move-do {
-  justify-content: flex-start;
-  margin-top: var(--space-2);
-}
-.co-move-lead .co-move-actions {
-  margin-left: 0;
+  margin-top: var(--space-3);
 }
 
 /* People as chips: a face and a name, wrapping, with the remainder as one
