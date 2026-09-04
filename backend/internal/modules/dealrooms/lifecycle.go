@@ -36,6 +36,7 @@ func (s *Store) PauseRoom(ctx context.Context, id ids.DealRoomID) (crmcontracts.
 		admits: func(current string) bool { return current == stateLive },
 		refuse: notPausable,
 		action: "pause",
+		anchor: anchorRetracts,
 		payload: func(dealID openapi_types.UUID) events.Payload {
 			return crmcontracts.PublicEventDealRoomPaused{DealId: dealID}
 		},
@@ -50,6 +51,7 @@ func (s *Store) ResumeRoom(ctx context.Context, id ids.DealRoomID) (crmcontracts
 		admits: func(current string) bool { return current == statePaused },
 		refuse: notPaused,
 		action: "resume",
+		anchor: anchorGrants,
 		payload: func(dealID openapi_types.UUID) events.Payload {
 			return crmcontracts.PublicEventDealRoomResumed{DealId: dealID}
 		},
@@ -71,12 +73,26 @@ func (s *Store) CloseRoom(ctx context.Context, id ids.DealRoomID) (crmcontracts.
 		admits:    func(current string) bool { return current == stateLive || current == statePaused },
 		refuse:    notClosable,
 		action:    "close",
+		anchor:    anchorRetracts,
 		stampsCol: "closed_at",
 		payload: func(dealID openapi_types.UUID) events.Payload {
 			return crmcontracts.PublicEventDealRoomClosed{DealId: dealID}
 		},
 	})
 }
+
+// anchorSide names which half of the archived-anchor rule an operation takes:
+// a move that hands access out is frozen by an archived deal, and one that takes
+// access away never is. auth.EnsureRetractable states the rule; this is how one
+// declarative move descriptor answers it.
+type anchorSide uint8
+
+const (
+	// The zero value is deliberately nameless: it says nothing, no move may keep
+	// it, and moveRoom refuses a descriptor that declares neither side.
+	anchorGrants anchorSide = iota + 1
+	anchorRetracts
+)
 
 // roomMove is one lifecycle transition: which states admit it, what it refuses
 // with, and what it announces.
@@ -85,6 +101,13 @@ type roomMove struct {
 	admits func(current string) bool
 	refuse func(current string) error
 	action string
+	// anchor is the side of the archived-anchor rule this move takes, and every
+	// move declares one: pause and close TAKE the room's working surface away,
+	// so an archived deal must not freeze them, while resume hands buyer reads
+	// back and must not run on one. The zero value names neither, and moveRoom
+	// refuses it — so a fourth move picks a side in the same literal it is
+	// declared in rather than inheriting whichever half came first.
+	anchor anchorSide
 	// stampsCol names a timestamp column the move sets to now(), or "" when the
 	// move records only its new state.
 	stampsCol string
@@ -119,7 +142,15 @@ func (s *Store) moveRoom(ctx context.Context, id ids.DealRoomID, move roomMove) 
 		if err != nil {
 			return err
 		}
-		if err := ensureDealWritable(ctx, tx, current); err != nil {
+		switch move.anchor {
+		case anchorRetracts:
+			err = ensureDealRetractable(ctx, tx, current)
+		case anchorGrants:
+			err = ensureDealWritable(ctx, tx, current)
+		default:
+			err = fmt.Errorf("dealrooms: the %q move declares no side of the archived-anchor rule", move.action)
+		}
+		if err != nil {
 			return err
 		}
 		// Lock before deciding: without it two concurrent pauses both read
