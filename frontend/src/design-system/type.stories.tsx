@@ -36,11 +36,19 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const RUNGS = [
-  { token: "--fs-eyebrow", px: "10.5px", role: "uppercase kickers, a monogram" },
+  {
+    token: "--fs-eyebrow",
+    px: "10.5px",
+    role: "uppercase kickers, a monogram",
+  },
   { token: "--fs-meta", px: "12px", role: "counts, timestamps, provenance" },
   { token: "--fs-sm", px: "13px", role: "chips, table cells, helper text" },
   { token: "--fs-body", px: "13.5px", role: "the default reading size" },
-  { token: "--fs-lead", px: "15px", role: "the paragraph under a heading; inputs" },
+  {
+    token: "--fs-lead",
+    px: "15px",
+    role: "the paragraph under a heading; inputs",
+  },
   { token: "--fs-h3", px: "17px", role: "a card title" },
   { token: "--fs-h2", px: "20px", role: "a section title" },
   { token: "--fs-h1", px: "24px", role: "a step title, a record's head" },
