@@ -361,7 +361,7 @@ func (s *ThreadVerdictStore) RecordOutcomeTx(
 		UPDATE capture_import
 		   SET verdict_status = $3, verdict_reason = NULLIF($4, '')
 		 WHERE activity_id = $1 AND user_id = $2`,
-		row.ActivityID, row.UserID, status, kind)
+		row.ActivityID, row.UserID, status, rowReasonForKind(kind))
 	if err != nil {
 		return fmt.Errorf("capture: recording a thread verdict on its import row: %w", err)
 	}

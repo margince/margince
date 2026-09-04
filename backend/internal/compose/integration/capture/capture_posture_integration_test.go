@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	activitiesmod "github.com/margince/margince/backend/internal/modules/activities"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/settings"
@@ -637,4 +638,136 @@ func threadVerdictStatus(t *testing.T, e *integration.SearchEnv, user ids.UUID, 
 		t.Fatalf("reading the thread verdict: %v", err)
 	}
 	return status
+}
+
+// TestAClassifierVerdictIsNotASendersMarking holds apart the two things that
+// once shared the word `explicitly_confidential`.
+//
+// A SENDER's subject-line marking is row-carried and survives an opening
+// verdict: a person marked that message, and no model and no later pass
+// overrules a person. A CLASSIFIER's answer of the same name is a judgement,
+// and the seat whose mail it is may disagree with it.
+//
+// Sharing the word made the second behave like the first. The reported symptom:
+// an ordinary deal thread was judged confidential, and the rep pressed Share.
+// The ledger recorded shared_by_owner, the derivation ran, read
+// `explicitly_confidential` off the row, treated it as the sender's own marking
+// and left the message held. The share worked and the hold ignored it, with
+// nothing on screen saying why.
+//
+// Both directions are asserted, because fixing one alone is the regression: a
+// change that made every hold clearable would publish the messages a sender
+// explicitly marked.
+func TestAClassifierVerdictIsNotASendersMarking(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	allowSharedPosture(t, e)
+	setPosture(t, env, e.Rep1, capturemod.PostureClassified)
+
+	// A classifier's hold, on a subject carrying no marker at all. The kind is
+	// the model's own `explicitly_confidential`, which is what the shipped
+	// classifier returned on the reported thread.
+	sync(t, emailWithSubject("john@mii.example", "John Khoury", captureOwner,
+		"verdict-share-1@mii.example", "Re: Follow up"))
+	judged := oneActivityID(t, e)
+	recordThreadVerdict(t, e, e.Rep1, judged, capturemod.VerdictHeld, "explicitly_confidential")
+	if got, reason := audienceOf(t, e, judged); got != "participants" {
+		t.Fatalf("a held message is %q / %q, want it held before the share", got, reason)
+	} else if reason == "explicitly_confidential" {
+		t.Fatalf("a CLASSIFIER's answer reached the row as %q, the word reserved for a sender's "+
+			"own subject-line marking: that word is row-carried, so the verdict became a hold "+
+			"its owner cannot clear", reason)
+	}
+
+	// The owner shares it, which is the whole point of a judgement being a
+	// judgement: it is theirs to disagree with.
+	shareThreadAsOwner(t, e, e.Rep1, judged)
+	if got, reason := audienceOf(t, e, judged); got != "workspace" {
+		t.Fatalf("after the owner shared it the message is %q / %q, want workspace: "+
+			"the share reached the ledger and the derivation ignored it", got, reason)
+	}
+
+	// The other direction. A sender's marking is NOT the owner's to overrule,
+	// and it still is not.
+	sync(t, emailWithSubject("anwalt@studiolegal.example", "Dr. Legal", captureOwner,
+		"verdict-share-2@studiolegal.example", "[Vertraulich] Aufhebungsvertrag"))
+	marked := newestActivityID(t, e)
+	if got, reason := audienceOf(t, e, marked); got != "participants" || reason != "explicitly_confidential" {
+		t.Fatalf("a marked message is %q / %q, want participants / explicitly_confidential", got, reason)
+	}
+	shareThreadAsOwner(t, e, e.Rep1, marked)
+	if got, reason := audienceOf(t, e, marked); got != "participants" || reason != "explicitly_confidential" {
+		t.Fatalf("a message its SENDER marked is %q / %q after an owner share, want it still "+
+			"held: the marking is not the recipient's to lift", got, reason)
+	}
+}
+
+// recordThreadVerdict drives the real writer — the store method the
+// confidentiality engine calls — rather than an INSERT of the row it produces.
+// The translation under test lives inside that method, so a seeded row would
+// bypass exactly the code this scenario is about.
+func recordThreadVerdict(
+	t *testing.T, e *integration.SearchEnv, seat, activityID ids.UUID, status, kind string,
+) {
+	t.Helper()
+	ctx := seatContext(e, seat)
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		var threadKey string
+		if err := tx.QueryRow(ctx,
+			`SELECT coalesce(thread_key, '') FROM activity WHERE id = $1`, activityID).Scan(&threadKey); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO capture_thread_verdict (thread_key, user_id, status, kind, seen_addresses, resolved_at)
+			VALUES ($1, $2, $3, $4, ARRAY[]::text[], now())
+			ON CONFLICT (thread_key, user_id) DO UPDATE SET status = $3, kind = $4`,
+			threadKey, seat, status, kind); err != nil {
+			return err
+		}
+		return capturemod.NewThreadVerdictStore(nil).RecordOutcomeTx(ctx, tx,
+			capturemod.PendingThread{ThreadKey: threadKey, UserID: seat, ActivityID: activityID},
+			status, kind)
+	}); err != nil {
+		t.Fatalf("recording the thread verdict: %v", err)
+	}
+	recomputeAudience(t, e, seat, activityID)
+}
+
+// shareThreadAsOwner runs the owner's own share, through the store method the
+// thread-audience endpoint calls, and then the derivation that endpoint runs
+// after it. Both are the shipped writers: the scenario is about what the
+// derivation does with what the share wrote, so a seeded ledger row would test
+// neither half.
+func shareThreadAsOwner(t *testing.T, e *integration.SearchEnv, seat, activityID ids.UUID) {
+	t.Helper()
+	ctx := seatContext(e, seat)
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		var threadKey string
+		if err := tx.QueryRow(ctx,
+			`SELECT coalesce(thread_key, '') FROM activity WHERE id = $1`, activityID).Scan(&threadKey); err != nil {
+			return err
+		}
+		return capturemod.NewThreadVerdictStore(nil).DecideAsOwner(ctx, tx, threadKey, true)
+	}); err != nil {
+		t.Fatalf("sharing the thread as its owner: %v", err)
+	}
+	recomputeAudience(t, e, seat, activityID)
+}
+
+// recomputeAudience runs the derivation the way every product writer does after
+// changing a contribution.
+//
+// The SEAT's context, not the admin's: the derivation writes an audit row, and a
+// row with no actor behind it is a change nobody made. That context is threaded
+// into the call rather than a fresh Background one, which is where the actor
+// lives.
+func recomputeAudience(t *testing.T, e *integration.SearchEnv, seat, activityID ids.UUID) {
+	t.Helper()
+	ctx := seatContext(e, seat)
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return activitiesmod.RecomputeAudienceTx(
+			ctx, tx, ids.From[ids.ActivityKind](activityID))
+	}); err != nil {
+		t.Fatalf("recomputing the audience: %v", err)
+	}
 }
