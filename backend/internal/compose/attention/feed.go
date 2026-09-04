@@ -8,6 +8,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -95,6 +96,9 @@ type Service struct {
 	// walks is OPTIONAL like pins above it: nil means this feed freezes no
 	// walk, and every page is an offset into a freshly ranked day.
 	walks Walks
+	// walk is the frozen walk THIS request resumes, resolved before the day is
+	// read and carried on a per-request copy. Nil on a first page.
+	walk *worklistsnap.Snapshot
 	// pinned is what THIS request's reader put at the top, resolved once by
 	// readingPins onto a copy of the service. Nil on the shared service, which
 	// is what keeps one reader's override off another's page.

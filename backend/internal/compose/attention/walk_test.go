@@ -13,11 +13,15 @@ package attention
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -35,8 +39,7 @@ func TestAWalkKeepsItsRowsWhileTheDayMovesUnderIt(t *testing.T) {
 	svc := (&Service{now: func() time.Time { return started }}).WithWalks(walks)
 	day := aDayOfTasks(8)
 
-	first := svc.worklistFrom(context.Background(), day, scopeAll, "", 3,
-		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	first := walkFrom(t, svc, day, 3, worklistCursor{})
 	if first.NextCursor == nil {
 		t.Fatal("a day of eight rows paged three at a time minted no cursor")
 	}
@@ -61,8 +64,7 @@ func TestAWalkKeepsItsRowsWhileTheDayMovesUnderIt(t *testing.T) {
 	}
 	cursor := decodedCursor(t, *first.NextCursor)
 	for page := 0; page < 4 && cursor.At > 0; page++ {
-		next := svc.worklistFrom(context.Background(), moved, scopeAll, "", 3,
-			waitingRead{}, leadRead{}, cursor, nil)
+		next := walkFrom(t, svc, moved, 3, cursor)
 		for _, row := range next.Queue {
 			seen[row.Id]++
 			order = append(order, row.Id)
@@ -127,8 +129,7 @@ func TestWorkThatArrivesWaitsForARefreshAndSaysSo(t *testing.T) {
 	walks := &walkStore{}
 	svc := (&Service{now: func() time.Time { return rankInstant }}).WithWalks(walks)
 
-	first := svc.worklistFrom(context.Background(), aDayOfTasks(4), scopeAll, "", 2,
-		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	first := walkFrom(t, svc, aDayOfTasks(4), 2, worklistCursor{})
 	if first.Walk == nil || first.NextCursor == nil {
 		t.Fatal("the first page froze no walk to resume")
 	}
@@ -142,8 +143,7 @@ func TestWorkThatArrivesWaitsForARefreshAndSaysSo(t *testing.T) {
 	busier.Planned = append(busier.Planned,
 		item("newcomer-one", "task"), item("newcomer-two", "task"))
 
-	next := svc.worklistFrom(context.Background(), busier, scopeAll, "", 2,
-		waitingRead{}, leadRead{}, decodedCursor(t, *first.NextCursor), nil)
+	next := walkFrom(t, svc, busier, 2, decodedCursor(t, *first.NextCursor))
 
 	if next.Walk == nil || next.Walk.NewAvailable == nil {
 		t.Fatal("a resumed page said nothing about work waiting behind the walk")
@@ -164,8 +164,7 @@ func TestWorkThatLeavesGoesImmediatelyAndIsCounted(t *testing.T) {
 	walks := &walkStore{}
 	svc := (&Service{now: func() time.Time { return rankInstant }}).WithWalks(walks)
 
-	first := svc.worklistFrom(context.Background(), aDayOfTasks(6), scopeAll, "", 2,
-		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	first := walkFrom(t, svc, aDayOfTasks(6), 2, worklistCursor{})
 	if first.NextCursor == nil {
 		t.Fatal("the first page minted no cursor")
 	}
@@ -173,8 +172,7 @@ func TestWorkThatLeavesGoesImmediatelyAndIsCounted(t *testing.T) {
 	thinner := aDayOfTasks(6)
 	thinner.Planned = thinner.Planned[:4]
 
-	next := svc.worklistFrom(context.Background(), thinner, scopeAll, "", 10,
-		waitingRead{}, leadRead{}, decodedCursor(t, *first.NextCursor), nil)
+	next := walkFrom(t, svc, thinner, 10, decodedCursor(t, *first.NextCursor))
 
 	if next.Walk == nil {
 		t.Fatal("a resumed page carried no walk state")
@@ -192,26 +190,36 @@ func TestWorkThatLeavesGoesImmediatelyAndIsCounted(t *testing.T) {
 
 // TestAWalkThatCannotBeResumedIsRefusedRatherThanRestarted.
 //
-// Silently serving a fresh page under a resumed token would hand the reader
-// rows they have already seen, in a new order, with nothing saying the walk
-// they were on had ended. The refusal is what makes the client start a new one
-// deliberately.
+// TWO WRONG ANSWERS were available and the second is the dangerous one. Serving
+// a fresh page under a resumed token hands the reader rows they have already
+// seen, in a new order, with nothing saying the walk they were on had ended.
+// Serving an EMPTY page is worse: on this queue an empty day means the work is
+// done, so an expired walk would tell a rep their morning was clear.
+//
+// So it refuses, with the code a cursor minted under a different question
+// already earns — the remedy is the same one, ask again without the cursor.
 func TestAWalkThatCannotBeResumedIsRefusedRatherThanRestarted(t *testing.T) {
 	t.Parallel()
 	svc := (&Service{now: func() time.Time { return rankInstant }}).
 		WithWalks(&walkStore{refuse: true})
-
-	out := svc.worklistFrom(context.Background(), aDayOfTasks(6), scopeAll, "", 2,
-		waitingRead{}, leadRead{},
-		worklistCursor{At: 2, Params: fingerprint(scopeAll, "", ids.UUID{}), Snapshot: ids.NewV7()},
-		nil)
-
-	if len(out.Queue) != 0 {
-		t.Errorf("a refused walk served %d rows, want none — a fresh page under a resumed "+
-			"token repeats rows the reader has already seen", len(out.Queue))
+	cursor := worklistCursor{
+		At: 2, Params: fingerprint(scopeAll, "", ids.UUID{}), Snapshot: ids.NewV7(),
 	}
-	if out.Walk != nil {
-		t.Error("a refused walk reported walk state, which claims a walk that is not there")
+
+	walk, walking, err := svc.walkNamedBy(context.Background(), cursor, scopeAll, "", ids.UUID{})
+
+	if err == nil {
+		t.Fatalf("a walk that cannot be resumed was allowed through as %v — the page that "+
+			"follows is either an empty day or rows the reader has already seen", walk)
+	}
+	if walking {
+		t.Error("a refused walk still reported itself as one to page, so the projection " +
+			"would resume into a snapshot the store declined to hand over")
+	}
+	var mismatch *storekit.CursorSortMismatchError
+	if !errors.As(err, &mismatch) {
+		t.Errorf("a refused walk answered %T, want the refusal a stale cursor earns so the "+
+			"client re-issues without it", err)
 	}
 }
 
@@ -224,8 +232,7 @@ func TestWithoutAStoreTheQueuePagesTheWayItAlwaysDid(t *testing.T) {
 	t.Parallel()
 	svc := &Service{now: func() time.Time { return rankInstant }}
 
-	out := svc.worklistFrom(context.Background(), aDayOfTasks(6), scopeAll, "", 2,
-		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	out := walkFrom(t, svc, aDayOfTasks(6), 2, worklistCursor{})
 
 	if len(out.Queue) != 2 {
 		t.Errorf("an unwired queue drew %d rows, want the page it was asked for", len(out.Queue))
@@ -236,6 +243,24 @@ func TestWithoutAStoreTheQueuePagesTheWayItAlwaysDid(t *testing.T) {
 	if out.NextCursor == nil {
 		t.Error("an unwired queue minted no cursor, so its walk cannot continue at all")
 	}
+}
+
+// walkFrom pages a day the way the endpoint does: resolve the walk the cursor
+// names FIRST, then project.
+//
+// The production path splits those two steps — a token that cannot be continued
+// is refused before a dozen lanes are read — so a test that called the
+// projection alone would exercise a service that never resumed anything.
+func walkFrom(
+	t *testing.T, svc *Service, day crmcontracts.Attention, limit int, cursor worklistCursor,
+) crmcontracts.Worklist {
+	t.Helper()
+	walk, walking, err := svc.walkNamedBy(context.Background(), cursor, scopeAll, "", ids.UUID{})
+	if err != nil {
+		t.Fatalf("resolving the walk this cursor names: %v", err)
+	}
+	return svc.readingWalk(walk, walking).worklistFrom(context.Background(), day, scopeAll, "", limit,
+		waitingRead{}, leadRead{}, cursor, nil)
 }
 
 // decodedCursor reads a minted token back the way the handler does.
@@ -330,8 +355,7 @@ func TestAWalkDoesNotSkipRowsWhenEarlierOnesAreDealtWith(t *testing.T) {
 	walks := &walkStore{}
 	svc := (&Service{now: func() time.Time { return rankInstant }}).WithWalks(walks)
 
-	first := svc.worklistFrom(context.Background(), aDayOfTasks(8), scopeAll, "", 3,
-		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	first := walkFrom(t, svc, aDayOfTasks(8), 3, worklistCursor{})
 	if len(first.Queue) != 3 || first.NextCursor == nil {
 		t.Fatalf("the first page drew %d rows, want three and a cursor", len(first.Queue))
 	}
@@ -351,8 +375,7 @@ func TestAWalkDoesNotSkipRowsWhenEarlierOnesAreDealtWith(t *testing.T) {
 	}
 	thinner.Planned = kept
 
-	next := svc.worklistFrom(context.Background(), thinner, scopeAll, "", 10,
-		waitingRead{}, leadRead{}, decodedCursor(t, *first.NextCursor), nil)
+	next := walkFrom(t, svc, thinner, 10, decodedCursor(t, *first.NextCursor))
 	for _, row := range next.Queue {
 		served[row.Id] = true
 	}
@@ -365,4 +388,75 @@ func TestAWalkDoesNotSkipRowsWhenEarlierOnesAreDealtWith(t *testing.T) {
 				"were dealt with between pages", want)
 		}
 	}
+}
+
+// TestAFoldedGroupLosingOneMemberDoesNotLoseTheOthers.
+//
+// A batch is a SYNTHETIC row: its id is minted from the group's key and cause,
+// so it exists only while the fold produces it. Drop one member below the fold
+// floor and the group stops being minted — and if the walk compares frozen
+// identities against a live set that refolded, the whole group reads as gone
+// while its still-unresolved members read as newly arrived. Real work a reader
+// was walking would drop out of the walk until they refreshed.
+func TestAFoldedGroupLosingOneMemberDoesNotLoseTheOthers(t *testing.T) {
+	t.Parallel()
+	walks := &walkStore{}
+	svc := (&Service{now: func() time.Time { return rankInstant }}).WithWalks(walks)
+
+	// A task ahead of the group, so page one is the task and the group waits
+	// behind the cursor — which is what makes the group's fate on page two the
+	// thing this test observes.
+	whole := aDayOfAlikeDecisions(batchFloor)
+	whole.Planned = []crmcontracts.AttentionItem{item("task-ahead", "task", withDue(rankInstant))}
+
+	first := walkFrom(t, svc, whole, 1, worklistCursor{})
+	if first.NextCursor == nil {
+		t.Fatal("the fixture did not page, so there is no resume to judge")
+	}
+	// The group's MEMBERS are in the frozen walk, not the group's own synthetic
+	// id. That is the fix this test drove: a group frozen by its own id vanishes
+	// when the fold stops producing it. The members are what persist, so they
+	// are what a walk holds.
+	frozen := frozenOrderOf(svc)
+	members := 0
+	for _, id := range frozen {
+		if id == "duplicates" {
+			t.Fatalf("the walk froze the group's synthetic id: %v — it exists only while the "+
+				"fold produces it, so the walk loses the whole group when one member goes", frozen)
+		}
+		if strings.HasPrefix(id, "pair-") {
+			members++
+		}
+	}
+	if members < batchFloor {
+		t.Fatalf("the walk froze %v, which holds %d of the group's members: this test cannot "+
+			"see the refold without them", frozen, members)
+	}
+
+	// One member is dealt with, dropping the group below its floor.
+	thinner := aDayOfAlikeDecisions(batchFloor - 1)
+	thinner.Planned = whole.Planned
+
+	next := walkFrom(t, svc, thinner, 10, decodedCursor(t, *first.NextCursor))
+
+	if next.Walk == nil {
+		t.Fatal("the resumed page carried no walk")
+	}
+	// The surviving members are unresolved work the reader was walking. They
+	// must not be reported as arrivals waiting behind a refresh.
+	if next.Walk.NewAvailable != nil && *next.Walk.NewAvailable >= batchFloor-1 {
+		t.Errorf("the walk reports %d rows newly arrived after one member of a folded group "+
+			"was dealt with — the group's surviving members are work the reader was already "+
+			"walking, not new work", *next.Walk.NewAvailable)
+	}
+}
+
+// aDayOfAlikeDecisions is n routine duplicate pairs, which fold into one group
+// once they reach the floor.
+func aDayOfAlikeDecisions(n int) crmcontracts.Attention {
+	pairs := make([]crmcontracts.AttentionItem, 0, n)
+	for i := 0; i < n; i++ {
+		pairs = append(pairs, item(fmt.Sprintf("pair-%d", i), "dedupe_candidate"))
+	}
+	return crmcontracts.Attention{AsOf: rankInstant, NeedsYou: pairs}
 }

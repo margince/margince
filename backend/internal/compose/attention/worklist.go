@@ -79,6 +79,18 @@ func (s *Service) Worklist(
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
+	// And the WALK it names, resolved here for the same reason and refused the
+	// same way. An expired or stolen walk cannot be answered with a page: an
+	// empty queue on this surface means the day is clear, so serving one would
+	// tell a rep their morning was done — and serving a fresh page under a
+	// resumed token hands them rows they have already seen in a new order.
+	//
+	// The caller re-issues without the cursor, which is the remedy a token
+	// minted under a different question already carries.
+	walk, walking, err := s.walkNamedBy(ctx, cursor, resolved, filter, namedOwner)
+	if err != nil {
+		return crmcontracts.Worklist{}, err
+	}
 	// The producers that CAN be narrowed are narrowed in their own queries,
 	// not filtered afterwards: each store bounds what it returns, so a page
 	// full of colleagues' rows would hide the reader's own work behind a cut
@@ -146,6 +158,7 @@ func (s *Service) Worklist(
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
+	withPins = withPins.readingWalk(walk, walking)
 	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, leads, cursor,
 		[]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr})
@@ -312,18 +325,6 @@ func (s *Service) worklistFrom(
 	// candidate order does not depend on `limit` — crowding is marked above, over
 	// the whole narrowed set — so page two weighs exactly what page one weighed
 	// and continues it rather than re-deciding it.
-	// Ranked ONCE, here, whichever way this page is served. A frozen walk takes
-	// its sequence from the snapshot and a fresh read takes it from this sort,
-	// but both need the comparator to have run: the snapshot's order IS a
-	// previous run of it, and the identities it stores were minted from one.
-	sortByRank(rows)
-	shown, more, reached, walk := s.pageOf(ctx, rows, limit, cursor, scope, filter)
-	// RENDERED IN THE ORDER THE PAGER CHOSE, never re-sorted. A fresh page was
-	// cut from the ranking above; a frozen walk's sequence is a previous run of
-	// that same comparator, and running it again here would return the reader's
-	// own rows in today's order rather than the one they were shown.
-	ordered := renderInOrder(stampAsOf(shown, day.AsOf), readerOf(ctx))
-	bands := bandsOf(ordered)
 	// What never answered, assembled ONCE and used twice: the page names these
 	// lanes to the reader, and the readings below refuse to state exact figures
 	// over them. Two derivations of one list could disagree about whether the
@@ -342,6 +343,24 @@ func (s *Service) worklistFrom(
 			missing = append(missing, *refusal)
 		}
 	}
+	// Ranked ONCE, here, whichever way this page is served. A frozen walk takes
+	// its sequence from the snapshot and a fresh read takes it from this sort,
+	// but both need the comparator to have run: the snapshot's order IS a
+	// previous run of it, and the identities it stores were minted from one.
+	sortByRank(rows)
+	shown, more, reached, walk := s.pageOf(
+		ctx, rows, limit, cursor, scope, filter, unreadSources(missing), day.AsOf)
+	// A walk this reader named and cannot continue — expired, somebody else's,
+	// or minted under another question. It cannot be answered with a page: an
+	// empty queue on this surface means the day is clear, so an expired walk
+	// would tell a rep their morning was done. The projection answers no error,
+	// so the refusal rides on the value and Worklist raises it.
+	// RENDERED IN THE ORDER THE PAGER CHOSE, never re-sorted. A fresh page was
+	// cut from the ranking above; a frozen walk's sequence is a previous run of
+	// that same comparator, and running it again here would return the reader's
+	// own rows in today's order rather than the one they were shown.
+	ordered := renderInOrder(stampAsOf(shown, day.AsOf), readerOf(ctx))
+	bands := bandsOf(ordered)
 	out := crmcontracts.Worklist{
 		AsOf:  day.AsOf,
 		Queue: ordered,
@@ -355,7 +374,7 @@ func (s *Service) worklistFrom(
 		// the sentence's own `total` has always been that scope. Counting the
 		// bands over `shown` printed one page's four figures beside the day's
 		// fifth, in a sentence shaped like a breakdown of the total.
-		Summary:            summarize(considered, materialBarOf(day, s.money)),
+		Summary:            walk.statedOver(summarize(considered, materialBarOf(day, s.money))),
 		SourcesUnavailable: missing,
 		// `considered` is every candidate this read weighed, `shown` what
 		// survived folding and the cut. Both are already in hand, so no figure

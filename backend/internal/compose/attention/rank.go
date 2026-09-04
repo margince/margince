@@ -24,6 +24,7 @@ package attention
 import (
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -164,6 +165,17 @@ type ranked struct {
 	// every folded source reports zero shown, which reads as "nothing from
 	// this source" rather than "folded into one row".
 	foldedFrom []crmcontracts.WorklistItemSource
+	// members names the rows this one stands for, by their own identities.
+	//
+	// A folded group's id is SYNTHETIC — minted from its key and cause — so it
+	// exists only while the fold produces it. A walk that froze the group row
+	// would lose the whole group the moment one member is dealt with and the
+	// rest fall below the fold floor: the group reads as gone and its surviving
+	// members, work the reader was already walking, read as newly arrived.
+	//
+	// So a walk freezes these instead, and the group is whatever today's fold
+	// makes of the members that remain.
+	members []worklistsnap.Row
 	// What a routine contact decision is ABOUT, for the group it joins. Read
 	// from the staged payload rather than re-derived here: the verdict engine
 	// already decided who the address belongs to, and a second opinion would

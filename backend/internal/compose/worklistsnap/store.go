@@ -60,13 +60,17 @@ type Snapshot struct {
 // would be yesterday's judgement about what mattered.
 const Life = 4 * time.Hour
 
-// keptPerReader bounds what one reader's snapshots cost.
+// KeptPerReader bounds what one reader's snapshots cost.
+//
+// Exported so the integration test asserts the sweep against the STORE's own
+// ceiling rather than a number repeated in the test, which would keep passing
+// after somebody changed one of the two.
 //
 // A snapshot outlives the page that minted it and nothing but expiry removes
 // one, so a rep who refreshes twenty times in a morning would otherwise leave
 // twenty rows behind. Three is past what a person can be walking at once: two
 // tabs and the one they forgot.
-const keptPerReader = 3
+const KeptPerReader = 3
 
 // maxRows bounds one walk's stored identity list.
 //
@@ -199,7 +203,7 @@ func sweep(ctx context.Context, tx pgx.Tx, reader ids.UUID, now time.Time) error
 		                    WHERE reader_id = $1
 		                    ORDER BY created_at DESC
 		                    LIMIT $3))`,
-		reader, now, keptPerReader-1,
+		reader, now, KeptPerReader-1,
 	); err != nil {
 		return fmt.Errorf("worklistsnap: sweeping a reader's old walks: %w", err)
 	}

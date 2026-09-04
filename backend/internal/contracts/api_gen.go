@@ -38221,11 +38221,16 @@ type GetWorklistParams struct {
 	// bounded, so no arrangement of arrivals, answers and reprioritisations makes a
 	// client paging to exhaustion loop.
 	//
-	// Not guaranteed: a stable snapshot, which a set re-assembled and re-ranked on every
-	// read cannot offer. One consequence, and it is the whole cost of this design: A ROW
-	// THAT CROSSES THE PAGE BOUNDARY BETWEEN TWO READS IS SERVED TWICE OR NOT AT ALL ON
-	// THIS WALK. A deal that turns urgent moves up past where you have got to; one that
-	// is answered lets everything below it move up by one.
+	// A walk is FROZEN at its first page: the rows it covers and the order they sit in
+	// are fixed, so paging does not race the day. `walk` on the response says what has
+	// happened since — how many of those rows have gone, and how much has arrived that is
+	// deliberately not in this walk. Membership moves one way: new work waits for a fresh
+	// read, work that was resolved or is no longer visible leaves at once.
+	//
+	// An installation that does not hold walks pages the older way instead, and there the
+	// cost is real and worth stating: A ROW THAT CROSSES THE PAGE BOUNDARY BETWEEN TWO
+	// READS IS SERVED TWICE OR NOT AT ALL. A deal that turns urgent moves up past where
+	// you have got to; one that is answered lets everything below it move up by one.
 	//
 	// Such a row is not lost from the product — the next read of the queue ranks it
 	// afresh and shows it — so treat a walk as a way to reach a backlog you already know

@@ -153,14 +153,32 @@ func TestARepsOldestWalksAreSweptAway(t *testing.T) {
 		minted = append(minted, id)
 	}
 
-	// The newest is resumable and the oldest is gone. Asserting both, because a
-	// sweep that deleted everything would satisfy the second alone.
-	if _, err := snaps.Resume(ctx, minted[len(minted)-1], "question-one"); err != nil {
-		t.Errorf("the newest walk was swept away with the old ones: %v", err)
+	// EXACTLY the bound survives, newest first. Asserting only that the newest
+	// lives and the oldest is gone passes for a sweep that keeps one, two, three
+	// or four — so it pins none of them, and the ceiling it exists to hold could
+	// drift without failing.
+	resumable := 0
+	for i, id := range minted {
+		_, err := snaps.Resume(ctx, id, "question-one")
+		switch {
+		case err == nil:
+			resumable++
+			if i < len(minted)-worklistsnap.KeptPerReader {
+				t.Errorf("walk %d of %d survived, past the newest %d the bound keeps",
+					i, len(minted), worklistsnap.KeptPerReader)
+			}
+		case errors.Is(err, apperrors.ErrNotFound):
+			if i >= len(minted)-worklistsnap.KeptPerReader {
+				t.Errorf("walk %d of %d was swept though it is among the newest %d",
+					i, len(minted), worklistsnap.KeptPerReader)
+			}
+		default:
+			t.Fatalf("resuming walk %d: %v", i, err)
+		}
 	}
-	if _, err := snaps.Resume(ctx, minted[0], "question-one"); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("a reader's oldest walk survived five refreshes, so nothing bounds what "+
-			"their snapshots cost: %v", err)
+	if resumable != worklistsnap.KeptPerReader {
+		t.Errorf("%d walks survived five refreshes, want exactly the %d the bound keeps",
+			resumable, worklistsnap.KeptPerReader)
 	}
 }
 

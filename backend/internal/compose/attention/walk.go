@@ -29,6 +29,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -49,6 +50,12 @@ type walkPage struct {
 	// an offer to refresh, never a promise that these rows are reachable — they
 	// are reachable by starting a new walk, which is what refreshing does.
 	arrived int
+	// held is how many of the walk's rows this read could not judge, because
+	// the lane that raised them was withheld or failed. Neither served nor
+	// counted gone: a source that did not answer says nothing about the work it
+	// carries, and reporting silence as resolution would tell a reader a backend
+	// hiccup had cleared their morning.
+	held int
 }
 
 // pageFrozenWalk serves one page in the order the walk was frozen in.
@@ -58,10 +65,23 @@ type walkPage struct {
 // read did not produce has gone — answered, deleted, or withdrawn — and is
 // counted rather than substituted for. A row this read produced that the
 // snapshot does not name has arrived behind the reader, and waits.
-func pageFrozenWalk(rows []ranked, limit int, cursor worklistCursor, walk worklistsnap.Snapshot) walkPage {
+func pageFrozenWalk(
+	rows []ranked, limit int, cursor worklistCursor, walk worklistsnap.Snapshot,
+	unread map[string]bool,
+) walkPage {
+	// Today's rows, reachable by every identity a walk might name them by.
+	//
+	// A group answers to its MEMBERS' identities, because that is what the walk
+	// froze — and to its own as well, so a token minted before this rule still
+	// resolves. Several member identities can therefore reach one group row,
+	// which is exactly right: the group is one row standing for all of them, and
+	// `shown` de-duplicates so it is drawn once.
 	live := make(map[worklistsnap.Row]ranked, len(rows))
 	for _, row := range rows {
 		live[rowIdentity(row)] = row
+		for _, member := range row.members {
+			live[member] = row
+		}
 	}
 	// The walk's own sequence, keeping only what is still here. Walked in the
 	// frozen order rather than sorted again: re-ranking is exactly what this
@@ -71,14 +91,31 @@ func pageFrozenWalk(rows []ranked, limit int, cursor worklistCursor, walk workli
 	for _, at := range walk.Rows {
 		carried[at] = true
 	}
-	gone := 0
+	// A row missing because its LANE did not answer has not gone anywhere.
+	//
+	// A withheld or failed source contributes no rows, so every identity the
+	// walk holds from it is absent from this read — and counting those as
+	// resolved would tell a reader their morning had been dealt with by a
+	// backend hiccup. Worse, the recovery reads as new work arriving: the same
+	// still-open rows come back and are counted as having turned up behind them.
+	//
+	// So a walk judges only the lanes that answered. Rows from a silent one are
+	// held: not served, because this read produced nothing to serve, and not
+	// counted as gone either.
+	gone, held := 0, 0
 	for _, at := range walk.Rows {
-		if _, here := live[at]; !here {
-			gone++
+		if _, here := live[at]; here {
+			continue
 		}
+		if unread[at.Source] {
+			held++
+			continue
+		}
+		gone++
 	}
 	page := walkPage{
 		gone: gone,
+		held: held,
 		// Everything this read holds that the walk does not. Counted over the
 		// whole live set rather than the page, because the question is how much
 		// a refresh would add to their day and not to their screen.
@@ -99,11 +136,21 @@ func pageFrozenWalk(rows []ranked, limit int, cursor worklistCursor, walk workli
 	// have gone are simply skipped as it walks past them.
 	from := min(cursor.At, len(walk.Rows))
 	shown := make([]ranked, 0, limit)
+	drawn := make(map[worklistsnap.Row]bool, limit)
 	at := from
 	for ; at < len(walk.Rows) && len(shown) < limit; at++ {
-		if row, here := live[walk.Rows[at]]; here {
-			shown = append(shown, row)
+		row, here := live[walk.Rows[at]]
+		if !here {
+			continue
 		}
+		// Once each. A group folded from several frozen members is reached by
+		// every one of them, and drawing it per member would repeat one row as
+		// many times as it stands for.
+		if drawn[rowIdentity(row)] {
+			continue
+		}
+		drawn[rowIdentity(row)] = true
+		shown = append(shown, row)
 	}
 	// Anything left in the frozen list past this page — rows still to serve, or
 	// only departed ones. Asked rather than inferred from the count: a tail made
@@ -157,6 +204,19 @@ func rowIdentity(row ranked) worklistsnap.Row {
 func frozenRows(rows []ranked) []worklistsnap.Row {
 	out := make([]worklistsnap.Row, 0, len(rows))
 	for _, row := range rows {
+		// A FOLDED GROUP freezes its members, never itself. Its own id is minted
+		// from the key and cause, so it exists only while the fold produces it:
+		// deal with one member, drop the rest below the floor, and the group
+		// stops being minted. Frozen by its own id it would read as gone, and
+		// its still-unresolved members would read as newly arrived — real work
+		// falling out of a walk the reader was part-way through.
+		//
+		// Frozen by member, the group is simply whatever today's fold makes of
+		// the members that remain.
+		if len(row.members) > 0 {
+			out = append(out, row.members...)
+			continue
+		}
 		out = append(out, rowIdentity(row))
 	}
 	return out
@@ -224,6 +284,12 @@ type walkState struct {
 	// carried says whether there is a walk at all. A first page that could not
 	// freeze one, and an installation with no store, both leave this false.
 	carried bool
+	// buckets is the partition the walk STARTED with, read back from the store.
+	//
+	// A resumed page must state this rather than a fresh count: the live day
+	// holds work that arrived behind the reader, and recomputing would let the
+	// headline climb — the exact movement freezing the walk exists to stop.
+	buckets worklistsnap.Buckets
 	// resumed says this page continued a walk rather than starting one.
 	//
 	// Its own field rather than a comparison of instants: a first page and its
@@ -278,16 +344,30 @@ func (w walkState) state() *crmcontracts.WorklistWalk {
 // saying the walk they were on had ended.
 func (s *Service) pageOf(
 	ctx context.Context, rows []ranked, limit int, cursor worklistCursor, scope, filter string,
+	unread map[string]bool, asOf time.Time,
 ) (shown []ranked, more bool, reached int, walk walkState) {
 	if s.walks == nil {
 		shown, more, reached = pageFrom(rows, limit, cursor)
 		return shown, more, reached, walkState{}
 	}
-	if id, named := snapshotOf(cursor); named {
-		return s.resumeWalk(ctx, rows, limit, cursor, id, scope, filter)
+	// The walk was resolved before the day was read — early, so a token that
+	// cannot be continued does not cost a dozen lane reads — and carried here on
+	// a per-request copy. Resuming again would be a second read of one fact.
+	if s.walk != nil {
+		id, _ := snapshotOf(cursor)
+		page := pageFrozenWalk(rows, limit, cursor, *s.walk, unread)
+		return page.shown, page.more, page.reached, walkState{
+			id:      id,
+			frozen:  s.walk.AsOf,
+			gone:    page.gone,
+			arrived: page.arrived,
+			buckets: s.walk.Buckets,
+			carried: true,
+			resumed: true,
+		}
 	}
 	shown, more, reached = pageFrom(rows, limit, cursor)
-	return shown, more, reached, s.freezeWalk(ctx, rows, scope, filter)
+	return shown, more, reached, s.freezeWalk(ctx, rows, asOf, scope, filter)
 }
 
 // freezeWalk records what this first page assembled.
@@ -296,14 +376,18 @@ func (s *Service) pageOf(
 // and freezing only the first twenty-five would end it at the bottom of page
 // one. Its buckets are the day's too, for the same reason.
 //
+// The DAY's instant, not a second clock read. The response publishes the
+// assembly's `as_of` and the contract says a first page's walk shares it, so
+// reading the clock again here made the two disagree by however long the
+// assembly took.
+//
 // A failure here is swallowed deliberately, and it is the one place in this
 // change where that is right: the alternative is failing a reader's whole day
 // because a convenience could not be recorded. The cost is that their next page
 // is unfrozen, which the absent walk on the response already tells the client.
 func (s *Service) freezeWalk(
-	ctx context.Context, rows []ranked, scope, filter string,
+	ctx context.Context, rows []ranked, asOf time.Time, scope, filter string,
 ) walkState {
-	asOf := s.now()
 	id, err := s.walks.Freeze(
 		ctx, fingerprint(scope, filter, s.taskOwner), asOf,
 		frozenBuckets(bucketsOf(rows)), frozenRows(rows))
@@ -313,25 +397,87 @@ func (s *Service) freezeWalk(
 	return walkState{id: id, frozen: asOf, carried: true}
 }
 
-// resumeWalk continues a walk this reader started.
-func (s *Service) resumeWalk(
-	ctx context.Context, rows []ranked, limit int, cursor worklistCursor,
-	id ids.UUID, scope, filter string,
-) (shown []ranked, more bool, reached int, walk walkState) {
-	frozen, err := s.walks.Resume(ctx, id, fingerprint(scope, filter, s.taskOwner))
+// unreadSources names the lanes this read could not see.
+//
+// A walk judges only what answered. A row missing because its own source was
+// withheld or failed has not been dealt with — the queue simply has no news
+// about it — and the difference decides whether a reader is told their morning
+// shrank or that part of it could not be read.
+func unreadSources(missing []crmcontracts.WorklistSourceUnavailable) map[string]bool {
+	if len(missing) == 0 {
+		return nil
+	}
+	out := make(map[string]bool, len(missing))
+	for _, lane := range missing {
+		out[string(lane.Source)] = true
+	}
+	return out
+}
+
+// statedOver puts the walk's own partition on a summary computed live.
+//
+// The sibling signals — urgent, due, in_play, lower_priority — stay this
+// read's: they are questions about the day, and a reader asking "how much is
+// overdue" wants today's answer.
+//
+// The PARTITION is the walk's, because it is the additive headline drawn beside
+// the queue. Recomputed live it would count work that arrived behind the reader
+// and is deliberately not in their walk, so the sentence would climb while the
+// rows below it did not — which is precisely the movement freezing a walk
+// exists to stop.
+//
+// Only on a RESUMED page. A first page's live count IS the walk's, having just
+// been frozen from it, and reading back a snapshot to restate what was just
+// computed would be a second answer to one question.
+func (w walkState) statedOver(summary crmcontracts.WorklistSummary) crmcontracts.WorklistSummary {
+	if !w.resumed {
+		return summary
+	}
+	frozen := crmcontracts.WorklistBuckets{
+		Urgent:   w.buckets.Urgent,
+		DueToday: w.buckets.DueToday,
+		Planned:  w.buckets.Planned,
+		Review:   w.buckets.Review,
+	}
+	summary.Buckets = &frozen
+	return summary
+}
+
+// walkNamedBy resolves the walk a cursor names, before the day is assembled.
+//
+// EARLY, for the reason decodeCursor is early: a token that cannot be continued
+// is the caller's to fix, and assembling a dozen lanes to then discard the page
+// spends real reads on an answer nobody receives.
+//
+// It answers three ways. No store or no walk named: nothing to resume, and the
+// page is served fresh. A walk that resumes: carried to the projection so it
+// need not read the store twice. A walk that refuses: the error travels, and
+// the caller re-issues without the cursor.
+func (s *Service) walkNamedBy(
+	ctx context.Context, cursor worklistCursor, scope, filter string, owner ids.UUID,
+) (walk worklistsnap.Snapshot, named bool, err error) {
+	id, carried := snapshotOf(cursor)
+	if s.walks == nil || !carried {
+		return worklistsnap.Snapshot{}, false, nil
+	}
+	frozen, err := s.walks.Resume(ctx, id, fingerprint(scope, filter, owner))
 	if err != nil {
-		// Refused rather than restarted. The caller sees the same 422 a
-		// malformed cursor earns, and its remedy is the same: ask again without
-		// a cursor and start a fresh walk.
-		return nil, false, 0, walkState{}
+		// The same refusal a cursor minted under a different question earns,
+		// and the same remedy: ask again without it. A dedicated code would
+		// tell the client nothing it can act on differently.
+		return worklistsnap.Snapshot{}, false, &storekit.CursorSortMismatchError{}
 	}
-	page := pageFrozenWalk(rows, limit, cursor, frozen)
-	return page.shown, page.more, page.reached, walkState{
-		id:      id,
-		frozen:  frozen.AsOf,
-		gone:    page.gone,
-		arrived: page.arrived,
-		carried: true,
-		resumed: true,
+	return frozen, true, nil
+}
+
+// readingWalk returns a copy of this service holding the walk this page serves.
+//
+// A copy, for the reason readingPins takes one: a single Service serves every
+// request, so a field set on it would follow one reader's page onto another's.
+func (s *Service) readingWalk(walk worklistsnap.Snapshot, walking bool) *Service {
+	reading := *s
+	if walking {
+		reading.walk = &walk
 	}
+	return &reading
 }
