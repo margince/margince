@@ -1067,6 +1067,21 @@ up)
   # its shipped empty default.
   public_base_url_flag=(--public-base-url "${MARGINCE_PUBLIC_BASE_URL:-http://localhost:${fe_port}}")
 
+  # The OAuth connect transport, which mounts on the state key and the public
+  # base URL ALONE — no vendor app in the environment. That is the whole point
+  # of it: an installation registers its Google or Microsoft app through the
+  # first-run platform step or Settings, and the transport is what lets a
+  # mailbox then be connected against it.
+  #
+  # Exported unconditionally, and it used to be exported only inside the branch
+  # below. A dev stack with no Gmail app in .env.local therefore mounted no
+  # transport, so a stored app could never run its consent flow — and the
+  # connect step reported "your organization has not registered its Google app
+  # yet" to somebody who had just registered one, because the roster could not
+  # tell an unregistered app from an unusable deployment. Not a secret: a fixed
+  # dev constant, overridden by .env.local where one is set.
+  export MARGINCE_CONNECTOR_STATE_KEY="${MARGINCE_CONNECTOR_STATE_KEY:-margince-dev-connector-state-key-0001}"
+
   # Gmail capture connector: when .env.local supplies a Google OAuth app, pass
   # its flags to the api and run the sync worker. Absent it, `make dev` is
   # unchanged and the /connectors/gmail/* surface stays its declared 501.
@@ -1076,13 +1091,12 @@ up)
     gmail_enabled=1
     # Secrets travel via the environment, NEVER CLI flags (argv is visible in
     # the process table). The client id/secret are already exported from
-    # .env.local; export the OAuth state key too. The api/worker flags
-    # default to these env vars, so we pass only the non-secret, dev-computed
-    # URL on the command line — api base = the api (:api_port), where the
-    # callback redirect_uri resolves. public-base-url is Gmail's consent
-    # landing origin too, but it rides on $public_base_url_flag above so it
-    # is passed exactly once.
-    export MARGINCE_CONNECTOR_STATE_KEY="${MARGINCE_CONNECTOR_STATE_KEY:-margince-dev-connector-state-key-0001}"
+    # .env.local, and the state key above. The api/worker flags default to
+    # these env vars, so we pass only the non-secret, dev-computed URL on the
+    # command line — api base = the api (:api_port), where the callback
+    # redirect_uri resolves. public-base-url is Gmail's consent landing origin
+    # too, but it rides on $public_base_url_flag above so it is passed exactly
+    # once.
     gmail_api_flags=(
       --api-base-url "http://localhost:${api_port}"
     )

@@ -33,6 +33,11 @@ type RoutingStore struct {
 	// keeps its credentials in the environment, which is where every
 	// installation had them before the vault existed, and `keys` still answers.
 	vault keyvault.Vault
+	// catalogue serves the one vendor (OpenRouter) whose list this store asks
+	// unauthenticated and unbound, for the ONE read that ranks by a published
+	// benchmark rather than by a stored binding. Optional: absent it, that
+	// vendor answers not_published like any adapter this build does not carry.
+	catalogue *ModelCatalogue
 }
 
 // NewRoutingStore builds the store over the settings catalog.

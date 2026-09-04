@@ -35,6 +35,10 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese borrow it as a term of art rather than translating it. The
   // section labels UNDER it are translated normally.
   "nav.analytics",
+  // Two placeholders and a colon. The field name is already translated one
+  // level down (factFieldLabelKey) and the value is the page's own word, so
+  // there is nothing left in this string for a locale to translate either.
+  "ob.scan.tickerFact",
   // Two whole clauses and the space between them. The weekly's opening sentence
   // is built from result keys and carry keys that ARE translated; this joins the
   // two rendered clauses and contributes no word of its own, so a locale has
@@ -127,11 +131,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // surface over.
   "provider.profile.linkedin",
   "person.page.linkedin",
-  "auth.coreProviderAnthropic",
-  "auth.coreProviderGemini",
-  "auth.coreProviderOllama",
-  "auth.coreProviderOpenAI",
-  "auth.coreProviderVllm",
   "overlay.userMap.principal.hubspot",
   "overlay.regionEu1",
   "overlay.budgetSources",
@@ -248,6 +247,24 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Other cases verified individually against the source.
   "shell.logoAria",
   "ob.conv.connect.scopeMicrosoft",
+
+  // Worked examples of a German commercial register entry, the shape the
+  // legal-notice read actually parses regardless of which locale a reader
+  // picked. A "translated" court name or register prefix would show an
+  // example that does not match what the product reads.
+  "ob.fieldEg.legal_name",
+  "ob.fieldEg.registered_address",
+  "ob.fieldEg.register_vat",
+  "ob.fieldEg.legal_form",
+  "ob.fieldEg.register_court",
+  "ob.fieldEg.register_number",
+
+  // Brand names, a protocol's acronym, and the console Google itself names
+  // in English.
+  "firstRun.platform.google",
+  "firstRun.platform.microsoft",
+  "firstRun.platform.imap",
+  "firstRun.google.helpConsole",
 ]);
 
 // Every invariant below derives from `catalogs`, so a locale added to the

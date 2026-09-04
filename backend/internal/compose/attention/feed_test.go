@@ -52,6 +52,11 @@ type stubDuplicates struct {
 	unreadable ids.UUID
 	// describeErr is a read that BROKE rather than one that was refused.
 	describeErr error
+	// unsettleable is a PAIR the merge itself would refuse — two companies
+	// each carrying live work — whatever authority the reader holds.
+	unsettleable ids.UUID
+	// settleErr is the settleable read failing rather than answering.
+	settleErr error
 	// asked records every batch the lane requested, so a test can count the
 	// reads rather than assume them.
 	asked *[]string
@@ -94,6 +99,19 @@ func (s stubDuplicates) DescribeMany(
 // names one that is not: the lane's other cases are about naming and ordering,
 // and a stub that withheld the verb by default would make each of them assert
 // the absence of a button for the wrong reason.
+func (s stubDuplicates) SettleablePairs(
+	_ context.Context, pairs []DuplicatePair,
+) (map[ids.UUID]bool, error) {
+	if s.settleErr != nil {
+		return nil, s.settleErr
+	}
+	settleable := make(map[ids.UUID]bool, len(pairs))
+	for _, pair := range pairs {
+		settleable[pair.ID] = pair.ID != s.unsettleable
+	}
+	return settleable, nil
+}
+
 func (s stubDuplicates) DecidableSubset(
 	_ context.Context, _ string, rowIDs []ids.UUID,
 ) (map[ids.UUID]bool, error) {
@@ -790,5 +808,63 @@ func TestAWithheldLaneAppearsInLanesOmittedExactlyOneTime(t *testing.T) {
 	}
 	if named != 1 {
 		t.Errorf("commitments named %d times in lanes_omitted, want once", named)
+	}
+}
+
+// A pair the MERGE would refuse offers no verb either, whatever authority the
+// reader holds.
+//
+// Two companies each carrying live work do not combine (PROJ-LIFE-4). Authority
+// cannot see that: it is a property of the PAIR, not of either record, so a
+// data steward who may write both was handed a button that answered 409 every
+// time — the same dead end the authority check above was added to remove,
+// reached by another path.
+func TestAPairTheMergeWouldRefuseOffersNoVerb(t *testing.T) {
+	pairID := ids.NewV7()
+	svc := NewService(
+		stubApprovals{},
+		stubDuplicates{open: 1, unsettleable: pairID, pairs: []DuplicatePair{{
+			ID: pairID, EntityType: "organization", Confidence: 0.9,
+			LeftID: ids.NewV7(), RightID: ids.NewV7(),
+		}}},
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	// Named, like the authority case: a steward who cannot merge these two
+	// still needs to know the duplicate is waiting.
+	if out.NeedsYou[0].Pair == nil {
+		t.Fatal("a pair the reader may read was hidden because the merge would refuse it")
+	}
+	for _, action := range out.NeedsYou[0].Actions {
+		if action == "merge" {
+			t.Error("merge is offered on a pair the merge itself refuses — the press " +
+				"answers 409 and says nothing about what to do next")
+		}
+	}
+}
+
+// And a pair nothing blocks still gets the verb, or the check above is
+// satisfied by a lane that offers merge to nobody.
+func TestAnUnblockedPairStillOffersTheVerb(t *testing.T) {
+	svc := NewService(
+		stubApprovals{},
+		stubDuplicates{open: 1, pairs: []DuplicatePair{{
+			ID: ids.NewV7(), EntityType: "organization", Confidence: 0.9,
+			LeftID: ids.NewV7(), RightID: ids.NewV7(),
+		}}},
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	var offered bool
+	for _, action := range out.NeedsYou[0].Actions {
+		offered = offered || action == "merge"
+	}
+	if !offered {
+		t.Error("a writable pair the merge would accept offers no verb — the lane has " +
+			"stopped offering merge at all, which the withholding cases above cannot see")
 	}
 }

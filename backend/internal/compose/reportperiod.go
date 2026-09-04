@@ -276,6 +276,7 @@ func winLossSpec() reportSpec {
 			fieldAmountBaseMinor: pipelineBaseValueExpr,
 			fieldDaysToClose:     daysToCloseExpr,
 		},
+		nativeMeasures: nativeMoney(fieldAmountMinor),
 		// Every dimension also filters (REPORT-VOCAB-1): the period grains
 		// included, so "won deals in 2026" is one call rather than a group-by
 		// the caller then has to sift.

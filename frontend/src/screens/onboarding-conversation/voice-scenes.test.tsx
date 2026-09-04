@@ -18,6 +18,7 @@ import {
 
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
+type CorpusManifestEntry = import("./use-voice-corpus").CorpusManifestEntry;
 
 // A minimal but contract-complete VoiceProfileVersion; profileJSON carries
 // only what the result board actually reads, `sample_drafts` swapped per
@@ -118,16 +119,17 @@ function collectScene(overrides: {
   fileRef?: RefObject<HTMLInputElement | null>;
   summary?: CorpusSummary | null;
   canBuild?: boolean;
+  onBuild?: () => void;
+  manifest?: CorpusManifestEntry[];
 }) {
   return withLocale(
     <VoiceCollectScene
-      eyebrow="Step 3 of 5: Voice"
       summary={overrides.summary ?? null}
-      manifest={[]}
+      manifest={overrides.manifest ?? []}
       fileRef={overrides.fileRef ?? createRef<HTMLInputElement>()}
       onFiles={() => undefined}
       onAddPaste={overrides.onAddPaste ?? (() => undefined)}
-      onBuild={() => undefined}
+      onBuild={overrides.onBuild ?? (() => undefined)}
       onSkip={() => undefined}
       canBuild={overrides.canBuild ?? false}
       startPending={false}
@@ -204,6 +206,43 @@ describe("VoiceCollectScene", () => {
   });
 });
 
+describe("the collect scene's distilling panel", () => {
+  it("reads the reader's own lines back beside the intake, with the server's readings between them", () => {
+    collectScene({
+      summary: summaryOf(1200),
+      manifest: [
+        {
+          ref: "u1",
+          label: "notes.md",
+          keptWords: 1200,
+          inputWords: 1200,
+          transcript: false,
+          lines: [
+            "We should move the kickoff to Thursday so the data team can join.",
+            "I have attached the revised offer with the two changes we discussed.",
+          ],
+        },
+      ],
+    });
+    const panel = document.querySelector(".ob-distill");
+    expect(panel).not.toBeNull();
+    // Decorative: the same numbers stand in the meter as real text.
+    expect(panel?.getAttribute("aria-hidden")).toBe("true");
+    expect(panel?.textContent).toContain("Distilling");
+    expect(panel?.textContent).toContain(
+      "We should move the kickoff to Thursday",
+    );
+    // A server fact, never a client inference: the corpus total and band.
+    expect(panel?.textContent).toContain("1,200 of your own words");
+    expect(panel?.querySelectorAll("mark").length).toBeGreaterThan(0);
+  });
+
+  it("shows nothing until there is material to read back", () => {
+    collectScene({});
+    expect(document.querySelector(".ob-distill")).toBeNull();
+  });
+});
+
 describe("the collect scene's corpus floor meter", () => {
   it("reflects the real corpus count, never a derived or estimated one", () => {
     collectScene({ summary: summaryOf(342) });
@@ -218,13 +257,19 @@ describe("the collect scene's corpus floor meter", () => {
     );
   });
 
-  it("shows the same floor the Build action gates on, below and at it", () => {
-    // Below the floor: the scene's own canBuild (computed from the same
-    // VOICE_MIN_WORDS) disables Build, and the meter still reads "not yet".
-    collectScene({ summary: summaryOf(200), canBuild: false });
-    expect(
+  it("shows the same floor the Build action gates on, below and at it", async () => {
+    // Below the floor: Build presses, and the press names the floor the
+    // scene's own canBuild (computed from the same VOICE_MIN_WORDS) is read
+    // against, while the meter still reads "not yet".
+    const onBuild = vi.fn();
+    collectScene({ summary: summaryOf(200), canBuild: false, onBuild });
+    await userEvent.click(
       screen.getByRole("button", { name: "Build my voice profile" }),
-    ).toBeDisabled();
+    );
+    expect(onBuild).not.toHaveBeenCalled();
+    expect(document.querySelector(".ob-stage-note")?.textContent).toContain(
+      `${VOICE_MIN_WORDS}`,
+    );
     expect(
       document.querySelector(".ob-voice-meter-line")?.textContent,
     ).toContain(`of ${VOICE_MIN_WORDS} words`);
@@ -252,7 +297,6 @@ describe("the collect scene's corpus floor meter", () => {
     rerender(
       <LocaleProvider initial="en">
         <VoiceCollectScene
-          eyebrow="Step 3 of 5: Voice"
           summary={summaryOf(VOICE_MIN_WORDS)}
           manifest={[]}
           fileRef={createRef<HTMLInputElement>()}
@@ -375,15 +419,19 @@ describe("VoiceResultScene", () => {
     });
     withLocale(
       <VoiceResultScene
-        eyebrow="Voice"
         loading={false}
         version={version}
         onContinue={() => undefined}
+        onRevise={() => undefined}
       />,
     );
 
+    // "Read the sample first." moved up to the room's own sub-heading
+    // (voice-act.tsx's boardHeading, ob.conv.voice.resultSub) once the scene
+    // stopped repeating the stage's own question inside itself — the scene's
+    // OWN pointer to the sample is the eyebrow that labels its card.
     expect(
-      screen.getByText("Read the sample first.", { exact: false }),
+      screen.getByText(en["ob.conv.voice.sampleEyebrow"]),
     ).toBeInTheDocument();
     expect(screen.getByText("The plan holds.")).toBeInTheDocument();
   });
@@ -396,17 +444,48 @@ describe("VoiceResultScene", () => {
     });
     withLocale(
       <VoiceResultScene
-        eyebrow="Voice"
         loading={false}
         version={version}
         onContinue={() => undefined}
+        onRevise={() => undefined}
       />,
     );
 
-    expect(screen.queryByText(en["ob.conv.voice.resultSub"])).toBeNull();
+    // No sample card at all — its eyebrow is the scene's own pointer to a
+    // sample, and there is none to point at. (The prose naming why —
+    // ob.conv.voice.resultSubNoSample — is the room's sub-heading now, set
+    // by voice-act.tsx's boardHeading, not by this scene.)
     expect(screen.queryByText(en["ob.conv.voice.sampleEyebrow"])).toBeNull();
+    expect(document.querySelector(".ob-voice-sample")).toBeNull();
     expect(
-      screen.getByText(en["ob.conv.voice.resultSubNoSample"]),
+      document.querySelector(".ob-voice-board-single"),
     ).toBeInTheDocument();
+  });
+
+  it("offers the two answers: that is me, or not quite me and back to collecting", async () => {
+    const version = resultVersion({
+      inference: { signature_moves: [] },
+      sample_drafts: [
+        { subject: "Re: kickoff", body: "The plan holds.", voice_score: 0.9 },
+      ],
+      guidance: {},
+    });
+    const onContinue = vi.fn();
+    const onRevise = vi.fn();
+    withLocale(
+      <VoiceResultScene
+        loading={false}
+        version={version}
+        onContinue={onContinue}
+        onRevise={onRevise}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Not quite me — add more writing" }),
+    );
+    expect(onRevise).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByRole("button", { name: "That is me" }));
+    expect(onContinue).toHaveBeenCalledTimes(1);
   });
 });

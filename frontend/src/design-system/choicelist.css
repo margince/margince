@@ -63,3 +63,62 @@
   color: var(--textMeta);
   font-size: var(--fs-sm);
 }
+
+/*
+ * `cards`: every answer a plate, the chosen one a selected card.
+ *
+ * For a question whose options are THINGS rather than settings. The plate is
+ * what makes the mark worth carrying: at this size a reader recognises the
+ * platform they already run before they read a word of the description.
+ *
+ * The whole plate is the label, so the whole plate is the click target. That is
+ * the point of `Radio` taking a node, and it is why the border lives on the
+ * label rather than on a wrapper the reader cannot press.
+ */
+.choicelist-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--space-3);
+}
+.choicelist-cards > .choicelist-legend {
+  grid-column: 1 / -1;
+}
+.choicelist-cards .choicelist-choice {
+  align-items: start;
+  gap: var(--space-3);
+  height: 100%;
+  padding: var(--space-4);
+  /* The STRONG border, not the subtle one. These plates stand on a card that
+     is already `--bgCard`, so a hairline in the subtle tone disappeared into
+     the ground and only the selected plate read as a plate at all. */
+  border: 1px solid var(--borderStrong);
+  border-radius: var(--r-md);
+  background: var(--bgCard);
+  transition:
+    border-color var(--dur-move) var(--ease-out),
+    box-shadow var(--dur-move) var(--ease-out);
+}
+/* Selection is a border and a ring rather than a fill: these plates carry a
+   vendor's own mark, and tinting the ground behind a logo puts the brand's
+   colours on a surface it did not choose. */
+.choicelist-cards .choicelist-choice:has(input:checked) {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.choicelist-cards .choicelist-choice:has(input:focus-visible) {
+  box-shadow: var(--focus-glow);
+}
+
+/* The mark sits above the words rather than beside them: beside, it competes
+   with the radio for the same left edge and the three plates stop lining up
+   the moment one vendor's logo is wider than another's. */
+.choicelist-mark {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  margin-bottom: var(--space-1);
+}
+.choicelist-mark svg {
+  width: 22px;
+  height: 22px;
+}

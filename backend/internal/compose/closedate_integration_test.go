@@ -220,7 +220,7 @@ func TestForecastExcludesFlaggedDealsFromCommitAndBestCase(t *testing.T) {
 	}
 
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	result := e.runForecastReport(t, ctx, `{"group_by":["forecast_category"]}`)
+	result := e.runForecastReport(t, ctx, `{"group_by":["forecast_category","currency"]}`)
 
 	counts := map[string]int64{}
 	for _, row := range result.Rows {
@@ -240,7 +240,7 @@ func TestForecastExcludesFlaggedDealsFromCommitAndBestCase(t *testing.T) {
 	// The filter rides the same expression: asking for commit returns the
 	// healthy deal alone, so a drill-through can never resurrect a
 	// flagged deal into the number it was excluded from.
-	filtered := e.runForecastReport(t, ctx, `{"filters":{"forecast_category":"commit"},"group_by":["forecast_category"]}`)
+	filtered := e.runForecastReport(t, ctx, `{"filters":{"forecast_category":"commit"},"group_by":["forecast_category","currency"]}`)
 	if len(filtered.Rows) != 1 || wireInt(t, filtered.Rows[0], "deals") != 1 {
 		t.Fatalf("filter commit → %+v, want exactly the one healthy deal", filtered.Rows)
 	}

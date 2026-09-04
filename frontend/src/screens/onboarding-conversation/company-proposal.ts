@@ -68,6 +68,11 @@ export function toMachineQuestion(
       const detail = option.detail ?? option.evidence_snippet ?? null;
       return {
         value: option.value,
+        // A clarify's value IS the record: the contract calls it "the exact
+        // string the selection authorizes, verbatim from the read or the
+        // current record", which is what lets the card show the consequence of
+        // each answer before it is given rather than after.
+        writes: option.value,
         label: option.label,
         ...(detail === null
           ? {}

@@ -1,0 +1,396 @@
+/* The profile: a narrow companion beside the deck, and the two-column
+   document a reader reads it as when they ask for the whole record. Reading
+   matter either way, so it is set as prose rather than as a table of rows: a
+   record somebody is about to stand behind should read like something a
+   person wrote. */
+
+/* ---- the companion ---- */
+
+.pdigest {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+}
+
+.pdigest-eyebrow {
+  margin: 0;
+  color: var(--textMeta);
+}
+
+.pdigest-count {
+  margin: 0;
+  color: var(--textMeta);
+  font-size: var(--fs-meta);
+}
+
+.pdigest-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* ---- lines shared by the companion and the document's article ---- */
+
+.pdigest-line {
+  margin: 0;
+  color: var(--textContent);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+}
+
+/* The line the deck is deciding right now, marked in the agent's colour
+   because it is a value being PROPOSED rather than one already recorded. This
+   is what makes the companion worth having beside the deck: answer a card and
+   you watch the line it belongs to land. Companion-only — the document has no
+   single field in front of the reader, so its lines never carry this. */
+.pdigest-line[data-active="true"] {
+  padding: var(--space-2) var(--space-3);
+  margin-inline: calc(var(--space-3) * -1);
+  border-radius: var(--r-sm);
+  background: var(--aiLight);
+  color: var(--aiText);
+}
+
+.pdigest-label {
+  color: var(--textMeta);
+}
+.pdigest-line[data-active="true"] .pdigest-label {
+  color: var(--aiText);
+}
+
+.pdigest-value {
+  color: var(--textPrimary);
+  font-weight: var(--fw-medium);
+}
+.pdigest-line[data-active="true"] .pdigest-value {
+  color: var(--aiText);
+}
+
+/* A field with nothing in it yet, in the companion or wherever the document
+   draws one un-actionably. The deck is what fills these, and a row of blanks
+   beside it would be the outstanding work listed a second time. */
+.pdigest-blank {
+  color: var(--textTertiary);
+  font-style: italic;
+}
+
+/* The footnote, set the way an encyclopedia sets one. */
+.pdigest-ref {
+  margin-inline-start: var(--space-1);
+  color: var(--aiText);
+  font-size: var(--fs-eyebrow);
+}
+
+/* No page behind it: typed by a person, or carried in from a profile that was
+   already there. Named rather than left blank, because "everything here is
+   sourced" is only true if the exceptions say so. */
+.pdigest-yours {
+  margin-inline-start: var(--space-2);
+  color: var(--textMeta);
+  font-size: var(--fs-meta);
+}
+
+/* ---- the document's unanswered row ---- */
+
+/* Dashed, on the agent's ground: staged, not yet real, per the provenance
+   rule in design-system/README.md — nothing here is on the record until the
+   deck writes it. The pill is the whole point of drawing this as its own row
+   rather than a plain blank line: reading the whole record is exactly where a
+   gap gets noticed, and this is the one press back to where it gets filled. */
+.pdigest-open {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1.5px dashed var(--aiMed);
+  border-radius: var(--r-sm);
+  background: var(--aiLight);
+  font-size: var(--fs-sm);
+}
+/* Text on --aiLight takes --aiText (design-system/README.md): the label's
+   meta grey and the blank's tertiary grey both fail AA on this ground. */
+.pdigest-open .pdigest-label {
+  flex: none;
+  color: var(--aiText);
+}
+.pdigest-open .pdigest-blank {
+  flex: 1 1 auto;
+  color: var(--aiText);
+}
+
+/* ---- the document ---- */
+
+.pdigest-doc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.pdigest-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+/* The one eyebrow drawn in the brand colour rather than the meta grey every
+   other heading on this page takes — the claim it makes ("this is what
+   Margince knows") belongs to the whole page, not to one section of it. */
+.pdigest-hero-eyebrow {
+  color: var(--accent);
+}
+
+.pdigest-hero-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.pdigest-hero-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.pdigest-hero-name {
+  margin: 0;
+  color: var(--textPrimary);
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-semibold);
+}
+
+.pdigest-hero-sub {
+  margin: 0;
+  color: var(--textMeta);
+  font-size: var(--fs-sm);
+}
+
+.pdigest-hero-stats {
+  display: flex;
+  gap: var(--space-5);
+}
+
+.pdigest-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.pdigest-figure-value {
+  color: var(--textPrimary);
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Warn only past zero: nothing left open is not a finding, and dyeing a
+   settled count the same colour as an outstanding one would say otherwise. */
+.pdigest-figure[data-warn="true"] .pdigest-figure-value {
+  color: var(--warn);
+}
+
+.pdigest-figure-caption {
+  color: var(--textMeta);
+  white-space: nowrap;
+}
+
+/* Two columns — article, sidebar — folding to one under the scene's own
+   width rather than the viewport's: this document is read inside the
+   workbench pane (`.ob-scene` declares the container in conversation.css),
+   which can be far narrower than the window around it. */
+.pdigest-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+@container ob-scene (max-width: 44rem) {
+  .pdigest-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.pdigest-article {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  /* The measure lives on the column, not on the page around it: a two-column
+     document capped at one column's own reading width would squash the
+     sidebar into whatever was left over. */
+  max-width: 46rem;
+  min-width: 0;
+}
+
+.pdigest-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.pdigest-heading {
+  margin: 0;
+  color: var(--textMeta);
+}
+
+/* One category of facts inside the Proof section: a subhead naming the
+   category, and its lines under it. */
+.pdigest-factgroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pdigest-subhead {
+  margin: 0;
+  color: var(--textMeta);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+}
+
+.pdigest-sources {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+.pdigest-sources ol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pdigest-sources li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+.pdigest-source-n {
+  flex: none;
+  color: var(--aiText);
+  font-size: var(--fs-eyebrow);
+}
+.pdigest-source-path {
+  overflow-wrap: anywhere;
+  color: var(--textMeta);
+  font-family: var(--f-mono);
+  font-size: var(--fs-meta);
+}
+.pdigest-source-label {
+  color: var(--textTertiary);
+  font-size: var(--fs-meta);
+}
+.pdigest-source-note {
+  margin: 0;
+  color: var(--textMeta);
+  font-size: var(--fs-meta);
+}
+
+/* ---- the sidebar ---- */
+
+.pdigest-sidebar {
+  min-width: 0;
+}
+
+.pdigest-side-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+}
+
+.pdigest-side-row {
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--borderSubtle);
+}
+.pdigest-side-row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.pdigest-side-label {
+  display: block;
+  margin: 0 0 var(--space-1);
+  color: var(--textMeta);
+}
+
+.pdigest-side-value {
+  margin: 0;
+  color: var(--textContent);
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+
+/* ---- the companion's head ---- */
+
+/* The mark, the count and the door to the whole record on one line: the door
+   sits on the record it opens rather than in the deck's tray, where a reader
+   looking at the record had to look away to find it. */
+.pdigest-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.pdigest-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.pdigest-whole {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--textMeta);
+  cursor: pointer;
+  font-family: var(--f-body);
+  font-size: var(--fs-meta);
+  text-decoration: underline;
+  text-decoration-color: var(--borderStrong);
+}
+.pdigest-whole:hover {
+  color: var(--textPrimary);
+}
+
+/* ---- a line corrected where it stands ---- */
+
+/* The value IS the control: same type, no chrome until it is hovered, so the
+   article reads as an article and only tells a hand that it can be edited. */
+.pdigest-editable {
+  padding: 0 var(--space-1);
+  margin: 0 calc(var(--space-1) * -1);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  cursor: text;
+  font: inherit;
+  text-align: start;
+}
+.pdigest-editable:hover {
+  background: var(--bgCard);
+}
+.pdigest-editable:focus-visible {
+  background: var(--bgCard);
+  outline: var(--focus-ring);
+}
+.pdigest-edit-control {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-1);
+}

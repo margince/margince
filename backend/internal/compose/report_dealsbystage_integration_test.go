@@ -37,7 +37,7 @@ func TestDealsByStageWeightedReconcilesToPerDealRounding(t *testing.T) {
 	e.seedOpenDeal(t, "Elsewhere", 20, nil, int64p(999999), stringp("commit"))
 
 	result := e.runReport(e.Admin(), t, "deals-by-stage",
-		`{"group_by":["stage_id"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"},{"fn":"sum","field":"weighted_amount_minor","as":"weighted_minor"}]}`)
+		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"},{"fn":"sum","field":"weighted_amount_minor","as":"weighted_minor"}]}`)
 	row := dealsByStageRow(t, result, e.stages[60].String())
 
 	wantWeighted := weightedMinor(dealAmount, 60) + weightedMinor(dealAmount, 60)
@@ -67,7 +67,7 @@ func TestDealsByStageWeightedDerivationReconcilesExactly(t *testing.T) {
 	e.seedOpenDeal(t, "Elsewhere", 20, nil, int64p(999999), stringp("commit"))
 
 	result := e.runReport(e.Admin(), t, "deals-by-stage",
-		`{"group_by":["stage_id"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"},{"fn":"sum","field":"weighted_amount_minor","as":"weighted_minor"}]}`)
+		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"},{"fn":"sum","field":"weighted_amount_minor","as":"weighted_minor"}]}`)
 	row := dealsByStageRow(t, result, e.stages[60].String())
 	handle, ok := row["derivation_url"].(string)
 	if !ok || handle == "" {
@@ -107,7 +107,7 @@ func TestDealsByStageCountsEveryDealWhateverTheTier(t *testing.T) {
 
 	rep := e.dealReadCtx(e.Rep1, nil, principal.RowScopeOwn)
 	result := e.runReport(rep, t, "deals-by-stage",
-		`{"group_by":["stage_id"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"},{"fn":"sum","field":"weighted_amount_minor","as":"weighted_minor"}]}`)
+		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"},{"fn":"sum","field":"weighted_amount_minor","as":"weighted_minor"}]}`)
 	row := dealsByStageRow(t, result, e.stages[60].String())
 	if got := wireInt(t, row, "deals"); got != 2 {
 		t.Fatalf("deals = %d, want 2 — a deal is readable by every seat, the other rep's included", got)
@@ -172,7 +172,7 @@ func TestDealsByStageFiltersByOrganizationID(t *testing.T) {
 		VALUES ($1, 'Deal B', $2, $3, $4, 20000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60], orgB)
 
 	result := e.runReport(e.Admin(), t, "deals-by-stage", fmt.Sprintf(
-		`{"group_by":["stage_id"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"organization_id":%q}}`,
+		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"organization_id":%q}}`,
 		orgA.String()))
 	row := dealsByStageRow(t, result, e.stages[60].String())
 	if got := wireInt(t, row, "deals"); got != 1 {
@@ -198,7 +198,7 @@ func TestDealsByStageGroupsRevenueByPartner(t *testing.T) {
 		VALUES ($1, 'Kestrel one', $2, $3, $4, 'sourced', 70000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60], kestrel)
 
 	result := e.runReport(e.Admin(), t, "deals-by-stage",
-		`{"group_by":["partner_org_id"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"partner_sourced":true}}`)
+		`{"group_by":["partner_org_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"partner_sourced":true}}`)
 
 	byPartner := map[string]int64{}
 	for _, row := range result.Rows {
@@ -239,7 +239,7 @@ func TestGroupingByPartnerDoesNotNameAPartnerTheCallerCannotOpen(t *testing.T) {
 	// A reader of every deal who holds no organization grant at all.
 	reader := e.dealReadCtx(ids.NewV7(), nil, principal.RowScopeAll)
 	result := e.runReport(reader, t, "deals-by-stage",
-		`{"group_by":["partner_org_id"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"partner_sourced":true}}`)
+		`{"group_by":["partner_org_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"partner_sourced":true}}`)
 
 	for _, row := range result.Rows {
 		if id, ok := row["partner_org_id"].(string); ok && id == hidden.String() {
@@ -271,7 +271,7 @@ func TestDealsByStageFiltersByPartnerSourced(t *testing.T) {
 		VALUES ($1, 'Direct', $2, $3, 20000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60])
 
 	result := e.runReport(e.Admin(), t, "deals-by-stage",
-		`{"group_by":["stage_id"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"partner_sourced":true}}`)
+		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"partner_sourced":true}}`)
 	row := dealsByStageRow(t, result, e.stages[60].String())
 	if got := wireInt(t, row, "deals"); got != 1 {
 		t.Fatalf("deals = %d, want 1 (only the partner-sourced deal)", got)
@@ -293,7 +293,7 @@ func TestDealsByStageStalledFilterWorksUnderTheStageJoin(t *testing.T) {
 	e.seedOpenDeal(t, "Fresh", 60, nil, int64p(20000), stringp("commit"))
 
 	result := e.runReport(e.Admin(), t, "deals-by-stage",
-		`{"group_by":["stage_id"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"stalled":true}}`)
+		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"stalled":true}}`)
 	row := dealsByStageRow(t, result, e.stages[60].String())
 	if got := wireInt(t, row, "deals"); got != 1 {
 		t.Fatalf("deals = %d, want 1 (only the idle deal)", got)

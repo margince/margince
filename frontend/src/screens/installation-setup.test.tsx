@@ -11,12 +11,23 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { pickOption, pickSuggestion } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { jsonResponse } from "./company.fixtures";
-import { InstallationSetup, outstandingStep } from "./installation-setup";
+import {
+  forgetPlatformDeclines,
+  InstallationSetup,
+  outstandingStep,
+} from "./installation-setup";
 
 afterEach(() => {
+  // Every case starts with the platform question unanswered by this account.
+  // BOTH halves of the answer: a decline is remembered in the tab as well as
+  // in storage, so clearing only storage would carry one case's decline into
+  // the next.
+  window.localStorage.clear();
+  forgetPlatformDeclines();
   cleanup();
   vi.unstubAllGlobals();
 });
@@ -117,6 +128,20 @@ function mount(
     if (url.endsWith("/ai-model-rates")) {
       return jsonResponse({ data: SEEDED_SHEET });
     }
+    // The platform question's "Not now" is remembered against the account that
+    // gave it, so the gate reads the session before it can hide the step.
+    if (url.endsWith("/me")) {
+      return jsonResponse(meFixture({ allow: {} }));
+    }
+    if (url.includes("/installation/oauth-apps/")) {
+      return jsonResponse({
+        source: "none",
+        client_id: "",
+        redirect_uris: [
+          { purpose: "sign_in", url: "https://crm.example/v1/auth/oidc/x" },
+        ],
+      });
+    }
     return jsonResponse(report);
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -155,18 +180,176 @@ describe("the first-run setup gate", () => {
     expect(await screen.findByText("Choose a model provider")).toBeTruthy();
   });
 
-  // The regression this screen was built wrong for. An installation with no
-  // Google app never reaches the company form, so `GET /company` keeps
-  // answering 404 and the shell's onboarding gate rewrites every route back to
-  // onboarding — an operator deploying without a Google app was locked out of
-  // the whole product, with `PUT /v1/company` the only way past.
-  it("lets a reader through with the models bound and no Google app", async () => {
-    // The panel is gone entirely rather than replaced by a Google one: the app
-    // is stored from settings, where the card also shows the redirect URIs
-    // Google's console asks for.
-    const { container, qc } = mount(setupReport(true, false));
-    await reportArrived(qc);
-    expect(container.innerHTML).toBe("");
+  // The models bound and no app yet: the platform question, asked once of
+  // the person running the cold start. Google is the answer it opens on, with
+  // the two fields an OAuth client has.
+  it("asks what the organization runs on once the models are bound", async () => {
+    mount(setupReport(true, false));
+    expect(
+      await screen.findByText("What does your organization run on?"),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("radio", { name: /Google Workspace/ }),
+    ).toHaveProperty("checked", true);
+    expect(screen.getByLabelText("Client ID")).toBeTruthy();
+    expect(screen.getByLabelText("Client secret")).toBeTruthy();
+    // The redirect URIs are registered in the vendor's console, which is the
+    // one part of this step done elsewhere: they stand in the open with their
+    // copy buttons, not behind the fold the rest of the help sits in.
+    expect(
+      await screen.findByRole("button", { name: "Copy Sign-in URI" }),
+    ).toBeTruthy();
+  });
+
+  it("stores the vendor's app through the same route settings uses", async () => {
+    const { writes } = mount(setupReport(true, false));
+    const user = userEvent.setup();
+    await user.type(
+      await screen.findByLabelText("Client ID"),
+      "123.apps.googleusercontent.com",
+    );
+    await user.type(screen.getByLabelText("Client secret"), "GOCSPX-x");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(writes.length).toBe(1));
+    expect(writes[0]?.url.endsWith("/installation/oauth-apps/google")).toBe(
+      true,
+    );
+    expect(writes[0]?.body).toEqual({
+      client_id: "123.apps.googleusercontent.com",
+      client_secret: "GOCSPX-x",
+    });
+  });
+
+  // The directory is REQUIRED here, unlike Settings: it is what puts Microsoft
+  // on the login page, and an admin who registered Microsoft and then found no
+  // Microsoft button would have nothing on either screen to tell them why.
+  it("asks Microsoft for its directory, and will not store an app without one", async () => {
+    const { writes } = mount(setupReport(true, false));
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("radio", { name: /Microsoft 365/ }),
+    );
+    // The redirect URIs are the one thing done in the vendor's console, so
+    // the step says so in the open rather than in a fold; and the pin is
+    // the directory sign-in runs on, which nothing else would explain.
+    expect(
+      screen.getByText("Register these redirect URIs on the app"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/directory is what puts Microsoft on the login page/),
+    ).toBeTruthy();
+    await user.type(screen.getByLabelText("Client ID"), "entra-app");
+    await user.type(screen.getByLabelText("Client secret"), "s3cret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(
+      screen.getByText("Still needed: Directory (tenant) ID"),
+    ).toBeTruthy();
+    expect(writes.length).toBe(0);
+
+    await user.type(
+      screen.getByLabelText("Directory (tenant) ID"),
+      "00000000-0000-0000-0000-000000000000",
+    );
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(writes.length).toBe(1));
+    expect(writes[0]?.url.endsWith("/installation/oauth-apps/microsoft")).toBe(
+      true,
+    );
+    expect(writes[0]?.body).toEqual({
+      client_id: "entra-app",
+      client_secret: "s3cret",
+      tenant: "00000000-0000-0000-0000-000000000000",
+    });
+  });
+
+  // Google has no directory concept, so asking for one there would be a field
+  // that does nothing — and a blocker nobody could clear.
+  it("asks Google for no directory", async () => {
+    mount(setupReport(true, false));
+    const user = userEvent.setup();
+    await screen.findByRole("radio", { name: /Google Workspace/ });
+    expect(screen.queryByLabelText("Directory (tenant) ID")).toBeNull();
+    await user.type(screen.getByLabelText("Client ID"), "google-app");
+    await user.type(screen.getByLabelText("Client secret"), "s3cret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.queryByText(/Still needed/)).toBeNull();
+  });
+
+  // The regression this screen was once built wrong for: an installation with
+  // no app must still reach the company form. The step does not block, so
+  // "not now" — or IMAP, which stores nothing installation-wide — lets the
+  // reader through, and the answer is remembered so the question is asked once.
+  it("lets a reader through on IMAP with Not now, and remembers it", async () => {
+    const { container, writes } = mount(setupReport(true, false));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("radio", { name: /IMAP/ }));
+    await user.click(screen.getByRole("button", { name: "Not now" }));
+    await waitFor(() => expect(container.innerHTML).toBe(""));
+    expect(writes.length).toBe(0);
+    expect(outstandingStep(setupReport(true, false), true)).toBeUndefined();
+  });
+
+  // The decline is the ACCOUNT's answer, not the browser's. Keyed on the
+  // browser alone it outlived the installation it was about: a machine that
+  // had run one cold start carried the answer into the next, and the second
+  // installation's setup skipped the platform step entirely.
+  it("keeps asking when the remembered decline belongs to another account", async () => {
+    window.localStorage.setItem(
+      "margince.first-run.platform-declined:00000000-0000-4000-8000-000000000009",
+      "1",
+    );
+    mount(setupReport(true, false));
+    expect(
+      await screen.findByRole("radio", { name: /Google Workspace/ }),
+    ).toBeTruthy();
+  });
+
+  it("stays answered for the account that gave it", async () => {
+    window.localStorage.setItem(
+      "margince.first-run.platform-declined:00000000-0000-4000-8000-000000000001",
+      "1",
+    );
+    const { container } = mount(setupReport(true, false));
+    await waitFor(() => expect(container.innerHTML).toBe(""));
+  });
+
+  // IMAP has no installation-wide app, so the one thing the answer can do is
+  // connect the mailbox of the person on screen: the same standing connect
+  // Settings makes, and the step is done once the server confirms it.
+  it("connects the reader's own mailbox on IMAP, through the standing connect", async () => {
+    const { container, writes } = mount(setupReport(true, false));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("radio", { name: /IMAP/ }));
+    await user.type(screen.getByLabelText("IMAP server *"), "mail.example.org");
+    await user.type(
+      screen.getByLabelText("Email address *"),
+      "lars@example.org",
+    );
+    await user.type(screen.getByLabelText("App password *"), "app-password");
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await waitFor(() => expect(container.innerHTML).toBe(""));
+    expect(
+      writes.map((w) => w.url.endsWith("/connectors/imap/connect")),
+    ).toEqual([true]);
+    expect(writes[0]?.body).toEqual({
+      imap: {
+        host: "mail.example.org",
+        port: 993,
+        username: "lars@example.org",
+        secret: "app-password",
+        mailbox: "INBOX",
+        max_messages: 50,
+      },
+    });
+  });
+
+  it("lets a reader past the app step with Not now", async () => {
+    const { container, writes } = mount(setupReport(true, false));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Not now" }));
+    await waitFor(() => expect(container.innerHTML).toBe(""));
+    expect(writes.length).toBe(0);
   });
 
   // Nothing at all when there is nothing outstanding, so a caller can put this
@@ -177,15 +360,10 @@ describe("the first-run setup gate", () => {
     expect(container.innerHTML).toBe("");
   });
 
-  // A frontend older than its server, meeting a blocking step it has no panel
-  // for. It lets the reader PAST rather than drawing the panel it does have —
-  // the model form under an `oauth_app` heading would take a reader's API key
-  // against a step they were never asked about — and past is what matters,
-  // because the caller gates on this same predicate and would otherwise hold an
-  // empty screen in front of them forever. The server pins ai_models as the
-  // only blocker (TestOnlyTheModelBindingBlocksFirstRun); this is the far side
-  // of that, for the deployment where the two versions disagree.
-  it("lets a reader past a blocking step it has no panel for", async () => {
+  // A decline only counts for a step that does not block. Should a server
+  // ever report the app step as blocking, a remembered "not now" must not let
+  // a reader past a gate the server holds shut.
+  it("keeps asking a blocking app step whatever was declined", () => {
     const report: { complete: boolean; steps: Step[] } = {
       complete: false,
       steps: [
@@ -193,15 +371,7 @@ describe("the first-run setup gate", () => {
         { step: "oauth_app", configured: false, blocking: true },
       ],
     };
-    // The caller's own question, asked the caller's way. An empty screen alone
-    // would not tell the two failures apart: a gate that lets nobody through
-    // and a gate that is finished both draw nothing, and it is this answer the
-    // onboarding act reads to decide whether to keep the gate up at all.
-    expect(outstandingStep(report)).toBeUndefined();
-
-    const { container, qc } = mount(report);
-    await reportArrived(qc);
-    expect(container.innerHTML).toBe("");
+    expect(outstandingStep(report, true)?.step).toBe("oauth_app");
   });
 
   // The key BEFORE the binding: a binding whose vendor has no key reads as
@@ -268,6 +438,33 @@ describe("the first-run setup gate", () => {
       expect(bound.base_url).toBe("https://openrouter.ai/api");
     }
     expect(routing.embeddings.base_url).toBe("https://openrouter.ai/api");
+  });
+
+  // Continue is always pressable. Pressing it early is how a reader learns
+  // what is missing: the field turns red and the rail names it, and nothing is
+  // written — a grey button would have said only that something is wrong.
+  it("names what is still needed when Continue is pressed early", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(false, false));
+    await screen.findByText("Choose a model provider");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByText("Still needed: API key")).toBeTruthy();
+    expect(screen.getAllByText("Needed to continue").length).toBe(1);
+    expect(writes.length).toBe(0);
+    // Typing the key clears the note; the press then goes through.
+    await user.type(screen.getByLabelText("API key"), "AIza-secret");
+    expect(screen.queryByText("Still needed: API key")).toBeNull();
+  });
+
+  it("names both halves of the app when Continue is pressed with neither", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(true, false));
+    await screen.findByRole("radio", { name: /Google Workspace/ });
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(
+      screen.getByText("Still needed: Client ID, Client secret"),
+    ).toBeTruthy();
+    expect(writes.length).toBe(0);
   });
 
   // The key is the reader's only copy. Clearing it after the FIRST write left a

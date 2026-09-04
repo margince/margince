@@ -5,11 +5,13 @@ package attention
 
 import (
 	"context"
+	"errors"
 	"sort"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -392,9 +394,19 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	if err != nil {
 		return nil, laneCount{}, err
 	}
+	// Whether the merge would be ACCEPTED, which authority does not answer.
+	// A permission verdict empties the offer the same way it does above: a
+	// reader who may not ask has no verb, which is a complete answer.
+	settleable, err := s.duplicates.SettleablePairs(ctx, pairs)
+	switch {
+	case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):
+		settleable = nil
+	case err != nil:
+		return nil, laneCount{}, err
+	}
 	duplicates := make([]crmcontracts.AttentionItem, 0, len(pairs))
 	for _, pair := range pairs {
-		duplicates = append(duplicates, s.duplicateItem(pair, named, decidable))
+		duplicates = append(duplicates, s.duplicateItem(pair, named, decidable, settleable))
 	}
 	approvals := make([]crmcontracts.AttentionItem, 0, len(staged))
 	for _, approval := range staged {

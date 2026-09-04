@@ -24,11 +24,21 @@ import (
 // say what a model is FOR at all. Split across five adapter files, the next
 // person adding a vendor would have to find four precedents to match.
 //
-// None of them publishes a price on this endpoint except a broker, and reading
-// a broker's would make this read the second answer to a question the
-// effective-dated price sheet already owns. So this answers AVAILABILITY only,
-// the sheet answers COST, and a model the vendor serves that the sheet cannot
-// price is offered and reports UNPRICED.
+// None of them publishes a price on this endpoint except a broker, and every
+// one of these five ListModels methods drops it where it does: reading a
+// broker's here would make this read the second answer to a question the
+// effective-dated price sheet already owns for anything reached through a
+// stored binding. So this answers AVAILABILITY only, the sheet answers COST,
+// and a model the vendor serves that the sheet cannot price is offered and
+// reports UNPRICED.
+//
+// The one broker priced anyway is OpenRouter's OWN read (`catalogue.go`,
+// asked unauthenticated by provider name rather than through a stored
+// binding and a Lister here): it has no binding to protect from drift, so its
+// price rides beside the sheet's, labelled PROPOSED. A binding that reaches
+// OpenRouter through openai_compatible instead still comes through
+// openAIWireModels below and still drops the price, for the same reason
+// every other broker's does.
 
 // modelListLimit caps what one vendor may hand back. Gemini's catalog runs to
 // dozens of entries and a broker's to thousands; a picker is unusable past a

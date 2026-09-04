@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Lock, Mail } from "lucide-react";
 import { type FormEvent, Fragment, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
@@ -212,23 +212,6 @@ export function AuthScreen({
   const resetAvailable = previewedPasswordReset(
     capabilities.data?.password_reset === true,
   );
-
-  // This query is presentation-only and deliberately independent of auth:
-  // profile latency or failure hides the live runtime line but can never
-  // disable or delay the credential form.
-  const assistantProfile = useQuery({
-    queryKey: ["assistant-profile"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/assistant/profile");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-    retry: false,
-  });
-
   const setLoginView = () => {
     setAuthPhase("idle");
     setView({ kind: "login" });
@@ -246,10 +229,7 @@ export function AuthScreen({
     servedOidcProviders.length === 0 && uiPreviewOidcEnabled();
 
   return (
-    <AuthExperience
-      profile={assistantProfile.data}
-      phase={view.kind === "login" ? authPhase : "quiet"}
-    >
+    <AuthExperience phase={view.kind === "login" ? authPhase : "quiet"}>
       <Wordmark alt={t("auth.title")} />
       {view.kind === "login" && (
         <>
@@ -709,8 +689,14 @@ function LoginForm({
 
   return (
     <form className="auth-card" onSubmit={submit}>
-      <h1>{t("auth.loginTitle")}</h1>
-      <p className="card-sub">{t("auth.loginSub")}</p>
+      {/* The page says its name once. The greeting above IS this page's
+          heading, so the form's own title and sub-line would repeat it in a
+          larger voice than the sentence they follow. Both stay in the
+          accessibility tree, where a form still wants its name, and leave the
+          composition. The other views keep theirs: nothing above a password
+          reset form says what it is. */}
+      <h1 className="sr-only">{t("auth.loginTitle")}</h1>
+      <p className="card-sub sr-only">{t("auth.loginSub")}</p>
       <ProviderButtons
         providers={providers}
         disabled={login.isPending}

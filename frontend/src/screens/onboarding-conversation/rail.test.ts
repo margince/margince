@@ -20,18 +20,19 @@ function at(
 }
 
 describe("the setup rail's stops", () => {
-  it("gives a creator five stops and a member three", () => {
+  it("gives a creator five stops and a member four", () => {
     expect(railStops(false).map((stop) => stop.key)).toEqual([
       "read",
       "confirm",
       "voice",
-      "ready",
       "connect",
+      "prefs",
     ]);
     expect(railStops(true).map((stop) => stop.key)).toEqual([
       "read",
       "confirm",
       "connect",
+      "prefs",
     ]);
   });
 
@@ -60,10 +61,12 @@ describe("which stop the conversation is standing on", () => {
   });
 
   it("maps each later act to its own stop", () => {
+    expect(currentStop(at("invite", "in.ask"))).toBe("voice");
+    expect(currentStop(at("team", "tm.ask"))).toBeNull();
     expect(currentStop(at("voice", "vo.collecting"))).toBe("voice");
-    expect(currentStop(at("results", "re.recap"))).toBe("ready");
     expect(currentStop(at("connect", "cn.consent"))).toBe("connect");
-    expect(currentStop(at("done", "cn.done"))).toBe("connect");
+    expect(currentStop(at("prefs", "pf.ask"))).toBe("prefs");
+    expect(currentStop(at("done", "pf.done"))).toBe("prefs");
   });
 
   it("stands on no stop before the flow starts", () => {
@@ -94,19 +97,19 @@ describe("how each stop reads", () => {
     const state = at("voice", "vo.collecting");
     expect(stopState("confirm", state)).toBe("done");
     expect(stopState("voice", state)).toBe("now");
-    expect(stopState("ready", state)).toBe("todo");
     expect(stopState("connect", state)).toBe("todo");
   });
 
-  it("holds connect at now while the user is still choosing, and only reads done when the flow finished", () => {
+  it("holds the last stop at now while the user is still choosing, and only reads done when the flow finished", () => {
     expect(stopState("connect", at("connect", "cn.consent"))).toBe("now");
-    expect(stopState("connect", at("done", "cn.done"))).toBe("done");
+    expect(stopState("connect", at("prefs", "pf.ask"))).toBe("done");
+    expect(stopState("prefs", at("prefs", "pf.ask"))).toBe("now");
+    expect(stopState("prefs", at("done", "pf.done"))).toBe("done");
   });
 
   it("reads todo for a stop the current path does not contain", () => {
     const member = at("connect", "cn.consent", { memberPath: true });
     expect(stopState("voice", member)).toBe("todo");
-    expect(stopState("ready", member)).toBe("todo");
     expect(stopState("connect", member)).toBe("now");
   });
 

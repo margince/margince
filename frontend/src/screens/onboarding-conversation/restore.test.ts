@@ -200,6 +200,19 @@ describe("restorePlan", () => {
         locale: "en",
       }),
     ).toMatchObject({ resumeTarget: "vo.skipped" });
+    expect(
+      restorePlan({
+        state: stateRow({ step: "team", voice_skipped: true }),
+        profile,
+        voice: emptyVoice,
+        read: null,
+        routeConnect: false,
+        locale: "en",
+      }),
+    ).toMatchObject({ resumeTarget: "tm.ask" });
+    // A row written before the invite existed, at the recap that used to
+    // follow the voice act: the recap is gone, and what followed it was
+    // connect.
     const results = restorePlan({
       state: stateRow({ step: "results", voice_skipped: true }),
       profile,
@@ -208,7 +221,7 @@ describe("restorePlan", () => {
       routeConnect: false,
       locale: "en",
     });
-    expect(results).toMatchObject({ resumeTarget: "re.recap" });
+    expect(results).toMatchObject({ resumeTarget: "cn.consent" });
     if (results.kind !== "start") {
       throw new Error("expected a start plan");
     }

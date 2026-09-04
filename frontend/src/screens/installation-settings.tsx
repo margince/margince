@@ -90,7 +90,10 @@ const EDITABLE_FACTS = [
 // is written, only where focus lands when the dialog opens.
 type EditedFact = (typeof EDITABLE_FACTS)[number];
 
-function useUpdateInstallationSettings(onSaved: () => void) {
+// Exported for the onboarding's preferences act, which writes the same sparse
+// patch from the same fields: a second mutation would be a second answer to
+// what a saved language invalidates.
+export function useUpdateInstallationSettings(onSaved: () => void) {
   const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
@@ -204,7 +207,7 @@ export function fiscalYearStartSummary(
 // row and the field inside the dialog say the same thing, from one expression,
 // because two copies of this rule would answer differently the day the server
 // stops sending a reason.
-function currencyNote(
+export function currencyNote(
   settings: InstallationSettings,
   t: ReturnType<typeof useT>,
 ): string {

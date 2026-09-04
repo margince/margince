@@ -1,13 +1,7 @@
 /** @vitest-environment jsdom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  within,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { Dispatch } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -84,16 +78,17 @@ it("shows a live legal-entity decision on the surface, never as a QuestionCard i
     seq: 1,
   });
 
-  // The scene: one heading, one radio per candidate.
+  // The scene renders no heading of its own — the room's h1 IS the
+  // question — and one radio per candidate.
   expect(
-    screen.getByRole("heading", { level: 2, name: /legal entity/ }),
+    screen.getByRole("heading", { level: 1, name: /legal entity/ }),
   ).toBeInTheDocument();
   expect(
     screen.getAllByRole("radio", { name: "Gradion Holding GmbH" }),
   ).toHaveLength(1);
 
-  // No fieldset-based question card reaches the rail while the scene owns
-  // this decision — the candidate list lives on the surface, once.
+  // No fieldset-based question card reaches the surface a second time while
+  // the scene owns this decision — the candidate list lives there once.
   expect(document.querySelectorAll(".ob-conv-question")).toHaveLength(0);
 });
 
@@ -138,7 +133,7 @@ it("keeps a superseded, never-answered re-ask out of the rail once a fresh one t
   ).toHaveLength(0);
 });
 
-it("carries no composer or free-text control in the rail during manual entry — typed fields stay on the surface", () => {
+it("carries no chat-style composer during manual entry — typed fields are the interview's own", () => {
   renderCompanyAct({
     ...initialConversationState,
     act: "company",
@@ -147,11 +142,9 @@ it("carries no composer or free-text control in the rail during manual entry —
     readCompleted: false,
   });
 
-  const rail = document.querySelector(".mw-thread");
-  expect(rail).not.toBeNull();
-  // The manual form's own fields are real textboxes — on the SURFACE
-  // (.mw-artifact), never inside the rail this query is scoped to.
-  expect(within(rail as HTMLElement).queryAllByRole("textbox")).toHaveLength(0);
+  // The manual form's own fields are real textboxes, asked one at a time —
+  // never a free-text message composed and sent.
+  expect(screen.queryAllByRole("textbox").length).toBeGreaterThan(0);
   expect(document.querySelector(".mw-composer")).toBeNull();
 });
 
@@ -291,30 +284,6 @@ function reviewRoutes(
   };
 }
 
-function renderReview(
-  state: ConversationState,
-  fields: readonly FieldFixture[],
-  openQuestions: Proposal["open_questions"] = [],
-) {
-  installFetchStub(reviewRoutes(fields, reviewProposal(fields, openQuestions)));
-  return render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
-      <LocaleProvider initial="en">
-        <CompanyAct
-          state={state}
-          dispatch={vi.fn()}
-          profile={null}
-          persist={vi.fn(async () => true)}
-        />
-      </LocaleProvider>
-    </QueryClientProvider>,
-  );
-}
-
 const REVIEW_STATE: ConversationState = {
   ...initialConversationState,
   act: "company",
@@ -323,199 +292,6 @@ const REVIEW_STATE: ConversationState = {
   readCompleted: true,
   pendingQuestion: null,
 };
-
-// Every case below waits on the guide's own sentence rather than the board's
-// heading. The heading arrives with the read-only fallback proposal, which is
-// a render or two BEFORE the draft is prefilled from the read — so a board
-// waited for that way can still be showing every field empty and everything
-// blocking. The sentence is rendered from `blockingCount` itself, the number
-// each case is about, so it cannot read as settled before the board is.
-describe("the rail's review to-do list", () => {
-  it("carries exactly as many items as the board's own section tallies add up to", async () => {
-    const { container } = renderReview(REVIEW_STATE, REVIEW_FIELDS);
-
-    await screen.findByText(/2 fields block confirm/);
-    // The board's own nav names every outstanding field as its own
-    // `.ob-triage-nav-item`, blocking and advisory alike (only the badge
-    // above them is blocking-only now) — the same two-tier split the rail's
-    // list makes, so the count of named fields is the one number both
-    // surfaces must agree on.
-    const nav = container.querySelector(".ob-triage-nav") as HTMLElement;
-    const boardTotal = nav.querySelectorAll(".ob-triage-nav-item").length;
-
-    const items = container.querySelectorAll(".ob-conv-attention li");
-    expect(items).toHaveLength(boardTotal);
-    // The scenario's own arithmetic (0 blocking + 5 advisory in identity, 1
-    // blocking in offer, 1 blocking + 2 advisory in customer, 0 in sales):
-    // pinned so a change to the fixture above cannot silently stop
-    // exercising the invariant.
-    expect(boardTotal).toBe(9);
-  });
-
-  // The board's own nav badges (`.ob-triage-nav-badge b`, confirm-card.tsx)
-  // already sum to `missingRequired.length` — the exact same required-empty
-  // rows the rail calls "blocks confirm" (both read the same predicate,
-  // `isRequired(field) && value === ""`). Two surfaces, one number: if
-  // either drifts from `isRequired`/REQUIRED_FIELDS, this fails.
-  it("counts exactly as many blocking rows as the nav's own blocking badges", async () => {
-    const { container } = renderReview(REVIEW_STATE, REVIEW_FIELDS);
-    await screen.findByText(/2 fields block confirm/);
-
-    const nav = container.querySelector(".ob-triage-nav") as HTMLElement;
-    const boardBlocking = [
-      ...nav.querySelectorAll(".ob-triage-nav-badge[data-blocking='true'] b"),
-    ].reduce((sum, badge) => sum + Number(badge.textContent), 0);
-    const railBlocking = container.querySelectorAll(
-      ".ob-conv-attention button[data-kind='blocks']",
-    );
-    expect(railBlocking).toHaveLength(boardBlocking);
-    // offer_summary and icp are the only two REQUIRED_FIELDS left empty in
-    // the fixture; industry/buying_center are merely weak-confidence, not
-    // required, so they must not count as blocking.
-    expect(boardBlocking).toBe(2);
-  });
-
-  it("sorts the blocking rows before decisions, and decisions before the merely advisory ones", async () => {
-    const { container } = renderReview(REVIEW_STATE, REVIEW_FIELDS, [
-      {
-        id: "clarify:register_vat:1",
-        field: "register_vat",
-        question: "Which VAT ID is current?",
-        options: [],
-      },
-    ]);
-    // Two waits, because two things have to have landed: the decision item
-    // proves the REAL proposal is in (the fallback carries no open question),
-    // and "3" proves the draft is prefilled — 2 blocking fields plus the one
-    // decision. Before the prefill the same sentence would read 4.
-    await screen.findByText("needs a decision");
-    await screen.findByText(/3 fields block confirm/);
-
-    const kinds = [
-      ...container.querySelectorAll(".ob-conv-attention button"),
-    ].map((button) => button.getAttribute("data-kind"));
-    const lastBlocks = kinds.lastIndexOf("blocks");
-    const decision = kinds.indexOf("decision");
-    const firstAdvisory = kinds.findIndex(
-      (kind) => kind === "empty" || kind === "check",
-    );
-    expect(lastBlocks).toBeGreaterThan(-1);
-    expect(decision).toBeGreaterThan(-1);
-    expect(firstAdvisory).toBeGreaterThan(-1);
-    expect(lastBlocks).toBeLessThan(decision);
-    expect(decision).toBeLessThan(firstAdvisory);
-  });
-
-  it("folds a still-open clarify decision into the same list, alongside the fields", async () => {
-    const { container } = renderReview(REVIEW_STATE, REVIEW_FIELDS, [
-      {
-        id: "clarify:register_vat:1",
-        field: "register_vat",
-        question: "Which VAT ID is current?",
-        options: [],
-      },
-    ]);
-    // The board itself renders from the same proposal fetch and settles
-    // first via the read-only fallback (no open questions yet); waiting for
-    // the decision button itself is waiting for the REAL proposal, the one
-    // that actually carries the still-open clarify — and then for the count
-    // that says the draft is prefilled too.
-    await screen.findByText("needs a decision");
-    await screen.findByText(/3 fields block confirm/);
-
-    expect(
-      container.querySelectorAll(
-        ".ob-conv-attention button[data-kind='decision']",
-      ),
-    ).toHaveLength(1);
-    expect(container.querySelectorAll(".ob-conv-attention li")).toHaveLength(
-      10,
-    );
-  });
-
-  it("names the header whenever the list itself renders", async () => {
-    const { container } = renderReview(REVIEW_STATE, REVIEW_FIELDS);
-    await screen.findByText(/2 fields block confirm/);
-
-    const attention = container.querySelector(
-      ".ob-conv-attention",
-    ) as HTMLElement;
-    expect(attention).not.toBeNull();
-    expect(
-      within(attention).getByRole("heading", {
-        name: "These need your input",
-      }),
-    ).toBeInTheDocument();
-  });
-
-  it("renders no blocking styling once nothing left blocks confirm", async () => {
-    // Fill icp too (offer_summary is filled by the base fixture below): one
-    // field, offer_summary, is left the ONLY thing that still blocks — the
-    // one case that may ever paint the blocking colour.
-    const { container } = renderReview(
-      REVIEW_STATE,
-      REVIEW_FIELDS.concat([proposedField("icp", "Mid-market B2B", 0.9)]),
-    );
-    await screen.findByText(/1 field blocks confirm/);
-    expect(
-      container.querySelectorAll(".ob-conv-attention [data-kind='blocks']"),
-    ).toHaveLength(1);
-
-    // Now fill offer_summary too: nothing left blocks, so the whole blocking
-    // group — heading, red dot and all — must be absent, not merely empty.
-    cleanup();
-    renderReview(
-      REVIEW_STATE,
-      REVIEW_FIELDS.concat([
-        proposedField("icp", "Mid-market B2B", 0.9),
-        proposedField("offer_summary", "Revenue software", 0.9),
-      ]),
-    );
-    await screen.findByText(/Nothing blocks you/);
-    expect(
-      document.querySelectorAll(".ob-conv-attention [data-kind='blocks']"),
-    ).toHaveLength(0);
-    expect(screen.queryByText("Needed before you can continue")).toBeNull();
-  });
-
-  it("puts exactly the required-and-empty fields in the blocking group, nothing else", async () => {
-    renderReview(REVIEW_STATE, REVIEW_FIELDS);
-    await screen.findByText(/2 fields block confirm/);
-
-    const blockingGroup = screen
-      .getByText("Needed before you can continue")
-      .closest(".ob-conv-attention-group") as HTMLElement;
-    const fields = [
-      ...blockingGroup.querySelectorAll(".ob-conv-attention-field"),
-    ].map((span) => span.textContent);
-    // offer_summary and icp are the only two REQUIRED_FIELDS the fixture
-    // leaves empty; industry and buying_center are merely weak-confidence
-    // and must never turn up here.
-    expect(fields.sort()).toEqual(["Ideal customer", "What do you sell?"]);
-  });
-
-  it("says the review is clean, with no empty list container, once nothing is outstanding", async () => {
-    const allSettled = REVIEW_FIELDS.map((field) =>
-      field.field === "industry" || field.field === "buying_center"
-        ? { ...field, confidence: 0.95 }
-        : field,
-    ).concat([
-      proposedField("legal_name", "Gradion GmbH", 0.9),
-      proposedField("registered_address", "Berlin, Germany", 0.9),
-      proposedField("register_vat", "DE123456789", 0.9),
-      proposedField("register_number", "HRB 12345 B", 0.9),
-      proposedField("offer_summary", "Revenue software", 0.9),
-      proposedField("icp", "Mid-market B2B", 0.9),
-      proposedField("desired_outcomes", "Faster ramp", 0.9),
-    ]);
-    renderReview(REVIEW_STATE, allSettled);
-    // The clean sentence IS the assertion's own state: nothing blocking and
-    // nothing advisory. Before the prefill the guide is still counting gaps.
-    await screen.findByText(/looks clean/);
-
-    expect(document.querySelector(".ob-conv-attention")).toBeNull();
-  });
-});
 
 // The dossier's entity cards and the clarify's candidate list ask the same
 // question of the same candidates, so a pick has to settle the same way on
@@ -634,6 +410,18 @@ describe("arriving at the review scene", () => {
     };
     const { rerender } = render(
       tree({ ...REVIEW_STATE, thread: [findingEntry] }),
+    );
+    // The finding-highlight effect targets `[data-finding-id]`, which only
+    // the editing wall carries: the deck's own digest, and the article the
+    // whole record is read as, both state the record as prose with no
+    // per-field DOM hook to pulse. The deck is the review's default face and
+    // reading is not editing, so the wall is two doors away, and this test
+    // walks the same two a reader would.
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Read the whole profile" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Choose the facts to keep" }),
     );
     await screen.findByRole("heading", { level: 2, name: /Correct me/ });
 
@@ -757,7 +545,7 @@ describe("recovering from a rejected confirm", () => {
     );
 
     const continueButton = await screen.findByRole("button", {
-      name: /Continue/,
+      name: "Confirm the profile",
     });
     expect(continueButton).toBeEnabled();
 
@@ -829,7 +617,7 @@ describe("recovering from a rejected confirm", () => {
     );
 
     const continueButton = await screen.findByRole("button", {
-      name: /Continue/,
+      name: "Confirm the profile",
     });
     await vi.waitFor(() => expect(continueButton).toBeEnabled());
 
@@ -901,7 +689,7 @@ describe("recovering from a rejected confirm", () => {
     );
 
     const continueButton = await screen.findByRole("button", {
-      name: /Continue/,
+      name: "Confirm the profile",
     });
     fireEvent.click(continueButton);
 
@@ -955,7 +743,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: /Continue/,
+      name: "Confirm the profile",
     });
     fireEvent.click(continueButton);
 
@@ -993,7 +781,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: /Continue/,
+      name: "Confirm the profile",
     });
     fireEvent.click(continueButton);
     await screen.findByText(NOT_READY_NOTICE);
@@ -1043,7 +831,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: /Continue/,
+      name: "Confirm the profile",
     });
     fireEvent.click(continueButton);
     await screen.findByText(NOT_READY_NOTICE);
@@ -1094,7 +882,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: /Continue/,
+      name: "Confirm the profile",
     });
     fireEvent.click(continueButton);
     await screen.findByText(NOT_READY_NOTICE);
@@ -1138,7 +926,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: /Continue/,
+      name: "Confirm the profile",
     });
     fireEvent.click(continueButton);
     await screen.findByText(NOT_READY_NOTICE);
@@ -1179,7 +967,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
-      name: /Continue/,
+      name: "Confirm the profile",
     });
     fireEvent.click(continueButton);
     await screen.findByText(NOT_READY_NOTICE);
@@ -1215,7 +1003,9 @@ describe("recovering from a rejected confirm", () => {
     });
     renderConfirmReview(dispatch);
 
-    fireEvent.click(await screen.findByRole("button", { name: /Continue/ }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Confirm the profile" }),
+    );
 
     await vi.waitFor(() =>
       expect(dispatch).toHaveBeenCalledWith({ type: "COMPANY_CONFIRMED" }),
@@ -1268,7 +1058,7 @@ describe("recovering from a rejected confirm", () => {
     renderConfirmReview(dispatch);
 
     const continueButton = await screen.findByRole("button", {
-      name: /Continue/,
+      name: "Confirm the profile",
     });
     fireEvent.click(continueButton);
     await vi.waitFor(() => expect(gate.release).not.toBeNull());
@@ -1325,7 +1115,9 @@ describe("recovering from a rejected confirm", () => {
     });
     renderConfirmReview(dispatch);
 
-    fireEvent.click(await screen.findByRole("button", { name: /Continue/ }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Confirm the profile" }),
+    );
 
     await screen.findByText(CHECK_FAILED_NOTICE);
     // The reader was never walked forward onto a profile that never arrived,

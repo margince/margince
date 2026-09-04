@@ -12,26 +12,33 @@ package compose
 // declares.
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
 type integrationsHandlers struct {
 	store *integrations.Store
 	runs  provider.RunService
+	// pool is here for ONE read: whether the caller may see the contact a paid
+	// lookup is about. The store carries its own handle for everything else.
+	pool *pgxpool.Pool
 }
 
 func (h integrationsHandlers) ListProviderConnections(w http.ResponseWriter, r *http.Request) {
@@ -154,6 +161,24 @@ func (h integrationsHandlers) CreatePersonEnrichmentRun(w http.ResponseWriter, r
 		httperr.Write(w, r, err)
 		return
 	}
+	// The contact has to be one this caller may SEE. Human-alone was the whole
+	// gate, so any seat could spend money looking up any contact — and on a
+	// capture-private row, which 404s on read, the only thing standing in the
+	// way was not knowing the id. An id is not a secret.
+	//
+	// Visibility is the FLOOR, not the answer to what a paid lookup should
+	// require. Whether a spend needs write authority over the record, or a
+	// grant of its own, is a product question (#4041) — but no reading of it
+	// permits spending on a record the spender cannot open, so this holds
+	// while that is decided.
+	//
+	// EnsureVisibleLive, so an invisible or archived contact answers not-found
+	// exactly as reading it would. A different refusal here would confirm the
+	// row exists to somebody who cannot read it.
+	if err := h.requireVisibleContact(r.Context(), id); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	var body crmcontracts.CreatePersonEnrichmentRunRequest
 	if !httperr.Decode(w, r, &body) {
 		return
@@ -251,5 +276,19 @@ func newIntegrationsHandlers(pool *pgxpool.Pool, vault keyvault.Vault, reg *inte
 	if err != nil {
 		panic("compose: integrations store construction failed with live dependencies: " + err.Error())
 	}
-	return integrationsHandlers{store: store, runs: runs}
+	return integrationsHandlers{store: store, runs: runs, pool: pool}
+}
+
+// requireVisibleContact refuses a paid lookup on a contact the caller cannot
+// open, answering not-found so existence stays hidden.
+func (h integrationsHandlers) requireVisibleContact(ctx context.Context, id crmcontracts.Id) error {
+	// No pool is no transaction to ask through, so the check cannot be
+	// performed — and an authority check that cannot run refuses. The gate in
+	// backend/gates/enrichmentpool_test.go keeps a wiring from reaching here.
+	if h.pool == nil {
+		return apperrors.ErrPermissionDenied
+	}
+	return database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+		return auth.EnsureVisibleLive(ctx, tx, "person", ids.UUID(id))
+	})
 }

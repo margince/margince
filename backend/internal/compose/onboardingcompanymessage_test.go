@@ -264,6 +264,73 @@ func TestOnboardingCompanyMessageReturnsDependencyFailures(t *testing.T) {
 	}
 }
 
+// The reader answered "which of these addresses is yours" while the model was
+// down, and their click is not the model's to lose. The field and the value
+// came from this server's own clarify and were verified against the read
+// before anything was asked of a model, so the change is recorded and the
+// draft moves — rather than a refusal telling them to pick again, into the
+// same outage, while the draft stays wrong.
+func TestAClickedClarifyOptionIsRecordedEvenWhenTheModelWillNotAnswer(t *testing.T) {
+	readID := ids.NewV7()
+	assistant := onboardingCompanyAssistant{
+		state: onboardingStateReaderStub{
+			state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID},
+		},
+		people: onboardingSiteReadReaderStub{read: people.SiteRead{
+			DraftVersion: 1,
+			LegalEntities: []people.SiteReadLegalEntity{
+				{Name: "Acme GmbH", RegisteredAddress: "Musterstraße 1, Berlin"},
+				{Name: "Acme Holding AG", RegisteredAddress: "Bahnhofstrasse 2, Zug"},
+			},
+		}},
+		brain:   &replyBrainStub{err: errors.New("the assistant did not answer")},
+		runtime: &onboardingRuntimeStub{},
+	}
+
+	recorder := onboardingCompanyRequest(&assistant, `{"message":"That one","locale":"en",`+
+		`"selected_option":{"clarify_id":"clarify:registered_address:1",`+
+		`"field":"registered_address","value":"Bahnhofstrasse 2, Zug"}}`)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s — a verified choice must outlive the prose about it",
+			recorder.Code, recorder.Body.String())
+	}
+	var reply crmcontracts.OnboardingCompanyMessageReply
+	if err := json.Unmarshal(recorder.Body.Bytes(), &reply); err != nil {
+		t.Fatal(err)
+	}
+	if len(reply.ProposedChanges) != 1 {
+		t.Fatalf("proposed changes = %+v, want the one value the human picked", reply.ProposedChanges)
+	}
+	change := reply.ProposedChanges[0]
+	if string(change.Field) != fieldRegisteredAddress || change.Value != "Bahnhofstrasse 2, Zug" {
+		t.Fatalf("proposed change = %+v, want exactly what was clicked", change)
+	}
+	// And it must not be silent about which half is missing: the choice is
+	// recorded, the assistant's own words are not there to be read.
+	if reply.Message == "" {
+		t.Fatal("the reply carries no message; a recorded choice still owes the reader a sentence")
+	}
+}
+
+// The same outage with NO click still refuses: there is nothing verified to
+// record, and inventing a change would be worse than saying the assistant is
+// unreachable.
+func TestAModelOutageWithNoSelectionStillRefuses(t *testing.T) {
+	assistant := onboardingCompanyAssistant{
+		state:   onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7()}},
+		people:  onboardingSiteReadReaderStub{},
+		brain:   &replyBrainStub{err: errors.New("the assistant did not answer")},
+		runtime: &onboardingRuntimeStub{},
+	}
+
+	recorder := onboardingCompanyRequest(&assistant, `{"message":"Tell me about this company","locale":"en"}`)
+
+	if recorder.Code == http.StatusOK {
+		t.Fatalf("status = %d, want a refusal: nothing was chosen, so nothing can be recorded", recorder.Code)
+	}
+}
+
 func TestOnboardingCompanyMessageRequiresAConfiguredAssistant(t *testing.T) {
 	request := httptest.NewRequest(http.MethodPost, "/v1/onboarding/company/messages", strings.NewReader(`{"message":"Hello","locale":"en"}`))
 	recorder := httptest.NewRecorder()

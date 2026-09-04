@@ -5970,6 +5970,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/company/site-reads/{readId}/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                readId: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Stream the mark a website read resolved, before anything adopts it.
+         * @description The bytes behind `CompanySiteRead.logo_url`: the company mark the read resolved from
+         *     its own site, parked on the dossier until a confirmation binds it to the record.
+         *     Served here so the review can show the company it is about while the record does not
+         *     exist yet. Normalized like every stored mark, so the response is always `image/png`
+         *     and never third-party markup. 404 when the read resolved no mark or does not exist;
+         *     501 when the deployment has no object store configured.
+         */
+        get: operations["getCompanySiteReadLogo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/company/site-reads/{readId}/messages": {
         parameters: {
             query?: never;
@@ -7773,6 +7800,11 @@ export interface paths {
             query?: {
                 /** @description The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default. */
                 tier?: string;
+                /**
+                 * @description Return only the best N under the vendor's own published measure, and name that measure in `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing form binds an id its reader already knows, while a first run puts a shortlist in front of somebody who has never seen these names, and four hundred rows is not a shortlist.
+                 *     Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
+                 */
+                top?: number;
             };
             header?: never;
             path: {
@@ -14168,13 +14200,19 @@ export interface components {
             /** @description The routing name of the vendor that was asked. */
             provider: string;
             models: components["schemas"]["AvailableModel"][];
+            /** @description The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten. */
+            ranked_by?: string;
             /**
              * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
              * @enum {string}
              */
             unavailable?: "no_key" | "profile_forbids" | "not_published" | "unreachable" | "no_endpoint";
         };
-        /** @description One model a vendor says it serves. Three fields and no fourth: the vendors disagree about everything else they publish, and a field only some of them fill is one a caller cannot rely on. */
+        /**
+         * @description One model a vendor says it serves.
+         *     Everything past `id` is OPTIONAL and stated only where that vendor states it: the vendors disagree about what they publish, and a caller that assumed a field was there would read a silence as a value. Absent is absent, never a default.
+         *     The price fields are the VENDOR'S OWN asking price, and they are not what a call is costed against. `/ai-model-rates` is that record: it is effective-dated and this installation has agreed to it, where these are a number the vendor printed today and nobody has confirmed. A screen may put the two side by side, and must say which is which. A model this installation cannot price is still bindable and reports UNPRICED.
+         */
         AvailableModel: {
             /** @description The string a binding names, exactly as the vendor spells it. */
             id: string;
@@ -14185,6 +14223,14 @@ export interface components {
              * @enum {string}
              */
             lane?: "chat" | "embeddings";
+            /** @description Absent where the vendor publishes none. */
+            context_length?: number;
+            /** @description The vendor's asking price per million input tokens, in the same USD decimal strings as `AiModelRate` so a screen can show a vendor's price beside a recorded one without converting between them. Absent where the vendor publishes no price. */
+            input_per_mtok?: string;
+            /** @description The same, per million output tokens. */
+            output_per_mtok?: string;
+            /** @description This model's score under the list's `ranked_by`, so a screen can show WHY a model is in a shortened list rather than asking a reader to trust the order. A decimal string for the same reason the prices are: it is displayed, never arithmetic. Absent where the vendor publishes no such measure, which is also when the list cannot be ranked. */
+            rank_score?: string;
         };
         /** @description What may be known about one vendor's credential. Deliberately three facts and no fourth: the key itself has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless. */
         AiProviderKeyStatus: {
@@ -14925,6 +14971,32 @@ export interface components {
         CaptureConnectionListResponse: {
             data: components["schemas"]["CaptureConnection"][];
             public_origin?: components["schemas"]["PublicOriginStatus"];
+            /**
+             * @description Whether a connect started right now would proceed, per provider a person can choose
+             *     between, so the connect screen can say so before the click rather than after a 501.
+             */
+            providers?: components["schemas"]["CaptureProviderAvailability"][];
+        };
+        /**
+         * @description Whether a connect started right now would proceed, decided by the same predicate the connect
+         *     endpoint itself uses so the two cannot disagree. Reported for the mail providers a person can
+         *     choose between (gmail, graph, imap); the paired calendar connectors (gcal, graphcal) are
+         *     created by a mail grant rather than picked, so they are absent.
+         */
+        CaptureProviderAvailability: {
+            /**
+             * @description The mail provider a person picks between.
+             * @enum {string}
+             */
+            provider: "gmail" | "graph" | "imap";
+            /**
+             * @description `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
+             *     app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
+             *     is a different fix from registering one. `unsupported`: this deployment does not serve the
+             *     provider at all.
+             * @enum {string}
+             */
+            reason: "ready" | "app_missing" | "app_unusable" | "unsupported";
         };
         /**
          * @description The address this installation puts in outgoing links, and whether it answered when last asked.
@@ -23488,6 +23560,8 @@ export interface components {
             password: boolean;
             /** @description The A74 reset flow can complete end to end (outbound email configured + healthy). */
             password_reset: boolean;
+            /** @description Whether this installation has yet to finish its setup, so an unconfigured one can be greeted rather than only asked for credentials. Deliberately readable without a session, which is the narrowest form of a fact `/installation/setup` reports in full to a human session: it says that setup is unfinished and nothing else. It names no account, no step, no configured value, and says nothing about any credential. */
+            first_run: boolean;
             /** @description Operational OIDC providers (empty until the OIDC flow ships). */
             oidc_providers: {
                 /** @description Stable provider key, e.g. `google`. */
@@ -25161,8 +25235,11 @@ export interface components {
         PutOnboardingStateRequest: {
             /** @description Zero creates; otherwise the version last read. */
             expected_version: number;
-            /** @enum {string} */
-            step: "read" | "confirm" | "voice" | "results" | "connect" | "complete";
+            /**
+             * @description Where the creator's setup stands. `invite` is the question asked once the company is confirmed — whether the person setting the installation up will also work in it, which is what decides whether the optional `voice` and `connect` steps are offered at all. `team` is where a creator who will not work in it invites the first person who will. `results` is kept for rows written before that question existed; a client treats it as the connect step being next.
+             * @enum {string}
+             */
+            step: "read" | "confirm" | "invite" | "team" | "voice" | "results" | "connect" | "complete";
             /** @enum {string|null} */
             source_mode: "website" | "manual" | null;
             /** Format: uri */
@@ -25178,7 +25255,7 @@ export interface components {
             /** @enum {string} */
             readonly path: "creator" | "member";
             /** @enum {string} */
-            step: "read" | "confirm" | "voice" | "results" | "connect" | "complete";
+            step: "read" | "confirm" | "invite" | "team" | "voice" | "results" | "connect" | "complete";
             /** @enum {string|null} */
             source_mode: "website" | "manual" | null;
             /** Format: uri */
@@ -25720,6 +25797,14 @@ export interface components {
             /** @enum {string|null} */
             phase?: "crawling" | "extracting" | null;
             pages_read?: number;
+            /**
+             * @description Where to fetch the mark the read resolved from the company's own site — the
+             *     `getCompanySiteReadLogo` path for this dossier, cookie-authenticated and
+             *     same-origin. ABSENT when the read resolved none, which a client answers with the
+             *     deterministic monogram. A confirmation moves the same mark onto the record, where
+             *     `CompanyProfile.logo_url` carries it from then on.
+             */
+            readonly logo_url?: string;
             pages: components["schemas"]["CompanySiteReadPage"][];
             profile_fields: components["schemas"]["ColdStartField"][];
             facts: components["schemas"]["CompanySiteReadFact"][];
@@ -40441,6 +40526,40 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    getCompanySiteReadLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                readId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The normalized logo bytes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The deployment has no object store configured, so no logo can be stored or served. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     messageCompanySiteRead: {
         parameters: {
             query?: never;
@@ -42411,6 +42530,11 @@ export interface operations {
             query?: {
                 /** @description The lane being edited, named as the routing document names it (`premium`, `embeddings`, …). It selects WHICH stored binding supplies the host, for the installation that binds one vendor at two — a broker on one lane and a self-hosted gateway on another, which the routing validator permits. Omitted, or naming a lane bound to some other vendor, the host falls back to any binding on this vendor and then to the adapter's own default. */
                 tier?: string;
+                /**
+                 * @description Return only the best N under the vendor's own published measure, and name that measure in `ranked_by`. For the surface that has to OFFER a choice rather than accept one: a routing form binds an id its reader already knows, while a first run puts a shortlist in front of somebody who has never seen these names, and four hundred rows is not a shortlist.
+                 *     Omitted, the vendor's whole list comes back in the vendor's own order. A vendor that publishes no such measure cannot honour this: it answers with the full list and no `ranked_by`, rather than inventing an order and calling it a ranking.
+                 */
+                top?: number;
             };
             header?: never;
             path: {

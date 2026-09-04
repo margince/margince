@@ -431,9 +431,9 @@ func wroteOnTwoThreadsTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
 // invitation named — a person the workspace does not have yet is exactly the
 // case this decides.
 //
-// THREE BOUNDS, the same three the consent arm applies (consent's
-// meetingQualifyingEvent), because they answer the same question about the same
-// row and two readings of one fact drift:
+// THREE BOUNDS, three of the four the consent arm applies (consent's
+// meetingQualifyingEvent, which says why it needs a fourth), because they answer
+// the same question about the same row and two readings of one fact drift:
 //
 //   - a CONNECTOR captured it, so a hand-logged "meeting" cannot mint a contact;
 //   - it was not declined or abandoned (no_show, canceled);

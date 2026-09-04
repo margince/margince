@@ -28,8 +28,8 @@ type SavedState = {
 };
 
 export type WizardPersistInput = Readonly<{
-  /** Classic STEPS index (0 read, 1 voice, 2 results, 3 connect, 4 complete). */
-  nextStep: number;
+  /** The step the journey stands on once this write lands. */
+  step: OnboardingState["step"];
   values: CompanyForm;
   /** Omitted fields inherit the previously saved state. */
   mode?: "website" | "manual" | null;
@@ -112,7 +112,7 @@ async function writeMerged(
   const data = await writeWizardState(
     wizardStateBody({
       expectedVersion: base.version,
-      nextStep: input.nextStep,
+      step: input.step,
       mode: input.mode === undefined ? base.sourceMode : input.mode,
       readID: input.readId === undefined ? base.siteReadId : input.readId,
       norm: { ok: website.trim() !== "", full: website },

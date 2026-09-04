@@ -123,6 +123,28 @@ describe("ImapConnectForm", () => {
     ).toBeInTheDocument();
   });
 
+  // Connect is always pressable, and pressing it early names what is missing
+  // at the fields and beside the button rather than leaving a grey button to
+  // explain itself. Nothing is posted until the form can be dialled.
+  it("names what is still needed when Connect is pressed early", async () => {
+    const calls: unknown[] = [];
+    installFetchStub({
+      "POST /connectors/imap/connect": (body) => {
+        calls.push(body);
+        return jsonResponse({}, 500);
+      },
+    });
+    render(<ImapConnectForm open onClose={() => {}} />);
+    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
+    expect(
+      screen.getByText(
+        "Still needed: IMAP server, Email address, App password",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("Needed to connect")).toHaveLength(3);
+    expect(calls).toHaveLength(0);
+  });
+
   it("never retains the secret after a failed submit", async () => {
     installFetchStub({
       "POST /connectors/imap/connect": () =>
