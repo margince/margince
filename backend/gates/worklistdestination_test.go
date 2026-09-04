@@ -26,10 +26,13 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 )
 
-// batchStandsForOtherRows is the one source that must NOT be classified here.
-// It names a group rather than a record, so its screen is its members' — and a
-// mapping for the word `batch` would be a second answer to a question the
-// members already answer.
+// batchStandsForOtherRows names a group rather than a record, so its screen is
+// its members' — and a mapping for the word `batch` would be a second answer to
+// a question the members already answer.
+//
+// Held by: TestEveryWorklistSourceHasADestination, which fails in both
+// directions — a source the contract declares and the map does not classify,
+// and this one if it ever is classified.
 const batchStandsForOtherRows = "batch"
 
 func TestEveryWorklistSourceHasADestination(t *testing.T) {

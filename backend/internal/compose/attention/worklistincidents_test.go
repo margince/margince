@@ -260,11 +260,10 @@ func TestAnIncidentGroupIsDrawnFromTheRulesNameNotItsIdentity(t *testing.T) {
 // heading that means something else, with nothing left on the page to notice.
 // The members go back as themselves instead: more rows, nothing lost.
 func TestRowsBoundForDifferentScreensDoNotFold(t *testing.T) {
-	cause := "sync_failing"
 	mixed := []ranked{
-		systemRowWithCause("notice", "one", cause),
-		systemRowWithCause("capture_health", "two", cause),
-		systemRowWithCause("capture_health", "three", cause),
+		systemRowWithCause("notice", "one"),
+		systemRowWithCause("capture_health", "two"),
+		systemRowWithCause("capture_health", "three"),
 	}
 	// The fixture has to be foldable but for the destination, or this test
 	// passes on a floor it never reached.
@@ -272,9 +271,9 @@ func TestRowsBoundForDifferentScreensDoNotFold(t *testing.T) {
 		t.Fatalf("the fixture holds %d rows, below the fold floor of %d", len(mixed), batchFloor)
 	}
 	alike := []ranked{
-		systemRowWithCause("capture_health", "one", cause),
-		systemRowWithCause("capture_health", "two", cause),
-		systemRowWithCause("capture_health", "three", cause),
+		systemRowWithCause("capture_health", "one"),
+		systemRowWithCause("capture_health", "two"),
+		systemRowWithCause("capture_health", "three"),
 	}
 	if folded := foldRoutineDecisions(alike); len(folded) != 1 {
 		t.Fatalf("three rows of one screen drew %d rows, so this fixture cannot show a refusal", len(folded))
@@ -295,7 +294,12 @@ func TestRowsBoundForDifferentScreensDoNotFold(t *testing.T) {
 
 // systemRowWithCause is one system row naming a shared condition, built through
 // the classifier production uses so the fold sees the shape it really gets.
-func systemRowWithCause(source crmcontracts.AttentionItemSource, id, cause string) ranked {
+//
+// ONE condition for every caller, because that is what makes the rows foldable:
+// the fold groups on the cause, so a test about what happens WITHIN a group
+// needs its rows to reach one.
+func systemRowWithCause(source crmcontracts.AttentionItemSource, id string) ranked {
+	cause := "sync_failing"
 	at := item(fmt.Sprintf("%s-%s", source, id), source)
 	at.CauseRef = &cause
 	return classifySystem(at, rankInstant)
