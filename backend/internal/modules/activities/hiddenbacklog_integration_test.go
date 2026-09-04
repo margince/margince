@@ -310,3 +310,42 @@ func TestAQueueAtTheScanCapRefusesToCallItselfClear(t *testing.T) {
 			"guardrail must never give, because nothing else would report the failure")
 	}
 }
+
+// `shown` counts what the QUERY found, which is a near neighbour of what the
+// page draws rather than equal to it.
+//
+// Machine senders are filtered TWICE and deliberately so. This query removes
+// the obvious ones before its cap, because two hundred notification threads
+// would otherwise fill the scan and push a real customer past it. The seam then
+// applies capture's own address rule over the survivors — a baseline of
+// transactional relay domains, which no ILIKE list could stand in for.
+//
+// A sender from one of those domains is therefore counted here and dropped
+// downstream, and so is a repeat thread from one sender, which the seam folds
+// statefully across rows.
+//
+// Asserted rather than left implicit, because the field's description used to
+// say "what the queue itself would carry" and a reader comparing this figure
+// against the rows on their screen would find it larger with nothing to explain
+// the gap. If the two are ever reconciled, this test is what says so.
+func TestShownCountsWhatTheQueryFoundRatherThanWhatThePageDraws(t *testing.T) {
+	e := setupLoad(t)
+	person := ids.NewV7()
+	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	before := hiddenNow(t, e)
+	// A wait seeded the way every other case here seeds one — so it satisfies
+	// every eligibility rule — with only the SENDER changed to a machine
+	// address. The seam drops it downstream; this query has no way to.
+	machine := e.seedWait(t, "Your receipt", "person_id", person)
+	e.exec(t, `UPDATE activity_participant SET address = 'receipts@mail.sendgrid.net'
+		WHERE activity_id = $1 AND role = 'from'`, machine)
+
+	got := moved(before, hiddenNow(t, e))
+
+	if got.Shown != 1 {
+		t.Fatalf("the found count moved by %d over one machine-sent wait, want 1 — "+
+			"this figure is the eligibility query's own answer, and the seam's "+
+			"machine-sender filter runs after it in Go", got.Shown)
+	}
+}
