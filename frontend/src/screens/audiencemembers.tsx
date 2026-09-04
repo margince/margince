@@ -50,21 +50,36 @@ export const AUDIENCE_HINT: Record<ActivityAudience, MessageKey> = {
   selected: "compose.audienceSelectedHint",
 };
 
-// Why a captured message is held, in the reader's words. A reason the server
-// learned to give and this map has not falls back to nothing rather than to the
-// raw token: a badge reading `financial_corporate` beside a customer's mail is
-// worse than no badge at all.
+// Why a captured message is held, in the reader's words.
 //
-// The server sends this token two ways — as `audience_reason` on an Activity
-// and as `explanation` on an EmailAccess, which `readEmailAccess` fills from
-// the same column. One map, so the row and the drawer name a held message the
-// same way.
+// EVERY reason the derivation can write has an entry. It once held five of the
+// nine, and the four it omitted were not rare: `explicitly_confidential` is
+// what a confidentiality verdict stamps, so an ordinary business mail narrowed
+// to its participants said only "not shared with you" and never why. A reader
+// cannot argue with a verdict they cannot see, which is how a wrong one
+// survives.
+//
+// The corpus is `activities.Reason*` — the constants the recompute writes and
+// `readEmailAccess` copies into `explanation`. Not capture's own copy, which
+// is a second spelling of the same words held against this one by
+// TestTheTwoModulesSpellTheRowCarriedReasonsTheSameWay, and not the
+// classifier's verdict kinds, which resolve to these before they reach a row.
+// `frontendaudiencereasons_test.go` fails in both directions when either side
+// grows a word the other has not.
+//
+// The server sends the token two ways — as `audience_reason` on an Activity
+// and as `explanation` on an EmailAccess — so one map keeps the row and the
+// drawer naming a held message the same way.
 export const AUDIENCE_REASON_LABEL: Record<string, MessageKey> = {
   posture: "compose.reason.posture",
   workspace_floor: "compose.reason.workspaceFloor",
   no_record: "compose.reason.noRecord",
   pending_verdict: "compose.reason.pendingVerdict",
   manual: "compose.reason.manual",
+  verdict: "compose.reason.verdict",
+  counterparty: "compose.reason.counterparty",
+  explicitly_confidential: "compose.reason.explicitlyConfidential",
+  no_counterparty: "compose.reason.noCounterparty",
 };
 
 /** One pickable seat or team, flattened out of the two rosters. */
