@@ -108,13 +108,22 @@ describe("evidence mark", () => {
         }}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: /1998/ }));
+    const trigger = screen.getByRole("button", { name: /1998/ });
+    await userEvent.click(trigger);
     await userEvent.click(screen.getByText("Full history"));
+    // The pointer leaves, which is what a reader who has navigated away has
+    // done. Without it the hover-intent poll this click armed is still running
+    // on the real clock — a 25ms tick with a 260ms ceiling that settles
+    // whatever the pointer is doing — and it re-opens the panel a moment after
+    // the assertion below, or a moment before it on a loaded machine.
+    await userEvent.unhover(trigger);
 
     expect(opened).toBe(true);
     // The panel closes on the way out, so the reader does not return to a
     // stale popover hanging over the surface they navigated to.
-    expect(screen.queryByRole("region")).toBeNull();
+    await waitFor(() => {
+      expect(screen.queryByRole("region")).toBeNull();
+    });
   });
 
   it("keeps one panel open at a time, whatever opened it", async () => {
