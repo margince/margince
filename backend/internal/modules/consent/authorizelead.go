@@ -102,7 +102,8 @@ func purposeRowFor(ctx context.Context, tx pgx.Tx, purposeKey string) (PurposeRo
 // honest answer, and it is the one shape here that must not become an allow,
 // because no suppression, objection or consent state can be read for a subject
 // nobody identified.
-func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient, purposeKey string, d commsauthz.Decision) (commsauthz.Decision, error) {
+func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision) (commsauthz.Decision, error) {
+	purposeKey := req.LegacyPurposeKey
 	leadID, found, err := resolveLead(ctx, tx, r)
 	if err != nil {
 		return commsauthz.Decision{}, err
