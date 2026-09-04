@@ -322,7 +322,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rulebooklength_test.go` | H3 | A rulebook is read in full by every session and, for its Craftsmanship section, by every gate prompt — so its length is a running cost rather than a matter of taste. |
 | `workflowtimeouts_test.go` | H3 | Every workflow job carries a wall-clock ceiling. |
 
-## Falsification (10)
+## Falsification (11)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -334,5 +334,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rbacbaselineerafixture_test.go` | H3 | The pre-state the RBAC composition gate replays over must not be hand-editable. |
 | `retainedcolumncases_test.go` | H1 | The retention sweep's two SQL claims, driven with SYNTHETIC statements rather than the tree — the same reason extensionsqlscopecases\_test.go gives for its own cases. |
 | `triggerwrittencolumncases_test.go` | H2 | The trigger-written-column reader driven with SYNTHETIC statements, for the reason retainedcolumncases\_test.go gives for its own: the tree is supposed to pass, so a reader proven only by "nothing in the tree trips it" is one that keeps passing after it stops working. |
+| `txseamreach_test.go` | H2 | Following a call one hop further than the name it is spelled with. |
 | `updateguardcases_test.go` | H2 | What the concurrency-guard census judges a function on, driven with SYNTHETIC source rather than the tree — the same reason retainedcolumncases\_test.go gives for its own cases. |
 | `writelivenesscases_test.go` | H2 | What the liveness census judges, and what it credits, driven with SYNTHETIC source rather than the tree — the same reason updateguardcases\_test.go gives for its own. |
