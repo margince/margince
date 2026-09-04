@@ -60,6 +60,47 @@ const (
 	TaskWeeklyReview Task = "weekly_review"
 )
 
+// taskDisplayNames is what each task is CALLED, for a surface that has to
+// name one to a person. The constant is vocabulary — a reader shown
+// "site_triage failed 8 times" learns nothing they can act on.
+//
+// Generated from the same declaration as the constants, so a task cannot
+// be added without a name and the two cannot drift.
+var taskDisplayNames = map[Task]string{
+	TaskAgentLoop:                     "Agent reasoning loop",
+	TaskBriefRanking:                  "Morning brief ranking",
+	TaskCaptureClassify:               "Message classification",
+	TaskCaptureConfidentialityVerdict: "Thread confidentiality check",
+	TaskCaptureCounterpartyVerdict:    "First-time sender check",
+	TaskCertJudge:                     "Certification judging",
+	TaskColdStart:                     "Onboarding read",
+	TaskCorpusAsk:                     "Document corpus question",
+	TaskDealHealth:                    "Deal status card",
+	TaskDocumentExtract:               "Document extraction",
+	TaskDraftReply:                    "Reply drafting",
+	TaskEnrich:                        "Signature enrichment",
+	TaskGrowthFit:                     "Company fit assessment",
+	TaskNlSearch:                      "Natural-language search",
+	TaskOfferDraft:                    "Offer drafting",
+	TaskOwedVerdict:                   "Unanswered-message triage",
+	TaskProposeRoles:                  "Buying-role reading",
+	TaskRateExtract:                   "Model pricing extraction",
+	TaskSignalExtract:                 "Signal extraction",
+	TaskSiteExtract:                   "Website deep read",
+	TaskSiteFactExtract:               "Website fact extraction",
+	TaskSiteTriage:                    "Website triage",
+	TaskSummarize:                     "Record summary",
+	TaskTranscript:                    "Transcript reading",
+	TaskTranscriptPropose:             "Meeting follow-up extraction",
+	TaskVoiceBuild:                    "Voice DNA build",
+	TaskWeeklyReview:                  "Weekly review narrative",
+}
+
+// DisplayName is what to call this task in front of a person. An unknown
+// task answers the empty string: a caller with nothing to show is better
+// served saying nothing than showing the key it was handed.
+func DisplayName(t Task) string { return taskDisplayNames[t] }
+
 // ExecutionMode distinguishes request-bound work from work carried by a
 // durable background job. Budget exhaustion degrades the former and
 // defers the latter.
@@ -85,7 +126,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "a5f3f393c1b28e6b894064ace4a82361dc6f1ef241894ea4e80ec3f2ab1d447d"
+const TaskContractHash = "8952d20054ec3374040e5d5769150e53d44d4a7743f2db255b8b383a61dc28b0"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
