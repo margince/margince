@@ -2279,6 +2279,30 @@ export async function mockApi(
     // envelopes the list catch-all below doesn't produce (`{sections:[]}`,
     // `{data:[AgentTool]}` vs `{data:[],page}`) — mock them explicitly so a
     // 360 open or the tool console doesn't crash on an undefined field.
+    // BEFORE the `/context` substring below, which would otherwise answer this
+    // with the company panel's envelope: Analytics reads
+    // `capabilities.submit_manager_forecast` straight off this frame, and the
+    // wrong shape crashed every route under #/analytics into its error
+    // boundary — which the AC sweep then reported as the analytics SCREEN
+    // being broken. An exact path beats a substring, and this file's
+    // convention is that the exact one is written first.
+    //
+    // Both capabilities true, so a spec asserting a control is ABSENT is
+    // asserting something the server said rather than something the seed
+    // forgot to grant.
+    if (path === "/analytics/context") {
+      return json({
+        default_scope: { kind: "workspace", label: "Whole workspace" },
+        allowed_scopes: [{ kind: "workspace", label: "Whole workspace" }],
+        capabilities: {
+          view_manager_forecast: true,
+          submit_manager_forecast: true,
+        },
+        as_of: "2026-03-02T09:00:00Z",
+        timezone: "Europe/Berlin",
+        base_currency: "EUR",
+      });
+    }
     if (path.includes("/context")) {
       return json({ anchor: { type: "person", id: "x" }, sections: [] });
     }
