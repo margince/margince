@@ -22,7 +22,9 @@ package migrations_test
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -134,6 +136,70 @@ func TestRetiringTheAgentSeatLeavesARealAgentIdentityAlone(t *testing.T) {
 					"row bootstrap wrote, and widening it deactivates a runner in use", tc.name, status)
 			}
 		})
+	}
+}
+
+// TestRetiringTheAgentSeatRoundTrips holds the pair as an inverse.
+//
+// The up touches only a seat holding exactly (`active`, NULL), so the down
+// restores exactly that pair and nothing has to record prior state. The second
+// fixture is the boundary: a seat an operator DEACTIVATED but did not archive —
+// the two are independent in this schema — is outside both predicates, so a
+// rollback cannot hand it back as live.
+//
+// The case the pair genuinely cannot separate is a seat an operator deactivated
+// AND archived by hand: it is indistinguishable from one this migration retired,
+// so a rollback reactivates it. That is stated in the down migration, and it is
+// the safe direction — the row comes back live but inert, since it holds no
+// password, no role, and no passport can name it.
+func TestRetiringTheAgentSeatRoundTrips(t *testing.T) {
+	ownerDSN, _ := dsns(t)
+	conn := connect(t, ownerDSN)
+	headSchema(t, conn)
+
+	seat := seedRetirableSeat(t, conn, "agent@roundtrip.gradion.local", "active", nil)
+	// The boundary: an operator stopped this one and did not archive it.
+	byHand := seedRetirableSeat(t, conn, "agent@stopped.gradion.local", "deactivated", nil)
+
+	applyMigrationFile(t, conn, retireAgentSeatMigration)
+	assertSeatState(t, conn, seat, "deactivated", true)
+	// Skipped by the up: already out of the meter, so there is nothing to do to
+	// it, and touching it would invent an archival the operator did not ask for.
+	assertSeatState(t, conn, byHand, "deactivated", false)
+
+	applyMigrationFile(t, conn, strings.Replace(retireAgentSeatMigration, ".up.sql", ".down.sql", 1))
+	// The one the up retired is back exactly as the up found it.
+	assertSeatState(t, conn, seat, "active", false)
+	// And the operator's own decision survives the rollback.
+	assertSeatState(t, conn, byHand, "deactivated", false)
+}
+
+// seedRetirableSeat writes one seeded-shape agent seat in a given state.
+func seedRetirableSeat(t *testing.T, conn *pgx.Conn, email, status string, archivedAt *time.Time) string {
+	t.Helper()
+	var id string
+	if err := conn.QueryRow(context.Background(),
+		`INSERT INTO app_user (email, display_name, is_agent, seat_type, status, archived_at)
+		 VALUES ($1, 'Margince Agent', true, 'full', $2, $3) RETURNING id`,
+		email, status, archivedAt).Scan(&id); err != nil {
+		t.Fatalf("seeding %s: %v", email, err)
+	}
+	return id
+}
+
+// assertSeatState reads one seat's status and whether it is archived.
+func assertSeatState(t *testing.T, conn *pgx.Conn, id, wantStatus string, wantArchived bool) {
+	t.Helper()
+	var status string
+	var archived bool
+	if err := conn.QueryRow(context.Background(),
+		`SELECT status, archived_at IS NOT NULL FROM app_user WHERE id = $1`, id).
+		Scan(&status, &archived); err != nil {
+		t.Fatalf("reading seat %s: %v", id, err)
+	}
+	if status != wantStatus || archived != wantArchived {
+		t.Errorf("seat %s is (%s, archived=%v), want (%s, archived=%v)",
+			id, status, archived, wantStatus, wantArchived)
 	}
 }
 
