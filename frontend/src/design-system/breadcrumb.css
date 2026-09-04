@@ -27,7 +27,7 @@
   list-style: none;
   min-width: 0;
   min-height: 30px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--textSecondary);
 }
 .crumbs > ol > li {
@@ -64,7 +64,7 @@
 .crumbs-link,
 .crumbs-step {
   color: var(--textMeta);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
 }
 .crumbs-link {
   text-decoration: none;

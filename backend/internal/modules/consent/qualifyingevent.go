@@ -35,7 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// kindInPerson is the one kind a human may assert. The other three are derived
+// kindInPerson is the one kind a human may assert. Every other kind is derived
 // from records, and a hand-written one would be a second, unbacked answer to a
 // question the data already settles.
 //
@@ -43,6 +43,12 @@ import (
 // (backend/internal/modules/consent/qualifyingevent_integration_test.go), whose
 // first case sends a derived kind and requires the refusal.
 const kindInPerson = "in_person"
+
+// KindMeeting is the event derived from a meeting the subject was in
+// (qualifyingground.go). Exported because the capture ladder reads the same
+// fact — a person we are meeting is a counterparty — and one spelling of the
+// word is what stops the two answers drifting apart.
+const KindMeeting = "meeting"
 
 // noteMaxRunes bounds what the evidence may be. A sentence saying where a card
 // changed hands is the whole need; a page of prose in this column is somebody

@@ -199,7 +199,7 @@ function EnrichedField({
       <p
         style={{
           margin: "var(--space-1) 0 0",
-          fontSize: "0.85rem",
+          fontSize: "var(--fs-body)",
           opacity: 0.75,
         }}
       >
@@ -220,7 +220,7 @@ function EnrichedField({
         <p
           style={{
             margin: "var(--space-1) 0 0",
-            fontSize: "0.85rem",
+            fontSize: "var(--fs-body)",
             opacity: 0.75,
           }}
         >

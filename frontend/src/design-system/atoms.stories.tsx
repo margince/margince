@@ -624,7 +624,6 @@ export const Cards: Story = {
           tone="warn"
           dot
           detail="1 of 3 at risk"
-          basisLabel="What this rests on"
           basis={
             <FactList
               facts={[

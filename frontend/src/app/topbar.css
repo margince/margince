@@ -147,7 +147,7 @@
   background: var(--bgPage);
   color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   font-weight: var(--fw-medium);
   line-height: 1;
 }

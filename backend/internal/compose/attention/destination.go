@@ -179,3 +179,23 @@ func sameDestination(members []ranked) bool {
 	}
 	return true
 }
+
+// destinationOfGroup is the screen a folded row belongs on, asked of its
+// members.
+//
+// The fold refuses to group rows that disagree, so members already sharing one
+// screen is the only shape that reaches here — and this asks anyway. The guard
+// is eight lines away in another function, which is exactly the distance over
+// which a claim stops being true without anybody noticing: a second caller
+// reaching batchRow without it would silently file a group wherever its first
+// member happened to sit.
+//
+// Disagreement answers `review` for the reason the unmapped case does: an
+// unexpected group on the review screen is one row somebody looks at, while the
+// same group in Today claims to be executable seller work.
+func destinationOfGroup(members []ranked) crmcontracts.WorklistItemDestination {
+	if len(members) == 0 || !sameDestination(members) {
+		return destinationReview
+	}
+	return destinationOf(members[0])
+}

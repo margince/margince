@@ -234,7 +234,7 @@ func TestBothSendTransportsCarryTheDraftOutcomeRecorder(t *testing.T) {
 
 		body, err := json.Marshal(crmcontracts.SendEmailRequest{
 			To: []openapi_types.Email{openapi_types.Email(e.recipient)}, Subject: "Pricing",
-			Body: voiceDraftBody, ConsentPurpose: "transactional", DraftRef: &draft.ref,
+			Body: voiceDraftBody, ConsentPurpose: ptrTo("transactional"), DraftRef: &draft.ref,
 		})
 		if err != nil {
 			t.Fatalf("marshaling the send request: %v", err)

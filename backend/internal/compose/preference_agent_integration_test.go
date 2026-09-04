@@ -31,15 +31,18 @@ import (
 func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
 	e := integration.Setup(t)
 	consentStore := consent.NewStore(InstallationDB(e.Pool))
-	stager := &recordingStager{}
 	// Built through the composition root, not by hand: a marketing send is
 	// exactly the case whose derivation depends on the unsubscribe linker and
 	// the public base URL that only newCommsAdapter wires. Assembled field by
 	// field the send would take a path no deployment has, and the opt-out this
 	// suite is about would be proven against the wrong one.
+	//
+	// The REAL delivery machinery for the same reason, one layer down: this
+	// suite's whole claim is that an opt-out REFUSES the next send, and the
+	// engine refuses at staging — inside commsStager, which a double replaces.
 	adapter := newCommsAdapter(e.Pool, nil, SendPath{
 		PublicBaseURL: "https://crm.margince.test",
-		Delivery:      stager,
+		Delivery:      realDeliveryStager(t, e),
 	})
 
 	admin := e.Admin()
@@ -62,10 +65,16 @@ func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
 
 	// An agent principal with the send-adjacent grants; the gate does not
 	// consult it, which is the point — suppression is principal-independent.
+	//
+	// It carries a UserID because an agent sends on behalf of a SEAT and the
+	// delivery is staged as that human (comms.stagingUser: a principal with no
+	// app_user identity cannot stage at all, because sending is a human act).
+	// A seatless agent could never have staged in production; it only reached
+	// delivery here while a double stood in for the machinery that asks.
 	agentCtx := principal.WithWorkspaceID(context.Background(), e.WS)
 	agentCtx = principal.WithCorrelationID(agentCtx, ids.NewV7())
 	agentCtx = principal.WithActor(agentCtx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:optout-probe",
+		Type: principal.PrincipalAgent, ID: "agent:optout-probe", UserID: e.Rep1,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true, Read: true},
@@ -86,7 +95,7 @@ func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
 	if err := send(); err != nil {
 		t.Fatalf("granted agent send → %v, want success", err)
 	}
-	assertStaged(t, stager, 1, "the granted agent send")
+	assertDelivered(t, e, 1, "the granted agent send")
 
 	// The buyer one-click unsubscribes through the PUBLIC preference surface,
 	// exactly as the anonymous middleware binds it (system principal).
@@ -104,7 +113,7 @@ func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
 	if err := send(); !errors.Is(err, apperrors.ErrConsentNotGranted) {
 		t.Fatalf("agent send after opt-out → %v, want ErrConsentNotGranted", err)
 	}
-	assertStaged(t, stager, 1, "the send after opt-out (still only the pre-opt-out one)")
+	assertDelivered(t, e, 1, "the send after opt-out (still only the pre-opt-out one)")
 }
 
 // seedReplyAnchor writes the mail activity the send threads onto.

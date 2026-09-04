@@ -152,7 +152,6 @@ function MoneyStat({
       value={formatMoneyOrAbsent(deal.amount_minor, deal.currency, locale)}
       detail={detail}
       numeric
-      basisLabel={basis ? t("co.strip.basis.reading") : undefined}
       basis={basis}
     />
   );
@@ -273,7 +272,6 @@ function PeopleStat({
       numeric
       // Counted segments, because a committee is a thing a reader counts.
       meter={{ filled: engaged, total: seats.length }}
-      basisLabel={t("co.strip.basis.reading")}
       basis={
         <FactList
           facts={seats.map((seat) => ({
@@ -318,9 +316,6 @@ function MomentumStat({
       dot={deal.stalled}
       openLabel={t("deal.strip.openHistory")}
       onOpen={onOpen}
-      basisLabel={
-        deal.last_activity_at ? t("co.strip.basis.reading") : undefined
-      }
       basis={
         deal.last_activity_at ? (
           <FactList

@@ -148,6 +148,11 @@ func (e *SearchEnv) SeedID(t *testing.T, sql string, args ...any) ids.UUID {
 // fixture that cannot ask the question its suite exists to ask.
 var searchObjects = []string{
 	objPerson, objOrg, objDeal, "lead", objActivity, objRelationship, objInstallSettings,
+	// The catalog types. Without the grant a principal here is refused before
+	// any row-scope rule is reached, so every product and offer-template hit
+	// would vanish from the assertions that count what a search returns —
+	// which reads as a passing suite rather than a missing branch.
+	"product", "offer_template",
 }
 
 // searchReadGrants is read on every record type this fixture's principals can
