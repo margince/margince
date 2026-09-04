@@ -56,7 +56,7 @@
   border: 1px solid var(--accent);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-pop);
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 /* :focus, not :focus-visible — the point is that it appears whenever it holds
    focus, and a heuristic about whether the focus "should" be visible is exactly
@@ -534,7 +534,7 @@
 .rail .ws-name b {
   /* A step up from the rows: the workspace's name heads the column and reads
      first, and at the rows' own size it was one more label among them. */
-  font-size: 15px;
+  font-size: var(--fs-lead);
   font-weight: var(--fw-semibold);
   color: var(--textPrimary);
   line-height: 1.25;
@@ -547,7 +547,7 @@
    length in a narrow column. */
 .rail .ws-org,
 .rail .railversion {
-  font-size: 9px;
+  font-size: var(--fs-eyebrow);
 }
 .rail .ws-org {
   overflow: hidden;
@@ -651,7 +651,7 @@
   text-decoration: none;
   /* A step above the body size: the rail's labels are the mock's 14px, read
      from further away than a paragraph. */
-  font-size: 14px;
+  font-size: var(--fs-body);
 }
 /* Collapsed, a row IS its target: a 32x32 square centred in the 56px column,
    with the glyph centred in it. The height is the expanded row's, so nothing
@@ -726,7 +726,7 @@
   corner-shape: round;
   background: var(--accent);
   color: var(--textOnAccentControl);
-  font-size: 10.5px;
+  font-size: var(--fs-eyebrow);
   font-weight: 600;
   display: grid;
   place-items: center;
@@ -755,7 +755,7 @@
   color: var(--railIconActive);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--r-sm);
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   white-space: nowrap;
   box-shadow: var(--shadow-pop);
   z-index: 50;
@@ -1140,7 +1140,7 @@
   outline: none;
   background: transparent;
   font-family: var(--f-body);
-  font-size: 14px;
+  font-size: var(--fs-body);
   color: var(--textPrimary);
 }
 .palette-list {
@@ -1159,7 +1159,7 @@
   border-radius: var(--r-sm);
   cursor: pointer;
   font-family: var(--f-body);
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   color: var(--textContent);
   text-align: left;
 }
@@ -1182,13 +1182,13 @@
 }
 .palette-row .sub {
   color: var(--textMeta);
-  font-size: 12px;
+  font-size: var(--fs-meta);
 }
 .palette-row .type {
-  font-size: 10.5px;
+  font-size: var(--fs-eyebrow);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-eyebrow);
   color: var(--textMeta);
   background: var(--bgCard);
   border-radius: var(--r-full);
@@ -1210,7 +1210,7 @@
 .client-back {
   color: var(--railIconActive);
   text-decoration: none;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   display: inline-flex;
   align-items: center;

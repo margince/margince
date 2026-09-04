@@ -1374,7 +1374,7 @@
   font-weight: var(--fw-regular);
   font-size: var(--fs-sm);
   line-height: 1.45;
-  letter-spacing: normal;
+  letter-spacing: var(--tracking-normal);
   color: var(--textMeta);
 }
 /* What the day's work could NOT be read from, under whatever rows there are.
@@ -1791,7 +1791,7 @@
   font-family: var(--f-display);
   font-size: var(--fs-lead);
   font-weight: var(--fw-medium);
-  letter-spacing: -0.01em;
+  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
 

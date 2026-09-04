@@ -95,7 +95,7 @@
    sentence rather than a figure, so the figure sits where the sentence still
    holds one line in the narrowest slot. */
 .stat-strip .stat-card-value {
-  font-size: clamp(17px, 1.5vw, 22px);
+  font-size: clamp(var(--fs-h3), 1.5vw, var(--fs-h2));
   line-height: 1.2;
 }
 

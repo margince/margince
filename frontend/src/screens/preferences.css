@@ -78,9 +78,9 @@
 }
 
 .pref-lock-badge {
-  font-size: 11px;
+  font-size: var(--fs-eyebrow);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-eyebrow);
   color: var(--textSecondary);
   background: var(--bgCard);
   border-radius: var(--r-full);
