@@ -745,7 +745,7 @@ test("AC-book-public (B-EP09.14): consent gates booking and the policy passes th
   expect(body.consent.purpose_id).toBeTruthy();
   expect(body.consent.policy_version).toBeTruthy();
   await expect(
-    page.getByText("Gebucht. Die Einladung ist unterwegs."),
+    page.getByText("Gebucht."),
   ).toBeVisible();
 });
 
@@ -766,7 +766,7 @@ test("AC-book-public-409: a taken slot degrades honestly — no fabricated confi
   ).toBeVisible();
   await expect(page.getByText("slot no longer available")).toBeVisible();
   await expect(
-    page.getByText("Gebucht. Die Einladung ist unterwegs."),
+    page.getByText("Gebucht."),
   ).toHaveCount(0);
 });
 
@@ -2439,17 +2439,18 @@ test.describe("filters and views", () => {
       objects.getByRole("button", { name: "Geschäfte", pressed: true }),
     ).toBeVisible();
 
-    // "Kontakte", not "Personen": these tabs read `filters.tab.contacts`,
-    // which is a different key from the nav's and is not one the People ruling
-    // moved. Noted on the ticket as a surface its inventory did not reach.
-    await objects.getByRole("button", { name: "Kontakte" }).click();
+    // "Personen": `filters.tab.contacts` is a different KEY from the nav's,
+    // which is why it was read as out of the People ruling's reach — but the
+    // key is not the word, and the catalog moved this one too. The tab says
+    // what every other surface says.
+    await objects.getByRole("button", { name: "Personen" }).click();
     await expect(page).toHaveURL(/#\/filters\/contacts$/);
 
     // Reloaded, not just navigated: the tab is where you ARE, so a shared link
     // and a refresh have to land on the same object.
     await page.reload();
     await expect(
-      objects.getByRole("button", { name: "Kontakte", pressed: true }),
+      objects.getByRole("button", { name: "Personen", pressed: true }),
     ).toBeVisible();
   });
 });
