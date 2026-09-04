@@ -389,13 +389,19 @@ type MergeResult struct {
 // deliberate product decision and it has a cost the caller has to be told
 // about: links to the old tag stop working, searching its name finds nothing,
 // and somebody can coin the same word again next month.
+//
+// expectedTargetVersion pins the SURVIVING tag. The routed id pins the row this
+// destroys, and for a long time that was the whole precondition — leaving the
+// word being folded into free to be renamed between a caller's decision and
+// this act. Zero means unpinned, which is what a caller sending no version
+// gets and what every door that has not been taught to send one passes.
 // It carries no per-record row gate, unlike applyTagTx/RemoveTag: it rewrites
 // every taggable row across the workspace as one vocabulary operation. No
 // SEEDED role pairs tag.update with a bounded row scope — every role holding
 // it today is unbounded — but the pairing is an object grant an admin could
 // still set (identity.Service.SetRoleObjectGrant), which this gate does not
 // itself refuse.
-func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID) (MergeResult, error) {
+func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID, expectedTargetVersion int64) (MergeResult, error) {
 	if err := auth.Require(ctx, "tag", principal.ActionUpdate); err != nil {
 		return MergeResult{}, err
 	}
@@ -426,6 +432,32 @@ func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID) (MergeR
 		}
 		if err := requireLiveTag(ctx, tx, target, intoTagIDField); err != nil {
 			return err
+		}
+		// The TARGET's pin, read under the lock taken above so the check and
+		// the merge cannot be separated by another writer.
+		//
+		// A merge is a two-row act with, until now, a one-row precondition:
+		// the routed id pins the word being retired, and the word being folded
+		// INTO was unpinned. So the survivor could be renamed between the
+		// moment a caller read it and the moment the merge ran, and the merge
+		// went ahead as though it had not been — which matters most on the
+		// confirm-first path, where a human approves a sentence naming both
+		// words and gets an act naming one of them differently.
+		//
+		// Zero means the caller sent none, the same reading UpdateTag takes of
+		// an absent If-Match.
+		if expectedTargetVersion != 0 {
+			targetRow, err := scanTag(tx.QueryRow(ctx,
+				"SELECT "+tagColumns+" FROM tag WHERE id = $1", target))
+			if errors.Is(err, pgx.ErrNoRows) {
+				return apperrors.ErrNotFound
+			}
+			if err != nil {
+				return err
+			}
+			if targetRow.Version != expectedTargetVersion {
+				return apperrors.ErrVersionSkew
+			}
 		}
 		sourceRow, err := scanTag(tx.QueryRow(ctx, "SELECT "+tagColumns+" FROM tag WHERE id = $1", source))
 		if errors.Is(err, pgx.ErrNoRows) {

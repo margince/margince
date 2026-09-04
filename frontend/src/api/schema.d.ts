@@ -5272,6 +5272,10 @@ export interface paths {
          *     source ends up carrying the target, the source is archived, and its NAME IS RELEASED
          *     — a later create may reuse it, and links to the old tag stop working.
          *
+         *     Send `into_tag_version` to pin the surviving word. This is a two-row act and the id
+         *     in the path pins only the row it destroys, so a caller that decided to fold into a
+         *     named tag should say which version of it they read.
+         *
          *     The answer separates `moved` from `collapsed` because they are different facts: a
          *     record that carried only the source is moved, and one that already carried both
          *     collapses into a single tagging. An admin reading "12 moved, 3 collapsed" knows the
@@ -22773,6 +22777,20 @@ export interface components {
              * @description The tag that survives. Must be live, and must not be this tag.
              */
             into_tag_id: string;
+            /**
+             * Format: int64
+             * @description The version the surviving tag was read at, refusing the merge with 409 if it has
+             *     moved since. A merge is a TWO-row operation and the routed id pins only one of
+             *     them, so without this the word a caller decided to fold INTO can be renamed
+             *     between the decision and the act, and the merge still runs as though it had not
+             *     been.
+             *
+             *     Optional, and absent means unpinned — the same reading `If-Match` has everywhere
+             *     else here. It belongs in the body rather than in `If-Match` because it qualifies
+             *     the id beside it, not the resource in the path: `If-Match` on this route would
+             *     pin the tag being retired, which is a different precondition.
+             */
+            into_tag_version?: number;
         };
         /** @description What the merge did, in the two numbers that differ. */
         MergeTagsResult: {
