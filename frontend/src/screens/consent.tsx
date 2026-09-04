@@ -138,6 +138,19 @@ function ConsentProofLog({ events }: Readonly<{ events: ConsentEvent[] }>) {
               </span>
               <span className="tl-meta">
                 <ConsentEventActor event={event} />
+                {/* The basis this decision was argued from. It is what an
+                    auditor, a subject request or a handover actually asks for
+                    — "when, and on what basis" — and it was on the wire and on
+                    no screen. Operator-authored free text ("Art. 6(1)(a)"),
+                    not a vocabulary key, so it is shown as written rather
+                    than translated. Absent stays silent: a row with no basis
+                    recorded says less than one claiming a basis nobody
+                    entered. */}
+                {event.lawful_basis && (
+                  <span>
+                    {t("consent.basis", { basis: event.lawful_basis })}
+                  </span>
+                )}
                 <span>{formatDateTime(event.occurred_at, locale, zone)}</span>
               </span>
             </span>
@@ -239,6 +252,14 @@ function ConsentRow({
         </Badge>
         {entry.state === "unknown" && (
           <span className="t-caption">{t("consent.noRecord")}</span>
+        )}
+        {/* The basis the CURRENT state stands on, beside the state itself. The
+            log below says how the record got here; this says what holds now,
+            which is the half a reader acting today needs. */}
+        {entry.lawful_basis && (
+          <span className="t-caption">
+            {t("consent.basis", { basis: entry.lawful_basis })}
+          </span>
         )}
       </div>
       <div className="consent-row-actions">

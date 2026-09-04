@@ -74,6 +74,7 @@ const CONSENT = {
       purpose_id: "p1",
       purpose_key: "transactional",
       state: "granted",
+      lawful_basis: "Art. 6(1)(b)",
       updated_at: "2026-05-01T10:00:00Z",
     },
     { purpose_id: "p2", purpose_key: "marketing_email", state: "unknown" },
@@ -84,6 +85,7 @@ const CONSENT = {
       purpose_id: "p1",
       new_state: "granted",
       source: "booking form",
+      lawful_basis: "Art. 6(1)(b)",
       actor_type: "human",
       actor_id: "u1",
       occurred_at: "2026-05-01T10:00:00Z",
@@ -170,6 +172,39 @@ describe("ConsentSection", () => {
       within(row).getByRole("button", { name: /proof log/i }),
     );
     expect(await screen.findByText(/booking form/i)).toBeInTheDocument();
+  });
+
+  // "When, and on what basis" is the whole of what a subject request, an audit
+  // or a handover asks about a consent record. `lawful_basis` was on the wire
+  // on both the state and every proof row, and reached no screen: a reader
+  // could see that a purpose was granted in May and not what it was granted
+  // ON, which is the half that decides whether the grant still stands.
+  it("says what basis the current state stands on", async () => {
+    stubRoutes();
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    const row = await findConsentRow("Deal messages");
+    expect(within(row).getByText(/Art\. 6\(1\)\(b\)/)).toBeInTheDocument();
+  });
+
+  it("says what basis each recorded decision was argued from", async () => {
+    stubRoutes();
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    const row = await findConsentRow("Deal messages");
+    await userEvent.click(
+      within(row).getByRole("button", { name: /proof log/i }),
+    );
+    // Two now — the state's and the event's — so this asserts the LOG grew a
+    // basis rather than counting the one that was already on the head row.
+    expect(await screen.findAllByText(/Art\. 6\(1\)\(b\)/)).toHaveLength(2);
+  });
+
+  // A record with no basis says nothing rather than claiming one nobody
+  // entered. The field is operator-authored free text, so absent is ordinary.
+  it("claims no basis for a record that carries none", async () => {
+    stubRoutes();
+    render(<ConsentSection personId="person-1" person={writablePerson} />);
+    const row = await findConsentRow("Marketing");
+    expect(within(row).queryByText(/Basis:/)).toBeNull();
   });
 
   // C3: the log's actor line must name the ACTUAL actor, never resolve to a

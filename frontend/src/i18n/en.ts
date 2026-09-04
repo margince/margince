@@ -802,6 +802,7 @@ export const en = {
   "consent.noPurposes": "This organization tracks no consent purposes yet.",
   "consent.defaultDeny":
     "Outbound is default-deny per purpose: a send is blocked unless an active, proven grant exists for that purpose. A grant for one purpose never authorizes another.",
+  "consent.basis": "Basis: {basis}",
   "consent.proofLog": "Proof log",
   "consent.proofEmpty":
     "No consent decision recorded for this purpose. An empty log is honest, not a gap.",
