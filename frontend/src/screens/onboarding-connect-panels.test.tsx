@@ -417,6 +417,24 @@ describe("OAuthReturnPanel handing off to the backread", () => {
     expect(screen.queryByText(/How far back should I read/)).toBeNull();
   });
 
+  // A roster that never answered is not evidence of anything. `live` is
+  // `undefined` for a failed query exactly as it is for an empty one, so
+  // without this gate a transient 500 records the step as deliberately
+  // skipped — a choice the reader did not make, on the strength of a request
+  // that came back with nothing to say. The stage's own exit stays available;
+  // it just belongs to the reader.
+  it("withholds the Enter CRM escape when the roster query failed", async () => {
+    installFetchStub({
+      "GET /connectors": () => jsonResponse({ title: "boom" }, 500),
+    });
+    render(<OAuthReturnPanel outcome="ok" onComplete={vi.fn()} />);
+
+    await screen.findByText("We couldn't confirm the connection.");
+    expect(
+      screen.queryByRole("button", { name: /^continue$/i }),
+    ).not.toBeInTheDocument();
+  });
+
   // Without this gate the escape reads on `live === undefined`, which is also
   // true of the roster's very first render — a reader could click straight
   // through before the OAuth connection was ever confirmed live.

@@ -373,13 +373,17 @@ export function OAuthReturnPanel({
           body={t("ob.s4.connectRetry")}
         />
       )}
-      {/* No live row means the consent came back but the roster never showed a
-        connected mailbox — the warning above says exactly that. Leaving here is
-        therefore leaving WITHOUT one, and `skipped` is what records that: the
-        false the button used to send wrote "a mailbox was connected" for a step
-        the panel had just told the reader it could not confirm, and scheduled
-        an overnight import for a mailbox that is not there. */}
-      {!connections.isPending && live === undefined && (
+      {/* A roster that ANSWERED and showed no connected mailbox is a fact: the
+        consent came back, nothing is connected, and leaving records `skipped`.
+        (The false this once sent wrote "a mailbox was connected" for a step the
+        warning above had just called unconfirmable, and scheduled an overnight
+        import for a mailbox that is not there.)
+
+        A roster that FAILED is not a fact in either direction, so this exit is
+        withheld: the reader still leaves, through the stage's own "continue
+        without a mailbox", where the answer is theirs rather than one this
+        panel invented from a request that never came back. */}
+      {!connections.isPending && !connections.isError && live === undefined && (
         <Button variant="primary" onClick={() => void onComplete(true)}>
           {t("ob.s4.enterCrm")} <ArrowRight aria-hidden />
         </Button>
