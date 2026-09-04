@@ -557,13 +557,18 @@ it("keeps a delayed pending body up while it stays mounted", async () => {
     });
     expect(container.querySelector(".pending")).not.toBeNull();
 
-    // A new read under the same bar — same delay, same mount.
+    // A new read under the same bar — same delay, same mount. The label moves
+    // with it, and that is asserted rather than assumed: a body that ignored
+    // the rerender would keep the bar up too, and this case would pass while
+    // proving nothing about it.
     await act(async () => {
       rerender(
         <PendingBody label="Still searching…" lines={1} delayMs={300} />,
       );
     });
     expect(container.querySelector(".pending")).not.toBeNull();
+    expect(screen.getByText("Still searching…")).toBeTruthy();
+    expect(screen.queryByText("Searching…")).toBeNull();
   } finally {
     vi.useRealTimers();
   }
