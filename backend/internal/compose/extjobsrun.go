@@ -47,16 +47,19 @@ func (extJobDispatcherArgs) FleetWide() {}
 
 // extJobWorkspaceArgs is one workspace's tick of one composed job.
 //
-// The `river:"unique"` tag on Workspace is what makes the overlap bound mean
-// what it says. ByArgs uniqueness hashes the WHOLE encoded args unless some
-// field is tagged, and River adds the kind to that hash itself — so the tag
-// says that the workspace is the unit of work and JobKind is not part of the
-// key, because River already keys on the kind. Same shape and same reason as
-// FxRateRefreshArgs, where RequestedBy is outside the hash.
-//
 // The row carries NO principal. What acts is the job, not a person: the tick's
 // authority is a pure function of the declaration (extensionJobPrincipal), so
 // there is nothing about it a queued row could carry stale.
+//
+// The `river:"unique"` tag on Workspace changes NOTHING today, and is kept
+// deliberately. ByArgs hashes the whole encoded args unless a field is tagged,
+// and River adds the kind to that hash itself — so with these two fields the
+// tagged and untagged keys partition identically, because JobKind is constant
+// for a given kind. It stays because it DECLARES which field is the unit of
+// work: the day a second varying field lands here, an untagged hash would
+// silently widen the key and hand one workspace a second concurrent child while
+// its first was still in flight. That is what the tag prevents, and it prevents
+// it by being here before the field arrives rather than after.
 type extJobWorkspaceArgs struct {
 	JobKind string `json:"job_kind"`
 	// Workspace is the tenant this tick is for, and the ONLY thing the

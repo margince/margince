@@ -163,7 +163,7 @@ func TestAnAgentWithNoHumanBehindItStillRecordsWhichAgent(t *testing.T) {
 	// exactly what must not be copied into a column meaning "the human".
 	agent := principal.Principal{
 		Type:     principal.PrincipalAgent,
-		ID:       "agent:extension-tick",
+		ID:       "agent:unattended-writer",
 		UserID:   uuidOf(t, p.user),
 		SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{

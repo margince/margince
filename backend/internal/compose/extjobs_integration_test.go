@@ -144,6 +144,41 @@ func seedWorkspaces(t *testing.T, e *integration.Env, n int) []ids.UUID {
 	return live
 }
 
+// seedAgentSeat writes an installation agent seat and answers its id.
+//
+// This harness seeds none of its own — `integration.Setup` inserts four ordinary
+// members and no migration seeds reference data — so a test whose subject is an
+// operator ARCHIVING the seat has to put one there first. Without it the archive
+// below matches zero rows and the test passes without ever reaching the state it
+// names.
+func seedAgentSeat(t *testing.T) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	// The OWNER connection: app_user is written outside any tenant's authority.
+	if _, err := integration.OwnerConn(t).Exec(context.Background(),
+		`INSERT INTO app_user (id, email, display_name, is_agent, seat_type)
+		 VALUES ($1, $2, 'Agent', true, 'full')`, id, id.String()+"@agent.test"); err != nil {
+		t.Fatalf("seeding the agent seat: %v", err)
+	}
+	return id
+}
+
+// archiveTheAgentSeat is the operator action under test, and it asserts that it
+// LANDED. A silent no-op here is the exact shape that would make the test above
+// prove nothing: it would still see the tick run, having never removed the seat.
+func archiveTheAgentSeat(t *testing.T, id ids.UUID) {
+	t.Helper()
+	tag, err := integration.OwnerConn(t).Exec(context.Background(),
+		`UPDATE app_user SET status = 'deactivated', archived_at = now()
+		  WHERE id = $1 AND is_agent`, id)
+	if err != nil {
+		t.Fatalf("archiving the agent seat: %v", err)
+	}
+	if tag.RowsAffected() != 1 {
+		t.Fatalf("archiving the agent seat touched %d rows, want 1 — the installation was never in the state this test names", tag.RowsAffected())
+	}
+}
+
 // awaitRows blocks until the job table holds want rows of kind, or the deadline
 // fires. It reads the table rather than the subscription because what is under
 // test is how many children the fan-out CREATED, and a subscription only
@@ -211,11 +246,7 @@ func TestDispatcherEnqueuesOneChildPerWorkspace(t *testing.T) {
 func TestAnInstallationWithNoAgentSeatStillTicks(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
-
-	if _, err := integration.OwnerConn(t).Exec(context.Background(),
-		`UPDATE app_user SET archived_at = now() WHERE is_agent`); err != nil {
-		t.Fatalf("archiving the agent seat: %v", err)
-	}
+	archiveTheAgentSeat(t, seedAgentSeat(t))
 
 	decl := testJobDecl()
 	ticked := make(chan principal.Principal, 1)
@@ -536,16 +567,6 @@ func countJobRows(t *testing.T, pool *pgxpool.Pool, kind string) int {
 		t.Fatalf("counting %s rows: %v", kind, err)
 	}
 	return n
-}
-
-// execAsOwner runs one statement past RLS. Every use below mutates an
-// app_user's own status or archival, which is the revocation the tick is meant
-// to notice, and which no tenant-scoped connection may write.
-func execAsOwner(t *testing.T, sql string, args ...any) {
-	t.Helper()
-	if _, err := integration.OwnerConn(t).Exec(context.Background(), sql, args...); err != nil {
-		t.Fatalf("%s: %v", sql, err)
-	}
 }
 
 // waitUntil polls a condition to a deadline, the same select-on-ctx shape

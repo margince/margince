@@ -121,13 +121,14 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// call is that lookup, on every tool.
 	//
 	// A principal carrying NO passport is not waved past that — it holds no
-	// credential for anybody to revoke. Two production paths mint one: an
-	// extension job tick (compose/extjobsrun.go), whose authority is the job
-	// owner's plus the declared scope the manifest asked for, and the
-	// auto-apply actor (compose/autoapply.go), whose authority is the record
-	// owner's plus a write scope. Both are the PRODUCT acting under a policy,
-	// derived from a live human at construction, and neither is a long-lived
-	// token. A third one is a decision rather than an oversight, which is what
+	// credential for anybody to revoke. Two production paths mint one, and they
+	// answer the revocation question differently: an extension job tick
+	// (compose/extjobsrun.go) holds no authority AT ALL — no user, no seat, no
+	// permissions, so every object is denied to it and the records it lands go
+	// through Ingest under the member's own live grants; and the auto-apply
+	// actor (compose/autoapply.go), whose authority IS a record owner's plus a
+	// write scope, derived from a live human at construction. Neither is a
+	// long-lived token. A third one is a decision rather than an oversight, which is what
 	// gates/passportlessagents_test.go keeps true.
 	//
 	// The seat and the grants come back together for the reason identity's own

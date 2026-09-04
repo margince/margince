@@ -6298,7 +6298,7 @@ export const en = {
   "users.deactivateConfirmBody":
     "They'll be signed out everywhere and their agent passports revoked immediately. You can reactivate them later, but they'll need to sign in again.",
   "users.deactivateAgentConfirmBody":
-    "This is the organization's agent identity. Deactivating it stops every job that runs with nobody behind it, extensions included, until you reactivate it. No person loses access — it signs in nowhere.",
+    "This is the organization's agent identity. It signs in nowhere and no person loses access. Scheduled extension jobs keep running: each one acts as the job it is, and captures under the authority of the member whose connection produced the record.",
   "users.agentSeat": "Agent",
   "users.agentSeatRole": "Acts under a passport, not a role",
   "users.roleLabel": "Role for the new user",
