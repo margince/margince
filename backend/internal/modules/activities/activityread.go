@@ -111,6 +111,11 @@ type ListActivitiesInput struct {
 	// this filter and the rest of the page judging against two different
 	// clock reads.
 	WaitingReplyAsOf *time.Time
+	// ownDomains is the colleague-domain snapshot the waiting walk tests senders
+	// against. Unexported and set by the store beside the transaction it reads
+	// in, never by a caller: it is one read's snapshot, not a request parameter,
+	// and a caller supplying it could widen or narrow who counts as a colleague.
+	ownDomains []string
 	// OpenAndDueBy narrows to tasks still open and already due at an instant:
 	// the day's work, asked as one question.
 	//
@@ -161,6 +166,14 @@ func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]c
 	var activities []crmcontracts.Activity
 	var page storekit.Page
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		// The colleague-domain snapshot for THIS read, taken beside the rows it
+		// judges. ListActivitiesTx cannot take it itself: it is a free function
+		// for a caller that already holds a transaction, so it has no seam to
+		// ask — and a composite record read that carries none simply excludes
+		// no sender, which is the same open default WithOwnDomains documents.
+		if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
+			return err
+		}
 		activities, page, err = ListActivitiesTx(ctx, tx, in)
 		return err
 	})
@@ -406,6 +419,10 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 			return err
 		}
 		if err := ensureNarrowingTargetVisible(ctx, tx, in.EntityType, in.EntityID); err != nil {
+			return err
+		}
+		var err error
+		if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
 			return err
 		}
 		if in.WithinProjectID != nil {

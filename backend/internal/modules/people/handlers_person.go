@@ -282,6 +282,21 @@ func (h Handlers) ArchivePerson(w http.ResponseWriter, r *http.Request, id crmco
 	httperr.WriteJSON(w, http.StatusOK, person)
 }
 
+// PublishCapturedPerson shares a contact the caller's own mailbox created.
+//
+// No If-Match. The version guards a field edit against a concurrent one; this
+// write is idempotent in the only direction it goes, and a contact the
+// organization can already see answers the same 404 as one that was never the
+// caller's — so a stale version could not produce a wrong outcome, only a
+// confusing refusal.
+func (h Handlers) PublishCapturedPerson(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if err := h.store.PromoteOwnCapturedPerson(r.Context(), pathID[ids.PersonKind](id)); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 	info := crmcontracts.PageInfo{HasMore: p.HasMore}
 	if p.NextCursor != "" {

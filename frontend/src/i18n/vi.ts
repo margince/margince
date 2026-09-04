@@ -1512,6 +1512,13 @@ export const vi = {
   "email.access.participants": "Người tham gia",
   "email.access.selected": "Được chọn",
   "email.access.withheld": "Bị giữ lại",
+  "email.access.sentence.team": "Mọi người trong tổ chức đều đọc được thư này.",
+  "email.access.sentence.participants":
+    "Chỉ những người có trong thư này mới đọc được.",
+  "email.access.sentence.selected":
+    "Chỉ những người được nêu bên dưới mới đọc được thư này.",
+  "email.access.sentence.withheld": "Thư này không được chia sẻ với bạn.",
+  "email.access.unnamedMember": "Một người không còn ở đây",
   "email.move.needsReply": "Cần trả lời",
   "email.move.waitingForThem": "Đang chờ họ",
   "email.detail.loading": "Đang mở thư",
@@ -7854,6 +7861,9 @@ export const vi = {
   "worklist.hidden.unlinked": "Không gắn với hồ sơ nào",
   "worklist.hidden.unlinked.detail":
     "Thường không phải bán hàng. Đôi khi là khách hàng không ai kịp lưu hồ sơ.",
+  "worklist.hidden.colleagues": "Từ tên miền của chính chúng ta",
+  "worklist.hidden.colleagues.detail":
+    "Đồng nghiệp, không phải khách hàng. Một tên miền nhập sai sẽ giấu đi thư thật.",
   "worklist.hidden.notSales": "Được đánh giá không phải việc bán hàng",
   "worklist.hidden.notSales.detail": "Ẩn với toàn bộ tổ chức, và không tự bỏ.",
   "worklist.hidden.setAside": "Bạn đã gác lại",
@@ -7909,6 +7919,7 @@ export const vi = {
   "worklist.because.response_due_soon.value": "cần trả lời trước {value}",
   "worklist.because.unassigned": "chưa có ai phụ trách",
   "worklist.because.stale": "đã chờ rất lâu",
+  "worklist.because.no_reply_history": "chưa từng trao đổi",
   "worklist.above.pin": "Trên mục kế vì bạn đã ghim.",
   "worklist.above.level": "Trên mục kế vì đây là loại việc gấp hơn.",
   "worklist.above.deadline": "Trên mục kế nhờ ngày hạn.",

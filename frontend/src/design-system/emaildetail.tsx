@@ -3,7 +3,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Paperclip, X } from "lucide-react";
-import { useId } from "react";
+import { type ReactNode, useId } from "react";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -42,11 +42,24 @@ export function EmailDetail({
   activityId,
   onClose,
   formatWhen,
+  renderAccess,
 }: Readonly<{
   activityId: string;
   onClose: () => void;
   /** The caller owns the reader's timezone, so it owns the formatting. */
   formatWhen: (iso: string) => string;
+  /**
+   * Who reads this message, and the control to change it.
+   *
+   * Passed in rather than mounted here because the editor performs WRITES: it
+   * reaches the audience service and the roster reads, which live in `screens/`
+   * where the app's queries do. A design-system component importing those would
+   * turn the catalog into a layer that talks to the API.
+   *
+   * Optional, so a story or a preview can draw the message without wiring the
+   * writes — and absent means no region, never an empty one.
+   */
+  renderAccess?: (presentation: EmailPresentation) => ReactNode;
 }>) {
   const t = useT();
   // Generated rather than fixed: two drawers mounted at once would otherwise
@@ -135,7 +148,11 @@ export function EmailDetail({
           {null}
         </SurfaceState>
       ) : (
-        <EmailBody presentation={read.data} formatWhen={formatWhen} />
+        <EmailBody
+          presentation={read.data}
+          formatWhen={formatWhen}
+          renderAccess={renderAccess}
+        />
       )}
     </Modal>
   );
@@ -144,9 +161,11 @@ export function EmailDetail({
 function EmailBody({
   presentation,
   formatWhen,
+  renderAccess,
 }: Readonly<{
   presentation: EmailPresentation;
   formatWhen: (iso: string) => string;
+  renderAccess?: (presentation: EmailPresentation) => ReactNode;
 }>) {
   const t = useT();
   if (presentation.access.content_state === "withheld") {
@@ -192,6 +211,12 @@ function EmailBody({
         </details>
       )}
       <Attachments files={presentation.attachments} />
+      {/* Who reads this, last: a reader came for the message, and the limit on
+          it is what they check after reading rather than before. The withheld
+          branch above returns before here on purpose — that reader is told the
+          message is not shared with them, which is the whole of what the
+          access block would say, and `can_change` is false for them anyway. */}
+      {renderAccess?.(presentation)}
     </div>
   );
 }

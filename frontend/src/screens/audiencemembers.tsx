@@ -14,12 +14,58 @@
 
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { type RosterKind, useRoster } from "./entityref";
 import "./audiencemembers.css";
 
 type AudienceMember = components["schemas"]["AudienceMember"];
+type ActivityAudience = components["schemas"]["ActivityAudience"];
 type User = components["schemas"]["User"];
 type Team = components["schemas"]["Team"];
+
+// The audiences an editor offers — all three the API takes. `selected` waited
+// for a member picker, because offering it without one would be a choice the
+// reader cannot complete; AudienceMembers below is that picker.
+//
+// These three maps sit beside the picker rather than inside an editor because
+// there are now TWO: the timeline row's dialog, which names a NEW set, and the
+// drawer's, which edits the standing one. Two editors spelling one audience's
+// name differently is the drift a reader notices first — the row saying
+// "Selected" about a message the drawer calls something else.
+export const AUDIENCE_CHOICES: readonly ActivityAudience[] = [
+  "workspace",
+  "participants",
+  "selected",
+];
+
+export const AUDIENCE_LABEL: Record<ActivityAudience, MessageKey> = {
+  workspace: "compose.audienceWorkspace",
+  participants: "compose.audienceParticipants",
+  selected: "compose.audienceSelected",
+};
+
+export const AUDIENCE_HINT: Record<ActivityAudience, MessageKey> = {
+  workspace: "compose.audienceWorkspaceHint",
+  participants: "compose.audienceParticipantsHint",
+  selected: "compose.audienceSelectedHint",
+};
+
+// Why a captured message is held, in the reader's words. A reason the server
+// learned to give and this map has not falls back to nothing rather than to the
+// raw token: a badge reading `financial_corporate` beside a customer's mail is
+// worse than no badge at all.
+//
+// The server sends this token two ways — as `audience_reason` on an Activity
+// and as `explanation` on an EmailAccess, which `readEmailAccess` fills from
+// the same column. One map, so the row and the drawer name a held message the
+// same way.
+export const AUDIENCE_REASON_LABEL: Record<string, MessageKey> = {
+  posture: "compose.reason.posture",
+  workspace_floor: "compose.reason.workspaceFloor",
+  no_record: "compose.reason.noRecord",
+  pending_verdict: "compose.reason.pendingVerdict",
+  manual: "compose.reason.manual",
+};
 
 /** One pickable seat or team, flattened out of the two rosters. */
 type Candidate = {
