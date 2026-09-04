@@ -60,7 +60,7 @@ var prebuiltReports = map[string]reportSpec{
 	"open-deals-per-company": {
 		entity:    datasource.EntityDeal,
 		table:     tableDeal,
-		baseWhere: "t.archived_at IS NULL AND t.status = 'open'",
+		baseWhere: whereOpenDeal,
 		basePlain: "live (unarchived) open deals",
 		// Currency is a dimension AND a filter because amount_minor is a
 		// measure here: a caller summing money on this key has to be able to
@@ -237,6 +237,11 @@ var prebuiltReports = map[string]reportSpec{
 	// rather than spelled inline: it carries the period-bucket vocabulary with
 	// it, and that vocabulary belongs beside the buckets it names.
 	"win-loss": winLossSpec(),
+	// What is still in play, converted per deal into one currency
+	// (reportspecs_pipeline.go). Beside deals-by-stage rather than replacing
+	// it: that report is the board's own totals, where a won deal still
+	// belongs to the stage it was won in.
+	"pipeline-current": pipelineCurrentSpec(),
 	// The project keys (reportprojects.go): what a delivery manager asks of
 	// the bodies of work in flight.
 	"projects-by-phase":   projectsByPhaseSpec(),
@@ -254,7 +259,7 @@ var prebuiltReports = map[string]reportSpec{
 		entity:    datasource.EntityDeal,
 		table:     tableDeal,
 		joins:     []string{joinStageForWinProbability},
-		baseWhere: "t.archived_at IS NULL AND t.status = 'open'",
+		baseWhere: whereOpenDeal,
 		basePlain: "open, unarchived deals (win probability read live from the deal's current stage; a commit/best_case deal whose close date is past, missing, or provisional reports as 'slipped' instead, per formulas §11)",
 		dimensions: map[string]string{
 			fieldOwnerID:        colOwnerID,
@@ -270,9 +275,28 @@ var prebuiltReports = map[string]reportSpec{
 			// never forwards.
 			fieldPartnerOrgID: colPartnerOrgID,
 		},
+		// Both denominations, and both earn their place.
+		//
+		// The NATIVE pair stays because this spec's default grouping INCLUDES
+		// currency: a sum of amount_minor under one currency row is a
+		// well-defined figure. pipeline-current drops the native pair precisely
+		// because its default grouping does not, and offering it there would
+		// let a caller sum minor units across currencies.
+		//
+		// The BASE pair is what lets the forecast be read as ONE answer instead
+		// of one answer per currency. A screen drawing the five categories had
+		// to band by currency — a slot carries a single figure, and adding
+		// euros to dong is the unit-less total data-semantics §1 r4 forbids —
+		// so a manager comparing commit against best case compared them inside
+		// each currency and never across the business.
+		//
+		// Priced through the SAME expressions pipeline-current uses, so the two
+		// reports cannot value one deal differently.
 		measures: map[string]string{
 			fieldAmountMinor:         colAmountMinor,
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
+			fieldAmountBaseMinor:     pipelineBaseValueExpr,
+			fieldWeightedBaseMinor:   pipelineWeightedBaseExpr,
 		},
 		filters: map[string]string{
 			fieldOwnerID:        colOwnerID,

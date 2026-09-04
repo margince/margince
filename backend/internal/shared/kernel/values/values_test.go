@@ -141,30 +141,16 @@ func mustMoney(t *testing.T, amount int64, cur string) Money {
 	return m
 }
 
-func TestParseSlug(t *testing.T) {
-	if _, err := ParseSlug("Acme Corp"); err == nil {
-		t.Error("spaces/uppercase must not parse")
-	}
-	if _, err := ParseSlug("-lead"); err == nil {
-		t.Error("leading hyphen must not parse")
-	}
-	s, err := ParseSlug("acme-corp-2")
-	if err != nil || s.String() != "acme-corp-2" {
-		t.Fatalf("ParseSlug = %q (%v)", s, err)
-	}
-}
-
 // TestValueObjectDBSeams exercises the driver.Valuer / sql.Scanner /
 // IsZero surface every value object carries so it can round-trip through
 // storekit. A broken Scan here silently corrupts a persisted email/phone/
-// domain/slug, so each seam is pinned: Value emits the canonical string,
+// domain, so each seam is pinned: Value emits the canonical string,
 // Scan accepts both the string and the []byte the pgx text protocol hands
 // back and rejects an unsupported source type, and IsZero reports empty.
 func TestValueObjectDBSeams(t *testing.T) {
 	email, _ := ParseEmail("ada@example.com")
 	phone, _ := ParsePhone("+493012345678")
 	domain, _ := ParseDomain("example.com")
-	slug, _ := ParseSlug("acme-corp")
 
 	// Value() emits the canonical string form on each type.
 	if v, err := email.Value(); err != nil || v != "ada@example.com" {
@@ -175,9 +161,6 @@ func TestValueObjectDBSeams(t *testing.T) {
 	}
 	if v, err := domain.Value(); err != nil || v != "example.com" {
 		t.Fatalf("Domain.Value = %v (%v)", v, err)
-	}
-	if v, err := slug.Value(); err != nil || v != "acme-corp" {
-		t.Fatalf("Slug.Value = %v (%v)", v, err)
 	}
 
 	// Scan() accepts the string form and the []byte form, and rejects junk.
@@ -205,19 +188,12 @@ func TestValueObjectDBSeams(t *testing.T) {
 	if err := d.Scan(nil); err == nil {
 		t.Fatal("Domain.Scan(nil) must reject an unsupported source type")
 	}
-	var s Slug
-	if err := s.Scan("team-x"); err != nil || s.String() != "team-x" {
-		t.Fatalf("Slug.Scan(string) = %q (%v)", s, err)
-	}
-	if err := s.Scan(struct{}{}); err == nil {
-		t.Fatal("Slug.Scan(struct) must reject an unsupported source type")
-	}
 
 	// IsZero reports the empty value on each type, false once parsed.
-	if !(Email{}).IsZero() || !(Phone{}).IsZero() || !(Domain{}).IsZero() || !(Slug{}).IsZero() {
+	if !(Email{}).IsZero() || !(Phone{}).IsZero() || !(Domain{}).IsZero() {
 		t.Fatal("zero value objects must report IsZero()==true")
 	}
-	if email.IsZero() || phone.IsZero() || domain.IsZero() || slug.IsZero() {
+	if email.IsZero() || phone.IsZero() || domain.IsZero() {
 		t.Fatal("parsed value objects must report IsZero()==false")
 	}
 }

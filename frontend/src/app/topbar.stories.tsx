@@ -258,7 +258,7 @@ export const ListRoute: Story = {
 };
 
 /**
- * The same route with the sidebar at 64px.
+ * The same route with the sidebar at 56px.
  *
  * This is the frame the centring claim is made against: the content column's
  * left edge has moved 188px and the search has moved with it, staying at the

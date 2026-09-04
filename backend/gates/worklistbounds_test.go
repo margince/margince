@@ -44,10 +44,18 @@ func TestTheWorklistsCopyOfALaneBoundMatchesTheLaneItself(t *testing.T) {
 			copyDecl:  `decayBound\s*=\s*(\d+)`,
 		},
 	}
-	copies := read(t, "internal/compose/attention/worklist.go")
+	// The file the queue keeps its copies in. Named rather than searched
+	// because the mirror is the SUBJECT here: a gate that hunted for the
+	// constant wherever it had moved to would still pass after somebody
+	// deleted it, which is the one failure this pairing exists to prevent.
+	//
+	// It moved once already — from worklist.go, when the assembler was split —
+	// so if it moves again, repoint this line rather than adding a second read.
+	const copiesLive = "internal/compose/attention/unseen.go"
+	copies := read(t, copiesLive)
 	for _, mirror := range mirrors {
 		owner := number(t, read(t, mirror.ownerFile), mirror.ownerDecl, mirror.ownerFile)
-		held := number(t, copies, mirror.copyDecl, "worklist.go")
+		held := number(t, copies, mirror.copyDecl, copiesLive)
 		if owner != held {
 			t.Errorf("%s: the lane reads %d rows but the worklist believes %d — the smaller number "+
 				"decides which side is wrong, and a source truncated past the copy reports itself complete",

@@ -70,6 +70,11 @@ var connectionAcquirers = map[string]string{
 	"ActivePersonColumns":       "reads the person custom-field catalog, which opens a transaction of its own",
 	"ActiveOrganizationColumns": "reads the organization custom-field catalog, which opens a transaction of its own",
 	"ActiveDealColumns":         "reads the deal custom-field catalog, which opens a transaction of its own",
+	// The drill-through's display names, resolved through each module's own
+	// gated label read — every one of which opens a transaction. It exists to
+	// be called ABOVE the report's transaction, exactly like the catalog reads
+	// above, so calling it from inside one reinstates the defect.
+	"labelDerivationRows": "names the drill-through's rows through the stores' label reads, each of which opens a transaction of its own",
 }
 
 func TestATxAcceptingFunctionAcquiresNoConnectionOfItsOwn(t *testing.T) {
@@ -205,17 +210,28 @@ func (b txBorrowing) acquires() []string {
 		if !ok {
 			return true
 		}
-		sel, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok {
-			return true
+		switch fn := call.Fun.(type) {
+		case *ast.SelectorExpr:
+			if _, isAcquirer := connectionAcquirers[fn.Sel.Name]; !isAcquirer {
+				return true
+			}
+			if b.receiverIsTheBorrowedTx(fn.X) {
+				return true
+			}
+			found = append(found, fn.Sel.Name)
+		case *ast.Ident:
+			// A package-local helper called by bare name. It has no receiver
+			// that could be the borrowed transaction, so a registered
+			// acquirer spelled this way is always a second connection.
+			//
+			// The walk read selectors only until an analytics helper reached
+			// a borrowed transaction unseen: the defect this gate exists to
+			// catch, wearing the one spelling it could not read.
+			if _, isAcquirer := connectionAcquirers[fn.Name]; !isAcquirer {
+				return true
+			}
+			found = append(found, fn.Name)
 		}
-		if _, isAcquirer := connectionAcquirers[sel.Sel.Name]; !isAcquirer {
-			return true
-		}
-		if b.receiverIsTheBorrowedTx(sel.X) {
-			return true
-		}
-		found = append(found, sel.Sel.Name)
 		return true
 	})
 	return found

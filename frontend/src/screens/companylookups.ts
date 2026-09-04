@@ -148,6 +148,19 @@ export const HEALTH_DIMENSION_LABEL: Record<
   payment: "co.health.dim.payment",
 };
 
+// What each dimension WEIGHS, for the reader meeting one of these words for
+// the first time. Beside the labels rather than in the screen that draws them:
+// a dimension's name and its definition are one fact, and a second surface
+// rating the same three would otherwise define them again in its own words.
+export const HEALTH_DIMENSION_MEANS: Record<
+  "relationship" | "commercial" | "payment",
+  MessageKey
+> = {
+  relationship: "co.health.means.relationship",
+  commercial: "co.health.means.commercial",
+  payment: "co.health.means.payment",
+};
+
 // How many days past due a median has to run before it reads as a habit worth
 // naming. Named rather than inlined so the threshold is one number a reader
 // can find and argue with.

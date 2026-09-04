@@ -17,6 +17,7 @@ export {
   WrittenBy,
   type WrittenByWriter,
 } from "./citations";
+export { incompleteGraph } from "./graphcompleteness";
 export {
   dealRoleLabel,
   projectRoleLabel,
@@ -24,12 +25,6 @@ export {
   signalTone,
 } from "./labels";
 export { CallCard, RecordReading, RecordReadingPair } from "./reading";
-export {
-  incompleteGraph,
-  OverlayFallback,
-  RailPanel,
-  SectionCard,
-} from "./shells";
 export {
   RecordSpine,
   type SpineCommercial,

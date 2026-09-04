@@ -267,11 +267,6 @@ func (s *Store) SendMessage(ctx context.Context, anchorID ids.ActivityID, in Sen
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	if err := gate.RequireGrantedForRecipients(ctx,
-		[]connector.Recipient{{Channel: &conversation.recipient}}, in.ConsentPurpose); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-
 	// The files, resolved to snapshots while the sender's own read gate still
 	// applies and BEFORE the transaction — mail's ordering, for mail's reason:
 	// the transaction holds writes only, and the whole send is refused when one

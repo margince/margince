@@ -118,16 +118,19 @@ var tableOwners = map[string]string{
 	"organization_domain":            "internal/modules/people",
 	"organization_relationship_type": "internal/modules/people",
 	"signal_thread_scan":             "internal/compose",
-	"relationship":                   "internal/modules/people",
-	"partner":                        "internal/modules/people",
-	"lead":                           "internal/modules/people",
-	"lead_score_history":             "internal/modules/people",
-	"lead_manual_signal":             "internal/modules/people",
-	"lead_source":                    "internal/modules/people",
-	"lead_disqualify_reason":         "internal/modules/people",
-	"organization_profile_field":     "internal/modules/people",
-	"organization_vat_check":         "internal/modules/people",
-	"person_profile_field":           "internal/modules/people",
+	// One reader's frozen walk through their worklist. Owned by the compose
+	// package that writes it, the way compose/weekly owns team_weekly_review.
+	"worklist_snapshot":          "internal/compose/worklistsnap",
+	"relationship":               "internal/modules/people",
+	"partner":                    "internal/modules/people",
+	"lead":                       "internal/modules/people",
+	"lead_score_history":         "internal/modules/people",
+	"lead_manual_signal":         "internal/modules/people",
+	"lead_source":                "internal/modules/people",
+	"lead_disqualify_reason":     "internal/modules/people",
+	"organization_profile_field": "internal/modules/people",
+	"organization_vat_check":     "internal/modules/people",
+	"person_profile_field":       "internal/modules/people",
 	// The signature pass's per-person read cursor (PO-F-2a): which mail was
 	// already shown to the model, so the same empty signature is not re-read
 	// every night.
@@ -193,6 +196,7 @@ var tableOwners = map[string]string{
 	"activity_retention_evidence": "internal/modules/activities",
 	"activity_sales_state":        "internal/modules/activities",
 	"activity_reader_state":       "internal/modules/activities",
+	"worklist_pin":                "internal/modules/activities",
 	// ACT-DDL-3: who was in the interaction. It belongs beside activity and
 	// activity_link for the same reason they belong together — it is part of
 	// what an activity IS, not a graph artifact derived from one.

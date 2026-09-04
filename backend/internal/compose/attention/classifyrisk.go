@@ -59,7 +59,12 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 		row.Because = append(row.Because, reason("closing_soon", nil))
 	}
 	return ranked{
-		item:             row,
+		item: row,
+		// The deal's own owner, and it is not known yet: dealfacts fills OwnerId
+		// onto the wire AFTER this classification runs. So this lane defers, and
+		// the wire step reads the deal the facts pass attached — the same second
+		// carrier answersTo has always consulted for these rows.
+		ownerRef:         deferredToTheDeal(),
 		deadlineAt:       deadlineOf(item.DueAt),
 		overdue:          item.Overdue != nil && *item.Overdue,
 		expectedBase:     expected,

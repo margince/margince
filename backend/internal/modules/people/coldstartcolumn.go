@@ -22,27 +22,16 @@ func writeOrgColumn(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, co
 	if !overwrite {
 		return applyUnclaimedOrgColumn(ctx, tx, orgID, column, value)
 	}
-	queries := map[string]string{
-		columnLegalName: `UPDATE organization SET legal_name = $2
-			WHERE id = $1 AND legal_name IS DISTINCT FROM $2`,
-		columnIndustry: `UPDATE organization SET industry = $2
-			WHERE id = $1 AND industry IS DISTINCT FROM $2`,
-		columnAddress: `UPDATE organization SET address_line1 = $2
-			WHERE id = $1 AND address_line1 IS DISTINCT FROM $2`,
-		columnDescription: `UPDATE organization SET description = $2
-			WHERE id = $1 AND description IS DISTINCT FROM $2
-			AND ($2::text IS NULL OR length($2) <= 500)`,
-	}
-	query, ok := queries[column]
+	write, ok := orgColumnWrites[column]
 	if !ok {
 		return false, fmt.Errorf("people: %q is not a coldstart-writable column", column)
 	}
-	// An empty value clears the column to NULL, not to "". The fill arm above
+	// An empty value clears the column to NULL, not to "". The fill arm below
 	// matches on IS NULL, so a column cleared to the empty string could never
 	// be filled again by any later read — the record would look answered while
 	// holding nothing, and no enrichment would ever correct it. The human
 	// company form clears to NULL for the same reason (setCompanyColumn).
-	tag, err := tx.Exec(ctx, query, orgID, emptyToNil(value))
+	tag, err := tx.Exec(ctx, write.statementFor(replaceStanding), orgID, emptyToNil(value))
 	if err != nil {
 		return false, fmt.Errorf("replace %s: %w", column, err)
 	}
@@ -51,16 +40,18 @@ func writeOrgColumn(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, co
 
 // applyUnclaimedOrgColumn writes a read-back value onto a column nobody has
 // claimed. For legal_name, industry and address that means the column is still
-// empty, which each statement enforces with IS NULL. The description is the one
-// column an automated read may also REPLACE, because the site is the authority
-// on what a company sells — so for that one "unclaimed" means no person has
-// authored it, and the check is below rather than in the statement.
+// empty, which each fill statement enforces. The description is the one column
+// an automated read may also REPLACE, because the site is the authority on what
+// a company sells — so for that one "unclaimed" means no person has authored it,
+// the check is below rather than in the statement, and the statement it then
+// sends is the replacing one.
 func applyUnclaimedOrgColumn(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, column, value string) (bool, error) {
-	query, ok := coldStartColumns[column]
+	write, ok := orgColumnWrites[column]
 	if !ok {
 		return false, fmt.Errorf("people: %q is not a coldstart-fillable column", column)
 	}
-	if column == descriptionField {
+	authority := fillUnclaimed
+	if column == columnDescription {
 		held, err := descriptionHeldByHuman(ctx, tx, orgID)
 		if err != nil {
 			return false, err
@@ -68,14 +59,15 @@ func applyUnclaimedOrgColumn(ctx context.Context, tx pgx.Tx, orgID ids.Organizat
 		if held {
 			return false, nil
 		}
+		authority = replaceStanding
 	}
-	// Nothing to fill. Writing "" here would satisfy this arm's own WHERE
-	// legal_name IS NULL once and never again: the column would read as
+	// Nothing to fill. Writing "" here would satisfy the fill arm's own
+	// WHERE legal_name IS NULL once and never again: the column would read as
 	// answered while holding nothing, and no later read could correct it.
 	if value == "" {
 		return false, nil
 	}
-	tag, err := tx.Exec(ctx, query, orgID, value)
+	tag, err := tx.Exec(ctx, write.statementFor(authority), orgID, value)
 	if err != nil {
 		return false, fmt.Errorf("fill %s: %w", column, err)
 	}

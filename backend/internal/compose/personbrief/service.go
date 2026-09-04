@@ -28,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -53,15 +54,23 @@ type Assembler interface {
 
 // Service writes and caches the brief.
 type Service struct {
-	pool           *pgxpool.Pool
-	view           Assembler
-	now            func() time.Time
+	pool *pgxpool.Pool
+	view Assembler
+	lane Completer
+	now  func() time.Time
+	// routingVersion identifies the model binding in the fingerprint, so
+	// re-pointing the lane rewrites briefs rather than leaving text attributed
+	// to a model that no longer writes it.
 	routingVersion string
 }
 
-// NewService binds the brief to the composite read it is written from.
-func NewService(pool *pgxpool.Pool, view Assembler, routingVersion string, now func() time.Time) *Service {
-	return &Service{pool: pool, view: view, routingVersion: routingVersion, now: now}
+// NewService binds the brief to the composite read it is written from and the
+// model lane that writes it. lane may be nil: that is a deployment running no
+// model, and the deterministic floor is the answer.
+func NewService(
+	pool *pgxpool.Pool, view Assembler, lane Completer, routingVersion string, now func() time.Time,
+) *Service {
+	return &Service{pool: pool, view: view, lane: lane, routingVersion: routingVersion, now: now}
 }
 
 // storedVersion is the cached payload's shape version. A row written by an
@@ -99,7 +108,8 @@ func (s *Service) Get(ctx context.Context, personID ids.PersonID, force bool) (c
 		return crmcontracts.PersonBrief{}, err
 	}
 	in := FromView(view)
-	fingerprint, err := Fingerprint(in, s.routingVersion)
+	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	fingerprint, err := Fingerprint(in, s.routingVersion, lang)
 	if err != nil {
 		return crmcontracts.PersonBrief{}, err
 	}
@@ -112,12 +122,16 @@ func (s *Service) Get(ctx context.Context, personID ids.PersonID, force bool) (c
 		return cached.wire(personID), nil
 	}
 
+	sentences, by, err := Write(ctx, s.lane, personID.String(), in, lang)
+	if err != nil {
+		return crmcontracts.PersonBrief{}, err
+	}
 	written := stored{
 		Fingerprint: fingerprint,
 		Version:     storedVersion,
 		GeneratedAt: s.now().UTC(),
-		GeneratedBy: crmcontracts.Deterministic,
-		Sentences:   Deterministic(personID.String(), in),
+		GeneratedBy: by,
+		Sentences:   sentences,
 	}
 	if err := s.save(ctx, userID, personID, written); err != nil {
 		return crmcontracts.PersonBrief{}, err

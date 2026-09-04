@@ -133,7 +133,7 @@ func TestTheFinalPageOffersNoCursor(t *testing.T) {
 // nothing in the response would have said so.
 func TestACursorIsRefusedWhenTheQuestionChanged(t *testing.T) {
 	someone := ids.UUID(mustUUID(t, "11111111-1111-4111-8111-111111111111"))
-	minted := encodeCursor(1, scopeMine, "", ids.UUID{})
+	minted := encodeCursor(1, scopeMine, "", ids.UUID{}, ids.UUID{})
 
 	for _, tc := range []struct {
 		name          string
@@ -157,7 +157,7 @@ func TestACursorIsRefusedWhenTheQuestionChanged(t *testing.T) {
 // Changing `limit` mid-walk is legitimate: it decides how many rows a page
 // carries, not which rows exist. Refusing it would be a lie about what changed.
 func TestChangingTheLimitDoesNotInvalidateACursor(t *testing.T) {
-	minted := encodeCursor(1, scopeMine, "", ids.UUID{})
+	minted := encodeCursor(1, scopeMine, "", ids.UUID{}, ids.UUID{})
 	if _, err := decodeCursor(minted, scopeMine, "", ids.UUID{}); err != nil {
 		t.Errorf("a cursor was refused although only the page size changed: %v", err)
 	}
@@ -311,7 +311,7 @@ func TestEquivalentSpellingsOfOneQuestionShareACursor(t *testing.T) {
 	t.Parallel()
 
 	t.Run("an omitted filter and filter=all", func(t *testing.T) {
-		minted := encodeCursor(1, scopeMine, "", ids.UUID{})
+		minted := encodeCursor(1, scopeMine, "", ids.UUID{}, ids.UUID{})
 		if _, err := decodeCursor(minted, scopeMine, "all", ids.UUID{}); err != nil {
 			t.Errorf("a client sending its documented `all` default on page two was refused: %v", err)
 		}
@@ -614,7 +614,7 @@ func TestACursorRoundTripsThePositionItWasMintedAt(t *testing.T) {
 	t.Parallel()
 
 	for _, at := range []int{1, 25, 100, 4096} {
-		token := encodeCursor(at, scopeMine, "", ids.UUID{})
+		token := encodeCursor(at, scopeMine, "", ids.UUID{}, ids.UUID{})
 		if token == "" {
 			t.Fatalf("offset %d minted an empty cursor", at)
 		}

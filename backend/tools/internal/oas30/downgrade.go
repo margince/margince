@@ -131,9 +131,17 @@ func walk(n *yaml.Node, scanKeys bool) error {
 			continue
 		}
 
-		rewritten, err := rewriteKeyword(n, key, val)
+		rewritten, drop, err := rewriteKeyword(n, key, val)
 		if err != nil {
 			return err
+		}
+		if drop {
+			// Remove the key and its value, then step back so the loop's
+			// `i += 2` lands on the pair that shifted into this slot rather
+			// than stepping over it.
+			n.Content = append(n.Content[:i], n.Content[i+2:]...)
+			i -= 2
+			continue
 		}
 		if rewritten {
 			continue
@@ -164,20 +172,20 @@ func walk(n *yaml.Node, scanKeys bool) error {
 // media-type MAPPING form is the one keyword here that 3.0 already
 // expresses: it stays unhandled, so the caller walks it as the arbitrary-key
 // container it is.
-func rewriteKeyword(mapping, key, val *yaml.Node) (bool, error) {
+func rewriteKeyword(mapping, key, val *yaml.Node) (handled, drop bool, err error) {
 	switch key.Value {
 	case "openapi":
 		if val.Kind == yaml.ScalarNode {
 			val.Value = "3.0.3"
 		}
-		return true, nil
+		return true, false, nil
 	case "type":
 		if val.Kind == yaml.SequenceNode {
 			if err := rewriteTypeUnion(mapping, val); err != nil {
-				return false, err
+				return false, false, err
 			}
 		}
-		return true, nil
+		return true, false, nil
 	case "enum":
 		// A 3.1 nullable enum spells its null member INSIDE the list
 		// (`enum: [null, booked, held]`); 3.0 has no such member and says
@@ -204,27 +212,44 @@ func rewriteKeyword(mapping, key, val *yaml.Node) (bool, error) {
 			}
 			val.Content = kept
 		}
-		return true, nil
+		return true, false, nil
 	case "const":
 		// 3.0 has no const; its faithful equivalent is a single-value
 		// enum (const: X ⇔ enum: [X]), so downgrade rather than drop it.
 		constValue := *val
 		key.Value = "enum"
 		*val = yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq", Content: []*yaml.Node{&constValue}}
-		return true, nil
+		return true, false, nil
 	case "examples":
 		// Only the schema-level plural form (a sequence) is 3.1-only;
 		// media-type examples (a mapping) exist in 3.0 and stay. The
 		// chosen example is opaque data — never descended into.
 		if val.Kind == yaml.SequenceNode {
-			if len(val.Content) > 0 {
-				key.Value = "example"
-				*val = *val.Content[0]
+			if len(val.Content) == 0 {
+				// DROPPED, not kept and not refused.
+				//
+				// Kept was the bug: the branch below only rewrote a non-empty
+				// sequence, so an empty one fell through with the key
+				// untouched and a schema-level `examples` survived into a
+				// 3.0.3 document, which does not define one. JSON Schema
+				// allows `examples: []`, so a valid 3.1 input produced an
+				// invalid 3.0.3 output. margince/margince#441.
+				//
+				// Not refused, though this file refuses every other 3.1-only
+				// keyword it cannot express — and the difference is what the
+				// refusal is FOR. It exists so meaning is never lost
+				// silently; an empty examples array carries no meaning to
+				// lose. Refusing would reject a valid contract over a keyword
+				// that says nothing, which is a trap for whoever first writes
+				// one rather than a guard for the reader.
+				return false, true, nil
 			}
-			return true, nil
+			key.Value = "example"
+			*val = *val.Content[0]
+			return true, false, nil
 		}
 	}
-	return false, nil
+	return false, false, nil
 }
 
 // rewriteTypeUnion turns type: [T, 'null'] into type: T + nullable: true on

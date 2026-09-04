@@ -775,3 +775,52 @@ func TestOpenCandidatesNamingIsSilentForARecordTypeWithNoQueue(t *testing.T) {
 		t.Fatalf("got %d candidates for a type that has no queue, want 0", len(rows))
 	}
 }
+
+// What the CARD offers and what the ENDPOINT accepts have to be one answer.
+//
+// The Worklist decides whether to draw the verbs by asking DecidableForMerge;
+// the disposition endpoint decides whether to accept the press by asking
+// ensurePairWritable. They are separate paths, so this pins them against the
+// same fixtures: a seat owning both records is offered the verbs and admitted,
+// and a seat owning neither is offered nothing and refused.
+//
+// A unit test cannot hold this. Both answers come out of SQL predicates over
+// owner_id and record_grant, which is exactly what a stub replaces.
+func TestTheMergeCardAgreesWithTheDispositionEndpoint(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	left, right := seedOrgPair(ctx, t, e)
+	c := openCandidates(ctx, t, e, "organization")[0]
+
+	// The owner of BOTH records: the endpoint admits this seat, so the card
+	// must offer it the verbs.
+	owner := e.asOwnScoped(e.rep)
+	decidable, err := e.store.DecidableForMerge(owner, entityOrganization, []ids.UUID{left, right})
+	if err != nil {
+		t.Fatalf("asking what the owner may decide: %v", err)
+	}
+	if !decidable[left] || !decidable[right] {
+		t.Fatalf("the card withheld the verbs from a seat owning both records (left=%v right=%v), "+
+			"and the endpoint would have accepted its press", decidable[left], decidable[right])
+	}
+
+	// The colleague owns NEITHER record. They may read the pair — everyone here
+	// reads the workspace's customer records — and the endpoint refuses them,
+	// so the card must not offer what would refuse.
+	colleague := e.asOwnScoped(e.otherRep)
+	withheld, err := e.store.DecidableForMerge(colleague, entityOrganization, []ids.UUID{left, right})
+	if err != nil {
+		t.Fatalf("asking what a colleague may decide: %v", err)
+	}
+	if withheld[left] || withheld[right] {
+		t.Fatalf("the card offered a verb over records the colleague owns neither of "+
+			"(left=%v right=%v) — the press this invites is the 403 that told them to try again",
+			withheld[left], withheld[right])
+	}
+	// And the endpoint really does refuse, so the assertion above is pinned to
+	// the behaviour rather than to an assumption about it.
+	if _, err := e.store.DisposeDedupeCandidate(colleague, c.ID, "not_a_duplicate", nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("the endpoint admitted a colleague owning neither record (%v), "+
+			"so withholding the verb from them is the card disagreeing with the write", err)
+	}
+}

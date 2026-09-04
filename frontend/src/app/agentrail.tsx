@@ -31,12 +31,9 @@ import {
   IDLE_ORDER,
   type IdleKind,
   LABELS,
-  REVIEW_ONLY,
   RUNNING,
   TASK_SAID,
-  VOCABULARY,
 } from "./agentrail-copy";
-import { type DemoRun, useDemoRun } from "./agentrail-demo";
 import { useAgentTicker } from "./agentrail-ticker";
 import { type AiActivity, useAiActivity } from "./ai-activity";
 import { lineFor, PANEL_HEADING } from "./ai-activity-lines";
@@ -45,10 +42,6 @@ import { useAgentTierMap } from "./autonomy";
 import { useCan } from "./capability";
 import { usePopoverDismiss } from "./popover";
 import type { Route } from "./router";
-import {
-  announceAgentStatesPreview,
-  uiPreviewAgentStatesEnabled,
-} from "./ui-preview";
 import { usePhoneViewport } from "./viewport";
 import "./agentrail.css";
 
@@ -72,9 +65,8 @@ import "./agentrail.css";
 // are unreachable, the model the last call actually ran on, this account's own
 // suggestions. Nothing is a zero standing in for a read that has not answered:
 // a row whose read is pending, or that this seat may not make, is absent
-// instead. The one invented table left is `REVIEW_ONLY` (agentrail-copy.ts),
-// the states no read can reach, offered from the switcher in the panel under a
-// heading that says review-only. The rail never enters one of those on its own.
+// instead. Nothing here can be put into a state by hand: the section reaches a
+// state because something was read, or it does not reach it at all.
 
 /** How many of the agent's last actions the panel recaps. */
 const RECAP_ROWS = 5;
@@ -505,7 +497,7 @@ function RunSection({
   }
   return (
     <div className="arsect">
-      <h4>{t(heading)}</h4>
+      <h2>{t(heading)}</h2>
       <ul className="arruns">
         {said.map(({ item, line }) => (
           <li className="arbox arrun" key={item.id}>
@@ -519,7 +511,6 @@ function RunSection({
 
 function AgentPanel({
   state,
-  setState,
   line,
   running,
   signals,
@@ -527,10 +518,8 @@ function AgentPanel({
   spend,
   panel,
   frame,
-  demo,
 }: Readonly<{
   state: MarginceCoreState;
-  setState: (next: MarginceCoreState) => void;
   /** The same line the card carries, so the two never disagree. */
   line: string;
   /** The scheduled runs the server reports as live. */
@@ -544,10 +533,8 @@ function AgentPanel({
   }>;
   panel: RefObject<HTMLElement | null>;
   frame: PanelFrame;
-  demo: DemoRun;
 }>) {
   const { locale } = useLocale();
-  const states = VOCABULARY;
   return (
     <section
       className="arpanel"
@@ -610,7 +597,7 @@ function AgentPanel({
           the agent looked, and there is nothing waiting. */}
       {signals.waiting !== undefined && (
         <div className="arsect">
-          <h4>{LABELS.acrossWorkspace}</h4>
+          <h2>{LABELS.acrossWorkspace}</h2>
           {signals.waiting === 0 ? (
             <p className="arnone">{LABELS.allClear}</p>
           ) : (
@@ -632,12 +619,12 @@ function AgentPanel({
       )}
 
       <div className="arsect">
-        <h4>
+        <h2>
           {LABELS.recap}
           <a className="arplain" href={AI_SETTINGS_HREF}>
             {LABELS.fullLog}
           </a>
-        </h4>
+        </h2>
         <Recap recent={model} />
       </div>
 
@@ -653,40 +640,6 @@ function AgentPanel({
           licenseLine={signals.licenseLine}
         />
       </div>
-
-      {/* Review-only, and behind a switch (app/ui-preview.ts): some of these
-          states describe an overnight run no read can reach, so a control
-          that enters them is a control over what the surface CLAIMS. It has no
-          place in an installation. */}
-      {uiPreviewAgentStatesEnabled() && (
-        <div className="arsect arstates">
-          <h4>{LABELS.states}</h4>
-          <div className="archips">
-            {/* The chips hold one state still; this plays the whole run. A state
-                a reviewer can only hold is a state nobody can judge the motion
-                of, and the motion is most of what the object is. */}
-            <button
-              type="button"
-              className="arplay"
-              aria-pressed={demo.playing}
-              onClick={demo.toggle}
-            >
-              {demo.playing ? LABELS.runStop : LABELS.runPlay}
-            </button>
-            {states.map((name) => (
-              <button
-                type="button"
-                key={name}
-                className="archip"
-                aria-pressed={name === state}
-                onClick={() => setState(name)}
-              >
-                {name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </section>
   );
 }
@@ -1137,8 +1090,6 @@ export function AgentRail({
   bar?: RefObject<HTMLElement | null>;
 }>) {
   const t = useT();
-  // The switcher's choice, and null while the rail is reporting what it read.
-  const [override, setOverride] = useState<MarginceCoreState | null>(null);
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLElement>(null);
@@ -1150,16 +1101,12 @@ export function AgentRail({
   const ticker = useAgentTicker();
   const spend = useAiSpend();
   const { locale } = useLocale();
-  const demo = useDemoRun();
   const { fault, acknowledge } = useAgentFault(server.recent);
-  // A run outranks everything, including a held state: it is the reviewer's own
-  // request, and it lasts seconds.
-  const derived = derive(signals, server, fault);
-  const state = demo.state ?? override ?? derived.state;
+  const { state, cause } = derive(signals, server, fault);
 
-  // What the screen's margins draw, published rather than re-derived: the run,
-  // the switcher and the reads above are all local to this component, so a second
-  // consumer calling the same hooks would get a second run and report on it.
+  // What the screen's margins draw, published rather than re-derived: the reads
+  // above are all local to this component, so a second consumer calling the same
+  // hooks would get a second set of them and report on those.
   // The unanswered queue is NOT part of it: it reaches a reader through this
   // panel's own line, with its count, rather than as a ring around the window
   // that stands for as long as the queue does.
@@ -1182,15 +1129,6 @@ export function AgentRail({
     }
   }, []);
   usePopoverDismiss(open, panel, dismiss);
-
-  // Once per session, in the console: a build that can be put into a state no
-  // installation is in has to say so where anyone inspecting the page will find
-  // it. In an effect, because a render must not have side effects.
-  useEffect(() => {
-    if (uiPreviewAgentStatesEnabled()) {
-      announceAgentStatesPreview();
-    }
-  }, []);
 
   const frame = usePanelFrame(block, trigger, bar, open, phone);
   const money =
@@ -1218,25 +1156,17 @@ export function AgentRail({
     return null;
   }
 
-  // Three things can hold the line, and this is their order. The switcher wins
-  // because a reviewer asked for that state; then whatever the state itself has
-  // to say, because a fault outranks small talk; and at rest, the rotation of
-  // true readings.
+  // Two things can hold the line, and this is their order: whatever the state
+  // itself has to say, because a fault outranks small talk, and at rest the
+  // rotation of true readings.
   //
   // The named occurrence is the one that put the orb where it is, so the colour
   // and the sentence can never be about two different runs.
-  // Only when the state SHOWING is the one the reading produced. The switcher
-  // and the scripted run both replace the state without replacing what caused
-  // it, and a caption from a reading nobody is looking at would name a run that
-  // has nothing to do with the colour on screen.
-  const agentLine =
-    state === derived.state ? causeLine(derived.cause, t) : null;
+  const agentLine = causeLine(cause, t);
   const line =
-    demo.said ??
-    (override && REVIEW_ONLY[override]) ??
-    (state === "idle"
+    state === "idle"
       ? resting
-      : barLine(state, signals, t("auth.coreDevelopment"), agentLine));
+      : barLine(state, signals, t("auth.coreDevelopment"), agentLine);
   return (
     <section
       className="arblock"
@@ -1257,12 +1187,10 @@ export function AgentRail({
           >
             <AgentPanel
               state={state}
-              setState={setOverride}
               signals={signals}
               model={model}
               panel={panel}
               frame={frame}
-              demo={demo}
               line={line}
               running={server.running}
               spend={spend}
@@ -1320,7 +1248,7 @@ export function AgentRail({
               repeated phrase still arrives as a new line rather than sitting
               there looking stuck: what a reader is counting is EVENTS, and two
               identical sentences in a row are two of them. */}
-          {ticker.length > 0 && demo.said === null && (
+          {ticker.length > 0 && (
             <span className="artool" key={ticker[0].id}>
               {ticker[0].said}
             </span>

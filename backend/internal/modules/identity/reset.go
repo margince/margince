@@ -413,13 +413,27 @@ func OperatorResetPassword(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID,
 	if lookupErr != nil {
 		return lookupErr
 	}
-	// The agent seat carries an address, so it is reachable by this lookup, but
-	// it has no password by design (seed-and-fixtures §1.5) and giving it one
-	// would turn an identity into an authority. Refusing by name beats letting
-	// the write fail on `app_user_agent_never_forced`, which would report a
-	// constraint to an operator who asked a reasonable-looking question.
+	// An agent identity carries an address, so it is reachable by this lookup,
+	// but it has no password by design and giving it one would turn an identity
+	// into an authority. Refusing by name beats letting the write fail on
+	// `app_user_agent_never_forced`, which would report a constraint to an
+	// operator who asked a reasonable-looking question.
+	//
+	// The SCHEMA is the backstop, not this branch: the write below also raises
+	// `must_change_password`, which `app_user_agent_never_forced` refuses for an
+	// agent row. Delete this `if` and the statement still aborts — on a
+	// constraint name, which is the whole difference. Do not read this as the
+	// check that makes the rule true.
+	//
+	// Worth knowing where the rule DOES hold, because it is not local: nothing in
+	// the product gives an agent row a password. This route is refused here and
+	// by the CHECK; RedeemPasswordReset carries no `is_agent` filter and does not
+	// need one, because no redeemable token can name an agent — every issuer
+	// excludes them (userpasswordlink refuses `is_agent`, forgot-password
+	// requires an existing hash, and an invite mints the row itself). The schema
+	// permits an agent to hold a password; the product simply never writes one.
 	if isAgent {
-		return fmt.Errorf("identity: %q is the agent seat, which has no password to reset", email)
+		return fmt.Errorf("identity: %q is an agent identity, which has no password to reset", email)
 	}
 	// An operator-chosen password is exactly the state the forced rotation
 	// exists for: the subject did not pick this credential and the operator

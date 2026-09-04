@@ -124,6 +124,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	"internal/modules/dealrooms:dealScopeClause":         "the READ spelling of a Deal Room's deal-derived row scope, shared by the single read, the list page and the release page — a room carries no owner of its own, so its visibility IS its deal's. Every path that changes a room resolves it through this read and then calls one of the two deal probes on the same deal — ensureDealWritable (auth.EnsureWritableLive) for anything that hands access out, ensureDealRetractable (auth.EnsureRetractable) for revoking a seat, pausing, closing or ending the room — before writing anything",
 	"internal/modules/commissions:entriesOfVisibleDeals": "the READ spelling of a commission entry's deal-derived row scope, rendered for the ledger page, the summary and the single read through VisibleClause and for the void through RetractableClause. It decides only whether a row may be SEEN: both paths that change one — Decide and ReverseForDeal — resolve the row through one of those two and then take WritableEntriesForDeal (auth.EnsureWritableLive) to approve or pay, or RetractableEntriesForDeal (auth.EnsureRetractable) to void, before writing anything",
 	"internal/modules/projects:transferableProjectIDs":   "the READ half of the bulk owner handover, listing the from-owner's live projects under the same visibility clause the project list renders. Every id it returns has ALREADY passed auth.WritableBy in the same function, and transferProjectOwner then locks and writes only those — a `read` share is enumerated here and dropped before anything is written",
+	"internal/modules/people:attachPersonEmployers":      "the employer stamped on every person a read returns, flagged only because a mutation hands back the record it wrote. The organization is written NOTHING — the probe decides whether this caller may be SHOWN the account their contact works at — and the person row that IS being changed takes its own authority at the entry: person:create on the create path, auth.EnsureWritable on the update. Narrowing it to write authority would blank the employer for a reader entitled to see the company but not to change it, which is most readers",
 	"internal/modules/people:CompaniesOnProjectTx":       "a READ: it lists the companies on a project and returns them, and every path that CHANGES the edges — SetProjectCompany, RemoveProjectCompany — takes auth.EnsureWritableLive on the project before it writes anything. This clause decides only which companies a reader may be SHOWN, so narrowing it to write authority would hide companies from a reader entitled to see them",
 	"internal/modules/privacy:AssembleSAR":               "an Art. 15 export is a READ, and read authority is the whole of what a read needs. It is flagged only because assembling a SAR records the request it answers; its Art. 17 sibling, which destroys rather than reads, uses auth.EnsureWritableForSubjectRights",
 
@@ -387,9 +388,22 @@ func writeAuthorityIndex(t *testing.T, tables map[string]bool) map[string]map[st
 			dirConsts[dir][name] = value
 		}
 	}
+	// The statements each package holds in its package-level vars and consts,
+	// read once per package. A statement hoisted out of a function body is
+	// executed by whoever NAMES it, and the write is that function's — reading
+	// only body literals left the organization column writers, the company
+	// form's and the cold-start fill's alike, outside this census entirely.
+	// Not reported as a gap: silently absent, which is the one way a census must
+	// not fail. updateguard folded the same shape in for the same reason.
+	heldCache := map[string]map[string][]string{}
 	for _, src := range files {
 		dir := filepath.ToSlash(filepath.Dir(src.Path))
 		consts := packageStringConsts(src)
+		held := heldStatements(t, heldCache, dir)
+		var imported []map[string][]string
+		for _, importDir := range inModuleImportDirs(src.File) {
+			imported = append(imported, heldStatements(t, heldCache, importDir))
+		}
 		for name, value := range dirConsts[dir] {
 			if _, local := consts[name]; !local {
 				consts[name] = value
@@ -414,6 +428,7 @@ func writeAuthorityIndex(t *testing.T, tables map[string]bool) map[string]map[st
 			}
 			at := probeSite{dir: dir, recv: recv, fn: fn.Name.Name, file: src.Path}
 			indexWriteAuthorityBody(fn, info, tables, consts, at, src)
+			indexHeldStatements(statementsJudged(fn, held, imported), info)
 		}
 	}
 	if len(pkgs) == 0 {
@@ -471,6 +486,25 @@ func indexWriteAuthorityBody(fn *ast.FuncDecl, info *writeAuthorityFn, tables ma
 		}
 		return true
 	})
+}
+
+// indexHeldStatements folds the statements a function NAMES but does not spell —
+// a package-level table of UPDATEs it indexes by column, which is how three of
+// the organization writers send theirs. Read exactly as a body literal is, so a
+// statement moved out of a body does not change what this census believes about
+// the function that runs it.
+func indexHeldStatements(statements []string, info *writeAuthorityFn) {
+	for _, text := range statements {
+		if writesSQL(text) {
+			info.mutates = true
+		}
+		written, dynamic := mutatedTables(text)
+		for _, table := range written {
+			info.mutates = true
+			info.noteWrite(table)
+		}
+		info.dynamicWrite = append(info.dynamicWrite, dynamic...)
+	}
 }
 
 func indexWriteAuthorityCall(call *ast.CallExpr, info *writeAuthorityFn, tables map[string]bool,

@@ -93,6 +93,11 @@ export function VerdictHead({
     <PanelBody>
       <div className="r360-verdict">
         <span className={`r360-standing r360-standing-${tone}`}>{label}</span>
+        {/* Three columns, not a row that wraps: the word, the line that says
+            why, and the working at the far end where the head has room for it.
+            As flex items they wrapped — the sentence fell under the word and
+            the working under the sentence — which read as a headline with two
+            captions rather than as one call. */}
         {because ? <span className="r360-because">{because}</span> : null}
         {restsOn && restsOn.length > 0 ? <RestsOn items={restsOn} /> : null}
       </div>

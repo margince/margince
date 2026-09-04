@@ -376,6 +376,16 @@ decline to answer, it publishes zeros. So the likely cause is an artifact a gree
 producer did not upload rather than anything about the scan itself, and the
 failing step names which download it was.
 
+READ THE RANGE BELOW MORE WEAKLY THAN THE OTHER ARMS' — this is the one lane
+that fails for reasons no commit caused. The scanner download's signature check
+fetches a public keyserver, and when that stopped answering the step sat silent
+until a timeout killed it (margince/margince#2543; the step now caps at eight
+minutes, so a hang is fast and legible rather than a 30-minute silent burn — but
+it still arrives here as a failure). A network outage attributed to somebody's
+commit is a false accusation generated automatically, which is worse than no
+report at all. Check whether the failing step is the scan itself or one of the
+three artifact downloads BEFORE reading these commits as suspects.
+
 ${MAIN_SUSPECTS:-_no suspect range was computed for this run._}
 
 Until it is fixed, treat the quality gate's reading for \`main\` as stale rather
@@ -439,6 +449,43 @@ The known standing failure is case 6: asked about past account-manager changes,
 the assistant cites the record correctly, quotes the post-mortem note correctly,
 and then repeats the note's wrong month in its own voice. If that is what the
 transcript shows, this issue is the existing finding rather than a new one."\
+    || unreported=1
+fi
+
+# --- merge-attest.yml -----------------------------------------------------------
+#
+# The arm the two above cannot cover. They answer "is main red", and by then the
+# breakage has already cost somebody a rebase; this one answers "did what just
+# landed have a verdict behind it", at push time, before anyone has paid for it.
+#
+# One issue per OFFENDING PULL REQUEST rather than per lane, because that is the
+# unit somebody can act on — and because a standing "merges are landing unproven"
+# issue would collect every case under one title and be closed once, which is how
+# a recurring finding becomes a stale one.
+
+if [[ "${MERGE_VERDICT_RESULT:-}" = "failure" ]]; then
+  report "A merge landed on main without a verdict behind it${MERGE_VERDICT_PR:+ (#$MERGE_VERDICT_PR)}" bug \
+"${MERGE_VERDICT_WHY:-a merge landed on \`main\` without a green required check; the run below says which}
+
+Found by the push-time check on \`main\`: $RUN_URL
+
+**This is not an accusation of bad faith, and not a request to remove bypass.**
+There are real cases for it — an infrastructure outage that reds every pull
+request, a revert that has to land now. What there was no case for is the fact
+being invisible: the pull request closes green-looking in the list,
+\`main-health\` is two-hourly and goes on reporting the last green it saw, and
+the next signal anybody gets is somebody else's pull request going red against a
+base they did not break. That is how #2504's four merges were found — twice,
+independently, each finder spending a rebase and a full local lane to rule their
+own diff out.
+
+**What to do with this issue.** If the tree is fine, say why the bypass was
+right and close it; the record is the point. If it is not, \`main\` is red now
+and this issue names the commit, which is roughly two hours earlier than
+\`main-health\` would have.
+
+Prevention is a branch-protection decision (#2496), not something this alarm
+can or should do."\
     || unreported=1
 fi
 

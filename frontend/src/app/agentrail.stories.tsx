@@ -238,7 +238,7 @@ export const NothingHasRunYet: Story = {
   render: story({ ...HEALTHY, calls: [] }),
 };
 
-/** The collapsed rail: the orb is the whole report at 64px, the words and the
+/** The collapsed rail: the orb is the whole report at 56px, the words and the
  *  chevron gone. */
 export const CollapsedRail: Story = {
   render: story(HEALTHY, true),

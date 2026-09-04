@@ -43,7 +43,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
 
@@ -52,7 +52,7 @@
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
 }
 
@@ -84,7 +84,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: 12px;
+  font-size: var(--fs-meta);
 }
 .project-durations li {
   display: flex;

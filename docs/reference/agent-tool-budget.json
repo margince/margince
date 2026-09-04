@@ -6,9 +6,9 @@
   "catalog": {
     "tools": 72,
     "system_frame_tokens": 353,
-    "tokens": 20878,
+    "tokens": 20964,
     "median_tool_tokens": 262,
-    "mean_tool_tokens": 289
+    "mean_tool_tokens": 290
   },
   "agents": [
     {
@@ -72,7 +72,7 @@
   "tool_cost": [
     {
       "name": "run_report",
-      "tokens": 786
+      "tokens": 862
     },
     {
       "name": "preview_import",
@@ -160,7 +160,7 @@
     },
     {
       "name": "forecast_readings",
-      "tokens": 327
+      "tokens": 337
     },
     {
       "name": "prep_for_meeting",

@@ -188,7 +188,10 @@ func TestSearchEmptyQueryIsAValidationError(t *testing.T) {
 // given cardinality is its business; the index existing is ours.)
 func TestSearchEveryBranchHasAGinIndex(t *testing.T) {
 	e := SetupSearch(t)
-	for _, table := range []string{"person", "organization", "deal", "lead", "activity"} {
+	// Derived from the branch table, never restated: a hand-kept copy of this
+	// list had already fallen behind by two branches, and a census that reads a
+	// smaller set than its subject reports PASS with nothing to notice.
+	for _, table := range search.SearchedTables() {
 		var exists bool
 		err := e.Owner.QueryRow(context.Background(), `
 			SELECT EXISTS (
@@ -206,4 +209,99 @@ func TestSearchEveryBranchHasAGinIndex(t *testing.T) {
 			t.Errorf("table %s is searched but has no GIN index over search_tsv", table)
 		}
 	}
+}
+
+// The catalog branches (product, offer_template). Both are workspaceWide: the
+// price list and the offer layouts carry no owner, so a seat that may read them
+// reads all of them — which makes the OBJECT grant the whole of the gate, and
+// the one thing worth proving twice.
+func TestSearchFindsTheCatalogByNameAndSku(t *testing.T) {
+	e := SetupSearch(t)
+	e.SeedID(t, `INSERT INTO product (id, name, sku, description, unit_price_minor, currency, source, captured_by)
+	             VALUES ($1, 'Kärcher floor scrubber', 'KAR-9910', 'Industrial wet cleaning unit', 129900, 'EUR', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO offer_template (id, name, layout) VALUES ($1, 'Kärcher rollout quote', '{}'::jsonb)`)
+
+	ctx := e.Admin()
+	// The name, unaccented: somebody typing an ASCII keyboard finds the umlaut.
+	page, err := e.Store.Search(ctx, search.Input{Query: "karcher"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"product", "offer_template"} {
+		if !hasType(page.Hits, want) {
+			t.Errorf("searching a catalog name returned no %s hit: %+v", want, page.Hits)
+		}
+	}
+
+	// The sku is an 'A' arm, not just an excerpt: a rep holding a printed offer
+	// has the sku and not the name.
+	page, err = e.Store.Search(ctx, search.Input{Query: "KAR-9910", Types: []string{"product"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Hits) != 1 {
+		t.Fatalf("searching a sku → %+v, want the one product", page.Hits)
+	}
+	if page.Hits[0].Snippet != "KAR-9910" {
+		t.Errorf("product excerpt is %q, want the sku that tells two variants apart", page.Hits[0].Snippet)
+	}
+}
+
+// A discontinued product is still findable. It stands on last quarter's offers,
+// and a rep looking one up is usually holding one of them — so `active` is not
+// a discovery narrowing, while archived_at (which every branch carries) is.
+func TestSearchFindsAnInactiveProductButNotAnArchivedOne(t *testing.T) {
+	e := SetupSearch(t)
+	e.SeedID(t, `INSERT INTO product (id, name, active, unit_price_minor, currency, source, captured_by)
+	             VALUES ($1, 'Zwickau retired mount', false, 4900, 'EUR', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO product (id, name, archived_at, unit_price_minor, currency, source, captured_by)
+	             VALUES ($1, 'Zwickau archived mount', now(), 4900, 'EUR', 'manual', 'human:x')`)
+
+	page, err := e.Store.Search(e.Admin(), search.Input{Query: "zwickau", Types: []string{"product"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Hits) != 1 {
+		t.Fatalf("searching a retired catalog → %+v, want the inactive row alone", page.Hits)
+	}
+	if page.Hits[0].Title != "Zwickau retired mount" {
+		t.Errorf("found %q, want the inactive product and never the archived one", page.Hits[0].Title)
+	}
+}
+
+// A seat with no catalog grant gets no catalog hits, and asking for the type by
+// name is an empty page rather than a 403 — the same existence-hiding posture
+// every other branch takes.
+func TestCatalogHitsAreWithheldWithoutTheObjectGrant(t *testing.T) {
+	e := SetupSearch(t)
+	e.SeedID(t, `INSERT INTO product (id, name, unit_price_minor, currency, source, captured_by)
+	             VALUES ($1, 'Ilmenau bracket', 2500, 'EUR', 'manual', 'human:x')`)
+
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	noCatalog := principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{objInstallSettings: {Read: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	page, err := e.Store.Search(noCatalog, search.Input{Query: "ilmenau"})
+	if err != nil || len(page.Hits) != 0 {
+		t.Fatalf("catalog search without the grant → %v %+v, want an empty page", err, page.Hits)
+	}
+	page, err = e.Store.Search(noCatalog, search.Input{Query: "ilmenau", Types: []string{"product"}})
+	if err != nil || len(page.Hits) != 0 {
+		t.Fatalf("denied catalog type → %v %+v, want an empty page and never a refusal", err, page.Hits)
+	}
+}
+
+// hasType answers whether any hit carries the type, which is what the
+// cross-type assertions above are actually asking.
+func hasType(hits []search.Hit, want string) bool {
+	for _, hit := range hits {
+		if hit.Type == want {
+			return true
+		}
+	}
+	return false
 }
