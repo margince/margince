@@ -275,13 +275,21 @@ func TestAgentReleaseSpendsTheCapsTheReleaseSpends(t *testing.T) {
 func TestACredentialDoesNotReleaseTheProposalItMade(t *testing.T) {
 	mine := ids.NewV7()
 	theirs := ids.NewV7()
+	lender := ids.NewV7()
+	someoneElse := ids.NewV7()
 	proposer := principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:test", OnBehalfOf: ids.NewV7(),
+		Type: principal.PrincipalAgent, ID: "agent:test", UserID: lender, OnBehalfOf: lender,
 		PassportID: mine, Scopes: principal.NewScopeSet(principal.ScopeWrite),
 	}
-	stagedBy := func(id ids.UUID) row {
-		passport := ids.From[ids.PassportKind](id)
-		return row{Kind: "advance_deal", PassportID: &passport}
+	// A staging carries BOTH halves, because an agent one always does:
+	// attributableStager refuses a passport-less agent staging, and
+	// insertProposalInTx writes on_behalf_of from the same principal. A fixture
+	// omitting the human is a shape production cannot produce, and it is the
+	// shape under which a rule about that human passes without being asked.
+	stagedBy := func(passportID, human ids.UUID) row {
+		passport := ids.From[ids.PassportKind](passportID)
+		on := ids.From[ids.UserKind](human)
+		return row{Kind: "advance_deal", PassportID: &passport, OnBehalfOf: &on}
 	}
 
 	cases := []struct {
@@ -290,12 +298,22 @@ func TestACredentialDoesNotReleaseTheProposalItMade(t *testing.T) {
 		approve bool
 		want    bool // admitted
 	}{
-		{"the proposer cannot approve its own row", stagedBy(mine), true, false},
+		{"the proposer cannot approve its own row", stagedBy(mine, lender), true, false},
 		// Deliberately allowed: an agent that changes its mind takes its own
 		// request off somebody's desk rather than leaving it there.
-		{"but it may still reject its own row", stagedBy(mine), false, true},
-		{"another credential's row it may approve", stagedBy(theirs), true, true},
-		// serverProposed: a row nobody's passport staged is not self-approval.
+		{"but it may still reject its own row", stagedBy(mine, lender), false, true},
+		// Another CREDENTIAL of the same person: the lender could have answered
+		// this in the CRM themselves, so answering it on a second credential they
+		// minted is the same person answering.
+		{"another credential of the same person it may approve", stagedBy(theirs, lender), true, true},
+		// Another PERSON's, which is the loop the tier exists to stop: two
+		// passports lent by two people push a confirm-first action through end to
+		// end and no human ever looks.
+		{"another person's row it does not approve", stagedBy(theirs, someoneElse), true, false},
+		{"but it may still reject another person's row", stagedBy(theirs, someoneElse), false, true},
+		// serverProposed: a row nobody's passport staged is not self-approval,
+		// and one staged on nobody's behalf is the unattended policy apply,
+		// bounded by the owner's own authority rather than by a staging.
 		{"a server-proposed row is nobody's own", row{Kind: "advance_deal"}, true, true},
 	}
 	for _, tc := range cases {
