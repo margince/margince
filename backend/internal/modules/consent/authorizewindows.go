@@ -74,3 +74,18 @@ func (g *Gate) windowsFor(ctx context.Context, tx pgx.Tx) (windows, error) {
 	}
 	return out, nil
 }
+
+// Why installation.country is MachineryApplied, recorded here because this is
+// the reader that needs it:
+//
+// windowsFor runs inside the transaction that binds a decision, under whatever
+// principal is sending. A rep holds no settings-read grant and a dispatching
+// worker holds the system principal, so a gated read fails the send outright —
+// with a 500, not a refusal, because "the caller may not read a setting" is not
+// an answer about anybody's consent.
+//
+// That is not hypothetical: the entry shipped gated and killed every outbound
+// send job on main until it was declared. TestEverySettingReadThroughApplyIsDeclaredMachineryApplied
+// (backend/gates/machineryapplied_test.go) now derives the pairing from the
+// source, so a reader added here without the declaration fails at build rather
+// than in a worker log.
