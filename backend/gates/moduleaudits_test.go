@@ -78,11 +78,12 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	// reason above, but the package now writes a real audit row — the evidence
 	// each agent-read buying role rests on — so it satisfies the gate outright
 	// and a waiver here would be a claim about it that is no longer true.
-	"internal/compose/person360":   "person_moment_dismissal, the same per-reader shape",
-	"internal/compose/orgbrief":    "org_brief is an assembly generated for one reader and never served to another",
-	"internal/compose/personbrief": "person_brief, the same",
-	"internal/compose/dealstatus":  "deal_status_card, the same per-reader shape — a card written from the facts one person may see, never served to another",
-	"internal/compose/orgdossier":  "org_dossier and org_growth_fit, the same — the DDL says outright that an assembly generated for one reader is never served to another, and growth fit folds seat-dependent context on top",
+	"internal/compose/person360":    "person_moment_dismissal, the same per-reader shape",
+	"internal/compose/orgbrief":     "org_brief is an assembly generated for one reader and never served to another",
+	"internal/compose/personbrief":  "person_brief, the same",
+	"internal/compose/dealstatus":   "deal_status_card, the same per-reader shape — a card written from the facts one person may see, never served to another",
+	"internal/compose/worklistsnap": "worklist_snapshot, the same per-reader shape — one person's position in one walk, keyed on reader_id, holding identity and order and no record content at all",
+	"internal/compose/orgdossier":   "org_dossier and org_growth_fit, the same — the DDL says outright that an assembly generated for one reader is never served to another, and growth fit folds seat-dependent context on top",
 
 	// The installation's ciphertext store. vault_secret is a ref -> ciphertext
 	// row carrying NO workspace_id — it is installation configuration, not a
