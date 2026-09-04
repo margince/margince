@@ -617,3 +617,63 @@ func countDispositions(t *testing.T, e *integration.Env, email string) int {
 	}
 	return n
 }
+
+// TestTheSweepLeavesAContactAHumanKeptPrivate holds the decision a person made.
+//
+// A captured contact somebody has worked on is not retracted when the
+// conversation turns out to be private: people.RetractCaptureOnlyPersonTx
+// refuses to archive one carrying a human audit row, and it stays owner-private.
+// That is a decision, and asking about it again would put it in front of a
+// model whose `person` answer publishes it to the workspace — a transition
+// nothing reverses.
+func TestTheSweepLeavesAContactAHumanKeptPrivate(t *testing.T) {
+	e := integration.Setup(t)
+	const sender = "privat@kunde.example"
+
+	// Fill the domain ceiling so the capture's own question is refused, which
+	// is what puts this contact in the sweep's selector at all.
+	for i := 0; i < capture.PendingDeferralDomainCap; i++ {
+		other := fmt.Sprintf("kept%d@kunde.example", i)
+		seedAttestedOutbound(t, e, fmt.Sprintf("kept-fill-out-%d", i), other, fmt.Sprintf("kept-fill-t%d", i))
+		captureInboundThroughRealSink(t, e, e.Rep1, fmt.Sprintf("kept-fill-in-%d", i), other, fmt.Sprintf("kept-fill-t%d", i))
+	}
+	seedAttestedOutbound(t, e, "kept-out-1", sender, "kept-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "kept-in-1", sender, "kept-t1")
+	if _, queued := openDisposition(t, e, sender); queued {
+		t.Fatal("the ceiling did not refuse the question, so the fixture no longer fills the cap")
+	}
+
+	// Somebody works on the contact: the evidence a human touched it.
+	personID := personIDFor(t, e, sender)
+	seedHumanEdit(t, e, personID)
+
+	runVerdict(t, e, &scriptedVerdictBrain{})
+	store := people.NewStore(InstallationDB(e.Pool))
+	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
+	if err := worker.Work(context.Background(), &river.Job[LinkReconcileWorkspaceArgs]{
+		Args: LinkReconcileWorkspaceArgs{Workspace: e.WS},
+	}); err != nil {
+		t.Fatalf("the sweep failed: %v", err)
+	}
+
+	if _, queued := openDisposition(t, e, sender); queued {
+		t.Fatal("the sweep re-asked about a contact a person had already worked on and kept " +
+			"private; a `person` answer to that question publishes it to the workspace")
+	}
+	if got, _ := personVisibility(t, e, sender); got != "owner" {
+		t.Fatalf("the contact is %q, want owner", got)
+	}
+}
+
+// personIDFor reads the person minted for an address.
+func personIDFor(t *testing.T, e *integration.Env, email string) ids.PersonID {
+	t.Helper()
+	var id ids.PersonID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT person_id FROM person_email WHERE email = $1`, email).Scan(&id)
+	}); err != nil {
+		t.Fatalf("reading the person for %s: %v", email, err)
+	}
+	return id
+}
