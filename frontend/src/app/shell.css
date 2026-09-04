@@ -412,6 +412,66 @@
   min-width: 0;
   overflow: hidden;
 }
+/* A company logo is the expanded rail's identity, not a row-sized avatar.
+   Wordmarks take the column's width and the product attribution sits beneath,
+   exactly as one lockup. The no-logo path below keeps the compact monogram and
+   company name because initials do not identify a company on their own. */
+.rail.expanded .railhead:has(.ws-logo) {
+  height: 92px;
+  margin-top: 0;
+}
+.rail .ws-logo {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: var(--space-2);
+  height: 100%;
+  box-sizing: border-box;
+  padding: var(--space-1) var(--space-2);
+}
+.rail .ws-logo .company-logo {
+  width: 100%;
+  height: 56px;
+}
+.rail .ws-logo .company-logo-img {
+  object-position: left center;
+}
+.rail .ws-logo .company-logo-fallback b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-h3);
+}
+.rail .ws-logo-powered {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  font-size: var(--fs-eyebrow);
+  line-height: 1;
+  text-align: right;
+}
+.rail .ws-logo-product {
+  font-family: var(--f-display);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-display);
+  color: var(--textPrimary);
+}
+.rail.collapsed .ws-logo {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  padding: var(--space-1);
+}
+.rail.collapsed .ws-logo .company-logo {
+  width: 36px;
+  height: 36px;
+}
+.rail.collapsed .ws-logo-powered,
+.rail.leveled .ws-logo-powered {
+  display: none;
+}
 .rail .ws-chip {
   /* The workspace's mark is the one picture in the chrome, and at 32px it read
      as one more row glyph. 44px is the head's height less a 2px inset on each

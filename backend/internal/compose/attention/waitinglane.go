@@ -76,6 +76,7 @@ type HiddenWork struct {
 	NotSales    int
 	PastHorizon int
 	Unlinked    int
+	Colleagues  int
 	// Truncated says a read stopped at its own scan bound, which makes every
 	// figure a floor. The module states why it is fatal to Clear rather than
 	// merely noted beside it.
@@ -85,7 +86,8 @@ type HiddenWork struct {
 // Clear reports that nothing is being held back — the guardrail's target.
 func (h HiddenWork) Clear() bool {
 	return !h.Truncated &&
-		h.SetAside == 0 && h.NotSales == 0 && h.PastHorizon == 0 && h.Unlinked == 0
+		h.SetAside == 0 && h.NotSales == 0 && h.PastHorizon == 0 && h.Unlinked == 0 &&
+		h.Colleagues == 0
 }
 
 // WaitingCustomer is one message nobody has answered.
@@ -111,6 +113,11 @@ type WaitingCustomer struct {
 	// thread. It is what keeps a long wait in execution instead of sending it
 	// to review.
 	HasOpenDeal bool
+	// Engaged says the workspace wrote on this thread before the message
+	// arrived. False means unproven, not absent: a client that strips reply
+	// headers gives each message its own thread, so this demotes rather than
+	// hides.
+	Engaged bool
 	// OwnerID is who owes this reply, resolved by the module from the record
 	// the thread is filed under. Zero when nothing on it names an owner, which
 	// is an unowned customer rather than a missing answer.
@@ -174,6 +181,13 @@ type waitingRead struct {
 // that does not read the mail stream has no waiting queue to hide work from, so
 // "nothing is held back" is the true answer rather than a degraded one.
 func (s *Service) HiddenBacklog(ctx context.Context) (crmcontracts.HiddenBacklog, error) {
+	// Refused BEFORE the unbound-seam answer below, so a reader without the tier
+	// is told they may not ask rather than told the backlog is clear. Those are
+	// different answers and the second is the one this endpoint must never give
+	// wrongly.
+	if err := requireLeadTier(ctx); err != nil {
+		return crmcontracts.HiddenBacklog{}, err
+	}
 	asOf := s.now()
 	if s.waiting == nil {
 		return crmcontracts.HiddenBacklog{AsOf: asOf, Clear: true}, nil
@@ -189,6 +203,7 @@ func (s *Service) HiddenBacklog(ctx context.Context) (crmcontracts.HiddenBacklog
 		NotSales:    work.NotSales,
 		PastHorizon: work.PastHorizon,
 		Unlinked:    work.Unlinked,
+		Colleagues:  work.Colleagues,
 		Truncated:   work.Truncated,
 		// Derived from the same struct the figures came from, so the flag and
 		// the numbers cannot disagree — a client reading `clear` over four
@@ -229,6 +244,11 @@ const responseWindowMaxDays = 90
 func (s *Service) ResponseMetrics(
 	ctx context.Context, days int,
 ) (crmcontracts.ResponseMetrics, error) {
+	// Before the window is even resolved: a refused reader learns nothing about
+	// what this endpoint would have measured.
+	if err := requireLeadTier(ctx); err != nil {
+		return crmcontracts.ResponseMetrics{}, err
+	}
 	if days <= 0 {
 		days = responseWindowDays
 	}

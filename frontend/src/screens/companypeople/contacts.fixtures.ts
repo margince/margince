@@ -13,10 +13,10 @@ import type { components } from "../../api/schema";
 type OrganizationContact = components["schemas"]["OrganizationContact"];
 
 /**
- * contactsFixture is one account holding all three engagement states.
+ * contactsFixture is one account holding all four engagement states.
  *
- * All three, because the states only matter in contrast: a fixture with one of
- * them proves a label renders, not that a reader can tell the three apart —
+ * All four, because the states only matter in contrast: a fixture with one of
+ * them proves a label renders, not that a reader can tell the four apart —
  * which is the whole job of this screen.
  */
 export function contactsFixture(): OrganizationContact[] {
@@ -26,8 +26,8 @@ export function contactsFixture(): OrganizationContact[] {
       full_name: "Dietmar Rietsch",
       title: "Managing Director",
       engagement: "answered",
-      last_inbound_at: "2026-08-28T09:00:00Z",
-      last_outbound_at: "2026-08-22T09:00:00Z",
+      last_inbound_at: "2026-08-22T09:00:00Z",
+      last_outbound_at: "2026-08-28T09:00:00Z",
       strength: {
         score: 71,
         bucket: "strong",
@@ -37,6 +37,18 @@ export function contactsFixture(): OrganizationContact[] {
           reciprocity: 0.8,
           direction: 1,
         },
+      },
+    },
+    {
+      person_id: "p-sabine",
+      full_name: "Sabine Vogel",
+      title: "Head of Partnerships",
+      engagement: "waiting",
+      last_inbound_at: "2026-08-30T09:00:00Z",
+      strength: {
+        score: 24,
+        bucket: "weak",
+        factors: { recency: 0.8, frequency: 0.1, reciprocity: 0, direction: 0 },
       },
     },
     {

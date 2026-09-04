@@ -1145,6 +1145,10 @@ test.describe("B-EP09.23: overlay mode", () => {
         exact: true,
       }),
     ).toBeVisible();
+    // The stakeholder card is in the record's collapsible context panel. Open
+    // that panel before counting it alongside the four overview refusals; a
+    // closed panel is intentionally absent from the accessibility tree.
+    await page.getByRole("button", { name: "Panel zeigen" }).click();
     await expect(page.getByText(unavailable)).toHaveCount(5);
     await expect(page.getByText(errorBox)).toHaveCount(0);
   });
@@ -1171,13 +1175,74 @@ test.describe("§3.8: 390px mobile", () => {
     });
   }
 
-  test("S-E11.2: the day's queue is readable on mobile at 390px", async ({
+  // The queue is WORKABLE with a thumb, not merely present.
+  //
+  // What stood here asserted that one text node was visible at 390px, and it
+  // passed for as long as the screen was unusable: the row is a three-column
+  // line whose verbs never yield width, so the title column was squeezed to a
+  // few characters while three buttons held their full size beside it. A test
+  // that cannot tell that from a working screen is part of the defect.
+  //
+  // So this measures the row itself — every row, not the first — and the
+  // targets a rep presses.
+  test("S-E11.2: the day's queue is workable with a thumb at 390px", async ({
     page,
   }) => {
     await page.goto("/#/worklist");
+    await page.waitForLoadState("networkidle");
     await expect(
       page.getByText(/Send the follow-up to Anna Weber/).first(),
     ).toBeVisible();
+
+    // Nothing runs off the side. The row wraps instead of pushing the page
+    // wider, which is the difference between a stacked layout and a squeezed
+    // one.
+    expect(await pageOverflow(page)).toEqual([]);
+
+    // The text column is wide enough to read a sentence in. Half the viewport
+    // is a low bar deliberately: it is the one this layout FAILED, at roughly a
+    // quarter, and a ceiling tuned to today's rows would break on tomorrow's
+    // longer verb.
+    const narrow = await page.evaluate(() => {
+      const floor = 390 / 2;
+      return Array.from(document.querySelectorAll(".worklist-row-text"))
+        .map((element) => ({
+          width: element.getBoundingClientRect().width,
+          text: (element.textContent ?? "").slice(0, 40),
+        }))
+        .filter(({ width }) => width < floor)
+        .map(({ width, text }) => `${Math.round(width)}px: ${text}`);
+    });
+    expect(narrow).toEqual([]);
+
+    // Every verb in the QUEUE is a real target — the rows and the focus card
+    // above them, which is the work this screen exists for. The focus CTA is a
+    // full-size `.btn` and already clears the floor through `--control-h`; it
+    // is measured anyway, because a rule that holds only where somebody
+    // remembered to look is not a floor.
+    //
+    // The readings strip above is deliberately NOT measured. Its "open this
+    // lane" link is a 24px target on a phone and genuinely too small, but it
+    // belongs to the design system's StatCard rather than to this screen —
+    // fixing it here would size every reading card in the product from the
+    // worklist's stylesheet. Filed as #3961.
+    //
+    // Visible controls only: the page carries collapsed panels whose buttons
+    // lay out at zero height, and those are not targets a thumb can miss.
+    const small = await page.evaluate(() => {
+      const controls = document.querySelectorAll(
+        ".worklist-list button, .worklist-list a.btn, .worklist-list .link-button, .worklist-focus button, .worklist-focus a.btn",
+      );
+      return Array.from(controls)
+        .filter((element) => element.getBoundingClientRect().height > 0)
+        .map((element) => ({
+          height: element.getBoundingClientRect().height,
+          label: (element.textContent ?? "").trim(),
+        }))
+        .filter(({ height }) => height < 44)
+        .map(({ height, label }) => `${label}: ${Math.round(height)}px`);
+    });
+    expect(small).toEqual([]);
   });
 
   // The bar's centre cell and the panel it opens, neither of which exists above

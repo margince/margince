@@ -167,6 +167,10 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		// The person-side draft rides the same lane for the same reason: one
 		// drafting task, a different input shape.
 		compose.WithPersonDraft(modelPath.DraftReply),
+		// And the lead-side one. Same lane again, and the same writer behind
+		// it — a lead is the person-draft's own shape, one recipient on the
+		// record itself, so what differs is the fold and nothing downstream.
+		compose.WithLeadDraft(modelPath.DraftReply),
 		compose.WithDealStatusWriter(modelPath.DealHealth, routingVersion),
 		// The meeting brief rides the same summarize lane as the account brief:
 		// grounded prose over records the caller can already see. The option

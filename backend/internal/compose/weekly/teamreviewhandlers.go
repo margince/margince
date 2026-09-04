@@ -63,7 +63,7 @@ func teamReviewToWire(review TeamReview) crmcontracts.TeamWeeklyReview {
 		RepsUnread:     &review.RepsUnread,
 		Counts: crmcontracts.TeamWeeklyCounts{
 			RepsCounted: c.RepsCounted,
-			DealsWon:    c.DealsWon, DealsLost: c.DealsLost,
+			DealsWon:    c.DealsWon, DealsLost: c.DealsLost, DealsMoved: c.DealsMoved,
 			LeadsRouted: c.LeadsRouted, LeadsAnsweredInTarget: c.LeadsAnsweredInTarget,
 			LeadsBreached: c.LeadsBreached,
 			MeetingsHeld:  c.MeetingsHeld, MeetingsWithNextStep: c.MeetingsWithNextStep,

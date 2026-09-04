@@ -42,6 +42,7 @@ export type MapCopy = Readonly<{
   engagement: Record<MapEngagement, string>;
   /** How an edge reads, given which way the conversation is owed. */
   awaitingReply: string;
+  replyOwed: string;
   theyReplied: string;
   neverWritten: string;
   onDeal: string;
@@ -163,6 +164,9 @@ function wordsFor(
   engagement: MapEngagement | undefined,
   copy: MapCopy,
 ): string {
+  if (engagement === "waiting") {
+    return copy.replyOwed;
+  }
   if (engagement === "answered") {
     return copy.theyReplied;
   }

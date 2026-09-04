@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 69 |
-| Resources | 9 |
-| Tool catalog | 192.4 KB |
-| Resource catalog | 3.4 KB |
-| Approx. wire tokens | 50141 |
+| Tools | 72 |
+| Resources | 11 |
+| Tool catalog | 199.5 KB |
+| Resource catalog | 4.2 KB |
+| Approx. wire tokens | 52130 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 92.8 KB | 48% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 45.3 KB | 23% | Yes, every step |
-| Input schemas | 39.8 KB | 20% | Yes, every step |
-| _Names, annotations, punctuation_ | 14.5 KB | 7% | Partly |
-| **Description + input schema** | **85.1 KB** | **44%** | **the recurring cost** |
+| Output schemas | 95.3 KB | 47% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 48.7 KB | 24% | Yes, every step |
+| Input schemas | 40.3 KB | 20% | Yes, every step |
+| _Names, annotations, punctuation_ | 15.2 KB | 7% | Partly |
+| **Description + input schema** | **89.0 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -45,11 +45,13 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 
 ## Index
 
-### Resources (9)
+### Resources (11)
 
 - [`margince://capabilities`](#capabilities) — What this installation can do
 - [`margince://schema/query`](#query_vocabulary) — Workspace query vocabulary
 - [`margince://schema/record-fields`](#record_fields) — Record write vocabulary
+- [`margince://schema/reports`](#report_vocabulary) — Report plan vocabulary
+- [`margince://schema/report-blocks`](#report_blocks) — Report block grammar
 - [`ui://margince/account-brief.html`](#account_brief_view) — Morning brief
 - [`ui://margince/relationship-map.html`](#relationship_map_view) — Who knows this contact
 - [`ui://margince/commitments.html`](#commitments_view) — Open commitments
@@ -57,7 +59,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (69)
+### Tools (72)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -73,6 +75,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.2 KB |
 | [`check_location_support`](#check_location_support) | Can a card read this device's location | yes | [`ui://margince/geo-probe.html`](#geo_probe_view) | 1.8 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 1.7 KB |
+| [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 2.6 KB |
 | [`create_record`](#create_record) | Create a record |  |  | 3.3 KB |
 | [`create_tag`](#create_tag) | Create a tag |  |  | 1.9 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
@@ -80,6 +83,8 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 2.9 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 2.9 KB |
 | [`describe_query_vocabulary`](#describe_query_vocabulary) | Describe the query vocabulary | yes |  | 2.1 KB |
+| [`describe_report_blocks`](#describe_report_blocks) | Describe the report block grammar | yes |  | 2.0 KB |
+| [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.4 KB |
 | [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  |  | 1.9 KB |
 | [`draft_email`](#draft_email) | Draft an email |  |  | 2.5 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
@@ -119,12 +124,12 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve people and companies | yes |  | 3.6 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
-| [`run_report`](#run_report) | Run a report | yes |  | 6.3 KB |
+| [`run_report`](#run_report) | Run a report | yes |  | 4.4 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
 | [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
-| [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 3.3 KB |
-| [`send_email`](#send_email) | Send an email |  |  | 3.0 KB |
-| [`send_message`](#send_message) | Reply on a channel conversation |  |  | 2.3 KB |
+| [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 3.9 KB |
+| [`send_email`](#send_email) | Send an email |  |  | 3.6 KB |
+| [`send_message`](#send_message) | Reply on a channel conversation |  |  | 2.9 KB |
 | [`update_record`](#update_record) | Update a record |  |  | 3.8 KB |
 | [`update_tag`](#update_tag) | Rename or recolour a tag |  |  | 2.0 KB |
 | [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes | [`ui://margince/pipeline-review.html`](#pipeline_review_view) | 2.3 KB |
@@ -160,6 +165,22 @@ Everything a query plan may say, for you: the record types you can ask about, th
 **Record write vocabulary**
 
 The fields create_record and update_record accept for each record_type: which are required, what shape each takes, and the values the closed ones admit. The two tools name this document instead of carrying it.
+
+### report_vocabulary
+
+`margince://schema/reports` · application/json
+
+**Report plan vocabulary**
+
+What each prebuilt report accepts in a run_report plan: the names its group_by, filters and aggregates admit, what it answers with no plan at all, and what a filter means when its name alone does not say. run_report names this document instead of carrying it.
+
+### report_blocks
+
+`margince://schema/report-blocks` · application/json
+
+**Report block grammar**
+
+The blocks a report may carry: each kind, whether it renders figures, words or both, and the severities a callout may state. compose_analytics_report names this document instead of carrying it.
 
 ### account_brief_view
 
@@ -2412,6 +2433,170 @@ Write a checked import into the workspace, once a person approves. Only from awa
 
 </details>
 
+### compose_analytics_report
+
+**Compose an analytics report**
+
+Render a report whose every figure comes from a saved analytics run. The document carries the STRUCTURE and the WORDS; each number names a run id and a cell inside it, and the server resolves those handles under the reader's own authority. It writes no number of its own and refuses any document that does. A block carrying a literal figure is refused EVEN WHEN a valid handle sits beside it: the literal is what renders, the two can disagree, and no reader could tell the page shows a figure the database never computed. Save a run first — run an analytics query with save, and cite the run id it answers with. Ask analytics_query for one number when a figure is what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the answer is a report somebody reads. describe_report_blocks holds the block kinds and their fields for a caller that wants them before composing. Never put a number in a block — cite the cell that holds it. A block kind outside the grammar is refused BY NAME with the whole set, so a first attempt costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "blocks": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "cells": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "column": {
+                  "type": "string"
+                },
+                "group": {
+                  "type": "array"
+                },
+                "run_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "run_id",
+                "column"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    }
+  },
+  "required": [
+    "blocks"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "blocks": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "blocks"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### create_record
 
 **Create a record**
@@ -3533,6 +3718,238 @@ Answer every still-waiting proposal that one act staged together — the overnig
 **Describe the query vocabulary**
 
 Answer what a query plan may SAY in this workspace: the record types that can be asked about, the fields nameable on each, the operators each field admits, and the one relationship hop a plan may take. It is the vocabulary query_workspace refuses against, so it holds the spelling of a field whose name a plan got wrong. It describes the vocabulary; it returns no records — query_workspace does that. What comes back is narrowed to what you may already read, so it names nothing you could not otherwise reach. Call query_workspace once you know the names. This tool answers the same document as the margince://schema/query resource, for a client that reads tools rather than resources. Take the field and operator names from `targets` verbatim — a plan naming anything outside them is refused rather than approximated, so guessing at a spelling costs a round trip. `grammar` says how the clauses are assembled, and `version` is the value a plan's own `version` member must carry. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {},
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "vocabulary": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "vocabulary"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### describe_report_blocks
+
+**Describe the report block grammar**
+
+Answer what a compose_analytics_report document may CONTAIN: every block kind, whether it renders figures or words, and the severities a callout may state. It describes the grammar; it composes nothing and returns no numbers. It is NOT a prerequisite — an unknown block kind is refused by name with the whole set, so a first attempt costs one refusal. The grammar is the same for every caller, because it is the engine's and not a workspace's. Compose directly when the blocks needed are the obvious ones, and read the refusal when a kind is wrong — it carries the accepted set. This tool answers the same document as the margince://schema/report-blocks resource, for a caller that reads tools rather than resources. A figure is never written into a block, only cited: every number names a saved run and a cell inside it. A block carrying a literal number is refused even beside a valid citation. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {},
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "blocks": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "blocks"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### describe_report_vocabulary
+
+**Describe the report vocabulary**
+
+Answer what a run_report plan may SAY: for each prebuilt report, the names its group_by, filters and aggregates admit, what it answers with no plan at all, and what a name means when the name alone does not say. It is the vocabulary run_report refuses against, so it holds the spelling of a name a plan got wrong. It describes the reports; it runs none and returns no numbers — run_report does that. It is NOT a prerequisite: run_report with `report` alone answers that report's default question and needs nothing from here, so reach for this only when a plan has to name a grouping, a filter or a measure. The names are the same for every caller, because a report's vocabulary is the engine's and not a workspace's. Call run_report directly when the report's default answer is the answer wanted, and read its refusal when a name is wrong — it carries that argument's accepted list. This tool answers the same document as the margince://schema/reports resource, for a caller that reads tools rather than resources. Take the names from a report's `group_by`, `filters` and `aggregates` verbatim — a plan naming anything outside them is refused rather than approximated. `filters` is one object holding both equality predicates and numeric thresholds, so a threshold key goes there and not in a slot of its own. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -11930,7 +12347,7 @@ Answer a question about totals, counts or breakdowns — pipeline by stage, deal
       "type": "array"
     },
     "report": {
-      "description": "The prebuilt report to run. Send `report` alone to get its defaults; the three plan arguments accept ONLY the names listed for that report. activities-by-kind — group_by: direction, kind, project, project_id; filters: direction, kind, project_id; aggregates: (none); default: count as activities grouped by kind; note: project_id admits exactly the activities filed under that project (an activity_link row naming it); an activity filed nowhere, or under another project, is excluded. deals-by-stage — group_by: currency, partner_org_id, pipeline_id, stage_id, status, win_probability; filters: currency, organization_id, owner_id, partner_org_id, partner_sourced, pipeline_id, project_id, stalled, status; aggregates: amount_minor, weighted_amount_minor; default: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast — group_by: currency, forecast_category, owner_id, partner_org_id, pipeline_id, stage_id, win_probability; filters: currency, forecast_category, owner_id, partner_org_id, pipeline_id, project_id, stage_id; aggregates: amount_minor, weighted_amount_minor; default: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. open-deals-per-company — group_by: currency, organization_id, owner_id; filters: currency, owner_id, pipeline_id, project_id; aggregates: amount_minor; default: count as open_deals grouped by organization_id. project-commitments — group_by: key, name, organization_id, owner_id, phase, project_id; filters: organization_id, owner_id, phase; aggregates: open_commitments, overdue_commitments; default: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id; note: rows are ordered most overdue first. projects-by-phase — group_by: organization_id, owner_id, phase; filters: organization_id, owner_id, phase; aggregates: open_deal_value_minor, won_deal_value_minor; default: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase; note: deal values are in the installation's base currency; an open deal in another currency counts nothing until it closes. projects-gone-quiet — group_by: key, last_activity_at, name, organization_id, owner_id, phase, project_id, quiet_since; filters: days, organization_id, owner_id, phase; aggregates: (none); default: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since; note: `days` is a whole number of days of silence, default 30; quiet_since is when the silence began. stage-age — group_by: owner_id, pipeline_id, stage_id; filters: owner_id, pipeline_id; aggregates: days_in_stage; default: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss — group_by: currency, organization_id, owner_id, period_month, period_quarter, period_year, pipeline_id, source, status; filters: currency, organization_id, owner_id, period_month, period_quarter, period_year, pipeline_id, project_id, source, status; aggregates: amount_minor; default: count as deals, sum(amount_minor) as amount_minor_sum grouped by status, currency. A `pipeline_id` or `stage_id` used here comes from list_pipelines — no other tool on this surface yields one.",
+      "description": "The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. open-deals-per-company: count as open_deals grouped by organization_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum grouped by status, currency. To narrow one instead, its `group_by`, `filters` and `aggregates` accept ONLY that report's own names, published at margince://schema/reports and answered by describe_report_vocabulary; a name outside them is refused by name, with that argument's accepted list. A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.",
       "enum": [
         "activities-by-kind",
         "deals-by-stage",
@@ -12507,6 +12924,21 @@ Put a mail on the wire to a real recipient, from this workspace, starting a new 
       },
       "type": "array"
     },
+    "communication_context": {
+      "description": "What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing.",
+      "enum": [
+        "reply_to_inbound",
+        "requested_followup",
+        "precontract_quote",
+        "active_deal_followup",
+        "customer_service",
+        "account_notice",
+        "contract_notice",
+        "invoice_or_payment",
+        "marketing"
+      ],
+      "type": "string"
+    },
     "consent_purpose": {
       "description": "Purpose key the recipients must have granted",
       "type": "string"
@@ -12545,6 +12977,15 @@ Put a mail on the wire to a real recipient, from this workspace, starting a new 
       "maxItems": 25,
       "minItems": 1,
       "type": "array"
+    },
+    "marketing_purpose": {
+      "description": "For marketing, the purpose key naming the topic",
+      "type": "string"
+    },
+    "operator_reason": {
+      "description": "Why this first message is being sent. Recorded; grants nothing.",
+      "maxLength": 500,
+      "type": "string"
     },
     "scheduled_at": {
       "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
@@ -12720,6 +13161,21 @@ Put a mail on the wire to a real recipient, from this workspace, and record it o
       },
       "type": "array"
     },
+    "communication_context": {
+      "description": "What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing.",
+      "enum": [
+        "reply_to_inbound",
+        "requested_followup",
+        "precontract_quote",
+        "active_deal_followup",
+        "customer_service",
+        "account_notice",
+        "contract_notice",
+        "invoice_or_payment",
+        "marketing"
+      ],
+      "type": "string"
+    },
     "consent_purpose": {
       "description": "Purpose key the recipients must have granted",
       "type": "string"
@@ -12727,6 +13183,15 @@ Put a mail on the wire to a real recipient, from this workspace, and record it o
     "idempotency_key": {
       "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
+      "type": "string"
+    },
+    "marketing_purpose": {
+      "description": "For marketing, the purpose key naming the topic",
+      "type": "string"
+    },
+    "operator_reason": {
+      "description": "Why this first message is being sent. Recorded; grants nothing.",
+      "maxLength": 500,
       "type": "string"
     },
     "scheduled_at": {
@@ -12898,6 +13363,21 @@ Reply on a captured chat conversation — the channels this workspace has connec
       "minLength": 1,
       "type": "string"
     },
+    "communication_context": {
+      "description": "What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing.",
+      "enum": [
+        "reply_to_inbound",
+        "requested_followup",
+        "precontract_quote",
+        "active_deal_followup",
+        "customer_service",
+        "account_notice",
+        "contract_notice",
+        "invoice_or_payment",
+        "marketing"
+      ],
+      "type": "string"
+    },
     "consent_purpose": {
       "description": "Purpose key the recipient must have granted",
       "type": "string"
@@ -12905,6 +13385,15 @@ Reply on a captured chat conversation — the channels this workspace has connec
     "idempotency_key": {
       "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
+      "type": "string"
+    },
+    "marketing_purpose": {
+      "description": "For marketing, the purpose key naming the topic",
+      "type": "string"
+    },
+    "operator_reason": {
+      "description": "Why this first message is being sent. Recorded; grants nothing.",
+      "maxLength": 500,
       "type": "string"
     }
   },

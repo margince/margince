@@ -1,10 +1,7 @@
-/* The company's mark and what can be done to it: the mark itself, then the
-   sentence and the verbs beside it. A row rather than a stack, because the mark
-   is the subject of the words next to it. */
+/* The company's logo and what can be done to it. A wide preview makes the
+   actual stored wordmark inspectable; a row-sized avatar made a healthy wide
+   logo look absent because its lettering was squeezed into a few pixels. */
 .company-mark {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
   padding-bottom: var(--space-4);
 }
 
@@ -14,6 +11,27 @@
   gap: var(--space-2);
   min-width: 0;
   flex: 1;
+}
+
+.company-logo-preview {
+  width: min(100%, 360px);
+  height: 112px;
+  box-sizing: border-box;
+  padding: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgCard);
+}
+
+.company-logo-preview .company-logo {
+  width: 100%;
+  height: 100%;
+}
+
+.company-logo-preview-empty {
+  width: 80px;
+  height: 80px;
+  padding: var(--space-3);
 }
 
 /* The two verbs sit on one line and wrap together on a narrow column. */

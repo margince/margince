@@ -186,6 +186,7 @@ export const en = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
+  "shell.poweredByPrefix": "Powered by",
   "shell.searchEverything": "Search everything…",
   "shell.breadcrumbAria": "Breadcrumb",
   "shell.license.none": "No license",
@@ -1583,6 +1584,7 @@ export const en = {
   "email.detail.from": "From",
   "email.detail.to": "To",
   "email.detail.cc": "Cc",
+  "email.detail.when": "Sent",
   "email.detail.bccWithheld":
     "Some recipients were blind-copied and are not shown to you",
   "compose.audienceWorkspace": "Everyone in the organization",
@@ -1639,6 +1641,7 @@ export const en = {
   "co.people.band.noWayInWhy":
     "Everyone here was written to and nobody replied",
   "co.people.band.showAnswered": "Show who answered",
+  "co.people.band.showWaiting": "Show who is waiting",
   "co.people.band.committee": "Buying team",
   "co.people.band.missing": "No {role}",
   "co.people.band.committeeComplete": "Champion and economic buyer named",
@@ -1678,6 +1681,7 @@ export const en = {
   "co.people.map.account": "Account",
   "co.people.map.missing": "{role} missing",
   "co.people.map.awaiting": "awaiting reply",
+  "co.people.map.owed": "reply owed",
   "co.people.map.replied": "they replied",
   "co.people.map.never": "never written to",
   "co.people.map.onDeal": "on the deal",
@@ -1715,6 +1719,7 @@ export const en = {
   "co.people.board.confirm": "Confirm",
   "co.people.board.confirming": "Confirming",
   "co.people.board.change": "Change role",
+  "co.reach.waiting": "Needs reply",
   "co.reach.answered": "Answered",
   "co.reach.silent": "No reply",
   "co.reach.untried": "Not approached",
@@ -2539,6 +2544,7 @@ export const en = {
   "teamweekly.movement.title": "What the week did",
   "teamweekly.movement.won": "Won",
   "teamweekly.movement.lost": "Lost",
+  "teamweekly.movement.moved": "Advanced",
   "teamweekly.movement.meetings": "Meetings held",
   "teamweekly.movement.leads": "Leads routed",
   "teamweekly.coach.title": "Coach this week",
@@ -2601,6 +2607,7 @@ export const en = {
   "home.weekly.queueWorked": "Morning queue",
   "home.weekly.actedDismissed": "{acted} acted · {dismissed} dismissed",
   "home.weekly.sincePrior": "{delta} vs last week",
+  "home.weekly.wonVsPrior": "{value} · {delta} vs prior week",
   "home.weekly.leadsAnswered": "Leads answered in time",
   "home.weekly.ofRouted": "{answered} of {routed}",
   "home.weekly.planCommitmentsKept": "Plan commitments kept",
@@ -6329,18 +6336,18 @@ export const en = {
   "settings.companyTrust":
     "Confirmed knowledge only — website text never becomes instructions.",
   "settings.companyConfirmed": "confirmed statements",
-  "settings.companyMark": "Company mark",
+  "settings.companyMark": "Company logo",
   "settings.companyMarkPresent":
-    "Shown wherever this company appears, including the top of the sidebar.",
+    "Shown here and as the main brand at the top of the sidebar.",
   "settings.companyMarkNone":
-    "No mark yet, so the initials stand in. A website read fills this in, or add one here.",
-  "settings.companyMarkAdd": "Add a mark",
+    "No logo yet, so the initials stand in. A website read can fill this in, or add one here.",
+  "settings.companyMarkAdd": "Add a logo",
   "settings.companyMarkReplace": "Replace",
   "settings.companyMarkRemove": "Remove",
-  "settings.companyMarkPick": "Company mark",
+  "settings.companyMarkPick": "Company logo",
   "settings.companyMarkHint":
-    "PNG, JPEG, GIF, WebP, ICO or SVG. It is squared and resized on upload, and a mark you choose stays until you remove it.",
-  "settings.companyMarkEmpty": "Drop an image here, or choose a file",
+    "Best results: SVG or a transparent PNG around 800 × 240 px (up to 4:1), under 5 MB. JPEG, GIF, WebP and ICO also work. Your logo keeps its proportions.",
+  "settings.companyMarkEmpty": "Drop your logo here, or choose a file",
   "settings.companyWebsite": "Public company website",
   "settings.companyWebsiteHint":
     "The public site every website read starts from.",
@@ -7939,10 +7946,22 @@ export const en = {
   "worklist.band.build_pipeline": "Build pipeline",
   "worklist.band.keep_momentum": "Keep momentum",
   "worklist.band.review": "Review",
+  // A band holding nothing, said rather than left out. Each says what is
+  // absent, because "nothing here" four times over tells a reader less than
+  // one line naming what they are clear of.
+  "worklist.bandClear.now": "Nothing needs you today.",
+  "worklist.bandClear.build_pipeline": "No new pipeline work waiting.",
+  "worklist.bandClear.keep_momentum": "Nothing agreed is drifting.",
+  "worklist.bandClear.review": "Nothing to review.",
   "worklist.disposition.verb.snooze": "Later",
+  "worklist.disposition.snoozeFor": "For how long",
+  "worklist.disposition.snoozeDays_one": "{value} day",
+  "worklist.disposition.snoozeDays_other": "{value} days",
   "worklist.disposition.verb.not_mine": "Not mine",
   "worklist.disposition.verb.not_sales": "Not a customer",
   "worklist.disposition.done.snooze": "Back on your list tomorrow.",
+  "worklist.disposition.doneSnooze_one": "Back on your list tomorrow.",
+  "worklist.disposition.doneSnooze_other": "Back on your list in {value} days.",
   "worklist.disposition.done.not_mine":
     "Off your list. Whoever owns it still sees it.",
   "worklist.disposition.done.not_sales": "Off everyone's list.",
@@ -8010,6 +8029,9 @@ export const en = {
   "worklist.hidden.unlinked": "Attached to no record",
   "worklist.hidden.unlinked.detail":
     "Usually not sales. Sometimes a customer nobody managed to file.",
+  "worklist.hidden.colleagues": "From one of our own domains",
+  "worklist.hidden.colleagues.detail":
+    "A colleague, not a customer. A mistyped domain hides a real one.",
   "worklist.hidden.notSales": "Judged not sales work",
   "worklist.hidden.notSales.detail":
     "Hidden from the whole organization, and it does not lift.",
@@ -8066,6 +8088,7 @@ export const en = {
   "worklist.because.response_due_soon.value": "reply due by {value}",
   "worklist.because.unassigned": "nobody owns it",
   "worklist.because.stale": "waiting a long time",
+  "worklist.because.no_reply_history": "no reply history",
   "worklist.above.pin": "Above the next because you pinned it.",
   "worklist.above.level":
     "Above the next because it is a more pressing kind of work.",
@@ -8155,6 +8178,8 @@ export const en = {
   "worklist.verb.draft_email": "Open to write",
   "worklist.verb.draft_email_now": "Draft the email",
   "worklist.deal.closes": "closes {date}",
+  "worklist.when.starts": "starts {when}",
+  "worklist.when.due": "due {when}",
   "worklist.batch.system_incident": "{cause} failed {count} times",
   "worklist.batch.unnamedCause": "Something",
 

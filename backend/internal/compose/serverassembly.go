@@ -12,9 +12,11 @@ package compose
 // layers on top of these defaults.
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
@@ -80,7 +82,20 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// including the human an agent acts on behalf of — and that resolution
 		// must be the same one the audit log records, so it is injected rather
 		// than re-derived here.
-		WithSenderName(identity.NewServiceFor(InstallationDB(pool)))
+		WithSenderName(identity.NewServiceFor(InstallationDB(pool))).
+		// Which domains are our own, for the waiting queue's colleague rule.
+		// capture owns workspace_email_domain and the rule for which entries
+		// count as vouched-for, so the edge is injected rather than restated.
+		WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))})
+}
+
+// ownDomainReader adapts capture's own-domain store to the seam the waiting
+// queue takes. It borrows the caller's transaction so one read's strict and
+// relaxed counts see a single snapshot of the domains.
+type ownDomainReader struct{ store *capture.OwnDomainStore }
+
+func (o ownDomainReader) Domains(ctx context.Context, tx pgx.Tx) ([]string, error) {
+	return o.store.ColleagueDomainsTx(ctx, tx)
 }
 
 // NewCollectionsStore is the ONE spelling of "the collections store with

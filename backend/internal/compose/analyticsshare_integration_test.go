@@ -503,3 +503,52 @@ func TestAnUnpricedDealExportsAnEmptyCellRatherThanAZero(t *testing.T) {
 		t.Errorf("an unpriced deal exported a zero amount:\n%s", body)
 	}
 }
+
+func TestASeatThatCanIssueAShareCanCloseIt(t *testing.T) {
+	e := setupForecast(t)
+	// The role a real installation seeds, read from the policy defaults rather
+	// than invented here. The first version of this file built a principal with
+	// Delete: true and passed — against an authority no seat in the product
+	// holds, because the forecast object is seeded create+read and nothing
+	// grants delete. Revoke was gated on that verb, so every share was
+	// permanent and no test noticed.
+	seat := ids.NewV7()
+	e.seedSeatHolding(t, seat, "issuer-real@forecast.test", "share_issuer_real")
+	ctx := principal.WithCorrelationID(
+		principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat,
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				// EXACTLY the seeded forecast posture: create and read, no
+				// delete. Spelled out so a reader can see that the absence is
+				// the point of the test.
+				"forecast":              {Create: true, Read: true},
+				"deal":                  {Read: true},
+				"installation_settings": {Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+
+	share, token := e.issue(ctx, t, NewShare{
+		Kind: shareKindLive, Target: "forecast",
+		Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace},
+	})
+
+	store := forecasting.NewStore(InstallationDB(e.Pool))
+	if err := store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		return e.shareStore(time.Now).Revoke(ctx, tx, share.ID)
+	}); err != nil {
+		t.Fatalf("the seat that issued this share cannot close it: %v — a link nobody can revoke is permanent", err)
+	}
+
+	// And it actually stopped serving, rather than the call merely succeeding.
+	err := store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := e.shareStore(time.Now).Resolve(ctx, tx, token)
+		return err
+	})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("a revoked share answered %v; it must stop serving", err)
+	}
+}

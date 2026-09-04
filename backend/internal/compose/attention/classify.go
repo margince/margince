@@ -49,6 +49,13 @@ const sourceAtRisk = "deal_at_risk"
 // subjectDeal is the subject type a deal-shaped row names.
 const subjectDeal = "deal"
 
+// subjectPerson is the subject type a person-shaped row names.
+//
+// A constant for the reason sourceDecay is one: the suppressor pairing the
+// decay lane against a waiting row matches on it, and a misspelt literal there
+// fails silently — it matches nothing, drops nothing, and reads green.
+const subjectPerson = "person"
+
 // classifyDay turns the assembled lanes into ranked candidates.
 //
 // Order of appearance does not matter — rankAll decides the order — so the lanes
@@ -218,20 +225,6 @@ func classifyDSR(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 // because there the silence is the problem rather than a closed chapter.
 const waitingStaleDays = 14
 
-// waitingDaysCeiling bounds what age contributes to the ORDER.
-//
-// Age breaks ties between rows the bands could not separate; it does not earn
-// precedence on its own. Uncapped it does exactly that — every additional day
-// of silence outranks every newer wait forever, so the oldest thread in the
-// workspace leads the page permanently and the queue becomes an archive sorted
-// by how long it has been ignored. That is the live page's own defect: eight
-// half-year-old threads holding the top of a working rep's day.
-//
-// Past the ceiling all waits tie on age and the next tie-break decides, which
-// is the honest answer — at six months versus seven, age has stopped saying
-// anything about what to do first.
-const waitingDaysCeiling = 30
-
 // classifyWaiting: somebody wrote and nobody answered.
 //
 // Level 1, the top band below a pin, and the reason is the concept's own: a
@@ -254,12 +247,30 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	if stale {
 		level = levelRoutine
 	}
+	// Nobody here has written on this thread, and no money is on it either.
+	//
+	// DEMOTED, never dropped. The evidence is thread identity, which comes from
+	// the sender's reply headers: a client that strips them gives every message
+	// its own thread, and this reads as "we never spoke" about a conversation
+	// three replies deep. Hiding on that would lose a live customer with nothing
+	// on the page to say so — the one failure this queue must not have — so the
+	// cost of being wrong is a scroll instead.
+	//
+	// Money outranks it, exactly as it does for staleness: an open deal on the
+	// thread is a stronger claim than any header the sender chose to send.
+	unproven := !waiting.Engaged && !waiting.HasOpenDeal
+	if unproven {
+		level = levelRoutine
+	}
 	because := []crmcontracts.WorklistReason{
 		reason("buyer_wrote_last", nil),
 		reason("waiting_days", daysValue(days)),
 	}
 	if stale {
 		because = append(because, reason("stale", nil))
+	}
+	if unproven {
+		because = append(because, reason("no_reply_history", nil))
 	}
 	row := crmcontracts.WorklistItem{
 		Id:          waiting.ActivityID.String(),
@@ -308,20 +319,20 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	// bounded one for the order. A rep reading "waiting 180 days" is being told
 	// something true; the queue placing that row above everything for the rest
 	// of its life is not.
-	ordering := days
-	if ordering > waitingDaysCeiling {
-		ordering = waitingDaysCeiling
-	}
 	return ranked{
 		item:        row,
 		waitingDays: days,
-		waitingRank: ordering,
+		waitingRank: orderingAge(days),
 		occurredAt:  waiting.Since,
 		// Who owes the reply, so the scope filters can judge this row the way
 		// they judge a deal-bearing one. A wait carries no deal on the wire, and
 		// without this it is a row the filters cannot place: a named owner's
 		// queue dropped every one of them.
 		owner: waiting.OwnerID,
+		// And WHO it is about, which the subject above may have given to a deal.
+		// The decay suppressor reads this rather than the subject, so a contact
+		// whose wait is filed under a deal is still recognised as answered.
+		person: waiting.PersonID,
 	}
 }
 
@@ -432,55 +443,4 @@ func classifySystem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	}
 	row := base(item, levelBlocking, "system", consequence)
 	return ranked{item: row, occurredAt: occurredOf(item, asOf)}
-}
-
-// stampDeadline marks an item whose date the READER owes.
-//
-// The flag is what tells a real deadline from a staged proposal's expiry: the
-// producers whose date is a deadline resolve it here, and the ones whose date
-// is a lapse moment leave it unset, so the header can count work due without
-// counting proposals that merely go stale.
-func stampDeadline(row *crmcontracts.WorklistItem, due *time.Time, asOf time.Time) {
-	if due == nil {
-		return
-	}
-	past := overdueAt(due, asOf)
-	row.Overdue = &past
-}
-
-func reason(kind crmcontracts.WorklistReasonKind, value *crmcontracts.WorklistValue) crmcontracts.WorklistReason {
-	return crmcontracts.WorklistReason{Kind: kind, Value: value}
-}
-
-func deadlineOf(due *time.Time) time.Time {
-	if due == nil {
-		return time.Time{}
-	}
-	return *due
-}
-
-// occurredOf answers when the reported thing happened, falling back to the read
-// instant so a row with no timestamp sorts as "now" rather than as 1 January
-// year one — which would put every undated row at the head of its level.
-func occurredOf(item crmcontracts.AttentionItem, asOf time.Time) time.Time {
-	if item.OccurredAt != nil {
-		return *item.OccurredAt
-	}
-	return asOf
-}
-
-// quietDaysOf reads the idle count the risk and decay lanes measure.
-//
-// From the TYPED field, not parsed out of the supporting sentence. It used to
-// read `detail` a digit at a time and answer zero for anything else, which made
-// the ordering depend on a display string: a lane that made its sentence
-// friendlier — "quiet for 90 days" instead of "90" — would have dropped every
-// such row to the bottom of the queue, and nothing would have failed.
-//
-// A lane that measures no idle time sends none, and zero is what that means.
-func quietDaysOf(item crmcontracts.AttentionItem) int {
-	if item.QuietDays == nil {
-		return 0
-	}
-	return *item.QuietDays
 }

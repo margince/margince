@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -170,8 +171,33 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// passport could not decide in the app.
 	agents.RegisterApprovalTools(registry, approvalQueue(approvalsSvc))
 	agents.RegisterReportTool(registry, nativeOnlyReportRunner(sorMode, reportToolRunner(newReportEngine(pool))), reportToolCatalog())
+	// The vocabulary that plan is written in, as a TOOL and not only as the
+	// margince://schema/reports resource — same reason describe_query_vocabulary
+	// exists next to query_workspace, and one reason more: the Surface-B runner
+	// is offered no resource read at all, so for a scheduled agent this is the
+	// ONLY route to the names run_report refuses against.
+	//
+	// It takes the SAME overlay guard run_report does, and the query
+	// vocabulary's comment says why: a vocabulary looks answerable anywhere, and
+	// what decides it is not whether the names are true but whether the verb
+	// they describe can be called. Here it cannot.
+	agents.RegisterReportVocabularyTool(registry,
+		nativeOnlyReportVocabularyReader{mode: sorMode, inner: agents.NewReportVocabularyResource(reportToolCatalog())})
 	// The forecast, read through the same assembler the HTTP surface uses, so
 	// the two transports cannot disagree about what a quarter contains.
+	// A report whose every figure came from a saved run, rendered through the
+	// SAME validator and renderer POST /analytics/reports/render calls. The
+	// floor is DefaultFloor on both paths: a figure a person may not see is one
+	// a model asking on their behalf may not see either.
+	agents.RegisterAnalyticsReportTool(registry,
+		analyticsReportComposer(pool, analyticsquery.DefaultFloor))
+	// The grammar that document is written in, as a TOOL and not only as the
+	// margince://schema/report-blocks resource — same reason
+	// describe_report_vocabulary exists beside run_report: the Surface-B runner
+	// is offered no resource step, so for a scheduled agent this is the only
+	// route to the kinds compose_analytics_report refuses against.
+	agents.RegisterReportBlocksTool(registry,
+		agents.NewReportBlocksResource(reportBlockGrammar()))
 	agents.RegisterForecastTool(registry, forecastToolReader(pool))
 	agents.RegisterMovementTool(registry, movementToolReader(pool))
 	agents.RegisterAssuranceTool(registry, assuranceToolReader(pool))

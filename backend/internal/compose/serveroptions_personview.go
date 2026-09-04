@@ -13,7 +13,9 @@ package compose
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/leaddraft"
 	"github.com/margince/margince/backend/internal/compose/persondraft"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
@@ -35,5 +37,32 @@ func WithPersonDraft(brain completer) Option {
 			WithEnvelope(draftEnvelope(pool, s.log)).
 			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
 		s.personDraftHandlers = persondraft.NewHandlers(svc, s.sorDispatch.isOverlay)
+	}
+}
+
+// WithLeadDraft binds the lane that writes an email to one lead.
+//
+// A separate option from WithPersonDraft, and deliberately so: they are two
+// endpoints on two record types, and a deployment lighting up one has said
+// nothing about the other. What they share is the WRITER — the same
+// persondraft.Write, prompt, voice floor and deterministic fallback behind
+// both — which is the part that must not be duplicated, and is not.
+//
+// Without it the endpoint still answers, from the deterministic floor: a rep
+// who pressed "Draft with AI" on a lead gets a short opener to edit rather
+// than a refusal.
+//
+// The pool it takes is for READS only — the sender's own voice profile and the
+// identity behind the envelope. Drafting still writes nothing.
+func WithLeadDraft(brain completer) Option {
+	return func(s *Server, pool *pgxpool.Pool) {
+		svc := leaddraft.NewService(
+			s.peopleStore,
+			leadCorrespondence{activities.NewStore(InstallationDB(pool))},
+			brain,
+		).
+			WithEnvelope(draftEnvelope(pool, s.log)).
+			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
+		s.leadDraftHandlers = leaddraft.NewHandlers(svc, s.sorDispatch.isOverlay)
 	}
 }

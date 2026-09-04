@@ -198,3 +198,87 @@ func TestAReasonAtTheBoundIsAccepted(t *testing.T) {
 		t.Errorf("a reason of exactly %d characters was refused: %v", maxOperatorReasonRunes, err)
 	}
 }
+
+// The non-HTTP transports run the SAME refusals.
+//
+// The MCP surface cannot reach the generated request types, so it needs its own
+// entry point — and an entry point is where a second, laxer validator grows. A
+// claim an agent may not make over HTTP must not become makeable by choosing
+// the tool surface, so both doors are asserted against the same vocabulary
+// rather than against a list written twice.
+func TestANonHTTPCallerCannotClaimAControllerCategory(t *testing.T) {
+	for _, c := range commsauthz.Categories() {
+		if !c.ServesTheSubject() {
+			continue
+		}
+		claim := SendContextInput{Context: string(c)}
+		if _, err := ApplyContext(SendEmailInput{}, claim); err == nil {
+			t.Errorf("the mail tool accepted %q, which is reserved for controller mail", c)
+		}
+		if _, err := ApplyChannelContext(SendMessageInput{}, claim); err == nil {
+			t.Errorf("the channel tool accepted %q, which is reserved for controller mail", c)
+		}
+	}
+}
+
+// And an unknown category, for the same reason it is refused over HTTP: a claim
+// nothing reads is worse than a refusal.
+func TestANonHTTPCallerCannotClaimAnUnknownCategory(t *testing.T) {
+	claim := SendContextInput{Context: "transactional"}
+	if _, err := ApplyContext(SendEmailInput{}, claim); err == nil {
+		t.Error("the mail tool accepted a category that does not exist")
+	}
+	if _, err := ApplyChannelContext(SendMessageInput{}, claim); err == nil {
+		t.Error("the channel tool accepted a category that does not exist")
+	}
+}
+
+// An ordinary claim reaches the input on both doors, or the refusals above
+// would be indistinguishable from a surface that drops everything.
+func TestANonHTTPClaimReachesBothInputs(t *testing.T) {
+	claim := SendContextInput{
+		Context:          string(commsauthz.CategoryActiveDealFollowup),
+		MarketingPurpose: "newsletter",
+		OperatorReason:   "they asked at the fair",
+		Evidence:         commsauthz.Evidence{DealID: ids.NewV7()},
+	}
+	mail, err := ApplyContext(SendEmailInput{Subject: "Hello"}, claim)
+	if err != nil {
+		t.Fatalf("mail: %v", err)
+	}
+	if mail.Context != commsauthz.CategoryActiveDealFollowup || mail.MarketingPurpose != "newsletter" {
+		t.Errorf("the claim did not reach the mail input: %+v", mail)
+	}
+	if mail.Evidence.DealID != claim.Evidence.DealID {
+		t.Error("named evidence did not reach the mail input")
+	}
+	if mail.Subject != "Hello" {
+		t.Error("ApplyContext overwrote a field it does not own")
+	}
+
+	channel, err := ApplyChannelContext(SendMessageInput{Body: "Hi"}, claim)
+	if err != nil {
+		t.Fatalf("channel: %v", err)
+	}
+	if channel.Context != commsauthz.CategoryActiveDealFollowup {
+		t.Errorf("the claim did not reach the channel input: %+v", channel)
+	}
+	if channel.Evidence.DealID != claim.Evidence.DealID {
+		t.Error("named evidence did not reach the channel input")
+	}
+	if channel.Body != "Hi" {
+		t.Error("ApplyChannelContext overwrote a field it does not own")
+	}
+}
+
+// An overlong operator reason is refused on these doors too. The bound lives in
+// one decoder, and this is what proves both entry points reach it.
+func TestANonHTTPOperatorReasonIsBounded(t *testing.T) {
+	claim := SendContextInput{OperatorReason: strings.Repeat("x", maxOperatorReasonRunes+1)}
+	if _, err := ApplyContext(SendEmailInput{}, claim); err == nil {
+		t.Error("the mail tool accepted an unbounded operator reason")
+	}
+	if _, err := ApplyChannelContext(SendMessageInput{}, claim); err == nil {
+		t.Error("the channel tool accepted an unbounded operator reason")
+	}
+}

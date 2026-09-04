@@ -51,7 +51,12 @@ type Message struct {
 	// It implies machineTouched and says something narrower: this message names
 	// an EVENT, so its recipients are attendees rather than people the workspace
 	// corresponded with.
-	calendarNotice  bool
+	calendarNotice bool
+	// hasCalendarPart is the raw evidence calendarNotice is derived from: this
+	// message carried a text/calendar payload. Kept in its own right because
+	// calendarNotice answers only the OUTBOUND contact-minting question, and an
+	// inbound invitation is a fact about the message either way.
+	hasCalendarPart bool
 	listUnsubscribe bool // an RFC 2369 List-Unsubscribe header — transactional-gate corroboration
 	sentByOwner     bool // the PROVIDER attested the owner sent this — set by AttestSentByOwner, never parsed
 	// participants are everyone on To, Cc and Bcc who is neither the mailbox
@@ -168,6 +173,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		autoReply:        autoReply,
 		machineTouched:   machineTouched,
 		calendarNotice:   calendarNotice,
+		hasCalendarPart:  hasCalendarPart,
 		listUnsubscribe:  strings.TrimSpace(header.Get("List-Unsubscribe")) != "",
 		participants:     otherParties(toList, ccList, bccList, ownerLower, participantExclusion(counterparty, calendarNotice)),
 		addresses:        allAddresses(fromList, toList, ccList, bccList),
@@ -316,11 +322,12 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 		EntityType: datasource.EntityActivity,
 		NaturalKey: connector.NaturalKey{SourceSystem: connectorName, SourceID: m.messageID},
 		Fields: capture.ActivityFields{
-			Kind:       "email",
-			Subject:    m.subject,
-			Body:       body,
-			OccurredAt: m.occurredAt,
-			Direction:  m.direction,
+			Kind:            "email",
+			Subject:         m.subject,
+			Body:            body,
+			OccurredAt:      m.occurredAt,
+			Direction:       m.direction,
+			HasCalendarPart: m.hasCalendarPart,
 		},
 		Source:       source,
 		CapturedBy:   "connector:" + connectorName,

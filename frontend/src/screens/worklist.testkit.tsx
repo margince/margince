@@ -31,6 +31,42 @@ export function jsonResponse(body: unknown): Response {
   });
 }
 
+// The DAY's own read, told apart from its siblings under the same prefix.
+//
+// `/worklist/hidden` and `/worklist/team` both start with `/worklist`, so a
+// prefix match answered them with the queue body. A Worklist has no `members`,
+// and the team board threw reading it — a throw that failed no test, because it
+// lands in React's render rather than in an assertion. The suite passed and
+// printed an unhandled error nobody owned.
+function isWorklistRead(url: string): boolean {
+  return url.split("?")[0].endsWith("/worklist");
+}
+
+// The quietest board the server can actually send.
+//
+// NOT an empty `members`: the contract says the array is never empty, because a
+// caller on no team is their own single row — "only you" and "nobody" are
+// different answers and the second reads as an outage. A fixture holding zero
+// members would model a response production does not produce.
+const QUIET_BOARD = {
+  as_of: "2026-08-31T09:00:00Z",
+  members: [
+    {
+      user_id: "00000000-0000-7000-8000-000000000001",
+      display_name: "The reader",
+      counts: { waiting: 0, at_risk: 0, overdue: 0 },
+    },
+  ],
+  unassigned: { waiting: 0, at_risk: 0, overdue: 0 },
+  truncated: false,
+};
+
+// The board's own read, so it is answered with a board rather than the
+// catch-all. A test that wants rows on it stubs fetch itself.
+function isTeamBoardRead(url: string): boolean {
+  return url.split("?")[0].endsWith("/worklist/team");
+}
+
 /**
  * The queue, plus the one approval a decision row fetches whole. A row sends a
  * sentence; deciding needs the payload, the stager and the evidence, so the row
@@ -41,11 +77,14 @@ export function stub(day: Worklist, approval?: unknown) {
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input instanceof Request ? input.url : input);
-      if (url.includes("/worklist")) {
+      if (isWorklistRead(url)) {
         return jsonResponse(day);
       }
       if (approval && /\/approvals\/[^/]+$/.test(url.split("?")[0])) {
         return jsonResponse(approval);
+      }
+      if (isTeamBoardRead(url)) {
+        return jsonResponse(QUIET_BOARD);
       }
       return jsonResponse({ data: [] });
     }),
@@ -65,7 +104,10 @@ export function stubWalk(pages: readonly Worklist[]) {
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input instanceof Request ? input.url : input);
-      if (!url.includes("/worklist")) {
+      if (isTeamBoardRead(url)) {
+        return jsonResponse(QUIET_BOARD);
+      }
+      if (!isWorklistRead(url)) {
         return jsonResponse({ data: [] });
       }
       const cursor = new URL(url, "http://localhost").searchParams.get(

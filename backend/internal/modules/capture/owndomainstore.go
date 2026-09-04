@@ -295,3 +295,32 @@ func ValidOwnDomain(raw string) (string, error) {
 	}
 	return ascii, nil
 }
+
+// ColleagueDomainsTx is the vouched-for own-domain set, read inside a
+// transaction the caller already holds.
+//
+// It exists beside Colleagues rather than replacing it because the two differ
+// in exactly the way that matters to a caller comparing several reads: this one
+// borrows the caller's transaction, so a set of counts meant to differ by one
+// rule sees ONE snapshot of the domains. Colleagues opens its own, which is
+// right for a single question asked once.
+//
+// Gated as an activity read, not a person read. The caller is judging
+// correspondence — which messages are a colleague's — and the grant that let
+// them read the message is the grant that answers it. Requiring person:read
+// would refuse a reader who may see the mail but not the contact, which is a
+// narrowing that has nothing to do with the question.
+//
+// Returns the normalized domains rather than the set, because the caller tests
+// them in SQL: a predicate cannot run before a scan cap, and a colleague rule
+// applied after one lets internal threads fill the scan.
+func (s *OwnDomainStore) ColleagueDomainsTx(ctx context.Context, tx pgx.Tx) ([]string, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	own, err := trustedOwnDomainsTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	return own.Domains(), nil
+}

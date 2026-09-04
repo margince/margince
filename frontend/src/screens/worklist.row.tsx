@@ -27,6 +27,7 @@ import {
   phrasedReasons,
   reasonText,
   rowHref,
+  whenText,
 } from "./worklist.copy";
 import { DispositionVerbs } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
@@ -94,6 +95,10 @@ export function WorklistRow({
   const title = itemTitle(item, t, locale);
   const facts = dealFactsText(item, t, locale, zone);
   const sample = namedMembers(item);
+  // The clock this row is racing. A meeting said "starting shortly" whether it
+  // began in four minutes or in fifty, and a task said "Overdue" without saying
+  // by how long — on the two rows whose whole claim is a moment.
+  const when = whenText(item, t, locale, zone, new Date());
   // The badged reasons are drawn as badges above and left out here, so one
   // meeting does not report the same finding twice in two registers.
   const because = phrasedReasons(item)
@@ -172,16 +177,13 @@ export function WorklistRow({
           // untrusted group is worse than the pile it replaced.
           <p className="t-caption worklist-row-sample">{sample.join(" · ")}</p>
         )}
-        {facts && <p className="t-caption worklist-row-facts">{facts}</p>}
-        {because && <p className="t-caption worklist-row-because">{because}</p>}
-        {/* What it costs to do nothing. The question a queue exists to answer,
-            and the one the lane feed had no field for. */}
-        {consequence && (
-          <p className="t-caption worklist-row-consequence">{consequence}</p>
-        )}
-        {/* Why this row beat the one below it. Absent on the last row, which
-            has nothing below it to beat. */}
-        {above && <p className="t-caption worklist-row-above">{above}</p>}
+        <RowCaptions
+          when={when}
+          facts={facts}
+          because={because}
+          consequence={consequence}
+          above={above}
+        />
       </div>
       {item.batch && onReview ? (
         <BatchVerb onReview={onReview} />
@@ -227,6 +229,52 @@ function RowAnswer({ item }: Readonly<{ item: WorklistItem }>) {
     return <NoticeAcknowledge id={item.id} />;
   }
   return null;
+}
+
+/**
+ * Everything the row says about itself under the title, in the order a reader
+ * needs it.
+ *
+ * When it happens, what it is worth, why it is ranked where it is, what doing
+ * nothing costs, and why it beat the row below. Each is absent when the server
+ * sent nothing for it — a caption drawn empty is a line of furniture the reader
+ * has to look past on every row.
+ *
+ * Together in one component because they are one idea — the row's own account
+ * of itself — and because the row's function had reached the complexity the
+ * linter allows, which is a fair reading of how much a person can hold at once.
+ */
+function RowCaptions({
+  when,
+  facts,
+  because,
+  consequence,
+  above,
+}: Readonly<{
+  when: string | null;
+  facts: string | null;
+  because: string;
+  consequence: string | null;
+  above: string | null;
+}>) {
+  return (
+    <>
+      {/* When it starts, or when it is due. Above the reasons because it is the
+          fact those reasons are ABOUT: "starting shortly" explains a rank, and
+          this says what time. */}
+      {when && <p className="t-caption worklist-row-when">{when}</p>}
+      {facts && <p className="t-caption worklist-row-facts">{facts}</p>}
+      {because && <p className="t-caption worklist-row-because">{because}</p>}
+      {/* What it costs to do nothing. The question a queue exists to answer,
+          and the one the lane feed had no field for. */}
+      {consequence && (
+        <p className="t-caption worklist-row-consequence">{consequence}</p>
+      )}
+      {/* Why this row beat the one below it. Absent on the last row, which has
+          nothing below it to beat. */}
+      {above && <p className="t-caption worklist-row-above">{above}</p>}
+    </>
+  );
 }
 
 /**

@@ -16,17 +16,20 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -86,6 +89,10 @@ func captureInboundThroughRealSink(
 			Kind: "email", Subject: "Angebot", Body: "Anbei.", Direction: connector.DirectionInbound,
 		},
 		ThreadKey: threadKey,
+		// One of the SEAT's own addresses on the message, which is the evidence
+		// the import row is written on: without it the sink stores the activity
+		// but records no per-seat contribution, and nothing opens a question.
+		Addresses: []string{counterparty, "a@authz.test"},
 		Source:    "gmail:" + sourceID, CapturedBy: "connector:gmail",
 	})
 	if err != nil {
@@ -363,4 +370,460 @@ func domainAdmission(t *testing.T, e *integration.Env, domain string) string {
 		t.Fatalf("reading the admission of %s: %v", domain, err)
 	}
 	return admission
+}
+
+// TestAReopenedThreadKeepsSomethingToAskAbout covers the message that reopens a
+// settled thread from a mailbox whose posture opens nothing.
+//
+// The reopen clears first_activity_id so the classifier is not shown the text a
+// previous answer was about. Filling it again used to depend on the NEXT
+// message arriving under a `classified` posture — and a shared mailbox never
+// takes that branch, so the row sat pending with nothing to read: unclaimable
+// once the claim requires a readable message, and before that, claimed and
+// judged on a blank prompt.
+func TestAReopenedThreadKeepsSomethingToAskAbout(t *testing.T) {
+	e := integration.Setup(t)
+	const first = "kunde@partner.example"
+	const stranger = "anwalt@kanzlei.example"
+
+	seedClassifiedGmail(t, e, e.Rep1)
+	seedAttestedOutbound(t, e, "reopen-out-1", first, "reopen-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "reopen-in-1", first, "reopen-t1")
+
+	// The thread is settled as ordinary, recording the sender it read.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			UPDATE capture_thread_verdict
+			   SET status = 'cleared', seen_addresses = ARRAY[$2::text],
+			       resolved_at = now(), next_attempt_at = NULL
+			 WHERE thread_key = $1`, "reopen-t1", first)
+		return err
+	}); err != nil {
+		t.Fatalf("settling the thread: %v", err)
+	}
+
+	// A sender the verdict never read replies on the same thread. That reopens
+	// the question, and this message is what the question is now about.
+	captureInboundThroughRealSink(t, e, e.Rep1, "reopen-in-2", stranger, "reopen-t1")
+
+	var status string
+	var pointer *ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT status, first_activity_id FROM capture_thread_verdict WHERE thread_key = $1`,
+			"reopen-t1").Scan(&status, &pointer)
+	}); err != nil {
+		t.Fatalf("reading the reopened thread: %v", err)
+	}
+	if status != capture.VerdictPending {
+		t.Fatalf("thread status = %q, want pending: an unseen sender must re-open the question", status)
+	}
+	if pointer == nil {
+		t.Fatal("the re-opened thread points at no message, so the classifier would be asked to " +
+			"judge an empty prompt — or, once the claim requires a readable message, never asked at all")
+	}
+	var pointedAt string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT coalesce(counterparty_email, '') FROM activity WHERE id = $1`, *pointer).Scan(&pointedAt)
+	}); err != nil {
+		t.Fatalf("reading the message the re-opened question is about: %v", err)
+	}
+	if pointedAt != stranger {
+		t.Fatalf("the re-opened question is about mail from %q, want %q: the classifier must read the "+
+			"message that caused the re-open, not the one a previous answer already covered",
+			pointedAt, stranger)
+	}
+}
+
+// TestAHeldMailboxIsNotAskedToPublishItsMail is the refusal the posture owes.
+//
+// A `held` mailbox keeps its mail whatever a classifier concludes, so it must
+// never have a confidentiality question opened for it: an `ordinary` answer on
+// that question maps to a workspace audience, which is exactly the publication
+// the posture exists to refuse.
+func TestAHeldMailboxIsNotAskedToPublishItsMail(t *testing.T) {
+	e := integration.Setup(t)
+	const first = "kunde@partner.example"
+	const stranger = "anwalt@kanzlei.example"
+
+	seedClassifiedGmail(t, e, e.Rep1)
+	seedAttestedOutbound(t, e, "held-out-1", first, "held-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "held-in-1", first, "held-t1")
+
+	// The thread is settled, and THEN the seat asks for their mail to be kept.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			UPDATE capture_thread_verdict
+			   SET status = 'cleared', seen_addresses = ARRAY[$2::text],
+			       resolved_at = now(), next_attempt_at = NULL
+			 WHERE thread_key = $1`, "held-t1", first); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(),
+			`UPDATE capture_connection SET mail_posture = 'held' WHERE user_id = $1`, e.Rep1)
+		return err
+	}); err != nil {
+		t.Fatalf("holding the mailbox: %v", err)
+	}
+
+	// A sender the verdict never read replies, which re-opens the question.
+	captureInboundThroughRealSink(t, e, e.Rep1, "held-in-2", stranger, "held-t1")
+
+	// The question, if one stands, must not be answerable: a claim is what
+	// spends an attempt and reaches a model, and a `cleared` answer to this
+	// thread would publish mail the seat asked to keep.
+	store := capture.NewThreadVerdictStore(InstallationDB(e.Pool))
+	claimed, err := store.ClaimDue(e.Admin(), 10)
+	if err != nil {
+		t.Fatalf("claiming due threads: %v", err)
+	}
+	for _, c := range claimed {
+		if c.ThreadKey == "held-t1" {
+			t.Fatal("an `always held` mailbox's thread was claimed for classification, and an " +
+				"`ordinary` answer publishes mail the seat asked to keep whatever a classifier concludes")
+		}
+	}
+}
+
+// seedClassifiedGmail connects a mailbox under the posture that holds its mail
+// until a classifier judges the thread — the only one that opens a question.
+//
+// account_label is what puts the seat's own address in the identity set, which
+// is the evidence an import row is written on: without it the sink stores the
+// activity and records no per-seat contribution at all.
+func seedClassifiedGmail(t *testing.T, e *integration.Env, user ids.UUID) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO capture_connection
+			       (user_id, provider, status, credential_ref, mail_posture, account_label)
+			VALUES ($1, 'gmail', 'connected', 'vault:test', 'classified', 'a@authz.test')
+			ON CONFLICT (user_id, provider)
+			DO UPDATE SET mail_posture = 'classified', archived_at = NULL,
+			              account_label = 'a@authz.test'`, user)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding a classified gmail connection: %v", err)
+	}
+}
+
+// TestAContactTheCeilingRefusedIsAskedAboutByTheSweep closes the hole the cap
+// leaves when the correspondence goes quiet.
+//
+// The ceiling delays a question rather than cancelling it, and the retry rides
+// the NEXT message from that address. A sender who does not write again never
+// triggers one, so the contact stays the mailbox owner's for good — invisible
+// to every colleague, their manager and an admin — with nothing left to put it
+// back in the queue.
+//
+// Driven through the real cap: the refusal has to be the one production
+// produces, not a state the test invented.
+func TestAContactTheCeilingRefusedIsAskedAboutByTheSweep(t *testing.T) {
+	e := integration.Setup(t)
+	const sender = "quiet@partner.example"
+
+	// Fill this domain's share of the ceiling, so the create below finds no
+	// room to ask.
+	for i := 0; i < capture.PendingDeferralDomainCap; i++ {
+		other := fmt.Sprintf("filler%d@partner.example", i)
+		seedAttestedOutbound(t, e, fmt.Sprintf("quiet-fill-out-%d", i), other, fmt.Sprintf("quiet-fill-t%d", i))
+		captureInboundThroughRealSink(t, e, e.Rep1, fmt.Sprintf("quiet-fill-in-%d", i), other, fmt.Sprintf("quiet-fill-t%d", i))
+	}
+
+	seedAttestedOutbound(t, e, "quiet-out-1", sender, "quiet-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "quiet-in-1", sender, "quiet-t1")
+
+	visibility, found := personVisibility(t, e, sender)
+	if !found {
+		t.Fatal("the capture created no person for a corresponded sender")
+	}
+	if visibility != "owner" {
+		t.Fatalf("the new contact is %q, want owner: an unjudged capture is the mailbox owner's", visibility)
+	}
+	if _, queued := openDisposition(t, e, sender); queued {
+		t.Fatal("the ceiling did not refuse the question, so this test is not exercising the " +
+			"case it exists for — the fixture no longer fills the cap")
+	}
+
+	// The sender never writes again. The queue drains, and the sweep is what
+	// notices the contact nobody was ever asked about.
+	runVerdict(t, e, &scriptedVerdictBrain{})
+
+	store := people.NewStore(InstallationDB(e.Pool))
+	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
+	if err := worker.Work(context.Background(), &river.Job[LinkReconcileWorkspaceArgs]{
+		Args: LinkReconcileWorkspaceArgs{Workspace: e.WS},
+	}); err != nil {
+		t.Fatalf("the sweep failed: %v", err)
+	}
+
+	dispositionID, queued := openDisposition(t, e, sender)
+	if !queued {
+		t.Fatal("a contact whose question the ceiling refused was never asked about again — " +
+			"it stays the mailbox owner's for good, which is the defect this sweep exists to close")
+	}
+
+	// And the answer reaches the record: the whole point of asking.
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPerson}}
+	runVerdict(t, e, brain)
+	if got, _ := personVisibility(t, e, sender); got != "workspace" {
+		t.Errorf("after the delayed verdict the contact is %q, want workspace", got)
+	}
+}
+
+// TestTheSweepDoesNotReaskASettledSender holds the other side of the rule.
+//
+// Any terminal answer counts as asked, `advisor` included: re-asking a settled
+// question would put a decided sender back in front of a model, and an advisor
+// whose record is deliberately the owner's would be judged again every night.
+func TestTheSweepDoesNotReaskASettledSender(t *testing.T) {
+	e := integration.Setup(t)
+	const advisor = "berater@kanzlei.example"
+
+	seedAttestedOutbound(t, e, "advisor-sweep-out-1", advisor, "advisor-sweep-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "advisor-sweep-in-1", advisor, "advisor-sweep-t1")
+	dispositionID, queued := openDisposition(t, e, advisor)
+	if !queued {
+		t.Fatal("no question was opened for a corresponded sender")
+	}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindAdvisor}}
+	runVerdict(t, e, brain)
+	if got, _ := personVisibility(t, e, advisor); got != "owner" {
+		t.Fatalf("an advisor's record is %q, want owner", got)
+	}
+
+	before := countDispositions(t, e, advisor)
+	store := people.NewStore(InstallationDB(e.Pool))
+	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
+	if err := worker.Work(context.Background(), &river.Job[LinkReconcileWorkspaceArgs]{
+		Args: LinkReconcileWorkspaceArgs{Workspace: e.WS},
+	}); err != nil {
+		t.Fatalf("the sweep failed: %v", err)
+	}
+	if after := countDispositions(t, e, advisor); after != before {
+		t.Fatalf("the sweep opened %d new question(s) about a settled sender; an advisor whose "+
+			"record is deliberately the owner's would be judged again every night", after-before)
+	}
+}
+
+// countDispositions counts every ledger row for an address, settled or not.
+func countDispositions(t *testing.T, e *integration.Env, email string) int {
+	t.Helper()
+	var n int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT count(*) FROM capture_pending_counterparty WHERE email = $1`, email).Scan(&n)
+	}); err != nil {
+		t.Fatalf("counting dispositions: %v", err)
+	}
+	return n
+}
+
+// TestTheSweepLeavesAContactAHumanKeptPrivate holds the decision a person made.
+//
+// A captured contact somebody has worked on is not retracted when the
+// conversation turns out to be private: people.RetractCaptureOnlyPersonTx
+// refuses to archive one carrying a human audit row, and it stays owner-private.
+// That is a decision, and asking about it again would put it in front of a
+// model whose `person` answer publishes it to the workspace — a transition
+// nothing reverses.
+func TestTheSweepLeavesAContactAHumanKeptPrivate(t *testing.T) {
+	e := integration.Setup(t)
+	const sender = "privat@kunde.example"
+
+	// Fill the domain ceiling so the capture's own question is refused, which
+	// is what puts this contact in the sweep's selector at all.
+	for i := 0; i < capture.PendingDeferralDomainCap; i++ {
+		other := fmt.Sprintf("kept%d@kunde.example", i)
+		seedAttestedOutbound(t, e, fmt.Sprintf("kept-fill-out-%d", i), other, fmt.Sprintf("kept-fill-t%d", i))
+		captureInboundThroughRealSink(t, e, e.Rep1, fmt.Sprintf("kept-fill-in-%d", i), other, fmt.Sprintf("kept-fill-t%d", i))
+	}
+	seedAttestedOutbound(t, e, "kept-out-1", sender, "kept-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "kept-in-1", sender, "kept-t1")
+	if _, queued := openDisposition(t, e, sender); queued {
+		t.Fatal("the ceiling did not refuse the question, so the fixture no longer fills the cap")
+	}
+
+	// Somebody works on the contact: the evidence a human touched it.
+	personID := personIDFor(t, e, sender)
+	seedHumanEdit(t, e, personID)
+
+	runVerdict(t, e, &scriptedVerdictBrain{})
+	store := people.NewStore(InstallationDB(e.Pool))
+	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
+	if err := worker.Work(context.Background(), &river.Job[LinkReconcileWorkspaceArgs]{
+		Args: LinkReconcileWorkspaceArgs{Workspace: e.WS},
+	}); err != nil {
+		t.Fatalf("the sweep failed: %v", err)
+	}
+
+	if _, queued := openDisposition(t, e, sender); queued {
+		t.Fatal("the sweep re-asked about a contact a person had already worked on and kept " +
+			"private; a `person` answer to that question publishes it to the workspace")
+	}
+	if got, _ := personVisibility(t, e, sender); got != "owner" {
+		t.Fatalf("the contact is %q, want owner", got)
+	}
+}
+
+// personIDFor reads the person minted for an address.
+func personIDFor(t *testing.T, e *integration.Env, email string) ids.PersonID {
+	t.Helper()
+	var id ids.PersonID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT person_id FROM person_email WHERE email = $1`, email).Scan(&id)
+	}); err != nil {
+		t.Fatalf("reading the person for %s: %v", email, err)
+	}
+	return id
+}
+
+// TestPublishingACapturedContactLeavesATrace holds the trail on the write that
+// most needs one.
+//
+// A contact stops being one person's and becomes everybody's. "Which contacts
+// were published, when, and on whose authority" is answered from audit_log or
+// it is not answered at all — and until this, the visibility flip was a bare
+// UPDATE while every other write on the record audited and emitted.
+func TestPublishingACapturedContactLeavesATrace(t *testing.T) {
+	e := integration.Setup(t)
+	const sender = "trace@partner.example"
+
+	seedAttestedOutbound(t, e, "trace-out-1", sender, "trace-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "trace-in-1", sender, "trace-t1")
+	personID := personIDFor(t, e, sender)
+	if got, _ := personVisibility(t, e, sender); got != "owner" {
+		t.Fatalf("a fresh capture is %q, want owner", got)
+	}
+	before := countVisibilityAudits(t, e, personID)
+
+	dispositionID, queued := openDisposition(t, e, sender)
+	if !queued {
+		t.Fatal("no question was opened for a corresponded sender")
+	}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPerson}}
+	runVerdict(t, e, brain)
+	if got, _ := personVisibility(t, e, sender); got != "workspace" {
+		t.Fatalf("after a person verdict the contact is %q, want workspace", got)
+	}
+
+	if after := countVisibilityAudits(t, e, personID); after != before+1 {
+		t.Fatalf("publishing the contact wrote %d audit row(s) naming visibility, want 1: "+
+			"nothing records that this contact became visible to the workspace", after-before)
+	}
+	if n := countOutboxFor(t, e, personID); n == 0 {
+		t.Fatal("publishing the contact emitted no event, so nothing downstream learns the " +
+			"record changed hands")
+	}
+}
+
+// countVisibilityAudits counts audit rows on a person naming the visibility
+// column, in either image.
+func countVisibilityAudits(t *testing.T, e *integration.Env, id ids.PersonID) int {
+	t.Helper()
+	var n int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT count(*) FROM audit_log
+			 WHERE entity_type = 'person' AND entity_id = $1
+			   AND (after ? 'visibility' OR before ? 'visibility')`, id.UUID).Scan(&n)
+	}); err != nil {
+		t.Fatalf("counting visibility audits: %v", err)
+	}
+	return n
+}
+
+// countOutboxFor counts the events published about a record.
+func countOutboxFor(t *testing.T, e *integration.Env, id ids.PersonID) int {
+	t.Helper()
+	var n int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT count(*) FROM event_outbox
+			 WHERE envelope->>'type' = 'person.updated'
+			   AND envelope->'entity'->>'id' = $1
+			   AND envelope->'payload'->'changed_fields' ? 'visibility'`,
+			id.UUID.String()).Scan(&n)
+	}); err != nil {
+		t.Fatalf("counting outbox rows: %v", err)
+	}
+	return n
+}
+
+// TestAnOwnerPublishesTheirOwnCapturedContact is the door out of capture
+// privacy for a contact no classifier will ever settle.
+//
+// The ceiling refuses to ask and the correspondence goes quiet, or the answer
+// is `advisor` and the owner disagrees, or they simply know who this is. Until
+// this, the only route out of `owner` was a verdict, so those contacts had none.
+func TestAnOwnerPublishesTheirOwnCapturedContact(t *testing.T) {
+	e := integration.Setup(t)
+	const sender = "eigen@partner.example"
+
+	seedAttestedOutbound(t, e, "own-out-1", sender, "own-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "own-in-1", sender, "own-t1")
+	personID := personIDFor(t, e, sender)
+	if got, _ := personVisibility(t, e, sender); got != "owner" {
+		t.Fatalf("a fresh capture is %q, want owner", got)
+	}
+
+	store := people.NewStore(InstallationDB(e.Pool))
+	if err := store.PromoteOwnCapturedPerson(seatCtx(e, e.Rep1), personID); err != nil {
+		t.Fatalf("the owner publishing their own contact: %v", err)
+	}
+	if got, _ := personVisibility(t, e, sender); got != "workspace" {
+		t.Fatalf("after the owner published it the contact is %q, want workspace", got)
+	}
+	// The trail, on the same terms as a verdict's promotion.
+	if n := countVisibilityAudits(t, e, personID); n != 1 {
+		t.Fatalf("publishing wrote %d audit row(s) naming visibility, want 1", n)
+	}
+}
+
+// TestOnlyTheOwnerPublishesACapturedContact is the security case.
+//
+// Capture privacy is the importing user's, and seniority does not override it:
+// an admin reading a colleague's unpromoted captured contacts is precisely the
+// disclosure the boundary exists to prevent. A promotion that matched on the
+// address rather than on the owner would have published a colleague's contact
+// to anybody who could reach this door.
+func TestOnlyTheOwnerPublishesACapturedContact(t *testing.T) {
+	e := integration.Setup(t)
+	const sender = "fremd@partner.example"
+
+	seedAttestedOutbound(t, e, "other-out-1", sender, "other-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "other-in-1", sender, "other-t1")
+	personID := personIDFor(t, e, sender)
+
+	store := people.NewStore(InstallationDB(e.Pool))
+	for _, seat := range []struct {
+		name string
+		user ids.UUID
+	}{{"a colleague", e.Rep2}, {"an admin", e.AdminUser}} {
+		err := store.PromoteOwnCapturedPerson(seatCtx(e, seat.user), personID)
+		if !errors.Is(err, apperrors.ErrNotFound) {
+			t.Fatalf("%s publishing somebody else's capture-private contact: err = %v, want ErrNotFound — "+
+				"a 403 would confirm the contact exists, which is what the boundary hides", seat.name, err)
+		}
+	}
+	if got, _ := personVisibility(t, e, sender); got != "owner" {
+		t.Fatalf("the contact is %q after two refused attempts, want owner", got)
+	}
+}
+
+// seatCtx is one seat acting as themselves, which is the only principal the
+// capture-privacy door accepts.
+func seatCtx(e *integration.Env, user ids.UUID) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(),
+		UserID: user, SeatType: principal.SeatFull,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"person": {Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
 }

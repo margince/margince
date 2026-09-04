@@ -79,5 +79,11 @@ func (w *confidentialityVerdictWorkspaceWorker) Work(ctx context.Context, job *r
 	if _, err := w.engine.RetireExhausted(wsCtx); err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
+	// And the answers that never reached their messages. After retiring, so a
+	// thread that just became `unsure` has its messages settled in the same
+	// tick rather than waiting for the next one.
+	if _, err := w.engine.FinishSettledThreads(wsCtx); err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
 	return nil
 }

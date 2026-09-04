@@ -155,62 +155,18 @@ func envelopedSpec(spec mcp.ToolSpec) mcp.ToolSpec {
 	return spec
 }
 
-// assertObjectSchemas holds two promises tools/list and tools/call have to
-// keep, at the one door every tool comes through.
+// retryKeyProperty is the advertised member, served in the tools/list catalog.
 //
-// The first is ENCODABILITY. Both schemas are hand-written JSON literals
-// spliced together from constants, and they reach the client by being embedded
-// verbatim into the tools/list response — so ONE misplaced brace does not
-// break one tool, it makes the whole listing unencodable and every tool
-// disappears behind a 500. That is a boot-time defect discovered on a client's
-// first request, which is exactly the wrong end.
+// Keep it short: a client holds this catalogue for a whole session. The runner's
+// listing omits this description and states the rule once in its frame
+// (runner.surfaceSchemaRules), so it is the catalogue that pays for the sentence
+// and not every turn of every run.
 //
-// The second is that both are OBJECT schemas. MCP requires an object input
-// schema, and a declared outputSchema obliges the server to answer with
-// structured content conforming to it — which the dispatcher can only do for
-// an object, because structuredContent is typed as one. A schema written some
-// other way (a $ref, a bare allOf) fails here on purpose: not wrong, but not
-// something the dispatcher has been taught to honour, and failing at boot
-// beats advertising a shape the results miss.
-func assertObjectSchemas(spec mcp.ToolSpec) error {
-	if spec.InputSchema == nil {
-		// The protocol requires one. A tool taking no arguments still declares
-		// `{"type":"object"}`; nil would put a bare null on tools/list.
-		return fmt.Errorf("%s declares no InputSchema; MCP requires every tool to advertise an object input schema", spec.Name)
-	}
-	for _, s := range []struct {
-		field string
-		raw   json.RawMessage
-	}{
-		{field: "InputSchema", raw: spec.InputSchema},
-		// Optional: a tool promising no output shape owes tools/call no
-		// structured content.
-		{field: "OutputSchema", raw: spec.OutputSchema},
-	} {
-		if s.raw == nil {
-			continue
-		}
-		var declared struct {
-			Type string `json:"type"`
-		}
-		if err := json.Unmarshal(s.raw, &declared); err != nil {
-			return fmt.Errorf("%s has an %s that is not valid JSON, which makes the whole tools/list response unencodable: %w",
-				spec.Name, s.field, err)
-		}
-		if declared.Type != "object" {
-			return fmt.Errorf("%s declares %s type %q; this surface serves object schemas only",
-				spec.Name, s.field, declared.Type)
-		}
-	}
-	return nil
-}
-
-// retryKeyProperty is the advertised member. The prose is short on purpose: it
-// is served in the tools/list catalog AND printed into every Surface-B run's
-// system prompt, once per mutating tool, so a sentence here is twenty-eight
-// sentences of every run's context.
+// The SENTENCE is mcp.ReservedIdempotencyKeyRule, not a literal here: the
+// runner's frame states the same rule once for the whole listing, and two
+// hand-written copies of it would drift with nothing failing.
 const retryKeyProperty = `{"type":"string","maxLength":255,` +
-	`"description":"Optional. Same key, same result; a key reused with other arguments is refused."}`
+	`"description":"Optional. ` + mcp.ReservedIdempotencyKeyRule + `"}`
 
 // unitOwned reports whether an extension unit shipped this tool's handler,
 // rather than the core tree. mcp.UnitScopedTool is the one declaration of that
@@ -297,12 +253,15 @@ func spliceRetryKey(inputSchema json.RawMessage) (json.RawMessage, error) {
 	// A schema that COMPOSES cannot be spliced by adding one top-level member: a
 	// closed branch inside `allOf` still rejects the key this surface just
 	// advertised, so a schema-aware client would be told to send an argument its
-	// own validator refuses. No tool here composes today; the one that tries gets
-	// an answer at boot rather than a puzzle at call time.
-	for _, keyword := range []string{"allOf", "anyOf", "oneOf", "$ref"} {
-		if _, composed := shape[keyword]; composed {
-			return nil, fmt.Errorf("its input schema uses `%s`, which this splice cannot reason about", keyword)
-		}
+	// own validator refuses.
+	//
+	// The SAME refusal assertObjectSchemas applies to every served spec, shared
+	// rather than re-typed. It is reachable here too because spliceRetryKey's
+	// own refusals are exercised directly (its doc says why), so this is not
+	// dead: it is the one caller that can arrive without having been through the
+	// registration door.
+	if err := assertNoSchemaComposition("its input schema", "schema", shape); err != nil {
+		return nil, err
 	}
 	if _, taken := properties[idempotencyKeyArg]; taken {
 		// A tool that wrote the member itself would have TWO definitions of it —
@@ -358,6 +317,45 @@ func assertNoRequiredReservedArgument(spec mcp.ToolSpec) error {
 				"sees it — every caller would be refused for omitting what they sent. Name the tool's own "+
 				"argument something else", spec.Name, field)
 		}
+	}
+	return assertNoDeclaredRetryKey(spec)
+}
+
+// assertNoDeclaredRetryKey refuses a tool that declares `idempotency_key` at the
+// ROOT of its own schema, whoever the tool is.
+//
+// spliceRetryKey already refuses it for a MUTATING CORE tool, because two
+// definitions of one member cannot both survive a splice. This is the rest of
+// that rule, and it exists because the argument is not declarable by anyone:
+// splitReserved pops the name from every call before any handler sees it, and
+// refuseUnkeyableCall then refuses it outright on a read-only tool and on an
+// extension unit's tool. So a tool declaring it is advertising an argument it
+// can never receive.
+//
+// It also removes a divergence rather than documenting one. withRetryKey splices
+// iff the tool is mutating AND core; the runner's listing compaction strips the
+// member's description iff the tool is mutating. Those two predicates disagree
+// for an extension's mutating tool, and the disagreement was invisible: the
+// equivalence gate compares the listing against the same compaction, so both
+// sides move together. With no tool able to declare the member, the only root
+// `idempotency_key` anywhere is the one the surface spliced, and there is
+// nothing left for the two predicates to disagree about.
+//
+// `approval_id` stays declarable: several tools name it in their own schemas
+// with their own per-tool meaning, which is why the compaction leaves it alone.
+func assertNoDeclaredRetryKey(spec mcp.ToolSpec) error {
+	var shape struct {
+		Properties map[string]json.RawMessage `json:"properties"`
+	}
+	//nolint:nilerr // the unreadable-schema refusal belongs to assertObjectSchemas, which runs right after this
+	if err := json.Unmarshal(spec.InputSchema, &shape); err != nil {
+		return nil
+	}
+	if _, declared := shape.Properties[idempotencyKeyArg]; declared {
+		return fmt.Errorf("%s declares `%s` at the root of its own schema. The surface owns that "+
+			"argument: it is popped from every call before the tool sees it, and refused outright for a "+
+			"read-only or extension-owned tool — so this advertises an argument the tool can never "+
+			"receive. Name the tool's own argument something else", spec.Name, idempotencyKeyArg)
 	}
 	return nil
 }

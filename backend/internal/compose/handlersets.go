@@ -10,6 +10,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
+	"github.com/margince/margince/backend/internal/compose/leaddraft"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/org360"
 	"github.com/margince/margince/backend/internal/compose/orgbrief"
@@ -87,6 +88,7 @@ type (
 	orgDossierHandlers     = orgdossier.Handlers
 	accountDraftHandlers   = accountdraft.Handlers
 	personDraftHandlers    = persondraft.Handlers
+	leadDraftHandlers      = leaddraft.Handlers
 	financeHandlers        = finance.Handlers
 	aiActivityHandlers     = aiactivity.Handlers
 	noticesHandlers        = notices.Handlers
@@ -142,6 +144,12 @@ func (s *Server) wirePerson360(pool *pgxpool.Pool) {
 	// answers from its deterministic floor rather than 501-ing.
 	s.personDraftHandlers = persondraft.NewHandlers(
 		persondraft.NewService(s.person360Svc, nil).
+			WithEnvelope(draftEnvelope(pool, s.log)), s.sorDispatch.isOverlay)
+	// The lead-side draft, on the same terms: nil lane, so a deployment with no
+	// model answers from persondraft's deterministic floor rather than 501-ing,
+	// and WithLeadDraft binds the api role's lane.
+	s.leadDraftHandlers = leaddraft.NewHandlers(
+		leaddraft.NewService(s.peopleStore, leadCorrespondence{activities.NewStore(InstallationDB(pool))}, nil).
 			WithEnvelope(draftEnvelope(pool, s.log)), s.sorDispatch.isOverlay)
 }
 

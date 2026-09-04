@@ -22,7 +22,6 @@ import (
 	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -92,7 +91,7 @@ func ScheduleAsAgentForTest(
 		principal.WithActor(principal.WithWorkspaceID(ctx, workspace), actor), ids.NewV7())
 	return store.SendOrSchedule(agentCtx, activities.FromActivity(anchor), in,
 		&activities.SendSchedule{At: at, TZ: "Europe/Berlin"},
-		consent.NewGate(consent.NewStore(InstallationDB(pool))),
+		consentGateFor(pool),
 		NewDeliveryStager(pool, inserter), NewScheduleTimer(inserter))
 }
 

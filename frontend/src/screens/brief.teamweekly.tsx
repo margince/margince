@@ -339,6 +339,12 @@ function Movement({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const rows = [
     { key: "teamweekly.movement.won" as const, value: counts.deals_won },
     { key: "teamweekly.movement.lost" as const, value: counts.deals_lost },
+    // ADVANCED sits with the two outcomes above it rather than with the
+    // activity rows below, because it is the same kind of fact: what happened
+    // to the team's deals. Without it a week that moved eleven deals and closed
+    // none read as a week where nothing happened, which is the week most teams
+    // have and the one a lead most needs to see.
+    { key: "teamweekly.movement.moved" as const, value: counts.deals_moved },
     {
       key: "teamweekly.movement.meetings" as const,
       value: counts.meetings_held,
