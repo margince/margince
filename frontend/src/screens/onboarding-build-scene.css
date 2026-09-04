@@ -106,6 +106,7 @@
 .ob-build-ghost-row {
   height: 8px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--borderSubtle);
 }
 /* The first bar reads as a card's title. */

@@ -64,6 +64,7 @@
   width: 40px;
   height: 22px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgElevated);
   /* --borderControl, not --borderSubtle: this boundary is the only thing
    * telling a user the rectangle is a control, and WCAG 1.4.11 asks it for
@@ -84,6 +85,7 @@
   width: 16px;
   height: 16px;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--borderControl);
   transition:
     transform var(--dur-state) var(--ease-in-out),

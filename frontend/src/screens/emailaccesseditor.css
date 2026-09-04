@@ -48,6 +48,7 @@
   padding: 0 var(--space-2);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
+  corner-shape: round;
   line-height: 1.7;
 }
 

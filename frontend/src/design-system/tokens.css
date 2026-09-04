@@ -260,13 +260,22 @@
    * collapses it, exactly as --successText and --textOnAccentControl do. */
   --dangerText: #b91c1c;
 
+  /* ===== Corners =====
+   * One ladder, in fours: 4 / 8 / 12 / 16 / 20, and the pill. Every corner in
+   * the tree reads one of these. A raw px radius is a sixth value nobody chose,
+   * which is how the tree came to answer 3, 5, 6, 9, 10, 11 and 28px at once —
+   * seven corners that were each somebody's judgement of "about right" and
+   * together were a ladder with no rungs. The squircle block at the foot of
+   * this file doubles the ladder under `corner-shape`, so a value here is also
+   * the thing that decides what a smooth corner measures. */
+  --r-xs: 4px;
   --r-sm: 8px;
   /* The one radius for a control a hand operates — button, input, select
      trigger. Between the chip's --r-sm and the pane's --r-md, because a control
      as round as the pane it sits in reads as part of the pane. */
-  --r-control: 10px;
-  --r-md: 14px;
-  --r-lg: 18px; /* the pane */
+  --r-control: 12px;
+  --r-md: 16px;
+  --r-lg: 20px; /* the pane */
   --r-full: 9999px;
 
   /* The height of an interactive control, in its two sizes. A button, a text
@@ -750,5 +759,49 @@
   :root {
     --control-h: 44px;
     --control-h-sm: 36px;
+  }
+}
+
+/* ===== Smooth corners =====
+ *
+ * `corner-shape: squircle` draws a superellipse instead of a quarter-circle:
+ * the same corner without the two points where a circular arc meets the
+ * straight edge. Where an engine has it (CSS Borders and Box Decorations L4),
+ * every box in the tree takes it — declared once, here, rather than at each of
+ * the several hundred call sites that would each have to remember.
+ *
+ * The ladder DOUBLES inside the query. A superellipse of radius R reads about
+ * as round as a circular corner of R/2, so a corner that kept its number would
+ * visibly tighten the day a browser shipped the property. Doubling is what
+ * keeps the change to the corner's quality rather than its size.
+ *
+ * `:where(*)` carries zero specificity on purpose: a pill, a circle or any
+ * other genuinely round thing cancels it with a plain `corner-shape: round`
+ * beside its own `border-radius`, wherever that rule happens to sit. A
+ * superellipse at --r-full is a lozenge and at 50% a squircle tile, and neither
+ * is what an avatar or a status pill means. --r-full is therefore NOT doubled:
+ * it is already larger than any box it lands on.
+ *
+ * The generated boxes are listed BESIDE the universal selector, because `*`
+ * matches elements and not pseudo-elements — while the doubled tokens reach
+ * them anyway, since a custom property inherits and `corner-shape` does not.
+ * Left off the list, `::before` and `::after` would keep the initial round
+ * shape and draw a corner at twice the radius its author asked for: a dot, a
+ * notch or a drawn separator visibly rounder than the box it belongs to. The
+ * pseudo-elements a stylesheet in this tree gives a corner to are held against
+ * this list by `corners.test.ts`, so a new one cannot arrive unlisted. */
+@supports (corner-shape: squircle) {
+  :root {
+    --r-xs: 8px;
+    --r-sm: 16px;
+    --r-control: 24px;
+    --r-md: 32px;
+    --r-lg: 40px;
+  }
+  :where(*),
+  :where(*)::before,
+  :where(*)::after,
+  :where(*)::backdrop {
+    corner-shape: squircle;
   }
 }

@@ -5,6 +5,7 @@
   height: 8px;
   background: var(--bgCard);
   border-radius: var(--r-full);
+  corner-shape: round;
   overflow: hidden;
   margin: 10px 0 8px;
 }
@@ -13,6 +14,7 @@
   height: 100%;
   background: linear-gradient(90deg, var(--accent), var(--away));
   border-radius: var(--r-full);
+  corner-shape: round;
   transition: width 0.5s var(--ease-out);
 }
 /* dense: the bar as a label's own bar rather than a block of its own. Thinner,
@@ -77,6 +79,7 @@
   padding: 6px 12px;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgElevated);
   color: var(--textPrimary);
   font-size: 13px;
