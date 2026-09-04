@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (74)
+## Parity (76)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -70,11 +70,13 @@ The eight shapes, what each is for, and how each one silently passes:
 | `languageset_test.go` | H3 | The languages the product speaks are declared in more than one place, and they have to agree. |
 | `mailbrieflink_test.go` | H1 | The Brief's address is spelled twice: the frontend routes it (frontend/src/screens/brief.view.ts) and outbound mail links to it (internal/platform/mailcopy/link.go), because a message has to name a view before the app it opens is running. |
 | `mailcopy_test.go` | H2 | The weekly message's labels are the weekly PANEL's labels. |
+| `meetinghorizonparity_test.go` | H2 | How far into the diary a meeting still says a relationship is live, spelled twice in two modules that may not import each other, and held equal here. |
 | `mergedecidableauthority_test.go` | H2 | Who may settle a duplicate pair has ONE answer, and the card must ask the same thing the write asks. |
 | `minorunitscale_test.go` | H3 | A currency's minor-unit scale — 100 for EUR, 1000 for KWD, 1 for VND — is one fact, and the table that holds it lives in shared/kernel/values. |
 | `modulecatalogtables_test.go` | H2 | The module catalog's Owns-tables column is the ownership map. |
 | `netguardparity_test.go` | H3 | The egress SSRF denylist exists twice, and this is where the two are held equal. |
 | `onboardinglocales_test.go` | H2 | The onboarding conversation speaks every language the product does. |
+| `onesendauthority_test.go` | H2 | The composer's preview and the send's door are one authority. |
 | `openchannelinboundschema_test.go` | H3 | The published OpenAPI body schema and the `arrival` struct it documents are ONE invariant spelled on both sides of a wire. |
 | `openchannellocaleparity_test.go` | H3 | The openchannel connector's failure vocabulary and its locale copy must name the SAME set of classes, or a member sees a raw translation key in place of a sentence for whichever class was renamed on one side and not the other. |
 | `outboundidentity_test.go` | H1 | A remote operator sees one name for this product and decides about it: blocks it, rate-limits it, allow-lists it, or writes a robots.txt group naming it. |
@@ -249,7 +251,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 | `writeliveness_test.go` | H2 | The LIVENESS obligation as a fitness function: a write that targets one standing row of a table which can be archived either REFUSES an archived row, DECLARES that it deliberately reaches one, or is ratified with a reason. |
 
-## Prohibition (43)
+## Prohibition (44)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -260,6 +262,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contentionprobe_test.go` | H2 | A contention probe that cannot see the backend it is waiting for. |
 | `dealforecastmovement_test.go` | H2 | A deal row changes through one door, and that door records the forecast. |
 | `errmatch_test.go` | H2 | Postgres failures are classified by SQLSTATE/constraint name (the storekit.UniqueViolation / CheckViolation helpers), never by message text: an error-string substring match silently breaks on a locale change, a driver upgrade, or an unrelated error that happens to mention the same identifier — and it misclassifies infrastructure faults as client faults. |
+| `evidencedeletes_test.go` | H2 | No domain code deletes an evidence row. |
 | `extensions_arch_test.go` | H2 | Extension-tier fitness functions (ADR-0069 §3): the compiler already walls extensions off from internal/\*\* (their module paths sit outside the backend module), these tests hold the rest of the import contract from the tree — every extension source dir (enabled or fixture) is enrolled the moment it exists. |
 | `flagdefault_test.go` | H2 | No string flag takes its default straight from the environment. |
 | `formulafieldscope_test.go` | H3 | The negative-scope half of the formula-field boundary proof (RD-AC-7): a formula field is a database-GENERATED artifact, never a runtime-authored one, so NO contract operation may accept a writable formula\_sql in its request body — ComputedField.formula\_sql (crm.yaml) is a response-only display field, never echoed back as an editable one. |

@@ -45,6 +45,19 @@ func (h Handlers) WithConsent(gate ConsentGate) Handlers {
 	return h
 }
 
+// WithSendPreview returns handlers whose composer can ask what the engine would
+// decide. Separate from WithConsent because the two are different questions of
+// the same authority, and compose injects the one gate into both.
+//
+// Held by: TestOneAuthorityServesBothConsentSeams
+// (backend/gates/onesendauthority_test.go) — two gates built there would agree
+// until one gained an injected reader the other did not, and the preview would
+// then promise sends the engine refuses.
+func (h Handlers) WithSendPreview(p SendPreviewer) Handlers {
+	h.preview = p
+	return h
+}
+
 // WithDelivery returns handlers whose send path records an accepted message
 // for transmission. Compose calls this; the zero Handlers value refuses to
 // send rather than log an activity claiming a message went out.

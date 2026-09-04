@@ -275,6 +275,12 @@ func qualifyingReason(event QualifyingEvent) string {
 		return fmt.Sprintf("they made an inquiry on %s", when)
 	case "active_deal":
 		return "an open deal connects you"
+	case KindMeeting:
+		// Tenseless on purpose: this arm admits a meeting in the diary as
+		// readily as one that has happened, and a reason claiming the wrong
+		// side of today reads as a bug to the rep who is looking at the
+		// calendar entry.
+		return fmt.Sprintf("a meeting on %s connects you", when)
 	default:
 		return fmt.Sprintf("a recorded exchange on %s: %s", when, event.Note)
 	}
