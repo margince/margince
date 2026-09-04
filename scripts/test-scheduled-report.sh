@@ -416,6 +416,40 @@ for key in MERGE_VERDICT_RESULT MERGE_VERDICT_PR MERGE_VERDICT_WHY; do
 		failures=$((failures + 1))
 	fi
 done
+# Three wiring facts the judge cannot check for itself, because each is a
+# property of the QUERY that feeds it rather than of the payload it receives. A
+# judge fed the wrong data agrees with it.
+# Matched on the QUERY STRING, not on the words: both of these appear in the
+# comments explaining them, and a check that matched prose would pass with the
+# code gone — which is the failure mode these exist to prevent, one level up.
+if ! grep -qF 'check-runs?per_page=100&filter=all' "$attest"; then
+	echo "FAIL: merge-attest asks for check runs without filter=all. The endpoint defaults to"
+	echo "      filter=latest, which returns only the most recent attempt per check — and the judge"
+	echo "      reads the OLDEST attempt precisely so a re-run after the merge cannot clear the"
+	echo "      record of the merge it was absent for. The default makes that rule unenforceable."
+	failures=$((failures + 1))
+else
+	echo "ok: the check-run query asks for every attempt, not only the latest"
+fi
+if ! grep -qE "^ *--jq '\\[\\[\\.\\[\\] \\| \\{number, merged_at, head_sha: \\.head\\.sha\\}\\] \\| min_by\\(\\.number\\)\\]" "$attest"; then
+	echo "FAIL: merge-attest does not narrow the commit's pull requests to one before reading a head."
+	echo "      The endpoint can return several for one commit, and taking the head from a different"
+	echo "      element than the judge reports on means describing pull request A while judging B's"
+	echo "      checks against A's merge time."
+	failures=$((failures + 1))
+else
+	echo "ok: one pull request is chosen once, and the head comes from that same element"
+fi
+if ! grep -qF "needs.verdict.outputs.why != ''" "$attest"; then
+	echo "FAIL: merge-attest's report job runs on a failed verdict without requiring a REASON."
+	echo "      The judge exits 2 with no reason when its input is missing, and a failed API step"
+	echo "      leaves the same shape — either would file the default merge-accusing issue with"
+	echo "      nothing behind it."
+	failures=$((failures + 1))
+else
+	echo "ok: the report job requires a reason, not merely a failure"
+fi
+
 if ! grep -qF 'scripts/check-merge-verdict.sh' "$attest"; then
 	echo "FAIL: merge-attest.yml never runs the judge, so its verdict job cannot fail for the reason the arm reports"
 	failures=$((failures + 1))
