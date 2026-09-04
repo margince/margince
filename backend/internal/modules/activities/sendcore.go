@@ -13,6 +13,7 @@ package activities
 
 import (
 	"context"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -87,7 +88,17 @@ type PreparedSend struct {
 // approval first, and a refusal discovered after that leaves an approved row
 // nothing can decide again. It is a getter and not a field so a caller outside
 // this package can read the request and cannot forge one.
-func (p PreparedSend) Authorization() commsauthz.Request { return p.authorization }
+func (p PreparedSend) Authorization() commsauthz.Request {
+	req := p.authorization
+	// The slices are CLONED, and that is the same guarantee the unexported
+	// fields give: a caller may carry this request and may not forge one.
+	// Handing back the backing arrays would be a forge by another name —
+	// staging decides on p.authorization, so rewriting a recipient through the
+	// returned request would send to somebody the preview never asked about.
+	req.Recipients = slices.Clone(p.authorization.Recipients)
+	req.Links = slices.Clone(p.authorization.Links)
+	return req
+}
 
 // PrepareSend runs everything an outbound send needs BEFORE it writes: origin
 // resolution, the guard sequence, the sign-off, deliverability, attachment
