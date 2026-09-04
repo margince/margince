@@ -212,15 +212,30 @@ export const de = {
   "ext.operations": "Veröffentlichte Operationen",
 
   "search.placeholder":
-    "Personen, Firmen, Deals, Aktivitäten, Leads durchsuchen…",
+    "Personen, Firmen, Deals, Projekte, Produkte, Aktivitäten, Leads durchsuchen…",
   "search.prompt": "Gib ein, wonach du suchst.",
   "search.empty": "Keine Treffer für „{q}“.",
   "search.group.person": "Personen",
   "search.group.organization": "Organisationen",
   "search.group.deal": "Deals",
+  "search.group.project": "Projekte",
+  "search.group.product": "Produkte",
+  "search.group.offerTemplate": "Angebotsvorlagen",
   "search.group.activity": "Aktivitäten",
   "search.group.lead": "Leads",
   "search.group.tag": "Tags",
+  "search.kind.person": "Person",
+  "search.kind.organization": "Organisation",
+  "search.kind.deal": "Deal",
+  "search.kind.project": "Projekt",
+  "search.kind.product": "Produkt",
+  "search.kind.offerTemplate": "Angebotsvorlage",
+  "search.kind.activity": "Aktivität",
+  "search.kind.lead": "Lead",
+  "search.kind.tag": "Tag",
+  "search.filter.label": "Nur zeigen",
+  "search.filter.all": "Alles",
+  "search.pending": "Wird gesucht…",
   "search.tag.carriedBy": "Auf {count} Datensätzen",
   "search.tier.mirrored": "aus einem verbundenen System",
   "search.tier.unverified": "nicht verifiziert",
@@ -236,6 +251,9 @@ export const de = {
   "palette.typeAction": "Aktion",
   "palette.typeRecord": "Datensatz",
   "palette.seeAll": "Alle Ergebnisse für „{query}“ anzeigen",
+  "palette.searching": "Datensätze werden durchsucht…",
+  "palette.searchFailed":
+    "Datensätze konnten gerade nicht durchsucht werden. Die Befehle oben funktionieren weiterhin.",
   "action.newDeal": "Neuer Deal",
   "action.readCompany": "Firma einlesen",
   "action.booking": "Buchungsseite",
@@ -818,7 +836,8 @@ export const de = {
   "co.strip.financeUnknown": "—",
   "co.strip.open.deals": "Deals öffnen",
   "co.strip.open.finance": "Finanzen öffnen",
-  "co.strip.basis.reading": "Wie es steht",
+  "stat.evidence": "Beleg",
+  "stat.evidence.rests": "Worauf das beruht",
   "co.strip.fin.notACustomer": "Noch kein Kunde",
   "co.strip.fin.noConnection": "Buchhaltung verbinden",
   "co.strip.fin.unmapped": "Noch keinem Kunden zugeordnet",
@@ -3547,8 +3566,11 @@ export const de = {
   "settings.tierRead":
     "Lesen, Zusammenfassen, Entwerfen — läuft sofort, voll protokolliert.",
   "settings.tierSend":
-    "E-Mail senden, Termine buchen, Daten ändern — wartet auf deine Freigabe.",
-  "settings.tierAdvance": "Deal-Phase weiterschieben — immer erst bestätigen.",
+    "E-Mail senden, Termine buchen, einen Kontakt oder Deal ändern — läuft ebenfalls sofort, wenn du dem Agenten diesen Bereich gegeben hast. Deine Erlaubnis ist die Freigabe, einmal erteilt.",
+  "settings.tierWait":
+    "Anreicherung, eigene Felder, Webhooks, Tags zusammenführen — das wartet in deinem Eingang.",
+  "settings.tierAdvance":
+    "Deal-Phase weiterschieben — wartet nur, wenn der Schritt den Deal gewonnen oder verloren abschließt.",
   "settings.locked": "gesperrt",
   "settings.purposes": "Einwilligungszwecke",
   "settings.purposesSub":
@@ -4181,9 +4203,9 @@ export const de = {
     "Du hast den Zugriff abgelehnt — es wurde nichts verbunden.",
   "ob.s4.googleBtn": "Zugriff auf mein Gmail erlauben",
   "ob.s4.googleHint":
-    "Liest deine Mails und sendet nur, was du freigibst. Du bestätigst bei Google und kannst jederzeit trennen.",
+    "Liest deine Mails und kann daraus senden. Beides bestätigst du bei Google, und du kannst jederzeit trennen.",
   "ob.s4.googleUnverified":
-    "Zeigt Google „nicht verifizierte App“, wähl Erweitert → Fortfahren. Ohne deine Freigabe geht nichts raus.",
+    "Zeigt Google „nicht verifizierte App“, wähl Erweitert → Fortfahren. Googles Bildschirm zeigt genau, was du erlaubst.",
   "backfill.title": "E-Mail-Verlauf importieren",
   "backfill.intro":
     "Wähle, wie weit zurück importiert wird. Umfang und geschätzte Kosten siehst du vor dem Start — du kannst diesen Schritt auch überspringen.",
@@ -4249,7 +4271,7 @@ export const de = {
   "overnightGrant.label":
     "Margince darf meinen Morgen-Überblick über Nacht vorbereiten",
   "overnightGrant.help":
-    "Es liest deine Deals und E-Mails, um zu ordnen, was heute wichtig ist. Es verschickt nie etwas von allein — alles, was nach außen geht, wartet auf deine Freigabe.",
+    "Es liest deine Deals und E-Mails, um zu ordnen, was heute wichtig ist, und schreibt Notizen zurück. Senden kann es nicht: die Erlaubnis hier deckt Lesen und Schreiben ab, niemals Senden.",
   "overnightGrant.danger":
     "ACHTUNG: Ohne diese Freigabe bleiben dein Morgen-Überblick, deine Arbeitsliste und dein Wochenrückblick leer. Das sind die Bildschirme, mit denen Margince startet — der größte Teil des Produkts wirkt dann, als würde er nicht funktionieren.",
   "overnightGrant.saveFailed":
@@ -4606,8 +4628,9 @@ export const de = {
   "ob.s4.scope1Lead": "Wir lesen — wir müllen nichts voll.",
   "ob.s4.scope1Rest":
     "Deine Post wird automatisch zu Kontakten, Firmen und Aktivitäten.",
-  "ob.s4.scope2Lead": "Wir senden nie etwas ohne deine Freigabe.",
-  "ob.s4.scope2Rest": "Entwürfe warten auf deine Entscheidung.",
+  "ob.s4.scope2Lead": "Senden gehört zu dieser Erlaubnis.",
+  "ob.s4.scope2Rest":
+    "Margince kann aus diesem Postfach senden — wenn du sendest, und wenn du einem Agenten einen Passport mit Senderecht gibst. Diese Erlaubnis ist deine Freigabe, einmal erteilt. Du kannst sie jederzeit zurücknehmen.",
   "ob.s4.scope3Lead": "Deine Daten bleiben in deiner Organisation.",
   "ob.s4.scope3Rest":
     "Own-your-data — jederzeit alles exportieren oder löschen.",
@@ -4817,7 +4840,7 @@ export const de = {
     "Du hast schon ein Postfach gewählt. Trenne es in den Einstellungen, um zu wechseln.",
   "ob.conv.connect.guaranteesToggle": "Was Verbinden tatsächlich bedeutet",
   "ob.conv.connect.railPromise":
-    "Wir lesen nur, und nichts wird ohne deine Freigabe gesendet.",
+    "Wir lesen deine Mail, und wir können daraus senden, sobald du das erlaubst.",
   "ob.conv.connect.dialogHeadlineAccess": "Zugriff auf {name} nötig",
   "ob.conv.connect.dialogHeadlineImap": "Verbinde deinen Mail-Host",
   "ob.conv.connect.dialogIntro":
@@ -4994,7 +5017,7 @@ export const de = {
     "Ich lese deine Website und entwerfe dein Firmenprofil. Du gibst frei, bevor ich speichere. Zwei Minuten.",
   "ob.gate.trustToggle": "So funktioniert es",
   "ob.gate.trustBody":
-    "Ich lese nur öffentliche Seiten. Nichts wird gespeichert, bevor du bestätigst, und ohne deine Freigabe geht nie etwas raus.",
+    "Ich lese nur öffentliche Seiten. Nichts wird gespeichert, bevor du bestätigst, und das Lesen deiner Website verschickt nichts nach außen.",
   "ob.gate.field": "Deine Website-Adresse",
   "ob.gate.placeholder": "deinefirma.de",
   "ob.gate.submit": "Meine Website lesen",
@@ -5178,7 +5201,7 @@ export const de = {
   "auth.coreWork":
     "Ich halte dein CRM aktuell, erkenne, was Aufmerksamkeit braucht, und bereite den nächsten Schritt vor – damit du dich um Kunden kümmern kannst.",
   "auth.corePromise":
-    "Und keine Sorge: Ich sende nie eine E-Mail oder Nachricht, ohne dich vorher zu fragen.",
+    "Und ich handle nur mit der Berechtigung, die du mir gegeben hast — nie mehr, als du selbst darfst.",
   "auth.coreHandover": "Zuerst stelle ich sicher, dass du es wirklich bist …",
   "auth.coreConfigured": "Konfiguriert",
   "auth.coreUnconfigured": "KI nicht konfiguriert",
@@ -6136,7 +6159,7 @@ export const de = {
     "Deine Texte hier ablegen oder klicken, um Dateien auszuwählen",
   "settings.voice.whyToggle": "Warum das wichtig ist",
   "settings.voice.whyBody":
-    "Margince entwirft E-Mails für dich in deinen eigenen Worten, und nichts wird gesendet, bevor du es freigibst. Es lernt Ton, Rhythmus und Formulierungen aus deinen eigenen Texten, und von niemandem sonst. Deine Proben bleiben privat.",
+    "Margince entwirft E-Mails für dich in deinen eigenen Worten, damit klingt, was rausgeht, nach dir. Es lernt Ton, Rhythmus und Formulierungen aus deinen eigenen Texten, und von niemandem sonst. Deine Proben bleiben privat.",
   "settings.voice.worksTitle": "Was am besten funktioniert",
   "settings.voice.worksEmails":
     "Gesendete E-Mails, als .txt oder .md gespeichert. Sie zeigen, wie du schreibst, wenn du etwas willst.",
@@ -7874,7 +7897,7 @@ export const de = {
   // The Worklist's own words: the ranked queue, its dials, and the phrase
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Dein Tag wird gelesen…",
-  "worklist.queue": "Was als Nächstes zu tun ist",
+  "worklist.queue": "Heute",
   "worklist.more": "Mehr anzeigen",
   "worklist.more.failed": "Konnte nicht mehr laden. Bitte erneut versuchen.",
   "worklist.summary":
@@ -7909,17 +7932,6 @@ export const de = {
   "worklist.pane.lastInbound": "Zuletzt geschrieben",
   "worklist.pane.lastOutbound": "Wir zuletzt geschrieben",
   "worklist.pane.never": "Nie",
-  "worklist.focus.title": "Das als Nächstes",
-  "worklist.nextup.title": "Und danach",
-  "worklist.focus.verb.decide": "Entscheiden",
-  "worklist.focus.verb.merge": "Paar prüfen",
-  "worklist.focus.verb.complete": "Erledigen",
-  "worklist.focus.verb.act": "Bearbeiten",
-  "worklist.focus.verb.acknowledge": "Zur Kenntnis nehmen",
-  "worklist.focus.verb.open": "Öffnen",
-  "worklist.focus.verb.snooze": "Öffnen",
-  "worklist.focus.verb.dismiss": "Öffnen",
-  "worklist.focus.verb.set_aside": "Öffnen",
   "worklist.band.now": "Jetzt",
   "worklist.band.build_pipeline": "Pipeline aufbauen",
   "worklist.band.keep_momentum": "In Bewegung halten",
@@ -8161,6 +8173,8 @@ export const de = {
   "worklist.verb.acknowledge": "Verstanden",
   "worklist.verb.acknowledgeFailed":
     "Das konnte nicht als gelesen markiert werden.",
+  "worklist.verb.completeFailed":
+    "Diese Aufgabe konnte nicht abgeschlossen werden.",
   "worklist.source.failed": "Eine Quelle konnte nicht gelesen werden: {source}",
   "worklist.source.withheld":
     "Eine Quelle ist für dein Konto nicht sichtbar: {source}",

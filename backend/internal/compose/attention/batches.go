@@ -18,6 +18,7 @@ package attention
 // it has in common with the rest.
 
 import (
+	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
@@ -298,11 +299,17 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 		},
 		Actions: []crmcontracts.WorklistItemActions{},
 		// The members' own screen, carried onto the row that stands for them.
-		// The fold has already refused to group rows that disagree, so the first
-		// member answers for all of them — and deriving it from the word `batch`
-		// instead would put a pile of approvals wherever `batch` was mapped
-		// rather than where its members belong.
-		Destination: destinationPtr(destinationOf(members[0])),
+		// Deriving it from the word `batch` instead would put a pile of
+		// approvals wherever `batch` was mapped rather than where its members
+		// belong.
+		//
+		// Read the same way the OWNER below is read — from the members, and only
+		// where they agree. The fold refuses to group rows bound for different
+		// screens, so today this can only be the one they share; asking the
+		// members rather than trusting that keeps the two answers from drifting
+		// apart if a second caller ever reaches this function without the
+		// guard in front of it.
+		Destination: destinationPtr(destinationOfGroup(members)),
 	}
 	if cause != "" {
 		row.Batch.Cause = &cause
@@ -329,6 +336,9 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 	return ranked{
 		item:       row,
 		foldedFrom: from,
+		// The members' own identities, so a walk freezes THEM rather than the
+		// synthetic id above: this row exists only while the fold produces it.
+		members:    memberIdentities(members),
 		occurredAt: occurred,
 		// The group's own answer, from the members it stands for. A fold is one
 		// row in place of many, so it can only name an owner where the many
@@ -361,4 +371,18 @@ func ownerOfTheGroup(members []ranked) ownerRef {
 		}
 	}
 	return first
+}
+
+// memberIdentities names the rows a group stands for.
+//
+// A walk freezes these rather than the group's own id, which is minted from the
+// key and cause and therefore exists only while the fold produces this group.
+// Freezing the synthetic id lost the whole group the moment one member was
+// dealt with and the rest fell below the floor.
+func memberIdentities(members []ranked) []worklistsnap.Row {
+	out := make([]worklistsnap.Row, 0, len(members))
+	for _, member := range members {
+		out = append(out, rowIdentity(member))
+	}
+	return out
 }

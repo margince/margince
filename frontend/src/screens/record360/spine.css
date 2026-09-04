@@ -143,7 +143,7 @@
      and compared with nothing, so it takes the display face at the size the
      reading's own figures use. */
   font-family: var(--f-display);
-  font-size: 26px;
+  font-size: var(--fs-h1);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--tracking-display);
   color: var(--warn);
@@ -261,7 +261,7 @@
 .co-spine-now-word {
   font-size: var(--fs-eyebrow);
   font-weight: var(--fw-semibold);
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
   color: var(--textPrimary);
 }

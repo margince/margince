@@ -336,7 +336,7 @@ test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async
   await page.goto("/#/home");
   await page.locator("body").click();
   await page.keyboard.press("ControlOrMeta+k");
-  const input = page.getByRole("textbox", { name: "Befehlspalette" });
+  const input = page.getByRole("searchbox", { name: "Befehlspalette" });
   await expect(input).toBeFocused();
   // "Deals" is the route id, not the label the rail shows (Pipeline) — typing the
   // domain word still has to land on the screen, or a relabeled destination
@@ -355,7 +355,7 @@ test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
   await expect(topbar.locator("input")).toHaveCount(0);
   await topbar.locator(".topbar-search").click();
   await expect(
-    page.getByRole("textbox", { name: "Befehlspalette" }),
+    page.getByRole("searchbox", { name: "Befehlspalette" }),
   ).toBeVisible();
   // And it is not a destination of its own — the links AC-shell-1 counts are
   // unchanged by search leaving the sidebar.
@@ -1176,6 +1176,159 @@ test.describe("§3.8: 390px mobile", () => {
     });
   }
 
+  test("nothing scrolls sideways at 390px on the search results", async ({
+    page,
+  }) => {
+    await page.goto("/#/search/brandt");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await expect(page.getByRole("heading", { name: "Produkte" })).toBeVisible();
+    expect(await pageOverflow(page)).toEqual([]);
+  });
+
+  // The palette is a full-height SHEET at this width — a 560px box floated at
+  // 12vh with a 320px list had about two rows left under a software keyboard.
+  // Its rows are thumb targets, which is the half a screenshot cannot assert.
+  test("the palette is a workable sheet at 390px", async ({ page }) => {
+    await page.goto("/#/home");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await page.keyboard.press("ControlOrMeta+k");
+    await expect(
+      page.getByRole("dialog", { name: "Befehlspalette" }),
+    ).toBeVisible();
+    expect(await pageOverflow(page)).toEqual([]);
+    const rows = page.locator(".palette-row");
+    await expect(rows.first()).toBeVisible();
+    const heights = await rows.evaluateAll((nodes) =>
+      nodes.map((node) => node.getBoundingClientRect().height),
+    );
+    expect(Math.min(...heights)).toBeGreaterThanOrEqual(44);
+  });
+
+  // AC-WORKLIST-SDR-01: the first action is above the phone fold.
+  //
+  // The whole promise of this screen on a phone is that a rep opens it and can
+  // ACT — not scroll, then act. Everything above the first row competes for
+  // that space: the title, the count sentence, the readings strip, the scope
+  // control. Each was added for a good reason and none of them is the work.
+  //
+  // Measured against the VIEWPORT rather than a fixed pixel budget, because the
+  // number that matters is whether a thumb can reach it without scrolling. The
+  // page is not scrolled first: this asserts the arriving screen.
+  // FAILS TODAY, and is left failing on purpose.
+  //
+  // The queue's first seeded row is an approval that draws its whole decision
+  // inline — evidence, draft and three answers — so its primary verb ends at
+  // 864px on an 844px screen. Nothing above the queue is the cause any more:
+  // the readings moved below it and the header is down to 174px. The remaining
+  // 20px is the row's own height.
+  //
+  // The fix is to take long decisions out of the row and into the shared
+  // drawer, which is the Review work rather than this screen's. Marked `fixme`
+  // rather than relaxed to 900px: a ceiling tuned to today's failure is a test
+  // that agrees with the defect, and this one has to go GREEN when the drawer
+  // lands rather than have to be tightened by somebody who remembers to.
+  test.fixme("AC-WORKLIST-SDR-01: the first primary action is above the fold at 390x844", async ({
+    page,
+  }) => {
+    await page.goto("/#/worklist");
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator(".worklist-list li").first()).toBeVisible();
+
+    const reach = await page.evaluate(() => {
+      const row = document.querySelector(".worklist-list li");
+      if (!row) {
+        return null;
+      }
+      // THE PRIMARY ACTION, which is the one that resolves the work — not
+      // merely the first control the row happens to lay out.
+      //
+      // Taking the first match was wrong in the way that matters: on an
+      // approval row the first control is the evidence link ("Freigabe-Detail"),
+      // which sits well above the Accept and Reject buttons that actually
+      // answer the row. The test passed while the verb a rep presses was still
+      // below the fold — a measurement of the wrong control is a green that
+      // means nothing.
+      //
+      // `btn-primary` is how the queue marks the one emerald verb. Where a row
+      // draws none — an inline decision offers several equal answers — the
+      // LOWEST control is measured instead, because a row is only workable
+      // when the reader can reach all of it.
+      const controls = Array.from(
+        row.querySelectorAll(
+          ".worklist-row-verbs button, .worklist-row-verbs a, .worklist-row-dispositions button, .worklist-row-decision button",
+        ),
+      ).filter((element) => element.getBoundingClientRect().height > 0);
+      if (controls.length === 0) {
+        return null;
+      }
+      const primary =
+        controls.find((element) => element.classList.contains("btn-primary")) ??
+        controls.reduce((lowest, element) =>
+          element.getBoundingClientRect().bottom >
+          lowest.getBoundingClientRect().bottom
+            ? element
+            : lowest,
+        );
+      return {
+        bottom: primary.getBoundingClientRect().bottom,
+        fold: window.innerHeight,
+        label: (primary.textContent ?? "").trim(),
+      };
+    });
+
+    // A day whose first row carries no verb at all is not this test's subject,
+    // and passing vacuously on one would hide exactly the regression it exists
+    // to catch — so it fails rather than skips.
+    expect(reach, "the first row drew no action to measure").not.toBeNull();
+    const seen = reach as { bottom: number; fold: number; label: string };
+    expect(
+      seen.bottom,
+      `"${seen.label}" ends ${Math.round(seen.bottom)}px down a ${seen.fold}px screen`,
+    ).toBeLessThanOrEqual(seen.fold);
+  });
+
+  // The height a row is allowed to take before it has to fold.
+  //
+  // The fold test above measures the FIRST row's reach; this one measures every
+  // row's own height, because a queue is only workable if a reader can travel
+  // it. A row that draws its whole decision inline — evidence, draft, three
+  // answers — takes 601px on a phone, so two rows fill a screen and a half and
+  // the queue stops being a list a thumb can work through.
+  //
+  // 208px for a row carrying an inline decision, 176px for one that does not:
+  // the two ceilings the product's own row anatomy sets.
+  // FAILS TODAY for the same one cause, and left failing for the same reason.
+  // An approval row draws 601px against a 208px ceiling.
+  test.fixme("AC-WORKLIST-SDR-07: no row outgrows its ceiling at 390x844", async ({
+    page,
+  }) => {
+    await page.goto("/#/worklist");
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator(".worklist-list li").first()).toBeVisible();
+
+    const tall = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll(".worklist-list li"))
+        .map((row) => {
+          const decides = row.querySelector(".worklist-row-decision") !== null;
+          return {
+            height: row.getBoundingClientRect().height,
+            ceiling: decides ? 208 : 176,
+            title: (row.querySelector(".worklist-row-title")?.textContent ?? "")
+              .trim()
+              .slice(0, 40),
+          };
+        })
+        .filter(({ height, ceiling }) => height > ceiling)
+        .map(
+          ({ height, ceiling, title }) =>
+            `${title}: ${Math.round(height)}px over a ${ceiling}px ceiling`,
+        );
+    });
+    expect(tall).toEqual([]);
+  });
+
   // The queue is WORKABLE with a thumb, not merely present.
   //
   // What stood here asserted that one text node was visible at 390px, and it
@@ -1232,7 +1385,7 @@ test.describe("§3.8: 390px mobile", () => {
     // lay out at zero height, and those are not targets a thumb can miss.
     const small = await page.evaluate(() => {
       const controls = document.querySelectorAll(
-        ".worklist-list button, .worklist-list a.btn, .worklist-list .link-button, .worklist-focus button, .worklist-focus a.btn",
+        ".worklist-list button, .worklist-list a.btn, .worklist-list .link-button",
       );
       return Array.from(controls)
         .filter((element) => element.getBoundingClientRect().height > 0)
@@ -1485,6 +1638,11 @@ const ADDRESSED_VIEWS = [
   // the readers who cannot see the glyph.
   "contacts/p-anna",
   "deals/d-fleet",
+  // The results screen with hits on it. It was in NEITHER sweep while it grew
+  // groups, a type filter and links per row — and it is the surface a reader
+  // arrives at by searching, so it is one of the few nobody navigates TO on
+  // purpose and everybody lands on.
+  "search/brandt",
   "projects/pr-fleet",
 ];
 
@@ -1559,6 +1717,56 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
       await expectNoAaViolations(page, screen);
     });
   }
+
+  // The results screen with hits on it, in the light palette. ADDRESSED_VIEWS
+  // above reaches it in dark alone, and the two sweeps disagree by design —
+  // this is the half where an accent-coloured link on a light card is judged.
+  test("no AA violations on the search results screen", async ({ page }) => {
+    await page.goto("/#/search/brandt");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await expect(page.getByRole("heading", { name: "Produkte" })).toBeVisible();
+    await settleAnimations(page);
+    await expectNoAaViolations(page, "search/brandt");
+  });
+
+  // The narrowed screen is a DIFFERENT arrangement, not the same one shorter:
+  // one group, a pressed pill, and — when the narrowing finds nothing — an
+  // empty state under a filter row that has to stay operable.
+  test("no AA violations on a narrowed search", async ({ page }) => {
+    await page.goto("/#/search/brandt");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await page.getByRole("button", { name: "Produkte", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Produkte", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await settleAnimations(page);
+    await expectNoAaViolations(page, "search/brandt (narrowed to products)");
+  });
+
+  // The ⌘K palette is a modal, and no sweep in this file had ever opened one:
+  // every axe pass above measures a page with the dialog closed, so the
+  // surface a reader reaches from any screen in the product was unmeasured.
+  test("no AA violations with the command palette open", async ({ page }) => {
+    await page.goto("/#/home");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await page.keyboard.press("ControlOrMeta+k");
+    await expect(
+      page.getByRole("dialog", { name: "Befehlspalette" }),
+    ).toBeVisible();
+    await page
+      .getByRole("searchbox", { name: "Befehlspalette" })
+      .fill("brandt");
+    // Wait on the hits, not on a duration: the live arm is what adds the rows
+    // this sweep exists to judge.
+    await expect(
+      page.getByRole("button", { name: /Brandt Automotive/ }),
+    ).toBeVisible();
+    await settleAnimations(page);
+    await expectNoAaViolations(page, "home — the command palette open");
+  });
 
   // A list header FOLDS its verbs into one overflow menu below 1100px
   // (design-system/listsurface.tsx), which is a different arrangement rather

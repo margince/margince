@@ -95,8 +95,8 @@ const row: CSSProperties = {
   gap: "var(--space-4)",
 };
 const label: CSSProperties = {
-  fontSize: "11px",
-  letterSpacing: "0.08em",
+  fontSize: "var(--fs-eyebrow)",
+  letterSpacing: "var(--tracking-eyebrow)",
   textTransform: "uppercase",
   color: "var(--textMeta)",
 };

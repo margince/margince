@@ -39,10 +39,11 @@ subsystem against it.
 
 ## The system in one screen
 
-Margince is a **governed, multi-tenant CRM** — a Go backend serving a contract-defined HTTP API under
-`/v1` (plus an MCP tool surface for AI agents) over Postgres + Redis. "Governed"
-is the theme: every read is tenant-isolated and RBAC-scoped, every write is audited and announced as an
-event, and every AI action is tiered (auto-execute vs. stage for human approval).
+Margince is a **governed, single-tenant CRM** — a Go backend serving a contract-defined HTTP API under
+`/v1` (plus an MCP tool surface for AI agents) over Postgres + Redis. One installation serves one
+organisation; boot refuses a second. "Governed" is the theme: every read is workspace-scoped and
+RBAC-scoped, every write is audited and announced as an event, and every AI action carries a declared
+autonomy tier (auto-execute vs. stage for human approval).
 
 **What happens on one request:**
 

@@ -53,8 +53,9 @@
   outline-offset: 2px;
 }
 
-/* The selected row, marked on its edge rather than by a fill: a filled row
-   competes with the focus card above it for the same "this is the one" claim. */
+/* The selected row, marked on its edge rather than by a fill. The first row is
+   selected on arrival, so a fill would paint a block of colour across the top of
+   every day rather than answering which row is in hand. */
 .worklist-row-selected {
   box-shadow: inset 3px 0 0 0 var(--accent);
 }
@@ -69,50 +70,6 @@
 .worklist-pane-facts dt,
 .worklist-pane-facts dd {
   margin: 0;
-}
-
-/* The one thing to do next.
-   Denser than a row and quieter than a banner: it earns its place by saying
-   more, not by shouting. The evidence lines step down the type ramp so a reader
-   scanning finds the name, then the money, then the reason. */
-.worklist-focus {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.worklist-focus-what {
-  align-items: center;
-  display: flex;
-  gap: var(--space-2);
-  margin: 0;
-}
-
-.worklist-focus-facts,
-.worklist-focus-why,
-.worklist-focus-cost {
-  margin: 0;
-}
-
-.worklist-focus-why,
-.worklist-focus-cost {
-  color: var(--textSecondary);
-}
-
-.worklist-focus-verb {
-  margin-top: var(--space-2);
-}
-
-/* What follows the focus card. A plain list of titles: the evidence is on the
-   card above and the rows below, and a third copy would be a third surface to
-   keep in agreement about one deal. */
-.worklist-nextup {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  list-style: none;
-  margin: 0;
-  padding: 0;
 }
 
 /* The band heading, above its own <ol>. The page draws one list per band, so
@@ -310,6 +267,36 @@
  * record head and the page zones all turn at it.
  */
 @media (max-width: 720px) {
+  /* THE WORK COMES FIRST on a phone.
+   *
+   * The readings are four stat cards that stack into a 338px block, and with
+   * the title, the count sentence and the scope controls above them the first
+   * row's verb sat 972px down an 844px screen. A rep opening their morning had
+   * to scroll before they could act, which is the one thing this screen exists
+   * not to make them do.
+   *
+   * Moved with `order` rather than in the DOM, so the reading order a screen
+   * reader follows still meets the day's figures before its rows — the figures
+   * are the frame for what follows, and a caveat met after the thing it
+   * qualifies is a caveat nobody reads. `order` moves the PAINT, not the tree.
+   *
+   * Everything else keeps `order: 0`, so the queue, the team board and the
+   * hidden-backlog panel stay in their written order and only this one block
+   * moves past them. A rule naming each sibling would go stale the day the page
+   * grows another.
+   *
+   * Held by AC-WORKLIST-SDR-01 in e2e/ac.spec.ts, which measures the first
+   * row's verb against the viewport on the real route rather than in a canvas.
+   */
+  .wrap.worklist {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .worklist-readings {
+    order: 1;
+  }
+
   .worklist-row {
     flex-wrap: wrap;
   }

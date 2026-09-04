@@ -165,7 +165,7 @@ function StrengthBody({
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  fontSize: 13,
+                  fontSize: "var(--fs-sm)",
                 }}
               >
                 <span>{t(`strength.factor.${row.key}`)}</span>

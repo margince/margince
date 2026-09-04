@@ -23,10 +23,10 @@ or the other, and say which.
 | [Derive the obligation](derive-the-obligation.md) | Why a rule is held by a gate rather than by memory, and how to write one that actually holds rather than one that reads green over its own defect — including the two ways a gate becomes the duplicate it forbids. The shapes a gate comes in are cataloged in [reference/gate-patterns.md](../reference/gate-patterns.md), and the gates themselves are generated into [reference/gate-inventory.md](../reference/gate-inventory.md). | *Rules learned from the review loop* |
 | [Nothing here is private](nothing-here-is-private.md) | Who the public reader is, what never appears in the tree, and why a working exploit takes the private path. | *This repository is public* |
 
-The rulebook sections stay where they are. `cli/craft` feeds the **whole**
-nearest `AGENTS.md` into its gate prompt, so a rule moved out of that file stops
-reaching the gate — these pages carry the reasoning and the method, the rulebook
-carries the binding short form. Every `CLAUDE.md` holds nothing but an
+The rulebook sections stay where they are. `cli/craft` feeds the nearest
+`AGENTS.md`'s **`## Craftsmanship` section** into its gate prompt, so a rule
+moved out of that section stops reaching the gate — these pages carry the
+reasoning and the method, the rulebook carries the binding short form. Every `CLAUDE.md` holds nothing but an
 `@AGENTS.md` import, so no rule has a second copy to drift from. A directory may
 carry its own `AGENTS.md` for rules that bind only inside it — `frontend/` does —
 and those only ADD: a rule binding the whole tree lives in the root rulebook and

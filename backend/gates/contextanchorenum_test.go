@@ -30,7 +30,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const searchBranchFile = "internal/modules/search/store.go"
+const searchBranchFile = "internal/modules/search/branches.go"
 
 const contextPath = "/records/{entity_type}/{id}/context"
 

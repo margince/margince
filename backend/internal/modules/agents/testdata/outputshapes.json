@@ -9021,6 +9021,9 @@
       "data": {
         "type": "object",
         "properties": {
+          "base_currency": {
+            "type": "string"
+          },
           "columns": {
             "type": "array",
             "items": {

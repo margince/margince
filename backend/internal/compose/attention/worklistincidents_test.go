@@ -304,3 +304,48 @@ func systemRowWithCause(source crmcontracts.AttentionItemSource, id string) rank
 	at.CauseRef = &cause
 	return classifySystem(at, rankInstant)
 }
+
+// A folded group's screen comes from its MEMBERS, not from the guard that
+// happens to run before it.
+//
+// foldRoutineDecisions refuses to group rows bound for different screens, so in
+// production batchRow only ever sees members that agree. That makes the claim
+// true and unheld at the same time: the guard is in another function, and a
+// second caller reaching batchRow without it would file a group wherever its
+// first member happened to sit. This calls batchRow directly, which is the
+// shape that guard cannot protect.
+func TestAGroupTakesItsScreenFromItsMembers(t *testing.T) {
+	members := []ranked{
+		systemRowWithCause("capture_health", "one"),
+		systemRowWithCause("capture_health", "two"),
+		systemRowWithCause("capture_health", "three"),
+	}
+	if at := destinationOf(members[0]); at != destinationSystemHealth {
+		t.Fatalf("the fixture's members belong to %q, so this test cannot show a group "+
+			"taking system_health from them", at)
+	}
+
+	group := batchRow(keySystemIncident, "sync_failing", members, false)
+
+	if group.item.Destination == nil {
+		t.Fatal("a folded group says nothing about which screen it belongs on")
+	}
+	if *group.item.Destination != destinationSystemHealth {
+		t.Errorf("a group of broken mailboxes belongs to %q, want %q — its members' screen",
+			*group.item.Destination, destinationSystemHealth)
+	}
+	// And members that disagree are filed for review rather than taking the
+	// first one's answer. Driven through batchRow, not through the helper it
+	// calls: the helper on its own proves nothing about what the group row
+	// actually carries, and a batchRow that went back to reading members[0]
+	// passed a version of this test that asked destinationOfGroup directly.
+	mixed := append([]ranked{systemRowWithCause("notice", "four")}, members...)
+	disagreeing := batchRow(keySystemIncident, "sync_failing", mixed, false)
+	if disagreeing.item.Destination == nil {
+		t.Fatal("a group of disagreeing members says nothing about its screen")
+	}
+	if *disagreeing.item.Destination != destinationReview {
+		t.Errorf("a group whose members disagree answered %q, want %q rather than the "+
+			"first member's screen", *disagreeing.item.Destination, destinationReview)
+	}
+}

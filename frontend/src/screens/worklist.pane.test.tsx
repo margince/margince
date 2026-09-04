@@ -52,7 +52,7 @@ describe("what the selected row is about", () => {
     expect(screen.queryByText("They last wrote")).toBeNull();
   });
 
-  it("opens the record beside the queue, and closes it on a second press", async () => {
+  it("has the first row in hand on arrival, and closes it on a press", async () => {
     stub(
       day({
         queue: [
@@ -71,19 +71,25 @@ describe("what the selected row is about", () => {
     );
     renderWorklist();
 
-    const open = await screen.findByRole("button", {
-      name: /^Show what/,
-    });
-    await userEvent.click(open);
+    // OPEN ALREADY. The first row is the day's answer to what matters most, so
+    // it is the row in hand when the page arrives — which is what lets the
+    // queue be the focus without a card above it repeating the row.
+    //
     // The pane names the record and answers the question the row cannot: how
     // long the silence has run, in both directions.
     await screen.findByText("They last wrote");
     expect(screen.getByText("We last wrote")).toBeTruthy();
 
+    // And it is still a control: pressing the rank puts the row down.
     await userEvent.click(screen.getByRole("button", { name: /^Show what/ }));
     await waitFor(() => {
       expect(screen.queryByText("They last wrote")).toBeNull();
     });
+
+    // And picks it up again, so the press is a toggle rather than a one-way
+    // dismissal the reader cannot undo.
+    await userEvent.click(screen.getByRole("button", { name: /^Show what/ }));
+    await screen.findByText("They last wrote");
   });
 
   // A rank that opens nothing is not a control.
@@ -121,7 +127,7 @@ describe("what the selected row is about", () => {
 
   // The other half of the same rule. Without this case, "no rank button" would
   // also be satisfied by a page that never drew one at all.
-  it("draws the rank as a button where a pane opens, and it opens", async () => {
+  it("draws the rank as a button where a pane opens, and it toggles", async () => {
     stub(
       day({
         queue: [
@@ -142,10 +148,21 @@ describe("what the selected row is about", () => {
     );
     renderWorklist();
 
+    // The aside is there on arrival, because the first row is in hand.
+    await waitFor(() => {
+      expect(screen.getByRole("complementary")).toBeTruthy();
+    });
+
+    // And the rank is a real control, not a pressed state over a pane that was
+    // going to be there anyway: pressing it takes the aside away.
     await userEvent.click(
       await screen.findByRole("button", { name: /^Show what/ }),
     );
+    await waitFor(() => {
+      expect(screen.queryByRole("complementary")).toBeNull();
+    });
 
+    await userEvent.click(screen.getByRole("button", { name: /^Show what/ }));
     await waitFor(() => {
       expect(screen.getByRole("complementary")).toBeTruthy();
     });
@@ -182,9 +199,7 @@ describe("what the selected row is about", () => {
     );
     renderWorklist();
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^Show what/ }),
-    );
+    // In hand on arrival, so there is nothing to press to open it.
     await screen.findByText("They last wrote");
 
     current = day({
