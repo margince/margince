@@ -733,25 +733,42 @@ func recordThreadVerdict(
 	recomputeAudience(t, e, seat, activityID)
 }
 
-// shareThreadAsOwner runs the owner's own share, through the store method the
-// thread-audience endpoint calls, and then the derivation that endpoint runs
-// after it. Both are the shipped writers: the scenario is about what the
-// derivation does with what the share wrote, so a seeded ledger row would test
-// neither half.
+// shareThreadAsOwner presses Share the way the endpoint does: through
+// ThreadAudienceSetter.Decide, which is the whole shipped path.
+//
+// It used to call DecideAsOwner and then the derivation by hand, and that is
+// precisely what a test must not do — the assembled version left out the step
+// between them, so a defect living in the seam was invisible to it while the
+// product had it. The setter runs the ledger write, the hold clear and the
+// recompute in one transaction, and this asks for all three.
 func shareThreadAsOwner(t *testing.T, e *integration.SearchEnv, seat, activityID ids.UUID) {
 	t.Helper()
-	ctx := seatContext(e, seat)
+	ctx := sharingContext(e, seat)
+	var threadKey string
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		var threadKey string
-		if err := tx.QueryRow(ctx,
-			`SELECT coalesce(thread_key, '') FROM activity WHERE id = $1`, activityID).Scan(&threadKey); err != nil {
-			return err
-		}
-		return capturemod.NewThreadVerdictStore(nil).DecideAsOwner(ctx, tx, threadKey, true)
+		return tx.QueryRow(ctx,
+			`SELECT coalesce(thread_key, '') FROM activity WHERE id = $1`, activityID).Scan(&threadKey)
 	}); err != nil {
+		t.Fatalf("reading the thread to share: %v", err)
+	}
+	if _, err := compose.NewThreadAudienceSetter(e.Pool).Decide(ctx, threadKey, true); err != nil {
 		t.Fatalf("sharing the thread as its owner: %v", err)
 	}
-	recomputeAudience(t, e, seat, activityID)
+}
+
+// sharingContext is one seat with the grant the endpoint checks. Decide asks
+// for activity:update before it writes anything, so a context without it would
+// prove only that the gate is there.
+func sharingContext(e *integration.SearchEnv, user ids.UUID) context.Context {
+	ctx := seatContext(e, user)
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
+		SeatType: principal.SeatFull,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"activity": {Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
 }
 
 // recomputeAudience runs the derivation the way every product writer does after
@@ -769,5 +786,102 @@ func recomputeAudience(t *testing.T, e *integration.SearchEnv, seat, activityID 
 			ctx, tx, ids.From[ids.ActivityKind](activityID))
 	}); err != nil {
 		t.Fatalf("recomputing the audience: %v", err)
+	}
+}
+
+// TestAnOwnerShareLiftsAVerdictHoldAndNothingElse is the reported bug and its
+// three boundaries.
+//
+// A row-carried hold outranks an opening contribution, which is right for the
+// holds a recipient may not lift and wrong for the one they may. The owner
+// pressed Share; the ledger recorded shared_by_owner, the derivation ran, read
+// the verdict's own reason off the row and left the message held. The share
+// worked and the hold ignored it, however many times it was pressed.
+//
+// The three that must NOT move are asserted beside it, because a clear that was
+// one word too wide would publish mail nobody decided to publish.
+func TestAnOwnerShareLiftsAVerdictHoldAndNothingElse(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	allowSharedPosture(t, e)
+	setPosture(t, env, e.Rep1, capturemod.PostureClassified)
+
+	// A classifier held it, answering `explicitly_confidential` — the kind that
+	// collides with a sender's own marking and lands on the row as the marking's
+	// word. That collision is what made the share inert: the row could not say
+	// which of the two held it, so it refused to let either be lifted. The
+	// subject carries no marker at all, which is the whole point.
+	sync(t, emailWithSubject("john@mii.example", "John Khoury", captureOwner,
+		"ownershare-1@mii.example", "Re: Follow up"))
+	judged := oneActivityID(t, e)
+	recordThreadVerdict(t, e, e.Rep1, judged, capturemod.VerdictHeld, "explicitly_confidential")
+	// The row as a binary BEFORE rowReasonForKind wrote it: the kind reached the
+	// column verbatim. Written here rather than left to the current writer,
+	// which translates it away — these are the rows already in the field, and
+	// they are what a rep cannot share. Set through the import row and the
+	// derivation, so the activity's own reason is derived rather than dictated.
+	setImportVerdictReason(t, e, e.Rep1, judged, "explicitly_confidential")
+	recomputeAudience(t, e, e.Rep1, judged)
+	if got, _ := audienceOf(t, e, judged); got != "participants" {
+		t.Fatalf("a message a verdict held is %q, want it held before the share", got)
+	}
+	shareThreadAsOwner(t, e, e.Rep1, judged)
+	if got, reason := audienceOf(t, e, judged); got != "workspace" {
+		t.Fatalf("after its owner shared it the message is %q / %q, want workspace: the share "+
+			"reached the ledger and the row's own reason outranked it", got, reason)
+	}
+
+	// A SENDER's marking is not the recipient's to lift.
+	sync(t, emailWithSubject("anwalt@studiolegal.example", "Dr. Legal", captureOwner,
+		"ownershare-2@studiolegal.example", "[Vertraulich] Aufhebungsvertrag"))
+	marked := newestActivityID(t, e)
+	shareThreadAsOwner(t, e, e.Rep1, marked)
+	if got, reason := audienceOf(t, e, marked); got != "participants" || reason != "explicitly_confidential" {
+		t.Fatalf("a message its SENDER marked is %q / %q after an owner share, want it still held",
+			got, reason)
+	}
+
+	// A COUNTERPARTY hold is this seat's standing decision about a person.
+	// Sharing one thread says nothing about whether they want that party's mail
+	// in a shared CRM.
+	holdCounterparty(t, e, e.Rep1, capturemod.HoldKindDomain, "ownerhold.example")
+	sync(t, email("partner@ownerhold.example", "Partner", captureOwner,
+		"ownershare-3@ownerhold.example", ""))
+	heldParty := newestActivityID(t, e)
+	shareThreadAsOwner(t, e, e.Rep1, heldParty)
+	if got, reason := audienceOf(t, e, heldParty); got != "participants" || reason != "counterparty" {
+		t.Fatalf("a counterparty hold is %q / %q after an owner share, want it still held", got, reason)
+	}
+
+	// And the WORKSPACE floor, which one seat cannot overrule.
+	setMailSharing(t, e, false)
+	sync(t, customerMail("ownershare-4@acme.example"))
+	floored := newestActivityID(t, e)
+	shareThreadAsOwner(t, e, e.Rep1, floored)
+	if got, reason := audienceOf(t, e, floored); got != "participants" || reason != "workspace_floor" {
+		t.Fatalf("the workspace floor is %q / %q after an owner share, want it still held", got, reason)
+	}
+}
+
+// setImportVerdictReason puts an import row back into the shape a verdict wrote
+// before rowReasonForKind translated the classifier's kind away.
+//
+// The COLUMN is set and the derivation is left to decide what the activity row
+// says about it, so the scenario still turns on production's own reading. There
+// is no product path to this state any more — that is the fix — and the rows it
+// reproduces are the ones already captured, which is exactly why the share has
+// to work on them.
+func setImportVerdictReason(
+	t *testing.T, e *integration.SearchEnv, seat, activityID ids.UUID, reason string,
+) {
+	t.Helper()
+	ctx := seatContext(e, seat)
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			UPDATE capture_import SET verdict_reason = $3
+			 WHERE activity_id = $1 AND user_id = $2`, activityID, seat, reason)
+		return err
+	}); err != nil {
+		t.Fatalf("restoring the pre-translation verdict reason: %v", err)
 	}
 }

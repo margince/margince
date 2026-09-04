@@ -59,41 +59,65 @@ const STATUS_SENTENCE: Record<EmailAccessStatus, MessageKey> = {
 };
 
 /**
- * What the drawer says about who reads this message, and the control to
- * change it when this reader may.
+ * WHAT this message's access is, as markers beside its subject.
  *
- * Always drawn, even for a reader who may change nothing: who may read a
- * message is a fact about it, like its date. A reader without standing sees
- * the sentence and no button — which is the honest rendering of "you can see
- * that this is limited, and it is not yours to widen".
+ * In the HEADER, because a limit is a fact about a message like its date and
+ * its sender, and a reader wants it before they read rather than after. Under
+ * the body it sat below the attachments, so on anything longer than a screen
+ * the first sign that a message was confidential came after the reader had
+ * finished reading it.
+ *
+ * Quiet badges, which the catalog asks for where a surface carries more than
+ * one: a row of filled pills reads as decoration and a reader learns to skip
+ * it. `withheld` is the exception and stays filled — it is the one state about
+ * the READER rather than the message, and it is why the body below is empty.
+ *
+ * The sentence does NOT come along. A header holds what a glance needs; the
+ * paragraph explaining what "Participants" means to this reader belongs beside
+ * the control that changes it.
+ */
+export function EmailAccessMarkers({
+  access,
+}: Readonly<{ access: EmailAccess }>) {
+  const t = useT();
+  const withheld = access.display_status === "withheld";
+  // WHY, when the server gave a reason. `explanation` is a TOKEN, not a
+  // sentence — `readEmailAccess` fills it from the same `audience_reason`
+  // column the timeline row reads — so it is translated through the shared
+  // map. Printing it raw would put `pending_verdict` on the screen, and a
+  // reason the server learned to give and the map has not draws nothing.
+  const reasonKey = AUDIENCE_REASON_LABEL[access.explanation ?? ""];
+  return (
+    <div className="emailaccess__markers">
+      <Badge tone={withheld ? "warn" : undefined} quiet={!withheld}>
+        {t(STATUS_LABEL[access.display_status])}
+      </Badge>
+      {reasonKey && <Badge quiet>{t(reasonKey)}</Badge>}
+    </div>
+  );
+}
+
+/**
+ * WHO reads this message, said in full, and the control to change it when this
+ * reader may.
+ *
+ * Always drawn, even for a reader who may change nothing: a reader without
+ * standing sees the sentence and no button, which is the honest rendering of
+ * "you can see that this is limited, and it is not yours to widen".
+ *
+ * The markers above are its other half and are NOT repeated here — the header
+ * carries the badge, this carries the sentence, the names and the verb.
  */
 export function EmailAccessEditor({
   presentation,
 }: Readonly<{ presentation: EmailPresentation }>) {
   const t = useT();
   const { access } = presentation;
-  const reasonKey = AUDIENCE_REASON_LABEL[access.explanation ?? ""];
   return (
     <div className="emailaccess">
-      <div className="emailaccess__verdict">
-        <Badge tone={access.display_status === "withheld" ? "warn" : undefined}>
-          {t(STATUS_LABEL[access.display_status])}
-        </Badge>
-        <span className="t-caption">
-          {t(STATUS_SENTENCE[access.display_status])}
-        </span>
-      </div>
-      {/* WHY, when the server gave a reason. A held message the reader can see
-          the outline of is otherwise a limit with no author: the reason names
-          what decided it, which is what a person disagreeing with the verdict
-          needs before they can argue with it.
-
-          `explanation` is a TOKEN, not a sentence — `readEmailAccess` fills it
-          from the same `audience_reason` column the timeline row reads — so it
-          is translated through the shared map. Printing it raw would put
-          `pending_verdict` on the screen. A reason the server learned to give
-          and the map has not draws nothing rather than the token. */}
-      {reasonKey && <p className="t-caption">{t(reasonKey)}</p>}
+      <p className="emailaccess__sentence">
+        {t(STATUS_SENTENCE[access.display_status])}
+      </p>
       <NamedMembers access={access} />
       {/* The control only where the server says this caller's write would be
           taken. `can_change` and `change_mode` are decided by the authority

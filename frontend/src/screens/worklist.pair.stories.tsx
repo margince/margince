@@ -94,3 +94,11 @@ export const WithoutCounts: Story = {
 export const Withheld: Story = {
   args: { item: pairRow({ pair: undefined, actions: [] }) },
 };
+
+// Both records READ, neither of them the reader's to change: the ordinary case
+// for a rep looking at a colleague's duplicates. The pair is named in full so
+// they know what is waiting, and the verbs are replaced by the sentence that
+// says who can settle it — rather than by buttons that would refuse.
+export const NotYoursToSettle: Story = {
+  args: { item: pairRow({ actions: [] }) },
+};

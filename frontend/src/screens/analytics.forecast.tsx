@@ -9,6 +9,12 @@ import { MoneyInput } from "../design-system/moneyinput";
 import { StatStrip } from "../design-system/statstrip";
 import { formatMoneyOrAbsent, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
+import {
+  type AnalyticsSelection,
+  scopeKey,
+  scopeQuery,
+  writableScope,
+} from "./analytics.context";
 import { ForecastReview } from "./analytics.forecast.review";
 import { QueryGate, throwProblem } from "./common";
 
@@ -21,15 +27,20 @@ type Readings = components["schemas"]["ForecastReadings"];
 // judgement, EVIDENCE is the part with confirmed dates behind it, and ALREADY
 // WON is money that arrived — three different kinds of claim, and a reader who
 // takes them for one number has been told something untrue.
-export function ForecastView() {
+export function ForecastView({
+  selection,
+  canSubmit,
+}: Readonly<{ selection: AnalyticsSelection; canSubmit: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
 
   const readings = useQuery({
-    queryKey: ["forecast"],
+    // The population is part of the key: without it a scope change would show
+    // the previous population's numbers under the new one's name.
+    queryKey: ["forecast", scopeKey(selection.scope)],
     queryFn: async () => {
       const { data, error } = await api.GET("/forecast", {
-        params: { query: {} },
+        params: { query: scopeQuery(selection.scope) },
       });
       if (error) {
         throwProblem(error);
@@ -43,7 +54,9 @@ export function ForecastView() {
       {(data) => (
         <>
           <ForecastAnswer readings={data} locale={locale} />
-          <ForecastCallEditor readings={data} />
+          {canSubmit && writableScope(selection.scope) ? (
+            <ForecastCallEditor readings={data} selection={selection} />
+          ) : null}
           {/* What to check comes BEFORE the receipt: a manager with ten
               minutes reads what needs doing first, and the receipt is what
               they consult when a number looks wrong. */}
@@ -143,7 +156,10 @@ function ForecastAnswer({
 // It writes no deal row, and the copy says so: a manager who disagrees with the
 // derived figure records their own number instead of editing the pipeline until
 // the derivation agrees with them.
-function ForecastCallEditor({ readings }: Readonly<{ readings: Readings }>) {
+function ForecastCallEditor({
+  readings,
+  selection,
+}: Readonly<{ readings: Readings; selection: AnalyticsSelection }>) {
   const t = useT();
   const client = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -158,13 +174,20 @@ function ForecastCallEditor({ readings }: Readonly<{ readings: Readings }>) {
     // render saw, which is the wrong number exactly when a save races a
     // refetch.
     mutationFn: async (call: { amountMinor: number; note: string }) => {
+      const named = writableScope(selection.scope);
+      if (!named) {
+        // The editor is not rendered without a nameable population, so this is
+        // unreachable rather than a state to design copy for.
+        throw new Error("a forecast names one population");
+      }
       const { data, error } = await api.POST("/forecast/calls", {
         body: {
-          // The defaults the contract documents, stated because the generated
-          // type requires them. A call with no period named is a call on the
-          // current quarter, and the workspace is the scope every seat has.
+          // The forecast is published for the population the reader is
+          // LOOKING at. Hard-coded to the workspace, this recorded a
+          // company-wide belief while a manager read their own team's numbers
+          // — the assertion and the figure it was formed from disagreeing.
           period: "quarter",
-          scope_kind: "workspace",
+          ...named,
           amount_minor: call.amountMinor,
           currency: readings.base_currency,
           // An empty note is no note. Sent as "", it would claim the author
@@ -179,7 +202,9 @@ function ForecastCallEditor({ readings }: Readonly<{ readings: Readings }>) {
     },
     onSuccess: async () => {
       // The readings carry the standing call, so they are stale the moment one
-      // is recorded.
+      // is recorded. Invalidating the whole "forecast" prefix rather than this
+      // population alone: a workspace call changes what a team reading shows
+      // beneath it, and a stale sibling is the bug this replaces.
       await client.invalidateQueries({ queryKey: ["forecast"] });
       setOpen(false);
       setNote("");

@@ -380,6 +380,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	addGmailCaptureJobs(reg, pool, cfg, log)
 	addGraphWatchJobs(reg, cfg, log)
 	addOverlayJobs(reg, pool, cfg, log)
+	addAuthzDisagreementWorker(reg, pool, log)
 
 	periodic := slices.Concat(
 		// The passes that register themselves: each helper wires its own
@@ -432,6 +433,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, GmailWatchArgs{}),
 		periodicFor(cfg, GraphWatchArgs{}),
 		periodicFor(cfg, OverlayReconcileArgs{}),
+		periodicFor(cfg, AuthzDisagreementArgs{}),
 	)
 
 	return reg, periodic

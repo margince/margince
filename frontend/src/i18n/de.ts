@@ -3229,14 +3229,14 @@ export const de = {
   "tasks.isDone": "Abgeschlossen",
   "tasks.logged": "Erfasst",
 
-  "analytics.sub": "Deals je Phase — ungewichtet neben gewichtet",
+  "analytics.sub": "nur offene Deals, jeder einzeln in {currency} umgerechnet — ungewichtet neben gewichtet",
   "analytics.currency": "Währung",
   "analytics.count": "Deals",
   "analytics.unweighted": "Ungewichtet",
   "analytics.weighted": "Gewichtet",
   "analytics.planNote":
     "der ausgeführte Plan und die Zeilen, auf die sich die Zahl zurückrechnet",
-  "analytics.reportDeals": "Deals nach Phase",
+  "analytics.reportDeals": "Offene Pipeline nach Phase",
   "analytics.sections": "Analytics-Bereiche",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
@@ -3264,7 +3264,7 @@ export const de = {
   "analytics.share.copyFailed":
     "Der Link konnte nicht kopiert werden. Markieren Sie ihn oben und kopieren Sie ihn von Hand.",
   "analytics.share.done": "Fertig",
-  "analytics.frame": "Stand {asOf} · {zone} · {currency}",
+  "analytics.frame": "Stand {asOf} · {zone}",
   "review.title": "Was sollte vor dem Call geprüft werden?",
   "review.ready": "Bereit",
   "review.readyWithExceptions": "Bereit, mit Anmerkungen",
@@ -3323,6 +3323,8 @@ export const de = {
   "forecast.supportingNote": "Begründung",
   "forecast.cancel": "Abbrechen",
   "forecast.saveCall": "Call speichern",
+  "analytics.scopeLabel": "Welche Datensätze diese Zahlen umfassen",
+  "analytics.scopeFixed": "Diese Zahlen umfassen {scope}.",
   "forecast.receipt": "Daten und Belege geprüft",
   "forecast.eligible": "Berücksichtigte Deals",
   "forecast.priced": "Mit Betrag",
@@ -7883,6 +7885,12 @@ export const de = {
   "worklist.pair.related": "{count} verknüpft",
   "worklist.pair.failed":
     "Paar konnte nicht entschieden werden. Bitte erneut versuchen.",
+  "worklist.pair.refused":
+    "Sie können dieses Paar nicht entscheiden. Beide Datensätze müssten Ihnen gehören — eine Administratorin oder eine Vertriebsleitung kann es entscheiden.",
+  "worklist.pair.alreadySettled":
+    "Das Paar konnte so nicht entschieden werden — vielleicht war jemand schneller, vielleicht haben sich die Datensätze geändert. Bitte die Liste neu laden.",
+  "worklist.pair.stewardOnly":
+    "Nur wer beide Datensätze ändern darf, kann das entscheiden — eine Administratorin oder eine Vertriebsleitung.",
   "worklist.needsPrep": "Unvorbereitet",
   "worklist.pane.title": "Zu diesem Datensatz",
   "worklist.pane.openRow": "Zeigen, worum es bei {position}, {title}, geht",
