@@ -279,7 +279,7 @@
   line-height: 1.05;
   /* Tighter than the display rung's tracking: a name set this large wears the
      scale's own spacing as gaps between its letters. */
-  letter-spacing: -0.035em;
+  letter-spacing: -0.035em; /* ds:ignore optical, at the record rung's fluid size: --tracking-display reads as gaps between letters this large */
 }
 /* The record page's verbs are the page's own rather than a toolbar's: one rung
    taller than a control in a form, beside a name at the record rung. Below
