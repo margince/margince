@@ -16505,6 +16505,55 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/reports/render:
+    post:
+      tags: [Reports]
+      operationId: renderAnalyticsReport
+      summary: Resolve a report document's figures for this reader.
+      description: |
+        A report document carries STRUCTURE and WORDS. It never carries a figure: every
+        number names a saved run and a cell inside it, and this is where those handles turn
+        into numbers.
+
+        THE DOCUMENT IS REFUSED IF IT CARRIES A NUMBER OF ITS OWN — and it is refused even
+        when a valid handle sits beside the literal. That case is the dangerous one rather
+        than the harmless one: the literal is what would render, the two can disagree, and
+        no reader could tell the page is showing a figure the database never computed.
+
+        Each cited run is resolved the way reading a run directly resolves: the saved
+        QUESTION is re-asked under this caller's own authority and re-judged against the
+        current privacy floor. So the same document shows different figures to readers who
+        may see different populations, and a cell the floor withholds renders as withheld
+        rather than as a number.
+
+        The blocks come back in the order they were composed, each carrying the resolved
+        values for its cells. Nothing is dropped: a document that cannot be rendered whole
+        is refused, because a report missing a block it was composed with says something
+        different from the report that was composed.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReportDocument' }
+      responses:
+        '200':
+          description: The document with every figure resolved for this caller.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RenderedReport' }
+        '400':
+          description: >-
+            The document is not in the block grammar — an unknown block, a literal number, a
+            figure block naming no cell, or an untyped callout. The message names the block
+            by index.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /analytics/explain:
     post:
       tags: [Reports]
@@ -31970,6 +32019,130 @@ components:
             The group floor that judged the ORIGINAL answer. Reported, never applied — this
             read is floored by the installation's current setting. Two runs served under
             different floors make different promises about what is missing.
+      additionalProperties: false
+    ReportDocument:
+      type: object
+      description: >-
+        A report as composed: structure and words, with every figure named by a handle.
+      required: [blocks]
+      properties:
+        blocks:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/ReportBlock' }
+      additionalProperties: false
+    ReportBlock:
+      type: object
+      description: One element of a report. What fields are legal is decided by `kind`.
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum:
+            - title
+            - subtitle
+            - scope
+            - generated_at
+            - summary
+            - methodology
+            - follow_ups
+            - stat_strip
+            - bar
+            - waterfall
+            - ranked_list
+            - record_table
+            - callout
+            - evidence_drawer
+          description: >-
+            The closed set a renderer knows how to draw. An unknown kind is refused rather
+            than dropped: a report missing a block it was composed with says something
+            different from the one composed.
+        text:
+          type: string
+          description: The composer's own words. Prose, never a figure.
+        cells:
+          type: array
+          items: { $ref: '#/components/schemas/ReportCell' }
+          description: >-
+            The figures this block shows, in render order. Required for a block whose
+            purpose is to display a number; refused on one that renders none, where the
+            figure would be silently unshown.
+        severity:
+          type: string
+          enum: [note, warning, partial, unknown, unsupported]
+          description: >-
+            Types a callout, and is meaningless elsewhere. A callout says what the numbers
+            cannot — a partial figure, an unanswerable question, an unsupported grouping —
+            and an untyped one renders as prose, which is how a measured absence becomes
+            indistinguishable from one nobody looked for.
+        value:
+          type: number
+          format: double
+          description: >-
+            ALWAYS REFUSED, and the field exists so the refusal can name what it found. A
+            composer that puts a number here is asking the renderer to draw a figure the
+            database never computed. Carrying one beside a valid handle is refused too, and
+            that case is worse: the literal is what renders, the two can disagree, and
+            nothing downstream can tell.
+      additionalProperties: false
+    ReportCell:
+      type: object
+      description: One figure, named by the run it lives in and the cell within it.
+      required: [run_id, column]
+      properties:
+        run_id:
+          type: string
+          format: uuid
+          description: The saved run. Resolved under the reading caller's own authority.
+        group:
+          type: array
+          items: {}
+          description: >-
+            The cell's group key values, one per grouping in the saved question. Omitted for
+            an ungrouped run, which has one cell.
+        column:
+          type: string
+          description: >-
+            Which measure of the cell to show. A cell can carry several and a block shows
+            one, so which is not a detail a renderer may pick.
+      additionalProperties: false
+    RenderedReport:
+      type: object
+      description: The composed document with every figure resolved for this reader.
+      required: [blocks]
+      properties:
+        blocks:
+          type: array
+          items: { $ref: '#/components/schemas/RenderedBlock' }
+      additionalProperties: false
+    RenderedBlock:
+      type: object
+      required: [kind, values]
+      properties:
+        kind: { type: string }
+        text: { type: string }
+        severity: { type: string }
+        values:
+          type: array
+          items: { $ref: '#/components/schemas/RenderedValue' }
+          description: One entry per cell the block named, in the same order.
+      additionalProperties: false
+    RenderedValue:
+      type: object
+      required: [withheld]
+      properties:
+        value:
+          nullable: true
+          description: >-
+            The figure the database computed, or null when it was withheld. A null with
+            `withheld` false means the cell resolved to no value at all, which is a
+            different fact from one kept back.
+        withheld:
+          type: boolean
+          description: >-
+            The privacy floor kept this figure back for this reader. The block still renders
+            — a figure that vanished would leave the report reading as complete while saying
+            less.
       additionalProperties: false
     ReportRunCell:
       type: object
