@@ -282,14 +282,13 @@ func newIntegrationsHandlers(pool *pgxpool.Pool, vault keyvault.Vault, reg *inte
 // requireVisibleContact refuses a paid lookup on a contact the caller cannot
 // open, answering not-found so existence stays hidden.
 func (h integrationsHandlers) requireVisibleContact(ctx context.Context, id crmcontracts.Id) error {
+	// No pool is no transaction to ask through, so the check cannot be
+	// performed — and an authority check that cannot run refuses. The gate in
+	// backend/gates/enrichmentpool_test.go keeps a wiring from reaching here.
 	if h.pool == nil {
 		return apperrors.ErrPermissionDenied
 	}
-	parsed, err := ids.Parse(id.String())
-	if err != nil {
-		return apperrors.ErrNotFound
-	}
 	return database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
-		return auth.EnsureVisibleLive(ctx, tx, "person", parsed)
+		return auth.EnsureVisibleLive(ctx, tx, "person", ids.UUID(id))
 	})
 }

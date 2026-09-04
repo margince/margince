@@ -224,13 +224,14 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthorityreach_test.go` | H2 | Every write of a shareable record reaches a write-authority probe. |
 | `writeshape_test.go` | H2 | The write-shape obligation as a fitness function: every mutation that writes an audit row commits a paired outbox event on the same static call path (data-model §11, events.md §4.2 — spelled once in storekit), across modules AND the composition layer. |
 
-## Shape (22)
+## Shape (23)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
 | `capturedbytyping_test.go` | H2 | `captured\_by` records the PRINCIPAL, and a principal is not a user row. |
 | `cursorrefusal_test.go` | H2 | A page token a caller hands back is either one this server minted or it is not, and that is ONE question with one answer on the wire: the contract's `422 code: malformed\_cursor`, which tells the caller to re-issue the request without the token. |
 | `domainclaimprobe_test.go` | H2 | A domain maps to at most one organization (data-model §4.2), so "is this domain taken?" is one question — and answering it discloses something either way. |
+| `enrichmentpool_test.go` | H2 | A provider handler set that can queue a RUN must carry the pool its visibility check reads through. |
 | `extensionsqlscope_test.go` | H1 | A unit's SQL addresses the unit's own tables. |
 | `fieldnames_test.go` | H2 | A field name published to a caller has to BE a field name. |
 | `geocodestaleness_test.go` | H1 | The staleness rule lives in the SCHEMA, and this holds it there. |
