@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 38,
+    "sites": 39,
     "sites_best_current": 35,
     "sites_best_partial": 0,
     "sites_best_stale": 3,
-    "sites_absent": 0,
-    "scenarios": 130,
+    "sites_absent": 1,
+    "scenarios": 133,
     "records": 59,
     "bindings": 10
   },
@@ -2560,6 +2560,33 @@
           "stale_reason": ""
         }
       ]
+    },
+    {
+      "task": "owed_verdict",
+      "site": "owed",
+      "key": "owed_verdict/owed",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "a_direct_question_asks_us_and_a_report_does_not",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/owed_verdict/basic_01.yaml"
+        },
+        {
+          "name": "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/owed_verdict/invitation_01.yaml"
+        },
+        {
+          "name": "the_recipient_line_separates_a_request_from_a_copy",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/owed_verdict/envelope_decides_01.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "propose_roles",

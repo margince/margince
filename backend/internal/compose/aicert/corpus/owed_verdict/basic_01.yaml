@@ -1,0 +1,42 @@
+name: a_direct_question_asks_us_and_a_report_does_not
+task: owed_verdict
+site: owed
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The baseline pair. Both messages are unanswered inbound mail on a real thread,
+# so the waiting queue shows both and cannot tell them apart — which is the whole
+# reason this site exists. One puts a question to us; the other reports and asks
+# nothing.
+fixture:
+  - subject: 'Re: retrofit quote'
+    body: |
+      Thanks for sending this through. Before I take it to the board on Friday,
+      can you confirm whether the price holds if we push the start date to
+      April?
+    to: ['sales@ourco.test']
+  - subject: 'Monatsreporting Juli'
+    body: |
+      Attached is the July report for your records. Figures are final and no
+      action is needed from your side.
+    to: ['reporting@customer.test']
+    cc: ['lars@ourco.test']
+expect:
+  outcome: accepted
+  answer: [asks_us, informs_us]
+  rubric: >
+    The first message asks a question with a deadline attached and waits on an
+    answer: asks_us. The second is a report filed to a desk address with our
+    reader merely copied, and it says in as many words that no action is needed:
+    informs_us.
+    Score high only if both are right. Getting the first wrong is the expensive
+    mistake and should score lowest — a customer with a question before a board
+    meeting is exactly the message this whole queue exists to surface, and
+    judging it informs_us demotes it out of a rep's day.
+    Getting the second wrong is milder: it leaves a report in the top band, which
+    costs a rep a scroll. Score it in the middle.
+    Note what must NOT drive the answer: the second message is about money and
+    the first is not. Importance is not the question — what the message ASKS is.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

@@ -36,6 +36,7 @@ export const TASK_SAID: Readonly<Record<string, string>> = {
   agent_loop: "Worked through a request",
   brief_ranking: "Ranked your morning brief",
   capture_classify: "Sorted captured mail",
+  owed_verdict: "Read which messages are waiting on you",
   capture_counterparty_verdict: "Decided who a message was with",
   cert_judge: "Checked its own answer",
   cold_start: "Set up your workspace",

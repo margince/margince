@@ -257,36 +257,26 @@ func classifyShapeValid(batch []unlabeledMessage) ai.Validator {
 // validateClassifyPayload names the first §2.8 batch-fidelity violation,
 // or "" when the payload is exact.
 func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) string {
-	seen := map[string]bool{}
-	want := map[string]bool{}
-	for _, m := range batch {
-		want[m.ID.String()] = true
+	requested := make([]string, len(batch))
+	for i, m := range batch {
+		requested[i] = m.ID.String()
 	}
+	if msg := checkBatchFidelity(payload.Results, requested); msg != "" {
+		return msg
+	}
+	// This site's own vocabulary, checked here rather than in the shared id
+	// contract: an error naming the wrong closed set sends a reader to the
+	// wrong prompt.
 	for _, r := range payload.Results {
-		// Every echoed token is MODEL output, and a sender who got the model to
-		// obey can choose it — so it is bounded before it reaches an error string
-		// that ends up in the operator's log and, on a retry, back in the prompt.
-		if !want[r.ID] {
-			return fmt.Sprintf("result id %q was not requested", clampToken(r.ID))
-		}
-		if seen[r.ID] {
-			return fmt.Sprintf("result id %q appears twice", clampToken(r.ID))
-		}
-		seen[r.ID] = true
 		if !classifyLabels[r.Label] {
 			return fmt.Sprintf("label %q is not commitment|meeting|noise", clampToken(r.Label))
-		}
-		if r.Confidence < 0 || r.Confidence > 1 {
-			return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
-		}
-	}
-	for id := range want {
-		if !seen[id] {
-			return fmt.Sprintf("requested id %q is missing from the results", id)
 		}
 	}
 	return ""
 }
+
+func (r classifyResult) answeredID() string  { return r.ID }
+func (r classifyResult) confidence() float64 { return float64(r.Confidence) }
 
 // classifySchema is the generation-time shape guardrail (§2.8).
 func classifySchema() json.RawMessage {

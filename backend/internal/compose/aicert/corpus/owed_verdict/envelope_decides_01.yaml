@@ -1,0 +1,42 @@
+name: the_recipient_line_separates_a_request_from_a_copy
+task: owed_verdict
+site: owed
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# Two messages whose BODIES are nearly identical and whose verdicts differ, so
+# the answer can only come from the recipient line. Without the envelope in the
+# prompt this site is guessing, and this scenario is what would show it: a model
+# reading subject and body alone must score at the floor here.
+fixture:
+  - subject: 'outstanding invoices'
+    body: |
+      The invoices below remain unpaid and work is suspended until they are
+      settled. Please advise on timing.
+    to: ['lars@ourco.test']
+  - subject: 'Re: outstanding invoices'
+    body: |
+      The invoices below remain unpaid and work is suspended until they are
+      settled. Please advise on timing.
+    to: ['accounts@customer.test']
+    cc: ['lars@ourco.test']
+expect:
+  outcome: accepted
+  answer: [asks_us, informs_us]
+  rubric: >
+    Identical bodies, different envelopes. The first is addressed to our reader
+    and asks them to advise: asks_us. The second is addressed to the customer's
+    own accounts desk with our reader copied — the request is being made of
+    somebody else and we are watching: informs_us.
+    Score high only if both are right, and treat a model that answers the same
+    verdict for both as scoring at the floor whichever verdict it picked. Two
+    identical answers here mean the recipient line was not read at all, which is
+    the failure this scenario exists to catch — and a model that ignores the
+    envelope will be wrong on a large share of real mail, because being copied on
+    somebody else's thread is one of the commonest shapes in a shared mailbox.
+    A model that gets the second right and the first wrong has over-applied the
+    rule and should score in the middle: it is reading the envelope but weighting
+    it above the plain address of the request.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
