@@ -55,7 +55,17 @@ export function bandSections(
     }
     runs.push({ band: item.band, items: [item] });
   }
-  return withDeclaredEmpties(runs, day.bands?.map((band) => band.band) ?? []);
+  // The server's bands, minus the ones whose work is no longer drawn here.
+  //
+  // `review` names judgements, and those are drawn in their own panel below the
+  // day. Left in this list it yields an empty run inside the day — a heading
+  // standing over nothing, saying the reader has nothing to review, while the
+  // review panel underneath holds exactly that work. A band the day does not
+  // hold is not an empty band; it is a band that belongs somewhere else.
+  const declared = (day.bands ?? [])
+    .map((band) => band.band)
+    .filter((band) => band !== "review");
+  return withDeclaredEmpties(runs, declared);
 }
 
 /**

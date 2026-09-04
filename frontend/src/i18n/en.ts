@@ -7989,6 +7989,7 @@ export const en = {
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Reading your day…",
   "worklist.queue": "Today",
+  "worklist.review": "To review",
   "worklist.more": "Show more",
   "worklist.more.failed": "Could not load more. Try again.",
   "worklist.summary":
