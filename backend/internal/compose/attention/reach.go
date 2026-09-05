@@ -170,7 +170,7 @@ func categoryOfSource(source crmcontracts.WorklistItemSource) crmcontracts.Workl
 		return categoryLeads
 	case sourceAtRisk, "brief_item":
 		return "deals_at_risk"
-	case "meeting":
+	case "meeting", "meeting_outcome":
 		return "meetings"
 	case sourceTask, "conversation_claim":
 		return "tasks"

@@ -211,6 +211,7 @@ const KNOWN_REASONS = {
   stale: true,
   no_reply_history: true,
   asks_nothing: true,
+  outcome_unrecorded: true,
 } as const;
 
 type KnownReason = keyof typeof KNOWN_REASONS;
@@ -740,6 +741,7 @@ export const KNOWN_SOURCES = {
   lead_response: true,
   deal_at_risk: true,
   meeting: true,
+  meeting_outcome: true,
   relationship_decay: true,
   failed_approval: true,
   dsr: true,
