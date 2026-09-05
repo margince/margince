@@ -6,6 +6,7 @@ import { Briefcase } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { ENTITY } from "../app/entity";
 import { navigate, routeHash } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -211,7 +212,7 @@ export function DealProjectChip({ deal }: Readonly<{ deal: Deal }>) {
   if (!deal.project_id) {
     return null;
   }
-  const href = routeHash({ screen: "projects", id: deal.project_id });
+  const href = routeHash(ENTITY.project.route(deal.project_id));
   return (
     <a className="chip chip-link" href={href} data-testid="deal-project">
       <Briefcase size={14} aria-hidden="true" />

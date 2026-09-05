@@ -286,6 +286,42 @@ const coverageRoutes: RouteMap = {
     }),
 };
 
+const deliveryRoutes: RouteMap = {
+  ...routes,
+  "POST /reports/projects-by-phase": () =>
+    run("projects-by-phase", [
+      {
+        phase: "delivering",
+        projects: 3,
+        open_deal_value_minor: 400000,
+        won_deal_value_minor: 900000,
+      },
+    ]),
+  "POST /reports/project-commitments": () =>
+    run("project-commitments", [
+      {
+        project_id: "p1",
+        name: "Rollout Nord",
+        phase: "delivering",
+        open_commitments: 5,
+        overdue_commitments: 2,
+      },
+    ]),
+  "POST /reports/projects-gone-quiet": () => run("projects-gone-quiet", []),
+};
+
+export const Delivery: Story = {
+  render: () => {
+    installFetchStub(deliveryRoutes);
+    return (
+      <StoryProviders>
+        <AnalyticsScreen />
+      </StoryProviders>
+    );
+  },
+  play: clickButton("Delivery"),
+};
+
 export const DataCoverage: Story = {
   render: () => {
     installFetchStub(coverageRoutes);

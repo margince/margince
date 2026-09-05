@@ -607,3 +607,26 @@ func TestACardWithSeveralNumbersPointsTheUndoAtTheReplacement(t *testing.T) {
 		t.Errorf("live numbers = %v, want the replacing work number retired", live)
 	}
 }
+
+// A card's LinkedIn URL reaches the slot in the SAME spelling every other
+// writer stores, because the slot is an identity rather than a display string:
+// it is compared verbatim for the exact-match dedupe key and looked up verbatim
+// by the provider resolver. A card that spelt the profile with http, a trailing
+// slash or a tracking query used to file the same person under a second one.
+func TestACardsLinkedInProfileIsStoredNormalized(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	results := importCards(ctx, t, e,
+		"BEGIN:VCARD\nFN:Kari Nord\nURL:http://WWW.LinkedIn.com/in/kari-nord/?trk=card\n"+
+			"EMAIL;TYPE=WORK:kari@nord.example\nEND:VCARD\n")
+
+	if len(results) != 1 || results[0].PersonID == nil {
+		t.Fatalf("outcomes = %+v, want one card imported to a person", results)
+	}
+	personID := ids.From[ids.PersonKind](results[0].PersonID.UUID)
+	const normalized = "https://www.linkedin.com/in/kari-nord"
+	if got := storedLinkedinHandle(ctx, t, e, personID); got != normalized {
+		t.Errorf("linkedin slot = %q, want %q", got, normalized)
+	}
+}
