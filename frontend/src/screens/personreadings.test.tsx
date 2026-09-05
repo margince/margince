@@ -206,6 +206,11 @@ describe("what we owe them", () => {
           data: [
             {
               id: "t1",
+              kind: "task",
+              source: "manual",
+              captured_by: "human:u1",
+              created_at: AS_OF,
+              updated_at: AS_OF,
               subject: "Prepare the translation checklist",
               due_at: "2026-08-05T09:00:00Z",
               is_done: false,
@@ -240,6 +245,11 @@ describe("what we owe them", () => {
           data: [
             {
               id: "t1",
+              kind: "task",
+              source: "manual",
+              captured_by: "human:u1",
+              created_at: AS_OF,
+              updated_at: AS_OF,
               subject: "Already sent",
               is_done: true,
               occurred_at: AS_OF,
@@ -265,6 +275,11 @@ describe("what we owe them", () => {
           data: [
             {
               id: "t1",
+              kind: "task",
+              source: "manual",
+              captured_by: "human:u1",
+              created_at: AS_OF,
+              updated_at: AS_OF,
               subject: "Prepare the checklist",
               is_done: false,
               occurred_at: AS_OF,
