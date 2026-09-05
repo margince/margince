@@ -8115,6 +8115,7 @@ export const en = {
     "Off your list. Whoever owns it still sees it.",
   "worklist.disposition.done.not_sales": "Off everyone's list.",
   "worklist.disposition.swipeCancel": "Keep it",
+  "worklist.disposition.menu": "Take off the list",
   "worklist.disposition.undo": "Undo",
   "worklist.disposition.undoFailed":
     "That could not be undone. The message is still off your list.",

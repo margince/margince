@@ -7927,6 +7927,7 @@ export const vi = {
     "Đã rời danh sách của bạn. Người phụ trách vẫn thấy nó.",
   "worklist.disposition.done.not_sales": "Đã rời danh sách của mọi người.",
   "worklist.disposition.swipeCancel": "Giữ lại",
+  "worklist.disposition.menu": "Đưa khỏi danh sách",
   "worklist.disposition.undo": "Hoàn tác",
   "worklist.disposition.undoFailed":
     "Không thể hoàn tác. Tin nhắn vẫn nằm ngoài danh sách của bạn.",

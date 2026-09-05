@@ -8015,6 +8015,7 @@ export const de = {
     "Von deiner Liste. Wer zuständig ist, sieht es weiterhin.",
   "worklist.disposition.done.not_sales": "Von allen Listen entfernt.",
   "worklist.disposition.swipeCancel": "Behalten",
+  "worklist.disposition.menu": "Aus der Liste nehmen",
   "worklist.disposition.undo": "Rückgängig",
   "worklist.disposition.undoFailed":
     "Das konnte nicht rückgängig gemacht werden. Die Nachricht ist weiterhin von deiner Liste.",
