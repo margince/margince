@@ -251,6 +251,12 @@ type TranscriptReading struct {
 	// of this meeting inherits them: a next step that hangs off no account is
 	// one nobody will find again.
 	Links []ActivityLinkInput
+	// OccurredAt is the day the activity is filed under — the day the meeting
+	// happened where the rep set one, and the day it was logged where they
+	// left the composer's default. It is what a relative deadline in the
+	// transcript counts from, so a backdated transcript filed under today
+	// resolves "by Friday" against the wrong week.
+	OccurredAt time.Time
 }
 
 // ReadTranscript hands back a transcript's lines and the records it belongs to.
@@ -276,6 +282,7 @@ func (s *Store) ReadTranscript(ctx context.Context, activityID ids.ActivityID) (
 			return ErrBlankTranscript
 		}
 		out.Lines = transcriptLines(*activity.Body)
+		out.OccurredAt = activity.OccurredAt
 		if activity.Links != nil {
 			for _, link := range *activity.Links {
 				out.Links = append(out.Links, ActivityLinkInput{

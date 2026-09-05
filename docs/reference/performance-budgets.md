@@ -30,7 +30,7 @@ them runs in CI, so nothing here changes unless somebody chooses to measure.
 | `PERF-6` | Cold start (single binary) | < 2 s | — | **not measured** | — |
 | `PERF-7` | Context-graph assembly | < 300 ms at mid-market | 9.9 ms | within budget | 2026-08-15 |
 | `CAP-PARAM-1` | Capture to timeline | 60 s p95 | 39.2 ms | within budget | 2026-08-15 |
-| `MOBILE-AC-2` | Record open, perceived, Fast-3G | < 300 ms perceived | 65.0 ms | within budget | 2026-08-15 |
+| `MOBILE-AC-2` | Record open, perceived, Fast-3G | < 300 ms perceived | 49.0 ms | within budget | 2026-08-21 |
 
 ### Still unmeasured
 
@@ -55,20 +55,20 @@ A latency is only true of the machine that produced it.
 |---|---|---|---|---|---|
 | `capture_to_timeline` | 27.8 ms | 39.2 ms | 42.9 ms | 60000 ms | 20 |
 
-### `make bench-mobile` · measured 2026-08-15
+### `make bench-mobile` · measured 2026-08-21
 
 | | |
 |---|---|
 | os / arch | darwin / arm64 |
-| cpu | Apple M4 (10 cores) |
+| cpu | Apple M4 Pro (12 cores) |
 | memory | 24 GiB |
-| toolchain | node 24.18.0 |
+| toolchain | node 24.16.0 |
 | network | throttled Fast-3G (MOBILE-PARAM-2) |
 | viewport | 390x844 |
 
 | measurement | p50 | p95 | p99 | budget | samples |
 |---|---|---|---|---|---|
-| `record_open_perceived` | 62.0 ms | 65.0 ms | 841 ms | 300 ms | 20 |
+| `record_open_perceived` | 45.0 ms | 49.0 ms | 843 ms | 300 ms | 20 |
 
 ### `make bench-perf` · measured 2026-08-15
 

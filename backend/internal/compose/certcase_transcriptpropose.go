@@ -136,6 +136,15 @@ func refuseUnreachableSteps(want []transcriptProposeExpectation, lineCount int) 
 
 // transcriptProposeCase is one transcript ready to be read, closed over the
 // lines that were asked about and the next steps the scenario expects.
+// certTranscriptMeetingDay is the day every graded transcript is read as having
+// happened on.
+//
+// PINNED for the reason the language is: a prompt carrying today's date would
+// make every morning's request a different one, and a score is only comparable
+// against a fixed request. No corpus scenario states a deadline yet, so nothing
+// grades what this resolves to — it is here so the request stays still.
+const certTranscriptMeetingDay = "2026-03-04"
+
 type transcriptProposeCase struct {
 	lines    []string
 	expected []transcriptProposeExpectation
@@ -151,7 +160,11 @@ func (c *transcriptProposeCase) Run(ctx context.Context, completer aitasks.Compl
 	// one that changed its mind. The rule is PRESENT in the graded request for
 	// the same reason — production sends one, so a case that left it out would
 	// grade a prompt the product does not send.
-	req := transcriptRequest(c.lines, string(textlang.English))
+	// The meeting day is PINNED for the same reason the language is: a case
+	// whose prompt carried today's date would grade a different request every
+	// morning, and any deadline a corpus case states relative to the meeting
+	// would resolve to a different day each run.
+	req := transcriptRequest(c.lines, certTranscriptMeetingDay, string(textlang.English))
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
 	if err != nil {

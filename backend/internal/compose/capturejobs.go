@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // CaptureClassifyArgs runs one catch-up classify pass (ADR-0063; §2.8).
@@ -35,41 +36,22 @@ func (CaptureClassifyArgs) Kind() string { return "capture_classify" }
 // and does no tenant work of its own (jobs.FleetWide).
 func (CaptureClassifyArgs) FleetWide() {}
 
-// captureClassifyWorker is the dispatcher for the label pass.
-type captureClassifyWorker struct {
-	pool *pgxpool.Pool
-}
-
-func (w *captureClassifyWorker) Work(ctx context.Context, _ *river.Job[CaptureClassifyArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(CaptureClassifyWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return CaptureClassifyWorkspaceArgs{Workspace: ws} }))
-}
-
-// CaptureClassifyWorkspaceArgs is one workspace's catch-up label pass.
-type CaptureClassifyWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (CaptureClassifyWorkspaceArgs) Kind() string { return "capture_classify_workspace" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a CaptureClassifyWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// captureClassifyWorkspaceWorker drives the batched label engine for one
+// captureClassifyWorker drives the batched label engine for every live
 // workspace; the engine commits per model call, so a mid-pass crash or budget
 // stop loses nothing and the next tick resumes from the shrunken backlog.
-type captureClassifyWorkspaceWorker struct {
+//
+// One worker where there were two (ADR-0103).
+type captureClassifyWorker struct {
+	pool       *pgxpool.Pool
 	classifier *CaptureClassifier
 }
 
-func (w *captureClassifyWorkspaceWorker) Work(ctx context.Context, job *river.Job[CaptureClassifyWorkspaceArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	return jobs.FaultContext(ctx, w.classifier.RunWorkspace(wsCtx, 0))
+func (w *captureClassifyWorker) Work(ctx context.Context, _ *river.Job[CaptureClassifyArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.classifyWorkspace))
+}
+
+func (w *captureClassifyWorker) classifyWorkspace(ctx context.Context, workspace ids.UUID) error {
+	return w.classifier.RunWorkspace(principal.WithWorkspaceID(ctx, workspace), 0)
 }
 
 // CaptureEnrichArgs runs one signature-enrich pass (ADR-0063; §2.9).
@@ -82,47 +64,29 @@ func (CaptureEnrichArgs) Kind() string { return "capture_enrich" }
 // and does no tenant work of its own (jobs.FleetWide).
 func (CaptureEnrichArgs) FleetWide() {}
 
-// captureEnrichWorker is the dispatcher for the signature-enrich pass.
+// captureEnrichWorker drives the evidence-gated signature pass for every live
+// workspace; every accepted field is auditable back to its verbatim signature
+// line.
+//
+// One worker where there were two (ADR-0103).
 type captureEnrichWorker struct {
-	pool *pgxpool.Pool
-}
-
-func (w *captureEnrichWorker) Work(ctx context.Context, _ *river.Job[CaptureEnrichArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(CaptureEnrichWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return CaptureEnrichWorkspaceArgs{Workspace: ws} }))
-}
-
-// CaptureEnrichWorkspaceArgs is one workspace's signature-enrich pass.
-type CaptureEnrichWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (CaptureEnrichWorkspaceArgs) Kind() string { return "capture_enrich_workspace" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a CaptureEnrichWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// captureEnrichWorkspaceWorker drives the evidence-gated signature pass for
-// one workspace; every accepted field is auditable back to its verbatim
-// signature line.
-type captureEnrichWorkspaceWorker struct {
+	pool     *pgxpool.Pool
 	enricher *CaptureEnricher
 	log      *slog.Logger
 }
 
-func (w *captureEnrichWorkspaceWorker) Work(ctx context.Context, job *river.Job[CaptureEnrichWorkspaceArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+func (w *captureEnrichWorker) Work(ctx context.Context, _ *river.Job[CaptureEnrichArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.enrichWorkspace))
+}
+
+func (w *captureEnrichWorker) enrichWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	filled, err := w.enricher.RunWorkspace(wsCtx)
 	if err != nil {
-		return jobs.FaultContext(ctx, err)
+		return err
 	}
 	if filled {
-		w.enqueueContinuation(wsCtx, job.Args)
+		w.enqueueContinuation(wsCtx, workspace)
 	}
 	return nil
 }
@@ -139,17 +103,23 @@ func (w *captureEnrichWorkspaceWorker) Work(ctx context.Context, job *river.Job[
 // the ByArgs/active-state uniqueness the trigger uses would dedupe the
 // continuation against its own still-running parent and drop it silently —
 // which is precisely the case this exists to fix.
-func (w *captureEnrichWorkspaceWorker) enqueueContinuation(ctx context.Context, args CaptureEnrichWorkspaceArgs) {
+// It queues the PASS, which the collapse made the only kind there is: the
+// continuation used to name one workspace and now re-runs the walk. On an
+// installation with a single workspace — the only shape the product supports
+// (identity.InstallationWorkspace refuses more) — that is the same work. On a
+// fleet it would re-visit the workspaces that did not fill their limit, and
+// each of those is a cheap no-op read against a backlog it just emptied.
+func (w *captureEnrichWorker) enqueueContinuation(ctx context.Context, workspace ids.UUID) {
 	client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
 	if err != nil {
 		w.log.WarnContext(ctx, "signature enrich: no River client in context, so the continuation was not enqueued",
-			"workspace", args.Workspace.String(), "err", err)
+			"workspace", workspace.String(), "err", err)
 		return
 	}
-	if _, err := client.Insert(ctx, CaptureEnrichWorkspaceArgs{Workspace: args.Workspace},
-		oneOffChildOpts(CaptureEnrichWorkspaceArgs{}.Kind())); err != nil {
+	if _, err := client.Insert(ctx, CaptureEnrichArgs{},
+		oneOffPassOpts(CaptureEnrichArgs{}.Kind())); err != nil {
 		w.log.WarnContext(ctx, "signature enrich: continuation enqueue failed",
-			"workspace", args.Workspace.String(), "err", err)
+			"workspace", workspace.String(), "err", err)
 	}
 }
 

@@ -116,7 +116,25 @@ function requestsTo(calls: Request[], suffix: string, method: string) {
   );
 }
 
+// The live figures count UP over a second of real time, and these cases are
+// about the number rather than the climb. Reduced motion renders the end state
+// at once, which is both the honest thing for the component to do and the only
+// way to assert on a figure without a test whose cost is wall-clock.
+function preferNoMotion() {
+  vi.stubGlobal("matchMedia", ((query: string) => ({
+    matches: query.includes("prefers-reduced-motion"),
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as typeof window.matchMedia);
+}
+
 beforeEach(() => {
+  preferNoMotion();
   vi.stubGlobal("scrollTo", vi.fn());
 });
 

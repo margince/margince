@@ -12,6 +12,7 @@ import { type ReactNode, useLayoutEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import {
   type CreateField,
   CreateRecordModal,
@@ -132,7 +133,7 @@ describe("contact create flow", () => {
       captured,
     );
     render(<ContactsScreen />);
-    await userEvent.click(screen.getByText("New contact"));
+    await userEvent.click(screen.getByText(en["create.contact"]));
     await userEvent.type(screen.getByLabelText("Full name *"), "Peter Neu");
     await userEvent.click(screen.getByText("Add email"));
     await userEvent.type(screen.getByLabelText("Email *"), "peter@neu.example");
@@ -158,7 +159,7 @@ describe("contact create flow", () => {
         ),
     });
     render(<ContactsScreen />);
-    await userEvent.click(screen.getByText("New contact"));
+    await userEvent.click(screen.getByText(en["create.contact"]));
     await userEvent.type(screen.getByLabelText("Full name *"), "x");
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() =>

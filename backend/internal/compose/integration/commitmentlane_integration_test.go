@@ -378,3 +378,62 @@ func TestTheCommitmentCountSeesPastTheLanesCap(t *testing.T) {
 			"five that they have two", total)
 	}
 }
+
+// The board's column and the rep's own lane answer the SAME question.
+//
+// They are two readers of one thing: a lead scans a table, then opens the day
+// behind a number that worried them. If the two disagree the lead is sent to a
+// desk where the work is not, and neither screen says which is right.
+//
+// The multi-owner count exists because a board reaches a hundred people and a
+// hundred sequential queries is a slow morning. What this holds is that making
+// it one query did not make it a different question.
+func TestTheBoardsPromiseColumnAgreesWithEachRepsOwnLane(t *testing.T) {
+	e := integration.Setup(t)
+	mine := e.SeedPerson(t, "Herr Vogt", &e.Rep1)
+	theirs := e.SeedPerson(t, "Frau Keller", &e.Rep2)
+	orphan := e.SeedPerson(t, "Niemands Kontakt", nil)
+	todayLater := laneClock.Add(6 * time.Hour)
+	nextWeek := laneClock.AddDate(0, 0, 7)
+
+	for range 3 {
+		seedPromise(t, e, mine, "Heute Nachmittag", &todayLater)
+	}
+	seedPromise(t, e, theirs, "Auch heute", &todayLater)
+	// Neither of these belongs on today's board: one is due next week, one is
+	// on a person nobody owns.
+	seedPromise(t, e, mine, "Nächste Woche", &nextWeek)
+	seedPromise(t, e, orphan, "Unterlagen nachreichen", &todayLater)
+
+	store := people.NewStore(e.DB())
+	bound := laneClock.Add(24 * time.Hour)
+	owners := []ids.UserID{
+		ids.From[ids.UserKind](e.Rep1),
+		ids.From[ids.UserKind](e.Rep2),
+	}
+	board, err := store.CountOpenCommitmentsDueByOwner(e.Admin(), owners, bound)
+	if err != nil {
+		t.Fatalf("counting the team's promises: %v", err)
+	}
+	for _, owner := range owners {
+		alone, err := store.CountOpenCommitmentsDue(e.Admin(), owner, bound)
+		if err != nil {
+			t.Fatalf("counting one rep's promises: %v", err)
+		}
+		if board[owner.UUID] != alone {
+			t.Fatalf("the board says %d for %v and their own lane says %d — "+
+				"a lead sent to that desk finds different work than the number promised",
+				board[owner.UUID], owner, alone)
+		}
+	}
+	// And the figures are the ones the fixture describes, so an agreement of
+	// two zeros could not pass for agreement.
+	if board[e.Rep1] != 3 || board[e.Rep2] != 1 {
+		t.Fatalf("the board read %d and %d, wanted 3 and 1", board[e.Rep1], board[e.Rep2])
+	}
+	// The unowned promise is on nobody's column, exactly as it is on nobody's
+	// lane.
+	if len(board) != 2 {
+		t.Fatalf("the board named %d owners over a roster of two", len(board))
+	}
+}

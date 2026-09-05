@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SLOWEST_MEASURED_TEST_MS } from "../../vitest.budget";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { ProviderCard } from "./integrations-provider";
 
 type Me = components["schemas"]["MeResponse"];
@@ -193,7 +194,7 @@ describe("ProviderCard write posture", () => {
   const DISCONNECT = "Disconnect";
   const DELETE_DATA = "Delete bought data";
   const KEY_FIELD = "Replace the API key";
-  const AUTOMATIC_LOOKUP = "Look up contacts automatically";
+  const AUTOMATIC_LOOKUP = en["provider.automaticLookup"];
   // Disconnect and delete-data live behind the overflow, because neither is the
   // same weight as Connect: one is recoverable and the other irreversibly
   // destroys purchased contact data. The trigger's presence is what the grant

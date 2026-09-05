@@ -1,7 +1,8 @@
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCan } from "../app/capability";
 import { ENTITY } from "../app/entity";
 import { navigate, routeHash, useRoute } from "../app/router";
 import {
@@ -69,6 +70,12 @@ type StageAgg = {
   count: number;
   rawMinor: number | null;
   weightedMinor: number | null;
+  // How many of `count` the two sums above cover — a deal in a currency the
+  // rate sheet cannot price is counted but priced nowhere in the money.
+  // Null, not zero, when the server left the aggregate out of the row: that
+  // is "we do not know", and folding it into 0 would print "0 of 2 priced"
+  // for a stage nobody actually finished pricing.
+  pricedDeals: number | null;
 };
 
 type ReportKey =
@@ -225,6 +232,24 @@ function rowCount(row: ReportRow, key: string): number {
   return Number(row[key] ?? 0);
 }
 
+// The footnote for a money figure a currency the rate sheet cannot price left
+// short. Null when every counted deal was priced, which is the common case and
+// not worth a caption nobody needs to read.
+function pricedFootnote(
+  pricedDeals: number,
+  total: number,
+  locale: Locale,
+  t: ReturnType<typeof useT>,
+): string | null {
+  if (pricedDeals >= total) {
+    return null;
+  }
+  return t("analytics.priced", {
+    priced: formatNumber(pricedDeals, locale),
+    total: formatNumber(total, locale),
+  });
+}
+
 // A report's own name, spelled once: the segment picker and the heading of the
 // card that segment opens read the same key, so the tab and the surface behind
 // it cannot drift into two names for one report.
@@ -259,11 +284,17 @@ const REPORT_AGGREGATES: Record<ReportKey, ReportAggregate[]> = {
     { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
     { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
     { fn: "count", as: "deal_count" },
+    // How many of deal_count the sums above actually cover — a deal in a
+    // currency the rate sheet cannot price is counted but contributes nothing
+    // to either total, so a row printing only the money reads as complete when
+    // it is short (margince#4201).
+    { fn: "count", field: "amount_base_minor", as: "priced_deals" },
   ],
   forecast: [
     { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
     { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
     { fn: "count", as: "deal_count" },
+    { fn: "count", field: "amount_base_minor", as: "priced_deals" },
   ],
   "open-deals-per-company": [
     { fn: "sum", field: "amount_minor", as: "raw_minor" },
@@ -331,6 +362,7 @@ export function ForecastTile({
   amountMinor,
   weightedMinor,
   dealCount,
+  pricedDeals,
   currency,
   locale,
 }: Readonly<{
@@ -348,6 +380,10 @@ export function ForecastTile({
   // worth less than it is, with nothing on screen to suggest otherwise.
   // Optional: a caller with no count to hand shows none rather than a zero.
   dealCount?: number | null;
+  // How many of `dealCount` the money above actually covers (margince#4201).
+  // Optional and paired with dealCount: a caller with no count has nothing
+  // this could qualify either.
+  pricedDeals?: number | null;
   currency: string | null;
   locale: Locale;
 }>) {
@@ -358,7 +394,7 @@ export function ForecastTile({
       numeric
       value={formatMoneyOrAbsent(amountMinor, currency, locale)}
       detail={forecastTileDetail(
-        { weightedMinor, dealCount, currency, locale },
+        { weightedMinor, dealCount, pricedDeals, currency, locale },
         t,
       )}
     />
@@ -372,11 +408,13 @@ function forecastTileDetail(
   {
     weightedMinor,
     dealCount,
+    pricedDeals,
     currency,
     locale,
   }: Readonly<{
     weightedMinor?: number | null;
     dealCount?: number | null;
+    pricedDeals?: number | null;
     currency: string | null;
     locale: Locale;
   }>,
@@ -390,6 +428,12 @@ function forecastTileDetail(
   }
   if (dealCount != null) {
     parts.push(`${t("analytics.count")}: ${formatNumber(dealCount, locale)}`);
+  }
+  if (dealCount != null && pricedDeals != null) {
+    const footnote = pricedFootnote(pricedDeals, dealCount, locale, t);
+    if (footnote) {
+      parts.push(footnote);
+    }
   }
   return parts.length > 0 ? parts.join(" · ") : undefined;
 }
@@ -455,6 +499,10 @@ function ForecastStrip({
                   amountMinor={row ? rowMoney(row, "raw_minor") : null}
                   weightedMinor={row ? rowMoney(row, "weighted_minor") : null}
                   dealCount={row ? rowCount(row, "deal_count") : null}
+                  // Not rowCount: an absent aggregate here means the server
+                  // did not answer, and rowCount's 0 default would print
+                  // that as "0 priced" instead of leaving the detail out.
+                  pricedDeals={row ? rowMoney(row, "priced_deals") : null}
                   currency={baseCurrency}
                   locale={locale}
                 />
@@ -614,6 +662,10 @@ export function buildStageAggregates(
           // (weighted_amount_minor), never round(rawMinor × p / 100)
           // — that rounds the column sum once instead of every deal.
           weightedMinor: rowMoney(row, "weighted_minor"),
+          // Not rowCount: an absent aggregate here means the server did not
+          // answer the question, and rowCount's 0 default would print that
+          // as an answer.
+          pricedDeals: rowMoney(row, "priced_deals"),
         };
       })
       // Stage position alone orders the ladder now. The old tiebreak on currency
@@ -673,11 +725,20 @@ function StageTable({
         {
           key: "raw",
           header: t("analytics.unweighted"),
-          render: (row: StageAgg) => (
-            <span className="t-mono">
-              {formatMoneyOrAbsent(row.rawMinor, baseCurrency, locale)}
-            </span>
-          ),
+          render: (row: StageAgg) => {
+            const footnote =
+              row.pricedDeals == null
+                ? null
+                : pricedFootnote(row.pricedDeals, row.count, locale, t);
+            return (
+              <span className="t-mono analytics-money-cell">
+                {formatMoneyOrAbsent(row.rawMinor, baseCurrency, locale)}
+                {footnote && (
+                  <span className="t-caption t-mono">{footnote}</span>
+                )}
+              </span>
+            );
+          },
         },
         {
           key: "weighted",
@@ -708,6 +769,7 @@ const DERIVATION_HEADERS: Readonly<Record<string, MessageKey>> = {
   owner_id: "explain.col.owner",
   pipeline_id: "explain.col.pipeline",
   organization_id: "analytics.company",
+  partner_org_id: "analytics.company",
 };
 
 // A column the vocabulary knows gets its word; anything else keeps the wire
@@ -762,10 +824,23 @@ function renderDerivationCell(
   row: Record<string, unknown>,
   baseCurrency: string | null,
   locale: Locale,
-): string {
+): ReactNode {
   const value = row[col];
   if (value == null) {
     return "";
+  }
+  if (typeof value === "string" && value !== "") {
+    if (col === "pipeline_id")
+      return <DerivationPipelineName pipelineId={value} />;
+    if (col === "stage_id" && typeof row.pipeline_id === "string") {
+      return (
+        <DerivationPipelineName pipelineId={row.pipeline_id} stageId={value} />
+      );
+    }
+    if (col === "owner_id") return <EntityRef kind="user" id={value} />;
+    if (col === "organization_id" || col === "partner_org_id") {
+      return <EntityRef kind="organization" id={value} />;
+    }
   }
   if (col.endsWith("_minor") && typeof value === "number") {
     return formatMoneyOrAbsent(
@@ -775,6 +850,33 @@ function renderDerivationCell(
     );
   }
   return String(value);
+}
+
+function DerivationPipelineName({
+  pipelineId,
+  stageId,
+}: Readonly<{ pipelineId: string; stageId?: string }>) {
+  const t = useT();
+  const pipeline = useQuery({
+    queryKey: ["pipeline", pipelineId],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/pipelines/{id}", {
+        params: { path: { id: pipelineId } },
+      });
+      if (error) throwProblem(error);
+      return data;
+    },
+  });
+  if (pipeline.isPending) return <>{t("common.loading")}</>;
+  if (pipeline.isError) return <>{t("common.error")}</>;
+  return (
+    <>
+      {stageId
+        ? (pipeline.data?.stages?.find((stage) => stage.id === stageId)?.name ??
+          t("common.empty"))
+        : pipeline.data?.name}
+    </>
+  );
 }
 
 // The source rows the explained figure reconciles to. A section INSIDE the
@@ -1084,6 +1186,10 @@ function DataCoverageView({
 }: Readonly<{ locale: Locale; timezone: string }>) {
   const t = useT();
   const coverage = useDataCoverage();
+  const allowed = useCan("data_coverage", "read");
+  if (!allowed) {
+    return <EmptyState>{t("common.permissionDenied")}</EmptyState>;
+  }
   return (
     <QueryGate query={coverage} pendingLabel={t("analytics.sectionCoverage")}>
       {(run) =>
@@ -1135,7 +1241,9 @@ function DataCoverageView({
 type DataCoverageRow = components["schemas"]["DataCoverage"]["sources"][number];
 
 function useDataCoverage() {
+  const allowed = useCan("data_coverage", "read");
   return useQuery({
+    enabled: allowed,
     queryKey: ["analytics-coverage"],
     retry: false,
     queryFn: async () => {
@@ -1724,6 +1832,7 @@ export function AnalyticsScreen() {
   // Sharing sits beside the tabs rather than inside a section, because the
   // thing being shared is the SECTION the reader is on — a button that moved
   // with the content would read as sharing one card.
+  const canReadCoverage = useCan("data_coverage", "read");
   const coverageProbe = useDataCoverage();
   const header = (
     <div className="analytics-header">
@@ -1733,10 +1842,9 @@ export function AnalyticsScreen() {
             return context.data?.default_scope.kind === "owner";
           }
           if (candidate === "coverage") {
-            // The server gates this read on the ops grant. The tab appears
-            // when the probe ANSWERS — hidden while pending, so a seat the
-            // server refuses never sees it flicker in and out.
-            return coverageProbe.isSuccess;
+            // The read starts only with the ops grant; the tab appears
+            // after the server has answered.
+            return canReadCoverage && coverageProbe.isSuccess;
           }
           return true;
         })}

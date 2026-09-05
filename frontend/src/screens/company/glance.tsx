@@ -5,15 +5,16 @@ import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { useRecordZone } from "../../app/recordzone";
 import { routeHash } from "../../app/router";
-import { Avatar, Button, Disclosure } from "../../design-system/atoms";
+import { Button, Disclosure } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelGroupHead } from "../../design-system/panel";
+import { RecordCard } from "../../design-system/recordcard";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { CommercialPanel, recordNamesIn } from "../company360";
 import { CompanyContractState } from "../companycommercial";
 import { CompanyProjects } from "../companyprojects";
-import { peopleSlice } from "../companyrailshared";
+import { contactRole, peopleSlice } from "../companyrailshared";
 import { activityHeadline, CompanyRecentList } from "../companyrecent";
 import type { CompanyTab } from "../companytab";
 import { CompanyWorkCard } from "../companywork";
@@ -228,10 +229,14 @@ export function MoneyPane({
 }
 
 /**
- * The account's people as chips: the first few by name, the rest as one
- * count, and the People tab behind the title. A glance at who is there, not
- * the roster — the roster has its own tab and the details column its top
- * three with their routes.
+ * The account's people as cards: the first few with what they do and how to
+ * write to them, the rest as one count, and the People tab behind the title.
+ *
+ * They were name chips. A chip says somebody exists; a reader deciding which
+ * of three to call had to open all three to find out which one buys. The card
+ * carries the facts that decision needs, so it is made here rather than after
+ * three round trips — which is the same trade the thread fold makes one panel
+ * up, spent on the few people the server already ranked to the top.
  */
 export function PeopleChips({
   view,
@@ -268,23 +273,27 @@ export function PeopleChips({
     >
       <PanelBody>
         {state === "ready" ? (
-          <ul className="co-people-chips">
+          <ul className="record-card-list">
             {shown.map((contact) => (
               <li key={contact.person_id}>
-                <a
-                  className="co-person-chip"
+                <RecordCard
+                  kind="person"
+                  name={contact.full_name}
+                  identity={contact.person_id}
                   href={routeHash({
                     screen: "contacts",
                     id: contact.person_id,
                   })}
-                >
-                  <Avatar name={contact.full_name} size="xs" />
-                  {contact.full_name}
-                </a>
+                  position={contactRole(contact)}
+                  email={contact.primary_email ?? undefined}
+                />
               </li>
             ))}
+            {/* The remainder stays a line rather than becoming a card: it
+                names no record, and a card with nothing to open in it reads
+                as one that failed to load. */}
             {(rest > 0 || count == null) && (
-              <li className="co-person-chip co-person-more">
+              <li className="co-people-rest t-caption">
                 {count != null
                   ? `+${formatNumber(rest, locale)}`
                   : t("co.rail.more")}

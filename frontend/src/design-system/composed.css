@@ -549,11 +549,37 @@
    the reference cards. A full step, because these are the breaks a scanning
    reader uses to find their place; the groups inside keep the tighter 16px,
    so the page reads as a few bodies rather than one long stack of cards. */
+/* The work column carries NO interval of its own — `.arrive-stack` is the
+   arrival, not a rhythm — so a tab body that draws more than one panel wraps
+   them in this. Two panels rendered as bare siblings meet at the border, and a
+   seam with no air on either side reads as one card with a rule through it
+   rather than as two sections of the record. */
 .record-stack {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
   min-width: 0;
+}
+
+/* The break between the record's bodies and its story, at the same step the
+   stack above puts between two bodies — the chronology is one more of them.
+   Only when something stands above it: on a Timeline tab the section IS the
+   body, and an interval there would push it off the strip that chose it. */
+.record-timeline:not(:first-child) {
+  margin-block-start: var(--space-6);
+}
+
+/* The columns of context beside the work, at a tighter step than the stack
+   above: a rail card is a glance and a work-column card is something you read.
+   `RecordView` puts these classes on the columns themselves, so the rhythm
+   belongs with the component that names them — every record page draws these
+   two columns, and a screen stylesheet spelling them again is one record's
+   answer to a question the shell already answers for all of them. */
+.record-rail,
+.record-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 /* The record page's zones — the grid itself is `PageZones` (pagezones.css),

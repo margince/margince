@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { PersonFilesTab } from "./personfiles";
 
 type Attachment = components["schemas"]["Attachment"];
@@ -264,9 +265,7 @@ describe("the person's files tab", () => {
     stub({ data: [], page: { has_more: false } });
     show(<PersonFilesTab personId="p-1" />);
 
-    expect(
-      await screen.findByText("No file has been filed against this contact."),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["person.documents.empty"])).toBeTruthy();
   });
 
   it("says the read failed, with a way to retry, rather than reading as empty", async () => {
@@ -275,9 +274,7 @@ describe("the person's files tab", () => {
 
     expect(await screen.findByText("This section did not load.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
-    expect(
-      screen.queryByText("No file has been filed against this contact."),
-    ).toBeNull();
+    expect(screen.queryByText(en["person.documents.empty"])).toBeNull();
   });
 
   it("draws a cut page's rows and says the list was cut, not the whole of it", async () => {
@@ -417,7 +414,7 @@ describe("the person's files tab", () => {
     stub({ data: [], page: { has_more: false } });
     show(<PersonFilesTab personId="p-42" />);
 
-    await screen.findByText("No file has been filed against this contact.");
+    await screen.findByText(en["person.documents.empty"]);
     if (!lastRequest) {
       throw new Error("the tab asked for nothing at all");
     }

@@ -9,8 +9,10 @@
 
 import { Check } from "lucide-react";
 
-import { Panel } from "../../design-system/panel";
-import { formatNumber } from "../../format/format";
+import { useRecordZone } from "../../app/recordzone";
+import { Avatar } from "../../design-system/atoms";
+import { Panel, PanelBody } from "../../design-system/panel";
+import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { IntroRequest } from "../introrequests";
 
@@ -28,7 +30,9 @@ export function RelayPanel({
 }: Readonly<{ ask: IntroRequest | undefined }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const steps = stepsFor(ask, t);
+  const owner = ask && !SETTLED.has(ask.status) ? ownerOf(ask, t) : undefined;
   return (
     <Panel
       title={t("person.intro.relayTitle")}
@@ -36,33 +40,70 @@ export function RelayPanel({
         ask ? t("person.intro.relaySubOpen") : t("person.intro.relaySubNone")
       }
     >
-      <ol className="pn-relay">
-        {steps.map((step, index) => (
-          <li
-            className={`pn-relay-step pn-relay-${step.state}`}
-            key={step.key}
-            aria-current={step.state === "current" ? "step" : undefined}
-          >
-            <span className="pn-relay-num" aria-hidden="true">
-              {step.state === "done" ? (
-                <Check size={14} />
-              ) : (
-                formatNumber(index + 1, locale)
-              )}
-            </span>
-            <div>
-              <strong>{t(step.key)}</strong>
-              {/* The state in words beside the step, because the ring around
+      <PanelBody>
+        <ol className="pn-relay">
+          {steps.map((step, index) => (
+            <li
+              className={`pn-relay-step pn-relay-${step.state}`}
+              key={step.key}
+              aria-current={step.state === "current" ? "step" : undefined}
+            >
+              <span className="pn-relay-num" aria-hidden="true">
+                {step.state === "done" ? (
+                  <Check size={14} />
+                ) : (
+                  formatNumber(index + 1, locale)
+                )}
+              </span>
+              <div>
+                <strong>{t(step.key)}</strong>
+                {/* The state in words beside the step, because the ring around
                   the number is colour and colour alone is not a state. */}
-              <small>
-                {t(STATE_WORD[step.state])} · {step.detail}
-              </small>
-            </div>
-          </li>
-        ))}
-      </ol>
+                <small>
+                  {t(STATE_WORD[step.state])} · {step.detail}
+                </small>
+              </div>
+            </li>
+          ))}
+        </ol>
+        {/* Who owes the next move, named once under the steps rather than
+          inferred from which ring is filled. The due date is the colleague's
+          answer window and belongs only to the step that has one. */}
+        {ask && owner ? (
+          <p className="pn-relay-owner">
+            <Avatar name={owner} size="sm" />
+            <span>{t("person.intro.handoffOwner", { name: owner })}</span>
+            {ask.status === "requested" ? (
+              <span className="pn-relay-due">
+                {t("person.intro.relayDue", {
+                  date: formatDate(ask.due_at, locale, recordZone),
+                })}
+              </span>
+            ) : null}
+          </p>
+        ) : null}
+      </PanelBody>
     </Panel>
   );
+}
+
+/**
+ * ownerOf names who owes the next move on an open ask.
+ *
+ * Shared with the strip's handoff slot, so the two never disagree about
+ * whose turn it is. A status that nobody owes says so rather than naming a
+ * person who has already done their part.
+ */
+export function ownerOf(ask: IntroRequest, t: ReturnType<typeof useT>): string {
+  switch (ask.status) {
+    case "requested":
+      return ask.introducer_display_name ?? t("person.intro.ownerColleague");
+    case "accepted":
+    case "name_drop_approved":
+      return ask.requester_display_name ?? t("person.intro.ownerYou");
+    default:
+      return t("person.intro.ownerNobody");
+  }
 }
 
 type Step = Readonly<{

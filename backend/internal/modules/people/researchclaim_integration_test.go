@@ -347,3 +347,51 @@ func TestARepWhoMayOnlyReadAPersonCannotAcceptClaimsOnThem(t *testing.T) {
 		t.Errorf("rows = %d, want 0 — a refused acceptance wrote anyway", rows)
 	}
 }
+
+// Two linkedin claims in ONE acceptance used to leave the record disagreeing
+// with itself. The acceptance REPLACES, so the second claim reached the
+// evidence row; the empty-slot fill it triggers is ADDITIVE, so the slot kept
+// the URL the first claim put there. The research section then showed one
+// profile and the rail another, and the audit trail said neither.
+//
+// Over real Postgres because that is the only place the two writes meet: the
+// divergence is a conflict clause on one table against a conflict clause on the
+// other, and neither exists anywhere a unit test could see.
+func TestTwoClaimsForOneFieldLeaveTheSlotAndTheEvidenceAgreeing(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	personID, _ := e.seedEmployedPerson(ctx, t,
+		"Ola Reite", "ola@research.test", "Reite AS", "research.test")
+
+	const last = "https://www.linkedin.com/in/ola-reite-second"
+	saved, err := e.store.SaveResearchClaims(ctx, personID, []ResearchClaimInput{
+		{
+			Field: "linkedin", Value: "https://www.linkedin.com/in/ola-reite-first",
+			Quote: "Ola Reite — Reite AS", SourceURL: "https://research.test/a",
+		},
+		{
+			Field: "linkedin", Value: last,
+			Quote: "Ola Reite — the profile they actually meant", SourceURL: "https://research.test/b",
+		},
+	})
+	if err != nil {
+		t.Fatalf("SaveResearchClaims: %v", err)
+	}
+	// One field accepted, so one claim saved — not the two the caller sent.
+	// The count rides the audit row and the outbox event, and reporting two
+	// would record a mutation that never happened.
+	if saved != 1 {
+		t.Errorf("saved = %d, want 1 — two claims about one field are one acceptance", saved)
+	}
+
+	evidence := readStoredClaim(ctx, t, e, personID, "linkedin")
+	if evidence.value != last {
+		t.Errorf("evidence value = %q, want the last claim's %q", evidence.value, last)
+	}
+	if got := storedLinkedinHandle(ctx, t, e, personID); got != last {
+		t.Errorf("linkedin slot = %q, want %q — the slot and the evidence must name one profile", got, last)
+	}
+	if rows := claimRowsFor(ctx, t, e, personID); rows != 1 {
+		t.Errorf("rows under this person = %d, want 1", rows)
+	}
+}

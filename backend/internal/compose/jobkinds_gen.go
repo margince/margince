@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "2214e01dba3aab6b7b75e9c383c179f54d84e55cc2a0d1efdba99a1136ef4cfe"
+const jobContractHash = "3a3de981a308bca94bf2152717dd8481adf56a1153bb0135d79e3d0f185afcec"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -39,7 +39,6 @@ type declaredJobArgs interface {
 		CaptureAutoEnrichSweepArgs |
 		CaptureBackfillArgs |
 		CaptureClassifyArgs |
-		CaptureClassifyWorkspaceArgs |
 		ConfidentialityVerdictArgs |
 		ConfidentialityVerdictWorkspaceArgs |
 		CounterpartyVerdictArgs |
@@ -47,7 +46,6 @@ type declaredJobArgs interface {
 		CaptureDigestArgs |
 		CaptureDigestWorkspaceArgs |
 		CaptureEnrichArgs |
-		CaptureEnrichWorkspaceArgs |
 		CaptureSyncArgs |
 		CaptureTraceSweepArgs |
 		CaptureTraceSweepWorkspaceArgs |
@@ -90,7 +88,6 @@ type declaredJobArgs interface {
 		OverlayReconcileWorkspaceArgs |
 		OverlayRefetchArgs |
 		OwedVerdictArgs |
-		OwedVerdictWorkspaceArgs |
 		ParticipantBackfillArgs |
 		ParticipantBackfillWorkspaceArgs |
 		PrivacyRetentionArgs |
@@ -150,11 +147,9 @@ func addDeclaredWorkerWithTimeout[T declaredJobArgs](reg *jobRegistry, w jobs.Wo
 var (
 	_ jobs.FleetWide = AssuranceSweepArgs{}
 	_ jobs.FleetWide = BriefGenerateArgs{}
-	_ jobs.FleetWide = CaptureClassifyArgs{}
 	_ jobs.FleetWide = ConfidentialityVerdictArgs{}
 	_ jobs.FleetWide = CounterpartyVerdictArgs{}
 	_ jobs.FleetWide = CaptureDigestArgs{}
-	_ jobs.FleetWide = CaptureEnrichArgs{}
 	_ jobs.FleetWide = CaptureTraceSweepArgs{}
 	_ jobs.FleetWide = CloseDateSweepArgs{}
 	_ jobs.FleetWide = FollowUpReconcileArgs{}
@@ -168,7 +163,6 @@ var (
 	_ jobs.FleetWide = LinkedInRematchArgs{}
 	_ jobs.FleetWide = OrgNamePromotionArgs{}
 	_ jobs.FleetWide = OverlayReconcileArgs{}
-	_ jobs.FleetWide = OwedVerdictArgs{}
 	_ jobs.FleetWide = ParticipantBackfillArgs{}
 	_ jobs.FleetWide = ProviderLookupSweepArgs{}
 	_ jobs.FleetWide = ProviderRunPollSweepArgs{}
@@ -186,11 +180,9 @@ var (
 	_ jobs.WorkspaceScoped = AssuranceWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = BriefGenerateWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
-	_ jobs.WorkspaceScoped = CaptureClassifyWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = ConfidentialityVerdictWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CounterpartyVerdictWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureDigestWorkspaceArgs{}
-	_ jobs.WorkspaceScoped = CaptureEnrichWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureSyncArgs{}
 	_ jobs.WorkspaceScoped = CaptureTraceSweepWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CheckOrganizationVatArgs{}
@@ -212,7 +204,6 @@ var (
 	_ jobs.WorkspaceScoped = OrgNamePromotionWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = OverlayReconcileWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = OverlayRefetchArgs{}
-	_ jobs.WorkspaceScoped = OwedVerdictWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = ParticipantBackfillWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = ProviderLookupArgs{}
 	_ jobs.WorkspaceScoped = ProviderRunPollArgs{}

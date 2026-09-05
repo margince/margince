@@ -45,8 +45,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -97,38 +97,9 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, personID ids.Pe
 	if readErr != nil {
 		return readErr
 	}
-	withholdActivityWrites(ctx, &moment)
+	momentaction.Withhold(ctx, &moment)
 	out.Moment = &moment
 	return nil
-}
-
-// withholdActivityWrites turns an action that writes an activity — logging one
-// or completing a task, the same POST /activities the store behind both forms
-// requires `activity.create` for — into a blocked one that says so, for a
-// caller who may not perform it. The ladder derives its actions from the page
-// alone and knows nothing about the caller, so an action offered as available
-// to a reader without that grant is a button that opens a form whose save is
-// refused.
-func withholdActivityWrites(ctx context.Context, moment *crmcontracts.PersonMoment) {
-	if auth.Require(ctx, "activity", principal.ActionCreate) == nil {
-		return
-	}
-	reason := "You do not have permission to log activities"
-	withhold := func(action *crmcontracts.PersonMomentAction) {
-		if action.Kind != crmcontracts.PersonMomentActionKindLogActivity &&
-			action.Kind != crmcontracts.PersonMomentActionKindCompleteTask {
-			return
-		}
-		action.State = crmcontracts.PersonMomentActionStateBlocked
-		action.BlockedReason = &reason
-		action.Destination = nil
-	}
-	withhold(&moment.RecommendedAction)
-	if moment.SecondaryActions != nil {
-		for i := range *moment.SecondaryActions {
-			withhold(&(*moment.SecondaryActions)[i])
-		}
-	}
 }
 
 // momentDismissed asks whether this viewer has already put this moment away

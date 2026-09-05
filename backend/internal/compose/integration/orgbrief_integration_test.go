@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/org360"
 	"github.com/margince/margince/backend/internal/compose/orgbrief"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -476,5 +477,47 @@ func TestOrganizationBriefTransportRefusesAnOverlayWorkspace(t *testing.T) {
 	}
 	if rows := e.WsCount(t, `SELECT count(*) FROM org_brief`); rows != 0 {
 		t.Errorf("org_brief rows = %d after an overlay refusal, want 0", rows)
+	}
+}
+
+// subjectLane records the record the router would be told the call is about.
+// The rail line "what I know about Acme" is only possible when the service
+// names the account on the context the lane is called under; a lane that saw
+// no subject is exactly the "this company" line this exists to retire.
+type subjectLane struct {
+	reply   string
+	subject ai.Subject
+	named   bool
+}
+
+func (l *subjectLane) Complete(ctx context.Context, _ model.Request) (model.Response, error) {
+	l.subject, l.named = ai.SubjectOf(ctx)
+	return model.Response{Text: l.reply}, nil
+}
+
+// The brief and the prepared question both name the account to the rail, by
+// the name the product shows for it — read from the same assembled input the
+// text is written from, never from the model's reply.
+func TestOrganizationBriefNamesTheAccountToTheRail(t *testing.T) {
+	e := Setup(t)
+	org := ids.From[ids.OrganizationKind](e.SeedOrg(t, "Acme", &e.Rep1))
+	reader := e.As(e.Rep1, nil, briefReaderPerms)
+	lane := &subjectLane{reply: `{"sections":[]}`}
+	svc := briefService(e, lane, "routing-1")
+
+	if _, err := svc.Get(reader, org, false); err != nil {
+		t.Fatalf("brief: %v", err)
+	}
+	want := ai.Subject{Ref: org.Ref(), Label: "Acme"}
+	if !lane.named || lane.subject != want {
+		t.Errorf("the brief was written under subject %+v (named=%v), want %+v", lane.subject, lane.named, want)
+	}
+
+	lane.subject, lane.named = ai.Subject{}, false
+	if _, err := svc.Ask(reader, org, crmcontracts.OrganizationQuestionWhatsOpen); err != nil {
+		t.Fatalf("ask: %v", err)
+	}
+	if !lane.named || lane.subject != want {
+		t.Errorf("the question was answered under subject %+v (named=%v), want %+v", lane.subject, lane.named, want)
 	}
 }

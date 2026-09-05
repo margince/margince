@@ -424,8 +424,11 @@ grant of its own, exactly as the rail row it replaced did not. Your screen still
 object it declares, and Settings → Integrations is additionally gated on the grants its own cards ask
 for.
 
-The four design-system gates (`ds-purity`, `icon-lint`, `ds-spacing`, `native-controls`) sweep your
-unit exactly as they sweep core.
+The design-system gates sweep your unit exactly as they sweep core. Six are script gates in
+the `fe-ds-gates` lane — `ds-purity`, `font-lock`, `icon-lint`, `ds-spacing`, `ds-spacing-roles`
+and `space-tokens` — and three read the TypeScript AST inside `fe-unit`: `native-controls`,
+`ext-imports`, and the action-row gate (`design-system/actionrow.test.ts`), which holds a
+unit's rows of two or more buttons to `gap: var(--gapActions)` like any other.
 
 **Test your screen next to it.** A `*.test.tsx` under your `frontend/` is run by `make fe-test-ext`,
 which `make check-fe` calls — a second vitest lane (`frontend/vitest.ext.config.ts`) rather than files

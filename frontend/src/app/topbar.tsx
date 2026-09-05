@@ -1,7 +1,7 @@
 import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
 import { useLocale, useT } from "../i18n";
-import { SETTINGS_SCREEN } from "../screens/settings";
+import { SETTINGS_SCREEN } from "../screens/settingsnav";
 import { AccountMenu } from "./account";
 import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";

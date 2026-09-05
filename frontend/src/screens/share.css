@@ -8,7 +8,7 @@
    (design-system/tokens.css) — no hex/rgb literals (make ds-purity). */
 
 .share-screen > .card {
-  margin-top: 16px;
+  margin-top: var(--gapCards);
 }
 
 .share-backlink {

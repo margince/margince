@@ -3,6 +3,7 @@ import { Mail, RefreshCw, Send, X } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { connectorsPollInterval } from "../app/capture-progress";
 import { useRoute } from "../app/router";
 import {
   Badge,
@@ -947,6 +948,11 @@ export function useConnectors() {
         publicOrigin: data.public_origin,
       };
     },
+    // Live while a mailbox is importing: the orb's ring, the capture chip and
+    // this card's own run row all draw the import from THIS read, and at the
+    // client's default staleness an import would be reported thirty seconds
+    // behind the counts the server holds.
+    refetchInterval: (query) => connectorsPollInterval(query.state.data),
   });
 }
 

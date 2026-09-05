@@ -145,8 +145,25 @@ func validateSiteReadOutcome(in FinishSiteReadInput) error {
 	return nil
 }
 
-// siteReadStatusFailed is the one terminal status that carries a diagnosis.
-const siteReadStatusFailed = "failed"
+// The dossier's statuses (site_read.status). failed is the one terminal status
+// that carries a diagnosis; deferred is the one that carries a retry time.
+const (
+	siteReadStatusQueued    = "queued"
+	siteReadStatusRunning   = "running"
+	siteReadStatusDeferred  = "deferred"
+	siteReadStatusDone      = "done"
+	siteReadStatusPartial   = "partial"
+	siteReadStatusFailed    = "failed"
+	siteReadStatusCancelled = "cancelled"
+)
+
+// Why a crawl stopped EARLY having read pages (site_read.stopped_reason).
+const (
+	siteReadStopBudget   = "budget"
+	siteReadStopPageCap  = "page_cap"
+	siteReadStopByteCap  = "byte_cap"
+	siteReadStopDeadline = "deadline"
+)
 
 // FinishSiteRead records the crawl's outcome in one guarded UPDATE from
 // running to a terminal status. No auth.Require, same as BeginSiteRead:
@@ -197,7 +214,7 @@ func (s *Store) FinishSiteRead(ctx context.Context, readID ids.UUID, in FinishSi
 	}
 	grounded := len(in.ProfileFields) > 0 || len(in.Facts) > 0
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
+		finished, err := scanSiteRead(tx.QueryRow(ctx, `
 			UPDATE site_read
 			SET status = $2, pages = $3, skipped = $4, stopped_reason = $5,
 			    fact_count = $6, proposal_ids = $7, profile_fields = $8, facts = $9,
@@ -209,16 +226,17 @@ func (s *Store) FinishSiteRead(ctx context.Context, readID ids.UUID, in FinishSi
 			    first_grounded_at = CASE WHEN $14 THEN COALESCE(first_grounded_at, now()) ELSE first_grounded_at END,
 			    finished_at = now(), updated_at = now()
 			WHERE id = $1 AND status = 'running'
-			  AND ($19::timestamptz IS NULL OR started_at = $19)`,
+			  AND ($19::timestamptz IS NULL OR started_at = $19)
+			RETURNING `+siteReadColumns,
 			readID, in.Status, pages, skipped, in.StoppedReason, in.FactCount, proposals,
 			profileFields, facts, people, warnings, in.ProposalHash, len(in.Pages), grounded, entities,
-			in.StatusCode, in.StatusDetail, in.NextAttemptAt, in.ClaimedAt)
+			in.StatusCode, in.StatusDetail, in.NextAttemptAt, in.ClaimedAt))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
 		if err != nil {
 			return fmt.Errorf("finish site read: %w", err)
 		}
-		if tag.RowsAffected() == 0 {
-			return apperrors.ErrNotFound
-		}
-		return nil
+		return logSiteReadActivity(ctx, tx, finished, 0)
 	})
 }

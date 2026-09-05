@@ -121,12 +121,12 @@ describe("the email drawer's attachments", () => {
 
     // The NAME is the download — the pattern the contact and account file
     // lists already use, rather than a second action word at the end of a row.
-    const link = screen.getByText("contract.pdf") as HTMLAnchorElement;
-    expect(link.tagName).toBe("A");
-    expect(link.getAttribute("href")).toBe(
+    const link = screen.getByText("contract.pdf").closest("a");
+    expect(link).not.toBeNull();
+    expect(link?.getAttribute("href")).toBe(
       "/v1/attachments/01a05500-0000-7000-8000-0000000000f1",
     );
-    expect(link.getAttribute("download")).toBe("contract.pdf");
+    expect(link?.getAttribute("download")).toBe("contract.pdf");
 
     // formatBytes' own scale: decimal units, so 248000 bytes is 248 kB. The
     // second file's size was never recorded and is absent rather than drawn as

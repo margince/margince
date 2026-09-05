@@ -26,6 +26,11 @@
 // it tonight would ask them the same question every morning until they stopped
 // reading.
 //
-// Tables owned: assurance_run, assurance_source_coverage, assurance_exception,
-// assurance_resolution
+// Tables owned: assurance_run, assurance_run_finding, assurance_source_coverage,
+// assurance_exception, assurance_resolution
+//
+// assurance_run_finding is which findings a run OBSERVED. The run row says how
+// much was checked and the exception row says what is open now; neither answers
+// "which run last confirmed this", which is the first question a manager
+// doubting a finding asks.
 package assurance

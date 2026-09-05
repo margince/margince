@@ -158,11 +158,11 @@ func dealFacts(deal RiskyDeal) *crmcontracts.AttentionDealFacts {
 	facts := &crmcontracts.AttentionDealFacts{
 		AmountMinor: deal.AmountMinor,
 		Currency:    deal.Currency,
-		// Carried through, not re-decided. The seam that read the committee
-		// already resolved the tri-state — a withheld or seatless read arrives
-		// absent — and a renderer that reapplied the rule would be a second
-		// judgement over a fact it cannot see the evidence for.
-		NoChampion: deal.NoChampion,
+		// A finding or nothing, the same rule the worklist projection applies:
+		// `false` is never sent, so a covered committee reaches the wire absent
+		// alongside the unreadable and the seatless one. Both sides of this
+		// field spell one rule, so they share the helper that holds it.
+		NoChampion: aFindingOnly(deal.NoChampion),
 	}
 	if deal.StageID != nil {
 		stage := openapi_types.UUID(*deal.StageID)

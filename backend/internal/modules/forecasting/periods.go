@@ -53,10 +53,15 @@ type Period struct {
 // PeriodKind is the length of a forecasting window.
 type PeriodKind string
 
-// The two window lengths a forecast is read over.
+// The window lengths a forecast is read over.
 const (
 	PeriodQuarter PeriodKind = "quarter"
 	PeriodMonth   PeriodKind = "month"
+	// PeriodWeek is the working week, Monday to Sunday. Unlike the other two it
+	// is not a division of the financial year — a fiscal year opening in April
+	// moves every quarter and month boundary and moves no Monday — so it is
+	// resolved by ResolveWeek rather than by ResolvePeriod.
+	PeriodWeek PeriodKind = "week"
 )
 
 // ResolvePeriod answers which window `at` falls in, for an installation whose
@@ -73,6 +78,15 @@ func ResolvePeriod(kind PeriodKind, at time.Time, fiscalStartMonth int, zone *ti
 	if fiscalStartMonth < 1 || fiscalStartMonth > 12 {
 		return Period{}, fmt.Errorf("forecasting: fiscal year start month %d is outside 1..12", fiscalStartMonth)
 	}
+	// A week is not a division of the financial year, so the month arithmetic
+	// below cannot answer it. Refused rather than defaulted: monthsIn returns 3
+	// for anything it does not recognise, so an unrefused week would resolve to
+	// a QUARTER and every reading would silently be the wrong window.
+	if kind == PeriodWeek {
+		return Period{}, fmt.Errorf(
+			"forecasting: a week is resolved by ResolveWeek from the Monday weekly.WeekStartOf returns, " +
+				"not from the financial year")
+	}
 	local := at.In(zone)
 	startYear, startMonth := periodStart(kind, local, fiscalStartMonth)
 	start := time.Date(startYear, startMonth, 1, 0, 0, 0, 0, zone)
@@ -86,6 +100,51 @@ func ResolvePeriod(kind PeriodKind, at time.Time, fiscalStartMonth int, zone *ti
 		// cannot be got wrong by arithmetic on a day count.
 		EndDate: end.AddDate(0, 0, -1),
 		Zone:    zone,
+	}, nil
+}
+
+// ResolveWeek builds the seven-day window opening on the Monday handed in.
+//
+// It takes the Monday rather than finding one, and that is the whole point.
+// Which day a week opens on is already decided by weekly.WeekStartOf, which
+// derives it through the installation's own reporting zone; a second spelling
+// here would be a second answer to "what week is it", and the two would file a
+// Sunday-night job's work under different weeks.
+//
+// So this refuses anything that is not a Monday at local midnight rather than
+// rounding to the nearest one. A caller who has the wrong instant gets an error
+// they can read, instead of a window silently shifted by a day — which would
+// put a deal in one week's readings and out of the next.
+//
+// SEVEN LOCAL DAYS, not 168 hours. AddDate crosses a daylight-saving boundary
+// by keeping the wall clock, so the spring week is 167 hours and the autumn one
+// 169, and both are still the seven days a person worked. Adding a duration
+// would leave the autumn week ending an hour before Sunday closed.
+func ResolveWeek(monday time.Time, zone *time.Location) (Period, error) {
+	if zone == nil {
+		return Period{}, fmt.Errorf("forecasting: a period needs the installation zone, which decides which day an instant falls on")
+	}
+	local := monday.In(zone)
+	start := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, zone)
+	if !start.Equal(local) {
+		return Period{}, fmt.Errorf(
+			"forecasting: a week opens at local midnight, and %s is not one — "+
+				"pass the Monday weekly.WeekStartOf returned rather than an instant inside the day",
+			local.Format(time.RFC3339))
+	}
+	if start.Weekday() != time.Monday {
+		return Period{}, fmt.Errorf(
+			"forecasting: a week opens on a Monday, and %s is a %s — "+
+				"which day a week starts on is weekly.WeekStartOf's answer, not this function's",
+			start.Format("2006-01-02"), start.Weekday())
+	}
+	end := start.AddDate(0, 0, 7)
+	return Period{
+		Start:     start,
+		End:       end,
+		StartDate: start,
+		EndDate:   end.AddDate(0, 0, -1),
+		Zone:      zone,
 	}, nil
 }
 
@@ -116,8 +175,35 @@ func (p Period) LocalDay(at time.Time) time.Time {
 
 // ContainsDay answers whether a local calendar day falls in this window.
 // Inclusive at both ends: the last day of a quarter is in the quarter.
+//
+// Compared as CALENDAR DAYS rather than as instants, because the two sides
+// carry their midnight in different zones. `deal.expected_close_date` is a
+// Postgres `date` and pgx scans it as UTC midnight; StartDate and EndDate are
+// midnight in the installation's zone. Comparing those instants asks whether
+// one moment precedes another, which is not the question — and it answers
+// wrongly at exactly the ends this window is inclusive at.
+//
+// Nine hours east, a deal expected on the window's last day scans as 09:00 on
+// that day and reads as AFTER an EndDate of 00:00, so it falls out of the
+// period it belongs to. West of UTC the same arithmetic drops the first day
+// instead. Both vanish from the reading with nothing to say where they went,
+// which is the failure Period's own doc comment describes for the other column.
 func (p Period) ContainsDay(day time.Time) bool {
-	return !day.Before(p.StartDate) && !day.After(p.EndDate)
+	return daysInOrder(p.StartDate, day) && daysInOrder(day, p.EndDate)
+}
+
+// daysInOrder answers whether one calendar day is the same as or before
+// another, ignoring what time of day and what zone each carries.
+func daysInOrder(earlier, later time.Time) bool {
+	ey, em, ed := earlier.Date()
+	ly, lm, ld := later.Date()
+	if ey != ly {
+		return ey < ly
+	}
+	if em != lm {
+		return em < lm
+	}
+	return ed <= ld
 }
 
 // ContainsInstant answers whether an instant falls in this window, by the day it

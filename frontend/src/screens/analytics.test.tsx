@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { formatMoney, MONEY_ABSENT } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
@@ -87,6 +88,19 @@ function reportsStub(opts: ReportsStubOpts = {}) {
     // numbers cover, and whether this reader may publish a forecast. A stub
     // without it leaves the screen waiting and the assertions below looking
     // like a rendering bug.
+    if (url.endsWith("/me")) {
+      return jsonResponse(
+        meFixture({
+          roles: ["rep"],
+          allow: {
+            data_coverage:
+              opts.coverage !== undefined && opts.coverage.status !== 403
+                ? ["read"]
+                : [],
+          },
+        }),
+      );
+    }
     if (url.includes("/analytics/coverage")) {
       const cov = opts.coverage ?? { status: 403 };
       return jsonResponse(
@@ -337,8 +351,9 @@ describe("the data coverage section", () => {
     ).toBeTruthy();
   });
 
-  it("hides the tab from a seat the server refuses", async () => {
-    vi.stubGlobal("fetch", reportsStub({ coverage: { status: 403 } }));
+  it("does not request coverage without the ops grant", async () => {
+    const fetch = reportsStub({ coverage: { status: 403 } });
+    vi.stubGlobal("fetch", fetch);
     render(<AnalyticsScreen />);
     await screen.findByRole("button", { name: "Pipeline" });
     await waitFor(() =>
@@ -346,6 +361,13 @@ describe("the data coverage section", () => {
         screen.queryByRole("button", { name: "Data coverage" }),
       ).toBeNull(),
     );
+    expect(
+      fetch.mock.calls.some(([input]) =>
+        String(input instanceof Request ? input.url : input).includes(
+          "/analytics/coverage",
+        ),
+      ),
+    ).toBe(false);
   });
 });
 
@@ -846,6 +868,7 @@ describe("reports never sum money across currencies", () => {
       { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
       { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
       { fn: "count", as: "deal_count" },
+      { fn: "count", field: "amount_base_minor", as: "priced_deals" },
     ]);
   });
 
@@ -1006,6 +1029,107 @@ describe("reports never sum money across currencies", () => {
     expect(row.count).toBe(3);
   });
 
+  // priced_deals answers how many of `deal_count` the sums above actually
+  // cover — a deal in a currency the rate sheet cannot price is counted but
+  // priced nowhere in either total (margince#4201).
+  it("carries how many of a stage's deals the money actually covers", () => {
+    const [row] = buildStageAggregates(
+      [
+        {
+          stage_id: "pl-s1",
+          raw_minor: 100,
+          weighted_minor: 90,
+          deal_count: 2,
+          priced_deals: 1,
+        },
+      ],
+      STAGES,
+    );
+    expect(row.pricedDeals).toBe(1);
+  });
+
+  // A row that omits priced_deals answers "the server did not say", not "zero
+  // deals were priced" — folding the two together would print a claim nobody
+  // made.
+  it("answers null rather than zero when a stage row omits priced_deals", () => {
+    const [row] = buildStageAggregates(
+      [
+        {
+          stage_id: "pl-s1",
+          raw_minor: 100,
+          weighted_minor: 90,
+          deal_count: 2,
+        },
+      ],
+      STAGES,
+    );
+    expect(row.pricedDeals).toBeNull();
+  });
+
+  it("shows a stage row's money is short a deal the rate sheet cannot price", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        stageRows: [
+          {
+            stage_id: "pl-s1",
+            raw_minor: 100,
+            weighted_minor: 90,
+            deal_count: 2,
+            priced_deals: 1,
+          },
+        ],
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await openPipeline();
+    await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
+    expect(
+      screen.getByText((text) => text.includes("1 of 2 priced")),
+    ).toBeTruthy();
+  });
+
+  it("shows no priced footnote when the row omits priced_deals entirely", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        stageRows: [
+          {
+            stage_id: "pl-s1",
+            raw_minor: 100,
+            weighted_minor: 90,
+            deal_count: 2,
+          },
+        ],
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await openPipeline();
+    await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
+    expect(screen.queryByText((text) => text.includes("priced"))).toBeNull();
+  });
+
+  it("shows no priced footnote once every counted deal was priced", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        stageRows: [
+          {
+            stage_id: "pl-s1",
+            raw_minor: 100,
+            weighted_minor: 90,
+            deal_count: 2,
+            priced_deals: 2,
+          },
+        ],
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await openPipeline();
+    await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
+    expect(screen.queryByText((text) => text.includes("priced"))).toBeNull();
+  });
+
   // The wire allows a deal to carry no forecast category — nobody has said which
   // way it is going — and the five named categories match none of it. A tile set
   // built from the enum alone drops those deals off the screen entirely: the
@@ -1119,6 +1243,7 @@ describe("reports never sum money across currencies", () => {
             raw_minor: 2_500_000,
             weighted_minor: 250_000,
             deal_count: 2,
+            priced_deals: 1,
           },
         ],
       }),
@@ -1131,6 +1256,11 @@ describe("reports never sum money across currencies", () => {
     ).toBeTruthy();
     // The count rides on the tile's second line beside the weighted figure.
     expect(screen.getByText((text) => text.includes("Deals: 2"))).toBeTruthy();
+    // The priced count reaches the screen too (margince#4201) — without it
+    // the €2,500,000 total reads as covering both deals when it covers one.
+    expect(
+      screen.getByText((text) => text.includes("1 of 2 priced")),
+    ).toBeTruthy();
   });
 
   // An installation whose deals are all categorised should not be shown an empty

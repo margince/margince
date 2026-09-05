@@ -5,6 +5,7 @@ package forecasting
 
 import (
 	"sort"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -82,6 +83,12 @@ type DealDelta struct {
 type snapshotSide struct {
 	DefinitionVersion string
 	Contributions     []Contribution
+	// The window this side was frozen over. Carried so a comparison can refuse
+	// two snapshots that are not about the same period: differencing a week
+	// against a quarter reports the change of WINDOW as deal movement, and
+	// every line of the waterfall would be a number nobody can act on.
+	PeriodStart time.Time
+	PeriodEnd   time.Time
 }
 
 // Reading names which of the four money answers a movement explains. A
