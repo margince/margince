@@ -18,6 +18,7 @@ import { Button, SegmentedControl } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { useMe } from "./common";
 import { useRoster } from "./entityref";
 import {
   subjectAcceptsAnOwner,
@@ -107,7 +108,22 @@ export function ReassignControl({
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [assignee, setAssignee] = useState("");
-  const options = useAssigneeOptions(owner);
+  // Whose queue is being read, which is the person a reassignment moves work
+  // AWAY from. On a rep's drill-down that is the selected rep; on the reader's
+  // own queue nobody is selected and it is the reader. Without the fallback the
+  // exclusion below compares against "" and matches nobody, so a rep was
+  // offered their own name and a press did nothing a reader could see.
+  const me = useMe();
+  const holder = owner !== "" ? owner : me.data?.user?.id;
+  // Nobody is offered until the holder is KNOWN. On the reader's own queue the
+  // holder is whoever `/me` names, and until that lands the exclusion below has
+  // nothing to compare against — so a picker opened in that window would list
+  // the reader's own name, and nothing on the server refuses a reassignment to
+  // the person already holding the task. An empty list is the honest state of a
+  // question not yet answered; a self-reassignment is a write that changes
+  // nothing and looks on screen exactly like one that did.
+  const options = useAssigneeOptions(holder);
+  const settled = holder !== undefined;
   const reassign = useReassignTask();
 
   if (!open) {
@@ -120,7 +136,7 @@ export function ReassignControl({
   return (
     <div className="worklist-manager-control">
       <Select
-        options={options}
+        options={settled ? options : []}
         value={assignee}
         onChange={setAssignee}
         placeholder={t("worklist.manager.reassignTo")}
