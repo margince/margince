@@ -251,9 +251,11 @@ type TranscriptReading struct {
 	// of this meeting inherits them: a next step that hangs off no account is
 	// one nobody will find again.
 	Links []ActivityLinkInput
-	// OccurredAt is when the meeting happened, which is the day a relative
-	// deadline in it counts from. "By Friday" said in a transcript read three
-	// weeks later means the Friday after the MEETING, not after the reading.
+	// OccurredAt is the day the activity is filed under — the day the meeting
+	// happened where the rep set one, and the day it was logged where they
+	// left the composer's default. It is what a relative deadline in the
+	// transcript counts from, so a backdated transcript filed under today
+	// resolves "by Friday" against the wrong week.
 	OccurredAt time.Time
 }
 

@@ -136,6 +136,15 @@ func refuseUnreachableSteps(want []transcriptProposeExpectation, lineCount int) 
 
 // transcriptProposeCase is one transcript ready to be read, closed over the
 // lines that were asked about and the next steps the scenario expects.
+// certTranscriptMeetingDay is the day every graded transcript is read as having
+// happened on.
+//
+// PINNED for the reason the language is: a prompt carrying today's date would
+// make every morning's request a different one, and a score is only comparable
+// against a fixed request. No corpus scenario states a deadline yet, so nothing
+// grades what this resolves to — it is here so the request stays still.
+const certTranscriptMeetingDay = "2026-03-04"
+
 type transcriptProposeCase struct {
 	lines    []string
 	expected []transcriptProposeExpectation
@@ -144,11 +153,6 @@ type transcriptProposeCase struct {
 // Run issues the one request this site sends, bare: production wraps the same
 // request in the shape-retry when the brain supports one, and a case that did
 // too would certify the answer a model gives after being told to try again.
-// certTranscriptMeetingDay is the day every graded transcript is read as having
-// happened on. A Wednesday, so a case saying "by Friday" resolves two days out
-// rather than into the following week.
-const certTranscriptMeetingDay = "2026-03-04"
-
 func (c *transcriptProposeCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
 	// English, pinned, rather than the installation's base language: a
 	// certification record grades a fixed corpus, and a score that moved with a

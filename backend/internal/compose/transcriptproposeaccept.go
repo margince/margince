@@ -129,10 +129,25 @@ func stampTranscriptDue(ctx context.Context, tx pgx.Tx, in *activities.LogActivi
 			"compose: transcript proposal due date %q is not a date — write it as YYYY-MM-DD: %w",
 			day, err)
 	}
-	// The last second of the named day, matching format/calendarday.dueInstant
-	// on the web side so a deadline typed by hand and one read from a
-	// transcript mean the same moment.
-	due := parsed.Add(24*time.Hour - time.Second).UTC()
+	// The last second of the named day.
+	//
+	// NOT the same instant the web composer's own date box produces, and the
+	// difference is deliberate. format/calendarday.dueInstant resolves the day
+	// in the BROWSER's zone, because a rep typing a due date is setting a
+	// deadline for themselves. This one resolves in the installation's, for the
+	// reason above: a transcript's deadline is a record fact read back by
+	// colleagues elsewhere. A rep far from the installation's zone will see the
+	// two land an hour or more apart, and on the far side of midnight, a day
+	// apart. Making them agree means deciding which of the two readings a due
+	// date IS, and that is a product question rather than a bug in either.
+	//
+	// Built from the day's OWN parts rather than by adding a day and taking a
+	// second back. A local day is not always 24 hours: on Europe/Berlin's
+	// spring-forward day that arithmetic lands at 00:59 the NEXT morning, so a
+	// task due the 29th would be due the 30th, and on the autumn day it lands
+	// an hour early. Naming 23:59:59 in the zone asks for the moment rather
+	// than computing a duration towards it.
+	due := time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 23, 59, 59, 0, loc).UTC()
 	in.DueAt = &due
 	return nil
 }

@@ -125,9 +125,17 @@ func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore
 	if err := activities.WithinReadingBounds(reading.Lines); err != nil {
 		return p.fail(ctx, store, readID, err.Error())
 	}
-	// The MEETING's day, in the installation's zone: a deadline stated relative
-	// to the conversation counts from when the conversation happened, not from
-	// when somebody got round to reading it.
+	// The day the activity is FILED under, which is the best available answer
+	// to "when was this conversation". The composer offers it as an editable
+	// date capped at today, so a rep pasting a three-week-old transcript can
+	// set the day it happened — and it defaults to today, so one who does not
+	// leaves the paste day standing.
+	//
+	// Said plainly because the difference matters: a relative deadline resolves
+	// against whatever this says, so "by Friday" on a backdated transcript
+	// whose date was left at today resolves to the wrong week. The reviewer
+	// sees the resulting date on the card before any task exists, which is
+	// where that is caught.
 	steps, err := p.ask(ctx, reading.Lines, reading.OccurredAt.Format(time.DateOnly))
 	if err != nil {
 		if errors.Is(err, errRefusedTranscript) {
