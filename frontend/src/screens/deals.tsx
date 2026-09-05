@@ -605,6 +605,8 @@ export function toBoardDeal(deal: Deal, naming: CompanyNaming): BoardDeal {
     ageMs: Math.max(0, Date.now() - new Date(since).getTime()),
     stalled: deal.stalled ?? false,
     archived: deal.archived_at != null,
+    closeDate: deal.expected_close_date ?? null,
+    closeDateProvisional: deal.close_date_provisional ?? false,
   };
 }
 
@@ -1909,6 +1911,7 @@ function DealBoardBody({
   >["columnDropHandlers"];
 }>) {
   const t = useT();
+  const recordZone = useRecordZone();
   // Every company the CARDS name. The picker's capped page answers most of them
   // for free; the rest are resolved by id (useOrgMarks), so no card is left
   // standing over a company the board simply failed to look up.
@@ -1936,6 +1939,7 @@ function DealBoardBody({
             <>
               <PipelineBoard
                 cardHref={(deal) => routeHash({ screen: "deals", id: deal.id })}
+                zone={recordZone}
                 columns={buildColumns(
                   effectivePipeline.stages ?? [],
                   loadedDeals,

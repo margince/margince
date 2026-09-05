@@ -288,6 +288,9 @@ export const de = {
   "deal.archived": "archiviert",
   "deal.singleThreaded": "nur eine Person",
   "deal.staged": "vorgemerkt",
+  "deal.closes": "Abschluss {date}",
+  "deal.closesProvisional":
+    "vorläufiger Abschlusstermin, von niemandem bestätigt",
   "record.notShown": "Nicht angezeigt",
   "record.timelineLoading": "Verlauf dieses Datensatzes wird geladen…",
   "record.chronologyLoading": "Änderungsverlauf wird gelesen…",

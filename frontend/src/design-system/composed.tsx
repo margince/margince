@@ -11,9 +11,11 @@ import {
 import type { ReactNode } from "react";
 import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { components } from "../api/schema";
+import { calendarDay, middayInstant } from "../format/calendarday";
 import { splitEmailBody } from "../format/emailtext";
 import {
   formatDate,
+  formatDayMonth,
   formatDuration,
   formatMoneyOrAbsent,
   formatNumber,
@@ -87,6 +89,16 @@ export type BoardDeal = BoardRecord & {
   valueMinor: number | null;
   currency: string | null;
   ageMs: number;
+  /**
+   * When the deal is expected to close, as the calendar day the record holds.
+   * Null on a deal nobody has dated, and the card then states no date rather
+   * than a guess. `closeDateProvisional` says the day is the nightly run's
+   * replacement for one that aged into the past and no human has confirmed —
+   * a date that reads as agreed with the buyer when it was not is the quiet
+   * kind of wrong, so the card marks it.
+   */
+  closeDate?: string | null;
+  closeDateProvisional?: boolean;
   stalled?: boolean;
   singleThreaded?: boolean;
   staged?: boolean;
@@ -202,6 +214,37 @@ function DealCardCompany({ deal }: Readonly<{ deal: BoardDeal }>) {
 }
 
 /**
+ * When the deal closes, on the card's figure line.
+ *
+ * Read as a calendar day in the record's zone, never as the instant midnight
+ * UTC — that instant is the previous date for half the world. The tone marks
+ * the DATE when it is one nobody confirmed or one already behind us, and says
+ * so in words for a reader who does not get the colour; the deal strip states
+ * the same fact the same two ways.
+ */
+function DealCloses({
+  day,
+  provisional,
+  zone,
+}: Readonly<{ day: string; provisional: boolean; zone: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const overdue = day < calendarDay(new Date(), zone);
+  const classes =
+    provisional || overdue ? "deal-closes deal-closes-warn" : "deal-closes";
+  return (
+    <span className={classes}>
+      {t("deal.closes", {
+        date: formatDayMonth(middayInstant(day, zone), locale, zone),
+      })}
+      {provisional && (
+        <span className="sr-only"> · {t("deal.closesProvisional")}</span>
+      )}
+    </span>
+  );
+}
+
+/**
  * One deal, as a card on the board.
  *
  * NO TAG STRIP. How a deal is filed is a fact about the record, not about the
@@ -215,10 +258,18 @@ function DealCardCompany({ deal }: Readonly<{ deal: BoardDeal }>) {
 export function DealCard({
   deal,
   href,
+  zone,
   onOpen,
   dragHandlers,
 }: Readonly<{
   deal: BoardDeal;
+  /**
+   * The IANA zone the close date is read in. A close date is a calendar day,
+   * and a day formatted as if it were an instant lands on the previous date
+   * for every reader west of Greenwich — so the card takes the zone the record
+   * lives in, the same way the timeline does, rather than the browser's.
+   */
+  zone: string;
   /**
    * The deal's own address.
    *
@@ -265,27 +316,45 @@ export function DealCard({
       onClick={(event) => onOpen?.(deal, event)}
       {...dragHandlers}
     >
-      {/* The company leads and the deal's own name follows it: a board is read
-          by account first — which pile of cards is this customer's — and the
-          card is scanned rather than read, so the line the eye reaches first is
-          the one it groups by. Weight still says which record the card opens. */}
-      <DealCardCompany deal={deal} />
+      {/* Four lines, read as a triage (composed.css says why in this order):
+          who it is with and how long it has sat; what it is; what it is worth
+          and when it closes; and what is wrong with it, only when something is. */}
+      <span className="deal-head">
+        <DealCardCompany deal={deal} />
+        <span className="deal-age">{formatDuration(deal.ageMs, locale)}</span>
+      </span>
       <span className="deal-name">{deal.name}</span>
-      <span className="deal-meta">
+      <span className="deal-figure">
         <span className="deal-value">
           {formatMoneyOrAbsent(deal.valueMinor, deal.currency, locale)}
         </span>
-        {deal.archived && <Badge>{t("deal.archived")}</Badge>}
-        {deal.stalled && <Badge tone="warn">{t("deal.stalled")}</Badge>}
-        {deal.singleThreaded && (
-          <Badge tone="danger">{t("deal.singleThreaded")}</Badge>
+        {deal.closeDate && (
+          <DealCloses
+            day={deal.closeDate}
+            provisional={deal.closeDateProvisional ?? false}
+            zone={zone}
+          />
         )}
-        {deal.staged && <Badge tone="ai">{t("deal.staged")}</Badge>}
-        {/* LAST, because the meta line pushes it to the far edge: what it is
-            pushed away from has to be every other item on that line, or a card
-            that carries a badge puts the badge at the edge instead. */}
-        <span className="deal-age">{formatDuration(deal.ageMs, locale)}</span>
       </span>
+      {(deal.archived ||
+        deal.stalled ||
+        deal.singleThreaded ||
+        deal.staged) && (
+        <span className="deal-flags">
+          {deal.archived && <Badge quiet>{t("deal.archived")}</Badge>}
+          {deal.stalled && (
+            <Badge quiet tone="warn">
+              {t("deal.stalled")}
+            </Badge>
+          )}
+          {deal.singleThreaded && (
+            <Badge quiet tone="danger">
+              {t("deal.singleThreaded")}
+            </Badge>
+          )}
+          {deal.staged && <Badge tone="ai">{t("deal.staged")}</Badge>}
+        </span>
+      )}
     </a>
   );
 }
@@ -330,6 +399,8 @@ type DealBoardProps = BoardHandlers<BoardDeal> & {
    */
   cardHref: (deal: BoardDeal) => string;
   onOpen?: (deal: BoardDeal, event: React.MouseEvent) => void;
+  /** The zone a close date is read in — see `DealCard`'s `zone`. */
+  zone: string;
 };
 
 type BoardLayoutProps<Record extends BoardRecord> = BoardHandlers<Record> & {
@@ -515,6 +586,7 @@ export function PipelineBoard<Record extends BoardRecord>(
         <DealCard
           deal={deal}
           href={props.cardHref(deal)}
+          zone={props.zone}
           onOpen={props.onOpen}
           dragHandlers={props.cardDragHandlers?.(deal, column)}
         />

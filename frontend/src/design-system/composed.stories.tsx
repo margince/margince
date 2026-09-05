@@ -181,8 +181,16 @@ const boardColumns: BoardMoneyColumn[] = [
     weightedMinor: 4_500,
     currency: "EUR",
     deals: [
-      boardDeal("d1", "Contoso renewal", 12_000, 3, { singleThreaded: true }),
-      boardDeal("d2", "Fabrikam expansion", 33_000, 9, { stalled: true }),
+      boardDeal("d1", "Contoso renewal", 12_000, 3, {
+        singleThreaded: true,
+        closeDate: "2026-10-14",
+      }),
+      // A close date the nightly run set and nobody confirmed: marked, not hidden.
+      boardDeal("d2", "Fabrikam expansion", 33_000, 9, {
+        stalled: true,
+        closeDate: "2026-09-30",
+        closeDateProvisional: true,
+      }),
     ],
   },
   {
@@ -278,6 +286,7 @@ export const BoardInSurface: StoryObj = {
       <PipelineBoard
         columns={boardColumns}
         cardHref={(d) => `#/deals/${d.id}`}
+        zone="Europe/Berlin"
       />
     </ListSurface>
   ),
@@ -363,6 +372,7 @@ export const BoardWithAbsentMoney: StoryObj = {
     <PipelineBoard
       columns={absentMoneyColumns}
       cardHref={(d) => `#/deals/${d.id}`}
+      zone="Europe/Berlin"
     />
   ),
 };
@@ -397,6 +407,7 @@ export const BoardWithWithheldCompany: StoryObj = {
     <PipelineBoard
       columns={withheldCompanyColumns}
       cardHref={(d) => `#/deals/${d.id}`}
+      zone="Europe/Berlin"
     />
   ),
 };
@@ -437,6 +448,7 @@ export const BoardWithALongStageName: StoryObj = {
     <PipelineBoard
       columns={longStageColumns}
       cardHref={(d) => `#/deals/${d.id}`}
+      zone="Europe/Berlin"
     />
   ),
 };

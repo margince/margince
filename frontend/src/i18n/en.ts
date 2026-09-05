@@ -309,6 +309,8 @@ export const en = {
   "deal.singleThreaded": "single-threaded",
   "deal.staged": "staged",
   "deal.archived": "archived",
+  "deal.closes": "closes {date}",
+  "deal.closesProvisional": "provisional close date, not confirmed by a human",
   "record.notShown": "Not shown",
   "record.timelineLoading": "Loading this record’s history…",
   "record.chronologyLoading": "Reading the change history…",

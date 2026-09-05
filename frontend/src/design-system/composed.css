@@ -25,12 +25,11 @@
   position: relative;
   flex: 1 1 220px;
   min-width: 220px;
-  /* A RECESS in the surface, not a card on it: the page's own ground showing
-     through, which is one hair off the surface in light and one hair under it
-     in dark. --bgCard is a card's ground and read as one — five of them in a
-     row made the board a grid of grey slabs with the deals inside them, and
-     the cards had to fight their own containers to look like the subject. */
-  background: var(--bgPage);
+  /* A RECESS in the surface, not a card on it. --bgCard is a card's ground and
+     read as one — five of them in a row made the board a grid of grey slabs
+     with the deals inside them, and the cards had to fight their own
+     containers to look like the subject. */
+  background: var(--bgWell);
   border-radius: var(--r-md);
   padding: var(--space-3);
   display: flex;
@@ -82,8 +81,8 @@
   gap: 6px;
   padding: 2px 4px 4px;
   /* The column's own ground, or the cards slide visibly behind a transparent
-     strip. It follows --bgPage for the same reason it followed --bgCard. */
-  background: var(--bgPage);
+     strip. */
+  background: var(--bgWell);
 }
 .board-col-head .stage {
   font-size: var(--fs-sm);
@@ -185,21 +184,25 @@
   opacity: 0.6;
   border-style: dashed;
 }
-.deal-card .deal-name {
-  font-size: var(--fs-body);
-  font-weight: 600;
-  color: var(--textPrimary);
+/* The card reads top to bottom as a triage: WHO it is with and how long it has
+   sat; WHAT it is; what it is WORTH and when it closes; and, only when there is
+   something to say, what is wrong with it. One fact per line, each in the
+   weight its importance earns — the figure is the loudest thing after the name,
+   because the figure is what a pipeline is a board OF. */
+.deal-card .deal-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
 }
-/* ABOVE the deal's own name, and quiet: a rep reads this board by account
-   first and by deal second, so the company is what the eye lands on, while the
-   name of the record the card opens stays the line with the weight. */
 .deal-card .deal-org {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   min-width: 0;
+  flex: 1 1 auto;
 }
 /* The card is one line of company in a narrow column, so a long name elides
  * rather than wrapping under its own mark. */
@@ -212,30 +215,60 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-/* A stage column is narrow, so the meta line wraps as whole items: a value or a
- * badge broken across two lines is harder to read than one that moved down. */
-.deal-card .deal-meta {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-1) 7px;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
-.deal-card .deal-meta > * {
-  white-space: nowrap;
-}
-.deal-card .deal-value {
-  font-family: var(--f-mono);
-  font-size: var(--fs-sm);
-  color: var(--textPrimary);
-}
-/* How long it has sat there goes to the far edge, away from the figure: the
-   two are read as separate facts, and side by side they read as one. It is the
-   last item on the line so that the edge it is pushed to is the card's, not
-   whatever badge the deal happens to carry. */
+/* How long it has sat in the stage, at the far edge of the head line — a
+   timestamp's place, and away from the name it would otherwise read as part
+   of. It never truncates: the company gives way, the figure does not. */
 .deal-card .deal-age {
   margin-left: auto;
+  flex: none;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.deal-card .deal-name {
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  color: var(--textPrimary);
+}
+.deal-card .deal-figure {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  margin-top: var(--space-1);
+}
+/* The one figure a reader compares across the board. Tabular so a column of
+   them lines up digit for digit; a hair tighter because a lead-size number in
+   the body face otherwise spreads wider than the name above it. */
+.deal-card .deal-value {
+  font-size: var(--fs-lead);
+  font-weight: var(--fw-semibold);
+  color: var(--textPrimary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.deal-card .deal-closes {
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+  white-space: nowrap;
+}
+/* A warning about the DATE, not about the deal: one nobody has confirmed, or
+   one already behind us. The tone marks the figure and leaves the card alone,
+   which is the deal strip's rule for the same fact. */
+.deal-card .deal-closes-warn {
+  color: var(--warn);
+}
+/* What is wrong with it, and only then: a card with nothing to flag has no
+   fourth line. Quiet badges — a dot and a word — because a stack of filled
+   pills at the foot of every third card is the field of colour this card was
+   just cleared of. The one filled badge left is the staged one, and it stays
+   filled because it is the agent's provenance and has to be seen. */
+.deal-card .deal-flags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  margin-top: var(--space-1);
 }
 
 .record-head {

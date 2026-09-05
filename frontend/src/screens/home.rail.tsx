@@ -372,6 +372,7 @@ export function WatchPanel({
   state: SectionState;
 }>) {
   const t = useT();
+  const recordZone = useRecordZone();
   // No page of organizations to draw on here — this is a short list, and every
   // company it names is resolved by id and cached.
   const naming = useOrgMarks([...deals], [], true);
@@ -408,6 +409,7 @@ export function WatchPanel({
               // A link, so no press handler: nothing here drags, and the
               // address is the whole behaviour.
               href={routeHash({ screen: "deals", id: deal.id })}
+              zone={recordZone}
             />
           ))}
         </SurfaceState>
