@@ -96,10 +96,11 @@ func dealFactsOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistDealFact
 		OwnerId:     item.Deal.OwnerId,
 		AmountMinor: item.Deal.AmountMinor,
 		Currency:    item.Deal.Currency,
-		// Copied verbatim: absent is not false. A committee this reader could
-		// not read in full arrives nil, and normalizing it to false would tell
-		// a rep nobody is carrying a deal whose champion they simply cannot see.
-		NoChampion: item.Deal.NoChampion,
+		// A finding or nothing. `false` is never sent, so a covered committee
+		// reaches the wire absent alongside the unreadable and the seatless one
+		// — a reader who cannot see the seats must not be able to tell those
+		// apart, because telling them apart is the disclosure.
+		NoChampion: aFindingOnly(item.Deal.NoChampion),
 	}
 	// The close date rides on the lane item's own due moment, and the idle
 	// count on its own typed field. Both were already resolved; only this projection
@@ -113,6 +114,19 @@ func dealFactsOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistDealFact
 		facts.QuietDays = &quiet
 	}
 	return facts
+}
+
+// aFindingOnly drops a stated false, so absence is this field's only negative.
+//
+// Both producers of the champion answer call it, because one rule spelled twice
+// drifts: a covered committee, an unreadable one and a seatless deal must reach
+// the wire alike, and a reader able to tell them apart is the disclosure the
+// rule exists to refuse.
+func aFindingOnly(answer *bool) *bool {
+	if answer == nil || !*answer {
+		return nil
+	}
+	return answer
 }
 
 // expectedRevenue is what the deal is worth times how likely it is to land.

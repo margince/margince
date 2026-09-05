@@ -39361,10 +39361,14 @@ components:
           type: [boolean, 'null']
           description: |
             `true` when the account has a buying committee and nobody engaged on it holds
-            the champion seat. Null is not `false`: it is sent only when the answer is both
-            known and negative, and stays absent for a committee the caller may not read in
-            full, for a deal carrying no seats at all, and for a server that does not assess
-            coverage. See `WorklistDealFacts.no_champion`, which carries the same fact out.
+            the champion seat. There is no other value: `false` is NEVER sent, and absent
+            is the answer in every case that is not that finding — a committee whose
+            champion seat IS held, a committee the caller may not read in full, a deal
+            carrying no seats at all, and a server that does not assess coverage.
+
+            So absence does not mean "covered". It means this endpoint is making no claim,
+            and a client MUST NOT read it as one. See `WorklistDealFacts.no_champion`,
+            which carries the same fact out under the same rule.
 
     AttentionRelationshipFacts:
       type: object
@@ -41002,12 +41006,15 @@ components:
             the champion seat — a deal drifting because nobody INSIDE is arguing for it,
             which needs a different move from the rep than a deal nobody outside has touched.
 
-            Null is not `false`. It is sent only when the answer is both known and negative,
-            and stays absent in the three cases that would otherwise be rounded down to a
-            finding: a committee the caller may not read in full (a champion they cannot see
-            is still a champion), a deal carrying no seats at all (no committee, so no gap),
-            and a server that does not assess coverage. A client MUST NOT render an absent
-            value as "nobody is carrying this".
+            `false` is NEVER sent. The field carries a finding or it carries nothing, and
+            absent is the answer in all FOUR cases that are not the finding: a committee
+            whose champion seat IS held, a committee the caller may not read in full (a
+            champion they cannot see is still a champion), a deal carrying no seats at all
+            (no committee, so no gap), and a server that does not assess coverage.
+
+            Absence therefore says nothing either way. A client MUST NOT render it as
+            "nobody is carrying this", and MUST NOT render it as "somebody is": the four
+            cases are indistinguishable on the wire by design.
 
     WorklistSourceUnavailable:
       type: object
