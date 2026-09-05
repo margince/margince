@@ -105,6 +105,13 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time) (Result, error) {
 			}
 		}
 		out.Findings = len(findings)
+		// Which findings THIS run saw, before the clearing below removes the
+		// ones it did not. Recorded from the same `seen` set that decides what
+		// stays open, so the membership and the clearing can never disagree
+		// about what tonight observed.
+		if err := s.store.RecordRunFindings(ctx, tx, runID, seen); err != nil {
+			return err
+		}
 		// A finding this complete walk did not re-mint has no condition left to
 		// report — close it, but only for rules whose required sources were
 		// read tonight. Absence is a claim, and it stands on what was looked at.

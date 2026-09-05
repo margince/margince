@@ -424,6 +424,7 @@ var tableOwners = map[string]string{
 	"weekly_review":             "internal/compose/weekly",
 	"team_weekly_review":        "internal/compose/weekly",
 	"team_weekly_review_rep":    "internal/compose/weekly",
+	"assurance_run_finding":     "internal/modules/assurance",
 	"assurance_run":             "internal/modules/assurance",
 	"assurance_source_coverage": "internal/modules/assurance",
 	"assurance_exception":       "internal/modules/assurance",
