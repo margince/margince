@@ -67,6 +67,9 @@ type ReportsStubOpts = {
   winLossRows?: Record<string, unknown>[];
   stageAgeRows?: Record<string, unknown>[];
   meetingRows?: Record<string, unknown>[];
+  // The coverage read: a payload, a status (403 for a seat without the ops
+  // grant, 404 for a fresh installation), or omitted for the default 403.
+  coverage?: { status: number; body?: unknown };
   derivation?: Record<string, unknown>;
   onDerivation?: (url: string) => void;
   context?: Record<string, unknown>;
@@ -81,6 +84,13 @@ function reportsStub(opts: ReportsStubOpts = {}) {
     // numbers cover, and whether this reader may publish a forecast. A stub
     // without it leaves the screen waiting and the assertions below looking
     // like a rendering bug.
+    if (url.includes("/analytics/coverage")) {
+      const cov = opts.coverage ?? { status: 403 };
+      return jsonResponse(
+        cov.body ?? { title: "Forbidden", status: cov.status },
+        cov.status,
+      );
+    }
     if (url.includes("/analytics/context")) {
       return jsonResponse(
         opts.context ?? {
@@ -186,6 +196,68 @@ async function openPerformance() {
     .setup()
     .click(await screen.findByRole("button", { name: "Performance" }));
 }
+
+describe("the data coverage section", () => {
+  it("names each source's state in words, with the instant a read one reached", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        coverage: {
+          status: 200,
+          body: {
+            run_id: "r1",
+            as_of: "2026-09-05T02:00:00Z",
+            sources: [
+              {
+                source: "mail",
+                state: "checked",
+                checked_through: "2026-09-05T01:30:00Z",
+              },
+              { source: "offers", state: "not_connected" },
+            ],
+          },
+        },
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Data coverage" }));
+    expect(await screen.findByText("Checked")).toBeTruthy();
+    // The source column speaks the reader's words, not the wire's.
+    expect(screen.getByText("the mailbox")).toBeTruthy();
+    // An unconnected source is a decision, not a repair — its words say so.
+    expect(
+      screen.getByText("Not connected — nothing to fix, something to decide"),
+    ).toBeTruthy();
+    // Only the read source carries a date; the unread one shows absence.
+    expect(screen.getByText("—")).toBeTruthy();
+  });
+
+  it("says a fresh installation was never looked at, in words", async () => {
+    vi.stubGlobal("fetch", reportsStub({ coverage: { status: 404 } }));
+    render(<AnalyticsScreen />);
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Data coverage" }));
+    expect(
+      await screen.findByText(
+        "No check has run yet. A fresh installation has not been looked at — different from one that was looked at and found healthy.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("hides the tab from a seat the server refuses", async () => {
+    vi.stubGlobal("fetch", reportsStub({ coverage: { status: 403 } }));
+    render(<AnalyticsScreen />);
+    await screen.findByRole("button", { name: "Pipeline" });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Data coverage" }),
+      ).toBeNull(),
+    );
+  });
+});
 
 // A context whose default lens is one seat: the rep's own.
 const ownLensContext = {

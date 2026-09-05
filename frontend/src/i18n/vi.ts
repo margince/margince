@@ -3281,6 +3281,20 @@ export const vi = {
   "analytics.sectionPerformance": "Hiệu suất",
   "analytics.noClosedDeals": "Chưa có deal nào được chốt.",
   "analytics.sectionOutcomes": "Kết quả của tôi",
+  "analytics.sectionCoverage": "Độ phủ dữ liệu",
+  "analytics.coverageSub":
+    "Những nguồn nào kiểm tra hằng đêm đọc được, và đến đâu. Nguồn im ắng nhưng đã đọc là đã kiểm tra; nguồn chưa đọc sẽ nói lý do.",
+  "analytics.covSource": "Nguồn",
+  "analytics.covState": "Trạng thái",
+  "analytics.covThrough": "Đã kiểm tra đến",
+  "analytics.covChecked": "Đã kiểm tra",
+  "analytics.covStale": "Cũ — gần đây không đọc được gì",
+  "analytics.covUnavailable": "Không khả dụng — kiểm tra không đọc được",
+  "analytics.covPermissionLimited": "Cần cấp lại quyền truy cập",
+  "analytics.covNotConnected":
+    "Chưa kết nối — không có gì để sửa, có việc cần quyết định",
+  "analytics.coverageInputsElsewhere":
+    "Vấn đề ở cấp bản ghi được liệt kê và xử lý trong phần rà soát đầu vào của Forecast.",
   "analytics.myPipeline": "Pipeline đang mở của tôi",
   "analytics.myMeetings": "Cuộc họp của tôi",
   "analytics.meetingsAsTheyStand":
@@ -3337,6 +3351,12 @@ export const vi = {
   "review.checksIncomplete": "Kiểm tra chưa đầy đủ",
   "review.allSourcesRead": "Đã đọc mọi nguồn.",
   "review.source.mail": "hộp thư",
+  "review.source.calendar": "lịch",
+  "review.source.documents": "tài liệu",
+  "review.source.contracts": "hợp đồng",
+  "review.source.incumbent": "hệ thống cũ",
+  "analytics.coverageNeverRun":
+    "Chưa có lần kiểm tra nào chạy. Bản cài đặt mới chưa được xem xét — khác với bản đã được xem và thấy ổn.",
   "review.source.offers": "báo giá",
   "review.sourcesUnread":
     "Chưa đọc: {sources}. Các phát hiện bên dưới chỉ bao gồm những gì kiểm tra được.",

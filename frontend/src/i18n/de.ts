@@ -3314,6 +3314,21 @@ export const de = {
   "analytics.sectionPerformance": "Ergebnisse",
   "analytics.noClosedDeals": "Es wurden noch keine Deals abgeschlossen.",
   "analytics.sectionOutcomes": "Meine Ergebnisse",
+  "analytics.sectionCoverage": "Datenabdeckung",
+  "analytics.coverageSub":
+    "Welche Quellen die nächtliche Prüfung lesen konnte, und wie weit. Eine stille, aber gelesene Quelle gilt als geprüft; eine ungelesene sagt warum.",
+  "analytics.covSource": "Quelle",
+  "analytics.covState": "Zustand",
+  "analytics.covThrough": "Geprüft bis",
+  "analytics.covChecked": "Geprüft",
+  "analytics.covStale": "Veraltet — zuletzt nichts gelesen",
+  "analytics.covUnavailable":
+    "Nicht verfügbar — die Prüfung konnte nicht lesen",
+  "analytics.covPermissionLimited": "Zugriff muss neu erteilt werden",
+  "analytics.covNotConnected":
+    "Nicht verbunden — nichts zu reparieren, etwas zu entscheiden",
+  "analytics.coverageInputsElsewhere":
+    "Probleme auf Datensatzebene werden in der Forecast-Eingangsprüfung gelistet und gelöst.",
   "analytics.myPipeline": "Meine offene Pipeline",
   "analytics.myMeetings": "Meine Termine",
   "analytics.meetingsAsTheyStand":
@@ -3370,6 +3385,12 @@ export const de = {
   "review.checksIncomplete": "Prüfung unvollständig",
   "review.allSourcesRead": "Alle Quellen wurden gelesen.",
   "review.source.mail": "das Postfach",
+  "review.source.calendar": "der Kalender",
+  "review.source.documents": "Dokumente",
+  "review.source.contracts": "Verträge",
+  "review.source.incumbent": "das Altsystem",
+  "analytics.coverageNeverRun":
+    "Noch keine Prüfung gelaufen. Eine frische Installation wurde noch nicht angesehen — etwas anderes als eine, die geprüft und für gesund befunden wurde.",
   "review.source.offers": "Angebote",
   "review.sourcesUnread":
     "Nicht gelesen: {sources}. Die Befunde unten decken nur ab, was geprüft werden konnte.",
