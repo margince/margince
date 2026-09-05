@@ -1184,7 +1184,12 @@ export const vi = {
   "contracts.renew.title": "Gia h\u1ea1n th\u1ecfa thu\u1eadn n\u00e0y",
   "contracts.renew.hint":
     "T\u1ea1o m\u1ed9t th\u1ecfa thu\u1eadn m\u1edbi v\u00e0 \u0111\u00e1nh d\u1ea5u th\u1ecfa thu\u1eadn n\u00e0y l\u00e0 \u0111\u00e3 thay th\u1ebf. \u0110i\u1ec1u kho\u1ea3n ri\u00eang \u2014 kh\u00f4ng g\u00ec \u0111\u01b0\u1ee3c gi\u1eef l\u1ea1i ngo\u00e0i b\u00ean \u0111\u1ed1i t\u00e1c.",
+  "contracts.renew.deal": "Deal",
+  "contracts.renew.dealHint":
+    "Deal \u0111\u00e3 gi\u00e0nh \u0111\u01b0\u1ee3c k\u1ef3 h\u1ea1n n\u00e0y, n\u1ebfu c\u00f3 \u2014 kh\u00f4ng bao gi\u1edd l\u00e0 deal c\u1ee7a h\u1ee3p \u0111\u1ed3ng tr\u01b0\u1edbc.",
+  "contracts.renew.dealNone": "Kh\u00f4ng c\u00f3 deal",
   "contracts.renew.submit": "Gia h\u1ea1n",
+  "contracts.deal": "Deal",
   "contracts.statusChange.title": "\u0110\u1ed5i tr\u1ea1ng th\u00e1i",
   "contracts.statusChange.label": "Tr\u1ea1ng th\u00e1i m\u1edbi",
   "contracts.statusChange.submit": "\u0110\u1ed5i tr\u1ea1ng th\u00e1i",
