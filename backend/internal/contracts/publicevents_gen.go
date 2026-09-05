@@ -1032,7 +1032,9 @@ type PublicEventConsentSuppressed struct {
 	Kind string `json:"kind"`
 }
 
-// PublicEventConsentSuppressionLifted Payload for consent.suppression_lifted — somebody with the authority to do so took back a stop, so mail to this person may resume.
+// PublicEventConsentSuppressionLifted Payload for consent.suppression_lifted — somebody with the authority to do so took back ONE stop.
+// That is not the same as "mail may resume", and a consumer must not read it that way. A person can carry several stops at once — their own objection and a rep's separate note — and lifting one says nothing about the others. `remaining_suppressions` is the field that answers the question a consumer actually has, and `still_suppressed` is that answer stated plainly: true means this person is STILL not writable, however many stops were just taken back.
+// Margince itself never relied on this event to decide a send — the engine re-reads the strongest live stop inside the sending transaction — so these fields exist for the readers outside it.
 // It carries BOTH levels: the one the stop was recorded at and the one that lifted it. A reader auditing this later needs to see that the second outranked the first, and a single "lifted_by" would leave that unanswerable without joining the row that no longer says it.
 // It never carries the reason either party gave. Those words belong to the people who wrote them, and an event reaches readers the explanation was not given to.
 type PublicEventConsentSuppressionLifted struct {
@@ -1041,6 +1043,15 @@ type PublicEventConsentSuppressionLifted struct {
 
 	// RecordedAtLevel The authority the stop was recorded at (machine | user | admin | subject).
 	RecordedAtLevel string `json:"recorded_at_level"`
+
+	// RemainingSuppressions How many stops are still live for this person after the lift, counted inside the same transaction that did the lifting.
+	RemainingSuppressions *int `json:"remaining_suppressions,omitempty"`
+
+	// StillSuppressed Whether this person is still not writable. Equivalent to remaining_suppressions > 0, stated as its own field so a consumer cannot get the comparison wrong in the direction that resumes mail.
+	StillSuppressed *bool `json:"still_suppressed,omitempty"`
+
+	// SuppressionId Which stop was lifted. Without it a consumer holding two stops for one person cannot tell which one this event describes.
+	SuppressionId *openapi_types.UUID `json:"suppression_id,omitempty"`
 }
 
 // PublicEventContractArchived Payload for contract.archived — the agreement left the surfaces that count it.

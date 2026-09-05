@@ -161,7 +161,7 @@ func TestWorkerBacksOffAConnectionLevelFailure(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 
-	w := &overlayReconcileWorkspaceWorker{
+	w := &overlayReconcileWorker{
 		pool: e.Pool, vault: vault, meter: workerBudgetMeter(t),
 		log:          slog.New(slog.DiscardHandler),
 		newIncumbent: func(_, _ string) overlay.Incumbent { return authFailingIncumbent{Adapter: fake.New()} },
@@ -169,9 +169,7 @@ func TestWorkerBacksOffAConnectionLevelFailure(t *testing.T) {
 	// The connection's failure IS this job's failure now: one workspace's
 	// reconcile is one job row, so River records it as failed and retries it
 	// rather than completing over a workspace that did not sync.
-	if err := w.Work(e.Admin(), &river.Job[OverlayReconcileWorkspaceArgs]{
-		Args: OverlayReconcileWorkspaceArgs{Workspace: e.WS},
-	}); err == nil {
+	if err := w.reconcileWorkspace(e.Admin(), e.WS); err == nil {
 		t.Fatal("a connection-level failure must fail this workspace's job row")
 	}
 

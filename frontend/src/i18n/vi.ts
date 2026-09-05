@@ -6703,6 +6703,35 @@ export const vi = {
   "installationSettings.fiscalYearStart": "Năm tài chính bắt đầu",
   "installationSettings.fiscalYearStartHint":
     "Tháng bắt đầu năm tài chính của bạn. Báo cáo nhóm theo năm và quý này — năm không bắt đầu từ tháng 1 được đặt tên theo cả hai năm dương lịch mà nó trải qua, ví dụ FY2026/27. Thay đổi sẽ đặt lại tên mọi báo cáo ngay lập tức, và một khung nhìn đã lưu có lọc theo kỳ sẽ hỏi những tháng khác.",
+  "installationSettings.forwardMeasure": "Dự phóng kết quả kỳ dựa trên",
+  "installationSettings.forwardMeasureHint":
+    "Phần pipeline còn lại nào được cộng vào số tiền đã thắng. Bằng chứng cam kết là chặt nhất: các deal đã cam kết có ngày chốt được xác nhận. Có trọng số tính mọi deal đang mở theo xác suất giai đoạn — cách đọc trung thực cho đội cam kết mọi thứ. Đánh giá của quản lý thay thế toàn bộ dự phóng thay vì cộng thêm vào phần đã thắng; nếu kỳ chưa có đánh giá nào, kỳ đó quay về bằng chứng cam kết và nói rõ điều đó.",
+  "installationSettings.forwardMeasure.commit_evidence":
+    "Bằng chứng cam kết — chỉ ngày chốt đã xác nhận",
+  "installationSettings.forwardMeasure.weighted":
+    "Pipeline có trọng số — mọi deal đang mở theo xác suất giai đoạn",
+  "installationSettings.forwardMeasure.manager_call":
+    "Đánh giá của quản lý — con số đã ghi cho kỳ này",
+  "forecast.landing": "Dự phóng kết quả kỳ",
+  "forecast.landingFrom": "{won} đã thắng cộng {remaining} còn sắp tới.",
+  "forecast.landingFromCall":
+    "Đánh giá cho kỳ này. Nó thay thế dự phóng chứ không cộng vào {won} đã thắng.",
+  "forecast.landing.caveat.call_absent":
+    "Chưa ai đánh giá kỳ này, nên đây là bằng chứng cam kết.",
+  "forecast.landing.caveat.call_below_actual":
+    "Đánh giá thấp hơn số tiền đã thắng. Nó được hiển thị đúng như đã ghi, không chỉnh sửa.",
+  "forecast.pipelineNeeded": "Pipeline cần có",
+  "forecast.pipelineNeededDetail":
+    "{current} đang mở so với {needed} cần để đạt {reference}.",
+  "forecast.pipelineBasis.manager_call": "Đo theo đánh giá cho kỳ này.",
+  "forecast.pipelineBasis.historical_median":
+    "Đo theo trung vị của bốn kỳ tương đương gần nhất.",
+  "forecast.pipelineAbsentTitle": "Không có số liệu bao phủ cho kỳ này",
+  "forecast.pipelineAbsent.insufficient_basis":
+    "Không có gì để đối chiếu: kỳ này chưa ghi đánh giá nào, và chưa đủ bốn kỳ tương đương đã kết thúc. Một số liệu bao phủ đo theo con số rút ra từ chính pipeline này thì lúc nào cũng đẹp.",
+  "forecast.pipelineAbsent.insufficient_history":
+    "Quá ít deal đã chốt để rút ra tỷ lệ chuyển đổi. Tỷ lệ từ một nhúm deal dao động nhiều hơn giá trị của câu trả lời.",
+  "forecast.coverage": "{percent}% pipeline cần thiết",
   "installationSettings.baseCurrency": "Đơn vị tiền tệ cơ sở",
   "installationSettings.baseCurrencyHint":
     "Mã ISO-4217 mà mọi số tiền được quy đổi về khi tổng hợp. Có thể thay đổi cho đến khi số tiền đầu tiên được quy đổi theo nó.",

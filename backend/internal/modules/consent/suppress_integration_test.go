@@ -17,6 +17,7 @@ package consent
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -300,5 +301,54 @@ func TestARepCannotStopAContactTheyOnlyRead(t *testing.T) {
 	}
 	if rows != 0 {
 		t.Errorf("the refused write still left %d row(s) on a contact the rep may only read", rows)
+	}
+}
+
+// TestASuppressionNeedsAReasonSomebodyCanReview holds the same bound on this
+// door that TestALiftNeedsAReasonSomebodyCanReview holds on its sibling.
+//
+// The two doors take the same field under the same contract limit and enforced
+// it in one place only: recording a stop accepted a megabyte where taking one
+// back refused at 500. Both now call requireReason, and this test is what fails
+// if one of them stops.
+func TestASuppressionNeedsAReasonSomebodyCanReview(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	// Only the BOUND. Empty is legal here and refused on the lift door, because
+	// the contract says so: the suppress body is `required: [kind]`, and a rep
+	// relaying "please stop emailing me" may have nothing to add. Asserting a
+	// refusal on empty would pin behaviour that breaks a conforming client.
+	for name, reason := range map[string]string{
+		"too long": strings.Repeat("x", reasonMax+1),
+	} {
+		err := e.store.Suppress(e.ctx, SuppressInput{
+			PersonID: e.person, Kind: suppressibleKind, Reason: reason,
+		})
+		var invalid *ValidationError
+		if !errors.As(err, &invalid) {
+			t.Errorf("a %s reason was refused with %v, want a validation error", name, err)
+			continue
+		}
+		if invalid.Field != fieldReason {
+			t.Errorf("a %s reason named field %q, want %q", name, invalid.Field, fieldReason)
+		}
+	}
+}
+
+// TestASuppressionMayCarryNoReason pins the other half of the contract: this
+// door's reason is OPTIONAL, and a body of `{"kind":"subject_request"}` is one
+// the published contract accepts. A shared validator that demanded a reason
+// here would answer 422 to that body and stop a rep recording a stop somebody
+// actually asked for.
+func TestASuppressionMayCarryNoReason(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	if err := e.store.Suppress(e.ctx, SuppressInput{
+		PersonID: e.person, Kind: suppressibleKind,
+	}); err != nil {
+		t.Fatalf("recording a stop with no reason: %v", err)
+	}
+	if kind, _, _ := liveSuppressionRow(t, e, e.person); kind != suppressibleKind {
+		t.Errorf("kind = %q, want %q", kind, suppressibleKind)
 	}
 }

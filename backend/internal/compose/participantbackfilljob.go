@@ -68,39 +68,18 @@ func newParticipantBackfillWorker(pool *pgxpool.Pool, log *slog.Logger) *partici
 // next tick simply re-selects whatever this one did not finish, because the
 // pass carries no cursor to lose.
 func (w *participantBackfillWorker) Work(ctx context.Context, _ *river.Job[ParticipantBackfillArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(ParticipantBackfillWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return ParticipantBackfillWorkspaceArgs{Workspace: ws} }))
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.backfillOneWorkspace))
 }
 
-// ParticipantBackfillWorkspaceArgs is one workspace's participant backfill.
-type ParticipantBackfillWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (ParticipantBackfillWorkspaceArgs) Kind() string { return "participant_backfill_workspace" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a ParticipantBackfillWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// participantBackfillWorkspaceWorker runs one workspace's pass. It reuses the dispatcher's
-// wiring rather than a second copy of it.
-type participantBackfillWorkspaceWorker struct {
-	*participantBackfillWorker
-}
-
-func (w *participantBackfillWorkspaceWorker) Work(ctx context.Context, job *river.Job[ParticipantBackfillWorkspaceArgs]) error {
-	if _, err := workspaceJobCtx(ctx, job.Args); err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	recovered, err := w.backfillWorkspace(ctx, job.Args.Workspace)
+func (w *participantBackfillWorker) backfillOneWorkspace(ctx context.Context, workspace ids.UUID) error {
+	ctx = principal.WithWorkspaceID(ctx, workspace)
+	recovered, err := w.backfillWorkspace(ctx, workspace)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
 	if recovered > 0 {
 		w.log.InfoContext(ctx, "participant backfill: recovered interaction participants",
-			"workspace", job.Args.Workspace.String(), "rows", recovered)
+			"workspace", workspace.String(), "rows", recovered)
 	}
 	return nil
 }

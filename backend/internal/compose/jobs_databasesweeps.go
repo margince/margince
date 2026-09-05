@@ -40,13 +40,13 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	addDeclaredWorker[AssuranceSweepArgs](reg, &assuranceSweepWorker{
 		pool: pool, now: func() time.Time { return time.Now().UTC() }, log: log,
 	})
-	addDeclaredWorker[ForecastSnapshotSweepArgs](reg, &forecastSnapshotSweepWorker{pool: pool})
-	addDeclaredWorker[ForecastSnapshotWorkspaceArgs](reg, &forecastSnapshotWorkspaceWorker{
+	addDeclaredWorker[ForecastSnapshotSweepArgs](reg, &forecastSnapshotSweepWorker{
 		pool: pool, now: func() time.Time { return time.Now().UTC() }, log: log,
 	})
 	addDeclaredWorker[TimeScanArgs](reg, &timeScanWorker{pool: pool, log: log})
-	addDeclaredWorker[IdempotencyRetentionArgs](reg, &idempotencyRetentionWorker{pool: pool})
-	addDeclaredWorker[IdempotencyRetentionWorkspaceArgs](reg, &idempotencyRetentionWorkspaceWorker{sweeper: NewIdempotencyRetentionSweeper(pool, log)})
+	addDeclaredWorker[IdempotencyRetentionArgs](reg, &idempotencyRetentionWorker{
+		pool: pool, sweeper: NewIdempotencyRetentionSweeper(pool, log),
+	})
 	addDeclaredWorker[AgentTaskRetentionArgs](reg, &agentTaskRetentionWorker{
 		sweeper: NewAgentTaskRetentionSweeper(pool, log), identity: identity.NewService(pool),
 	})

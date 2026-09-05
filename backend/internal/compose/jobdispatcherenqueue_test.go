@@ -30,7 +30,7 @@ import (
 // or a BUILD rather than a workspace. It is a floor and not an equality for
 // that reason — it stops the walk passing on nothing without pinning a number
 // that a sanctioned retirement has to come back and edit.
-const dispatcherLiteralFloor = 15
+const dispatcherLiteralFloor = 5
 
 // periodicForArgs answers every composite literal this package's own sources
 // hand to periodicFor, keyed by node so the second walk can ask of a literal it

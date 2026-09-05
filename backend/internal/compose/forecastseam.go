@@ -81,7 +81,7 @@ func ForecastDeals(
 		SELECT d.id, d.owner_id, d.amount_minor, d.currency, %s,
 		       d.expected_close_date, d.close_date_provisional, d.closed_at,
 		       d.status = 'won', d.forecast_category,
-		       COALESCE(s.win_probability, 0)
+		       COALESCE(s.win_probability, 0), d.stage_id
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
 		WHERE d.archived_at IS NULL
@@ -107,9 +107,13 @@ func ForecastDeals(
 		var d forecasting.Deal
 		var owner *ids.UUID
 		var currency, category *string
+		var stage *ids.UUID
 		err := row.Scan(&d.ID, &owner, &d.AmountMinor, &currency, &d.BaseMinor,
 			&d.ExpectedCloseDate, &d.CloseProvisional, &d.ClosedAt,
-			&d.Won, &category, &d.StageProbability)
+			&d.Won, &category, &d.StageProbability, &stage)
+		if stage != nil {
+			d.StageID = stage.String()
+		}
 		if owner != nil {
 			d.Owner = owner.String()
 		}
