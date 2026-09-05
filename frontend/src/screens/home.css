@@ -23,14 +23,23 @@
   padding: var(--space-6) 0 var(--space-5);
 }
 
-/* One step above the app's 22px display type and no further. This is the page a
- * day opens on, so it may be the largest heading in the product; a display-size
- * greeting would instead be the largest thing on the SCREEN, out-shouting the
- * six counts it exists to introduce. */
+/* THE DISPLAY SIZE, fluid: this is the page a day opens on and the first thing
+ * anyone sees after signing in, so the greeting is the one heading in the
+ * product allowed the full-viewport rung. It used to stop one step under it so
+ * as not to out-shout the readings — which were then five panes; they are a
+ * ruled row now (statstrip.css, `flat`), and a quiet row under a large
+ * greeting is the order the page reads in. */
 .glance-greeting {
   margin: 0;
-  font-size: var(--fs-h1);
+  font-size: var(--fs-display-fluid);
   line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-display);
+  text-wrap: balance;
+}
+
+/* The day under the greeting: `t-sub` sets its type, this only places it. */
+.glance-date {
+  margin: 0 0 var(--space-2);
 }
 
 /* ── The readings plate ────────────────────────────────────────────────────
