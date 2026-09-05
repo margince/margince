@@ -71,5 +71,18 @@ func teamReviewToWire(review TeamReview) crmcontracts.TeamWeeklyReview {
 		},
 		Pipeline: pipelineToWire(review.Money),
 		Reps:     reps,
+		// Derived here rather than stored: it is an order over the reps this
+		// same call assembled, so it cannot go stale, and a snapshot written
+		// before the agenda existed answers one anyway.
+		Agenda: agendaToWire(agendaOrder(review.Reps)),
 	}
+}
+
+// agendaToWire renders the agenda's order in the contract's uuid type.
+func agendaToWire(order []ids.UUID) []openapi_types.UUID {
+	agenda := make([]openapi_types.UUID, 0, len(order))
+	for _, id := range order {
+		agenda = append(agenda, openapi_types.UUID(id))
+	}
+	return agenda
 }

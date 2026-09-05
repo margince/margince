@@ -1,0 +1,33 @@
+/* The Monday agenda: a numbered list of the week's own items, in the order the
+   review ranks them. The ordinal is decoration — the list order carries the
+   meaning and a screen reader hears the rows in it — so it is aria-hidden. */
+.teamweekly-agenda-summary {
+  margin: 0;
+  color: var(--textMeta);
+}
+
+.teamweekly-agenda-item {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.teamweekly-agenda-ordinal {
+  color: var(--textMeta);
+  font-variant-numeric: tabular-nums;
+}
+
+.teamweekly-agenda-name {
+  font-weight: 500;
+  color: var(--textContent);
+}
+
+.teamweekly-agenda-focus {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  color: var(--textMeta);
+}
