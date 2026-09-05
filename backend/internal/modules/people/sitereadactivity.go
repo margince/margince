@@ -84,12 +84,12 @@ func (sr SiteRead) claim() SiteReadClaim {
 // not happen" — the reason says which it was.
 func siteReadActivityState(status string) string {
 	switch status {
-	case "queued", "running", "done", "failed":
+	case siteReadStatusQueued, siteReadStatusRunning, siteReadStatusDone, siteReadStatusFailed:
 		return status
-	case "deferred", "partial":
+	case siteReadStatusDeferred, siteReadStatusPartial:
 		return "degraded"
-	case "cancelled":
-		return "failed"
+	case siteReadStatusCancelled:
+		return siteReadStatusFailed
 	}
 	return status
 }
@@ -97,10 +97,10 @@ func siteReadActivityState(status string) string {
 // The stop reasons as prose. Server-authored and closed — never a provider's
 // words — which is the condition on reaching a rail an ordinary rep reads.
 var siteReadStopSaid = map[string]string{
-	"budget":   "The read stopped at the AI budget's limit.",
-	"page_cap": "The read stopped at its page limit.",
-	"byte_cap": "The read stopped at its size limit.",
-	"deadline": "The read stopped at its time limit.",
+	siteReadStopBudget:   "The read stopped at the AI budget's limit.",
+	siteReadStopPageCap:  "The read stopped at its page limit.",
+	siteReadStopByteCap:  "The read stopped at its size limit.",
+	siteReadStopDeadline: "The read stopped at its time limit.",
 }
 
 const (
@@ -115,18 +115,18 @@ const (
 func (sr SiteRead) activityDegradeReason() string {
 	var said string
 	switch sr.Status {
-	case "failed", "deferred":
+	case siteReadStatusFailed, siteReadStatusDeferred:
 		if sr.StatusDetail != nil {
 			said = *sr.StatusDetail
 		}
-	case "partial":
+	case siteReadStatusPartial:
 		said = siteReadPartialSaid
 		if sr.StoppedReason != nil {
 			if stop, known := siteReadStopSaid[*sr.StoppedReason]; known {
 				said = stop
 			}
 		}
-	case "cancelled":
+	case siteReadStatusCancelled:
 		said = siteReadCancelledSaid
 	}
 	return boundedRunes(said, siteReadDegradeReasonBound)
@@ -140,7 +140,7 @@ func (sr SiteRead) activitySettledAt() *time.Time {
 	if sr.FinishedAt != nil {
 		return sr.FinishedAt
 	}
-	if state := siteReadActivityState(sr.Status); state == "queued" || state == "running" {
+	if state := siteReadActivityState(sr.Status); state == siteReadStatusQueued || state == siteReadStatusRunning {
 		return nil
 	}
 	settled := sr.UpdatedAt
@@ -182,7 +182,7 @@ func emitSiteReadActivity(ctx context.Context, tx pgx.Tx, ledgerID ids.UUID, sr 
 			return err
 		}
 		subject := openapi_types.UUID(sr.OrganizationID.UUID)
-		subjectType := "organization"
+		subjectType := entityOrganization
 		payload.SubjectType = &subjectType
 		payload.SubjectId = &subject
 		if label != "" {
@@ -219,7 +219,7 @@ func siteReadSubjectLabel(ctx context.Context, tx pgx.Tx, orgID ids.UUID) (strin
 // keeps a worker's transition attributable without an entity ref.
 func logSiteReadActivity(ctx context.Context, tx pgx.Tx, sr SiteRead, lease time.Duration) error {
 	ledgerID, err := storekit.LogSystem(ctx, tx, "ai_task.state_changed", map[string]any{
-		"source": SiteReadActivitySource, "occurrence_key": sr.ID.String(),
+		auditKeySource: SiteReadActivitySource, "occurrence_key": sr.ID.String(),
 		"state": sr.Status, "attempt": sr.Attempt,
 	})
 	if err != nil {

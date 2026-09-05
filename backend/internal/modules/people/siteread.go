@@ -147,7 +147,7 @@ const siteReadBudgetDetail = "AI budget reached its current limit. This website 
 // operator withdrew the standing setting that queued it. Kept distinct from
 // failed because a failure is something to investigate and this is not.
 var finishedSiteReadStatuses = map[string]bool{
-	"done": true, "partial": true, "failed": true, "cancelled": true,
+	siteReadStatusDone: true, siteReadStatusPartial: true, siteReadStatusFailed: true, siteReadStatusCancelled: true,
 }
 
 // The three things a dossier can be ABOUT (site_read.target_kind). An
@@ -162,7 +162,9 @@ const (
 
 // siteReadStopReasons mirrors the row's stopped_reason CHECK so a bad
 // worker value reads as an actionable error, not a constraint 500.
-var siteReadStopReasons = map[string]bool{"budget": true, "page_cap": true, "byte_cap": true, "deadline": true}
+var siteReadStopReasons = map[string]bool{
+	siteReadStopBudget: true, siteReadStopPageCap: true, siteReadStopByteCap: true, siteReadStopDeadline: true,
+}
 
 // SiteReadEnqueue inserts the worker job through the dossier transaction.
 // Compose supplies the River-backed implementation; keeping it as a callback

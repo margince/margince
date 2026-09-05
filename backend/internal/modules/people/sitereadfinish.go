@@ -145,8 +145,25 @@ func validateSiteReadOutcome(in FinishSiteReadInput) error {
 	return nil
 }
 
-// siteReadStatusFailed is the one terminal status that carries a diagnosis.
-const siteReadStatusFailed = "failed"
+// The dossier's statuses (site_read.status). failed is the one terminal status
+// that carries a diagnosis; deferred is the one that carries a retry time.
+const (
+	siteReadStatusQueued    = "queued"
+	siteReadStatusRunning   = "running"
+	siteReadStatusDeferred  = "deferred"
+	siteReadStatusDone      = "done"
+	siteReadStatusPartial   = "partial"
+	siteReadStatusFailed    = "failed"
+	siteReadStatusCancelled = "cancelled"
+)
+
+// Why a crawl stopped EARLY having read pages (site_read.stopped_reason).
+const (
+	siteReadStopBudget   = "budget"
+	siteReadStopPageCap  = "page_cap"
+	siteReadStopByteCap  = "byte_cap"
+	siteReadStopDeadline = "deadline"
+)
 
 // FinishSiteRead records the crawl's outcome in one guarded UPDATE from
 // running to a terminal status. No auth.Require, same as BeginSiteRead:
