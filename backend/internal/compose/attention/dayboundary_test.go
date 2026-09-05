@@ -205,3 +205,106 @@ func daysWithNoLocalMidnight(loc *time.Location) []time.Time {
 	}
 	return out
 }
+
+// THE OTHER END of the same day, for a lane that looks back.
+//
+// A forward lane asks what is still coming and stops at endOfDay. A lane about
+// what already happened needs where today BEGAN, and the two have to mean the
+// same day or work falls between them: a meeting at 08:00 is after the start
+// and before the end, and a boundary computed in a different zone puts it
+// outside both.
+func TestTheDayBeginsAtTheInstallationsMidnight(t *testing.T) {
+	// Mid-afternoon in Ho Chi Minh City, which is 08:30 UTC.
+	asOf := time.Date(2026, 6, 15, 8, 30, 0, 0, time.UTC)
+	for name, tc := range map[string]struct {
+		zone string
+		want time.Time
+	}{
+		"east of UTC": {"Asia/Ho_Chi_Minh", time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC).Add(-7 * time.Hour)},
+		"west of UTC": {"America/New_York", time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC).Add(4 * time.Hour)},
+		"at UTC":      {"UTC", time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			s := &Service{zone: zoneNamed(t, tc.zone)}
+			got, err := s.startOfDay(context.Background(), asOf)
+			if err != nil {
+				t.Fatalf("startOfDay: %v", err)
+			}
+			if !got.Equal(tc.want) {
+				t.Errorf("today began at %s, want %s — the boundary is the installation's "+
+					"midnight, and %s reads it as UTC's", got.UTC(), tc.want.UTC(), name)
+			}
+		})
+	}
+}
+
+// The two ends bound ONE day, which is the property a backward lane rests on.
+//
+// Asserted as a relationship rather than two constants: a start and an end each
+// correct against their own fixture can still describe different days, and the
+// lane between them would then carry a window that is 23, 25 or 48 hours long
+// without either test noticing.
+func TestTheDaysTwoEndsBoundTheSameDay(t *testing.T) {
+	for _, name := range []string{"Asia/Ho_Chi_Minh", "America/New_York", "UTC", "America/Havana"} {
+		t.Run(name, func(t *testing.T) {
+			loc, err := time.LoadLocation(name)
+			if err != nil {
+				t.Skipf("%s is not in this tzdata", name)
+			}
+			s := &Service{zone: zoneNamed(t, name)}
+			asOf := time.Date(2026, 6, 15, 8, 30, 0, 0, time.UTC)
+			began, err := s.startOfDay(context.Background(), asOf)
+			if err != nil {
+				t.Fatalf("startOfDay: %v", err)
+			}
+			ends, err := s.endOfDay(context.Background(), asOf)
+			if err != nil {
+				t.Fatalf("endOfDay: %v", err)
+			}
+			if !began.Before(asOf) || !asOf.Before(ends) {
+				t.Fatalf("now (%s) is not inside [%s, %s)", asOf, began, ends)
+			}
+			// One local date, whichever way the clocks moved that day.
+			if !sameDate(began.In(loc), asOf.In(loc)) {
+				t.Errorf("the day begins on %s but now is %s — the two ends describe different days",
+					began.In(loc).Format(time.DateOnly), asOf.In(loc).Format(time.DateOnly))
+			}
+		})
+	}
+}
+
+// And it holds on the mornings local midnight does not exist.
+func TestADayWhoseMidnightDoesNotExistBeginsAtItsFirstInstant(t *testing.T) {
+	var found int
+	for _, name := range []string{"America/Havana", "America/Santiago", "Asia/Beirut"} {
+		loc, err := time.LoadLocation(name)
+		if err != nil {
+			t.Logf("%s is not in this tzdata; skipping it", name)
+			continue
+		}
+		for _, day := range daysWithNoLocalMidnight(loc) {
+			found++
+			t.Run(name+"/"+day.Format(time.DateOnly), func(t *testing.T) {
+				// Mid-afternoon LOCAL on the day itself, so the boundary under
+				// test is that same day's own beginning.
+				asOf := time.Date(day.Year(), day.Month(), day.Day(), 15, 0, 0, 0, loc)
+				s := &Service{zone: zoneNamed(t, name)}
+				began, err := s.startOfDay(context.Background(), asOf)
+				if err != nil {
+					t.Fatalf("startOfDay: %v", err)
+				}
+				local := began.In(loc)
+				if !sameDate(local, day) {
+					t.Fatalf("the day begins at %s, which is not %s", local, day.Format(time.DateOnly))
+				}
+				if before := local.Add(-time.Minute); sameDate(before, local) {
+					t.Errorf("%s is not the FIRST instant of %s — a minute earlier is still the same "+
+						"date, so the window opens late and drops the work before it", local, day.Format(time.DateOnly))
+				}
+			})
+		}
+	}
+	if found == 0 {
+		t.Fatal("no day without a local midnight under this tzdata, so this test proves nothing")
+	}
+}

@@ -144,9 +144,7 @@ export function OwnDomainsCard() {
               description={
                 <>
                   {t("ownDomains.fromCompany")}{" "}
-                  <a href="#/settings/admin/general">
-                    {t("ownDomains.openCompany")}
-                  </a>
+                  <a href="#/settings/general">{t("ownDomains.openCompany")}</a>
                 </>
               }
               layout="stack"
