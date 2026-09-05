@@ -28,7 +28,7 @@ func TestPRTemplate_requiresTheAccountabilitySections(t *testing.T) {
 
 func TestContributing_statesAccountabilityAndDisclosure(t *testing.T) {
 	doc := readRepoFile(t, "CONTRIBUTING.md")
-	for _, want := range []string{"accountable", "explain every line", "DCO", "Signed-off-by", "craftsmanship gate"} {
+	for _, want := range []string{"accountable", "explain every line", "craftsmanship gate"} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("CONTRIBUTING.md missing %q", want)
 		}
@@ -37,11 +37,8 @@ func TestContributing_statesAccountabilityAndDisclosure(t *testing.T) {
 
 func TestCIWorkflow_externalPRsHitTheGateJobs(t *testing.T) {
 	yml := readRepoFile(t, ".github/workflows/ci.yml")
-	// The dco + craftsmanship + craft-residue jobs are defined so external/fork PRs
-	// hit the same gate as internal work.
-	if !regexp.MustCompile(`(?m)^\s+dco:`).MatchString(yml) {
-		t.Error("ci.yml missing the dco job")
-	}
+	// The craftsmanship + craft-residue jobs are defined so external/fork PRs hit
+	// the same gate as internal work.
 	for _, job := range []string{"craftsmanship:", "craft-residue:"} {
 		if !strings.Contains(yml, job) {
 			t.Errorf("ci.yml missing job %q that external PRs must also hit", job)

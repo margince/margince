@@ -54,8 +54,12 @@ func (a TranscriptProposeArgs) WorkspaceID() ids.UUID { return a.Workspace }
 // SAME reading collapses while a fresh reading always queues.
 func transcriptProposeInsertOpts() *river.InsertOpts {
 	return &river.InsertOpts{
-		Queue:      transcriptReadQueue,
-		UniqueOpts: river.UniqueOpts{ByArgs: true},
+		Queue: transcriptReadQueue,
+		// One-off: a rep asked for this recording to be read and nothing
+		// re-asks, so the ladder carries the blob-store blip and the unreadable
+		// transcript alone — the same reading document_extract is sized for.
+		MaxAttempts: oneOffJobMaxAttempts,
+		UniqueOpts:  river.UniqueOpts{ByArgs: true},
 	}
 }
 

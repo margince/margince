@@ -48,7 +48,7 @@ describe("the hidden-backlog panel is about the reader", () => {
   // from you" read as Lena's backlog. On the one surface whose whole job is to
   // say what a queue is not showing, that is the worst place in the product to
   // attribute a figure to the wrong person.
-  it("draws no hidden-backlog panel on a colleague's queue", async () => {
+  it("AC-WORKLIST-MGR-02: draws no hidden-backlog panel on a colleague's queue", async () => {
     stub(day({ scope_options: ["mine", "team"] }));
     renderWorklist("en", "11111111-1111-4111-8111-111111111111");
 

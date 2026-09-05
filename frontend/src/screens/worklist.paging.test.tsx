@@ -126,7 +126,7 @@ describe("walking to the rest of the queue", () => {
   // population rather than four figures about the page beside a fifth about the
   // day. A fixture whose bands could be a count of its own page would pass
   // whichever the header meant, which is how this shipped.
-  it("keeps the day's figures still while the rows grow", async () => {
+  it("AC-WORKLIST-SDR-04: keeps the day's figures still while the rows grow", async () => {
     const counts = [
       {
         category: "tasks" as const,

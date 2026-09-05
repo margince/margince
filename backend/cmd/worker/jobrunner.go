@@ -383,13 +383,16 @@ func vatCheckerFor(baseURL, requester string) vatcheck.Checker {
 	return vatcheck.NewVIES(baseURL, requester, nil)
 }
 
+// geocoderFor builds the geocoding client, or nil for a deployment that
+// geocodes nothing.
+//
+//nolint:ireturn // the PORT is the return type: nil means this deployment geocodes nothing, which a concrete type cannot express.
 func geocoderFor(baseURL string) geocode.Client {
-	switch baseURL {
-	case "":
+	if !geocode.Configured(baseURL) {
 		return nil
-	case baseURLPublic:
-		return geocode.NewNominatim(geocode.PublicBaseURL, nil)
-	default:
-		return geocode.NewNominatim(baseURL, nil)
 	}
+	if baseURL == baseURLPublic {
+		return geocode.NewNominatim(geocode.PublicBaseURL, nil)
+	}
+	return geocode.NewNominatim(baseURL, nil)
 }

@@ -98,7 +98,13 @@ afterEach(() => {
 
 describe("EmailEntry", () => {
   it("says who wrote, what about, and whose move it is", () => {
-    wrap(<EmailEntry summary={READABLE} timestamp="1 Sep 09:12" />);
+    wrap(
+      <EmailEntry
+        summary={READABLE}
+        timestamp="1 Sep 09:12"
+        whyNotOpenable="noDetail"
+      />,
+    );
     expect(screen.getByText(/Ana Sommer \+2/)).toBeInTheDocument();
     expect(screen.getByText("Angebot Q4")).toBeInTheDocument();
     expect(
@@ -110,7 +116,13 @@ describe("EmailEntry", () => {
   });
 
   it("keeps a withheld row visible and says nothing in it", () => {
-    wrap(<EmailEntry summary={WITHHELD} timestamp="1 Sep 09:12" />);
+    wrap(
+      <EmailEntry
+        summary={WITHHELD}
+        timestamp="1 Sep 09:12"
+        whyNotOpenable="noDetail"
+      />,
+    );
     // Visible, so a reader can tell a limited conversation from one that never
     // happened.
     expect(screen.getByText("1 Sep 09:12")).toBeInTheDocument();
@@ -135,7 +147,13 @@ describe("EmailEntry", () => {
   // was every withheld row and every row whose summary carries no
   // counterparty, on every 360 timeline.
   it("never ends the direction on a preposition", () => {
-    wrap(<EmailEntry summary={WITHHELD} timestamp="1 Sep 09:12" />);
+    wrap(
+      <EmailEntry
+        summary={WITHHELD}
+        timestamp="1 Sep 09:12"
+        whyNotOpenable="noDetail"
+      />,
+    );
     expect(screen.getByText("Received")).toBeInTheDocument();
     expect(screen.queryByText("Received from")).not.toBeInTheDocument();
   });
@@ -148,6 +166,7 @@ describe("EmailEntry", () => {
       <EmailEntry
         summary={{ ...READABLE, counterparty: "   " }}
         timestamp="1 Sep 09:12"
+        whyNotOpenable="noDetail"
       />,
     );
     expect(screen.getByText("Received")).toBeInTheDocument();
@@ -155,7 +174,13 @@ describe("EmailEntry", () => {
   });
 
   it("says the direction WITH the name when there is one", () => {
-    wrap(<EmailEntry summary={READABLE} timestamp="1 Sep 09:12" />);
+    wrap(
+      <EmailEntry
+        summary={READABLE}
+        timestamp="1 Sep 09:12"
+        whyNotOpenable="noDetail"
+      />,
+    );
     // One sentence from one string, so the two forms cannot drift and a
     // locale can put the name where its grammar wants it.
     expect(screen.getByText(/^Received from Ana Sommer/)).toBeInTheDocument();
@@ -169,6 +194,7 @@ describe("EmailEntry", () => {
       <EmailEntry
         summary={{ ...WITHHELD, direction: "outbound" }}
         timestamp="1 Sep 09:12"
+        whyNotOpenable="noDetail"
       />,
     );
     expect(screen.getByText("Sent")).toBeInTheDocument();
@@ -182,7 +208,13 @@ describe("EmailEntry", () => {
   // "email" in an icon alone, so a screen reader was told what happened
   // without being told what kind of thing it was.
   it("announces that the row is an email", () => {
-    wrap(<EmailEntry summary={READABLE} timestamp="1 Sep 09:12" />);
+    wrap(
+      <EmailEntry
+        summary={READABLE}
+        timestamp="1 Sep 09:12"
+        whyNotOpenable="noDetail"
+      />,
+    );
     // Asked of the sr-only span itself: "Email" appearing SOMEWHERE on the row
     // would still pass after the announcement was removed.
     expect(
@@ -205,7 +237,13 @@ describe("EmailEntry", () => {
   });
 
   it("is not a control when there is nothing to open", () => {
-    wrap(<EmailEntry summary={READABLE} timestamp="1 Sep 09:12" />);
+    wrap(
+      <EmailEntry
+        summary={READABLE}
+        timestamp="1 Sep 09:12"
+        whyNotOpenable="noDetail"
+      />,
+    );
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
@@ -249,7 +287,13 @@ describe("EmailDetail", () => {
     vi.stubGlobal("fetch", fetchSpy);
 
     // A row on its own costs nothing: the summary it draws came with the list.
-    wrap(<EmailEntry summary={READABLE} timestamp="1 Sep 09:12" />);
+    wrap(
+      <EmailEntry
+        summary={READABLE}
+        timestamp="1 Sep 09:12"
+        whyNotOpenable="noDetail"
+      />,
+    );
     expect(fetchSpy).not.toHaveBeenCalled();
     cleanup();
 

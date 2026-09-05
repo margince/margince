@@ -53,7 +53,12 @@ var activeSweepStates = []rivertype.JobState{
 	rivertype.JobStateRetryable,
 }
 
-// sweepInsertOpts is the shared insert policy for the periodic passes.
+// sweepInsertOpts is the shared UNIQUENESS policy for the periodic passes, and
+// it deliberately names no attempt cap: River resolves MaxAttempts as the
+// explicit opts first, the args type's own InsertOpts second, so a number here
+// would override every args-owned cap the contract publishes and make
+// api/jobs.yaml's declared ladder a number nothing runs at. periodicFor
+// supplies one only where no args type owns it.
 func sweepInsertOpts() *river.InsertOpts {
 	return &river.InsertOpts{UniqueOpts: river.UniqueOpts{ByState: activeSweepStates}}
 }

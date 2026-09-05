@@ -433,28 +433,47 @@ describe("what the ranked queue tells a reader", () => {
     const { container } = renderWorklist();
 
     await screen.findByText("A buyer is waiting on a funded deal");
-    // The first three are said outright.
-    for (const kind of [
-      "buyer_wrote_last",
-      "stale",
-      "no_reply_history",
-    ] as const) {
-      expect(container.textContent).toContain(en[`worklist.because.${kind}`]);
+    const fold = container.querySelector("details.worklist-row-because-fold");
+    expect(fold).not.toBeNull();
+    // Read the two halves SEPARATELY. Asserting over the whole page cannot
+    // tell "in the summary" from "in the fold", so it passes just as well on a
+    // row that put the strongest reasons behind the tap — which is the exact
+    // inversion this component exists to prevent.
+    const summary = fold?.querySelector("summary")?.textContent ?? "";
+    const hidden = fold?.querySelector("p")?.textContent ?? "";
+
+    // THE SERVER'S ORDER, kept. `because` arrives "in the order they were
+    // weighed", so the head is the strongest three and the fold falls in the
+    // right place by construction. Nothing held that until now: reversing the
+    // list before the slice passed every test in this file, and a reversed
+    // fold buries the weak reasons and promotes the ones a reader already has.
+    // Positions, checked for PRESENCE first. indexOf answers -1 for a phrase
+    // that is not there, and -1 is less than every real index — so an ordering
+    // assertion alone passes when the reason it names has vanished entirely.
+    const at = (kind: "buyer_wrote_last" | "stale" | "no_reply_history") => {
+      const found = summary.indexOf(en[`worklist.because.${kind}`]);
+      expect(found, `${kind} is missing from the summary`).toBeGreaterThan(-1);
+      return found;
+    };
+    expect(at("buyer_wrote_last")).toBeLessThan(at("stale"));
+    expect(at("stale")).toBeLessThan(at("no_reply_history"));
+
+    // The rest are PRESENT — folded, never discarded — and specifically NOT in
+    // the summary. The one that decided the rank is in here, which is the whole
+    // reason a cap was wrong.
+    for (const kind of ["asks_nothing", "expected_revenue"] as const) {
+      expect(hidden).toContain(en[`worklist.because.${kind}`]);
+      expect(summary).not.toContain(en[`worklist.because.${kind}`]);
     }
-    // The rest are PRESENT — folded, never discarded. The one that decided the
-    // rank is in here, which is the whole reason a cap was wrong.
-    expect(container.textContent).toContain(
-      en["worklist.because.expected_revenue"],
+
+    // The count names how many are ACTUALLY hidden, so a reader can decide
+    // whether to spend the tap. Asserted as the whole rendered phrase against
+    // the summary alone: `toContain("2")` matched any digit 2 anywhere on the
+    // page, so a summary promising "+22 more reasons" over two hidden facts
+    // passed it.
+    expect(summary).toContain(
+      en["worklist.because.more_other"].replace("{count}", "2"),
     );
-    expect(container.textContent).toContain(
-      en["worklist.because.asks_nothing"],
-    );
-    // And the fold names HOW MANY, so a reader can decide whether to spend the
-    // tap. "+2 more reasons", not "more".
-    expect(container.textContent).toContain("2");
-    expect(
-      container.querySelector("details.worklist-row-because-fold"),
-    ).not.toBeNull();
   });
 
   // Three reasons still fit on one line at 390px, so folding them would cost a
@@ -550,15 +569,24 @@ describe("what the ranked queue tells a reader", () => {
     );
     const { container } = renderWorklist();
 
-    // The row arrives first; the decision it carries is a second read, so the
-    // card appears after it.
     await screen.findByText(/Send the follow-up/);
     // A queue that can rank a decision and not answer it sends the reader to a
     // second screen to do what the row already described. The card is the same
     // one the record page draws, posting to the same endpoint.
+    //
+    // ANSWERED IN A DRAWER, not in the row. The card is 440px of evidence,
+    // draft and three answers; inline it made the row 657px against a 208px
+    // ceiling and pushed the page's first action off a phone screen. So the row
+    // offers the verb and the drawer holds the card, and this asserts both
+    // halves — a row that opened nothing would pass on the button alone.
     await waitFor(() => {
       expect(container.querySelector(".worklist-row-decision")).toBeTruthy();
     });
+    // Not answerable until the reader asks: the queue draws no Accept.
+    expect(screen.queryByRole("button", { name: "Accept" })).toBeNull();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Decide" }),
+    );
     expect(await screen.findByRole("button", { name: "Accept" })).toBeTruthy();
   });
 
@@ -607,7 +635,7 @@ describe("what the ranked queue tells a reader", () => {
     expect(screen.getAllByText("My team").length).toBeGreaterThan(0);
   });
 
-  it("warns rather than claiming a clear day it could not read", async () => {
+  it("AC-WORKLIST-SDR-05: warns rather than claiming a clear day it could not read", async () => {
     stub(
       day({
         sources_unavailable: [{ source: "capture_health", reason: "failed" }],
@@ -1003,7 +1031,7 @@ describe("the draft_reply verb says what the click does", () => {
 // fixture must keep them distinct for the count to mean what it says, which is
 // what `seen.size` being asserted at 3 holds.
 describe("every obligation is drawn once", () => {
-  it("renders no row twice, including the one at the top", async () => {
+  it("AC-WORKLIST-SDR-02: renders no row twice, including the one at the top", async () => {
     stub(
       day({
         queue: [

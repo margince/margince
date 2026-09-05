@@ -187,7 +187,12 @@
   padding: 0;
 }
 
-.worklist-row-verbs {
+.worklist-row-verbs,
+/* The dispositions are laid out like the verbs beside them because they ARE a
+   group of controls beside the verbs. Left as a bare block it filled its line
+   whatever it held, so on a phone it could never share a row with the verbs and
+   the two spent 88px on four small buttons. */
+.worklist-row-dispositions {
   display: flex;
   flex: 0 0 auto;
   gap: var(--space-2);
@@ -349,13 +354,21 @@
     min-width: 0;
   }
 
-  /* Every group of verbs below the text, at full width and free to wrap. They
-     are separate elements — the row's own, the ways to put it down, the
-     hand-off — and each has to yield, or the one that does not squeezes the
-     others back onto a sliver. */
+  /* Every group of verbs below the text, and free to wrap. They are separate
+     elements — the row's own, the ways to put it down, the hand-off — and each
+     has to yield, or the one that does not squeezes the others back onto a
+     sliver.
+
+     They SHARE a line where they fit, and take one each only when they do not.
+     `1 1 100%` gave every group a full-width band of its own, so a row with
+     verbs AND dispositions spent two 44px lines on four small buttons and stood
+     284px tall against a 176px ceiling — measured at 390x844, with no decision
+     card on it. `auto` asks for the width the buttons actually need and the
+     wrap does the rest, which is the same behaviour for a group too wide to
+     share and a shorter row for every group that is not. */
   .worklist-row-verbs,
   .worklist-row-dispositions {
-    flex: 1 1 100%;
+    flex: 1 1 auto;
     flex-wrap: wrap;
   }
 

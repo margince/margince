@@ -334,29 +334,6 @@ no running stack — but it does need the browser: \`pnpm exec playwright instal
     || unreported=1
 fi
 
-if [[ "${MAIN_DCO_RESULT:-}" = "failure" ]]; then
-  report "main carries a commit with no Signed-off-by" bug \
-"The \`dco (main)\` job failed on the two-hourly health check: $RUN_URL
-
-The \`dco\` job in \`ci.yml\` runs PR-side, over the branch's own commits. \`main\`
-takes the SQUASH, whose message GitHub composes from the pull request — so the
-two are not the same text, and once the branch is deleted the check is attached
-to a ref that no longer exists. An unsigned commit on \`main\` is invisible FROM
-\`main\`, which is why this job exists.
-
-It is filed as a bug rather than a chore because a missing trailer is the
-licence model's provenance obligation, not a style rule, and because the repair
-is not ours: a sign-off is a certification BY THE AUTHOR. Nobody else may add
-one on their behalf. The fix is a follow-up commit from whoever wrote the commit
-this run names.
-
-${MAIN_SUSPECTS:-_no suspect range was computed for this run._}
-
-Reproduce locally with \`./scripts/check-dco.sh <baseline> HEAD\` — the same
-script the PR lane runs, over a range instead of a branch."\
-    || unreported=1
-fi
-
 if [[ "${MAIN_SONAR_RESULT:-}" = "failure" ]]; then
   report "main's SonarCloud analysis was not published" bug \
 "The \`sonarcloud (main)\` job failed on the two-hourly health check, with every

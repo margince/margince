@@ -180,4 +180,38 @@ describe("do next", () => {
     rerender(<DoNext day={undefined} state="failed" />);
     expect(screen.queryByText(en["brief.donext.clear"])).toBeNull();
   });
+
+  // The section draws a waiting message in FULL — sender, subject, preview,
+  // access badge — and shipped with no way to open it: a reader was shown the
+  // message and then refused it. A drawer needs no second column, only a
+  // dialog, so the absence was never about this page's shape.
+  it("opens a waiting message it drew in full", () => {
+    render(
+      <DoNext
+        day={day([
+          item({
+            id: "e1",
+            title: "Aster Handel",
+            email_summary: {
+              activity_id: "01a05500-0000-7000-8000-00000000ee01",
+              occurred_at: "2026-06-09T09:15:00Z",
+              version: 2,
+              subject: "Re: the renewal quote",
+              preview: "Can you hold the price until Friday?",
+              counterparty: "Dana Buyer",
+              direction: "inbound",
+              display_status: "team",
+              move: "needs_reply",
+              attachment_count: 0,
+            },
+          }),
+        ])}
+        state="ready"
+      />,
+    );
+
+    // A control, not a paragraph: the row says it opens a dialog.
+    const row = screen.getByRole("button", { name: /Re: the renewal quote/ });
+    expect(row.getAttribute("aria-haspopup")).toBe("dialog");
+  });
 });

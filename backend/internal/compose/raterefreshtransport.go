@@ -73,8 +73,12 @@ func (h rateRefreshHandlers) enqueueRefresh(w http.ResponseWriter, r *http.Reque
 	// (RequestedBy is provenance, untagged), so two admins refreshing the same
 	// workspace collapse to one in-flight crawl rather than racing two.
 	opts := &river.InsertOpts{
-		Queue:      rateRefreshQueue,
-		UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
+		Queue: rateRefreshQueue,
+		// One-off: an admin pressed refresh and nothing re-presses it. The
+		// sheet is diffed at the end, so a run that gives up stages nothing and
+		// the next click starts over.
+		MaxAttempts: oneOffJobMaxAttempts,
+		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 	}
 	if err := h.enqueue.Enqueue(ctx, args, opts); err != nil {
 		httperr.Write(w, r, err)

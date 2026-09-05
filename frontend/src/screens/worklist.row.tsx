@@ -8,7 +8,8 @@
 // decides how one piece of work reads and where each of its verbs goes, and
 // that is the half a reader of either question does not need the other for.
 
-import { Badge, Button } from "../design-system/atoms";
+import { useId, useRef, useState } from "react";
+import { Badge, Button, Modal } from "../design-system/atoms";
 import { PanelRow } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
@@ -89,9 +90,12 @@ export function WorklistRow({
   // Where a grouped row is reviewed. Also a filter change the Brief cannot
   // make: it shows a fixed cut and has no filter to move.
   onReview?: () => void;
-  // Opens a waiting email. Absent on a surface with no drawer — the Brief
-  // draws the message and does not offer to open it, rather than drawing a
-  // control that answers nothing.
+  // Opens a waiting email. Unlike the pane above, this one is carried by every
+  // surface that draws a waiting row, the Brief included: a drawer needs no
+  // second column, only a dialog, and the row draws the whole message —
+  // sender, subject, preview, access badge. A row that shows a reader the
+  // message and refuses to open it teaches them the product does not work.
+  // Optional only for a caller that draws no waiting row at all.
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
@@ -119,7 +123,11 @@ export function WorklistRow({
     .filter((phrase): phrase is string => phrase !== null);
   const above = comparisonText(item.above_next, t, locale, zone);
   const consequence = consequenceText(item, t);
-  const emailRow = item.email_summary != null;
+  // How this row NAMES ITSELF: the canonical email row when there is a message
+  // AND somewhere to open it, the title line otherwise. Held as the opener
+  // rather than as a flag, so the row cannot be drawn without one — a caller
+  // with no drawer keeps the title instead of losing the row's name with it.
+  const emailOpener = item.email_summary != null ? onOpenEmail : undefined;
   return (
     <PanelRow
       className={
@@ -138,9 +146,9 @@ export function WorklistRow({
             sentence about it. Everything else keeps the title line it had, and
             the badges below stay on both: they say where the row sits in the
             day, which the email row does not answer. */}
-        <WaitingEmailLine item={item} onOpen={onOpenEmail} />
+        {emailOpener && <WaitingEmailLine item={item} onOpen={emailOpener} />}
         <p className="t-body worklist-row-title">
-          {emailRow ? null : href ? (
+          {emailOpener ? null : href ? (
             <a className="entity-link" href={href}>
               {title}
             </a>
@@ -494,20 +502,72 @@ function decidable(item: WorklistItem): boolean {
   return item.actions.includes("decide") && item.source === "approval";
 }
 
-// The decision itself, fetched whole because a row cannot carry it.
+// The decision itself, fetched whole because a row cannot carry it — and
+// answered in a DRAWER rather than in the row.
+//
+// It used to render inline, and that is what made the queue unusable on a
+// phone. The card carries evidence, a draft and three answers; measured at
+// 390x844 it stood 440px tall inside a row whose ceiling is 208, which pushed
+// the first primary action of the whole page to 920px down an 844px screen.
+// The reader had to scroll past one decision to reach the work.
+//
+// The row keeps the decision's SUMMARY and one button. The drawer holds the
+// card — the same ApprovalRow the record page draws, posting to the same
+// endpoint — so the queue still adds no authority of its own. What it adds is
+// that the decision is answerable where it was ranked.
+//
+// Held by: AC-WORKLIST-SDR-01 and AC-WORKLIST-SDR-07 (frontend/e2e/ac.spec.ts),
+// which measure the closed row and the first action against the phone fold.
 function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
-  const approval = useApproval(item.id, true);
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const opener = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+  // Fetched only once the reader asks. A queue of decisions would otherwise
+  // fire one read per row on arrival to fill cards nobody has opened, and the
+  // row above needs none of it to draw its button.
+  const approval = useApproval(item.id, open);
   // A body with no `kind` is not a proposal this card can draw: the kind
   // chooses the label, the tool chip and the autonomy dot. Treated as a failed
   // read rather than rendered, because the alternative is a throw that takes
   // the whole day's page down over one malformed answer.
   const usable = approval.data?.kind ? approval.data : undefined;
-  if (!usable) {
-    return null;
-  }
   return (
     <div className="worklist-row-decision">
-      <ApprovalRow approval={usable} extraInvalidateKeys={[worklistKey]} />
+      <Button
+        ref={opener}
+        variant="primary"
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
+      >
+        {t("worklist.verb.decide")}
+      </Button>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy={titleId}
+        placement="right"
+        size="wide"
+        returnFocusTo={() => opener.current}
+      >
+        <h2 id={titleId}>{t("worklist.decision.title")}</h2>
+        {usable ? (
+          <ApprovalRow
+            approval={usable}
+            extraInvalidateKeys={[worklistKey]}
+            onAlreadyDecided={() => setOpen(false)}
+          />
+        ) : (
+          // The read has not landed, or landed unusable. Said rather than left
+          // blank: a drawer that opens onto nothing reads as a broken button,
+          // and the reader has already committed a tap to get here.
+          <p>
+            {approval.isPending
+              ? t("worklist.decision.loading")
+              : t("worklist.decision.unavailable")}
+          </p>
+        )}
+      </Modal>
     </div>
   );
 }

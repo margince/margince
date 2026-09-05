@@ -52,10 +52,10 @@ if [[ -z "$probe_job" ]]; then
 	exit 1
 fi
 
-all_green='{"dco":{"result":"success"},"integration":{"result":"success"}}'
-one_skip='{"dco":{"result":"success"},"integration":{"result":"skipped"}}'
-one_fail='{"dco":{"result":"success"},"integration":{"result":"failure"}}'
-one_cancel='{"dco":{"result":"success"},"integration":{"result":"cancelled"}}'
+all_green='{"deterministic-gates":{"result":"success"},"integration":{"result":"success"}}'
+one_skip='{"deterministic-gates":{"result":"success"},"integration":{"result":"skipped"}}'
+one_fail='{"deterministic-gates":{"result":"success"},"integration":{"result":"failure"}}'
+one_cancel='{"deterministic-gates":{"result":"success"},"integration":{"result":"cancelled"}}'
 
 case_is "queue, all green" merge_group "$all_green" 0
 case_is "pr, all green" pull_request "$all_green" 0

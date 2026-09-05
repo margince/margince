@@ -81,8 +81,12 @@ const (
 // SAME read collapses while a fresh read (new dossier) always queues.
 func siteDeepReadInsertOpts() *river.InsertOpts {
 	return &river.InsertOpts{
-		Queue:      deepReadQueue,
-		UniqueOpts: river.UniqueOpts{ByArgs: true},
+		Queue: deepReadQueue,
+		// Swept: capture_auto_enrich_sweep re-nominates an organization that is
+		// still due on its next daily pass, so a crawl that cannot finish is
+		// re-read tomorrow rather than re-walked all afternoon.
+		MaxAttempts: sweptJobMaxAttempts,
+		UniqueOpts:  river.UniqueOpts{ByArgs: true},
 	}
 }
 

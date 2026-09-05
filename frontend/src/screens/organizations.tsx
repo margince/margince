@@ -2439,6 +2439,7 @@ function CompanyOverviewStack({
             view={view}
             loading={loading}
             onOpenHistory={onOpenHistory}
+            onOpenRecord={onOpenRecord}
           />
         </Company360Call>
       )}

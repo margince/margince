@@ -297,6 +297,13 @@ func sweepReprojectionPhase(ctx context.Context, deps sweepDeps, workspace ids.W
 // re-fetch is still queued must not stack a second read of the same record —
 // the args ARE the coalescing key, exactly as they are for the webhook lane's
 // signal-driven re-fetch (overlaywebhook.go).
+//
+// Swept, so the cap is small: the reconcile pass lists the stale rows again on
+// its next tick, and because retryable is one of activeSweepStates a longer
+// ladder would suppress that re-enqueue rather than hasten it.
 func reprojectionInsertOpts() *river.InsertOpts {
-	return &river.InsertOpts{UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates}}
+	return &river.InsertOpts{
+		MaxAttempts: sweptJobMaxAttempts,
+		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
+	}
 }

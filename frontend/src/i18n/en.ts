@@ -1888,7 +1888,6 @@ export const en = {
   "co.recent.emptyDetail":
     "Once you send an email, log a call or hold a meeting, the exchange appears here, with who did what on each side.",
   "co.recent.empty": "Nothing logged with them yet.",
-  "co.recent.viewHistory": "View history",
   "co.recent.kind.email": "Email",
   "co.recent.kind.call": "Call",
   "co.recent.kind.meeting": "Meeting",
@@ -8323,6 +8322,12 @@ export const en = {
   "worklist.untitled.introduction_request":
     "A colleague asked you for an introduction",
   "worklist.verb.decide": "Decide",
+  // The drawer the decision is answered in. The row shows what is being decided
+  // and this names the act, so the heading does not repeat the row's sentence.
+  "worklist.decision.title": "Your decision",
+  "worklist.decision.loading": "Fetching what is being proposed…",
+  "worklist.decision.unavailable":
+    "This proposal could not be read. Open the approvals queue to answer it.",
   "worklist.verb.merge": "Merge",
   "worklist.verb.open": "Open",
   "worklist.verb.complete": "Open",

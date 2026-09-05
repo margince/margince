@@ -175,6 +175,9 @@ function RecentRow({
                 ? () => onOpenRecord("activity", activity.id)
                 : undefined
             }
+            // Absent only for a host that mounts no drawer. Every account
+            // surface that draws this list routes `activity` to the reader.
+            whyNotOpenable="noReader"
           />
         ) : (
           <>
