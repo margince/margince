@@ -184,6 +184,7 @@ async function createLead(
 }
 
 export function LeadsScreen() {
+  const t = useT();
   const me = useMe();
   return (
     // The page's own root, OUTSIDE the gate: inside it, only the loaded screen
@@ -192,7 +193,7 @@ export function LeadsScreen() {
     // `.wrap:has(> .lt)` is what gives a list screen its full height and a div
     // between the two would take that away.
     <div className="wrap lead-surface lead-queue">
-      <QueryGate query={me}>
+      <QueryGate query={me} pendingLabel={t("nav.leads")}>
         {(session) => (
           <LeadsWorkbench
             viewerId={session.user.id}

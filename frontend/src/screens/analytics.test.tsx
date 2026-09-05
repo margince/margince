@@ -64,6 +64,12 @@ type ReportsStubOpts = {
   stageRows?: Record<string, unknown>[];
   forecastRows?: Record<string, unknown>[];
   companyRows?: Record<string, unknown>[];
+  winLossRows?: Record<string, unknown>[];
+  stageAgeRows?: Record<string, unknown>[];
+  meetingRows?: Record<string, unknown>[];
+  // The coverage read: a payload, a status (403 for a seat without the ops
+  // grant, 404 for a fresh installation), or omitted for the default 403.
+  coverage?: { status: number; body?: unknown };
   derivation?: Record<string, unknown>;
   onDerivation?: (url: string) => void;
   context?: Record<string, unknown>;
@@ -78,6 +84,13 @@ function reportsStub(opts: ReportsStubOpts = {}) {
     // numbers cover, and whether this reader may publish a forecast. A stub
     // without it leaves the screen waiting and the assertions below looking
     // like a rendering bug.
+    if (url.includes("/analytics/coverage")) {
+      const cov = opts.coverage ?? { status: 403 };
+      return jsonResponse(
+        cov.body ?? { title: "Forbidden", status: cov.status },
+        cov.status,
+      );
+    }
     if (url.includes("/analytics/context")) {
       return jsonResponse(
         opts.context ?? {
@@ -130,16 +143,22 @@ function reportsStub(opts: ReportsStubOpts = {}) {
       const rows =
         key === "forecast"
           ? (opts.forecastRows ?? [])
-          : key === "open-deals-per-company"
-            ? (opts.companyRows ?? [])
-            : (opts.stageRows ?? [
-                {
-                  stage_id: "pl-s1",
-                  raw_minor: 100000,
-                  deal_count: 2,
-                  currency: "EUR",
-                },
-              ]);
+          : key === "activities-by-kind"
+            ? (opts.meetingRows ?? [])
+            : key === "win-loss"
+              ? (opts.winLossRows ?? [])
+              : key === "stage-age"
+                ? (opts.stageAgeRows ?? [])
+                : key === "open-deals-per-company"
+                  ? (opts.companyRows ?? [])
+                  : (opts.stageRows ?? [
+                      {
+                        stage_id: "pl-s1",
+                        raw_minor: 100000,
+                        deal_count: 2,
+                        currency: "EUR",
+                      },
+                    ]);
       return jsonResponse({
         report: key,
         plan: {},
@@ -171,6 +190,238 @@ async function openPipeline() {
     .setup()
     .click(await screen.findByRole("button", { name: "Pipeline" }));
 }
+
+async function openPerformance() {
+  await userEvent
+    .setup()
+    .click(await screen.findByRole("button", { name: "Performance" }));
+}
+
+describe("the data coverage section", () => {
+  it("names each source's state in words, with the instant a read one reached", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        coverage: {
+          status: 200,
+          body: {
+            run_id: "r1",
+            as_of: "2026-09-05T02:00:00Z",
+            sources: [
+              {
+                source: "mail",
+                state: "checked",
+                checked_through: "2026-09-05T01:30:00Z",
+              },
+              { source: "offers", state: "not_connected" },
+            ],
+          },
+        },
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Data coverage" }));
+    expect(await screen.findByText("Checked")).toBeTruthy();
+    // The source column speaks the reader's words, not the wire's.
+    expect(screen.getByText("the mailbox")).toBeTruthy();
+    // An unconnected source is a decision, not a repair — its words say so.
+    expect(
+      screen.getByText("Not connected — nothing to fix, something to decide"),
+    ).toBeTruthy();
+    // Only the read source carries a date; the unread one shows absence.
+    expect(screen.getByText("—")).toBeTruthy();
+  });
+
+  it("says a fresh installation was never looked at, in words", async () => {
+    vi.stubGlobal("fetch", reportsStub({ coverage: { status: 404 } }));
+    render(<AnalyticsScreen />);
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Data coverage" }));
+    expect(
+      await screen.findByText(
+        "No check has run yet. A fresh installation has not been looked at — different from one that was looked at and found healthy.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("hides the tab from a seat the server refuses", async () => {
+    vi.stubGlobal("fetch", reportsStub({ coverage: { status: 403 } }));
+    render(<AnalyticsScreen />);
+    await screen.findByRole("button", { name: "Pipeline" });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Data coverage" }),
+      ).toBeNull(),
+    );
+  });
+});
+
+// A context whose default lens is one seat: the rep's own.
+const ownLensContext = {
+  default_scope: { kind: "owner", id: "u-rep-1", label: "Riley Rep" },
+  allowed_scopes: [{ kind: "owner", id: "u-rep-1", label: "Riley Rep" }],
+  capabilities: {
+    view_manager_forecast: false,
+    submit_manager_forecast: false,
+  },
+  as_of: "2026-09-04T00:00:00Z",
+  timezone: "Europe/Berlin",
+  base_currency: "EUR",
+};
+
+describe("the my-outcomes section", () => {
+  it("shows the tab under an owner lens and answers with the seat's own facts", async () => {
+    const bodies: { key: string; body: Record<string, unknown> }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        context: ownLensContext,
+        onRun: (key, body) => bodies.push({ key, body }),
+        stageRows: [{ deal_count: 4, raw_minor: 250000 }],
+        meetingRows: [
+          { meeting_status: "held", meetings: 3 },
+          { meeting_status: "booked", meetings: 2 },
+        ],
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "My outcomes" }));
+
+    // The meetings card states current standing, not a funnel.
+    expect(
+      await screen.findByText(
+        "Meetings you host, by where each stands today — a held meeting no longer counts as booked.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("Held")).toBeTruthy();
+    expect(screen.getByText("3")).toBeTruthy();
+    // A status with no meetings is an honest zero, not an absent tile.
+    expect(screen.getByText("No-show")).toBeTruthy();
+
+    // The meetings question is pinned to the seat: hosted by this user, and
+    // only meetings — the server filters, the browser never sifts rows.
+    const meetings = bodies.find((sent) => sent.key === "activities-by-kind");
+    expect(meetings?.body.filters).toEqual({
+      kind: "meeting",
+      host_user_id: "u-rep-1",
+    });
+    expect(meetings?.body.group_by).toEqual(["meeting_status"]);
+
+    // The pipeline card is pinned to the seat too — the heading says "my",
+    // and the request must say it rather than trusting a server default.
+    const pipeline = bodies.find(
+      (sent) => sent.key === "pipeline-current" && sent.body.filters != null,
+    );
+    expect(pipeline?.body.filters).toEqual({ owner_id: "u-rep-1" });
+    expect(await screen.findByText("4")).toBeTruthy();
+  });
+
+  it("explains itself instead of fetching under a wider lens", async () => {
+    const bodies: { key: string; body: Record<string, unknown> }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({ onRun: (key, body) => bodies.push({ key, body }) }),
+    );
+    window.location.hash = "#/analytics/outcomes";
+    try {
+      render(<AnalyticsScreen />);
+      expect(
+        await screen.findByText(
+          "This view answers for one seat. Your lens covers more than your own records, so the wider sections carry your numbers.",
+        ),
+      ).toBeTruthy();
+      // And it fetched nothing: numbers under this heading would have
+      // measured the default population, not the person.
+      expect(bodies.some((sent) => sent.key === "activities-by-kind")).toBe(
+        false,
+      );
+    } finally {
+      window.location.hash = "";
+    }
+  });
+
+  it("hides the tab when the lens covers more than one seat", async () => {
+    vi.stubGlobal("fetch", reportsStub());
+    render(<AnalyticsScreen />);
+    await screen.findByRole("button", { name: "Pipeline" });
+    expect(screen.queryByRole("button", { name: "My outcomes" })).toBeNull();
+  });
+});
+
+describe("the performance section", () => {
+  it("renders won and lost with converted value and computed durations", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        winLossRows: [
+          {
+            status: "won",
+            deal_count: 8,
+            raw_minor: 500000,
+            median_days: 21,
+            p75_days: 40,
+          },
+          {
+            status: "lost",
+            deal_count: 4,
+            raw_minor: 200000,
+            median_days: 55,
+            p75_days: null,
+          },
+        ],
+        stageAgeRows: [
+          { stage_id: "pl-s1", deal_count: 6, median_days: 12, p75_days: 30 },
+        ],
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await openPerformance();
+
+    // Both outcomes, by their words rather than a status key.
+    expect(await screen.findByText("Won")).toBeTruthy();
+    expect(screen.getByText("Lost")).toBeTruthy();
+    // The value arrives converted; the screen only formats it.
+    expect(screen.getByText(formatMoney(500000, "EUR", "en"))).toBeTruthy();
+    // Durations are the server's medians, never a quotient made here.
+    expect(screen.getByText("21 days")).toBeTruthy();
+    // A withheld percentile is words, not a zero and not a dash: below the
+    // sample floor the engine answers null, and the cell says why.
+    expect(screen.getByText("Too few to say")).toBeTruthy();
+    // The stage-age card names the stage from the pipeline, not by UUID.
+    expect(screen.getByText("Qualify")).toBeTruthy();
+    expect(screen.getByText("12 days")).toBeTruthy();
+  });
+
+  it("asks the server for the vocabulary it renders, computing nothing", async () => {
+    const bodies: { key: string; body: Record<string, unknown> }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        onRun: (key, body) => bodies.push({ key, body }),
+        winLossRows: [],
+        stageAgeRows: [],
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await openPerformance();
+    await waitFor(() => {
+      expect(bodies.some((sent) => sent.key === "win-loss")).toBe(true);
+      expect(bodies.some((sent) => sent.key === "stage-age")).toBe(true);
+    });
+    const winLoss = bodies.find((sent) => sent.key === "win-loss");
+    expect(winLoss?.body.aggregates).toEqual([
+      { fn: "count", as: "deal_count" },
+      { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
+      { fn: "median", field: "days_to_close", as: "median_days" },
+      { fn: "p75", field: "days_to_close", as: "p75_days" },
+    ]);
+  });
+});
 
 describe("AnalyticsScreen", () => {
   it("renders unweighted/weighted columns under Pipeline", async () => {
@@ -533,8 +784,14 @@ describe("reports never sum money across currencies", () => {
       reportsStub({ onRun: (key, body) => bodies.push({ key, body }) }),
     );
     render(<AnalyticsScreen />);
+    // Every section, so a report added to a NEW section enters this census by
+    // construction rather than by somebody remembering to widen the walk.
     await openPipeline();
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
+    await openPerformance();
+    await waitFor(() =>
+      expect(bodies.some((sent) => sent.key === "stage-age")).toBe(true),
+    );
 
     expect(bodies.length).toBeGreaterThan(0);
     let nativePlans = 0;

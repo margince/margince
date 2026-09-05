@@ -111,14 +111,19 @@ var dsrTransitions = map[string]map[string]bool{
 // admin's live grants, so without this arm a read-scoped passport would
 // enumerate every data subject who ever filed against the workspace.
 func requireDSRAdmin(ctx context.Context, action principal.Action) error {
-	if err := auth.Require(ctx, "person", action); err != nil {
+	// ONE object where there were two gates. `person` plus the literal admin
+	// role said "may read people, and is an administrator" — two questions
+	// standing in for the one nobody could ask: may this caller work the subject
+	// queue. privacy_request asks it directly, so an installation delegating the
+	// privacy inbox no longer has to hand out member administration with it.
+	if err := auth.Require(ctx, "privacy_request", action); err != nil {
 		return err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
 		return fmt.Errorf("human-only subject-request queue: %w", apperrors.ErrPermissionDenied)
 	}
-	return auth.RequireAdmin(ctx)
+	return nil
 }
 
 // dsrListQuery assembles the keyset-paged queue SQL and its args: an optional

@@ -38,7 +38,7 @@ function review(
   counts: Partial<TeamWeeklyReview["counts"]> = {},
   over: Partial<TeamWeeklyReview> = {},
 ): TeamWeeklyReview {
-  return {
+  const base = {
     id: "r1",
     team_id: "t1",
     team_name: "Nord",
@@ -62,6 +62,14 @@ function review(
     },
     reps: [rep()],
     ...over,
+  };
+  // Every response carries an agenda — an ORDER over the reps — so a fixture
+  // without one would be testing a shape the server never sends. It defaults to
+  // the reps' own order and sits BEFORE the spread, so a test about the order
+  // supplies its own and this does not overwrite it.
+  return {
+    agenda: base.reps.map((r) => r.user_id),
+    ...base,
   } as TeamWeeklyReview;
 }
 
@@ -308,7 +316,9 @@ describe("the team's frozen week", () => {
     const { container } = render(<TeamWeeklySection teamId="t1" />);
 
     await screen.findByText("Three leads went unanswered");
-    expect(container.querySelectorAll(".teamweekly-rep")).toHaveLength(2);
+    expect(container.querySelectorAll(".teamweekly-agenda-item")).toHaveLength(
+      2,
+    );
     // The good week is marked as something to copy, not as a problem.
     expect(screen.getByText(en["teamweekly.focus.strong_week"])).toBeTruthy();
     expect(screen.getByText("Fastest first response on the team")).toBeTruthy();

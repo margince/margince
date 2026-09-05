@@ -153,6 +153,59 @@ describe("SearchScreen", () => {
     );
   });
 
+  // The palette's half of #3850: it owns no page, so it sends the reader here
+  // with the message named in the address, and the screen opens the drawer it
+  // already owns. Without this the palette could find an email and had nowhere
+  // to put the reader.
+  it("opens the message the address names, on arrival", async () => {
+    const urlOf = (input: RequestInfo | URL) =>
+      input instanceof Request ? input.url : String(input);
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (urlOf(input).includes("email-presentation")) {
+        return jsonResponse(emailPresentation);
+      }
+      return jsonResponse({
+        data: [emailHit],
+        page: { next_cursor: null, has_more: false },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SearchScreen q="renewal" openActivityId="a1" />);
+
+    // Asked for WITHOUT a click. The drawer's own contract is emaildetail's;
+    // what this holds is that the address reached it.
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some((call) =>
+          urlOf(call[0]).includes("/activities/a1/email-presentation"),
+        ),
+      ).toBe(true),
+    );
+  });
+
+  // Closing it has to STAY closed. The address still names the message, so a
+  // drawer driven by the prop on every render would reopen under the reader.
+  it("stays closed once the reader closes it", async () => {
+    const urlOf = (input: RequestInfo | URL) =>
+      input instanceof Request ? input.url : String(input);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) =>
+        urlOf(input).includes("email-presentation")
+          ? jsonResponse(emailPresentation)
+          : jsonResponse({
+              data: [emailHit],
+              page: { next_cursor: null, has_more: false },
+            }),
+      ),
+    );
+    render(<SearchScreen q="renewal" openActivityId="a1" />);
+
+    const close = await screen.findByRole("button", { name: /close/i });
+    await userEvent.click(close);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
   // A call, a note, a task and a meeting are activities too. The server sends
   // no `email_summary` for them and the row keeps the generic treatment it has
   // always had — the failure this catches is a screen branching on the KIND

@@ -138,7 +138,7 @@ export function AiRoutingCard({
   }
 
   return (
-    <QueryGate query={query}>
+    <QueryGate query={query} pendingLabel={t("aiRouting.title")}>
       {(routing) => (
         <RoutingForm
           routing={routing}

@@ -1,0 +1,36 @@
+/* SPDX-License-Identifier: BUSL-1.1
+   SPDX-FileCopyrightText: 2026 Gradion */
+
+/* A row that answers a thumb. The wrapper is positioning only — it draws no
+   border, no ground and no padding, because it sits INSIDE a row that already
+   has all three and a second box would read as a second row. */
+.swipe-row {
+  position: relative;
+  /* The horizontal gesture is ours; vertical scrolling stays the browser's.
+     Without this the row swallows the scroll on a touch screen and the list
+     cannot be moved past a swipeable row at all. */
+  touch-action: pan-y;
+  /* IT SPANS THE ROW, because the row is the surface a thumb lands on. The
+     caller mounts it inside a flex row, where a box sizing to its content would
+     ask a reader to find the few pixels its children happen to occupy — the
+     defect that made an earlier version of this a gesture on an 83px chip.
+     `display: contents` would give the row's own arrangement back, but an
+     element that generates no box also receives no pointer events, so the
+     gesture would never fire. */
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: inherit;
+}
+
+/* What a finished drag staged, and the two ways out of it. It sits IN the flow
+   rather than over the row: an overlay would cover the words the reader just
+   swiped on, and the confirm press asks them to be sure about a row they can no
+   longer see. */
+.swipe-row-staged {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}

@@ -386,7 +386,44 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
 // row, which buildStageTotals reads as "hide the sum" — the report never
 // includes archived deals (like every report), so the totals reflect the
 // live pipeline regardless of the board's "show archived" toggle.
-function useStageTotals(f: DealFilters) {
+// Why the board may not state a stage total, or undefined when it may.
+//
+// ONE function for both the decision and the words. The query's `enabled` keys
+// on this answering undefined, and the column prints what it answers — so a
+// reason cannot be added to one without the other, and the column can never
+// explain a total by a rule that is not the one that withheld it.
+//
+// Derived from the FILTERS, never from the query's own status. A query that
+// errored also settles to idle-and-not-successful, and reading status would
+// have told a reader whose report answered 422 to press a filter instead of
+// showing them the failure.
+//
+// The two reasons:
+//
+// A TAG has no filter field on the report — sending one is a 422 — so the
+// totals would count deals the board is not showing.
+//
+// The POPULATION differs unless the owner filter names the viewer. `GET /deals`
+// returns every deal the reader may SEE, a deal being readable by every seat,
+// while the report engine narrows to the caller's OWN records (reportwhere.go
+// applies a population clause on top of row scope, precisely because a deal is
+// an identity table whose row scope renders TRUE). On the demo installation
+// that is 35 open deals as cards against 7 in the header — the "1 deal" over
+// eight cards the rehearsal found.
+function totalsWithheldBecause(
+  f: DealFilters,
+  viewerID: string | undefined,
+): MessageKey | undefined {
+  if (parseTagIDs(f.filters.tag_id).length > 0) {
+    return "deals.totalsNoTagFilter";
+  }
+  if (viewerID === undefined || f.filters.owner_id !== viewerID) {
+    return "deals.totalsNeedOwnerFilter";
+  }
+  return undefined;
+}
+
+function useStageTotals(f: DealFilters, viewerID: string | undefined) {
   return useQuery({
     // Under ["deals"] on purpose, so the ONE invalidation every deal mutation
     // already fires refreshes the column headers along with the cards. Keyed
@@ -395,13 +432,13 @@ function useStageTotals(f: DealFilters) {
     // single-currency stage left the old sum standing, which is the mixed-
     // currency refusal not happening.
     queryKey: ["deals", "by-stage-totals", f],
-    // Not while a tag narrows the board. The report's filter vocabulary has no
-    // tag field — sending one is a 422 — so the totals would count deals the
-    // board is not showing, and a column header reporting more than the cards
-    // under it is a number the reader has no way to reconcile. Withheld is the
-    // honest answer, and buildStageTotals already draws the no-sum column for
-    // the mixed-currency case.
-    enabled: !f.overlay && parseTagIDs(f.filters.tag_id).length === 0,
+    // Asked only when the report would count the deals the board is drawing.
+    // totalsWithheldBecause owns that decision and the words for it both, so
+    // the column cannot explain a missing total by the wrong rule.
+    //
+    // Overlay is separate and not a reason: the board does not render at all
+    // there, so there is no column to explain anything to.
+    enabled: !f.overlay && totalsWithheldBecause(f, viewerID) === undefined,
     queryFn: async () => {
       const { data, error } = await api.POST("/reports/{report}", {
         params: { path: { report: "deals-by-stage" } },
@@ -1307,6 +1344,10 @@ export function buildColumns(
   deals: Deal[],
   totals: Map<string, StageTotals>,
   naming: CompanyNaming,
+  // What to say where a stage total would go when the totals query was not
+  // asked at all — see measuresTheSamePopulation. Undefined when totals are in
+  // play, which is the ordinary case.
+  totalsWithheld?: string,
 ): BoardMoneyColumn[] {
   return [...stages]
     .sort((a, b) => a.position - b.position)
@@ -1328,7 +1369,11 @@ export function buildColumns(
         // count while totals are still loading, so the column shows SOME
         // number rather than a misleading 0.
         count: stageTotals?.count ?? stageDeals.length,
-        sumHidden: stageTotals?.sumHidden ?? false,
+        // Withheld totals hide the sum for their own reason, which is NOT the
+        // mixed-currency one the column says by default.
+        sumHidden:
+          totalsWithheld !== undefined || (stageTotals?.sumHidden ?? false),
+        sumHiddenReason: totalsWithheld,
       };
     });
 }
@@ -1845,12 +1890,17 @@ function DealBoardBody({
   openDeal,
   cardDragHandlers,
   columnDropHandlers,
+  totalsWithheld,
 }: Readonly<{
   dealsQuery: ReturnType<typeof useDeals>;
   pipelinesQuery: ReturnType<typeof usePipelines>;
   effectivePipeline?: Pipeline;
   loadedDeals: Deal[];
   stageTotalsQuery: ReturnType<typeof useStageTotals>;
+  // Why no stage total is coming, or undefined when one is. Decided by
+  // totalsWithheldBecause where the query's own `enabled` reads it, so the
+  // column's explanation and the query's absence cannot disagree.
+  totalsWithheld?: MessageKey;
   orgs: Organization[];
   orgsSettled: boolean;
   openDeal: ComponentProps<typeof PipelineBoard>["onOpen"];
@@ -1859,6 +1909,7 @@ function DealBoardBody({
     typeof PipelineBoard
   >["columnDropHandlers"];
 }>) {
+  const t = useT();
   // Every company the CARDS name. The picker's capped page answers most of them
   // for free; the rest are resolved by id (useOrgMarks), so no card is left
   // standing over a company the board simply failed to look up.
@@ -1869,7 +1920,7 @@ function DealBoardBody({
   const orgMarks = useOrgMarks(loadedDeals, orgs, orgsSettled);
   return (
     <>
-      <QueryGate query={pipelinesQuery}>
+      <QueryGate query={pipelinesQuery} pendingLabel={t("nav.deals")}>
         {() =>
           effectivePipeline ? (
             // Only the INITIAL load goes through the gate. An infinite
@@ -1880,7 +1931,9 @@ function DealBoardBody({
             // retries — exactly what OverlayDealsTable does above, and for
             // the same reason.
             (dealsQuery.data?.pages ?? []).length === 0 ? (
-              <QueryGate query={dealsQuery}>{() => null}</QueryGate>
+              <QueryGate query={dealsQuery} pendingLabel={t("nav.deals")}>
+                {() => null}
+              </QueryGate>
             ) : (
               <>
                 <PipelineBoard
@@ -1892,6 +1945,7 @@ function DealBoardBody({
                     loadedDeals,
                     stageTotalsQuery.data ?? new Map(),
                     orgMarks,
+                    totalsWithheld ? t(totalsWithheld) : undefined,
                   )}
                   onOpen={openDeal}
                   cardDragHandlers={cardDragHandlers}
@@ -2473,7 +2527,13 @@ export function DealsScreen({
   // over EVERY matching deal, not just the capped page useDeals fetches —
   // built from the SAME filter dials so cards and totals never disagree
   // about which deals are in view.
-  const stageTotalsQuery = useStageTotals(dealFilters);
+  const stageTotalsQuery = useStageTotals(dealFilters, meQuery.data?.user.id);
+  // The same answer the query keys its `enabled` on, so the column explains the
+  // absence by the rule that caused it.
+  const totalsWithheld = totalsWithheldBecause(
+    dealFilters,
+    meQuery.data?.user.id,
+  );
   // A stage-keyed board cannot place a mirror deal (its pipeline/stage is the
   // null pipeline/stage), so overlay mode opens on the flat table and hides the toggle
   // (below) — the mode is fixed for the page's life, so a static initial value
@@ -2594,6 +2654,7 @@ export function DealsScreen({
         effectivePipeline={effectivePipeline}
         loadedDeals={loadedDeals}
         stageTotalsQuery={stageTotalsQuery}
+        totalsWithheld={totalsWithheld}
         orgs={orgsQuery.data?.data ?? []}
         orgsSettled={orgsQuery.isSuccess}
         openDeal={openDeal}
@@ -4140,7 +4201,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
 
   return (
     <div className="wrap">
-      <QueryGate query={dealQuery}>
+      <QueryGate query={dealQuery} pendingLabel={t("nav.deals")}>
         {(deal) => {
           const stages = [...(pipelineQuery.data?.stages ?? [])].sort(
             (a, b) => a.position - b.position,
@@ -4257,6 +4318,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                     <TimelineThread
                       thread={threadQuery}
                       commercial={{ next_close_on: deal.expected_close_date }}
+                      onOpenEmail={setOpenEmail}
                     />
                   }
                   coverage={coverageRead}

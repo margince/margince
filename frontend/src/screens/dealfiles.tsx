@@ -101,6 +101,7 @@ export function DealFiles({ dealId }: Readonly<{ dealId: string }>) {
         onClose={() => setAdding(false)}
       />
       <SurfaceState
+        loadingLabel={t("files.title")}
         state={state}
         emptyLabel={t("files.empty")}
         detail={

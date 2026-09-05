@@ -41,8 +41,8 @@ import (
 // disagreement between two pages about the same week is the kind of defect
 // nobody can reproduce on demand.
 //
-// WHY IT DOES NOT SUM amount_minor_base for the created figure. That generated
-// column is null on every OPEN deal by design — a deal freezes its rate on
+// WHY IT DOES NOT SUM amount_minor_base for the created figure. That column is
+// null on every OPEN deal by design — a deal freezes its rate on
 // CLOSE (deal_closed_fx) — so summing it over deals created in the week returns
 // null whenever the week actually created pipeline. Closed deals do carry it,
 // and the won and lost sums below use it for exactly that reason: their rate is

@@ -52,7 +52,7 @@ func (m attentionMeetings) Today(
 		needsPrep, known := meetingPrep(row)
 		ahead = append(ahead, attention.Meeting{
 			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartsAt: row.OccurredAt,
-			NeedsPrep: needsPrep, PrepKnown: known,
+			NeedsPrep: needsPrep, PrepKnown: known, PersonID: personOnMeeting(row),
 		})
 	}
 	// Soonest first: the lane is a countdown, and the store returns activities
@@ -110,4 +110,28 @@ func subjectOfMeeting(row crmcontracts.Activity) string {
 		return *row.Subject
 	}
 	return ""
+}
+
+// personOnMeeting is whose page this meeting's brief is read on.
+//
+// The FIRST person link in the row's own order, which is the store's, so two
+// reads of an unchanged meeting choose the same page. A meeting with several
+// attendees has several honest answers and the row shows one link; picking by
+// anything cleverer here would be a ranking this lane has no basis for, and
+// picking a different one each read would move a control under the reader.
+//
+// Zero where the meeting links no person at all — an internal meeting, or one
+// whose attendees this reader may not see, since the links come back already
+// scoped. The row then offers no brief rather than a link to somebody's page
+// chosen at random.
+func personOnMeeting(row crmcontracts.Activity) ids.UUID {
+	if row.Links == nil {
+		return ids.UUID{}
+	}
+	for _, link := range *row.Links {
+		if link.EntityType == crmcontracts.ActivityLinkEntityTypePerson {
+			return ids.UUID(link.EntityId)
+		}
+	}
+	return ids.UUID{}
 }

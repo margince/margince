@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -9,14 +9,10 @@ import { MoneyInput } from "../design-system/moneyinput";
 import { StatStrip } from "../design-system/statstrip";
 import { formatMoneyOrAbsent, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
-import {
-  type AnalyticsSelection,
-  scopeKey,
-  scopeQuery,
-  writableScope,
-} from "./analytics.context";
+import { type AnalyticsSelection, writableScope } from "./analytics.context";
 import { ForecastReview } from "./analytics.forecast.review";
 import { QueryGate, throwProblem } from "./common";
+import { useForecastReadings } from "./forecast.queries";
 
 type Readings = components["schemas"]["ForecastReadings"];
 
@@ -34,23 +30,12 @@ export function ForecastView({
   const t = useT();
   const { locale } = useLocale();
 
-  const readings = useQuery({
-    // The population is part of the key: without it a scope change would show
-    // the previous population's numbers under the new one's name.
-    queryKey: ["forecast", scopeKey(selection.scope)],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/forecast", {
-        params: { query: scopeQuery(selection.scope) },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  // The same read the morning's pipeline counter makes, through the same key:
+  // two surfaces asking what the pipeline is worth must not get two answers.
+  const readings = useForecastReadings(selection.scope);
 
   return (
-    <QueryGate query={readings}>
+    <QueryGate query={readings} pendingLabel={t("forecast.updateCall")}>
       {(data) => (
         <>
           <ForecastAnswer readings={data} locale={locale} />

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# test-check-merge-verdict.sh — prove the merge alarm still tells an absent
-# verdict from a green one.
+# test-check-merge-verdict.sh — prove the merge alarm still tells an ADVERSE
+# verdict from an absent one.
 #
 # It runs beside the judge for the reason `test-ci-verdict.sh` runs beside the
 # verdict: this thing is silent when it is working, so "the alarm did not go
-# off" is exactly the signal that was already untrustworthy. The case that
-# matters most is the check that is MISSING rather than red — #2504's own shape,
-# and the one an "is it green?" question cannot see, because jq reading an
-# absent field and jq reading a passing one both answer with something falsy if
-# the script is written carelessly.
+# off" is exactly the signal that was already untrustworthy. Silence is now the
+# answer to far more inputs than it used to be — every absent verdict — which
+# makes the half of this suite that asserts exit 0 the half that matters. An
+# alarm rewritten to say less is one keystroke from saying nothing, and only a
+# case that FAILS when it goes quiet can tell those apart.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -45,31 +45,37 @@ check() { printf '{"check_runs":[{"name":"ci","status":"completed","conclusion":
 # script exits non-zero.
 case_is "green before the merge" "$pr" "$(check success 2026-08-24T02:29:56Z)" 0 "#2516"
 
-# #2504's four merges. An absent verdict is not a red one, and nothing that asks
-# "was it green?" can see the difference.
-case_is "the required check never reported" "$pr" '{"check_runs":[]}' 1 "before its required \`ci\` check reported at all"
+# THE ONE FINDING THAT REMAINS about a check: it reported, and the answer was
+# adverse. Merging past `ci` is a standing decision, so the alarm is silent about
+# a verdict that is merely absent — but never about one that came back bad.
+case_is "the required check reported red" "$pr" "$(check failure 2026-08-24T02:29:56Z)" 1 'reported `failure`'
+case_is "the required check timed out" "$pr" "$(check timed_out 2026-08-24T02:29:56Z)" 1 'reported `timed_out`'
+
+# Green, and green only afterwards. The merge was decided on an unfinished run;
+# under a bypass that is the expected shape, not a finding.
+case_is "green AFTER the merge landed" "$pr" "$(check success 2026-08-24T03:10:00Z)" 0 "merged behind a green"
+
+# THE SILENT ARMS. Each is a way to have NO answer, and each must exit 0 — but
+# each is asserted on its message too, so a judge that has stopped reading the
+# verdict at all cannot pass this by falling through to a bare exit 0.
+case_is "the required check never reported" "$pr" '{"check_runs":[]}' 0 "no \`ci\` verdict to read"
 case_is "some other check reported, ci did not" "$pr" \
-	'{"check_runs":[{"name":"dco","status":"completed","conclusion":"success","completed_at":"2026-08-24T02:16:58Z"}]}' \
-	1 "before its required \`ci\` check reported at all"
-
-case_is "merged over a red ci" "$pr" "$(check failure 2026-08-24T02:29:56Z)" 1 'was `failure`'
-case_is "merged over a cancelled ci" "$pr" "$(check cancelled 2026-08-24T02:29:56Z)" 1 'was `cancelled`'
-# GitHub counts a skipped required check as passing. This does not.
-case_is "merged over a skipped ci" "$pr" "$(check skipped 2026-08-24T02:29:56Z)" 1 'was `skipped`'
-case_is "ci still running at merge time" "$pr" \
-	'{"check_runs":[{"name":"ci","status":"in_progress","conclusion":null}]}' 1 'was `still running`'
-
-# Green, but only afterwards. The merge was decided on an unfinished run and the
-# answer arriving later is luck, not a gate — invisible to anything that reads
-# the conclusion alone.
-case_is "green AFTER the merge landed" "$pr" "$(check success 2026-08-24T03:10:00Z)" 1 "before its required \`ci\` check finished"
+	'{"check_runs":[{"name":"deterministic-gates","status":"completed","conclusion":"success","completed_at":"2026-08-24T02:16:58Z"}]}' \
+	0 "no \`ci\` verdict to read"
+# Deleting the branch on merge cancels what was still running on it. That is the
+# tidy-up, not the tree.
+case_is "the required check was cancelled" "$pr" "$(check cancelled 2026-08-24T02:29:56Z)" 0 'is an absent answer'
+case_is "the required check was skipped" "$pr" "$(check skipped 2026-08-24T02:29:56Z)" 0 'is an absent answer'
+case_is "ci still running when read" "$pr" \
+	'{"check_runs":[{"name":"ci","status":"in_progress","conclusion":null}]}' 0 'is an absent answer'
 
 # A re-run after the merge must not clear the record of the merge it was absent
 # for, so the OLDEST run is the one judged.
 case_is "a later re-run does not overwrite the verdict at merge time" "$pr" \
 	'{"check_runs":[{"name":"ci","status":"completed","conclusion":"failure","completed_at":"2026-08-24T02:29:56Z"},{"name":"ci","status":"completed","conclusion":"success","completed_at":"2026-08-25T09:00:00Z"}]}' \
-	1 'was `failure`'
+	1 'reported `failure`'
 
+# The other finding, and the loudest: nothing reviewed this at all.
 case_is "no pull request at all" '[]' '{"check_runs":[]}' 1 "no pull request naming it"
 
 # A commit with no pull request and a lookup that did not happen are different

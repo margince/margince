@@ -46,6 +46,7 @@ export function SchedulePanel({
             padded twice and read as an indented block against every other
             panel in the rail. `SurfaceState` draws its sentence either way. */}
         <SurfaceState
+          loadingLabel={t("home.panel.schedule")}
           state={state === "ready" && meetings.length === 0 ? "empty" : state}
           emptyLabel={t("home.schedule.clear")}
         >
@@ -86,6 +87,7 @@ export function PromisesPanel({
     <section id="home-promises" aria-label={t("home.panel.promises")}>
       <Panel title={t("home.panel.promises")} className="rail-panel">
         <SurfaceState
+          loadingLabel={t("home.panel.promises")}
           state={state === "ready" && tasks.length === 0 ? "empty" : state}
           emptyLabel={t("home.promises.clear")}
         >

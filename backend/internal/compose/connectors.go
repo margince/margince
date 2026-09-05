@@ -476,6 +476,7 @@ func toContractConnection(v capture.ConnectionView) crmcontracts.CaptureConnecti
 		// following the tenant default, not a field the read forgot.
 		SignatureEnrichEnabled: v.SignatureEnrichEnabled,
 		MailPosture:            postureOnWire(v.MailPosture),
+		ContextTag:             contextTagOnWire(v.ContextTag),
 	}
 	if c.Scopes == nil {
 		c.Scopes = []string{}

@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/riverqueue/river"
+
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
@@ -312,4 +314,43 @@ func TestEveryScheduledKindIsWiredExactlyOnce(t *testing.T) {
 // neither is reached by its dispatcher, and has no periodicFor site to own.
 func declaresAClock(c jobs.Cadence) bool {
 	return c.Fixed != 0 || c.OperatorField != "" || c.OnDemand
+}
+
+// TestThePeriodicInsertYieldsToAnArgsOwnedCap is what makes periodicInsertOpts'
+// claim about River's resolution order checkable.
+//
+// River reads the EXPLICIT InsertOpts before the args type's own, so the
+// periodic insert leaving MaxAttempts at zero is the whole reason an
+// opts_owner: args kind runs at the number api/jobs.yaml publishes for it.
+// Supply one unconditionally and every declared cap is silently outranked —
+// TestArgsOwnedAttemptCapsMatchTheirDeclaration would still pass, because it
+// reads the args method rather than what the scheduler inserts with, and the
+// drift would surface only as a pass retrying far more than the file says.
+func TestThePeriodicInsertYieldsToAnArgsOwnedCap(t *testing.T) {
+	t.Parallel()
+	// AgentSchedulerArgs owns its InsertOpts and declares one attempt; the
+	// periodic insert must add nothing, or the one becomes three.
+	if got := periodicInsertOpts(AgentSchedulerArgs{}).MaxAttempts; got != 0 {
+		t.Errorf("the periodic insert supplied MaxAttempts %d for a kind whose args own the cap: River reads "+
+			"the explicit opts first, so this outranks the %d api/jobs.yaml publishes for agent_scheduler",
+			got, specFor(t, AgentSchedulerArgs{}.Kind()).MaxAttempts)
+	}
+}
+
+// TestThePeriodicInsertCapsAPassNobodyElseCaps is the other half: a scheduled
+// kind whose args own no InsertOpts has no other place a cap could come from,
+// and River's default of 25 is a ladder reaching days that nobody chose.
+func TestThePeriodicInsertCapsAPassNobodyElseCaps(t *testing.T) {
+	t.Parallel()
+	// CloseDateSweepArgs is opts_owner: caller — api/jobs.yaml refuses it a
+	// max_attempts, so this insert is the only door the number comes through.
+	if _, owned := any(CloseDateSweepArgs{}).(river.JobArgsWithInsertOpts); owned {
+		t.Fatal("CloseDateSweepArgs now owns its own InsertOpts, so it no longer stands for the caller-owned " +
+			"passes this test is about — name one that does not")
+	}
+	if got := periodicInsertOpts(CloseDateSweepArgs{}).MaxAttempts; got != periodicPassMaxAttempts {
+		t.Errorf("the periodic insert gave a caller-owned pass MaxAttempts %d, not periodicPassMaxAttempts "+
+			"(%d): nothing else caps it, so anything but this leaves it on River's %d-rung default",
+			got, periodicPassMaxAttempts, river.MaxAttemptsDefault)
+	}
 }

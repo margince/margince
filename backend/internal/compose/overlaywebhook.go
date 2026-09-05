@@ -323,6 +323,10 @@ func (h *hubspotWebhookHandler) enqueueRefetch(r *http.Request, workspace ids.UU
 		ExternalID:     externalID,
 	}, &river.InsertOpts{
 		ScheduledAt: time.Now().Add(webhookCoalesceWindow),
+		// Swept: a signal is an optimization and the reconcile poller heals
+		// whatever it misses, so a re-fetch that keeps failing is dropped for
+		// the pass to find rather than laddered for hours.
+		MaxAttempts: sweptJobMaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 	})
 }

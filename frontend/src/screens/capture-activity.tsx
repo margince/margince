@@ -226,7 +226,7 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
   });
 
   return (
-    <QueryGate query={query}>
+    <QueryGate query={query} pendingLabel={t("captureActivity.title")}>
       {(loaded) => {
         // The funnel is a property of the WINDOW, not of the loaded pages, so
         // it comes off the first page and does not grow as more are fetched.
@@ -291,6 +291,7 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
                   // on pages nobody has fetched, and saying "no capture
                   // activity" there would contradict the number beside it.
                   <SurfaceState
+                    loadingLabel={t("captureActivity.title")}
                     state="empty"
                     emptyLabel={t(
                       filter

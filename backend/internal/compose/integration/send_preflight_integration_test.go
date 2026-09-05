@@ -48,11 +48,6 @@ type preflightEnv struct {
 	activityID string
 	personID   string
 	ws, user   string
-	// mail is the operator relay, kept so a test can read the confirm-details
-	// link out of it. A marketing purpose requires double opt-in, and the only
-	// thing that grants one now is a link the subject spent from their own
-	// mailbox — the plaintext never reaches a response.
-	mail *capturingMailer
 }
 
 // setupPreflight boots the api composition WITH the Google app configured, so
@@ -93,13 +88,18 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	if err != nil {
 		t.Fatalf("building the local vault: %v", err)
 	}
-	mail := &capturingMailer{}
-	opts := append([]compose.Option{compose.WithKeyvault(vault), compose.WithOperatorMail(mail)}, extra...)
+	opts := append([]compose.Option{compose.WithKeyvault(vault), compose.WithOperatorMail(discardingMailer{})}, extra...)
 	// A marketing send derives a one-click unsubscribe link and refuses
 	// without a boot-configured base to build it from, so the fixture
 	// carries one — an install that can send at all has one.
 	opts = append(opts, compose.WithPublicBaseURL(preflightBaseURL))
 	e := apptest.SetupAppWithOptions(t, opts...)
+	// This suite composes its OWN vault (a real local one, because the
+	// pre-flight it is about needs a credential custodian), and WithKeyvault
+	// replaces the harness's. AppEnv.Vault has to name the one the server
+	// actually sealed into, or a suite reading a confirm link back would look
+	// in the wrong store and find nothing.
+	e.Vault = vault
 	apptest.BootstrapWorkspaceSession(t, e, "Preflight E2E", "sender@fable.test", "Admin")
 
 	var person struct {
@@ -154,7 +154,7 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	}); err != nil {
 		t.Fatalf("resolving the acting human: %v", err)
 	}
-	return &preflightEnv{AppEnv: e, activityID: activity.ID, personID: person.ID, ws: ws, user: user, mail: mail}
+	return &preflightEnv{AppEnv: e, activityID: activity.ID, personID: person.ID, ws: ws, user: user}
 }
 
 // send issues the authenticated send and returns the status plus the

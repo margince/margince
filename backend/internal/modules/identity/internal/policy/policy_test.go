@@ -4,13 +4,17 @@
 package policy
 
 import (
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestEverySystemRoleHasAValidDefaultDocument(t *testing.T) {
-	for _, key := range []string{"admin", "manager", "rep", "read_only", "ops"} {
+	for key := range defaults {
 		doc, err := Parse(MustDefaultJSON(key))
 		if err != nil {
 			t.Errorf("seeded default for %q does not pass its own validator: %v", key, err)
@@ -220,6 +224,15 @@ func TestNoSeededRoleGrantsAWriteWithoutRead(t *testing.T) {
 			if g.Read || !writes {
 				continue
 			}
+			// system_reset is the one object whose only surface destroys.
+			// POST /admin/reset-data is its single operation, and whether the
+			// reset is armed is /me's data_reset_available — a deployment-file
+			// fact served to every seat and gated by no object. A read here
+			// would name a surface that does not exist, which is the worse of
+			// the two defects this rule is weighing.
+			if object == objSystemReset && g.Delete && !g.Create && !g.Update {
+				continue
+			}
 			t.Errorf("role %q grants %q create=%v update=%v delete=%v with read=false — a write it can never "+
 				"see the result of, and a staged change to it that no inbox may disclose",
 				roleKey, object, g.Create, g.Update, g.Delete)
@@ -256,6 +269,98 @@ func TestZeroRolesDenyEverything(t *testing.T) {
 		for _, a := range []principal.Action{principal.ActionCreate, principal.ActionRead, principal.ActionUpdate, principal.ActionDelete} {
 			if merged.Allows(object, a) {
 				t.Errorf("a user with no roles was granted %s.%s", object, a)
+			}
+		}
+	}
+}
+
+// The builder's own guard. `grid` is what replaced a 44-argument positional
+// zip, and the one failure the positional form made impossible is the one this
+// form could introduce: a key that names nothing. Silently ignoring it would
+// seed a role missing an object it was written to hold, which reads as a
+// permission bug in the product rather than a typo in this file — and
+// `TestEverySystemRoleHasAValidDefaultDocument` above would not catch it,
+// because the base still covers every object.
+func TestGridRefusesAnOverrideNamingNoCoreObject(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("grid accepted an override naming a non-object; a typo must fail the build, not seed a role that silently governs nothing")
+		}
+	}()
+	grid(readOnly, map[string]grant{"persson": crud})
+}
+
+// The admit case beside it: a real object name is applied, and every other
+// object keeps the base. Without this the test above would pass against a
+// `grid` that panicked on everything.
+func TestGridAppliesAnOverrideAndLeavesTheRestAtBase(t *testing.T) {
+	got := grid(readOnly, map[string]grant{"deal": crud})
+	if got["deal"] != crud {
+		t.Errorf("the overridden object holds %+v, want crud", got["deal"])
+	}
+	if got["person"] != readOnly {
+		t.Errorf("an object with no override holds %+v, want the base readOnly", got["person"])
+	}
+	if len(got) != len(coreObjects) {
+		t.Errorf("the grid covers %d objects, want all %d", len(got), len(coreObjects))
+	}
+}
+
+// A role's override map may not restate its own base. Such a line says nothing
+// — `grid` already gave the object that grant — but it reads as a decision, so
+// the next author weighs it and the one after that preserves it.
+//
+// Read from SOURCE, because the defect is invisible in the result: an override
+// that restates the base produces exactly the map a missing override produces,
+// so no amount of inspecting `defaults` can find it. The parser walks each
+// `grid(base, map[string]grant{...})` call and compares each value expression
+// against that call's base expression, which is the same comparison a reader
+// makes and the only one that can fail.
+func TestNoOverrideRestatesItsOwnBase(t *testing.T) {
+	// Every non-test source file in the package, not defaults.go by name: the
+	// role documents and the grid they are built from have lived in one file
+	// and in two, and a corpus naming one file reads a shorter tree without
+	// failing when the next split moves a call out of it.
+	sources, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatalf("listing the package: %v", err)
+	}
+	var calls [][]string
+	call := regexp.MustCompile(`grid\((\w+), map\[string\]grant\{([^}]*)\}`)
+	for _, name := range sources {
+		if strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		source, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatalf("reading %s: %v", name, err)
+		}
+		calls = append(calls, call.FindAllStringSubmatch(string(source), -1)...)
+	}
+	// Five: admin, ops, rep, read_only and the shared managerObjects. The two
+	// missing roles are the point of the number — `manager` reuses
+	// managerObjects and `management` derives managementObjects from it, so
+	// neither spells a grid call of its own. Pinning the count is what makes
+	// this test fail LOUDLY when the corpus stops seeing part of the seed;
+	// without it a file rename would quietly leave a role unchecked.
+	const wantCalls = 5
+	if len(calls) != wantCalls {
+		t.Fatalf("found %d grid(base, overrides) calls across the package, want %d "+
+			"(admin, ops, rep, read_only, managerObjects) — either the corpus is not reading "+
+			"the whole seed, or a role gained its own grid and this count needs revisiting",
+			len(calls), wantCalls)
+	}
+	for _, call := range calls {
+		base := call[1]
+		// Both spellings of a key. A map here mixes bare `objXxx` constants with
+		// quoted string literals, and a `\w+` key group silently skips every
+		// quoted one — which was two thirds of rep's overrides and left the
+		// commonest lines in the file unchecked.
+		override := regexp.MustCompile(`(obj\w+|"[a-z_]+"):\s*(\w+),`)
+		for _, line := range override.FindAllStringSubmatch(call[2], -1) {
+			if line[2] == base {
+				t.Errorf("an override sets %s to %s, which is already the base of that grid — "+
+					"the line changes nothing and reads as a decision", line[1], base)
 			}
 		}
 	}

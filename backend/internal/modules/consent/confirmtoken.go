@@ -54,9 +54,16 @@ const confirmTokenTTL = 14 * 24 * time.Hour
 type IssuedConfirm struct {
 	Token     string
 	ExpiresAt time.Time
-	// DeliveredTo is where the send path must post it. Returned rather than
-	// taken, so the mailbox the consent claim rests on is the subject's own.
+	// DeliveredTo is where the link was posted. Returned rather than taken, so
+	// the mailbox the consent claim rests on is the subject's own.
 	DeliveredTo string
+	// Staged reports whether the mail was queued on the durable lane.
+	//
+	// FALSE is a real outcome and not an error: an installation with no relay
+	// configured still mints the token — refusing would invite a retry that
+	// mints a second link and silently supersedes the first — and the screen
+	// tells an operator to configure one.
+	Staged bool
 }
 
 // ConfirmRef is a token's resolution: whose record it opens, the address the
@@ -185,6 +192,22 @@ func (s *Store) issueLink(ctx context.Context, personID ids.PersonID, kind strin
 			return err
 		}
 		out = IssuedConfirm{Token: token, ExpiresAt: expires, DeliveredTo: deliveredTo}
+		// The mail itself, on THIS transaction. The token row and the message
+		// that carries it commit together or not at all: a token minted without
+		// its mail is a link nobody was ever sent, and a mail staged without its
+		// token is a link that resolves to nothing.
+		staged, err := s.stageConfirmMail(ctx, tx, confirmMailInput{
+			personID:   personID,
+			recipient:  deliveredTo,
+			kind:       kind,
+			tokenRowID: tokenRowID,
+			link:       s.confirmLink(token),
+			expiresAt:  expires,
+		})
+		if err != nil {
+			return err
+		}
+		out.Staged = staged
 		return nil
 	})
 	if err != nil {

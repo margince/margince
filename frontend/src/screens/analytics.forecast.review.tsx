@@ -51,7 +51,7 @@ export function ForecastReview() {
   });
 
   return (
-    <QueryGate query={assurance}>
+    <QueryGate query={assurance} pendingLabel={t("review.title")}>
       {(run) =>
         run === null ? (
           <Panel title={t("review.title")}>
@@ -99,7 +99,7 @@ function ReviewPanel({
             what happened. */}
         <CoverageLine run={run} />
       </PanelBody>
-      <QueryGate query={checks}>
+      <QueryGate query={checks} pendingLabel={title}>
         {(found) =>
           found.length === 0 ? (
             <PanelBody>
@@ -156,10 +156,41 @@ function CoverageLine({ run }: Readonly<{ run: Assurance }>) {
   return (
     <p className="sub">
       {t("review.sourcesUnread", {
-        sources: unread.map((source) => source.source).join(", "),
+        sources: unread
+          .map((source) => sourceName(source.source, t))
+          .join(", "),
       })}
     </p>
   );
+}
+
+// A source's name in the reader's language.
+//
+// The wire carries the server's own vocabulary — "mail", "offers" — and the
+// line printed it verbatim, so a German reader was told which sources went
+// unread in English, in words that name a table rather than a thing they
+// recognise. An unknown source falls back to its wire key: a source this
+// release has not heard of is better named badly than not named at all, since
+// the whole point of the line is which one to go and fix.
+// Exported for the Data coverage table, which draws the same source enum:
+// two screens naming one vocabulary share one translator.
+export function sourceName(source: string, t: ReturnType<typeof useT>): string {
+  switch (source) {
+    case "mail":
+      return t("review.source.mail");
+    case "offers":
+      return t("review.source.offers");
+    case "calendar":
+      return t("review.source.calendar");
+    case "documents":
+      return t("review.source.documents");
+    case "contracts":
+      return t("review.source.contracts");
+    case "incumbent":
+      return t("review.source.incumbent");
+    default:
+      return source;
+  }
 }
 
 // One finding, and the way to answer it.

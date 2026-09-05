@@ -37,6 +37,7 @@ const LABELS: DecisionCardLabels = {
   showMore: "Show the whole message",
   showLess: "Show less",
   noContent: "This proposal carries nothing to read.",
+  loading: "Reading the proposal",
 };
 
 function approval(over: Partial<DecisionApproval> = {}): DecisionApproval {

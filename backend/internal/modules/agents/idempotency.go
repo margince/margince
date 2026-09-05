@@ -45,6 +45,7 @@ import (
 	"log/slog"
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -352,7 +353,7 @@ func (r *Registry) ServeRecorded(ctx context.Context, tool string, recorded json
 			"tool", tool, "err", err)
 		return nil, apperrors.ErrNotFound
 	}
-	if err := r.ensureReplayVisible(ctx, evidence); err != nil {
+	if err := r.ensureReplayVisible(ctx, spec, evidence); err != nil {
 		return nil, err
 	}
 	if err := r.chargeReplay(ctx, spec, records); err != nil {
@@ -364,15 +365,21 @@ func (r *Registry) ServeRecorded(ctx context.Context, tool string, recorded json
 // ensureReplayVisible re-reads every record the recorded answer names, through
 // the same seam a fresh read of it would use.
 //
-// AN ANSWER THAT NAMES NOTHING IS REFUSED, and that is not the same claim as
-// "it carries nothing". Admission checked scope, tier and seat; object RBAC and
-// row scope live inside the handler, which a replay never enters — so the only
+// AN ANSWER THAT NAMES NOTHING IS REFUSED UNLESS THE TOOL SAYS WHAT ELSE TO
+// CHECK, and that is not the same claim as "it carries nothing". Admission
+// checked scope, tier and seat; object RBAC and row scope live inside the
+// handler, which a replay never enters — so for a write to a RECORD the only
 // authority a replay can re-check is the one attached to a record it can name.
-// A recorded document citing no evidence is therefore unprovable rather than
-// harmless, and an unprovable document is not served. Every mutating tool
-// answers with the record it changed, so this refuses nothing the surface
-// produces today; a tool that stopped doing so would lose replay rather than
-// quietly lose its gate.
+//
+// A write to VOCABULARY names none. A tag is a word rather than a row with a
+// scope, which is the same reason list_tags stamps no evidence — and for those
+// the object grant is what the handler checked, so ReplayGrant says which one
+// and the replay re-proves it. Without that a retry after a timeout was told
+// the call never happened, and an agent could coin a second word or re-issue
+// an edit it had already made.
+//
+// An answer with neither keeps the refusal: it is unprovable rather than
+// harmless, and an unprovable document is not served.
 //
 // THE READ IS LIVE, and one consequence is worth stating rather than
 // discovering: a tool whose effect REMOVES its own evidence trades its receipt
@@ -383,12 +390,28 @@ func (r *Registry) ServeRecorded(ctx context.Context, tool string, recorded json
 // stamps archived_at, so the same relaxation would replay pre-erasure names and
 // e-mail addresses out of a 24h-old snapshot that every live read path now
 // refuses. Held by TestAnArchivesReceiptIsRefusedAndItsEffectStillHappensOnce.
-func (r *Registry) ensureReplayVisible(ctx context.Context, evidence []EvidenceRef) error {
+func (r *Registry) ensureReplayVisible(
+	ctx context.Context, spec mcp.ToolSpec, evidence []EvidenceRef,
+) error {
 	// Before the emptiness question, because a surface with no reader cannot
 	// prove anything about any document — the composition root is the only place
 	// that could have wired one, and a missing dependency must never pay out.
-	if r.replayReader == nil || len(evidence) == 0 {
+	if r.replayReader == nil {
 		return apperrors.ErrNotFound
+	}
+	if len(evidence) == 0 {
+		if spec.ReplayGrant == nil {
+			return apperrors.ErrNotFound
+		}
+		// The grant AS THE CALLER HOLDS IT NOW, which is the whole point of
+		// re-checking rather than replaying: a passport whose grant has been
+		// revoked since the original call is refused here.
+		if err := auth.Require(ctx, spec.ReplayGrant.Object, spec.ReplayGrant.Action); err != nil {
+			// The same answer a lost row gives. A caller learns no more from a
+			// withdrawn grant than from a record they can no longer see.
+			return apperrors.ErrNotFound
+		}
+		return nil
 	}
 	for _, ref := range evidence {
 		if _, err := r.replayReader.Read(ctx, datasource.EntityRef{Type: ref.RecordType, ID: ref.RecordID}); err != nil {

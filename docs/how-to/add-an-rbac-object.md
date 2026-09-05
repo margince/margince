@@ -19,18 +19,30 @@ In `backend/internal/modules/identity/internal/policy/policy.go`:
 
 1. Append the name to `coreObjects`. This is the closed set `Parse` validates
    against, so nothing outside it can ever be granted.
-2. Add one parameter to `objects(...)` — same name, same position — and one line
-   to the map it returns.
-3. Give **every one of the five system roles** its grant, in the same position,
-   in the `defaults` map: `admin`, `manager`, `rep`, `read_only`, `ops`.
+2. In `defaults.go`, decide for **each of the six system roles** — `admin`,
+   `management`, `manager`, `rep`, `read_only`, `ops` — whether the new object
+   matches that role's baseline. If it does, there is nothing to write: `grid`
+   gives every core object the base. If it does not, add one line naming the
+   object and its grant to that role's override map.
 
-**The argument list is positional.** `objects(...)` zips its arguments onto the
-map by declaration order, and a role's entry is a single line of bare `crud`,
-`readOnly` and `grant{}` values. Go's compiler catches a *missing* argument;
-nothing catches a *transposed* one, and a diff that shifts two grants one column
-apart is invisible in review. Write the new grant at the **end** of every list
-rather than in a "logical" middle position, and re-read the generated matrix in
-step 4 before you believe your own change.
+   **Silence is now the default, and that is the trap.** The old positional form
+   made a forgotten role a compile error — an argument was missing. `grid` gives
+   that role the base instead and tells nobody. So decide for all six
+   deliberately, and confirm the result in the regenerated matrix at step 4;
+   that page is the only thing that will tell you a role inherited a grant you
+   never thought about.
+
+**Nothing is positional.** `grid(base, overrides)` seeds every object in
+`coreObjects` with the base and then applies the overrides by NAME, so the
+object a grant governs is written beside it. An override naming an object that
+does not exist panics at package init rather than being ignored, which is what
+makes a typo a build failure instead of a role that silently governs nothing.
+
+A role's override map is therefore the list of places that role DEPARTS from its
+own posture, which is the sentence a reviewer wants: not "what does rep hold on
+all 44 objects" but "where is rep not the record posture". `managerObjects` is
+still one variable shared by `manager` and `management` so the two grids cannot
+drift; only their row scope differs.
 
 Pick the posture from an existing precedent rather than inventing one — the
 comment block above `defaults` records the reasoning for each family (record
@@ -129,9 +141,10 @@ go test ./internal/modules/identity/ -run RBAC -update
 The same test — **`TestPublishedRBACMatrixMatchesTheSeededRoleDocuments`** in
 `backend/internal/modules/identity/rbacmatrix_test.go` — runs on every build
 *without* `-update` and fails when the page and the seeded values disagree, so the
-two cannot drift apart unnoticed. Read the regenerated row: it is your best
-chance to catch a transposed argument from step 1, because it renders each role's
-grant as `CRUD` letters rather than as a position in a call.
+two cannot drift apart unnoticed. Read the regenerated row: it renders each
+role's grant as `CRUD` letters, which is the resolved answer rather than the
+base-plus-overrides you wrote — so it is where you confirm that the role you did
+NOT write a line for inherited the grant you meant it to.
 
 ## 5. Gate the store, then the UI
 

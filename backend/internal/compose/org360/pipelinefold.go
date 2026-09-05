@@ -50,8 +50,8 @@ type openRow struct {
 //
 // A deal ALREADY in the base currency needs no rate, and contributes its own
 // figure. This is the ordinary case and the reason the fold cannot read
-// amount_minor_base: that generated column is null on every open deal, because
-// the rate freezes on CLOSE (deals.deal_advance).
+// amount_minor_base: that column is null on every open deal, because the rate
+// freezes on CLOSE (deals.deal_advance).
 //
 // A deal in another currency contributes only when the converted figure AND the
 // date of the rate that produced it are both present. Refusing it otherwise is

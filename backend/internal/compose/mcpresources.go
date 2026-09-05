@@ -75,6 +75,7 @@ func mcpResourceProviders(capabilities mcp.ResourceProvider, vocabulary mcp.Reso
 		agents.RecordFieldsResource{},
 		agents.NewReportVocabularyResource(reportToolCatalog()),
 		agents.NewReportBlocksResource(reportBlockGrammar()),
+		analyticsSchemaResource{},
 	}
 	// views is nil for a role that composes none — a worker, or an api whose
 	// connector gate is off. composeResources drops it, which is the same

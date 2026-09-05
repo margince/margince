@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -55,16 +56,8 @@ type IssuedPreview struct {
 // Superseding the unconsumed CREDENTIAL is enough to keep a minted-but-unopened
 // link from lying around, and issueCredentialFor already does exactly that.
 func (s *Store) PreviewRoom(ctx context.Context, roomID ids.DealRoomID) (IssuedPreview, error) {
-	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
+	if err := previewAllowedForCaller(ctx); err != nil {
 		return IssuedPreview{}, err
-	}
-	if err := auth.RequireHuman(ctx); err != nil {
-		return IssuedPreview{}, err
-	}
-	// RequireHuman admits the system principal; a preview is a person's act
-	// on their own seat and a system caller has no seat to preview from.
-	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalHuman {
-		return IssuedPreview{}, apperrors.ErrPermissionDenied
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
@@ -104,6 +97,92 @@ func (s *Store) PreviewRoom(ctx context.Context, roomID ids.DealRoomID) (IssuedP
 		return nil
 	})
 	return out, err
+}
+
+// previewAllowedForCaller is the half of the preview gate that depends on WHO
+// is asking rather than on which room.
+//
+// Extracted so a room read can answer PreviewAvailable with the same rule the
+// press will apply. Two spellings of "may this person preview" would agree
+// until one of them changed, and the visible cost of that is a button offered
+// and then refused — which is the state this exists to leave behind.
+func previewAllowedForCaller(ctx context.Context) error {
+	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
+		return err
+	}
+	if err := auth.RequireHuman(ctx); err != nil {
+		return err
+	}
+	// RequireHuman admits the system principal; a preview is a person's act
+	// on their own seat and a system caller has no seat to preview from.
+	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalHuman {
+		return apperrors.ErrPermissionDenied
+	}
+	return nil
+}
+
+// StampPreviewAvailable answers, for a page of rooms, whether THIS caller could
+// open each one's buyer preview — for a read that wants to say so before the
+// press rather than after it.
+//
+// Every condition PreviewRoom applies: the caller's authority, the deal being
+// writable and live, and the room not being archived. It mints nothing and
+// writes nothing.
+//
+// SET-BASED, over all the rooms' deals at once, because the alternative is two
+// queries a row on a page of up to two hundred. auth.StampWritable is the same
+// answer every other capability boolean in the tree is stamped with
+// (Deal.Writable, Lead.Writable), including its archived exclusion — a deal
+// that is writable but archived is nobody's to present.
+//
+// An error PROPAGATES. Answering false on a failed probe would be worse than
+// wrong: the probe runs on the caller's transaction, a failed statement leaves
+// it aborted, and a swallowed error would let the read commit having verified
+// nothing and tell a rep a database stall was a decision about their access.
+func StampPreviewAvailable(ctx context.Context, tx pgx.Tx, rooms []crmcontracts.DealRoom) error {
+	if len(rooms) == 0 {
+		return nil
+	}
+	// The caller's own authority is asked once: it is the same answer for every
+	// room on the page, and a denial here is an ordinary false rather than an
+	// error — a colleague who may read rooms and not present them is the case
+	// this field exists to describe.
+	if err := previewAllowedForCaller(ctx); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			for i := range rooms {
+				no := false
+				rooms[i].PreviewAvailable = &no
+			}
+			return nil
+		}
+		return err
+	}
+	deals := make([]dealOfRoom, len(rooms))
+	for i, room := range rooms {
+		deals[i] = dealOfRoom{DealID: ids.UUID(room.DealId)}
+	}
+	writable, err := auth.StampWritable(ctx, tx, dealTable, deals,
+		func(d dealOfRoom) ids.UUID { return d.DealID },
+		func(d *dealOfRoom, may bool) { d.Writable = may })
+	if err != nil {
+		return err
+	}
+	for i := range rooms {
+		// Archived is the room's OWN state, which StampWritable answers for the
+		// deal rather than for the room.
+		available := writable[ids.UUID(rooms[i].DealId)] && rooms[i].State != stateArchived
+		rooms[i].PreviewAvailable = &available
+	}
+	return nil
+}
+
+// dealOfRoom carries one room's deal id through auth.StampWritable, which
+// stamps a flag onto rows it is given rather than answering a bare set. The
+// rooms themselves cannot be passed: the flag it would stamp is the DEAL's
+// writability, and a room carries no such field to put it in.
+type dealOfRoom struct {
+	DealID   ids.UUID
+	Writable bool
 }
 
 // previewSeat finds the caller's preview participant in the room, or creates

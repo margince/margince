@@ -136,7 +136,6 @@ internal/compose/flipclaim.go#func flipLockKey
 internal/compose/flipsource.go#const block at const flipObjectOrganization
 internal/compose/flipstages.go#const block at const stageSemanticOpen
 internal/compose/gmailpush.go#func handleGmailPush
-internal/compose/handlers_extensions.go#method extensionsHandlers.ListExtensions
 internal/compose/heldrelease_integration_test.go#const draftRecipient
 internal/compose/idempotency.go#const replayWindow
 internal/compose/installation.go#func seedRoutingBinding

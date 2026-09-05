@@ -209,7 +209,7 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 // A line naming the variable is what turns that into a question an operator
 // can answer.
 func announceGeocoding(baseURL string, stdout io.Writer) {
-	if baseURL == "" {
+	if !geocode.Configured(baseURL) {
 		_, _ = fmt.Fprintln(stdout,
 			"worker geocoding OFF (MARGINCE_GEOCODE_BASE_URL unset) — company addresses "+
 				"keep no coordinates and every within_radius query answers unavailable")

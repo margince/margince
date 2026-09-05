@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -333,6 +334,21 @@ func TestPostMeetingRecapPlanEmitsOneDraftEmailWithTheRecapIntent(t *testing.T) 
 	}
 	if args.Intent != recapIntent {
 		t.Errorf("draft_email intent = %q, want %q", args.Intent, recapIntent)
+	}
+	// The recap says WHAT IT IS, not only which purpose it is licensed under.
+	// Without this the send reaches the engine claiming nothing, falls through
+	// to the legacy purpose model, and is answered by a row this product is
+	// archiving — so a recap would start denying the day that row goes.
+	if args.CommunicationContext != commsauthz.CategoryReplyToInbound {
+		t.Errorf("draft_email context = %q, want %q",
+			args.CommunicationContext, commsauthz.CategoryReplyToInbound)
+	}
+	// The purpose rides ALONGSIDE it. A recap whose anchor has since been
+	// archived bears no evidence, reaches the legacy fallback, and needs the
+	// key to get the answer the old model gave.
+	if args.ConsentPurpose != purposeBusinessCorrespondence {
+		t.Errorf("draft_email purpose = %q, want %q",
+			args.ConsentPurpose, purposeBusinessCorrespondence)
 	}
 }
 

@@ -108,6 +108,11 @@ export function PersonMemory({
               summary={row.emailSummary}
               timestamp={row.time}
               onOpen={openerFor(row, onOpenEmail)}
+              // `openerFor` withholds an opener on two honest grounds: a page
+              // that mounts no drawer, and a row the projection gave no
+              // activity id. The second is the narrower claim, so it is the
+              // one stated.
+              whyNotOpenable="noDetail"
             />
           ) : (
             <span>

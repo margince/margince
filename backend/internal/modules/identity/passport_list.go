@@ -16,7 +16,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // PassportRow is one passport's metadata for the Settings list. The
@@ -95,12 +97,17 @@ const listPassportsSQL = `
 	) newest_per_connection
 	ORDER BY created_at DESC, id DESC` // #nosec G101 -- a SELECT over passport metadata; it reads no token column
 
-// ListPassports enumerates passports as metadata: a user sees their
-// own; the admin role sees the workspace's (the same authority split
+// ListPassports enumerates passports as metadata: a user sees their own; a
+// member administrator sees the workspace's (the same authority split
 // RevokePassport enforces).
+//
+// The widening is a READ of member administration, not the ability to revoke:
+// seeing which agents act for whom is what an operator answering "why did this
+// happen" needs, and it is a strictly smaller authority than cutting one off.
 func (s *Service) ListPassports(ctx context.Context, id Identity) ([]PassportRow, error) {
+	ctx = actorCtx(ctx, id)
 	scope, args := "p.on_behalf_of = $1", []any{id.UserID}
-	if id.hasRole(roleAdmin) {
+	if auth.Require(ctx, objectUserAdmin, principal.ActionRead) == nil {
 		scope, args = "true", nil
 	}
 	query := fmt.Sprintf(listPassportsSQL, scope)

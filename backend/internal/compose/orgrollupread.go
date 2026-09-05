@@ -369,11 +369,15 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 }
 
 // closedWonMinorThisQuarter sums won deals closed in the current
-// workspace-timezone quarter [start, end). amount_minor_base (0065) IS
-// round(amount_minor * fx_rate_to_base)::bigint, computed once at write
-// time from each deal's FROZEN close-time rate — never a live lookup;
-// reading the GENERATED column here is the same figure as recomputing
-// the product, just not re-derived per read. No FX failure can arise
+// workspace-timezone quarter [start, end). amount_minor_base carries each
+// deal's amount in the base currency at its FROZEN close-time rate, written
+// once by the freeze writer across both currencies' minor-unit scales — never
+// a live lookup, and never a product to recompute here: the scales are not on
+// the row, so multiplying the amount by the rate would be short by a factor of
+// a hundred for a zero-decimal currency.
+//
+// Held by: TestSchema_amountMinorBaseHasOneWriter
+// (backend/migrations/schema_fitness_integration_test.go) No FX failure can arise
 // here: the deal_closed_fx CHECK guarantees fx_rate_to_base for every
 // closed deal that has an amount, and an amountless won deal's NULL
 // amount_minor_base is skipped by SUM — an honest 0, not an invented rate.

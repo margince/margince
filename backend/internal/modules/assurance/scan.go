@@ -39,8 +39,11 @@ type Result struct {
 	RunID         ids.UUID
 	EligibleDeals int
 	Findings      int
-	Readiness     string
-	Status        string
+	// Cleared counts formerly open findings this pass closed because their
+	// condition is no longer present.
+	Cleared   int64
+	Readiness string
+	Status    string
 }
 
 // Scan asks every rule of every live open deal, once.
@@ -77,11 +80,13 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time) (Result, error) {
 			// which is the night worth reporting.
 			out.Status = StatusIncomplete
 			out.Readiness = ReadinessChecksIncomplete
-			return s.store.FinishRun(ctx, tx, runID, 0, 0, out.Status, out.Readiness)
+			return s.store.FinishRun(ctx, tx, runID, 0, 0, 0, out.Status, out.Readiness)
 		}
 
 		var findings []Finding
+		var seen, walked []string
 		for _, subject := range subjects {
+			walked = append(walked, subject.DealID)
 			// Counted in the LOOP, one per deal actually evaluated. Taken from
 			// len(subjects) it would be the same number the query returned,
 			// which makes the census assert x == x and leaves a loop that
@@ -93,22 +98,55 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time) (Result, error) {
 					continue
 				}
 				findings = append(findings, *found)
+				seen = append(seen, LogicalKey(*found))
 				if err := s.store.UpsertException(ctx, tx, *found, subject.Owner); err != nil {
 					return err
 				}
 			}
 		}
 		out.Findings = len(findings)
+		// A finding this complete walk did not re-mint has no condition left to
+		// report — close it, but only for rules whose required sources were
+		// read tonight. Absence is a claim, and it stands on what was looked at.
+		cleared, err := s.store.CloseCleared(ctx, tx, clearableTypes(coverage), walked, seen)
+		if err != nil {
+			return err
+		}
+		out.Cleared = cleared
 		out.Readiness = Readiness(coverage, findings, s.cfg)
 		out.Status = StatusComplete
 		if out.Readiness == ReadinessChecksIncomplete {
 			out.Status = StatusIncomplete
 		}
-		return s.store.FinishRun(ctx, tx, runID, out.EligibleDeals, 0,
+		return s.store.FinishRun(ctx, tx, runID, out.EligibleDeals, 0, out.Cleared,
 			out.Status, out.Readiness)
 	})
 	if err != nil {
 		return Result{}, err
 	}
 	return out, nil
+}
+
+// clearableTypes names the rule types whose findings tonight's pass may close
+// in absence: every source the rule needs was actually read. A rule with no
+// declared needs stands on the subjects read alone, which succeeding is what
+// got us here.
+func clearableTypes(coverage []SourceCoverage) []string {
+	checked := map[string]bool{}
+	for _, c := range coverage {
+		checked[c.Source] = c.State == CoverageChecked
+	}
+	var out []string
+	for _, rule := range Rules() {
+		clearable := true
+		for _, need := range rule.Needs {
+			if !checked[need] {
+				clearable = false
+			}
+		}
+		if clearable {
+			out = append(out, rule.Type)
+		}
+	}
+	return out
 }

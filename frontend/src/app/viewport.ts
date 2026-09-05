@@ -12,6 +12,19 @@ import { useEffect, useState } from "react";
 // cites this file and the two are changed together.
 export const PHONE_MAX_WIDTH = 700;
 
+// The width at which the LAYOUT turns: the tree's own narrow breakpoint, which
+// thirteen stylesheets already spell as `@media (max-width: 720px)` — the modal,
+// the record head, the page zones and the worklist row among them. It is here
+// for the code that must AGREE with that fold rather than merely be laid out by
+// it: the worklist's set-aside verbs are drawn as buttons above this width and
+// answered by a swipe below it, and a component keying that on a different
+// number would draw both at the widths between the two.
+//
+// A stylesheet cannot read a TypeScript constant, so those blocks and this line
+// are changed together, the same pairing PHONE_MAX_WIDTH keeps with
+// app/shell.css.
+export const FOLD_MAX_WIDTH = 720;
+
 // The width at which a LIST HEADER stops fitting its verbs. Below it the row of
 // actions folds into one overflow menu (design-system/listsurface.tsx). It is
 // wider than the phone breakpoint on purpose: nothing about the shell changes
@@ -57,6 +70,11 @@ export function useViewportUnder(maxWidth: number): boolean {
 /** Whether the viewport is at phone width, where the sidebar is a bottom bar. */
 export function usePhoneViewport(): boolean {
   return useViewportUnder(PHONE_MAX_WIDTH);
+}
+
+/** Whether the layout has folded to its narrow arrangement. */
+export function useFoldedViewport(): boolean {
+  return useViewportUnder(FOLD_MAX_WIDTH);
 }
 
 /** Whether a card's header has to fold its row of verbs into one menu. */

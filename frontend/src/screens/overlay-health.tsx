@@ -133,6 +133,7 @@ function SyncStatusPanel({
         </Callout>
       ) : (
         <SurfaceState
+          loadingLabel={t("overlay.title")}
           state={readingState(query.isPending, objects.length)}
           emptyLabel={t("overlay.syncEmpty")}
         >
@@ -288,6 +289,7 @@ function BudgetPanel({
         </Callout>
       ) : (
         <SurfaceState
+          loadingLabel={t("overlay.title")}
           state={readingState(query.isPending, query.data ? 1 : 0)}
           emptyLabel={t("overlay.budgetEmpty")}
         >

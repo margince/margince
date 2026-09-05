@@ -147,7 +147,11 @@ export function DealStatusCardPanel({
   return (
     <>
       <CallCard name={dealName}>
-        <QueryStates query={status} pendingLines={6}>
+        <QueryStates
+          query={status}
+          pendingLines={6}
+          pendingLabel={t("nav.deals")}
+        >
           {status.isSuccess && !status.data?.story ? (
             // `story` is required on the wire and the server always writes at
             // least one line, so reaching here means a response that is not

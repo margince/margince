@@ -42,12 +42,24 @@ import (
 // that will own it lands with the preference centre. The row shape is the one
 // liveSuppression reads, and when that writer arrives this helper is what
 // should be repointed at it.
+//
+// decided_by_level is named rather than defaulted, because the column has no
+// default: the migration that added it dropped the scaffolding one on purpose,
+// so that a writer states who decided or the INSERT fails where its author can
+// see it. 'subject' is what this row IS — a marketing objection is the person's
+// own act under Art. 21, the one tier no seat in the installation may lift —
+// and it is the level that migration's own backfill gives the same kind.
 func suppressPerson(t *testing.T, e *apptest.AppEnv, personID string) {
 	t.Helper()
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
+		// decided_by_level is stated rather than defaulted, because the column
+		// deliberately has no default: a writer names who decided or the INSERT
+		// fails where the author can see it. `subject` is what this row IS — a
+		// marketing objection is Art. 21 by definition, which is the same
+		// classification the migration gave the rows that predate the column.
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO communication_suppression (person_id, kind, source, captured_by)
-			VALUES ($1, 'marketing_objection', 'test', $2)`, personID, "test")
+			INSERT INTO communication_suppression (person_id, kind, source, captured_by, decided_by_level)
+			VALUES ($1, 'marketing_objection', 'test', $2, 'subject')`, personID, "test")
 		return err
 	}); err != nil {
 		t.Fatalf("recording the objection: %v", err)

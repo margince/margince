@@ -78,3 +78,37 @@ func TestTheHealthEvidenceReadRefusesRatherThanScoringWithoutTheEdge(t *testing.
 			in.engagedStakeholderIDs)
 	}
 }
+
+// The batch champion read carries the same gate as the per-deal one.
+//
+// It exists so a queue weighing fifty drifting deals asks the champion
+// question once rather than fifty times, and a faster read that had quietly
+// dropped the edge grant would answer where Stakeholders refuses — the
+// optimisation would have widened what a caller can learn about who sits on a
+// deal. The nil transaction is the assertion: only a refusal resolved before
+// the statement can return an error rather than panicking.
+func TestTheBatchChampionReadRefusesBeforeItReachesAStatement(t *testing.T) {
+	_, err := ChampionCoverFor(dealReaderWithoutTheEdgeGrant(), nil,
+		[]ids.UUID{ids.NewV7()}, time.Now().UTC())
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("ChampionCoverFor(no edge grant) = %v, want ErrPermissionDenied", err)
+	}
+}
+
+// An EMPTY set asks nothing, and must not be the way past the gate.
+//
+// The early return for no deals sits above the read, so a caller handing an
+// empty slice gets an empty answer rather than a refusal. That is right — there
+// is nothing to disclose — but it is worth holding: moving the gate below the
+// length check would be invisible here, and moving the length check below the
+// gate would make an ordinary empty queue fail for a caller who is merely
+// unlucky in their grants.
+func TestTheBatchChampionReadAnswersNothingForNoDeals(t *testing.T) {
+	cover, err := ChampionCoverFor(dealReaderWithoutTheEdgeGrant(), nil, nil, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("ChampionCoverFor(no deals) = %v, want no error", err)
+	}
+	if len(cover) != 0 {
+		t.Errorf("ChampionCoverFor(no deals) answered %v, want nothing", cover)
+	}
+}

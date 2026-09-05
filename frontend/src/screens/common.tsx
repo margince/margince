@@ -245,7 +245,7 @@ export function QueryStates({
   // the generic answer is honest for them; a screen whose body is a table or a
   // timeline says so, or its content lands in a third of the space the
   // placeholder held and pushes the page down as it arrives.
-  pendingLabel?: string;
+  pendingLabel: string;
   pendingLines?: number;
   children: ReactNode;
 }>) {
@@ -328,7 +328,7 @@ export function QueryGate<Data>({
   empty?: (data: Data) => boolean;
   // Forwarded to QueryStates: the gate adds the empty check, not a second
   // pending state, so there is one place a screen names its wait.
-  pendingLabel?: string;
+  pendingLabel: string;
   pendingLines?: number;
   children: (data: Data) => ReactNode;
 }>) {

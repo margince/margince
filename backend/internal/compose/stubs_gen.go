@@ -631,6 +631,10 @@ func (stubs) ConnectConnector(w nethttp.ResponseWriter, r *nethttp.Request, prov
 	httperr.NotImplemented(w, r, "ConnectConnector")
 }
 
+func (stubs) SetConnectorContextTag(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+	httperr.NotImplemented(w, r, "SetConnectorContextTag")
+}
+
 func (stubs) DisconnectConnector(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
 	httperr.NotImplemented(w, r, "DisconnectConnector")
 }
@@ -1653,6 +1657,10 @@ func (stubs) GetPersonConsentGuard(w nethttp.ResponseWriter, r *nethttp.Request,
 
 func (stubs) RecordQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RecordQualifyingEvent")
+}
+
+func (stubs) SuppressPerson(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "SuppressPerson")
 }
 
 func (stubs) DraftPersonEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

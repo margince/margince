@@ -73,7 +73,11 @@ type NewSnapshot struct {
 // question about two recorded states, and a snapshot without its rows can only
 // say that a number changed.
 func (s *Store) TakeSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot) (ids.UUID, error) {
-	if err := auth.Require(ctx, "forecast", principal.ActionCreate); err != nil {
+	// The scope half of the gate for the same reason the call has it: this
+	// freezes a number AGAINST a named team or owner, and a seat that may take
+	// snapshots at all is not thereby accountable for every scope in the
+	// installation.
+	if err := requireForecastScope(ctx, in.Scope); err != nil {
 		return ids.Nil, err
 	}
 	if err := checkSnapshot(in); err != nil {

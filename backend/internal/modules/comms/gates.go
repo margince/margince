@@ -270,6 +270,25 @@ func (d *Dispatcher) gateConsent(ctx context.Context, del Delivery) (commsauthz.
 		return ticket, o, w, err
 	}
 
+	// The installation's own mail stops here, and this is the ONE place the
+	// controller lane parts from a user send.
+	//
+	// The legacy question below is "is this purpose granted for these people",
+	// and a controller row has no purpose: consent_purpose is NULL on it by
+	// design, because the message is not sent under a permission somebody gave.
+	// Asked anyway, the purpose lookup finds no row and answers "not granted" —
+	// so every confirmation mail would park, and the lane would look configured
+	// and never deliver.
+	//
+	// What replaces it is not nothing. The engine has already answered above,
+	// on this delivery's own evidence, through the same AuthorizeTransmit call
+	// every other message goes through: a live confirm_token for this person of
+	// this kind. That is a STRONGER question than the legacy gate asks, not a
+	// skipped one.
+	if del.IsController() {
+		return ticket, outcomeUndecided, 0, nil
+	}
+
 	// EVERY subject this delivery reaches is asked about, not just the To line:
 	// a Cc'd person is owed the same suppression, and this call is the only one
 	// that runs after they could have withdrawn. consentRecipients is what makes

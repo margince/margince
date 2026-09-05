@@ -921,7 +921,11 @@ function ConfiguredAutomationsRow({
       layout="stack"
       control={
         canViewRuns ? (
-          <QueryGate query={instances} empty={(page) => page.data.length === 0}>
+          <QueryGate
+            query={instances}
+            empty={(page) => page.data.length === 0}
+            pendingLabel={t("auto.instances")}
+          >
             {(page) => (
               <ul className="auto-instances">
                 {page.data.map((automation) => (
@@ -938,7 +942,7 @@ function ConfiguredAutomationsRow({
             )}
           </QueryGate>
         ) : (
-          <QueryGate query={me}>
+          <QueryGate query={me} pendingLabel={t("auto.instances")}>
             {() => <EmptyState>{t("auto.withheld")}</EmptyState>}
           </QueryGate>
         )
@@ -969,7 +973,11 @@ function StarterLibraryRow({
       description={t("auto.catalogSub")}
       layout="stack"
       control={
-        <QueryGate query={catalog} empty={(page) => page.data.length === 0}>
+        <QueryGate
+          query={catalog}
+          empty={(page) => page.data.length === 0}
+          pendingLabel={t("auto.catalog")}
+        >
           {(page) => (
             // A nested SettingList, so the interval between two entries and the
             // hairline that separates them are the row language's own. As a bare

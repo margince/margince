@@ -122,10 +122,11 @@ func pdfLayoutString(layout map[string]any, key string) string {
 type pdfTranslator func(string) string
 
 // writeOfferPDFHeader writes the title/revision/issuer block, the
-// template layout's header_text (when the layout carries one), and, when
-// buyerBlock is non-nil, the buyer legal block underneath it. A nil
-// buyerBlock (an unsent draft with no buyer org) omits the section
-// entirely rather than printing an empty heading.
+// template layout's header_text (when the layout carries one), and the buyer
+// legal block underneath it. A block that NAMES no buyer — nil, as an unsent
+// draft with no buyer org is, or one carrying neither display_name nor
+// legal_name — omits the section entirely rather than printing an empty
+// heading.
 func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer, buyerBlock map[string]any, issuerName string, layout map[string]any, labels pdfLabels) {
 	number := ""
 	if o.OfferNumber != nil {
@@ -151,22 +152,37 @@ func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 		pdf.Ln(4)
 	}
 
-	if buyerBlock == nil {
+	// The buyer is identified by NAME. The snapshot also carries our internal
+	// organization_id, and printing it put a UUID — under a hardcoded English
+	// label, on an otherwise translated document — as the first line the
+	// customer read about themselves. It identifies the record to us and
+	// nothing to them.
+	//
+	// So a block holding neither name draws no section at all, rather than a
+	// heading over blank paper: an offer that cannot say who it is for says
+	// nothing there, and the reader sees a document missing its buyer instead
+	// of one whose buyer is an empty line.
+	//
+	// Reachable through the FROZEN snapshot, which resolveRenderBuyerBlock
+	// returns verbatim from jsonb (offer_render.go). Both of today's writers
+	// set display_name beside the id, and organization.display_name is NOT
+	// NULL, so a block this release builds always names its buyer — but the
+	// stored bag is not constrained to that shape, and this renderer's job is
+	// to print what it was handed rather than to assume what wrote it.
+	displayName := pdfBuyerBlockString(buyerBlock, "display_name")
+	legalName := pdfBuyerBlockString(buyerBlock, "legal_name")
+	if buyerBlock == nil || (displayName == "" && legalName == "") {
 		return
 	}
 	pdf.SetFont("Helvetica", "B", 12)
 	pdf.Cell(0, 6, tr(labels.buyer))
 	pdf.Ln(7)
 	pdf.SetFont("Helvetica", "", 11)
-	if id := pdfBuyerBlockString(buyerBlock, "organization_id"); id != "" {
-		pdf.Cell(0, 6, tr("Organization ID: "+id))
-		pdf.Ln(6)
-	}
-	if displayName := pdfBuyerBlockString(buyerBlock, "display_name"); displayName != "" {
+	if displayName != "" {
 		pdf.Cell(0, 6, tr(displayName))
 		pdf.Ln(6)
 	}
-	if legalName := pdfBuyerBlockString(buyerBlock, "legal_name"); legalName != "" {
+	if legalName != "" {
 		pdf.Cell(0, 6, tr(legalName))
 		pdf.Ln(6)
 	}

@@ -877,7 +877,9 @@ const (
 	AnalyticsCount         AnalyticsMeasureFn = "count"
 	AnalyticsCountDistinct AnalyticsMeasureFn = "count_distinct"
 	AnalyticsMax           AnalyticsMeasureFn = "max"
+	AnalyticsMedian        AnalyticsMeasureFn = "median"
 	AnalyticsMin           AnalyticsMeasureFn = "min"
+	AnalyticsP75           AnalyticsMeasureFn = "p75"
 	AnalyticsSum           AnalyticsMeasureFn = "sum"
 )
 
@@ -892,7 +894,11 @@ func (e AnalyticsMeasureFn) Valid() bool {
 		return true
 	case AnalyticsMax:
 		return true
+	case AnalyticsMedian:
+		return true
 	case AnalyticsMin:
+		return true
+	case AnalyticsP75:
 		return true
 	case AnalyticsSum:
 		return true
@@ -1846,6 +1852,27 @@ func (e AuditLogEntryActorType) Valid() bool {
 	}
 }
 
+// Defines values for AuthorizationRowScope.
+const (
+	AuthorizationRowScopeAll  AuthorizationRowScope = "all"
+	AuthorizationRowScopeOwn  AuthorizationRowScope = "own"
+	AuthorizationRowScopeTeam AuthorizationRowScope = "team"
+)
+
+// Valid indicates whether the value is a known member of the AuthorizationRowScope enum.
+func (e AuthorizationRowScope) Valid() bool {
+	switch e {
+	case AuthorizationRowScopeAll:
+		return true
+	case AuthorizationRowScopeOwn:
+		return true
+	case AuthorizationRowScopeTeam:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AuthorizationSeatType.
 const (
 	AuthorizationSeatTypeFull AuthorizationSeatType = "full"
@@ -2328,13 +2355,16 @@ func (e CaptureExclusionScope) Valid() bool {
 
 // Defines values for CaptureOwnerIdentitySource.
 const (
-	CaptureOwnerIdentitySourceProvider CaptureOwnerIdentitySource = "provider"
-	CaptureOwnerIdentitySourceUser     CaptureOwnerIdentitySource = "user"
+	CaptureOwnerIdentitySourceDeliveredTo CaptureOwnerIdentitySource = "delivered_to"
+	CaptureOwnerIdentitySourceProvider    CaptureOwnerIdentitySource = "provider"
+	CaptureOwnerIdentitySourceUser        CaptureOwnerIdentitySource = "user"
 )
 
 // Valid indicates whether the value is a known member of the CaptureOwnerIdentitySource enum.
 func (e CaptureOwnerIdentitySource) Valid() bool {
 	switch e {
+	case CaptureOwnerIdentitySourceDeliveredTo:
+		return true
 	case CaptureOwnerIdentitySourceProvider:
 		return true
 	case CaptureOwnerIdentitySourceUser:
@@ -5713,6 +5743,7 @@ func (e ForecastAssuranceSourceSource) Valid() bool {
 // Defines values for ForecastAssuranceSourceState.
 const (
 	ForecastAssuranceSourceStateChecked           ForecastAssuranceSourceState = "checked"
+	ForecastAssuranceSourceStateNotConnected      ForecastAssuranceSourceState = "not_connected"
 	ForecastAssuranceSourceStatePermissionLimited ForecastAssuranceSourceState = "permission_limited"
 	ForecastAssuranceSourceStateStale             ForecastAssuranceSourceState = "stale"
 	ForecastAssuranceSourceStateUnavailable       ForecastAssuranceSourceState = "unavailable"
@@ -5722,6 +5753,8 @@ const (
 func (e ForecastAssuranceSourceState) Valid() bool {
 	switch e {
 	case ForecastAssuranceSourceStateChecked:
+		return true
+	case ForecastAssuranceSourceStateNotConnected:
 		return true
 	case ForecastAssuranceSourceStatePermissionLimited:
 		return true
@@ -10819,6 +10852,30 @@ func (e SendAccountEmailRequestCommunicationContext) Valid() bool {
 	}
 }
 
+// Defines values for SendAuthorizationPreviewRecipientDecidedBy.
+const (
+	SendAuthorizationPreviewRecipientDecidedByAdmin   SendAuthorizationPreviewRecipientDecidedBy = "admin"
+	SendAuthorizationPreviewRecipientDecidedByMachine SendAuthorizationPreviewRecipientDecidedBy = "machine"
+	SendAuthorizationPreviewRecipientDecidedBySubject SendAuthorizationPreviewRecipientDecidedBy = "subject"
+	SendAuthorizationPreviewRecipientDecidedByUser    SendAuthorizationPreviewRecipientDecidedBy = "user"
+)
+
+// Valid indicates whether the value is a known member of the SendAuthorizationPreviewRecipientDecidedBy enum.
+func (e SendAuthorizationPreviewRecipientDecidedBy) Valid() bool {
+	switch e {
+	case SendAuthorizationPreviewRecipientDecidedByAdmin:
+		return true
+	case SendAuthorizationPreviewRecipientDecidedByMachine:
+		return true
+	case SendAuthorizationPreviewRecipientDecidedBySubject:
+		return true
+	case SendAuthorizationPreviewRecipientDecidedByUser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SendAuthorizationPreviewRecipientMode.
 const (
 	SendAuthorizationPreviewRecipientModeEnforce SendAuthorizationPreviewRecipientMode = "enforce"
@@ -13294,6 +13351,7 @@ const (
 	WorklistComparisonComparatorDeadline        WorklistComparisonComparator = "deadline"
 	WorklistComparisonComparatorExpectedRevenue WorklistComparisonComparator = "expected_revenue"
 	WorklistComparisonComparatorLevel           WorklistComparisonComparator = "level"
+	WorklistComparisonComparatorOpportunity     WorklistComparisonComparator = "opportunity"
 	WorklistComparisonComparatorOrder           WorklistComparisonComparator = "order"
 	WorklistComparisonComparatorPin             WorklistComparisonComparator = "pin"
 	WorklistComparisonComparatorRelationship    WorklistComparisonComparator = "relationship"
@@ -13310,6 +13368,8 @@ func (e WorklistComparisonComparator) Valid() bool {
 	case WorklistComparisonComparatorExpectedRevenue:
 		return true
 	case WorklistComparisonComparatorLevel:
+		return true
+	case WorklistComparisonComparatorOpportunity:
 		return true
 	case WorklistComparisonComparatorOrder:
 		return true
@@ -13351,6 +13411,48 @@ func (e WorklistCountCategory) Valid() bool {
 	case WorklistCountCategorySystem:
 		return true
 	case WorklistCountCategoryTasks:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistDealVerdictSource.
+const (
+	WorklistInsightSourceBriefFinding WorklistDealVerdictSource = "brief_finding"
+	WorklistInsightSourceDealStatus   WorklistDealVerdictSource = "deal_status"
+)
+
+// Valid indicates whether the value is a known member of the WorklistDealVerdictSource enum.
+func (e WorklistDealVerdictSource) Valid() bool {
+	switch e {
+	case WorklistInsightSourceBriefFinding:
+		return true
+	case WorklistInsightSourceDealStatus:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistDealVerdictStanding.
+const (
+	WorklistStandingBlocked  WorklistDealVerdictStanding = "blocked"
+	WorklistStandingCold     WorklistDealVerdictStanding = "cold"
+	WorklistStandingDrifting WorklistDealVerdictStanding = "drifting"
+	WorklistStandingLive     WorklistDealVerdictStanding = "live"
+)
+
+// Valid indicates whether the value is a known member of the WorklistDealVerdictStanding enum.
+func (e WorklistDealVerdictStanding) Valid() bool {
+	switch e {
+	case WorklistStandingBlocked:
+		return true
+	case WorklistStandingCold:
+		return true
+	case WorklistStandingDrifting:
+		return true
+	case WorklistStandingLive:
 		return true
 	default:
 		return false
@@ -13414,6 +13516,33 @@ func (e WorklistItemBand) Valid() bool {
 	case Now:
 		return true
 	case Review:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistItemBriefSection.
+const (
+	BriefSectionBuildPipeline        WorklistItemBriefSection = "build_pipeline"
+	BriefSectionMoveRevenue          WorklistItemBriefSection = "move_revenue"
+	BriefSectionPrepareConversations WorklistItemBriefSection = "prepare_conversations"
+	BriefSectionRespondNow           WorklistItemBriefSection = "respond_now"
+	BriefSectionReviewAndRepair      WorklistItemBriefSection = "review_and_repair"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemBriefSection enum.
+func (e WorklistItemBriefSection) Valid() bool {
+	switch e {
+	case BriefSectionBuildPipeline:
+		return true
+	case BriefSectionMoveRevenue:
+		return true
+	case BriefSectionPrepareConversations:
+		return true
+	case BriefSectionRespondNow:
+		return true
+	case BriefSectionReviewAndRepair:
 		return true
 	default:
 		return false
@@ -13898,6 +14027,7 @@ const (
 	WorklistValueKindLevel WorklistValueKind = "level"
 	WorklistValueKindMoney WorklistValueKind = "money"
 	WorklistValueKindNone  WorklistValueKind = "none"
+	WorklistValueKindScore WorklistValueKind = "score"
 )
 
 // Valid indicates whether the value is a known member of the WorklistValueKind enum.
@@ -13912,6 +14042,8 @@ func (e WorklistValueKind) Valid() bool {
 	case WorklistValueKindMoney:
 		return true
 	case WorklistValueKindNone:
+		return true
+	case WorklistValueKindScore:
 		return true
 	default:
 		return false
@@ -15276,19 +15408,34 @@ func (e ListPeopleParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListPeopleParamsTagMode.
 const (
-	All  ListPeopleParamsTagMode = "all"
-	Any  ListPeopleParamsTagMode = "any"
-	None ListPeopleParamsTagMode = "none"
+	ListPeopleParamsTagModeAll  ListPeopleParamsTagMode = "all"
+	ListPeopleParamsTagModeAny  ListPeopleParamsTagMode = "any"
+	ListPeopleParamsTagModeNone ListPeopleParamsTagMode = "none"
 )
 
 // Valid indicates whether the value is a known member of the ListPeopleParamsTagMode enum.
 func (e ListPeopleParamsTagMode) Valid() bool {
 	switch e {
-	case All:
+	case ListPeopleParamsTagModeAll:
 		return true
-	case Any:
+	case ListPeopleParamsTagModeAny:
 		return true
-	case None:
+	case ListPeopleParamsTagModeNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SuppressPersonJSONBodyKind.
+const (
+	SubjectRequest SuppressPersonJSONBodyKind = "subject_request"
+)
+
+// Valid indicates whether the value is a known member of the SuppressPersonJSONBodyKind enum.
+func (e SuppressPersonJSONBodyKind) Valid() bool {
+	switch e {
+	case SubjectRequest:
 		return true
 	default:
 		return false
@@ -16743,11 +16890,11 @@ type AnalyticsMeasure struct {
 	// Field What to aggregate. Required for every fn but `count`.
 	Field *string `json:"field,omitempty"`
 
-	// Fn The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.
+	// Fn The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population. `median` and `p75` answer null below a five-value sample floor: a percentile over three deals is one deal's value wearing a statistic's name, and the count beside the blank still says how many there were.
 	Fn AnalyticsMeasureFn `json:"fn"`
 }
 
-// AnalyticsMeasureFn The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.
+// AnalyticsMeasureFn The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population. `median` and `p75` answer null below a five-value sample floor: a percentile over three deals is one deal's value wearing a statistic's name, and the count beside the blank still says how many there were.
 type AnalyticsMeasureFn string
 
 // AnalyticsQuery One question, in the vocabulary the schema returned.
@@ -17498,9 +17645,16 @@ type AttentionCounts struct {
 // client already holds the pipelines vocabulary and writes the label in the
 // reader's own language; a label composed server-side would not be.
 type AttentionDealFacts struct {
-	AmountMinor *int64              `json:"amount_minor,omitempty"`
-	Currency    *string             `json:"currency,omitempty"`
-	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
+	AmountMinor *int64  `json:"amount_minor,omitempty"`
+	Currency    *string `json:"currency,omitempty"`
+
+	// NoChampion `true` when the account has a buying committee and nobody engaged on it holds
+	// the champion seat. Null is not `false`: it is sent only when the answer is both
+	// known and negative, and stays absent for a committee the caller may not read in
+	// full, for a deal carrying no seats at all, and for a server that does not assess
+	// coverage. See `WorklistDealFacts.no_champion`, which carries the same fact out.
+	NoChampion *bool               `json:"no_champion,omitempty"`
+	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// StageId The deal's current stage; null for an overlay-mirror deal, whose stage lives with the incumbent.
 	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
@@ -17667,6 +17821,21 @@ type AttentionItem struct {
 	// three languages, so a duplicate pair sends its `kind` and `confidence`
 	// and the client writes the line in the reader's own.
 	Title *string `json:"title,omitempty"`
+
+	// WithPerson Whose record a `meeting` row's brief is read on. Sent only for
+	// `source: meeting`, and only where the meeting names a person this caller may
+	// see.
+	//
+	// It is not the row's SUBJECT, which is the meeting itself — the row is about
+	// the appointment, and the brief happens to be reached through somebody's page:
+	// it opens as `?prep=<activity>` on a person's record rather than as a page of
+	// its own. Both ids are needed to name it, and the row already carried only one.
+	//
+	// ABSENT rather than empty for an internal meeting, and for one whose only
+	// attendees are people the caller may not read — the two are indistinguishable
+	// here on purpose, since both mean the same thing to a client: there is no page
+	// to read this brief on, so offer no way in rather than one that opens nothing.
+	WithPerson *openapi_types.UUID `json:"with_person,omitempty"`
 }
 
 // AttentionItemActions defines model for AttentionItem.Actions.
@@ -17975,14 +18144,26 @@ type AuthCapabilities struct {
 
 // Authorization What this principal may do, as the server itself computed it — never a client-side re-derivation from role keys, which drifts the moment an installation's stored grants differ from the compiled-in defaults.
 // Two independent axes, both of which must permit an action: the licensing seat ceiling (A62/ADR-0047), checked BEFORE RBAC and clamped on HTTP method, and the object grants. A client that collapses them into one predicate will be wrong in both directions.
-// This is a snapshot, not an authority. A role change does not revoke live sessions, so a client refetches on window focus and after any 403, and treats the server's answer as the only one that counts. It does NOT express row scope, nor the human-principal and admin-role gates some routes carry independently of any grant — a permitted grant here is necessary, never sufficient.
+// This is a snapshot, not an authority. A role change does not revoke live sessions, so a client refetches on window focus and after any 403, and treats the server's answer as the only one that counts. It does not express the human-principal gate, nor the few routes that still key on the literal admin role independently of any grant — a permitted grant here is necessary, never sufficient.
 type Authorization struct {
 	// Objects Effective grants keyed by RbacObject. An absent key denies — the server resolves an unknown object to the zero grant, and a client must do the same rather than treat a missing entry as unrestricted.
 	Objects map[string]RbacObjectGrant `json:"objects"`
 
+	// RowScope How far the grants above reach: the caller's own rows, every row belonging to a live team they share, or every row in the workspace. Widened to the maximum any of the caller's roles holds, the same union the server applies.
+	// It is a THIRD axis, independent of the seat ceiling and the object grants, and a client that ignores it will describe a team lead's reach as if it were an admin's.
+	// The server never sends a value outside this enum: an unresolved scope is narrowed to `own` before it reaches the wire, so a client reading a value it does not recognize is reading a newer server and should narrow it the same way.
+	// This does not let a client decide which rows it gets — the server's scope clauses do that on every query. It is what a client needs to EXPLAIN the answer it got, and to label a setting as reaching only the reader, their team, or the company.
+	RowScope AuthorizationRowScope `json:"row_scope"`
+
 	// SeatType The licensing seat. A read seat may read but never mutate over REST, whatever its role grants. A client that cannot read a recognized value MUST assume a read seat: the ceiling fails closed, so an omission never buys the ability to mutate.
 	SeatType AuthorizationSeatType `json:"seat_type"`
 }
+
+// AuthorizationRowScope How far the grants above reach: the caller's own rows, every row belonging to a live team they share, or every row in the workspace. Widened to the maximum any of the caller's roles holds, the same union the server applies.
+// It is a THIRD axis, independent of the seat ceiling and the object grants, and a client that ignores it will describe a team lead's reach as if it were an admin's.
+// The server never sends a value outside this enum: an unresolved scope is narrowed to `own` before it reaches the wire, so a client reading a value it does not recognize is reading a newer server and should narrow it the same way.
+// This does not let a client decide which rows it gets — the server's scope clauses do that on every query. It is what a client needs to EXPLAIN the answer it got, and to label a setting as reaching only the reader, their team, or the company.
+type AuthorizationRowScope string
 
 // AuthorizationSeatType The licensing seat. A read seat may read but never mutate over REST, whatever its role grants. A client that cannot read a recognized value MUST assume a read seat: the ceiling fails closed, so an omission never buys the ability to mutate.
 type AuthorizationSeatType string
@@ -18442,9 +18623,19 @@ type CaptureConnection struct {
 	AccountLabel *string `json:"account_label,omitempty"`
 
 	// Backfill Summary of the connection's backfill run; state `none` when never run.
-	Backfill  *BackfillStatus    `json:"backfill,omitempty"`
-	CreatedAt *time.Time         `json:"created_at,omitempty"`
-	Id        openapi_types.UUID `json:"id"`
+	Backfill *BackfillStatus `json:"backfill,omitempty"`
+
+	// ContextTag The one existing word every record this connector creates is filed under, so
+	// "which records came in from this source" has an answer. Absent when the operator
+	// chose none, which is the honest default rather than a guess.
+	//
+	// The connector is the batch, not a sync window: a mailbox polls forever, and a word
+	// per window would mint one nobody chose, growing without bound. The other half of
+	// the question — "in this period" — is answered by the record's own `created_at`
+	// and needs no word at all.
+	ContextTag *ConnectorContextTag `json:"context_tag,omitempty"`
+	CreatedAt  *time.Time           `json:"created_at,omitempty"`
+	Id         openapi_types.UUID   `json:"id"`
 
 	// LastSyncErrorClass rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log.
 	LastSyncErrorClass *string `json:"last_sync_error_class,omitempty"`
@@ -18641,6 +18832,15 @@ type CaptureOwnerIdentity struct {
 	// Source Where the claim came from. `user` is the seat typing it in. `provider` is an address a mail
 	// provider attests; nothing writes it yet, because reading a provider's send-as list needs a
 	// scope the connection grant does not request.
+	//
+	// `delivered_to` is a FORWARDING ALIAS the product discovered: an address that delivers into
+	// the connected mailbox but is never the From of anything it sends, so nothing on the send
+	// side could have found it. It is learned only from the receiving server's own delivery
+	// header, read from a position a sender could not have authored, and only once two distinct
+	// messages carry the same claim.
+	//
+	// It is its own word rather than `user` because a seat looking at an address they never typed
+	// is owed the difference — and, seeing it, may remove it like any other.
 	Source CaptureOwnerIdentitySource `json:"source"`
 
 	// Value The folded address or domain.
@@ -18655,6 +18855,15 @@ type CaptureOwnerIdentityListResponse struct {
 // CaptureOwnerIdentitySource Where the claim came from. `user` is the seat typing it in. `provider` is an address a mail
 // provider attests; nothing writes it yet, because reading a provider's send-as list needs a
 // scope the connection grant does not request.
+//
+// `delivered_to` is a FORWARDING ALIAS the product discovered: an address that delivers into
+// the connected mailbox but is never the From of anything it sends, so nothing on the send
+// side could have found it. It is learned only from the receiving server's own delivery
+// header, read from a position a sender could not have authored, and only once two distinct
+// messages carry the same claim.
+//
+// It is its own word rather than `user` because a seat looking at an address they never typed
+// is owed the difference — and, seeing it, may remove it like any other.
 type CaptureOwnerIdentitySource string
 
 // CaptureProviderAvailability Whether a connect started right now would proceed, decided by the same predicate the connect
@@ -19741,19 +19950,22 @@ type ConfirmFieldOrigin struct {
 	Source     string `json:"source"`
 }
 
-// ConfirmRequestIssued A confirm link that now exists, and what became of the attempt to deliver it. Three
-// outcomes rather than two, because a reader's next move differs: it went, this
-// installation cannot send at all, or the send was tried and failed.
+// ConfirmRequestIssued A confirm link that now exists, and whether a message carrying it was queued. What
+// becomes of that message afterwards is the delivery's own answer, not this one: the
+// dispatcher transmits it later, retries a transient failure, and parks one it cannot send.
 type ConfirmRequestIssued struct {
 	// DeliveredTo The address the link was posted to — the person's own live primary email.
 	DeliveredTo string    `json:"delivered_to"`
 	ExpiresAt   time.Time `json:"expires_at"`
 
-	// ProviderAccepted Whether the relay accepted the message. False while `sendable` is true means the send
-	// was attempted and failed, which is a different fact from an installation that cannot
-	// send at all. It is deliberately not called `delivered`: a relay returns before any
-	// mailbox has seen the message, and a later bounce cannot travel back to change this.
-	ProviderAccepted bool `json:"provider_accepted"`
+	// Queued Whether the message was put on the outbound send lane, in the same transaction that
+	// minted the link. False while `sendable` is true should not happen — staging and
+	// minting commit together — so it reads as an installation that cannot send.
+	//
+	// Deliberately not `delivered`, and no longer `provider_accepted`: the message is
+	// queued here and transmitted later by the dispatcher, which retries and can park. What
+	// became of it is the delivery's own answer and changes as the dispatcher learns more.
+	Queued bool `json:"queued"`
 
 	// Sendable Whether this installation has an outbound relay and a link origin configured. False
 	// means nothing was attempted — the link exists and must be passed on by hand.
@@ -19883,6 +20095,29 @@ type ConnectorAppRedirectUri struct {
 // ConnectorAppRedirectUriPurpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
 // None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
 type ConnectorAppRedirectUriPurpose string
+
+// ConnectorContextTag The one existing word every record this connector creates is filed under, so
+// "which records came in from this source" has an answer. Absent when the operator
+// chose none, which is the honest default rather than a guess.
+//
+// The connector is the batch, not a sync window: a mailbox polls forever, and a word
+// per window would mint one nobody chose, growing without bound. The other half of
+// the question — "in this period" — is answered by the record's own `created_at`
+// and needs no word at all.
+type ConnectorContextTag struct {
+	// Archived The chosen word has since been archived. The connector then files NOTHING —
+	// an archived word is one the workspace retired, and applying it anyway would
+	// keep a retired vocabulary alive from a setting nobody looks at.
+	//
+	// Said here rather than left silent, because the alternative is a connector that
+	// quietly stopped filing and an operator with no way to see why. Choose another
+	// word, or clear it.
+	Archived bool                `json:"archived"`
+	Id       *openapi_types.UUID `json:"id,omitempty"`
+
+	// Name The word as the vocabulary spells it today, so a reader need not resolve the id.
+	Name *string `json:"name,omitempty"`
+}
 
 // ConsentEvent An append-only proof row (Art. 7 demonstrability). Never updated or deleted.
 type ConsentEvent struct {
@@ -21285,7 +21520,10 @@ type DealRoom struct {
 	// ExpiresAt When buyer access lapses on its own. Extending is an explicit human act.
 	ExpiresAt *time.Time         `json:"expires_at,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
-	Source    string             `json:"source"`
+
+	// PreviewAvailable Whether THIS caller may open the buyer preview of THIS room — the same question `POST /deal-rooms/{id}/preview` answers, computed here so a screen can say no before the press rather than after it. Four things must hold, and a plain `writable` would answer only one: the caller holds `update` on deal rooms, is a person rather than an agent (a preview is a seat's own view, and a system caller has no seat to preview from), the underlying deal is writable AND live, and the room is not archived. False is not "this room is broken" — it is the ordinary reading for a colleague who may read the room and not present it.
+	PreviewAvailable *bool  `json:"preview_available,omitempty"`
+	Source           string `json:"source"`
 
 	// State Where the room stands. A room is created `live`, and `live` and `closed` are
 	// the two that serve a buyer. `draft`, `building`, `ready` and `publishing` are
@@ -24351,7 +24589,7 @@ type MeResponse struct {
 
 	// Authorization What this principal may do, as the server itself computed it — never a client-side re-derivation from role keys, which drifts the moment an installation's stored grants differ from the compiled-in defaults.
 	// Two independent axes, both of which must permit an action: the licensing seat ceiling (A62/ADR-0047), checked BEFORE RBAC and clamped on HTTP method, and the object grants. A client that collapses them into one predicate will be wrong in both directions.
-	// This is a snapshot, not an authority. A role change does not revoke live sessions, so a client refetches on window focus and after any 403, and treats the server's answer as the only one that counts. It does NOT express row scope, nor the human-principal and admin-role gates some routes carry independently of any grant — a permitted grant here is necessary, never sufficient.
+	// This is a snapshot, not an authority. A role change does not revoke live sessions, so a client refetches on window focus and after any 403, and treats the server's answer as the only one that counts. It does not express the human-principal gate, nor the few routes that still key on the literal admin role independently of any grant — a permitted grant here is necessary, never sufficient.
 	Authorization *Authorization `json:"authorization,omitempty"`
 
 	// DataResetAvailable True when this installation armed `operations.allow_data_reset` in its deployment file. It is the SAME value `POST /admin/reset-data` gates on, so a client never renders an action for a route that would answer 404. Absent or false means the capability does not exist here — the compiled default in every posture, dev included.
@@ -24371,6 +24609,12 @@ type MeResponse struct {
 
 	// Roles Effective role keys for this principal, and the one authority for them — `user.roles` is deliberately left unset here rather than repeating the same fact.
 	Roles []string `json:"roles"`
+
+	// SettingsAvailability Which settings surfaces EXIST in this installation, independently of whether this caller may read them. A surface can be absent for two unrelated reasons — the installation never enabled it, or this caller holds no grant on it — and settings navigation has to tell them apart: the first is not a destination at all, the second is a destination that explains itself.
+	// Deployment facts only, never per-caller ones. Nothing here narrows with a role, so it discloses no more than the deployment file already tells every seat. A caller capability belongs beside `admin_password_link` instead, which folds the caller's role into its answer for exactly that reason.
+	// Carried on `/me` so navigation, the command palette, settings home and settings search can resolve from ONE cached snapshot. Each of those surfaces has to agree about which pages exist, and a screen-specific probe alongside them is how they came to disagree: the rail asked, the palette did not, and a page appeared in one and not the other.
+	// The whole object is optional, and a client that cannot read it should treat every surface here as unavailable — the fail-closed direction hides a page that exists rather than offering one that does not.
+	SettingsAvailability *SettingsAvailability `json:"settings_availability,omitempty"`
 
 	// SystemOfRecord The installation's active system-of-record mode (overlay_mode.sor_mode). `native` is the
 	// default and full-capability mode. In `overlay` mode the data is served from a read-only
@@ -30641,6 +30885,28 @@ type SendAuthorizationPreviewRecipient struct {
 	// Basis The lawful ground an allow would rest on.
 	Basis *string `json:"basis,omitempty"`
 
+	// CanBeOverruled Whether a person may lift this refusal by recording why they are writing.
+	//
+	// It needs BOTH halves of a question the engine keeps on two axes, which is why it
+	// is answered here rather than derived. `decided_by` says whose decision it is, and
+	// an absolute reason says no rollout mode softens it — and the two disagree: a hard
+	// bounce, a rolling frequency cap, an unresolvable recipient and an unconfirmed
+	// opt-in are all the engine's own reading (`machine`) AND absolute. A surface that
+	// offered an override on those would render a button that cannot achieve what it
+	// promises, and the rep would type a justification the staging gate then ignores.
+	CanBeOverruled *bool `json:"can_be_overruled,omitempty"`
+
+	// DecidedBy Whose decision this answer is, which is what says whether anybody may overrule
+	// it. `machine` is the engine reading an incomplete record and a rep who knows
+	// better may say so. `subject` is the person's own act — an objection or a
+	// withdrawal — and nobody in the installation lifts it, admin included.
+	//
+	// It is sent rather than derived because the rule lives in Go
+	// (`commsauthz.LevelForReason`), and a surface that mapped reason codes to
+	// liftability itself would be a second copy of that rule. The copy that stopped
+	// matching would offer a rep a button that cannot lawfully be pressed.
+	DecidedBy *SendAuthorizationPreviewRecipientDecidedBy `json:"decided_by,omitempty"`
+
 	// Mode How much authority the engine's answer carries for this category on this
 	// installation. Under `observe` a `deny` here still sends, and a composer that
 	// showed it as a refusal would be describing a rollout position as a rule.
@@ -30658,7 +30924,28 @@ type SendAuthorizationPreviewRecipient struct {
 	// Verdict `allow` would send. `deny` would refuse. `review` is not a soft allow — it means
 	// the record does not carry this message on its own and names what is missing.
 	Verdict SendAuthorizationPreviewRecipientVerdict `json:"verdict"`
+
+	// WouldRefuse Whether this answer actually STOPS the message on this installation. Not the same
+	// question as the verdict, and the only one a surface should draw a refusal from.
+	//
+	// Three things decide it and the engine already weighs them together: the verdict,
+	// the rollout mode for the resolved category, and whether the reason is one no mode
+	// may soften. Under `observe` a `deny` is recorded and the send still goes, so a
+	// composer reading the verdict alone would show a rollout position as a rule and
+	// talk a rep out of a message that would have gone.
+	WouldRefuse *bool `json:"would_refuse,omitempty"`
 }
+
+// SendAuthorizationPreviewRecipientDecidedBy Whose decision this answer is, which is what says whether anybody may overrule
+// it. `machine` is the engine reading an incomplete record and a rep who knows
+// better may say so. `subject` is the person's own act — an objection or a
+// withdrawal — and nobody in the installation lifts it, admin included.
+//
+// It is sent rather than derived because the rule lives in Go
+// (`commsauthz.LevelForReason`), and a surface that mapped reason codes to
+// liftability itself would be a second copy of that rule. The copy that stopped
+// matching would offer a rep a button that cannot lawfully be pressed.
+type SendAuthorizationPreviewRecipientDecidedBy string
 
 // SendAuthorizationPreviewRecipientMode How much authority the engine's answer carries for this category on this
 // installation. Under `observe` a `deny` here still sends, and a composer that
@@ -30998,6 +31285,17 @@ type SetBlockedDomainRequest struct {
 // SetBlockedDomainRequestAdmission defines model for SetBlockedDomainRequest.Admission.
 type SetBlockedDomainRequestAdmission string
 
+// SetConnectorContextTagRequest The word this connector files what it captures under.
+type SetConnectorContextTagRequest struct {
+	// TagId An EXISTING tag, refused with 422 when it names one the vocabulary does not
+	// carry or one already archived — the same constraint an import's context tag
+	// takes. Null clears the choice, and the connector then files nothing.
+	//
+	// Validated here, at the moment it is set, rather than when a record lands: a
+	// capture must never fail over a word somebody archived afterwards.
+	TagId *openapi_types.UUID `json:"tag_id"`
+}
+
 // SetDealRoomExpiryRequest defines model for SetDealRoomExpiryRequest.
 type SetDealRoomExpiryRequest struct {
 	// ExpiresAt When buyer access lapses. Null removes the bound entirely, which is why
@@ -31096,6 +31394,15 @@ type SetRoleObjectGrantRequest struct {
 type SetSignatureEnrichmentRequest struct {
 	// Enabled true or false is this mailbox's own answer; null follows the tenant default.
 	Enabled *bool `json:"enabled"`
+}
+
+// SettingsAvailability Which settings surfaces EXIST in this installation, independently of whether this caller may read them. A surface can be absent for two unrelated reasons — the installation never enabled it, or this caller holds no grant on it — and settings navigation has to tell them apart: the first is not a destination at all, the second is a destination that explains itself.
+// Deployment facts only, never per-caller ones. Nothing here narrows with a role, so it discloses no more than the deployment file already tells every seat. A caller capability belongs beside `admin_password_link` instead, which folds the caller's role into its answer for exactly that reason.
+// Carried on `/me` so navigation, the command palette, settings home and settings search can resolve from ONE cached snapshot. Each of those surfaces has to agree about which pages exist, and a screen-specific probe alongside them is how they came to disagree: the rail asked, the palette did not, and a page appeared in one and not the other.
+// The whole object is optional, and a client that cannot read it should treat every surface here as unavailable — the fail-closed direction hides a page that exists rather than offering one that does not.
+type SettingsAvailability struct {
+	// CompanyContext True when the installation's company-context rollout has typed reads active — the same predicate `GET /company-context/capabilities` reports as `read_enabled`, and the same one its own endpoints gate on. False leaves the Company page to the installation and currency settings beside it.
+	CompanyContext bool `json:"company_context"`
 }
 
 // ShareCaptureHoldHistoryResponse defines model for ShareCaptureHoldHistoryResponse.
@@ -31725,11 +32032,26 @@ type TeamWeeklyRepFocusKind string
 
 // TeamWeeklyReview One team's week, as it was measured when the week closed.
 type TeamWeeklyReview struct {
-	AsOf           time.Time          `json:"as_of"`
-	Counts         TeamWeeklyCounts   `json:"counts"`
-	GeneratedAt    time.Time          `json:"generated_at"`
-	Id             openapi_types.UUID `json:"id"`
-	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+	// Agenda The Monday agenda: every id in `reps`, permuted into the order a lead should raise
+	// them. Derived on read from the same focus ranking that picked each rep's
+	// `focus_kind` — a rep who ASKED for help first, a quiet week last — so the meeting
+	// takes the week in the order the review already decided, rather than alphabetically.
+	//
+	// An ORDER over `reps` rather than a second list of them. The items are the reps'
+	// own focuses and are already on the wire; publishing them again would be one agenda
+	// spelled twice, and the two would eventually disagree. A client renders `reps` in
+	// this order and has the whole agenda.
+	//
+	// As many items as there are members, never a fixed count: a week with two things
+	// worth discussing is a two-item meeting, and padding it to a layout's number would
+	// be inventing an item. Empty exactly when `reps` is — a team whose week could not be
+	// read has no agenda, which a client says rather than drawing an empty list.
+	Agenda         []openapi_types.UUID `json:"agenda"`
+	AsOf           time.Time            `json:"as_of"`
+	Counts         TeamWeeklyCounts     `json:"counts"`
+	GeneratedAt    time.Time            `json:"generated_at"`
+	Id             openapi_types.UUID   `json:"id"`
+	LocalWeekStart openapi_types.Date   `json:"local_week_start"`
 
 	// Pipeline What the team's week did to the pipeline. ABSENT when any member's week could not
 	// be converted — summing only the ones that did would be a confident number quietly
@@ -31737,7 +32059,8 @@ type TeamWeeklyReview struct {
 	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
 
 	// Reps Who was on the team that week — the frozen membership, which a join against the
-	// live team could never answer.
+	// live team could never answer. Ordered by name, because that is what a membership
+	// list is read as; the order a MEETING takes them in is `agenda`.
 	Reps []TeamWeeklyRep `json:"reps"`
 
 	// RepsUnread Members whose week could not be read at all. Zero is the claim that every member's
@@ -33506,12 +33829,108 @@ type WorklistDealFacts struct {
 	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
 
 	// ExpectedMinorBase The deal amount converted to the base currency, NOT weighted by win_probability. Null when the amount or the conversion rate is unknown.
-	ExpectedMinorBase *int64              `json:"expected_minor_base,omitempty"`
-	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
-	QuietDays         *int                `json:"quiet_days,omitempty"`
-	StageId           *openapi_types.UUID `json:"stage_id,omitempty"`
-	WinProbability    *int                `json:"win_probability,omitempty"`
+	ExpectedMinorBase *int64 `json:"expected_minor_base,omitempty"`
+
+	// NoChampion `true` when the account has a buying committee and nobody engaged on it holds
+	// the champion seat — a deal drifting because nobody INSIDE is arguing for it,
+	// which needs a different move from the rep than a deal nobody outside has touched.
+	//
+	// Null is not `false`. It is sent only when the answer is both known and negative,
+	// and stays absent in the three cases that would otherwise be rounded down to a
+	// finding: a committee the caller may not read in full (a champion they cannot see
+	// is still a champion), a deal carrying no seats at all (no committee, so no gap),
+	// and a server that does not assess coverage. A client MUST NOT render an absent
+	// value as "nobody is carrying this".
+	NoChampion     *bool               `json:"no_champion,omitempty"`
+	OwnerId        *openapi_types.UUID `json:"owner_id,omitempty"`
+	QuietDays      *int                `json:"quiet_days,omitempty"`
+	StageId        *openapi_types.UUID `json:"stage_id,omitempty"`
+	WinProbability *int                `json:"win_probability,omitempty"`
 }
+
+// WorklistDealVerdict How the deal behind a row is STANDING, beside the move that acts on it.
+//
+// The move says what to do; this says what the reader is walking into. A row
+// that names a step without saying whether the deal is alive asks the reader to
+// open the deal page to find out, which is the hand-off the queue exists to
+// remove.
+//
+// NOTHING IS DECIDED HERE. compose/dealstatus already wrote a standing per deal
+// and cached it per reader; this carries that answer onto the row. A deal with
+// no cached card carries no verdict, and its row says what it said before.
+//
+// `source` is what the reader is being shown, and a client's copy turns on it:
+// a deterministic rule stated as a belief is a lie about where the sentence came
+// from.
+type WorklistDealVerdict struct {
+	// AsOf When the reading behind this line was taken, so a stale one can be told from
+	// a fresh one.
+	AsOf *time.Time `json:"as_of,omitempty"`
+
+	// Line One sentence saying what the standing rests on, already written and already
+	// cited when it was written.
+	//
+	// Never composed here from parts. A line assembled on this side would be a
+	// second author of the same judgement, in one language, over facts this pass
+	// did not gather.
+	Line string `json:"line"`
+
+	// Source Where the line came from, so a client never presents one reading as the other.
+	//
+	// `deal_status` — the deal's own cached card, model-written and evidence-cited.
+	// `brief_finding` — the night's brief item for this deal, grounded and
+	// evidence-validated, used when no card is cached.
+	//
+	// Both are READINGS, and there is deliberately no third member for the
+	// deterministic case. A row with no reading carries no verdict at all: its
+	// typed `because` reasons are the deterministic explanation, they are already
+	// on every row, and a client draws them under their own heading rather than
+	// under this one.
+	Source WorklistDealVerdictSource `json:"source"`
+
+	// Standing `live` — moving, with a next step both sides expect.
+	// `drifting` — nothing wrong, nothing happening; it dies of neglect.
+	// `blocked` — something specific is in the way.
+	// `cold` — long silence after real engagement.
+	//
+	// The same four the deal page's own verdict carries, because they ARE that
+	// verdict. Held by backend/gates/worklistverdictstandings_test.go, which
+	// derives this set from DealStatusCardVerdict's description rather than
+	// keeping a second list of them.
+	//
+	// ABSENT on a `brief_finding` line, which is prose about the deal and not one
+	// of these four calls. A word invented for it would be the queue deciding a
+	// judgement the deal card owns.
+	Standing *WorklistDealVerdictStanding `json:"standing,omitempty"`
+}
+
+// WorklistDealVerdictSource Where the line came from, so a client never presents one reading as the other.
+//
+// `deal_status` — the deal's own cached card, model-written and evidence-cited.
+// `brief_finding` — the night's brief item for this deal, grounded and
+// evidence-validated, used when no card is cached.
+//
+// Both are READINGS, and there is deliberately no third member for the
+// deterministic case. A row with no reading carries no verdict at all: its
+// typed `because` reasons are the deterministic explanation, they are already
+// on every row, and a client draws them under their own heading rather than
+// under this one.
+type WorklistDealVerdictSource string
+
+// WorklistDealVerdictStanding `live` — moving, with a next step both sides expect.
+// `drifting` — nothing wrong, nothing happening; it dies of neglect.
+// `blocked` — something specific is in the way.
+// `cold` — long silence after real engagement.
+//
+// The same four the deal page's own verdict carries, because they ARE that
+// verdict. Held by backend/gates/worklistverdictstandings_test.go, which
+// derives this set from DealStatusCardVerdict's description rather than
+// keeping a second list of them.
+//
+// ABSENT on a `brief_finding` line, which is prose about the deal and not one
+// of these four calls. A word invented for it would be the queue deciding a
+// judgement the deal card owns.
+type WorklistDealVerdictStanding string
 
 // WorklistItem One thing to do, with the reason it sits where it sits.
 //
@@ -33556,6 +33975,33 @@ type WorklistItem struct {
 	// Because The facts that put this item at this level, in the order they were weighed.
 	Because []WorklistReason `json:"because"`
 
+	// BriefItemId The overnight brief entry this row also stands for, where the night
+	// surfaced the same deal the day's own lanes did.
+	//
+	// One deal is ONE row. The brief ranks deals and the at-risk lane raises
+	// them, so a deal the night picked and the day also found arrived twice —
+	// the same name, the same figures, two places to answer it. The rows are
+	// folded into one, and this carries the brief entry's id so the verbs that
+	// belong to the brief (`/brief/items/{id}/act`, and its set-aside and
+	// dismiss) still reach it. Absent on a row the night did not raise.
+	BriefItemId *openapi_types.UUID `json:"brief_item_id,omitempty"`
+
+	// BriefSection Which part of the morning this row belongs to, as a LABEL and never as an
+	// order.
+	//
+	// The server has already ranked the page, and this says nothing about where a
+	// row sits. A client may draw the label, and may group runs of consecutive
+	// rows that share it — but partitioning the page by this field and
+	// concatenating the parts would be a second ranking, and the two would
+	// disagree the first time a `respond_now` row ranked below a `move_revenue`
+	// one, which is ordinary and correct.
+	//
+	// Derived on the server from the row's own category, source and band, so
+	// every surface reads one answer. Exhaustive over the categories:
+	// `backend/internal/compose/attention/briefsections.go` names every one, and
+	// a gate derives that census from the generated contract.
+	BriefSection *WorklistItemBriefSection `json:"brief_section,omitempty"`
+
 	// Category The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
 	Category WorklistItemCategory `json:"category"`
 
@@ -33570,6 +34016,21 @@ type WorklistItem struct {
 	// failures of one thing into one row. Opaque identity, never rendered and never
 	// parsed. Absent on a row that reports no shared condition.
 	CauseRef *string `json:"cause_ref,omitempty"`
+
+	// ChangedSinceBrief Whether the thing this row reports happened AFTER the overnight run's data
+	// cutoff — the run's `as_of`, not its `generated_at`, which is only when the
+	// row was written.
+	//
+	// The distinction is the whole of this field's value: a run generated at 06:42
+	// over data read at 06:00 has a 42-minute window in which a buyer can reply,
+	// and comparing against the wrong instant either hides that reply or reports
+	// every row as new. Stamped from the material timestamp each producer already
+	// owns rather than from one generic `occurred_at`, so the browser never guesses
+	// freshness.
+	//
+	// Absent when there is no run today to compare against, which is different from
+	// false: false says the night saw this, absent says there was no night.
+	ChangedSinceBrief *bool `json:"changed_since_brief,omitempty"`
 
 	// Consequence What happens if the reader does nothing. Derived per ITEM rather than per
 	// source, because one source has several honest answers: a deal past its close
@@ -33725,6 +34186,36 @@ type WorklistItem struct {
 
 	// Title The server's own sentence for this item, where it has one.
 	Title *string `json:"title,omitempty"`
+
+	// Verdict How the deal behind a row is STANDING, beside the move that acts on it.
+	//
+	// The move says what to do; this says what the reader is walking into. A row
+	// that names a step without saying whether the deal is alive asks the reader to
+	// open the deal page to find out, which is the hand-off the queue exists to
+	// remove.
+	//
+	// NOTHING IS DECIDED HERE. compose/dealstatus already wrote a standing per deal
+	// and cached it per reader; this carries that answer onto the row. A deal with
+	// no cached card carries no verdict, and its row says what it said before.
+	//
+	// `source` is what the reader is being shown, and a client's copy turns on it:
+	// a deterministic rule stated as a belief is a lie about where the sentence came
+	// from.
+	Verdict *WorklistDealVerdict `json:"verdict,omitempty"`
+
+	// WithPerson Whose record a `meeting` row's brief is read on, carried out from
+	// `AttentionItem.with_person`.
+	//
+	// Sent only for `source: meeting`, and only where the meeting names a person
+	// this caller may see. It is not the row's SUBJECT — the row is about the
+	// appointment — and it exists because the brief is not a page of its own: it
+	// opens as `?prep=<activity>` on a person's record, so the address needs both
+	// ids and the subject carries only one.
+	//
+	// A client MUST NOT draw a way into the brief without it. Absent means there is
+	// no page to read this brief on, which an internal meeting and a meeting whose
+	// attendees are all withheld both produce, and both mean the same thing here.
+	WithPerson *openapi_types.UUID `json:"with_person,omitempty"`
 }
 
 // WorklistItemActions defines model for WorklistItem.Actions.
@@ -33740,6 +34231,22 @@ type WorklistItemActions string
 // the queue arrives already sorted, and every row of one band is contiguous. A client
 // draws a heading when the band changes and never re-sorts.
 type WorklistItemBand string
+
+// WorklistItemBriefSection Which part of the morning this row belongs to, as a LABEL and never as an
+// order.
+//
+// The server has already ranked the page, and this says nothing about where a
+// row sits. A client may draw the label, and may group runs of consecutive
+// rows that share it — but partitioning the page by this field and
+// concatenating the parts would be a second ranking, and the two would
+// disagree the first time a `respond_now` row ranked below a `move_revenue`
+// one, which is ordinary and correct.
+//
+// Derived on the server from the row's own category, source and band, so
+// every surface reads one answer. Exhaustive over the categories:
+// `backend/internal/compose/attention/briefsections.go` names every one, and
+// a gate derives that census from the generated contract.
+type WorklistItemBriefSection string
 
 // WorklistItemCategory The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
 type WorklistItemCategory string
@@ -34112,6 +34619,15 @@ type WorklistValue struct {
 
 	// Minor Money in minor units of `currency`.
 	Minor *int64 `json:"minor,omitempty"`
+
+	// Score A ranking judgement between 0 and 1 — today, the overnight brief's composite
+	// for a deal.
+	//
+	// Drawn as a BAND rather than as a number. The value orders the queue, and a
+	// client printing "0.72 against 0.68" would be offering a precision the score
+	// does not carry and a reader cannot check; the same two rows read honestly as
+	// "the night rated this one higher".
+	Score *float32 `json:"score,omitempty"`
 }
 
 // WorklistValueKind defines model for WorklistValue.Kind.
@@ -37342,6 +37858,19 @@ type IssueDoubleOptInJSONBody struct {
 	PurposeId openapi_types.UUID `json:"purpose_id"`
 }
 
+// SuppressPersonJSONBody defines parameters for SuppressPerson.
+type SuppressPersonJSONBody struct {
+	// Kind Which stop this is. Only the subject's own request is recordable by hand.
+	Kind SuppressPersonJSONBodyKind `json:"kind"`
+
+	// Reason What the person was told, in their words. Stored because a suppression somebody
+	// later asks to lift is only reviewable if the record says why it was made.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// SuppressPersonJSONBodyKind defines parameters for SuppressPerson.
+type SuppressPersonJSONBodyKind string
+
 // DraftPersonEmailJSONBody defines parameters for DraftPersonEmail.
 type DraftPersonEmailJSONBody struct {
 	// Intent Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence.
@@ -39089,6 +39618,9 @@ type PreviewConnectorBackfillJSONRequestBody = BackfillPreviewRequest
 // ConnectConnectorJSONRequestBody defines body for ConnectConnector for application/json ContentType.
 type ConnectConnectorJSONRequestBody = ConnectConnectorRequest
 
+// SetConnectorContextTagJSONRequestBody defines body for SetConnectorContextTag for application/json ContentType.
+type SetConnectorContextTagJSONRequestBody = SetConnectorContextTagRequest
+
 // SetConnectorMailPostureJSONRequestBody defines body for SetConnectorMailPosture for application/json ContentType.
 type SetConnectorMailPostureJSONRequestBody = SetMailPostureRequest
 
@@ -39388,6 +39920,9 @@ type IssueDoubleOptInJSONRequestBody IssueDoubleOptInJSONBody
 
 // RecordQualifyingEventJSONRequestBody defines body for RecordQualifyingEvent for application/json ContentType.
 type RecordQualifyingEventJSONRequestBody = RecordQualifyingEventRequest
+
+// SuppressPersonJSONRequestBody defines body for SuppressPerson for application/json ContentType.
+type SuppressPersonJSONRequestBody SuppressPersonJSONBody
 
 // DraftPersonEmailJSONRequestBody defines body for DraftPersonEmail for application/json ContentType.
 type DraftPersonEmailJSONRequestBody DraftPersonEmailJSONBody
@@ -41991,6 +42526,14 @@ func (a *DealRoom) UnmarshalJSON(b []byte) error {
 		delete(object, "id")
 	}
 
+	if raw, found := object["preview_available"]; found {
+		err = json.Unmarshal(raw, &a.PreviewAvailable)
+		if err != nil {
+			return fmt.Errorf("error reading 'preview_available': %w", err)
+		}
+		delete(object, "preview_available")
+	}
+
 	if raw, found := object["source"]; found {
 		err = json.Unmarshal(raw, &a.Source)
 		if err != nil {
@@ -42105,6 +42648,13 @@ func (a DealRoom) MarshalJSON() ([]byte, error) {
 	object["id"], err = json.Marshal(a.Id)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'id': %w", err)
+	}
+
+	if a.PreviewAvailable != nil {
+		object["preview_available"], err = json.Marshal(a.PreviewAvailable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'preview_available': %w", err)
+		}
 	}
 
 	object["source"], err = json.Marshal(a.Source)
@@ -47854,6 +48404,9 @@ type ServerInterface interface {
 	// Connect (or re-authorize) the calling user's mail/calendar for capture.
 	// (POST /connectors/{provider}/connect)
 	ConnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	// Set the word this connector files what it captures under.
+	// (PUT /connectors/{provider}/context-tag)
+	SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
 	// Disconnect the calling user's mail/calendar capture.
 	// (POST /connectors/{provider}/disconnect)
 	DisconnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
@@ -48622,6 +49175,9 @@ type ServerInterface interface {
 	// Record the exchange that makes business correspondence lawful.
 	// (POST /people/{id}/consent/qualifying-events)
 	RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id)
+	// Record that this person asked us to stop writing to them.
+	// (POST /people/{id}/consent/suppress)
+	SuppressPerson(w http.ResponseWriter, r *http.Request, id Id)
 	// Draft an email to this person, grounded in their record.
 	// (POST /people/{id}/draft-email)
 	DraftPersonEmail(w http.ResponseWriter, r *http.Request, id Id)
@@ -50080,6 +50636,12 @@ func (_ Unimplemented) ConnectorOAuthCallback(w http.ResponseWriter, r *http.Req
 // Connect (or re-authorize) the calling user's mail/calendar for capture.
 // (POST /connectors/{provider}/connect)
 func (_ Unimplemented) ConnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set the word this connector files what it captures under.
+// (PUT /connectors/{provider}/context-tag)
+func (_ Unimplemented) SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -51616,6 +52178,12 @@ func (_ Unimplemented) GetPersonConsentGuard(w http.ResponseWriter, r *http.Requ
 // Record the exchange that makes business correspondence lawful.
 // (POST /people/{id}/consent/qualifying-events)
 func (_ Unimplemented) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record that this person asked us to stop writing to them.
+// (POST /people/{id}/consent/suppress)
+func (_ Unimplemented) SuppressPerson(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58171,6 +58739,38 @@ func (siw *ServerInterfaceWrapper) ConnectConnector(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ConnectConnector(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetConnectorContextTag operation middleware
+func (siw *ServerInterfaceWrapper) SetConnectorContextTag(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider CaptureProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetConnectorContextTag(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -69776,6 +70376,38 @@ func (siw *ServerInterfaceWrapper) RecordQualifyingEvent(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// SuppressPerson operation middleware
+func (siw *ServerInterfaceWrapper) SuppressPerson(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SuppressPerson(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DraftPersonEmail operation middleware
 func (siw *ServerInterfaceWrapper) DraftPersonEmail(w http.ResponseWriter, r *http.Request) {
 
@@ -78479,6 +79111,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/connectors/{provider}/connect", wrapper.ConnectConnector)
 	})
 	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/connectors/{provider}/context-tag", wrapper.SetConnectorContextTag)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/connectors/{provider}/disconnect", wrapper.DisconnectConnector)
 	})
 	r.Group(func(r chi.Router) {
@@ -79245,6 +79880,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/consent/qualifying-events", wrapper.RecordQualifyingEvent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/people/{id}/consent/suppress", wrapper.SuppressPerson)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/draft-email", wrapper.DraftPersonEmail)

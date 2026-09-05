@@ -142,10 +142,13 @@ func oneOffChildOpts(childKind string) *river.InsertOpts {
 // enqueue lands on the same pool the scheduled tick uses instead of a queue the
 // caller happened to name.
 //
-// No attempt cap, because a caller-owned kind declares none: max_attempts is
-// contract-declared only for a fan-out child, whose cap the fan-out is
-// responsible for setting. Passing one here would publish a number the
-// declaration does not carry.
+// The attempt cap is periodicPassMaxAttempts, the same one the CLOCK gives
+// this kind: a collapsed pass enqueued by a trigger is the identical pass the
+// tick enqueues, and the two doors already dedupe against each other, so a
+// trigger-queued row riding a different ladder from a scheduled one would be
+// the same pass behaving two ways depending on which door it came through. It
+// is not read off the declaration because a caller-owned kind publishes no
+// max_attempts — api/jobs.yaml refuses a number nothing applies.
 //
 // No sweep tag, for the reason oneOffChildOpts gives: the tag marks a row as
 // one workspace's share of a fleet pass, and the gauges count tagged rows. A
@@ -159,7 +162,7 @@ func oneOffPassOpts(kind string) *river.InsertOpts {
 	if spec.OptsOwner != jobs.OptsCaller {
 		panic("compose: " + kind + " declares an opts_owner other than caller, so its queue is not this helper's to set")
 	}
-	return &river.InsertOpts{Queue: spec.Queue}
+	return &river.InsertOpts{Queue: spec.Queue, MaxAttempts: periodicPassMaxAttempts}
 }
 
 // fanOutChildren is every kind some dispatcher DECLARES it fans out to —

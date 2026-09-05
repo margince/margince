@@ -178,6 +178,18 @@ type NormalizedRecord struct {
 	CapturedBy string // "connector:<name>" — REQUIRED
 	Raw        []byte // re-parseable original → raw jsonb, off the hot path
 
+	// DeliveredTo is the address the RECEIVING infrastructure recorded this
+	// message as delivered to, and empty whenever no such claim could be
+	// trusted. It is how a forwarding alias is discoverable at all: an alias
+	// is never the From of anything the mailbox sends, so the send side cannot
+	// see it.
+	//
+	// A connector fills this only from a header position a sender could not
+	// have authored — mailmap.TopDeliveredTo is that decision, made once. An
+	// empty value is the safe answer and the common one; a connector that
+	// cannot make the judgement leaves it empty rather than guessing.
+	DeliveredTo string
+
 	// Counterparty is the human on the other side of a captured message —
 	// the auto-create pipeline's input (ADR-0063). Zero for records that
 	// carry no counterparty (a lead import, a system activity); the

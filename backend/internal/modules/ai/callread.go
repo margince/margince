@@ -130,7 +130,7 @@ func (s *CallReadStore) ListCalls(
 	limit *int,
 	task *string,
 ) (CallPage, error) {
-	if err := auth.Require(ctx, "automation", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
 		return CallPage{}, err
 	}
 	n := storekit.ClampLimit(limit)
@@ -219,7 +219,7 @@ func scanCallDetail(row rowScanner) (CallDetail, ids.UUID, error) {
 // GetCall returns a terminal call and its complete attempt ladder. RLS
 // makes a missing and a foreign-workspace identifier indistinguishable.
 func (s *CallReadStore) GetCall(ctx context.Context, id ids.UUID) (CallDetail, error) {
-	if err := auth.Require(ctx, "automation", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
 		return CallDetail{}, err
 	}
 	var detail CallDetail

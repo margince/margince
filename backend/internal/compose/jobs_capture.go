@@ -91,7 +91,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// message, in the same transaction as the activity; this role only needs
 	// the worker registered.
 	if cfg.SendRegistry != nil {
-		addDeclaredWorker[SendEmailArgs](reg, newSendWorker(pool, cfg.SendRegistry, cfg.SendPacing, cfg.SendBlob))
+		addDeclaredWorker[SendEmailArgs](reg, newSendWorker(pool, cfg.SendRegistry, cfg.SendPacing, cfg.SendBlob, cfg.ControllerRelay, cfg.ControllerVault))
 		// The alarm for a message a rep chose to send later. Firing one creates
 		// its delivery and its dispatch job, so it registers only where that
 		// machinery exists — a role that cannot send cannot fire either.
@@ -253,6 +253,33 @@ func (CaptureSyncArgs) Kind() string { return "capture_sync" }
 
 // WorkspaceID binds this connection's sync to its tenant (jobs.WorkspaceScoped).
 func (a CaptureSyncArgs) WorkspaceID() ids.UUID { return a.Workspace }
+
+// pushSyncOpts is what a PROVIDER PUSH enqueues one connection's sync with —
+// one helper for both push lanes, because the two carried the same literal and
+// the same paragraph explaining it, which is two writers of one rule.
+//
+// It is not oneOffChildOpts: that helper drops active-state uniqueness because
+// its event's whole claim is that new rows landed and a running pass may have
+// read the mailbox before they did. A push says the same thing, but a mailbox
+// sync is a full incremental pull whose cursor advances only at the end, so a
+// second one racing the first re-fetches the same mail rather than reaching
+// anything the first missed — the running pass will see it.
+//
+// river's default uniqueness window includes completed jobs; activeSweepStates
+// deliberately excludes them, so this must stay exactly as-is — dropping
+// ByState would suppress a legitimate re-sync any time the prior one had
+// finished.
+//
+// The attempt cap comes off the declaration rather than being written here, so
+// api/jobs.yaml's number is the one a push actually runs at: capture_sync
+// publishes River's own 25 with the reason it is right there — the worker
+// records its own failure and returns nil, so the ladder is walked only for a
+// fault the sidecar's backoff does not own.
+func pushSyncOpts() *river.InsertOpts {
+	opts := oneOffChildOpts(CaptureSyncArgs{}.Kind())
+	opts.UniqueOpts = river.UniqueOpts{ByArgs: true, ByState: activeSweepStates}
+	return opts
+}
 
 // captureSyncWorker runs one SyncOnce under the connection's workspace. A
 // sync failure returns nil after the registry has recorded it: the sidecar's

@@ -334,29 +334,6 @@ no running stack — but it does need the browser: \`pnpm exec playwright instal
     || unreported=1
 fi
 
-if [[ "${MAIN_DCO_RESULT:-}" = "failure" ]]; then
-  report "main carries a commit with no Signed-off-by" bug \
-"The \`dco (main)\` job failed on the two-hourly health check: $RUN_URL
-
-The \`dco\` job in \`ci.yml\` runs PR-side, over the branch's own commits. \`main\`
-takes the SQUASH, whose message GitHub composes from the pull request — so the
-two are not the same text, and once the branch is deleted the check is attached
-to a ref that no longer exists. An unsigned commit on \`main\` is invisible FROM
-\`main\`, which is why this job exists.
-
-It is filed as a bug rather than a chore because a missing trailer is the
-licence model's provenance obligation, not a style rule, and because the repair
-is not ours: a sign-off is a certification BY THE AUTHOR. Nobody else may add
-one on their behalf. The fix is a follow-up commit from whoever wrote the commit
-this run names.
-
-${MAIN_SUSPECTS:-_no suspect range was computed for this run._}
-
-Reproduce locally with \`./scripts/check-dco.sh <baseline> HEAD\` — the same
-script the PR lane runs, over a range instead of a branch."\
-    || unreported=1
-fi
-
 if [[ "${MAIN_SONAR_RESULT:-}" = "failure" ]]; then
   report "main's SonarCloud analysis was not published" bug \
 "The \`sonarcloud (main)\` job failed on the two-hourly health check, with every
@@ -464,28 +441,31 @@ fi
 # a recurring finding becomes a stale one.
 
 if [[ "${MERGE_VERDICT_RESULT:-}" = "failure" ]]; then
-  report "A merge landed on main without a verdict behind it${MERGE_VERDICT_PR:+ (#$MERGE_VERDICT_PR)}" bug \
-"${MERGE_VERDICT_WHY:-a merge landed on \`main\` without a green required check; the run below says which}
+  # TWO findings, two titles. The judge reports a commit no pull request names
+  # BEFORE any verdict exists, so titling that one "against a failing verdict"
+  # would describe a check that never ran — and the two are told apart by
+  # exactly the thing the title would otherwise name, the pull request number.
+  if [[ -n "${MERGE_VERDICT_PR:-}" ]]; then
+    merge_title="A merge landed on main against a failing verdict (#$MERGE_VERDICT_PR)"
+  else
+    merge_title="A merge landed on main with no pull request behind it"
+  fi
+  report "$merge_title" bug \
+"${MERGE_VERDICT_WHY:-a merge landed on \`main\` whose required check reported an adverse verdict; the run below says which}
 
 Found by the push-time check on \`main\`: $RUN_URL
 
-**This is not an accusation of bad faith, and not a request to remove bypass.**
-There are real cases for it — an infrastructure outage that reds every pull
-request, a revert that has to land now. What there was no case for is the fact
-being invisible: the pull request closes green-looking in the list,
-\`main-health\` is two-hourly and goes on reporting the last green it saw, and
-the next signal anybody gets is somebody else's pull request going red against a
-base they did not break. That is how #2504's four merges were found — twice,
-independently, each finder spending a rebase and a full local lane to rule their
-own diff out.
+**This is not about the bypass.** Merging past \`ci\` is a standing decision here
+and this alarm says nothing about it — a verdict that was merely ABSENT at merge
+time is not reported at all. What is reported is a verdict that came back and was
+BAD: the tree now on \`main\` does not pass its own required check, or no pull
+request names the commit at all.
 
-**What to do with this issue.** If the tree is fine, say why the bypass was
-right and close it; the record is the point. If it is not, \`main\` is red now
-and this issue names the commit, which is roughly two hours earlier than
-\`main-health\` would have.
-
-Prevention is a branch-protection decision (#2496), not something this alarm
-can or should do."\
+**What to do with this issue.** \`main\` is red now, and this issue names the
+commit that made it so — roughly two hours earlier than \`main-health\` would,
+and without the rebase-and-full-local-lane that ruling out your own diff costs.
+Fix forward or revert. If the verdict was wrong rather than the tree, say why and
+close it; the record is the point."\
     || unreported=1
 fi
 

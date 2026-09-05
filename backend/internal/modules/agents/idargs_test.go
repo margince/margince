@@ -240,8 +240,11 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterPipelineTool(r, func(context.Context) ([]Pipeline, error) { return nil, errSeamReached })
 	RegisterReportTool(r, func(context.Context, string, json.RawMessage) (json.RawMessage, error) {
 		return nil, errSeamReached
-	}, probeReportCatalog)
+	}, probeReportCatalog, probeReportPlan)
 	RegisterAnalyticsReportTool(r, func(context.Context, json.RawMessage) (json.RawMessage, error) {
+		return nil, errSeamReached
+	})
+	RegisterAnalyticsQueryTool(r, func(context.Context, json.RawMessage) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
 	RegisterReportBlocksTool(r, NewReportBlocksResource(BlockGrammar{}))

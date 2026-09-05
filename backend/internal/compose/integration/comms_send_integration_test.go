@@ -357,7 +357,7 @@ func (p *preflightEnv) grantMarketingConsent(t *testing.T) {
 		AnyMap{}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("ask the workspace to mail the confirm link → %d", status)
 	}
-	token := p.mail.confirmLinkToken(t)
+	token := confirmLinkToken(t, p.AppEnv)
 	if s := publicCall(t, p.AppEnv, "POST", "/v1/public/confirm/"+token, AnyMap{
 		"marketing_choice":  "granted",
 		"marketing_wording": "Yes, send me occasional product news.",

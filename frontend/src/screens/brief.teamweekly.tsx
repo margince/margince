@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, StatCard } from "../design-system/atoms";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { Select } from "../design-system/select";
 import { StatStrip } from "../design-system/statstrip";
@@ -12,9 +12,8 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { EntityRef } from "./entityref";
+import { AgendaPanel, AgendaSummary } from "./brief.teamweeklyagenda";
 import {
-  type TeamWeeklyFocusKind,
   type TeamWeeklyReview,
   useTeams,
   useTeamWeeklyReview,
@@ -37,21 +36,6 @@ import "./brief.teamweekly.css";
  */
 const HEALTHY_RATE = 0.9;
 const WEAK_RATE = 0.7;
-
-/** Which focus rules are a coaching prompt and which are something to copy. */
-const CELEBRATED: ReadonlySet<TeamWeeklyFocusKind> = new Set([
-  "strong_week",
-  "quiet_week",
-]);
-
-const FOCUS_LABEL: Readonly<Record<TeamWeeklyFocusKind, MessageKey>> = {
-  help_requested: "teamweekly.focus.help_requested",
-  leads_breached: "teamweekly.focus.leads_breached",
-  commitments_missed: "teamweekly.focus.commitments_missed",
-  meetings_without_next_step: "teamweekly.focus.meetings_without_next_step",
-  strong_week: "teamweekly.focus.strong_week",
-  quiet_week: "teamweekly.focus.quiet_week",
-};
 
 /** A rate, or null when nothing was due — zero of zero is not zero per cent. */
 function rate(part: number, whole: number): number | null {
@@ -179,6 +163,7 @@ export function TeamWeeklySection({
             <>
               <PanelBody>
                 <Headline review={review} />
+                <AgendaSummary review={review} />
                 <Coverage review={review} />
               </PanelBody>
               <Scorecard review={review} />
@@ -187,7 +172,7 @@ export function TeamWeeklySection({
           )}
         </SurfaceState>
       </Panel>
-      {review && <CoachPanel review={review} />}
+      {review && <AgendaPanel review={review} />}
     </section>
   );
 }
@@ -369,47 +354,6 @@ function Movement({ review }: Readonly<{ review: TeamWeeklyReview }>) {
         />
       ))}
     </PanelBody>
-  );
-}
-
-/**
- * One row per rep, including the rep whose week went well.
- *
- * A page promising one focus per rep and delivering rows only for the troubled
- * ones reads as a team where only those people exist — which is why the server
- * has positive focus kinds at all.
- */
-function CoachPanel({ review }: Readonly<{ review: TeamWeeklyReview }>) {
-  const t = useT();
-  return (
-    <Panel title={t("teamweekly.coach.title")} sub={t("teamweekly.coach.sub")}>
-      {review.reps.length === 0 && (
-        <PanelBody>
-          <p>{t("teamweekly.coach.empty")}</p>
-        </PanelBody>
-      )}
-      {review.reps.map((rep) => (
-        <PanelRow key={rep.user_id}>
-          <div className="teamweekly-rep">
-            <span className="teamweekly-rep-name">
-              <EntityRef kind="user" id={rep.user_id} name={rep.display_name} />
-            </span>
-            <span className="teamweekly-rep-focus">
-              <Badge
-                quiet
-                tone={CELEBRATED.has(rep.focus_kind) ? "success" : "warn"}
-              >
-                {t(FOCUS_LABEL[rep.focus_kind])}
-              </Badge>
-              {/* Composed by the server from the stored figures, never
-                  model-written, so it cannot say what the snapshot does not
-                  hold. */}
-              <span>{rep.focus_label}</span>
-            </span>
-          </div>
-        </PanelRow>
-      ))}
-    </Panel>
   );
 }
 

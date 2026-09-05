@@ -70,6 +70,18 @@ func (s *Service) WithDealMoves(m DealMoves) *Service {
 	return s
 }
 
+// WithDealStandings binds the reader that puts a deal's already-written standing
+// on its queue row. An option for the reason WithDealMoves is one.
+//
+// Unbound, a deal row still says what to do and still carries its typed reasons;
+// what it loses is the verdict word above them, and the night's brief finding
+// still reaches a row this feed surfaced. dealstanding.go states why the floor
+// is no verdict rather than one this pass computes.
+func (s *Service) WithDealStandings(d DealStandings) *Service {
+	s.dealStandings = d
+	return s
+}
+
 // WithTeammates binds the membership question a team-scoped reader's named-owner
 // ask is decided by. An option for the reason WithWaiting is one.
 //

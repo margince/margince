@@ -66,8 +66,12 @@ func (a DocumentExtractArgs) WorkspaceID() ids.UUID { return a.Workspace }
 // replacement.
 func documentExtractInsertOpts() *river.InsertOpts {
 	return &river.InsertOpts{
-		Queue:      transcriptReadQueue,
-		UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
+		Queue: transcriptReadQueue,
+		// One-off: a rep asked for this document to be read and nothing
+		// re-asks, so the ladder carries the blob-store blip and the malformed
+		// attachment alone — the reading vcardIngestMaxAttempts is sized for.
+		MaxAttempts: oneOffJobMaxAttempts,
+		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 	}
 }
 

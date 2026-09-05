@@ -114,6 +114,7 @@ export function DealCommitteeMap({
   return (
     <Card className="dc-card" title={t("deal.committee.title")}>
       <SurfaceState
+        loadingLabel={t("deal.committee.title")}
         state={state}
         emptyLabel={t("deal.committee.empty")}
         detail={

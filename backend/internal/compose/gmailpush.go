@@ -36,7 +36,6 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
@@ -170,13 +169,7 @@ func handleGmailPush(pool *pgxpool.Pool, inserter *jobs.Runner, log *slog.Logger
 				Workspace:    d.Workspace.UUID,
 				ConnectionID: d.ID.String(),
 				Provider:     "gmail",
-			}, &river.InsertOpts{
-				// river's default uniqueness window includes completed jobs;
-				// activeSweepStates deliberately excludes them, so this must
-				// stay exactly as-is — dropping ByState would suppress a
-				// legitimate re-sync any time the prior one had finished.
-				UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
-			}); err != nil {
+			}, pushSyncOpts()); err != nil {
 				log.ErrorContext(ctx, "gmail push: enqueueing sync", "connection", d.ID.String(), "err", err)
 				return Transient, err
 			}

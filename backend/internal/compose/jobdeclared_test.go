@@ -522,4 +522,6 @@ var argsForKind = map[string]river.JobArgs{
 	IntroExpiryArgs{}.Kind():             IntroExpiryArgs{},
 	ApprovalAutoApplyArgs{}.Kind():       ApprovalAutoApplyArgs{},
 	PrivacyRetentionArgs{}.Kind():        PrivacyRetentionArgs{},
+	ProviderRunSubmitArgs{}.Kind():       ProviderRunSubmitArgs{},
+	TelegramPollArgs{}.Kind():            TelegramPollArgs{},
 }

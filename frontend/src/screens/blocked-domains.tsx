@@ -192,7 +192,10 @@ export function BlockedDomainsCard() {
             label={t("blockedDomains.listTitle")}
             layout="stack"
             control={
-              <QueryGate query={query}>
+              <QueryGate
+                query={query}
+                pendingLabel={t("blockedDomains.listTitle")}
+              >
                 {(list) =>
                   list.data.length === 0 ? (
                     // `empty`, and only `empty`: no decision has been recorded,

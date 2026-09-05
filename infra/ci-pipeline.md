@@ -224,13 +224,12 @@ changes ──┬─> deterministic-gates ──> craftsmanship
           ├─> live-boot                                         │   │
           v                                                     v   v
  deterministic-gates + integration + extension-reference + frontend ──> sonarcloud
-  dco            (independent — runs on merge_group too)
   craft-residue  (every non-draft change, independent)
   secret-scan    (every non-draft change, independent — + the image-pin gate)
 
-  ci  ── the ONE required context. needs: dco, deterministic-gates,
+  ci  ── the ONE required context. needs: deterministic-gates,
          craftsmanship, craft-residue, secret-scan, extension-reference,
-         integration, frontend, license-gate   (nine — vuln, live-boot and uat
+         integration, frontend, license-gate   (eight — vuln, live-boot and uat
          stay advisory and are NOT in the fan-in)
 ```
 
@@ -416,7 +415,6 @@ third-party actions it calls, which would otherwise ride in unread.
 | Job | What it enforces |
 |---|---|
 | `changes` | The scope classifier above (always runs first, on non-draft; its answer is overridden on `merge_group`) |
-| `dco` | Every merging commit carries a Developer Certificate of Origin sign-off (`scripts/check-dco.sh`). Runs on `merge_group` as well as `pull_request`, taking its base/head SHAs from whichever event fired — the queue's are the ones that count, since that is the tree that lands. It cannot be `pull_request`-only: the `ci` aggregate refuses a skip on `merge_group`, so a PR-only job there would stop merging outright, and exempting it would have reopened the skip-as-pass hole for the one gate that proves provenance |
 | `deterministic-gates` | `make check-backend`: build, vet, lint (baseline + new-code strict), arch-lint, unit + root fitness tests (incl. `audit_log` enum coherence + the contract `$ref` pre-flight), generated-drift, and the script gates (craft-doc floor, image pins, contract-breaking, test-lanes, file-length, RLS store-path, jurisdiction isolation, and the `backend/pkg` published-surface freeze). Fetches full history so the diff-scoped gates have a base ref |
 | `extension-reference` | The composed-build lane (ADR-0069): proves the **empty** extension set still composes byte-identically to the committed `composition/` stub, then enables the reference fixture and runs the backend build + unit lane + `check-composition` against the composed workspace, plus every enabled unit's own module lane. Emits its own coverage profile — extension units are separate Go modules, unreachable by the shard profiles |
 | `craftsmanship` | `make craft-static` — strict: BLOCKER **and** MAJOR findings fail it, MINOR is advisory. Runs **after** `deterministic-gates` — a red build is never judged on style |
@@ -488,7 +486,7 @@ Wiring details:
   **Publication waits for the `ci` aggregate verdict**, and nothing weaker would
   do. This job's other conditions cover only its *coverage producers*, so without
   that clause a `merge_group` build whose `secret-scan`, `license-gate`,
-  `craft-residue` or `dco` failed would still publish — a tree that does not
+  `craft-residue` or `license-gate` failed would still publish — a tree that does not
   merge, replacing the stored analysis every scheduled check reads for `main`.
   Requiring `needs.ci.result == 'success'` on `merge_group` is what makes
   "published as `main`" mean "became `main`". Nothing waits on this job in turn:
@@ -537,21 +535,23 @@ beside the gate, deliberately outside it:
   [The shared Go build cache](#the-shared-go-build-cache) for why it is scheduled
   rather than per-push.
 
-- **`merge-attest.yml`** — on every push to `main`, and it runs no lane: two API
-  reads and a jq, which is what makes a push trigger affordable at ~85 merges a
-  day. It asks one question the health check cannot — not *is `main` red*, but
-  *did what just landed have a verdict behind it*: a pull request that named the
-  commit, and a `ci` check that reported, was green, and finished **before** the
-  merge. A required check that never reported is the case it exists for, because
-  an absent verdict is not a red one and nothing asking "was it green?" can tell
-  them apart.
+- **`merge-attest.yml`** — on every push to `main`. It runs no lane, but it does
+  **wait**: `ci` is a fan-in that starts only once every other lane has finished,
+  so it posts minutes after the merge and a read at push time would see nothing.
+  The wait is bounded at 20 minutes, and reaching that bound is not a finding.
 
-  **Gates nothing, and never will.** It runs after the merge. A repository role
-  merging past `ci` is deliberate — an infrastructure outage that reds every
-  pull request, a revert that has to land now — and what this changes is only
-  that the fact is loud and attributed at push time instead of surfacing two
-  hours later as somebody else's pull request going red against a base they did
-  not break. Prevention is a branch-protection decision (#2496). Judged by
+  It reports exactly two things: a commit **no pull request names** at all, and a
+  required check that **reported an adverse verdict** — the tree on `main` does
+  not pass its own required check. It says nothing about a verdict that was
+  merely *absent* at merge time. A repository role merging past `ci` is a
+  standing decision here, so an absent verdict is the expected shape of that
+  decision and not an incident; an alarm that fires on the expected state is one
+  that gets muted, and it would bury the two findings above.
+
+  **Gates nothing, and never will.** It runs after the merge. What it changes is
+  that a bad verdict is loud and attributed at push time, instead of surfacing
+  two hours later as somebody else's pull request going red against a base they
+  did not break. Prevention is a branch-protection decision (#2496). Judged by
   [`scripts/check-merge-verdict.sh`](../scripts/check-merge-verdict.sh), which
   reads its evidence from the environment so every arm is drivable from a
   fixture (`make test-merge-verdict`); a finding is filed as one issue per

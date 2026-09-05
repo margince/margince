@@ -68,15 +68,12 @@ var claimedByTheirCallers = map[string]bool{"sendInputFrom": true}
 
 // contextlessSends ratifies each construction that states no claim, with what
 // the omission costs.
-var contextlessSends = gatekit.Waive(map[string]string{
-	"internal/compose/heldrelease.go": "KNOWN GAP, not a settled exemption. An automation-drafted " +
-		"message released by an approver reaches the engine with no claimed category, no evidence " +
-		"and no operator reason, because automation.HeldDraftProposal carries none to pass — the " +
-		"consent plan's PR 5 was to add them and never landed. The send is still authorized: the " +
-		"engine resolves from the anchor thread, which is the strongest ground a reply can have, " +
-		"so this is a missing STATEMENT rather than a missing check. Waived because adding the " +
-		"fields reaches the approval payload and the edit-scope pin, which is its own change",
-})
+//
+// It is EMPTY, and that is the finished state rather than an oversight. Its one
+// entry was the automation-drafted message released by an approver, which
+// reached the engine claiming nothing because HeldDraftProposal carried nothing
+// to pass. It carries a context now, so every send door states what it is.
+var contextlessSends = gatekit.Waive(map[string]string{})
 
 func TestEverySendStatesWhyItIsBeingSent(t *testing.T) {
 	t.Parallel()

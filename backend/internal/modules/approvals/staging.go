@@ -149,6 +149,10 @@ func (s *Service) stageOrJoinPendingInTx(ctx context.Context, tx pgx.Tx, in Stag
 	if !ok {
 		return ids.ApprovalID{}, errors.New("crmapprovals: no workspace bound to context")
 	}
+	stager, ok := principal.Actor(ctx)
+	if !ok {
+		return ids.ApprovalID{}, errors.New("crmapprovals: no actor bound to context")
+	}
 	if err := lockProposalIdentity(ctx, tx, wsID, in); err != nil {
 		return ids.ApprovalID{}, err
 	}
@@ -165,10 +169,18 @@ func (s *Service) stageOrJoinPendingInTx(ctx context.Context, tx pgx.Tx, in Stag
 	// history into the fresh act's bundle. Under the lock the predicate is
 	// re-evaluated, so a settled row is simply not found and the re-proposal
 	// creates the live member it meant to.
+	//
+	// Scoped to the staging member for a shape whose proposal is one member's
+	// (stagingsubject.go): without it two colleagues staging a byte-identical
+	// payload produce ONE row, owned by whoever staged first — so the second
+	// member's proposal is invisible to them and undecidable by them, for a
+	// kind whose own gate says a row belongs to one person.
+	joinArgs := []any{in.Kind, nullUUID(in.TargetID), in.DiffHash}
 	err := tx.QueryRow(ctx, `SELECT id FROM approval
 			WHERE kind = $1 AND target_entity_id IS NOT DISTINCT FROM $2 AND diff_hash = $3
-			  AND status = 'pending' AND expires_at > now()
-			ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, in.Kind, nullUUID(in.TargetID), in.DiffHash).Scan(&id)
+			  AND status = 'pending' AND expires_at > now()`+
+		subjectScope(in, stager, &joinArgs)+`
+			ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, joinArgs...).Scan(&id)
 	switch {
 	case err == nil:
 		if err := s.rebundleJoinedInTx(ctx, tx, in, id); err != nil {
@@ -259,7 +271,7 @@ func (s *Service) supersedePendingInTx(ctx context.Context, tx pgx.Tx, in StageI
 	// which is nobody's order in particular — and a bundle decision walking the
 	// same rows in (created_at, id) is precisely the transaction on the other
 	// side of that. See lockOrder.
-	superseded, err := lockPendingUnderIdentity(ctx, tx, in, survivor)
+	superseded, err := lockPendingUnderIdentity(ctx, tx, in, p, survivor)
 	if err != nil {
 		return err
 	}
@@ -295,14 +307,21 @@ func (s *Service) supersedePendingInTx(ctx context.Context, tx pgx.Tx, in StageI
 // Split from the write because the order is the point: the predicate is the
 // one that used to sit on the UPDATE itself, and reading it under lockOrder
 // first is what stops this transaction taking those locks in scan order.
-func lockPendingUnderIdentity(ctx context.Context, tx pgx.Tx, in StageInput, survivor ids.ApprovalID) ([]ids.UUID, error) {
+func lockPendingUnderIdentity(
+	ctx context.Context, tx pgx.Tx, in StageInput, p principal.Principal, survivor ids.ApprovalID,
+) ([]ids.UUID, error) {
+	// Scoped to the staging member for a shape whose proposal is one member's
+	// (stagingsubject.go): the identity is a logical key the CALLER built, and
+	// two members' identities colliding would expire a colleague's pending row.
+	args := []any{in.Kind, nullUUID(in.TargetID), survivor, in.Identity}
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM approval
 		 WHERE kind = $1 AND target_entity_id IS NOT DISTINCT FROM $2
 		   AND status = 'pending' AND expires_at > now()
-		   AND id <> $3 AND proposed_change @> $4
+		   AND id <> $3 AND proposed_change @> $4`+
+		subjectScope(in, p, &args)+`
 		 `+lockOrder+`
-		 FOR UPDATE`, in.Kind, nullUUID(in.TargetID), survivor, in.Identity)
+		 FOR UPDATE`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("lock the proposals this one supersedes: %w", err)
 	}
@@ -311,45 +330,6 @@ func lockPendingUnderIdentity(ctx context.Context, tx pgx.Tx, in StageInput, sur
 		return nil, fmt.Errorf("collect superseded approvals: %w", err)
 	}
 	return superseded, nil
-}
-
-// resolveTargetVersion reads the staged target's CURRENT version inside the
-// staging transaction, so what a human approves is bound to the row as it
-// stood when they were asked.
-//
-// The pin is taken here, at the ONE place every stager passes through, and
-// never from what the caller supplied. A caller-supplied pin is a pin the
-// caller can decline to supply: on the REST admission path it came from the
-// optional If-Match header, so an agent that simply left the header off
-// staged target_version NULL, and validateRedemptionTarget short-circuits on
-// NULL — the approval then authorized the operation against whatever the row
-// had drifted to inside the TTL, which for a body-less action route (send
-// this offer) is any content state at all. Automation-staged actions carried
-// no pin for the same reason: nothing had computed one.
-//
-// A target type outside versionTables has no version column to read, so it
-// stays unpinned and the diff_hash identical-call binding is what holds. That
-// residue is bounded and declared: TestConfirmFirstTargetsArePinnable holds
-// the confirm-first surface to a ratified list of them.
-// pinned is false for a target with no version column to read, and for a
-// create, which has no prior row to bind to.
-func resolveTargetVersion(ctx context.Context, tx pgx.Tx, in StageInput) (version int64, pinned bool, err error) {
-	if in.TargetID.IsZero() || !TargetVersionCheckable(in.TargetType) {
-		return 0, false, nil
-	}
-	// Two declared waivers, both meaning "this kind stages with no pin", and
-	// each says a different thing about why: the target is context rather than
-	// operand (contextTargetKinds), or it is the operand and the pin still binds
-	// nothing the human judged (unpinnedKinds). Both are read here because this
-	// is the one place a pin is taken.
-	if TargetIsContextOnly(in.Kind) || TargetVersionUnpinned(in.Kind) {
-		return 0, false, nil
-	}
-	current, err := targetVersion(ctx, tx, in.TargetType, in.TargetID)
-	if err != nil {
-		return 0, false, err
-	}
-	return current, true, nil
 }
 
 // StageInTx records a proposal through a caller-owned transaction. Compose
@@ -392,6 +372,14 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 	if pinned {
 		in.TargetVersion = &current
 	}
+	coVersion, coPinned, err := resolveCoTargetVersion(ctx, tx, in)
+	if err != nil {
+		return ids.ApprovalID{}, err
+	}
+	var coTargetVersion *int64
+	if coPinned {
+		coTargetVersion = &coVersion
+	}
 	id := ids.New[ids.ApprovalKind]()
 	evidence, err := marshalEvidence(in.Evidence)
 	if err != nil {
@@ -412,12 +400,15 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 	if err := tx.QueryRow(ctx,
 		`INSERT INTO approval (id, kind, proposed_by, on_behalf_of, passport_id,
 			                       target_entity_type, target_entity_id, target_version,
+			                       co_target_entity_type, co_target_entity_id, co_target_version,
 			                       target_label, summary, proposed_change, diff_hash, expires_at,
 			                       bundle_id, evidence)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now() + $13::interval, $14, $15)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+			         now() + $16::interval, $17, $18)
 			 RETURNING expires_at`,
 		id, in.Kind, p.ID, nullUUID(p.OnBehalfOf), nullUUID(p.PassportID),
 		nullStr(in.TargetType), nullUUID(in.TargetID), in.TargetVersion,
+		nullStr(in.CoTargetType), nullUUID(in.CoTargetID), coTargetVersion,
 		targetLabel(ctx, tx, in.TargetType, in.TargetID),
 		nullStr(in.Summary), in.ProposedChange, in.DiffHash, ttlFor(in.Kind, in.TTL).String(),
 		nullUUID(in.BundleID), evidence).Scan(&expiresAt); err != nil {
