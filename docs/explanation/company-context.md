@@ -14,7 +14,7 @@ prompt prose. This page explains the whole lane; the model runtime it feeds is
  FIRST RUN (the wizard)                 THE PROFILE (people module)       AI TASKS (compose + ai)
  ─────────────────────                 ───────────────────────────      ───────────────────────
  Read → Confirm → Basis → Voice         organization        (identity)   CompanyContextProvider
-      → Connect → Preferences           organization_profile_field         task → scopes | none
+      → Connect                         organization_profile_field         task → scopes | none
    │                                    organization_fact   (evidence)        │  (closed policy,
    ├─ "Read my website"                 site_read           (dossier)         │   fitness-gated)
    │    progressive, evidence-or-omit        ▲                                ▼
@@ -51,7 +51,7 @@ capabilities, administrative), and a deterministic fingerprint. Consumers get
 bounded views of this model; nothing assembles its own company prompt from
 tables.
 
-## The cold start — six stops, one narrating rail
+## The cold start — five stops, one narrating rail
 
 First login lands in a full-viewport work surface: one scene owns the board at a
 time and a derived step rail narrates beside it
@@ -60,15 +60,18 @@ cannot disagree with it). State persists server-side (`/onboarding/state`,
 `onboarding_wizard_state` in the identity module), so a reload or an OAuth
 round-trip reconstructs the same scene.
 
-The creator's rail reads **Read · Confirm · Basis · Voice · Connect · Preferences**.
-Basis is the installation's reporting basis — base currency and reporting
-timezone — asked once, right after the company is confirmed and before any step
-about the person answering; an admin can change either later in Settings, and a
-currency a deal has already frozen is shown locked there as it is here.
+The creator's rail reads **Read · Confirm · Basis · Voice · Connect**. Basis is
+what the setup settles right after the company is confirmed and before any step
+about the person answering: the installation's reporting basis — base currency
+and reporting timezone — and what the agent may change on its own. An admin can
+change any of it later in Settings, and a currency a deal has already frozen is
+shown locked there as it is here. Connect is the last stop: leaving it writes
+completion and plays the handoff, as leaving the team act does for a creator who
+will not work in Margince themselves.
 
 **An invited member walks the personal stops.** Their company and its basis are
-already settled, so their rail reads Voice · Connect · Preferences and the
-restore plan lands them straight in the voice act. The app's onboarding gate
+already settled, so their rail reads Voice · Connect and the restore plan lands
+them straight in the voice act. The app's onboarding gate
 sends every human whose wizard state is absent or unfinished here, a read seat
 excepted (it cannot write the checkpoint the journey ends on), so a member
 invited later trains their voice and connects their mailbox exactly as the

@@ -4,18 +4,18 @@
 import type { MessageKey } from "../../i18n/en";
 import type { ConversationState } from "./conversation-types";
 
-// Where the setup journey is, as six stops. Derived from the machine rather
+// Where the setup journey is, as five stops. Derived from the machine rather
 // than tracked beside it, so the rail cannot disagree with the conversation.
 //
 // The stops are NOT the phases: READ is already finished by the time the
 // two-column view first renders, CONFIRM covers the whole clarify/review/
 // manual cluster, and the invite is the doorway to VOICE rather than a stop
 // of its own. A member's company and basis were settled before they arrived,
-// so their rail carries only the three personal stops — a stop already done
+// so their rail carries only the two personal stops — a stop already done
 // by somebody else is not theirs to be shown walking.
 
 export type RailStop = Readonly<{
-  key: "read" | "confirm" | "basis" | "voice" | "connect" | "prefs";
+  key: "read" | "confirm" | "basis" | "voice" | "connect";
   labelKey: MessageKey;
 }>;
 
@@ -27,7 +27,6 @@ const CREATOR_STOPS: readonly RailStop[] = [
   { key: "basis", labelKey: "ob.rail.basis" },
   { key: "voice", labelKey: "ob.rail.voice" },
   { key: "connect", labelKey: "ob.rail.connect" },
-  { key: "prefs", labelKey: "ob.rail.prefs" },
 ];
 
 // The creator's rail minus the stops the member path never visits.
@@ -69,11 +68,11 @@ export function currentStop(state: ConversationState): RailStop["key"] | null {
     // Every account the setup asks for — mailbox and LinkedIn alike — belongs to
     // this one stop. A stop per integration would grow the rail once per provider
     // for something the reader already reads as "connecting".
+    // The journey closes from this stop, so a finished flow still stands on
+    // it — read as done, below, rather than as a stop past the last.
     case "connect":
-      return "connect";
-    case "prefs":
     case "done":
-      return "prefs";
+      return "connect";
   }
 }
 
@@ -104,7 +103,7 @@ function stopStateByPosition(
   }
   // The last stop only reads `done` once the flow actually finished, so
   // it does not claim completion while the user is still choosing.
-  return stop === "prefs" && state.act === "done" ? "done" : "now";
+  return stop === "connect" && state.act === "done" ? "done" : "now";
 }
 
 export function stopState(

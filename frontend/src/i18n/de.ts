@@ -5085,7 +5085,8 @@ export const de = {
   "ob.conv.voice.footFloor":
     "Mindestens {min} Wörter. Darunter kopiert das Modell nur Formulierungen.",
   "ob.conv.voice.buildingTitle": "Ich lerne deine Stimme",
-  "ob.conv.voice.buildingMeta": "{words} Wörter, {sources} Quellen",
+  "ob.conv.voice.buildingMeta_one": "{words} Wörter, {sources} Quelle",
+  "ob.conv.voice.buildingMeta_other": "{words} Wörter, {sources} Quellen",
   "ob.conv.voice.resultSub":
     "Lies zuerst das Beispiel. Passt es, bestätige. Passt es nicht, gib mir mehr Quellen und ich baue neu.",
   "ob.conv.voice.resultSubNoSample":
@@ -5170,14 +5171,13 @@ export const de = {
   "ob.conv.connect.mailboxNeeded":
     "Ein Postfach fehlt noch: Mail ist, was gelesen und entworfen wird. Verbinde oben eines, oder gehe vorerst ohne weiter.",
 
-  // Die Setup-Leiste: sechs Stationen, je ein Wort. Lang genug, den Schritt zu
-  // benennen, kurz genug, dass sechs davon bei 10px in eine Spalte passen.
+  // Die Setup-Leiste: fünf Stationen, je ein Wort. Lang genug, den Schritt zu
+  // benennen, kurz genug, dass fünf davon bei 10px in eine Spalte passen.
   "ob.rail.read": "Lesen",
   "ob.rail.confirm": "Bestätigen",
   "ob.rail.basis": "Basis",
   "ob.rail.voice": "Stimme",
   "ob.rail.connect": "Verbinden",
-  "ob.rail.prefs": "Einstellungen",
 
   "ob.conv.invite.title": "Wirst du selbst in Margince arbeiten?",
   "ob.conv.invite.body":
@@ -5203,23 +5203,18 @@ export const de = {
   "ob.conv.team.finish": "Einrichtung abschließen",
   "ob.conv.team.done":
     "Die Einrichtung ist abgeschlossen. Wen du hinzufügst, kann Stimme und Konten in den Einstellungen selbst einrichten.",
-  "ob.conv.basis.title": "Zuerst: wie die Zahlen berichtet werden.",
+  "ob.conv.team.persistFailed":
+    "Ich konnte nicht festhalten, dass die Einrichtung abgeschlossen ist. Versuche es noch einmal oder schließe sie später in den Einstellungen ab.",
+  "ob.conv.basis.title": "Zuerst: die Basis.",
   "ob.conv.basis.body":
-    "Basiswährung und Berichtszeitzone gehören der Installation: jeder Deal, jeder Bericht und jedes Briefing wird darauf bepreist und datiert. Beides ist vorausgefüllt und lässt sich später in den Einstellungen ändern, bis ein Deal die Währung eingefroren hat.",
+    "Basiswährung und Berichtszeitzone gehören der Installation: jeder Deal, jeder Bericht und jedes Briefing wird darauf bepreist und datiert. Was es ohne Rückfrage ändern darf, entscheidest du. Alles ist vorausgefüllt und lässt sich später in den Einstellungen ändern, bis ein Deal die Währung eingefroren hat.",
   "ob.conv.basis.reportingTitle": "Berichtsbasis",
   "ob.conv.basis.timezoneNeeded": "Eine Berichtszeitzone wird benötigt.",
+  "ob.conv.basis.autonomyTitle": "Was es eigenständig ändern darf",
+  "ob.conv.basis.autonomyBody":
+    "Jede Art von Änderung unten wird dir zuerst vorgeschlagen. Schalte eine ein, und sie gilt ohne Rückfrage; jederzeit wieder abschaltbar.",
   "ob.conv.basis.continue": "Weiter",
   "ob.conv.basis.done": "Berichtsbasis festgelegt.",
-
-  "ob.conv.prefs.title": "Zum Schluss ein paar Einstellungen.",
-  "ob.conv.prefs.body":
-    "Alles hier ist mit bereits hinterlegten Angaben vorausgefüllt und lässt sich später in den Einstellungen ändern. Drücke Fertig, wenn alles stimmt.",
-  "ob.conv.prefs.autonomyTitle": "Was es eigenständig ändern darf",
-  "ob.conv.prefs.autonomyBody":
-    "Jede Art von Änderung unten wird dir zuerst vorgeschlagen. Schalte eine ein, und sie gilt ohne Rückfrage; jederzeit wieder abschaltbar.",
-  "ob.conv.prefs.done": "Fertig",
-  "ob.conv.prefs.persistFailed":
-    "Ich konnte nicht festhalten, dass die Einrichtung abgeschlossen ist. Versuche es noch einmal oder schließe sie später in den Einstellungen ab.",
 
   // --- das Tor: der erste Screen nach der Anmeldung ----------------------
   // Eine Frage und sonst nichts. Niemand soll das ganze Werkzeug auf dem
@@ -8414,6 +8409,7 @@ export const de = {
   "worklist.because.legal_deadline": "eine gesetzliche Frist läuft",
   "worklist.because.meeting_soon": "beginnt gleich",
   "worklist.because.meeting_unprepared": "nichts vorbereitet",
+  "worklist.because.outcome_unrecorded": "kein Ergebnis festgehalten",
   "worklist.because.response_overdue": "Antwort überfällig",
   "worklist.because.response_due_soon": "Antwort bald fällig",
   "worklist.because.response_due_soon.value": "Antwort fällig bis {value}",
@@ -8473,6 +8469,7 @@ export const de = {
   "worklist.untitled.lead_response": "Ein Lead",
   "worklist.untitled.deal_at_risk": "Ein Deal treibt ab",
   "worklist.untitled.meeting": "Ein Termin",
+  "worklist.untitled.meeting_outcome": "Ein Termin",
   "worklist.untitled.relationship_decay": "Eine Beziehung schläft ein",
   "worklist.untitled.failed_approval": "Etwas Zugestimmtes lief nicht",
   "worklist.untitled.dsr": "Eine offene Datenschutzanfrage",

@@ -324,12 +324,7 @@ describe("the collect scene's corpus floor meter", () => {
 describe("VoiceBuildScene", () => {
   function buildScene(stage: "snapshot" | "extract" | null) {
     return withLocale(
-      <VoiceBuildScene
-        stage={stage}
-        summary={null}
-        sources={1}
-        model="gemini-3.5-flash"
-      />,
+      <VoiceBuildScene stage={stage} summary={null} sources={1} />,
     );
   }
 
@@ -346,6 +341,14 @@ describe("VoiceBuildScene", () => {
     buildScene(null);
 
     expect(screen.queryByText("Why this step matters")).toBeNull();
+  });
+
+  it("counts a single source in the singular", () => {
+    withLocale(
+      <VoiceBuildScene stage="extract" summary={summaryOf(4216)} sources={1} />,
+    );
+
+    expect(screen.getByText("4,216 words, 1 source")).toBeTruthy();
   });
 
   it("creeps toward the reported stage's ceiling instead of jumping to it, and never passes it", () => {
@@ -378,12 +381,7 @@ describe("VoiceBuildScene", () => {
 
     rerender(
       <LocaleProvider initial="en">
-        <VoiceBuildScene
-          stage="extract"
-          summary={null}
-          sources={1}
-          model="gemini-3.5-flash"
-        />
+        <VoiceBuildScene stage="extract" summary={null} sources={1} />
       </LocaleProvider>,
     );
     // extract's ceiling is 2/5 = 40%; the very next frame must not already
