@@ -67,8 +67,10 @@ var fxConversionExempt = gatekit.Waive(map[string]string{
 	"internal/modules/deals/basecurrencyfreeze.go": "the CLOSE-time freeze, which is a different question: a " +
 		"closed deal stores the rate it was converted at, where this engine answers what an OPEN one converts " +
 		"at today",
-	"internal/modules/deals/deal_advance.go": "the same freeze at the moment it happens — advancing to won " +
-		"reads the rate once and stores it on the deal, which is why a closed figure never moves again",
+	"internal/modules/deals/basecurrencyfreezewrite.go": "the same freeze at the moment it happens — closing " +
+		"reads the rate once and stores it, with the amount it converts to, on the deal, which is why a " +
+		"closed figure never moves again. The conversion itself is ConvertToBase, the engine this gate " +
+		"protects, called here rather than re-spelled",
 	"internal/compose/rateproposals_integration_test.go": "a test seeding and asserting on rate rows. It reads " +
 		"the table to arrange and to check, never to convert an amount for a reader",
 	"gates/onecurrencyconversion_test.go": "this gate itself: the probes below are planted defects, and " +

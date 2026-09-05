@@ -44,8 +44,15 @@ func BaseValueSQL(asOfSQL, baseSQL, alias string) string {
 	return fmt.Sprintf(`CASE
 		WHEN %[3]s.amount_minor IS NULL THEN NULL
 		WHEN %[3]s.currency IS NULL OR %[3]s.currency = %[2]s THEN %[3]s.amount_minor
-		WHEN %[3]s.fx_rate_to_base IS NOT NULL THEN %[3]s.amount_minor_base
-		ELSE (SELECT round(%[3]s.amount_minor * fr.rate)::bigint FROM fx_rate fr
+		WHEN %[3]s.amount_minor_base IS NOT NULL THEN %[3]s.amount_minor_base
+		ELSE (SELECT round(%[3]s.amount_minor * fr.rate
+		                    * power(10::numeric, coalesce(
+		                        (SELECT bd.digits FROM currency_minor_digits bd
+		                          WHERE bd.currency = %[2]s), 2))
+		                    / power(10::numeric, coalesce(
+		                        (SELECT dd.digits FROM currency_minor_digits dd
+		                          WHERE dd.currency = %[3]s.currency), 2)))::bigint
+		      FROM fx_rate fr
 		      WHERE fr.from_currency = %[3]s.currency AND fr.to_currency = %[2]s
 		        AND fr.rate_date <= %[1]s::date
 		      ORDER BY fr.rate_date DESC LIMIT 1)
