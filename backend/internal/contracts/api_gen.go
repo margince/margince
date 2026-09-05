@@ -19413,7 +19413,10 @@ type CaptureVerdictClock struct {
 	// NextPassAt When the next pass runs. Absent when this deployment cannot say — nothing scheduled and no completed run still in the queue's retention — in which case a reader is owed the cadence rather than an invented time. Never a substitute for `every_seconds`: a person reading one time learns nothing about the rhythm they are living with.
 	NextPassAt *time.Time `json:"next_pass_at,omitempty"`
 
-	// Running A pass is in flight right now. Queued and running are different states to somebody watching a counter that has not moved, and only one of them ends by itself.
+	// Queued A run is DUE and no worker has picked it up. Its own answer rather than a time, because a due run's moment has already passed — and the one that tells a slow installation from a stopped one, which is what somebody watching an unmoving counter is really asking.
+	Queued bool `json:"queued"`
+
+	// Running A pass is in flight right now.
 	Running bool `json:"running"`
 }
 

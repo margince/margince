@@ -312,6 +312,7 @@ it("says when the thread pass runs while a row is pending", async () => {
   renderCard([PENDING], undefined, {
     every_seconds: 600,
     running: false,
+    queued: false,
     next_pass_at: "2026-08-30T09:20:00Z",
   });
 
@@ -327,6 +328,7 @@ it("says nothing about the pass when no row is waiting on it", async () => {
   renderCard([JUDGED], undefined, {
     every_seconds: 600,
     running: false,
+    queued: false,
     next_pass_at: "2026-08-30T09:20:00Z",
   });
 

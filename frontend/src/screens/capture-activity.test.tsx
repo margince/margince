@@ -423,6 +423,7 @@ describe("capture activity", () => {
         sender_verdict: {
           every_seconds: 3600,
           running: false,
+          queued: false,
           next_pass_at: "2026-08-15T22:21:00Z",
         },
       }),
@@ -445,12 +446,40 @@ describe("capture activity", () => {
         sender_verdict: {
           every_seconds: 3600,
           running: true,
+          queued: false,
           next_pass_at: "2026-08-15T22:21:00Z",
         },
       }),
     );
     const note = await screen.findByTestId("verdict-pass-senders");
     expect(note).toHaveTextContent(/a pass is running now/i);
+    expect(note).not.toHaveTextContent(/next pass/i);
+  });
+
+  it("says a pass is due rather than naming a moment that has gone", async () => {
+    // A run River has made runnable carries a scheduled_at in the PAST, so the
+    // honest answer is that it is due — not a time, and not "running", which
+    // would claim a worker has it. It is also what tells a slow installation
+    // from a stopped one: work sitting queued is a worker that is not running.
+    renderTab(
+      windowBody({
+        funnel: {
+          captured: 0,
+          internal: 0,
+          suppressed: 0,
+          deferred: 3,
+          fault: 0,
+        },
+        sender_verdict: {
+          every_seconds: 3600,
+          running: false,
+          queued: true,
+          next_pass_at: null,
+        },
+      }),
+    );
+    const note = await screen.findByTestId("verdict-pass-senders");
+    expect(note).toHaveTextContent(/due and waiting/i);
     expect(note).not.toHaveTextContent(/next pass/i);
   });
 
@@ -470,6 +499,7 @@ describe("capture activity", () => {
         sender_verdict: {
           every_seconds: 3600,
           running: false,
+          queued: false,
           next_pass_at: "2026-08-15T22:21:00Z",
         },
       }),

@@ -66,6 +66,8 @@ func verdictPass(pool *pgxpool.Pool, kind string) capture.VerdictPass {
 		if err != nil {
 			return capture.VerdictClock{}, err
 		}
-		return capture.VerdictClock{Every: pass.Every, Running: pass.Running, NextAt: pass.NextAt}, nil
+		return capture.VerdictClock{
+			Every: pass.Every, Running: pass.Running, Queued: pass.Queued, NextAt: pass.NextAt,
+		}, nil
 	}
 }

@@ -47,9 +47,11 @@ export function VerdictPassNote({
   );
 }
 
-// Running and queued are different states to somebody watching a counter that
-// has not moved, and only one of them ends by itself — so a pass in flight says
-// so instead of naming a time it is already past.
+// Three states, and only one of them is a time. A pass in flight says so; a pass
+// that is DUE and waiting for a worker says that, because its moment has already
+// passed and printing it would name a time that has been and gone — and it is
+// the state that tells a slow installation from a stopped one, which is what
+// somebody watching an unmoving counter is really asking.
 function passState(
   clock: Clock,
   t: ReturnType<typeof useT>,
@@ -57,6 +59,9 @@ function passState(
 ): string {
   if (clock.running) {
     return t("verdictPass.running");
+  }
+  if (clock.queued) {
+    return t("verdictPass.queued");
   }
   if (!clock.next_pass_at) {
     return "";

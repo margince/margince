@@ -92,6 +92,7 @@ const WINDOW = {
   sender_verdict: {
     every_seconds: 3600,
     running: false,
+    queued: false,
     next_pass_at: "2026-08-15T22:21:00Z",
   },
 };

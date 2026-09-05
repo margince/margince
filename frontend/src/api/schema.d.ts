@@ -14343,8 +14343,10 @@ export interface components {
         CaptureVerdictClock: {
             /** @description How often this pass is scheduled. Zero for a deployment where no clock runs it. */
             every_seconds: number;
-            /** @description A pass is in flight right now. Queued and running are different states to somebody watching a counter that has not moved, and only one of them ends by itself. */
+            /** @description A pass is in flight right now. */
             running: boolean;
+            /** @description A run is DUE and no worker has picked it up. Its own answer rather than a time, because a due run's moment has already passed — and the one that tells a slow installation from a stopped one, which is what somebody watching an unmoving counter is really asking. */
+            queued: boolean;
             /**
              * Format: date-time
              * @description When the next pass runs. Absent when this deployment cannot say — nothing scheduled and no completed run still in the queue's retention — in which case a reader is owed the cadence rather than an invented time. Never a substitute for `every_seconds`: a person reading one time learns nothing about the rhythm they are living with.

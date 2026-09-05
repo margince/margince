@@ -69,6 +69,53 @@ func TestWithNothingScheduledThePassIsTheLastRunPlusItsCadence(t *testing.T) {
 	}
 }
 
+// A DUE RUN IS NOT A FUTURE ONE.
+//
+// River makes a row `available` when its moment arrives, and that row's
+// scheduled_at is then in the PAST. Read as a next-run time it names a moment
+// that has been and gone; read as nothing it falls through to a projection off
+// the last completed run, which is a different lie. It is its own answer.
+func TestADueRunIsReportedAsQueuedRatherThanAsATime(t *testing.T) {
+	_, pool := migratedAppPool(t)
+	ctx := t.Context()
+	due := time.Now().Add(-3 * time.Minute)
+
+	// A completed run as well, so a fall-through would have something to
+	// project from — and would then print a time nobody is waiting for.
+	seedJob(ctx, t, pool, seed{Kind: aScheduledKind, State: "completed", CreatedAt: due.Add(-time.Hour)})
+	seedJob(ctx, t, pool, seed{Kind: aScheduledKind, State: "available", Scheduled: due})
+
+	pass, err := jobs.PassFor(ctx, pool, aScheduledKind)
+	if err != nil {
+		t.Fatalf("reading the pass: %v", err)
+	}
+	if !pass.Queued {
+		t.Error("a runnable row is reported as not queued, so the screen falls back to a " +
+			"projection and names a time when what is really happening is a worker not picking work up")
+	}
+	if pass.Running {
+		t.Error("a queued run is reported as running, which claims a worker has it")
+	}
+}
+
+// A retry is a pass that is still coming, and reporting the cadence past it
+// would promise a run at a time when what is pending is an attempt.
+func TestARetryableRunCountsAsQueued(t *testing.T) {
+	_, pool := migratedAppPool(t)
+	ctx := t.Context()
+	seedJob(ctx, t, pool, seed{
+		Kind: aScheduledKind, State: "retryable", Scheduled: time.Now().Add(-time.Minute),
+	})
+
+	pass, err := jobs.PassFor(ctx, pool, aScheduledKind)
+	if err != nil {
+		t.Fatalf("reading the pass: %v", err)
+	}
+	if !pass.Queued {
+		t.Error("a row waiting to be retried is reported as not queued")
+	}
+}
+
 func TestARunningPassSaysSoRatherThanNamingATime(t *testing.T) {
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()

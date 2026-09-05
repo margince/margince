@@ -5949,6 +5949,7 @@ export const vi = {
   "verdictPass.every_one": "{subject} được xét mỗi phút.",
   "verdictPass.every_other": "{subject} được xét mỗi {minutes} phút.",
   "verdictPass.next": "Lượt tiếp theo {when}.",
+  "verdictPass.queued": "Một lượt đã đến hạn và đang chờ chạy.",
   "verdictPass.running": "Một lượt đang chạy.",
   "captureActivity.title": "Hoạt động thu thập",
   "captureActivity.sub":

@@ -331,6 +331,18 @@ const settledOutcome = `CASE
 // the outcome. Mail is unguarded, so a `captured` row carrying noise_prior or
 // decided_prior still reports the settled PRIOR verdict that explains it.
 //
+// A MEMBER'S OWN VERDICT IS THEIRS, and the ledger says which one is: the same
+// `NOT resolved_by_owner OR owner_id = <the reader>` the stranded-contact scan
+// asks (strandedcontacts.go). A machine verdict is a fact about the sender and
+// applies to everybody; one a person reached is a fact about their own
+// correspondence. Without it a workspace row — whose t.user_id is NULL — reports
+// whatever a colleague decided about that address, and this read is exactly
+// where a manager sees it.
+//
+// It also settles which of several historical rows answers: the ledger keeps one
+// per address per owner, so the newest-first LIMIT 1 was picking between people
+// rather than between times.
+//
 // BOTH joins carry the workspace, and that is not belt-and-braces: there is no
 // RLS on these tables since 0217, an address is not unique across tenants, and
 // an unscoped `d.email = a.counterparty_email` would answer with ANOTHER
@@ -358,6 +370,7 @@ const resolutionJoin = `
 		         SELECT status, kind, resolved_at
 		           FROM capture_pending_counterparty
 		          WHERE email = a.counterparty_email
+		            AND (NOT resolved_by_owner OR owner_id = t.user_id)
 		            AND (a.channel_provider IS NULL
 		                 OR (t.user_id IS NOT NULL
 		                     AND t.outcome IN ('deferred', 'suppressed')))

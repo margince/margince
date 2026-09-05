@@ -6131,6 +6131,7 @@ export const en = {
   "verdictPass.every_one": "{subject} are judged every minute.",
   "verdictPass.every_other": "{subject} are judged every {minutes} minutes.",
   "verdictPass.next": "Next pass {when}.",
+  "verdictPass.queued": "A pass is due and waiting to start.",
   "verdictPass.running": "A pass is running now.",
   "captureActivity.title": "Capture activity",
   "captureActivity.sub":

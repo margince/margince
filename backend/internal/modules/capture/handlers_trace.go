@@ -55,6 +55,8 @@ type VerdictClock struct {
 	Every time.Duration
 	// Running says a pass is in flight right now.
 	Running bool
+	// Queued says a run is due and nobody has picked it up.
+	Queued bool
 	// NextAt is when the next pass runs, nil when unknowable.
 	NextAt *time.Time
 }
@@ -153,6 +155,7 @@ func VerdictClockResponse(clock VerdictClock) *crmcontracts.CaptureVerdictClock 
 	return &crmcontracts.CaptureVerdictClock{
 		EverySeconds: int(clock.Every / time.Second),
 		Running:      clock.Running,
+		Queued:       clock.Queued,
 		NextPassAt:   clock.NextAt,
 	}
 }

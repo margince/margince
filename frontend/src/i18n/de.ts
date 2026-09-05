@@ -6011,6 +6011,7 @@ export const de = {
   "verdictPass.every_other":
     "{subject} werden alle {minutes} Minuten beurteilt.",
   "verdictPass.next": "Nächster Durchlauf {when}.",
+  "verdictPass.queued": "Ein Durchlauf ist fällig und wartet auf den Start.",
   "verdictPass.running": "Ein Durchlauf läuft gerade.",
   "captureActivity.title": "Erfassungsaktivität",
   "captureActivity.sub":

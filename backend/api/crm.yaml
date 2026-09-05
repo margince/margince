@@ -21140,7 +21140,7 @@ components:
 
     CaptureVerdictClock:
       type: object
-      required: [every_seconds, running]
+      required: [every_seconds, running, queued]
       description: >-
         When one verdict pass runs. Derived from the cadence the job declares and from the queue
         itself, never from a number written down beside the screen: a second copy of the schedule
@@ -21153,9 +21153,14 @@ components:
           minimum: 0
         running:
           type: boolean
+          description: 'A pass is in flight right now.'
+        queued:
+          type: boolean
           description: >-
-            A pass is in flight right now. Queued and running are different states to somebody
-            watching a counter that has not moved, and only one of them ends by itself.
+            A run is DUE and no worker has picked it up. Its own answer rather than a time,
+            because a due run's moment has already passed — and the one that tells a slow
+            installation from a stopped one, which is what somebody watching an unmoving counter
+            is really asking.
         next_pass_at:
           type: [string, 'null']
           format: date-time
