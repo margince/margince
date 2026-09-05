@@ -101,7 +101,18 @@ const populated = {
       kind: "no_reply",
       fingerprint: "f-1",
       reason: "You reached out 11 days ago and nobody has come back.",
-      evidence: [{ entity_type: "activity", entity_id: "a-2" }],
+      // The receipt the rule carries: the message's own subject and opening
+      // words, the day it went out, and the channel — what the chip opens.
+      evidence: [
+        {
+          entity_type: "activity",
+          entity_id: "a-2",
+          name: "Renewal terms for 2027",
+          quote: "Hi Dana, attached are the renewal terms we discussed.",
+          at: "2026-07-27T09:00:00Z",
+          origin: "Email you sent",
+        },
+      ],
     },
   ],
   next_steps: {
