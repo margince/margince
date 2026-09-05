@@ -234,8 +234,72 @@ describe("a route that cannot be asked for", () => {
 
     await screen.findByText(en["person.intro.unavailable"]);
     expect(
-      screen.queryByRole("button", { name: en["person.intro.askAction"] }),
+      screen.queryByRole("button", {
+        name: en["person.intro.askFirstName"].replace(
+          "{name}",
+          taken.via_display_name,
+        ),
+      }),
     ).toBeNull();
+  });
+});
+
+// The strip's first slot counts the ways in rather than naming the best one,
+// because the verdict panel above it already names the lead. What it owes the
+// reader is the mix: how many colleagues, and how many of them get there only
+// through somebody at the account.
+describe("several ways in", () => {
+  const direct: NonNullable<PersonGraph["routes"]>[number] = {
+    route_id: "direct:1",
+    route_type: "direct",
+    via_user_id: "018f3a1b-0000-7000-8000-0000000000a1",
+    via_display_name: "Sofia Meier",
+    strength_bucket: "strong",
+    evidence: { interactions_90d: 6, two_way: true },
+    availability: "available",
+  };
+  const viaContact: NonNullable<PersonGraph["routes"]>[number] = {
+    ...direct,
+    route_id: "through:1",
+    route_type: "through_contact",
+    via_user_id: "018f3a1b-0000-7000-8000-0000000000a2",
+    via_display_name: "Lena Hoff",
+    through_person_id: "018f3a1b-0000-7000-8000-0000000000b1",
+    through_display_name: "Philipp Königs",
+    strength_bucket: "moderate",
+  };
+
+  it("counts the colleagues and says how many go through a contact", async () => {
+    renderTab({
+      person_id: PERSON,
+      nodes: [anchor],
+      edges: [],
+      routes: [
+        direct,
+        viaContact,
+        { ...direct, route_id: "direct:2", via_display_name: "Martin Weber" },
+      ],
+      groups_omitted: [],
+    });
+
+    await screen.findByText(
+      en["person.intro.stripWhoCount_other"].replace("{count}", "3"),
+    );
+    expect(
+      screen.getByText(
+        en["person.intro.stripWhoMix"]
+          .replace("{direct}", "2")
+          .replace("{indirect}", "1"),
+      ),
+    ).toBeTruthy();
+    // The lead is the verdict panel's; the card under it lists the OTHER two,
+    // ranked as the second and third way in rather than as a new list of one.
+    expect(screen.getByText(en["person.intro.otherRoutesTitle"])).toBeTruthy();
+    expect(screen.queryByText(WAYS_IN)).toBeNull();
+    const ranks = Array.from(document.querySelectorAll(".pn-route-rank")).map(
+      (rank) => rank.textContent,
+    );
+    expect(ranks).toEqual(["2", "3"]);
   });
 });
 

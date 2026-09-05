@@ -7134,9 +7134,30 @@ export const de = {
   "person.intro.factDirect": "Direkte Beziehung",
   "person.intro.factIndirect": "Über eine Kollegin",
   "person.intro.factReceipts": "{count} einsehbare Belege",
-  "person.intro.stripPath": "Bester Weg",
+  "person.intro.verdictDirect":
+    "{name} fragen — die beiden schreiben sich bereits.",
+  "person.intro.verdictOneSided":
+    "{name} fragen — hat geschrieben, bisher ohne Antwort.",
+  "person.intro.verdictVia":
+    "{name} fragen — erreicht die Person über {through}.",
+  "person.intro.evidenceEyebrow": "Die Belege dahinter",
+  "person.intro.evidenceExchanges": "Austausche",
+  "person.intro.evidenceWindow": "in 90 Tagen",
+  "person.intro.evidenceFrom": "{count} von {name}",
+  "person.intro.evidenceLastContact": "Letzter Kontakt",
+  "person.intro.lastToday": "Heute",
+  "person.intro.lastYesterday": "Gestern",
+  "person.intro.lastDays": "vor {days} Tagen",
+  "person.intro.lastNever": "Keiner in 90 Tagen",
+  "person.intro.stripWho": "Wer die Person erreicht",
+  "person.intro.stripWhoCount_one": "Nur {name}",
+  "person.intro.stripWhoCount_other": "{count} Kolleginnen und Kollegen",
+  "person.intro.stripWhoMix": "{direct} direkt · {indirect} über einen Kontakt",
+  "person.intro.otherRoutesTitle": "Weitere Wege hinein",
+  "person.intro.otherRoutesSub":
+    "Sortiert danach, wie viel beidseitiger Austausch dahintersteht.",
+  "person.intro.relayDue": "fällig {date}",
   "person.intro.stripDirect": "Direkte Beziehung",
-  "person.intro.stripVia": "Über {through}",
   "person.intro.stripNoPath": "Bisher erreicht hier niemand diese Person",
   "person.intro.stripWhyNow": "Warum jetzt",
   "person.intro.stripWhyNowSub": "Die jüngste Veränderung in dieser Beziehung",
@@ -7179,7 +7200,6 @@ export const de = {
   "person.intro.routesSub":
     "Bester zuerst. Nimm den, der sich wirklich nutzen lässt — der zweite steht hier, weil der erste nicht immer verfügbar ist.",
   "person.intro.best": "Bester Weg",
-  "person.intro.alternative": "Alternative",
   "person.intro.evidenceTwoWay_one":
     "{total} Austausch in beide Richtungen in 90 Tagen · {when}",
   "person.intro.evidenceTwoWay_other":

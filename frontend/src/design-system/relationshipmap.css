@@ -35,8 +35,11 @@
   }
 }
 
-/* The drawing has an intrinsic width, so a narrow screen scrolls the PICTURE
- * inside its own box rather than making the page scroll sideways. */
+/* The drawing has an intrinsic width. In a box narrower than that it scales
+ * down to fit, so a half-width column shows the whole picture and not its
+ * left third — down to a floor where the names would stop being legible,
+ * below which it scrolls inside its own box rather than making the page
+ * scroll sideways. */
 .rmap-scroll {
   overflow-x: auto;
   background: var(--pane);
@@ -47,6 +50,9 @@
 
 .rmap-svg {
   display: block;
+  max-width: 100%;
+  min-width: 560px;
+  height: auto;
 }
 
 /* A lane heading IS an eyebrow, and the eyebrow has ONE spelling — the

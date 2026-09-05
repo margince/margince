@@ -7058,9 +7058,29 @@ export const vi = {
   "person.intro.factDirect": "Quan hệ trực tiếp",
   "person.intro.factIndirect": "Qua một đồng nghiệp",
   "person.intro.factReceipts": "{count} bằng chứng xem được",
-  "person.intro.stripPath": "Hướng tốt nhất",
+  "person.intro.verdictDirect":
+    "Hỏi {name} — hai bên đã trao đổi thư từ với nhau.",
+  "person.intro.verdictOneSided":
+    "Hỏi {name} — đã gửi thư nhưng chưa được hồi âm.",
+  "person.intro.verdictVia": "Hỏi {name} — tiếp cận được họ qua {through}.",
+  "person.intro.evidenceEyebrow": "Bằng chứng phía sau",
+  "person.intro.evidenceExchanges": "Lượt trao đổi",
+  "person.intro.evidenceWindow": "trong 90 ngày",
+  "person.intro.evidenceFrom": "{count} từ {name}",
+  "person.intro.evidenceLastContact": "Liên hệ gần nhất",
+  "person.intro.lastToday": "Hôm nay",
+  "person.intro.lastYesterday": "Hôm qua",
+  "person.intro.lastDays": "{days} ngày trước",
+  "person.intro.lastNever": "Không có trong 90 ngày",
+  "person.intro.stripWho": "Ai tiếp cận được họ",
+  "person.intro.stripWhoCount_one": "Chỉ {name}",
+  "person.intro.stripWhoCount_other": "{count} đồng nghiệp",
+  "person.intro.stripWhoMix": "{direct} trực tiếp · {indirect} qua một liên hệ",
+  "person.intro.otherRoutesTitle": "Các lối vào khác",
+  "person.intro.otherRoutesSub":
+    "Xếp theo mức trao đổi hai chiều làm cơ sở cho từng lối.",
+  "person.intro.relayDue": "hạn {date}",
   "person.intro.stripDirect": "Quan hệ trực tiếp",
-  "person.intro.stripVia": "Qua {through}",
   "person.intro.stripNoPath": "Chưa ai ở đây tiếp cận được họ",
   "person.intro.stripWhyNow": "Vì sao lúc này",
   "person.intro.stripWhyNowSub": "Thay đổi gần nhất trong quan hệ này",
@@ -7102,7 +7122,6 @@ export const vi = {
   "person.intro.routesSub":
     "Tốt nhất trước. Chọn lối bạn thực sự dùng được — lối thứ hai có ở đây vì lối đầu không phải lúc nào cũng sẵn sàng.",
   "person.intro.best": "Tốt nhất",
-  "person.intro.alternative": "Lựa chọn khác",
   "person.intro.evidenceTwoWay_one":
     "{total} lượt trao đổi hai chiều trong 90 ngày · {when}",
   "person.intro.evidenceTwoWay_other":
