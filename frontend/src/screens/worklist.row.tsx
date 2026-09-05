@@ -230,21 +230,28 @@ export function WorklistRow({
             above={above}
           />
         </div>
-        {item.batch && onReview ? (
-          <BatchVerb onReview={onReview} />
-        ) : (
-          <RowVerbs item={item} href={href} move={moveHref(item)} />
-        )}
-        {/* The ways this row can be PUT DOWN, as the server declares them. Drawn
+        {/* EVERY VERB ON ONE LINE UNDER THE WORK, not beside it. Beside it, seven
+            controls took the width and left the subject, the snippet and the
+            reasons a 160px column that wrapped every line; under it the work
+            has the whole row and the verbs read as what can be done about it,
+            in the order they were drawn: the move, then the ways to put the
+            row down, then the reader's own pin. */}
+        <div className="worklist-row-acts">
+          {item.batch && onReview ? (
+            <BatchVerb onReview={onReview} />
+          ) : (
+            <RowVerbs item={item} href={href} move={moveHref(item)} />
+          )}
+          {/* The ways this row can be PUT DOWN, as the server declares them. Drawn
           from `dispositions` rather than inferred from `source`: which rows a
           rep may judge is a server rule, and a client keeping its own copy
           draws a verb that 404s or hides one the rep is entitled to. */}
-        <DispositionVerbs item={item} />
-        {/* The reader's own override, on every row that can carry one. It is not
+          <DispositionVerbs item={item} />
+          {/* The reader's own override, on every row that can carry one. It is not
           a disposition — those put a row DOWN, and this lifts one up — so it is
           drawn beside them rather than among them. */}
-        <PinVerb item={item} />
-        {/* Only a task carries an assignee, so only a task can be handed on. A
+          <PinVerb item={item} />
+          {/* Only a task carries an assignee, so only a task can be handed on. A
           group row stands for a pile and names no single activity to move.
 
           Offered on the reader's OWN queue too: handing work on is not a
@@ -253,9 +260,10 @@ export function WorklistRow({
           excluded from the destinations follows the queue rather than this
           condition — ReassignControl falls back to the reader when no rep is
           selected, so the current holder is never offered as the new one. */}
-        {item.source === "task" && !item.batch && (
-          <ReassignControl item={item} owner={owner} />
-        )}
+          {item.source === "task" && !item.batch && (
+            <ReassignControl item={item} owner={owner} />
+          )}
+        </div>
         <RowAnswer item={item} />
       </PutDownByThumb>
     </PanelRow>

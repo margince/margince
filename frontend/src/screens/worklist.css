@@ -116,21 +116,29 @@
   margin: 0;
 }
 
-/* Four columns a reader runs down as four lists: the rank, the KIND of work,
-   the work itself, and the verbs. The kind column is fixed so the titles beside
-   it start at one x whatever the kind says, which is what lets the eye read the
-   kinds alone and then the titles alone. Everything after the verbs — the
-   dispositions, the pin, a reassignment, a decision drawn inside the row — is
-   the row's own tail and takes the full width under the four. */
+/* Three columns a reader runs down as three lists: the rank, the KIND of work,
+   and the work itself — which takes the whole rest of the row. The kind column
+   is fixed so the titles beside it start at one x whatever the kind says, which
+   is what lets the eye read the kinds alone and then the titles alone. The
+   verbs are NOT a fourth column: seven controls beside the work took the width
+   and left the subject, the snippet and the reasons a strip that wrapped every
+   line. They sit under the work, one wrapping line, and so does anything else
+   the row carries after it — a decision drawn inside the row, an answer. */
 .worklist-row {
   align-items: flex-start;
   display: grid;
-  grid-template-columns: auto var(--worklist-kind-w, 7.5rem) minmax(0, 1fr) auto;
-  column-gap: var(--space-3);
+  grid-template-columns: auto var(--worklist-kind-w, 7.5rem) minmax(0, 1fr);
+  column-gap: var(--space-4);
   row-gap: var(--space-2);
 }
-.worklist-row > :nth-child(n + 5) {
-  grid-column: 2 / -1;
+.worklist-row > :nth-child(n + 4) {
+  grid-column: 3 / -1;
+}
+.worklist-row-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
 }
 
 /* The kind, as an eyebrow in the muted tone; in the warn tone on a row the day
@@ -155,7 +163,7 @@
     grid-column: 2 / -1;
     padding-top: 0;
   }
-  .worklist-row > :nth-child(n + 4) {
+  .worklist-row > :nth-child(n + 3) {
     grid-column: 2 / -1;
   }
 }
