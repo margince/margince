@@ -12,8 +12,11 @@ package capture
 // to take. This layer decodes, maps and writes.
 
 import (
+	"context"
 	"errors"
+	"log/slog"
 	"net/http"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -31,11 +34,34 @@ type TraceHandlers struct {
 	// inferred from the rows: a window in which every message happened to have no
 	// subject would otherwise look like the posture was off.
 	payloadCapture bool
+	// senderPass answers when the sender verdict next runs. Injected because the
+	// schedule lives in the job queue, which this module does not own and must
+	// not learn to read: compose holds the pool and the seam.
+	//
+	// Nil is a deployment that composed no queue reader, and it answers the
+	// screen with no clock at all rather than a zero one — "next pass at
+	// 01:00 on 1 January 1970" is worse than saying nothing.
+	senderPass VerdictPass
+}
+
+// VerdictPass answers when one verdict pass next runs. Once per read, not per
+// row: the schedule is a property of the installation.
+type VerdictPass func(ctx context.Context) (VerdictClock, error)
+
+// VerdictClock is one pass's schedule as a screen can state it.
+type VerdictClock struct {
+	// Every is the declared cadence. Zero where no clock runs this pass, which
+	// is a different sentence from a next time this deployment cannot compute.
+	Every time.Duration
+	// Running says a pass is in flight right now.
+	Running bool
+	// NextAt is when the next pass runs, nil when unknowable.
+	NextAt *time.Time
 }
 
 // NewTraceHandlers wires the transport over a trace store.
-func NewTraceHandlers(store *TraceStore, payloadCapture bool) TraceHandlers {
-	return TraceHandlers{store: store, payloadCapture: payloadCapture}
+func NewTraceHandlers(store *TraceStore, payloadCapture bool, senderPass VerdictPass) TraceHandlers {
+	return TraceHandlers{store: store, payloadCapture: payloadCapture, senderPass: senderPass}
 }
 
 // ListMyCaptureActivity answers for the caller's own connections.
@@ -69,7 +95,20 @@ func (h TraceHandlers) answer(w http.ResponseWriter, r *http.Request, read func(
 		WriteTraceErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, traceResponse(window, h.payloadCapture))
+	response := traceResponse(window, h.payloadCapture)
+	if h.senderPass != nil {
+		pass, err := h.senderPass(r.Context())
+		if err != nil {
+			// The window is the answer; the clock is what makes waiting
+			// legible. A queue this read could not ask still leaves a screen
+			// that works, so the counters go out without it rather than
+			// failing a read nobody asked a schedule of.
+			slog.WarnContext(r.Context(), "capture: reading the sender verdict schedule", "error", err)
+		} else {
+			response.SenderVerdict = VerdictClockResponse(pass)
+		}
+	}
+	httperr.WriteJSON(w, http.StatusOK, response)
 }
 
 // WriteTraceErr maps this module's own refusal onto the wire. Everything else
@@ -106,6 +145,18 @@ func traceResponse(window TraceWindow, payloadCapture bool) crmcontracts.Capture
 	}
 }
 
+// VerdictClockResponse renders one pass's schedule. Exported because the held
+// threads answer carries the OTHER pass in the same shape, and two renderings
+// of one contract type is how the two screens come to phrase the same fact
+// differently.
+func VerdictClockResponse(clock VerdictClock) *crmcontracts.CaptureVerdictClock {
+	return &crmcontracts.CaptureVerdictClock{
+		EverySeconds: int(clock.Every / time.Second),
+		Running:      clock.Running,
+		NextPassAt:   clock.NextAt,
+	}
+}
+
 func traceFunnelResponse(funnel map[string]int) crmcontracts.CaptureActivityFunnel {
 	out := crmcontracts.CaptureActivityFunnel{}
 	for outcome, n := range funnel {
@@ -131,6 +182,7 @@ func traceEntryResponse(row TraceRow) crmcontracts.CaptureTraceEntry {
 		Id:           openapi_types.UUID(row.ID),
 		Connector:    row.Connector,
 		Outcome:      crmcontracts.CaptureTraceEntryOutcome(row.Outcome),
+		OutcomeNow:   crmcontracts.CaptureTraceEntryOutcomeNow(row.OutcomeNow),
 		Reason:       nullableString(row.Reason),
 		ActivityId:   traceUUID(row.ActivityID),
 		Counterparty: nullableString(row.Counterparty),

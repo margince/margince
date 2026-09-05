@@ -16,6 +16,7 @@ const ENTRIES = [
     id: "01930000-0000-7000-8000-00000000c001",
     connector: "gmail",
     outcome: "captured",
+    outcome_now: "captured",
     reason: null,
     activity_id: "01930000-0000-7000-8000-0000000000a1",
     resolution: null,
@@ -27,6 +28,7 @@ const ENTRIES = [
     id: "01930000-0000-7000-8000-00000000c002",
     connector: "gmail",
     outcome: "internal",
+    outcome_now: "internal",
     reason: "internal_only",
     activity_id: null,
     resolution: null,
@@ -38,6 +40,9 @@ const ENTRIES = [
     id: "01930000-0000-7000-8000-00000000c003",
     connector: "telegram",
     outcome: "deferred",
+    // Deferred at capture, judged real since — so the server counts it under
+    // what the verdict decided rather than under the bucket it was filed in.
+    outcome_now: "captured",
     reason: null,
     activity_id: "01930000-0000-7000-8000-0000000000a3",
     resolution: {
@@ -53,6 +58,7 @@ const ENTRIES = [
     id: "01930000-0000-7000-8000-00000000c004",
     connector: "gmail",
     outcome: "deferred",
+    outcome_now: "deferred",
     reason: "deferral_capped",
     activity_id: "01930000-0000-7000-8000-0000000000a4",
     resolution: null,
@@ -64,6 +70,7 @@ const ENTRIES = [
     id: "01930000-0000-7000-8000-00000000c005",
     connector: "imap",
     outcome: "suppressed",
+    outcome_now: "suppressed",
     reason: "transactional_registry",
     activity_id: "01930000-0000-7000-8000-0000000000a5",
     resolution: null,
@@ -79,6 +86,14 @@ const WINDOW = {
   page: { next_cursor: null },
   payload_capture_enabled: false,
   window_hours: 24,
+  // Five messages still waiting, and the clock they are waiting on. Without it
+  // the strip is the state the ticket was about: a number that does not move
+  // and no sentence saying when it will.
+  sender_verdict: {
+    every_seconds: 3600,
+    running: false,
+    next_pass_at: "2026-08-15T22:21:00Z",
+  },
 };
 
 function story(body: Record<string, unknown>, allow: GrantSpec = {}) {

@@ -212,3 +212,44 @@ func TestAReadWithNoMemberBehindItSaysSo(t *testing.T) {
 		t.Errorf("body = %q, want it to say what is missing", w.Body.String())
 	}
 }
+
+// Every ledger status the column accepts is classified by the funnel fold.
+//
+// The fold spells its statuses as SQL literals for the reason the join above
+// does, so nothing but this makes the SQL and the vocabulary agree. A status
+// the fold does not name leaves a settled sender counted as one still waiting
+// — the exact reading the fold exists to end — and an OPEN status named by it
+// would do the opposite, counting a sender still being judged under the answer
+// nobody has given.
+func TestTheSettledFoldClassifiesEveryLedgerStatus(t *testing.T) {
+	for _, status := range PendingStatuses() {
+		named := strings.Contains(settledOutcome, "'"+status+"'")
+		open := pipelinetrace.IsOpenDisposition(status)
+		switch {
+		case open && named:
+			t.Errorf("the fold names %q, which means the sender's question is still OPEN: "+
+				"counting that row under an answer would report a verdict nobody reached", status)
+		case !open && !named:
+			t.Errorf("the fold does not name %q, so a message whose sender was judged that way "+
+				"still counts as waiting for a verdict that has landed", status)
+		}
+	}
+}
+
+// The fold moves a DEFERRED row and nothing else.
+//
+// Every other outcome is terminal at capture time: a suppressed message was
+// suppressed whatever its sender turned out to be, and re-bucketing it on a
+// later verdict would rewrite what the pipeline did. Only `deferred` was ever
+// provisional — it is the ladder's word for "the question is open".
+func TestTheSettledFoldMovesOnlyADeferredRow(t *testing.T) {
+	if !strings.Contains(settledOutcome, "t.outcome = '"+string(TraceDeferred)+"'") {
+		t.Fatal("the fold is not conditioned on the deferred outcome, so it would re-bucket rows " +
+			"whose outcome was never provisional")
+	}
+	for _, outcome := range []TraceOutcome{TraceInternal, TraceFault} {
+		if strings.Contains(settledOutcome, "t.outcome = '"+string(outcome)+"'") {
+			t.Errorf("the fold reads %q, which no verdict can change", outcome)
+		}
+	}
+}

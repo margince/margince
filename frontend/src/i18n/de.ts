@@ -6016,6 +6016,13 @@ export const de = {
   "knowledge.new.submit": "Sammlung anlegen",
   "settings.tab.privacy": "Datenschutz & Audit",
   "settings.tab.capture-activity": "Erfassungsaktivität",
+  "verdictPass.subject.senders": "Absender",
+  "verdictPass.subject.threads": "Threads",
+  "verdictPass.every_one": "{subject} werden jede Minute beurteilt.",
+  "verdictPass.every_other":
+    "{subject} werden alle {minutes} Minuten beurteilt.",
+  "verdictPass.next": "Nächster Durchlauf {when}.",
+  "verdictPass.running": "Ein Durchlauf läuft gerade.",
   "captureActivity.title": "Erfassungsaktivität",
   "captureActivity.sub":
     "Was aus Ihrer Post der letzten 24 Stunden geworden ist. Die Absender, die Sie ausschließen, stehen darüber.",
@@ -6040,7 +6047,7 @@ export const de = {
   "captureActivity.outcome.captured": "Erfasst",
   "captureActivity.outcome.internal": "Als intern verworfen",
   "captureActivity.outcome.suppressed": "Keine Person angelegt",
-  "captureActivity.outcome.deferred": "Wartet auf Beurteilung",
+  "captureActivity.outcome.deferred": "Wartet auf Absender-Beurteilung",
   "captureActivity.outcome.fault": "Ableitung fehlgeschlagen",
   "captureActivity.reason.internal_only":
     "alle Beteiligten waren auf Ihren eigenen Domains",
@@ -6136,7 +6143,14 @@ export const de = {
   "pipeline.reason.no_contact_intended":
     "die Personenentscheidung ergab, dass keine anzulegen war",
   "pipeline.reason.awaiting_verdict": "der Absender wartet noch auf ein Urteil",
-  "pipeline.reason.verdict_reached": "für diesen Absender liegt ein Urteil vor",
+  "pipeline.reason.judged_real":
+    "dieser Absender wurde als echte Person beurteilt",
+  "pipeline.reason.judged_noise":
+    "dieser Absender wurde als Rauschen beurteilt, deshalb wurde kein Eintrag angelegt",
+  "pipeline.reason.judged_rejected":
+    "jemand hat diesen Absender abgelehnt, deshalb wurde kein Eintrag angelegt",
+  "pipeline.reason.judged_suppressed":
+    "dieser Absender wurde unterdrückt, deshalb wurde kein Eintrag angelegt",
   "pipeline.reason.no_open_question":
     "zu diesem Absender gab es keine offene Frage",
   "pipeline.reason.transport_not_read":

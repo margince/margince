@@ -70,9 +70,14 @@ type TraceRow struct {
 	// Stage is which step of the pipeline recorded this row. The window reads
 	// leave it as the funnel stage they filtered to; the ladder read uses it to
 	// place each rung on the path.
-	Stage      string
-	Connector  string
-	Outcome    string
+	Stage     string
+	Connector string
+	Outcome   string
+	// OutcomeNow is the bucket this row counts under today: Outcome, unless the
+	// sender's question has since been answered. The counters above the list are
+	// grouped by the same expression, which is what keeps a row and the tile it
+	// belongs to in agreement.
+	OutcomeNow string
 	Reason     string
 	ActivityID *ids.UUID
 	Resolution *TraceResolution
@@ -158,7 +163,10 @@ func (s *TraceStore) readFunnel(ctx context.Context, tx pgx.Tx, scope traceScope
 	addArg := func(v any) int { args = append(args, v); return len(args) }
 	where := traceWhere(scope, addArg)
 	rows, err := tx.Query(ctx, storekit.SQLf(
-		`SELECT outcome, count(*) FROM capture_trace t WHERE %s GROUP BY outcome`, where), args...)
+		`SELECT `+settledOutcome+` AS bucket, count(*)
+		   FROM capture_trace t`+resolutionJoin+`
+		  WHERE %s
+		  GROUP BY bucket`, where), args...)
 	if err != nil {
 		return fmt.Errorf("capture: reading the trace funnel: %w", err)
 	}
@@ -253,9 +261,39 @@ func finishTracePage(items []TraceRow, n int) ([]TraceRow, string, error) {
 // Two spellings would be two answers: the window would say a sender is still
 // waiting while the drawer opened from it said the verdict had landed, and a
 // member comparing the two would be right to trust neither.
-const traceRowColumns = `t.id, t.stage, t.connector, t.outcome, coalesce(t.reason, ''), t.activity_id,
+const traceRowColumns = `t.id, t.stage, t.connector, t.outcome, ` + settledOutcome + `, coalesce(t.reason, ''), t.activity_id,
 		       d.status, coalesce(d.kind, ''), d.resolved_at,
 		       coalesce(t.counterparty, ''), coalesce(t.subject, ''), t.occurred_at`
+
+// settledOutcome is the bucket a message counts under NOW: the outcome the
+// pipeline recorded, unless the sender's question has since been answered.
+//
+// Only a `deferred` row folds, because it is the only one whose outcome was
+// provisional — the ladder's own word for "the sender is a stranger and the
+// question is open". A `real` verdict made a record and a noise, rejected or
+// suppressed one deliberately made none; either way the row is no longer
+// waiting, and a counter that still said so gave a reader the exact opposite of
+// what happened. An open verdict leaves the row where it was.
+//
+// It CANNOT double-count. Resolving a sender writes no second trace row —
+// captureverdict.go creates records directly and the trace is append-only, so a
+// message that deferred never gains a `captured` row of its own to be counted
+// beside this one.
+//
+// Both window queries read this expression — the counters and the rows they
+// head — because two spellings is how the tiles came to say
+// `SENT FOR A VERDICT 49` over forty-nine rows each reading `judged noise`.
+// Held by TestTheCountersAgreeWithTheRowsTheyHead
+// (tracesettled_integration_test.go), which reads a window and compares them.
+//
+// SQL literals for the reason resolutionJoin gives about its own: both queries
+// stay compile-time constants, and TestTheSettledFoldClassifiesEveryLedgerStatus
+// holds the literals against the vocabulary they come from.
+const settledOutcome = `CASE
+		         WHEN t.outcome = 'deferred' AND d.status IN ('noise', 'rejected', 'suppressed') THEN 'suppressed'
+		         WHEN t.outcome = 'deferred' AND d.status = 'real' THEN 'captured'
+		         ELSE t.outcome
+		       END`
 
 // resolutionJoin reaches a message's sender's disposition.
 //
@@ -330,7 +368,7 @@ func scanTraceRow(rows pgx.Rows) (TraceRow, error) {
 	var row TraceRow
 	var status, kind *string
 	var resolvedAt *time.Time
-	if err := rows.Scan(&row.ID, &row.Stage, &row.Connector, &row.Outcome, &row.Reason, &row.ActivityID,
+	if err := rows.Scan(&row.ID, &row.Stage, &row.Connector, &row.Outcome, &row.OutcomeNow, &row.Reason, &row.ActivityID,
 		&status, &kind, &resolvedAt, &row.Counterparty, &row.Subject, &row.OccurredAt); err != nil {
 		return TraceRow{}, fmt.Errorf("capture: reading the trace page: %w", err)
 	}

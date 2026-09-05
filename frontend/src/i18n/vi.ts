@@ -5954,6 +5954,12 @@ export const vi = {
   "knowledge.new.submit": "Tạo bộ",
   "settings.tab.privacy": "Quyền riêng tư & kiểm toán",
   "settings.tab.capture-activity": "Hoạt động thu thập",
+  "verdictPass.subject.senders": "Người gửi",
+  "verdictPass.subject.threads": "Chuỗi hội thoại",
+  "verdictPass.every_one": "{subject} được xét mỗi phút.",
+  "verdictPass.every_other": "{subject} được xét mỗi {minutes} phút.",
+  "verdictPass.next": "Lượt tiếp theo {when}.",
+  "verdictPass.running": "Một lượt đang chạy.",
   "captureActivity.title": "Hoạt động thu thập",
   "captureActivity.sub":
     "Thư của bạn trong 24 giờ qua đã trở thành gì. Những người gửi bạn chặn nằm ở phía trên.",
@@ -5977,7 +5983,7 @@ export const vi = {
   "captureActivity.outcome.captured": "Đã thu thập",
   "captureActivity.outcome.internal": "Bỏ qua vì nội bộ",
   "captureActivity.outcome.suppressed": "Không tạo hồ sơ người",
-  "captureActivity.outcome.deferred": "Đang chờ phán quyết",
+  "captureActivity.outcome.deferred": "Đang chờ phán quyết người gửi",
   "captureActivity.outcome.fault": "Suy luận thất bại",
   "captureActivity.reason.internal_only":
     "mọi bên đều thuộc tên miền của chính bạn",
@@ -6071,7 +6077,13 @@ export const vi = {
   "pipeline.reason.no_contact_intended":
     "quyết định về hồ sơ người kết luận rằng không cần tạo",
   "pipeline.reason.awaiting_verdict": "người gửi vẫn đang chờ kết luận",
-  "pipeline.reason.verdict_reached": "đã có kết luận cho người gửi này",
+  "pipeline.reason.judged_real": "người gửi này được xác định là người thật",
+  "pipeline.reason.judged_noise":
+    "người gửi này bị xem là nhiễu nên không tạo bản ghi",
+  "pipeline.reason.judged_rejected":
+    "có người đã từ chối người gửi này nên không tạo bản ghi",
+  "pipeline.reason.judged_suppressed":
+    "người gửi này bị chặn nên không tạo bản ghi",
   "pipeline.reason.no_open_question":
     "không có câu hỏi nào đang mở về người gửi này",
   "pipeline.reason.transport_not_read":

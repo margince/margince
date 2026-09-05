@@ -58,7 +58,13 @@ const WITHHELD: HeldThread = {
   activity_id: undefined,
 };
 
-function renderCard(rows: HeldThread[], share?: Record<string, unknown>) {
+type Clock = components["schemas"]["CaptureVerdictClock"];
+
+function renderCard(
+  rows: HeldThread[],
+  share?: Record<string, unknown>,
+  threadVerdict?: Clock,
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -76,10 +82,13 @@ function renderCard(rows: HeldThread[], share?: Record<string, unknown>) {
         });
       }
       if (key === "GET /capture/held-threads") {
-        return new Response(JSON.stringify({ data: rows }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ data: rows, thread_verdict: threadVerdict }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
       // The drawer's own read. Served here so opening a thread does not throw
       // on a body with no access block; what the drawer draws from it is
@@ -294,4 +303,33 @@ it("says a thread is not the reader's without offering to open it", async () => 
   // it. Only the message's words are refused.
   expect(screen.getByText("Legal")).toBeTruthy();
   expect(screen.queryByRole("button", { name: /not shared/i })).toBeNull();
+});
+
+// A held thread that says only "waiting" is the same defect the capture
+// counters had: the classifier runs every ten minutes, the screen never said
+// so, and an owner watching an unchanged row can only read it as broken.
+it("says when the thread pass runs while a row is pending", async () => {
+  renderCard([PENDING], undefined, {
+    every_seconds: 600,
+    running: false,
+    next_pass_at: "2026-08-30T09:20:00Z",
+  });
+
+  const note = await screen.findByTestId("verdict-pass-threads");
+  expect(note).toHaveTextContent(/every 10 minutes/i);
+  expect(note).toHaveTextContent(/next pass/i);
+});
+
+// A thread held because the model judged it personnel is not waiting for
+// anything. Telling its owner when the next pass runs would promise a change
+// that is not coming.
+it("says nothing about the pass when no row is waiting on it", async () => {
+  renderCard([JUDGED], undefined, {
+    every_seconds: 600,
+    running: false,
+    next_pass_at: "2026-08-30T09:20:00Z",
+  });
+
+  await screen.findByText("Legal");
+  expect(screen.queryByTestId("verdict-pass-threads")).toBeNull();
 });

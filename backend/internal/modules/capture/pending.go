@@ -42,6 +42,23 @@ const (
 	PendingStatusRejected = "rejected"
 )
 
+// PendingStatuses is every state a ledger row can hold, and the same closed set
+// the column's CHECK constraint holds.
+//
+// A list rather than six constants alone because two readers have to account
+// for ALL of them: the trace's funnel fold decides which bucket each settled
+// verdict counts under, and the ladder names each one to a member. A status
+// added to the column and to neither would leave a settled sender reading as
+// one still being judged, forever. The list cannot grow in the database alone:
+//
+// Held by: TestTheLedgerStatusSetMatchesItsConstraint (backend/gates/captureledgerstatuses_test.go)
+func PendingStatuses() []string {
+	return []string{
+		PendingStatusPending, PendingStatusUnsure, PendingStatusReal,
+		PendingStatusNoise, PendingStatusSuppressed, PendingStatusRejected,
+	}
+}
+
 // The sender kinds a verdict can report — WHO wrote, which is a different
 // question from the row's lifecycle status above and is stored in its own
 // column (migration 0222).

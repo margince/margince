@@ -26,6 +26,7 @@ import { CaptureExclusionsCard } from "./capture-exclusions";
 import { useProviderLabel } from "./channelproviders";
 import { QueryGate, throwProblem } from "./common";
 import { useOpenEmail } from "./openemail";
+import { VerdictPassNote } from "./verdictpass";
 
 // Settings → Capture activity: what the pipeline did with the reader's own
 // messages in the last 24 hours.
@@ -232,8 +233,13 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
         // it comes off the first page and does not grow as more are fetched.
         const first = loaded.pages[0];
         const entries = loaded.pages.flatMap((page) => page.data);
+        // Filtered on the bucket the COUNTERS group by, not on the outcome
+        // the pipeline recorded. Filtering on the latter is what put
+        // "Showing 49 of 49 Waiting on a verdict" over forty-nine rows each
+        // reading "judged noise" — two answers to one question, one directly
+        // above the other.
         const shown = filter
-          ? entries.filter((entry) => entry.outcome === filter)
+          ? entries.filter((entry) => entry.outcome_now === filter)
           : entries;
         return (
           <>
@@ -246,11 +252,23 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
               description={t("captureActivity.scopeNote")}
               layout="stack"
               control={
-                <CaptureFunnel
-                  funnel={first.funnel}
-                  selected={filter}
-                  onSelect={setFilter}
-                />
+                <>
+                  <CaptureFunnel
+                    funnel={first.funnel}
+                    selected={filter}
+                    onSelect={setFilter}
+                  />
+                  {/* Only where something is actually waiting. A cadence
+                      printed over a window with nothing outstanding is
+                      furniture, and furniture is what a reader learns to skip
+                      before the one day it matters. */}
+                  {(first.funnel.deferred ?? 0) > 0 && (
+                    <VerdictPassNote
+                      clock={first.sender_verdict}
+                      subject="senders"
+                    />
+                  )}
+                </>
               }
             />
             {/* The log, behind a disclosure. It answers a question about ONE
@@ -367,20 +385,6 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
 // A bucket counts every message that met an outcome, so its label has to hold
 // for all of them at once.
 //
-// Four of the five already do. `deferred` does not: the funnel groups by
-// outcome alone, with no ledger join, so one number covers the senders still
-// being judged AND the ones already answered — and "Waiting on a verdict — 31"
-// over rows that each say the verdict landed is the same contradiction the row
-// avoids, one level up and louder, because the strip is what a reader sees
-// first. What every message in the bucket has in common is that the ladder sent
-// it for a verdict, so that is what the bucket says.
-//
-// The ROW keeps the tense: there it is one message, and whether that one is
-// still waiting is knowable and worth saying.
-function funnelLabel(outcome: Outcome): Outcome | "deferred_sent" {
-  return outcome === "deferred" ? "deferred_sent" : outcome;
-}
-
 function CaptureFunnel({
   funnel,
   selected,
@@ -406,7 +410,7 @@ function CaptureFunnel({
           onClick={() => onSelect(selected === outcome ? null : outcome)}
         >
           <StatCard
-            label={t(`captureActivity.outcome.${funnelLabel(outcome)}`)}
+            label={t(`captureActivity.outcome.${outcome}`)}
             // Zero is a reading, not an absence: "no message was dropped as
             // internal today" is exactly what somebody comes here to confirm.
             value={formatNumber(funnel[outcome] ?? 0, locale)}
