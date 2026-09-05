@@ -34,8 +34,7 @@ import (
 // overnight run is the deterministic composite order. The model re-order stays
 // what the api role adds on a rep's explicit refresh.
 func addBriefGenerateJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, mail BriefMailConfig) {
-	addDeclaredWorker[BriefGenerateArgs](reg, &briefGenerateWorker{pool: pool})
-	addDeclaredWorker[BriefGenerateWorkspaceArgs](reg, &briefGenerateWorkspaceWorker{
+	addDeclaredWorker[BriefGenerateArgs](reg, &briefGenerateWorker{
 		engine: briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool))),
 		pool:   pool,
 		users:  identity.NewService(pool),

@@ -71,7 +71,7 @@ func TestBackfillCompletionBuildsTheDigest(t *testing.T) {
 	}()
 
 	// Drain the boot digest so the next one cannot be it — nor deduped by it.
-	awaitKindCompleted(t, sub, CaptureDigestWorkspaceArgs{}.Kind())
+	awaitKindCompleted(t, sub, CaptureDigestArgs{}.Kind())
 
 	// The boot pass placed its own dispatcher row, so "no dispatcher exists" is
 	// not the claim to make — "the completion added none" is. Read the count
@@ -87,30 +87,26 @@ func TestBackfillCompletionBuildsTheDigest(t *testing.T) {
 	}
 	awaitKindCompleted(t, sub, "capture_backfill")
 	// The digest that follows the completed backfill is the payoff wiring.
-	awaitKindCompleted(t, sub, CaptureDigestWorkspaceArgs{}.Kind())
+	awaitKindCompleted(t, sub, CaptureDigestArgs{}.Kind())
 
 	// The waits above are satisfied by a digest of the right KIND, which the
-	// boot pass also produces — they prove the wiring fires, not WHAT it
-	// fires. The two assertions below tell a one-off workspace child from a
-	// fleet dispatcher, which on a single-workspace fixture produce the same
-	// visible outcome and are otherwise indistinguishable.
-
-	// A dispatcher row added here would be one workspace's backfill running
-	// the digest for every workspace in the installation.
-	if after := countJobsOfKind(ctx, t, b.env.Pool, CaptureDigestArgs{}.Kind()); after != dispatchersBefore {
-		t.Errorf("capture_digest rows went %d -> %d across the backfill; a completion must enqueue the "+
-			"CHILD kind for its own workspace, never the dispatcher that fans out over the whole fleet",
-			dispatchersBefore, after)
-	}
-
-	// An UNTAGGED child for this workspace is what a one-off enqueue looks
-	// like, and it is the row the boot fan-out cannot have written: every
-	// child of a fleet pass is tagged at the dispatch chokepoint. So finding
-	// one is proof the completion enqueued it, and proof it will not be
-	// counted as a fleet pass by the sweep gauges.
+	// scheduled pass also produces — they prove the wiring fires, not WHAT it
+	// fires. The assertion below tells a one-off enqueue from a scheduled tick,
+	// which produce the same visible outcome and are otherwise
+	// indistinguishable.
+	//
+	// It no longer tells a CHILD from a DISPATCHER, because there is no longer
+	// a pair to tell apart (ADR-0103): the digest is one kind, and a completion
+	// and a tick enqueue the same one. What survives that collapse is the TAG.
+	// A scheduled pass is stamped with jobs.SweepTag at the dispatch
+	// chokepoint; a one-off is deliberately not, so the sweep gauges do not
+	// count a backfill's digest as a day's coverage. So an untagged row is
+	// still proof the completion enqueued it, and still proof it will not be
+	// miscounted.
+	_ = dispatchersBefore
 	rows, err := b.env.Pool.Query(ctx,
 		`SELECT coalesce(args->>'workspace_id', ''), tags FROM river_job WHERE kind = $1 ORDER BY id`,
-		CaptureDigestWorkspaceArgs{}.Kind())
+		CaptureDigestArgs{}.Kind())
 	if err != nil {
 		t.Fatalf("reading digest rows: %v", err)
 	}
@@ -124,19 +120,22 @@ func TestBackfillCompletionBuildsTheDigest(t *testing.T) {
 			t.Fatalf("scanning a digest row: %v", err)
 		}
 		if slices.Contains(tags, jobs.SweepTag) {
-			continue // the boot fan-out's own child
+			continue // a scheduled tick's own row
 		}
 		oneOffs++
-		if workspace != b.env.WS.String() {
-			t.Errorf("the one-off digest names workspace %q, want the finishing tenant's %q", workspace, b.env.WS)
+		// The pass names NO tenant, and that is the collapse rather than a
+		// dropped field: it walks the workspaces itself, so a workspace in
+		// these args would be a claim the row is about one of them.
+		if workspace != "" {
+			t.Errorf("the one-off digest names workspace %q; a pass over the installation addresses no tenant", workspace)
 		}
 	}
 	if err := rows.Err(); err != nil {
 		t.Fatalf("reading digest rows: %v", err)
 	}
 	if oneOffs != 1 {
-		t.Errorf("%d untagged capture_digest_workspace row(s), want exactly 1 — the completion's own digest, "+
-			"tagged as a fleet pass or never enqueued at all", oneOffs)
+		t.Errorf("%d untagged capture_digest row(s), want exactly 1 — the completion's own digest, "+
+			"tagged as a scheduled pass or never enqueued at all", oneOffs)
 	}
 }
 

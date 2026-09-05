@@ -32,8 +32,8 @@ var teamJobClock = time.Date(2026, 6, 10, 9, 0, 0, 0, time.UTC)
 // wiring mistake there is a wiring mistake here. The narrator and the mail
 // relay are omitted on purpose: both are absent by design in an installation
 // without them, and neither is what this test is about.
-func teamSnapshotWorker(e *integration.Env) *weeklyGenerateWorkspaceWorker {
-	return &weeklyGenerateWorkspaceWorker{
+func teamSnapshotWorker(e *integration.Env) *weeklyGenerateWorker {
+	return &weeklyGenerateWorker{
 		engine: weekly.NewEngine(e.Pool, newTeammatesSeam(e.Pool)),
 		pool:   e.Pool,
 		users:  identity.NewService(e.Pool),

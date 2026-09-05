@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "d1b084a36d62cbd9b19a925414211f4b0f997e678f267f223289da645b5bd8e4"
+const JobContractHash = "96a8c061619ec1c669ba4111f95293a2a35b2e37df06ba294adefef02266593f"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -110,25 +110,13 @@ var specs = map[string]Spec{
 		Args:        []ArgField{{Name: "Workspace"}},
 	},
 	"brief_generate": {
-		Kind:       "brief_generate",
-		GoType:     "BriefGenerateArgs",
-		Role:       Dispatcher,
-		Queue:      "default",
-		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
-		FanOutUnit: FanOutWorkspace,
-		FanOutTo:   "brief_generate_workspace",
-		OptsOwner:  OptsCaller,
-		Cadence:    Cadence{Fixed: 1 * time.Hour},
-	},
-	"brief_generate_workspace": {
-		Kind:        "brief_generate_workspace",
-		GoType:      "BriefGenerateWorkspaceArgs",
-		Role:        Worker,
-		Queue:       "default",
-		Timeout:     TimeoutPolicy{Fixed: 10 * time.Minute},
-		MaxAttempts: 3,
-		OptsOwner:   OptsFanOut,
-		Args:        []ArgField{{Name: "Workspace"}},
+		Kind:      "brief_generate",
+		GoType:    "BriefGenerateArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 1 * time.Hour},
 	},
 	"capture_auto_enrich_sweep": {
 		Kind:      "capture_auto_enrich_sweep",
@@ -181,25 +169,12 @@ var specs = map[string]Spec{
 	"capture_digest": {
 		Kind:         "capture_digest",
 		GoType:       "CaptureDigestArgs",
-		Role:         Dispatcher,
-		Queue:        "default",
-		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
-		FanOutUnit:   FanOutWorkspace,
-		FanOutTo:     "capture_digest_workspace",
-		OptsOwner:    OptsCaller,
-		Cadence:      Cadence{Fixed: 24 * time.Hour},
-		Registration: Registration{When: []string{"GmailRegistry"}},
-	},
-	"capture_digest_workspace": {
-		Kind:         "capture_digest_workspace",
-		GoType:       "CaptureDigestWorkspaceArgs",
 		Role:         Worker,
 		Queue:        "default",
 		Timeout:      TimeoutPolicy{Fixed: 5 * time.Minute},
-		MaxAttempts:  3,
-		OptsOwner:    OptsFanOut,
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{Fixed: 24 * time.Hour},
 		Registration: Registration{When: []string{"GmailRegistry"}},
-		Args:         []ArgField{{Name: "Workspace"}},
 	},
 	"capture_enrich": {
 		Kind:         "capture_enrich",
@@ -889,25 +864,13 @@ var specs = map[string]Spec{
 		Registration: Registration{When: []string{"WebhookRetry.Deliverer"}},
 	},
 	"weekly_review_generate": {
-		Kind:       "weekly_review_generate",
-		GoType:     "WeeklyReviewGenerateArgs",
-		Role:       Dispatcher,
-		Queue:      "default",
-		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
-		FanOutUnit: FanOutWorkspace,
-		FanOutTo:   "weekly_review_generate_workspace",
-		OptsOwner:  OptsCaller,
-		Cadence:    Cadence{Fixed: 6 * time.Hour},
-	},
-	"weekly_review_generate_workspace": {
-		Kind:        "weekly_review_generate_workspace",
-		GoType:      "WeeklyReviewGenerateWorkspaceArgs",
-		Role:        Worker,
-		Queue:       "default",
-		Timeout:     TimeoutPolicy{Fixed: 10 * time.Minute},
-		MaxAttempts: 3,
-		OptsOwner:   OptsFanOut,
-		Args:        []ArgField{{Name: "Workspace"}},
+		Kind:      "weekly_review_generate",
+		GoType:    "WeeklyReviewGenerateArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 6 * time.Hour},
 	},
 }
 
