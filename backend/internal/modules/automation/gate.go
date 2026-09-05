@@ -40,6 +40,20 @@ import (
 // whether two wordings mean the same thing.
 const reasonOwnerGone = "the automation's owner no longer has access"
 
+// audienceWorkspace is the one activity audience an ownerless firing may derive
+// from: the value that says every seat here may read this row.
+const audienceWorkspace = "workspace"
+
+// reasonOwnerlessHeld and reasonOwnerlessUnreadable are what a blocked
+// ownerless firing records. Two reasons rather than one, because they are
+// different facts to whoever reads the run: the first says the message is held
+// and this automation has nobody whose reading of it could be checked; the
+// second says there was no message left to read.
+const (
+	reasonOwnerlessHeld       = "this automation has no owner, and the message it fired on is not readable by the whole workspace"
+	reasonOwnerlessUnreadable = "the message this fired on is no longer there to read"
+)
+
 // gateDecision is the pure, DB-free verdict checkOwnerPermission renders.
 // The zero value means "proceed" — runOne turns a blocked verdict into a
 // durable run row (recordBlocked) and lets a non-nil error (a transient

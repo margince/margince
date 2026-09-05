@@ -73,16 +73,22 @@ const activityEntity = datasource.EntityType("activity")
 // that inherited the caller's context would pass for every firing and look
 // exactly like a working gate.
 //
-// A firing that names no activity is not this gate's business and proceeds. A
-// system-seeded automation (no owner) likewise: there is no human authority
-// behind it to check, the same reasoning the object gate applies to a zero
-// OwnerID.
+// A firing that names no activity is not this gate's business and proceeds.
+//
+// A system-seeded automation (no owner) is NOT exempt, and this is where that
+// used to be got wrong. The object gate next door is right to skip an ownerless
+// firing — "may this owner do this action" has no subject to ask about. This
+// gate's question is about the ROW, and an ownerless automation still writes
+// content derived from it: post_meeting_recap planned 468 drafts holding
+// model-written summaries of mail held to its participants, and no gate here
+// ran at all. So an ownerless firing takes the floor instead: it may derive
+// from a row the whole workspace can read, and nothing else.
 func checkOwnerCanReadSubject(ctx context.Context, db *database.DB, resolver authz.Resolver, ev workflow.Event) (gateDecision, error) {
 	if ev.Entity.Type != activityEntity || ev.Entity.ID.IsZero() {
 		return gateDecision{}, nil
 	}
 	if ev.OwnerID == ids.Nil {
-		return gateDecision{}, nil
+		return checkOwnerlessSubject(ctx, db, ev)
 	}
 	if resolver == nil {
 		// A composed engine always carries a resolver (compose/workflows.go);
@@ -144,4 +150,45 @@ func checkOwnerCanReadSubject(ctx context.Context, db *database.DB, resolver aut
 		// rather than claiming a terminal blocked row over a blip.
 		return gateDecision{}, fmt.Errorf("automation: re-checking the subject's audience: %w", err)
 	}
+}
+
+// checkOwnerlessSubject decides what a firing with no human behind it may
+// derive from, answered off the row rather than through a principal.
+//
+// There is no authority to resolve, so there is none to check — and the safe
+// reading of that is the one this tree takes everywhere a principal is missing
+// rather than denied: approvals' own decidable says it plainly, that a proposal
+// nobody is recorded for is one nobody may read, not one everybody may.
+//
+// The floor is therefore the audience column itself. `workspace` is the only
+// value that says every seat here may read this, which is the most an
+// automation nobody owns can claim. `participants` and `selected` both name a
+// set this firing is not in and cannot be checked against.
+//
+// Giving these automations a human owner at seed time was the other way to make
+// the existing gate apply. It answers a different question: what the automation
+// may read would become whatever one arbitrarily chosen seat may read, moving
+// as that person's grants move, and the audit would record a human authority
+// that never existed.
+func checkOwnerlessSubject(ctx context.Context, db *database.DB, ev workflow.Event) (gateDecision, error) {
+	var audience string
+	err := db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT audience FROM activity WHERE id = $1`, ev.Entity.ID).Scan(&audience)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		// A row that is not there is not one to derive from, and it reads as
+		// absent rather than as a fault: an activity erased or archived between
+		// the firing and this check is an ordinary race, not an outage.
+		return gateDecision{blocked: true, reason: reasonOwnerlessUnreadable}, nil
+	}
+	if err != nil {
+		// Infrastructure. Surfaced so the firing retries rather than recording
+		// a terminal blocked row over a blip.
+		return gateDecision{}, fmt.Errorf("automation: reading the subject's audience for an ownerless firing: %w", err)
+	}
+	if audience == audienceWorkspace {
+		return gateDecision{}, nil
+	}
+	return gateDecision{blocked: true, reason: reasonOwnerlessHeld}, nil
 }
