@@ -421,8 +421,6 @@
 }
 .co-cite-origin {
   margin: var(--space-1) 0 0;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
 }
 /* The way to the record, set off from the words above it. The interval is
    this line's own, not the button's: a primitive keeps its own spacing. */

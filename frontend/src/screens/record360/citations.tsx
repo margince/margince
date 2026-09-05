@@ -387,7 +387,7 @@ function CitationWithReceipt({
       {chip.quote && (
         <blockquote className="co-cite-quote">{chip.quote}</blockquote>
       )}
-      {provenance && <p className="co-cite-origin">{provenance}</p>}
+      {provenance && <p className="co-cite-origin t-caption">{provenance}</p>}
       {onOpen && (
         <p className="co-cite-open">
           <Button small variant="ghost" onClick={onOpen}>
