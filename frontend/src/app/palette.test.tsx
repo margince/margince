@@ -331,7 +331,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       expect(screen.getByText("Floor scrubber")).toBeTruthy(),
     );
     await userEvent.click(screen.getByText("Floor scrubber"));
-    expect(window.location.hash).toContain("data-model");
+    // `fields`, the current spelling of the entry that carries products today.
+    // The catalog splits it into fields/tags/products; this follows when the
+    // screen renders those pages rather than the combined one.
+    expect(window.location.hash).toContain("fields");
   });
 
   // A project hit carries no snippet, and "project" under two projects both

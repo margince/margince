@@ -16,8 +16,9 @@ import { TeamAct } from "./team-act";
 
 // The team act invites through the settings form and then finishes. Two
 // things it must get right: the write that closes the journey lands before
-// the dispatch that plays the handoff, and an invite on an installation with
-// no email channel hands the admin the set-password link straight away.
+// the dispatch that plays the handoff (and a refused write keeps the reader
+// here), and an invite on an installation with no email channel hands the
+// admin the set-password link straight away.
 
 const asking: ConversationState = {
   ...initialConversationState,
@@ -27,7 +28,9 @@ const asking: ConversationState = {
 
 const NEW_USER = "018f3a1b-0000-7000-8000-0000000000e7";
 
-function renderTeam(options: { passwordLink?: boolean } = {}) {
+function renderTeam(
+  options: { passwordLink?: boolean; persisted?: boolean } = {},
+) {
   installFetchStub({
     // An admin, on an installation that may or may not be able to mail: the
     // server says which through `admin_password_link`.
@@ -47,6 +50,7 @@ function renderTeam(options: { passwordLink?: boolean } = {}) {
       }),
   });
   const dispatch = vi.fn();
+  const persist = vi.fn(async () => options.persisted ?? true);
   render(
     <QueryClientProvider
       client={
@@ -54,11 +58,11 @@ function renderTeam(options: { passwordLink?: boolean } = {}) {
       }
     >
       <LocaleProvider initial="en">
-        <TeamAct state={asking} dispatch={dispatch} />
+        <TeamAct state={asking} dispatch={dispatch} persist={persist} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return dispatch;
+  return { dispatch, persist };
 }
 
 afterEach(() => {
@@ -83,8 +87,8 @@ describe("TeamAct", () => {
     ).toBeInTheDocument();
   });
 
-  it("skipping ends the act and hands on, leaving the finish to the preferences act", async () => {
-    const dispatch = renderTeam();
+  it("skipping closes the journey: completion is written, then the act hands on", async () => {
+    const { dispatch, persist } = renderTeam();
     const user = userEvent.setup();
 
     await user.click(
@@ -94,6 +98,22 @@ describe("TeamAct", () => {
     await waitFor(() =>
       expect(dispatch).toHaveBeenCalledWith({ type: "TEAM_DONE" }),
     );
+    expect(persist).toHaveBeenCalledWith(
+      expect.objectContaining({ step: "complete" }),
+    );
+  });
+
+  it("says so and stays when completion could not be written", async () => {
+    const { dispatch, persist } = renderTeam({ persisted: false });
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Skip for now" }),
+    );
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(persist).toHaveBeenCalledTimes(1);
+    expect(dispatch).not.toHaveBeenCalled();
   });
 
   it("an invite lists the person, turns the skip into a finish, and mints their link where no mail can carry it", async () => {

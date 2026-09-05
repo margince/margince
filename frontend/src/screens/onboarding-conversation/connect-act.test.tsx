@@ -401,9 +401,10 @@ it("closes the backread onto the surface and finishes only from the surface's Co
   await userEvent.click(screen.getByRole("button", { name: "Continue" }));
   await waitFor(() => expect(dispatch).toHaveBeenCalledTimes(1));
   expect(dispatch).toHaveBeenCalledWith({ type: "CONNECT_DONE" });
-  // The mailbox IS connected on this path, so the connect step was not skipped.
+  // The mailbox IS connected on this path, so the connect step was not
+  // skipped — and leaving the last stop is what records completion.
   expect(persist).toHaveBeenCalledWith(
-    expect.objectContaining({ connectSkipped: false }),
+    expect.objectContaining({ step: "complete", connectSkipped: false }),
   );
 });
 
@@ -605,7 +606,7 @@ describe("the way onward", () => {
   });
 
   // With a mailbox live the step is left as connected: the skip flag is
-  // false, and the act hands on to the preferences act rather than entering.
+  // false, and leaving the last stop is what writes completion.
   it("records the step as connected and hands on when a mailbox is live", async () => {
     stubWithSession({ "GET /connectors": rosterWith({ state: "none" }) });
     const { dispatch, persist } = renderConnectAct();
@@ -620,7 +621,7 @@ describe("the way onward", () => {
       expect(dispatch).toHaveBeenCalledWith({ type: "CONNECT_DONE" }),
     );
     expect(persist).toHaveBeenCalledWith(
-      expect.objectContaining({ step: "connect", connectSkipped: false }),
+      expect.objectContaining({ step: "complete", connectSkipped: false }),
     );
   });
 });

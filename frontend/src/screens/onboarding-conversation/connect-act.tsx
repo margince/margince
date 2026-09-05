@@ -233,11 +233,11 @@ export function ConnectAct({
     }
     // Voice flags are NOT sent: the merge keeps whatever the voice act (or an
     // earlier session) recorded, so leaving here can never overwrite a built
-    // voice as skipped. The step stays "connect": the preferences act that
-    // follows is the one that writes completion, so a reload before it lands
-    // comes back here, to a screen that already shows what is connected.
+    // voice as skipped. Leaving IS finishing: this is the last stop, so the
+    // step written is "complete", and a reload before it lands comes back
+    // here, to a screen that already shows what is connected.
     const persisted = await persist({
-      step: "connect",
+      step: "complete",
       values: EMPTY_DRAFT.values,
       connectSkipped: skipped,
     });

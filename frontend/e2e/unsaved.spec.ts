@@ -37,7 +37,7 @@ const editOrgName = (page: Page) =>
 // Types into the dialog and closes it again, leaving the draft behind on a page
 // with nothing open over it — which is what makes the navigation below possible.
 const typeAndCloseDialog = async (page: Page, name: string) => {
-  await page.goto("/#/settings/admin/general");
+  await page.goto("/#/settings/company");
   await editOrgName(page).click();
   await orgName(page).fill(name);
   await page.keyboard.press("Escape");

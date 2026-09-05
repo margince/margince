@@ -109,6 +109,8 @@ func TestTheMeasureSiteListCoversEveryForwardMeasureEnum(t *testing.T) {
 // `weighted` and `manager_call` are words other schemas could reasonably use;
 // `commit_evidence` names this specific reading and nothing else in the
 // contract spells it.
+//
+//craft:ignore naked-any a decoded YAML document is untyped by nature — mappings, sequences and scalars arrive as any, and the switch below is the narrowing
 func walkForwardMeasureEnums(node any, at []string, found map[string]bool) {
 	switch shape := node.(type) {
 	case map[string]any:

@@ -12,9 +12,10 @@ import { BasisAct } from "./basis-act";
 import { initialConversationState } from "./conversation-machine";
 import type { ConversationState } from "./conversation-types";
 
-// The reporting basis, asked right after the company is confirmed: base
-// currency and reporting timezone, prefilled from the installation, with the
-// currency shown locked once a deal has frozen it.
+// The basis, asked right after the company is confirmed: base currency and
+// reporting timezone, prefilled from the installation, with the currency shown
+// locked once a deal has frozen it — and beside them, what the agent may
+// change on its own.
 
 const asking: ConversationState = {
   ...initialConversationState,
@@ -33,6 +34,25 @@ const settings = {
   max_upload_bytes: 26214400,
 };
 
+const autonomy = {
+  data: [
+    {
+      kind: "close_date_correction",
+      mode: "manual",
+      approved_clean: 12,
+      approved_edited: 1,
+      rejected: 0,
+    },
+    {
+      kind: "org_name_promotion",
+      mode: "auto",
+      approved_clean: 0,
+      approved_edited: 0,
+      rejected: 0,
+    },
+  ],
+};
+
 function act(locked: boolean, locale?: "de") {
   return () => {
     installFetchStub({
@@ -45,6 +65,7 @@ function act(locked: boolean, locale?: "de") {
             ? { base_currency_locked_reason: "3 deals have frozen EUR" }
             : {}),
         }),
+      "GET /autonomy": () => jsonResponse(autonomy),
     });
     return (
       <StoryProviders locale={locale}>
@@ -61,7 +82,7 @@ const meta: Meta<typeof BasisAct> = {
 export default meta;
 type Story = StoryObj<typeof BasisAct>;
 
-/** Both fields open, prefilled. */
+/** Both fields open, prefilled, with the autonomy switches beneath. */
 export const Open: Story = { render: act(false) };
 
 /** The currency frozen by a deal: the field says it cannot change. */

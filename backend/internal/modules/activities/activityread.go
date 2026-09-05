@@ -101,6 +101,24 @@ type ListActivitiesInput struct {
 	// [day 00:00, next day 00:00) with no double-counting at midnight.
 	OccurredAfter  *time.Time
 	OccurredBefore *time.Time
+	// AwaitingOutcome narrows to meetings nobody has said the result of.
+	//
+	// A DIAL RATHER THAN A GO-SIDE FILTER, unlike the forward meetings lane
+	// which removes non-booked rows after reading. That lane's window is the
+	// rest of today, so what it discards is bounded by a set the database
+	// already made small. This question looks BACKWARD, where almost every
+	// meeting is settled: a newest-first page of the past is dominated by rows
+	// the filter throws away, and the unreported meeting from three days ago
+	// falls off the end. The lane then draws "nothing to report" over real
+	// work — lossy in the one direction that hides itself.
+	//
+	// It admits a NULL status as well as `booked`. Capture writes calendar
+	// events with no status at all, so a synced meeting that happened
+	// yesterday carries NULL and is exactly the row this asks for; matching
+	// only `booked` would empty the lane on every installation whose calendar
+	// is connected. Same rule as meetingStillWorthPreparing, which is the
+	// forward lane's spelling of the same fact.
+	AwaitingOutcome bool
 	// WaitingReplyAsOf narrows the list to the SAME thread walk WaitingReplies
 	// answers for the Worklist: the newest inbound message per thread that
 	// nobody has answered, as of this instant. Nil means the filter is off.

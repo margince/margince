@@ -147,12 +147,15 @@ describe("conversationReducer happy path", () => {
       linkedinStatus: "saved",
     });
 
-    // Leaving connect is not the end: every path closes on the preferences
-    // act, and only its own move is the terminal.
+    // Leaving connect IS the end: it is the last stop, and its own move is
+    // the terminal.
     state = run([{ type: "CONNECT_DONE" }], state);
-    expect(state).toMatchObject({ act: "prefs", phase: "pf.ask" });
-    state = run([{ type: "PREFS_DONE" }], state);
-    expect(state).toMatchObject({ act: "done", phase: "pf.done" });
+    expect(state).toMatchObject({ act: "done", phase: "done" });
+    expect(state.thread.at(-1)).toMatchObject({
+      kind: "outcome",
+      i18nKey: "ob.conv.done",
+      tone: "success",
+    });
   });
 
   it("records a failed read as a failure outcome and allows the manual path out", () => {
@@ -195,7 +198,7 @@ describe("conversationReducer happy path", () => {
     expect(conversationReducer(state, { type: "CONNECT_DONE" })).toBe(state);
 
     state = run([{ type: "TEAM_DONE" }], state);
-    expect(state).toMatchObject({ act: "prefs", phase: "pf.ask" });
+    expect(state).toMatchObject({ act: "done", phase: "done" });
     expect(state.thread.at(-1)).toMatchObject({
       kind: "outcome",
       i18nKey: "ob.conv.team.done",
@@ -399,14 +402,10 @@ describe("member path", () => {
     );
     expect(state).toMatchObject({ act: "connect", phase: "cn.consent" });
     state = run(
-      [
-        { type: "LINKEDIN_SKIPPED" },
-        { type: "CONNECT_DONE" },
-        { type: "PREFS_DONE" },
-      ],
+      [{ type: "LINKEDIN_SKIPPED" }, { type: "CONNECT_DONE" }],
       state,
     );
-    expect(state).toMatchObject({ act: "done", phase: "pf.done" });
+    expect(state).toMatchObject({ act: "done", phase: "done" });
   });
 
   it("ignores every creator-only event", () => {

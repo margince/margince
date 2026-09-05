@@ -352,7 +352,7 @@ function applyEvent(
         },
       ]);
     case "TEAM_DONE":
-      return withEntries(state, { act: "prefs", phase: "pf.ask" }, [
+      return withEntries(state, { act: "done", phase: "done" }, [
         {
           kind: "outcome",
           id: "team:done",
@@ -465,12 +465,10 @@ function applyEvent(
         },
       ]);
     case "CONNECT_DONE":
-      return withEntries(state, { act: "prefs", phase: "pf.ask" });
-    case "PREFS_DONE":
-      return withEntries(state, { act: "done", phase: "pf.done" }, [
+      return withEntries(state, { act: "done", phase: "done" }, [
         {
           kind: "outcome",
-          id: "prefs:done",
+          id: "connect:done",
           i18nKey: "ob.conv.done",
           tone: "success",
         },

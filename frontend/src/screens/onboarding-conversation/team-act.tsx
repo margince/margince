@@ -5,6 +5,7 @@ import type { Dispatch } from "react";
 import { useState } from "react";
 import { useT } from "../../i18n";
 import { useMe } from "../common";
+import { EMPTY_DRAFT } from "../onboarding";
 import { type InvitedMember, InviteUserForm } from "../users-invite-form";
 import { PasswordLinkModal, usePasswordLink } from "../users-password-link";
 import type {
@@ -12,6 +13,7 @@ import type {
   ConversationState,
 } from "./conversation-machine";
 import { presenceFor } from "./presence";
+import type { WizardPersistInput } from "./use-wizard-state";
 import { WayOnward } from "./way-onward";
 import { ConversationWorkbench } from "./workbench";
 
@@ -22,24 +24,43 @@ import { ConversationWorkbench } from "./workbench";
 // only way the invited person ever gets in, so it is minted the moment the
 // invite lands, the way the roster does it.
 //
-// Leaving, with or without an invite, moves on to the preferences act, which
-// is where the journey is closed: the personal steps were already recorded as
-// skipped on the way in (the invite checkpoint), so nothing here is a write.
+// Leaving, with or without an invite, closes the journey: the personal steps
+// were already recorded as skipped on the way in (the invite checkpoint), so
+// the one write here is completion itself — a server fact before the handoff
+// plays, and a refusal keeps the reader here with the way out still offered.
 
 type TeamActProps = Readonly<{
   state: ConversationState;
   dispatch: Dispatch<ConversationEvent>;
+  persist: (input: WizardPersistInput) => Promise<boolean>;
 }>;
 
-export function TeamAct({ state, dispatch }: TeamActProps) {
+export function TeamAct({ state, dispatch, persist }: TeamActProps) {
   const t = useT();
   const me = useMe();
   const [invited, setInvited] = useState<readonly InvitedMember[]>([]);
   const [linkFor, setLinkFor] = useState<InvitedMember | null>(null);
+  const [finishing, setFinishing] = useState(false);
+  const [finishFailed, setFinishFailed] = useState(false);
   const passwordLink = usePasswordLink();
   // The server answers whether THIS caller can mint set-password links: admin,
   // on an installation with no email channel and a configured base URL.
   const canIssueLink = me.data?.admin_password_link ?? false;
+
+  const finish = async () => {
+    setFinishing(true);
+    setFinishFailed(false);
+    const persisted = await persist({
+      step: "complete",
+      values: EMPTY_DRAFT.values,
+    });
+    setFinishing(false);
+    if (!persisted) {
+      setFinishFailed(true);
+      return;
+    }
+    dispatch({ type: "TEAM_DONE" });
+  };
 
   return (
     <ConversationWorkbench
@@ -81,8 +102,16 @@ export function TeamAct({ state, dispatch }: TeamActProps) {
             invited.length > 0 ? "ob.conv.team.finish" : "ob.conv.team.skip",
           )}
           variant={invited.length > 0 ? "primary" : "ghost"}
+          pending={finishing}
           stillNeeded={(why) => why.join(" ")}
-          onGo={() => dispatch({ type: "TEAM_DONE" })}
+          note={
+            finishFailed ? (
+              <p className="ob-stage-note" role="alert">
+                {t("ob.conv.team.persistFailed")}
+              </p>
+            ) : undefined
+          }
+          onGo={() => void finish()}
         />
       </div>
       {linkFor && (

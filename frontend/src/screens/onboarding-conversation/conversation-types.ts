@@ -22,10 +22,9 @@ export type ConversationAct =
   | "team"
   | "voice"
   | "connect"
-  // The last word before the app: what the agent may change on its own,
-  // prefilled from what is already recorded. Every path ends here — the team
-  // act's and the connect act's.
-  | "prefs"
+  // The journey has closed and the handoff plays. Both ways out land here —
+  // the connect act's and the team act's — and each writes completion itself
+  // before it moves.
   | "done";
 
 export type ConversationPhase =
@@ -52,10 +51,9 @@ export type ConversationPhase =
   // profile saved beside it (linkedinStatus tracks its own resolution
   // independently and never gates the act's finish).
   | "cn.consent"
-  // The preferences act: asked once, then the one terminal every path shares.
-  // The team act reaches it without ever entering connect.
-  | "pf.ask"
-  | "pf.done";
+  // The one terminal every path shares. The team act reaches it without ever
+  // entering connect.
+  | "done";
 
 // Exactly one label source — a blank button is unrepresentable.
 type LabelSource =
@@ -253,7 +251,6 @@ export type ConversationEvent =
   // A succeeded build the reader does not recognise as their own: back to
   // collecting, so more of their writing can go in before the next build.
   | { type: "VOICE_REVISE" }
-  // Leaving the connect act and leaving the team act both land on the
-  // preferences act; PREFS_DONE is the one terminal move.
-  | { type: "CONNECT_DONE" }
-  | { type: "PREFS_DONE" };
+  // Leaving the connect act ends the journey, as leaving the team act does:
+  // the two are the terminal moves, one per way out.
+  | { type: "CONNECT_DONE" };

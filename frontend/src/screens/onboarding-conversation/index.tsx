@@ -4,7 +4,7 @@ import type { Dispatch } from "react";
 import { useEffect, useReducer, useRef } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { navigateReplacing, useRoute } from "../../app/router";
+import { navigate, navigateReplacing, useRoute } from "../../app/router";
 import { Button } from "../../design-system/atoms";
 import { useLocale, useT } from "../../i18n";
 import { throwProblem } from "../common";
@@ -14,6 +14,7 @@ import {
   pickBuiltVersion,
   useCompany,
 } from "../onboarding";
+import { BuildScene } from "../onboarding-build-scene";
 import { BasisAct } from "./basis-act";
 import { CompanyAct } from "./company-act";
 import { ConnectAct } from "./connect-act";
@@ -25,7 +26,6 @@ import {
   initialConversationState,
 } from "./conversation-machine";
 import { InviteAct } from "./invite-act";
-import { PrefsAct } from "./prefs-act";
 import { restorePlan, type VoiceRestoreProbe } from "./restore";
 import { TeamAct } from "./team-act";
 import type { WizardPersistInput } from "./use-wizard-state";
@@ -109,9 +109,9 @@ async function probeVoice(): Promise<VoiceRestoreProbe> {
 // question already answered. Entering the connect screen shows both mail and
 // LinkedIn at once, so there is nothing left behind a reload could strand —
 // its checkpoint fires on arrival, unlike voice which fires on departure.
-// Finishing is not here either: the connect act records how it left (a
-// mailbox connected or skipped) before it moves, and the preferences act
-// writes step "complete" itself before the handoff.
+// Finishing is not here either: the connect act and the team act each write
+// step "complete" themselves before they move, so the handoff never plays
+// over a journey the server still holds open.
 const actCheckpoints: ReadonlyMap<
   string,
   Omit<WizardPersistInput, "values">
@@ -399,12 +399,11 @@ function CurrentAct({
     case "invite":
       return <InviteAct state={state} dispatch={dispatch} />;
     case "team":
-      return <TeamAct state={state} dispatch={dispatch} />;
-    // Every journey ends on the same last word, and the act that asked it
-    // plays the handoff.
-    case "prefs":
+      return <TeamAct state={state} dispatch={dispatch} persist={persist} />;
+    // Every journey ends on the same handoff, once the act that closed it has
+    // recorded completion.
     case "done":
-      return <PrefsAct state={state} dispatch={dispatch} persist={persist} />;
+      return <BuildScene onDone={() => navigate({ screen: "home" })} />;
     case "connect":
       return (
         <ConnectAct

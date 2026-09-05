@@ -31,7 +31,11 @@ function act(locale?: "de") {
     });
     return (
       <StoryProviders locale={locale}>
-        <TeamAct state={asking} dispatch={() => {}} />
+        <TeamAct
+          state={asking}
+          dispatch={() => {}}
+          persist={async () => true}
+        />
       </StoryProviders>
     );
   };

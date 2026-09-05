@@ -405,6 +405,11 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 	if in.OccurredBefore != nil {
 		where = append(where, sprintf("a.occurred_at < $%d", arg(*in.OccurredBefore)))
 	}
+	if in.AwaitingOutcome {
+		// NULL counts as awaiting: a captured calendar event carries no status,
+		// and excluding it would empty this question on a connected calendar.
+		where = append(where, "(a.meeting_status IS NULL OR a.meeting_status = 'booked')")
+	}
 	if in.Cursor != nil && *in.Cursor != "" {
 		if in.OpenAndDueBy != nil {
 			return "", nil, "", nil, errOpenAndDueByWithCursor

@@ -81,6 +81,11 @@ func validateSourceUpdate(in UpdateSourceInput) (*bool, error) {
 }
 
 func (s *VoiceStore) updateVoiceSource(ctx context.Context, tx pgx.Tx, profileID, sourceID ids.UUID, in UpdateSourceInput, excluded *bool) (VoiceCorpusSource, CorpusSummary, error) {
+	// Before the source row this is about to write, so every corpus writer
+	// queues here in one order — see lockProfileForCorpusWrite.
+	if err := lockProfileForCorpusWrite(ctx, tx, profileID); err != nil {
+		return VoiceCorpusSource{}, CorpusSummary{}, err
+	}
 	profile, err := s.visibleProfile(ctx, tx, profileID)
 	if err != nil {
 		return VoiceCorpusSource{}, CorpusSummary{}, err
@@ -179,6 +184,11 @@ func (s *VoiceStore) DeleteSource(ctx context.Context, profileID, sourceID ids.U
 	}
 	var removed VoiceCorpusSource
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Before the source row this is about to archive, so every corpus writer
+		// queues here in one order — see lockProfileForCorpusWrite.
+		if err := lockProfileForCorpusWrite(ctx, tx, profileID); err != nil {
+			return err
+		}
 		profile, err := s.visibleProfile(ctx, tx, profileID)
 		if err != nil {
 			return err

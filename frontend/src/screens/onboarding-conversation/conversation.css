@@ -1480,17 +1480,54 @@
   color: var(--textPrimary);
 }
 
-/* The build scene: the Core carries the ring, the percentage sits in it. */
+/* The build scene: the Core carries the ring, the percentage sits in it.
+   Held to the pair's own measure rather than the board's — the account beside
+   the orb is a short line and a four-item checklist, and stretched to 74rem it
+   read as two things at opposite ends of the board rather than as one. */
 .ob-voice-building {
-  align-items: center;
+  max-width: 48rem;
   padding-top: var(--space-6);
-  text-align: center;
+}
+
+/* The orb is the subject and keeps its own column; the account reads down the
+   column beside it. Centred under the orb, each of those lines started from a
+   different place and the eye crossed the board to find it. */
+.ob-voice-building-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: center;
+}
+
+.ob-voice-building-account {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* One column where the two cannot sit side by side. The orb is sized in px, so
+   the breakpoint is where the account's own lines start to break, not where
+   the orb stops fitting. */
+@container ob-scene (max-width: 32rem) {
+  .ob-voice-building-row {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
 }
 
 .ob-voice-orb {
   position: relative;
   display: grid;
   place-items: center;
+}
+
+/* The orb's column is `auto` — measured against the Core's own px size — so the
+   primitive's viewport cap has nothing left to protect and would only shrink
+   the sphere on a narrow window that still holds both columns. Set on the Core
+   itself, which is where the default it overrides is declared. */
+.ob-voice-orb .core {
+  --coreCap: 100%;
 }
 
 /* White, not --textPrimary: the ring behind it is the Core's own dark
@@ -1519,27 +1556,6 @@
   margin: 0;
   color: var(--textSecondary);
   font-size: var(--fs-body);
-}
-
-.ob-voice-building-model {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-  font-family: var(--f-mono);
-}
-
-.ob-voice-building-model i {
-  width: 6px;
-  height: 6px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--aiText);
-}
-
-.ob-voice-building .ob-conv-stages {
-  margin-top: var(--space-4);
-  text-align: start;
 }
 
 /* ---- the connect scene ---- */
@@ -3330,14 +3346,14 @@
   outline-offset: 1px;
 }
 
-/* ---- the preferences act: the last word before the app ---- */
+/* ---- the basis act: the reporting basis and the autonomy switches ---- */
 
-.ob-prefs-scene {
+.ob-basis-scene {
   max-width: 48rem;
   gap: var(--space-5);
 }
 
-.ob-prefs-section {
+.ob-basis-section {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -3347,13 +3363,13 @@
   background: var(--bgElevated);
 }
 
-.ob-prefs-section h3 {
+.ob-basis-section h3 {
   margin: 0;
   color: var(--textPrimary);
   font: var(--fw-semibold) var(--fs-h3) / var(--lh-tight) var(--f-display);
 }
 
-.ob-prefs-lead {
+.ob-basis-lead {
   margin: 0;
   color: var(--textSecondary);
   font-size: var(--fs-sm);

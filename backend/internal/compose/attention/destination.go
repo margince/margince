@@ -59,6 +59,7 @@ var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.Workl
 	crmcontracts.WorklistItemSourceLeadResponse:      destinationToday,
 	crmcontracts.WorklistItemSourceDealAtRisk:        destinationToday,
 	crmcontracts.WorklistItemSourceMeeting:           destinationToday,
+	crmcontracts.WorklistItemSourceMeetingOutcome:    destinationToday,
 	crmcontracts.WorklistItemSourceTask:              destinationToday,
 	crmcontracts.WorklistItemSourceConversationClaim: destinationToday,
 	crmcontracts.WorklistItemSourceBriefItem:         destinationToday,

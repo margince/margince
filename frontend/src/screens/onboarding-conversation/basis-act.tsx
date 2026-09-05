@@ -9,6 +9,7 @@ import { useInstallationSettings } from "../../app/uploadlimit";
 import { Field, TextInput } from "../../design-system/atoms";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
+import { AutonomyChoices, useAutonomy } from "../autonomy-settings";
 import { problemFieldErrorsOf, problemMessageOf, QueryGate } from "../common";
 import {
   currencyNote,
@@ -23,16 +24,20 @@ import { railStops } from "./rail";
 import { WayOnward } from "./way-onward";
 import { ConversationWorkbench } from "./workbench";
 
-// The basis act: the installation's reporting basis — base currency and
-// reporting timezone — asked right after the company is confirmed, before any
-// step about the person answering. It is the one installation-wide answer the
-// setup needs, and it belongs with the company rather than at the end: every
-// deal, report and brief that follows is priced and dated on it.
+// The basis act: what the setup settles right after the company is confirmed,
+// before any step about the person answering. Two things are asked. The
+// installation's reporting basis — base currency and reporting timezone — is
+// the one installation-wide answer the setup needs, and it belongs with the
+// company rather than at the end: every deal, report and brief that follows is
+// priced and dated on it. What the agent may change on its own is the reader's
+// own answer, asked here beside the basis so the administrator settles both
+// before anything personal; every switch records itself the moment it moves,
+// as it does in Settings.
 //
-// Both fields are prefilled from what the installation already holds, so a
-// reader who agrees presses Continue and nothing is written twice. They are
-// the installation's, so they are shown only to a reader who may change them
-// (the same grant Settings checks), and written as the one sparse patch
+// The reporting fields are prefilled from what the installation already holds,
+// so a reader who agrees presses Continue and nothing is written twice. They
+// are the installation's, so they are shown only to a reader who may change
+// them (the same grant Settings checks), and written as the one sparse patch
 // Settings writes; a reader without the grant simply continues.
 //
 // Leaving is a server fact before it is a UI fact: the settings patch lands
@@ -76,6 +81,7 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
   const [currencyEdit, setCurrencyEdit] = useState<string | null>(null);
   const [timezoneEdit, setTimezoneEdit] = useState<string | null>(null);
   const update = useUpdateInstallationSettings(() => undefined);
+  const autonomy = useAutonomy();
   const [leaving, setLeaving] = useState(false);
 
   const stored = settings.data;
@@ -122,6 +128,7 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
     m: ordinalNumber(stops.length),
     label: t("ob.rail.basis"),
   });
+  const autonomyRows = autonomy.data?.data ?? [];
 
   return (
     <ConversationWorkbench
@@ -132,11 +139,11 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
       title={t("ob.conv.basis.title")}
       sub={t("ob.conv.basis.body")}
     >
-      <div className="ob-scene ob-prefs-scene">
+      <div className="ob-scene ob-basis-scene">
         {canManage && (
           <QueryGate query={settings} pendingLabel={t("ob.conv.basis.title")}>
             {(current) => (
-              <section className="ob-prefs-section">
+              <section className="ob-basis-section">
                 <h3>{t("ob.conv.basis.reportingTitle")}</h3>
                 <Field
                   label={t("installationSettings.baseCurrency")}
@@ -174,6 +181,17 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
               </section>
             )}
           </QueryGate>
+        )}
+        {/* An empty set is this seat's own answer — nothing is routed to it
+            of any kind — and on this surface that is nothing to ask, not an
+            empty card. The switches write themselves, so Continue does not
+            wait on them the way it waits on the reporting basis. */}
+        {autonomyRows.length > 0 && (
+          <section className="ob-basis-section">
+            <h3>{t("ob.conv.basis.autonomyTitle")}</h3>
+            <p className="ob-basis-lead">{t("ob.conv.basis.autonomyBody")}</p>
+            <AutonomyChoices rows={autonomyRows} />
+          </section>
         )}
         <WayOnward
           label={t("ob.conv.basis.continue")}

@@ -75,6 +75,10 @@ type Service struct {
 	// an installation can warn about deals without deriving relationships.
 	decay    Decay
 	meetings Meetings
+	// meetingsAwaitingOutcome is the counterpart lane, and OPTIONAL separately:
+	// an installation can prepare a rep for their day without asking them to
+	// close off what already happened.
+	meetingsAwaitingOutcome MeetingsAwaitingOutcome
 	// zone resolves the installation timezone the day boundary is measured in;
 	// nil is UTC, for the reason WithZone gives.
 	zone   Zone

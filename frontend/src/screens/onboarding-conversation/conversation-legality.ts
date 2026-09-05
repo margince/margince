@@ -71,7 +71,6 @@ const legalPhases: Record<
   LINKEDIN_SAVED: new Set(["cn.consent"]),
   LINKEDIN_SKIPPED: new Set(["cn.consent"]),
   CONNECT_DONE: new Set(["cn.consent"]),
-  PREFS_DONE: new Set(["pf.ask"]),
 };
 
 export function isLegal(
