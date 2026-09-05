@@ -177,9 +177,9 @@ func liveRecord(predicate, alias string) string {
 // waitingRepliesSQL is Sprintf'd directly at ALL call sites — WaitingReplies
 // below (entityClause scopeUnbounded, the workspace-wide Worklist read), the
 // entity-scoped list filter (waitingReplyExistsClause) and the guardrail —
-// rather than through a wrapper. Thirteen positional holes is already the shape the
-// constant settled on for its own eligibility rules; a wrapper over that
-// many arguments would just be the same Sprintf call once removed, with a
+// rather than through a wrapper. A long positional argument list is already the
+// shape the constant settled on for its own eligibility rules; a wrapper over
+// that many arguments would just be the same Sprintf call once removed, with a
 // second place to keep its parameter order in sync with the %[N] indices
 // below. What must not fork between the call sites is the SQL TEXT — the
 // anti-joins, the tie break, the future-dated guard, the horizon, the
@@ -215,6 +215,13 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		// reader watch a row vanish to learn that a reply they may not see had
 		// arrived.
 		content, err := auth.ActivityContentClause(ctx, "a", arg)
+		if err != nil {
+			return err
+		}
+		// The same gate for the reply that may LIFT a snooze. A reply this
+		// reader cannot see must not put the row back on their day: the row
+		// reappearing is itself the disclosure that it arrived.
+		backContent, err := auth.ActivityContentClause(ctx, "back", arg)
 		if err != nil {
 			return err
 		}
@@ -264,7 +271,8 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 				reader,
 				scopeUnbounded,
 				neverRelaxed, neverRelaxed,
-				neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains))), args...)
+				neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
+				messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent)), args...)
 		if err != nil {
 			return err
 		}

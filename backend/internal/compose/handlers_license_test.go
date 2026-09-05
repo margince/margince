@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 )
 
@@ -153,6 +154,35 @@ func TestWithLicensePostureReachesTheEntitlementHandler(t *testing.T) {
 	// and the exposition cannot disagree about what this process resolved.
 	if srv.licensePosture == nil {
 		t.Error("the option did not reach the /metrics accessor")
+	}
+}
+
+// The option ADDS the posture and keeps the seat count, which is the invariant
+// that lets the two halves be wired in two places.
+//
+// The count comes from the assembly and the posture from the option, so a
+// WithLicensePosture that rebuilt the struct instead of adding to it would drop
+// the store — and the drop is silent: both entitlement and capacity would answer
+// 501 for the life of the process, in the one role that applies this option.
+// Nothing else covers that branch, because the harness that exercises the
+// capacity endpoint wires no posture and so never runs this code.
+func TestWithLicensePostureKeepsTheSeatCountItWasGiven(t *testing.T) {
+	t.Parallel()
+	// Stand in for the assembly, which is what puts the store here. A real one
+	// needs a pool; what this asserts is only that the option does not discard
+	// whatever it found, so a non-nil marker is the whole fixture.
+	srv := Server{}
+	srv.licenseHandlers = licenseHandlers{seats: &identity.SeatUsageStore{}}
+
+	WithLicensePosture(func() licensecheck.Posture {
+		return licensecheck.Posture{State: licensecheck.StateAbsent, CheckedAt: resolvedAt}
+	})(&srv, nil)
+
+	if srv.seats == nil {
+		t.Fatal("the option dropped the seat count; both license surfaces would answer 501")
+	}
+	if srv.posture == nil {
+		t.Fatal("the option did not add the posture")
 	}
 }
 

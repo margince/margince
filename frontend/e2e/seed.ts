@@ -2253,6 +2253,32 @@ export async function mockApi(
         base_currency: "EUR",
       });
     }
+    // Home's own reading of the same pipeline (home.readings.tsx) and
+    // Analytics' forecast tab (analytics.forecast.tsx) share this one query.
+    // Without it the catch-all's list envelope reaches
+    // formatMoneyCompact(data.open_minor, data.base_currency, locale)
+    // unguarded — unlike the weighted figure beside it, which is wrapped in
+    // formatMoneyOrAbsent — so an undefined currency took the whole #/home
+    // shell down with it.
+    if (path === "/forecast") {
+      return json({
+        period_start: "2026-04-01",
+        period_end: "2026-06-30",
+        scope_kind: "workspace",
+        won_minor: 4_000_000,
+        evidence_minor: 12_000_000,
+        best_case_minor: 18_000_000,
+        open_minor: 25_000_000,
+        weighted_minor: 13_000_000,
+        eligible_count: 12,
+        priced_count: 12,
+        confirmed_date_count: 10,
+        fx_missing_count: 0,
+        as_of: "2026-07-13T00:00:00Z",
+        timezone: "Europe/Berlin",
+        base_currency: "EUR",
+      });
+    }
     if (path.startsWith("/reports/")) {
       return json({
         report: "deals-by-stage",
@@ -2331,25 +2357,6 @@ export async function mockApi(
         aggregated_account_count: 1,
         restricted_excluded: [],
         computed_at: "2026-07-13T00:00:00Z",
-      });
-    }
-    // Analytics' frame, BEFORE the record-context match below: that one tests
-    // a substring, so it answered this route with a 360's envelope — a body
-    // with no `default_scope`, which took every analytics screen to the error
-    // boundary and the rail with it. Named in full here because the two share
-    // a word and nothing else.
-    if (path === "/analytics/context") {
-      const workspace = { kind: "workspace", label: "Whole workspace" };
-      return json({
-        default_scope: workspace,
-        allowed_scopes: [workspace],
-        capabilities: {
-          view_manager_forecast: true,
-          submit_manager_forecast: true,
-        },
-        as_of: "2026-07-13T00:00:00Z",
-        timezone: "Europe/Berlin",
-        base_currency: "EUR",
       });
     }
     // RS-3's context panel and the IT-1 tool console both read fixed-shape

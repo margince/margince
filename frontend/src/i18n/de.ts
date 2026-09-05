@@ -195,6 +195,10 @@ export const de = {
   "shell.more": "Mehr",
   "shell.unknownPage": "Nicht gefunden",
   "shell.closeMenu": "Schließen",
+  "shell.capture.importing": "E-Mail-Verlauf wird importiert",
+  "shell.capture.share": "{percent} · {scanned} von {total} Nachrichten",
+  "shell.capture.count": "Bisher {scanned} Nachrichten",
+  "shell.capture.open": "Import öffnen",
   "shell.navBack": "Zurück",
   "shell.navBackTo": "Zurück zu {name}",
   "shell.navTop": "Bereiche",
@@ -241,6 +245,13 @@ export const de = {
   "search.tier.mirrored": "aus einem verbundenen System",
   "search.tier.unverified": "nicht verifiziert",
 
+  "context.recentTouches": "Letzte Gespräche",
+  "context.openTasks": "Offene Aufgaben",
+  "context.relatedPeople": "Zugehörige Personen",
+  "context.relatedCompanies": "Zugehörige Unternehmen",
+  "context.relatedProjects": "Verknüpfte Projekte",
+  "context.whoKnows": "Wer sie kennt",
+  "context.relatedDeals": "Zugehörige Deals",
   "context.title": "Verwandte Belege",
   "context.empty": "Noch nichts Verwandtes.",
 
@@ -3237,7 +3248,7 @@ export const de = {
     "Das ist eine Antwort auf ihre eigene Nachricht — dafür brauchst du keinen Grund anzugeben.",
   "compose.sendLaterLabel": "Später senden (optional)",
   "compose.send": "Senden",
-  "compose.sendConfirmTitle": "Diese E-Mail senden?",
+  "compose.sendConfirmTitle": "E-Mail entwerfen",
   "compose.threadHeading": "Dieser Verlauf",
   "compose.continueHeading": "Einen Verlauf fortsetzen?",
   "compose.threadLeave": "Anderen wählen",
@@ -3246,7 +3257,7 @@ export const de = {
   "compose.threadContinuing": "Der letzte Austausch, den dies fortsetzt",
   "compose.threadPending": "Verlauf wird geladen\u2026",
   "compose.sendBody":
-    "Sie senden diese E-Mail jetzt. Dies ist eine ausgehende, unwiderrufliche Aktion.",
+    "Prüfen und bearbeiten Sie Ihren Entwurf. Ein Klick auf Senden verschickt die E-Mail und kann nicht rückgängig gemacht werden.",
   "compose.schedule": "Einplanen",
   "compose.scheduleConfirmTitle": "Diese E-Mail einplanen?",
   // The composer computed that it had scheduled a send and said nothing —
@@ -3308,6 +3319,7 @@ export const de = {
   "analytics.count": "Deals",
   "analytics.unweighted": "Ungewichtet",
   "analytics.weighted": "Gewichtet",
+  "analytics.priced": "{priced} von {total} bepreist",
   "analytics.planNote":
     "der ausgeführte Plan und die Zeilen, auf die sich die Zahl zurückrechnet",
   "analytics.reportDeals": "Offene Pipeline nach Phase",
@@ -3318,6 +3330,20 @@ export const de = {
   "analytics.noClosedDeals": "Es wurden noch keine Deals abgeschlossen.",
   "analytics.sectionOutcomes": "Meine Ergebnisse",
   "analytics.sectionCoverage": "Datenabdeckung",
+  "analytics.sectionDelivery": "Lieferung",
+  "analytics.reportProjectsByPhase": "Projekte nach Phase",
+  "analytics.reportProjectCommitments": "Projektzusagen",
+  "analytics.reportProjectsGoneQuiet": "Verstummte Projekte",
+  "analytics.projects": "Projekte",
+  "analytics.project": "Projekt",
+  "analytics.openDealValue": "Offener Deal-Wert ({currency})",
+  "analytics.wonDealValue": "Gewonnener Deal-Wert ({currency})",
+  "analytics.openCommitments": "Offen",
+  "analytics.overdueCommitments": "Überfällig",
+  "analytics.quietSince": "Still seit",
+  "analytics.nothingQuiet": "Kein Projekt in Lieferung ist verstummt.",
+  "analytics.noProjectsYet":
+    "Noch keine Projekte — ein gewonnener Deal eröffnet eines.",
   "analytics.coverageSub":
     "Welche Quellen die nächtliche Prüfung lesen konnte, und wie weit. Eine stille, aber gelesene Quelle gilt als geprüft; eine ungelesene sagt warum.",
   "analytics.covSource": "Quelle",
@@ -3599,18 +3625,48 @@ export const de = {
     "Ich bin bei {name} nur teilweise durchgekommen und habe gestoppt.",
   "agent.activity.documentExtractNamed.failed":
     "Ich konnte {name} nicht lesen.",
+  "agent.activity.siteRead.queued":
+    "Die Firmenwebsite steht zum Lesen in der Warteschlange.",
+  "agent.activity.siteRead.running": "Ich lese die Firmenwebsite.",
+  "agent.activity.siteRead.stalled":
+    "Das Lesen der Firmenwebsite dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.siteRead.done": "Ich habe die Firmenwebsite gelesen.",
+  "agent.activity.siteRead.degraded":
+    "Ich habe die Firmenwebsite nicht zu Ende gelesen.",
+  "agent.activity.siteRead.failed": "Ich konnte die Firmenwebsite nicht lesen.",
+  "agent.activity.siteReadNamed.queued":
+    "Die Website von {name} steht zum Lesen in der Warteschlange.",
+  "agent.activity.siteReadNamed.running": "Ich lese die Website von {name}.",
+  "agent.activity.siteReadNamed.stalled":
+    "Das Lesen der Website von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.siteReadNamed.done":
+    "Ich habe die Website von {name} gelesen.",
+  "agent.activity.siteReadNamed.degraded":
+    "Ich habe die Website von {name} nicht zu Ende gelesen.",
+  "agent.activity.siteReadNamed.failed":
+    "Ich konnte die Website von {name} nicht lesen.",
   "agent.activity.summarize.queued":
-    "Das Zusammentragen zu diesem Unternehmen steht in der Warteschlange.",
+    "Eine Zusammenfassung steht in der Warteschlange.",
   "agent.activity.summarize.running":
-    "Ich trage zusammen, was ich über dieses Unternehmen weiß.",
-  "agent.activity.summarize.done":
-    "Was ich über dieses Unternehmen weiß, ist fertig.",
+    "Ich stelle eine Zusammenfassung zusammen.",
+  "agent.activity.summarize.done": "Deine Zusammenfassung ist fertig.",
   "agent.activity.summarize.degraded":
-    "Ich habe über dieses Unternehmen nur teilweise Informationen zusammengetragen und dann aufgehört.",
+    "Ich habe nur einen Teil der Zusammenfassung geschafft und dann aufgehört.",
   "agent.activity.summarize.failed":
-    "Ich konnte das Zusammentragen zu diesem Unternehmen nicht abschließen.",
+    "Ich konnte die Zusammenfassung nicht abschließen.",
   "agent.activity.summarize.stalled":
-    "Das Zusammentragen zu diesem Unternehmen dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+    "Die Zusammenfassung dauert ungewöhnlich lange. Möglicherweise wurde sie abgebrochen.",
+  "agent.activity.summarizeNamed.queued":
+    "Das Zusammentragen zu {name} steht in der Warteschlange.",
+  "agent.activity.summarizeNamed.running":
+    "Ich trage zusammen, was ich über {name} weiß.",
+  "agent.activity.summarizeNamed.done": "Was ich über {name} weiß, ist fertig.",
+  "agent.activity.summarizeNamed.degraded":
+    "Ich habe zu {name} nur teilweise Informationen zusammengetragen und dann aufgehört.",
+  "agent.activity.summarizeNamed.failed":
+    "Ich konnte das Zusammentragen zu {name} nicht abschließen.",
+  "agent.activity.summarizeNamed.stalled":
+    "Das Zusammentragen zu {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
   "agent.activity.draftReply.queued":
     "Deine Antwort steht zum Entwerfen in der Warteschlange.",
   "agent.activity.draftReply.running": "Ich entwerfe deine Antwort.",
@@ -4406,7 +4462,7 @@ export const de = {
   "overnightGrant.help":
     "Es liest deine Deals und E-Mails, um zu ordnen, was heute wichtig ist, und schreibt Notizen zurück. Senden kann es nicht: die Erlaubnis hier deckt Lesen und Schreiben ab, niemals Senden.",
   "overnightGrant.danger":
-    "ACHTUNG: Ohne diese Freigabe bleiben dein Morgen-Überblick, deine Arbeitsliste und dein Wochenrückblick leer. Das sind die Bildschirme, mit denen Margince startet — der größte Teil des Produkts wirkt dann, als würde er nicht funktionieren.",
+    "Ohne diese Berechtigung kann der Agent Ihren Brief über Nacht weder lesen noch kommentieren. Ihre Datensätze, Arbeitsliste und der geplante Wochenrückblick bleiben verfügbar.",
   "overnightGrant.saveFailed":
     "Deine Antwort auf die Nacht-Frage konnte nicht gespeichert werden. Alles andere ist verbunden — stelle es unter Einstellungen → Verbindungen ein, sobald du drin bist.",
   "overnightGrant.renew":
@@ -5623,6 +5679,7 @@ export const de = {
   "recordmail.send": "E-Mail schreiben",
   "deal360.rewrite": "Neu schreiben",
   "deal360.readFull": "Vollständige Einschätzung lesen",
+  "deal360.openTask": "Vorhandene Aufgabe öffnen",
   "deal360.createTask": "Aufgabe anlegen",
   "deal360.openBrief": "Meeting-Briefing öffnen",
   "deal360.unreadable":
@@ -7134,9 +7191,30 @@ export const de = {
   "person.intro.factDirect": "Direkte Beziehung",
   "person.intro.factIndirect": "Über eine Kollegin",
   "person.intro.factReceipts": "{count} einsehbare Belege",
-  "person.intro.stripPath": "Bester Weg",
+  "person.intro.verdictDirect":
+    "{name} fragen — die beiden schreiben sich bereits.",
+  "person.intro.verdictOneSided":
+    "{name} fragen — hat geschrieben, bisher ohne Antwort.",
+  "person.intro.verdictVia":
+    "{name} fragen — erreicht die Person über {through}.",
+  "person.intro.evidenceEyebrow": "Die Belege dahinter",
+  "person.intro.evidenceExchanges": "Austausche",
+  "person.intro.evidenceWindow": "in 90 Tagen",
+  "person.intro.evidenceFrom": "{count} von {name}",
+  "person.intro.evidenceLastContact": "Letzter Kontakt",
+  "person.intro.lastToday": "Heute",
+  "person.intro.lastYesterday": "Gestern",
+  "person.intro.lastDays": "vor {days} Tagen",
+  "person.intro.lastNever": "Keiner in 90 Tagen",
+  "person.intro.stripWho": "Wer die Person erreicht",
+  "person.intro.stripWhoCount_one": "Nur {name}",
+  "person.intro.stripWhoCount_other": "{count} Kolleginnen und Kollegen",
+  "person.intro.stripWhoMix": "{direct} direkt · {indirect} über einen Kontakt",
+  "person.intro.otherRoutesTitle": "Weitere Wege hinein",
+  "person.intro.otherRoutesSub":
+    "Sortiert danach, wie viel beidseitiger Austausch dahintersteht.",
+  "person.intro.relayDue": "fällig {date}",
   "person.intro.stripDirect": "Direkte Beziehung",
-  "person.intro.stripVia": "Über {through}",
   "person.intro.stripNoPath": "Bisher erreicht hier niemand diese Person",
   "person.intro.stripWhyNow": "Warum jetzt",
   "person.intro.stripWhyNowSub": "Die jüngste Veränderung in dieser Beziehung",
@@ -7179,7 +7257,6 @@ export const de = {
   "person.intro.routesSub":
     "Bester zuerst. Nimm den, der sich wirklich nutzen lässt — der zweite steht hier, weil der erste nicht immer verfügbar ist.",
   "person.intro.best": "Bester Weg",
-  "person.intro.alternative": "Alternative",
   "person.intro.evidenceTwoWay_one":
     "{total} Austausch in beide Richtungen in 90 Tagen · {when}",
   "person.intro.evidenceTwoWay_other":
@@ -8050,15 +8127,20 @@ export const de = {
   "worklist.bandClear.keep_momentum": "Nichts Vereinbartes bleibt liegen.",
   "worklist.bandClear.review": "Nichts zu prüfen.",
   "worklist.disposition.verb.snooze": "Schlummern",
+  "worklist.disposition.snoozeForDays_one": "{value} Tag schlummern",
+  "worklist.disposition.snoozeForDays_other": "{value} Tage schlummern",
   "worklist.disposition.snoozeFor": "Für wie lange",
   "worklist.disposition.snoozeDays_one": "{value} Tag",
   "worklist.disposition.snoozeDays_other": "{value} Tage",
+  "worklist.disposition.snoozeUntil.reply": "Bis sie antworten",
   "worklist.disposition.verb.not_mine": "Nicht meins",
   "worklist.disposition.verb.not_sales": "Kein Kunde",
   "worklist.disposition.done.snooze": "Morgen wieder auf deiner Liste.",
   "worklist.disposition.doneSnooze_one": "Morgen wieder auf deiner Liste.",
   "worklist.disposition.doneSnooze_other":
     "In {value} Tagen wieder auf deiner Liste.",
+  "worklist.disposition.doneSnoozeUntil.reply":
+    "Wieder auf deiner Liste, sobald sie antworten.",
   "worklist.disposition.done.not_mine":
     "Von deiner Liste. Wer zuständig ist, sieht es weiterhin.",
   "worklist.disposition.done.not_sales": "Von allen Listen entfernt.",
@@ -8140,6 +8222,14 @@ export const de = {
   "worklist.board.atRisk": "Gefährdete Deals",
   "worklist.board.overdue": "Überfällig",
   "worklist.board.nobody": "Noch niemand",
+  "worklist.coaching.title": "Heute früh ein Gespräch wert",
+  "worklist.coaching.promises":
+    "{name} schuldet {count} fällige Zusagen — die Kundschaft wartet bereits darauf.",
+  "worklist.coaching.waiting":
+    "{count} Kundinnen und Kunden warten auf {name}.",
+  "worklist.coaching.overdue":
+    "{name} hat {count} Aufgaben, deren Frist verstrichen ist.",
+  "worklist.board.promises": "Fällige Zusagen",
   "worklist.board.truncated":
     "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
   "worklist.readings.label": "Was heute auf dem Spiel steht",

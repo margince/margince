@@ -425,6 +425,7 @@ const (
 	CommsDeliveryBounced                  SubscribableEventType = "comms.delivery_bounced"
 	ConsentChanged                        SubscribableEventType = "consent.changed"
 	ConsentSuppressed                     SubscribableEventType = "consent.suppressed"
+	ConsentSuppressionLifted              SubscribableEventType = "consent.suppression_lifted"
 	ContractArchived                      SubscribableEventType = "contract.archived"
 	ContractCreated                       SubscribableEventType = "contract.created"
 	ContractStatusChanged                 SubscribableEventType = "contract.status_changed"
@@ -565,6 +566,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ConsentChanged:
 		return true
 	case ConsentSuppressed:
+		return true
+	case ConsentSuppressionLifted:
 		return true
 	case ContractArchived:
 		return true
@@ -1027,6 +1030,17 @@ type PublicEventConsentSuppressed struct {
 
 	// Kind Which stop this is (subject_request for a hand-recorded one).
 	Kind string `json:"kind"`
+}
+
+// PublicEventConsentSuppressionLifted Payload for consent.suppression_lifted — somebody with the authority to do so took back a stop, so mail to this person may resume.
+// It carries BOTH levels: the one the stop was recorded at and the one that lifted it. A reader auditing this later needs to see that the second outranked the first, and a single "lifted_by" would leave that unanswerable without joining the row that no longer says it.
+// It never carries the reason either party gave. Those words belong to the people who wrote them, and an event reaches readers the explanation was not given to.
+type PublicEventConsentSuppressionLifted struct {
+	// LiftedByLevel The authority that lifted it. Always strictly above the level above.
+	LiftedByLevel string `json:"lifted_by_level"`
+
+	// RecordedAtLevel The authority the stop was recorded at (machine | user | admin | subject).
+	RecordedAtLevel string `json:"recorded_at_level"`
 }
 
 // PublicEventContractArchived Payload for contract.archived — the agreement left the surfaces that count it.
@@ -2416,6 +2430,10 @@ func (PublicEventConsentSuppressed) EventType() string { return "consent.suppres
 
 func (PublicEventConsentSuppressed) EntityType() string { return "person" }
 
+func (PublicEventConsentSuppressionLifted) EventType() string { return "consent.suppression_lifted" }
+
+func (PublicEventConsentSuppressionLifted) EntityType() string { return "person" }
+
 func (PublicEventContractArchived) EventType() string { return "contract.archived" }
 
 func (PublicEventContractArchived) EntityType() string { return "contract" }
@@ -2869,6 +2887,7 @@ var PublicEventVersions = map[string]int{
 	"comms.delivery_bounced":                    1,
 	"consent.changed":                           1,
 	"consent.suppressed":                        1,
+	"consent.suppression_lifted":                1,
 	"contract.archived":                         1,
 	"contract.created":                          1,
 	"contract.status_changed":                   1,

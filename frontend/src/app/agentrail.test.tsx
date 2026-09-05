@@ -109,6 +109,33 @@ const AI_CALL: AiCallSummary = {
 
 const OPERATOR: GrantSpec = { automation: ["update"], license: ["read"] };
 
+/** A month with one priced line and one the server could not price. */
+const PRICED_USAGE = {
+  days: [
+    {
+      date: "2026-08-01",
+      tasks: [
+        {
+          task: "enrich",
+          tier: "cheap_cloud",
+          calls: 2,
+          tokens_in: 100,
+          tokens_out: 40,
+          cost_est_minor: 120,
+        },
+        {
+          task: "summarize",
+          tier: "cheap_cloud",
+          calls: 1,
+          tokens_in: 30,
+          tokens_out: 10,
+        },
+      ],
+    },
+  ],
+  budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" },
+};
+
 const PROFILE = (state: AssistantProfile["state"]): AssistantProfile => ({
   name: "Margince",
   kind: "ai",
@@ -817,39 +844,51 @@ describe("AgentRail", () => {
     expect(container.querySelector(".arspend")).toBeNull();
   });
 
+  // The exact figure, not merely a figure: 120 minor units of the budget's
+  // currency is $1.20, and the line the server could not price adds nothing
+  // to it rather than turning the total into an unknown.
   it("sums the priced lines into the month's spend", async () => {
-    stubAgentRailApi({
-      aiUsage: () =>
-        jsonResponse({
-          days: [
-            {
-              date: "2026-08-01",
-              tasks: [
-                {
-                  task: "enrich",
-                  tier: "cheap_cloud",
-                  calls: 2,
-                  tokens_in: 100,
-                  tokens_out: 40,
-                  cost_est_minor: 120,
-                },
-                {
-                  task: "summarize",
-                  tier: "cheap_cloud",
-                  calls: 1,
-                  tokens_in: 30,
-                  tokens_out: 10,
-                },
-              ],
-            },
-          ],
-          budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" },
-        }),
-    });
+    stubAgentRailApi({ aiUsage: () => jsonResponse(PRICED_USAGE) });
     const { container } = render(ROUTE);
     await waitFor(() =>
-      expect(container.querySelector(".arspend")?.textContent).toBeTruthy(),
+      expect(container.querySelector(".arspend")?.textContent).toContain(
+        "$1.20",
+      ),
     );
+  });
+
+  // The server serves the figure on `automation:update`, which the ops seat
+  // holds and an edited role may hold; the cost is the administrator's figure
+  // regardless, so a seat with the grant and without the role gets the runtime
+  // row and no money — on the rail, in the panel head and in the meta row.
+  it("shows the spend to no seat but an admin, grant or not", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubAgentRailApi({
+      me: () => jsonResponse(meFixture({ roles: ["ops"], allow: OPERATOR })),
+      aiUsage: () => jsonResponse(PRICED_USAGE),
+    });
+    const { container } = render(ROUTE);
+    await openPanel(user, container);
+    await waitFor(() =>
+      expect(panel().querySelector(".armeta")?.textContent).toContain(
+        LABELS.noCallsYet,
+      ),
+    );
+    expect(container.querySelector(".arspend")).toBeNull();
+    expect(panel().querySelector(".arpmoney")).toBeNull();
+    expect(panel().querySelector(".armeta")?.textContent).not.toContain(
+      LABELS.spend,
+    );
+    expect(
+      container.querySelector(".arhit")?.getAttribute("aria-label"),
+    ).not.toContain(LABELS.spend);
+    // Withheld at the source, not only at the paint: a figure the seat may not
+    // see is a figure the client never asks for.
+    expect(
+      fetchMock.mock.calls.some(([request]) =>
+        new URL(request.url).pathname.endsWith("/ai/usage"),
+      ),
+    ).toBe(false);
   });
 
   // The wire carries the invocation-site token (`capture_classify`); the
@@ -1010,13 +1049,27 @@ describe("AgentRail", () => {
   // the copy existing is not the claim — the claim is that a live summarize
   // reaches the reader's own line, in their own words, through the same feed
   // the overnight run uses.
-  it("narrates a summary the reader asked for while it is still being written", async () => {
-    withRuns(RUN({ kind: "summarize" }));
+  //
+  // NAMED, because that is the line that answers the reader: the server sends
+  // the record the summary is about as `subject_label`, and the rail says
+  // "about Acme" rather than "about this company" — which was wrong for a
+  // person or a meeting and told a rep nothing for a company.
+  it("names the record a summary is about while it is still being written", async () => {
+    withRuns(RUN({ kind: "summarize", subject_label: "Acme" }));
     const { container } = render(ROUTE);
     await settlesOnLine(
       container,
-      "I'm pulling together what I know about this company.",
+      "I'm pulling together what I know about Acme.",
     );
+  });
+
+  // An occurrence that arrived without a name — an older server, or a record
+  // with no name to give — falls back to a line that names NO record, rather
+  // than guessing at one.
+  it("names no record for a summary that carried no name", async () => {
+    withRuns(RUN({ kind: "summarize" }));
+    const { container } = render(ROUTE);
+    await settlesOnLine(container, "I'm pulling a summary together.");
   });
 
   it("moves the Core to working when a server run is live and this tab is idle", async () => {
@@ -1074,11 +1127,12 @@ describe("AgentRail", () => {
     });
   });
 
-  // Two subjects, two slots. They used to share one, so the agent's sentence
-  // disappeared for as long as anything was loading and a reader could not tell
-  // which of the two was talking. Both are true at the same moment here: an
-  // overnight brief is running, and this tab is fetching its own sources.
-  it("keeps the agent's line and the tool's narration in separate slots", async () => {
+  // ONE line under the orb. While this tab is fetching something it can name,
+  // that sentence is the orb's line; the agent's own sentence has the slot
+  // back once the read settles. Both are true at the same moment here — an
+  // overnight brief is running, and this tab is fetching its own sources — and
+  // the reader sees one status at a time, never two stacked.
+  it("gives the tool's named read the orb's one line, then hands it back", async () => {
     vi.useFakeTimers();
     stubAgentRailApi({
       agentActivity: () =>
@@ -1086,17 +1140,41 @@ describe("AgentRail", () => {
     });
     const { container } = render(ROUTE);
     // Inside the ticker's LINGER_MS, so the mount-time reads it named are still
-    // standing while the agent's own line has answered. That overlap IS the
-    // case: the two used to take turns in one slot, and the whole point of the
-    // change is that this moment shows both.
+    // standing while the agent's own line has answered. WHICH of them is newest
+    // is a race between stubs and no part of the claim: that the tool's
+    // sentence holds the one slot, and nothing sits under it, is the claim.
     await act(() => vi.advanceTimersByTimeAsync(300));
+    const inFlight = container.querySelector(".arline")?.textContent;
+    expect(inFlight).toBeTruthy();
+    expect(inFlight).not.toBe(BRIEF_RUNNING);
+    expect(container.querySelectorAll(".arwords > span").length).toBe(1);
+    // Past every linger the mount reads can hold, the agent's line is back.
+    await act(() => vi.advanceTimersByTimeAsync(2500));
     expect(container.querySelector(".arline")?.textContent).toBe(BRIEF_RUNNING);
-    // WHICH of the mount reads is newest is a race between stubs and no part of
-    // the claim. That the tool has a line of its own, saying something other
-    // than the agent's, is the whole claim.
-    const tool = container.querySelector(".artool")?.textContent;
-    expect(tool).toBeTruthy();
-    expect(tool).not.toBe(BRIEF_RUNNING);
+  });
+
+  // A fault keeps the line while reads are in flight: the colour and the
+  // caption are about the same thing, and an amber orb captioned with a read
+  // would tell a reader the read is the fault. Proven by the caption standing
+  // still across the window the case above shows the tool taking.
+  it("never lets a read caption a fault", async () => {
+    vi.useFakeTimers();
+    stubAgentRailApi({
+      license: () =>
+        jsonResponse({
+          state: "rejected",
+          seats_used: 1,
+          over_limit: false,
+          checked_at: "2026-08-01T09:00:00Z",
+        }),
+      agentActivity: () => jsonResponse({ running: [], recent: [] }),
+    });
+    const { container } = render(ROUTE);
+    await act(() => vi.advanceTimersByTimeAsync(300));
+    expect(block(container).getAttribute("data-core-state")).toBe("warning");
+    const inFlight = container.querySelector(".arline")?.textContent;
+    await act(() => vi.advanceTimersByTimeAsync(2500));
+    expect(container.querySelector(".arline")?.textContent).toBe(inFlight);
   });
 
   // The colour and the sentence are always about the SAME thing. A workspace in
@@ -1154,6 +1232,19 @@ describe("AgentRail", () => {
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("ingest"),
     );
+  });
+
+  // The crawl a person starts from a company page, reported by the dossier row
+  // itself rather than by the settled model calls it makes — which is what lets
+  // the orb hold `ingest` for the whole read instead of resting between calls.
+  // The line names the company, because the source sent its name.
+  it("moves the Core to ingest while a company website is being read, and names the company", async () => {
+    withRuns(RUN({ kind: "site_read", subject_label: "Acme" }));
+    const { container } = render(ROUTE);
+    await waitFor(() =>
+      expect(block(container).getAttribute("data-core-state")).toBe("ingest"),
+    );
+    await settlesOnLine(container, "I'm reading the Acme website.");
   });
 
   // A run past the lease its own source declared. The server derives it, so a

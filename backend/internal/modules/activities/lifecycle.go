@@ -131,6 +131,16 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 		if err != nil {
 			return err
 		}
+		// A transition is a CHANGE. A PATCH resending the status a meeting
+		// already holds is somebody saving a form, and recording it would make
+		// "booked twice" a countable event.
+		if err := recordMeetingTransition(ctx, tx, meetingTransition{
+			ActivityID:     id,
+			Status:         changedMeetingStatus(current, out),
+			ScheduledStart: &out.OccurredAt,
+		}); err != nil {
+			return err
+		}
 		before, after := storekit.ChangedColumns(activityColumnImage(current), activityColumnImage(out))
 		auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "activity", id.UUID, before, after)
 		if err != nil {

@@ -147,6 +147,51 @@ describe("how long a row is put down for", () => {
     },
   );
 
+  // The answer a span cannot give.
+  //
+  // Every duration above is a guess about when the customer will move, and the
+  // rep is usually wrong in one of two directions. This asserts the WIRE rather
+  // than the button, because a picker that renders the line and sends a
+  // one-day snooze underneath looks identical on screen and is the same old
+  // guess.
+  it("sends the reply condition and no moment when the reader picks it", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const fetch = draw();
+
+    await user.click(screen.getByRole("button", { name: "For how long" }));
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["worklist.disposition.snoozeUntil.reply"],
+      }),
+    );
+
+    await waitFor(async () => expect((await sentBodies(fetch)).length).toBe(1));
+    const body = (await sentBodies(fetch))[0];
+    expect(body.reopen_on).toBe("reply");
+    // No moment: the server refuses a reply snooze carrying one, and a client
+    // that sent tomorrow alongside would turn every such press into a 422.
+    expect(body.snoozed_until).toBeUndefined();
+  });
+
+  // The default press still names the clock EXPLICITLY.
+  //
+  // The server treats an absent condition as `time`, so omitting it would work
+  // today — and would silently become a different snooze the day that default
+  // changed. Saying which one is meant costs one field.
+  it("names the clock condition on the plain press", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const fetch = draw();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.disposition.verb.snooze"],
+      }),
+    );
+
+    await waitFor(async () => expect((await sentBodies(fetch)).length).toBe(1));
+    expect((await sentBodies(fetch))[0].reopen_on).toBe("time");
+  });
+
   // The spans are offered only where the verb is. A duration picker beside a
   // row the server never offered a snooze on is a control that 404s.
   it("offers no spans on a row the server does not let a reader snooze", () => {

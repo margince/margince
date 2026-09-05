@@ -595,6 +595,7 @@ function LeadScorePanel({
               />
             )}
           </Field>
+          {/* ds:ignore a lead line is a labelled row; this one happens to hold only verbs */}
           <div className="lead-line">
             <Button
               variant="primary"

@@ -231,19 +231,39 @@ func readableActivityIDsTx(ctx context.Context, tx pgx.Tx, ids0 []ids.UUID) ([]i
 // It is also the honest number: the caller is owed how many colleagues co-hold
 // THEIR messages, not how many hold a stranger's message that happens to carry
 // the same header value.
+//
+// Whether one row holds is activities' question, answered by the same
+// predicate the audience derivation runs (activities.ImportRowHolds). The
+// count and the recompute read the same rows, so a second spelling here is a
+// second answer, and the one time this had one they disagreed: the last owner
+// to share a two-mailbox message was told a colleague still held it while the
+// recompute opened it to the workspace.
 func othersHoldingTx(ctx context.Context, tx pgx.Tx, messages []ids.UUID, user ids.UUID) (int, error) {
 	if len(messages) == 0 {
 		return 0, nil
 	}
-	var held int
-	if err := tx.QueryRow(ctx, `
-		SELECT count(DISTINCT i.user_id)
+	rows, err := tx.Query(ctx, `
+		SELECT i.user_id, i.posture_at_import, i.verdict_status
 		  FROM capture_import i
-		 WHERE i.activity_id = ANY($1) AND i.user_id <> $2
-		   AND (coalesce(i.posture_at_import, 'shared') <> 'shared'
-		        OR i.verdict_status IN ('held', 'unsure', 'held_by_owner', 'pending'))`,
-		messages, user).Scan(&held); err != nil {
+		 WHERE i.activity_id = ANY($1) AND i.user_id <> $2`,
+		messages, user)
+	if err != nil {
 		return 0, fmt.Errorf("compose: counting the seats still holding a thread: %w", err)
 	}
-	return held, nil
+	defer rows.Close()
+	holding := map[ids.UUID]struct{}{}
+	for rows.Next() {
+		var seat ids.UUID
+		var posture, status *string
+		if err := rows.Scan(&seat, &posture, &status); err != nil {
+			return 0, fmt.Errorf("compose: counting the seats still holding a thread: %w", err)
+		}
+		if activities.ImportRowHolds(posture, status) {
+			holding[seat] = struct{}{}
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return 0, fmt.Errorf("compose: counting the seats still holding a thread: %w", err)
+	}
+	return len(holding), nil
 }
