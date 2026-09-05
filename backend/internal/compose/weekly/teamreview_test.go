@@ -32,25 +32,33 @@ func TestARepWhoAskedForHelpIsRaisedFirst(t *testing.T) {
 
 // Every rep gets a focus, including the one whose week went well. Without this
 // a page promising one row per rep quietly shortens to the troubled ones.
-func TestEveryWeekProducesAFocus(t *testing.T) {
-	cases := map[string]struct {
-		counts Counts
-		help   int
-		want   string
-	}{
-		"asked for help":     {Counts{}, 2, FocusHelpRequested},
-		"a lead went past":   {Counts{LeadsRouted: 3, LeadsBreached: 1}, 0, FocusLeadsBreached},
-		"missed commitments": {Counts{CommitmentsDue: 3, CommitmentsKept: 1}, 0, FocusCommitmentsMissed},
-		"meetings with no next step": {
-			Counts{MeetingsHeld: 2, MeetingsWithNextStep: 1}, 0, FocusMeetingsWithoutNextStep,
-		},
-		"won something":         {Counts{DealsWon: 2}, 0, FocusStrongWeek},
-		"kept every commitment": {Counts{CommitmentsDue: 3, CommitmentsKept: 3}, 0, FocusStrongWeek},
-		"nothing happened":      {Counts{}, 0, FocusQuietWeek},
-	}
+// focusRules is one case per rule focusFor can fire, IN THE ORDER the switch
+// tries them. Ordered and one-per-kind on purpose: the agenda's ranking is read
+// off this sequence by TestTheAgendaOrderIsTheOrderTheRulesAreTried, so a case
+// added out of order, or a second case for a kind, would quietly re-rank the
+// Monday meeting.
+//
+// Each case supplies only what its own rule needs. One that supplies more would
+// still reach its rule and still pass, while proving nothing about the rules
+// above it.
+var focusRules = []struct {
+	name   string
+	counts Counts
+	help   int
+	want   string
+}{
+	{"asked for help", Counts{}, 2, FocusHelpRequested},
+	{"a lead went past", Counts{LeadsRouted: 3, LeadsBreached: 1}, 0, FocusLeadsBreached},
+	{"missed commitments", Counts{CommitmentsDue: 3, CommitmentsKept: 1}, 0, FocusCommitmentsMissed},
+	{"meetings with no next step",
+		Counts{MeetingsHeld: 2, MeetingsWithNextStep: 1}, 0, FocusMeetingsWithoutNextStep},
+	{"won something", Counts{DealsWon: 2}, 0, FocusStrongWeek},
+	{"nothing happened", Counts{}, 0, FocusQuietWeek},
+}
 
-	for name, tc := range cases {
-		t.Run(name, func(t *testing.T) {
+func TestEveryWeekProducesAFocus(t *testing.T) {
+	for _, tc := range focusRules {
+		t.Run(tc.name, func(t *testing.T) {
 			kind, label := focusFor(tc.counts, tc.help)
 			if kind != tc.want {
 				t.Errorf("focus = %q, want %q", kind, tc.want)
@@ -59,6 +67,19 @@ func TestEveryWeekProducesAFocus(t *testing.T) {
 				t.Error("the focus carries no words — a row a lead cannot read is not a focus")
 			}
 		})
+	}
+}
+
+// A week with nothing won is still a strong week when every commitment was
+// kept. It is the second route to strong_week and so cannot sit in focusRules,
+// which carries one case per kind because the agenda's order is read off it.
+func TestKeepingEveryCommitmentIsAStrongWeek(t *testing.T) {
+	kind, label := focusFor(Counts{CommitmentsDue: 3, CommitmentsKept: 3}, 0)
+	if kind != FocusStrongWeek {
+		t.Errorf("focus = %q, want %q — a rep who kept all three has something to copy", kind, FocusStrongWeek)
+	}
+	if label == "" {
+		t.Error("the focus carries no words — a row a lead cannot read is not a focus")
 	}
 }
 
