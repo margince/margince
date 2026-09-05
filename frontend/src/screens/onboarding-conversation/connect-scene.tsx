@@ -601,10 +601,7 @@ function ConnectorCard({
         <span className="ob-connect-card-auth t-caption">{auth}</span>
         {state === "unavailable"
           ? settingsLink && (
-              <a
-                className="ob-connect-card-setup"
-                href="#/settings/admin/general"
-              >
+              <a className="ob-connect-card-setup" href="#/settings/general">
                 {t("ob.conv.connect.appSetupLink")}
               </a>
             )
