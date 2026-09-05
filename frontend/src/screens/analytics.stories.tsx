@@ -236,6 +236,80 @@ export const Performance: Story = {
   play: clickButton("Performance"),
 };
 
+// The seat's own outcomes: pipeline and meetings under an owner lens. Its own
+// route map, because serving /analytics/context to every story above would
+// grow a scope picker into renders that exist to show something else.
+const ownLensRoutes: RouteMap = {
+  ...routes,
+  "GET /analytics/context": () =>
+    jsonResponse({
+      default_scope: { kind: "owner", id: "u-rep-1", label: "Riley Rep" },
+      allowed_scopes: [{ kind: "owner", id: "u-rep-1", label: "Riley Rep" }],
+      capabilities: {
+        view_manager_forecast: false,
+        submit_manager_forecast: false,
+      },
+      as_of: "2026-09-04T00:00:00Z",
+      timezone: "Europe/Berlin",
+      base_currency: "EUR",
+    }),
+  "POST /reports/activities-by-kind": () =>
+    run("activities-by-kind", [
+      { meeting_status: "booked", meetings: 2 },
+      { meeting_status: "held", meetings: 3 },
+      { meeting_status: "no_show", meetings: 1 },
+    ]),
+};
+
+// Source health under the ops grant: one read source with its instant, and
+// every unread state in its own words.
+const coverageRoutes: RouteMap = {
+  ...routes,
+  "GET /analytics/coverage": () =>
+    jsonResponse({
+      run_id: "r1",
+      as_of: "2026-09-05T02:00:00Z",
+      sources: [
+        {
+          source: "mail",
+          state: "checked",
+          checked_through: "2026-09-05T01:30:00Z",
+        },
+        {
+          source: "offers",
+          state: "checked",
+          checked_through: "2026-09-05T02:00:00Z",
+        },
+        { source: "calendar", state: "stale" },
+        { source: "documents", state: "not_connected" },
+      ],
+    }),
+};
+
+export const DataCoverage: Story = {
+  render: () => {
+    installFetchStub(coverageRoutes);
+    return (
+      <StoryProviders>
+        <AnalyticsScreen />
+      </StoryProviders>
+    );
+  },
+  play: clickButton("Data coverage"),
+};
+
+export const MyOutcomes: Story = {
+  render: () => {
+    installFetchStub(ownLensRoutes);
+    return (
+      <StoryProviders>
+        <AnalyticsScreen />
+      </StoryProviders>
+    );
+  },
+  play: clickButton("My outcomes"),
+};
+
 export const Explain: Story = {
   render: screenStory,
   // Pipeline first: the explain verb belongs to a report card's action row, and
