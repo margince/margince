@@ -169,10 +169,26 @@ func workspaceLabelFor(r jobs.StateRow) string {
 // exposition text is provable without a database.
 //
 // workspace_id is admitted on these gauges by ADR-0080/A125 — the id, never
-// a name, because the exposition endpoint has no redaction path. An empty
-// value is a dispatcher, exactly and only: a job that does tenant work
-// declares its workspace, and a null in that column means a dispatcher and
-// nothing else.
+// a name, because the exposition endpoint has no redaction path.
+//
+// AN EMPTY VALUE IS A FLEET-WIDE PASS, and that used to read "is a
+// dispatcher". The two were the same thing until ADR-0103 collapsed the
+// workspace dispatchers: a dispatcher did no tenant work, and a null in this
+// column meant a row that only enumerated and enqueued. A collapsed pass owns
+// no workspace either — it walks them — but it does the tenant work itself, so
+// the old sentence describes the opposite of what an empty value means, on the
+// gauges an operator reads during an incident.
+//
+// The label still EARNS its exception, for a reason that also changed. It was
+// licensed while the fan-out existed, to tell one workspace's share of a pass
+// from another's; there are no such shares now. What it still separates is the
+// kinds whose args NAME a workspace — a queued send, an import, an ingest —
+// from the ones that answer for the installation. An operator reading queue
+// depth wants that split: a backlog on somebody's import is a different fact
+// from a backlog on the nightly passes.
+//
+// TestTheWorkspaceLabelStillSeparatesTwoPopulations holds that justification,
+// so it is a check rather than a paragraph.
 //
 // It returns an error because an io.Writer can fail. A scrape that
 // swallowed a refused write would serve a truncated exposition, which
@@ -189,7 +205,7 @@ func writeJobMetrics(w io.Writer, snap jobs.Snapshot) error {
 		return err
 	}
 	if err := writeQueueGauge(w, "margince_job_queue_depth",
-		"Jobs waiting to run (available + scheduled + retryable + pending) per queue and workspace. An empty workspace_id is a dispatcher, which does no tenant work.",
+		"Jobs waiting to run (available + scheduled + retryable + pending) per queue and workspace. An empty workspace_id is a fleet-wide pass, which answers for the installation rather than for one tenant.",
 		depth); err != nil {
 		return err
 	}

@@ -480,3 +480,43 @@ func TestALiteralEscapeSequenceDoesNotCollideWithTheCharacterItEncodes(t *testin
 			"set makes Prometheus reject the entire scrape\ngot:\n%s", got)
 	}
 }
+
+// The workspace_id label discriminates, which is what earns it its ADR-0080
+// exception — and what earns it CHANGED when ADR-0103 collapsed the workspace
+// dispatchers.
+//
+// It was licensed to tell one workspace's share of a fleet pass from another's.
+// There are no such shares now: a collapsed pass walks the tenants inside one
+// row, so every scheduled pass reports an empty workspace_id. What the label
+// still separates is the kinds whose args NAME a workspace — a queued send, an
+// import, an ingest — from the ones that answer for the installation.
+//
+// So the exception rests on both populations existing. If the last
+// workspace-scoped kind were ever collapsed too, every row on these gauges
+// would carry the same empty label, and a label with one value is not a
+// dimension: it would be publishing a tenant id column that never varies, which
+// is exactly the trade ADR-0080 weighs. This says so out loud rather than
+// leaving the justification in a comment nobody re-reads.
+func TestTheWorkspaceLabelStillSeparatesTwoPopulations(t *testing.T) {
+	t.Parallel()
+
+	var tenanted, fleet int
+	for _, spec := range jobs.Declared() {
+		if spec.Fleet {
+			fleet++
+			continue
+		}
+		for _, arg := range spec.Args {
+			if arg.Name == "Workspace" {
+				tenanted++
+				break
+			}
+		}
+	}
+	if tenanted == 0 {
+		t.Error("no kind names a workspace in its args any more, so workspace_id is empty on every row — the label has stopped being a dimension and its ADR-0080 exception has stopped being earned")
+	}
+	if fleet == 0 {
+		t.Error("no kind is fleet-wide any more, so the empty workspace_id the gauges document never appears — the HELP text describes a value nothing produces")
+	}
+}
