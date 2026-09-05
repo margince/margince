@@ -108,9 +108,10 @@ const (
 	siteReadCancelledSaid = "The read was withdrawn before it ran."
 )
 
-// activityDegradeReason is the one sentence a settled-short read carries. Every value
-// is authored in this tree: status_detail is written by the closed failure
-// classifier and the budget deferral, never copied from a site or a model.
+// activityDegradeReason is the one sentence a settled-short read carries. Every
+// value is authored in this tree: status_detail comes from the closed failure
+// classifier or the budget deferral, so no site's and no model's words reach
+// the rail through it.
 func (sr SiteRead) activityDegradeReason() string {
 	var said string
 	switch sr.Status {
