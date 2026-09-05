@@ -149,6 +149,51 @@ func TestASharedMailboxBirthsAMessageOpen(t *testing.T) {
 	}
 }
 
+// TestAnOwnerHoldOnAMessageBornOpenStillShowsItsEvidence is margince#4183: a
+// thread a SHARED mailbox births open never runs EnsureTx, so its ledger row
+// (if one exists at all) starts with no first_activity_id — and DecideAsOwner
+// used to leave it that way. heldthreadslist's existence check joins on that
+// column, so an owner who held such a thread was told their own intact
+// message had been erased.
+func TestAnOwnerHoldOnAMessageBornOpenStillShowsItsEvidence(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	allowSharedPosture(t, e)
+	setPosture(t, env, e.Rep1, capturemod.PostureShared)
+
+	sync(t, customerMail("owner-hold-open-1@acme.example"))
+	activityID := oneActivityID(t, e)
+	var threadKey string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT coalesce(thread_key, '') FROM activity WHERE id = $1`, activityID).Scan(&threadKey)
+	}); err != nil {
+		t.Fatalf("reading the thread to hold: %v", err)
+	}
+
+	// The hold path, not the share one: this thread never went through
+	// EnsureTx (a shared mailbox births its messages open, with no verdict
+	// row at all), so DecideAsOwner is the row's very first writer.
+	if _, err := compose.NewThreadAudienceSetter(e.Pool).Decide(sharingContext(e, e.Rep1), threadKey, false); err != nil {
+		t.Fatalf("holding the thread as its owner: %v", err)
+	}
+
+	held, err := capturemod.HeldThreadsFor(seatContext(e, e.Rep1), e.DB())
+	if err != nil {
+		t.Fatalf("listing held threads: %v", err)
+	}
+	if len(held) != 1 {
+		t.Fatalf("want exactly one held thread, got %d", len(held))
+	}
+	if !held[0].HasActivity {
+		t.Fatalf("an owner's hold on a message born open reads HasActivity=false, " +
+			"want true: the message is intact, only its ledger row was")
+	}
+	if held[0].ActivityID == nil || *held[0].ActivityID != activityID {
+		t.Fatalf("held thread activity id = %v, want %s", held[0].ActivityID, activityID)
+	}
+}
+
 func TestTheWorkspaceFloorOutranksASharedMailbox(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync

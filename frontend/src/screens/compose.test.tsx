@@ -1956,6 +1956,34 @@ describe("TimelineActions", () => {
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });
 
+  // A successfully-linked connector message is born `workspace` with no
+  // `audience_reason` at all — decideBirthTx only stamps one when something
+  // holds the row, and limitLinkLessAudience only for a link-less one — yet
+  // the server's own `activityWasImported` test still refuses a direct write
+  // on it, because an import row exists regardless of what it derived. Gating
+  // only on `audience_reason` missed exactly this row: Visibility opened,
+  // took an answer, and the write came back refused with no working control on
+  // the page (margince#4152).
+  it("offers no audience control on a captured message with no audience_reason at all", () => {
+    stubRoutes();
+    render(
+      <TimelineActions
+        activity={{
+          ...activity202,
+          id: "a10",
+          kind: "message",
+          captured_by: "connector:ext:openchannel:1",
+          thread_key: "openchannel:abc",
+          audience_reason: null,
+        }}
+        entityType="deal"
+        entityId="d1"
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
+  });
+
   // `manual` is a HUMAN's own answer, not the system's, so it stays theirs to
   // change. Without this the fix above would read as "any reason at all hides
   // the control", which withholds it from every row somebody has already set.
