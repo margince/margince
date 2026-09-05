@@ -35,11 +35,11 @@ type CaptureTraceSweepArgs struct{}
 // Kind is the stable job identifier River persists in river_job.
 func (CaptureTraceSweepArgs) Kind() string { return "capture_trace_sweep" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues, and does no
-// tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (CaptureTraceSweepArgs) FleetWide() {
 	// Intentionally empty: jobs.FleetWide is a marker interface, and the method
-	// exists to be satisfied rather than called. The dispatcher's work is
+	// exists to be satisfied rather than called. The pass's work is
 	// Work(), which enumerates the fleet.
 }
 

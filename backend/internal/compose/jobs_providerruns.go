@@ -119,8 +119,8 @@ type ProviderRunPollSweepArgs struct{}
 // Kind is the stable job identifier River persists in river_job.
 func (ProviderRunPollSweepArgs) Kind() string { return "provider_run_poll_sweep" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues, and does no
-// tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (ProviderRunPollSweepArgs) FleetWide() {}
 
 // providerJobActor binds the principal a provider run STARTS as, plus the

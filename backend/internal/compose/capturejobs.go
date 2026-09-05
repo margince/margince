@@ -32,8 +32,8 @@ type CaptureClassifyArgs struct{}
 // Kind is the stable job identifier River persists in river_job.
 func (CaptureClassifyArgs) Kind() string { return "capture_classify" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues,
-// and does no tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (CaptureClassifyArgs) FleetWide() {}
 
 // captureClassifyWorker drives the batched label engine for every live
@@ -60,8 +60,8 @@ type CaptureEnrichArgs struct{}
 // Kind is the stable job identifier River persists in river_job.
 func (CaptureEnrichArgs) Kind() string { return "capture_enrich" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues,
-// and does no tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (CaptureEnrichArgs) FleetWide() {}
 
 // captureEnrichWorker drives the evidence-gated signature pass for every live
@@ -129,11 +129,10 @@ type OrgNamePromotionArgs struct{}
 // Kind is the stable job identifier River persists in river_job.
 func (OrgNamePromotionArgs) Kind() string { return "org_name_promotion" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues,
-// and does no tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (OrgNamePromotionArgs) FleetWide() {}
 
-// orgNamePromotionWorker is the dispatcher for the corroborated-name sweep.
 // orgNamePromotionWorker promotes names for every live workspace.
 //
 // One worker where there were two (ADR-0103).
@@ -160,8 +159,8 @@ type CaptureDigestArgs struct{}
 // Kind is the stable job identifier River persists in river_job.
 func (CaptureDigestArgs) Kind() string { return "capture_digest" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues,
-// and does no tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (CaptureDigestArgs) FleetWide() {}
 
 // captureDigestWorker assembles one digest per connected user per
@@ -276,20 +275,26 @@ func (w *captureBackfillWorker) Work(ctx context.Context, job *river.Job[Capture
 // ambient River client; the digest worker rebuilds the day idempotently
 // (as-of-now truths).
 //
-// The child kind, never the dispatcher. The finishing tenant is known here, and
-// CaptureDigestArgs is a fleet fan-out: enqueueing it would run every workspace
-// in the installation because one of them imported its history, and N tenants
-// finishing together would run the fleet N times. The intent is local, so the
-// enqueue is too — which also leaves the fan-out path exclusively the
-// dispatcher's, so a digest pass in the sweep gauges is one a clock scheduled.
+// THE PASS, because there is no longer a child to prefer to it. This argued the
+// opposite until ADR-0103 collapsed the digest pair: the intent here is local —
+// one tenant just imported its history — and a fleet fan-out would have run
+// every workspace in the installation for it, N times over if N tenants
+// finished together. There is one kind now, so "local" is not something the
+// enqueue can express any more.
 //
-// oneOffChildOpts carries the queue and attempt cap the contract declares for
-// the kind, and states there why a one-off deliberately takes neither the sweep
-// tag nor the active-state uniqueness the fleet's children carry. The second of
-// those matters here in particular: a digest already RUNNING may have
-// snapshotted the workspace BEFORE this backfill's rows landed, and deduping
-// against it would drop the freshly-imported history off the morning screen
-// until the nightly pass.
+// What that costs is bounded by the same invariant the collapse rests on: an
+// installation holds one active workspace (identity.InstallationWorkspace
+// refuses more), so the pass covers exactly the tenant that finished. On a
+// fleet it would also re-walk the others, each a re-build of a day they already
+// have — the digest is idempotent over as-of-now truths, which is what made the
+// pair affordable to collapse in the first place.
+//
+// oneOffPassOpts carries the queue the contract declares for the kind, and
+// states there why a one-off deliberately takes neither the sweep tag nor the
+// active-state uniqueness a scheduled tick carries. The second matters here in
+// particular: a digest already RUNNING may have snapshotted the workspace
+// BEFORE this backfill's rows landed, and deduping against it would drop the
+// freshly-imported history off the morning screen until the nightly pass.
 //
 // The Safely variant is deliberate: the plain ClientFromContext PANICS when
 // there is no client, and a best-effort enqueue must degrade rather than crash
@@ -305,11 +310,6 @@ func (w *captureBackfillWorker) enqueueDigest(ctx context.Context, args CaptureB
 			"backfill", args.BackfillID, "err", err)
 		return
 	}
-	// The PASS, not a per-workspace child: the child kind went with the fan-out
-	// (ADR-0103). A backfill's same-day digest is wanted for the workspace it
-	// imported into, and the pass covers that workspace along with the rest —
-	// on the single-workspace installations this product supports, the same
-	// work.
 	child := CaptureDigestArgs{}
 	if _, err := client.Insert(ctx, child, oneOffPassOpts(child.Kind())); err != nil {
 		w.log.WarnContext(ctx, "capture backfill: digest enqueue failed",
@@ -323,8 +323,8 @@ type CounterpartyVerdictArgs struct{}
 // Kind is the stable job identifier River persists in river_job.
 func (CounterpartyVerdictArgs) Kind() string { return "capture_counterparty_verdict" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues,
-// and does no tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (CounterpartyVerdictArgs) FleetWide() {}
 
 // counterpartyVerdictWorker drives the disposition ledger's stages in the order

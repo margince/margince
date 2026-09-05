@@ -62,7 +62,8 @@ type WeeklyReviewGenerateArgs struct{}
 // Kind names the job in the contract.
 func (WeeklyReviewGenerateArgs) Kind() string { return "weekly_review_generate" }
 
-// FleetWide marks this as an enumerator that does no tenant work itself.
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (WeeklyReviewGenerateArgs) FleetWide() {}
 
 // weeklyGenerateWorker measures every live workspace's reps.
