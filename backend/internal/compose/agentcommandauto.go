@@ -153,6 +153,22 @@ func runReportCommand(_ agentPolicy, _ restCommandDeps, r *http.Request, _ []byt
 	return agents.NewRunReportCall(agents.RunReportCommand{Report: report}), nil
 }
 
+// analyticsQueryCommand decodes POST /v1/analytics/query. A POST because a
+// plan does not fit a query string, not because it writes; the command exists
+// so the door can say what an approval would bind to — no record, one
+// population name.
+//
+//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
+func analyticsQueryCommand(_ agentPolicy, _ restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
+	var in struct {
+		Entity string `json:"entity"`
+	}
+	if err := json.Unmarshal(body, &in); err != nil {
+		return nil, err
+	}
+	return agents.NewAnalyticsQueryCall(agents.AnalyticsQueryCommand{Entity: in.Entity}), nil
+}
+
 // composeReportCommand decodes POST /v1/analytics/reports/render.
 //
 // The route is a POST because a report document does not fit a query string,

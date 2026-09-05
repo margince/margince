@@ -88,10 +88,11 @@ export function useProject360(id: string) {
 }
 
 export function ProjectScreen({ id }: Readonly<{ id: string }>) {
+  const t = useT();
   const view = useProject360(id);
   return (
     <div className="wrap">
-      <QueryGate query={view}>
+      <QueryGate query={view} pendingLabel={t("nav.projects")}>
         {(data) => <ProjectPage view={data} />}
       </QueryGate>
     </div>
@@ -470,7 +471,11 @@ function useProjectChronology(
       timeline: [],
       timelineHeader: <ChronologyFilter filter={filter} onFilter={setFilter} />,
       timelineNotice: (
-        <SurfaceState state="withheld" emptyLabel="">
+        <SurfaceState
+          state="withheld"
+          emptyLabel=""
+          loadingLabel={t("nav.projects")}
+        >
           {null}
         </SurfaceState>
       ),

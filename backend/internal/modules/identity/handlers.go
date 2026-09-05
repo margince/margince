@@ -106,6 +106,12 @@ type Handlers struct {
 	// endpoint gates on, so an offered action and a served route agree. False
 	// is the fail-closed default for a role that wired nothing.
 	dataResetAvailable bool
+
+	// companyContextAvailable is whether the installation's company-context
+	// rollout has typed reads active. Injected rather than read, because the
+	// rollout lives in the composition root and identity may not import it —
+	// the same shape as dataResetAvailable above, and for the same reason.
+	companyContextAvailable bool
 	// mcpResource is the canonical MCP server URL (public_base_url +
 	// "/mcp"), injected by the composition root from deployment config.
 	// The RFC 9728 protected-resource document advertises this verbatim

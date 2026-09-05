@@ -4,7 +4,12 @@
 import { navigate } from "../app/router";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
-import { formatDateTime, formatNumber } from "../format/format";
+import {
+  formatDateTime,
+  formatMoneyCompact,
+  formatMoneyOrAbsent,
+  formatNumber,
+} from "../format/format";
 import { viewerZone } from "../format/timezone";
 import {
   type Locale,
@@ -13,6 +18,8 @@ import {
   usePlural,
   useT,
 } from "../i18n";
+import { useAnalyticsContext } from "./analytics.context";
+import { useForecastReadings } from "./forecast.queries";
 import { WORKLIST_FILTER_PARAM } from "./worklist";
 import { isUnprepared } from "./worklist.copy";
 import type {
@@ -23,19 +30,28 @@ import type {
 
 // The day's readings, on one plate.
 //
-// FIVE slots, always. A reading nobody can take stays in the row and says what
-// it has none of, because a strip is read ACROSS as one comparison: a row that
-// shrank to four would let a reader take a missing question for an answered one.
-// That is the opposite convention to the Worklist's own strip, which draws only
-// what it can measure — and deliberately so. This is the page a rep opens to ask
-// "what is my morning", and the questions it does not answer are part of the
-// answer.
+// FIVE slots, and every one of them answerable — which is what changed. Two of
+// the five were placeholders drawing an em dash: promises, because the
+// commitments lane is unwired, and quota pace, because targets were retired from
+// the product by founder decision. A row where two slots say "not tracked" is
+// not a comparison a reader can make; it is three figures and two apologies, and
+// the apologies were permanent.
 //
-// Every figure comes from the ONE worklist answer the queue below is drawn from,
-// so no second read can put a different number beside the same rows. Two of the five have
-// no source at all today and say so in words rather than drawing a nought:
-// promises are not tracked (the commitments lane is unwired) and quota targets
-// were retired from the product.
+// The rule that kept them was that a strip is read ACROSS, so a shrinking row
+// could let a reader take a missing question for an answered one. That rule
+// holds for a question the product intends to answer LATER. It does not hold for
+// one the product decided not to ask: a slot that will never fill is not a
+// pending answer, and drawing it forever teaches a reader to skip the row.
+//
+// So the count is the same and the content is not. The plate asks: what is
+// urgent, what needs preparing, which leads are owed an answer, where the
+// pipeline stands, and what is waiting on a decision.
+//
+// FOUR OF THE FIVE come from the ONE worklist answer the queue below is drawn
+// from, so no second read can put a different number beside the same rows. The
+// pipeline outlook is the exception and is read separately, through the same
+// query key Analytics uses — one answer to "what is the pipeline worth",
+// wherever it is asked.
 //
 // The floor caveat is the plate's own, through `StatStrip`'s `floor` slot — the
 // row is read across as one statement, so a caveat belonging to one figure would
@@ -71,15 +87,20 @@ export function HomeReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
       >
         <StatCard
           numeric
-          label={t("home.readings.waiting")}
-          value={formatNumber(readings.buyer_replies, locale)}
-          tone={readings.buyer_replies > 0 ? "warn" : undefined}
+          label={t("home.readings.urgent")}
+          value={formatNumber(day.summary.urgent, locale)}
+          tone={day.summary.urgent > 0 ? "warn" : undefined}
+          // The SUMMARY's own count, not one lane's. `urgent` is every row at
+          // the top two levels — somebody waiting or a promise breaking — and
+          // the morning's first question is how many of those there are, not
+          // how many came from one producer.
+          //
           // The basis line says what the figure was taken over, on every day. A
           // zero already reads as "none"; a line under it repeating that says
           // the same thing twice and drops the one fact it could add.
-          detail={t("home.readings.waitingBasis")}
+          detail={t("home.readings.urgentBasis")}
           openLabel={t("home.readings.openLane")}
-          onOpen={() => openLane("customer_waiting")}
+          onOpen={() => openLane("all")}
         />
         <MeetingsStat
           meetings={meetings.meetings}
@@ -88,10 +109,6 @@ export function HomeReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           t={t}
           onOpen={() => openLane("meetings")}
         />
-        <Untracked
-          label={t("home.readings.promises")}
-          detail={t("home.readings.promisesBasis")}
-        />
         <LeadsStat
           leads={readings.prospecting}
           soonest={soonest}
@@ -99,9 +116,15 @@ export function HomeReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           t={t}
           onOpen={() => openLane("leads")}
         />
-        <Untracked
-          label={t("home.readings.quota")}
-          detail={t("home.readings.quotaBasis")}
+        <PipelineOutlook />
+        <StatCard
+          numeric
+          label={t("home.readings.decisions")}
+          value={formatNumber(readings.review, locale)}
+          tone={readings.review > 0 ? "warn" : undefined}
+          detail={t("home.readings.decisionsBasis")}
+          openLabel={t("home.readings.openLane")}
+          onOpen={() => openLane("decisions")}
         />
       </StatStrip>
     </section>
@@ -262,20 +285,6 @@ function replyDueAt(item: WorklistItem): string | undefined {
 // would be `StatCard` with its own props spelled twice — a rename, not a shared
 // answer. The primitive they genuinely share is `StatCard`, and both use it.
 
-// A slot whose question the product cannot answer yet.
-//
-// It draws an em dash and says why underneath. A zero here would be a false
-// answer — "you owe nobody a promise" is a claim, and nothing in the estate has
-// standing to make it.
-function Untracked({
-  label,
-  detail,
-}: Readonly<{ label: string; detail: string }>) {
-  // The em dash is not a translated string: it is the same mark in every
-  // catalog, and `worklist.readings.tsx` spells an unpriced figure the same way.
-  return <StatCard label={label} value="—" detail={detail} />;
-}
-
 // The meetings reading: how many stand behind the day, and how many of those
 // nothing is prepared for — or that the second question could not be answered.
 //
@@ -305,4 +314,93 @@ function meetingsReading(day: Worklist): {
     meetings: entry.considered,
     unready: whole ? day.queue.filter(isUnprepared).length : null,
   };
+}
+
+// Where the pipeline stands: what is open, and what it is worth weighted.
+//
+// TWO FIGURES, NEITHER OF THEM A TARGET. The slot this replaces said "Quota
+// pace — no target is set", which was a permanent apology for a question the
+// product decided not to ask. What a rep can actually be told is what the
+// pipeline holds, and the honest version of that is both numbers: `open` is the
+// face value of every open deal, `weighted` applies each deal's own probability.
+// One without the other invites the reader to treat a face value as a forecast.
+//
+// The card NEVER says on track, attainment, or gap. There is no authoritative
+// target in this product to compare against — the quota table was dropped by
+// founder decision — so any such word would be inventing the thing that was
+// removed.
+//
+// READ THROUGH THE SAME KEY ANALYTICS USES. Two surfaces asking what the
+// pipeline is worth must not get two answers, so this calls the shared hook
+// rather than its own fetch.
+function PipelineOutlook() {
+  const t = useT();
+  const { locale } = useLocale();
+  // The reader's OWN pipeline, under the scope the SERVER names for them.
+  //
+  // `/analytics/context` answers `default_scope`, which is what Analytics starts
+  // from too: a rep's own records, a manager's managed teams, the workspace for
+  // a reader whose lens reaches it. Asking for it here is what makes the shared
+  // key true rather than merely claimed — an earlier version spelled the
+  // omission as a client-built `managed_teams` scope, which keyed as
+  // "managed_teams" while Analytics keyed the same rep's read as "owner:<id>",
+  // so the two surfaces held two cache entries for one identical request.
+  //
+  // It also stops the client constructing a scope it has no standing to name.
+  // `managed_teams` is documented as a server ANSWER, never a request, and
+  // building one meant filling its required `label` with an empty string —
+  // a placeholder where the code had nothing true to put.
+  const context = useAnalyticsContext();
+  const readings = useForecastReadings(context.data?.default_scope);
+
+  if (readings.isPending) {
+    // KEEPS THE ROW'S SHAPE: a detail line, like every slot beside it. A card
+    // one line shorter reflows the whole strip when the read lands, which is the
+    // opposite of the property this plate's fixed slot count defends.
+    return (
+      <StatCard
+        label={t("home.readings.pipeline")}
+        value="—"
+        detail={t("home.readings.pipelineReading")}
+      />
+    );
+  }
+  if (readings.isError || !readings.data) {
+    // A read that did not land is not a pipeline of nothing. The em dash says
+    // the question went unanswered, which is what the retired slots said and
+    // the one case where that spelling is still true.
+    return (
+      <StatCard
+        label={t("home.readings.pipeline")}
+        value="—"
+        detail={t("home.readings.pipelineUnread")}
+      />
+    );
+  }
+  const data = readings.data;
+  return (
+    <StatCard
+      label={
+        data.scope_kind === "workspace"
+          ? t("home.readings.pipelineWorkspace")
+          : t("home.readings.pipeline")
+      }
+      // formatMoneyCompact, not the full amount: its own doc says a strip slot
+      // has about 110px and a full euro figure wraps mid-number or clips. Every
+      // other money StatCard in the tree uses it.
+      value={formatMoneyCompact(data.open_minor, data.base_currency, locale)}
+      // The weighted figure and the completeness in one line, because they are
+      // read together: a weighted number over a partly priced population is a
+      // floor, and a reader who cannot see the second cannot judge the first.
+      detail={t("home.readings.pipelineBasis", {
+        weighted: formatMoneyOrAbsent(
+          data.weighted_minor,
+          data.base_currency,
+          locale,
+        ),
+        priced: formatNumber(data.priced_count, locale),
+        eligible: formatNumber(data.eligible_count, locale),
+      })}
+    />
+  );
 }

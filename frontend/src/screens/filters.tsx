@@ -225,7 +225,9 @@ function PreviewSection({
         <SectionHeader level={2} title={t("filters.resultsTitle")} />
         {/* The house spelling of a failed read: the headline and the server's
             own cause in one live region, with the retry beside it. */}
-        <QueryStates query={preview}>{null}</QueryStates>
+        <QueryStates query={preview} pendingLabel={t("filters.resultsTitle")}>
+          {null}
+        </QueryStates>
       </Card>
     );
   }

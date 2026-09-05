@@ -80,7 +80,7 @@ export function CaptureSettingsCard() {
           on the same 16px it does in a plain one. */}
       <PanelBody className="form-stack">
         <p className="settings-panel-sub">{t("captureSettings.sub")}</p>
-        <QueryGate query={query}>
+        <QueryGate query={query} pendingLabel={t("captureSettings.title")}>
           {(settings) => (
             <SettingList>
               {/* The row draws the naming — what the setting is, and what it

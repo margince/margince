@@ -17,10 +17,11 @@ package meetingbrief
 // would have bought a bigger prompt and no more understanding: what makes a
 // history useful is knowing which parts of it to read closely.
 //
-// A row this caller may not READ still counts. It keeps its date and its
-// thread key, so the shape of the relationship is right, and it contributes no
-// subject and no body. The count of such rows becomes an omission, because a
-// thin arc that does not say it is thin reads exactly like a quiet account.
+// A row this caller may not READ still counts and still keeps its date and
+// thread key on the row itself, but contributes neither to the arc it is
+// folded into (threads.go) nor a subject or body here. The count of such rows
+// becomes an omission, because a thin arc that does not say it is thin reads
+// exactly like a quiet account.
 
 import (
 	"context"
@@ -161,8 +162,8 @@ func (s *Service) readHistory(
 		row.ID = id.String()
 		row.Withheld = !readableRow
 		if row.Withheld {
-			// What it was called is content. The row still counts and still
-			// shapes the arc's dates; it says nothing.
+			// What it was called is content. The row still counts; it says
+			// nothing and, per threads.go, does not shape the arc either.
 			row.Subject = ""
 		}
 		history = append(history, row)

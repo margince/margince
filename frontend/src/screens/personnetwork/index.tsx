@@ -152,6 +152,7 @@ export function PersonNetworkTab({
               reader who scrolled past this. */}
           {read.withheld ? (
             <SurfaceState
+              loadingLabel={t("tab.network")}
               state="withheld"
               emptyLabel={t("person.graph.noDirect")}
             >

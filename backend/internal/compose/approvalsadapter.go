@@ -32,6 +32,8 @@ func (a approvalsAdapter) StageCall(ctx context.Context, in agents.StageRequest)
 		DiffHash:       in.DiffHash,
 		TargetType:     in.TargetType,
 		TargetID:       in.TargetID,
+		CoTargetType:   in.CoTargetType,
+		CoTargetID:     in.CoTargetID,
 		Summary:        in.Summary,
 	})
 }

@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
@@ -64,7 +65,7 @@ func TestAPercentileBelowTheSampleFloorIsBlankRatherThanWrong(t *testing.T) {
 		}
 		var median *float64
 		var count int64
-		query := `SELECT (CASE WHEN count(d.days) >= ` + strconv.Itoa(percentileSampleFloor) +
+		query := `SELECT (CASE WHEN count(d.days) >= ` + strconv.Itoa(analyticsquery.PercentileSampleFloor) +
 			` THEN percentile_cont(0.5) WITHIN GROUP (ORDER BY d.days) END),
 			         count(d.days)
 			  FROM (VALUES ` + holders + `) AS d(days)`

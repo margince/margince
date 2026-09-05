@@ -184,6 +184,18 @@ func titleOf(moment ArcMoment) string {
 // rather than titled: it has no readable subject to name and no citation they
 // could open. Its existence is still reported, in the activity_history
 // omission, which is the honest place for "there is more here you cannot see".
+//
+// A thread with nothing this caller may read carries the zero time in its
+// First/Last (threadsOf never sets them from a withheld row), and none of
+// Inbound/OnDeal/HasMeeting either. The zero time sorts before every real
+// activity, so such a thread always opens its own moment here — the gap back
+// to any real date is enormous — scored on recency alone against a
+// millennium-old instant, which is the floor every real moment already
+// meets or beats and never loses a tie against (a real moment's own instant
+// is always after the zero time). It cannot outrank, and so cannot displace,
+// a moment built from anything this caller may read — before the loop below
+// drops it for holding no readable IDs at all. Its existence still counts;
+// it never gets to date, weigh or size a moment a reader is shown.
 func accountArc(in Input) []ArcMoment {
 	if len(in.History) == 0 {
 		return nil

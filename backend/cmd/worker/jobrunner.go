@@ -208,6 +208,13 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// capture writes them to; without it a message carrying files fails at
 		// the read rather than going out without them.
 		SendBlob: lanes.blob,
+		// The installation's own mail is transmitted by the same relay that
+		// carries a password reset, and its one-time links are unsealed from
+		// the same vault everything else uses. Either one absent leaves a
+		// controller delivery parking with a reason that names what is missing,
+		// rather than retrying a deployment fact.
+		ControllerRelay: compose.ControllerRelayFor(weeklyMail.Mailer),
+		ControllerVault: vault,
 		// The geocoder, when this deployment has one. Empty leaves it nil, the
 		// worker records that it cannot resolve, and radius queries stay
 		// unavailable — which is honest for an installation that geocodes
@@ -376,13 +383,16 @@ func vatCheckerFor(baseURL, requester string) vatcheck.Checker {
 	return vatcheck.NewVIES(baseURL, requester, nil)
 }
 
+// geocoderFor builds the geocoding client, or nil for a deployment that
+// geocodes nothing.
+//
+//nolint:ireturn // the PORT is the return type: nil means this deployment geocodes nothing, which a concrete type cannot express.
 func geocoderFor(baseURL string) geocode.Client {
-	switch baseURL {
-	case "":
+	if !geocode.Configured(baseURL) {
 		return nil
-	case baseURLPublic:
-		return geocode.NewNominatim(geocode.PublicBaseURL, nil)
-	default:
-		return geocode.NewNominatim(baseURL, nil)
 	}
+	if baseURL == baseURLPublic {
+		return geocode.NewNominatim(geocode.PublicBaseURL, nil)
+	}
+	return geocode.NewNominatim(baseURL, nil)
 }

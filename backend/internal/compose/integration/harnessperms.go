@@ -134,15 +134,18 @@ var (
 	// grant when production would have admitted it.
 	//
 	// What ops does NOT hold is governance authority: user administration, role
-	// assignment, passport binding for another user, and the full-workspace
-	// audit read are the admin's alone, and those gate on the role rather than
-	// on any object. An unbounded row scope is not a stand-in for admin, which
-	// is the confusion this fixture exists to make testable.
+	// assignment, passport binding for another user, the installation reset, and
+	// the full-workspace audit read. Those used to gate on the literal admin
+	// role, which is why this fixture could take the admin object map whole; each
+	// is now its own object, so the difference lives in the GRANTS and the clone
+	// has to subtract them. An unbounded row scope is still not a stand-in for
+	// admin, which is the confusion this fixture exists to make testable.
+	//
 	// Cloned, not aliased: these are package-level fixtures, and a suite that
 	// wrote one grant into a shared map would silently widen the admin too.
 	OpsPerms = principal.Permissions{
 		RoleKeys: []string{roleOps},
-		Objects:  maps.Clone(AdminPerms.Objects),
+		Objects:  withoutGovernance(AdminPerms.Objects),
 		RowScope: principal.RowScopeAll,
 	}
 	// AdminWithSignals is AdminPerms plus the warm-room signal grants the real
@@ -225,7 +228,62 @@ var (
 			// refusal, which is what makes a fixture narrower than the seat it
 			// stands in for worth fixing on sight.
 			"data_coverage": {Read: true},
+
+			// The settings-administration objects, at the verbs the seeded admin
+			// role holds. Each replaced a literal `admin` role check, so a
+			// fixture without them stands for a caller who used to pass every one
+			// of these gates and now fails them — and the 403 that produces reads
+			// exactly like a correctly refused request.
+			"user_admin":            {Create: true, Read: true, Update: true, Delete: true},
+			"role_admin":            {Create: true, Read: true, Update: true, Delete: true},
+			"team_admin":            {Create: true, Read: true, Update: true},
+			"privacy_request":       {Read: true, Update: true},
+			"audit_log":             {Read: true},
+			"job_health":            {Read: true},
+			"extension_access":      {Read: true},
+			"system_reset":          {Delete: true},
+			"ai_diagnostics":        {Read: true},
+			"consent_config":        {Create: true, Read: true, Update: true, Delete: true},
+			"authentication_policy": {Read: true, Update: true},
+			"oauth_application":     {Create: true, Read: true, Update: true, Delete: true},
+			"seat_usage":            {Read: true},
 		},
 		RowScope: principal.RowScopeAll,
 	}
 )
+
+// withoutGovernance copies a grant map minus the authority ops does not hold,
+// matching identity/internal/policy's own ops document.
+//
+// Spelled as a subtraction from the admin map rather than as its own literal so
+// the two stay together on everything else: ops holds the admin grid, and a
+// second full map here would need editing every time the real one moved.
+//
+// Held by: TestTheOpsFixtureMatchesTheSeededOpsRoleOnGovernance
+// (backend/internal/compose/integration/harnesspermsparity_integration_test.go),
+// which compares this subtraction against the seeded ops document object by
+// object. It earned itself immediately: the first version of this function gave
+// ops authentication_policy.update, which the seed grants read-only.
+func withoutGovernance(objects map[string]principal.ObjectGrant) map[string]principal.ObjectGrant {
+	out := maps.Clone(objects)
+	// Two objects ops holds NARROWER rather than not at all, so they are
+	// overwritten instead of deleted.
+	//
+	// role_admin is read: an operator answering "why can this person not see
+	// that" needs the policy in front of them, and changing it stays with admin.
+	// authentication_policy is read for the same shape of reason — ops sees which
+	// sign-in providers the installation offers; deciding who may enter it is
+	// admin's.
+	out["role_admin"] = principal.ObjectGrant{Read: true}
+	out["authentication_policy"] = principal.ObjectGrant{Read: true}
+	for _, object := range []string{
+		"user_admin",
+		"team_admin",
+		"privacy_request",
+		"audit_log",
+		"system_reset",
+	} {
+		delete(out, object)
+	}
+	return out
+}

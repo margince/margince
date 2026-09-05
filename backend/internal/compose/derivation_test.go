@@ -80,7 +80,7 @@ func TestRenderDefinitionTellsUnsetApartFromEmptyText(t *testing.T) {
 
 func TestRenderDefinitionRejectsUnknownAggregate(t *testing.T) {
 	_, err := renderDefinition(prebuiltReports["forecast"], nil, nil,
-		[]reportAggregate{{Fn: "median", Field: "amount_minor"}})
+		[]reportAggregate{{Fn: "p90", Field: "amount_minor"}})
 	var notAllowed *FieldNotAllowedError
 	if !errors.As(err, &notAllowed) {
 		t.Fatalf("unknown fn → %v, want FieldNotAllowedError", err)

@@ -154,9 +154,16 @@ func TestTransferProjectOwnershipRefusesAReceiverWhoCannotOwn(t *testing.T) {
 	org := e.SeedOrg(t, "BAER Pharma", nil)
 	project := seedProject(e.Admin(), t, e, "ERP replacement", org, &e.Rep1)
 
+	// Carries the admin fixture's grants, not just the role name. Deactivating a
+	// member is gated on user_admin.delete now, so an identity holding a name
+	// and no permissions is a caller who holds nothing — and this setup step
+	// would fail with a permission denial that has nothing to do with what the
+	// test is about.
 	admin := identity.Identity{
 		UserID: ids.From[ids.UserKind](e.AdminUser), WorkspaceID: ids.From[ids.WorkspaceKind](e.WS),
-		Roles: []string{"admin"},
+		Roles:       []string{"admin"},
+		SeatType:    string(principal.SeatFull),
+		Permissions: AdminPerms,
 	}
 	if err := identity.NewService(e.Pool).DeactivateUser(e.Admin(), admin,
 		identity.DeactivateUserInput{UserID: ids.From[ids.UserKind](e.Rep3)}); err != nil {

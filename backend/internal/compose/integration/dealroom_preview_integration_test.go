@@ -221,3 +221,64 @@ func TestNoRoomCanBeCreatedInDraftAnyMore(t *testing.T) {
 		t.Fatalf("deal_room.state defaults to %q, want live — a room landing in draft is unreadable", def)
 	}
 }
+
+// What the room ADVERTISES about the preview is what pressing it does.
+//
+// The screen drew its button from `state` alone, so a colleague who could read
+// the room was offered a preview that failed after the click, with a permission
+// message where the buyer's view should have been. `preview_available` answers
+// the whole question — grant, human seat, deal writable and live, room not
+// archived — and this holds the two together: a room that says yes issues, and
+// the field travels on the LIST read, which is where the screen gets its room.
+func TestARoomSaysWhetherItsPreviewWillOpen(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	stages := apptest.DiscoverSeededPipeline(t, e)
+	dealID := apptest.CreateOpenDeal(t, e, stages)
+	var room AnyMap
+	if status := e.Call(t, "POST", "/v1/deal-rooms", AnyMap{
+		"deal_id": dealID, "title": "Advertised", "welcome_message": "Welcome.", "source": "ui",
+	}, nil, &room); status != http.StatusCreated {
+		t.Fatalf("create room = %d %v", status, room)
+	}
+	roomID, _ := room["id"].(string)
+
+	// The LIST read, because that is the one the room screen makes. A field
+	// only the by-id read filled would be absent exactly where the button is.
+	var listed AnyMap
+	if status := e.Call(t, "GET", "/v1/deal-rooms?deal_id="+dealID, nil, nil, &listed); status != http.StatusOK {
+		t.Fatalf("list rooms = %d %v", status, listed)
+	}
+	rows, _ := listed["data"].([]any)
+	if len(rows) != 1 {
+		t.Fatalf("listed %d rooms, want the 1 created", len(rows))
+	}
+	first, _ := rows[0].(map[string]any)
+	advertised, present := first["preview_available"].(bool)
+	if !present {
+		t.Fatalf("the listed room carries no preview_available, so the screen has "+
+			"nothing to gate its button on: %v", first)
+	}
+	if !advertised {
+		t.Fatal("the room's creator was told the preview is unavailable — the same " +
+			"seat that just created the room and holds every grant it needs")
+	}
+
+	// And the press agrees with the advertisement.
+	var issued AnyMap
+	if status := e.Call(t, "POST", "/v1/deal-rooms/"+roomID+"/preview", nil, nil, &issued); status != http.StatusCreated {
+		t.Fatalf("a room advertising preview_available=true refused the press: %d %v",
+			status, issued)
+	}
+
+	// The by-id read answers it too, so an agent reading one room by its id
+	// gets the same answer the screen does.
+	var byID AnyMap
+	if status := e.Call(t, "GET", "/v1/deal-rooms/"+roomID, nil, nil, &byID); status != http.StatusOK {
+		t.Fatalf("read room = %d %v", status, byID)
+	}
+	if byID["preview_available"] != true {
+		t.Errorf("the by-id read says preview_available=%v while the list says true",
+			byID["preview_available"])
+	}
+}

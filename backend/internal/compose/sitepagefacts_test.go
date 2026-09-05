@@ -777,3 +777,64 @@ func TestTheDomainIsReadFromTheLastAtInTheAddress(t *testing.T) {
 			"read, not whether the local part is quoted")
 	}
 }
+
+// The value that cost a whole read: `"Capital One — "`, a multi-value fact
+// whose description the model left empty.
+//
+// It is not dropped and it is not a failure — it is an ordinary fact whose key
+// the normalizer now derives from the same string the value is stored as. What
+// this proves is that the pair AGREE, because the write refuses them when they
+// do not and one refusal discarded twelve crawled pages and sixty good facts.
+func TestAValueEndingOnTheSeparatorStillLandsAndKeysToItsName(t *testing.T) {
+	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindHome, seedURL+"/customers",
+		"Capital One is one of the banks we serve alongside other financial institutions.")
+	reply := `{"facts":[{"f":"named_customer","v":"Capital One — ","e":"s0"}]}`
+
+	res, dropped := gatePageFacts(reply, page, menu, idx)
+
+	if len(res.facts) != 1 {
+		t.Fatalf("the fact was dropped rather than landed: facts=%+v dropped=%+v", res.facts, dropped)
+	}
+	got := res.facts[0]
+	if got.Value != "Capital One —" {
+		t.Errorf("stored value = %q, want the trimmed value", got.Value)
+	}
+	// The assertion the failure was: the key the producer stores must be the
+	// one the row check re-derives from the value beside it.
+	if want := people.NormalizeFactValueKey(got.Value); got.ValueKey != want {
+		t.Errorf("value_key = %q but the value %q normalizes to %q — the write refuses this fact, and "+
+			"refusing one discards the whole read", got.ValueKey, got.Value, want)
+	}
+	if got.ValueKey != "capital one" {
+		t.Errorf("value_key = %q, want %q — a value with an empty description names the same customer a "+
+			"well-formed re-read describes", got.ValueKey, "capital one")
+	}
+}
+
+// And the class, not just the case: a fact the accept path would refuse is
+// dropped where it costs one fact, with its reason, and the good ones beside it
+// still land.
+//
+// validDeepReadFact returns on its first bad fact and the accept propagates it,
+// so before this a single unusable value cost the whole read — and `internal`
+// failures are not retried, so the company simply stayed unenriched.
+func TestAnUnusableFactCostsOneFactAndNotTheRead(t *testing.T) {
+	page, menu, idx := pageFixture(crmcontracts.SiteReadPageKindServices, seedURL+"/services",
+		"Cloud Cost Audit\nA line-by-line review of cloud spend.\nDatabase Tuning\nIndex and query work.")
+	// The second names a field the vocabulary carries, is cited, and is still
+	// unusable: an evidence snippet of whitespace is what validDeepReadFact
+	// refuses, and it must not take the first one with it.
+	reply := `{"facts":[
+		{"f":"service","v":"Cloud Cost Audit — line-by-line review","e":"s0"},
+		{"f":"service","v":"Database Tuning — index and query work","e":"   "}]}`
+
+	res, dropped := gatePageFacts(reply, page, menu, idx)
+
+	if len(res.facts) != 1 || factName(res.facts[0].Value) != "Cloud Cost Audit" {
+		t.Fatalf("the usable fact did not survive beside the unusable one: %+v", res.facts)
+	}
+	if len(dropped) == 0 {
+		t.Fatal("the unusable fact was dropped without a breadcrumb — an omission nothing records is " +
+			"indistinguishable from a fact the model never returned")
+	}
+}

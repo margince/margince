@@ -212,7 +212,7 @@ export function OvernightGrantCard() {
     <Panel title={t("overnightGrant.title")}>
       <PanelBody>
         <p className="settings-panel-sub">{t("overnightGrant.sub")}</p>
-        <QueryGate query={query}>
+        <QueryGate query={query} pendingLabel={t("overnightGrant.title")}>
           {(grants) => {
             const grant = morningBriefGrant(grants);
             const granted = grant?.state === "granted";

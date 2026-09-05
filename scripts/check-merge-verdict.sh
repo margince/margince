@@ -20,12 +20,17 @@
 #
 #   - nothing merged it. No pull request names this commit, so no review and no
 #     check ever applied to it.
-#   - the check never reported. It was still running, or never started, when the
-#     merge landed — #2504's own case, and the one a "was it green?" question
-#     cannot see, because an absent verdict is not a red one.
-#   - the check reported and was not green.
-#   - the check went green AFTER the merge. The merge was decided on an earlier,
-#     unfinished state; that the answer turned out well is luck, not a gate.
+#   - the check reported, and the verdict was adverse. The tree that landed does
+#     not pass its own required check.
+#
+# WHAT IT DELIBERATELY DOES NOT REPORT: an ABSENT verdict. Merging past `ci` is a
+# standing decision here, not an incident, and `ci` is a fan-in that only starts
+# once every lane has finished — so it posts roughly ten minutes after a run
+# begins and a merge inside that window sees nothing. Reporting that was
+# reporting the decision back to the people who made it: seventeen issues in
+# under five hours, every one of them describing a bypass working as intended.
+# An alarm that fires on the expected state is an alarm that gets turned off,
+# and it would have buried the two findings above.
 #
 # Reads its evidence from the environment rather than fetching it, so every arm
 # above is drivable from a fixture — the same shape ci-verdict.sh uses, and for
@@ -75,8 +80,6 @@ if [[ -z "$pr_number" ]]; then
 	exit 1
 fi
 
-merged_at="$(jq -r --arg n "$pr_number" '[.[] | select((.number|tostring) == $n)] | .[0].merged_at // ""' <<<"$pulls")"
-
 # The oldest matching run, not the newest. A re-run after the merge answers
 # about a tree that had already landed, and taking the latest verdict would let
 # one clear the record of the merge it was not present for.
@@ -85,24 +88,25 @@ verdict="$(jq -r --arg name "$required" '
 	| sort_by(.completed_at // "9999") | .[0] // {}' <<<"$checks")"
 
 if [[ "$(jq -r 'length' <<<"$verdict")" -eq 0 ]]; then
-	emit "pull request #$pr_number merged before its required \`$required\` check reported at all — an absent verdict, which is not the same as a green one"
-	exit 1
+	echo "ok: $sha has no \`$required\` verdict to read (pull request #$pr_number) — an absent verdict is the shape of a decision that was taken, not a finding"
+	exit 0
 fi
 
+# `success` passes; the three below are the OTHER ways to have no answer, and
+# they are not adverse ones. A cancelled run is the case that would otherwise
+# accuse: deleting the branch on merge cancels whatever was still running on it,
+# so treating `cancelled` as a red verdict would report the tidy-up rather than
+# the tree.
 conclusion="$(jq -r '.conclusion // ""' <<<"$verdict")"
-if [[ "$conclusion" != "success" ]]; then
-	emit "pull request #$pr_number merged while its required \`$required\` check was \`${conclusion:-still running}\`"
+case "$conclusion" in
+success)
+	echo "ok: $sha merged behind a green \`$required\` (pull request #$pr_number)"
+	;;
+"" | cancelled | skipped | neutral)
+	echo "ok: $sha has no \`$required\` verdict to read (pull request #$pr_number) — \`${conclusion:-still running}\` is an absent answer, not an adverse one"
+	;;
+*)
+	emit "pull request #$pr_number landed, and its required \`$required\` check then reported \`$conclusion\` — the tree on main does not pass its own required check"
 	exit 1
-fi
-
-completed_at="$(jq -r '.completed_at // ""' <<<"$verdict")"
-# Compared as STRINGS, which is right for these two and only these two: the API
-# writes both as ISO-8601 in UTC with the same fixed width, so lexical order is
-# chronological order. It would not be for a mixed-offset timestamp, and neither
-# field is ever one.
-if [[ -n "$merged_at" && -n "$completed_at" && "$completed_at" > "$merged_at" ]]; then
-	emit "pull request #$pr_number merged at $merged_at, before its required \`$required\` check finished at $completed_at — the merge was decided on an unfinished run"
-	exit 1
-fi
-
-echo "ok: $sha merged behind a green \`$required\` (pull request #$pr_number)"
+	;;
+esac

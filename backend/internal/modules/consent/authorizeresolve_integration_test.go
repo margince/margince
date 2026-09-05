@@ -722,3 +722,28 @@ func (e *resolveEnv) plantStagingDecision(t *testing.T, delivery ids.UUID, addre
 		t.Fatalf("planting the staging decision: %v", err)
 	}
 }
+
+// issueLinkRow plants a confirm_token in one of the shapes the validator must
+// tell apart: live, spent, or expired.
+//
+// Written directly rather than through Store.issueLink, and this is the one
+// place in this file where that is right. issueLink mints a token AND stages the
+// mail that carries it, so seeding through it would need the whole controller
+// lane wired — a stager, a vault, a job runner — to set up a case about whether
+// the row supports a category. What the validator reads is four columns, and
+// this writes exactly those four in each of the shapes the real writer produces:
+// consumed_at NULL or set, expires_at ahead or behind. A shape the writer cannot
+// produce would be caught by the column list disagreeing with the schema.
+//
+//nolint:unparam // kind is the axis TestAConfirmationLinkDoesNotSupportTheOtherKind varies; a helper fixed to one kind could not express that case
+func (e *resolveEnv) issueLinkRow(t *testing.T, kind string, expires time.Time, consumed *time.Time) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO confirm_token (id, person_id, token_hash, delivered_to, expires_at, consumed_at, kind)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		id, e.person, "hash-"+id.String(), e.address, expires, consumed, kind); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}

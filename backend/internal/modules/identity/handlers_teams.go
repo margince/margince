@@ -150,7 +150,7 @@ func wireAccess(a Access) crmcontracts.AccessPreview {
 	identityRead := crmcontracts.AccessPreviewIdentityReadWorkspace
 	return crmcontracts.AccessPreview{
 		Role:         a.Role,
-		RowScope:     crmcontracts.AccessPreviewRowScope(a.Permissions.RowScope),
+		RowScope:     accessPreviewRowScope(a.Permissions.RowScope),
 		IdentityRead: &identityRead,
 		Objects:      objects,
 		FieldMasks:   masks,

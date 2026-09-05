@@ -59,7 +59,7 @@ export function HeldThreadsCard() {
     <Panel title={t("heldThreads.title")}>
       <PanelBody>
         <p className="settings-panel-sub">{t("heldThreads.sub")}</p>
-        <QueryGate query={query}>
+        <QueryGate query={query} pendingLabel={t("heldThreads.title")}>
           {(list) =>
             list.data.length === 0 ? (
               // Nothing held is a READING, not an absent list: "my mailbox is

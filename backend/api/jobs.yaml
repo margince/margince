@@ -387,6 +387,16 @@ kinds:
       judging stage leases and commits in claims of eight, so a cut-off pass
       keeps every verdict it paid for.
 
+      One call each is what these twenty minutes are sized against, and the
+      asymmetric confidence floor made a SECOND call ordinary: a creating
+      answer between the two floors is re-asked, which is the common case on a
+      mailbox of first-time senders. reAskBudget bounds those at
+      verdictCatchUpCap / verdictReAskShare, so the worst case is cap + budget
+      calls rather than twice the cap — the arithmetic above holds by
+      construction, at any model speed and whatever fraction of answers land in
+      the band. Lowering the cap or raising this wall would both need a
+      measured pass on real hardware; the bound does not.
+
   capture_confidentiality_verdict:
     role: dispatcher
     go_type: ConfidentialityVerdictArgs
@@ -1419,6 +1429,7 @@ kinds:
     go_type: ProviderRunSubmitArgs
     queue: default
     timeout: 2m
+    max_attempts: 3
     opts_owner: args
     registration: {when: [ProviderRuns.Registry, ProviderRuns.Vault], absent: registers_nothing}
     args:
@@ -1430,6 +1441,12 @@ kinds:
       states) is a spend guard, not a scheduling nicety: two live submit jobs
       for one run could each pass the queued check and buy the same answer
       twice, so every inserter carries the rule.
+
+      Three attempts, not River's 25: a stranded submit is recovered by the
+      poll sweep, which re-enqueues after a worked job died, so the sweep is
+      the real retry — and the uniqueness above dedupes over retryable, so a
+      long ladder would suppress the very recovery it is waiting for while
+      each rung risks buying the same answer again.
 
   provider_run_poll_sweep:
     role: dispatcher
@@ -1769,6 +1786,7 @@ kinds:
     go_type: TelegramPollArgs
     queue: default
     timeout: {derived: telegramPollJobTimeout, value: 2m}
+    max_attempts: 3
     opts_owner: args
     registration: {when: [ChannelVault], absent: registers_nothing}
     args:
@@ -1779,6 +1797,11 @@ kinds:
       around it: a poll cancelled by its own job timeout returns nothing, so its
       offset never advances and the connection retries forever without making
       progress.
+
+      Three attempts, not River's 25: telegram_poll_sweep fans this out again
+      every thirty seconds, so the tick is the real retry — and because the
+      insert dedupes over retryable, a longer ladder would suppress those ticks
+      and stop the connection being polled at all.
 
   telegram_poll_sweep:
     role: dispatcher

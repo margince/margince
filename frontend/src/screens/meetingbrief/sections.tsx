@@ -176,6 +176,7 @@ export function Background({
         )}
         {omitted.map((omission) => (
           <SurfaceState
+            loadingLabel={t("person.meeting.omittedSource")}
             key={omission.source}
             state="withheld"
             labelLevel="h4"

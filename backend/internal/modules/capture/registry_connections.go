@@ -162,6 +162,10 @@ type ConnectionView struct {
 	// binary still answers.
 	MailPosture string
 
+	// ContextTag is the word every record this connection creates is filed
+	// under, or nil when the operator chose none.
+	ContextTag *ContextTag
+
 	// Sync health from the CAP-DDL-5 sidecar; all nil before the first sync
 	// (a connection with no sidecar row is simply due immediately).
 	LastSyncedAt   *time.Time
@@ -192,9 +196,16 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 		rows, err := tx.Query(ctx, `
 			SELECT c.id, c.provider, c.status, c.sync_cursor, c.watch_expires_at, c.provider_scopes,
 			       c.account_label, c.signature_enrich_enabled, c.mail_posture,
+			       t.id, t.name, t.archived_at IS NOT NULL,
 			       s.last_synced_at, s.last_error_class, s.next_sync_at
 			FROM capture_connection c
 			LEFT JOIN capture_sync_state s ON s.connection_id = c.id
+			-- The word's own row, so the connection reports the name the
+			-- vocabulary spells today and whether it has since been archived.
+			-- An archived word files nothing (contexttag.go), and a connection
+			-- that quietly stopped filing with no way to see why is exactly
+			-- what saying so here prevents.
+			LEFT JOIN tag t ON t.id = c.context_tag_id
 			WHERE c.user_id = $1 AND c.archived_at IS NULL
 			ORDER BY c.provider`, actor.UserID)
 		if err != nil {
@@ -203,11 +214,16 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 		defer rows.Close()
 		for rows.Next() {
 			var v ConnectionView
+			var tagID *ids.UUID
+			var tagName *string
+			var tagArchived *bool
 			if err := rows.Scan(&v.ID, &v.Provider, &v.Status, &v.Cursor, &v.WatchExpiresAt, &v.ProviderScopes,
 				&v.AccountLabel, &v.SignatureEnrichEnabled, &v.MailPosture,
+				&tagID, &tagName, &tagArchived,
 				&v.LastSyncedAt, &v.LastErrorClass, &v.NextSyncDueAt); err != nil {
 				return err
 			}
+			v.ContextTag = contextTagOf(tagID, tagName, tagArchived)
 			out = append(out, v)
 		}
 		if err := rows.Err(); err != nil {

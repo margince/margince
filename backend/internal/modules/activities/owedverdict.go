@@ -110,7 +110,11 @@ func (s *Store) UnjudgedInbound(ctx context.Context, asOf time.Time, limit, body
 		//
 		// The rest of the partial index's predicate rides along, so the index
 		// and this query ask the same question and the planner can use it.
-		waiting, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, own,
+		horizon, err := s.waitingHorizonFor(ctx, tx, asOf)
+		if err != nil {
+			return err
+		}
+		waiting, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, own, horizon,
 			`a.owed_verdict IS NULL AND a.audience = 'workspace' AND a.restricted_at IS NULL`)
 		if err != nil {
 			return err

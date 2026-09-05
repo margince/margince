@@ -37,6 +37,11 @@ type row struct {
 	TargetType    *string
 	TargetID      *ids.UUID
 	TargetVersion *int64
+	// CoTarget* is the SECOND row a proposal's meaning can rest on, pinned the
+	// same way. All three are set together or none is; the schema holds it.
+	CoTargetType    *string
+	CoTargetID      *ids.UUID
+	CoTargetVersion *int64
 	// TargetLabel is what the target was CALLED when the proposal was staged.
 	// Nil where the type has no name, or where the row had gone by then — the
 	// card says nothing rather than saying unknown.
@@ -63,14 +68,16 @@ type row struct {
 }
 
 const columns = `id, kind, status, proposed_by, on_behalf_of, passport_id,
-	target_entity_type, target_entity_id, target_version, target_label, summary,
+	target_entity_type, target_entity_id, target_version,
+	co_target_entity_type, co_target_entity_id, co_target_version, target_label, summary,
 	proposed_change, diff_hash, expires_at, decided_by, decided_at, consumed_at, created_at,
 	bundle_id, evidence, effect_failed_at, effect_failure`
 
 func scan(r pgx.Row) (row, error) {
 	var a row
 	err := r.Scan(&a.ID, &a.Kind, &a.Status, &a.ProposedBy, &a.OnBehalfOf, &a.PassportID,
-		&a.TargetType, &a.TargetID, &a.TargetVersion, &a.TargetLabel, &a.Summary,
+		&a.TargetType, &a.TargetID, &a.TargetVersion,
+		&a.CoTargetType, &a.CoTargetID, &a.CoTargetVersion, &a.TargetLabel, &a.Summary,
 		&a.ProposedChange, &a.DiffHash, &a.ExpiresAt, &a.DecidedBy, &a.DecidedAt, &a.ConsumedAt, &a.CreatedAt,
 		&a.BundleID, &a.Evidence, &a.EffectFailedAt, &a.EffectFailure)
 	return a, err
@@ -258,8 +265,10 @@ func scanInbox(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInp
 //
 // Every row shares that target, so the target-visibility half of decidable is
 // asked ONCE for the record rather than once per row — the inbox's per-row
-// probe exists only because its rows point at different records. The per-kind
-// grant check still varies by row and stays in the loop.
+// probe exists only because its rows point at different records. The two halves
+// that vary by row stay in the loop: the per-kind grant check, and the self-only
+// narrowing (withheldFromOtherSeats), which is per-row because it compares the
+// caller against the seat THAT ROW was staged for and not against the target.
 //
 // A target the caller could not read — its type ungranted, or its row outside
 // their scope — answers an EMPTY list, never a refusal: nothing staged against a
@@ -286,7 +295,9 @@ func listForTarget(ctx context.Context, tx pgx.Tx, p principal.Principal, in Lis
 	if len(batch) == PendingScanCap {
 		scanned = &batch[len(batch)-1]
 	}
-	granted := func(a row) (bool, error) { return requireDecisionGrants(p, a) == nil, nil }
+	granted := func(a row) (bool, error) {
+		return requireDecisionGrants(p, a) == nil && !withheldFromOtherSeats(p, a), nil
+	}
 	out, _, err := appendDecidable(batch, nil, in.Limit+1, granted)
 	if err != nil {
 		return nil, storekit.Page{}, err

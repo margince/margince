@@ -86,7 +86,10 @@ func (e *scanEnv) as() context.Context {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"manager"},
 			Objects: map[string]principal.ObjectGrant{
-				"forecast": {Read: true, Create: true},
+				// Update is real: the scan WRITES as well as mints — closing a
+				// cleared finding is an update, the same grant a human answer
+				// spends. In production the job's system principal bypasses this.
+				"forecast": {Read: true, Create: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -242,5 +245,140 @@ func TestARunWithUnreadableInputsStillExists(t *testing.T) {
 	}
 	if status != StatusIncomplete {
 		t.Errorf("the stored run says %q", status)
+	}
+}
+
+// checkedCoverage is a night on which every source was read.
+func checkedCoverage(context.Context, pgx.Tx, time.Time) []SourceCoverage {
+	now := time.Now().UTC()
+	return []SourceCoverage{
+		{Source: "mail", State: CoverageChecked, CheckedThrough: &now},
+		{Source: "offers", State: CoverageChecked, CheckedThrough: &now},
+	}
+}
+
+// Fixing the record closes the finding, as condition_cleared and not as
+// resolved: nobody answered it, the record changed, and the two must stay
+// tellable apart later.
+func TestAFixedRecordClearsItsFindingOnTheNextScan(t *testing.T) {
+	t.Parallel()
+	e := setupScan(t)
+	ctx := e.as()
+
+	past := time.Now().UTC().AddDate(0, 0, -10)
+	sick := Subject{
+		DealID: ids.NewV7().String(), Owner: e.rep.String(),
+		ExpectedClose: &past, Category: "commit", HasNextStep: true, HasEconomicBuyer: true,
+	}
+	subjects := []Subject{sick}
+	scanner := NewScanner(e.store,
+		func(context.Context, pgx.Tx) ([]Subject, error) { return subjects, nil },
+		checkedCoverage, DefaultConfig())
+
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+
+	// The rep moves the close date forward; tonight the condition is gone.
+	future := time.Now().UTC().AddDate(0, 0, 20)
+	subjects[0].ExpectedClose = &future
+	got, err := scanner.Scan(ctx, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Cleared != 1 {
+		t.Errorf("the pass cleared %d findings, want 1", got.Cleared)
+	}
+
+	var status string
+	if err := e.store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT status FROM assurance_exception WHERE subject_id = $1 AND type = $2`,
+			sick.DealID, TypeClosePast).Scan(&status)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if status != ExceptionConditionCleared {
+		t.Errorf("the fixed record's finding is %q, want %q — left open it nags about "+
+			"a condition that is gone; folded into resolved it forges an answer nobody gave",
+			status, ExceptionConditionCleared)
+	}
+}
+
+// A finding whose rule needs a source that went unread tonight stays open:
+// on such a night "not observed" means "not looked", not "not there".
+func TestAFindingWhoseSourceWentUnreadStaysOpen(t *testing.T) {
+	t.Parallel()
+	e := setupScan(t)
+	ctx := e.as()
+
+	long := time.Now().UTC().AddDate(0, 0, -120)
+	amount := int64(100_000_00)
+	silent := Subject{
+		DealID: ids.NewV7().String(), Owner: e.rep.String(),
+		AmountMinor: &amount, Currency: "EUR", Category: "commit",
+		LastInboundAt: &long, HasNextStep: true, HasEconomicBuyer: true,
+	}
+	subjects := []Subject{silent}
+	coverage := checkedCoverage
+	scanner := NewScanner(e.store,
+		func(context.Context, pgx.Tx) ([]Subject, error) { return subjects, nil },
+		func(ctx context.Context, tx pgx.Tx, now time.Time) []SourceCoverage {
+			return coverage(ctx, tx, now)
+		},
+		DefaultConfig())
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+
+	// Tonight the mailbox cannot be read, and the deal row alone no longer
+	// shows the silence — LastInboundAt is what the mailbox feeds.
+	subjects[0].LastInboundAt = nil
+	coverage = func(context.Context, pgx.Tx, time.Time) []SourceCoverage {
+		now := time.Now().UTC()
+		return []SourceCoverage{
+			{Source: "mail", State: CoverageUnavailable},
+			{Source: "offers", State: CoverageChecked, CheckedThrough: &now},
+		}
+	}
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+
+	var status string
+	if err := e.store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT status FROM assurance_exception WHERE subject_id = $1 AND type = $2`,
+			silent.DealID, TypeBuyerSilent).Scan(&status)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if status != "open" {
+		t.Errorf("the silence finding is %q after a night the mailbox went unread, want "+
+			"open — clearing it would read an unread mailbox as an all-clear", status)
+	}
+
+	// The admit arm: the NEXT night the mailbox is read again and the buyer
+	// has answered. Now absence is a looked-at fact, and the finding clears.
+	recent := time.Now().UTC().AddDate(0, 0, -2)
+	subjects[0].LastInboundAt = &recent
+	coverage = checkedCoverage
+	got, err := scanner.Scan(ctx, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Cleared != 1 {
+		t.Errorf("the read-again night cleared %d findings, want 1", got.Cleared)
+	}
+	if err := e.store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT status FROM assurance_exception WHERE subject_id = $1 AND type = $2`,
+			silent.DealID, TypeBuyerSilent).Scan(&status)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if status != ExceptionConditionCleared {
+		t.Errorf("after a checked night with the buyer answering, the finding is %q, "+
+			"want %q", status, ExceptionConditionCleared)
 	}
 }

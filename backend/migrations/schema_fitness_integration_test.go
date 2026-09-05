@@ -14,58 +14,110 @@ package migrations_test
 
 import (
 	"context"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// TestSchema_amountMinorBaseIsDatabaseGenerated is the fitness function for
-// the formula-field boundary invariant (RD-AC-6, 0065): deal.amount_minor_base
-// must be a database GENERATED column, never an application-computed or
-// hand-maintained one — the DATABASE is the source of truth, so a future
-// migration that quietly re-added it as a plain writable bigint (letting a
-// write path set it directly) fails here rather than surviving unnoticed.
-// The generation expression itself is checked structurally (both formula
-// inputs are named), not restated verbatim, so the test stays robust to a
-// harmless whitespace/parenthesization change in a later migration.
-func TestSchema_amountMinorBaseIsDatabaseGenerated(t *testing.T) {
+// TestSchema_amountMinorBaseHasOneWriter is the fitness function for the
+// formula-field boundary invariant (RD-AC-6, 0065): deal.amount_minor_base
+// carries a deal's money in the installation base currency, and exactly one
+// place in the tree decides what goes in it.
+//
+// It USED to assert the column was GENERATED, which bought that guarantee for
+// free — no write path can set a generated column, so there was nothing to
+// police. That mechanism could not survive the arithmetic being right. The
+// conversion needs BOTH currencies' minor-unit scales, one of which lives in
+// currency_minor_digits and the other behind the installation's base-currency
+// setting, and a generated expression may read neither: it sees only the row it
+// belongs to. Kept generated, the column was round(amount_minor *
+// fx_rate_to_base) — a hundredth of the truth for a zero-decimal currency
+// against a two-decimal base, stored, and repeated by every reader.
+//
+// So the column is plain now, and the guarantee is asserted rather than
+// structural. The census below walks the tree for writes of the column and
+// fails when one appears outside the freeze writer, which converts through
+// deals.ConvertToBase rather than spelling the arithmetic a second time.
+func TestSchema_amountMinorBaseHasOneWriter(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)
 	ctx := context.Background()
 
-	var isGenerated, generationExpr string
+	// The column is plain. Asserted rather than assumed: a later migration that
+	// re-added the generated clause would be restoring the wrong arithmetic,
+	// and it would do so silently — the tests below still pass over a generated
+	// column, because they read what the tree WRITES, not what it stores.
+	var isGenerated string
 	if err := owner.QueryRow(
 		ctx, `
-		SELECT is_generated, generation_expression
+		SELECT is_generated
 		FROM information_schema.columns
 		WHERE table_schema = 'public' AND table_name = 'deal' AND column_name = 'amount_minor_base'`,
-	).Scan(&isGenerated, &generationExpr); err != nil {
+	).Scan(&isGenerated); err != nil {
 		t.Fatalf("querying deal.amount_minor_base from information_schema: %v", err)
 	}
-	if isGenerated != "ALWAYS" {
-		t.Errorf("deal.amount_minor_base has information_schema.columns.is_generated=%q, want ALWAYS", isGenerated)
-	}
-	for _, want := range []string{"amount_minor", "fx_rate_to_base"} {
-		if !strings.Contains(generationExpr, want) {
-			t.Errorf("deal.amount_minor_base's generation expression %q does not reference %q", generationExpr, want)
-		}
+	if isGenerated != "NEVER" {
+		t.Errorf("deal.amount_minor_base has is_generated=%q, want NEVER — a generated "+
+			"expression cannot reach either minor-unit scale, so restoring one restores "+
+			"the hundredfold error it was removed to fix", isGenerated)
 	}
 
-	// pg_attribute is a second, independent catalog: attgenerated = 's' is
-	// Postgres's STORED-generated marker (the only kind it currently
-	// supports), cross-checking the information_schema view above.
-	var attgenerated string
-	if err := owner.QueryRow(
-		ctx, `
-		SELECT attgenerated FROM pg_attribute
-		WHERE attrelid = 'deal'::regclass AND attname = 'amount_minor_base' AND NOT attisdropped`,
-	).Scan(&attgenerated); err != nil {
-		t.Fatalf("querying pg_attribute for deal.amount_minor_base: %v", err)
+	// ONE writer. The census is over the tree rather than a list, so a second
+	// writer added later fails here instead of being remembered about.
+	//
+	// A test file may name the column freely: it arranges and it asserts, and
+	// neither is a production write path.
+	const theWriter = "internal/modules/deals/basecurrencyfreezewrite.go"
+	var offenders []string
+	var judged int
+	root := ".."
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		body, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		for _, line := range strings.Split(string(body), "\n") {
+			// A READ is fine and there are many: every rollup sums this column.
+			// What must be unique is a WRITE, which in this tree is a storekit
+			// patch naming the column constant.
+			if !strings.Contains(line, "baseAmountColumn") {
+				continue
+			}
+			judged++
+			rel := strings.TrimPrefix(filepath.ToSlash(path), "../")
+			if rel == theWriter || strings.Contains(line, "baseAmountColumn =") {
+				continue
+			}
+			offenders = append(offenders, rel+": "+strings.TrimSpace(line))
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walking the tree for writers of amount_minor_base: %v", err)
 	}
-	if attgenerated != "s" {
-		t.Errorf("deal.amount_minor_base has pg_attribute.attgenerated=%q, want \"s\" (STORED)", attgenerated)
+	// A census that judged nothing certifies nothing: the writer names the
+	// column and so does its constant, so a zero here means the scan is reading
+	// a tree shape that is gone.
+	if judged == 0 {
+		t.Fatal("no reference to the base-amount column constant was found at all, " +
+			"so this census is reading a tree shape that no longer exists")
+	}
+	if len(offenders) > 0 {
+		t.Errorf("deal.amount_minor_base is written outside %s:\n  %s\n\n"+
+			"Two writers of one converted figure agree until they do not, and the one that "+
+			"drifts is a money total nobody can reproduce.",
+			theWriter, strings.Join(offenders, "\n  "))
 	}
 }
 
@@ -156,7 +208,11 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// a promise: nothing writes task_activity_id.
 	"conversation_claim.person_id":          "gated: RecordConversationClaim opens with auth.RequireHuman + auth.Require(person, update), then auth.EnsureWritableLive on the person inside the write's own transaction — a claim may only be recorded against a person the caller could already change",
 	"conversation_claim.source_activity_id": "gated: the same writer takes auth.EnsureActivityContentVisibleLive on the cited activity in that transaction, so a claim can never quote a message the caller may not open — and LIVE rather than merely visible, because a claim must not outlive its evidence",
-	"conversation_claim.task_activity_id":   "PENDING WRITER: the column has no writer. The task an extracted commitment creates is written through the tasks substrate's own gated path, and this entry is replaced with that gate when the routing edge lands",
+	// Held by backend/gates/pendingwriter_test.go, which fails when a column
+	// classified PENDING WRITER gains one — the entry becoming false is
+	// otherwise silent, and five of the seven this file once carried went
+	// stale exactly that way.
+	"conversation_claim.task_activity_id": "PENDING WRITER: the column has no writer. The task an extracted commitment creates is written through the tasks substrate's own gated path, and this entry is replaced with that gate when the routing edge lands",
 	// Owned child rows: the row is an attribute of its visible parent,
 	// written only through the parent's own gated paths.
 	"organization_geocode_state.organization_id": "child row: the sidecar for an organization's own coordinate lookup, and no caller ever names the organization it keys on. " +
@@ -240,7 +296,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// subject a writer may name is the run's own, which QueueRun gated before
 	// the run existed, and a writer that named a person of its own instead
 	// would need its own gate and its own entry.
-	"provider_applied_field.person_id": "PENDING WRITER: the obligation on whoever writes it — the subject must be the run's own, which QueueRun already gated, as its sibling person_provider_claim.person_id is",
+	"provider_applied_field.person_id": "child row: written by ApplyProviderClaims (people/providerclaimapply.go) from the run's own subject, which QueueRun already gated; the writer re-takes the check itself — auth.HoldWritableLive on the person, inside the hand-off transaction — so every fill that puts provider PII on a shareable record is gated where it is written rather than two packages back",
 	// telegram-oa design §6.4: the channel-aware ensure contract creates the
 	// Person (owner_id NULL) and this identity satellite in the same
 	// transaction, from the inbound message's own channel principal —

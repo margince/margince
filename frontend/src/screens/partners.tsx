@@ -483,7 +483,7 @@ export function PartnerTab({
   }
 
   return (
-    <QueryGate query={query}>
+    <QueryGate query={query} pendingLabel={t("nav.partners")}>
       {(partner) =>
         partner ? (
           // The record's own stack: this tab is three cards, and the account

@@ -481,3 +481,15 @@ func (s *Service) readingWalk(walk worklistsnap.Snapshot, walking bool) *Service
 	}
 	return &reading
 }
+
+// readingScores carries this read's overnight composites onto a copy of the
+// service, the way readingWalk carries the walk.
+//
+// A COPY, always. One Service serves every request, and a score map left on the
+// shared one would rank the next reader's page by the last reader's night.
+func (s *Service) readingScores(scores map[ids.UUID]float64, cutoff time.Time) *Service {
+	reading := *s
+	reading.briefScores = scores
+	reading.briefCutoff = cutoff
+	return &reading
+}

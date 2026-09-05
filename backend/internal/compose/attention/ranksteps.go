@@ -160,6 +160,30 @@ var rankSteps = []rankStep{
 		},
 	},
 	{
+		// The night's own reading of which deal is worth the morning, read AFTER
+		// money and before age.
+		//
+		// Money first because a bigger deal at risk is the product's rule and not
+		// a model's opinion. Age after, because "this one has waited longer" is a
+		// fact about the reader's own queue and the composite is a judgement about
+		// the deal — where the night has an opinion, it should outrank the clock.
+		//
+		// Rows the night never ranked carry zero and therefore lose this step to
+		// any row it did, which is correct: a deal the brief considered and scored
+		// is one it has something to say about, and a deal it never saw is not.
+		name: "opportunity",
+		decides: func(a, b ranked) (bool, bool) {
+			return a.opportunity != b.opportunity, a.opportunity > b.opportunity
+		},
+		explain: func(a, b ranked) crmcontracts.WorklistComparison {
+			return crmcontracts.WorklistComparison{
+				Comparator: crmcontracts.WorklistComparisonComparatorOpportunity,
+				Mine:       scoreValue(a.opportunity),
+				Theirs:     scoreValue(b.opportunity),
+			}
+		},
+	},
+	{
 		name: "waiting_days",
 		// Ordered on the BOUNDED age and reported as the TRUE one: the bounded
 		// value is what decided, and the true value is what the row itself says

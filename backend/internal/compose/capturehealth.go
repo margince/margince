@@ -65,7 +65,10 @@ func (h captureHealthHandlers) GetCaptureHealth(w http.ResponseWriter, r *http.R
 		httperr.Write(w, r, err)
 		return
 	}
-	if err := auth.RequireAdmin(ctx); err != nil {
+	// The same operational question as job health, for the same reader, so the same
+	// object gates it. Leaving this on the literal admin role would make System
+	// health grant-derived for one card and role-derived for its neighbour.
+	if err := auth.Require(ctx, "job_health", principal.ActionRead); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

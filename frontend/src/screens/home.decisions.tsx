@@ -103,6 +103,7 @@ function deckLabels(
     showMore: t("home.deck.showMore"),
     showLess: t("home.deck.showLess"),
     noContent: t("common.empty"),
+    loading: t("home.panel.decisions"),
   };
   return {
     card,

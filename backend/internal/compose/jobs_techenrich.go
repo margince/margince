@@ -83,8 +83,13 @@ func (TechnicalEnrichBackfillArgs) InsertOpts() river.InsertOpts {
 // second one against the same three services.
 func technicalInsertOpts() *river.InsertOpts {
 	return &river.InsertOpts{
-		Queue:      technicalLookupQueue,
-		UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
+		Queue: technicalLookupQueue,
+		// Swept: technical_enrich_backfill re-nominates a company whose lookup
+		// did not land, and the three services this asks are small ones running
+		// on goodwill — a long ladder would keep asking them about a company
+		// the next pass is going to ask about anyway.
+		MaxAttempts: sweptJobMaxAttempts,
+		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 	}
 }
 

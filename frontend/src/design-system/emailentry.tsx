@@ -50,6 +50,41 @@ function statusTone(status: EmailAccessStatus): "warn" | undefined {
   return status === "withheld" ? "warn" : undefined;
 }
 
+// The row's direction line, as one whole sentence.
+//
+// Each direction has a form WITH a name and a form without, and the STRING
+// owns the sentence rather than being glued to a name in the browser. Gluing
+// is what produced "Received from" with nothing after it on every row whose
+// counterparty is absent — which is every withheld row, and every row the
+// summary carries no counterparty for. A preposition with no object reads as
+// an unfinished render rather than as a deliberate absence.
+//
+// It also does not translate: German and Vietnamese put the name somewhere a
+// `${direction} ${name}` template cannot.
+//
+// Direction is nullable, and an unknown one is not an outbound one — saying
+// "Sent to" about a message nobody recorded a direction for is a claim the row
+// does not have, so it answers null and the caller says "A message".
+function directionLine(
+  direction: EmailSummary["direction"],
+  counterparty: string | null | undefined,
+  t: ReturnType<typeof useT>,
+): string | null {
+  // TRIMMED, and blank counts as absent: the server sends "" for a
+  // counterparty it could not resolve, and "" is not null — so a bare presence
+  // check picked the named form and rendered "Received from " with a trailing
+  // space. That is the same dangling preposition this function exists to
+  // remove, one character longer.
+  const name = counterparty?.trim() ?? "";
+  if (direction === "inbound") {
+    return name ? t("email.receivedFrom", { who: name }) : t("email.received");
+  }
+  if (direction === "outbound") {
+    return name ? t("email.sentTo", { who: name }) : t("email.sent");
+  }
+  return null;
+}
+
 // What the row draws, decided in one place.
 //
 // Every field the withheld status governs is settled here TOGETHER, from the
@@ -59,16 +94,8 @@ function statusTone(status: EmailAccessStatus): "warn" | undefined {
 // print a counterparty's name beside a message the reader may not open.
 function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
   const withheld = summary.display_status === "withheld";
-  // Direction is nullable, and an unknown one is not an outbound one: saying
-  // "Sent to" about a message nobody recorded a direction for is a claim the
-  // row does not have.
-  const direction =
-    summary.direction === "inbound"
-      ? t("email.receivedFrom")
-      : summary.direction === "outbound"
-        ? t("email.sentTo")
-        : null;
   const counterparty = withheld ? null : summary.counterparty;
+  const direction = directionLine(summary.direction, counterparty, t);
   return {
     withheld,
     // A withheld row keeps its shape and loses its words. Drawing it as absent
@@ -78,32 +105,51 @@ function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
     subject: withheld
       ? t("email.withheldSubject")
       : summary.subject?.trim() || t("email.noSubject"),
-    who:
-      counterparty && direction
-        ? `${direction} ${counterparty}`
-        : (direction ?? t("email.aMessage")),
+    who: direction ?? t("email.aMessage"),
     preview: withheld ? null : summary.preview,
     move: withheld || summary.move === "none" ? null : MOVE_LABEL[summary.move],
     attachments: withheld ? 0 : summary.attachment_count,
   };
 }
 
+/**
+ * Why a row does not open, for the two cases where that is the honest answer.
+ *
+ * `noDetail` — the row has no message to open: a thread projection standing
+ * for several messages, or an entry the server gave no activity id.
+ * `noReader` — the surface itself mounts no drawer, so there is nowhere to
+ * open INTO. The Brief is the one such surface.
+ *
+ * Naming the reason is the point. An optional opener could not tell these
+ * apart from a surface that simply forgot to pass one, and a forgotten opener
+ * renders a full-fidelity preview that does nothing — the defect this union
+ * exists to make unwritable.
+ */
+type NoOpenReason = "noDetail" | "noReader";
+
 export function EmailEntry({
   summary,
   timestamp,
-  onOpen,
+  ...opener
 }: Readonly<{
   /** The server's own row model. Nothing here is derived in the browser. */
   summary: EmailSummary;
   /** Formatted by the caller, which owns the reader's timezone. */
   timestamp: string;
-  /**
-   * Opens the canonical detail. Omitted only where there is no detail to open;
-   * a row that looks openable and is not teaches a reader the product does not
-   * work.
-   */
-  onOpen?: () => void;
-}>) {
+}> &
+  Readonly<
+    /**
+     * Openable, or explicitly not — never silently neither.
+     *
+     * A caller threading a callback it cannot guarantee (an optional prop, a
+     * row that may carry no activity id) takes the first branch and states the
+     * fallback reason too: `onOpen` undefined then means what the caller says
+     * it means, rather than meaning nobody thought about it.
+     */
+    | { onOpen: () => void }
+    | { onOpen: undefined; whyNotOpenable: NoOpenReason }
+    | { whyNotOpenable: NoOpenReason }
+  >) {
   const t = useT();
   const { locale } = useLocale();
   const row = rowFields(summary, t);
@@ -112,6 +158,11 @@ export function EmailEntry({
     <>
       <span className="emailentry__lead">
         <Mail aria-hidden="true" />
+        {/* The row's KIND, for a reader who cannot see the envelope. Every
+            other timeline kind announces itself through a Badge; this one
+            said "email" in an icon and nothing else, so a screen reader was
+            told what happened without being told what kind of thing it was. */}
+        <span className="sr-only">{t("timeline.kind.email")}</span>
         <span className="emailentry__who">{row.who}</span>
         <span className="emailentry__when">{timestamp}</span>
       </span>
@@ -137,6 +188,7 @@ export function EmailEntry({
     </>
   );
 
+  const onOpen = "onOpen" in opener ? opener.onOpen : undefined;
   if (!onOpen) {
     return <div className="emailentry">{content}</div>;
   }

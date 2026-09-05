@@ -17,6 +17,8 @@
 import { DataTable, Disclosure } from "../design-system/atoms";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
+import { useViewerId } from "./common";
+import { TakeOwnershipControl } from "./worklist.manager";
 import { type TeamException, useTeamExceptions } from "./worklist.queries";
 
 /**
@@ -30,11 +32,20 @@ export function TeamExceptionsPanel({
   enabled,
   onOwner,
 }: Readonly<{ enabled: boolean; onOwner: (id: string) => void }>) {
+  // The whole body is a child rather than this function's own, so that a
+  // reader below the tier MOUNTS NOTHING. Hooks cannot sit under an early
+  // return, so keeping the reads here would have made a rep's page ask who
+  // they are on behalf of a panel they are not shown — a request whose only
+  // purpose was to fill a control that never rendered.
+  return enabled ? <TeamExceptions onOwner={onOwner} /> : null;
+}
+
+function TeamExceptions({
+  onOwner,
+}: Readonly<{ onOwner: (id: string) => void }>) {
   const t = useT();
-  const exceptions = useTeamExceptions(enabled);
-  if (!enabled) {
-    return null;
-  }
+  const viewerId = useViewerId();
+  const exceptions = useTeamExceptions(true);
   const state = exceptions.isPending
     ? "loading"
     : exceptions.isError
@@ -62,7 +73,16 @@ export function TeamExceptionsPanel({
               // the intervention this page routes to. A row nobody holds opens
               // the unassigned scope instead: the work is real and somebody has
               // to take it.
-              onRowClick={(row) => onOwner(row.owner.id ?? "")}
+              //
+              // Read off the OWNER'S KIND, not off the id. A `user` row whose
+              // id this caller may not resolve still has somebody carrying it,
+              // and sending the manager to the unassigned scope for it would
+              // route them to a queue the work is not in.
+              onRowClick={(row) =>
+                row.owner.kind === "user" && row.owner.id
+                  ? onOwner(row.owner.id)
+                  : onOwner("")
+              }
               columns={[
                 {
                   key: "kind",
@@ -79,16 +99,50 @@ export function TeamExceptionsPanel({
                 {
                   key: "owner",
                   header: t("worklist.exceptions.owner"),
-                  // The name where the caller may resolve it, and the honest
-                  // absence otherwise. Never the raw id: a uuid in front of a
-                  // lead is the defect the label exists to prevent.
+                  // Three answers, because there are three facts and the wire
+                  // tells them apart: a name, somebody this caller may not
+                  // name, and nobody at all.
+                  //
+                  // Falling back to "Nobody yet" on a missing LABEL conflated
+                  // the last two. An exception owned by a real person whose
+                  // name the reader cannot resolve was reported as unassigned
+                  // work — which is not a display nicety: a lead reads that as
+                  // "this is going nowhere" and takes it, when a teammate is
+                  // already carrying it.
+                  //
+                  // Never the raw id either: a uuid in front of a lead is the
+                  // defect the label exists to prevent.
                   render: (row: TeamException) =>
-                    row.owner.label ?? t("worklist.exceptions.nobody"),
+                    row.owner.kind === "unassigned"
+                      ? t("worklist.exceptions.nobody")
+                      : (row.owner.label ??
+                        t("worklist.exceptions.ownerWithheld")),
                 },
                 {
                   key: "threshold",
                   header: t("worklist.exceptions.basis"),
                   render: (row: TeamException) => row.threshold,
+                },
+                {
+                  key: "take",
+                  header: t("worklist.exceptions.intervene"),
+                  // The press must not ALSO open the owner's queue. Every row
+                  // navigates on click, so a button inside one fires both: the
+                  // handover runs and the page walks away from its own
+                  // confirmation, which reads as a control that did something
+                  // unrelated to what it said.
+                  //
+                  // The control stops it on its own buttons rather than under a
+                  // wrapper: a handler on a static element is invisible to a
+                  // keyboard and the a11y lint rejects it, and the buttons are
+                  // already the interactive things the event comes from.
+                  render: (row: TeamException) => (
+                    <TakeOwnershipControl
+                      subject={row.subject}
+                      viewerId={viewerId ?? ""}
+                      insideAClickableRow
+                    />
+                  ),
                 },
               ]}
             />

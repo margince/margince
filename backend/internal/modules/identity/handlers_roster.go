@@ -11,31 +11,40 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ListUsers serves one keyset page of the workspace member roster.
 func (h Handlers) ListUsers(w http.ResponseWriter, r *http.Request, params crmcontracts.ListUsersParams) {
 	actor, hasActor := identityFrom(r.Context())
-	isAdmin := hasActor && actor.hasRole(roleAdmin)
-	// The widened admin management view is honored only for an admin caller;
-	// everyone else gets the active-only roster the share/assignee pickers use.
-	includeInactive := isAdmin && params.IncludeInactive != nil && *params.IncludeInactive
+	// The widened management view is honored for a caller who may administer
+	// members; everyone else gets the active-only roster the share/assignee
+	// pickers use. A grant rather than the literal admin role, so an
+	// installation that delegates member administration gets the view that goes
+	// with it — the safe roster stays open to every authenticated caller.
+	mayManage := false
+	if hasActor {
+		ctx, err := admit(r.Context(), actor, objectUserAdmin, principal.ActionRead)
+		mayManage = err == nil
+		r = r.WithContext(ctx)
+	}
+	includeInactive := mayManage && params.IncludeInactive != nil && *params.IncludeInactive
 	rows, page, err := h.svc.ListUsers(r.Context(), ListUsersInput{
 		Q:               params.Q,
 		Cursor:          params.Cursor,
 		Limit:           params.Limit,
 		IncludeInactive: includeInactive,
-		WithRoles:       isAdmin,
+		WithRoles:       mayManage,
 	})
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	// Same URL, different body per caller: an admin's page carries role keys and
-	// the widened status view, a rep's carries neither. A shared cache keyed on
-	// the URL alone would serve one of them the other's answer.
+	// Same URL, different body per caller: a member administrator's page carries
+	// role keys and the widened status view, a rep's carries neither. A shared
+	// cache keyed on the URL alone would serve one of them the other's answer.
 	w.Header().Set("Cache-Control", "private, no-store")
-	wire := rosterUserMapping(isAdmin)
+	wire := rosterUserMapping(mayManage)
 	data := make([]crmcontracts.User, 0, len(rows))
 	for _, u := range rows {
 		data = append(data, wire(u))

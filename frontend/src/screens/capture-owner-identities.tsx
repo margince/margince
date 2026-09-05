@@ -118,7 +118,10 @@ export function OwnerIdentitiesCard() {
             description={t("ownerIdentities.notRetroactive")}
             layout="stack"
             control={
-              <QueryGate query={query}>
+              <QueryGate
+                query={query}
+                pendingLabel={t("ownerIdentities.title")}
+              >
                 {(list) => (
                   <IdentityRows
                     list={list.data}
@@ -145,6 +148,25 @@ const kindLabel: Record<Kind, MessageKey> = {
   address: "ownerIdentities.kind.address",
   domain: "ownerIdentities.kind.domain",
 };
+
+/**
+ * A row says where its claim came from, and only when the seat did not make it.
+ *
+ * An address somebody typed needs no explanation. One the product LEARNED does:
+ * a seat scanning this card would otherwise find an address they never entered
+ * and have no way to tell whether they forgot adding it or something else did —
+ * and they are the person who decides whether it stays.
+ */
+function learnedNote(source: OwnerIdentity["source"]): MessageKey | null {
+  switch (source) {
+    case "delivered_to":
+      return "ownerIdentities.learned.deliveredTo";
+    case "provider":
+      return "ownerIdentities.learned.provider";
+    default:
+      return null;
+  }
+}
 
 /**
  * One declared address per row: what it names on the left, whether it is an
@@ -175,24 +197,28 @@ function IdentityRows({
   }
   return (
     <SettingList testId="owner-identities-list">
-      {list.map((identity) => (
-        <SettingRow
-          key={identity.id}
-          label={identity.value}
-          value={t(kindLabel[identity.kind])}
-          control={
-            <Button
-              small
-              variant="ghost"
-              disabled={pending}
-              aria-label={t("ownerIdentities.remove")}
-              onClick={() => onRemove(identity.id)}
-            >
-              <Trash2 aria-hidden size={16} />
-            </Button>
-          }
-        />
-      ))}
+      {list.map((identity) => {
+        const learned = learnedNote(identity.source);
+        return (
+          <SettingRow
+            key={identity.id}
+            label={identity.value}
+            description={learned === null ? undefined : t(learned)}
+            value={t(kindLabel[identity.kind])}
+            control={
+              <Button
+                small
+                variant="ghost"
+                disabled={pending}
+                aria-label={t("ownerIdentities.remove")}
+                onClick={() => onRemove(identity.id)}
+              >
+                <Trash2 aria-hidden size={16} />
+              </Button>
+            }
+          />
+        );
+      })}
     </SettingList>
   );
 }

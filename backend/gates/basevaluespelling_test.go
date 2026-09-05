@@ -33,7 +33,7 @@ import (
 const (
 	baseValueOwner  = "internal/compose/basecurrencysql.go"
 	baseValueOwnFn  = "BaseValueSQL"
-	baseValueTwin   = "internal/compose/briefs/briefrank.go"
+	baseValueTwin   = "internal/compose/briefs/briefbasevalue.go"
 	baseValueTwinFn = "briefBaseValueSQL"
 )
 

@@ -75,7 +75,9 @@ type CounterpartyVerdictEngine struct {
 	// admitted deserves a company. A `real` answer creates the PERSON; whether
 	// they have an employer is a separate question this engine does not answer.
 	triage *domainTriageTrigger
-	log    *slog.Logger
+	// tagFiler files a created contact under the word its connector was set to.
+	tagFiler *connectorTagFiler
+	log      *slog.Logger
 }
 
 // NewCounterpartyVerdictEngine builds the engine over the pool and the verdict
@@ -91,6 +93,7 @@ func NewCounterpartyVerdictEngine(pool *pgxpool.Pool, brain completer, log *slog
 		approvals:  approvals.NewService(InstallationDB(pool)),
 		brain:      brain,
 		triage:     newDomainTriageTrigger(pool, log),
+		tagFiler:   newConnectorTagFiler(pool),
 		log:        log,
 	}
 }
@@ -147,6 +150,7 @@ func (e *CounterpartyVerdictEngine) RunWorkspace(ctx context.Context, maxVerdict
 	if maxVerdicts <= 0 {
 		maxVerdicts = verdictCatchUpCap
 	}
+	budget := reAskBudgetFor(maxVerdicts)
 	return e.inWorkspace(ctx, func(wsCtx context.Context, _ ids.UUID) error {
 		resolved := 0
 		for resolved < maxVerdicts {
@@ -157,7 +161,7 @@ func (e *CounterpartyVerdictEngine) RunWorkspace(ctx context.Context, maxVerdict
 			if len(batch) == 0 {
 				return nil
 			}
-			n, err := e.judgeClaimed(wsCtx, batch)
+			n, err := e.judgeClaimed(wsCtx, batch, budget)
 			resolved += n
 			if errors.Is(err, ai.ErrBudgetDeferred) {
 				// Every row this pass never reached is refunded: no model saw
@@ -189,10 +193,12 @@ func (e *CounterpartyVerdictEngine) RunWorkspace(ctx context.Context, maxVerdict
 // when the victim's id was legitimately in the request. The extra calls land on
 // the cheapest rung of a background task, which is the right price for a
 // decision that creates or destroys records.
-func (e *CounterpartyVerdictEngine) judgeClaimed(ctx context.Context, claimed []capture.PendingCounterparty) (int, error) {
+func (e *CounterpartyVerdictEngine) judgeClaimed(
+	ctx context.Context, claimed []capture.PendingCounterparty, budget *reAskBudget,
+) (int, error) {
 	applied := 0
 	for _, row := range claimed {
-		n, err := e.judgeOne(ctx, row)
+		n, err := e.judgeOne(ctx, row, budget)
 		if err != nil {
 			// WHY it failed decides whether the row pays for it, and the cause
 			// has to be read BEFORE the deferral — a Defer clears claimed_by, so
@@ -225,7 +231,9 @@ func (e *CounterpartyVerdictEngine) judgeClaimed(ctx context.Context, claimed []
 // judgeOne asks about ONE sender and applies what comes back, if it clears the
 // floor. An answer still below the floor retires the row to `unsure` for a human
 // rather than spending another attempt on a question this model cannot answer.
-func (e *CounterpartyVerdictEngine) judgeOne(ctx context.Context, row capture.PendingCounterparty) (int, error) {
+func (e *CounterpartyVerdictEngine) judgeOne(
+	ctx context.Context, row capture.PendingCounterparty, budget *reAskBudget,
+) (int, error) {
 	// The OWNER's own decision first, and no model call at all when there is
 	// one. A person who told this product what a sender is has answered the
 	// question; asking anyway would spend a call to be told something we then
@@ -259,6 +267,21 @@ func (e *CounterpartyVerdictEngine) judgeOne(ctx context.Context, row capture.Pe
 	// a hope that the same question answers differently: an unbound structured
 	// call escalates the routing ladder, so the second attempt is a stronger
 	// model looking at the same message.
+	//
+	// A pass whose re-ask budget is spent takes the answer the floor already
+	// gives it: terminally unsure, a human decides. Not deferred — the row has
+	// been judged, and a deferral would spend one of PendingMaxAttempts on a
+	// pass that never asked its second question. Not accepted either: the whole
+	// point of the floor is that an answer this unconfident does not act.
+	if !budget.spend() {
+		// The same helper, asked with no retry answer to prefer: a human is
+		// owed what the model DID say, which here is the one answer it gave.
+		if err := e.pending.Retire(ctx, row, "below the confidence floor, and this pass had no re-ask left",
+			lastMeasurement(nil, "", answers, servedModel)); err != nil {
+			return 0, err
+		}
+		return 1, nil
+	}
 	retry, retryModel, err := e.ask(ctx, row)
 	if err != nil {
 		return 0, err

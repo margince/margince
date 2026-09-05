@@ -380,7 +380,10 @@ export type DecisionDeckProps = Readonly<{
    *  above all a retry, without which `failed` is `unavailable` with extra
    *  words. */
   stateDetail?: SectionDetail;
-  loadingLabel?: string;
+  // Required, like the SurfaceState it forwards to: this deck cannot know what
+  // its caller is waiting for, and a generic line is what the required prop
+  // one level down exists to prevent.
+  loadingLabel: string;
   /** Under the tray: what a refused commit said, in the caller's words. */
   notice?: ReactNode;
   chips?: (

@@ -23,6 +23,27 @@ const SETTLE = 0.08;
 
 // A resting hand sends no move events at all, so silence has to BE the answer
 // rather than leaving the last speed standing.
+// ## Testing a component that uses this hook
+//
+// This hook reasons in REAL milliseconds — a 25ms poll, a floor, and a ceiling
+// that settles whatever the pointer is doing. A jsdom pointer reports no
+// movement, which reads as "resting", so a trigger that receives a pointer
+// event opens on its own within the ceiling whether the test asked for it or
+// not.
+//
+// A test that renders one of these and then asserts on what is on screen is
+// therefore racing that timer, and the race is decided by how loaded the
+// machine is: the case passes alone, passes on a quiet gate, and fails on a
+// parallel one — on a different file each run, which is what makes it
+// expensive to read (#4000).
+//
+// Two ways out, and a test needs one of them:
+//
+//   - own the clock, as hoverintent.test.tsx does (fake `performance` too, or
+//     the thresholds are measured against a clock that is still running); or
+//   - leave the trigger before asserting, which stops the poll through
+//     onPointerLeave the way a reader's pointer does.
+
 const STILL_AFTER_MS = 70;
 
 // The smoothing is weighted to history: one stuttered sample from a hand about

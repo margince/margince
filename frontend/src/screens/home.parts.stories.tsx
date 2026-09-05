@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { components } from "../api/schema";
+import { BriefFeed } from "./brief.feed";
 import { PlanSection } from "./brief.plan";
 import { deckItems } from "./home";
 import { DecisionsSection } from "./home.decisions";
@@ -9,20 +11,20 @@ import {
   bundle,
   deals,
   digest,
+  leadRow,
   meetingRow,
   NOT_FOUND,
+  overnightRow,
   pipelineRows,
-  quietRun,
-  ranked,
   readingsDay,
   report,
   singles,
+  type Worklist,
 } from "./home.fixtures";
 import { HomeGlance } from "./home.glance";
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
 import { PromisesPanel, SchedulePanel } from "./home.schedule";
-import { FocusSection } from "./home.today";
 import {
   installFetchStub,
   jsonResponse,
@@ -30,9 +32,6 @@ import {
   type RouteMap,
   StoryProviders,
 } from "./story-utils";
-
-// A story draws one section on its own, so nothing leads the page above it.
-const NOTHING_ABOVE: ReadonlySet<string> = new Set();
 
 // Home, one part at a time.
 //
@@ -58,6 +57,33 @@ const NOW_DATE = new Date(NOW);
 const RAIL_ROUTES: RouteMap = {
   "GET /me": meRoute({}),
   "GET /digest": () => jsonResponse(digest),
+  // The readings strip's pipeline card makes two reads of its own: the scope
+  // the server names for this reader, and the forecast under it. Both are
+  // routed, because installFetchStub's fallback answers a 200 with a list
+  // envelope — a shape that resolves the query SUCCESSFULLY and leaves the card
+  // formatting undefined figures, which is how a catalog ends up drawing
+  // "NaN of NaN priced" while every test stays green.
+  "GET /analytics/context": () =>
+    jsonResponse({
+      default_scope: { kind: "owner", id: "u-1", label: "Lena Fischer" },
+      scopes: [],
+    }),
+  "GET /forecast": () =>
+    jsonResponse({
+      period_start: "2026-07-01",
+      period_end: "2026-09-30",
+      scope_kind: "owner",
+      open_minor: 42_000_000,
+      weighted_minor: 16_800_000,
+      best_case_minor: 24_000_000,
+      evidence_minor: 12_000_000,
+      eligible_count: 12,
+      priced_count: 11,
+      confirmed_date_count: 8,
+      fx_missing_count: 0,
+      as_of: "2026-09-03T06:42:00Z",
+      base_currency: "EUR",
+    }),
   "GET /projects/01a00000-0000-7000-8000-000000000001": () =>
     jsonResponse({
       id: "01a00000-0000-7000-8000-000000000001",
@@ -222,9 +248,10 @@ export const GlanceWeeklyUnread: Story = {
 
 // ── The readings strip ──────────────────────────────────────────────────────
 
-// Five slots, always, and deliberately no money: the pipeline is worth three
-// currencies at once and no honest single figure for it exists. The per-currency
-// figures are the rail's Position panel, below.
+// Five slots, and every one of them answerable — which is the change. Two of
+// them used to draw an em dash forever: promises, because the commitments lane
+// is unwired, and quota pace, because targets were retired from the product. A
+// slot that will never fill is not a pending answer.
 export const Readings: Story = {
   render: part(<HomeReadingsStrip day={readingsDay()} />),
 };
@@ -240,9 +267,9 @@ export const ReadingsCapped: Story = {
   ),
 };
 
-// A quiet morning. The two untracked slots read the same as ever — the strip
-// does not get shorter on a day with less in it, because a reader comparing it
-// with yesterday's would take the missing slot for an answered question.
+// A quiet morning. The strip does not get shorter on a day with less in it,
+// because a reader comparing it with yesterday's would take the missing slot for
+// an answered question — the zeros are the answer.
 export const ReadingsQuiet: Story = {
   render: part(
     <HomeReadingsStrip
@@ -281,68 +308,87 @@ export const DecisionsRefused: Story = {
   ),
 };
 
-// The ranked queue: the composite as the first row of the same axis its five
-// factors are drawn on, and the factors in a softer fill so the row that leads
-// reads first.
-export const Focus: Story = {
+// One day, ranked by the server, with four sections in the order it chose.
+//
+// Deliberately NOT in section order — a "move revenue" row sits above a "build
+// pipeline" one and below a "respond now" one, which is what the real ranking
+// produces and what makes the run-length labelling meaningful. A story whose
+// rows happened to be section-sorted would draw the same page a grouping client
+// draws and prove nothing.
+const feedDay: Worklist = {
+  as_of: "2026-09-03T06:42:00Z",
+  scope: "mine",
+  scope_options: ["mine"],
+  summary: { urgent: 1, due: 2, lower_priority: 1, total: 4 },
+  sources_unavailable: [],
+  reach: [],
+  counts: [],
+  readings: {
+    revenue_at_risk_minor: null,
+    buyer_replies: 1,
+    prospecting: 1,
+    review: 0,
+    more_available: false,
+  },
+  queue: [
+    sectioned(leadRow("lead-1"), "respond_now"),
+    sectioned(meetingRow("meet-1", false), "prepare_conversations"),
+    sectioned(overnightRow("deal-1", "d-1"), "move_revenue"),
+    sectioned(leadRow("lead-2", "2026-09-04T09:00:00Z"), "build_pipeline"),
+  ],
+};
+
+// Two rows of one section, adjacent. The second must draw no label.
+const repeatedSectionDay: Worklist = {
+  ...feedDay,
+  queue: [
+    sectioned(overnightRow("deal-1", "d-1"), "move_revenue"),
+    sectioned(overnightRow("deal-2", "d-2"), "move_revenue"),
+    sectioned(leadRow("lead-1"), "respond_now"),
+  ],
+};
+
+type FeedItem = components["schemas"]["WorklistItem"];
+
+/** One row, labelled with the section the server put it in. */
+function sectioned(
+  item: FeedItem,
+  section: NonNullable<FeedItem["brief_section"]>,
+): FeedItem {
+  return { ...item, brief_section: section };
+}
+
+// The morning as ONE feed, in the server's order, with the section label drawn
+// where it changes. Four rows and four sections, so the run-length labelling is
+// visible: a label appears once and the next row under it says nothing again.
+export const Feed: Story = {
+  render: part(<BriefFeed day={feedDay} state="ready" />, RAIL_ROUTES),
+};
+
+// Two rows of one section in a row. The second draws no label, which is the
+// whole of what "a label, not a grouping" looks like on screen.
+export const FeedRepeatedSection: Story = {
   render: part(
-    <FocusSection
-      brief={ranked}
-      deals={deals}
-      nowMs={NOW}
-      state="ready"
-      drawnAbove={NOTHING_ABOVE}
-    />,
-    { ...RAIL_ROUTES, "POST /brief": () => jsonResponse(ranked) },
+    <BriefFeed day={repeatedSectionDay} state="ready" />,
+    RAIL_ROUTES,
   ),
 };
 
-// A run that ranked nothing, with the candidate count under it. Honest quiet,
-// and no invented urgency.
-export const FocusQuietRun: Story = {
+// A read that landed on nothing. "Nothing is waiting" is only ever said about a
+// read that ANSWERED — the failed case below draws something else entirely.
+export const FeedClear: Story = {
   render: part(
-    <FocusSection
-      brief={quietRun}
-      deals={deals}
-      nowMs={NOW}
-      state="ready"
-      drawnAbove={NOTHING_ABOVE}
-    />,
-    { ...RAIL_ROUTES, "POST /brief": () => jsonResponse(quietRun) },
+    <BriefFeed day={{ ...feedDay, queue: [] }} state="ready" />,
+    RAIL_ROUTES,
   ),
 };
 
-// No run has ever been made. The panel offers to make one instead of drawing an
-// empty queue that looks like a failure.
-export const FocusNoRun: Story = {
-  render: part(
-    <FocusSection
-      brief={null}
-      deals={deals}
-      nowMs={NOW}
-      state="ready"
-      drawnAbove={NOTHING_ABOVE}
-    />,
-    {
-      ...RAIL_ROUTES,
-      "POST /brief": () => jsonResponse(ranked),
-    },
-  ),
-};
-
-// The read behind the queue failed. The panel says so where the cards would be,
-// rather than drawing the empty plate a morning with no run would show — the two
-// are different facts and used to look identical.
-export const FocusRefused: Story = {
-  render: part(
-    <FocusSection
-      brief={null}
-      deals={deals}
-      nowMs={NOW}
-      state="failed"
-      drawnAbove={NOTHING_ABOVE}
-    />,
-  ),
+// The read behind the feed failed. The panel says so where the rows would be,
+// rather than drawing the empty plate a clear morning shows — the two are
+// different facts and a page that drew them alike would send a rep away
+// believing their morning was clear.
+export const FeedRefused: Story = {
+  render: part(<BriefFeed day={undefined} state="failed" />, RAIL_ROUTES),
 };
 
 // ── The context rail ────────────────────────────────────────────────────────

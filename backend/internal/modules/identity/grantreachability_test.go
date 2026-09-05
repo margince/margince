@@ -75,7 +75,13 @@ var grantedToNobody = gatekit.Waive(map[string]string{
 // not a regression and should not fail. It moves DOWN freely and up only with
 // a reason: each of these is a door no static check covers, so growing the
 // number is growing the blind spot this gate exists to bound.
-const dynamicObjectCeiling = 106
+//
+// 107 since the record-less replay path: ensureReplayVisible re-checks the
+// object a TOOL declares in its ReplayGrant, so the object is the tool's own
+// and cannot be a literal here. The declarations it reads are held instead —
+// agents/recordlessreplay_test.go pins each vocabulary tool to the grant its
+// handler checks, which is the same claim this scan makes for a literal.
+const dynamicObjectCeiling = 107
 
 // dynamicActionCeiling is the same bound for the OTHER unresolved argument: a
 // call site naming a known object and an action computed at runtime, as
@@ -85,7 +91,15 @@ const dynamicObjectCeiling = 106
 // warns about. A new dynamic-action call site adds no resolved pair, so no pair
 // assertion fires; it removes none either, so `requireSitesFloor` does not
 // fall. The blind spot grew and everything reported PASS.
-const dynamicActionCeiling = 6
+//
+// 7 since the tag vocabulary gained one gate for its four authoring writes.
+// requireVocabularyAuthority takes the verb as a parameter because rename,
+// retire, restore and fold pass through it — one gate rather than four checks
+// is what stops the fifth vocabulary write shipping without one, and it costs
+// this scan the verb. The four verbs are pinned instead by
+// compose/integration/tagvocabscope_integration_test.go, which drives each of
+// the four writes through the gate.
+const dynamicActionCeiling = 7
 
 // requireSitesFloor is the fail-short guard. The scan walking a smaller tree
 // than it thinks — a moved directory, a parser error swallowed — would report
@@ -200,16 +214,25 @@ func grantsHandlersRequire(t *testing.T) requireCensus {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
 		ast.Inspect(file, func(node ast.Node) bool {
-			call, ok := requireCall(node)
+			dir := filepath.Dir(path)
+			call, at, ok := requireCall(node, strings.HasSuffix(dir, "internal/modules/identity"))
 			if !ok {
 				return true
 			}
-			object, resolved := objectName(call.Args[1], constants[filepath.Dir(path)])
+			// admit's OWN auth.Require names its parameters, so it is the one
+			// site whose object genuinely is not decided here. Skipped by that
+			// shape rather than by its file: skipping escalation.go wholesale
+			// would hide any literal-object gate added there later, with nothing
+			// failing to say so.
+			if ident, isIdent := call.Args[at].(*ast.Ident); isIdent && ident.Name == "object" {
+				return true
+			}
+			object, resolved := objectName(call.Args[at], constants[dir])
 			if !resolved {
 				census.dynamicObject++
 				return true
 			}
-			action, ok := actionName(call.Args[2])
+			action, ok := actionName(call.Args[at+1])
 			if !ok {
 				// The action is a parameter (`auth.Require(ctx, "person", action)`),
 				// so the pair is not decided here. The object is still known and
@@ -230,22 +253,50 @@ func grantsHandlersRequire(t *testing.T) requireCensus {
 	return census
 }
 
-// requireCall answers whether a node is an `auth.Require(ctx, object, action)`
-// call with the three arguments this scan reads.
-func requireCall(node ast.Node) (*ast.CallExpr, bool) {
+// requireCall answers whether a node names an object and an action to
+// auth.Require, and where in its arguments those two sit.
+//
+// Two spellings reach the same gate. `auth.Require(ctx, object, action)` is the
+// direct one. `admit(ctx, actor, object, action)` is identity's wrapper, which
+// exists because auth.Require reads the actor off the context and a site that
+// checks before calling actorCtx asks about nobody — it pairs the two so the
+// order cannot be got wrong.
+//
+// The wrapper is read HERE rather than counted as unresolvable. Its own
+// auth.Require names a parameter, so following only the direct spelling would
+// turn every wrapped door into a blind spot — eighteen of them — while the
+// object each one names is a plain constant one frame up and perfectly
+// resolvable. A census that stops at a helper is the "fail short" shape this
+// gate's own floor exists to refuse.
+func requireCall(node ast.Node, inIdentity bool) (*ast.CallExpr, int, bool) {
 	call, ok := node.(*ast.CallExpr)
 	if !ok {
-		return nil, false
+		return nil, 0, false
+	}
+	// identity's own wrapper, called unqualified inside the package.
+	//
+	// Pinned to that package by the caller, not matched on the name alone.
+	// `admit` is an ordinary word here — crawlRun, AssembleOptions and mailmap's
+	// collector each have a method by that name — and while a method is a
+	// SelectorExpr and so misses this branch today, a package-level func admit
+	// with four arguments anywhere under backend/ would be read as an RBAC door
+	// and its third argument scanned as an object name. Over-recognising into a
+	// wrong answer is worse than the unresolved count this replaced.
+	if ident, isIdent := call.Fun.(*ast.Ident); isIdent && ident.Name == "admit" && inIdentity {
+		if len(call.Args) < 4 {
+			return nil, 0, false
+		}
+		return call, 2, true
 	}
 	selector, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok || selector.Sel.Name != "Require" {
-		return nil, false
+		return nil, 0, false
 	}
 	pkg, ok := selector.X.(*ast.Ident)
 	if !ok || pkg.Name != "auth" || len(call.Args) < 3 {
-		return nil, false
+		return nil, 0, false
 	}
-	return call, true
+	return call, 1, true
 }
 
 // objectName resolves the object argument: a string literal, or an identifier

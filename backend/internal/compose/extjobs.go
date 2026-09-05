@@ -172,8 +172,8 @@ func composedJobSpecs(set []composedJob) []jobs.Spec {
 				FanOutTo:   j.decl.ChildKind(),
 				// The TICK owns this row's insert options, exactly as it does for
 				// every core dispatcher: periodicForComposed hands River
-				// sweepInsertOpts(), which names no queue and so lands the row on
-				// River's default. The unit's declared queue is the CHILD's — that
+				// periodicInsertOpts(), which names no queue and so lands the row
+				// on River's default. The unit's declared queue is the CHILD's — that
 				// is the row that does the tenant's work and the pool an operator
 				// sizes — and it is bound there through OptsFanOut below.
 				//
@@ -276,7 +276,7 @@ func periodicForComposed(d extension.JobDeclaration) *river.PeriodicJob {
 	args := extJobDispatcherArgs{JobKind: d.DispatcherKind()}
 	return river.NewPeriodicJob(
 		river.PeriodicInterval(d.Cadence),
-		func() (river.JobArgs, *river.InsertOpts) { return args, sweepInsertOpts() },
+		func() (river.JobArgs, *river.InsertOpts) { return args, periodicInsertOpts(args) },
 		&river.PeriodicJobOpts{RunOnStart: true},
 	)
 }

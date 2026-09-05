@@ -669,7 +669,10 @@ function CompanyFactsCard({
         {readOnly && (
           <p className="t-caption">{t("settings.companyReadOnly")}</p>
         )}
-        <QueryGate query={company}>
+        <QueryGate
+          query={company}
+          pendingLabel={t("settings.companySourceTitle")}
+        >
           {(profile) =>
             form && (
               <>

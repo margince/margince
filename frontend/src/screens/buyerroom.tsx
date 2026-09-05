@@ -374,7 +374,11 @@ function RoomBody({
     onSettled: onSessionLost,
   });
   return (
-    <QueryStates query={room} pendingLines={4}>
+    <QueryStates
+      query={room}
+      pendingLines={4}
+      pendingLabel={t("room.card.title")}
+    >
       {room.data ? (
         <>
           <RoomView
@@ -601,8 +605,16 @@ function BuyerBoard({
     actions: <BuyerDocumentVerbs token={token} doc={doc} />,
   }));
   return (
-    <QueryStates query={docs} pendingLines={3}>
-      <QueryStates query={threads} pendingLines={3}>
+    <QueryStates
+      query={docs}
+      pendingLines={3}
+      pendingLabel={t("buyer.docs.title")}
+    >
+      <QueryStates
+        query={threads}
+        pendingLines={3}
+        pendingLabel={t("buyer.docs.title")}
+      >
         {docs.data && threads.data ? (
           <DocumentBoard
             title={t("buyer.docs.title")}

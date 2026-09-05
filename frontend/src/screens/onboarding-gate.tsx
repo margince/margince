@@ -155,6 +155,7 @@ export function OnboardingGate({
     return (
       <GateColumn name={named}>
         <SurfaceState
+          loadingLabel={t("ob.gate.sub")}
           state="failed"
           // Read by the `empty` arm alone, which a failed read never reaches:
           // what there is none of is not a question a broken poll has an

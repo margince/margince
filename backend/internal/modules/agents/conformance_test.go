@@ -177,8 +177,9 @@ func fullRegistry(t *testing.T) *Registry {
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
 	RegisterCoreTools(r, nil, nil, nil, nil, nil, nil)
 	RegisterPipelineTool(r, func(context.Context) ([]Pipeline, error) { return nil, nil })
-	RegisterReportTool(r, nil, probeReportCatalog)
+	RegisterReportTool(r, nil, probeReportCatalog, probeReportPlan)
 	RegisterAnalyticsReportTool(r, nil)
+	RegisterAnalyticsQueryTool(r, nil)
 	RegisterReportBlocksTool(r, NewReportBlocksResource(BlockGrammar{}))
 	RegisterForecastTool(r, nil)
 	RegisterMovementTool(r, nil)
@@ -705,6 +706,14 @@ var probeReportCatalog = []ReportCatalogEntry{{
 	Aggregates: []string{"amount_minor"},
 	Defaults:   "count as deals grouped by stage_id",
 }}
+
+// probeReportPlan stands in for the engine's plan vocabulary, and carries the
+// REAL function names for the reason the catalog above carries a real entry:
+// an empty set takes the branch that omits the enum, so a registry built on
+// nil would conformance-check a schema no deployment serves.
+var probeReportPlan = ReportPlanVocabulary{
+	Functions: []string{"avg", "count", "max", "median", "min", "p75", "sum"},
+}
 
 // A result that misses its own declared schema is OUR defect, and the client
 // must not be handed structuredContent that violates what this server just

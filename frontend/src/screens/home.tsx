@@ -8,29 +8,21 @@ import { useNow } from "../format/now";
 import { useT } from "../i18n";
 import { useDecisionSink } from "./approvalrow";
 import { usePendingApprovals } from "./approvals.queries";
+import { ChangedSinceBrief } from "./brief.changed";
 import { BriefDials } from "./brief.dials";
-import { DoNext } from "./brief.donext";
+import { BriefFeed } from "./brief.feed";
 import { PlanSection } from "./brief.plan";
-import { ledAlready } from "./brief.sentence";
 import { TeamWeeklyPanel } from "./brief.teamweekly";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { BriefCoverage } from "./briefcoverage";
 import { useMe } from "./common";
 import { DecisionsSection } from "./home.decisions";
 import { HomeGlance } from "./home.glance";
-import {
-  type Deal,
-  type MorningBrief,
-  quietDeals,
-  useHomeDeals,
-  useMorningBrief,
-  useWeeklyReview,
-} from "./home.queries";
+import { quietDeals, useHomeDeals, useWeeklyReview } from "./home.queries";
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
 import { PromisesPanel, SchedulePanel } from "./home.schedule";
 import { HomeTeamBoard } from "./home.teamboard";
-import { FocusSection } from "./home.today";
 import { WeeklySection } from "./home.weekly";
 import { useWorklist, type Worklist } from "./worklist.queries";
 import "./home.css";
@@ -123,9 +115,6 @@ function HomeWork({
   items,
   nowMs,
   deckState,
-  brief,
-  deals,
-  briefState,
   teamOffered,
   day,
   dayState,
@@ -135,14 +124,11 @@ function HomeWork({
   items: readonly DecisionDeckItem[];
   nowMs: number;
   deckState: SectionState;
-  brief: MorningBrief | null;
-  deals: readonly Deal[];
-  briefState: SectionState;
   // Whether the reader's scope reaches a team, off the worklist read the page
   // already makes. The same gate the team BOARD uses, so one tier decides both.
   teamOffered: boolean;
-  // The ONE ranked order, already read by the page for its coverage line. Do
-  // next shows its head, from the same query key — so the Brief and the
+  // The ONE ranked order, already read by the page for its coverage line. The
+  // feed draws a prefix of it, from the same query key — so the Brief and the
   // Worklist cannot disagree about what is waiting.
   day: Worklist | undefined;
   dayState: SectionState;
@@ -157,18 +143,6 @@ function HomeWork({
       nowMs={nowMs}
       state={deckState}
       onAlreadyDecided={onAlreadyDecided}
-    />
-  );
-  const focus = (
-    <FocusSection
-      key="focus"
-      brief={brief}
-      deals={deals}
-      nowMs={nowMs}
-      state={briefState}
-      // What "Do next" already drew, so one brief run reaching the page through
-      // two endpoints does not put the same suggestion on it twice.
-      drawnAbove={ledAlready(day)}
     />
   );
   // A KEYED array, not two fragments. Positional children of a fragment are
@@ -188,11 +162,13 @@ function HomeWork({
   // next week holds by reading what this one did, so the frozen past leads and
   // the live future follows.
   const nextWeek = <PlanSection key="plan" />;
-  // WHAT IS ALREADY WAITING, above what is worth pursuing. The deal queue below
-  // answers a different question, and a morning that led with it led with the
-  // wrong half — decision 3 of the Brief plan, and the reason this section
-  // exists at all.
-  const doNext = <DoNext key="donext" day={day} state={dayState} />;
+  // THE MORNING, AS ONE FEED. It replaces the two panels that stood here —
+  // "Do next" (the head of the ranked worklist) and "Focus" (the overnight
+  // opportunity queue) — which drew two orders over one morning and made the
+  // rep reconcile them. The server ranks everything once now, with the night's
+  // composite as a tie-break inside a level, so the page draws that order and
+  // adds nothing to it.
+  const feed = <BriefFeed key="feed" day={day} state={dayState} />;
   const board = <HomeTeamBoard key="board" offered={teamOffered} />;
 
   // ONE VIEW AT A TIME, and every combination the dials offer has a surface
@@ -214,9 +190,10 @@ function HomeWork({
   if (address.view === "weekly") {
     return [lastWeek, nextWeek];
   }
-  return items.length > 0
-    ? [decisions, doNext, focus]
-    : [doNext, focus, decisions];
+  // The feed leads unless decisions are waiting, and a decision is a judgement
+  // somebody is blocked on rather than work to do — which is why it is the one
+  // thing that goes above the day's own order rather than into it.
+  return items.length > 0 ? [decisions, feed] : [feed, decisions];
 }
 
 export function HomeScreen() {
@@ -232,7 +209,6 @@ export function HomeScreen() {
   // screen does.
   const { onAlreadyDecided, decidedNote } = useDecisionSink();
   const approvalsQuery = usePendingApprovals();
-  const briefQuery = useMorningBrief();
   const dealsQuery = useHomeDeals();
   // The ONE ranked order, read here for its coverage. Home has always been
   // deal-only; what it could not say is which sources it never saw, and that
@@ -272,7 +248,6 @@ export function HomeScreen() {
   // bounded number as a total.
   const beyondPage = dealsQuery.data?.more ?? false;
   const quiet = quietDeals(deals);
-  const brief = briefQuery.data ?? null;
 
   // `QueryLike` has no `isSuccess`: settled-and-answered is the absence of both
   // other states, and the difference matters here — a reading that is still in
@@ -310,6 +285,11 @@ export function HomeScreen() {
           the rail it would be a warning about the queue, filed away from the
           queue. */}
       {worklistQuery.data && <BriefCoverage day={worklistQuery.data} />}
+      {/* And what has happened since the night looked, under the coverage line
+          and above the readings: both are facts about the page as a whole
+          rather than about any one row, and a reader takes them before the
+          figures they qualify. */}
+      {worklistQuery.data && <ChangedSinceBrief day={worklistQuery.data} />}
       {/* The strip reads the SAME worklist answer the queue below it reads, so
           the five figures cannot disagree with the rows they summarise. */}
       {worklistQuery.data && <HomeReadingsStrip day={worklistQuery.data} />}
@@ -328,9 +308,6 @@ export function HomeScreen() {
             items={items}
             nowMs={nowMs}
             deckState={deckState}
-            brief={brief}
-            deals={deals}
-            briefState={readState(briefQuery)}
             // The optional chain reaches the FIELD, not just the payload: a
             // worklist answer that carried no scope_options crashed the whole
             // page, and a page that throws is a worse answer than one that

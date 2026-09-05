@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { DispositionVerbs } from "./worklist.dispositions";
 import type { WorklistItem } from "./worklist.queries";
 
@@ -111,7 +112,11 @@ describe("how long a row is put down for", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const fetch = draw();
 
-    await user.click(screen.getByRole("button", { name: "Later" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.disposition.verb.snooze"],
+      }),
+    );
 
     await waitFor(async () => expect((await sentBodies(fetch)).length).toBe(1));
     expect(daysSent((await sentBodies(fetch))[0])).toBe(1);
@@ -194,7 +199,11 @@ describe("how long a row is put down for", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     draw();
 
-    await user.click(screen.getByRole("button", { name: "Later" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.disposition.verb.snooze"],
+      }),
+    );
 
     expect(await screen.findByText("Back on your list tomorrow.")).toBeTruthy();
   });

@@ -424,6 +424,7 @@ const (
 	CommissionDecided                     SubscribableEventType = "commission.decided"
 	CommsDeliveryBounced                  SubscribableEventType = "comms.delivery_bounced"
 	ConsentChanged                        SubscribableEventType = "consent.changed"
+	ConsentSuppressed                     SubscribableEventType = "consent.suppressed"
 	ContractArchived                      SubscribableEventType = "contract.archived"
 	ContractCreated                       SubscribableEventType = "contract.created"
 	ContractStatusChanged                 SubscribableEventType = "contract.status_changed"
@@ -562,6 +563,8 @@ func (e SubscribableEventType) Valid() bool {
 	case CommsDeliveryBounced:
 		return true
 	case ConsentChanged:
+		return true
+	case ConsentSuppressed:
 		return true
 	case ContractArchived:
 		return true
@@ -1013,6 +1016,17 @@ type PublicEventConsentChanged struct {
 
 	// PurposeId The consent purpose this state change applies to.
 	PurposeId openapi_types.UUID `json:"purpose_id"`
+}
+
+// PublicEventConsentSuppressed Payload for consent.suppressed — somebody recorded that we may not write to a subject (consent/suppress.go's Suppress). Its own event rather than a consent.changed, because a suppression is not the absence of consent: it outranks a grant, it does not expire on its own, and a later re-grant must not silently erase it. A consumer that folded the two would resume mail the subject asked us to stop.
+// The subject is a person and only a person: the write door names that object as a literal, so this is a static entity whose delivery scope the fan-out gate proves mechanically rather than by hand-ratification.
+// It names WHAT was recorded and at WHICH authority, never the reason the subject gave: that is their words about themselves, and an event fans out further than the record it describes.
+type PublicEventConsentSuppressed struct {
+	// DecidedByLevel Whose decision it is, which is what says who may lift it (machine | user | admin | subject).
+	DecidedByLevel string `json:"decided_by_level"`
+
+	// Kind Which stop this is (subject_request for a hand-recorded one).
+	Kind string `json:"kind"`
 }
 
 // PublicEventContractArchived Payload for contract.archived — the agreement left the surfaces that count it.
@@ -2398,6 +2412,10 @@ func (PublicEventConsentChanged) EventType() string { return "consent.changed" }
 
 func (PublicEventConsentChanged) EntityType() string { return "dynamic" }
 
+func (PublicEventConsentSuppressed) EventType() string { return "consent.suppressed" }
+
+func (PublicEventConsentSuppressed) EntityType() string { return "person" }
+
 func (PublicEventContractArchived) EventType() string { return "contract.archived" }
 
 func (PublicEventContractArchived) EntityType() string { return "contract" }
@@ -2850,6 +2868,7 @@ var PublicEventVersions = map[string]int{
 	"commission.decided":                        1,
 	"comms.delivery_bounced":                    1,
 	"consent.changed":                           1,
+	"consent.suppressed":                        1,
 	"contract.archived":                         1,
 	"contract.created":                          1,
 	"contract.status_changed":                   1,

@@ -62,10 +62,15 @@ export function DealRoomAside({
   dealId,
   dealName,
 }: Readonly<{ dealId: string; dealName: string }>) {
+  const t = useT();
   const roomQuery = useDealRoom(dealId);
   const room = roomQuery.data?.data?.[0];
   return (
-    <QueryStates query={roomQuery} pendingLines={3}>
+    <QueryStates
+      query={roomQuery}
+      pendingLines={3}
+      pendingLabel={t("room.card.title")}
+    >
       {room ? (
         <RoomCard room={room} />
       ) : roomQuery.isSuccess ? (

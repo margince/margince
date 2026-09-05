@@ -83,19 +83,29 @@ type LogActivityInput struct {
 	Links                        []ActivityLinkInput
 	Source                       string
 	// Origin says who caused this row to exist, and the recency clocks in the
-	// schema read it: OriginSystemRemediation is excluded from every
-	// last_activity_at, because the system asking about a silent deal is not
-	// the buyer breaking their silence. Empty means OriginHuman.
+	// schema read it: the two system origins are excluded from every
+	// last_activity_at, because neither the system asking about a silent deal
+	// nor the installation mailing somebody a notice it owes them is the other
+	// side breaking their silence. Empty means OriginHuman.
 	Origin string
 }
 
-// The origins an activity can have. OriginSystemRemediation marks work the
-// product files about a record — a forecast-assurance review task — and is the
-// one value the last_activity_of_* functions skip.
+// The origins an activity can have.
+//
+// Two of them are the system writing rather than a person, and neither counts
+// as the record being touched: OriginSystemRemediation marks work the product
+// files about a record — a forecast-assurance review task — and OriginSystemNotice
+// marks a message the installation owes somebody, such as the confirm-details
+// link. A Go query that needs to exclude them calls auth.OriginIsEngagement
+// rather than naming an origin itself; the last_activity_of_* functions carry
+// the same clause in SQL.
+//
+// Held by: TestEveryRecencyReadingExcludesTheSystemOrigins (backend/gates/recencyorigins_test.go)
 const (
 	OriginHuman             = "human"
 	OriginAgent             = "agent"
 	OriginSystemRemediation = "system_remediation"
+	OriginSystemNotice      = "system_notice"
 )
 
 // LogActivity writes the activity + links; the last_activity_at clocks

@@ -12,11 +12,19 @@
 # It is NOT a gate and will never be one. It runs AFTER the merge, on the tip,
 # and blocks nothing. Prevention is a branch-protection decision (#2496).
 #
-# It runs no lane. That is what makes a push trigger affordable at ~85 merges a
-# day: two API reads and a jq. `main-health` still owns the question of whether
-# main actually works, at its own cadence and its own cost — this one answers
-# only whether the merge had an answer, which is the question that was going
-# unasked for two hours at a time.
+# It reports ONE thing: a merge whose required check then reported an adverse
+# verdict, or a commit no pull request names at all. It deliberately says nothing
+# about an ABSENT verdict — merging past `ci` is a standing decision here, and an
+# alarm that fires on the expected state is one that gets muted. Seventeen issues
+# in under five hours, each describing the bypass working as intended, is what
+# that looked like.
+#
+# It runs no lane, but it does WAIT: `ci` is a fan-in and lands minutes after the
+# merge, so the verdict has to be waited for rather than sampled at push time.
+# That is the cost — a runner held for up to the budget below, per merge, on a
+# repository whose minutes are free. `main-health` still owns whether main
+# actually works, at its own cadence; this one attributes a bad verdict to the
+# merge that carried it, roughly two hours before the health check would.
 name: merge-attest
 
 on:
@@ -37,8 +45,14 @@ concurrency:
 jobs:
   verdict:
     name: verdict
-    timeout-minutes: 10
+    # The wait below is bounded at 20 minutes; this bounds the job around it.
+    timeout-minutes: 30
     runs-on: ubuntu-latest
+    # ONE name for the required check, read by the step that waits for it and by
+    # the judge that reads its conclusion. Spelled twice, the wait could settle
+    # on one check while the judge reported on another.
+    env:
+      MERGE_VERDICT_REQUIRED: ci
     permissions:
       contents: read
       # The pull request that carried this commit, and the checks that ran on
@@ -84,40 +98,66 @@ jobs:
             echo "EOF"
             echo "head=$(jq -r '.[0].head_sha // ""' <<<"$pulls")"
           } >>"$GITHUB_OUTPUT"
-      - name: The checks that ran on its head
+      - name: The verdict on its head, waited for rather than sampled
         id: checks
         if: steps.pulls.outputs.head != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ steps.pulls.outputs.head }}
         run: |
+          # WAITED FOR, not sampled. `ci` is a fan-in that starts only once every
+          # lane has finished, so it posts minutes after the merge — on every
+          # merge measured when this was written, between three and twelve of
+          # them. Reading once at push time therefore sees no verdict on nearly
+          # every merge, and an absent verdict is precisely what this alarm no
+          # longer reports: without the wait it would judge nothing, ever, while
+          # going on printing a clean record. A census that can fail short has
+          # already failed.
+          #
+          # Bounded, and reaching the bound is not itself a finding: a verdict
+          # that never arrives is an absent one. The loop stops and the judge
+          # says so.
+          #
+          # filter=all, not the endpoint's default of `latest`. The judge
+          # deliberately reads the OLDEST attempt, so that a re-run after the
+          # merge cannot clear the record of the merge it was absent for — and
+          # `latest` returns only the most recent attempt per check, which is
+          # exactly the one that would clear it.
+          #
+          # PAGINATED. per_page caps at 100, and with filter=all every ATTEMPT
+          # of every check counts toward it — a pull request re-run a few times
+          # passes 100 easily. Truncating drops the tail, and the tail is what
+          # the judge reads.
+          #
+          # --slurp because --paginate alone emits one JSON document per page,
+          # which is not a value jq can fold; slurped, the pages arrive as an
+          # array and .[].check_runs[] flattens them into the one list the judge
+          # expects. The filter runs in a SEPARATE jq because gh refuses
+          # `--slurp` together with `--jq` and exits 1.
+          #
+          # A KNOWN CEILING remains, and is GitHub's rather than ours: this
+          # endpoint stops at the 1000 most recent check SUITES for a ref.
+          # Reaching it would need a commit re-run into four figures. Named
+          # rather than silently inherited.
+          deadline=$(( SECONDS + 20 * 60 ))
+          while :; do
+            runs="$(gh api --paginate --slurp "repos/${{ github.repository }}/commits/$HEAD_SHA/check-runs?per_page=100&filter=all" \
+              | jq -c '{check_runs: [.[].check_runs[] | {name, status, conclusion, completed_at}]}')"
+            settled="$(jq -r --arg n "$MERGE_VERDICT_REQUIRED" \
+              '[.check_runs[] | select(.name == $n and .status == "completed")] | length' <<<"$runs")"
+            [ "$settled" -gt 0 ] && break
+            [ "$SECONDS" -ge "$deadline" ] && {
+              echo "no completed \`$MERGE_VERDICT_REQUIRED\` within the budget — judging what is there"
+              break
+            }
+            sleep 30
+          done
+          # The payload is the LAST fetch the loop made, not a fresh one. A
+          # second call here would be a second answer to the same question, and
+          # the two could disagree across the seconds between them.
           {
             echo "runs<<EOF"
-            # filter=all, not the endpoint's default of `latest`. The judge
-            # deliberately reads the OLDEST attempt, so that a re-run after the
-            # merge cannot clear the record of the merge it was absent for —
-            # and `latest` returns only the most recent attempt per check,
-            # which is exactly the one that would clear it. The default would
-            # have made that rule silently unenforceable.
-            # PAGINATED. per_page caps at 100, and with filter=all every
-            # ATTEMPT of every check counts toward it — a pull request that was
-            # re-run a few times passes 100 easily. Truncating drops the tail,
-            # and the tail is precisely what the judge reads: it takes the
-            # OLDEST attempt so a re-run after the merge cannot clear the
-            # record of the merge it was absent for.
-            #
-            # --slurp because --paginate alone emits one JSON document per
-            # page, which is not a value jq can fold; slurped, the pages arrive
-            # as an array and .[].check_runs[] flattens them into the one list
-            # the judge expects.
-            #
-            # A KNOWN CEILING remains and is GitHub's rather than ours: this
-            # endpoint stops at the 1000 most recent check SUITES for a ref.
-            # Reaching that would need a commit re-run into four figures, and
-            # the alternative is walking the check-suites endpoint instead —
-            # more request budget on every push to cover a case nothing here
-            # has approached. Named rather than silently inherited.
-            gh api --paginate --slurp "repos/${{ github.repository }}/commits/${{ steps.pulls.outputs.head }}/check-runs?per_page=100&filter=all" \
-              --jq '{check_runs: [.[].check_runs[] | {name, status, conclusion, completed_at}]}'
+            echo "$runs"
             echo "EOF"
           } >>"$GITHUB_OUTPUT"
       - name: Was there a verdict behind this merge?

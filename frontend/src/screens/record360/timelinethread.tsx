@@ -32,9 +32,16 @@ import { timelineSpineSource } from "./timelinespine";
 export function TimelineThread({
   thread,
   commercial,
+  onOpenEmail,
 }: Readonly<{
   thread: RecordTimeline;
   commercial?: SpineCommercial | null;
+  // Opens a cited message, handed straight to the spine. The record page owns
+  // its one drawer, so this asks rather than mounting a second one behind the
+  // first — and without it a conversation this thread NAMES is the one place
+  // in the product a reader cannot open, which reads as the analytics being a
+  // different kind of object from the mail they describe.
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   if (thread.isPending) {
@@ -51,6 +58,7 @@ export function TimelineThread({
         thread.hasNextPage,
       )}
       commercial={commercial}
+      onOpenEmail={onOpenEmail}
     />
   );
 }

@@ -12,6 +12,10 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import {
+  RecordPicker,
+  type RecordPickerCandidate,
+} from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { calendarDay, dueInstant, middayInstant } from "../format/calendarday";
 import { viewerZone } from "../format/timezone";
@@ -112,12 +116,49 @@ function occurredInstant(input: ActivityDraft, recordZone: string): string {
   return middayInstant(input.day, recordZone);
 }
 
+// A meeting and a call are WITH A PERSON, and the server refuses either one
+// filed against a company — per link, so naming the company alongside the
+// person is refused too, and the company is reached through the attendee's
+// employer instead (activities/activitylinks.go, migration
+// "a meeting is with a person again").
+//
+// So a form opened on a company has to ask WHO was in the room before it can
+// send one of these kinds at all. It offered no way to say, and the reader met
+// a 422 with no field to correct.
+const KINDS_WITH_A_PERSON = new Set(["meeting", "call"]);
+
+// The company's own contacts, narrowed by what the reader typed.
+//
+// Scoped to the company rather than searching every person in the installation:
+// the question is who from THIS account was in the room, and an unscoped search
+// would offer contacts of other companies as equally likely answers to it.
+async function searchCompanyContacts(
+  organizationID: string,
+  q: string,
+): Promise<RecordPickerCandidate[]> {
+  const { data, error } = await api.GET("/people", {
+    params: { query: { organization_id: organizationID, q, limit: 20 } },
+  });
+  if (error) {
+    throwProblem(error);
+  }
+  return data.data.map((person) => ({
+    id: person.id,
+    // full_name, which the contract documents as always present. display_name
+    // belongs to a USER; a person has neither the field nor a fallback for it.
+    name: person.full_name,
+  }));
+}
+
 // The wire body one drafted entry becomes.
 function activityRequestBody(
   input: ActivityDraft,
   entityType: EntityKind,
   entityId: string,
   recordZone: string,
+  // Who was in the room, when the form is open on a company and the kind is one
+  // that needs a person. Null everywhere else.
+  attendee: RecordPickerCandidate | null,
 ) {
   // source_system: transcript is what routes the body through the
   // server's ADR-0058 normalizer and what the activity/transcript
@@ -153,7 +194,13 @@ function activityRequestBody(
     // today), and held is what the lead ladder reads as engagement.
     ...(input.kind === "meeting" ? { meeting_status: "held" as const } : {}),
     ...(isTranscript ? { source_system: "transcript" } : {}),
-    links: [{ entity_type: entityType, entity_id: entityId }],
+    // The attendee REPLACES the company link rather than joining it. The
+    // server refuses an organization link on a meeting or a call whichever
+    // else are present, and the company still reaches the activity: the
+    // employer walk carries it there through the person who was named.
+    links: attendee
+      ? [{ entity_type: "person" as const, entity_id: attendee.id }]
+      : [{ entity_type: entityType, entity_id: entityId }],
     source: "manual",
   };
 }
@@ -199,6 +246,11 @@ export function LogActivityForm({
     }
   }
   const [fileError, setFileError] = useState<string | null>(null);
+  // Who was in the room. Only ever asked on a company, and only for the kinds
+  // that are with a person — see KINDS_WITH_A_PERSON.
+  const [attendee, setAttendee] = useState<RecordPickerCandidate | null>(null);
+  const needsAttendee =
+    entityType === "organization" && KINDS_WITH_A_PERSON.has(draft.kind);
 
   const log = useMutation({
     // Keyed on entityId, the record this form is open on, not the created
@@ -210,13 +262,18 @@ export function LogActivityForm({
     // committed render held, and what this one decides with the zone is the
     // instant the entry is STORED at — so a stale read would not misdraw a
     // page, it would file the activity on the wrong day, permanently.
-    mutationFn: async (input: { draft: ActivityDraft; zone: string }) => {
+    mutationFn: async (input: {
+      draft: ActivityDraft;
+      zone: string;
+      attendee: RecordPickerCandidate | null;
+    }) => {
       const { data, error } = await api.POST("/activities", {
         body: activityRequestBody(
           input.draft,
           entityType,
           entityId,
           input.zone,
+          input.attendee,
         ),
       });
       if (error) {
@@ -232,7 +289,20 @@ export function LogActivityForm({
       for (const queryKey of keys) {
         queryClient.invalidateQueries({ queryKey });
       }
+      // The attendee's OWN timeline too. The activity is filed against the
+      // person, so the company screen this form sits on reaches it through the
+      // employer walk while the person's page holds it directly — and a reader
+      // who logs a meeting here and opens the contact expects to find it.
+      if (input.attendee) {
+        for (const queryKey of entityTimelineKeys(
+          "person",
+          input.attendee.id,
+        )) {
+          queryClient.invalidateQueries({ queryKey });
+        }
+      }
       setDraft(freshDraft(input.zone));
+      setAttendee(null);
       onLogged?.();
     },
   });
@@ -245,7 +315,7 @@ export function LogActivityForm({
       className="form-stack"
       onSubmit={(event) => {
         event.preventDefault();
-        log.mutate({ draft, zone: recordZone });
+        log.mutate({ draft, zone: recordZone, attendee });
       }}
     >
       <div className="form-row">
@@ -300,6 +370,19 @@ export function LogActivityForm({
           )}
         </Field>
       </div>
+      {/* WHO was in the room, asked before what was said. A meeting or a call
+          is with a person and the server refuses one filed against a company,
+          so on a company this is the field that decides whether the entry can
+          be sent at all — not a refinement of one that could. */}
+      {needsAttendee && (
+        <RecordPicker
+          label={t("log.attendee")}
+          searchTargets={(q) => searchCompanyContacts(entityId, q)}
+          selected={attendee}
+          onPick={setAttendee}
+          disabled={log.isPending}
+        />
+      )}
       <Field label={t("log.subject")} required>
         {(control) => (
           <TextInput
@@ -370,7 +453,15 @@ export function LogActivityForm({
           small
           variant="primary"
           type="submit"
-          disabled={!log.isPending && !draft.subject.trim()}
+          // An unnamed attendee is refused by the server with a 422 the reader
+          // cannot act on from here, so the button says no first. Never
+          // auto-selecting the company's first contact to make the submit
+          // work: filing a meeting against somebody who was not there is worse
+          // than refusing to file it.
+          disabled={
+            !log.isPending &&
+            (!draft.subject.trim() || (needsAttendee && !attendee))
+          }
           pending={log.isPending}
           busyLabel={t("log.saving")}
         >

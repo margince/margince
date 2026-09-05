@@ -147,3 +147,44 @@ func (s DecisionSet) Effective(modeFor func(Category) Mode, legacyAllowed bool) 
 	}
 	return legacyAllowed
 }
+
+// WouldRefuse reports whether one recipient's answer actually stops the message.
+//
+// The verdict alone does not say: under a mode short of enforce a deny is
+// recorded and the send still goes, which is what makes observe usable at all.
+// An absolute reason overrides that, because those are refusals no rollout
+// position may soften.
+//
+// It is the per-recipient twin of Effective, which answers for a whole set at
+// transmit. Both are spelled here so a caller asking "would this stop" never
+// recombines verdict, mode and absoluteness for itself — three inputs and one
+// rule, and a second copy of it decides whether mail reaches a person.
+//
+// Held by: TestWouldRefuseFollowsTheModeExceptWhereNothingMay (absolute_test.go)
+func (d Decision) WouldRefuse(mode Mode) bool {
+	if d.Verdict == VerdictAllow {
+		return false
+	}
+	if Absolute(d.ReasonCode) {
+		return true
+	}
+	return mode == ModeEnforce
+}
+
+// CanBeOverruled reports whether a person may lift this refusal by recording
+// why they are writing.
+//
+// Both axes have to agree. LevelForReason says whose decision it is, and four
+// reasons are the engine's own reading AND absolute — a dead mailbox, a rolling
+// cap, an unresolvable recipient, an unconfirmed opt-in. Each is a fact to
+// correct rather than a decision to respect, and none is corrected by typing a
+// justification: the staging gate refuses an absolute denial whatever a rep
+// wrote. Offering the override there is a control that cannot do what it says.
+//
+// Held by: TestOnlyANonAbsoluteMachineReadingCanBeOverruled (absolute_test.go)
+func (d Decision) CanBeOverruled() bool {
+	if d.Verdict == VerdictAllow {
+		return false
+	}
+	return LevelForReason(d.ReasonCode) == LevelMachine && !Absolute(d.ReasonCode)
+}

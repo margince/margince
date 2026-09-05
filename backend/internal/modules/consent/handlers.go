@@ -14,7 +14,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -28,11 +27,6 @@ type Handlers struct {
 	// the eraser: answering an access request means producing the package, not
 	// marking a row done.
 	assembler SubjectAccessAssembler
-	// The confirm link's two halves, both injected by compose. Either one
-	// missing means the installation cannot deliver, which the send path
-	// reports rather than fails on.
-	confirmMailer mailer.Mailer
-	publicBaseURL string
 }
 
 // Eraser is the erase-path seam (compose injects the real one): DSR
@@ -180,6 +174,36 @@ func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, _ crm
 	httperr.Write(w, r, fmt.Errorf(
 		"a double opt-in link can only be completed by the data subject, and this installation "+
 			"cannot yet mail one: %w", apperrors.ErrConflict))
+}
+
+// SuppressPerson serves POST /people/{id}/consent/suppress: a person recording
+// that the subject asked us to stop writing to them.
+//
+// Wire-only. The store owns which kinds a seat may write, whose authority the
+// row carries and whether this caller may write about this subject at all —
+// the last of which must not be decided here, because a handler that probed
+// visibility itself would be a second row-scope gate beside the one the store
+// already runs.
+func (h Handlers) SuppressPerson(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.SuppressPersonJSONRequestBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	in := SuppressInput{
+		PersonID: ids.From[ids.PersonKind](ids.UUID(id)),
+		Kind:     string(req.Kind),
+	}
+	if req.Reason != nil {
+		in.Reason = *req.Reason
+	}
+	if err := h.store.Suppress(r.Context(), in); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	// 204: the row is the whole result, and echoing it back would invite a
+	// caller to read a suppression list from the write door rather than from
+	// the person's own consent view.
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // RecordQualifyingEvent serves POST /people/{id}/consent/qualifying-events: the

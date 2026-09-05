@@ -284,3 +284,56 @@ func TestTheCallersAuthorityReachesTheStatement(t *testing.T) {
 		t.Errorf("the caller's own narrowing is absent from:\n%s", plan.SQL)
 	}
 }
+
+// A percentile renders under the sample floor: below five values the answer
+// is NULL, not a number — a median over three deals is one deal's value
+// wearing a statistic's name. The report engine writes the same refusal at
+// the same threshold, through the same renderer.
+func TestAPercentileAnswersNullBelowTheSampleFloor(t *testing.T) {
+	t.Parallel()
+	plan, err := Compile(Query{
+		Entity: "deals",
+		Measures: []Measure{
+			{Fn: Median, Field: "amount", As: "typical"},
+			{Fn: P75, Field: "amount", As: "upper"},
+		},
+	}, testSchema(), noScope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantMedian := "(CASE WHEN count(t.amount_minor) >= 5 THEN " +
+		"percentile_cont(0.5) WITHIN GROUP (ORDER BY t.amount_minor) END)"
+	if !strings.Contains(plan.SQL, wantMedian) {
+		t.Errorf("median renders without the floor:\n got: %s\nwant it to contain: %s",
+			plan.SQL, wantMedian)
+	}
+	if !strings.Contains(plan.SQL, "percentile_cont(0.75)") {
+		t.Errorf("p75 does not ask for the 75th percentile: %s", plan.SQL)
+	}
+}
+
+// A percentile over a non-numeric field is refused at the bar every refusal
+// holds: typed, named invalid, and suggesting a measure that works — the 50th
+// percentile of a stage id means nothing, and Postgres computing it anyway is
+// exactly why the refusal is written here.
+func TestAPercentileOverANonNumericFieldIsRefused(t *testing.T) {
+	t.Parallel()
+	for _, fn := range []AggFn{Median, P75} {
+		_, err := Compile(Query{
+			Entity:   "deals",
+			Measures: []Measure{{Fn: fn, Field: "stage"}},
+		}, testSchema(), noScope)
+		var refusal *RefusalError
+		if !errors.As(err, &refusal) {
+			t.Fatalf("%s over a dimension answered %v", fn, err)
+		}
+		if refusal.Kind != RefusalInvalid {
+			t.Errorf("%s over a dimension is %q; it means nothing rather than being unbuilt",
+				fn, refusal.Kind)
+		}
+		if !strings.Contains(refusal.Suggest, "amount") {
+			t.Errorf("the refusal suggests %q, which does not name a measure that works",
+				refusal.Suggest)
+		}
+	}
+}

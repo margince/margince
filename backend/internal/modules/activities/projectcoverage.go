@@ -96,10 +96,12 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 			WHERE l.project_id = $%[1]d OR d.project_id = $%[1]d OR r.project_id = $%[1]d
 		)
 		SELECT count(*) FILTER (WHERE f.filed_here),
-		       -- Recency excludes remediation, matching last_activity_of_project.
-		       -- The counts do not: a review task filed here IS attributed work,
-		       -- it just is not the other side engaging.
-		       max(a.occurred_at) FILTER (WHERE f.filed_here AND a.origin <> 'system_remediation'),
+		       -- Recency excludes the system's own origins, matching
+		       -- last_activity_of_project. The counts do not: a review task filed
+		       -- here IS attributed work, it just is not the other side engaging.
+		       -- TRUE carries the fragment's leading AND, so the one spelling in
+		       -- auth.OriginIsEngagement serves a FILTER as well as a WHERE.
+		       max(a.occurred_at) FILTER (WHERE f.filed_here AND TRUE`+auth.OriginIsEngagement("a")+`),
 		       count(*) FILTER (WHERE NOT f.filed_anywhere),
 		       count(*) FILTER (WHERE f.filed_here AND a.kind = 'task' AND NOT a.is_done)
 		FROM activity a

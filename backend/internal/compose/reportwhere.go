@@ -167,12 +167,21 @@ func specNarrowings(
 	// and appended it would be the second partial answer the gate exists to
 	// refuse, and it would pass, because the gate reads the clause builders
 	// and not what a caller does after them.
-	_, population, err := AnalyticsPopulationClause(ctx, tx, requested, "t", arg)
-	if err != nil {
-		return nil, err
-	}
-	if population != "" {
-		out = append(out, population)
+	//
+	// Gated on spec.population like buildReportWhere's own population half:
+	// a spec that opts out (measureEveryReadableRow) means it, on every door
+	// onto it — the saved-analytics path this composes for must not narrow a
+	// report the run_report path already answers unnarrowed, and for a spec
+	// with no owner_id column (activities-by-kind) resolving this
+	// unconditionally is not a narrower answer, it is a crash.
+	if spec.population == measureCallersOwn {
+		_, population, err := AnalyticsPopulationClause(ctx, tx, requested, "t", arg)
+		if err != nil {
+			return nil, err
+		}
+		if population != "" {
+			out = append(out, population)
+		}
 	}
 	// An aggregate over a masked column would disclose it through the total,
 	// so the row leaves the population entirely.

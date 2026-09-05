@@ -17,11 +17,11 @@ package gates
 // with the cause several files away from the edit that caused it.
 //
 // This is a fitness test rather than a fixed list because the mistake has already
-// been made twice in one change: `dco` and `license-gate` were both
-// pull_request-only, and finding the second by hand after fixing the first is
-// exactly the "fixed the case under review, missed the sibling copy" pattern the
-// engineering rules name. Deriving the obligation from the workflow means the
-// third one fails here instead of in production.
+// been made twice in one change: two lanes were both pull_request-only, and
+// finding the second by hand after fixing the first is exactly the "fixed the
+// case under review, missed the sibling copy" pattern the engineering rules
+// name. Deriving the obligation from the workflow means the third one fails here
+// instead of in production.
 //
 // WHAT THIS CATCHES: a job in the aggregate's `needs:` whose condition cannot be
 // satisfied on `merge_group`.

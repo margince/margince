@@ -60,7 +60,7 @@ function WithheldRateCard({
   return (
     <Panel title={title}>
       <PanelBody>
-        <QueryGate query={me}>
+        <QueryGate query={me} pendingLabel={title}>
           {() => <EmptyState>{reason}</EmptyState>}
         </QueryGate>
       </PanelBody>
@@ -165,7 +165,10 @@ export function FxRatesCard() {
             label={t("settings.rates.fxTableLabel")}
             layout="stack"
             control={
-              <QueryGate query={query}>
+              <QueryGate
+                query={query}
+                pendingLabel={t("settings.rates.fxTableLabel")}
+              >
                 {(rows) =>
                   rows.length === 0 ? (
                     <EmptyState>
@@ -393,7 +396,10 @@ export function ModelCostsCard() {
             label={t("settings.rates.modelTableLabel")}
             layout="stack"
             control={
-              <QueryGate query={query}>
+              <QueryGate
+                query={query}
+                pendingLabel={t("settings.rates.modelTableLabel")}
+              >
                 {(rows) =>
                   rows.length === 0 ? (
                     <EmptyState>

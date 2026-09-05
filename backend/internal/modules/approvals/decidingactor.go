@@ -99,9 +99,11 @@ func ReleaseSends(kind string) bool { return sendingKinds[kind] }
 // agentMayDecide bounds what a PASSPORT may do to one staged proposal, given
 // that actingForAHuman has already admitted it as somebody's agent.
 //
-// Two questions, one place, because they fail the same way if either is missed:
-// a credential must not release what its human did not lend it, and it must not
-// be the thing that confirms its own proposal.
+// Three questions, one place, because they fail the same way if any is missed:
+// a credential must not release what its human did not lend it, it must not be
+// the thing that confirms its own proposal, and it must not stand in for a
+// person it does not act for — two passports lent by two people otherwise walk
+// a confirm-first action through end to end with nobody having looked.
 //
 // A human decides on the strength of their seat and their grants; an agent
 // decides on the strength of a credential a human minted with a fixed set of
@@ -137,6 +139,37 @@ func agentMayDecide(p principal.Principal, a row, approve bool) error {
 	if approve && a.PassportID != nil && p.PassportID != ids.Nil && a.PassportID.UUID == p.PassportID {
 		return fmt.Errorf("this credential proposed the action, so it does not also release it — "+
 			"the person it acts for answers it in the CRM: %w", apperrors.ErrPermissionDenied)
+	}
+	// AND IT DOES NOT CONFIRM ANOTHER PERSON'S. The rule above binds the
+	// credential; this one binds the PERSON behind it, and without the second the
+	// first buys nothing. Two humans each lend a passport: A's stages the
+	// confirm-first call, B's approves it, A's redeems it, and the whole tier has
+	// been satisfied by two autonomous agents with nobody having looked. The
+	// decide route is itself auto_execute, so B's approval needed no confirmation
+	// of its own — which is what turns a bounded loan into a way around the tier
+	// rather than an exercise of it.
+	//
+	// What a lent credential may answer is what the person who lent it could have
+	// answered in the CRM themselves, and a proposal staged for somebody else is
+	// not that. UserID, not OnBehalfOf, is the comparison: a passport carries its
+	// lender's user id (AgentIdentity.Principal), so this is the same "is this
+	// your own business" test decidable() applies to a self-only kind, asked of
+	// the decision instead of the read.
+	//
+	// A row with NO recorded human — a SERVER proposal, which attributableStager
+	// guarantees is what a NULL passport_id means — is deliberately outside the
+	// rule. It is the unattended policy apply (compose/autoapply.go), which
+	// releases under the OWNER's own authority and is bounded by that rather than
+	// by a staging nobody made on anybody's behalf.
+	//
+	// Approve only, for the reason the self-approval rule is: a rejection
+	// discards a proposal and cannot escalate, and an agent unable to take a
+	// request off a desk is an obstacle rather than a rule.
+	if approve && a.OnBehalfOf != nil &&
+		(p.UserID == ids.Nil || a.OnBehalfOf.UUID != p.UserID) {
+		return fmt.Errorf("this credential acts for somebody other than the person this action was "+
+			"staged for, so it does not release it — that person answers it themselves: %w",
+			apperrors.ErrPermissionDenied)
 	}
 	kind := a.Kind
 	// A step-up is a question ABOUT this credential — how much of what it may

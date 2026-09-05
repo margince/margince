@@ -292,12 +292,16 @@ func TestAFiringOnANonActivitySubjectIsUnaffected(t *testing.T) {
 	}
 }
 
-func TestASystemSeededFiringOnHeldMailIsUnaffected(t *testing.T) {
-	// A system-seeded automation stamps no owner_id. There is no human
-	// authority behind it to check, which is the same reasoning the object gate
-	// applies to a zero OwnerID — and the reason this suite's siblings can pass
-	// a nil resolver. Asserting it here is what stops the audience gate
-	// silently disabling the starter automations.
+// A system-seeded automation stamps no owner_id, so there is no authority to
+// resolve — and the shipped gate read that as "proceed, unchecked". It is the
+// opposite: no authority to check is not a licence, it is the case with nothing
+// standing behind it.
+//
+// post_meeting_recap is what that cost. It fired 2,232 times on a seeded stack
+// and planned 468 drafts holding model-written summaries of mail held to its
+// participants, with zero blocked runs — because the gate that would have
+// blocked them never ran.
+func TestAnOwnerlessFiringOnHeldMailIsBlocked(t *testing.T) {
 	fx := setupAutomationDB(t)
 	applyCalls := 0
 	handler := scriptedWorkflow{
@@ -316,9 +320,66 @@ func TestASystemSeededFiringOnHeldMailIsUnaffected(t *testing.T) {
 	if err := engine.HandleEvent(context.Background(), activityEventFor(held)); err != nil {
 		t.Fatalf("HandleEvent: %v", err)
 	}
+	if applyCalls != 0 {
+		t.Errorf("Apply called %d times, want 0 — an automation nobody owns derived content from a "+
+			"message held to its participants", applyCalls)
+	}
+}
+
+// The other half, and the one that keeps the narrowing from becoming a ban: an
+// ownerless automation on mail the whole workspace can read still runs. Without
+// this the fix above would be satisfied by disabling the starter automations
+// outright, which is not what it is for.
+func TestAnOwnerlessFiringOnWorkspaceMailProceeds(t *testing.T) {
+	fx := setupAutomationDB(t)
+	applyCalls := 0
+	handler := scriptedWorkflow{
+		name: "system_seeded",
+		apply: func(workflow.Event) (workflow.RunResult, error) {
+			applyCalls++
+			return workflow.RunResult{}, nil
+		},
+	}
+	fx.seedAutomation(t, handler.name)
+	open := fx.seedActivity(t, "workspace")
+
+	engine := NewWorkflowEngine(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)), nil)
+	engine.RegisterWorkflow(handler)
+
+	if err := engine.HandleEvent(context.Background(), activityEventFor(open)); err != nil {
+		t.Fatalf("HandleEvent: %v", err)
+	}
 	if applyCalls != 1 {
-		t.Errorf("Apply called %d times, want 1 — a system-seeded automation has no owner "+
-			"whose sight could have narrowed", applyCalls)
+		t.Errorf("Apply called %d times, want 1 — a message every seat may read is the most an "+
+			"ownerless automation can be asked to respect, and it is readable", applyCalls)
+	}
+}
+
+// `selected` is the third audience and it is NOT workspace, so it takes the
+// same refusal. Asserted separately because a check written as "not
+// participants" would pass every test above and admit the narrowest audience
+// the product has.
+func TestAnOwnerlessFiringOnSelectedMailIsBlocked(t *testing.T) {
+	fx := setupAutomationDB(t)
+	applyCalls := 0
+	handler := scriptedWorkflow{
+		name: "system_seeded",
+		apply: func(workflow.Event) (workflow.RunResult, error) {
+			applyCalls++
+			return workflow.RunResult{}, nil
+		},
+	}
+	fx.seedAutomation(t, handler.name)
+	narrow := fx.seedActivity(t, "selected")
+
+	engine := NewWorkflowEngine(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)), nil)
+	engine.RegisterWorkflow(handler)
+
+	if err := engine.HandleEvent(context.Background(), activityEventFor(narrow)); err != nil {
+		t.Fatalf("HandleEvent: %v", err)
+	}
+	if applyCalls != 0 {
+		t.Errorf("Apply called %d times, want 0 — `selected` is the narrowest audience there is", applyCalls)
 	}
 }
 
@@ -356,5 +417,38 @@ func TestTheAudienceGateDoesNotInheritTheEnginesSystemPrincipal(t *testing.T) {
 	if applyCalls != 0 {
 		t.Error("the firing applied: the audience check ran as the system principal, which " +
 			"reads every row, so it admits every firing while looking like a gate")
+	}
+}
+
+// The honest race: an activity erased or archived between the firing and this
+// check. It is not an outage and must not be retried as one — the row is not
+// there to derive from, so the firing is refused and says which of the two
+// refusals it was.
+//
+// Reachable rather than theoretical: an event is queued when the message
+// lands and this gate runs when the engine reaches it, and erasure destroys
+// rows on its own schedule in between.
+func TestAnOwnerlessFiringOnAMessageThatIsGoneIsBlocked(t *testing.T) {
+	fx := setupAutomationDB(t)
+	applyCalls := 0
+	handler := scriptedWorkflow{
+		name: "system_seeded",
+		apply: func(workflow.Event) (workflow.RunResult, error) {
+			applyCalls++
+			return workflow.RunResult{}, nil
+		},
+	}
+	fx.seedAutomation(t, handler.name)
+
+	engine := NewWorkflowEngine(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)), nil)
+	engine.RegisterWorkflow(handler)
+
+	// An id no row carries: the message this fired on is gone.
+	if err := engine.HandleEvent(context.Background(), activityEventFor(ids.NewV7())); err != nil {
+		t.Fatalf("HandleEvent: %v — a missing row is a refusal, not an error to retry", err)
+	}
+	if applyCalls != 0 {
+		t.Errorf("Apply called %d times, want 0 — there was no message left to derive content from",
+			applyCalls)
 	}
 }

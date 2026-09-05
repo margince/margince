@@ -223,10 +223,15 @@ func (s *Service) WithdrawInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID
 // refusal keyed on it is forgotten the moment any of that moves, and the next
 // pass re-offers the rename a human just refused. Containment matches the
 // decision the human actually made: this record, this proposed value.
-func declinedProbeSQL(byIdentity bool) string {
+// Both discriminators are scoped by subjectScope for a shape whose proposal is
+// one member's (stagingsubject.go). Unscoped, the memory is the WORKSPACE's: one
+// member's refusal would refuse a colleague's proposal, for exactly the kinds
+// whose own gate says a row is one person's business — and the colleague would
+// see no offer and no reason for its absence.
+func declinedProbeSQL(byIdentity bool, subject string) string {
 	const prefix = `SELECT status FROM approval
 		 WHERE kind = $1 AND target_entity_id IS NOT DISTINCT FROM $2 AND `
-	const suffix = `
+	suffix := subject + `
 		 ` + lockOrder + `
 		 FOR UPDATE`
 	if byIdentity {
@@ -359,7 +364,12 @@ func (s *Service) StageUnlessDeclined(ctx context.Context, in StageInput) (ids.A
 		if byIdentity {
 			discriminator = in.Identity
 		}
-		rows, err := tx.Query(ctx, declinedProbeSQL(byIdentity), in.Kind, nullUUID(in.TargetID), discriminator)
+		stager, ok := principal.Actor(ctx)
+		if !ok {
+			return errors.New("crmapprovals: no actor bound to context")
+		}
+		args := []any{in.Kind, nullUUID(in.TargetID), discriminator}
+		rows, err := tx.Query(ctx, declinedProbeSQL(byIdentity, subjectScope(in, stager, &args)), args...)
 		if err != nil {
 			return fmt.Errorf("lock the prior offers for this proposal: %w", err)
 		}

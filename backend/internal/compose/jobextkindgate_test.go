@@ -156,8 +156,8 @@ func TestAnUnregisteredExtensionKindIsStillARefusal(t *testing.T) {
 // from the truth when a unit picks a pool other than the default.
 //
 // The dispatcher's insert options come from periodicForComposed's
-// sweepInsertOpts(), which names no queue — so the row lands on River's default
-// whatever the fragment says. The unit's declared queue belongs to the CHILD,
+// periodicInsertOpts(), which names no queue — so the row lands on River's
+// default whatever the fragment says. The unit's declared queue belongs to the CHILD,
 // which is the row that does the tenant's work and the pool an operator sizes.
 // A dispatcher Spec republishing the unit's queue would put a label on
 // margince_job_declared_info naming a pool its rows never reach, which is
@@ -177,7 +177,7 @@ func TestAComposedDispatcherPublishesTheQueueItsRowsActuallyLandOn(t *testing.T)
 		t.Fatalf("%s is not declared", d.DispatcherKind())
 	}
 	if dispatcher.Queue != river.QueueDefault {
-		t.Errorf("the dispatcher declares queue %q, but sweepInsertOpts names no queue so its rows land on %q",
+		t.Errorf("the dispatcher declares queue %q, but the periodic insert names no queue so its rows land on %q",
 			dispatcher.Queue, river.QueueDefault)
 	}
 	if dispatcher.OptsOwner != jobs.OptsCaller {
@@ -187,7 +187,7 @@ func TestAComposedDispatcherPublishesTheQueueItsRowsActuallyLandOn(t *testing.T)
 	// calls: a *river.PeriodicJob keeps its constructor unexported, so the
 	// alternative is inserting a row and reading the queue back — a database test
 	// for a claim that is decided entirely at the insert site.
-	if opts := sweepInsertOpts(); opts.Queue != "" && opts.Queue != river.QueueDefault {
+	if opts := periodicInsertOpts(extJobDispatcherArgs{JobKind: d.DispatcherKind()}); opts.Queue != "" && opts.Queue != river.QueueDefault {
 		t.Errorf("the tick inserts on queue %q while the declaration publishes %q", opts.Queue, dispatcher.Queue)
 	}
 

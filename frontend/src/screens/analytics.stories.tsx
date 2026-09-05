@@ -145,6 +145,28 @@ const routes: RouteMap = {
   "GET /pipelines": () => jsonResponse(pipelines),
   "POST /reports/pipeline-current": () => run("pipeline-current", stageRows),
   "POST /reports/forecast": () => run("forecast", forecastRows),
+  "POST /reports/win-loss": () =>
+    run("win-loss", [
+      {
+        status: "won",
+        deal_count: 8,
+        raw_minor: 500000,
+        median_days: 21,
+        p75_days: 40,
+      },
+      {
+        status: "lost",
+        deal_count: 4,
+        raw_minor: 200000,
+        median_days: 55,
+        p75_days: null,
+      },
+    ]),
+  "POST /reports/stage-age": () =>
+    run("stage-age", [
+      { stage_id: "pl-s1", deal_count: 6, median_days: 12, p75_days: 30 },
+      { stage_id: "pl-s2", deal_count: 3, median_days: null, p75_days: null },
+    ]),
   "POST /reports/open-deals-per-company": () =>
     run("open-deals-per-company", companyRows),
   "GET /reports/pipeline-current/derivation": () => jsonResponse(derivation),
@@ -206,6 +228,88 @@ export const OpenDealsPerCompany: Story = {
 
 // "Explain this number" open: the report card above, the derivation card below
 // it, both the same titled-card surface.
+// The performance section: closed outcomes beside stage velocity, every
+// duration the server's own, and a withheld percentile rendered as words
+// rather than a zero.
+export const Performance: Story = {
+  render: screenStory,
+  play: clickButton("Performance"),
+};
+
+// The seat's own outcomes: pipeline and meetings under an owner lens. Its own
+// route map, because serving /analytics/context to every story above would
+// grow a scope picker into renders that exist to show something else.
+const ownLensRoutes: RouteMap = {
+  ...routes,
+  "GET /analytics/context": () =>
+    jsonResponse({
+      default_scope: { kind: "owner", id: "u-rep-1", label: "Riley Rep" },
+      allowed_scopes: [{ kind: "owner", id: "u-rep-1", label: "Riley Rep" }],
+      capabilities: {
+        view_manager_forecast: false,
+        submit_manager_forecast: false,
+      },
+      as_of: "2026-09-04T00:00:00Z",
+      timezone: "Europe/Berlin",
+      base_currency: "EUR",
+    }),
+  "POST /reports/activities-by-kind": () =>
+    run("activities-by-kind", [
+      { meeting_status: "booked", meetings: 2 },
+      { meeting_status: "held", meetings: 3 },
+      { meeting_status: "no_show", meetings: 1 },
+    ]),
+};
+
+// Source health under the ops grant: one read source with its instant, and
+// every unread state in its own words.
+const coverageRoutes: RouteMap = {
+  ...routes,
+  "GET /analytics/coverage": () =>
+    jsonResponse({
+      run_id: "r1",
+      as_of: "2026-09-05T02:00:00Z",
+      sources: [
+        {
+          source: "mail",
+          state: "checked",
+          checked_through: "2026-09-05T01:30:00Z",
+        },
+        {
+          source: "offers",
+          state: "checked",
+          checked_through: "2026-09-05T02:00:00Z",
+        },
+        { source: "calendar", state: "stale" },
+        { source: "documents", state: "not_connected" },
+      ],
+    }),
+};
+
+export const DataCoverage: Story = {
+  render: () => {
+    installFetchStub(coverageRoutes);
+    return (
+      <StoryProviders>
+        <AnalyticsScreen />
+      </StoryProviders>
+    );
+  },
+  play: clickButton("Data coverage"),
+};
+
+export const MyOutcomes: Story = {
+  render: () => {
+    installFetchStub(ownLensRoutes);
+    return (
+      <StoryProviders>
+        <AnalyticsScreen />
+      </StoryProviders>
+    );
+  },
+  play: clickButton("My outcomes"),
+};
+
 export const Explain: Story = {
   render: screenStory,
   // Pipeline first: the explain verb belongs to a report card's action row, and

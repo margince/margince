@@ -110,7 +110,7 @@ type NewCall struct {
 // predecessor and the chain forks — two heads, and no way to say which was
 // current.
 func (s *Store) RecordCall(ctx context.Context, in NewCall) (Call, error) {
-	if err := auth.Require(ctx, "forecast", principal.ActionCreate); err != nil {
+	if err := requireForecastScope(ctx, in.Scope); err != nil {
 		return Call{}, err
 	}
 	note, err := checkCall(in)
@@ -141,7 +141,7 @@ func (s *Store) RecordCall(ctx context.Context, in NewCall) (Call, error) {
 // the caller: an entry point that trusts its caller to have checked is one
 // deletion away from being an ungated write.
 func (s *Store) RecordCallTx(ctx context.Context, tx pgx.Tx, in NewCall) (Call, error) {
-	if err := auth.Require(ctx, "forecast", principal.ActionCreate); err != nil {
+	if err := requireForecastScope(ctx, in.Scope); err != nil {
 		return Call{}, err
 	}
 	note, err := checkCall(in)
@@ -333,9 +333,9 @@ func (s *Store) CurrentCallTx(ctx context.Context, tx pgx.Tx, period Period, sco
 
 // standingCallTx is the lookup itself. Ungated on purpose and unexported for
 // exactly that reason: its two callers are CurrentCallTx, which gates read, and
-// the write path, which has already required create on the same object. A
-// second Require there would refuse a manager who may call but not read, which
-// is not a seat this product has.
+// the write path, which has already required create on the same object AND
+// answered for the scope. A second Require here would refuse a manager who may
+// call but not read, which is not a seat this product has.
 func (s *Store) standingCallTx(ctx context.Context, tx pgx.Tx, period Period, scope Scope) (Call, error) {
 	var out Call
 	var note *string

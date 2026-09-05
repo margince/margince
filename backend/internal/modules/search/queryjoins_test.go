@@ -689,21 +689,34 @@ func TestEveryJoinTableThatIsAnRBACObjectDeclaresIt(t *testing.T) {
 		t.Fatalf("%q is not in identity's object list, so this gate is reading the wrong thing",
 			objectRelationship)
 	}
-	// The list is cross-checked against a SECOND derivation from the same file:
-	// policy's `objects(...)` takes one parameter per object. A literal read
-	// alone would go on passing if a later object were appended somewhere other
-	// than the literal — an init, a helper, a second slice — and this module
-	// would then leave a governed join table ungated while the gate reported
-	// green. Two readings that must agree is what makes the omission loud.
-	signature := regexp.MustCompile(`func objects\(([^)]*)\) map\[string\]grant`).FindSubmatch(body)
-	if signature == nil {
-		t.Fatal("identity no longer declares objects() in the shape this gate cross-checks")
-	}
-	params := strings.Split(strings.ReplaceAll(string(signature[1]), " grant", ""), ",")
-	if len(params) != len(objects) {
-		t.Errorf("identity's object literal names %d objects and its objects() takes %d parameters — "+
-			"the two disagree, so the literal is no longer the whole list and a join table could be "+
-			"governed by an object this gate cannot see", len(objects), len(params))
+	// The literal is cross-checked against a SECOND reading of the same source,
+	// because one reading cannot tell a shrinking list from a correct one.
+	//
+	// That second reading used to be `objects(...)`'s parameter count, one per
+	// object. The seed now builds each role with `grid(base, overrides)`, which
+	// RANGES over coreObjects rather than restating it, so there is no
+	// parameter list left to count.
+	//
+	// What this reading proves, exactly: the seed still DERIVES from the
+	// literal. An edit that went back to spelling a role's grants out object by
+	// object would let the two disagree again, and would do it silently — the
+	// join tables below would go on being checked against a list the seed no
+	// longer honours. Scoped to `grid`'s own body rather than to a bare loop
+	// header, so an unrelated future range over coreObjects elsewhere in the
+	// package cannot stand in for the seeder and keep this green.
+	//
+	// What it does NOT prove, and never did in either form: that nothing
+	// appends to coreObjects after package init. A `func init()` doing so
+	// passes this gate and passed the parameter count before it. The literal is
+	// the whole list by convention, not by proof.
+	// Bounded to `grid`'s own body: `[^}]*?` cannot cross the first closing
+	// brace, so a range in a LATER function cannot stand in for the seeder and
+	// keep this green. An earlier spelling used `(?s).*?`, which matched nine
+	// kilobytes into an unrelated helper and reported a gutted `grid` as fine.
+	seeder := regexp.MustCompile(`func grid\(base grant[^}]*?for _, object := range coreObjects`)
+	if !seeder.Match(body) {
+		t.Error("identity's `grid` no longer seeds from coreObjects — a role's grants and the object " +
+			"list can now disagree, and a join table could be governed by an object this gate cannot see")
 	}
 	for _, join := range joinTables {
 		switch {

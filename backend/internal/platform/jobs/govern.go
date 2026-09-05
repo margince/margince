@@ -10,6 +10,15 @@ import (
 	"github.com/riverqueue/river"
 )
 
+// DefaultMaxAttempts is the ladder River gives a job whose insert names none:
+// 25 attempts on attempt-to-the-fourth backoff, which reaches days.
+//
+// It is spelled here, in the package that owns this repo's River integration,
+// because the fitness function that refuses an uncapped insert has to know the
+// number it is refusing and may not import River to ask. Mirrored rather than
+// copied: a River upgrade that moves the default moves this with it.
+const DefaultMaxAttempts = river.MaxAttemptsDefault
+
 // WorkOnly is all a hand-written worker exposes. River asks a worker four
 // questions; three of them — Timeout, NextRetry, Middleware — are the
 // contract's to answer, so a worker that declared its own would be answering

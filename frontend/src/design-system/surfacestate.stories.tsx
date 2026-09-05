@@ -64,6 +64,7 @@ function AllStates() {
       {ALL.map((state) => (
         <Card key={state} title={state}>
           <SurfaceState
+            loadingLabel="Loading the section"
             state={state}
             emptyLabel="No open deal on this account."
             detail={DETAIL}
@@ -87,6 +88,7 @@ function OrderDemo() {
     <div style={{ display: "grid", gap: "var(--space-4)", maxWidth: 420 }}>
       <Card title="Stale — caveat first">
         <SurfaceState
+          loadingLabel="Loading the section"
           state="stale"
           emptyLabel="No open deal on this account."
           detail={{ staleAsOf: "9:15 this morning" }}
@@ -96,6 +98,7 @@ function OrderDemo() {
       </Card>
       <Card title="Partial — count last">
         <SurfaceState
+          loadingLabel="Loading the section"
           state="partial"
           emptyLabel="No open deal on this account."
           detail={{ remaining: 4 }}
@@ -117,6 +120,7 @@ function RetryDemo() {
     <div style={{ display: "grid", gap: "var(--space-4)", maxWidth: 420 }}>
       <Card title="Failed, retryable">
         <SurfaceState
+          loadingLabel="Loading the section"
           state="failed"
           emptyLabel="Nothing recorded."
           detail={{ onRetry: () => undefined }}
@@ -125,7 +129,11 @@ function RetryDemo() {
         </SurfaceState>
       </Card>
       <Card title="Failed, nothing to retry">
-        <SurfaceState state="failed" emptyLabel="Nothing recorded.">
+        <SurfaceState
+          state="failed"
+          emptyLabel="Nothing recorded."
+          loadingLabel="Loading the section"
+        >
           {ROWS}
         </SurfaceState>
       </Card>
@@ -143,10 +151,20 @@ export const FailedWithAndWithoutRetry: Story = {
 function LabelledDemo() {
   return (
     <Card title="Tags and lists" style={{ maxWidth: 420 }}>
-      <SurfaceState label="Lists" state="ready" emptyLabel="Not on any list.">
+      <SurfaceState
+        label="Lists"
+        state="ready"
+        emptyLabel="Not on any list."
+        loadingLabel="Loading the section"
+      >
         <p className="t-body">Q3 expansion targets</p>
       </SurfaceState>
-      <SurfaceState label="Tags" state="withheld" emptyLabel="No tags.">
+      <SurfaceState
+        label="Tags"
+        state="withheld"
+        emptyLabel="No tags."
+        loadingLabel="Loading the section"
+      >
         <p className="t-body">strategic</p>
       </SurfaceState>
     </Card>
@@ -164,6 +182,7 @@ function NestedDemo() {
     <Card title="Company 360" style={{ maxWidth: 420 }}>
       <Eyebrow as="h3">What is in flight</Eyebrow>
       <SurfaceState
+        loadingLabel="Loading the section"
         label="Deals"
         labelLevel="h4"
         state="ready"
@@ -172,6 +191,7 @@ function NestedDemo() {
         <p className="t-body">Fleet retrofit 2026</p>
       </SurfaceState>
       <SurfaceState
+        loadingLabel="Loading the section"
         label="Projects"
         labelLevel="h4"
         state="withheld"
