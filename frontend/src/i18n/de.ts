@@ -560,6 +560,13 @@ export const de = {
   "state.staleAsOf": "Zuletzt bekannte Werte, Stand {when}",
   "state.partial": "Nur ein Teil der Liste",
   "state.partialCount": "{count} weitere nicht angezeigt",
+  "filePreview.download": "Herunterladen",
+  "filePreview.print": "Drucken",
+  "filePreview.close": "Vorschau schließen",
+  "filePreview.loading": "Datei wird geöffnet…",
+  "filePreview.failedTitle": "Diese Datei kann hier nicht angezeigt werden",
+  "filePreview.failed":
+    "Laden Sie sie herunter, um sie in einer anderen Anwendung zu öffnen.",
 
   "list.headActions": "Weitere Aktionen",
   "list.search": "Suchen",

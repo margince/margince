@@ -439,6 +439,54 @@
 .modal-wide {
   width: min(720px, calc(100vw - 40px));
 }
+/* The LIGHTBOX: a stored file, read at the size of the screen.
+ *
+ * The inset is what makes it a lightbox rather than a second page — the
+ * darkened overlay stays visible on all four sides, so the record behind is
+ * still the thing the reader is in the middle of. Padding is zero because the
+ * content pays it in its own bands (filepreview.css), the way the wide drawer
+ * does, and `overflow: hidden` keeps the document's scroll inside the stage
+ * rather than moving the box. */
+.modal-full {
+  width: min(1240px, calc(100vw - 48px));
+  height: calc(100dvh - 48px);
+  max-height: calc(100dvh - 48px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* What the lightbox prints: the document it is holding, and nothing else.
+ *
+ * A reader who presses Print with a file open is printing the FILE, and a
+ * browser handed the whole page spends their paper on a rail, a table and a
+ * scrim they cannot even see. Everything but the overlay carrying the box is
+ * taken off the sheet, and the box stops being a fixed-size window over a
+ * scrolling document and becomes as tall as what is in it.
+ *
+ * Scoped to a lightbox BEING open — `body:has(.modal-full)` — so these rules
+ * say nothing about any other page in the product. A PDF never reaches them:
+ * the frame prints itself, because a page-level print of an embedded viewer
+ * puts an empty box on the paper. */
+@media print {
+  body:has(.modal-full) > *:not(:has(.modal-full)) {
+    display: none;
+  }
+  .overlay:has(.modal-full) {
+    position: static;
+    display: block;
+    background: none;
+  }
+  .modal-full {
+    width: auto;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    box-shadow: none;
+  }
+}
+
 /* The right-anchored drawer: the composer and the evidence receipt. Full
    height against the right edge so the record behind stays legible as
    context. The width is a share of the viewport with both ends pinned —
@@ -544,6 +592,16 @@
     max-height: 100dvh;
     border-radius: 0;
     padding: var(--space-4);
+  }
+  /* On a phone the lightbox is the whole screen: a document read on 390px has
+     no room to spare for a frame around it. Its bands still pay their own
+     padding, so it is not in the rule above. */
+  .modal-full {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
   }
   /* A split drawer keeps paying its padding in its three bands, on a phone as
      on a desktop. The rule above is written for the unsplit sheet and reaches

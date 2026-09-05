@@ -608,6 +608,16 @@ export const en = {
   "state.staleAsOf": "Last known values, as of {when}",
   "state.partial": "Showing part of the list",
   "state.partialCount": "{count} more not shown",
+  // The opened file. `FilePreview` is a design-system control every surface
+  // that draws a file card can open, so its words belong to the control rather
+  // than to any one screen â the same three verbs stand over a contract on an
+  // account and over a scan that arrived on a message.
+  "filePreview.download": "Download",
+  "filePreview.print": "Print",
+  "filePreview.close": "Close preview",
+  "filePreview.loading": "Opening this file…",
+  "filePreview.failedTitle": "This file cannot be shown here",
+  "filePreview.failed": "Download it to open it in another application.",
 
   "list.headActions": "More actions",
   "list.search": "Search",

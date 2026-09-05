@@ -556,6 +556,12 @@ export const vi = {
   "state.staleAsOf": "Giá trị biết đến gần nhất, tính đến {when}",
   "state.partial": "Chỉ hiển thị một phần danh sách",
   "state.partialCount": "Còn {count} mục chưa hiển thị",
+  "filePreview.download": "Tải xuống",
+  "filePreview.print": "In",
+  "filePreview.close": "Đóng bản xem trước",
+  "filePreview.loading": "Đang mở tệp này…",
+  "filePreview.failedTitle": "Không thể hiển thị tệp này ở đây",
+  "filePreview.failed": "Hãy tải xuống để mở bằng ứng dụng khác.",
 
   "list.headActions": "Thao tác khác",
   "list.search": "Tìm kiếm",
