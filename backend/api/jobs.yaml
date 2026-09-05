@@ -387,6 +387,16 @@ kinds:
       judging stage leases and commits in claims of eight, so a cut-off pass
       keeps every verdict it paid for.
 
+      One call each is what these twenty minutes are sized against, and the
+      asymmetric confidence floor made a SECOND call ordinary: a creating
+      answer between the two floors is re-asked, which is the common case on a
+      mailbox of first-time senders. reAskBudget bounds those at
+      verdictCatchUpCap / verdictReAskShare, so the worst case is cap + budget
+      calls rather than twice the cap — the arithmetic above holds by
+      construction, at any model speed and whatever fraction of answers land in
+      the band. Lowering the cap or raising this wall would both need a
+      measured pass on real hardware; the bound does not.
+
   capture_confidentiality_verdict:
     role: dispatcher
     go_type: ConfidentialityVerdictArgs
