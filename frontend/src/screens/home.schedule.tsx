@@ -7,6 +7,7 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
+import { SpineTrack, type Stop } from "./record360/spine";
 import { isUnprepared, itemTitle, rowHref } from "./worklist.copy";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 
@@ -24,49 +25,86 @@ const MEETING = "meeting";
 const TASK = "task";
 
 /**
- * The day's schedule, in the order the server ranked it.
+ * The day's schedule as an axis: the meetings in the order the server ranked
+ * them, on the record spine's own track, with a line through it where the
+ * reader is standing.
  *
- * A meeting with nothing prepared for it carries the badge here as well as in
- * the queue — the same `isUnprepared` the readings strip counts, so the figure
- * in the strip, the badge in the queue and the badge here are one answer.
+ * Horizontal for the reason the record's thread is — the day is a shape, not a
+ * list. What is behind, how the morning is loaded, how far the next one is:
+ * taken in one glance left to right. A meeting with nothing prepared for it
+ * carries the badge here as well as in the queue — the same `isUnprepared`
+ * the readings strip counts, so the figure in the strip, the badge in the
+ * queue and the badge here are one answer.
  */
 export function SchedulePanel({
   day,
   state,
-}: Readonly<{ day: Worklist | undefined; state: SectionState }>) {
+  now,
+}: Readonly<{
+  day: Worklist | undefined;
+  state: SectionState;
+  // The reader's clock, handed in: the marker is where they are standing, and
+  // a panel that read the clock itself would draw a different day in a test
+  // than in the morning it is for.
+  now: Date;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
   const meetings = rowsFrom(day, MEETING);
   return (
     <section id="home-schedule" aria-label={t("home.panel.schedule")}>
-      <Panel title={t("home.panel.schedule")} className="rail-panel">
-        {/* The rows are `PanelRow`s and carry the panel's own gutter, so they
-            sit in the Panel directly — inside a `PanelBody` they would be
-            padded twice and read as an indented block against every other
-            panel in the rail. `SurfaceState` draws its sentence either way. */}
+      <Panel title={t("home.panel.schedule")} className="home-schedule">
         <SurfaceState
           loadingLabel={t("home.panel.schedule")}
           state={state === "ready" && meetings.length === 0 ? "empty" : state}
           emptyLabel={t("home.schedule.clear")}
         >
-          {meetings.map((item) => (
-            <PanelRow key={item.id} className="rail-schedule-row">
-              <span className="t-caption rail-schedule-when">
-                {whenOf(item, locale, zone)}
-              </span>
-              <span className="rail-schedule-what">
-                <Title item={item} />
-                {isUnprepared(item) && (
-                  <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
-                )}
-              </span>
-            </PanelRow>
-          ))}
+          <SpineTrack stops={dayStops(meetings, now, t, locale, zone)} />
         </SurfaceState>
       </Panel>
     </section>
   );
+}
+
+// The day's stops: one per meeting, filed or ahead by its start against the
+// clock, and the reader's own moment as a line through the axis. The marker
+// goes before the first meeting that has not started — with every meeting
+// behind it, it closes the day.
+function dayStops(
+  meetings: readonly WorklistItem[],
+  now: Date,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+  zone: string,
+): Stop[] {
+  const stops: Stop[] = meetings.map((item) => ({
+    key: item.id,
+    tone: item.due_at && new Date(item.due_at) < now ? "past" : "ahead",
+    when: whenOf(item, locale, zone),
+    title: <Title item={item} />,
+    detail: isUnprepared(item) ? (
+      <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
+    ) : undefined,
+  }));
+  const marker: Stop = {
+    key: "now",
+    tone: "now",
+    when: "",
+    title: (
+      <>
+        <span className="co-spine-now-word">{t("home.spine.now")}</span>
+        <span className="co-spine-now-date">
+          {formatTimeOfDay(now.toISOString(), locale, zone)}
+        </span>
+      </>
+    ),
+  };
+  const first = stops.findIndex((stop) => stop.tone === "ahead");
+  if (first === -1) {
+    return [...stops, marker];
+  }
+  return [...stops.slice(0, first), marker, ...stops.slice(first)];
 }
 
 /**

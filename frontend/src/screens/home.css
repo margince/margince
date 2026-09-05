@@ -16,6 +16,25 @@
  * around it would make it one more panel to read rather than the sentence the
  * page opens with. */
 
+/* The first line of the page: the greeting takes the room, the dials sit at
+   the far edge on the greeting's own top line, and on a phone they drop under
+   it. */
+.brief-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+}
+.brief-head > .glance {
+  flex: 1 1 32rem;
+  min-width: 0;
+}
+.brief-head > .brief-dials {
+  margin-top: var(--space-6);
+  margin-bottom: 0;
+}
+
 .glance {
   display: flex;
   flex-direction: column;
@@ -50,6 +69,12 @@
  * wider than any gap INSIDE either register. */
 
 .home-readings {
+  margin-bottom: var(--space-6);
+}
+
+/* The day's axis sits between the figures and the work, at the same interval
+ * the readings keep under themselves: it is the last of the briefing. */
+.home-schedule {
   margin-bottom: var(--space-6);
 }
 

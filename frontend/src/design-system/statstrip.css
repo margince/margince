@@ -118,29 +118,19 @@
   transition-duration: var(--dur-tap);
 }
 
-/* THE FLAT ROW. One plate, the slots divided by hairlines and closed by a rule
-   underneath, and no pane around any of them. The reading's own type, figure
-   and basis are untouched: only the frame goes, because on a page the readings
-   OPEN — the Brief — five panes above the work read as five more cards to
-   work through, and a rule under the row is what hands the eye on to the
-   work. The container fold still applies, and a folded row keeps its
-   hairlines: below 66rem the slots are already a grid of readings rather than
-   one line, and a divider beside the first slot of a lower row is a rung of
-   that grid. */
-.stat-strip-flat {
-  gap: 0;
-  border-bottom: 1px solid var(--borderSubtle);
+/* THE HERO ROW: the strip at the size of a page it opens. The figure takes
+   the display rung and the tile grows to hold it with the display's own air;
+   the label and the basis keep the type every strip shares, so the row still
+   reads as one comparison, only at the scale of a page whose first answer it
+   is. Stated here rather than by the screen: a primitive carries its own
+   type and interval, and a screen re-sizing it is a second spelling of the
+   tile that drifts from the first. */
+.stat-strip-hero > .stat-card {
+  min-block-size: 150px;
+  padding: var(--space-5);
+  gap: var(--space-2);
 }
-.stat-strip-flat > .stat-card {
-  background: none;
-  border: 0;
-  border-radius: 0;
-  padding: var(--space-3) var(--space-4) var(--space-4);
-  min-block-size: 0;
-}
-.stat-strip-flat > .stat-card + .stat-card {
-  border-left: 1px solid var(--borderSubtle);
-}
-.stat-strip-flat > .stat-card:first-child {
-  padding-left: 0;
+.stat-strip-hero .stat-card-value {
+  font-size: var(--fs-display-fluid);
+  line-height: 1.05;
 }

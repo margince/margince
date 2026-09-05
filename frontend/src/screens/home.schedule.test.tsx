@@ -28,6 +28,10 @@ function taskRow(id: string, title: string): WorklistItem {
   };
 }
 
+// A fixed clock, in the morning of the fixtures' day: the panel draws the
+// reader's moment on the axis, and a real clock would move it.
+const NOW = new Date("2026-09-03T08:00:00Z");
+
 function draw(node: React.ReactNode) {
   return render(<LocaleProvider initial="en">{node}</LocaleProvider>);
 }
@@ -41,7 +45,7 @@ describe("the schedule panel", () => {
       taskRow("t1", "Call Alice back"),
       meetingRow("m2", false),
     ]);
-    draw(<SchedulePanel day={day} state="ready" />);
+    draw(<SchedulePanel day={day} state="ready" now={NOW} />);
 
     const panel = screen.getByRole("region");
     // The task belongs to the OTHER panel: a rail that listed everything would
@@ -57,7 +61,7 @@ describe("the schedule panel", () => {
       meetingRow("m1", false),
       meetingRow("m2", true),
     ]);
-    draw(<SchedulePanel day={day} state="ready" />);
+    draw(<SchedulePanel day={day} state="ready" now={NOW} />);
 
     expect(screen.getAllByText(en["worklist.needsPrep"])).toHaveLength(1);
   });
@@ -77,11 +81,13 @@ describe("the schedule panel", () => {
       meetingRow("m1", true, "2026-09-03T03:40:00Z"),
       meetingRow("m2", true, "2026-09-03T13:15:00Z"),
     ]);
-    draw(<SchedulePanel day={day} state="ready" />);
+    draw(<SchedulePanel day={day} state="ready" now={NOW} />);
 
+    // The meetings' own dates: the marker for now sits on the same track and
+    // states no date, so it is not one of them.
     const times = screen
       .getByRole("region")
-      .querySelectorAll(".rail-schedule-when");
+      .querySelectorAll(".co-spine-stop:not(.co-spine-now) .co-spine-when");
     expect(Array.from(times, (cell) => cell.textContent)).toEqual([
       formatTimeOfDay("2026-09-03T03:40:00Z", "en", zone),
       formatTimeOfDay("2026-09-03T13:15:00Z", "en", zone),
@@ -93,7 +99,7 @@ describe("the schedule panel", () => {
   });
 
   it("says the day is clear rather than drawing an empty panel", () => {
-    draw(<SchedulePanel day={readingsDay({}, [])} state="ready" />);
+    draw(<SchedulePanel day={readingsDay({}, [])} state="ready" now={NOW} />);
 
     expect(screen.getByText(en["home.schedule.clear"])).toBeTruthy();
   });
@@ -101,7 +107,7 @@ describe("the schedule panel", () => {
   // A read that has not landed is not a clear day. Saying so would send a rep
   // into a morning believing nothing was booked.
   it("says nothing about the day before the read lands", () => {
-    draw(<SchedulePanel day={undefined} state="loading" />);
+    draw(<SchedulePanel day={undefined} state="loading" now={NOW} />);
 
     expect(screen.queryByText(en["home.schedule.clear"])).toBeNull();
   });

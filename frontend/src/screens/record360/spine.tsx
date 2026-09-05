@@ -125,7 +125,7 @@ export type SpineCommercial = {
 // One stop on the thread. `tone` is what the dot and the rule say about it,
 // never decoration: `past` is filed, `gap` is the waiting itself, `ahead` is
 // dated and has not happened.
-type Stop = {
+export type Stop = {
   key: string;
   tone: "past" | "gap" | "ahead" | "overdue" | "now";
   when: string;
@@ -179,6 +179,16 @@ export function RecordSpine({
   if (stops.length === 0) {
     return null;
   }
+  return <SpineTrack stops={stops} />;
+}
+
+/**
+ * The axis itself: stops on one horizontal track, drawn the same way whatever
+ * put them there. `RecordSpine` computes a record's stops from its read; a
+ * day's spine computes its own from the calendar. The track is the one
+ * spelling of the shape both draw.
+ */
+export function SpineTrack({ stops }: Readonly<{ stops: readonly Stop[] }>) {
   // The gap takes half again the width of the stops either side of it. It is
   // the one stop with no record behind it, and on a horizontal axis the WIDTH
   // is the waiting — a silence drawn the same width as the meeting before it

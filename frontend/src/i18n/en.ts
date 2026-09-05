@@ -2782,6 +2782,7 @@ export const en = {
   "home.panel.position": "Position",
   "home.panel.schedule": "Today's schedule",
   "home.schedule.clear": "Nothing is booked today.",
+  "home.spine.now": "Now",
   "home.panel.promises": "Promises & tasks",
   "home.promises.clear": "Nothing is open on you.",
   "home.promises.untracked":
