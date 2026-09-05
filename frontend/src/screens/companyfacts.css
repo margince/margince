@@ -32,8 +32,6 @@
    against the page and still be read (design §2 contrast law), and the tone
    below it is a disabled state rather than a quiet one. */
 .co-facts dt {
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
   white-space: nowrap;
 }
 

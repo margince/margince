@@ -89,7 +89,7 @@ function DetailLine({
   color,
 }: Readonly<{ label: string; value: string; color?: string }>) {
   return (
-    <p className="t-small" style={{ marginTop: "var(--space-1)", color }}>
+    <p className="t-caption" style={{ marginTop: "var(--space-1)", color }}>
       <span className="t-label">{label}</span> {value}
     </p>
   );
@@ -114,7 +114,7 @@ function RunRow({ run }: Readonly<{ run: AutomationRun }>) {
       >
         <OutcomeBadge outcome={run.outcome} />
         <time
-          className="t-small"
+          className="t-caption"
           dateTime={run.occurred_at}
           title={run.occurred_at}
         >
@@ -359,7 +359,7 @@ export function AutomationPreview({
                   n: formatNumber(result.matches_now, locale),
                 })}
               </p>
-              <p className="t-small">
+              <p className="t-caption">
                 {result.would_have_fired == null
                   ? t("auto.preview.notComputable")
                   : t("auto.preview.wouldFire", {
@@ -368,7 +368,7 @@ export function AutomationPreview({
                     })}
               </p>
               {hidden > 0 && (
-                <p className="t-small">
+                <p className="t-caption">
                   {t("auto.preview.hidden", {
                     n: formatNumber(hidden, locale),
                   })}

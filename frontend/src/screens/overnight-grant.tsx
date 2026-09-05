@@ -180,7 +180,7 @@ export function OvernightGrantChoice({
         label={t("overnightGrant.label")}
         data-testid="overnight-grant-choice"
       />
-      <p className="overnight-grant-help">{t("overnightGrant.help")}</p>
+      <p className="overnight-grant-help t-sub">{t("overnightGrant.help")}</p>
       {!checked && <OvernightGrantDanger />}
       {failed && (
         <Callout tone="warn" live="alert">

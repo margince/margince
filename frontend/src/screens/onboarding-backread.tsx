@@ -316,7 +316,7 @@ function BackreadSetup({
 
   return (
     <section className="ob-backread">
-      <h3 className="ob-backread-h">{t("ob.backread.heading")}</h3>
+      <h3 className="ob-backread-h t-h3">{t("ob.backread.heading")}</h3>
       <fieldset className="ob-backread-windows">
         <legend className="sr-only">{t("ob.backread.heading")}</legend>
         {WINDOWS.map((option) => (
@@ -331,7 +331,7 @@ function BackreadSetup({
         ))}
       </fieldset>
       <BackreadScope preview={preview} problem={previewProblem} />
-      <p className="ob-backread-note">{t("ob.backread.note")}</p>
+      <p className="ob-backread-note t-caption">{t("ob.backread.note")}</p>
       <div className="ob-backread-acts">
         <Button
           variant="primary"
@@ -381,7 +381,7 @@ function BackreadScope({
         </p>
       )}
       {preview?.estimate_quality === "heuristic" && (
-        <p className="ob-backread-qualifier">
+        <p className="ob-backread-qualifier t-caption">
           {t("ob.backread.estimateHeuristic")}
         </p>
       )}
@@ -426,7 +426,7 @@ function BackreadRun({
 
   return (
     <section className="ob-backread">
-      {heading !== null && <h3 className="ob-backread-h">{t(heading)}</h3>}
+      {heading !== null && <h3 className="ob-backread-h t-h3">{t(heading)}</h3>}
       {live && <BackreadProgress run={run} />}
       <BackreadTallies counts={run.counts} />
       <BackreadOutcome run={run} />
@@ -530,11 +530,21 @@ function BackreadOutcome({ run }: Readonly<{ run: BackfillStatus }>) {
   const t = useT();
   switch (run.state) {
     case "queued":
-      return <p className="ob-backread-note">{t("ob.backread.queued")}</p>;
+      return (
+        <p className="ob-backread-note t-caption">{t("ob.backread.queued")}</p>
+      );
     case "running":
-      return <p className="ob-backread-note">{t("ob.backread.runningNote")}</p>;
+      return (
+        <p className="ob-backread-note t-caption">
+          {t("ob.backread.runningNote")}
+        </p>
+      );
     case "done":
-      return <p className="ob-backread-note">{t("ob.backread.doneNote")}</p>;
+      return (
+        <p className="ob-backread-note t-caption">
+          {t("ob.backread.doneNote")}
+        </p>
+      );
     case "error":
       return (
         <p className="ob-backread-problem" role="alert">
@@ -551,7 +561,7 @@ function BackreadOutcome({ run }: Readonly<{ run: BackfillStatus }>) {
       // in the inbox, waiting on review, whether or not the run kept going.
       const captured = run.counts?.captured ?? 0;
       return (
-        <p className="ob-backread-note">
+        <p className="ob-backread-note t-caption">
           {t(
             captured > 0
               ? "ob.backread.cancelledPartial"

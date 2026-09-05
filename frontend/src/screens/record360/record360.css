@@ -160,8 +160,6 @@
 
 .r360-rests-from {
   margin: 0;
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
 }
 
 /* The findings, as a strip to scan rather than a list to read. Wrapping

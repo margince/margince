@@ -111,7 +111,7 @@ export function DocumentBoard({
       <Panel title={title} sub={sub} titleAction={titleAction}>
         {documents.length === 0 ? (
           <PanelBody>
-            <p className="t-small">{empty}</p>
+            <p className="t-caption">{empty}</p>
           </PanelBody>
         ) : (
           groups.map((group) => {
@@ -145,7 +145,7 @@ export function DocumentBoard({
       >
         <PanelBody>
           {roomThreads.length === 0 ? (
-            <p className="t-small">{t("threads.empty")}</p>
+            <p className="t-caption">{t("threads.empty")}</p>
           ) : null}
           <ThreadList threads={roomThreads} verbs={verbs} />
           <ThreadComposer
@@ -179,7 +179,7 @@ function DocumentCard({
       <div className="room-doc">
         <div>
           <p className="board-doc-title">{doc.title}</p>
-          <p className="t-small">{doc.meta}</p>
+          <p className="t-caption">{doc.meta}</p>
           {doc.status ? (
             <div className="board-doc-status">{doc.status}</div>
           ) : null}
@@ -188,7 +188,7 @@ function DocumentCard({
       </div>
       {threads.length > 0 ? (
         <div className="board-doc-threads">
-          <span className="t-small board-doc-threads-head">
+          <span className="t-caption board-doc-threads-head">
             <MessageSquare aria-hidden />
             {plural("threads.aboutThis", threads.length, {
               count: formatNumber(threads.length, locale),
@@ -266,7 +266,7 @@ function ThreadRow({
               comment.author.side === "buyer" ? "thread-buyer" : "thread-seller"
             }
           >
-            <span className="t-small thread-author">
+            <span className="t-caption thread-author">
               {comment.author.name} ·{" "}
               {t(
                 comment.author.side === "buyer"
@@ -323,7 +323,7 @@ function ThreadRow({
           </div>
         </div>
       ) : null}
-      {error ? <p className="t-small t-danger">{error}</p> : null}
+      {error ? <p className="t-caption t-danger">{error}</p> : null}
     </div>
   );
 }
@@ -367,7 +367,7 @@ function ThreadComposer({
     return (
       <>
         {collapsible ? null : (
-          <p className="t-small t-danger" id={REFUSAL_ID}>
+          <p className="t-caption t-danger" id={REFUSAL_ID}>
             {verbs.refusal}
           </p>
         )}
@@ -450,7 +450,7 @@ function ThreadComposer({
           </Button>
         ) : null}
       </div>
-      {error ? <p className="t-small t-danger">{error}</p> : null}
+      {error ? <p className="t-caption t-danger">{error}</p> : null}
     </div>
   );
 }

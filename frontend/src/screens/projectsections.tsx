@@ -169,7 +169,7 @@ function TransitionRow({
               phase: phaseWord(transition.to_phase, t),
             })}
       </span>
-      <span className="project-row-meta">
+      <span className="project-row-meta t-caption">
         <span>{formatDateTime(transition.changed_at, locale, recordZone)}</span>
         <span>
           {transition.changed_by.display_name ?? t("project.history.bySystem")}
@@ -221,7 +221,7 @@ function ProjectDealRow({
       >
         {deal.name}
       </button>
-      <span className="project-row-meta">
+      <span className="project-row-meta t-caption">
         <Badge tone={deal.status === "won" ? "success" : undefined} quiet>
           {deal.status}
         </Badge>
@@ -311,7 +311,7 @@ function StakeholderRow({
   return (
     <PanelRow className="project-row">
       <EntityRef kind="person" id={seat.person_id} name={seat.person_name} />
-      <span className="project-row-meta">
+      <span className="project-row-meta t-caption">
         {seat.role && <Badge quiet>{projectRoleLabel(seat.role, t)}</Badge>}
         {writable && (
           <RemoveProjectStakeholder
@@ -363,7 +363,7 @@ function ContractRow({
   return (
     <PanelRow className="project-row">
       <span>{contract.title}</span>
-      <span className="project-row-meta">
+      <span className="project-row-meta t-caption">
         <Badge quiet>{contract.status}</Badge>
         <span className="t-mono">
           {formatMoneyOrAbsent(contract.value_minor, contract.currency, locale)}
@@ -421,7 +421,7 @@ function DocumentRow({
       >
         {doc.title || doc.filename}
       </a>
-      <span className="project-row-meta">
+      <span className="project-row-meta t-caption">
         {doc.byte_size != null && (
           <span className="t-mono">{formatBytes(doc.byte_size, locale)}</span>
         )}
@@ -472,7 +472,7 @@ function CommitmentRow({
   return (
     <PanelRow className="project-row">
       <span>{commitment.subject}</span>
-      <span className="project-row-meta">
+      <span className="project-row-meta t-caption">
         {/* A due date is a personal deadline, read in the reader's own zone
             exactly as the tasks screen reads it. */}
         {commitment.due_at && (

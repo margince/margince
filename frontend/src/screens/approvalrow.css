@@ -33,8 +33,6 @@
    the reader opened onto `deal_id` instead. */
 .approval-detail-lead {
   margin-bottom: var(--space-2);
-  color: var(--textContent);
-  font-size: var(--fs-body);
   line-height: var(--lh-relaxed);
 }
 
@@ -42,7 +40,5 @@
    prose, unlike the wire values under Technical details, which stay mono
    because a uuid IS machine output and should look like it. */
 .approval-detail-value {
-  color: var(--textContent);
-  font-size: var(--fs-body);
   overflow-wrap: anywhere;
 }

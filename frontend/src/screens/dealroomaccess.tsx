@@ -153,7 +153,7 @@ function ReadingSoFar({ participant }: Readonly<{ participant: Participant }>) {
   }
   const titles = participant.documents_downloaded ?? [];
   return (
-    <p className="t-small access-row-facts">
+    <p className="t-caption access-row-facts">
       {t("access.downloads", { count: formatNumber(downloads, locale) })}
       {titles.length > 0 ? ` · ${titles.join(", ")}` : ""}
     </p>
@@ -180,12 +180,12 @@ function ParticipantRow({
       <div className="access-row-main">
         <p>
           {participant.full_name}
-          <span className="t-small access-row-email">
+          <span className="t-caption access-row-email">
             {" "}
             · {participant.email}
           </span>
         </p>
-        <p className="t-small access-row-facts">
+        <p className="t-caption access-row-facts">
           {t(CAPABILITY_LABELS[participant.capability])}
           {" · "}
           {revoked
@@ -199,7 +199,7 @@ function ParticipantRow({
         </p>
         <ReadingSoFar participant={participant} />
         {participant.link_requested_at && !revoked ? (
-          <p className="t-small access-row-request">
+          <p className="t-caption access-row-request">
             <Link2 aria-hidden />
             {t("access.linkRequested", {
               when: formatDateAbbrev(
@@ -297,12 +297,12 @@ function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
             : t("access.issued.copy")}
         </Button>
         {copied === "failed" ? (
-          <span className="t-small t-danger">
+          <span className="t-caption t-danger">
             {t("access.issued.copyFailed")}
           </span>
         ) : null}
       </div>
-      <p className="t-small">{t("access.issued.oneTime")}</p>
+      <p className="t-caption">{t("access.issued.oneTime")}</p>
     </div>
   );
 }
@@ -410,7 +410,7 @@ function InviteDialog({
               description: t(CAPABILITY_HINTS[c]),
             }))}
           />
-          <p className="t-small">{t("access.inviteNote")}</p>
+          <p className="t-caption">{t("access.inviteNote")}</p>
         </div>
       )}
     </ConfirmModal>
@@ -522,7 +522,7 @@ function RevokeDialog({
           ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, recordZone) })}`
           : ` · ${t("access.neverSignedIn")}`}
       </p>
-      <p className="t-small">{t("access.revokeBody")}</p>
+      <p className="t-caption">{t("access.revokeBody")}</p>
     </ConfirmModal>
   );
 }

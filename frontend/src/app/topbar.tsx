@@ -114,7 +114,7 @@ function TopBarSearch({
     <div className="topbar-searchslot">
       <button
         type="button"
-        className="topbar-search"
+        className="topbar-search t-sub"
         aria-label={label}
         onClick={onOpenSearch}
       >

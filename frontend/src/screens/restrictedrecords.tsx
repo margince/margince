@@ -145,7 +145,7 @@ function OverrideModal({
       pending={decide.isPending}
       error={decide.error ? problemMessageOf(decide.error, t) : null}
     >
-      <p className="t-small">{t(`restricted.${kind}.body`)}</p>
+      <p className="t-caption">{t(`restricted.${kind}.body`)}</p>
       <Field
         label={t("restricted.reasonLabel")}
         hint={t("restricted.reasonHint")}

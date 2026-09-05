@@ -178,7 +178,7 @@ function CandidateBanner({
           n: identifierNumber(candidate.profile_version),
         })}
       </b>
-      <p className="t-small">{t("voice.candidate.whatItIs")}</p>
+      <p className="t-caption">{t("voice.candidate.whatItIs")}</p>
       {/* The decision this card asks for cannot be taken without the thing it
           is about. It used to show a title, the evaluator's raw sentences and
           two buttons — so "Use this version" meant approving writing the
@@ -193,7 +193,7 @@ function CandidateBanner({
       </Disclosure>
       {candidate.review_reasons.length > 0 && (
         <>
-          <p className="t-small vdna-label">
+          <p className="t-caption vdna-label">
             {t("voice.candidate.concernsLabel")}
           </p>
           <ul className="vdna-reasons">
@@ -203,9 +203,9 @@ function CandidateBanner({
           </ul>
         </>
       )}
-      <p className="t-small">{t("voice.candidate.applyHint")}</p>
+      <p className="t-caption">{t("voice.candidate.applyHint")}</p>
       {error && (
-        <p className="t-small" role="alert">
+        <p className="t-caption" role="alert">
           {error}
         </p>
       )}
@@ -325,7 +325,7 @@ export function VoiceHistory({
       </QueryGate>
       <QueryGate query={learning} pendingLabel={t("voice.history.label")}>
         {(summary) => (
-          <p className="t-small vdna-learning">
+          <p className="t-caption vdna-learning">
             {t("voice.history.learning", {
               drafted: formatNumber(summary.drafted, locale),
               edited: formatNumber(summary.edited_sent, locale),
@@ -370,7 +370,7 @@ export function VoiceChangeLog({ profileId }: Readonly<{ profileId: string }>) {
     <QueryGate query={deltas} pendingLabel={t("voice.history.label")}>
       {(page) =>
         allDeltas.length === 0 ? (
-          <p className="t-small">{t("voice.history.deltasEmpty")}</p>
+          <p className="t-caption">{t("voice.history.deltasEmpty")}</p>
         ) : (
           <div>
             <ul className="vdna-list">
@@ -471,7 +471,7 @@ function VersionRow({
         </button>
       )}
       {error && (
-        <span className="t-small" role="alert">
+        <span className="t-caption" role="alert">
           {error}
         </span>
       )}

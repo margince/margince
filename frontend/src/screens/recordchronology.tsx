@@ -359,7 +359,7 @@ export function ChronologyFooter({
   return (
     <>
       {chronology.truncated && (
-        <p className="t-small">
+        <p className="t-caption">
           {t(
             filter === "activities"
               ? "chronology.truncatedActivities"

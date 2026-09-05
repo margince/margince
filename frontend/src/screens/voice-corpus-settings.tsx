@@ -106,14 +106,14 @@ export function VoiceCorpusIntake({
             )}
             <WhatTeachesTheVoice />
             {first && (
-              <p className="t-small vdna-floornote">
+              <p className="t-caption vdna-floornote">
                 {t("settings.voice.floorNote", {
                   min: formatNumber(VOICE_MIN_WORDS, locale),
                 })}
               </p>
             )}
             <Disclosure summary={t("settings.voice.whyToggle")}>
-              <p className="t-small">{t("settings.voice.whyBody")}</p>
+              <p className="t-caption">{t("settings.voice.whyBody")}</p>
             </Disclosure>
           </div>
         )}
@@ -129,13 +129,13 @@ function WhatTeachesTheVoice() {
   const t = useT();
   return (
     <div className="vdna-works">
-      <p className="t-small vdna-label">{t("settings.voice.worksTitle")}</p>
-      <ul className="t-small vdna-works-list">
+      <p className="t-caption vdna-label">{t("settings.voice.worksTitle")}</p>
+      <ul className="t-caption vdna-works-list">
         <li>{t("settings.voice.worksEmails")}</li>
         <li>{t("settings.voice.worksDocs")}</li>
         <li>{t("settings.voice.worksTranscripts")}</li>
       </ul>
-      <p className="t-small vdna-works-not">{t("settings.voice.worksNot")}</p>
+      <p className="t-caption vdna-works-not">{t("settings.voice.worksNot")}</p>
     </div>
   );
 }
@@ -159,7 +159,7 @@ function SpeakerPanel({
       <legend className="vdna-label">
         {t("settings.voice.speakerQuestion", { name: ask.label })}
       </legend>
-      <p className="t-small">{t("settings.voice.speakerWhy")}</p>
+      <p className="t-caption">{t("settings.voice.speakerWhy")}</p>
       <ul className="vdna-speaker-options">
         {ask.preview.speakers.map((speaker) => (
           <li key={speaker.label}>
@@ -251,7 +251,7 @@ function NoticeRow({ notice }: Readonly<{ notice: IntakeNotice }>) {
   const { locale } = useLocale();
   return (
     <li
-      className={`t-small vdna-notice vdna-notice-${notice.tone}`}
+      className={`t-caption vdna-notice vdna-notice-${notice.tone}`}
       role={notice.tone === "warn" ? "alert" : undefined}
     >
       {noticeText(t, notice, locale)}

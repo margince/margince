@@ -191,7 +191,7 @@ export function OwnDomainsCard() {
           />
         </SettingList>
         {!canManage && (
-          <p className="t-small" id={denialId}>
+          <p className="t-caption" id={denialId}>
             {t("captureSettings.adminOnly")}
           </p>
         )}

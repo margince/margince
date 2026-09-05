@@ -525,7 +525,9 @@ export function CommandPalette({
               key={command.id}
               type="button"
               className={
-                index === selected ? "palette-row selected" : "palette-row"
+                index === selected
+                  ? "palette-row t-body selected"
+                  : "palette-row t-body"
               }
               onClick={() => run(command)}
               ref={(element) => {
@@ -541,7 +543,7 @@ export function CommandPalette({
               )}
               <span className="label">{command.label}</span>
               {command.subtitle && (
-                <span className="sub">{command.subtitle}</span>
+                <span className="sub t-caption">{command.subtitle}</span>
               )}
               <span className="type">{t(TYPE_KEY[command.type])}</span>
             </button>

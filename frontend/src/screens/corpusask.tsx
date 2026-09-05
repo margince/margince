@@ -212,7 +212,7 @@ function AnswerView({ answer }: Readonly<{ answer: Answer }>) {
                 honest: the grounded part of a grounded answer was never the
                 prose. */}
             {claim.text ? <p>{claim.text}</p> : null}
-            <blockquote className="t-small">{claim.quote}</blockquote>
+            <blockquote className="t-caption">{claim.quote}</blockquote>
             {/* The file itself, downloadable, beside where in it the quote
                 sits. A citation nobody can follow is a citation in name only —
                 the reader has the sentence and the quote, and this is what lets

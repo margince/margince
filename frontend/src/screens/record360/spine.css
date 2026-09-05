@@ -67,9 +67,7 @@
   align-items: flex-end;
   min-block-size: var(--space-6);
   padding-block-end: var(--space-1);
-  font-size: var(--fs-meta);
   line-height: 1;
-  color: var(--textMeta);
   white-space: nowrap;
 }
 
@@ -122,10 +120,8 @@
 
 .co-spine-detail {
   display: block;
-  font-size: var(--fs-meta);
   line-height: 1.45;
   margin-block-start: var(--space-1);
-  color: var(--textMeta);
   text-wrap: pretty;
   overflow-wrap: anywhere;
 }

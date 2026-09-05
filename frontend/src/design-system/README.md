@@ -65,7 +65,14 @@ label depending on which sheet drew it.
 
 `design-system/type.test.ts` holds all of it, reads an inline `fontSize` in a
 component as well as a stylesheet's, and derives the canon from `tokens.css` so
-the gate cannot become a second copy of the ramp. Two waivers live in the tree
+the gate cannot become a second copy of the ramp.
+
+The ramp names sizes; `base.css` names ROLES on top of it — `.t-caption`,
+`.t-sub`, `.t-label`, `.t-eyebrow`, `.t-h3` — and a screen that wants one wears
+the class. A rule that writes the utility's properties out again under its own
+name (135 did, every one of them reading the right token) is a copy that stops
+moving when the utility does; `type-one-spelling.test.ts` fails it, reading the
+utilities from `base.css` rather than restating them. Two waivers live in the tree
 and both are a PLATFORM fact rather than a design choice — iOS zooms the
 viewport on any field under 16px, and the RBAC mask glyph's dot gap is a picture
 rather than a label's tracking. Spell one as
@@ -429,7 +436,7 @@ where one fact refuses all of them. And `FieldGuard` covers a withheld VALUE
 rather than a withheld surface. What is left hands the sentence straight to
 `EmptyState` — `<EmptyState>{t(…)}</EmptyState>` — which is the shape to match
 where `SurfaceState` does not fit. **The sentence carries no wrapper and no type
-class of its own**: the plate declares both, and a `t-small` or `t-caption`
+class of its own**: the plate declares both, and a `t-caption` or `t-sub`
 inside it overrides the primitive from the call site — which is how one screen
 came to say "there is none" at 12px while the card beside it said the same thing
 at 14px, and thirty-one call sites drew that sentence a step smaller than the
@@ -505,11 +512,12 @@ the shell script it replaced could not.
 | `frontend/scripts/check-font-lock.sh` | A fourth type family |
 | `frontend/scripts/check-icon-glyph.sh` | An emoji glyph in a source string — Lucide only |
 | `frontend/scripts/check-ds-spacing.sh` | New raw-px margin/padding/gap outside this tier (diff-scoped) |
-| `frontend/scripts/check-ds-spacing-roles.sh` | Screen CSS that re-spaces a class this tier both spaces and declares on its own, or that spells a rung where a role exists — `*-actions` gap, `*-cards` gap, `*-card`/`*-panel` padding. Whole-tree; the corpus is derived from this tier on every run, so a primitive added here is protected the day it exists |
+| `frontend/scripts/check-ds-spacing-roles.sh` | Screen CSS that re-spaces a class this tier both spaces and declares on its own, or re-sizes one it sizes (`font-size`, `line-height`, `letter-spacing`), or that spells a rung where a role exists — `*-actions` gap, `*-cards` gap, `*-card`/`*-panel` padding. Whole-tree; the corpus is derived from this tier on every run, so a primitive added here is protected the day it exists |
 | `design-system/conformance.test.ts` | Hard-coded user-facing copy, the same colour and font rules, one stylesheet per class namespace; a reduced-motion rule a later plain rule of equal specificity beats; an infinite animation with no reduced-motion answer; a second home for the pending announcement or the placeholder pulse; a focus ring that spells its own width and colour |
 | `design-system/actionrow.test.ts` | A container of two or more sibling buttons that does not get `gap: var(--gapActions)` — from a class it names or its own inline style. It reads the markup and the stylesheets together, so it catches the one thing a CSS gate cannot: a row naming a class nothing defines |
 | `design-system/tokens.test.ts` | A token whose value drifted from the design canon |
 | `design-system/type.test.ts` | A `font-size` or inline `fontSize` that names a length instead of a rung of the ramp, including a `clamp()` with a raw end (waivable in line, with a reason — the two live waivers are the iOS 16px field floor and the mask glyph's dot gap); a `letter-spacing` outside the three-token tracking family; a ramp whose rungs do not ascend, or whose two rungs share a size |
+| `design-system/type-one-spelling.test.ts` | A screen or app-chrome rule whose own declarations say everything a `.t-*` utility says — `font-size: var(--fs-meta); color: var(--textMeta)` is `.t-caption` under any name — instead of the element carrying the class; the utilities are read from `base.css`. And a per-sheet ratchet on rules drawing uppercase micro-type by hand. Waived on the `font-size` line, with a reason |
 | `design-system/corners.test.ts` | A `border-radius` that names a length instead of a rung of the ladder (waivable in line, with a reason); a `--r-full` or `50%` corner that does not cancel the squircle with `corner-shape: round`; a second `corner-shape: squircle` outside `tokens.css`; a rung that is not a multiple of four, or has no doubled twin in the `@supports` block |
 | `design-system/catalog.test.ts` | A component in this directory that this table never names; a row claiming a story of its own where no story file exists; a story anywhere under `src/` filed under a root the sidebar table above does not document |
 | `e2e/` (axe) | WCAG 2.2 AA on every core screen, plus the 390px no-horizontal-scroll sweep |

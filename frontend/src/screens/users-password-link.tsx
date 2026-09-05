@@ -120,7 +120,7 @@ export function PasswordLinkModal({
       <h2 id={headingId} className="t-h3 modal-title">
         {t("users.link.title", { name: memberName })}
       </h2>
-      {pending && <p className="t-small">{t("users.link.pending")}</p>}
+      {pending && <p className="t-caption">{t("users.link.pending")}</p>}
       {/* `danger`: the credential does not exist. The same vocabulary the
           roster and the invite form now use for a refused write, rather than a
           paragraph tinted by hand — the tint WAS the claim, spelled in an
@@ -137,7 +137,7 @@ export function PasswordLinkModal({
       )}
       {link && !pending && (
         <>
-          <p className="t-small">{t("users.link.body")}</p>
+          <p className="t-caption">{t("users.link.body")}</p>
           <CopyableLink url={link.url} />
           <Expiry iso={link.expiresAt} />
         </>

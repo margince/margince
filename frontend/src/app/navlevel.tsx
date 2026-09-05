@@ -221,7 +221,7 @@ function NavLevelRow({
   );
   return (
     <a
-      className={active ? "navitem active" : "navitem"}
+      className={active ? "navitem t-body active" : "navitem t-body"}
       href={navEntryHref(level.path, entry)}
       aria-label={label}
       aria-current={active ? (level.ancestor ? "true" : "page") : undefined}
@@ -335,7 +335,7 @@ function NavLevelBack({
   return (
     <button
       type="button"
-      className="navitem navback"
+      className="navitem navback t-body"
       aria-label={label}
       onClick={onWalkUp}
       onPointerEnter={hover.onPointerEnter}

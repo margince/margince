@@ -80,7 +80,7 @@ export function PersonAccess({ person }: Readonly<{ person: Person }>) {
             )
           }
         />
-        <p className="t-small">
+        <p className="t-caption">
           {isPrivate
             ? t("personAccess.privateToYou")
             : t("personAccess.organization")}

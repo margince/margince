@@ -237,7 +237,11 @@ Three families, which is the ceiling `check-font-lock.sh` holds.
   a pixel off a rung is a decision nobody made, and the tree carried 25 of
   them. `design-system/type.test.ts` fails a tenth value, and a genuine
   platform floor (iOS zooms a field under 16px) is waived in line with its
-  reason.
+  reason. A role that has a class is spelled as the class: `.t-caption` is
+  quiet grey at the meta size, `.t-sub` the same at the dense size, `.t-label`,
+  `.t-eyebrow`, `.t-h3` and the rest, all in `base.css`. A rule that writes a
+  utility's properties out again under a name of its own stops moving when the
+  utility does, and `design-system/type-one-spelling.test.ts` fails it.
 - **Tracking is a family of three.** `--tracking-eyebrow` 0.08em on an
   uppercase label, `--tracking-display` -0.03em on the display face,
   `--tracking-normal` everywhere else. The eyebrow ran 0.02em to 0.14em across
