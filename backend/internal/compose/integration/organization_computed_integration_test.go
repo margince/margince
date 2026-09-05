@@ -36,20 +36,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// freezeDealFX sets fx_rate_to_base = 1 (identity conversion — every
-// fixture in this suite deals in the workspace's own EUR base currency)
-// directly through the owner connection: the one state no application
-// write path reaches for an OPEN deal, so amount_minor_base (0065's
-// GENERATED column) becomes a real, non-NULL figure for these tests to
-// sum.
-func freezeDealFX(t *testing.T, owner *pgx.Conn, dealID ids.UUID) {
-	t.Helper()
-	if _, err := owner.Exec(context.Background(),
-		`UPDATE deal SET fx_rate_to_base = 1 WHERE id = $1`, dealID); err != nil {
-		t.Fatal(err)
-	}
-}
-
 // directOpenPipelineRead is the test's own ground truth: the exact
 // query organization_computed.go's openPipelineRollup runs, executed
 // independently here so the assertions below prove the store's
@@ -169,27 +155,25 @@ var computedFieldNoGrantPerms = principal.Permissions{
 // rows must carry their exact honest reasons.
 func TestOrganizationComputed_GatedVisible_RealValueMatchesDirectViewRead(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	orgID := e.SeedOrg(t, "Acme Corp", nil)
 
-	d1, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+	// The two deals are EUR against a EUR base, so the rollup view converts
+	// them by the same-currency shortcut and needs no rate loaded.
+	_, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "D1", AmountMinor: int64Ptr(100000), Currency: strPtr("EUR"),
 		PipelineID: pipeline, StageID: open, OrganizationID: orgIDPtr(orgIDOf(orgID)), Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	d2, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+	_, err = e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "D2", AmountMinor: int64Ptr(250000), Currency: strPtr("EUR"),
 		PipelineID: pipeline, StageID: open, OrganizationID: orgIDPtr(orgIDOf(orgID)), Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	freezeDealFX(t, owner, ids.UUID(d1.Id))
-	freezeDealFX(t, owner, ids.UUID(d2.Id))
-
 	wantMinor, wantCount, found := directOpenPipelineRead(e.Admin(), t, e, orgID)
 	if !found || wantMinor == nil || *wantMinor != 350000 || wantCount != 2 {
 		t.Fatalf("test fixture: direct view read = %v/%d/%v, want 350000/2/true", wantMinor, wantCount, found)

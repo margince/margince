@@ -315,10 +315,13 @@ func exportColumnSQL(table, column string, arg func(any) int) string {
 		privacy.UnscrubbedImageSQL("t", fmt.Sprintf("$%d", arg(privacy.ScrubVerbs()))), column, column)
 }
 
-// exportableColumns lists a table's persisted columns in definition
-// order, excluding generated columns (the tsvector search indexes) — the
-// single source of truth is the live schema, so the export can never
-// drift from the tables it dumps.
+// exportableColumns lists a table's persisted columns in definition order,
+// excluding generated ones — today the tsvector search indexes, which are a
+// derived form of text the export already carries in full. The single source of
+// truth is the live schema, so the export can never drift from the tables it
+// dumps, and a column that stops being generated joins the bundle by itself.
+// That is the intent: a figure the product stores about a record is a figure
+// the record's subject may read.
 func exportableColumns(ctx context.Context, tx pgx.Tx, table string) ([]string, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT column_name FROM information_schema.columns

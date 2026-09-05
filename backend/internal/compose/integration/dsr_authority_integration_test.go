@@ -35,9 +35,12 @@ func TestSubjectRequestQueueIsTheAdminsAlone(t *testing.T) {
 		t.Fatalf("seeding a request the queue can hide: %v", err)
 	}
 
-	// Both hold row scope `all`, and ops carries the admin object grid, so
-	// neither is refused for want of a grant — the role is what turns them
-	// away, which is the whole point.
+	// Both hold row scope `all`, so an unbounded scope is not what refuses them.
+	// The queue moved off a compound person+admin gate onto privacy_request,
+	// which the seed gives admin alone, and OpsPerms mirrors production by
+	// carrying the admin grid minus that governance set. The GRANT is what turns
+	// them away — a subject request is raised against the installation, so the
+	// party who answers it cannot be the party who operates it.
 	for _, unbounded := range []principal.Permissions{OpsPerms, ReadOnlyPerms} {
 		ctx := e.As(ids.NewV7(), []ids.UUID{e.Team1}, unbounded)
 		if _, _, err := store.ListDSRs(ctx, nil, "", ""); !errors.Is(err, apperrors.ErrPermissionDenied) {

@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { useRecordZone } from "../../app/recordzone";
 import { routeHash } from "../../app/router";
-import { Avatar, Button } from "../../design-system/atoms";
+import { Avatar, Button, Disclosure } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelGroupHead } from "../../design-system/panel";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
-import { formatNumber } from "../../format/format";
+import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { CommercialPanel, recordNamesIn } from "../company360";
 import { CompanyContractState } from "../companycommercial";
 import { CompanyProjects } from "../companyprojects";
 import { peopleSlice } from "../companyrailshared";
-import { CompanyRecentList } from "../companyrecent";
+import { activityHeadline, CompanyRecentList } from "../companyrecent";
 import type { CompanyTab } from "../companytab";
 import { CompanyWorkCard } from "../companywork";
 import "./glance.css";
@@ -28,12 +29,27 @@ const THREAD_LIMIT = 6;
 const CHIP_LIMIT = 3;
 
 /**
- * The thread folded inside the 360: "Read the thread · N" opens the most
- * recent exchanges under the spine, and "Full history" is the History tab.
+ * The thread folded inside the 360: what happened lately, teased on one row
+ * that opens it, with "Full history" beside for the History tab.
+ *
+ * CLOSED on arrival. It was open once, on the reasoning that the thread is
+ * what the call above it was read FROM — true, but it cost the reading its
+ * whole lower half before a reader had asked for anything, and the 360 exists
+ * to be taken in at a glance. So the row teases instead: it names the section,
+ * says how much is in it, and shows the newest exchange, which is the part a
+ * reader wanted the thread for in the first place. A control that says only
+ * "show" makes them open it to find out whether it was worth opening.
+ *
+ * The whole row is the control — it is a `Disclosure`, whose `<summary>` is
+ * the toggle — so the label, the count and the teaser are all pressable rather
+ * than a button sitting beside them. "Full history" goes in `action`, OUTSIDE
+ * the summary, because a control inside a control both fails
+ * `nested-interactive` and would fold the section it was meant to leave.
  *
  * It asks `sectionState` the same question the chronicle does, so a section
  * this reader may not see says so when opened rather than reading as an
- * account nobody has written to.
+ * account nobody has written to — and teases nothing, because there is nothing
+ * it may honestly promise.
  */
 export function ThreadFold({
   view,
@@ -51,11 +67,7 @@ export function ThreadFold({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  // Open on arrival. The thread is what the call above it was read FROM, so a
-  // reader who has just been told the account is waiting on them wants the
-  // last few exchanges in the same look — not behind a control that says how
-  // many there are and shows none of them.
-  const [open, setOpen] = useState(true);
+  const zone = useRecordZone();
   const logged = view?.activities?.data ?? [];
   const state = sectionState(
     view,
@@ -65,45 +77,58 @@ export function ThreadFold({
     loading,
   );
   const shown = Math.min(logged.length, THREAD_LIMIT);
+  // The newest exchange, in the words its own row will use once the fold
+  // opens. Only when the section is READY: a teaser drawn from a withheld or
+  // half-read section would state a fact the list under it then refuses.
+  const newest = state === "ready" ? logged[0] : undefined;
   return (
-    <>
-      {open &&
-        (state === "ready" ? (
+    <PanelBody>
+      <Disclosure
+        className="co-thread-fold"
+        summary={
+          <>
+            <span className="co-thread-name">
+              {shown > 0
+                ? t("co.360.threadCount", {
+                    count: formatNumber(shown, locale),
+                  })
+                : t("co.360.thread")}
+            </span>
+            {newest && (
+              <span className="co-thread-teaser">
+                {activityHeadline(newest, t)}
+                {" · "}
+                {formatDateAbbrev(newest.occurred_at, locale, zone)}
+              </span>
+            )}
+          </>
+        }
+        action={
+          onOpenHistory && (
+            <Button small variant="ghost" onClick={onOpenHistory}>
+              {t("co.360.fullHistory")}
+            </Button>
+          )
+        }
+      >
+        {state === "ready" ? (
           <CompanyRecentList
             activities={logged.slice(0, THREAD_LIMIT)}
             nameOf={recordNamesIn(view)}
             onOpenRecord={onOpenRecord}
           />
         ) : (
-          <PanelBody>
-            <SurfaceState
-              loadingLabel={t("co.recent.title")}
-              state={state}
-              emptyLabel={t("co.recent.empty")}
-              emptyDetail={t("co.recent.emptyDetail")}
-            >
-              {null}
-            </SurfaceState>
-          </PanelBody>
-        ))}
-      <PanelBody className="co-360-foot">
-        <Button
-          small
-          variant="ghost"
-          aria-expanded={open}
-          onClick={() => setOpen((current) => !current)}
-        >
-          {open
-            ? t("co.360.hideThread")
-            : t("co.360.readThread", { count: formatNumber(shown, locale) })}
-        </Button>
-        {onOpenHistory && (
-          <Button small variant="ghost" onClick={onOpenHistory}>
-            {t("co.360.fullHistory")}
-          </Button>
+          <SurfaceState
+            loadingLabel={t("co.recent.title")}
+            state={state}
+            emptyLabel={t("co.recent.empty")}
+            emptyDetail={t("co.recent.emptyDetail")}
+          >
+            {null}
+          </SurfaceState>
         )}
-      </PanelBody>
-    </>
+      </Disclosure>
+    </PanelBody>
   );
 }
 

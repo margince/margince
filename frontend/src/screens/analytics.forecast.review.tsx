@@ -156,10 +156,31 @@ function CoverageLine({ run }: Readonly<{ run: Assurance }>) {
   return (
     <p className="sub">
       {t("review.sourcesUnread", {
-        sources: unread.map((source) => source.source).join(", "),
+        sources: unread
+          .map((source) => sourceName(source.source, t))
+          .join(", "),
       })}
     </p>
   );
+}
+
+// A source's name in the reader's language.
+//
+// The wire carries the server's own vocabulary — "mail", "offers" — and the
+// line printed it verbatim, so a German reader was told which sources went
+// unread in English, in words that name a table rather than a thing they
+// recognise. An unknown source falls back to its wire key: a source this
+// release has not heard of is better named badly than not named at all, since
+// the whole point of the line is which one to go and fix.
+function sourceName(source: string, t: ReturnType<typeof useT>): string {
+  switch (source) {
+    case "mail":
+      return t("review.source.mail");
+    case "offers":
+      return t("review.source.offers");
+    default:
+      return source;
+  }
 }
 
 // One finding, and the way to answer it.

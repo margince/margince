@@ -9002,6 +9002,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/{id}/consent/suppress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record that this person asked us to stop writing to them.
+         * @description Writes a suppression, which is NOT the absence of consent. It outranks a grant, it does
+         *     not expire on its own, and a later re-grant does not erase it — so a subject who asked us
+         *     to stop stays stopped until somebody with the authority to lift it says otherwise.
+         *
+         *     **Who may lift it is part of the record.** The row carries the authority of whoever wrote
+         *     it, taken from the session and never from this body. A rep's row is liftable by an admin
+         *     and not by another rep; nothing an installation can do lifts the subject's own Art. 21
+         *     objection, which is a different kind this door cannot write.
+         *
+         *     The only kind recordable here is `subject_request`. An objection and a processing
+         *     restriction carry legal consequences a relayed phone call does not establish, and a hard
+         *     bounce is a fact about a mailbox only the mail path observes.
+         */
+        post: operations["suppressPerson"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{id}/consent/double-opt-in": {
         parameters: {
             query?: never;
@@ -24280,10 +24314,10 @@ export interface components {
         };
         AnalyticsMeasure: {
             /**
-             * @description The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.
+             * @description The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population. `median` and `p75` answer null below a five-value sample floor: a percentile over three deals is one deal's value wearing a statistic's name, and the count beside the blank still says how many there were.
              * @enum {string}
              */
-            fn: "count" | "count_distinct" | "sum" | "avg" | "min" | "max";
+            fn: "count" | "count_distinct" | "sum" | "avg" | "min" | "max" | "median" | "p75";
             /** @description What to aggregate. Required for every fn but `count`. */
             field?: string;
             /** @description The caller's name for the result column. It never reaches the statement — results map by position — so it cannot carry anything into SQL. */
@@ -30373,6 +30407,53 @@ export interface components {
              */
             primary_action?: "decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge";
             verdict?: components["schemas"]["WorklistDealVerdict"];
+            /**
+             * Format: uuid
+             * @description The overnight brief entry this row also stands for, where the night
+             *     surfaced the same deal the day's own lanes did.
+             *
+             *     One deal is ONE row. The brief ranks deals and the at-risk lane raises
+             *     them, so a deal the night picked and the day also found arrived twice —
+             *     the same name, the same figures, two places to answer it. The rows are
+             *     folded into one, and this carries the brief entry's id so the verbs that
+             *     belong to the brief (`/brief/items/{id}/act`, and its set-aside and
+             *     dismiss) still reach it. Absent on a row the night did not raise.
+             */
+            brief_item_id?: string;
+            /**
+             * @description Which part of the morning this row belongs to, as a LABEL and never as an
+             *     order.
+             *
+             *     The server has already ranked the page, and this says nothing about where a
+             *     row sits. A client may draw the label, and may group runs of consecutive
+             *     rows that share it — but partitioning the page by this field and
+             *     concatenating the parts would be a second ranking, and the two would
+             *     disagree the first time a `respond_now` row ranked below a `move_revenue`
+             *     one, which is ordinary and correct.
+             *
+             *     Derived on the server from the row's own category, source and band, so
+             *     every surface reads one answer. Exhaustive over the categories:
+             *     `backend/internal/compose/attention/briefsections.go` names every one, and
+             *     a gate derives that census from the generated contract.
+             * @enum {string}
+             */
+            brief_section?: "respond_now" | "prepare_conversations" | "move_revenue" | "build_pipeline" | "review_and_repair";
+            /**
+             * @description Whether the thing this row reports happened AFTER the overnight run's data
+             *     cutoff — the run's `as_of`, not its `generated_at`, which is only when the
+             *     row was written.
+             *
+             *     The distinction is the whole of this field's value: a run generated at 06:42
+             *     over data read at 06:00 has a 42-minute window in which a buyer can reply,
+             *     and comparing against the wrong instant either hides that reply or reports
+             *     every row as new. Stamped from the material timestamp each producer already
+             *     owns rather than from one generic `occurred_at`, so the browser never guesses
+             *     freshness.
+             *
+             *     Absent when there is no run today to compare against, which is different from
+             *     false: false says the night saw this, absent says there was no night.
+             */
+            changed_since_brief?: boolean;
         };
         /**
          * @description How the deal behind a row is STANDING, beside the move that acts on it.
@@ -30471,7 +30552,7 @@ export interface components {
              *     when the two rows share a level.
              * @enum {string}
              */
-            comparator: "pin" | "crowded" | "level" | "deadline" | "expected_revenue" | "waiting_days" | "relationship" | "order";
+            comparator: "pin" | "crowded" | "level" | "deadline" | "expected_revenue" | "opportunity" | "waiting_days" | "relationship" | "order";
             mine?: components["schemas"]["WorklistValue"];
             theirs?: components["schemas"]["WorklistValue"];
         };
@@ -30482,7 +30563,7 @@ export interface components {
          */
         WorklistValue: {
             /** @enum {string} */
-            kind: "date" | "money" | "days" | "level" | "none";
+            kind: "date" | "money" | "days" | "level" | "score" | "none";
             /** Format: date-time */
             date?: string;
             /**
@@ -30493,6 +30574,16 @@ export interface components {
             currency?: string;
             days?: number;
             level?: number;
+            /**
+             * @description A ranking judgement between 0 and 1 — today, the overnight brief's composite
+             *     for a deal.
+             *
+             *     Drawn as a BAND rather than as a number. The value orders the queue, and a
+             *     client printing "0.72 against 0.68" would be offering a precision the score
+             *     does not carry and a reader cannot check; the same two rows read honestly as
+             *     "the night rated this one higher".
+             */
+            score?: number;
         };
         /**
          * @description The next step this row suggests, and what it would act on.
@@ -44824,6 +44915,46 @@ export interface operations {
                     "application/json": components["schemas"]["PersonConsentState"];
                 };
             };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    suppressPerson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Which stop this is. Only the subject's own request is recordable by hand.
+                     * @enum {string}
+                     */
+                    kind: "subject_request";
+                    /**
+                     * @description What the person was told, in their words. Stored because a suppression somebody
+                     *     later asks to lift is only reviewable if the record says why it was made.
+                     */
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };

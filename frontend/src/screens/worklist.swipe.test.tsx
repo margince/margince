@@ -4,7 +4,14 @@
 /** @vitest-environment jsdom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
@@ -54,17 +61,37 @@ function atWidth(folded: boolean) {
   }));
 }
 
-function draw(dispositions: readonly WorklistDisposition[]) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(
-      async () =>
-        new Response(JSON.stringify({}), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        }),
-    ),
+// The row as worklist.row.tsx mounts it, without the fetch stub — for the tests
+// that need to control the response themselves.
+function rowUnderTest(dispositions: readonly WorklistDisposition[]) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  const item = row(dispositions);
+  return (
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <PutDownByThumb item={item}>
+            <p>Anna Weber is waiting</p>
+            <DispositionVerbs item={item} />
+          </PutDownByThumb>
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
+    </QueryClientProvider>
   );
+}
+
+function draw(dispositions: readonly WorklistDisposition[]) {
+  const fetchSpy = vi.fn(
+    async () =>
+      new Response(JSON.stringify({}), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+  );
+  vi.stubGlobal("fetch", fetchSpy);
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -80,6 +107,43 @@ function draw(dispositions: readonly WorklistDisposition[]) {
             <p>Anna Weber is waiting</p>
             <DispositionVerbs item={item} />
           </PutDownByThumb>
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  return fetchSpy;
+}
+
+// Two rows of the same shape, for the assertions that only fail on a page with
+// more than one menu in it.
+function drawRows(count: number) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    ),
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          {Array.from({ length: count }, (_, at) => {
+            const item = { ...row(EVERY_JUDGEMENT), id: `row-${at}` };
+            return (
+              <PutDownByThumb key={item.id} item={item}>
+                <p>{item.title}</p>
+                <DispositionVerbs item={item} />
+              </PutDownByThumb>
+            );
+          })}
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>
@@ -180,6 +244,88 @@ describe("putting a row down below the fold", () => {
     expect(
       screen.getByRole("button", { name: verb("not_mine") }),
     ).toBeInTheDocument();
+  });
+
+  // THE KEYBOARD PATH. A swipe is not a control a keyboard, a switch or a
+  // screen reader can operate, so a fold that left the gesture as the only
+  // route would take the three judgements away from every reader who does not
+  // point. The menu is one tab stop carrying all three — not the 44px band
+  // back, which is the height the fold removed.
+  it("offers every judgement to a keyboard below the fold", async () => {
+    const user = userEvent.setup();
+    atWidth(true);
+    // TWO rows, because one hides the defect: with a single menu the portalled
+    // panel happens to be next in document order, and a test that tabs once
+    // passes over a page where every other row's trigger comes first.
+    drawRows(2);
+
+    // Reachable by TAB, not merely present: a control a keyboard cannot land
+    // on is the gap this closes, not a fix for it.
+    await user.tab();
+    const trigger = screen.getAllByRole("button", {
+      name: en["worklist.disposition.menu"],
+    })[0];
+    expect(document.activeElement).toBe(trigger);
+
+    await user.keyboard("{Enter}");
+
+    // FOCUS IS INSIDE THE PANEL, which is the whole claim. The panel is
+    // portalled to the body, so asserting the items merely RENDER proves
+    // nothing about reaching them: a reader would Tab to the next row's
+    // trigger, then through the rest of the page, and meet these last.
+    const first = screen.getByRole("button", {
+      name: verb(EVERY_JUDGEMENT[0]),
+    });
+    expect(document.activeElement).toBe(first);
+
+    // And Tab walks the rest of them rather than leaving for the page.
+    for (const disposition of EVERY_JUDGEMENT.slice(1)) {
+      await user.tab();
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: verb(disposition) }),
+      );
+    }
+  });
+
+  // BOTH PLACEMENTS SHARE THE ROW'S ONE WRITE.
+  //
+  // The menu and the swipe are two placements of one capability. Held apart
+  // they are two mutations with two `pending` flags and neither disables the
+  // other, so a row being written from one placement looks idle to the other.
+  //
+  // The flag is what the two share, so the flag is what this reads: a write
+  // started from the GESTURE has to reach the MENU'S item. A second mutation
+  // leaves each placement reading its own, and the menu offers a fresh press
+  // over a row already going to the server.
+  it("shows the menu a write the gesture started", async () => {
+    const user = userEvent.setup();
+    atWidth(true);
+    // A write that does not settle, so `pending` is observable rather than a
+    // state the assertion races.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    render(rowUnderTest(EVERY_JUDGEMENT));
+
+    // Start a write from the gesture and confirm it.
+    swipe(...FORWARD);
+    await user.click(
+      screen.getAllByRole("button", { name: verb("snooze") })[0],
+    );
+
+    // The menu's own item now reads that write as in flight.
+    await user.click(
+      screen.getByRole("button", { name: en["worklist.disposition.menu"] }),
+    );
+    await waitFor(() => {
+      const items = screen.getAllByRole("button", { name: verb("snooze") });
+      expect(
+        items.some((one) => one.getAttribute("aria-disabled") === "true"),
+        "the menu offers a fresh press over a row already being written, so " +
+          "the two placements are not sharing one mutation",
+      ).toBe(true);
+    });
   });
 
   it("draws no gesture at all on a row the server offers nothing for", () => {

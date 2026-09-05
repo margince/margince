@@ -1425,18 +1425,28 @@
 /* A section verb sits ON the summary's line and OUTSIDE the `<summary>`, which
    is a control of its own — nesting one inside the other fails
    `nested-interactive` and makes pressing the verb toggle the section under it.
-   Absolute rather than a flex row because the `<details>` has to keep its own
-   box: the summary is what a click on the line must reach, and a sibling laid
-   out beside it would take half that line away from the toggle. */
+
+   A grid, so the verb RESERVES its width: the `<details>` takes every column
+   the verb does not, which keeps the whole line except the verb's own box as
+   the toggle, and lets a long summary end before the verb. Absolute
+   positioning kept that clickable width too, but reserved nothing — so a
+   summary wide enough simply ran underneath the verb, which is what the
+   account's thread teaser did the first time this prop had a caller.
+
+   `start` rather than `center`: an OPEN section's body is inside the details,
+   and centring against it would drift the verb down the section it labels. The
+   padding matches the details' own, which is what puts the verb on the
+   summary's line rather than above it. */
 .disclosure-wrap {
-  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--space-3);
 }
 .disclosure-action {
-  position: absolute;
-  top: var(--space-3);
-  right: 0;
   display: inline-flex;
   align-items: center;
+  padding-top: var(--space-3);
 }
 
 /* The chevron on a control that opens something which is NOT a `<details>` —

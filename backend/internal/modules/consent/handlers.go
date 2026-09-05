@@ -176,6 +176,36 @@ func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, _ crm
 			"cannot yet mail one: %w", apperrors.ErrConflict))
 }
 
+// SuppressPerson serves POST /people/{id}/consent/suppress: a person recording
+// that the subject asked us to stop writing to them.
+//
+// Wire-only. The store owns which kinds a seat may write, whose authority the
+// row carries and whether this caller may write about this subject at all —
+// the last of which must not be decided here, because a handler that probed
+// visibility itself would be a second row-scope gate beside the one the store
+// already runs.
+func (h Handlers) SuppressPerson(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.SuppressPersonJSONRequestBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	in := SuppressInput{
+		PersonID: ids.From[ids.PersonKind](ids.UUID(id)),
+		Kind:     string(req.Kind),
+	}
+	if req.Reason != nil {
+		in.Reason = *req.Reason
+	}
+	if err := h.store.Suppress(r.Context(), in); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	// 204: the row is the whole result, and echoing it back would invite a
+	// caller to read a suppression list from the write door rather than from
+	// the person's own consent view.
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // RecordQualifyingEvent serves POST /people/{id}/consent/qualifying-events: the
 // one lawful basis nothing can derive, written down by the person who was
 // there. The store owns the rules; this is wire-only.

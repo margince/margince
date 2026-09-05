@@ -43,14 +43,14 @@ type Team struct {
 // CreateTeam makes a team. A name already in use answers ErrConflict — two
 // teams with one name would be two answers to "which team is DACH Sales".
 func (s *Service) CreateTeam(ctx context.Context, actor Identity, name string) (Team, error) {
-	if !actor.hasRole(roleAdmin) {
-		return Team{}, apperrors.ErrPermissionDenied
-	}
-	name, err := validTeamName(name)
+	ctx, err := admit(ctx, actor, objectTeamAdmin, principal.ActionCreate)
 	if err != nil {
 		return Team{}, err
 	}
-	ctx = actorCtx(ctx, actor)
+	name, err = validTeamName(name)
+	if err != nil {
+		return Team{}, err
+	}
 	var out Team
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `INSERT INTO team (name) VALUES ($1) RETURNING id, name`, name).
@@ -76,8 +76,9 @@ type UpdateTeamInput struct {
 // and the memberships; an archived team stops resolving scope and shares
 // because every reader of team_membership joins a live team.
 func (s *Service) UpdateTeam(ctx context.Context, actor Identity, id ids.UUID, in UpdateTeamInput) (Team, error) {
-	if !actor.hasRole(roleAdmin) {
-		return Team{}, apperrors.ErrPermissionDenied
+	ctx, err := admit(ctx, actor, objectTeamAdmin, principal.ActionUpdate)
+	if err != nil {
+		return Team{}, err
 	}
 	var name *string
 	if in.Name != nil {
@@ -87,9 +88,8 @@ func (s *Service) UpdateTeam(ctx context.Context, actor Identity, id ids.UUID, i
 		}
 		name = &valid
 	}
-	ctx = actorCtx(ctx, actor)
 	var out Team
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var before Team
 		if err := tx.QueryRow(ctx, `SELECT id, name, archived_at FROM team WHERE id = $1 FOR UPDATE`, id).
 			Scan(&before.ID, &before.Name, &before.ArchivedAt); err != nil {
@@ -134,10 +134,10 @@ func (s *Service) UpdateTeam(ctx context.Context, actor Identity, id ids.UUID, i
 // idempotent: the state the admin asked for is the state, and a change that
 // changes nothing writes no audit noise. An agent seat holds no team.
 func (s *Service) SetTeamMember(ctx context.Context, actor Identity, teamID, userID ids.UUID, on bool) error {
-	if !actor.hasRole(roleAdmin) {
-		return apperrors.ErrPermissionDenied
+	ctx, err := admit(ctx, actor, objectTeamAdmin, principal.ActionUpdate)
+	if err != nil {
+		return err
 	}
-	ctx = actorCtx(ctx, actor)
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The team is locked for the write: an archive committing between
 		// this check and the insert would otherwise leave a member on a
