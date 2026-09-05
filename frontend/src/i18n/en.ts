@@ -4949,9 +4949,11 @@ export const en = {
     "No action needed here — continue, and it finishes on its own.",
   "ob.conv.voice.composer": "Paste the text you wrote here",
   "ob.conv.voice.dropHint":
-    "You can also drop files anywhere in this conversation.",
+    "You can also drop files anywhere in this conversation: .txt, .md, .pdf, .docx, or a .vtt, .srt or .json transcript.",
   "ob.conv.voice.fileSkipped":
-    "I cannot read {name}. I take .txt, .md, .vtt, .srt, or .json.",
+    "I cannot read {name}. I take .txt, .md, .pdf, .docx, .vtt, .srt, or .json.",
+  "ob.conv.voice.fileUnreadable":
+    "I could not open {name}. If it is password-protected or damaged, paste its text instead.",
   "ob.conv.voice.fileEmpty":
     "There are no words in {name}, so nothing was counted.",
   "ob.conv.voice.reactionTranscript":
@@ -6410,7 +6412,7 @@ export const en = {
   "settings.voice.addSource": "Add writing samples",
   "settings.voice.addFirstLabel": "Your first writing sample",
   "settings.voice.dropHint":
-    "Drop files here or choose them. .txt, .md, .vtt, .srt or .json, several at once is fine.",
+    "Drop files here or choose them. .txt, .md, .pdf, .docx, .vtt, .srt or .json, several at once is fine.",
   "settings.voice.dropEmpty":
     "Drop your writing here, or click to choose files",
   "settings.voice.whyToggle": "Why this matters",
@@ -6418,7 +6420,7 @@ export const en = {
     "Margince drafts emails for you in your own words, so what goes out sounds like you. It learns your tone, rhythm and phrasing from your own writing, and from nobody else's. Your samples stay private to you.",
   "settings.voice.worksTitle": "What works best",
   "settings.voice.worksEmails":
-    "Sent emails, saved as .txt or .md. They show how you write when you want something.",
+    "Sent emails, saved as .txt, .md, .pdf or .docx. They show how you write when you want something.",
   "settings.voice.worksDocs":
     "Proposals, posts and anything else you wrote yourself.",
   "settings.voice.worksTranscripts":
@@ -6440,7 +6442,9 @@ export const en = {
     "{name}: kept {kept} of {total} words. Only your turns count.",
   "settings.voice.noticeAdded": "{name}: {words} words added.",
   "settings.voice.noticeSkippedType":
-    "{name} was skipped — only text files can be read.",
+    "{name} was skipped — I read .txt, .md, .pdf, .docx, .vtt, .srt or .json.",
+  "settings.voice.noticeSkippedUnreadable":
+    "{name} could not be opened. If it is password-protected or damaged, paste its text instead.",
   "settings.voice.noticeSkippedEmpty": "{name} was skipped — it has no text.",
   "settings.voice.noticeDismissed":
     "{name} was skipped — nothing in it could be attributed to you.",
