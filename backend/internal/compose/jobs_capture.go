@@ -102,22 +102,22 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	}
 
 	if cfg.ClassifyBrain != nil {
-		addDeclaredWorker[CaptureClassifyArgs](reg, &captureClassifyWorker{pool: pool})
-		addDeclaredWorker[CaptureClassifyWorkspaceArgs](reg, &captureClassifyWorkspaceWorker{
+		addDeclaredWorker[CaptureClassifyArgs](reg, &captureClassifyWorker{
+			pool:       pool,
 			classifier: NewCaptureClassifier(pool, cfg.ClassifyBrain, log),
 		})
 	}
 
 	if cfg.OwedBrain != nil {
-		addDeclaredWorker[OwedVerdictArgs](reg, &owedVerdictWorker{pool: pool})
-		addDeclaredWorker[OwedVerdictWorkspaceArgs](reg, &owedVerdictWorkspaceWorker{
+		addDeclaredWorker[OwedVerdictArgs](reg, &owedVerdictWorker{
+			pool:       pool,
 			classifier: NewOwedClassifier(pool, cfg.OwedBrain, nil, log),
 		})
 	}
 
 	if cfg.EnrichBrain != nil {
-		addDeclaredWorker[CaptureEnrichArgs](reg, &captureEnrichWorker{pool: pool})
-		addDeclaredWorker[CaptureEnrichWorkspaceArgs](reg, &captureEnrichWorkspaceWorker{
+		addDeclaredWorker[CaptureEnrichArgs](reg, &captureEnrichWorker{
+			pool:     pool,
 			enricher: NewCaptureEnricher(pool, cfg.EnrichBrain, log),
 			log:      log,
 		})
