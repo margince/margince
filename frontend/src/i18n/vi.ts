@@ -6432,6 +6432,8 @@ export const vi = {
   "aicalls.title": "Dấu vết lượt gọi AI",
   "aicalls.withheld":
     "Chỉ người vận hành mới đọc được dấu vết từng lượt gọi. Nó ghi lại mọi lượt gọi mô hình của bản cài đặt, nên không hiển thị rộng hơn.",
+  "aiHealth.withheld":
+    "Chỉ người vận hành mới xem được các tầng mô hình có đang trả lời hay không. Đó là hệ thống của bản cài đặt, không phải điều gì về công việc của bạn.",
   "aicalls.sub":
     "Mọi lượt gọi mô hình — danh tính định tuyến, token, số lần thử lại, nội dung đã ghi.",
   "aicalls.col.detail": "Chi tiết",

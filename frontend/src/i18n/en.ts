@@ -6564,6 +6564,8 @@ export const en = {
   "aicalls.title": "AI call trace",
   "aicalls.withheld":
     "Only an operator can read the per-call trace. It records every model call the installation made, so it is not shown more widely.",
+  "aiHealth.withheld":
+    "Only an operator can read whether the model lanes are answering. It is the installation's own wiring, not a fact about your work.",
   "aicalls.sub":
     "Every model call — routing identity, tokens, retries, captured payload.",
   "aicalls.col.detail": "Detail",

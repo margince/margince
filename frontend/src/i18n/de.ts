@@ -6498,6 +6498,8 @@ export const de = {
   "aicalls.title": "KI-Aufrufprotokoll",
   "aicalls.withheld":
     "Nur ein Betreiber liest die Aufrufspur. Sie verzeichnet jeden Modellaufruf dieser Installation und wird deshalb nicht breiter gezeigt.",
+  "aiHealth.withheld":
+    "Nur ein Betreiber sieht, ob die Modellstufen antworten. Das ist die Verkabelung der Installation, keine Aussage über Ihre Arbeit.",
   "aicalls.sub":
     "Jeder Modellaufruf — Routing, Tokens, Wiederholungen und erfasste Nutzdaten.",
   "aicalls.col.detail": "Detail",
