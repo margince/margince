@@ -103,6 +103,7 @@
   color: var(--textSecondary);
   display: block;
   margin: var(--space-5) 0 var(--space-2);
+  padding-inline: var(--padPanel);
 }
 
 .worklist-queue-band:first-child .worklist-band {
@@ -114,6 +115,18 @@
 .worklist-band-clear {
   color: var(--textSecondary);
   margin: 0;
+  padding-inline: var(--padPanel);
+}
+
+/* The way to the rest of the backlog, on the cards' own left edge. It had no
+   rule of any kind, so it sat flush against the panel while every line above it
+   was inset. */
+.worklist-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+  padding: 0 var(--padPanel) var(--space-3);
 }
 
 /* Three columns a reader runs down as three lists: the rank, the KIND of work,
@@ -134,6 +147,23 @@
 .worklist-row > :nth-child(n + 4) {
   grid-column: 3 / -1;
 }
+/* The card's own ground, edge and padding — the pane every card in this
+   product is drawn on, so a task reads as the same kind of object as a deal in
+   the rail beside it.
+   Written against BOTH classes because two of these properties are the panel
+   ROW's: its padding, and the rule it draws between siblings. A single class
+   would leave which one wins to the order the sheets happen to load in, and the
+   rule between two cards is the boundary drawn twice. */
+.panel-row.worklist-row {
+  background: var(--pane);
+  border: 1px solid var(--paneEdge);
+  border-radius: var(--r-md);
+  padding: var(--padCard);
+}
+.panel-row.worklist-row::before {
+  content: none;
+}
+
 .worklist-row-acts {
   display: flex;
   flex-wrap: wrap;
@@ -157,7 +187,7 @@
    has no column to give a second word. */
 @media (max-width: 40rem) {
   .worklist-row {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr);
   }
   .worklist-row-kind {
     grid-column: 2 / -1;
@@ -279,12 +309,22 @@
   margin-block-start: var(--space-1);
 }
 
-/* The queue is an ordered list for assistive technology and a plain stack on
-   screen: the rank number is already drawn in the row. */
+/* EACH TASK IS A CARD, and the queue is a stack of them.
+   As rows in one panel the tasks ran together: a row carries a subject, a
+   snippet, a kind, three reason lines and its verbs, and with only a hairline
+   between them a reader could not see where one piece of work ended and the
+   next began — the page read as one long feed rather than as a day's worth of
+   separate things to do.
+   Still an ordered list for assistive technology; the rank number is already
+   drawn in the row. The cards are inset to the panel's own margin, which is
+   where every other line in this panel sits. */
 .worklist-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 var(--padPanel) var(--space-3);
 }
 
 .worklist-row-verbs,
