@@ -1124,11 +1124,32 @@ describe("DealsScreen", () => {
     );
 
     expect(totalsAsked).toBe(false);
-    // Once per stage column: each one owes the reader a reason where its
-    // figure would be, not a blank that reads as a stage worth nothing.
+    // Once per stage column, exactly. Each one owes the reader a reason where
+    // its figure would be, and "more than zero" would pass with one column
+    // explaining itself while the rest drew blanks.
     expect(
-      screen.getAllByText("No total — filter to My deals").length,
-    ).toBeGreaterThan(0);
+      screen.getAllByText("Loaded only — filter to My deals for the total")
+        .length,
+    ).toBe(stages.length);
+  });
+
+  // A tag filter withholds totals too — the report has no tag field and sending
+  // one is a 422 — and it must say THAT, not tell the reader to press an owner
+  // filter they may already have pressed.
+  it("names the tag filter, not the owner filter, when a tag is what withheld the total", async () => {
+    window.location.hash = "#/deals?owner_id=u-me&tag_id=t1";
+    vi.stubGlobal("fetch", stubBackend([deal({ id: "a", stage_id: "s1" })]));
+    render(<DealsScreen />);
+    await waitFor(() =>
+      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+    );
+
+    expect(
+      screen.getAllByText("Loaded only — no total while a tag filters").length,
+    ).toBe(stages.length);
+    expect(
+      screen.queryByText("Loaded only — filter to My deals for the total"),
+    ).toBeNull();
   });
 
   it("sends the board's active filters to the deals-by-stage totals request", async () => {
@@ -2468,15 +2489,17 @@ describe("the partner filter", () => {
       return stubBackend([d], { single: d })(request);
     });
 
-    // Totals are asked for only while the owner filter names the viewer: it is
-    // the one selection under which the report's population and the board's
-    // card list are the same deals. Set on the address, because a filter
-    // already applied opens the bar as a chip rather than as the "Filter"
-    // button this test then clicks.
+    // The owner filter comes from the address rather than from a click,
+    // because it is this test's PRECONDITION and not its subject: totals are
+    // asked for only while it names the viewer, so without it there is no
+    // report body for the partner assertion to inspect. A reader reaches the
+    // same state by choosing "My deals", and the case that covers that choice
+    // is the withheld-total one above.
     window.location.hash = "#/deals?owner_id=u-me";
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
     await userEvent.click(screen.getByRole("button", { name: "Table" }));
+    // The partner dial itself IS the subject, so it is pressed, not addressed.
     const menu = screen.getByRole("group", { name: "Filter" });
     await userEvent.click(
       within(menu).getByRole("button", { name: "Partner" }),

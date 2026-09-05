@@ -349,7 +349,7 @@ const absentMoneyColumns: BoardMoneyColumn[] = [
     weightedMinor: null,
     currency: null,
     sumHidden: true,
-    sumHiddenReason: "No total — filter to My deals",
+    sumHiddenReason: "Loaded only — filter to My deals for the total",
     count: 2,
     deals: [
       boardDeal("a6", "Northwind renewal", 12_000, 3),
