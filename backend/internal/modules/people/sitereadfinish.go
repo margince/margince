@@ -165,6 +165,17 @@ const (
 	siteReadStopDeadline = "deadline"
 )
 
+// SiteReadPartialExtractionWarning is the caveat a read carries when part of
+// its extraction fan-out died with evidence already in hand.
+//
+// Exported because it is written on one side of a seam and read on the other:
+// the deep-read worker puts it in FinishSiteReadInput.Warnings, and
+// stoppedAtOwnCeiling looks for it to tell a crawl that merely filled its page
+// budget from one that also lost a lane. It is one constant rather than the
+// same sentence twice, so a reworded caveat cannot quietly turn every such
+// read healthy — the failure a second copy would cause is silent.
+const SiteReadPartialExtractionWarning = "Some pages could not be extracted; the grounded findings that completed are still available."
+
 // FinishSiteRead records the crawl's outcome in one guarded UPDATE from
 // running to a terminal status. No auth.Require, same as BeginSiteRead:
 // the worker runs under the job's workspace context, not a human

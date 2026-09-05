@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -71,7 +72,25 @@ func (sr SiteRead) claim() SiteReadClaim {
 	}
 }
 
+// activityStateDegraded is the projection's word for a settled occurrence that
+// kept partial state. It is the one answer below that no site_read status
+// spells, so it is named rather than repeated.
+const activityStateDegraded = "degraded"
+
 // The dossier's own statuses in the projection's vocabulary.
+//
+// `degraded` is not a synonym for "not done": the projection's fault arm is
+// bounded on it, and the rail holds the newest unacknowledged one on the orb
+// until a reader opens the panel. So the question each arm answers is whether
+// a person has to be TOLD, and `partial` splits on exactly that. A crawl that
+// ran into one of the ceilings this product sets for it — the page cap, the
+// byte cap, the wall clock — did what it was configured to do: it read the
+// site down to the budget it was given and staged everything it found, and the
+// dossier carries where it stopped. A crawl whose extraction lost a lane, or
+// whose workspace ran out of AI credit, is short of what it was ASKED for.
+// Only the second is somebody's to act on; the first is true of almost every
+// ordinary company site, whose pages outnumber the cap, and an orb amber on
+// every one of those is a signal nobody reads any more.
 //
 // deferred settles rather than staying live: the read is not being worked, the
 // budget it waits on may return hours later, and an orb lit that whole time
@@ -82,16 +101,46 @@ func (sr SiteRead) claim() SiteReadClaim {
 // cancelled is a read withdrawn by a decision rather than a fault, and it
 // reports `failed` because the vocabulary has no third settled word for "did
 // not happen" — the reason says which it was.
-func siteReadActivityState(status string) string {
-	switch status {
+func (sr SiteRead) activityState() string {
+	switch sr.Status {
 	case siteReadStatusQueued, siteReadStatusRunning, siteReadStatusDone, siteReadStatusFailed:
-		return status
-	case siteReadStatusDeferred, siteReadStatusPartial:
-		return "degraded"
+		return sr.Status
+	case siteReadStatusPartial:
+		if sr.stoppedAtOwnCeiling() {
+			return siteReadStatusDone
+		}
+		return activityStateDegraded
+	case siteReadStatusDeferred:
+		return activityStateDegraded
 	case siteReadStatusCancelled:
 		return siteReadStatusFailed
 	}
-	return status
+	return sr.Status
+}
+
+// stoppedAtOwnCeiling answers whether this partial is a crawl that filled its
+// budget and nothing else.
+//
+// Both halves are required, and the second is the one that is easy to forget:
+// a run can hit the page cap AND lose an extraction lane, and the row spells
+// that with the cap's own stop reason, indistinguishable from a clean one.
+// SiteReadPartialExtractionWarning is what the worker writes when a lane died,
+// so its presence is what keeps that read out of the healthy answer.
+func (sr SiteRead) stoppedAtOwnCeiling() bool {
+	if sr.StoppedReason == nil || !siteReadOwnCeiling[*sr.StoppedReason] {
+		return false
+	}
+	return !slices.Contains(sr.Warnings, SiteReadPartialExtractionWarning)
+}
+
+// siteReadOwnCeiling is the half of the stop vocabulary that names a bound
+// this product chose. `budget` is deliberately absent: the workspace running
+// out of AI credit is a condition an operator repairs, not a ceiling the crawl
+// was built to fill.
+var siteReadOwnCeiling = map[string]bool{
+	siteReadStopPageCap:  true,
+	siteReadStopByteCap:  true,
+	siteReadStopDeadline: true,
 }
 
 // The stop reasons as prose. Server-authored and closed — never a provider's
@@ -140,7 +189,7 @@ func (sr SiteRead) activitySettledAt() *time.Time {
 	if sr.FinishedAt != nil {
 		return sr.FinishedAt
 	}
-	if state := siteReadActivityState(sr.Status); state == siteReadStatusQueued || state == siteReadStatusRunning {
+	if state := sr.activityState(); state == siteReadStatusQueued || state == siteReadStatusRunning {
 		return nil
 	}
 	settled := sr.UpdatedAt
@@ -161,7 +210,7 @@ func emitSiteReadActivity(ctx context.Context, tx pgx.Tx, ledgerID ids.UUID, sr 
 		OccurrenceKey: sr.ID.String(),
 		Kind:          SiteReadActivityKind,
 		Attempt:       sr.Attempt,
-		State:         siteReadActivityState(sr.Status),
+		State:         sr.activityState(),
 		// The instant THIS attempt became current, not the read's creation: a
 		// live row ages from here, and a read claimed again hours later would
 		// otherwise be past its lease before the worker fetched a page.
