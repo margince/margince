@@ -1258,7 +1258,12 @@ export const en = {
   "contracts.renew.title": "Renew this agreement",
   "contracts.renew.hint":
     "Creates a new agreement and marks this one superseded. Its own terms — nothing carries over but the counterparty.",
+  "contracts.renew.deal": "Deal",
+  "contracts.renew.dealHint":
+    "The opportunity that won this term, if there was one — never the predecessor's own.",
+  "contracts.renew.dealNone": "No deal",
   "contracts.renew.submit": "Renew",
+  "contracts.deal": "Deal",
   "contracts.statusChange.title": "Change status",
   "contracts.statusChange.label": "New status",
   "contracts.statusChange.submit": "Change status",

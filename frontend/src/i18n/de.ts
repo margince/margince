@@ -1193,7 +1193,12 @@ export const de = {
   "contracts.renew.title": "Diese Vereinbarung verlängern",
   "contracts.renew.hint":
     "Erstellt eine neue Vereinbarung und markiert diese als abgelöst. Eigene Bedingungen — nichts wird übernommen außer der Vertragspartei.",
+  "contracts.renew.deal": "Deal",
+  "contracts.renew.dealHint":
+    "Der Deal, der diese Laufzeit gewonnen hat, falls es einen gab — nie der des Vorgängers.",
+  "contracts.renew.dealNone": "Kein Deal",
   "contracts.renew.submit": "Verlängern",
+  "contracts.deal": "Deal",
   "contracts.statusChange.title": "Status ändern",
   "contracts.statusChange.label": "Neuer Status",
   "contracts.statusChange.submit": "Status ändern",

@@ -38,6 +38,7 @@ const ACTIVE = {
 };
 
 const EXPIRED = { ...ACTIVE, id: "c-2", status: "expired" };
+const RENEWED_DEAL = { id: "d-1", name: "2025 renewal" };
 
 const GRANTED = meFixture({
   allow: { contract: ["read", "create", "update", "delete"] },
@@ -52,7 +53,9 @@ function stub(contracts: unknown[], me: unknown = GRANTED) {
         ? me
         : url.includes("/documents")
           ? { data: [] }
-          : { data: contracts };
+          : url.includes("/deals/")
+            ? RENEWED_DEAL
+            : { data: contracts };
       return new Response(JSON.stringify(body), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -154,5 +157,27 @@ describe("the contract row menu", () => {
     expect(
       screen.queryByRole("button", { name: "Contract actions" }),
     ).toBeNull();
+  });
+});
+
+// margince#3286 (re-measured): a renewal made through the screen could not
+// name the deal that won it, and no row said which deal a contract WAS
+// linked to even where one existed. These prove the row's own display half.
+describe("the contract row's linked deal", () => {
+  it("names the deal a contract carries", async () => {
+    stub([{ ...ACTIVE, deal_id: RENEWED_DEAL.id }]);
+    show(<CompanyContractsCard orgId="o-1" />);
+
+    await screen.findByText("Framework agreement 2024");
+    expect(await screen.findByText(RENEWED_DEAL.name)).toBeTruthy();
+  });
+
+  it("shows nothing where a contract carries no deal", async () => {
+    stub([ACTIVE]);
+    show(<CompanyContractsCard orgId="o-1" />);
+
+    await screen.findByText("Framework agreement 2024");
+    expect(screen.queryByText(RENEWED_DEAL.name)).toBeNull();
+    expect(screen.queryByText("Deal")).toBeNull();
   });
 });
