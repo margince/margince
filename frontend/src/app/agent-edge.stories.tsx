@@ -35,11 +35,11 @@ type Story = StoryObj<typeof AgentEdge>;
  * (agent-edge-signal.ts). So a story has to say what the agent is doing the same
  * way the rail does, and clear it on the way out or the next story inherits it.
  */
-function Edge({ reading }: AgentEdgeReading) {
+function Edge({ reading, register }: AgentEdgeReading) {
   useEffect(() => {
-    publishAgentEdge({ reading });
+    publishAgentEdge({ reading, register });
     return clearAgentEdge;
-  }, [reading]);
+  }, [reading, register]);
   return (
     <>
       <AgentEdge />
@@ -58,14 +58,25 @@ function Edge({ reading }: AgentEdgeReading) {
 
 /** Nothing at all, which is the resting state and most of the working day. */
 export const Still: Story = {
-  render: () => <Edge reading={false} />,
+  render: () => <Edge reading={false} register="agent" />,
 };
 
 /**
- * Work in flight. The whole rim is lit, the light billows in place, and one soft
- * arc laps the perimeter. This is the only state that moves, which is what makes
- * movement here mean something.
+ * The agent's own work in flight: a run, or a call this tab holds open. The
+ * whole rim is lit, the light billows in place, and one soft arc laps the
+ * perimeter. Movement here means something is happening, and this is the louder
+ * of the two registers it can happen in.
  */
 export const Reading: Story = {
-  render: () => <Edge reading={true} />,
+  render: () => <Edge reading={true} register="agent" />,
+};
+
+/**
+ * A mailbox import in flight, and nothing else. The same rim in the thin
+ * register: about half the thickness, half the breath, a faint head still making
+ * its lap. Open this beside `Reading` — the difference is the whole design, and
+ * it should be unmistakable at a glance and unremarkable over an afternoon.
+ */
+export const Importing: Story = {
+  render: () => <Edge reading={true} register="capture" />,
 };
