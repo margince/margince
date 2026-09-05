@@ -51,6 +51,35 @@ func (h installationSettingsHandlers) GetInstallationSettings(w http.ResponseWri
 	httperr.WriteJSON(w, http.StatusOK, h.toContract(s))
 }
 
+// GetAuthenticationPolicy answers the sign-in half on its own grant.
+//
+// The values are identical to the `sign_in_providers` field of the aggregate;
+// what differs is who may read them. Every role reads the installation's name,
+// timezone and currency, and who may sign in is not that — so it answers to
+// `authentication_policy`, which the store checks before it reads the entry.
+func (h installationSettingsHandlers) GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request) {
+	if h.store == nil {
+		httperr.NotImplemented(w, r, "GetAuthenticationPolicy")
+		return
+	}
+	// Human-only (x-agent-access): an agent never reads how humans sign in.
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	chosen, err := h.store.SignInPolicy(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	// The SAME resolver the aggregate renders and the login screen is served
+	// from, so a reader cannot be told a different answer by asking a different
+	// surface.
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AuthenticationPolicy{
+		SignInProviders: h.signInProviders(chosen),
+	})
+}
+
 func (h installationSettingsHandlers) UpdateInstallationSettings(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
 		httperr.NotImplemented(w, r, "UpdateInstallationSettings")
