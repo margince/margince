@@ -28,9 +28,12 @@ func TestABouncedSendNamesTheAddressThatRefusedIt(t *testing.T) {
 			BouncedSend{Recipient: "dana@turbinenbau.de"},
 			"dana@turbinenbau.de",
 		},
-		// A send carrying no recipient — an older row, or one stored without
-		// one. The reason stands alone rather than the card claiming to know
-		// where it was aimed.
+		// No address to name, which happens two ways: a row bounced before the
+		// column existed, and one whose address an erasure restriction NULLed
+		// (privacy/erasure_restrict.go). The second is the one worth knowing —
+		// a reader told only "an older row" would be surprised that a restricted
+		// send loses its address. The reason stands alone either way, rather
+		// than the card claiming to know where it was aimed.
 		"reason only": {
 			BouncedSend{Reason: "550 no such user"},
 			"550 no such user",

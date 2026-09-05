@@ -147,9 +147,6 @@ func bounceItem(send BouncedSend) crmcontracts.AttentionItem {
 		subject := send.Subject
 		item.Title = &subject
 	}
-	// The address AND the refusal, because neither answers the reader alone.
-	// The reason says why it failed; the address says which mailbox to fix, and
-	// a contact carrying three of them leaves a rep guessing without it.
 	if detail := bounceDetail(send); detail != "" {
 		item.Detail = &detail
 	}

@@ -119,14 +119,6 @@ type ParkedSend struct {
 	// PersonID is the person the send's activity is filed under, zero when it
 	// is filed under none — the card then offers no open.
 	PersonID ids.UUID
-	// Recipient is the address that refused the send.
-	//
-	// Without it the card names a person and a subject, and a rep opening a
-	// contact who carries three addresses cannot tell which one is dead — the
-	// row reports a failure and leaves the reader to guess at the fix. Empty
-	// when the send carries no recipient, and the card then says nothing about
-	// where it was aimed rather than guessing.
-	Recipient string
 }
 
 // Bounces is the reader's own sends whose delivery reports came back hard —

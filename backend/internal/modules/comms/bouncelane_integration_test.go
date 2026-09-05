@@ -173,10 +173,9 @@ func TestHardBouncesForNamesTheAddressThatRefused(t *testing.T) {
 	// pass against a read that returned the constant, and prove nothing about
 	// the address travelling. The message id is what the bounce is matched on;
 	// the recipient is the separate fact under test.
-	// TWO recipients, and the one that bounced is NOT the first. A read taking
-	// `recipients->>0` would name the bystander — the exact defect the
-	// bounce_recipient column was added for, whose migration says a send with a
-	// CC would otherwise mark every address on it as the one that refused.
+	// TWO recipients, and the one that bounced is NOT the first: a read keyed on
+	// the send'"'"'s recipient list rather than the report'"'"'s own address names the
+	// bystander.
 	staged := e.stage(t, func() StageInput {
 		in := e.baseInput(e.activity, "dana-msg")
 		in.Recipients = []string{"colleague@turbinenbau.de", "dana@turbinenbau.de"}
