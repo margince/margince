@@ -27,11 +27,11 @@ type IdempotencyRetentionArgs struct{}
 // Kind is the stable job identifier River persists in river_job.
 func (IdempotencyRetentionArgs) Kind() string { return "idempotency_retention" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues,
-// and does no tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (IdempotencyRetentionArgs) FleetWide() {}
 
-// idempotencyRetentionWorker is the dispatcher. It enumerates EVERY
+// idempotencyRetentionWorker sweeps EVERY
 // workspace, archived ones included: archiving does not un-store the claim
 // snapshots inside a workspace, and idempotency_key.workspace_id is
 // ON DELETE RESTRICT, so leftovers would also refuse the eventual hard delete.

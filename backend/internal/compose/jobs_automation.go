@@ -31,8 +31,8 @@ type TimeScanArgs struct{}
 // Kind is the stable job identifier River persists in river_job.
 func (TimeScanArgs) Kind() string { return "time_scan" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues,
-// and does no tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (TimeScanArgs) FleetWide() {}
 
 // timeScanWorker scans every live workspace.

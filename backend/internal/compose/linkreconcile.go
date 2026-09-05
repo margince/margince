@@ -60,8 +60,8 @@ type LinkReconcileArgs struct{}
 // Kind is the River job kind for the captured-mail link reconcile.
 func (LinkReconcileArgs) Kind() string { return "link_reconcile" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues, and does no
-// tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (LinkReconcileArgs) FleetWide() {}
 
 type linkReconcileWorker struct {

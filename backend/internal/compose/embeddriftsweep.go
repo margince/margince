@@ -35,8 +35,8 @@ type EmbedDriftSweepArgs struct{}
 // Kind is the stable job identifier River persists in river_job.
 func (EmbedDriftSweepArgs) Kind() string { return "embed_drift_sweep" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues,
-// and does no tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (EmbedDriftSweepArgs) FleetWide() {}
 
 // embedDriftSweepWorker heals every live workspace's drift.

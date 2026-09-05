@@ -28,8 +28,8 @@ type ConfidentialityVerdictArgs struct{}
 // Kind is the stable job identifier River persists in river_job.
 func (ConfidentialityVerdictArgs) Kind() string { return "capture_confidentiality_verdict" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues, and does no
-// tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (ConfidentialityVerdictArgs) FleetWide() {}
 
 // confidentialityVerdictWorker drains every live workspace's thread backlog.
