@@ -59,7 +59,7 @@ test("AC-leaddetail-qualify: the dialog says what qualifying will do and why, th
     .getByRole("button", { name: "Qualifizieren", exact: true })
     .click();
   await expect(
-    page.getByText("Die Übernahme legt einen neuen Kontakt an."),
+    page.getByText("Die Übernahme legt eine neue Person an."),
   ).toBeVisible();
   // The reason is derived, not asked for: the seeded lead has no captured
   // engagement, so it is the rep's own call.

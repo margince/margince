@@ -14,6 +14,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { CompanyRail } from "./companyrail";
 
 type Organization360 = components["schemas"]["Organization360"];
@@ -1011,11 +1012,9 @@ describe("CompanyRail", () => {
     const spy = vi.fn();
     stub();
     renderRail({ onTab: spy });
-    expect(
-      screen.getByText("No contacts yet. Nobody to write to."),
-    ).toBeInTheDocument();
+    expect(screen.getByText(en["co.rail.people.empty"])).toBeInTheDocument();
     await userEvent.click(
-      screen.getByRole("button", { name: "Add a contact" }),
+      screen.getByRole("button", { name: en["co.rail.people.add"] }),
     );
     expect(spy).toHaveBeenCalledWith("people");
     // That is the empty roster's one verb: no second "Add" under it.

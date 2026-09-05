@@ -804,7 +804,7 @@ test("AC-create-1: a contact is created from the list and lands on its 360", asy
   page,
 }) => {
   await page.goto("/#/contacts");
-  await page.getByRole("button", { name: "Neuer Kontakt" }).click();
+  await page.getByRole("button", { name: "Neue Person" }).click();
   await page.getByLabel("Vollständiger Name").fill("Peter Neu");
   // Email is now a repeatable row group (P-15): add a row, then fill it.
   await page.getByRole("button", { name: "E-Mail hinzufügen" }).click();
@@ -1847,7 +1847,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     // runs in it.
     await page.getByRole("button", { name: "Weitere Aktionen" }).click();
     await expect(
-      page.getByRole("button", { name: "Neuer Kontakt" }),
+      page.getByRole("button", { name: "Neue Person" }),
     ).toBeVisible();
     await expectNoAaViolations(page, "contacts (folded header)");
   });

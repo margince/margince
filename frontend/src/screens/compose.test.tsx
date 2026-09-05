@@ -2376,9 +2376,7 @@ describe("ComposeModal started from an account", () => {
       />,
     );
 
-    expect(
-      await screen.findByText(/No contact on this account yet/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/Nobody on this account yet/)).toBeTruthy();
     // The dead end is about the DRAFT, not about which body of work the
     // message is for.
     expect(

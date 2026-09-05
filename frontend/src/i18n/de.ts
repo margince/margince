@@ -286,7 +286,7 @@ export const de = {
   "dealfiles.unhidden": "Wieder an diesem Deal sichtbar",
   "deal.stalled": "stockt",
   "deal.archived": "archiviert",
-  "deal.singleThreaded": "nur ein Kontakt",
+  "deal.singleThreaded": "nur eine Person",
   "deal.staged": "vorgemerkt",
   "record.notShown": "Nicht angezeigt",
   "record.timelineLoading": "Verlauf dieses Datensatzes wird geladen…",
@@ -374,7 +374,7 @@ export const de = {
   "edit.versionSkew":
     "Dieser Datensatz hat sich geändert, seit du ihn geöffnet hast — neu laden und erneut versuchen.",
 
-  "merge.person": "Kontakt zusammenführen",
+  "merge.person": "Person zusammenführen",
   "merge.org": "Firma zusammenführen",
   "merge.searchPlaceholder": "Suchen…",
   "merge.pickTarget": "Überlebenden Datensatz auswählen",
@@ -776,10 +776,10 @@ export const de = {
   "consent.grant": "Erteilen",
   "consent.withdraw": "Widerrufen",
   "consent.doiBySubject":
-    "Diesen Zweck best\u00e4tigt der Kontakt selbst \u2013 \u00fcber einen Link an seine eigene Adresse. Nutzen Sie unten \u201eUm Best\u00e4tigung der Daten bitten\u201c.",
+    "Diesen Zweck best\u00e4tigt die Person selbst \u2013 \u00fcber einen Link an ihre eigene Adresse. Nutzen Sie unten \u201eUm Best\u00e4tigung der Daten bitten\u201c.",
   "consent.askToConfirm": "Um Bestätigung der Daten bitten",
   "consent.askToConfirmWhat":
-    "Schickt diesem Kontakt einen persönlichen Link: Er sieht, was ihr über ihn gespeichert habt, kann es korrigieren und sagen, ob er von euch hören möchte. Der Link geht an seine hinterlegte Adresse — woandershin könnt ihr ihn nicht schicken.",
+    "Schickt dieser Person einen persönlichen Link: Sie sieht, was ihr über sie gespeichert habt, kann es korrigieren und sagen, ob sie von euch hören möchte. Der Link geht an ihre hinterlegte Adresse — woandershin könnt ihr ihn nicht schicken.",
   "consent.askQueued": "Unterwegs an {address}.",
   "consent.askNotDelivered":
     "Der Link wurde für {address} erstellt, aber diese Installation verschickt keine Mails — es hat ihn also niemand bekommen.",
@@ -1077,12 +1077,12 @@ export const de = {
     "Die Sitzung endet sofort und der Link funktioniert nicht mehr. Kommentare bleiben sichtbar und zugeordnet. Der Zugang lässt sich nicht durch eine Link-Anfrage wiederherstellen.",
   "access.changeCapabilityTitle": "Was darf {name} tun?",
   "persondealrooms.title": "Deal Rooms",
-  "persondealrooms.sub": "Räume, die dieser Kontakt noch betreten kann.",
+  "persondealrooms.sub": "Räume, die diese Person noch betreten kann.",
   "persondealrooms.open": "Öffnen",
   "persondealrooms.seatGone":
     "Diese Adresse hat in dem Raum keinen Platz mehr.",
   "persondealrooms.cut":
-    "Nur die ersten Räume werden gezeigt; dieser Kontakt sitzt in weiteren.",
+    "Nur die ersten Räume werden gezeigt; diese Person sitzt in weiteren.",
   "persondealrooms.revokeTitle": "Zugang zu {room} entziehen?",
   "room.state.draft": "Entwurf",
   "room.state.building": "Wird erstellt",
@@ -1097,8 +1097,8 @@ export const de = {
   "co.pulse.owner": "Betreut von",
   "co.pulse.sizeBand": "{band} Mitarbeitende",
   "co.pulse.strongestLead": "Zugang \u00fcber",
-  "co.pulse.strengthTail_one": "\u2014 der einzige Kontakt hier",
-  "co.pulse.strengthTail_other": "\u2014 von {count} Kontakten hier",
+  "co.pulse.strengthTail_one": "\u2014 die einzige Person hier",
+  "co.pulse.strengthTail_other": "\u2014 von {count} Personen hier",
   "co.pulse.unowned": "Nicht zugewiesen",
   "co.since.first": "Du öffnest diesen Account zum ersten Mal.",
   "co.partial":
@@ -1337,13 +1337,13 @@ export const de = {
   "co.evidence.kind.rule": "Abgeleitet",
   "co.brief.cite.deal": "Deal",
   "co.brief.cite.activity": "Aktivität",
-  "co.brief.cite.person": "Kontakt",
+  "co.brief.cite.person": "Person",
   "co.brief.cite.organization": "Account",
   "co.brief.cite.fact": "Fakt",
   "co.brief.cite.profile_field": "Profilfeld",
   "co.brief.cite.deal.many": "{count} Deals",
   "co.brief.cite.activity.many": "{count} Aktivitäten",
-  "co.brief.cite.person.many": "{count} Kontakte",
+  "co.brief.cite.person.many": "{count} Personen",
   "co.brief.cite.organization.many": "{count} Accounts",
   "co.brief.cite.fact.many": "{count} Fakten",
   "co.brief.cite.profile_field.many": "{count} Profilfelder",
@@ -1367,7 +1367,7 @@ export const de = {
   "approval.kind.site_lead": "Person von der Website aufnehmen",
   "approval.kind.capture_counterparty": "Person aus deiner Mail aufnehmen",
   "approval.kind.org_name_promotion": "Account umbenennen",
-  "approval.kind.vcard_create": "Kontakt aus einer Visitenkarte anlegen",
+  "approval.kind.vcard_create": "Person aus einer Visitenkarte anlegen",
   "approval.kind.lifecycle_change": "Account-Phase",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus einem Transkript übernehmen",
@@ -1412,7 +1412,7 @@ export const de = {
   "approval.field.published_email": "E-Mail auf der Seite",
   "approval.field.connection_name": "Auf LinkedIn",
   "approval.field.connection_company": "Arbeitet bei",
-  "approval.field.person_name": "Kontakt hier",
+  "approval.field.person_name": "Person hier",
   "approval.field.owner": "Zuständig",
   "approval.field.to": "An",
   "approval.field.currency": "Währung",
@@ -1473,8 +1473,8 @@ export const de = {
   "co.rail.deals.attentionCommitment": "Sie schulden uns",
   "co.rail.people.title": "Ihre Ansprechpartner",
   "co.rail.people.empty":
-    "Noch keine Kontakte. Niemand, dem man schreiben kann.",
-  "co.rail.people.add": "Kontakt hinzufügen",
+    "Noch keine Personen. Niemand, dem man schreiben kann.",
+  "co.rail.people.add": "Person hinzufügen",
   "co.rail.people.inTouch": "Bereits mit ihnen in Kontakt",
   "co.rail.details.all": "Alle Felder",
   "co.commercial.title": "Kommerziell",
@@ -1496,7 +1496,7 @@ export const de = {
   "linkedinImport.notConnectedNote":
     "Mit deiner hinterlegten Profil-URL werden importierte Kontakte dir namentlich zugeordnet.",
   "linkedinImport.whichFile":
-    "LinkedIn stellt dir Connections.csv unter Einstellungen \u2192 Datenschutz \u2192 Kopie deiner Daten bereit; das Archiv enth\u00e4lt ein Dutzend weitere, gesucht ist diese eine. Was du hochl\u00e4dst, wird niemals zu Kontakten: die Verbindungen erscheinen weder in der Suche noch in Listen oder auf Kontaktseiten, und niemand kann ihnen schreiben oder mailen.",
+    "LinkedIn stellt dir Connections.csv unter Einstellungen \u2192 Datenschutz \u2192 Kopie deiner Daten bereit; das Archiv enth\u00e4lt ein Dutzend weitere, gesucht ist diese eine. Was du hochl\u00e4dst, wird niemals zu Personen: die Verbindungen erscheinen weder in der Suche noch in Listen oder auf Personenseiten, und niemand kann ihnen schreiben oder mailen.",
   "linkedinImport.choose": "Connections.csv ausw\u00e4hlen",
   "linkedinImport.importLabel": "Kontakt-Export",
   "linkedinImport.noMatchesYet":
@@ -1613,7 +1613,7 @@ export const de = {
     "Einige Empfänger stehen im Blindkopie-Feld und werden Ihnen nicht angezeigt",
   "compose.audienceWorkspace": "Alle in der Organisation",
   "compose.audienceWorkspaceHint":
-    "Jeder, der den Kontakt sehen darf, liest auch diese Nachricht.",
+    "Jeder, der die Person sehen darf, liest auch diese Nachricht.",
   "compose.audienceParticipants": "Nur Beteiligte",
   "compose.audienceParticipantsHint":
     "Nur die Personen auf dieser Nachricht lesen Betreff und Inhalt. Andere sehen nur, dass an diesem Tag eine Nachricht gewechselt wurde.",
@@ -1624,7 +1624,7 @@ export const de = {
   "compose.audienceMembersLoading": "Personenliste wird gelesen…",
   "compose.audienceConfirm": "Sichtbarkeit speichern",
   "compose.audienceNote":
-    "Gilt nur f\u00fcr diese Nachricht \u2014 nicht f\u00fcr den Thread und nicht f\u00fcr den Kontakt.",
+    "Gilt nur f\u00fcr diese Nachricht \u2014 nicht f\u00fcr den Thread und nicht f\u00fcr die Person.",
   "timeline.textMore": "Lesen",
   "timeline.textLess": "Weniger",
   "timeline.tailMore": "Signatur und Zitat anzeigen",
@@ -1947,7 +1947,7 @@ export const de = {
   "tagResult.viewAll": "Alle {count} {kind} anzeigen",
   "tagResult.resultsTitle": "Datensätze mit diesem Tag",
   "tagResult.nothingCarries":
-    "Noch kein Datensatz trägt dieses Tag. Vergeben Sie es auf einem Kontakt, einem Unternehmen oder einem Deal.",
+    "Noch kein Datensatz trägt dieses Tag. Vergeben Sie es auf einer Person, einem Unternehmen oder einem Deal.",
   "tagResult.loadingRows": "{kind} werden geladen…",
   "tagResult.noneLeft": "Trägt niemand mehr",
   "tagResult.unnamed": "Ohne Namen",
@@ -2087,23 +2087,23 @@ export const de = {
   "lead.boardTerminalOnly":
     "Keiner dieser Leads ist noch offen \u2014 sie z\u00e4hlen unter Qualifiziert und Disqualifiziert.",
   "person.fromLead": "Aus Lead übernommen",
-  "lead.promotedTitle": "Als Kontakt übernommen",
+  "lead.promotedTitle": "Als Person übernommen",
   "lead.promotedMerged":
-    "Dieser Lead wurde mit einem bereits bekannten Kontakt zusammengeführt — es entstand kein Duplikat.",
-  "lead.promotedCreated": "Aus diesem Lead wurde ein neuer Kontakt.",
+    "Dieser Lead wurde mit einer bereits bekannten Person zusammengeführt — es entstand kein Duplikat.",
+  "lead.promotedCreated": "Aus diesem Lead wurde eine neue Person.",
   "lead.promotedAt": "Übernommen am",
   "lead.promotedTrigger": "Auslöser:",
   "lead.promotedEvidence": "Beleg:",
   "lead.previewPending": "Prüfe, ob wir diese Person schon kennen …",
-  "lead.previewCreate": "Die Übernahme legt einen neuen Kontakt an.",
+  "lead.previewCreate": "Die Übernahme legt eine neue Person an.",
   "lead.previewMerge":
-    "Die Übernahme führt mit dem bestehenden Kontakt zusammen:",
+    "Die Übernahme führt mit der bestehenden Person zusammen:",
   "lead.previewMergeWithheld":
-    "Die Übernahme führt mit einem bestehenden Kontakt zusammen, den Sie nicht sehen können.",
+    "Die Übernahme führt mit einer bestehenden Person zusammen, die Sie nicht sehen können.",
   "lead.demote": "Übernahme rückgängig machen",
   "lead.demoteDialog": "Übernahme rückgängig machen?",
   "lead.demoteExplain":
-    "Der Lead kehrt als „In Bearbeitung“ in die Liste zurück. Ein Kontakt, den die Übernahme angelegt hat, wird archiviert; ein Kontakt, mit dem zusammengeführt wurde, bleibt unverändert. Bei einem Kontakt an einem laufenden Deal ist die Rücknahme nicht möglich.",
+    "Der Lead kehrt als „In Bearbeitung“ in die Liste zurück. Eine Person, die die Übernahme angelegt hat, wird archiviert; eine Person, mit der zusammengeführt wurde, bleibt unverändert. Bei einer Person an einem laufenden Deal ist die Rücknahme nicht möglich.",
   "lead.demoteReason": "Grund (wird im Protokoll festgehalten)",
   "lead.demoteReasonRequired": "Bitte zuerst begr\u00fcnden.",
   "lead.demoteConfirm": "Rückgängig machen",
@@ -2220,7 +2220,7 @@ export const de = {
   "lead.trigger.humanQualify": "Manuell qualifiziert",
   "lead.evidenceNote": "Beleg-Notiz (optional)",
   "lead.segregation":
-    "Leads bleiben von Kontakten getrennt. Ein Lead wird erst zum Kontakt, wenn du ihn qualifizierst.",
+    "Leads bleiben von Personen getrennt. Ein Lead wird erst zur Person, wenn du ihn qualifizierst.",
   "lead.segregationDismiss": "Verstanden",
   "list.emptyMine": "Dir sind keine {unit} zugewiesen.",
   "list.showAll": "Alle anzeigen",
@@ -2240,13 +2240,13 @@ export const de = {
   "lead.ladder.theyReplied": "Antwort erhalten",
   "lead.ladder.meetingBooked": "Termin gebucht",
   "lead.ladder.meetingHeld": "Termin stattgefunden",
-  "lead.ladder.qualified": "Qualifiziert — dieser Lead ist jetzt ein Kontakt.",
+  "lead.ladder.qualified": "Qualifiziert — dieser Lead ist jetzt eine Person.",
   "lead.ladder.qualifiedOn":
-    "Qualifiziert am {at} — dieser Lead ist jetzt ein Kontakt.",
+    "Qualifiziert am {at} — dieser Lead ist jetzt eine Person.",
   "lead.ladder.disqualified": "Disqualifiziert.",
   "lead.ladder.disqualifiedWithReason": "Disqualifiziert: {reason}",
   "lead.qualify.title": "{name} qualifizieren",
-  "lead.qualify.contact": "Kontakt",
+  "lead.qualify.contact": "Person",
   "lead.qualify.alsoDeal": "Auch einen Deal anlegen",
   "lead.qualify.pipeline": "Pipeline",
   "lead.qualify.stage": "Phase",
@@ -2264,7 +2264,7 @@ export const de = {
   "lead.qualify.reasonHuman": "Grund: von dir qualifiziert.",
   "lead.qualify.confirm": "Qualifizieren",
   "lead.qualify.confirmWithDeal": "Qualifizieren und Deal anlegen",
-  "lead.qualify.done": "{name} ist jetzt ein Kontakt:",
+  "lead.qualify.done": "{name} ist jetzt eine Person:",
   "lead.disqualify.title": "{name} disqualifizieren",
   "lead.disqualify.reason": "Grund",
   "lead.disqualify.pickReason": "Grund wählen",
@@ -2803,7 +2803,7 @@ export const de = {
   "deepread.kindTeam": "Team",
   "deepread.kindServices": "Leistungen",
   "deepread.kindProducts": "Produkte",
-  "deepread.kindContact": "Kontakt",
+  "deepread.kindContact": "Person",
   "deepread.kindOther": "Sonstiges",
 
   "transcriptread.title": "Dieses Transkript lesen",
@@ -2833,7 +2833,7 @@ export const de = {
     "Erforderlich – mindestens eine Option wählen.",
   "create.save": "Anlegen",
   "create.saving": "Wird angelegt…",
-  "create.contact": "Neuer Kontakt",
+  "create.contact": "Neue Person",
   "vcardImport.action": "Karten importieren",
   "vcardImport.title": "Visitenkarten importieren",
   "vcardImport.fileLabel": "Visitenkarten-Datei",
@@ -2937,7 +2937,7 @@ export const de = {
   "co.spine.days_other": "{count} Tage",
   "co.spine.quietSince": "Seitdem Funkstille",
   "co.spine.neverReplied": "Sie haben nie geantwortet",
-  "co.spine.singleThreaded": "Ein Kontakt, und keine Antwort von ihm",
+  "co.spine.singleThreaded": "Eine Person, und keine Antwort von ihr",
   "co.spine.overdue": "\u00dcberf\u00e4llig",
   "co.spine.expectedClose": "Erwarteter Abschluss",
   "co.360.subject": "{name} · 360",
@@ -2956,7 +2956,7 @@ export const de = {
   "today.source.nextMeeting": "der Kalender",
   "today.source.deals": "Deals",
   "today.meeting.prepare": "Meeting vorbereiten",
-  "today.source.people": "die Kontakte",
+  "today.source.people": "die Personen",
   "today.source.standing": "wer am Zug ist und die Signale",
   "today.source.activities": "was gesprochen wurde",
   "today.silence.days": "seit {count} Tagen keine Antwort",
@@ -2974,10 +2974,10 @@ export const de = {
   "evidence.humanSet": "Von einer Person gesetzt",
   "acctCoverage.open": "Abdeckung vergleichen",
   "acctCoverage.title": "Wer diesen Account abdeckt",
-  "acctCoverage.contact": "Kontakt",
-  "acctCoverage.findContact": "Kontakt suchen",
+  "acctCoverage.contact": "Person",
+  "acctCoverage.findContact": "Person suchen",
   "acctCoverage.untried": "Nicht versucht",
-  "acctCoverage.noMatch": "Kein Kontakt passt dazu.",
+  "acctCoverage.noMatch": "Niemand passt dazu.",
   "acctCoverage.columnCap":
     "{cap} Kolleginnen und Kollegen angezeigt — einen abwählen, um einen weiteren hinzuzufügen.",
   "acctCoverage.partial":
@@ -3139,12 +3139,12 @@ export const de = {
   "log.save": "Erfassen",
   "log.saving": "Wird erfasst…",
 
-  "personAccess.title": "Wer diesen Kontakt sieht",
+  "personAccess.title": "Wer diese Person sieht",
   "personAccess.privateToYou":
-    "Nur für Sie. Ihr Postfach hat diesen Kontakt angelegt, und niemand sonst im Unternehmen sieht ihn — auch nicht Ihr Team und keine Administration.",
-  "personAccess.organization": "Alle im Unternehmen sehen diesen Kontakt.",
+    "Nur für Sie. Ihr Postfach hat diese Person angelegt, und niemand sonst im Unternehmen sieht sie — auch nicht Ihr Team und keine Administration.",
+  "personAccess.organization": "Alle im Unternehmen sehen diese Person.",
   "personAccess.share": "Mit dem Unternehmen teilen",
-  "personAccess.published": "Das Unternehmen sieht diesen Kontakt jetzt.",
+  "personAccess.published": "Das Unternehmen sieht diese Person jetzt.",
   "compose.reply": "Antworten",
   "compose.writeEmail": "E-Mail schreiben",
   "compose.relink": "Neu verknüpfen",
@@ -3172,9 +3172,9 @@ export const de = {
   "compose.cc": "Cc",
   "compose.subject": "Betreff",
   "compose.noGroundableRecipient":
-    "Noch kein Kontakt zu diesem Account — schreibe die Nachricht selbst oder lege zuerst einen Kontakt an",
+    "Noch niemand an diesem Account — schreibe die Nachricht selbst oder lege zuerst eine Person an",
   "compose.draftTo": "Entwurf an",
-  "compose.draftToUnset": "Kontakt wählen",
+  "compose.draftToUnset": "Person wählen",
   "compose.relatedTo": "Bezug",
   "compose.relatedToNone": "Der Account allgemein",
   "compose.project": "Projekt",
@@ -3720,7 +3720,7 @@ export const de = {
   "settings.tierRead":
     "Lesen, Zusammenfassen, Entwerfen — läuft sofort, voll protokolliert.",
   "settings.tierSend":
-    "E-Mail senden, Termine buchen, einen Kontakt oder Deal ändern — läuft ebenfalls sofort, wenn du dem Agenten diesen Bereich gegeben hast. Deine Erlaubnis ist die Freigabe, einmal erteilt.",
+    "E-Mail senden, Termine buchen, eine Person oder einen Deal ändern — läuft ebenfalls sofort, wenn du dem Agenten diesen Bereich gegeben hast. Deine Erlaubnis ist die Freigabe, einmal erteilt.",
   "settings.tierWait":
     "Anreicherung, eigene Felder, Webhooks, Tags zusammenführen — das wartet in deinem Eingang.",
   "settings.tierAdvance":
@@ -3747,7 +3747,7 @@ export const de = {
   "import.object.organization": "Firmen",
   "import.object.person": "Personen",
   "import.objectHint.lead":
-    "Eine unbearbeitete Liste landet als Leads zur Qualifizierung, bevor sie jemand als Kontakte behandelt.",
+    "Eine unbearbeitete Liste landet als Leads zur Qualifizierung, bevor sie jemand als Personen behandelt.",
   "import.objectHint.organization":
     "Firmen werden über den zugeordneten Namen erkannt, ein erneuter Upload korrigiert also statt zu duplizieren.",
   "import.objectHint.person":
@@ -4515,7 +4515,7 @@ export const de = {
     "Sobald Ihr Postfach E-Mails eingebracht hat, steht hier jeder Absender mit dem, was aus ihm wurde.",
   "senders.colSender": "Absender",
   "senders.colDecision": "Entschieden",
-  "senders.colRecord": "Kontakt",
+  "senders.colRecord": "Person",
   "senders.colActions": "Aktionen",
   "senders.recordYes": "Ja",
   "senders.recordNo": "Nein",
@@ -4526,7 +4526,7 @@ export const de = {
   "senders.withdraw": "Zurücknehmen",
   "senders.keepOutTitle": "Diesen Absender dauerhaft aussperren?",
   "senders.keepOutBody":
-    "Es wird kein Kontakt angelegt, und die E-Mails, die dieser Absender bereits in Ihr Postfach eingebracht hat, werden vernichtet. E-Mails, die auch eine Kollegin importiert hat, bleiben ihr erhalten.",
+    "Es wird keine Person angelegt, und die E-Mails, die dieser Absender bereits in Ihr Postfach eingebracht hat, werden vernichtet. E-Mails, die auch eine Kollegin importiert hat, bleiben ihr erhalten.",
   "senders.keepOutConfirm": "Aussperren und vernichten",
   "senders.kind.person": "Eine Person",
   "senders.kind.roleMailbox": "Ein Funktionspostfach",
@@ -4541,7 +4541,7 @@ export const de = {
   "senders.kind.undecided": "Noch nicht entschieden",
   "mailSharing.title": "E-Mail-Freigabe",
   "mailSharing.sub":
-    "Erfasste E-Mails sind für alle Kolleginnen und Kollegen lesbar, die den Kontakt sehen können. Standardmäßig eingeschaltet — das macht die Pipeline gemeinsam.",
+    "Erfasste E-Mails sind für alle Kolleginnen und Kollegen lesbar, die die Person sehen können. Standardmäßig eingeschaltet — das macht die Pipeline gemeinsam.",
   "mailSharing.label": "Erfasste E-Mails im Team teilen",
   "mailSharing.help":
     "Einzelne Nachrichten lassen sich nachträglich einschränken, Adressen und Domains vorab ausschließen.",
@@ -4589,7 +4589,7 @@ export const de = {
     "Was dieser Connector einbringt, ablegen unter",
   "connectors.contextTag.none": "Kein Tag",
   "connectors.contextTag.hint":
-    "Ein vorhandenes Tag. Jeder Kontakt, den dieser Connector ab jetzt anlegt, wird darunter abgelegt — so kannst du fragen, was aus dieser Quelle kam. Kontakte, die schon da sind, behalten ihre Tags.",
+    "Ein vorhandenes Tag. Jede Person, die dieser Connector ab jetzt anlegt, wird darunter abgelegt — so kannst du fragen, was aus dieser Quelle kam. Personen, die schon da sind, behalten ihre Tags.",
   "connectors.contextTag.archived":
     "{name} ist archiviert, also wird nichts mehr darunter abgelegt. Wähl ein anderes Tag oder keins.",
   "connectors.signatureEnrich.followingDefault":
@@ -4598,7 +4598,7 @@ export const de = {
     "Eigene Antwort dieses Postfachs — bleibt bestehen, was auch immer Ihre Organisation einstellt.",
   "hold.sectionTitle": "Private Korrespondenz",
   "hold.notHeld":
-    "E-Mails mit diesem Kontakt folgen der Einstellung Ihres Postfachs.",
+    "E-Mails mit dieser Person folgen der Einstellung Ihres Postfachs.",
   "hold.heldByAddress":
     "Sie behalten E-Mails mit dieser Adresse bei den Beteiligten.",
   "hold.heldByDomain": "Sie behalten E-Mails mit {domain} bei den Beteiligten.",
@@ -4616,7 +4616,7 @@ export const de = {
   "hold.confirmHistoryNote":
     "Das gilt ab jetzt. Bereits erfasste E-Mails behalten ihre bisherige Sichtbarkeit.",
   "captureNotice.whatHappens":
-    "Margince liest dieses Postfach und legt ab, was es findet: die Nachrichten, wer daran beteiligt war, sowie die Kontakte und Firmen hinter den Adressen. Anhänge werden mit ihrer Nachricht gespeichert.",
+    "Margince liest dieses Postfach und legt ab, was es findet: die Nachrichten, wer daran beteiligt war, sowie die Personen und Firmen hinter den Adressen. Anhänge werden mit ihrer Nachricht gespeichert.",
   "captureNotice.whoReads":
     "Ein neues Postfach ist standardmäßig zurückgehalten. Eine Nachricht bleibt bei den Beteiligten, bis eine Einstufung den Verlauf als gewöhnliche geschäftliche Korrespondenz beurteilt — erst dann können Kolleginnen und Kollegen sie lesen. Sie können das Postfach jederzeit so einstellen, dass alles zurückgehalten bleibt.",
   "captureNotice.yourControl":
@@ -4824,7 +4824,7 @@ export const de = {
   "ob.s4.accessToggle": "Welchen Zugriff das gibt",
   "ob.s4.scope1Lead": "Wir lesen — wir müllen nichts voll.",
   "ob.s4.scope1Rest":
-    "Deine Post wird automatisch zu Kontakten, Firmen und Aktivitäten.",
+    "Deine Post wird automatisch zu Personen, Firmen und Aktivitäten.",
   "ob.s4.scope2Lead": "Senden gehört zu dieser Erlaubnis.",
   "ob.s4.scope2Rest":
     "Margince kann aus diesem Postfach senden — wenn du sendest, und wenn du einem Agenten einen Passport mit Senderecht gibst. Diese Erlaubnis ist deine Freigabe, einmal erteilt. Du kannst sie jederzeit zurücknehmen.",
@@ -4996,10 +4996,10 @@ export const de = {
   "ob.conv.scene.continue": "Weiter",
   "ob.conv.connect.sceneTitle": "Verbinde deine Konten.",
   "ob.conv.connect.sceneSub":
-    "Ich baue Kontakte, Firmen und Historie aus dem, was schon im Postfach liegt.",
+    "Ich baue Personen, Firmen und Historie aus dem, was schon im Postfach liegt.",
   "ob.conv.connect.mailboxTitle": "Dein Postfach",
   "ob.conv.connect.mailboxHint":
-    "Wähle eins. Von hier kommen deine Kontakte, Firmen und Historie.",
+    "Wähle eins. Von hier kommen deine Personen, Firmen und Historie.",
   "ob.conv.connect.networkTitle": "Dein Netzwerk",
   "ob.conv.connect.networkHint":
     "Optional, aber lohnend. Macht aus Bekannten Accounts und beobachtet sie auf Trigger.",
@@ -5028,7 +5028,7 @@ export const de = {
     "Diese Installation bietet {name} nicht an.",
   "ob.conv.connect.appSetupLink": "In den Einstellungen einrichten",
   "ob.conv.connect.dialogIntro":
-    "{brings}. Ich lese es einmal, um deine Kontakte und Historie aufzubauen, und halte es danach synchron.",
+    "{brings}. Ich lese es einmal, um deine Personen und Historie aufzubauen, und halte es danach synchron.",
   "ob.conv.connect.dialogClose": "Schließen",
   "ob.conv.connect.linkedinName": "LinkedIn",
   "ob.conv.connect.linkedinConnected": "Verbunden",
@@ -5125,7 +5125,7 @@ export const de = {
   "ob.conv.recap.readDeferred":
     "Willkommen zurück. Mein Lesevorgang von {host} pausiert gerade. Nenn mir wieder eine Website oder erzähl es mir direkt.",
   "ob.conv.linkedin.cardBody":
-    "Macht aus deinem Netzwerk Firmen und Kontakte, und meldet, wenn jemand aus deinem Netzwerk den Job wechselt.",
+    "Macht aus deinem Netzwerk Firmen und Personen, und meldet, wenn jemand aus deinem Netzwerk den Job wechselt.",
   "ob.conv.linkedin.limitsToggle": "Was Margince sehen kann und was nicht",
   "ob.conv.linkedin.scope1Lead": "Deine Kontaktliste \u2014",
   "ob.conv.linkedin.scope1Rest":
@@ -5140,7 +5140,7 @@ export const de = {
   "ob.conv.linkedin.scope4Rest":
     "Das Verbinden verschickt keine Einladungen und keine Nachrichten \u2014 nie.",
   "ob.conv.linkedin.neverContacts":
-    "Deine Kontakte werden nie zu CRM-Kontakten. Sie beantworten nur: Wer hier kennt sie schon?",
+    "Deine Kontakte werden nie zu Personen im CRM. Sie beantworten nur: Wer hier kennt sie schon?",
   "ob.conv.linkedin.profileLabel": "Deine LinkedIn-Profil-URL",
   "ob.conv.linkedin.profilePlaceholder": "https://www.linkedin.com/in/…",
   "ob.conv.linkedin.profileWhy":
@@ -5526,7 +5526,7 @@ export const de = {
   "client.open360": "360 öffnen",
   "client.unknown": "Noch nicht in deiner Organisation.",
   "client.unknownDetail":
-    "Dieser Absender passt zu keinem Kontakt, den du sehen kannst. Von woanders wurde nichts geholt.",
+    "Dieser Absender passt zu keiner Person, die du sehen kannst. Von woanders wurde nichts geholt.",
   "client.createLead": "Als Lead erfassen",
   "client.isolation": "spricht nur mit DEINER Organisation",
   "client.attribution": "Jede Erfassung ist zugeordnet und prüfbar.",
@@ -5837,9 +5837,9 @@ export const de = {
   "network.bucket.strong": "Stark",
   "coverage.engaged": "Im Austausch",
   "coverage.quiet": "Kein beidseitiger Kontakt",
-  "coverage.seatWithheld": "Ein Kontakt, den Sie nicht lesen dürfen",
+  "coverage.seatWithheld": "Eine Person, die Sie nicht lesen dürfen",
   "coverage.daysSinceTouch": "{days} Tage",
-  "coverage.risk.single_threaded_theirs": "Nur ein Kontakt",
+  "coverage.risk.single_threaded_theirs": "Nur eine Person",
   "coverage.risk.single_threaded_ours": "Von einer Person getragen",
   "coverage.risk.coverage_gap": "Kein engagierter Fürsprecher",
   "coverage.risk.champion_left": "Fürsprecher hat gekündigt",
@@ -5853,7 +5853,7 @@ export const de = {
   "cf.object": "Objekt",
   "cf.obj.deal": "Deal",
   "cf.obj.organization": "Firma",
-  "cf.obj.person": "Kontakt",
+  "cf.obj.person": "Person",
   "cf.obj.lead": "Lead",
   "cf.listLabel": "Felder auf {object}",
   "cf.col.field": "Feld",
@@ -5866,9 +5866,9 @@ export const de = {
   "cf.empty.organization":
     "Noch keine benutzerdefinierten Felder auf Firma. Füge eines hinzu, wenn du etwas erfasst, das wir nicht mitgeliefert haben.",
   "cf.empty.person":
-    "Noch keine benutzerdefinierten Felder auf Kontakt. Die Kernfelder decken den Kontaktdatensatz ab; füge eines hinzu, wenn du mehr erfasst.",
+    "Noch keine benutzerdefinierten Felder auf Person. Die Kernfelder decken den Personendatensatz ab; füge eines hinzu, wenn du mehr erfasst.",
   "cf.empty.lead":
-    "Noch keine benutzerdefinierten Felder auf Lead. Ein Feld, das du hier hinzufügst, erscheint auch, sobald ein Lead zu einem Kontakt befördert wird.",
+    "Noch keine benutzerdefinierten Felder auf Lead. Ein Feld, das du hier hinzufügst, erscheint auch, sobald ein Lead zu einer Person befördert wird.",
   "cf.type.text": "Text",
   "cf.type.number": "Zahl",
   "cf.type.date": "Datum",
@@ -6016,7 +6016,7 @@ export const de = {
   "captureActivity.contentNone": "kein Absender erfasst",
   "captureActivity.outcome.captured": "Erfasst",
   "captureActivity.outcome.internal": "Als intern verworfen",
-  "captureActivity.outcome.suppressed": "Kein Kontakt angelegt",
+  "captureActivity.outcome.suppressed": "Keine Person angelegt",
   "captureActivity.outcome.deferred": "Wartet auf Beurteilung",
   "captureActivity.outcome.fault": "Ableitung fehlgeschlagen",
   "captureActivity.reason.internal_only":
@@ -6026,19 +6026,19 @@ export const de = {
   "captureActivity.reason.noise_prior":
     "eine frühere Beurteilung stufte diesen Absender als Rauschen ein, die Nachricht wird archiviert",
   "captureActivity.reason.decided_prior":
-    "über diesen Absender wurde bereits entschieden, es wird kein Kontakt angelegt",
+    "über diesen Absender wurde bereits entschieden, es wird keine Person angelegt",
   "captureActivity.reason.no_granting_human":
     "die Verbindung nannte kein Mitglied, für das gehandelt werden kann",
   "captureActivity.reason.invisible_incumbent":
     "sie traf auf einen Datensatz außerhalb Ihrer Sicht",
   "captureActivity.reason.derivation_failed":
-    "der Kontaktschritt schlug fehl; die Nachricht selbst ist unberührt",
+    "der Schritt zur Person schlug fehl; die Nachricht selbst ist unberührt",
   "captureActivity.reason.no_counterparty":
     "kein Absender, den dieses CRM erfassen konnte",
   "captureActivity.reason.role_mailbox":
-    "ein Sammelpostfach, keine Person — gespeichert, aber kein Kontakt angelegt",
+    "ein Sammelpostfach, keine Person — gespeichert, aber keine Person angelegt",
   "captureActivity.reason.private_thread":
-    "ein privater Austausch — für Sie gespeichert, aber kein Kontakt angelegt",
+    "ein privater Austausch — für Sie gespeichert, aber keine Person angelegt",
   "captureActivity.reason.transactional_infra":
     "der Absender ist Mail-Infrastruktur, kein Unternehmen, mit dem Sie arbeiten",
   "captureActivity.reason.transactional_prefix":
@@ -6047,7 +6047,7 @@ export const de = {
   "captureActivity.outcome.deferred_sent": "Zur Entscheidung vorgelegt",
   "captureActivity.resolution.pending": "wartet noch",
   "captureActivity.resolution.unsure": "an die Prüfliste gesendet",
-  "captureActivity.resolution.real": "als echter Kontakt beurteilt",
+  "captureActivity.resolution.real": "als echte Person beurteilt",
   "captureActivity.resolution.noise": "als Rauschen beurteilt",
   "captureActivity.resolution.rejected": "von einer Person abgelehnt",
   "captureActivity.resolution.suppressed": "unterdrückt",
@@ -6077,8 +6077,8 @@ export const de = {
   "pipeline.stage.erasure_check": "Löschprüfung",
   "pipeline.stage.internal_drop": "Prüfung auf rein interne Nachricht",
   "pipeline.stage.activity_write": "In der Chronik gespeichert",
-  "pipeline.stage.tier_ladder": "Kontaktentscheidung",
-  "pipeline.stage.person_create": "Kontakt angelegt",
+  "pipeline.stage.tier_ladder": "Personenentscheidung",
+  "pipeline.stage.person_create": "Person angelegt",
   "pipeline.stage.verdict": "Absenderurteil",
   "pipeline.stage.company_triage": "Firmenprüfung",
   "pipeline.stage.attention_label": "Aufmerksamkeits-Label",
@@ -6101,17 +6101,17 @@ export const de = {
   "pipeline.reason.no_counterparty":
     "kein Absender, den dieses CRM erfassen konnte",
   "pipeline.reason.role_mailbox":
-    "ein Sammelpostfach, keine Person — gespeichert, aber kein Kontakt angelegt",
+    "ein Sammelpostfach, keine Person — gespeichert, aber keine Person angelegt",
   "pipeline.reason.private_thread":
-    "ein privater Austausch — für Sie gespeichert, aber kein Kontakt angelegt",
+    "ein privater Austausch — für Sie gespeichert, aber keine Person angelegt",
   "pipeline.reason.no_granting_human":
     "die Verbindung nennt kein Mitglied, in dessen Namen gehandelt wird",
   "pipeline.reason.derivation_failed":
-    "der Kontaktschritt ist fehlgeschlagen; die Nachricht selbst ist unberührt",
+    "der Schritt zur Person ist fehlgeschlagen; die Nachricht selbst ist unberührt",
   "pipeline.reason.not_linked_yet":
-    "mit dieser Nachricht ist noch kein Kontakt verknüpft",
+    "mit dieser Nachricht ist noch keine Person verknüpft",
   "pipeline.reason.no_contact_intended":
-    "die Kontaktentscheidung ergab, dass keiner anzulegen war",
+    "die Personenentscheidung ergab, dass keine anzulegen war",
   "pipeline.reason.awaiting_verdict": "der Absender wartet noch auf ein Urteil",
   "pipeline.reason.verdict_reached": "für diesen Absender liegt ein Urteil vor",
   "pipeline.reason.no_open_question":
@@ -6929,14 +6929,14 @@ export const de = {
     "Ein Unternehmen wechselt die Phase aufgrund dessen, was mit ihm geschehen ist. Das kann auch ändern, wer das Konto sieht und welche Automationen laufen.",
   "captureSettings.title": "Anreicherung",
   "captureSettings.sub":
-    "Wie erfasste Unternehmen und Kontakte nach ihrer Erstellung angereichert werden.",
+    "Wie erfasste Unternehmen und Personen nach ihrer Erstellung angereichert werden.",
   "captureSettings.autoEnrich.label":
     "Erfasste Unternehmen automatisch anreichern",
   "captureSettings.autoEnrich.help":
     "Wenn aktiviert, erhält jedes aus erfassten E-Mails erstellte Unternehmen automatisch ein Web-Dossier — seine Website wird gelesen und sein Profil ausgefüllt. Läuft unter einem Tageslimit.",
   "captureSettings.signatureEnrich.label": "Kontaktdaten aus E-Mails auswerten",
   "captureSettings.signatureEnrich.help":
-    "Wenn aktiv, übernimmt Margince, was ein Kontakt in E-Mails an Sie unter seinem eigenen Namen angibt — in der Signatur und auf einer angehängten Visitenkarte. Position, Telefonnummer, Adresse, Firma. Das geschieht innerhalb von Minuten nach Eingang der E-Mail. Nichts wird erschlossen: Was die E-Mail nicht nennt, wird nicht geschrieben. Das ist die Voreinstellung der Organisation; ein Postfach mit eigener Einstellung behält sie.",
+    "Wenn aktiv, übernimmt Margince, was eine Person in E-Mails an Sie unter ihrem eigenen Namen angibt — in der Signatur und auf einer angehängten Visitenkarte. Position, Telefonnummer, Adresse, Firma. Das geschieht innerhalb von Minuten nach Eingang der E-Mail. Nichts wird erschlossen: Was die E-Mail nicht nennt, wird nicht geschrieben. Das ist die Voreinstellung der Organisation; ein Postfach mit eigener Einstellung behält sie.",
   "captureSettings.adminOnly":
     "Nur ein Administrator oder Ops kann dies ändern.",
 
@@ -6950,14 +6950,14 @@ export const de = {
   "captureExclusions.empty": "Keine Ausschlüsse.",
   "ownerIdentities.title": "Ihre weiteren Adressen",
   "ownerIdentities.sub":
-    "Adressen, die auch Sie sind: ein Alias zum Senden, eine private Domain, die Sie lesen, eine Adresse, von der Sie weiterleiten. Post zwischen Ihren eigenen Adressen ist keine Korrespondenz mit jemandem — sie wird nicht erfasst und wird nie ein Kontakt.",
+    "Adressen, die auch Sie sind: ein Alias zum Senden, eine private Domain, die Sie lesen, eine Adresse, von der Sie weiterleiten. Post zwischen Ihren eigenen Adressen ist keine Korrespondenz mit jemandem — sie wird nicht erfasst und wird nie eine Person.",
   "ownerIdentities.add": "Adresse hinzufügen",
   "ownerIdentities.addLabel": "Eine weitere Adresse als Ihre eigene angeben",
   "ownerIdentities.addDescription":
     "Nur Ihre. Kolleginnen und Kollegen sehen nie, was Sie hier eintragen.",
   "ownerIdentities.current": "Angegeben",
   "ownerIdentities.notRetroactive":
-    "Gilt ab der nächsten Nachricht. Bereits erfasste Post bleibt, und ein aus einem Alias entstandener Kontakt bleibt, bis Sie ihn zusammenführen oder entfernen.",
+    "Gilt ab der nächsten Nachricht. Bereits erfasste Post bleibt, und eine aus einem Alias entstandene Person bleibt, bis Sie sie zusammenführen oder entfernen.",
   "ownerIdentities.empty": "Sie haben keine weiteren Adressen angegeben.",
   "ownerIdentities.remove": "Diese Adresse zurückziehen",
   "ownerIdentities.added": "Adresse hinzugefügt.",
@@ -7157,7 +7157,7 @@ export const de = {
   "person.enriched.confirm": "Das stimmt",
   "person.enriched.save": "Korrektur speichern",
   "person.enriched.cancel": "Abbrechen",
-  "person.graph.loading": "Das Netzwerk um diesen Kontakt wird gelesen \u2026",
+  "person.graph.loading": "Das Netzwerk um diese Person wird gelesen \u2026",
   "person.graph.routeDirect": "{name} steht bereits im Austausch mit ihnen.",
   "person.graph.routeVia":
     "{name} steht im Austausch mit {through} im selben Unternehmen.",
@@ -7168,7 +7168,7 @@ export const de = {
   "person.graph.recordWorksWith": "Festhalten: arbeitet mit {name} zusammen",
   "person.graph.noEdge": "Keine erfasste Korrespondenz mit {name}.",
   "person.graph.withColleague": "mit {name}",
-  "person.graph.withContact": "mit diesem Kontakt",
+  "person.graph.withContact": "mit dieser Person",
   "person.graph.counts":
     "{total} Interaktionen in 90 Tagen \u00b7 {inbound} eingehend, {outbound} ausgehend",
   "person.graph.untitledMessage": "Ohne Titel",
@@ -7179,7 +7179,7 @@ export const de = {
   "person.graph.withheldDirect":
     "Einige Kolleginnen und Kollegen werden nicht angezeigt.",
   "person.graph.withheldAccount":
-    "Einige Kontakte dieses Unternehmens werden nicht angezeigt.",
+    "Einige Personen dieses Unternehmens werden nicht angezeigt.",
   "person.intro.askFirstName": "{name} um eine Vorstellung bitten",
   "person.intro.leadEyebrow": "Empfohlener Weg",
   "person.intro.leadRouteBadge": "Starker Weg",
@@ -7250,7 +7250,7 @@ export const de = {
   "person.intro.lanePeers": "Mit wem sie sprechen",
   "person.intro.laneTarget": "Zielperson",
   "person.intro.useThisRoute": "Diesen Weg nutzen",
-  "person.intro.mapRegion": "Wer diesen Kontakt erreicht, und über wen",
+  "person.intro.mapRegion": "Wer diese Person erreicht, und über wen",
   "person.intro.edgeDirect": "{name} korrespondiert direkt mit ihr",
   "person.intro.edgeAccount": "arbeitet mit {name}",
   "person.intro.routesSub":
@@ -7274,13 +7274,13 @@ export const de = {
   "person.intro.askFailed": "Die Anfrage konnte nicht gespeichert werden.",
   "person.intro.reasonLabel": "Warum Sie fragen",
   "person.intro.reasonHint":
-    "Das liest Ihre Kollegin, nicht der Kontakt. Sagen Sie, warum sich die Vorstellung lohnt.",
-  "person.intro.valueLabel": "Was der Kontakt davon hat",
+    "Das liest Ihre Kollegin, nicht die Person. Sagen Sie, warum sich die Vorstellung lohnt.",
+  "person.intro.valueLabel": "Was die Person davon hat",
   "person.intro.valueHint":
-    "Der Grund, warum der Kontakt dieses Gespräch wollen würde.",
+    "Der Grund, warum die Person dieses Gespräch wollen würde.",
   "person.intro.noteLabel": "Notiz zum Weiterleiten",
   "person.intro.noteHint":
-    "Nur dieser Teil erreicht den Kontakt. Schreiben Sie ihn so, dass er unverändert weitergegeben werden kann.",
+    "Nur dieser Teil erreicht die Person. Schreiben Sie ihn so, dass er unverändert weitergegeben werden kann.",
   "person.intro.nameDropAsk": "Um Erlaubnis bitten, den Namen zu nennen",
   "person.intro.fallbackLegend": "Falls abgelehnt wird",
   "person.intro.fallbackNone": "Nichts weiter",
@@ -7380,7 +7380,7 @@ export const de = {
   "person.network.replied": "antwortete {when}",
 
   "person.page.loading": "Wird geladen…",
-  "person.page.notOpened": "Dieser Kontakt konnte nicht geöffnet werden.",
+  "person.page.notOpened": "Diese Person konnte nicht geöffnet werden.",
   "person.page.buyingRole": "Rolle im Kauf",
   "person.page.owner": "Zuständig",
   "person.page.ownerUnassigned": "Nicht zugewiesen",
@@ -7388,7 +7388,7 @@ export const de = {
   "person.page.openProfile": "Profil öffnen",
   "person.rail.detailsTitle": "Details",
   "person.rail.archivedReadOnly":
-    "Dieser Kontakt ist archiviert. Stelle ihn wieder her, um hier etwas zu ändern.",
+    "Diese Person ist archiviert. Stelle sie wieder her, um hier etwas zu ändern.",
   "person.rail.employmentVersionUnresolved":
     "Die aktuelle Version dieser Zeile konnte nicht zum Speichern zurückgelesen werden. Lade neu und versuche es erneut.",
   "person.rail.employmentTitle": "Unternehmen",
@@ -7413,7 +7413,7 @@ export const de = {
   "person.meetings.noneLogged": "Es ist kein Termin mit ihnen erfasst.",
   "person.meetings.untitled": "Termin ohne Betreff",
   "person.meetings.participants": "Im Raum",
-  "person.documents.empty": "Zu diesem Kontakt liegt keine Datei.",
+  "person.documents.empty": "Zu dieser Person liegt keine Datei.",
   "person.research.empty": "Zu ihnen wurde noch nichts recherchiert.",
   "person.research.fields": "Belege der Anreicherung",
   "person.research.fieldsEmpty":
@@ -7548,7 +7548,7 @@ export const de = {
   "person.rail.noReplyDays": "Seit {count} Tagen keine Antwort",
   "person.rail.repliedDaysAgo_one": "Antwort vor {count} Tag",
   "person.rail.repliedDaysAgo_other": "Antwort vor {count} Tagen",
-  "person.rail.singleThreaded": "Nur ein Kontakt in diesem Deal",
+  "person.rail.singleThreaded": "Nur eine Person in diesem Deal",
   "person.rail.noMeetingBooked": "Kein nächster Termin vereinbart",
   "person.rail.consentTitle": "Einwilligung & Kanäle",
   "person.rail.email": "E-Mail",
@@ -7589,7 +7589,7 @@ export const de = {
   "person.composer.blockedRewrite":
     "Eine Nachricht unter einem anderen Zweck muss auch diese Art von Nachricht SEIN — sie umzuetikettieren macht sie nicht dazu.",
   "person.composer.blockedRecordConsent":
-    "Wenn Sie eine Rechtsgrundlage haben, erfassen Sie die Einwilligungsentscheidung am Kontakt.",
+    "Wenn Sie eine Rechtsgrundlage haben, erfassen Sie die Einwilligungsentscheidung am Datensatz der Person.",
   "person.composer.consentPickPurpose":
     "Wählen Sie, wofür diese Nachricht ist — die Einwilligung gilt je Zweck.",
   "person.composer.intent": "Worum soll es gehen?",
@@ -7707,26 +7707,26 @@ export const de = {
   "provider.deleteDataConfirm.title":
     "Alles löschen, was von diesem Anbieter stammt?",
   "provider.deleteDataConfirm.body":
-    "Jeder Wert dieses Anbieters verschwindet von jedem Kontakt. Was du ausgegeben hast, bleibt in den Aufzeichnungen; die Daten nicht. Das lässt sich nicht rückgängig machen.",
+    "Jeder Wert dieses Anbieters verschwindet von jeder Person. Was du ausgegeben hast, bleibt in den Aufzeichnungen; die Daten nicht. Das lässt sich nicht rückgängig machen.",
   "provider.deleteDataConfirm.typed":
     "Zum Bestätigen den Namen des Anbieters eingeben",
-  "provider.automaticLookup": "Kontakte automatisch nachschlagen",
+  "provider.automaticLookup": "Personen automatisch nachschlagen",
   "provider.automaticLookupHint":
-    "Jeder Kontakt wird einmal nachgeschlagen — für das, was die Verbindung auswählt und der Anbieter nicht berechnet, in der Regel den beruflichen Profil-Link, die aktuelle Rolle samt Arbeitgeber und den Werdegang. E-Mail-Adressen und Mobilnummern werden so nie gekauft: die kosten Guthaben und bleiben eine Entscheidung pro Kontakt.",
+    "Jede Person wird einmal nachgeschlagen — für das, was die Verbindung auswählt und der Anbieter nicht berechnet, in der Regel den beruflichen Profil-Link, die aktuelle Rolle samt Arbeitgeber und den Werdegang. E-Mail-Adressen und Mobilnummern werden so nie gekauft: die kosten Guthaben und bleiben eine Entscheidung pro Person.",
   "provider.automaticLookupJurisdiction":
-    "Schalt das aus, wenn deine Kontakte einem Recht unterliegen, das den Handel mit Personendaten verbietet, etwa dem vietnamesischen. Der Knopf auf dem einzelnen Kontakt funktioniert weiterhin, damit die Entscheidung bei dem bleibt, der sie trifft.",
+    "Schalt das aus, wenn die Personen in deinem CRM einem Recht unterliegen, das den Handel mit Personendaten verbietet, etwa dem vietnamesischen. Der Knopf auf der einzelnen Person funktioniert weiterhin, damit die Entscheidung bei dem bleibt, der sie trifft.",
   "provider.buyable": "Kauf von {category} erlauben",
   "provider.buyableHint_one":
-    "Dieser Schalter kauft nichts. Er stellt bei jedem Kontakt eine Schaltfläche bereit, zum Preis von {credits} Guthaben, damit jemand diese Angabe für eine einzelne Person kaufen kann.",
+    "Dieser Schalter kauft nichts. Er stellt bei jeder Person eine Schaltfläche bereit, zum Preis von {credits} Guthaben, damit jemand diese Angabe für eine einzelne Person kaufen kann.",
   "provider.buyableHint_other":
-    "Dieser Schalter kauft nichts. Er stellt bei jedem Kontakt eine Schaltfläche bereit, zum Preis von {credits} Guthaben, damit jemand diese Angabe für eine einzelne Person kaufen kann.",
+    "Dieser Schalter kauft nichts. Er stellt bei jeder Person eine Schaltfläche bereit, zum Preis von {credits} Guthaben, damit jemand diese Angabe für eine einzelne Person kaufen kann.",
   "provider.buyableNeeds":
     "Der Anbieter sucht danach nur zusammen mit {prerequisite}. Einzeln lässt es sich nicht kaufen — erlauben Sie zuerst diese Angabe.",
   "provider.backlog": "Noch nachzuschlagen",
-  "provider.backlogRemaining_one": "{count} Kontakt",
-  "provider.backlogRemaining_other": "{count} Kontakte",
+  "provider.backlogRemaining_one": "{count} Person",
+  "provider.backlogRemaining_other": "{count} Personen",
   "provider.backlogWorking":
-    "Kontakte, die es beim Verbinden schon gab, werden nach und nach nachgeschlagen.",
+    "Personen, die es beim Verbinden schon gab, werden nach und nach nachgeschlagen.",
   "provider.backlogPaused":
     "Zurzeit wird nichts nachgeschlagen: automatische Abfragen sind aus, das Tageslimit ist aufgebraucht, oder der Anbieter ist nicht nutzbar.",
   "provider.credits": "Restguthaben beim Anbieter",
@@ -7752,11 +7752,10 @@ export const de = {
   "provider.profile.notConnected":
     "Es ist kein Datenanbieter verbunden, also wurde nichts gekauft.",
   "provider.profile.notEligible":
-    "Für diesen Kontakt nicht zulässig — er hat widersprochen, oder der Datensatz ist archiviert.",
+    "Für diese Person nicht zulässig — sie hat widersprochen, oder der Datensatz ist archiviert.",
   "provider.profile.nothingToLookUp":
-    "Es gibt nichts, womit sich dieser Kontakt nachschlagen ließe. Tragen Sie die LinkedIn-URL oder das Unternehmen ein, dann kann die Suche laufen.",
-  "provider.profile.neverRun":
-    "Diesen Kontakt hat noch niemand nachgeschlagen.",
+    "Es gibt nichts, womit sich diese Person nachschlagen ließe. Tragen Sie die LinkedIn-URL oder das Unternehmen ein, dann kann die Suche laufen.",
+  "provider.profile.neverRun": "Diese Person hat noch niemand nachgeschlagen.",
   "provider.profile.queued": "In der Warteschlange",
   "provider.profile.inProgress": "Wird nachgeschlagen …",
   "provider.profile.working":
@@ -7764,7 +7763,7 @@ export const de = {
   "provider.profile.landing":
     "Antwort da. Sie wird in den Datensatz übernommen.",
   "provider.profile.completed": "Gefunden",
-  "provider.profile.noMatch": "Der Anbieter hatte nichts zu diesem Kontakt.",
+  "provider.profile.noMatch": "Der Anbieter hatte nichts zu dieser Person.",
   "provider.profile.stale":
     "Früher gekauft. Der Anbieter ist nicht mehr verbunden, eine Auffrischung ist deshalb nicht möglich.",
   "provider.profile.invalidCredentials":
@@ -7779,12 +7778,12 @@ export const de = {
     "Wie diese Abfrage ausgegangen ist, haben wir nie erfahren. Sie kann berechnet worden sein.",
   "provider.profile.claimsUnwritten":
     "Bezahlt, aber die Daten sind nie an diesem Datensatz angekommen. Niemand muss danach suchen — das hier ist die Lücke.",
-  "provider.profile.enrichNow": "Kontakt nachschlagen · kostenlos",
+  "provider.profile.enrichNow": "Person nachschlagen · kostenlos",
   "provider.profile.recheck": "Erneut prüfen · kostenlos",
   "provider.profile.lookingUp": "Wir fragen den Anbieter. Das dauert kurz.",
-  "provider.profile.emptyTitle": "Für diesen Kontakt wurde noch nichts gekauft",
+  "provider.profile.emptyTitle": "Für diese Person wurde noch nichts gekauft",
   "provider.profile.emptyBody":
-    "Eine Abfrage holt bei {provider} Angaben zu diesem Kontakt — je nachdem, was für diese Verbindung eingekauft werden soll. Sie kostet {provider}-Credits, und was zurückkommt steht hier neben dem Datensatz; überschrieben wird nichts, was jemand aus dem Team eingetragen hat.",
+    "Eine Abfrage holt bei {provider} Angaben zu dieser Person — je nachdem, was für diese Verbindung eingekauft werden soll. Sie kostet {provider}-Credits, und was zurückkommt steht hier neben dem Datensatz; überschrieben wird nichts, was jemand aus dem Team eingetragen hat.",
   "provider.profile.emails": "E-Mail-Adressen",
   "provider.profile.emailType.provider": "{type}, so vom Anbieter bezeichnet",
   "provider.profile.emailType.requested":
@@ -7803,9 +7802,9 @@ export const de = {
   "provider.profile.buyRebuys":
     "Im Preis ist {categories} erneut enthalten: Der Anbieter sucht ohne diese Angabe nicht danach und berechnet alles, was er zurückliefert.",
   "provider.freeTier.hint":
-    "LinkedIn-Profil, aktuelle Rolle und Werdegang kosten keine Credits. Am besten anlassen: jeder neue Kontakt bekommt sie, ohne dass jemand entscheiden muss.",
+    "LinkedIn-Profil, aktuelle Rolle und Werdegang kosten keine Credits. Am besten anlassen: jede neue Person bekommt sie, ohne dass jemand entscheiden muss.",
   "provider.pricedTier.hint":
-    "Werden nie automatisch gekauft. Jemand drückt bei einem einzelnen Kontakt auf den Knopf, und der Preis steht darauf.",
+    "Werden nie automatisch gekauft. Jemand drückt bei einer einzelnen Person auf den Knopf, und der Preis steht darauf.",
   "provider.profile.receiptAt": "Abgefragt am {at}.",
   "provider.profile.receipt":
     "Abgefragt am {at} · {asked} Angaben angefragt, {answered} zurückbekommen.",
@@ -7863,7 +7862,7 @@ export const de = {
   "filters.tab.deals": "Gesch\u00e4fte",
   "filters.builderTitle": "Filter",
   "filters.dynamic": "Dynamisch \u2014 bei jedem Ereignis neu berechnet",
-  "filters.matchContacts": "{count} Kontakte treffen zu",
+  "filters.matchContacts": "{count} Personen treffen zu",
   "filters.matchCompanies": "{count} Firmen treffen zu",
   "filters.matchDeals": "{count} Gesch\u00e4fte treffen zu",
   "filters.noFilterYet": "Bedingung hinzuf\u00fcgen, um die Treffer zu sehen",
@@ -7947,7 +7946,7 @@ export const de = {
   "projectCompanies.searchLabel": "Unternehmen nach Name suchen",
   "personProjects.title": "Projekte",
   "personProjects.empty":
-    "Dieser Kontakt erscheint hier, sobald er an einer Lieferung beteiligt ist — als Sponsor, Ansprechpartner oder wer sonst daran arbeitet.",
+    "Diese Person erscheint hier, sobald sie an einer Lieferung beteiligt ist — als Sponsor, Ansprechpartner oder wer sonst daran arbeitet.",
   "projectRole.customer": "Kunde",
   "projectRole.partner": "Partner",
   "projectRole.subcontractor": "Subunternehmer",
@@ -8380,7 +8379,7 @@ export const de = {
   "worklist.untitled.dsr": "Eine offene Datenschutzanfrage",
   "worklist.untitled.sync_health":
     "Die CRM-Synchronisierung braucht Aufmerksamkeit",
-  "worklist.sync.class.contacts": "Kontakte",
+  "worklist.sync.class.contacts": "Personen",
   "worklist.sync.class.companies": "Firmen",
   "worklist.sync.class.deals": "Deals",
   "worklist.sync.class.leads": "Interessenten",
@@ -8438,9 +8437,9 @@ export const de = {
   "worklist.verb.dismissed": "Für einen Monat zurückgestellt.",
   "worklist.verb.dismissUndo": "Rückgängig",
   "worklist.verb.dismissFailed":
-    "Dieser Kontakt konnte nicht zurückgestellt werden.",
+    "Diese Person konnte nicht zurückgestellt werden.",
   "worklist.verb.dismissUndoFailed":
-    "Dieser Kontakt konnte nicht zurückgeholt werden.",
+    "Diese Person konnte nicht zurückgeholt werden.",
   "worklist.verb.completeUndo": "Rückgängig",
   "worklist.verb.completeUndoFailed":
     "Diese Aufgabe konnte nicht wieder geöffnet werden.",
@@ -8519,7 +8518,7 @@ export const de = {
   "ob.digest.pageKind.team": "Team-Seite",
   "ob.digest.pageKind.services": "Leistungsseite",
   "ob.digest.pageKind.products": "Produktseite",
-  "ob.digest.pageKind.contact": "Kontaktseite",
+  "ob.digest.pageKind.contact": "Personenseite",
   "ob.digest.pageKind.other": "Seite",
   "ob.deck.counter": "{n} von {m}",
   "ob.deck.left": "Noch {n} von {m}",
@@ -8617,10 +8616,10 @@ export const de = {
   "aiRates.proposedDetail":
     "Gerade beim Anbieter gelesen, nicht aus deiner Preisliste. Beim Binden landet er in deinem Freigabe-Eingang, damit Verbrauch und Kosten ihn nach deiner Bestätigung bepreisen können.",
   "firstRun.ai.foot": "Vor dem Klick auf Weiter geht nichts an Ihren Anbieter.",
-  "person.readings.title": "Wo dieser Kontakt steht",
+  "person.readings.title": "Wo diese Person steht",
   "person.readings.move": "Wer ist am Zug",
   "person.readings.yourMove": "Du",
-  "person.readings.theirMove": "Der Kontakt",
+  "person.readings.theirMove": "Die Person",
   "person.readings.quiet": "Verstummt",
   "person.readings.neverSpoke": "Noch nie gesprochen",
   "person.readings.lastFromThem": "zuletzt von ihnen: {when}",
@@ -8636,8 +8635,8 @@ export const de = {
   "deal.strip.lastTouch": "Letzter Kontakt",
   "lead.standing.qualified": "Qualifiziert",
   "lead.standing.qualifiedOn":
-    "Qualifiziert am {at}. Dieser Lead ist jetzt ein Kontakt.",
-  "lead.standing.qualifiedUndated": "Dieser Lead ist jetzt ein Kontakt.",
+    "Qualifiziert am {at}. Dieser Lead ist jetzt eine Person.",
+  "lead.standing.qualifiedUndated": "Dieser Lead ist jetzt eine Person.",
   "lead.standing.closed": "Geschlossen",
   "lead.standing.closedFor":
     "Geschlossen: {reason}. Der Datensatz bleibt als Spur.",
@@ -8651,7 +8650,7 @@ export const de = {
   "lead.standing.inMotion": "In Bewegung",
   "lead.standing.engagedBecause":
     "Der Lead hat geantwortet, oder ein Termin steht im Kalender.",
-  "lead.standing.rests.promoted": "Zu einem Kontakt befördert.",
+  "lead.standing.rests.promoted": "Zu einer Person befördert.",
   "lead.standing.rests.closed": "Disqualifiziert, kein Grund erfasst.",
   "lead.standing.rests.ladder": "Lead-Leiter",
   "lead.standing.rests.record": "Lead-Datensatz",
