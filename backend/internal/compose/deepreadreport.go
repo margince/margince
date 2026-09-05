@@ -133,7 +133,7 @@ func readWarnings(legalWarning string, extractErr error, jsShell bool) []string 
 		warnings = append(warnings, legalWarning)
 	}
 	if extractErr != nil {
-		warnings = append(warnings, "Some pages could not be extracted; the grounded findings that completed are still available.")
+		warnings = append(warnings, people.SiteReadPartialExtractionWarning)
 	}
 	if jsShell {
 		// Said out loud, because the dossier otherwise looks like a thin
