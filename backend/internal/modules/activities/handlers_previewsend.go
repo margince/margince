@@ -93,6 +93,11 @@ func previewInputFrom(to []openapi_types.Email, category, marketing, purpose *st
 // The mode travels with each recipient because it changes what the answer
 // MEANS: under observe a deny still sends, and a composer that drew it as a
 // refusal would be showing a rollout position as a rule.
+//
+// So does the authority level, for the same kind of reason: it says whether the
+// refusal is anybody's to lift. Both are answers this engine already holds, and
+// a surface that re-derived either would be a second implementation of a rule
+// that decides whether mail reaches a person.
 func previewResponse(set commsauthz.DecisionSet) crmcontracts.SendAuthorizationPreview {
 	out := crmcontracts.SendAuthorizationPreview{
 		Allowed:    set.Allowed(),
@@ -116,6 +121,24 @@ func previewResponse(set commsauthz.DecisionSet) crmcontracts.SendAuthorizationP
 			mode := crmcontracts.SendAuthorizationPreviewRecipientMode(d.Mode)
 			entry.Mode = &mode
 		}
+		// Whose decision this is, resolved HERE from the reason code rather than
+		// by the surface reading it. A composer that mapped reason codes to
+		// liftability would hold a second copy of commsauthz.LevelForReason, and
+		// the copy that stopped matching would offer a rep a button that cannot
+		// lawfully be pressed — or hide one they are entitled to.
+		decidedBy := crmcontracts.SendAuthorizationPreviewRecipientDecidedBy(
+			commsauthz.LevelForReason(d.ReasonCode))
+		entry.DecidedBy = &decidedBy
+
+		// The two answers a surface actually draws with, each folding inputs the
+		// engine already weighs together. Sent rather than derived for the same
+		// reason as decidedBy: recombining verdict, mode and absoluteness in a
+		// browser is a second implementation of the rule that decides whether
+		// mail reaches a person.
+		refuses := d.WouldRefuse(d.Mode)
+		entry.WouldRefuse = &refuses
+		overrulable := d.CanBeOverruled()
+		entry.CanBeOverruled = &overrulable
 		out.Recipients = append(out.Recipients, entry)
 	}
 	return out

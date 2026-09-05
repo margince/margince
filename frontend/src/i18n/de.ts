@@ -3208,6 +3208,28 @@ export const de = {
   "compose.why.contract": "Zu ihrem Vertrag",
   "compose.why.account": "Zu ihrem Konto",
   "compose.why.marketing": "Werbung",
+  "sendPermission.refused": "Sie können diese Nachricht nicht senden.",
+  "sendPermission.sayWhy": "Begründung angeben",
+  "sendPermission.unproven":
+    "Margince hat keinen Nachweis, warum Sie schreiben dürfen.",
+  "sendPermission.unprovenHint":
+    "Wenn Sie den Grund kennen — man hat Sie darum gebeten, Sie hatten ein Treffen, es ist ein Kunde —, halten Sie ihn fest. Er wird unter Ihrem Namen gespeichert.",
+  "sendPermission.reason.objected":
+    "Diese Person hat Werbung widersprochen. Das kann hier niemand aufheben, auch keine Administration.",
+  "sendPermission.reason.withdrawn":
+    "Diese Person hat ihre Einwilligung zurückgezogen. Das kann hier niemand aufheben, auch keine Administration.",
+  "sendPermission.reason.restricted":
+    "Die Daten dieser Person sind in der Verarbeitung eingeschränkt. Das kann hier niemand aufheben, auch keine Administration.",
+  "sendPermission.reason.bounced":
+    "Diese Adresse nimmt keine Mails an. Sie zu korrigieren ist die Lösung, nicht eine Ausnahme.",
+  "sendPermission.reason.tooMany":
+    "Diese Person hat vorerst so viele Werbenachrichten erhalten, wie hier erlaubt sind. Das löst sich von selbst.",
+  "sendPermission.reason.ambiguous":
+    "Mehrere Datensätze teilen sich diese Adresse, daher ist nicht erkennbar, für wen die Nachricht ist. Sie zusammenzuführen ist die Lösung.",
+  "sendPermission.reason.unconfirmed":
+    "Diese Person hat noch nicht bestätigt, dass sie von uns hören möchte. Das kann nur sie selbst tun.",
+  "sendPermission.reason.other":
+    "Diese Nachricht kann nicht gesendet werden, und keine Rolle hier kann das übergehen.",
   "compose.derivedReply":
     "Das ist eine Antwort auf ihre eigene Nachricht — dafür brauchst du keinen Grund anzugeben.",
   "compose.sendLaterLabel": "Später senden (optional)",

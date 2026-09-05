@@ -10825,6 +10825,30 @@ func (e SendAccountEmailRequestCommunicationContext) Valid() bool {
 	}
 }
 
+// Defines values for SendAuthorizationPreviewRecipientDecidedBy.
+const (
+	SendAuthorizationPreviewRecipientDecidedByAdmin   SendAuthorizationPreviewRecipientDecidedBy = "admin"
+	SendAuthorizationPreviewRecipientDecidedByMachine SendAuthorizationPreviewRecipientDecidedBy = "machine"
+	SendAuthorizationPreviewRecipientDecidedBySubject SendAuthorizationPreviewRecipientDecidedBy = "subject"
+	SendAuthorizationPreviewRecipientDecidedByUser    SendAuthorizationPreviewRecipientDecidedBy = "user"
+)
+
+// Valid indicates whether the value is a known member of the SendAuthorizationPreviewRecipientDecidedBy enum.
+func (e SendAuthorizationPreviewRecipientDecidedBy) Valid() bool {
+	switch e {
+	case SendAuthorizationPreviewRecipientDecidedByAdmin:
+		return true
+	case SendAuthorizationPreviewRecipientDecidedByMachine:
+		return true
+	case SendAuthorizationPreviewRecipientDecidedBySubject:
+		return true
+	case SendAuthorizationPreviewRecipientDecidedByUser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SendAuthorizationPreviewRecipientMode.
 const (
 	SendAuthorizationPreviewRecipientModeEnforce SendAuthorizationPreviewRecipientMode = "enforce"
@@ -30710,6 +30734,28 @@ type SendAuthorizationPreviewRecipient struct {
 	// Basis The lawful ground an allow would rest on.
 	Basis *string `json:"basis,omitempty"`
 
+	// CanBeOverruled Whether a person may lift this refusal by recording why they are writing.
+	//
+	// It needs BOTH halves of a question the engine keeps on two axes, which is why it
+	// is answered here rather than derived. `decided_by` says whose decision it is, and
+	// an absolute reason says no rollout mode softens it — and the two disagree: a hard
+	// bounce, a rolling frequency cap, an unresolvable recipient and an unconfirmed
+	// opt-in are all the engine's own reading (`machine`) AND absolute. A surface that
+	// offered an override on those would render a button that cannot achieve what it
+	// promises, and the rep would type a justification the staging gate then ignores.
+	CanBeOverruled *bool `json:"can_be_overruled,omitempty"`
+
+	// DecidedBy Whose decision this answer is, which is what says whether anybody may overrule
+	// it. `machine` is the engine reading an incomplete record and a rep who knows
+	// better may say so. `subject` is the person's own act — an objection or a
+	// withdrawal — and nobody in the installation lifts it, admin included.
+	//
+	// It is sent rather than derived because the rule lives in Go
+	// (`commsauthz.LevelForReason`), and a surface that mapped reason codes to
+	// liftability itself would be a second copy of that rule. The copy that stopped
+	// matching would offer a rep a button that cannot lawfully be pressed.
+	DecidedBy *SendAuthorizationPreviewRecipientDecidedBy `json:"decided_by,omitempty"`
+
 	// Mode How much authority the engine's answer carries for this category on this
 	// installation. Under `observe` a `deny` here still sends, and a composer that
 	// showed it as a refusal would be describing a rollout position as a rule.
@@ -30727,7 +30773,28 @@ type SendAuthorizationPreviewRecipient struct {
 	// Verdict `allow` would send. `deny` would refuse. `review` is not a soft allow — it means
 	// the record does not carry this message on its own and names what is missing.
 	Verdict SendAuthorizationPreviewRecipientVerdict `json:"verdict"`
+
+	// WouldRefuse Whether this answer actually STOPS the message on this installation. Not the same
+	// question as the verdict, and the only one a surface should draw a refusal from.
+	//
+	// Three things decide it and the engine already weighs them together: the verdict,
+	// the rollout mode for the resolved category, and whether the reason is one no mode
+	// may soften. Under `observe` a `deny` is recorded and the send still goes, so a
+	// composer reading the verdict alone would show a rollout position as a rule and
+	// talk a rep out of a message that would have gone.
+	WouldRefuse *bool `json:"would_refuse,omitempty"`
 }
+
+// SendAuthorizationPreviewRecipientDecidedBy Whose decision this answer is, which is what says whether anybody may overrule
+// it. `machine` is the engine reading an incomplete record and a rep who knows
+// better may say so. `subject` is the person's own act — an objection or a
+// withdrawal — and nobody in the installation lifts it, admin included.
+//
+// It is sent rather than derived because the rule lives in Go
+// (`commsauthz.LevelForReason`), and a surface that mapped reason codes to
+// liftability itself would be a second copy of that rule. The copy that stopped
+// matching would offer a rep a button that cannot lawfully be pressed.
+type SendAuthorizationPreviewRecipientDecidedBy string
 
 // SendAuthorizationPreviewRecipientMode How much authority the engine's answer carries for this category on this
 // installation. Under `observe` a `deny` here still sends, and a composer that
