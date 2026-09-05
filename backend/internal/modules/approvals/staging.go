@@ -149,6 +149,10 @@ func (s *Service) stageOrJoinPendingInTx(ctx context.Context, tx pgx.Tx, in Stag
 	if !ok {
 		return ids.ApprovalID{}, errors.New("crmapprovals: no workspace bound to context")
 	}
+	stager, ok := principal.Actor(ctx)
+	if !ok {
+		return ids.ApprovalID{}, errors.New("crmapprovals: no actor bound to context")
+	}
 	if err := lockProposalIdentity(ctx, tx, wsID, in); err != nil {
 		return ids.ApprovalID{}, err
 	}
@@ -165,10 +169,18 @@ func (s *Service) stageOrJoinPendingInTx(ctx context.Context, tx pgx.Tx, in Stag
 	// history into the fresh act's bundle. Under the lock the predicate is
 	// re-evaluated, so a settled row is simply not found and the re-proposal
 	// creates the live member it meant to.
+	//
+	// Scoped to the staging member for a shape whose proposal is one member's
+	// (stagingsubject.go): without it two colleagues staging a byte-identical
+	// payload produce ONE row, owned by whoever staged first — so the second
+	// member's proposal is invisible to them and undecidable by them, for a
+	// kind whose own gate says a row belongs to one person.
+	joinArgs := []any{in.Kind, nullUUID(in.TargetID), in.DiffHash}
 	err := tx.QueryRow(ctx, `SELECT id FROM approval
 			WHERE kind = $1 AND target_entity_id IS NOT DISTINCT FROM $2 AND diff_hash = $3
-			  AND status = 'pending' AND expires_at > now()
-			ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, in.Kind, nullUUID(in.TargetID), in.DiffHash).Scan(&id)
+			  AND status = 'pending' AND expires_at > now()`+
+		subjectScope(in, stager, &joinArgs)+`
+			ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, joinArgs...).Scan(&id)
 	switch {
 	case err == nil:
 		if err := s.rebundleJoinedInTx(ctx, tx, in, id); err != nil {
@@ -259,7 +271,7 @@ func (s *Service) supersedePendingInTx(ctx context.Context, tx pgx.Tx, in StageI
 	// which is nobody's order in particular — and a bundle decision walking the
 	// same rows in (created_at, id) is precisely the transaction on the other
 	// side of that. See lockOrder.
-	superseded, err := lockPendingUnderIdentity(ctx, tx, in, survivor)
+	superseded, err := lockPendingUnderIdentity(ctx, tx, in, p, survivor)
 	if err != nil {
 		return err
 	}
@@ -295,14 +307,21 @@ func (s *Service) supersedePendingInTx(ctx context.Context, tx pgx.Tx, in StageI
 // Split from the write because the order is the point: the predicate is the
 // one that used to sit on the UPDATE itself, and reading it under lockOrder
 // first is what stops this transaction taking those locks in scan order.
-func lockPendingUnderIdentity(ctx context.Context, tx pgx.Tx, in StageInput, survivor ids.ApprovalID) ([]ids.UUID, error) {
+func lockPendingUnderIdentity(
+	ctx context.Context, tx pgx.Tx, in StageInput, p principal.Principal, survivor ids.ApprovalID,
+) ([]ids.UUID, error) {
+	// Scoped to the staging member for a shape whose proposal is one member's
+	// (stagingsubject.go): the identity is a logical key the CALLER built, and
+	// two members' identities colliding would expire a colleague's pending row.
+	args := []any{in.Kind, nullUUID(in.TargetID), survivor, in.Identity}
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM approval
 		 WHERE kind = $1 AND target_entity_id IS NOT DISTINCT FROM $2
 		   AND status = 'pending' AND expires_at > now()
-		   AND id <> $3 AND proposed_change @> $4
+		   AND id <> $3 AND proposed_change @> $4`+
+		subjectScope(in, p, &args)+`
 		 `+lockOrder+`
-		 FOR UPDATE`, in.Kind, nullUUID(in.TargetID), survivor, in.Identity)
+		 FOR UPDATE`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("lock the proposals this one supersedes: %w", err)
 	}
