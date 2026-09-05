@@ -1523,6 +1523,9 @@ export const en = {
   "co.suggest.byline": "Margince suggests",
   "co.suggest.dismissFailed":
     "That could not be dismissed — it is still showing for you",
+  // Said plainly, because the reader's next move depends on it: a step they
+  // believe was written is a step nobody goes looking for again.
+  "co.suggest.addTaskFailed": "That step was not written — nothing was saved",
   "co.suggest.viewTasks": "View tasks",
   "co.suggest.commitment.overdueCount": "{count} overdue",
   "co.suggest.commitment.openCount": "{count} open",

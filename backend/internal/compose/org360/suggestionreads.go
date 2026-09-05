@@ -153,6 +153,11 @@ type suggestionInputs struct {
 	// lifecycle is the stage the record claims. It comes from the organization
 	// row the assembly already holds, not from a read of its own.
 	lifecycle string
+	// orgName is the account as its record names it, and it is only ever read
+	// by the step a suggestion PREPARES: a task lands in a queue where this
+	// page is not on screen, so "Agree the next step" alone would name nothing
+	// its owner could place. It reaches the fingerprint through nothing.
+	orgName string
 	// contractEnded is whether the account's own correspondence says the
 	// relationship is over. Filled from the shared signal read, so the
 	// contradiction rule and the health section count one query between them.
@@ -187,7 +192,7 @@ func granted(ctx context.Context, object string) (bool, error) {
 
 // gatherSuggestionInputs reads what the rules need, skipping whatever this
 // caller has no grant for.
-// facts and lifecycle are passed in rather than read here, because the page
+// facts and heading are passed in rather than read here, because the page
 // already holds both and a 360 that re-read them would pay for the same rows
 // twice.
 //
@@ -197,7 +202,7 @@ func granted(ctx context.Context, object string) (bool, error) {
 // stores nothing. Required, a caller that omits one does not compile.
 func gatherSuggestionInputs(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, now time.Time,
-	facts signalFacts, lifecycle string, baseCurrency string,
+	facts signalFacts, heading organizationHeading, baseCurrency string,
 ) (suggestionInputs, error) {
 	timeline, err := granted(ctx, "activity")
 	if err != nil {
@@ -239,23 +244,38 @@ func gatherSuggestionInputs(
 		in.open = open
 	}
 	in.contractEnded = facts.ContractEnded
-	in.lifecycle = lifecycle
+	in.lifecycle = heading.lifecycle
+	in.orgName = heading.name
 	return in, nil
 }
 
-// organizationLifecycle is the stage the record claims, read where the
-// suggestion inputs are assembled so the contradiction rule fires the same way
-// for the page and for the dismissal that answers it.
-func organizationLifecycle(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (string, error) {
+// organizationHeading is what the rules quote off the account's own row: the
+// stage it claims, and the name it goes by. Together because both callers need
+// both and a second read for the name would be a second instant.
+type organizationHeading struct {
+	lifecycle string
+	name      string
+}
+
+// readOrganizationHeading takes it from the organization row, for the caller
+// that has no assembled page to read it off — so the contradiction rule and the
+// step a suggestion prepares come out the same way for the page and for the
+// dismissal that answers it.
+func readOrganizationHeading(
+	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID,
+) (organizationHeading, error) {
 	var lifecycle *string
+	var name string
 	if err := tx.QueryRow(ctx,
-		`SELECT lifecycle FROM organization WHERE id = $1`, orgID).Scan(&lifecycle); err != nil {
-		return "", fmt.Errorf("read the account's lifecycle: %w", err)
+		`SELECT lifecycle, display_name FROM organization WHERE id = $1`, orgID,
+	).Scan(&lifecycle, &name); err != nil {
+		return organizationHeading{}, fmt.Errorf("read the account's stage and name: %w", err)
 	}
-	if lifecycle == nil {
-		return "", nil
+	out := organizationHeading{name: name}
+	if lifecycle != nil {
+		out.lifecycle = *lifecycle
 	}
-	return *lifecycle, nil
+	return out, nil
 }
 
 // engagementState is PO-F-4: whose move is it, from the newest message that can

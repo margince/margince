@@ -43,6 +43,22 @@ numbers appear here when releases start.
   leads with what is due and quotes what the last message said, so it is a
   plainer brief rather than a thinner one.
 
+- **"Set the next step" names the step, and the button writes it.** An account
+  with an open deal and nothing scheduled raised advice that restated the finding
+  as an instruction — and offered an "Add the next step" button the company page
+  had no surface to route to, so pressing it did nothing at all. The rule now
+  names the step in the words it will be written in ("Agree the next step on
+  *Fleet retrofit 2026*", or the account's own name where several deals are open
+  and picking one would be a guess) and prepares the exact `POST /tasks` body
+  beside it, which the client sends unchanged — so the sentence a rep accepts and
+  the task they get cannot come apart. The recommendation also appears on the
+  record's **Tasks** tab above the open work, marked as the agent's rather than a
+  person's, where a reader who came looking for what happens next will meet it;
+  an archived account offers no button, because the write would only be refused.
+  Still deterministic, still nothing staged: no task exists until a rep presses
+  the button, and the write goes through the same governed endpoint the task form
+  uses, audited and undoable.
+
 - **The operational agent budgets stop being called quotas.** One word named two
   unrelated things until the sales quota was retired: the revenue target a
   manager typed, and the volume ceiling that stops an agent reading, writing or
