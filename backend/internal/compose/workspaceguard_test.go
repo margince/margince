@@ -41,7 +41,9 @@ import (
 // does not drag it along, and high enough that a declaration answering nothing
 // — which would make the derivation below demand nothing — is reported rather
 // than read as full coverage.
-const workspaceKindFloor = 25
+// It falls with ADR-0103: the collapse retires the workspace CHILDREN, so the
+// count of workspace-scoped kinds drops by 27 as the passes absorb them.
+const workspaceKindFloor = 18
 
 func TestEveryWorkspaceWorkerRefusesArgsNamingNoWorkspace(t *testing.T) {
 	refusals := workspaceRefusalDrivers()
@@ -83,7 +85,7 @@ func TestEveryWorkspaceWorkerRefusesArgsNamingNoWorkspace(t *testing.T) {
 func TestTheWorkspaceGuardBindsTheWorkspaceTheArgsDeclare(t *testing.T) {
 	want := ids.NewV7()
 
-	ctx, err := workspaceJobCtx(context.Background(), SignalScanWorkspaceArgs{Workspace: want})
+	ctx, err := workspaceJobCtx(context.Background(), GmailWatchRenewArgs{Workspace: want})
 	if err != nil {
 		t.Fatalf("the guard refused a workspace it was given: %v", err)
 	}
@@ -144,30 +146,6 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		VCardIngestArgs{}.Kind(): func(ctx context.Context) error {
 			return (&vcardIngestWorker{}).Work(ctx, &river.Job[VCardIngestArgs]{})
 		},
-		ForecastSnapshotWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&forecastSnapshotWorkspaceWorker{}).Work(ctx, &river.Job[ForecastSnapshotWorkspaceArgs]{})
-		},
-		SignalScanWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&signalScanWorkspaceWorker{}).Work(ctx, &river.Job[SignalScanWorkspaceArgs]{})
-		},
-		IdempotencyRetentionWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&idempotencyRetentionWorkspaceWorker{}).Work(ctx, &river.Job[IdempotencyRetentionWorkspaceArgs]{})
-		},
-		GraphEdgeWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&graphEdgeWorkspaceWorker{}).Work(ctx, &river.Job[GraphEdgeWorkspaceArgs]{})
-		},
-		ParticipantBackfillWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&participantBackfillWorkspaceWorker{}).Work(ctx, &river.Job[ParticipantBackfillWorkspaceArgs]{})
-		},
-		LinkedInRematchWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&linkedInRematchWorkspaceWorker{}).Work(ctx, &river.Job[LinkedInRematchWorkspaceArgs]{})
-		},
-		LinkReconcileWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&linkReconcileWorkspaceWorker{}).Work(ctx, &river.Job[LinkReconcileWorkspaceArgs]{})
-		},
-		OverlayReconcileWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&overlayReconcileWorkspaceWorker{}).Work(ctx, &river.Job[OverlayReconcileWorkspaceArgs]{})
-		},
 		GmailWatchRenewArgs{}.Kind(): func(ctx context.Context) error {
 			return (&gmailWatchRenewWorker{}).Work(ctx, &river.Job[GmailWatchRenewArgs]{})
 		},
@@ -227,15 +205,6 @@ func idBearingRefusalDrivers() map[string]func(context.Context) error {
 			return (&siteDeepReadWorker{}).Work(ctx, &river.Job[SiteDeepReadArgs]{
 				Args: SiteDeepReadArgs{SiteReadID: ids.NewV7()},
 			})
-		},
-		SignalScanWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&signalScanWorkspaceWorker{}).Work(ctx, &river.Job[SignalScanWorkspaceArgs]{})
-		},
-		ProviderRunPollArgs{}.Kind(): func(ctx context.Context) error {
-			return (&providerRunPollWorker{}).Work(ctx, &river.Job[ProviderRunPollArgs]{})
-		},
-		ProviderLookupArgs{}.Kind(): func(ctx context.Context) error {
-			return (&providerLookupWorker{}).Work(ctx, &river.Job[ProviderLookupArgs]{})
 		},
 		ProviderRunSubmitArgs{}.Kind(): func(ctx context.Context) error {
 			return (&providerRunSubmitWorker{}).Work(ctx, &river.Job[ProviderRunSubmitArgs]{

@@ -23,7 +23,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/overlay"
@@ -244,7 +243,7 @@ func TestWorkerCleanStopsOnMidSweepDisconnect(t *testing.T) {
 	fakeInc := fake.New()
 	fakeInc.SeedOwner("owner-1", "a@authz.test") // matches Rep1, so SeedUserMap reaches a fenced UpsertUserMap
 
-	w := &overlayReconcileWorkspaceWorker{
+	w := &overlayReconcileWorker{
 		pool: e.Pool, vault: vault, meter: workerBudgetMeter(t),
 		log: slog.New(slog.DiscardHandler),
 		newIncumbent: func(_, _ string) overlay.Incumbent {
@@ -253,9 +252,7 @@ func TestWorkerCleanStopsOnMidSweepDisconnect(t *testing.T) {
 	}
 	// A mid-sweep disconnect is a clean stop, not a failure: every fenced
 	// write aborted, so there is nothing to retry and nothing to back off.
-	if err := w.Work(e.Admin(), &river.Job[OverlayReconcileWorkspaceArgs]{
-		Args: OverlayReconcileWorkspaceArgs{Workspace: e.WS},
-	}); err != nil {
+	if err := w.reconcileWorkspace(e.Admin(), e.WS); err != nil {
 		t.Fatalf("a mid-sweep disconnect must not fail the job: %v", err)
 	}
 
