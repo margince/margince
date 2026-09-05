@@ -3613,6 +3613,26 @@ export const de = {
     "Ich bin bei {name} nur teilweise durchgekommen und habe gestoppt.",
   "agent.activity.documentExtractNamed.failed":
     "Ich konnte {name} nicht lesen.",
+  "agent.activity.siteRead.queued":
+    "Die Firmenwebsite steht zum Lesen in der Warteschlange.",
+  "agent.activity.siteRead.running": "Ich lese die Firmenwebsite.",
+  "agent.activity.siteRead.stalled":
+    "Das Lesen der Firmenwebsite dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.siteRead.done": "Ich habe die Firmenwebsite gelesen.",
+  "agent.activity.siteRead.degraded":
+    "Ich habe die Firmenwebsite nicht zu Ende gelesen.",
+  "agent.activity.siteRead.failed": "Ich konnte die Firmenwebsite nicht lesen.",
+  "agent.activity.siteReadNamed.queued":
+    "Die Website von {name} steht zum Lesen in der Warteschlange.",
+  "agent.activity.siteReadNamed.running": "Ich lese die Website von {name}.",
+  "agent.activity.siteReadNamed.stalled":
+    "Das Lesen der Website von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.siteReadNamed.done":
+    "Ich habe die Website von {name} gelesen.",
+  "agent.activity.siteReadNamed.degraded":
+    "Ich habe die Website von {name} nicht zu Ende gelesen.",
+  "agent.activity.siteReadNamed.failed":
+    "Ich konnte die Website von {name} nicht lesen.",
   "agent.activity.summarize.queued":
     "Das Zusammentragen zu diesem Unternehmen steht in der Warteschlange.",
   "agent.activity.summarize.running":
