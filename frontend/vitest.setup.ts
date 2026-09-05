@@ -1,4 +1,4 @@
-import { beforeEach, vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 
 // Node ≥23 ships its own global Web Storage: a `localStorage` getter that
 // yields undefined unless the process was started with --localstorage-file.
@@ -101,6 +101,28 @@ if (typeof window !== "undefined") {
   beforeEach(() => {
     window.location.hash = "";
   });
+
+  // Unmount what a case rendered, because nothing else does.
+  //
+  // React Testing Library registers this hook itself — but only
+  // `if (typeof afterEach === 'function')`, and this suite runs on vitest's
+  // default `globals: false`, where that global does not exist. So the library's
+  // own cleanup never arms, and a file's renders are still mounted when the
+  // jsdom environment is torn down. React's scheduler then wakes on a
+  // `setImmediate` into a world with no `window` and throws there, which vitest
+  // reports as an uncaught exception and fails the lane on — a red run whose
+  // every test passed, and which clears on a re-run of the same commit.
+  //
+  // Registered here rather than asked of each file: 119 of the 418 suites that
+  // render never call `cleanup` themselves, and the next one written will not
+  // either. A suite that DOES call it is unaffected — vitest runs a file's own
+  // `afterEach` before this one, and unmounting an unmounted tree is a no-op.
+  //
+  // Imported here rather than at the top of the file so the node-environment
+  // suites, which are most of them, do not load react-dom for a hook that can
+  // only mean something where there is a DOM.
+  const { cleanup } = await import("@testing-library/react");
+  afterEach(cleanup);
 }
 
 // The calendar-drift lane: run the whole suite as if it were N days from now.
