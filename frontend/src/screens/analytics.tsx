@@ -72,7 +72,10 @@ type StageAgg = {
   weightedMinor: number | null;
   // How many of `count` the two sums above cover — a deal in a currency the
   // rate sheet cannot price is counted but priced nowhere in the money.
-  pricedDeals: number;
+  // Null, not zero, when the server left the aggregate out of the row: that
+  // is "we do not know", and folding it into 0 would print "0 of 2 priced"
+  // for a stage nobody actually finished pricing.
+  pricedDeals: number | null;
 };
 
 type ReportKey =
@@ -496,7 +499,10 @@ function ForecastStrip({
                   amountMinor={row ? rowMoney(row, "raw_minor") : null}
                   weightedMinor={row ? rowMoney(row, "weighted_minor") : null}
                   dealCount={row ? rowCount(row, "deal_count") : null}
-                  pricedDeals={row ? rowCount(row, "priced_deals") : null}
+                  // Not rowCount: an absent aggregate here means the server
+                  // did not answer, and rowCount's 0 default would print
+                  // that as "0 priced" instead of leaving the detail out.
+                  pricedDeals={row ? rowMoney(row, "priced_deals") : null}
                   currency={baseCurrency}
                   locale={locale}
                 />
@@ -656,7 +662,10 @@ export function buildStageAggregates(
           // (weighted_amount_minor), never round(rawMinor × p / 100)
           // — that rounds the column sum once instead of every deal.
           weightedMinor: rowMoney(row, "weighted_minor"),
-          pricedDeals: rowCount(row, "priced_deals"),
+          // Not rowCount: an absent aggregate here means the server did not
+          // answer the question, and rowCount's 0 default would print that
+          // as an answer.
+          pricedDeals: rowMoney(row, "priced_deals"),
         };
       })
       // Stage position alone orders the ladder now. The old tiebreak on currency
@@ -717,12 +726,10 @@ function StageTable({
           key: "raw",
           header: t("analytics.unweighted"),
           render: (row: StageAgg) => {
-            const footnote = pricedFootnote(
-              row.pricedDeals,
-              row.count,
-              locale,
-              t,
-            );
+            const footnote =
+              row.pricedDeals == null
+                ? null
+                : pricedFootnote(row.pricedDeals, row.count, locale, t);
             return (
               <span className="t-mono analytics-money-cell">
                 {formatMoneyOrAbsent(row.rawMinor, baseCurrency, locale)}

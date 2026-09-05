@@ -1048,6 +1048,24 @@ describe("reports never sum money across currencies", () => {
     expect(row.pricedDeals).toBe(1);
   });
 
+  // A row that omits priced_deals answers "the server did not say", not "zero
+  // deals were priced" — folding the two together would print a claim nobody
+  // made.
+  it("answers null rather than zero when a stage row omits priced_deals", () => {
+    const [row] = buildStageAggregates(
+      [
+        {
+          stage_id: "pl-s1",
+          raw_minor: 100,
+          weighted_minor: 90,
+          deal_count: 2,
+        },
+      ],
+      STAGES,
+    );
+    expect(row.pricedDeals).toBeNull();
+  });
+
   it("shows a stage row's money is short a deal the rate sheet cannot price", async () => {
     vi.stubGlobal(
       "fetch",
@@ -1069,6 +1087,26 @@ describe("reports never sum money across currencies", () => {
     expect(
       screen.getByText((text) => text.includes("1 of 2 priced")),
     ).toBeTruthy();
+  });
+
+  it("shows no priced footnote when the row omits priced_deals entirely", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        stageRows: [
+          {
+            stage_id: "pl-s1",
+            raw_minor: 100,
+            weighted_minor: 90,
+            deal_count: 2,
+          },
+        ],
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await openPipeline();
+    await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
+    expect(screen.queryByText((text) => text.includes("priced"))).toBeNull();
   });
 
   it("shows no priced footnote once every counted deal was priced", async () => {
