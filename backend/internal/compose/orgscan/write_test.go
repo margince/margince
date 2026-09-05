@@ -51,7 +51,7 @@ func finding(message MessageIn, quote string) map[string]any {
 
 func TestAGroundedFindingCarriesTheMessageAsItsReceipt(t *testing.T) {
 	in, nudge := scanInput()
-	orgID := ids.NewV7().String()
+	orgID := ids.New[ids.OrganizationKind]()
 
 	kept, refused, err := ParseFindings(reply(finding(nudge, "did the sample reports get held up somewhere?")), orgID, in)
 	if err != nil || len(refused) != 0 || len(kept) != 1 {
@@ -91,7 +91,7 @@ func TestAGroundedFindingCarriesTheMessageAsItsReceipt(t *testing.T) {
 func TestAFindingWhoseQuoteIsNotInItsMessageIsRefused(t *testing.T) {
 	in, nudge := scanInput()
 
-	kept, refused, err := ParseFindings(reply(finding(nudge, "we need this by Monday or the deal is off")), "org", in)
+	kept, refused, err := ParseFindings(reply(finding(nudge, "we need this by Monday or the deal is off")), ids.OrganizationID{}, in)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +107,7 @@ func TestAQuoteMayFoldTheMessagesLineBreaks(t *testing.T) {
 	in.Messages[0].Text = "did the sample reports\nget held   up somewhere?"
 	nudge.Text = in.Messages[0].Text
 
-	kept, refused, err := ParseFindings(reply(finding(nudge, "did the sample reports get held up somewhere?")), "org", in)
+	kept, refused, err := ParseFindings(reply(finding(nudge, "did the sample reports get held up somewhere?")), ids.OrganizationID{}, in)
 	if err != nil || len(refused) != 0 || len(kept) != 1 {
 		t.Fatalf("kept %d, refused %v, err %v", len(kept), refused, err)
 	}
@@ -117,7 +117,7 @@ func TestAFindingCitingAMessageTheModelWasNotGivenIsRefused(t *testing.T) {
 	in, _ := scanInput()
 	stranger := MessageIn{ID: ids.NewV7(), Text: "anything"}
 
-	kept, refused, _ := ParseFindings(reply(finding(stranger, "anything")), "org", in)
+	kept, refused, _ := ParseFindings(reply(finding(stranger, "anything")), ids.OrganizationID{}, in)
 	if len(kept) != 0 || len(refused) != 1 {
 		t.Errorf("kept %d, refused %v — a citation outside the input must not ground", len(kept), refused)
 	}
@@ -128,7 +128,7 @@ func TestOnlyTheReadKindsMayBeRaised(t *testing.T) {
 	raw := finding(nudge, "did the sample reports get held up somewhere?")
 	raw["kind"] = "no_reply"
 
-	kept, refused, _ := ParseFindings(reply(raw), "org", in)
+	kept, refused, _ := ParseFindings(reply(raw), ids.OrganizationID{}, in)
 	if len(kept) != 0 || len(refused) != 1 {
 		t.Errorf("a rule kind raised by the model was kept: %v / %v", kept, refused)
 	}
@@ -139,7 +139,7 @@ func TestAnIdInTheProseIsRefused(t *testing.T) {
 	raw := finding(nudge, "did the sample reports get held up somewhere?")
 	raw["reason"] = "See " + nudge.ID.String() + " for the ask."
 
-	kept, refused, _ := ParseFindings(reply(raw), "org", in)
+	kept, refused, _ := ParseFindings(reply(raw), ids.OrganizationID{}, in)
 	if len(kept) != 0 || len(refused) != 1 {
 		t.Errorf("an id in the reason was shown to a reader: %v / %v", kept, refused)
 	}
@@ -147,10 +147,10 @@ func TestAnIdInTheProseIsRefused(t *testing.T) {
 
 func TestAReplyWithNoFindingsKeyDidNotAnswer(t *testing.T) {
 	in, _ := scanInput()
-	if _, _, err := ParseFindings(`{"answer": []}`, "org", in); err == nil {
+	if _, _, err := ParseFindings(`{"answer": []}`, ids.OrganizationID{}, in); err == nil {
 		t.Error("a reply without a findings key was read as an empty answer")
 	}
-	kept, refused, err := ParseFindings(`{"findings": []}`, "org", in)
+	kept, refused, err := ParseFindings(`{"findings": []}`, ids.OrganizationID{}, in)
 	if err != nil || len(kept) != 0 || len(refused) != 0 {
 		t.Errorf("an empty answer is a good answer: kept %d, refused %v, err %v", len(kept), refused, err)
 	}
@@ -162,7 +162,7 @@ func TestTheSameSituationRaisedTwiceIsOneFinding(t *testing.T) {
 	in, nudge := scanInput()
 	quote := "did the sample reports get held up somewhere?"
 
-	kept, _, _ := ParseFindings(reply(finding(nudge, quote), finding(nudge, quote)), "org", in)
+	kept, _, _ := ParseFindings(reply(finding(nudge, quote), finding(nudge, quote)), ids.OrganizationID{}, in)
 	if len(kept) != 1 {
 		t.Errorf("kept %d findings for one situation", len(kept))
 	}

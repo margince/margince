@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { meFixture } from "../../app/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -33,6 +34,10 @@ const SOFIA = "018f3a1b-0000-7000-8000-000000000021";
 const MARTIN = "018f3a1b-0000-7000-8000-000000000022";
 const PHILIPP = "018f3a1b-0000-7000-8000-000000000031";
 const RUI = "018f3a1b-0000-7000-8000-000000000041";
+// The reader themselves, which is the id `meFixture` answers /me with. The
+// story is ABOUT the two matching, so it is read from the session fixture
+// rather than typed a second time here.
+const READER = meFixture({}).user.id;
 
 // The anchor is the contact this graph is about, and the tab reads its label
 // for every sentence that names them.
@@ -216,6 +221,52 @@ type Story = StoryObj<typeof PersonNetworkTab>;
 // contact, and a rep who can act on it without reading anything else.
 export const StrongDirectRoute: Story = {
   render: () => render(graph()),
+};
+
+// THE READER IS THE WAY IN.
+//
+// Nothing excludes the person reading from the colleagues the server ranks, so
+// on a contact they correspond with themselves the warmest route is their own
+// — and every sentence here is otherwise written about somebody to go and ask.
+// This is the story that shows the second person: the verdict, the chain, the
+// split legend and the strip all address the reader, and the ask is replaced by
+// what to do instead, because the server refuses an introduction whose
+// introducer is the person requesting it.
+export const TheReadersOwnRoute: Story = {
+  render: () =>
+    render(
+      graph({
+        nodes: [
+          anchor,
+          {
+            id: `user:${READER}`,
+            type: "colleague",
+            group: "direct",
+            label: "Demo Admin",
+            sublabel: "Workspace owner",
+            user_id: READER,
+          },
+        ],
+        edges: [
+          {
+            from: `user:${READER}`,
+            to: `person:${PERSON}`,
+            strength_bucket: "strong",
+            interactions_90d: 12,
+            inbound_90d: 7,
+            outbound_90d: 5,
+            last_at: "2026-08-27T09:00:00Z",
+          },
+        ],
+        routes: [
+          directRoute({
+            route_id: `direct:${READER}`,
+            via_user_id: READER,
+            via_display_name: "Demo Admin",
+          }),
+        ],
+      }),
+    ),
 };
 
 // Nobody here knows the contact, but a colleague knows somebody at their

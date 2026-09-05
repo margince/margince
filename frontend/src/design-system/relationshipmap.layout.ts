@@ -369,7 +369,16 @@ function colleagueRoute(
   }
 }
 
-function strongest(edges: readonly MapEdge[]): MapEdge | null {
+/**
+ * strongest picks the edge a reader should act on, by `beats` below.
+ *
+ * Exported because a caller that narrows the candidates first — the account
+ * map's introduction, which may not ask the reader for a favour from
+ * themselves — still has to rank what is left the way the drawing does. A
+ * second comparison there would light one route on the picture and open a
+ * dialog about another.
+ */
+export function strongest(edges: readonly MapEdge[]): MapEdge | null {
   let best: MapEdge | null = null;
   for (const edge of edges) {
     if (!best || beats(edge, best)) {

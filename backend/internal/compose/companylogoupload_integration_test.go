@@ -48,10 +48,11 @@ func theCompanyExists(t *testing.T, e *integration.Env) people.Company {
 	return company
 }
 
-// uploadMark drives the real transport, because the parse, the re-encode and
-// the object write are all this side of the store — a case that called the
-// store directly would prove nothing about what an upload actually stores.
-func uploadMark(t *testing.T, e *integration.Env, handlers companyHandlers, image []byte, filename string) crmcontracts.CompanyProfile {
+// markUpload builds the multipart body both upload routes take, and the content
+// type that describes it. ONE builder: the two routes decode through one
+// function, and a second spelling here would let a case pass against a body the
+// product never receives.
+func markUpload(t *testing.T, image []byte, filename string) (*bytes.Buffer, string) {
 	t.Helper()
 	var body bytes.Buffer
 	form := multipart.NewWriter(&body)
@@ -65,9 +66,18 @@ func uploadMark(t *testing.T, e *integration.Env, handlers companyHandlers, imag
 	if err := form.Close(); err != nil {
 		t.Fatalf("closing the upload: %v", err)
 	}
-	request := httptest.NewRequest(http.MethodPost, "/v1/company/logo", &body).
+	return &body, form.FormDataContentType()
+}
+
+// uploadMark drives the real transport, because the parse, the re-encode and
+// the object write are all this side of the store — a case that called the
+// store directly would prove nothing about what an upload actually stores.
+func uploadMark(t *testing.T, e *integration.Env, handlers companyHandlers, image []byte, filename string) crmcontracts.CompanyProfile {
+	t.Helper()
+	body, contentType := markUpload(t, image, filename)
+	request := httptest.NewRequest(http.MethodPost, "/v1/company/logo", body).
 		WithContext(e.As(e.Rep1, nil, integration.AdminPerms))
-	request.Header.Set("Content-Type", form.FormDataContentType())
+	request.Header.Set("Content-Type", contentType)
 	recorder := httptest.NewRecorder()
 	handlers.UploadCompanyLogo(recorder, request)
 	if recorder.Code != http.StatusOK {
@@ -93,11 +103,11 @@ func TestAnUploadedMarkIsStoredAsThisServersOwnPNG(t *testing.T) {
 
 	uploaded := uploadMark(t, e, handlers, logoFixture(t, 400, 400), "acme-logo.png")
 
-	key, err := e.People.OrganizationLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), company.OrganizationID)
+	key, err := e.People.OrganizationLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), company.OrganizationID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("the company wears no mark after its own upload: %v", err)
 	}
-	wantURL := *people.LogoURL(company.OrganizationID.UUID, &key)
+	wantURL := *people.LogoURL(company.OrganizationID.UUID, &key, people.LogoWide)
 	if uploaded.LogoUrl == nil || *uploaded.LogoUrl != wantURL {
 		t.Fatalf("logo_url = %v, want %q — the face the shell and the record both render",
 			uploaded.LogoUrl, wantURL)
@@ -137,7 +147,7 @@ func TestAPersonsMarkOutranksWhatAWebsiteReadResolves(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
 	uploadMark(t, e, handlers, logoFixture(t, 400, 400), "acme-logo.png")
-	chosen, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID)
+	chosen, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("reading the uploaded mark: %v", err)
 	}
@@ -156,7 +166,7 @@ func TestAPersonsMarkOutranksWhatAWebsiteReadResolves(t *testing.T) {
 	if superseded != nil {
 		t.Fatalf("a declined resolve reported %q as superseded, want nothing", *superseded)
 	}
-	after, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID)
+	after, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("reading the mark after the resolve: %v", err)
 	}
@@ -173,7 +183,7 @@ func TestRemovingAMarkGivesTheFieldBackToTheNextRead(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
 	uploadMark(t, e, handlers, logoFixture(t, 400, 400), "acme-logo.png")
-	uploaded, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID)
+	uploaded, err := e.People.OrganizationLogoKey(ctx, company.OrganizationID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("reading the uploaded mark: %v", err)
 	}
@@ -222,7 +232,7 @@ func TestReReadingTheCompanysSiteReplacesTheMarkAnEarlierReadLanded(t *testing.T
 	// person's, which is the case that must NOT be replaced.
 	firstArgs, first := readTheAnchorsSiteFor(t, e, blob)
 	created := confirmTheAnchorAsTheAPIDoes(t, e, engine, firstArgs)
-	if wearing, err := e.People.OrganizationLogoKey(human, created); err != nil || wearing != first {
+	if wearing, err := e.People.OrganizationLogoKey(human, created, people.LogoWide); err != nil || wearing != first {
 		t.Fatalf("after onboarding the company wears %q (%v), want the first read's mark at %q — "+
 			"this case has no replacement to observe otherwise", wearing, err, first)
 	}
@@ -244,7 +254,7 @@ func TestReReadingTheCompanysSiteReplacesTheMarkAnEarlierReadLanded(t *testing.T
 	}
 	stale := first
 
-	wearing, err := e.People.OrganizationLogoKey(human, orgID)
+	wearing, err := e.People.OrganizationLogoKey(human, orgID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("the company lost its logo to the re-read: %v", err)
 	}

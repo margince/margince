@@ -718,3 +718,208 @@ describe("a peer the graph observed but nothing has recorded", () => {
     ).toBeNull();
   });
 });
+
+// THE READER IS ONE OF THE ROUTES THE SERVER RANKS.
+//
+// Nothing in the graph read excludes the person doing the reading, so on a
+// contact they correspond with themselves the warmest way in IS them — and
+// every sentence on this tab was written about a colleague to go and ask. The
+// page told an admin who was logged in as themselves to ask themselves for an
+// introduction, printed their own name back at them as a third party, and
+// counted them among "2 colleagues".
+describe("the reader's own route", () => {
+  // The id meFixture answers /me with. The whole case turns on the route
+  // naming the SAME user the session does, so it is read from there rather
+  // than typed twice.
+  const READER = meFixture({}).user.id;
+  const mine: NonNullable<PersonGraph["routes"]>[number] = {
+    route_id: `direct:${READER}`,
+    route_type: "direct",
+    via_user_id: READER,
+    via_display_name: "Demo Admin",
+    strength_bucket: "strong",
+    evidence: {
+      interactions_90d: 12,
+      inbound_90d: 7,
+      outbound_90d: 5,
+      two_way: true,
+    },
+    availability: "available",
+  };
+  const colleague: NonNullable<PersonGraph["routes"]>[number] = {
+    ...mine,
+    route_id: "direct:2",
+    via_user_id: "018f3a1b-0000-7000-8000-0000000000c1",
+    via_display_name: "Sofia Meier",
+  };
+
+  function reachedByReader(
+    routes: NonNullable<PersonGraph["routes"]>,
+  ): PersonGraph {
+    return {
+      person_id: PERSON,
+      nodes: [anchor],
+      edges: [],
+      routes,
+      groups_omitted: [],
+    } as PersonGraph;
+  }
+
+  it("is written in the second person and offers no introduction", async () => {
+    const { seatAnswered } = renderTab(reachedByReader([mine]));
+
+    expect(
+      await screen.findByText(en["person.intro.verdictDirectYou"]),
+    ).toBeTruthy();
+    expect(screen.getByText(en["person.intro.heroYou"])).toBeTruthy();
+    expect(screen.getByText(en["person.intro.heroDirectYou"])).toBeTruthy();
+    // The counts speak to the reader too — the split legend named them beside
+    // the contact, so one half of one line said "you" and the other said
+    // "Demo Admin" about the same person.
+    expect(
+      screen.getByText(
+        en["person.intro.evidenceFromYou"].replace("{count}", "5"),
+      ),
+    ).toBeTruthy();
+
+    // The server refuses an ask whose introducer is the person making it, so
+    // the button would be a control that exists to fail. The session has
+    // answered by the time this runs, which is what makes the absence an
+    // answer about the reader rather than about a page still loading.
+    await seatAnswered;
+    await act(async () => {});
+    expect(
+      screen.queryByRole("button", {
+        name: en["person.intro.askFirstName"].replace("{name}", "Demo Admin"),
+      }),
+    ).toBeNull();
+    expect(screen.getByText(en["person.intro.ownRouteNoAsk"])).toBeTruthy();
+  });
+
+  it("is the only way in, and the strip says so as one person", async () => {
+    renderTab(reachedByReader([mine]));
+
+    expect(
+      await screen.findByText(en["person.intro.stripWhoOnlyYou"]),
+    ).toBeTruthy();
+  });
+
+  it("is counted apart from the colleagues who can be asked", async () => {
+    renderTab(reachedByReader([mine, colleague]));
+
+    expect(
+      await screen.findByText(
+        en["person.intro.stripWhoWithYou_one"].replace("{count}", "1"),
+      ),
+    ).toBeTruthy();
+    // And the colleague beside them keeps their own ask.
+    expect(
+      screen.getByRole("button", {
+        name: en["person.intro.askFirstName"].replace("{name}", "Sofia Meier"),
+      }),
+    ).toBeTruthy();
+  });
+
+  it("says who corresponds with whom in the second person on the list too", async () => {
+    // The reader ranked SECOND, so their route is drawn by the alternatives
+    // card rather than by the panel — the two write the same fact and only one
+    // of them had been taught the reader's own name.
+    renderTab(reachedByReader([colleague, mine]));
+
+    expect(
+      await screen.findByText(en["person.graph.routeDirectYou"]),
+    ).toBeTruthy();
+  });
+});
+
+// The verb on a colleague node in the picture.
+//
+// The drawing keys its nodes by the graph's own ids (`user:<uuid>`) and a
+// route names the bare uuid, so the comparison behind this action matched
+// nothing and pressing it did nothing at all — silently, on every route, with
+// the button still drawn.
+describe("using a route from the picture", () => {
+  const COLLEAGUE = "018f3a1b-0000-7000-8000-0000000000d1";
+  const READER = meFixture({}).user.id;
+
+  // A node in the drawing, which names its lane after the person — anchored so
+  // it cannot also match the panel's "Ask {name} for an intro" above it.
+  function nodeOnMap(name: string) {
+    return screen.findByRole("button", { name: new RegExp(`^${name}, `) });
+  }
+
+  function drawnGraph(viaUserId: string, name: string): PersonGraph {
+    return {
+      person_id: PERSON,
+      nodes: [
+        anchor,
+        {
+          id: `user:${viaUserId}`,
+          type: "colleague",
+          group: "direct",
+          label: name,
+          user_id: viaUserId,
+        },
+      ],
+      edges: [
+        {
+          from: `user:${viaUserId}`,
+          to: anchor.id,
+          strength_bucket: "strong",
+          interactions_90d: 12,
+        },
+      ],
+      routes: [
+        {
+          route_id: `direct:${viaUserId}`,
+          route_type: "direct",
+          via_user_id: viaUserId,
+          via_display_name: name,
+          strength_bucket: "strong",
+          evidence: { interactions_90d: 12, two_way: true },
+          availability: "available",
+        },
+      ],
+      groups_omitted: [],
+    } as PersonGraph;
+  }
+
+  it("opens the ask for the colleague the node draws", async () => {
+    const user = userEvent.setup();
+    renderTab(drawnGraph(COLLEAGUE, "Sofia Meier"));
+
+    // The verb rides the map's own panel, so the node is selected first.
+    await user.click(await nodeOnMap("Sofia Meier"));
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["person.intro.useThisRoute"],
+      }),
+    );
+
+    expect(
+      await screen.findByText(
+        en["person.intro.askTitle"].replace("{name}", anchor.label),
+      ),
+    ).toBeTruthy();
+  });
+
+  it("opens nothing on the reader's own node", async () => {
+    const user = userEvent.setup();
+    const { seatAnswered } = renderTab(drawnGraph(READER, "Demo Admin"));
+
+    await user.click(await nodeOnMap("Demo Admin"));
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["person.intro.useThisRoute"],
+      }),
+    );
+    await seatAnswered;
+    await act(async () => {});
+
+    expect(
+      screen.queryByText(
+        en["person.intro.askTitle"].replace("{name}", anchor.label),
+      ),
+    ).toBeNull();
+  });
+});

@@ -26,7 +26,7 @@ import { IntroAsksCard } from "../introasks";
 import { IntroDrawer } from "../introdrawer";
 import { type IntroRequest, useIntroRequests } from "../introrequests";
 import { usePersonGraph } from "../persongraph";
-import { availabilityLabel, RoutesCard } from "../personroutes";
+import { availabilityLabel, RoutesCard, useOwnRoute } from "../personroutes";
 import { DecisionStrip } from "./decision";
 import { EdgeDetail } from "./edgedetail";
 import { LeadPanel } from "./leadpanel";
@@ -56,6 +56,7 @@ export function PersonNetworkTab({
   const t = useT();
   const { locale } = useLocale();
   const graph = usePersonGraph(personId);
+  const own = useOwnRoute();
   const asks = useIntroRequests(personId);
   const [focus, setFocus] = useState<string | null>(null);
   const [asking, setAsking] = useState<RouteCandidate | undefined>();
@@ -186,8 +187,11 @@ export function PersonNetworkTab({
         focusId={read.focused}
         onFocus={setFocus}
         onAction={(nodeId) => {
-          const picked = read.routes.find((r) => r.via_user_id === nodeId);
-          if (picked) {
+          const picked = read.routeAt(nodeId);
+          // A route the reader IS, or one already spoken for, opens no drawer:
+          // neither the panel nor the rows offer it, and the server refuses an
+          // ask whose introducer is the person making it.
+          if (picked && !own(picked) && picked.availability === "available") {
             setAsking(picked);
           }
         }}
@@ -264,6 +268,19 @@ function readGraph(
     withheld,
     // Whether the working grid has a left column at all.
     hasMain: alternatives || withheld,
+    // The drawing's verb, joined back to the route it means.
+    //
+    // A node is keyed by the graph's own id and a route names a bare user id,
+    // so the join is the node's `user_id` — read out of the same payload rather
+    // than re-derived from the id's shape. Comparing the two raw (which is what
+    // this did) matched nothing, and every "use this route" on the picture
+    // silently did nothing at all.
+    routeAt: (nodeId: string) => {
+      const node = nodes.find((n) => n.id === nodeId);
+      return node?.user_id === undefined
+        ? undefined
+        : routes.find((r) => r.via_user_id === node.user_id);
+    },
     // A selection only means something against the graph ON SCREEN. This tab
     // stays mounted as a reader moves between contacts, so a raw id would open
     // the detail on a node this graph does not have — describing a record the

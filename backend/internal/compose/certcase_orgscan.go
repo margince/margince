@@ -85,7 +85,7 @@ func (orgScanCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepared
 	if err := refuseUngroundableBrief(want, label); err != nil {
 		return nil, fmt.Errorf("account_scan/org_scan: %w", err)
 	}
-	return &orgScanCase{in: in, orgID: ids.NewV7().String(), label: label, expected: want}, nil
+	return &orgScanCase{in: in, orgID: ids.New[ids.OrganizationKind](), label: label, expected: want}, nil
 }
 
 // orgScanInput builds the production input, minting one id per labelled
@@ -146,7 +146,7 @@ func orgScanInput(f orgScanFixture) (orgscan.Input, map[string]string, error) {
 // orgScanCase certifies one reading of one account.
 type orgScanCase struct {
 	in       orgscan.Input
-	orgID    string
+	orgID    ids.OrganizationID
 	label    map[string]string
 	expected []string
 }

@@ -232,7 +232,7 @@ func (s *Service) Run(ctx context.Context, scanID ids.UUID, orgID ids.Organizati
 		return s.fail(ctx, claimed.ID, "The account could not be read. Try again later.")
 	}
 	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
-	findings, by, err := Read(ctx, s.lane, orgID.String(), in, lang)
+	findings, by, err := Read(ctx, s.lane, orgID, in, lang)
 	var deferral *ai.BudgetDeferralError
 	if errors.As(err, &deferral) {
 		if deferErr := s.deferBudget(ctx, claimed.ID, deferral.NextAttemptAt); deferErr != nil {

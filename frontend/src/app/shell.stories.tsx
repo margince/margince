@@ -59,6 +59,10 @@ type Story = StoryObj<typeof Shell>;
 const COUNTS = { inbox: 12, tasks: 4 };
 const COMPANY_WORDMARK =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 700 200'%3E%3Crect width='700' height='200' fill='white'/%3E%3Ctext x='350' y='125' text-anchor='middle' font-family='sans-serif' font-size='92' font-weight='700' fill='%23ff6500'%3EGRADION%3C/text%3E%3C/svg%3E";
+// The same company's square badge. It exists because the wordmark above is
+// unreadable at 32px, so the two are only worth looking at together.
+const COMPANY_BADGE =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' rx='36' fill='%23ff6500'/%3E%3Ctext x='100' y='142' text-anchor='middle' font-family='sans-serif' font-size='128' font-weight='700' fill='white'%3EG%3C/text%3E%3C/svg%3E";
 
 /**
  * The session every frame here mounts on, plus whatever routes the frame is about.
@@ -94,13 +98,19 @@ function stubSession(allow: GrantSpec = {}, about: RouteMap = {}) {
 function SeedInstallation({
   children,
   logoUrl,
-}: Readonly<{ children: ReactNode; logoUrl?: string }>) {
+  logoIconUrl,
+}: Readonly<{
+  children: ReactNode;
+  logoUrl?: string;
+  logoIconUrl?: string;
+}>) {
   const client = useQueryClient();
   if (client.getQueryData(["company"]) === undefined) {
     client.setQueryData(["company"], {
       organization_id: "org-1",
       display_name: "Gradion GmbH",
       logo_url: logoUrl,
+      logo_icon_url: logoIconUrl,
     });
   }
   return <>{children}</>;
@@ -234,6 +244,39 @@ export const SidebarStates: Story = {
     return (
       <StoryProviders>
         <SeedInstallation>
+          <div style={{ display: "flex", height: "100vh" }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <SidebarExample initiallyCollapsed={false} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <SidebarExample initiallyCollapsed />
+            </div>
+          </div>
+        </SeedInstallation>
+      </StoryProviders>
+    );
+  },
+};
+
+/**
+ * The two marks in the two panels that ask for them, side by side.
+ *
+ * This is the frame the second slot exists for: the same company, wordmark
+ * across the open head and badge alone in the 56px rail. Reading them together
+ * is the only way to see that the swap happens at all, and the only way to
+ * catch the failure it replaced — a wordmark contained into a 32px square,
+ * which renders as a smear rather than as a missing image.
+ */
+export const CompanyMarksAtBothWidths: Story = {
+  name: "sidebar — wordmark expanded, badge collapsed",
+  render: () => {
+    stubSession();
+    return (
+      <StoryProviders>
+        <SeedInstallation
+          logoUrl={COMPANY_WORDMARK}
+          logoIconUrl={COMPANY_BADGE}
+        >
           <div style={{ display: "flex", height: "100vh" }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <SidebarExample initiallyCollapsed={false} />

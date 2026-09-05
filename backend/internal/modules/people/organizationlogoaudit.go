@@ -53,16 +53,19 @@ func resolvedLogoWrite(previousOrigin *string, originURL, by string) logoWrite {
 // the audit row, and the organization.updated event that links both into the
 // trace. It runs inside the caller's transaction, so the mark and the record
 // of who set it commit together or not at all.
-func recordLogoWrite(ctx context.Context, tx pgx.Tx, id ids.OrganizationID, write logoWrite) error {
+func recordLogoWrite(ctx context.Context, tx pgx.Tx, id ids.OrganizationID, slot LogoSlot, write logoWrite) error {
+	// The SLOT names the field, so the two marks keep two histories: a reader
+	// looking at why the sidebar changed can see which picture moved.
+	field := slot.field()
 	if err := storekit.StampFields(ctx, tx, "organization", id.UUID, write.source, write.by,
-		[]storekit.FieldStamp{{Field: logoFieldName, EvidenceRef: write.origin}}); err != nil {
+		[]storekit.FieldStamp{{Field: field, EvidenceRef: write.origin}}); err != nil {
 		return err
 	}
 	// A removal's after-image says the field is empty, which is the one thing a
 	// reader of the history must be able to tell from "unchanged".
-	delta := map[string]any{logoFieldName: nil}
+	delta := map[string]any{field: nil}
 	if write.origin != nil {
-		delta[logoFieldName] = *write.origin
+		delta[field] = *write.origin
 	}
 	// The mark is named on every surface by the page it was resolved from, so
 	// that URL is the field's VALUE here — and the caller reads the outgoing one
@@ -72,9 +75,9 @@ func recordLogoWrite(ctx context.Context, tx pgx.Tx, id ids.OrganizationID, writ
 	// The source vocabulary is context ABOUT the write and rides evidence: in
 	// the image it would project as a change to a field called `source`
 	// (storekit.AuditWithEvidence).
-	before := map[string]any{logoFieldName: nil}
+	before := map[string]any{field: nil}
 	if write.previousOrigin != nil {
-		before[logoFieldName] = *write.previousOrigin
+		before[field] = *write.previousOrigin
 	}
 	evidence := map[string]any{auditKeySource: write.source}
 	if write.sourceURL != nil {

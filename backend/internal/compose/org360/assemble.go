@@ -331,18 +331,18 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 		var facts signalFacts
 		facts, a.adviceErr = a.signalFactsOnce()
 		if a.adviceErr == nil {
-			// The stage comes off the organization row this assembly already
-			// read, so the page adds no query for it.
-			lifecycle := ""
+			// The stage and the name come off the organization row this
+			// assembly already read, so the page adds no query for either.
+			heading := organizationHeading{name: a.out.Organization.DisplayName}
 			if lc := a.out.Organization.Lifecycle; lc != nil {
-				lifecycle = string(*lc)
+				heading.lifecycle = string(*lc)
 			}
 			var base string
 			if base, a.adviceErr = a.installationBaseCurrency(); a.adviceErr != nil {
 				return a.advice, a.adviceErr
 			}
 			a.advice, a.adviceErr = gatherSuggestionInputs(
-				a.ctx, a.tx, a.orgID, a.now, facts, lifecycle, base)
+				a.ctx, a.tx, a.orgID, a.now, facts, heading, base)
 		}
 		a.adviceRead = true
 	}

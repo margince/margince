@@ -113,9 +113,9 @@ func (s *Service) raisesSuggestion(
 	if err != nil {
 		return false, err
 	}
-	// The dismissal has no assembled page to take the stage from, so it reads
-	// it — off the hot path, and once.
-	lifecycle, err := organizationLifecycle(ctx, tx, orgID)
+	// The dismissal has no assembled page to take the account's own row from,
+	// so it reads it — off the hot path, and once.
+	heading, err := readOrganizationHeading(ctx, tx, orgID)
 	if err != nil {
 		return false, err
 	}
@@ -124,7 +124,7 @@ func (s *Service) raisesSuggestion(
 	if err != nil {
 		return false, err
 	}
-	in, err := gatherSuggestionInputs(ctx, tx, orgID, now, facts, lifecycle, base)
+	in, err := gatherSuggestionInputs(ctx, tx, orgID, now, facts, heading, base)
 	if err != nil {
 		return false, err
 	}

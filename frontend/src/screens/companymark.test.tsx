@@ -1,6 +1,12 @@
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -12,12 +18,14 @@ type CompanyProfile = components["schemas"]["CompanyProfile"];
 
 const ORG = "00000000-0000-4000-8000-000000000010";
 const LOGO = `/v1/organizations/${ORG}/logo`;
+const ICON = `/v1/organizations/${ORG}/logo/icon`;
 
 const WITHOUT_MARK: CompanyProfile = {
   organization_id: ORG,
   display_name: "Acme GmbH",
 };
 const WITH_MARK: CompanyProfile = { ...WITHOUT_MARK, logo_url: LOGO };
+const WITH_BOTH: CompanyProfile = { ...WITH_MARK, logo_icon_url: ICON };
 
 afterEach(() => {
   cleanup();
@@ -47,31 +55,77 @@ function mark(profile: CompanyProfile) {
   );
 }
 
-// A company with no resolved mark is not a broken image and not an empty slot:
-// it is its own initials, and the row says why and offers the way out.
-it("stands the monogram in and offers to add a mark", () => {
-  const { container } = mark(WITHOUT_MARK);
-  expect(container.querySelector(".company-mark img")).toBeNull();
-  expect(container.querySelector(".company-mark .avatar")?.textContent).toBe(
-    "AG",
-  );
-  expect(screen.getByRole("button", { name: "Add a logo" })).toBeTruthy();
-  // Nothing to remove, so the verb that removes it is not drawn. A control
-  // whose only outcome is a refusal is worse than no control.
-  expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
-});
+// The two slots are told apart by the heading each is named by, never by
+// position: an order that changed would otherwise leave every assertion below
+// passing about the wrong picture.
+function slot(name: "Wide logo" | "Square icon") {
+  return within(screen.getByRole("region", { name }));
+}
 
-it("draws the mark the company wears, and offers to replace or remove it", () => {
-  const { container } = mark(WITH_MARK);
+// A company with no mark in a slot is not a broken image and not an empty slot:
+// it is its own initials, and the slot says why and offers the way out.
+it("stands the monogram in and offers to add each mark", () => {
+  mark(WITHOUT_MARK);
+  for (const name of ["Wide logo", "Square icon"] as const) {
+    const field = slot(name);
+    expect(field.queryByRole("img", { name: "Acme GmbH" })).toBeNull();
+    expect(field.getByText("AG")).toBeTruthy();
+    // Nothing to remove, so the verb that removes it is not drawn. A control
+    // whose only outcome is a refusal is worse than no control.
+    expect(field.queryByRole("button", { name: /^Remove/ })).toBeNull();
+  }
+  expect(screen.getByRole("button", { name: "Add a wide logo" })).toBeTruthy();
   expect(
-    container.querySelector(".company-mark img")?.getAttribute("src"),
-  ).toBe(LOGO);
-  expect(screen.getByRole("button", { name: "Replace" })).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Remove" })).toBeTruthy();
-  expect(screen.getByText(/transparent PNG around 800 × 240 px/)).toBeTruthy();
+    screen.getByRole("button", { name: "Add a square icon" }),
+  ).toBeTruthy();
 });
 
-// The stub declares fetch's own parameters so the recorded calls are TYPED as
+// Each slot answers for its own mark. A company that uploaded a wordmark and no
+// badge is the ordinary case, and the icon slot must still be an invitation
+// rather than look as though it already holds the wordmark.
+it("draws each mark in its own slot and offers the verbs that fit it", () => {
+  mark(WITH_MARK);
+  expect(
+    slot("Wide logo")
+      .getByRole("img", { name: "Acme GmbH" })
+      .querySelector("img")
+      ?.getAttribute("src"),
+  ).toBe(LOGO);
+  expect(
+    screen.getByRole("button", { name: "Replace the wide logo" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Remove the wide logo" }),
+  ).toBeTruthy();
+
+  const icon = slot("Square icon");
+  expect(icon.queryByRole("img", { name: "Acme GmbH" })).toBeNull();
+  expect(icon.getByText("AG")).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Add a square icon" }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Remove the square icon" }),
+  ).toBeNull();
+});
+
+it("draws both marks when the company wears both", () => {
+  mark(WITH_BOTH);
+  expect(
+    slot("Square icon")
+      .getByRole("img", { name: "Acme GmbH" })
+      .querySelector("img")
+      ?.getAttribute("src"),
+  ).toBe(ICON);
+  expect(
+    screen.getByRole("button", { name: "Replace the square icon" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Remove the square icon" }),
+  ).toBeTruthy();
+});
+
+// The STUB declares fetch's own parameters so the recorded calls are TYPED as
 // fetch's argument tuple. The runtime records every argument either way; what a
 // zero-parameter mock loses is the type, and `const [path, init]` below would
 // then not compile.
@@ -84,48 +138,69 @@ function stubFetch(answer: CompanyProfile) {
   return fetchStub;
 }
 
-it("sends the chosen file as the multipart part the upload route names", async () => {
-  const user = userEvent.setup();
-  const fetchStub = stubFetch(WITH_MARK);
-  mark(WITHOUT_MARK);
+// One case per slot, and the ROUTE is what each asserts: the two uploads share
+// one decode on the server, so a slot that sent its file to the other's path
+// would store the picture successfully and hang it in the wrong place.
+it.each([
+  {
+    slotName: "Wide logo",
+    add: "Add a wide logo",
+    path: "/v1/company/logo",
+  },
+  {
+    slotName: "Square icon",
+    add: "Add a square icon",
+    path: "/v1/company/logo/icon",
+  },
+] as const)(
+  "sends $slotName to the upload route that owns it",
+  async ({ slotName, add, path }) => {
+    const user = userEvent.setup();
+    const fetchStub = stubFetch(WITH_BOTH);
+    mark(WITHOUT_MARK);
 
-  await user.click(screen.getByRole("button", { name: "Add a logo" }));
-  const chosen = new File(["not really a png"], "acme-logo.png", {
-    type: "image/png",
-  });
-  await user.upload(screen.getByLabelText("Company logo"), chosen);
+    await user.click(screen.getByRole("button", { name: add }));
+    const chosen = new File(["not really a png"], "acme-logo.png", {
+      type: "image/png",
+    });
+    await user.upload(slot(slotName).getByLabelText(slotName), chosen);
 
-  await waitFor(() => expect(fetchStub).toHaveBeenCalled());
-  const [path, init] = fetchStub.mock.calls[0];
-  expect(path).toBe("/v1/company/logo");
-  expect(init?.method).toBe("POST");
-  // The part's NAME is the contract's, and a body that spells it differently
-  // reaches a server that answers 422 for a file the person did choose.
-  const body = init?.body as FormData;
-  expect((body.get("file") as File).name).toBe("acme-logo.png");
-});
+    await waitFor(() => expect(fetchStub).toHaveBeenCalled());
+    const [sent, init] = fetchStub.mock.calls[0];
+    expect(sent).toBe(path);
+    expect(init?.method).toBe("POST");
+    // The part's NAME is the contract's, and a body that spells it differently
+    // reaches a server that answers 422 for a file the person did choose.
+    const body = init?.body as FormData;
+    expect((body.get("file") as File).name).toBe("acme-logo.png");
+  },
+);
 
-it("removes the mark through the delete the contract declares", async () => {
+it.each([
+  { verb: "Remove the wide logo", path: "/v1/company/logo" },
+  { verb: "Remove the square icon", path: "/v1/company/logo/icon" },
+] as const)("removes a mark through $path", async ({ verb, path }) => {
   const user = userEvent.setup();
   const fetchStub = stubFetch(WITHOUT_MARK);
-  mark(WITH_MARK);
+  mark(WITH_BOTH);
 
-  await user.click(screen.getByRole("button", { name: "Remove" }));
+  await user.click(screen.getByRole("button", { name: verb }));
 
   await waitFor(() => expect(fetchStub).toHaveBeenCalled());
   // The typed client sends a Request, not a (url, init) pair — asserting the
   // pair here would pass on any object at all once stringified.
   const [input] = fetchStub.mock.calls[0];
   const request = input as Request;
-  expect(new URL(request.url).pathname).toBe("/v1/company/logo");
+  expect(new URL(request.url).pathname).toBe(path);
   expect(request.method).toBe("DELETE");
 });
 
-// A refusal is shown where the person is standing. The server is the one that
-// judges an image: the picker's filter goes on media type and says nothing
-// about whether the bytes behind it decode, so a file that passes the picker
-// can still be refused.
-it("shows the server's refusal beside the control", async () => {
+// A refusal is shown where the person is standing, and only there. The server
+// is the one that judges an image: the picker's filter goes on media type and
+// says nothing about whether the bytes behind it decode, so a file that passes
+// the picker can still be refused — and a refusal that surfaced under BOTH
+// slots would accuse a mark the person never touched.
+it("shows the server's refusal under the slot that was refused", async () => {
   const user = userEvent.setup();
   vi.stubGlobal(
     "fetch",
@@ -144,15 +219,16 @@ it("shows the server's refusal beside the control", async () => {
   );
   mark(WITHOUT_MARK);
 
-  await user.click(screen.getByRole("button", { name: "Add a logo" }));
+  await user.click(screen.getByRole("button", { name: "Add a square icon" }));
   await user.upload(
-    screen.getByLabelText("Company logo"),
+    slot("Square icon").getByLabelText("Square icon"),
     new File(["truncated"], "half-a-logo.png", { type: "image/png" }),
   );
 
   expect(
-    await screen.findByText(/not an image this server can read/),
+    await slot("Square icon").findByText(/not an image this server can read/),
   ).toBeTruthy();
+  expect(slot("Wide logo").queryByRole("alert")).toBeNull();
 });
 
 // The removal is judged by the server too, and its refusal lands in the same
@@ -178,7 +254,9 @@ it("shows the server's refusal of a removal beside the control", async () => {
   );
   mark(WITH_MARK);
 
-  await user.click(screen.getByRole("button", { name: "Remove" }));
+  await user.click(
+    screen.getByRole("button", { name: "Remove the wide logo" }),
+  );
 
   expect(
     await screen.findByText(/being replaced by another write/),

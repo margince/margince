@@ -10,7 +10,7 @@ import {
 } from "../format/format";
 import type { Locale, useT } from "../i18n";
 import { translatePlural } from "../i18n";
-import { BRIEF_PARAM, COMPOSE_PARAM } from "./personpage.address";
+import { BRIEF_PARAM, COMPOSE_PARAM, THREAD_PARAM } from "./personpage.address";
 import { settingsAddress } from "./settingsnav";
 import type {
   Worklist,
@@ -508,17 +508,20 @@ function sameDayInZone(utcIso: string, now: Date, zone: string): boolean {
 // promise what the click cannot do — the defect this function's own comment
 // warned about before the route existed.
 //
-// AND IT NAMES NO MESSAGE. `?compose=reply` asks for a reply to the PERSON, not
-// to the thread this row is about, because the composer cannot be aimed at one.
-// The row keeps its link to the record beside this, where the message sits on
-// the timeline. A parameter naming an activity would promise a precision the
-// composer does not have.
+// AND IT NAMES THE MESSAGE. `?thread=<activity>` carries the conversation this
+// row is about, so the composer opens on the transport that message is on
+// rather than on whichever this contact leads with. Without it a contact
+// reachable two ways had the reply drafted into the wrong one — which is why
+// this function returned a bare record href until the composer could be aimed.
+//
+// `draft_email` carries none, and must not: it OPENS a conversation rather than
+// continuing one, so a thread id would anchor it on something the reader is not
+// answering.
 // The verbs this row can take a reader to.
 //
-// Both end at a person's composer. Which of the two the server chose still
-// matters to the LABEL — one answers a message, the other opens a fresh one —
-// but not to the address, because the composer picks its own transport and
-// threading from the person.
+// Both end at a person's composer, and which of the two the server chose
+// reaches the address as well as the label: `draft_reply` names the message it
+// answers, `draft_email` names none because it is opening a conversation.
 //
 // `open_meeting_brief` is the third, and it lands somewhere else entirely: the
 // brief is read as `?prep=<activity>` on the PERSON's record, so the address
@@ -590,7 +593,15 @@ export function moveHref(item: WorklistItem): string | undefined {
   if (!record || item.subject?.type !== "person") {
     return record;
   }
-  return `${record}?${COMPOSE_PARAM}=reply`;
+  // The message the row is about travels with the ask. Without it the composer
+  // would open on whichever transport this contact leads with, which for a
+  // contact reachable two ways is a reply drafted into the wrong conversation —
+  // the overstated promise this link was withheld for until it could be kept.
+  const thread = move.activity_id;
+  const anchored = thread
+    ? `&${THREAD_PARAM}=${encodeURIComponent(thread)}`
+    : "";
+  return `${record}?${COMPOSE_PARAM}=reply${anchored}`;
 }
 
 /**

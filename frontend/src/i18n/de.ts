@@ -1460,6 +1460,8 @@ export const de = {
   "co.suggest.byline": "Margince schlägt vor",
   "co.suggest.dismissFailed":
     "Konnte nicht ausgeblendet werden — es wird weiter angezeigt",
+  "co.suggest.addTaskFailed":
+    "Der Schritt wurde nicht angelegt — nichts wurde gespeichert",
   "co.suggest.viewTasks": "Aufgaben ansehen",
   "co.suggest.commitment.overdueCount": "{count} überfällig",
   "co.suggest.commitment.openCount": "{count} offen",
@@ -4492,7 +4494,7 @@ export const de = {
   "extUnits.workspace.sub":
     "Erweiterungen, die diese Installation mit einem gemeinsamen Zugang betreibt. Was du hier einstellst, gilt für alle.",
 
-  "connectors.title": "Verbundene Postfächer",
+  "connectors.title": "Verbundene Postfächer und Kalender",
   // Die dauerhafte Nacht-Vollmacht der Nutzerin — eine Frage, gestellt beim
   // Postfach-Verbinden im Onboarding und noch einmal in den Einstellungen.
   "overnightGrant.title": "Vorbereitung über Nacht",
@@ -4600,10 +4602,10 @@ export const de = {
   "connectors.originUnreachable": "Antwortet nicht",
   "connectors.originUnchecked": "Noch nicht gepr\u00fcft",
   "connectors.sub":
-    "Postfächer, die dein CRM automatisch füllen. Trenne eines bei Bedarf — bereits erfasste Datensätze bleiben.",
+    "Postfächer und Kalender, die dein CRM automatisch füllen. Trenne eines bei Bedarf — bereits erfasste Datensätze bleiben.",
   "connectors.loading": "Verbindungen werden geladen…",
   "connectors.loadFailed": "Verbindungen konnten nicht geladen werden.",
-  "connectors.empty": "Noch kein Postfach verbunden.",
+  "connectors.empty": "Noch kein Postfach und kein Kalender verbunden.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Kalender",
   "connectors.provGraph": "Outlook",
@@ -4727,7 +4729,7 @@ export const de = {
   "connectors.addOpen": "Konto verbinden",
   "connectors.connect": "Verbinden",
   "connectors.connectProvider": "{provider} verbinden",
-  "connectors.rosterLabel": "Erfassende Postfächer",
+  "connectors.rosterLabel": "Erfassen in dein CRM",
   "connectors.addGmailBrings":
     "Die Mails, die du sendest und empfängst, von Google. Margince kann auch darüber senden.",
   "connectors.addGcalBrings":
@@ -6558,17 +6560,33 @@ export const de = {
     "Nur bestätigtes Wissen — Website-Texte werden nie zu Anweisungen.",
   "settings.companyConfirmed": "bestätigte Aussagen",
   "settings.companyMark": "Firmenlogo",
-  "settings.companyMarkPresent":
-    "Wird hier und als Hauptmarke oben in der Seitenleiste gezeigt.",
-  "settings.companyMarkNone":
+  "settings.companyMarkIntro":
+    "Zwei Marken, denn die Seitenleiste zeigt Ihr Unternehmen in zwei Breiten. Füllen Sie die breite, nutzt die eingeklappte Seitenleiste sie ebenfalls — bis Sie ein quadratisches Symbol hinzufügen.",
+  "settings.companyMarkWide": "Breites Logo",
+  "settings.companyMarkWidePresent":
+    "Wird hier und als Hauptmarke oben in der geöffneten Seitenleiste gezeigt.",
+  "settings.companyMarkWideNone":
     "Noch kein Logo, deshalb stehen die Initialen dafür. Ein Website-Auslesen kann es ergänzen, oder Sie laden hier eines hoch.",
-  "settings.companyMarkAdd": "Logo hinzufügen",
+  "settings.companyMarkIcon": "Quadratisches Symbol",
+  "settings.companyMarkIconPresent":
+    "Wird in der eingeklappten Seitenleiste gezeigt, wo das breite Logo zu klein zum Lesen wäre.",
+  "settings.companyMarkIconNone":
+    "Noch kein Symbol, deshalb greift die eingeklappte Seitenleiste auf das breite Logo zurück.",
+  "settings.companyMarkAdd": "Hinzufügen",
   "settings.companyMarkReplace": "Ersetzen",
   "settings.companyMarkRemove": "Entfernen",
-  "settings.companyMarkPick": "Firmenlogo",
-  "settings.companyMarkHint":
+  "settings.companyMarkAddWide": "Breites Logo hinzufügen",
+  "settings.companyMarkReplaceWide": "Breites Logo ersetzen",
+  "settings.companyMarkRemoveWide": "Breites Logo entfernen",
+  "settings.companyMarkAddIcon": "Quadratisches Symbol hinzufügen",
+  "settings.companyMarkReplaceIcon": "Quadratisches Symbol ersetzen",
+  "settings.companyMarkRemoveIcon": "Quadratisches Symbol entfernen",
+  "settings.companyMarkWideHint":
     "Am besten: SVG oder transparentes PNG mit etwa 800 × 240 px (bis 4:1), unter 5 MB. JPEG, GIF, WebP und ICO funktionieren ebenfalls. Die Proportionen bleiben erhalten.",
+  "settings.companyMarkIconHint":
+    "Am besten: SVG oder transparentes PNG mit etwa 256 × 256 px, quadratisch, unter 5 MB. Eine breite Datei wird nicht beschnitten — sie behält ihre Proportionen und steht einfach klein im Quadrat.",
   "settings.companyMarkEmpty": "Logo hierher ziehen oder Datei auswählen",
+  "settings.companyMarkIconEmpty": "Symbol hierher ziehen oder Datei auswählen",
   "settings.companyWebsite": "Öffentliche Unternehmenswebsite",
   "settings.companyWebsiteHint":
     "Die öffentliche Website, von der jede Website-Lesung ausgeht.",
@@ -7207,6 +7225,9 @@ export const de = {
   "person.graph.routeDirect": "{name} steht bereits im Austausch mit ihnen.",
   "person.graph.routeVia":
     "{name} steht im Austausch mit {through} im selben Unternehmen.",
+  "person.graph.routeDirectYou": "Sie stehen bereits im Austausch mit ihnen.",
+  "person.graph.routeViaYou":
+    "Sie stehen im Austausch mit {through} im selben Unternehmen.",
   "person.graph.noRoute":
     "Bisher steht hier niemand im Austausch mit ihnen oder mit jemandem in ihrem Unternehmen.",
   "person.graph.noDirect": "Hier hat niemand mit ihnen korrespondiert.",
@@ -7231,6 +7252,9 @@ export const de = {
   "person.intro.leadRouteBadge": "Starker Weg",
   "person.intro.heroDirect": "kennt die Person direkt",
   "person.intro.heroIndirect": "erreicht sie über {through}",
+  "person.intro.heroYou": "Sie",
+  "person.intro.heroDirectYou": "kennen die Person direkt",
+  "person.intro.heroIndirectYou": "erreichen sie über {through}",
   "person.intro.factReciprocal": "Wechselseitig",
   "person.intro.factOneSided": "Einseitig",
   "person.intro.factDirect": "Direkte Beziehung",
@@ -7242,10 +7266,16 @@ export const de = {
     "{name} fragen — hat geschrieben, bisher ohne Antwort.",
   "person.intro.verdictVia":
     "{name} fragen — erreicht die Person über {through}.",
+  "person.intro.verdictDirectYou": "Sie schreiben sich bereits.",
+  "person.intro.verdictOneSidedYou":
+    "Sie haben geschrieben, bisher ohne Antwort.",
+  "person.intro.verdictViaYou": "Sie erreichen die Person über {through}.",
+  "person.intro.ownRouteNoAsk": "Niemanden zu fragen — schreiben Sie selbst.",
   "person.intro.evidenceEyebrow": "Die Belege dahinter",
   "person.intro.evidenceExchanges": "Austausche",
   "person.intro.evidenceWindow": "in 90 Tagen",
   "person.intro.evidenceFrom": "{count} von {name}",
+  "person.intro.evidenceFromYou": "{count} von Ihnen",
   "person.intro.evidenceLastContact": "Letzter Kontakt",
   "person.intro.lastToday": "Heute",
   "person.intro.lastYesterday": "Gestern",
@@ -7255,6 +7285,10 @@ export const de = {
   "person.intro.stripWhoCount_one": "Nur {name}",
   "person.intro.stripWhoCount_other": "{count} Kolleginnen und Kollegen",
   "person.intro.stripWhoMix": "{direct} direkt · {indirect} über einen Kontakt",
+  "person.intro.stripWhoOnlyYou": "Nur Sie",
+  "person.intro.stripWhoWithYou_one": "Sie und {count} Kollegin oder Kollege",
+  "person.intro.stripWhoWithYou_other":
+    "Sie und {count} Kolleginnen und Kollegen",
   "person.intro.otherRoutesTitle": "Weitere Wege hinein",
   "person.intro.otherRoutesSub":
     "Sortiert danach, wie viel beidseitiger Austausch dahintersteht.",
@@ -7644,6 +7678,8 @@ export const de = {
   "person.composer.draftWithAi": "Mit KI entwerfen",
   "person.composer.intentAgenda":
     "eine Agenda für den anstehenden Termin vorschlagen",
+  "person.composer.threadGone":
+    "Das Gespräch, auf das dieser Link zeigt, kann nicht mehr beantwortet werden — der Kanal oder die Adresse dazu gibt es nicht mehr. Das hier ist eine neue Nachricht.",
   "person.composer.intentReply": "auf die letzte Nachricht antworten",
   "person.composer.intentCommitment": "einlösen, was wir zugesagt haben",
   "person.composer.intentFollowUp": "nachfassen — es ist still geworden",

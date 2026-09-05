@@ -15,12 +15,14 @@ package org360
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	org360svc "github.com/margince/margince/backend/internal/compose/org360"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -576,11 +578,13 @@ func TestAnIntroRequestRefusesADealTheCallerCannotRead(t *testing.T) {
 	wrote(t, e, contact, org, "Re: Angebot", "We will review the scope this week.", 2)
 	// A REAL route, so the refusal below is about the deal rather than about a
 	// colleague who cannot reach anybody. Without it this test passed with the
-	// bug restored, because introRoute refused first.
+	// bug restored, because introRoute refused first. The route is a SECOND
+	// rep's: an introduction is asked of somebody else, so a route belonging to
+	// the caller would be refused before the deal was ever read.
 	e.WsExec(t, `INSERT INTO graph_interaction_edge
 			(user_id, person_id, last_at, count_90d, in_count_90d, out_count_90d)
 		VALUES ($1, $2, $3, 20, 10, 10)`,
-		e.Rep1, contact, org360Clock.AddDate(0, 0, -2))
+		e.Rep2, contact, org360Clock.AddDate(0, 0, -2))
 
 	// A reader who may see the account, its people and their routes — and no
 	// deals at all.
@@ -588,7 +592,7 @@ func TestAnIntroRequestRefusesADealTheCallerCannotRead(t *testing.T) {
 	_, err := svc.IntroRequestDraft(blind, nil, ids.OrganizationID{UUID: org},
 		org360svc.IntroRequest{
 			PersonID:  ids.From[ids.PersonKind](contact),
-			ViaUserID: ids.From[ids.UserKind](e.Rep1),
+			ViaUserID: ids.From[ids.UserKind](e.Rep2),
 			DealID:    ptrDeal(deal),
 		})
 	if err == nil {
@@ -614,13 +618,13 @@ func TestAnIntroRequestWithoutADealStillDraftsForTheSameCaller(t *testing.T) {
 	e.WsExec(t, `INSERT INTO graph_interaction_edge
 			(user_id, person_id, last_at, count_90d, in_count_90d, out_count_90d)
 		VALUES ($1, $2, $3, 20, 10, 10)`,
-		e.Rep1, contact, org360Clock.AddDate(0, 0, -2))
+		e.Rep2, contact, org360Clock.AddDate(0, 0, -2))
 
 	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, org360NoDealPerms)
 	draft, err := svc.IntroRequestDraft(blind, nil, ids.OrganizationID{UUID: org},
 		org360svc.IntroRequest{
 			PersonID:  ids.From[ids.PersonKind](contact),
-			ViaUserID: ids.From[ids.UserKind](e.Rep1),
+			ViaUserID: ids.From[ids.UserKind](e.Rep2),
 		})
 	if err != nil {
 		t.Fatalf("an account-wide introduction was refused: %v", err)
@@ -631,5 +635,38 @@ func TestAnIntroRequestWithoutADealStillDraftsForTheSameCaller(t *testing.T) {
 	// No lane was given, so the template wrote it and says so.
 	if draft.GeneratedBy != "deterministic" {
 		t.Fatalf("a draft written with no lane is credited to %q", draft.GeneratedBy)
+	}
+}
+
+// AN INTRODUCTION IS ASKED OF SOMEBODY ELSE.
+//
+// The routes this draft is written from rank everyone on our side who
+// corresponds with the contact, and the reader is one of them — so the way in
+// the page recommends can be the reader's own relationship. Drafting from that
+// wrote a letter asking its own sender for a favour, at the workspace's model
+// budget, and the reader had a route the whole time.
+func TestAnIntroRequestRefusesTheReaderAsTheirOwnIntroducer(t *testing.T) {
+	e := integration.Setup(t)
+	svc := org360Service(e)
+
+	org, _ := seedRoleDeal(t, e)
+	contact := e.SeedPerson(t, "Ute Sommer", nil)
+	employ(t, e, contact, org, "Chief Financial Officer")
+	wrote(t, e, contact, org, "Re: Angebot", "We will review the scope this week.", 2)
+	// The caller's OWN route, which is the shape the page offers when the
+	// warmest relationship with this contact is the reader's.
+	e.WsExec(t, `INSERT INTO graph_interaction_edge
+			(user_id, person_id, last_at, count_90d, in_count_90d, out_count_90d)
+		VALUES ($1, $2, $3, 20, 10, 10)`,
+		e.Rep1, contact, org360Clock.AddDate(0, 0, -2))
+
+	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, org360NoDealPerms)
+	_, err := svc.IntroRequestDraft(reader, nil, ids.OrganizationID{UUID: org},
+		org360svc.IntroRequest{
+			PersonID:  ids.From[ids.PersonKind](contact),
+			ViaUserID: ids.From[ids.UserKind](e.Rep1),
+		})
+	if !errors.Is(err, apperrors.ErrInvalidArgument) {
+		t.Fatalf("a reader drafted an introduction from themselves: %v", err)
 	}
 }

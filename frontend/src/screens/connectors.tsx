@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Mail, RefreshCw, Send, X } from "lucide-react";
+import { CalendarDays, Mail, RefreshCw, Send, X } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -31,6 +31,7 @@ import {
   statusLabel,
   statusTone,
 } from "./connector-status";
+import { isMailbox } from "./connectorproviders";
 import { ConnectorContextTagRow } from "./connectors.contexttag";
 import { ImapConnectForm } from "./imap-connect-form";
 import { TelegramConnectForm } from "./telegram-connect-form";
@@ -650,13 +651,18 @@ function ConnectorRow({
   const t = useT();
   const needsReconnect =
     conn.status === "reauth_required" || missingSendGrant(conn);
+  // A calendar is not a mailbox, and three of the rows below only make sense
+  // against one. The account label is the member's own email address on both
+  // kinds, so the envelope was the only thing distinguishing them and it was
+  // wrong for half of them.
+  const mailbox = isMailbox(conn.provider);
   return (
     <>
       <SettingRow
         testId={`connector-${conn.provider}`}
         label={
           <ConnectionIdentity
-            icon={Mail}
+            icon={mailbox ? Mail : CalendarDays}
             name={t(providerLabel[conn.provider])}
             account={conn.account_label}
           />
@@ -701,10 +707,15 @@ function ConnectorRow({
           </div>
         }
       />
-      {conn.status === "connected" && <MailPostureRow conn={conn} />}
-      {conn.status === "connected" && <SignatureEnrichmentRow conn={conn} />}
+      {conn.status === "connected" && mailbox && <MailPostureRow conn={conn} />}
+      {conn.status === "connected" && mailbox && (
+        <SignatureEnrichmentRow conn={conn} />
+      )}
+      {/* The tag is the one of the four that belongs to a calendar too: a
+          meeting brings in contacts exactly as a message does, and filing them
+          under the source that found them is the same question. */}
       {conn.status === "connected" && <ConnectorContextTagRow conn={conn} />}
-      {conn.status === "connected" && (
+      {conn.status === "connected" && mailbox && (
         <div className="connector-backfill">
           <BackfillPanel provider={conn.provider} initial={conn.backfill} />
         </div>

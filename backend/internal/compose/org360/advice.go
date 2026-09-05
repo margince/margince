@@ -98,7 +98,7 @@ func (s *Service) KeepUndismissed(
 }
 
 // suggestionInputsFor gathers the rules' inputs outside an assembly, the way
-// the dismissal path does: the signal reading, the stage off the row, the
+// the dismissal path does: the signal reading, the account's own heading, the
 // installation's base currency, then the grant-gated reads.
 func (s *Service) suggestionInputsFor(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, now time.Time,
@@ -107,7 +107,7 @@ func (s *Service) suggestionInputsFor(
 	if err != nil {
 		return suggestionInputs{}, err
 	}
-	lifecycle, err := organizationLifecycle(ctx, tx, orgID)
+	heading, err := readOrganizationHeading(ctx, tx, orgID)
 	if err != nil {
 		return suggestionInputs{}, err
 	}
@@ -115,5 +115,5 @@ func (s *Service) suggestionInputsFor(
 	if err != nil {
 		return suggestionInputs{}, err
 	}
-	return gatherSuggestionInputs(ctx, tx, orgID, now, facts, lifecycle, base)
+	return gatherSuggestionInputs(ctx, tx, orgID, now, facts, heading, base)
 }

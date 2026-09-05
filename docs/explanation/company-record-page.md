@@ -218,8 +218,9 @@ carries the rule in the words they read** (`reason` — "the rule that fired, in
 the words the rep reads. Never a score."), plus the `evidence` records it fired
 on and, where the server can name one, an `action` that opens a governed surface
 prefilled from that evidence (`draft_reply` opens the composer on the unanswered
-message, `open_deal` opens the stalled deal, `add_task` opens the account's task
-form already on a task). A rule that cannot name an action carries `null` and
+message, `open_deal` opens the stalled deal, `add_task` writes the step the
+server prepared, through the same `POST /tasks` the task form uses). A rule
+that cannot name an action carries `null` and
 the card advises without offering a button — a control that does nothing teaches
 the reader to stop pressing them, and so does a button the page cannot perform:
 the page's handler is total over the action kinds, so a kind it has no surface
@@ -438,6 +439,26 @@ storing one. The monogram is not a fallback of last resort: it renders
 *underneath* the image, so it is what shows while the logo loads, what is left if
 the image fails, and what a company without a resolved logo simply has. A
 company is never a broken image or an empty slot.
+
+### The installation's second mark
+
+The record above wears ONE picture. The installation's own company wears two,
+because the sidebar draws it at two widths: the wide lockup an open panel has
+room for, and a **square icon** for the 56px rail, where a wordmark scaled into
+a 32px box is a row of illegible strokes.
+
+The icon is a second pair of columns on the same row (`logo_icon_object_key`,
+`logo_icon_origin`), read back as `CompanyProfile.logo_icon_url` and streamed
+from `GET /organizations/{id}/logo/icon` on exactly the terms above — same
+re-encode, same headers, same 404 for absent, invisible and non-existent alike.
+What differs is who writes it: `uploadCompanyLogoIcon` and nothing else. No
+website read resolves a second picture, so this slot has no machine writer to
+hold off and no precedence rule of its own, and every organization but the
+anchor answers 404 for it.
+
+The two slots are chosen and cleared separately in settings, and the collapsed
+rail falls back to the wide mark when there is no icon — which is what every
+installation did before the slot existed.
 
 ## The connections card
 

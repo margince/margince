@@ -81,6 +81,61 @@ export function transportsFor(
   return out;
 }
 
+/**
+ * Which transport a NAMED message is on, and whether it can still be answered.
+ *
+ * A worklist row is about one message. Opening the composer on whichever
+ * transport the person happens to lead with would draft a reply to the wrong
+ * conversation — the same overstated promise that kept `moveHref` returning a
+ * bare record href until the composer could honour the link.
+ *
+ * `chosen` is the transport to open on, absent when the message names none this
+ * contact still has. `stale` says which of the two absences it is, and the
+ * distinction is the whole reason this returns a pair rather than a transport:
+ *
+ *   - no id asked         → nothing named, no claim to keep, `stale` is false
+ *   - named, resolved     → open on it
+ *   - named, unresolvable → open on the default AND say so
+ *
+ * The third is a real shape rather than a defensive one: a channel disconnected
+ * since the row was ranked, an address removed, a message archived out of the
+ * page's own window. Falling back silently there is the defect this pair
+ * exists to prevent — the reader asked to answer one conversation and would be
+ * writing into another without being told.
+ */
+export type AnchoredTransport = {
+  chosen: Transport | undefined;
+  stale: boolean;
+};
+
+export function transportForActivity(
+  transports: readonly Transport[],
+  view: Person360,
+  activityId: string | undefined,
+): AnchoredTransport {
+  if (!activityId) {
+    return { chosen: undefined, stale: false };
+  }
+  const named = (view.activities?.data ?? []).find(
+    (activity) => activity.id === activityId,
+  );
+  if (!named) {
+    return { chosen: undefined, stale: true };
+  }
+  // A message belongs to its channel; anything else on the timeline — a mail,
+  // a note, a call — is answered by mail, which is the one transport that can
+  // OPEN a conversation rather than continue one.
+  const wanted = named.kind === "message" ? named.channel_provider : "email";
+  const chosen = transports.find((transport) => transport.id === wanted);
+  return chosen
+    ? // ANCHORED ON THE MESSAGE THE CALLER NAMED, not on the provider's newest.
+      // transportsFor offers the latest conversation per provider because that
+      // is what a rep means when they pick a transport from the list; a caller
+      // who named one means that one.
+      { chosen: { ...chosen, anchorId: named.id }, stale: false }
+    : { chosen: undefined, stale: true };
+}
+
 // The same answer for a caller that holds only the record.
 //
 // Both readers need the transport directory and the reader's own language to

@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -149,7 +150,7 @@ func (e *LaneError) Unwrap() error { return e.Cause }
 // is returned as *LaneError; a budget deferral as the typed error the job
 // carrier snoozes on; no lane or nothing to read as the deterministic floor.
 func Read(
-	ctx context.Context, lane Completer, orgID string, in Input, lang string,
+	ctx context.Context, lane Completer, orgID ids.OrganizationID, in Input, lang string,
 ) ([]crmcontracts.Organization360Suggestion, crmcontracts.WrittenBy, error) {
 	if lane == nil || len(in.Messages) == 0 {
 		return nil, crmcontracts.Deterministic, nil
@@ -197,7 +198,7 @@ type rawFinding struct {
 // reply, or one with no findings key, is an error: the model did not answer
 // the question.
 func ParseFindings(
-	reply, orgID string, in Input,
+	reply string, orgID ids.OrganizationID, in Input,
 ) (kept []crmcontracts.Organization360Suggestion, refused []string, err error) {
 	var parsed struct {
 		Findings *[]rawFinding `json:"findings"`
@@ -228,7 +229,7 @@ func ParseFindings(
 }
 
 // ground turns one raw finding into a suggestion, or says why it cannot.
-func ground(raw rawFinding, orgID string, in Input) (crmcontracts.Organization360Suggestion, string) {
+func ground(raw rawFinding, orgID ids.OrganizationID, in Input) (crmcontracts.Organization360Suggestion, string) {
 	kind, ok := readKind(raw.Kind)
 	if !ok {
 		return crmcontracts.Organization360Suggestion{}, fmt.Sprintf("kind %q is not one the scan raises", clamp(raw.Kind))
@@ -265,7 +266,7 @@ func ground(raw rawFinding, orgID string, in Input) (crmcontracts.Organization36
 		Title:       &title,
 		Reason:      reason,
 		Evidence:    evidence,
-		Fingerprint: org360.SuggestionFingerprint(string(kind), orgID, evidence),
+		Fingerprint: org360.SuggestionFingerprint(string(kind), orgID.String(), evidence),
 		WrittenBy:   &by,
 		// The message's own date, like the no-reply rule's: when the words
 		// were written, never a deadline the system chose.
@@ -276,7 +277,12 @@ func ground(raw rawFinding, orgID string, in Input) (crmcontracts.Organization36
 		out.Action = org360.NewSuggestionAction(crmcontracts.Organization360SuggestionActionKindDraftReply)
 		out.Action.ActivityId = &evidence[0].EntityId
 	case actionAddTask:
+		// The page writes the step from the body the finding carries, so the
+		// sentence the reader accepted is the task they get. It hangs on the
+		// account: the one record the scan is certain the finding is about.
 		out.Action = org360.NewSuggestionAction(crmcontracts.Organization360SuggestionActionKindAddTask)
+		body := org360.TaskBody(title, "organization", orgID.UUID)
+		out.Action.Task = &body
 	}
 	return out, ""
 }

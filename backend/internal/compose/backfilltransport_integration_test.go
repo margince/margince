@@ -112,11 +112,15 @@ func (f *backfillFakeConnector) BackfillPage(_ context.Context, _ connector.Auth
 
 // plainSyncConnector deliberately implements only the base Connector — the
 // non-Backfiller shape the 422 connector_unsupported branch guards.
-type plainSyncConnector struct{}
+//
+// Named, because the suite needs two of them: one CONNECTED mailbox that cannot
+// page backward, and one registered mailbox nobody has connected, which is what
+// "no connection" actually looks like to a caller.
+type plainSyncConnector struct{ name string }
 
-func (plainSyncConnector) Descriptor() connector.Descriptor {
+func (c plainSyncConnector) Descriptor() connector.Descriptor {
 	return connector.Descriptor{
-		Name: "graph", Version: "1",
+		Name: c.name, Version: "1",
 		Scopes:   []principal.Scope{principal.ScopeRead},
 		RiskTier: mcp.TierAutoExecute,
 		Produces: []datasource.EntityType{datasource.EntityActivity},
@@ -172,7 +176,11 @@ func setupBackfillWire(t *testing.T) *backfillWireEnv {
 		WithDigestProjects(digestProjectsSource)
 	gm := &backfillFakeConnector{name: "gmail", messages: 25, pageSize: 10}
 	registry.Register(gm)
-	registry.Register(plainSyncConnector{})
+	registry.Register(plainSyncConnector{name: "graph"})
+	// A registered mailbox nobody connects, so the connection-not-found branch
+	// has a MAIL provider to be asked about. It used to be asked about gcal,
+	// which now answers `not_a_mailbox` before any connection is looked for.
+	registry.Register(plainSyncConnector{name: "imap"})
 
 	human := principal.WithWorkspaceID(context.Background(), e.WS)
 	human = principal.WithCorrelationID(human, ids.NewV7())
@@ -471,14 +479,31 @@ func assertPreviewValidatesItsWindowAndPricesHonestly(t *testing.T, b *backfillW
 
 func assertOpsRefuseProvidersTheyCannotBackfill(t *testing.T, b *backfillWireEnv) {
 	t.Helper()
-	t.Run("a provider without a connection is a 404 on every op", func(t *testing.T) {
+	t.Run("a mailbox without a connection is a 404 on every op", func(t *testing.T) {
+		for name, invoke := range map[string]func(http.ResponseWriter, *http.Request){
+			"preview": b.previewBackfill(crmcontracts.CaptureProviderImap), "start": b.startBackfill(crmcontracts.CaptureProviderImap),
+			"status": b.backfillStatus(crmcontracts.CaptureProviderImap), "cancel": b.cancelBackfill(crmcontracts.CaptureProviderImap),
+		} {
+			code, pcode := b.do(b.human, t, invoke, `{"window":"6m"}`, nil)
+			if code != http.StatusNotFound || pcode != "connection_not_found" {
+				t.Fatalf("%s without a connection = %d/%s, want 404/connection_not_found", name, code, pcode)
+			}
+		}
+	})
+
+	// A CALENDAR is refused before the connection is looked for at all, and the
+	// order is the useful one. "Connect it first" would send a reader off to
+	// connect the calendar they already have in order to get mail history out
+	// of it; "this is a calendar, import from the mailbox on the same account"
+	// names the thing that will actually work.
+	t.Run("a calendar is refused as no mailbox, connection or not", func(t *testing.T) {
 		for name, invoke := range map[string]func(http.ResponseWriter, *http.Request){
 			"preview": b.previewBackfill(crmcontracts.CaptureProviderGcal), "start": b.startBackfill(crmcontracts.CaptureProviderGcal),
 			"status": b.backfillStatus(crmcontracts.CaptureProviderGcal), "cancel": b.cancelBackfill(crmcontracts.CaptureProviderGcal),
 		} {
 			code, pcode := b.do(b.human, t, invoke, `{"window":"6m"}`, nil)
-			if code != http.StatusNotFound || pcode != "connection_not_found" {
-				t.Fatalf("%s without a connection = %d/%s, want 404/connection_not_found", name, code, pcode)
+			if code != http.StatusUnprocessableEntity || pcode != "not_a_mailbox" {
+				t.Fatalf("%s on a calendar = %d/%s, want 422/not_a_mailbox", name, code, pcode)
 			}
 		}
 	})

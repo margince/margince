@@ -27,18 +27,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// logoFieldName is how the logo is spelled in field_provenance and in the
-// audit/event delta. One spelling, so the provenance display and the write
-// cannot disagree about which field was set.
-// Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/gates/claimedspelling_test.go)
-const logoFieldName = "logo"
-
-// SetOrganizationLogo records a resolved company mark: the storage key its
-// normalized bytes live at, and the asset URL it came from. It reports whether
-// the row was written — false means a human's own logo holds the field, which
-// is a normal outcome and not an error — and hands back the key the row named
-// BEFORE this write, so the caller can reclaim bytes nothing references any
-// more.
+// SetOrganizationLogo records a resolved company mark in the WIDE slot: the
+// storage key its normalized bytes live at, and the asset URL it came from.
+// It names that slot rather than taking one as an argument, because a site
+// declares one picture of itself: a read resolves a company's lockup and never
+// its badge.
+//
+// It reports whether the row was written — false means a human's own logo holds
+// the field, which is a normal outcome and not an error — and hands back the key
+// the row named BEFORE this write, so the caller can reclaim bytes nothing
+// references any more.
 //
 // The bytes must already be stored: this store is blob-free, the same division
 // the offer PDF's asset ref keeps, so a caller writes the object first and the
@@ -99,7 +97,7 @@ func (s *Store) SetOrganizationLogo(ctx context.Context, id ids.OrganizationID, 
 		// NEXT resolve had since put there.
 		var previous, previousOrigin *string
 		err = tx.QueryRow(ctx, orgLogoWrite,
-			id, objectKey, originURL).Scan(&previous, &previousOrigin)
+			id, objectKey, originURL, LogoWide.wide()).Scan(&previous, &previousOrigin)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Visible above but not updatable here: the row was archived
 			// between the two statements. Nothing to record.
@@ -110,7 +108,7 @@ func (s *Store) SetOrganizationLogo(ctx context.Context, id ids.OrganizationID, 
 		}
 		written = true
 		supersededKey = supersededObject(previous, objectKey)
-		return recordLogoWrite(ctx, tx, id, resolvedLogoWrite(previousOrigin, originURL, by))
+		return recordLogoWrite(ctx, tx, id, LogoWide, resolvedLogoWrite(previousOrigin, originURL, by))
 	})
 	if err != nil {
 		return false, nil, err
@@ -299,7 +297,7 @@ func bindSiteReadLogo(ctx context.Context, tx pgx.Tx, readID ids.UUID, orgID ids
 	// only side that can collect bytes.
 	var previousKey, previousOrigin *string
 	err = tx.QueryRow(ctx, orgLogoWrite,
-		orgID, *objectKey, *originURL).Scan(&previousKey, &previousOrigin)
+		orgID, *objectKey, *originURL, LogoWide.wide()).Scan(&previousKey, &previousOrigin)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Archived under this confirmation: nothing to wear a mark, and the
 		// same parked object left over.
@@ -323,7 +321,7 @@ func bindSiteReadLogo(ctx context.Context, tx pgx.Tx, readID ids.UUID, orgID ids
 	// draft: provenance is written once and never re-derived, and a machine mark
 	// recorded under a person's name would make the human-precedence guard
 	// refuse every later resolve for a logo nobody chose.
-	if err := recordLogoWrite(ctx, tx, orgID,
+	if err := recordLogoWrite(ctx, tx, orgID, LogoWide,
 		resolvedLogoWrite(previousOrigin, *originURL, companySiteReadCapturedBy)); err != nil {
 		return nil, err
 	}
@@ -376,8 +374,9 @@ func supersededObject(previous *string, objectKey string) *string {
 	return previous
 }
 
-// LogoHeldByHuman answers whether a person set this organization's logo, for a
-// caller that must know BEFORE it does expensive or irreversible work — the
+// LogoHeldByHuman answers whether a person set this organization's WIDE mark,
+// for a caller that must know BEFORE it does expensive or irreversible work —
+// the
 // site read asks first so it neither fetches a logo it may not use nor
 // overwrites the object a person's own logo already occupies. It carries the
 // record's read gate, so an organization the caller cannot see is not found.
@@ -400,8 +399,10 @@ func (s *Store) LogoHeldByHuman(ctx context.Context, id ids.OrganizationID) (boo
 	return held, err
 }
 
-// logoHeldByHuman reports whether a person's own mark is on this organization
-// right now.
+// logoHeldByHuman reports whether a person's own WIDE mark is on this
+// organization right now. Only that slot needs the question asked: the icon has
+// no machine writer to hold off, so there is nothing for a person's icon to
+// outrank.
 //
 // TWO questions, because the logo's provenance can outlive the logo. What holds
 // a read off is a mark a person chose, not the fact that a person once touched
@@ -425,12 +426,12 @@ func logoHeldByHuman(ctx context.Context, tx pgx.Tx, id ids.OrganizationID) (boo
 	return wearsMark, nil
 }
 
-// OrganizationLogoKey answers where one organization's logo bytes live, for a
-// caller that streams them. It returns ErrNotFound both when the organization
-// is invisible or absent and when it simply has no logo: to the client those
-// are the same answer — draw the monogram — and distinguishing them would leak
-// which organizations exist.
-func (s *Store) OrganizationLogoKey(ctx context.Context, id ids.OrganizationID) (string, error) {
+// OrganizationLogoKey answers where one slot's logo bytes live, for a caller
+// that streams them. It returns ErrNotFound both when the organization is
+// invisible or absent and when it simply wears no mark in that slot: to the
+// client those are the same answer — draw the monogram — and distinguishing
+// them would leak which organizations exist.
+func (s *Store) OrganizationLogoKey(ctx context.Context, id ids.OrganizationID, slot LogoSlot) (string, error) {
 	// A logo is part of the record, so reading its location is a read of the
 	// record and carries the record's gate.
 	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
@@ -441,8 +442,7 @@ func (s *Store) OrganizationLogoKey(ctx context.Context, id ids.OrganizationID) 
 		if err := auth.EnsureVisible(ctx, tx, "organization", id.UUID); err != nil {
 			return err
 		}
-		return tx.QueryRow(ctx,
-			`SELECT logo_object_key FROM organization WHERE id = $1 AND archived_at IS NULL`, id).Scan(&key)
+		return tx.QueryRow(ctx, orgLogoKeyRead, id, slot.wide()).Scan(&key)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", apperrors.ErrNotFound
@@ -456,23 +456,25 @@ func (s *Store) OrganizationLogoKey(ctx context.Context, id ids.OrganizationID) 
 	return *key, nil
 }
 
-// LogoURL renders where a client fetches an organization's logo bytes, or nil
-// when the organization has no logo stored. Its query token changes with the
-// object key, so replacing a logo cannot leave a browser showing the previous
-// cached image at the same URL. The key itself never reaches the wire: it names
-// a bucket path, and only a short one-way digest is exposed.
+// LogoURL renders where a client fetches one slot's logo bytes, or nil when the
+// organization wears no mark there. Its query token changes with the object key,
+// so replacing a logo cannot leave a browser showing the previous cached image
+// at the same URL. The key itself never reaches the wire: it names a bucket
+// path, and only a short one-way digest is exposed.
 //
 // Exported because the account-graph assembly reads organization rows of its
 // own and must spell this URL exactly as this module's own reads do — one
 // spelling, or a company's face differs between its record and the graph.
-func LogoURL(id ids.UUID, objectKey *string) *string {
+func LogoURL(id ids.UUID, objectKey *string, slot LogoSlot) *string {
 	if objectKey == nil || *objectKey == "" {
 		return nil
 	}
 	// The prefix versions the representation as well as the object. Version 2
 	// removes the transparent square canvas written by older logo uploads, so a
 	// browser that cached that letterboxed response must fetch the wide one.
+	// The slot needs no version of its own: each slot has its own path, and a
+	// key is minted per upload, so two marks can never share a cache entry.
 	digest := sha256.Sum256([]byte("logo-display-v2\x00" + *objectKey))
-	path := fmt.Sprintf("/v1/organizations/%s/logo?v=%x", id.String(), digest[:6])
+	path := fmt.Sprintf("/v1/organizations/%s/logo%s?v=%x", id.String(), slot.urlSuffix(), digest[:6])
 	return &path
 }

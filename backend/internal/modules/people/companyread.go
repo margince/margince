@@ -22,13 +22,14 @@ import (
 func readCompany(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (Company, error) {
 	out := Company{OrganizationID: orgID, Fields: map[string]string{}}
 	if err := tx.QueryRow(ctx,
-		`SELECT o.display_name, o.source, o.captured_by, o.updated_at, o.logo_object_key, d.domain
+		`SELECT o.display_name, o.source, o.captured_by, o.updated_at,
+		        o.logo_object_key, o.logo_icon_object_key, d.domain
 		   FROM organization o
 		   LEFT JOIN organization_domain d
 		     ON d.organization_id = o.id AND d.is_primary AND d.archived_at IS NULL
 		  WHERE o.id = $1`,
 		orgID).Scan(&out.DisplayName, &out.OrganizationSource, &out.OrganizationCapturedBy,
-		&out.UpdatedAt, &out.LogoObjectKey, &out.Website); err != nil {
+		&out.UpdatedAt, &out.LogoObjectKey, &out.LogoIconObjectKey, &out.Website); err != nil {
 		return Company{}, fmt.Errorf("read company: %w", err)
 	}
 

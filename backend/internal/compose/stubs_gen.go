@@ -583,6 +583,14 @@ func (stubs) UploadCompanyLogo(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "UploadCompanyLogo")
 }
 
+func (stubs) DeleteCompanyLogoIcon(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DeleteCompanyLogoIcon")
+}
+
+func (stubs) UploadCompanyLogoIcon(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UploadCompanyLogoIcon")
+}
+
 func (stubs) StartCompanySiteRead(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.StartCompanySiteReadParams) {
 	httperr.NotImplemented(w, r, "StartCompanySiteRead")
 }
@@ -1469,6 +1477,10 @@ func (stubs) DraftIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id 
 
 func (stubs) GetOrganizationLogo(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetOrganizationLogo")
+}
+
+func (stubs) GetOrganizationLogoIcon(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetOrganizationLogoIcon")
 }
 
 func (stubs) MergeOrganization(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MergeOrganizationParams) {

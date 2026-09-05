@@ -60,6 +60,16 @@ const imapConnected: CaptureConnection = {
   scopes: [],
 };
 
+// The calendar half of the same Google grant. Its account_label is the member's
+// own email address — the vendor gives the same identity for both connections —
+// so nothing on the row but its NAME says this is not their mailbox.
+const gcalConnected: CaptureConnection = {
+  ...gmailConnected,
+  id: "018f3a1b-0000-7000-8000-0000000000ca",
+  provider: "gcal",
+  scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
+};
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -185,7 +195,7 @@ describe("the connected-inboxes card", () => {
     stubApi([gmailConnected]);
     render(<ConnectorsCard />);
     const inboxes = await screen.findByRole("heading", {
-      name: "Connected inboxes",
+      name: "Connected mailboxes and calendars",
     });
     const telegram = screen.getByRole("heading", { name: "Telegram bot" });
     // Two panel headings means two panels: neither heading may sit inside the
@@ -214,6 +224,49 @@ describe("the connected-inboxes card", () => {
     ).toBeTruthy();
   });
 
+  // A calendar is not a mailbox, and the three mail-shaped rows do not belong
+  // to one. Reported from a live installation: a member saw the history-import
+  // card under their Google Calendar answering "this mailbox type can't be
+  // backfilled" and read it as the product refusing to import their mail. The
+  // account label is their own email address on both connections, so the row
+  // itself gave them no reason to think otherwise.
+  it("draws no mail-shaped row against a calendar connection", async () => {
+    stubApi([gcalConnected]);
+    render(<ConnectorsCard />);
+    await screen.findByTestId("connector-gcal");
+    expect(document.querySelector(".connector-backfill")).toBeNull();
+    expect(screen.queryByTestId("connector-gcal-mail-posture")).toBeNull();
+    expect(screen.queryByText(/Import your mail history/)).toBeNull();
+  });
+
+  // The control: the same three rows against a mailbox. Without it a card that
+  // had stopped rendering rows at all would satisfy the case above.
+  it("draws the mail-shaped rows against a mailbox", async () => {
+    stubApi([gmailConnected]);
+    render(<ConnectorsCard />);
+    await screen.findByTestId("connector-gmail");
+    expect(document.querySelector(".connector-backfill")).not.toBeNull();
+    expect(screen.getByTestId("connector-gmail-mail-posture")).toBeTruthy();
+  });
+
+  // And the tag row stays: a meeting brings in contacts exactly as a message
+  // does, so which source found them is the same question on either kind.
+  it("keeps the context tag row on a calendar connection", async () => {
+    stubApi([
+      {
+        ...gcalConnected,
+        context_tag: {
+          id: "t-cal",
+          name: "From the calendar",
+          archived: false,
+        },
+      },
+    ]);
+    render(<ConnectorsCard />);
+    await screen.findByTestId("connector-gcal");
+    expect(screen.getByTestId("connector-gcal-context-tag")).toBeTruthy();
+  });
+
   // An empty roster is the ANSWER to the question this card asks, so it is a
   // row of the card's own list rather than a bare paragraph floating between
   // the description and whatever came next.
@@ -221,7 +274,9 @@ describe("the connected-inboxes card", () => {
     stubApi([]);
     render(<ConnectorsCard />);
     const row = await screen.findByTestId("connector-roster-empty");
-    expect(within(row).getByText(/No inbox is connected yet/)).toBeTruthy();
+    expect(
+      within(row).getByText(/No mailbox or calendar is connected yet/),
+    ).toBeTruthy();
     expect(row.closest(".settinglist")).not.toBeNull();
     expect(
       screen.getByRole("button", { name: "Connect an account" }),

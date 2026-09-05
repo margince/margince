@@ -63,7 +63,7 @@ func TestAChangeIsRefusedBeforeAnySQLWhenItsShapeCannotBeStored(t *testing.T) {
 // Answered, it would be a query with no predicate on the one column that makes
 // the feed personal — everybody's work, handed to whoever asked.
 func TestAPersonalReadWithNoPersonIsRefused(t *testing.T) {
-	_, _, err := NewStore(nil).Mine(context.Background(), time.Time{}, nil)
+	_, err := NewStore(nil).Mine(context.Background(), time.Time{}, nil)
 	if err == nil {
 		t.Fatal("expected a refusal for a read with no person")
 	}
@@ -80,5 +80,21 @@ func TestTroubledWithNoPersonIsRefusedWithTheSentinel(t *testing.T) {
 	_, err := NewStore(nil).Troubled(context.Background(), time.Time{}, 8)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("Troubled with no person = %v, want ErrPermissionDenied", err)
+	}
+}
+
+// The faults arm exists because ten later SUCCESSES pushed an unacknowledged
+// failure off `recent`. Its own bound is what stops the same thing happening
+// one level down: at or below the settled bound, a busy day's later faults
+// would evict the earliest one — the overnight run, which is the case the arm
+// was built for and the one nobody has looked at yet.
+//
+// A relationship rather than a number, because the numbers are free to move and
+// the ordering between them is not.
+func TestTheFaultBoundIsNotNarrowerThanTheSettledOne(t *testing.T) {
+	if faultBound < recentBound {
+		t.Errorf("faultBound = %d, recentBound = %d — a faults arm narrower than the settled one "+
+			"lets a fault evict a fault, which is the defect it was built to prevent one outcome over",
+			faultBound, recentBound)
 	}
 }

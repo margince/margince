@@ -53,8 +53,8 @@ func TestLogoURLChangesWithTheStoredRevisionWithoutExposingItsKey(t *testing.T) 
 	orgID := ids.New[ids.OrganizationKind]()
 	firstKey := "workspaces/private/organization_logo/first-revision"
 	secondKey := "workspaces/private/organization_logo/second-revision"
-	first := LogoURL(orgID.UUID, &firstKey)
-	second := LogoURL(orgID.UUID, &secondKey)
+	first := LogoURL(orgID.UUID, &firstKey, LogoWide)
+	second := LogoURL(orgID.UUID, &secondKey, LogoWide)
 	if first == nil || second == nil {
 		t.Fatal("stored logo keys produced no display URL")
 	}

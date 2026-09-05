@@ -225,6 +225,13 @@ frequency × reciprocity arithmetic as the contact's workspace-wide score, over 
 addition and are never merged**. A contact can be warm to the company while the colleague beside them
 has barely met them, and that gap *is* the answer to "who should make the introduction".
 
+**The reader is ranked like anybody else, and is never somebody to ask.** Nothing in the route read
+excludes the person doing the reading, so on a contact they correspond with themselves the warmest way
+in *is* them — which is the most useful fact the surface can report and never an introduction to
+request. Both writers refuse it (`introductions.Store.Create` and the account draft in
+`compose/org360`, each with `ErrInvalidArgument`), and both surfaces say so in the second person rather
+than printing the reader's own name back at them as a third party.
+
 The vocabularies are deliberately different on screen too — the per-user bands are
 `none / weak / moderate / strong`, the workspace-wide card's are `dormant / weak / warm / strong` — so
 nobody is invited to compare two numbers that are not comparable.
