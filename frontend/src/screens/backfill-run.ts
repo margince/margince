@@ -7,23 +7,8 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { throwProblem } from "./common";
 
-/**
- * The run row and the four operations on it, in one spelling.
- *
- * Two surfaces draw a connect-time import: the Settings connections card
- * (backfill.tsx) and the last step of onboarding (onboarding-backread.tsx).
- * They ask the reader different questions and say different things about the
- * answer — that is theirs — but the read, the estimate, the start, the stop and
- * the pick that ties them together are ONE behaviour, and they held two copies
- * of it. The copies had already begun to disagree in the way copies do: each
- * carried its own spelling of the cache key under a comment claiming the key was
- * shared, so an invalidation from one surface reached the other only because the
- * two strings happened to still match.
- *
- * What stays with each caller is what genuinely differs: which refusals it can
- * name, whether an estimate it has not seen may be acted on, and every word on
- * screen.
- */
+// The connect-time import, as both of its surfaces need it: the run row, the
+// four operations on it, and the window pick that ties them together.
 
 type BackfillStatus = components["schemas"]["BackfillStatus"];
 type BackfillPreview = components["schemas"]["BackfillPreview"];
@@ -102,6 +87,23 @@ async function cancelRun(provider: Provider): Promise<BackfillStatus> {
   return data;
 }
 
+/**
+ * The run row and the four operations on it, in one spelling.
+ *
+ * Two surfaces draw a connect-time import: the Settings connections card
+ * (backfill.tsx) and the last step of onboarding (onboarding-backread.tsx).
+ * They ask the reader different questions and say different things about the
+ * answer — that is theirs — but the read, the estimate, the start, the stop and
+ * the pick that ties them together are ONE behaviour, and they held two copies
+ * of it. The copies had already begun to disagree in the way copies do: each
+ * carried its own spelling of the cache key under a comment claiming the key
+ * was shared, so an invalidation from one surface reached the other only
+ * because the two strings happened to still match.
+ *
+ * What stays with each caller is what genuinely differs: which refusals it can
+ * name, whether an estimate it has not seen may be acted on, and every word on
+ * screen.
+ */
 export function useBackfillRun({
   provider,
   initial,
