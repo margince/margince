@@ -16,6 +16,20 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
+// adHocReferenceTables are the descriptor field NAMES that point at a
+// row-scoped record, mapped to the table each names.
+//
+// Keyed by field name where the prebuilt catalog's referenceScopes are keyed by
+// SQL expression, because this vocabulary renders its own expressions
+// (`t.` + name) and there is no spec author to write one.
+// TestTheAdHocVocabularyScopesEveryReferenceTheCatalogDoes holds the two
+// together, so a reference the catalog learns about cannot stay unknown here.
+var adHocReferenceTables = map[string]string{
+	fieldOrganizationID: tableOrganization,
+	fieldPartnerOrgID:   tableOrganization,
+	fieldProjectID:      tableProject,
+}
+
 // runAdHocPlan serves the datasource seam's RunReport: the plan's
 // vocabulary is the schema descriptors (every declared field may group
 // or filter; count is the aggregate). Used by overlay tooling and the
@@ -42,6 +56,20 @@ func (e *reportEngine) runAdHocPlan(ctx context.Context, plan datasource.ReportP
 		spec.filters[f.Name] = expr
 		if f.Type == "bigint" || f.Type == "integer" {
 			spec.measures[f.Name] = expr
+		}
+		// A descriptor field that POINTS AT a row-scoped record carries the same
+		// obligation here as in the prebuilt catalog: grouping by it hands back
+		// an id the caller's own read of the same row masks.
+		//
+		// Derived from the schema rather than written per spec, because this
+		// vocabulary is. A hand-kept list would go stale the next time a
+		// descriptor grows a reference, and the failure is a disclosure rather
+		// than an error.
+		if table, isReference := adHocReferenceTables[f.Name]; isReference {
+			if spec.referenceScopes == nil {
+				spec.referenceScopes = map[string]string{}
+			}
+			spec.referenceScopes[expr] = table
 		}
 	}
 	req := reportRequest{GroupBy: plan.GroupBy, Filters: map[string]any{}}
