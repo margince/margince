@@ -121,24 +121,68 @@ func previewAllowedForCaller(ctx context.Context) error {
 	return nil
 }
 
-// PreviewAvailableFor answers whether THIS caller could open THIS room's buyer
-// preview, for a read that wants to say so before the press.
+// StampPreviewAvailable answers, for a page of rooms, whether THIS caller could
+// open each one's buyer preview — for a read that wants to say so before the
+// press rather than after it.
 //
-// Every condition PreviewRoom applies, asked in the same order and through the
-// same helpers: the caller's authority, the deal being writable and live, and
-// the room not being archived. It mints nothing and writes nothing.
+// Every condition PreviewRoom applies: the caller's authority, the deal being
+// writable and live, and the room not being archived. It mints nothing and
+// writes nothing.
 //
-// An error from any probe is FALSE rather than an error of its own: this
-// answers a screen's question about a button, and a room the caller can read is
-// still a room they can read when the answer is no.
-func PreviewAvailableFor(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom) bool {
-	if previewAllowedForCaller(ctx) != nil {
-		return false
+// SET-BASED, over all the rooms' deals at once, because the alternative is two
+// queries a row on a page of up to two hundred. auth.StampWritable is the same
+// answer every other capability boolean in the tree is stamped with
+// (Deal.Writable, Lead.Writable), including its archived exclusion — a deal
+// that is writable but archived is nobody's to present.
+//
+// An error PROPAGATES. Answering false on a failed probe would be worse than
+// wrong: the probe runs on the caller's transaction, a failed statement leaves
+// it aborted, and a swallowed error would let the read commit having verified
+// nothing and tell a rep a database stall was a decision about their access.
+func StampPreviewAvailable(ctx context.Context, tx pgx.Tx, rooms []crmcontracts.DealRoom) error {
+	if len(rooms) == 0 {
+		return nil
 	}
-	if ensureDealWritable(ctx, tx, room) != nil {
-		return false
+	// The caller's own authority is asked once: it is the same answer for every
+	// room on the page, and a denial here is an ordinary false rather than an
+	// error — a colleague who may read rooms and not present them is the case
+	// this field exists to describe.
+	if err := previewAllowedForCaller(ctx); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			for i := range rooms {
+				no := false
+				rooms[i].PreviewAvailable = &no
+			}
+			return nil
+		}
+		return err
 	}
-	return room.State != stateArchived
+	deals := make([]dealOfRoom, len(rooms))
+	for i, room := range rooms {
+		deals[i] = dealOfRoom{DealID: ids.UUID(room.DealId)}
+	}
+	writable, err := auth.StampWritable(ctx, tx, dealTable, deals,
+		func(d dealOfRoom) ids.UUID { return d.DealID },
+		func(d *dealOfRoom, may bool) { d.Writable = may })
+	if err != nil {
+		return err
+	}
+	for i := range rooms {
+		// Archived is the room's OWN state, which StampWritable answers for the
+		// deal rather than for the room.
+		available := writable[ids.UUID(rooms[i].DealId)] && rooms[i].State != stateArchived
+		rooms[i].PreviewAvailable = &available
+	}
+	return nil
+}
+
+// dealOfRoom carries one room's deal id through auth.StampWritable, which
+// stamps a flag onto rows it is given rather than answering a bare set. The
+// rooms themselves cannot be passed: the flag it would stamp is the DEAL's
+// writability, and a room carries no such field to put it in.
+type dealOfRoom struct {
+	DealID   ids.UUID
+	Writable bool
 }
 
 // previewSeat finds the caller's preview participant in the room, or creates

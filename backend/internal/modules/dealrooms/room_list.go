@@ -45,18 +45,10 @@ func (s *Store) ListRooms(ctx context.Context, in ListRoomsInput) ([]crmcontract
 		if err != nil {
 			return err
 		}
-		// Answered per row, because the room screen reads its room from HERE
-		// rather than by id — a field only GetRoom filled would be absent
+		// Answered here as well as by id, because the room screen reads its
+		// room from the LIST — a field only GetRoom filled would be absent
 		// exactly where the button that needs it is drawn.
-		//
-		// Two probes a row, on a list a caller has narrowed to one deal. The
-		// alternative is a button that offers itself and then refuses, which
-		// is what this replaces.
-		for i := range out {
-			available := PreviewAvailableFor(ctx, tx, out[i])
-			out[i].PreviewAvailable = &available
-		}
-		return nil
+		return StampPreviewAvailable(ctx, tx, out)
 	})
 	return out, page, err
 }

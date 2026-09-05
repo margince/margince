@@ -35,8 +35,11 @@ func (s *Store) GetRoom(ctx context.Context, id ids.DealRoomID) (crmcontracts.De
 		// Answered on the READ so a screen can say no before the press. The
 		// press itself still asks — this is what the button should look like,
 		// never what it is allowed to do.
-		available := PreviewAvailableFor(ctx, tx, out)
-		out.PreviewAvailable = &available
+		rooms := []crmcontracts.DealRoom{out}
+		if err := StampPreviewAvailable(ctx, tx, rooms); err != nil {
+			return err
+		}
+		out = rooms[0]
 		return nil
 	})
 	return out, err
