@@ -75,17 +75,23 @@ a.record-card-open:focus-visible {
   font-size: var(--fs-sm);
 }
 
+/* Truncated in TWO places, because the handle has two shapes. A value
+   `contacturi` refuses is plain inline text and the paragraph cuts it here.
+   A value it accepts is a `link-button`, a flex line — one atomic inline box
+   to the paragraph, which cannot cut INSIDE it — so the link carries the same
+   ellipsis itself. With only the paragraph's, an accepted address was sliced
+   mid-word at the card's edge with nothing to say anything was missing; with
+   only the link's, a refused one overflowed the card entirely. */
 .record-card-handles {
   margin: 0;
   font-size: var(--fs-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* The address carries its OWN ellipsis. `link-button` is a flex line, so it is
-   one atomic inline box to the paragraph around it and a `text-overflow` out
-   there cannot cut INSIDE it — a long address was sliced mid-word at the
-   card's edge with nothing to say that anything was missing. Blocked, which it
-   can be here: a handle on a card carries an address and never an icon. */
+/* Blocked, which it can be here: a handle on a card carries an address and
+   never an icon beside it. */
 .record-card-handles > .link-button {
   display: block;
   overflow: hidden;

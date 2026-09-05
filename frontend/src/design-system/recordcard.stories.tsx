@@ -76,6 +76,26 @@ export const NameOnly: Story = {
 };
 
 /**
+ * An address `contacturi` REFUSES — this one carries a comma, which separates
+ * two mailboxes in a `mailto:` and so may never reach one. The fact stays and
+ * only the link is dropped, and it truncates like any other handle: refused it
+ * is plain text the paragraph cuts, accepted it is a flex line that cuts
+ * itself, and both have to hold or a long one overflows the card.
+ */
+export const RefusedAddress: Story = {
+  render: () => (
+    <RecordCard
+      kind="person"
+      name="Anna Brandt"
+      identity="p-1"
+      href="#/contacts/p-1"
+      position="Head of Procurement"
+      email="anna.brandt@nordwind-logistik.de, einkauf@nordwind-logistik.de"
+    />
+  ),
+};
+
+/**
  * What the SURFACE knows, rather than the record: which colleagues already
  * reach this contact, or that an employment is the current one. It keeps its
  * own track, so a long name ellipsises before it arrives.
