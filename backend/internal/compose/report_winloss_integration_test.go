@@ -672,7 +672,29 @@ func TestWinLossGroupsLossesByTheirReason(t *testing.T) {
 	// Three groups: two reasons and the wins' NULL. A fourth would mean the
 	// won deal grew a reason the CHECK constraints forbid.
 	if len(result.Rows) != 3 {
-		t.Errorf("rows = %d, want 3 (two reasons plus the wins' NULL): %+v", len(result.Rows), result.Rows)
+		t.Fatalf("rows = %d, want 3 (two reasons plus the wins' NULL): %+v", len(result.Rows), result.Rows)
+	}
+
+	// The wins' bucket is a REAL null on the wire, not a filled-in stand-in.
+	// Counting three rows alone would pass just as happily against a
+	// COALESCE(lost_reason, 'none') that invented a reason for every won deal —
+	// the report would then name a cause the record does not carry, which is
+	// the one thing a report about causes must never do.
+	var wins map[string]any
+	for _, row := range result.Rows {
+		if row[fieldLostReason] == nil {
+			wins = row
+			break
+		}
+	}
+	if wins == nil {
+		t.Fatalf("no row carries a null lost_reason — the wins' bucket is missing or filled in: %+v", result.Rows)
+	}
+	if got := wireInt(t, wins, "deals"); got != 1 {
+		t.Errorf("won deals in the null bucket = %d, want 1", got)
+	}
+	if got := wireInt(t, wins, "amount_minor_sum"); got != 12000 {
+		t.Errorf("won amount = %d, want 12000", got)
 	}
 }
 
