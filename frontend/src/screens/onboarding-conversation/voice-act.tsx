@@ -23,7 +23,7 @@ import {
   VoiceResultScene,
   VoiceSpeakerScene,
 } from "./voice-scenes";
-import { ConversationWorkbench, useConfiguredModel } from "./workbench";
+import { ConversationWorkbench } from "./workbench";
 
 // The voice act driver: intake and ingestion live in useVoiceCorpus, the
 // build lifecycle in useVoiceBuild. Every source — a browsed file, a window
@@ -81,7 +81,6 @@ export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
   };
 
   const presence = presenceFor(state);
-  const configuredModel = useConfiguredModel();
 
   // Where the journey stands, in the rail's own counting.
   const stops = railStops(state.memberPath);
@@ -101,7 +100,6 @@ export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
       fileRef={fileRef}
       onFiles={onFiles}
       onAnswer={handleAnswer}
-      model={configuredModel}
     />
   );
 
@@ -238,7 +236,6 @@ function VoiceSurface({
   fileRef,
   onFiles,
   onAnswer,
-  model,
 }: Readonly<{
   state: ConversationState;
   dispatch: Dispatch<ConversationEvent>;
@@ -248,7 +245,6 @@ function VoiceSurface({
   fileRef: RefObject<HTMLInputElement | null>;
   onFiles: (event: ChangeEvent<HTMLInputElement>) => void;
   onAnswer: (questionId: string, value: string) => void;
-  model: string;
 }>) {
   const t = useT();
   if (state.phase === "vo.collecting") {
@@ -282,7 +278,6 @@ function VoiceSurface({
         stage={build.stage}
         summary={corpus.summary}
         sources={corpus.manifest.length}
-        model={model}
       />
     );
   }

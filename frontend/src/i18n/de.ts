@@ -5085,7 +5085,8 @@ export const de = {
   "ob.conv.voice.footFloor":
     "Mindestens {min} Wörter. Darunter kopiert das Modell nur Formulierungen.",
   "ob.conv.voice.buildingTitle": "Ich lerne deine Stimme",
-  "ob.conv.voice.buildingMeta": "{words} Wörter, {sources} Quellen",
+  "ob.conv.voice.buildingMeta_one": "{words} Wörter, {sources} Quelle",
+  "ob.conv.voice.buildingMeta_other": "{words} Wörter, {sources} Quellen",
   "ob.conv.voice.resultSub":
     "Lies zuerst das Beispiel. Passt es, bestätige. Passt es nicht, gib mir mehr Quellen und ich baue neu.",
   "ob.conv.voice.resultSubNoSample":

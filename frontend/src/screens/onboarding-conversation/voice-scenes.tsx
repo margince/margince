@@ -6,7 +6,7 @@ import { Button, Disclosure } from "../../design-system/atoms";
 import { MarginceCoreScene } from "../../design-system/margince-core";
 import { usePrefersReducedMotion } from "../../design-system/motion";
 import { formatNumber } from "../../format/format";
-import { type Locale, useLocale, useT } from "../../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { ACCEPTED_CORPUS_ATTR } from "../voice-corpus-file";
 import type { VoiceInsightsData } from "../voice-insights";
 import { parseVoiceInsights } from "../voice-insights";
@@ -459,7 +459,8 @@ export function VoiceSpeakerScene({
 
 /**
  * The build scene: the Core carrying the progress ring with the percentage
- * inside it, and the four pipeline stages as a checklist. The ceiling is
+ * inside it, and beside it — never stacked under it — what the build is
+ * reading and the four pipeline stages as a checklist. The ceiling is
  * DERIVED from the stage the server reports; the displayed number crawls
  * toward it (useCrawlingProgress) so the ring keeps moving during a stage
  * instead of sitting still, but it can never pass the ceiling the server has
@@ -470,14 +471,13 @@ export function VoiceBuildScene({
   stage,
   summary,
   sources,
-  model,
 }: Readonly<{
   stage: BuildStage | null;
   summary: CorpusSummary | null;
   sources: number;
-  model: string;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const reached = stage === null ? -1 : BUILD_STAGES.indexOf(stage);
   // A queued build (no stage yet) shows nothing claimed; each reached stage
@@ -486,43 +486,56 @@ export function VoiceBuildScene({
   const progress = useCrawlingProgress(ceiling);
   return (
     <div className="ob-scene ob-voice-building">
-      <div className="ob-voice-orb">
-        <MarginceCoreScene
-          state={buildCore(stage)}
-          progress={progress}
-          feed={false}
-        />
-        {/* Decorative: the stage checklist below and the rail's own log
-            (role="log" in ConversationThread) already carry the build's
-            progress in words, so the crawling digits stay out of the a11y
-            tree instead of being announced on every tick. */}
-        <span className="ob-voice-orb-pct" aria-hidden>
-          {formatNumber(Math.round(progress * 100), locale)}
-          <small>%</small>
-        </span>
-      </div>
-      <p className="ob-voice-building-meta">
-        {t("ob.conv.voice.buildingMeta", {
-          words: formatNumber(summary?.total_words ?? 0, locale),
-          sources: formatNumber(sources, locale),
-        })}
-      </p>
-      <p className="ob-voice-building-model t-caption">
-        <i aria-hidden /> {model}
-      </p>
-      <ol className="ob-conv-stages" aria-label={t("ob.conv.voice.stageTitle")}>
-        {BUILD_STAGES.map((name, index) => (
-          <li
-            key={name}
-            data-state={
-              index < reached ? "done" : index === reached ? "current" : "todo"
-            }
+      {/* The orb is the subject and takes its own column; what the build is
+          reading and how far it has got reads down the column beside it.
+          Which model is answering is NOT repeated here — the band's runtime
+          chip above names it for every screen in the room, and the second
+          copy was a full-width line of identifiers under the orb. */}
+      <div className="ob-voice-building-row">
+        <div className="ob-voice-orb">
+          <MarginceCoreScene
+            state={buildCore(stage)}
+            progress={progress}
+            feed={false}
+          />
+          {/* Decorative: the stage checklist beside it and the rail's own log
+              (role="log" in ConversationThread) already carry the build's
+              progress in words, so the crawling digits stay out of the a11y
+              tree instead of being announced on every tick. */}
+          <span className="ob-voice-orb-pct" aria-hidden>
+            {formatNumber(Math.round(progress * 100), locale)}
+            <small>%</small>
+          </span>
+        </div>
+        <div className="ob-voice-building-account">
+          <p className="ob-voice-building-meta">
+            {plural("ob.conv.voice.buildingMeta", sources, {
+              words: formatNumber(summary?.total_words ?? 0, locale),
+              sources: formatNumber(sources, locale),
+            })}
+          </p>
+          <ol
+            className="ob-conv-stages"
+            aria-label={t("ob.conv.voice.stageTitle")}
           >
-            {index < reached && <Check aria-hidden />}
-            <span>{t(stageLabelKeys[name])}</span>
-          </li>
-        ))}
-      </ol>
+            {BUILD_STAGES.map((name, index) => (
+              <li
+                key={name}
+                data-state={
+                  index < reached
+                    ? "done"
+                    : index === reached
+                      ? "current"
+                      : "todo"
+                }
+              >
+                {index < reached && <Check aria-hidden />}
+                <span>{t(stageLabelKeys[name])}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
     </div>
   );
 }
