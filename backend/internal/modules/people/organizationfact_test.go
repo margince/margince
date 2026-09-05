@@ -8,7 +8,10 @@ package people
 // (or violating the row's CHECKs) fails with a named reason before any
 // write.
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestNormalizeFactValueKeyReducesAValueToItsNameIdentity(t *testing.T) {
 	cases := map[string]string{
@@ -20,6 +23,41 @@ func TestNormalizeFactValueKeyReducesAValueToItsNameIdentity(t *testing.T) {
 	for value, want := range cases {
 		if got := NormalizeFactValueKey(value); got != want {
 			t.Errorf("NormalizeFactValueKey(%q) = %q, want %q", value, got, want)
+		}
+	}
+}
+
+// The key must not move when the value is trimmed, because the two sides of the
+// write disagreed on exactly that: the producer keyed the raw value and stored
+// the trimmed one, the row check re-derived from the trimmed one, and
+// `"Capital One — "` keyed as `capital one` on one side and `capital one —` on
+// the other. One malformed value then discarded twelve crawled pages and sixty
+// facts.
+//
+// The separator is " — ", space on each side, so trimming removes the space the
+// cut needs — which is why this is a property of the normalizer rather than a
+// rule each caller has to remember.
+func TestTheKeyIsTheSameWhicheverSideTrims(t *testing.T) {
+	// Every one of these is the same offering said untidily, and the ticket's
+	// own table: the first row is the observed failure, key for key.
+	for _, value := range []string{
+		"Capital One — ",
+		"Capital One —",
+		"Capital One  —  ",
+		"  Capital One — a bank  ",
+		"Capital One",
+	} {
+		raw := NormalizeFactValueKey(value)
+		trimmed := NormalizeFactValueKey(strings.TrimSpace(value))
+		if raw != trimmed {
+			t.Errorf("NormalizeFactValueKey(%q) = %q but %q trimmed = %q — the producer and the row "+
+				"check derive from different spellings of one value, so the write refuses the fact",
+				value, raw, value, trimmed)
+		}
+		if raw != "capital one" {
+			t.Errorf("NormalizeFactValueKey(%q) = %q, want %q — a value ending in the separator names "+
+				"an offering with an empty description, which is the same offering a well-formed "+
+				"re-read describes", value, raw, "capital one")
 		}
 	}
 }
