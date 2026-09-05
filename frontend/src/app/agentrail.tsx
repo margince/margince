@@ -44,7 +44,7 @@ import { type AiActivity, useAiActivity } from "./ai-activity";
 import { lineFor, PANEL_HEADING } from "./ai-activity-lines";
 import { laneFor } from "./ai-activity-orb";
 import { useAgentTierMap } from "./autonomy";
-import { useCan } from "./capability";
+import { useCan, useHoldsAdminRole } from "./capability";
 import { type CaptureProgress, liveCapture } from "./capture-progress";
 import { usePopoverDismiss } from "./popover";
 import type { Route } from "./router";
@@ -290,9 +290,12 @@ function useRecentCalls(): Readonly<{
  * a confident zero: the difference between "this cost nothing" and "nobody knows
  * what this cost" is the whole point of the row.
  *
- * Operator-only, on the same grant the spend card uses: the server treats the
- * runtime's cost as operator information, so a sales seat gets nothing and the
- * panel says so rather than printing a number that seat could not verify.
+ * Admin-only. The grant alone is not the predicate: `automation:update` is what
+ * the server serves the figure on, and the ops seat holds it by default while an
+ * operator-edited role may hold it too. What the agent costs is the
+ * administrator's figure, not every seat's that may configure automation, so
+ * the role narrows the grant here — and the grant still stands beside it,
+ * because an admin whose role lost it would only be asking for a 403.
  */
 function useAiSpend(): Readonly<{
   allowed: boolean;
@@ -301,7 +304,9 @@ function useAiSpend(): Readonly<{
   /** One number per day of the month so far, oldest first. */
   daily: readonly number[];
 }> {
-  const allowed = useCan("automation", "update");
+  const admin = useHoldsAdminRole();
+  const granted = useCan("automation", "update");
+  const allowed = admin && granted;
   const usage = useQuery({
     queryKey: ["ai-usage", "agentrail-month"],
     enabled: allowed,
