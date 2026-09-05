@@ -200,6 +200,10 @@ var tableOwners = map[string]string{
 	// activity_link for the same reason they belong together — it is part of
 	// what an activity IS, not a graph artifact derived from one.
 	"activity_participant": "internal/modules/activities",
+	// What a meeting BECAME and when. It hangs off activity.meeting_status and
+	// is written in the same transaction by the two doors that set it, so it
+	// belongs to the module that owns the column it is the history of.
+	"activity_meeting_history": "internal/modules/activities",
 	// The named readers of an activity whose audience a human limited to
 	// `selected`; it is written by the audience endpoint in the same
 	// transaction as the column it qualifies.
@@ -420,6 +424,7 @@ var tableOwners = map[string]string{
 	"weekly_review":             "internal/compose/weekly",
 	"team_weekly_review":        "internal/compose/weekly",
 	"team_weekly_review_rep":    "internal/compose/weekly",
+	"assurance_run_finding":     "internal/modules/assurance",
 	"assurance_run":             "internal/modules/assurance",
 	"assurance_source_coverage": "internal/modules/assurance",
 	"assurance_exception":       "internal/modules/assurance",

@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { withoutComments } from "../testing/css";
 
 // `Card` is the one card surface, and a hand-rolled one is a second card the
 // moment any of its chrome moves — which is not a warning, it is a description
@@ -48,12 +49,6 @@ function stylesheets(dir: string): string[] {
 
 /** One `selector { … }` rule, as written. */
 type Rule = Readonly<{ selector: string; body: string }>;
-
-/** CSS comments are not rules, and one sitting above a rule was being read as
- * its selector. */
-function withoutComments(css: string): string {
-  return css.replace(/\/\*[\s\S]*?\*\//g, "");
-}
 
 function rules(css: string): Rule[] {
   const found: Rule[] = [];

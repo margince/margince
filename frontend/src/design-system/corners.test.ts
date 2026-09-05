@@ -40,6 +40,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { withoutComments } from "../testing/css";
 
 const frontendRoot = resolve(__dirname, "..", "..");
 const tokensFile = join(frontendRoot, "src", "design-system", "tokens.css");
@@ -211,17 +212,6 @@ function namedRungs(text: string, rungs: Set<string>): string[] {
     }
   }
   return out;
-}
-
-/**
- * The same text with every comment blanked to spaces of its own length. A
- * commented-out declaration declares nothing, and offsets are worth keeping:
- * the in-line waiver lives in a comment of its own, read from the original.
- */
-function withoutComments(text: string): string {
-  return text.replace(/\/\*[\s\S]*?\*\//g, (comment) =>
-    " ".repeat(comment.length),
-  );
 }
 
 /**

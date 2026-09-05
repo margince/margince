@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -119,8 +120,18 @@ type BriefItem struct {
 	// answers are metered under.
 	EvidenceIDs []ids.UUID `json:"evidence_ids"`
 	// SnoozedUntil is when a snoozed item re-surfaces, and is absent unless the
-	// item is snoozed.
+	// item is snoozed waiting on the clock.
 	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
+	// ReopenOn is what a snoozed item is waiting for: the clock, a reply, or a
+	// meeting being over. SERVED rather than withheld, and served BECAUSE
+	// SnoozedUntil is: without it a snooze with no moment reads as a snooze
+	// that never lifts, and an agent would report a deal as abandoned when the
+	// person is simply waiting for the customer to write back.
+	ReopenOn values.ReopenCondition `json:"reopen_on,omitempty"`
+	// ReopenRef is the meeting being waited for, set only when ReopenOn names
+	// one. Charged like the other ids: naming a record to an agent hands that
+	// record over.
+	ReopenRef *ids.UUID `json:"reopen_ref,omitempty"`
 	// Lineage is set when this deal is back after the person dismissed it, and
 	// it is SERVED rather than withheld: it is a deterministic fact about what
 	// they did, not something an agent wrote, so reading it is not a loop

@@ -42,7 +42,7 @@ const SYSTEM_SWEEP = notDisplayed(
 // case, and a kind-level map cannot say "sometimes personal" in the SYSTEM_SWEEP
 // sentence — which is why they get their own reason instead of sharing one.
 const SITE_READ_WATCHED_WHERE_IT_RUNS = notDisplayed(
-  "the site-read lanes, whose attribution is a fact about the READ rather than the task: a human-requested read carries that person as on_behalf_of and IS personal to them, while a domain-triage or auto-enrich read names no human and is workspace-scoped. Neither wants a line here. The human's read is already narrated where it was started — the organization page polls the read's own status and draws it live (SiteReadPanel), and the taskbar carries a `site-read` key for the same action — so a rail line would be a third telling of one thing. The system's read belongs to nobody, exactly like the sweeps above. There is also a grain the rail could not render honestly: the occurrence key is correlation+task and one read's correlation is its site_read row id, so a single read files one occurrence PER LANE it runs — the extract lanes for an ordinary read, and site_triage on top for a domain-triage one, which is the only read that reaches all three",
+  "the site-read lanes, which are the individual model calls a website read makes, and the read narrates itself: `site_read` below is one occurrence for the whole crawl, announced by the dossier row from the moment it is queued to the moment it settles, so a line per call would tell one reading several times over — and at a grain the rail could not render honestly, because the occurrence key is correlation+task and one read's correlation is its site_read row id, so a single read files one occurrence PER LANE it runs. Their attribution is a fact about the READ rather than the task: a human-requested read carries that person as on_behalf_of and IS personal to them, while a domain-triage or auto-enrich read names no human and is workspace-scoped, exactly like the sweeps above",
 );
 /**
  * The line for one (kind, state), by literal key — or the reason there is none.
@@ -96,6 +96,18 @@ export const ACTIVITY_LINE: Readonly<
     done: "agent.activity.documentExtract.done",
     degraded: "agent.activity.documentExtract.degraded",
     failed: "agent.activity.documentExtract.failed",
+  },
+  // A company's website read end to end, from the button on its page. The
+  // other carrier a person presses and then waits on: the dossier row can say
+  // queued and running, which is what lets the orb enter `ingest` for the
+  // whole crawl rather than flicker on each settled model call.
+  site_read: {
+    queued: "agent.activity.siteRead.queued",
+    running: "agent.activity.siteRead.running",
+    stalled: "agent.activity.siteRead.stalled",
+    done: "agent.activity.siteRead.done",
+    degraded: "agent.activity.siteRead.degraded",
+    failed: "agent.activity.siteRead.failed",
   },
 
   // `queued` is written for all three and reachable by none of them: the router
@@ -205,9 +217,11 @@ export const PANEL_HEADING: Readonly<Record<"running", MessageKey>> = {
  * PARTIAL on purpose, where `ACTIVITY_LINE` is total: a named variant is not
  * something every kind can have. Most occurrences are about no single record,
  * and the ones that are only carry a name when their emitter sends
- * `subject_label` — which today is the document reading and nothing else. A
- * total map here would demand copy for sentences no server can produce, which
- * is the boilerplate the notDisplayed branch exists to avoid.
+ * `subject_label` — the document reading names its document, the website
+ * read names its company, and the summary sites name the company, person or
+ * meeting they were asked about. A total map here would demand copy for
+ * sentences no server can produce, which is the boilerplate the notDisplayed
+ * branch exists to avoid.
  *
  * Each entry is a strict alternative to the unnamed line, never a suffix: "I'm
  * reading Q3-offer.pdf" is one sentence in every locale this ships in, and
@@ -230,6 +244,29 @@ export const NAMED_LINE: Readonly<Partial<Record<ActivityKind, LineSet>>> = {
     done: "agent.activity.documentExtractNamed.done",
     degraded: "agent.activity.documentExtractNamed.degraded",
     failed: "agent.activity.documentExtractNamed.failed",
+  },
+  // One table for three kinds of record, because the sentence is the same
+  // shape for each: "what I know about Acme", "about Ana Roth", "about the
+  // cutover review". The label is what the product calls the record elsewhere,
+  // sent by the site that assembled the summary's input.
+  summarize: {
+    queued: "agent.activity.summarizeNamed.queued",
+    running: "agent.activity.summarizeNamed.running",
+    stalled: "agent.activity.summarizeNamed.stalled",
+    done: "agent.activity.summarizeNamed.done",
+    degraded: "agent.activity.summarizeNamed.degraded",
+    failed: "agent.activity.summarizeNamed.failed",
+  },
+  // The company's name, as the source knew it when the read was queued: the
+  // dossier is about one organization, and the label is that record's own
+  // display name, already on the page the read was started from.
+  site_read: {
+    queued: "agent.activity.siteReadNamed.queued",
+    running: "agent.activity.siteReadNamed.running",
+    stalled: "agent.activity.siteReadNamed.stalled",
+    done: "agent.activity.siteReadNamed.done",
+    degraded: "agent.activity.siteReadNamed.degraded",
+    failed: "agent.activity.siteReadNamed.failed",
   },
 };
 

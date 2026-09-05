@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import type { AccountScan } from "./accountscan";
+import { en } from "../i18n/en";
 import { TodayOnThisAccount } from "./companytoday";
 
 // The section earns its place by carrying what nothing else on the page says,
@@ -131,7 +132,7 @@ describe("what needs a person on this account today", () => {
     show({ ...BASE, sections_omitted: ["people"] });
 
     expect(screen.getByText(/Hidden from you/).textContent).toContain(
-      "the contacts",
+      en["today.source.people"],
     );
   });
 

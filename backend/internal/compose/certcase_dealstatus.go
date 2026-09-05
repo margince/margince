@@ -45,6 +45,19 @@ type dealStatusFixture struct {
 	// model explains the move rather than choosing one, so a case that omitted
 	// it would certify the lane against a prompt production never sends.
 	Move string `json:"move"`
+	// OpenTasks is work nobody has done yet, which production always sends
+	// alongside the timeline. A fixture that omitted it could not certify the
+	// rule that matters most here — that an overdue task is a promise still
+	// owed rather than evidence the work happened.
+	OpenTasks []dealStatusTaskFixture `json:"open_tasks"`
+}
+
+type dealStatusTaskFixture struct {
+	Label   string `json:"label"`
+	Subject string `json:"subject"`
+	Due     string `json:"due"`
+	// State is "open" or "overdue"; empty reads as open, the ordinary case.
+	State string `json:"state"`
 }
 
 type dealStatusDealFixture struct {
@@ -123,6 +136,20 @@ func dealStatusInput(f dealStatusFixture) (dealstatus.StatusInput, map[string]st
 		in.Timeline = append(in.Timeline, dealstatus.ActIn{
 			ID: id, Kind: act.Kind, Direction: act.Direction,
 			Subject: act.Subject, At: act.At, When: when, Excerpt: act.Excerpt,
+		})
+	}
+	for _, task := range f.OpenTasks {
+		if err := refuseUnnameable(task.Label, "open task", label); err != nil {
+			return in, nil, err
+		}
+		id := ids.NewV7().String()
+		label[task.Label] = id
+		state := task.State
+		if state == "" {
+			state = dealstatus.TaskStateOpen
+		}
+		in.OpenTasks = append(in.OpenTasks, dealstatus.TaskIn{
+			ID: id, Subject: task.Subject, Due: task.Due, State: state,
 		})
 	}
 	return in, label, nil

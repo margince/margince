@@ -42,7 +42,19 @@ type Handlers struct {
 }
 
 // NewHandlers binds the transport to a ready service.
+//
+// A nil overlay resolver is refused HERE rather than at the first request. The
+// resolver used to read as native when absent, which turned dropped wiring into
+// a person page served happily off native tables a mirrored workspace does not
+// fill; checking it per request instead would move that to a 500 on one
+// endpoint of a server that booted. Composition supplies the resolver
+// unconditionally, so an absent one is an assembly mistake, and the assembly is
+// where compose refuses its other unbuildable wirings too.
 func NewHandlers(svc *Service, overlay OverlayMode) Handlers {
+	if overlay == nil {
+		panic("compose: the person 360 transport was assembled with no system-of-record resolver, " +
+			"so it could not tell a mirrored workspace from a native one")
+	}
 	return Handlers{svc: svc, overlay: overlay}
 }
 
@@ -87,11 +99,11 @@ func (h Handlers) GetPersonProfileFields(w http.ResponseWriter, r *http.Request,
 
 // nativeOnly refuses the read in overlay mode. A mirror holds none of these
 // relationships, so answering from it would describe a record this
-// installation does not own.
+// installation does not own. It is also what keeps the moment card's verbs
+// honest in overlay: the ladder mints "log an interaction" as available with
+// no idea of the mode, and POST /activities is refused for every mirrored
+// workspace — the page never reaches a reader there to offer it.
 func (h Handlers) nativeOnly(w http.ResponseWriter, r *http.Request) bool {
-	if h.overlay == nil {
-		return true
-	}
 	overlay, err := h.overlay(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)

@@ -79,6 +79,17 @@ type Input struct {
 	RoomHidden bool
 }
 
+// RailLabel is what the AI-activity rail calls this meeting: its subject line,
+// which is how the calendar and the timeline name it — or the company when the
+// meeting was booked without one, because "preparing Acme" still tells the
+// reader whose meeting it is and an empty label would tell them nothing.
+func (in Input) RailLabel() string {
+	if in.Subject != "" {
+		return in.Subject
+	}
+	return in.Company
+}
+
 // DealIn is the deal this meeting is about.
 type DealIn struct {
 	ID          string

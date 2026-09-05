@@ -114,6 +114,22 @@ function directRoute(over: Partial<RouteCandidate> = {}): RouteCandidate {
       last_at: "2026-08-28T09:00:00Z",
       days_since_last: 4,
     },
+    // The messages the counts were read from. Only a direct route carries
+    // them, and the verdict panel lists them beside its figures.
+    receipts: [
+      {
+        activity_id: "018f3a1b-0000-7000-8000-0000000000e1",
+        subject: "Re: Q4 rollout — site list",
+        occurred_at: "2026-08-28T09:00:00Z",
+        kind: "email",
+      },
+      {
+        activity_id: "018f3a1b-0000-7000-8000-0000000000e2",
+        subject: "Northgate pilot: next steps",
+        occurred_at: "2026-08-21T14:30:00Z",
+        kind: "meeting",
+      },
+    ],
     ...over,
   };
 }

@@ -30,17 +30,22 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
+	"github.com/margince/margince/backend/internal/modules/people"
 )
 
-// documentReadingKind is the one kind that is not a scheduled spec: a human
-// asking for an attached document to be read.
+// The two carrier kinds that are not scheduled specs: a human asking for an
+// attached document to be read, and a company's website being read end to end.
 //
-// Read from the EMITTER's own exported constant rather than restated, so a
+// Read from each EMITTER's own exported constant rather than restated, so a
 // carrier that renames its kind fails here instead of leaving this gate
-// vouching for a name nothing writes. Its ai_task and its display kind are one
-// string for this carrier — the reading IS the task — which is why one constant
-// answers both.
-const documentReadingKind = activities.ExtractionAITask
+// vouching for a name nothing writes. The document reading's ai_task and its
+// display kind are one string — the reading IS the task — which is why one
+// constant answers both there; the website read runs several tasks and names
+// none as its own.
+const (
+	documentReadingKind = activities.ExtractionAITask
+	websiteReadingKind  = people.SiteReadActivityKind
+)
 
 func TestEveryKindSomethingProducesIsOneTheContractCanExpress(t *testing.T) {
 	t.Parallel()
@@ -67,7 +72,7 @@ func TestEveryKindSomethingProducesIsOneTheContractCanExpress(t *testing.T) {
 // It deliberately does NOT render a replacement enum, and the reason is worth
 // keeping: crmYAMLNamedEnum SORTS what it reads, because its callers do set
 // comparisons. So no helper built on it can reproduce the contract's own order
-// — and that order is deliberate, opening with the three carrier kinds the
+// — and that order is deliberate, opening with the four carrier kinds the
 // schema's own description explains. A "paste this" block built from a sorted
 // list would move every name in the enum in order to add one: a diff nobody can
 // review, and a grouping silently destroyed.
@@ -85,7 +90,7 @@ func alignEnum(missing []string) string {
 
 // producedKinds is every kind an emitter can announce.
 //
-// Three producers, and the third is why this function is derived rather than
+// Four producers, and the fourth is why this function is derived rather than
 // listed: the ROUTER announces on behalf of every task the rail registry leaves
 // to it, under the task's own name. That set grows the moment somebody declares
 // a task in api/ai-tasks.yaml, so a list here would be one edit behind the
@@ -97,7 +102,7 @@ func alignEnum(missing []string) string {
 // direction is a producer half-gated, and the half that is missing is whichever
 // one nobody thought about.
 func producedKinds() []string {
-	out := []string{documentReadingKind, orgscan.ActivityKind}
+	out := []string{documentReadingKind, websiteReadingKind, orgscan.ActivityKind}
 	for _, spec := range runner.Catalog() {
 		out = append(out, spec.Name)
 	}

@@ -391,13 +391,33 @@
 
 /* ---- progress (WDS-CORE-2's optional half) ------------------------------ */
 /* A ring around the glass rather than a bar beside it: the Core is already the
-   thing being waited on, and a second widget would compete with it. */
+   thing being waited on, and a second widget would compete with it.
+
+   It hugs the ball that is actually DRAWN. The shader's camera sits 3.2 radii
+   from a unit sphere behind a 1.05 lens, so the silhouette it paints spans
+   tan(asin(1 / 3.2)) / 1.05 of the canvas's half-height on either side —
+   about 63% of the glass box — and the rest of the box is the halo's room. A
+   ring drawn at the box's edge therefore floated a third of the ball's width
+   away from it, which read as a separate dial rather than as the orb's own
+   progress. `--coreBall` is that share, and it is the shader's constant
+   restated rather than a tuning: move the camera and this moves with it. */
 .core-progress {
+  --coreBall: 0.627;
+  --coreRingGap: 4px;
   position: absolute;
-  inset: calc((var(--coreSize) - var(--coreGlass)) / 2 - 6px);
+  inset: calc(
+    (var(--coreSize) - var(--coreGlass) * var(--coreBall)) /
+    2 -
+    var(--coreRingGap)
+  );
   z-index: 3;
   pointer-events: none;
   transform: rotate(-90deg);
+}
+/* The still dress fills the whole glass box, so on a host without WebGL2 the
+   ring keeps the box's edge — the same ring, around the ball that host has. */
+.core-still .core-progress {
+  inset: calc((var(--coreSize) - var(--coreGlass)) / 2 - 6px);
 }
 .core-progress circle {
   fill: none;

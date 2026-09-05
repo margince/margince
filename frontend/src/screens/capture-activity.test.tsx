@@ -381,7 +381,7 @@ describe("capture activity", () => {
     );
     const row = within(await screen.findByRole("list"));
     expect(row.getByText(/sent for a verdict/i)).toBeInTheDocument();
-    expect(row.getByText(/judged a real contact/i)).toBeInTheDocument();
+    expect(row.getByText(/judged a real person/i)).toBeInTheDocument();
     expect(row.queryByText(/waiting on a verdict/i)).not.toBeInTheDocument();
   });
 

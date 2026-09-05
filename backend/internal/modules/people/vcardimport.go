@@ -265,8 +265,15 @@ func personFromVCard(entry VCardEntry) CreatePersonInput {
 	// on the profile-field sidecar instead, by the same split the update path
 	// makes — one rule, so which outcome a card gets cannot change what it
 	// means.
+	// Through the normalizer, like every other writer of this slot. The slot is
+	// compared verbatim — the exact-match dedupe key, the provider resolver's
+	// lookup — so a card that spelt the profile with http, a trailing slash or
+	// a tracking query would file the same person under a second identity.
+	// isLinkedinURL has already refused anything the normalizer would.
 	if u := strings.TrimSpace(entry.URL); u != "" && isLinkedinURL(u) {
-		person.Social = map[string]any{profileURLField: u}
+		if normalized, err := NormalizeLinkedInURL(u); err == nil {
+			person.Social = map[string]any{profileURLField: normalized}
+		}
 	}
 	// The card's postal address, as the one line it was reduced to. Parsing a
 	// field and then dropping it is the quieter defect: a reader who sees an

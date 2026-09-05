@@ -31,6 +31,22 @@ type licenseHandlers struct {
 	posture func() licensecheck.Posture
 }
 
+// withPosture adds the license half to a handler that already carries the seat
+// count, and is the ONLY way the entitlement surface is completed.
+//
+// It takes the receiver's store rather than building a second one. The two
+// halves genuinely come from different places — the count from the assembly,
+// because app_user rows exist whether or not a license was configured; the
+// posture from the option, because only that caller has one — and a struct
+// literal restating both would let an edit to either drop the other silently.
+//
+// Held by: TestWithLicensePostureKeepsTheSeatCountItWasGiven, which fails when
+// this rebuilds the struct instead of adding to it.
+func (h licenseHandlers) withPosture(posture func() licensecheck.Posture) licenseHandlers {
+	h.posture = posture
+	return h
+}
+
 // GetLicenseEntitlement answers the entitlement and the usage measured against
 // it.
 //
@@ -55,6 +71,33 @@ func (h licenseHandlers) GetLicenseEntitlement(w http.ResponseWriter, r *http.Re
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, toContractLicenseEntitlement(h.posture(), used))
+}
+
+// GetSeatUsage answers the seat count without the entitlement beside it.
+//
+// The posture is not read here at all, and that is the split: this surface
+// exists so a reader who may see capacity is not thereby handed what the
+// installation pays. Its gate is the store's — `seat_usage` rather than
+// `license` — so the two surfaces differ in exactly one thing, which grant
+// opens them.
+func (h licenseHandlers) GetSeatUsage(w http.ResponseWriter, r *http.Request) {
+	if h.seats == nil {
+		httperr.NotImplemented(w, r, "GetSeatUsage")
+		return
+	}
+	// Human-only for the same reason the entitlement is: how much of an
+	// installation is in use is capacity planning, not something an agent asks
+	// for, even one carrying its holder's passport.
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	used, err := h.seats.SeatsInUse(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.SeatUsage{SeatsUsed: used})
 }
 
 // renewalWindow is how long before expiry the surface asks for a renewal.

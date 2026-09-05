@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
+	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/network"
 	"github.com/margince/margince/backend/internal/compose/org360"
@@ -78,6 +79,7 @@ type Server struct {
 	// unqualified name, and two embedded `Handlers` is a compile error rather
 	// than a decision anybody made.
 	attentionHandlers attention.Handlers
+	magicHandlers     magic.Handlers
 	// The relationship-graph reads (ADR-0078): who knows this contact, and
 	// how a deal is covered.
 	network.Reads
@@ -458,41 +460,3 @@ type Server struct {
 }
 
 var _ crmcontracts.ServerInterface = Server{}
-
-// GetAttention forwards the day's read to the assembled surface. Explicit
-// because the field is named rather than embedded, so no method is promoted.
-func (s Server) GetAttention(w http.ResponseWriter, r *http.Request) {
-	s.attentionHandlers.GetAttention(w, r)
-}
-
-// GetWorklist forwards the ranked read to the same assembled surface.
-func (s Server) GetWorklist(w http.ResponseWriter, r *http.Request, params crmcontracts.GetWorklistParams) {
-	s.attentionHandlers.GetWorklist(w, r, params)
-}
-
-// GetResponseMetrics forwards the reading of how fast the workspace replies.
-func (s Server) GetResponseMetrics(
-	w http.ResponseWriter, r *http.Request, params crmcontracts.GetResponseMetricsParams,
-) {
-	s.attentionHandlers.GetResponseMetrics(w, r, params)
-}
-
-// GetHiddenBacklog forwards the guardrail over the queue's own hiding rules.
-func (s Server) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
-	s.attentionHandlers.GetHiddenBacklog(w, r)
-}
-
-// GetHandledForYou forwards the reader's own receipt of what was done.
-func (s Server) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
-	s.attentionHandlers.GetHandledForYou(w, r)
-}
-
-// GetTeamExceptions forwards the lead's read of what is going wrong.
-func (s Server) GetTeamExceptions(w http.ResponseWriter, r *http.Request) {
-	s.attentionHandlers.GetTeamExceptions(w, r)
-}
-
-// GetTeamBoard forwards the manager's read of the same work.
-func (s Server) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
-	s.attentionHandlers.GetTeamBoard(w, r)
-}

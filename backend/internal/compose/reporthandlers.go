@@ -53,7 +53,7 @@ func (h reportHandlers) RunReport(w http.ResponseWriter, r *http.Request, report
 	// The whole-result handle pins the same instant its rows do: it explains the
 	// same answer, over every row rather than one group's.
 	resultURL := derivationURL(
-		outcome.Report, outcome.Filters, nil, outcome.Aggregates, nil, outcome.GeneratedAt)
+		outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, nil, outcome.GeneratedAt)
 	totalRows := len(rows)
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReportResult{
 		Report:               outcome.Report,

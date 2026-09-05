@@ -1,13 +1,7 @@
-/* The company view's cards. The rails stack cards vertically at a tighter
-   rhythm than the main column, because a rail card is a glance and a main
-   column card is something you read. */
-
-.record-rail,
-.record-aside {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+/* The company view's cards. The rails' own rhythm is the SHELL's — every
+   record page draws those two columns, so `.record-rail` / `.record-aside`
+   live with `RecordView` in design-system/composed.css. What is here is what
+   the account's cards need on top of it. */
 
 /* A pane in the margin pays the card's inset, not the work column's. The
    panel's own --space-5 is sized for a body a reader reads across; in a
@@ -15,11 +9,7 @@
    further from the label naming it. The readings row beside it is on
    --space-4, and these read as the same kind of card. */
 .record-aside .panel-body {
-  padding: var(--space-4);
-}
-
-.co-card {
-  padding: var(--space-3);
+  padding: var(--padCard);
 }
 
 /* The left rail: the account's context beside the work (mockup State A).
@@ -91,7 +81,7 @@
 .co-reading-call > .panel-head {
   background: none;
   border-bottom: 0;
-  padding-top: var(--space-5);
+  padding-top: var(--padPanel);
   padding-bottom: 0;
 }
 
@@ -180,10 +170,6 @@
   outline: var(--focus-ring);
   outline-offset: 2px;
   border-radius: var(--r-sm);
-}
-
-.co-person-name {
-  font-weight: var(--fw-semibold);
 }
 
 .co-since {
@@ -461,7 +447,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--gapActions);
   margin-left: auto;
 }
 
@@ -995,7 +981,7 @@
 .co-evidence-steps {
   display: flex;
   justify-content: space-between;
-  gap: var(--space-2);
+  gap: var(--gapActions);
   margin-top: var(--space-4);
 }
 
@@ -1124,7 +1110,7 @@
    component drew it. */
 .co-card {
   border-radius: var(--r-sm);
-  padding: var(--space-5);
+  padding: var(--padPanel);
 }
 
 /* Figures read in the body face with tabular figures. The mono face was doing
@@ -1179,7 +1165,7 @@
 }
 .co-rail .co-sect .disclosure-body {
   margin-top: 0;
-  padding: 0 var(--space-5) var(--space-5);
+  padding: 0 var(--padPanel) var(--padPanel);
 }
 
 /* The summary's own row: the section name, then whatever it carries (a count,
@@ -1248,38 +1234,6 @@
   gap: var(--space-1);
 }
 
-/* The rail's person row: face, identity, and the colleague routes on the
-   right edge, on ONE line. The container rule rides with its children — the
-   People refactor deleted it beside the section that moved and left these
-   rows stacking as bare blocks. */
-.co-person-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-/* Stacked blocks, not a flex gap: the two lines are close enough that the
-   scale's own floor (--space-1) would push them apart, and the font's own
-   leading already separates them. */
-.co-person-id {
-  min-width: 0;
-}
-.co-person-name,
-.co-person-role {
-  display: block;
-}
-.co-person-name {
-  font-size: var(--fs-sm);
-  color: var(--textPrimary);
-}
-.co-person-role {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
-.co-person-routes {
-  margin-left: auto;
-}
 .co-person-routes-list {
   list-style: none;
   margin: var(--space-1) 0 0;
@@ -1315,7 +1269,9 @@
 .co-dot-danger {
   background: var(--danger);
 }
-/* Stacked blocks, not a flex gap, same reasoning as .co-person-id above. */
+/* Stacked blocks, not a flex gap: the two lines are close enough that the
+   scale's own floor (--space-1) would push them apart, and the font's own
+   leading already separates them. */
 .co-signal-body {
   min-width: 0;
 }
@@ -1497,6 +1453,7 @@
    this is, then how it stands — so the row needs room to start rather than
    sitting directly under the name it describes. */
 .record-head:has(.identity-meta) {
+  /* ds:ignore a head carrying an identity row pays for that row */
   margin-bottom: var(--space-5);
 }
 

@@ -36,19 +36,39 @@ describe("the agent edge signal", () => {
 
   it("keeps one object per reading, so a subscriber can compare by identity", () => {
     const first = currentAgentEdge();
-    publishAgentEdge({ reading: false });
+    publishAgentEdge({ reading: false, register: "agent" });
 
     expect(currentAgentEdge()).toBe(first);
   });
 
   it("carries the reading it was published with", () => {
-    publishAgentEdge({ reading: true });
+    publishAgentEdge({ reading: true, register: "agent" });
 
-    expect(currentAgentEdge()).toEqual({ reading: true });
+    expect(currentAgentEdge()).toEqual({ reading: true, register: "agent" });
+  });
+
+  it("carries the import's register, and drops it the moment the light goes out", () => {
+    // A register means nothing while dark, so rest has ONE spelling whatever
+    // the light was doing: a subscriber comparing by identity sees the still
+    // object, and a test asserting rest need not know what ran before it.
+    publishAgentEdge({ reading: true, register: "capture" });
+    expect(currentAgentEdge()).toEqual({ reading: true, register: "capture" });
+
+    publishAgentEdge({ reading: false, register: "capture" });
+    expect(currentAgentEdge()).toBe(AGENT_EDGE_STILL);
+  });
+
+  it("publishes a change of register as a change, so a run starting mid-import reaches the margins", () => {
+    publishAgentEdge({ reading: true, register: "capture" });
+    const thin = currentAgentEdge();
+    publishAgentEdge({ reading: true, register: "agent" });
+
+    expect(currentAgentEdge()).not.toBe(thin);
+    expect(currentAgentEdge().register).toBe("agent");
   });
 
   it("goes still when cleared, so a reading cannot outlive its session", () => {
-    publishAgentEdge({ reading: true });
+    publishAgentEdge({ reading: true, register: "agent" });
     clearAgentEdge();
 
     expect(currentAgentEdge()).toEqual(AGENT_EDGE_STILL);
@@ -73,10 +93,10 @@ describe("the agent edge", () => {
     // an element that only exists while work is in flight cannot fall out of
     // step with the fact it reports.
     const { container } = render(<AgentEdge />);
-    act(() => publishAgentEdge({ reading: true }));
+    act(() => publishAgentEdge({ reading: true, register: "agent" }));
     expect(container.querySelector("canvas")).not.toBeNull();
 
-    act(() => publishAgentEdge({ reading: false }));
+    act(() => publishAgentEdge({ reading: false, register: "agent" }));
     expect(container.querySelector("canvas")).toBeNull();
   });
 
@@ -86,10 +106,10 @@ describe("the agent edge", () => {
     const { container } = render(<AgentEdge />);
     expect(container.querySelector("canvas")).toBeNull();
 
-    act(() => publishAgentEdge({ reading: true }));
+    act(() => publishAgentEdge({ reading: true, register: "agent" }));
     expect(container.querySelector("canvas")).not.toBeNull();
 
-    act(() => publishAgentEdge({ reading: false }));
+    act(() => publishAgentEdge({ reading: false, register: "agent" }));
     expect(container.querySelector("canvas")).toBeNull();
   });
 
@@ -99,9 +119,26 @@ describe("the agent edge", () => {
     // the agent is working, so the fallback is a plain lit rim rather than
     // nothing: a decoration that vanishes takes a reading with it.
     const { container } = render(<AgentEdge />);
-    act(() => publishAgentEdge({ reading: true }));
+    act(() => publishAgentEdge({ reading: true, register: "agent" }));
 
     expect(container.querySelector(".agentedge-still")).not.toBeNull();
+  });
+
+  it("tells the rim which register it is in, so the fallback can wear it too", () => {
+    // The shader's frames never reach the DOM, so this attribute is the one
+    // place the register is legible outside the loop: the static rim draws
+    // its thinner spelling from it, and this test reads it the same way.
+    const { container } = render(<AgentEdge />);
+    act(() => publishAgentEdge({ reading: true, register: "capture" }));
+    expect(
+      container.querySelector("canvas")?.getAttribute("data-register"),
+    ).toBe("capture");
+
+    // A run starting mid-import is the agent's own work, and the rim says so.
+    act(() => publishAgentEdge({ reading: true, register: "agent" }));
+    expect(
+      container.querySelector("canvas")?.getAttribute("data-register"),
+    ).toBe("agent");
   });
 
   it("takes no pointer and is hidden from a screen reader", () => {
@@ -118,7 +155,7 @@ describe("the agent edge", () => {
     // here: it has to serve every subscriber, not the last one to arrive.
     const first = render(<AgentEdge />);
     const second = render(<AgentEdge />);
-    act(() => publishAgentEdge({ reading: true }));
+    act(() => publishAgentEdge({ reading: true, register: "agent" }));
 
     expect(first.container.querySelector("canvas")).not.toBeNull();
     expect(second.container.querySelector("canvas")).not.toBeNull();
@@ -131,7 +168,7 @@ describe("the agent edge", () => {
     const warn = vi.spyOn(console, "error").mockImplementation(() => {});
     const { unmount } = render(<AgentEdge />);
     unmount();
-    act(() => publishAgentEdge({ reading: true }));
+    act(() => publishAgentEdge({ reading: true, register: "agent" }));
 
     expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();

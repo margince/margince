@@ -1,5 +1,6 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { readCorpusFile } from "./voice-corpus-file";
 import { ensureProfileId } from "./voice-profile";
 
 // The voice-corpus intake, spelled once for both surfaces that collect writing
@@ -19,12 +20,10 @@ type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
 type IngestStats = components["schemas"]["VoiceIngestStats"];
 type IngestRequest = components["schemas"]["IngestVoiceCorpusSourceRequest"];
 
-// The file extensions the corpus accepts, and the subset that is conversational
-// by name. These are a CLIENT-side accept list, not the wire enum: the contract
-// carries `format: text | transcript`, and the concrete detected format appears
-// only in a preview result.
-export const ACCEPTED_CORPUS_FILE = /\.(txt|md|vtt|srt|json)$/i;
-export const ACCEPTED_CORPUS_ATTR = ".txt,.md,.vtt,.srt,.json";
+// The file extensions that are conversational by name. A CLIENT-side rule,
+// not the wire enum: the contract carries `format: text | transcript`, and the
+// concrete detected format appears only in a preview result. Which files are
+// accepted at all is the reader table's to say (voice-corpus-file).
 export const TRANSCRIPT_EXT = /\.(vtt|srt|json)$/i;
 
 // 800 mirrors the server's build floor ("at least 800 eligible own-authored
@@ -270,7 +269,9 @@ export type IntakeOutcome =
       kind: "skipped";
       ref: string;
       label: string;
-      reason: "type" | "empty";
+      /** `unreadable`: a file of an accepted type that could not be opened —
+       * an encrypted or damaged PDF, a .docx that is not a Word document. */
+      reason: "type" | "empty" | "unreadable";
     }>;
 
 // The three request bodies, built in one place so both surfaces send the same
@@ -424,6 +425,35 @@ export function intakeUpload(
   return intakePreviewed(ref, name, text, documentBody, onIssue);
 }
 
+/**
+ * A file as the owner dropped it: read to text (a PDF or Word document is
+ * extracted here, in the browser), keyed by name and content, then taken in
+ * as an upload. `existing` is the set of source_refs the profile already
+ * holds, as `sourceRef` reads it. A file that cannot be opened has no content
+ * to key on, so its outcome is keyed by the name the reader chose it under.
+ */
+export async function intakeFile(
+  file: File,
+  existing?: ReadonlySet<string>,
+  onIssue?: () => void,
+): Promise<IntakeOutcome> {
+  const text = await readCorpusFile(file);
+  if (text === null) {
+    return {
+      kind: "skipped",
+      ref: `unreadable:${file.name}`,
+      label: file.name,
+      reason: "unreadable",
+    };
+  }
+  return intakeUpload(
+    sourceRef("upload", file.name, text, existing),
+    file.name,
+    text,
+    onIssue,
+  );
+}
+
 /** Text the owner pasted. Previewed exactly like a file — a transcript is a
  * transcript however it reached the box. */
 export function intakePaste(
@@ -451,9 +481,4 @@ export function intakeTranscript(
     true,
     onIssue,
   );
-}
-
-/** Whether a filename is one the corpus accepts at all. */
-export function isAcceptedCorpusFile(name: string): boolean {
-  return ACCEPTED_CORPUS_FILE.test(name);
 }

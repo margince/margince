@@ -8,7 +8,7 @@ package integration
 // The automations surface (B-E15.1/.4, feedback/14): a closed catalog,
 // instance CRUD that validates params against it, created-paused,
 // If-Match on the enable flip, soft delete — and the workspace
-// bootstrap seeding exactly the six starter templates enabled
+// bootstrap seeding the six starters, with owner-dependent drafts paused
 // (UAT.md:72).
 
 import (
@@ -23,7 +23,7 @@ func TestAutomationCatalogAndCRUD(t *testing.T) {
 	e.BootstrapWorkspace(t)
 
 	assertAutomationCatalogIsClosed(t, e)
-	assertBootstrapSeededStartersEnabled(t, e)
+	assertBootstrapSeededStarters(t, e)
 	assertAutomationCreateValidatesParams(t, e)
 	createdID := createPausedAutomation(t, e)
 
@@ -94,10 +94,10 @@ func assertAutomationCatalogIsClosed(t *testing.T, e *apptest.AppEnv) {
 	}
 }
 
-// assertBootstrapSeededStartersEnabled checks the workspace bootstrap
+// assertBootstrapSeededStarters checks the workspace bootstrap
 // seeded EXACTLY the six starter templates already enabled (UAT.md:72)
 // — the recorded deviation from the API path's created-paused rule.
-func assertBootstrapSeededStartersEnabled(t *testing.T, e *apptest.AppEnv) {
+func assertBootstrapSeededStarters(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	// Bootstrap seeded the six starters ENABLED (system floor, recorded
 	// deviation from created-paused which governs the API path).
@@ -116,8 +116,12 @@ func assertBootstrapSeededStartersEnabled(t *testing.T, e *apptest.AppEnv) {
 		t.Fatalf("bootstrap seeded %d automations, want exactly 6", len(listed.Data))
 	}
 	for _, a := range listed.Data {
-		if a.Status != "enabled" {
-			t.Fatalf("seeded %s is %s, want enabled", a.Key, a.Status)
+		want := "enabled"
+		if a.Key == "post_meeting_recap" {
+			want = "paused"
+		}
+		if a.Status != want {
+			t.Fatalf("seeded %s is %s, want %s", a.Key, a.Status, want)
 		}
 	}
 }

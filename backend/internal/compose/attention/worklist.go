@@ -27,14 +27,6 @@ import (
 // worklistPage is how many ranked items one read carries by default.
 const worklistPage = 25
 
-// waitingLead is how many unanswered customers lead the page.
-//
-// Not a cap on the source: the rest are still ranked and still reachable. It is
-// a cap on how much of ONE kind a reader meets before they see the others, and
-// the number is the answer to "how many can somebody act on this morning"
-// rather than to "how many are there".
-const waitingLead = 8
-
 // leadResponseBound is how many leads still owed a reply one read carries.
 //
 // Declared here and passed through the interface, the way plannedCap is, so
@@ -336,6 +328,11 @@ func (s *Service) worklistFrom(
 	// its sequence from the snapshot and a fresh read takes it from this sort,
 	// but both need the comparator to have run: the snapshot's order IS a
 	// previous run of it, and the identities it stores were minted from one.
+	// How much of one kind this reader meets before they meet the others,
+	// decided over the rows that actually survive to the page: the folds above
+	// turn several rows into one, and a group is one thing to read rather than
+	// the three it was assembled from.
+	rows = markCrowding(rows)
 	sortByRank(rows)
 	shown, more, reached, walk := s.pageOf(
 		ctx, rows, limit, cursor, scope, filter, unreadSources(missing), day.AsOf)
@@ -442,40 +439,23 @@ func (s *Service) rankedWaits(
 	sort.SliceStable(waits, func(i, j int) bool {
 		return waits[i].occurredAt.Before(waits[j].occurredAt)
 	})
-	waits = s.narrowToScope(ctx, waits, scope, s.taskOwner)
-	for i := range waits {
-		// Past the lead, a wait sorts BELOW the other kinds without ceasing to
-		// be one: its level still says a customer is waiting, because that is
-		// what it is and the summary counts on it. What changes is only where
-		// it sits, through the ordering's own last tiebreak.
-		//
-		// Rewriting the level instead would have told the reader the ninth
-		// waiting customer was agreed work, while the row went on saying a
-		// buyer wrote last — the page contradicting itself.
-		if i >= waitingLead {
-			waits[i].crowded = true
-		}
-	}
-	return waits
+	return s.narrowToScope(ctx, waits, scope, s.taskOwner)
 }
 
-// rankedLeads ranks the leads still owed a first reply, among everything else
-// rather than in a queue of their own. Longest overdue first, so the few that
-// LEAD are the ones most likely to have been forgotten.
+// rankedLeads classifies the leads still owed a first reply, among everything
+// else rather than in a queue of their own.
+//
+// Longest overdue first. The ordering re-sorts every row on the page anyway, so
+// this decides nothing a reader sees — what it fixes is the order two leads
+// that tie on every ranking step arrive in, which is what keeps one read's page
+// equal to the next.
 func rankedLeads(leads leadRead, asOf time.Time) []ranked {
 	sort.SliceStable(leads.rows, func(i, j int) bool {
 		return leads.rows[i].DeadlineAt.Before(leads.rows[j].DeadlineAt)
 	})
 	out := make([]ranked, 0, len(leads.rows))
-	for i, lead := range leads.rows {
-		row := classifyLead(lead, asOf)
-		// Past the lead, an overdue lead sorts BELOW the other kinds without
-		// ceasing to be one — the same treatment a ninth waiting customer gets,
-		// and for the same reason: its level still states the fact.
-		if i >= leadLead {
-			row.crowded = true
-		}
-		out = append(out, row)
+	for _, lead := range leads.rows {
+		out = append(out, classifyLead(lead, asOf))
 	}
 	return out
 }

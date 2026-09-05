@@ -32,11 +32,11 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1634 | 6% | 15774 | 6 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2467 | 10% | 14941 | 15 | 8 |
-| _whole served catalog, for scale_ | 73 | 21485 | 87% | — | — | — |
+| _whole served catalog, for scale_ | 73 | 21497 | 87% | — | — | — |
 
 ### `morning_brief`
 
-> Assemble the Morning Brief for this workspace: enumerate open deals, read the ones with recent activity, and produce a ranked list (at most 7) of deals the team can win this week. For each: why it is on the list, what changed recently, and one recommended next move — every claim grounded in a record you actually read, citing its id. A quiet day yields a short list; never pad it.
+> Prepare the acting person's existing Morning Brief. First call read_brief. Its items are the queue already ranked for this person; do not assemble a workspace-wide list. Read the evidence for those items, then call annotate_brief with one concise narrative and grounded findings: why each item matters, what changed and the next move. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.
 
 Attaches 5 tools for 1634 tokens, leaving 15774 of its budget and 22942 tokens of the
 window for the goal, the grounding and everything it reads.
@@ -129,7 +129,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 263 tokens, mean 293, across 73 served tools.
+Median 263 tokens, mean 294, across 73 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -160,8 +160,8 @@ a term in an addition.
 | `search_records` | 385 | 6 scenarios |
 | `forecast_movement` | 351 | — |
 | `describe_report_vocabulary` | 349 | — |
+| `forecast_readings` | 349 | — |
 | `search_context` | 345 | — |
-| `forecast_readings` | 337 | — |
 | `prep_for_meeting` | 326 | — |
 | `merge_records` | 292 | — |
 | `catch_me_up_on` | 280 | 3 scenarios |

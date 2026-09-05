@@ -160,6 +160,11 @@ type Service struct {
 	// bounded listing reader the ranked queue uses. Optional, and its absence
 	// draws no column rather than a column of zeros.
 	overdueLoad OverdueLoad
+	// promiseLoad is the board's counting reader for commitments due, optional
+	// on the same terms: absent draws no column, because a column of zeros
+	// reads as a team owing nothing rather than as a question this installation
+	// cannot answer.
+	promiseLoad PromiseLoad
 	// decisionDepth is how many staged decisions a read takes. The lane feed's
 	// page is a prefetch for a surface that answers one at a time; the ranked
 	// queue takes a census, because a batch row that says "10" over a pile of

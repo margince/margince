@@ -13,3 +13,12 @@
      on its own line rather than letting the strip scroll away from it. */
   flex-wrap: wrap;
 }
+
+/* A money cell that also carries the priced-of-total footnote: stacked rather
+   than inline, or the two texts run together with no space between them
+   (`.t-caption`/`.t-mono` are typography-only, and a table cell does not
+   stack its children on its own). */
+.analytics-money-cell {
+  display: flex;
+  flex-direction: column;
+}

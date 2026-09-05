@@ -60,3 +60,9 @@
 .agentedge-still {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orbMid) 80%, transparent);
 }
+/* The import's register on the same fallback. A pixel is the thinnest rim there
+   is, so the difference the shader draws as thickness is drawn here as
+   strength: the same hairline, further back. */
+.agentedge-still[data-register="capture"] {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orbMid) 45%, transparent);
+}

@@ -90,7 +90,17 @@ describe("panel.css keeps the row's hover on the interactive variant", () => {
     const drawn = line?.[1] ?? "";
     expect(drawn).toMatch(/background:\s*var\(--borderSubtle\)/);
     expect(drawn).toMatch(/height:\s*1px/);
-    expect(drawn).toMatch(/inset:\s*0 var\(--space-5\) auto/);
+    // WHICH inset: the panel's own, read off the body rather than spelled here.
+    // The hairline stopping at the padding is the whole point of drawing it as
+    // a pseudo-element, so a body retuned to a different token while the line
+    // kept the old one would leave every rule in the panel a few pixels short
+    // of the text above it — and a literal expectation here would still pass.
+    const bodyRule = /(?:^|\n)\.panel-body\s*\{([^}]*)\}/.exec(panelCss());
+    const inset = /padding:\s*(var\(--[a-zA-Z0-9-]+\))/.exec(
+      bodyRule?.[1] ?? "",
+    );
+    expect(inset).not.toBeNull();
+    expect(drawn).toContain(`inset: 0 ${inset?.[1]} auto`);
   });
 
   // The card's own chrome keeps its full-width border: the header and the footer

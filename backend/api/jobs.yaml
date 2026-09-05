@@ -316,66 +316,32 @@ kinds:
       "unreachable".
 
   capture_classify:
-    role: dispatcher
+    role: worker
     go_type: CaptureClassifyArgs
     queue: default
-    timeout: 2m
+    timeout: 15m
     opts_owner: caller
     cadence: 1h
     registration: {when: [ClassifyBrain], absent: registers_nothing}
-    fans_out_to: capture_classify_workspace
-    fan_out_unit: workspace
     reason: >-
       An hourly catch-up (ADR-0063). The nightly suite reruns the same engine,
       so this pass exists to shorten the wait rather than to be the only run;
       the backlog index makes a caught-up tenant one cheap probe.
 
-  capture_classify_workspace:
-    role: worker
-    go_type: CaptureClassifyWorkspaceArgs
-    queue: ai_capture
-    timeout: 15m
-    max_attempts: 3
-    opts_owner: fan_out
-    registration: {when: [ClassifyBrain], absent: registers_nothing}
-    args:
-      Workspace: id
-    reason: >-
-      Up to fifty serial model calls (classifyCatchUpCap 500 labels, ten
-      messages per prompt). The engine commits per batch, so the cap decides how
-      much one hourly tick drains rather than whether work is lost — and it is
-      what keeps a hung model lane from holding one of two ai_capture workers.
 
   owed_verdict:
-    role: dispatcher
+    role: worker
     go_type: OwedVerdictArgs
     queue: default
-    timeout: 2m
+    timeout: 15m
     opts_owner: caller
     cadence: 1h
     registration: {when: [OwedBrain], absent: registers_nothing}
-    fans_out_to: owed_verdict_workspace
-    fan_out_unit: workspace
     reason: >-
       Hourly, like the capture-label pass it is modelled on, and for the same
       reason: the backlog is a query, so a caught-up tenant costs one cheap
       probe and a busy one gets its answer inside the hour a rep is working.
 
-  owed_verdict_workspace:
-    role: worker
-    go_type: OwedVerdictWorkspaceArgs
-    queue: ai_capture
-    timeout: 15m
-    max_attempts: 3
-    opts_owner: fan_out
-    registration: {when: [OwedBrain], absent: registers_nothing}
-    args:
-      Workspace: id
-    reason: >-
-      Up to fifty serial model calls (owedCatchUpCap 500 verdicts, ten messages
-      per prompt) — the same shape and the same bound as the capture-label
-      worker beside it. The engine commits per batch, so the cap decides how
-      much one tick drains rather than whether work is lost.
 
   capture_counterparty_verdict:
     role: dispatcher
@@ -576,33 +542,17 @@ kinds:
       failed is retried with the rest, and the day uniqueness makes that safe.
 
   capture_enrich:
-    role: dispatcher
+    role: worker
     go_type: CaptureEnrichArgs
     queue: default
-    timeout: 2m
+    timeout: 20m
     opts_owner: caller
     cadence: 24h
     registration: {when: [EnrichBrain], absent: registers_nothing}
-    fans_out_to: capture_enrich_workspace
-    fan_out_unit: workspace
     reason: >-
       Daily — the ADR-0063 nightly cadence rides this job until the nightly
       dispatcher lands.
 
-  capture_enrich_workspace:
-    role: worker
-    go_type: CaptureEnrichWorkspaceArgs
-    queue: ai_capture
-    timeout: 20m
-    max_attempts: 3
-    opts_owner: fan_out
-    registration: {when: [EnrichBrain], absent: registers_nothing}
-    args:
-      Workspace: id
-    reason: >-
-      One model call per candidate signature, up to enrichPassLimit (100) in
-      series — more calls than the classify pass makes, though each is smaller.
-      The nightly cycle picks up whatever a stopped pass did not reach.
 
   capture_sync:
     role: worker

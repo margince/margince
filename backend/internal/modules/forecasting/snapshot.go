@@ -272,8 +272,8 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 	}
 	var out snapshotSide
 	err := tx.QueryRow(ctx,
-		`SELECT definition_version FROM forecast_snapshot WHERE id = $1`, id).
-		Scan(&out.DefinitionVersion)
+		`SELECT definition_version, period_start, period_end FROM forecast_snapshot WHERE id = $1`, id).
+		Scan(&out.DefinitionVersion, &out.PeriodStart, &out.PeriodEnd)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return snapshotSide{}, apperrors.ErrNotFound
 	}
@@ -347,6 +347,18 @@ func (s *Store) Movement(ctx context.Context, reading Reading, from, to ids.UUID
 		closing, err := s.SnapshotSide(ctx, tx, to)
 		if err != nil {
 			return err
+		}
+		// The two sides must describe the SAME window. Nothing else in this
+		// request checks it: the ids come from the caller, and a week compared
+		// against the quarter containing it would report the window's own
+		// difference as deals that moved — every line of the waterfall a number
+		// that describes no decision anybody made.
+		if !opening.PeriodStart.Equal(closing.PeriodStart) ||
+			!opening.PeriodEnd.Equal(closing.PeriodEnd) {
+			return &values.ParseError{
+				Field: "from", Code: "periods_differ",
+				Message: "a movement compares two readings of the same period",
+			}
 		}
 		out = Classify(reading, opening, closing)
 		return nil

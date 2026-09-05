@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "3f96ed2041cb6057c22c6e22f7ace42eef0cabba881564cfc83d0df8693c934a"
+const JobContractHash = "0777913b8924cb60dce0393d04839a542c5ab69fcab0d6a9418234a11dd5286e"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -163,25 +163,12 @@ var specs = map[string]Spec{
 	"capture_classify": {
 		Kind:         "capture_classify",
 		GoType:       "CaptureClassifyArgs",
-		Role:         Dispatcher,
+		Role:         Worker,
 		Queue:        "default",
-		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
-		FanOutUnit:   FanOutWorkspace,
-		FanOutTo:     "capture_classify_workspace",
+		Timeout:      TimeoutPolicy{Fixed: 15 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Cadence:      Cadence{Fixed: 1 * time.Hour},
 		Registration: Registration{When: []string{"ClassifyBrain"}},
-	},
-	"capture_classify_workspace": {
-		Kind:         "capture_classify_workspace",
-		GoType:       "CaptureClassifyWorkspaceArgs",
-		Role:         Worker,
-		Queue:        "ai_capture",
-		Timeout:      TimeoutPolicy{Fixed: 15 * time.Minute},
-		MaxAttempts:  3,
-		OptsOwner:    OptsFanOut,
-		Registration: Registration{When: []string{"ClassifyBrain"}},
-		Args:         []ArgField{{Name: "Workspace"}},
 	},
 	"capture_confidentiality_verdict": {
 		Kind:       "capture_confidentiality_verdict",
@@ -251,25 +238,12 @@ var specs = map[string]Spec{
 	"capture_enrich": {
 		Kind:         "capture_enrich",
 		GoType:       "CaptureEnrichArgs",
-		Role:         Dispatcher,
+		Role:         Worker,
 		Queue:        "default",
-		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
-		FanOutUnit:   FanOutWorkspace,
-		FanOutTo:     "capture_enrich_workspace",
+		Timeout:      TimeoutPolicy{Fixed: 20 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Cadence:      Cadence{Fixed: 24 * time.Hour},
 		Registration: Registration{When: []string{"EnrichBrain"}},
-	},
-	"capture_enrich_workspace": {
-		Kind:         "capture_enrich_workspace",
-		GoType:       "CaptureEnrichWorkspaceArgs",
-		Role:         Worker,
-		Queue:        "ai_capture",
-		Timeout:      TimeoutPolicy{Fixed: 20 * time.Minute},
-		MaxAttempts:  3,
-		OptsOwner:    OptsFanOut,
-		Registration: Registration{When: []string{"EnrichBrain"}},
-		Args:         []ArgField{{Name: "Workspace"}},
 	},
 	"capture_sync": {
 		Kind:         "capture_sync",
@@ -707,25 +681,12 @@ var specs = map[string]Spec{
 	"owed_verdict": {
 		Kind:         "owed_verdict",
 		GoType:       "OwedVerdictArgs",
-		Role:         Dispatcher,
+		Role:         Worker,
 		Queue:        "default",
-		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
-		FanOutUnit:   FanOutWorkspace,
-		FanOutTo:     "owed_verdict_workspace",
+		Timeout:      TimeoutPolicy{Fixed: 15 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Cadence:      Cadence{Fixed: 1 * time.Hour},
 		Registration: Registration{When: []string{"OwedBrain"}},
-	},
-	"owed_verdict_workspace": {
-		Kind:         "owed_verdict_workspace",
-		GoType:       "OwedVerdictWorkspaceArgs",
-		Role:         Worker,
-		Queue:        "ai_capture",
-		Timeout:      TimeoutPolicy{Fixed: 15 * time.Minute},
-		MaxAttempts:  3,
-		OptsOwner:    OptsFanOut,
-		Registration: Registration{When: []string{"OwedBrain"}},
-		Args:         []ArgField{{Name: "Workspace"}},
 	},
 	"participant_backfill": {
 		Kind:       "participant_backfill",

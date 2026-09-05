@@ -1396,7 +1396,7 @@ describe("CompanyScreen — the account pulse line (P-4)", () => {
     // The way in. WHEN contact last happened is the readings row's (Last
     // touch), not the header's: one fact, one home.
     await waitFor(() => expect(screen.getByText(/Way in/)).toBeTruthy());
-    expect(screen.getByText(/of 3 contacts here/)).toBeTruthy();
+    expect(screen.getByText(/of 3 people here/)).toBeTruthy();
     expect(screen.queryByText(/Last contact/)).toBeNull();
     // The composite is gone: it was PO-F-3's MAX over contacts, so one
     // talkative contact spoke for the account and "41/100" read as a verdict.
@@ -2128,6 +2128,61 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     expect(fold?.open).toBe(false);
     // The NEWEST, not merely the first the reader would meet scrolling.
     expect(summary?.textContent).not.toContain("Quarterly review");
+  });
+
+  // A name and a link say somebody exists. A reader choosing which of the
+  // account's people to call had to open all three to find out which one buys,
+  // which is three round trips spent on a decision the list could have carried.
+  it("carries what a listed contact does and how to write to them", async () => {
+    stubFetch(companyBackstop, {
+      org360: {
+        ...org360,
+        people: {
+          data: [
+            {
+              person_id: "p-1",
+              full_name: "Anna Brandt",
+              title: "Head of Procurement",
+              primary_email: "anna.brandt@brandt-automotive.de",
+              deal_roles: [],
+              consent: {},
+              strength: {
+                score: 0,
+                bucket: "none",
+                factors: {
+                  recency: 0,
+                  frequency: 0,
+                  reciprocity: 0,
+                  direction: 0,
+                },
+              },
+            },
+          ],
+          page: { has_more: false, next_cursor: null },
+        },
+      },
+    });
+    render(<CompanyScreen id="o-1" />);
+
+    // The name opens the record, and it is the LINK's whole name: the mark
+    // beside it draws initials as text, which would otherwise be announced
+    // ahead of the person they stand for.
+    const name = await screen.findByRole("link", { name: "Anna Brandt" });
+    expect(name.getAttribute("href")).toBe("#/contacts/p-1");
+    expect(screen.getAllByText("Head of Procurement").length).toBeGreaterThan(
+      0,
+    );
+
+    // The address is its own control, a sibling of the name rather than
+    // nested inside it: a link inside a link is a press whose destination
+    // nobody can predict.
+    const write = screen.getAllByRole("link", {
+      name: "anna.brandt@brandt-automotive.de",
+    })[0];
+    expect(write.getAttribute("href")).toBe(
+      "mailto:anna.brandt@brandt-automotive.de",
+    );
+    expect(name.contains(write)).toBe(false);
   });
 
   // None of the reference cards comes from the 360 — each runs its own read —
