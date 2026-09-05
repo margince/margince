@@ -441,7 +441,16 @@ fi
 # a recurring finding becomes a stale one.
 
 if [[ "${MERGE_VERDICT_RESULT:-}" = "failure" ]]; then
-  report "A merge landed on main against a failing verdict${MERGE_VERDICT_PR:+ (#$MERGE_VERDICT_PR)}" bug \
+  # TWO findings, two titles. The judge reports a commit no pull request names
+  # BEFORE any verdict exists, so titling that one "against a failing verdict"
+  # would describe a check that never ran — and the two are told apart by
+  # exactly the thing the title would otherwise name, the pull request number.
+  if [[ -n "${MERGE_VERDICT_PR:-}" ]]; then
+    merge_title="A merge landed on main against a failing verdict (#$MERGE_VERDICT_PR)"
+  else
+    merge_title="A merge landed on main with no pull request behind it"
+  fi
+  report "$merge_title" bug \
 "${MERGE_VERDICT_WHY:-a merge landed on \`main\` whose required check reported an adverse verdict; the run below says which}
 
 Found by the push-time check on \`main\`: $RUN_URL
