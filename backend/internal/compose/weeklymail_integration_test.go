@@ -68,7 +68,7 @@ var weeklyMailClock = time.Date(2026, 7, 6, 6, 30, 0, 0, time.UTC)
 // with the relay swapped for one that counts.
 type mailEnv struct {
 	*integration.Env
-	worker *weeklyGenerateWorkspaceWorker
+	worker *weeklyGenerateWorker
 	relay  *countingMailer
 	repCtx context.Context
 }
@@ -80,7 +80,7 @@ func setupWeeklyMail(t *testing.T) *mailEnv {
 	return &mailEnv{
 		Env:   e,
 		relay: relay,
-		worker: &weeklyGenerateWorkspaceWorker{
+		worker: &weeklyGenerateWorker{
 			engine: weekly.NewEngine(e.Pool, newTeammatesSeam(e.Pool)),
 			pool:   e.Pool,
 			users:  identity.NewService(e.Pool),

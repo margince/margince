@@ -75,18 +75,27 @@ async function settleAnimations(page: Page) {
   ).toEqual([]);
 }
 
-// The no-sideways-scroll check, over what THIS surface owns: the document and
-// the drawer's own scroll lane.
+// The no-sideways-scroll check, over every scroller this page has: the
+// document, the shell's content column, and the drawer's own lane.
 //
-// The shell's content scroller is deliberately not measured here. It carries a
-// 16px overflow on the person record's meetings tab with no drawer open at all
-// — a pre-existing fault of that page, filed rather than fixed in this change,
-// and one that would make this spec fail for a reason the meeting brief cannot
-// cause and cannot fix.
+// THE SHELL SCROLLER USED TO BE EXCLUDED, and the exclusion said why: the
+// meetings tab carried an overflow with no drawer open at all, so measuring it
+// here would have failed this spec for a fault the meeting brief could neither
+// cause nor fix. That fault is fixed, so the exclusion goes with it — leaving
+// it would be a hole in the one check that would notice the fault coming back.
+//
+// The shell pins `.main` to `overflow: hidden` and gives `.scroll` the page's
+// own scrolling, so a header or a card that spills spills into that element
+// and the document never grows a pixel. Measuring the document alone is a
+// check that cannot fail on the shape this page actually has.
 async function pageOverflow(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const scrollers: { name: string; element: Element }[] = [
       { name: "the document", element: document.documentElement },
+      ...Array.from(document.querySelectorAll(".scroll")).map((element) => ({
+        name: "the shell content scroller (.scroll)",
+        element,
+      })),
       ...Array.from(document.querySelectorAll(".drawer-body")).map(
         (element) => ({ name: "the drawer's scroll lane", element }),
       ),

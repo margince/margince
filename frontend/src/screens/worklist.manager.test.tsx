@@ -13,13 +13,14 @@
 
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { CoachControl, ReassignControl } from "./worklist.manager";
+import { WorklistRow } from "./worklist.row";
 import { jsonResponse, row } from "./worklist.testkit";
 
 afterEach(() => {
@@ -34,7 +35,11 @@ afterEach(() => {
 const LENA = "u-lena";
 const MINH = "u-minh";
 
-function stubRosterAnd(write: (input: Request) => Response | undefined) {
+function stubRosterAnd(
+  write: (input: Request) => Response | undefined,
+  options: { answerMe?: boolean } = {},
+) {
+  const answerMe = options.answerMe ?? true;
   const fetched = vi.fn(async (input: RequestInfo | URL) => {
     const request = input instanceof Request ? input : undefined;
     const url = String(request ? request.url : input);
@@ -43,6 +48,16 @@ function stubRosterAnd(write: (input: Request) => Response | undefined) {
       if (answered) {
         return answered;
       }
+    }
+    // Who is reading. The reassign picker falls back to this when no rep is
+    // selected, so a stub without it leaves the exclusion comparing against
+    // undefined — and the reader is offered their own name.
+    if (url.includes("/me")) {
+      if (!answerMe) {
+        // Pending forever: the holder is never learned.
+        return new Promise<Response>(() => {});
+      }
+      return jsonResponse({ user: { id: LENA, display_name: "Lena Fischer" } });
     }
     if (url.includes("/users")) {
       // The list AND the end of it. `walkRoster` pages until a null cursor, so
@@ -236,5 +251,104 @@ describe("leaving a note on somebody's queue", () => {
       recipient_user_id: LENA,
       kind: "coach_general",
     });
+  });
+});
+
+// Handing work on is not a manager's verb.
+//
+// The control used to be gated on a rep being SELECTED, so a reader looking at
+// their own queue — where nobody is selected — had no way to pass a task along.
+// Dropping that gate is only safe if the picker still refuses the person who
+// already holds the task: with no selection the exclusion had nothing to
+// compare against, and the reader was offered their own name. A press on it
+// posts a reassignment from Lena to Lena, which is a write that changes
+// nothing and reads on screen exactly like one that did.
+describe("a rep hands on their own task", () => {
+  it("offers everyone but the reader, when no rep is selected", async () => {
+    stubRosterAnd(() => undefined);
+    renderUnderAToastRegion(
+      <ReassignControl item={row({ id: "a-1" })} owner="" />,
+    );
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: en["worklist.manager.reassign"],
+      }),
+    );
+    // The listbox is PORTALLED, so its options are not inside the labelled
+    // trigger — reading them through `within(picker)` finds none and the
+    // not-offered assertion below passes over an empty list.
+    await userEvent.click(
+      await screen.findByLabelText(en["worklist.manager.reassignTo"]),
+    );
+    const offered = (await screen.findAllByRole("option")).map(
+      (option) => option.textContent,
+    );
+    expect(offered).toContain("Minh Tran");
+    expect(offered).not.toContain("Lena Fischer");
+  });
+
+  // The window between opening the picker and learning who is reading.
+  //
+  // Nothing on the server refuses a reassignment to the person who already
+  // holds the task, so the client filter is the only guard — and a filter with
+  // nothing to compare against is not one. A reader quick enough to open the
+  // picker before `/me` lands would be offered their own name.
+  it("offers nobody until it knows who is reading", async () => {
+    // `/me` never answers, which is what makes this the WINDOW rather than a
+    // restatement of the test above: with the stub resolving immediately the
+    // holder is known before the picker can open, and removing the guard under
+    // test changes nothing a click can see.
+    const fetched = stubRosterAnd(() => undefined, { answerMe: false });
+    const fetchedRoster = () =>
+      fetched.mock.calls.some(([input]) =>
+        String(input instanceof Request ? input.url : input).includes("/users"),
+      );
+    renderUnderAToastRegion(
+      <ReassignControl item={row({ id: "a-1" })} owner="" />,
+    );
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: en["worklist.manager.reassign"],
+      }),
+    );
+    await userEvent.click(
+      await screen.findByLabelText(en["worklist.manager.reassignTo"]),
+    );
+    // The roster has to have LANDED first, or this passes because nothing has
+    // rendered yet rather than because the guard held. Minh is in the same
+    // answer as Lena, so his absence with the guard in place and his presence
+    // without it is what tells the two apart.
+    await waitFor(() => {
+      expect(fetchedRoster()).toBe(true);
+    });
+    expect(screen.queryByRole("option", { name: "Minh Tran" })).toBeNull();
+    expect(screen.queryByRole("option", { name: "Lena Fischer" })).toBeNull();
+  });
+});
+
+// And the ROW offers it, which is the change this issue was about.
+//
+// The two tests above mount ReassignControl directly, so they hold what the
+// control does with an empty owner and prove nothing about whether the row
+// still hides it. The condition that hid it lived in worklist.row.tsx.
+describe("the row a rep is standing on", () => {
+  it("offers reassign on the reader's own task", async () => {
+    stubRosterAnd(() => undefined);
+    renderUnderAToastRegion(
+      <WorklistRow
+        item={row({ id: "a-1", source: "task" })}
+        position={1}
+        owner=""
+        selected={false}
+        onSelect={() => {}}
+        onReview={() => {}}
+        onOpenEmail={() => {}}
+      />,
+    );
+    expect(
+      await screen.findByRole("button", {
+        name: en["worklist.manager.reassign"],
+      }),
+    ).toBeTruthy();
   });
 });

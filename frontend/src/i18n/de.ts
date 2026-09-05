@@ -4451,6 +4451,7 @@ export const de = {
     "Er versucht es selbstständig erneut; alles bisher Erfasste bleibt erhalten.",
   "backfill.cancel": "Import stoppen",
   "backfill.cancelledNote": "Gestoppt. Alles bisher Erfasste bleibt erhalten.",
+  "backfill.restart": "Weiteren Import starten",
   "backfill.unsupportedNote":
     "Dieser Postfachtyp kann nicht rückwirkend importiert werden — ab jetzt werden nur neue E-Mails erfasst.",
   "backfill.narrowingNote":

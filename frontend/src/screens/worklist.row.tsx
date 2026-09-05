@@ -75,8 +75,10 @@ export function WorklistRow({
 }: Readonly<{
   item: WorklistItem;
   position: number;
-  // Whose queue this row is on, empty for the reader's own. A row can only be
-  // handed to somebody else from a page that is already about somebody else.
+  // Whose queue this row is on, empty for the reader's own. It names the
+  // person a reassignment moves work AWAY from, which on the reader's own
+  // queue is the reader — ReassignControl resolves that rather than this
+  // prop carrying it, so an empty value is a real state and not a missing one.
   owner: string;
   // Whether the pane beside the queue is about this row.
   //
@@ -243,8 +245,15 @@ export function WorklistRow({
           drawn beside them rather than among them. */}
         <PinVerb item={item} />
         {/* Only a task carries an assignee, so only a task can be handed on. A
-          group row stands for a pile and names no single activity to move. */}
-        {owner !== "" && item.source === "task" && !item.batch && (
+          group row stands for a pile and names no single activity to move.
+
+          Offered on the reader's OWN queue too: handing work on is not a
+          manager's verb, and gating it on a selected rep left somebody
+          looking at their own list with no way to pass a task along. Who is
+          excluded from the destinations follows the queue rather than this
+          condition — ReassignControl falls back to the reader when no rep is
+          selected, so the current holder is never offered as the new one. */}
+        {item.source === "task" && !item.batch && (
           <ReassignControl item={item} owner={owner} />
         )}
         <RowAnswer item={item} />

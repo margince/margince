@@ -234,3 +234,174 @@ func TestADepartedSeatIsNotAFailedRead(t *testing.T) {
 			"those apart, and any other error fails open and burns their attempt", err)
 	}
 }
+
+// sentTo counts the messages this relay took for one rep's own address.
+//
+// Per RECIPIENT and not `count()`: the whole workspace's reps share the seeded
+// deal, so every one of them has a morning worth mailing and a total says
+// nothing about the rep whose hour is under test.
+func sentTo(t *testing.T, relay *countingMailer, user ids.UUID) int {
+	t.Helper()
+	var address string
+	if err := integration.OwnerConn(t).QueryRow(context.Background(),
+		`SELECT email FROM app_user WHERE id = $1`, user).Scan(&address); err != nil {
+		t.Fatal(err)
+	}
+	relay.mu.Lock()
+	defer relay.mu.Unlock()
+	sent := 0
+	for _, to := range relay.sends {
+		if to == address {
+			sent++
+		}
+	}
+	return sent
+}
+
+// setDeliveryHour writes one rep's chosen floor through the real column.
+func setDeliveryHour(t *testing.T, user ids.UUID, hour int) {
+	t.Helper()
+	if _, err := integration.OwnerConn(t).Exec(context.Background(),
+		`UPDATE app_user SET delivery_hour_local = $2 WHERE id = $1`, user, hour); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// THE SETTING THIS LANE EXISTED WITHOUT. `delivery_hour_local` was stored,
+// validated and audited, and no lane read it — a rep could choose nine o'clock
+// and be mailed at seven.
+//
+// The two halves are one case on purpose. Holding the message back is easy to
+// get right and worthless alone: the candidate query lists only reps who hold
+// NO run for the day, so a lane that merely skipped the early tick would drop
+// the rep for good the moment their run was written. What must be true is that
+// the message is still sent LATER, and only the pair says so.
+func TestARepsChosenHourHoldsTheMorningBackAndThenSendsIt(t *testing.T) {
+	relay := &countingMailer{}
+	b := setupBriefJob(t).withMailer(relay)
+	seedWorkFor(t, b.Env, b.Rep1)
+	setDeliveryHour(t, b.Rep1, 9)
+
+	// The briefing hour comes first and assembles the run. Nine has not.
+	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
+	b.now = morning
+	if err := b.run(t); err != nil {
+		t.Fatalf("the seven o'clock pass failed: %v", err)
+	}
+	if at, _ := mailAttemptOf(t, b.Rep1, morning); at != nil {
+		t.Fatalf("the attempt was spent at seven, for a rep who asked for nine — "+
+			"stamped %v, and nine o'clock now has nothing left to send", at)
+	}
+
+	// Eight is still early. Asserted rather than assumed: a floor that only
+	// held for the one hour it was written against would pass the case below
+	// on its own.
+	b.now = morning.Add(time.Hour)
+	if err := b.run(t); err != nil {
+		t.Fatalf("the eight o'clock pass failed: %v", err)
+	}
+	if sent := sentTo(t, relay, b.Rep1); sent != 0 {
+		t.Fatalf("%d message(s) reached the rep before the hour they chose", sent)
+	}
+
+	// Nine. The run was written two hours ago and is no longer a candidate for
+	// assembly, so this is the half that fails if the mail rides the assembly.
+	b.now = morning.Add(2 * time.Hour)
+	if err := b.run(t); err != nil {
+		t.Fatalf("the nine o'clock pass failed: %v", err)
+	}
+	if sent := sentTo(t, relay, b.Rep1); sent != 1 {
+		t.Fatalf("%d message(s) reached the rep at the hour they chose, want exactly one", sent)
+	}
+	at, cause := mailAttemptOf(t, b.Rep1, morning)
+	if at == nil {
+		t.Fatal("the message went out and the attempt was not stamped, so a later tick would send it again")
+	}
+	if cause != nil {
+		t.Errorf("the send recorded a failure: %q", *cause)
+	}
+
+	// And ten does not send it twice: the claim, not the hour, is what makes
+	// that impossible.
+	b.now = morning.Add(3 * time.Hour)
+	if err := b.run(t); err != nil {
+		t.Fatalf("the ten o'clock pass failed: %v", err)
+	}
+	if sent := sentTo(t, relay, b.Rep1); sent != 1 {
+		t.Errorf("%d message(s) reached the rep after a fourth tick, want the one already sent", sent)
+	}
+}
+
+// A rep who chose no hour is mailed by the pass that assembles them, which is
+// what every rep had before the setting was honoured. Without this the case
+// above would be satisfied by a lane that held EVERY message back.
+func TestARepWithNoChosenHourIsMailedByTheAssemblingPass(t *testing.T) {
+	relay := &countingMailer{}
+	b := setupBriefJob(t).withMailer(relay)
+	seedWorkFor(t, b.Env, b.Rep1)
+
+	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
+	b.now = morning
+	if err := b.run(t); err != nil {
+		t.Fatalf("the overnight pass failed: %v", err)
+	}
+
+	if at, _ := mailAttemptOf(t, b.Rep1, morning); at == nil {
+		t.Error("a rep with no chosen hour was held back by a floor they never set")
+	}
+}
+
+// A SEAT THAT WENT BETWEEN THE ASSEMBLY AND THE MAIL does not take the rest of
+// the workspace's morning with it.
+//
+// The mail is a pass of its own over the day's unmailed runs, and it resolves
+// each rep's own authority to make the claim and read the preference under it.
+// A seat deactivated since its run was written cannot be resolved — and the
+// loop must carry on, because the alternative is one departure costing every
+// colleague their brief.
+//
+// Reachable through the delivery hour rather than by mocking the resolver: a
+// run held back until nine is a run still waiting when the seat goes, which is
+// exactly the window this guard covers.
+func TestADepartedSeatDoesNotCostTheOthersTheirMorning(t *testing.T) {
+	relay := &countingMailer{}
+	b := setupBriefJob(t).withMailer(relay)
+	seedWorkFor(t, b.Env, b.Rep1)
+	setDeliveryHour(t, b.Rep1, 9)
+	setDeliveryHour(t, b.Rep2, 9)
+
+	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
+	b.now = morning
+	if err := b.run(t); err != nil {
+		t.Fatalf("the seven o'clock pass failed: %v", err)
+	}
+	// The premise: both runs exist and neither has spent its attempt, so the
+	// nine o'clock pass has two to mail rather than one.
+	for _, rep := range []ids.UUID{b.Rep1, b.Rep2} {
+		if at, _ := mailAttemptOf(t, rep, morning); at != nil {
+			t.Fatalf("a run was mailed at seven for a rep who asked for nine")
+		}
+	}
+
+	if _, err := integration.OwnerConn(t).Exec(context.Background(),
+		`UPDATE app_user SET status = 'deactivated', archived_at = now() WHERE id = $1`,
+		b.Rep1); err != nil {
+		t.Fatal(err)
+	}
+
+	b.now = morning.Add(2 * time.Hour)
+	if err := b.run(t); err != nil {
+		t.Fatalf("a departed seat failed the whole workspace's pass: %v", err)
+	}
+
+	if sent := sentTo(t, relay, b.Rep2); sent != 1 {
+		t.Errorf("the colleague received %d message(s), want the one their own hour was due — "+
+			"a seat that went must not cost anybody else their morning", sent)
+	}
+	// And the departed seat's own attempt is left unspent rather than burned on
+	// a message nobody could be sent: the row still says the mail never went.
+	if at, _ := mailAttemptOf(t, b.Rep1, morning); at != nil {
+		t.Errorf("the departed seat's attempt was spent at %v, so the row claims a message "+
+			"was tried for somebody the pass could not even resolve", at)
+	}
+}

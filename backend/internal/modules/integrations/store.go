@@ -134,6 +134,14 @@ type CategoryCost struct {
 	// empty when there is none. A buy button asks for both or neither, and
 	// Cost above is already the price of the pair.
 	Requires string
+	// Follows names the category whose empty answer triggers this one, for a
+	// fallback rather than a purchase of its own — empty when there is none.
+	// The consequence for a button is the same as Requires, and so is the
+	// pricing: pricedWith walks both, so Cost is the price of the pair either
+	// way. Carried separately because the two are different relations, and a
+	// message telling somebody why their request was refused has to name the
+	// right one.
+	Follows string
 }
 
 // Connection is one provider's connection as the surfaces read it. It carries
@@ -376,6 +384,7 @@ func catalogOf(d provider.Descriptor) []CategoryCost {
 			Free:     free[category],
 			Cost:     priced,
 			Requires: string(d.RequiresAnswerTo[category]),
+			Follows:  string(triggerOf(d, category)),
 		})
 	}
 	return out
@@ -406,6 +415,21 @@ func pricedWith(d provider.Descriptor, category provider.Category) []provider.Ca
 		out = append(out, prerequisite)
 	}
 	return out
+}
+
+// triggerOf names the category whose empty answer fires this one as a
+// fallback, or "" where it is not a fallback at all.
+//
+// Read off the same Cascades that pricedWith walks: the catalog's price and
+// the catalog's pairing must come from one declaration, or a button prices a
+// pair and sends one half — which is precisely what shipped.
+func triggerOf(d provider.Descriptor, category provider.Category) provider.Category {
+	for _, cascade := range d.Cascades {
+		if cascade.Category == category {
+			return cascade.After
+		}
+	}
+	return ""
 }
 
 func categoriesFrom(raw []string) []provider.Category {
