@@ -397,7 +397,7 @@ function UnitCard({
             // screen token rather than spelled here, so this link and the
             // router cannot drift apart.
             <a
-              className="t-small ext-unit-link"
+              className="t-caption ext-unit-link"
               href={routeHash({ screen: EXTENSION_SCREEN, id: page.name })}
             >
               <ArrowUpRight aria-hidden size={15} />
@@ -414,14 +414,14 @@ function UnitCard({
             everything else because it is what an operator deciding whether to
             grant the switches below is actually missing: the unit name alone
             leaves "de" meaning nothing. */}
-        <p className="t-small ext-unit-description">{unit.description}</p>
+        <p className="t-caption ext-unit-description">{unit.description}</p>
         {/* Said, not silently omitted, and only where the two registries
             DISAGREE: a unit the running binary composed whose descriptor this
             bundle does not carry is a version skew an operator has to be able
             to tell apart from a unit that simply has no page. A unit with a
             descriptor and nothing to show is neither, and says nothing. */}
         {descriptor ? null : (
-          <p className="t-small ext-note ext-unit-nopage">
+          <p className="t-caption ext-note ext-unit-nopage">
             <Info aria-hidden size={15} />
             {t("extAccess.noPage", { name: unit.name })}
           </p>
@@ -443,7 +443,7 @@ function UnitCard({
             </Callout>
           ) : null}
           {unit.rbac_objects.length === 0 ? (
-            <p className="t-small ext-note">{t("extAccess.noObjects")}</p>
+            <p className="t-caption ext-note">{t("extAccess.noObjects")}</p>
           ) : (
             unit.rbac_objects.map((object) => (
               <SettingRow
@@ -544,7 +544,9 @@ function BringsRow({
       </dt>
       <dd className="ext-brings-def">
         {items.length === 0 ? (
-          <span className="t-small ext-none">{t("extAccess.brings.none")}</span>
+          <span className="t-caption ext-none">
+            {t("extAccess.brings.none")}
+          </span>
         ) : (
           <ul className="ext-chips">
             {items.map((item) => (
@@ -648,7 +650,7 @@ function ObjectMatrix({
                   <th scope="row">
                     <span className="ext-role-name">{role.name}</span>
                     {role.is_system ? (
-                      <span className="t-small ext-role-note">
+                      <span className="t-caption ext-role-note">
                         {t("extAccess.systemRole")}
                       </span>
                     ) : null}

@@ -333,11 +333,11 @@ function UserRow({
         <div className="usermap-facts">
           <span className="usermap-email">{entry.name ?? entry.email}</span>
           {entry.name && (
-            <span className="t-small usermap-email">{entry.email}</span>
+            <span className="t-caption usermap-email">{entry.email}</span>
           )}
           {self && <Badge tone="accent">{t("overlay.userMap.you")}</Badge>}
           {mapped ? (
-            <span className="t-small">
+            <span className="t-caption">
               {identityLabel(
                 entry.incumbent_user_name,
                 entry.incumbent_user_email,
@@ -506,7 +506,7 @@ function ByOwnerList({
             </div>
             <ul className="usermap-group-users">
               {group.users.map((user) => (
-                <li key={user.user_id} className="t-small">
+                <li key={user.user_id} className="t-caption">
                   {identityLabel(user.name, user.email, user.user_id)}
                 </li>
               ))}
@@ -905,7 +905,7 @@ function UserMapNotice({
     return null;
   }
   if (!canManage) {
-    return <p className="t-small">{t("overlay.userMap.adminOnly")}</p>;
+    return <p className="t-caption">{t("overlay.userMap.adminOnly")}</p>;
   }
   const code = problemCodeOf(error);
   if (!overlay || code === "mode_not_overlay") {
@@ -930,7 +930,7 @@ function UserMapNotice({
     );
   }
   if (pending) {
-    return <p className="t-small">{t("overlay.userMap.loading")}</p>;
+    return <p className="t-caption">{t("overlay.userMap.loading")}</p>;
   }
   return null;
 }
@@ -972,7 +972,7 @@ function UnmapConfirm({
         }
       }}
     >
-      <p className="t-small">
+      <p className="t-caption">
         {self
           ? t("overlay.userMap.unmapSelfBody")
           : t("overlay.userMap.unmapBody", {

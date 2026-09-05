@@ -30,12 +30,8 @@
 }
 
 .ob-backread-h {
-  font-family: var(--f-display);
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
   line-height: var(--lh-snug);
   letter-spacing: var(--tracking-display);
-  color: var(--textPrimary);
   text-wrap: balance;
 }
 
@@ -88,12 +84,6 @@
   color: var(--textPrimary);
   font-variant-numeric: tabular-nums;
 }
-
-.ob-backread-qualifier {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
-
 /* The cost of a machine's work reads in the AI family, never the brand accent:
    green means the user acts, indigo means the machine cost something. */
 .ob-backread-cost {
@@ -104,9 +94,7 @@
 }
 
 .ob-backread-note {
-  font-size: var(--fs-meta);
   line-height: var(--lh-relaxed);
-  color: var(--textMeta);
 }
 
 .ob-backread-problem {

@@ -540,8 +540,8 @@ function AccountCard() {
                 </div>
                 {/* The two lines that qualify the name: the address the session
                     is bound to, and the workspace it is bound to it IN. */}
-                <span className="t-small">{me.user.email}</span>
-                <span className="t-small">{me.workspace_name}</span>
+                <span className="t-caption">{me.user.email}</span>
+                <span className="t-caption">{me.workspace_name}</span>
               </div>
             </div>
           )}
@@ -1822,7 +1822,9 @@ function StageRemove({
         // back to (design-system/confirmmodal).
         returnFocusTo={returnFocusTo}
       >
-        <p className="t-small">{t("stage.removeBody", { name: stage.name })}</p>
+        <p className="t-caption">
+          {t("stage.removeBody", { name: stage.name })}
+        </p>
       </ConfirmModal>
     </>
   );
@@ -1850,7 +1852,7 @@ function StageRow({
       <Badge tone={stageSemanticTone(stage.semantic)}>
         {stageSemanticLabel(stage.semantic, t)}
       </Badge>
-      <span className="t-mono t-small">
+      <span className="t-mono t-caption">
         {formatNumber(stage.win_probability, locale)}%
       </span>
       {/* Each control carries its own verb — editing a stage is
@@ -2319,7 +2321,7 @@ function AuditLogRow({
             viewer's clock an entry at 18:00Z is 21 August to a reader in Berlin
             and 22 August to one in Ho Chi Minh City — two operators quoting the
             same line quote different days. */}
-        <span className="t-small">
+        <span className="t-caption">
           {formatDateTime(entry.occurred_at, locale, recordZone)}
         </span>
         <ActorTag entry={entry} meUserId={meUserId} />
@@ -2327,7 +2329,7 @@ function AuditLogRow({
         {entry.entity_id && isEntityKind(entry.entity_type) ? (
           <EntityRef kind={entry.entity_type} id={entry.entity_id} />
         ) : (
-          <span className="t-mono t-small">
+          <span className="t-mono t-caption">
             {entry.entity_type}
             {entry.entity_id ? ` ${entry.entity_id}` : ""}
           </span>
@@ -2354,13 +2356,13 @@ function AuditLogRow({
           ))}
           {entry.passport_id && <PassportChip id={entry.passport_id} />}
           {entry.on_behalf_of && (
-            <span className="t-small">
+            <span className="t-caption">
               {t("settings.auditOnBehalf")}{" "}
               <span className="t-mono">{entry.on_behalf_of}</span>
             </span>
           )}
           {entry.authorization_rule && (
-            <span className="t-small">
+            <span className="t-caption">
               {t("settings.auditRule")}: {entry.authorization_rule}
             </span>
           )}

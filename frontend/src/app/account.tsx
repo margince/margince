@@ -97,7 +97,7 @@ function IdentityLines({ identity }: Readonly<{ identity: Identity }>) {
     <span className="acctwho">
       <b>{identity.label}</b>
       {identity.name && identity.email && (
-        <span className="acctmail">{identity.email}</span>
+        <span className="acctmail t-caption">{identity.email}</span>
       )}
     </span>
   );

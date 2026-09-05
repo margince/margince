@@ -184,7 +184,7 @@ button.evidence-chip:hover {
  * over the card, so the same token that passes on a plain card does not pass
  * here. This is the ancestor-dependent contrast trap the Badge hit before it
  * (4.54:1 vs 4.05:1 on identical tokens); the fix is the body ink, which reads
- * 9.1:1, with `t-small` doing the demoting. */
+ * 9.1:1, with `t-caption` doing the demoting. */
 .staging-card .approval-why {
   margin-top: var(--space-1);
   color: var(--textContent);

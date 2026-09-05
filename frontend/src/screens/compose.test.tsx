@@ -1918,7 +1918,9 @@ describe("TimelineActions", () => {
       <TimelineActions activity={captured} entityType="deal" entityId="d1" />,
     );
     expect(screen.queryByRole("button", { name: "Share thread" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Change visibility" }),
+    ).toBeNull();
     // Relink still draws, so the two absences above are the gate rather than a
     // component that never mounted at all.
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
@@ -1933,7 +1935,9 @@ describe("TimelineActions", () => {
     render(
       <TimelineActions activity={handTyped} entityType="deal" entityId="d1" />,
     );
-    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Change visibility" }),
+    ).toBeNull();
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });
 
@@ -1959,7 +1963,9 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
-    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Change visibility" }),
+    ).toBeNull();
     // The row is still actionable — this withholds one control, not the row.
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });
@@ -2009,7 +2015,9 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
-    expect(screen.getByRole("button", { name: "Visibility" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Change visibility" }),
+    ).toBeTruthy();
   });
 
   // A note, a call or a meeting derives no audience, so the row keeps the
@@ -2023,7 +2031,9 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
-    expect(screen.getByRole("button", { name: "Visibility" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Change visibility" }),
+    ).toBeTruthy();
   });
 
   // `selected` is the API's third audience and the dialog offered two, because
@@ -2075,7 +2085,9 @@ describe("TimelineActions", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Visibility" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Change visibility" }),
+    );
     await userEvent.click(screen.getByLabelText(/Named people/));
 
     // An agent seat is not on offer.
@@ -2146,7 +2158,9 @@ describe("TimelineActions", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Visibility" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Change visibility" }),
+    );
     await userEvent.click(screen.getByLabelText(/Named people/));
     await screen.findByLabelText(/Lena Fischer/);
 
@@ -2174,7 +2188,9 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
-    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Change visibility" }),
+    ).toBeNull();
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });
 });

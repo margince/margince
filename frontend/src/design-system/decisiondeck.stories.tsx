@@ -162,7 +162,7 @@ const CHIPS = (
       {shared.kind !== undefined && (
         <>
           <AutonomyDot tier="confirm" />
-          <span className="t-small">
+          <span className="t-caption">
             {shared.kind === "site_lead"
               ? "Add a person found on the site"
               : "Send an email"}

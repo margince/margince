@@ -542,7 +542,7 @@ function RunSection({
   }
   return (
     <div className="arsect">
-      <h2>{t(heading)}</h2>
+      <h2 className="t-eyebrow">{t(heading)}</h2>
       <ul className="arruns">
         {said.map(({ item, line }) => (
           <li className="arbox arrun" key={item.id}>
@@ -642,16 +642,16 @@ function AgentPanel({
           the agent looked, and there is nothing waiting. */}
       {signals.waiting !== undefined && (
         <div className="arsect">
-          <h2>{LABELS.acrossWorkspace}</h2>
+          <h2 className="t-eyebrow">{LABELS.acrossWorkspace}</h2>
           {signals.waiting === 0 ? (
-            <p className="arnone">{LABELS.allClear}</p>
+            <p className="arnone t-sub">{LABELS.allClear}</p>
           ) : (
             <div className="artiles">
               {/* The tile leads with the number because that is what a reader
                   scans for, and its NAME leads with the label because "10"
                   spoken alone is not a sentence about anything. */}
               <a
-                className="arbox artile"
+                className="arbox artile t-caption"
                 href="#/worklist"
                 aria-label={`${LABELS.approvals} ${formatNumber(signals.waiting, locale)}`}
               >
@@ -664,7 +664,7 @@ function AgentPanel({
       )}
 
       <div className="arsect">
-        <h2>
+        <h2 className="t-eyebrow">
           {LABELS.recap}
           <a className="arplain" href={AI_SETTINGS_HREF}>
             {LABELS.fullLog}

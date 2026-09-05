@@ -721,7 +721,7 @@ function CredentialDialog({
       pending={pending}
       error={error}
     >
-      <p className="t-small">{t("provider.connectConfirm.body")}</p>
+      <p className="t-caption">{t("provider.connectConfirm.body")}</p>
       {/* The field is write-only in both states: a sealed key is never sent
           back to the browser, so the box is empty even when one is in place.
           Left unexplained that reads as "no key connected" while the card

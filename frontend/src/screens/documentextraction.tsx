@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { watchStartedAiRun } from "../app/ai-activity";
 import { Button, TextInput } from "../design-system/atoms";
 import { EvidenceMark } from "../design-system/evidencemark";
 import type { ConfidenceLevel } from "../design-system/trust";
@@ -168,6 +169,12 @@ export function DocumentExtractionPanel({
       // one: it would pre-fill the new field, differ from the new value, and be
       // sent as a deliberate human edit of a reading nobody typed it against.
       setEdits({});
+      // The reading is queued, not held open: this route answers at once and
+      // the occurrence reaches the rail's feed through the outbox afterwards.
+      // Without this the reading is the agent's own work with nothing on the
+      // chrome saying so until an idle poll happens to catch it — and a short
+      // one settles inside that window and is never announced at all.
+      watchStartedAiRun(queryClient);
       await queryClient.invalidateQueries({
         queryKey: ["attachment-extraction", attachmentId],
       });
@@ -203,12 +210,12 @@ export function DocumentExtractionPanel({
   });
 
   if (dismissed) {
-    return <p className="t-small">{t("extraction.dismissed")}</p>;
+    return <p className="t-caption">{t("extraction.dismissed")}</p>;
   }
   if (accepted !== null) {
     return (
       <section className="real-card" aria-label={t("extraction.acceptedLabel")}>
-        <p className="t-small">
+        <p className="t-caption">
           {plural("extraction.acceptedHeading", accepted, {
             count: formatNumber(accepted, locale),
           })}
@@ -280,7 +287,7 @@ function ReadOffer({
   const t = useT();
   return (
     <div className="staging-card">
-      <p className="t-small">{t("extraction.neverRead")}</p>
+      <p className="t-caption">{t("extraction.neverRead")}</p>
       <Button
         onClick={onRead}
         pending={pending}
@@ -327,7 +334,7 @@ function ExtractionBody({
     // who to ask.
     return (
       <div className="staging-card">
-        <p className="t-small">{t("extraction.failed")}</p>
+        <p className="t-caption">{t("extraction.failed")}</p>
         {extraction.status_detail && (
           <p className="t-caption">{extraction.status_detail}</p>
         )}
@@ -340,7 +347,7 @@ function ExtractionBody({
     // what keeps it from reading as a broken feature.
     return (
       <div className="staging-card">
-        <p className="t-small">{t("extraction.groundedNothing")}</p>
+        <p className="t-caption">{t("extraction.groundedNothing")}</p>
         {extraction.status_detail && (
           <p className="t-caption">{extraction.status_detail}</p>
         )}
@@ -351,7 +358,7 @@ function ExtractionBody({
 
   return (
     <StagingCard>
-      <p className="t-small">
+      <p className="t-caption">
         {plural("extraction.heading", extraction.fields.length, {
           count: formatNumber(extraction.fields.length, locale),
         })}

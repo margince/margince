@@ -352,7 +352,7 @@ function WorkCount({ view }: Readonly<{ view?: Organization360 }>) {
   const count = view.deals.data.length;
   const capped = view.deals.page.has_more;
   return (
-    <span className="t-small">
+    <span className="t-caption">
       {capped
         ? t("co.work.countAtLeast", { count: formatNumber(count, locale) })
         : t("co.work.count", { count: formatNumber(count, locale) })}
@@ -393,7 +393,7 @@ function DealLine({
           )}
         </p>
       )}
-      <span className="co-row-meta">
+      <span className="co-row-meta t-caption">
         <span>{deal.stage_name ?? t("co.deals.noStage")}</span>
         {deal.expected_close_date && (
           <span>

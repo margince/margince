@@ -109,7 +109,7 @@ export function ClientSurfaceScreen() {
 
         <footer className="client-footer">
           <Badge>{t("client.isolation")}</Badge>
-          <span className="t-small">{t("client.attribution")}</span>
+          <span className="t-caption">{t("client.attribution")}</span>
         </footer>
       </div>
     </div>
