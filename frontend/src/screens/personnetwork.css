@@ -375,7 +375,9 @@
   font-weight: var(--fw-medium);
 }
 .pn-moment p .badge {
-  margin-left: var(--space-2); /* ds:ignore a badge trailing a sentence takes the word gap after it; no role names an inline interval */
+  /* ds:ignore a badge trailing a sentence takes the word gap after it; no
+     role names an inline interval */
+  margin-left: var(--space-2);
   vertical-align: 1px;
 }
 .pn-moment-when {
