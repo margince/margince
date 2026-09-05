@@ -69,13 +69,25 @@ func seedRollupOpenDeal(t *testing.T, e *Env, st rollupStages, org ids.UUID, amo
 
 // seedRollupWonDeal closes a deal with the frozen FX rate the
 // deal_closed_fx CHECK demands — the rate the quarter sum must reuse.
+//
+// baseMinor is the FROZEN converted amount, stated by the caller rather than
+// computed here. It used to need no argument at all: amount_minor_base was a
+// GENERATED column, and inserting the amount and the rate was enough to produce
+// it. 1788583500 stopped generating it — a generated expression cannot reach
+// either currency's minor-unit scale — so it is now a column the close writer
+// fills, and a fixture that inserts a won deal directly has to fill it too.
+//
+// Stated and not derived, deliberately. Repeating the conversion arithmetic
+// here would be a second implementation of the thing under test, and the sums
+// below would then agree with this fixture rather than with the product. What
+// the caller writes is the figure it expects the quarter sum to find.
 func seedRollupWonDeal(t *testing.T, e *Env, st rollupStages, org ids.UUID,
-	amountMinor int64, currency, fxRateToBase string, closedAt time.Time,
+	amountMinor, baseMinor int64, currency, fxRateToBase string, closedAt time.Time,
 ) {
 	t.Helper()
-	e.WsExec(t, `INSERT INTO deal (id, name, amount_minor, currency, fx_rate_to_base, pipeline_id, stage_id, organization_id, status, closed_at, source, captured_by)
-		VALUES ($1, 'Won Deal', $2, $3, $4, $5, $6, $7, 'won', $8, 'manual', 'human:test')`,
-		ids.NewV7(), amountMinor, currency, fxRateToBase, st.pipeline, st.won, org, closedAt)
+	e.WsExec(t, `INSERT INTO deal (id, name, amount_minor, amount_minor_base, currency, fx_rate_to_base, pipeline_id, stage_id, organization_id, status, closed_at, source, captured_by)
+		VALUES ($1, 'Won Deal', $2, $3, $4, $5, $6, $7, $8, 'won', $9, 'manual', 'human:test')`,
+		ids.NewV7(), amountMinor, baseMinor, currency, fxRateToBase, st.pipeline, st.won, org, closedAt)
 }
 
 func seedRollupFxRate(t *testing.T, e *Env, fromCurrency, rate string, day time.Time) {
@@ -188,7 +200,8 @@ func TestOrgRollupReconcilesTreeToSelves(t *testing.T) {
 	seedRollupOpenDeal(t, e, st, childA, int64Ptr(10_000), strPtr("USD")) // 0.5 → 5_000 base
 	seedRollupOpenDeal(t, e, st, grandchild, int64Ptr(20_000), strPtr("EUR"))
 	seedRollupFxRate(t, e, "USD", "0.5", now.AddDate(0, 0, -2))
-	seedRollupWonDeal(t, e, st, root, 30_000, "EUR", "1.0", now)
+	// EUR against a EUR base: the frozen figure is the amount itself.
+	seedRollupWonDeal(t, e, st, root, 30_000, 30_000, "EUR", "1.0", now)
 	seedRollupOrgActivity(t, e, root, now.Add(-24*time.Hour))
 	seedRollupOrgActivity(t, e, grandchild, now.Add(-24*time.Hour))
 	seedRollupOrgActivity(t, e, childA, now.Add(-40*24*time.Hour)) // outside the 30d window
@@ -359,10 +372,10 @@ func TestOrgRollupClosedWonQuarterWindow(t *testing.T) {
 	st := seedRollupStages(t, e)
 	root := seedRollupOrg(t, e, "Root Co", nil, nil)
 	asOf := time.Date(2026, time.May, 15, 12, 0, 0, 0, time.UTC)
-	seedRollupWonDeal(t, e, st, root, 10_000, "USD", "0.5", asOf)
+	seedRollupWonDeal(t, e, st, root, 10_000, 5_000, "USD", "0.5", asOf)
 	// 100 days back is outside any calendar quarter containing asOf (a
 	// quarter spans at most 92 days), whatever asOf itself resolves to.
-	seedRollupWonDeal(t, e, st, root, 99_999, "USD", "1.0", asOf.AddDate(0, 0, -100))
+	seedRollupWonDeal(t, e, st, root, 99_999, 99_999, "USD", "1.0", asOf.AddDate(0, 0, -100))
 
 	res, err := compose.OrgHierarchyRollup(e.Admin(), e.Pool, root, "tree", fixedClock(asOf))
 	if err != nil {
