@@ -7,6 +7,12 @@
         "read": true,
         "update": true
       },
+      "ai_diagnostics": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "ai_model_rate": {
         "create": true,
         "delete": false,
@@ -14,6 +20,18 @@
         "update": true
       },
       "ai_routing": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
+      "audit_log": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "authentication_policy": {
         "create": false,
         "delete": false,
         "read": true,
@@ -55,6 +73,12 @@
         "read": true,
         "update": false
       },
+      "consent_config": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "contract": {
         "create": true,
         "delete": true,
@@ -90,6 +114,12 @@
         "delete": false,
         "read": true,
         "update": true
+      },
+      "extension_access": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "finance": {
         "create": true,
@@ -133,6 +163,12 @@
         "read": true,
         "update": true
       },
+      "job_health": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "knowledge_corpus": {
         "create": true,
         "delete": true,
@@ -158,6 +194,12 @@
         "update": false
       },
       "list": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "oauth_application": {
         "create": true,
         "delete": true,
         "read": true,
@@ -205,6 +247,12 @@
         "read": true,
         "update": true
       },
+      "privacy_request": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "product": {
         "create": true,
         "delete": true,
@@ -229,11 +277,23 @@
         "read": true,
         "update": true
       },
+      "role_admin": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "saved_view": {
         "create": true,
         "delete": true,
         "read": true,
         "update": true
+      },
+      "seat_usage": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "signal": {
         "create": true,
@@ -241,7 +301,25 @@
         "read": true,
         "update": true
       },
+      "system_reset": {
+        "create": false,
+        "delete": true,
+        "read": false,
+        "update": false
+      },
       "tag": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "team_admin": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
+      "user_admin": {
         "create": true,
         "delete": true,
         "read": true,
@@ -276,6 +354,12 @@
         "read": true,
         "update": true
       },
+      "ai_diagnostics": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "ai_model_rate": {
         "create": false,
         "delete": false,
@@ -286,6 +370,18 @@
         "create": false,
         "delete": false,
         "read": false,
+        "update": false
+      },
+      "audit_log": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "authentication_policy": {
+        "create": false,
+        "delete": false,
+        "read": true,
         "update": false
       },
       "automation": {
@@ -324,6 +420,12 @@
         "read": true,
         "update": false
       },
+      "consent_config": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "contract": {
         "create": true,
         "delete": true,
@@ -355,6 +457,12 @@
         "update": true
       },
       "embedding_reindex": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "extension_access": {
         "create": false,
         "delete": false,
         "read": false,
@@ -402,6 +510,12 @@
         "read": true,
         "update": true
       },
+      "job_health": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "knowledge_corpus": {
         "create": false,
         "delete": false,
@@ -431,6 +545,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "oauth_application": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "offer": {
         "create": true,
@@ -474,6 +594,12 @@
         "read": true,
         "update": false
       },
+      "privacy_request": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "product": {
         "create": true,
         "delete": true,
@@ -498,11 +624,23 @@
         "read": false,
         "update": false
       },
+      "role_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "saved_view": {
         "create": true,
         "delete": true,
         "read": true,
         "update": true
+      },
+      "seat_usage": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "signal": {
         "create": true,
@@ -510,10 +648,28 @@
         "read": true,
         "update": true
       },
+      "system_reset": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "tag": {
         "create": false,
         "delete": false,
         "read": true,
+        "update": false
+      },
+      "team_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "user_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
         "update": false
       },
       "voice_profile": {
@@ -545,6 +701,12 @@
         "read": true,
         "update": true
       },
+      "ai_diagnostics": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "ai_model_rate": {
         "create": false,
         "delete": false,
@@ -552,6 +714,18 @@
         "update": false
       },
       "ai_routing": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "audit_log": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "authentication_policy": {
         "create": false,
         "delete": false,
         "read": false,
@@ -593,6 +767,12 @@
         "read": true,
         "update": false
       },
+      "consent_config": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "contract": {
         "create": true,
         "delete": true,
@@ -624,6 +804,12 @@
         "update": true
       },
       "embedding_reindex": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "extension_access": {
         "create": false,
         "delete": false,
         "read": false,
@@ -671,6 +857,12 @@
         "read": true,
         "update": true
       },
+      "job_health": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "knowledge_corpus": {
         "create": false,
         "delete": false,
@@ -700,6 +892,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "oauth_application": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
       },
       "offer": {
         "create": true,
@@ -743,6 +941,12 @@
         "read": true,
         "update": false
       },
+      "privacy_request": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "product": {
         "create": true,
         "delete": true,
@@ -767,11 +971,23 @@
         "read": false,
         "update": false
       },
+      "role_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "saved_view": {
         "create": true,
         "delete": true,
         "read": true,
         "update": true
+      },
+      "seat_usage": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
       },
       "signal": {
         "create": true,
@@ -779,10 +995,28 @@
         "read": true,
         "update": true
       },
+      "system_reset": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "tag": {
         "create": false,
         "delete": false,
         "read": true,
+        "update": false
+      },
+      "team_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "user_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
         "update": false
       },
       "voice_profile": {
@@ -814,6 +1048,12 @@
         "read": true,
         "update": true
       },
+      "ai_diagnostics": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "ai_model_rate": {
         "create": true,
         "delete": false,
@@ -825,6 +1065,18 @@
         "delete": false,
         "read": true,
         "update": true
+      },
+      "audit_log": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "authentication_policy": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "automation": {
         "create": true,
@@ -862,6 +1114,12 @@
         "read": true,
         "update": false
       },
+      "consent_config": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "contract": {
         "create": true,
         "delete": true,
@@ -897,6 +1155,12 @@
         "delete": false,
         "read": true,
         "update": true
+      },
+      "extension_access": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "finance": {
         "create": true,
@@ -940,6 +1204,12 @@
         "read": true,
         "update": true
       },
+      "job_health": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "knowledge_corpus": {
         "create": true,
         "delete": true,
@@ -965,6 +1235,12 @@
         "update": false
       },
       "list": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "oauth_application": {
         "create": true,
         "delete": true,
         "read": true,
@@ -1012,6 +1288,12 @@
         "read": true,
         "update": true
       },
+      "privacy_request": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "product": {
         "create": true,
         "delete": true,
@@ -1036,11 +1318,23 @@
         "read": true,
         "update": true
       },
+      "role_admin": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "saved_view": {
         "create": true,
         "delete": true,
         "read": true,
         "update": true
+      },
+      "seat_usage": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "signal": {
         "create": true,
@@ -1048,11 +1342,29 @@
         "read": true,
         "update": true
       },
+      "system_reset": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "tag": {
         "create": true,
         "delete": true,
         "read": true,
         "update": true
+      },
+      "team_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "user_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
       },
       "voice_profile": {
         "create": true,
@@ -1083,6 +1395,12 @@
         "read": true,
         "update": false
       },
+      "ai_diagnostics": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "ai_model_rate": {
         "create": false,
         "delete": false,
@@ -1090,6 +1408,18 @@
         "update": false
       },
       "ai_routing": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "audit_log": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "authentication_policy": {
         "create": false,
         "delete": false,
         "read": false,
@@ -1131,6 +1461,12 @@
         "read": true,
         "update": false
       },
+      "consent_config": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "contract": {
         "create": false,
         "delete": false,
@@ -1162,6 +1498,12 @@
         "update": false
       },
       "embedding_reindex": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "extension_access": {
         "create": false,
         "delete": false,
         "read": false,
@@ -1209,6 +1551,12 @@
         "read": true,
         "update": false
       },
+      "job_health": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "knowledge_corpus": {
         "create": false,
         "delete": false,
@@ -1237,6 +1585,12 @@
         "create": false,
         "delete": false,
         "read": true,
+        "update": false
+      },
+      "oauth_application": {
+        "create": false,
+        "delete": false,
+        "read": false,
         "update": false
       },
       "offer": {
@@ -1281,6 +1635,12 @@
         "read": true,
         "update": false
       },
+      "privacy_request": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "product": {
         "create": false,
         "delete": false,
@@ -1305,11 +1665,23 @@
         "read": false,
         "update": false
       },
+      "role_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "saved_view": {
         "create": true,
         "delete": true,
         "read": true,
         "update": true
+      },
+      "seat_usage": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
       },
       "signal": {
         "create": false,
@@ -1317,10 +1689,28 @@
         "read": true,
         "update": false
       },
+      "system_reset": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "tag": {
         "create": false,
         "delete": false,
         "read": true,
+        "update": false
+      },
+      "team_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "user_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
         "update": false
       },
       "voice_profile": {
@@ -1352,6 +1742,12 @@
         "read": true,
         "update": true
       },
+      "ai_diagnostics": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "ai_model_rate": {
         "create": false,
         "delete": false,
@@ -1359,6 +1755,18 @@
         "update": false
       },
       "ai_routing": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "audit_log": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "authentication_policy": {
         "create": false,
         "delete": false,
         "read": false,
@@ -1400,6 +1808,12 @@
         "read": true,
         "update": false
       },
+      "consent_config": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "contract": {
         "create": true,
         "delete": false,
@@ -1431,6 +1845,12 @@
         "update": true
       },
       "embedding_reindex": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "extension_access": {
         "create": false,
         "delete": false,
         "read": false,
@@ -1478,6 +1898,12 @@
         "read": true,
         "update": true
       },
+      "job_health": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "knowledge_corpus": {
         "create": false,
         "delete": false,
@@ -1507,6 +1933,12 @@
         "delete": false,
         "read": true,
         "update": true
+      },
+      "oauth_application": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
       },
       "offer": {
         "create": true,
@@ -1550,6 +1982,12 @@
         "read": true,
         "update": false
       },
+      "privacy_request": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "product": {
         "create": true,
         "delete": false,
@@ -1574,11 +2012,23 @@
         "read": false,
         "update": false
       },
+      "role_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "saved_view": {
         "create": true,
         "delete": true,
         "read": true,
         "update": true
+      },
+      "seat_usage": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
       },
       "signal": {
         "create": true,
@@ -1586,10 +2036,28 @@
         "read": true,
         "update": true
       },
+      "system_reset": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "tag": {
         "create": false,
         "delete": false,
         "read": true,
+        "update": false
+      },
+      "team_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "user_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
         "update": false
       },
       "voice_profile": {
