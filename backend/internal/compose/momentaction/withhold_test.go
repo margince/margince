@@ -121,3 +121,29 @@ func TestWithholdBlocksTheRecommendationOnACardWithNoSecondaries(t *testing.T) {
 		t.Errorf("recommended state = %q, want blocked", moment.RecommendedAction.State)
 	}
 }
+
+// A verb the ladder already blocked keeps its own reason. The account card's
+// "Open it from the task list" is a blocked complete_task — off because the
+// task names no record beneath it — and answering it with a grant refusal would
+// explain a control that was already unavailable with the wrong cause.
+func TestWithholdLeavesAnAlreadyBlockedVerbSayingWhatItSaid(t *testing.T) {
+	reason := "The task names no record to open"
+	moment := crmcontracts.PersonMoment{
+		RecommendedAction: crmcontracts.PersonMomentAction{
+			Kind:          crmcontracts.PersonMomentActionKindCompleteTask,
+			Label:         "Open it from the task list",
+			State:         crmcontracts.PersonMomentActionStateBlocked,
+			BlockedReason: &reason,
+		},
+	}
+
+	Withhold(reader(principal.ObjectGrant{Read: true}), &moment)
+
+	got := moment.RecommendedAction
+	if got.BlockedReason == nil {
+		t.Fatalf("blocked_reason was cleared, want the reason the ladder gave: %q", reason)
+	}
+	if *got.BlockedReason != reason {
+		t.Errorf("blocked_reason = %q, want the reason the ladder gave: %q", *got.BlockedReason, reason)
+	}
+}

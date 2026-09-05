@@ -73,3 +73,17 @@ func TestGetPerson360RefusesWhenTheModeCannotBeResolved(t *testing.T) {
 		t.Errorf("status = %d, want 500 — an unresolved mode is not a native one", rec.Code)
 	}
 }
+
+// Assembly with no resolver is refused where the assembly happens. A per-request
+// check would let a server boot and answer 500 on one endpoint; this fails the
+// build of the transport, which is when a dropped wiring is cheap to notice.
+func TestNewHandlersRefusesAnAssemblyWithNoOverlayResolver(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Error("NewHandlers accepted a nil resolver; the first request would panic instead, " +
+				"or worse, a fallback would serve a mirrored workspace off native tables")
+		}
+	}()
+
+	NewHandlers(nil, nil)
+}

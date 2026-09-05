@@ -66,6 +66,15 @@ func Withhold(ctx context.Context, moment *crmcontracts.PersonMoment) {
 		if !writesAnActivity[action.Kind] {
 			return
 		}
+		// An action the ladder already blocked was blocked for its own reason,
+		// and that reason is the one the reader needs: the account card's
+		// "Open it from the task list" is off because the task names no record
+		// beneath it, not because of a grant. Relabelling it would answer a
+		// question the reader did not ask, about a control that was already
+		// unavailable.
+		if action.State == crmcontracts.PersonMomentActionStateBlocked {
+			return
+		}
 		action.State = crmcontracts.PersonMomentActionStateBlocked
 		action.BlockedReason = &reason
 		action.Destination = nil
