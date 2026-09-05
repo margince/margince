@@ -4731,6 +4731,8 @@ public.signing_key.signing_key_pkey PRIMARY KEY (kid)
 public.signing_key.workspace_signing_key_alg_check CHECK ((alg = 'EdDSA'::text))
 public.signing_key_pkey CREATE UNIQUE INDEX signing_key_pkey ON public.signing_key USING btree (kid)
 public.site_read acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.site_read.attempt integer NOT NULL gen=- def=1
+public.site_read.attempt_at timestamp with time zone NOT NULL gen=- def=now()
 public.site_read.confirmed_at timestamp with time zone gen=- def=-
 public.site_read.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.site_read.draft_version integer NOT NULL gen=- def=1
@@ -4753,6 +4755,7 @@ public.site_read.proposal_hash text NOT NULL gen=- def=''::text
 public.site_read.proposal_ids uuid[] NOT NULL gen=- def='{}'::uuid[]
 public.site_read.requested_by text NOT NULL gen=- def=-
 public.site_read.seed_url text NOT NULL gen=- def=-
+public.site_read.site_read_attempt_check CHECK ((attempt >= 1))
 public.site_read.site_read_draft_version_check CHECK ((draft_version > 0))
 public.site_read.site_read_org_fkey FOREIGN KEY (organization_id) REFERENCES organization(id) ON DELETE CASCADE
 public.site_read.site_read_outcome_shape CHECK ((((status = 'deferred'::text) AND (status_code = 'budget_deferred'::text) AND (status_detail IS NOT NULL) AND (next_attempt_at IS NOT NULL)) OR ((status = 'failed'::text) AND (status_code IS NOT NULL) AND (status_code = ANY (ARRAY['bot_blocked'::text, 'http_client_error'::text, 'http_server_error'::text, 'timeout'::text, 'dns'::text, 'tls'::text, 'robots_disallowed'::text, 'unreadable'::text, 'internal'::text, 'stale_reclaim'::text])) AND (status_detail IS NOT NULL)) OR ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'partial'::text, 'cancelled'::text])) AND (status_code IS NULL) AND (status_detail IS NULL) AND (next_attempt_at IS NULL))))

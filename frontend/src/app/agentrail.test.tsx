@@ -1169,6 +1169,19 @@ describe("AgentRail", () => {
     );
   });
 
+  // The crawl a person starts from a company page, reported by the dossier row
+  // itself rather than by the settled model calls it makes — which is what lets
+  // the orb hold `ingest` for the whole read instead of resting between calls.
+  // The line names the company, because the source sent its name.
+  it("moves the Core to ingest while a company website is being read, and names the company", async () => {
+    withRuns(RUN({ kind: "site_read", subject_label: "Acme" }));
+    const { container } = render(ROUTE);
+    await waitFor(() =>
+      expect(block(container).getAttribute("data-core-state")).toBe("ingest"),
+    );
+    await settlesOnLine(container, "I'm reading the Acme website.");
+  });
+
   // A run past the lease its own source declared. The server derives it, so a
   // worker that died without saying so cannot go on being displayed as busy —
   // and amber is right for it, because the work may yet land and there is

@@ -42,6 +42,9 @@ export const ACTIVITY_LANE: Readonly<Record<ActivityKind, AgentLane>> = {
   signal_extract: "ingest",
   site_extract: "ingest",
   site_fact_extract: "ingest",
+  // The crawl itself, as one occurrence: the three site lanes above are the
+  // calls it makes, and this is the read those calls serve.
+  site_read: "ingest",
   site_triage: "ingest",
   transcript: "ingest",
   voice_build: "ingest",
