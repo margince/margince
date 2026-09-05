@@ -296,3 +296,38 @@ func (r *Registry) CancelBackfill(ctx context.Context, provider string, userID i
 	}
 	return r.BackfillStatus(ctx, provider, userID)
 }
+
+// LiveBackfills answers the runs this workspace still owes work on: every row
+// the live-run index counts, which is queued or running.
+//
+// It exists for the nightly reconcile (ADR-0063), and the shape of the problem
+// is why. A backfill's paging job is inserted with ONE attempt — the row owns
+// the outcome, so a River retry would re-page a run the engine already ended —
+// and the run is protected by a unique index over (connection_id) WHERE status
+// IN ('queued', 'running'). Those two together are the trap: if that single
+// attempt is lost to something the engine never sees — a worker killed
+// mid-page, a rescue, a queue that dropped it — the row stays live with no job
+// behind it, and the index then refuses every future StartBackfill for that
+// connection. The import stops, and the only symptom is a person who cannot
+// start one.
+//
+// A run's own give-up cap is NOT consulted here. A stranded run has recorded no
+// failure — nothing failed, something disappeared — so the cap has nothing to
+// say about it; what decides whether a re-enqueued run keeps going is the
+// engine, on the next page it actually runs.
+func (r *Registry) LiveBackfills(ctx context.Context) ([]ids.UUID, error) {
+	var ids0 []ids.UUID
+	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT id FROM capture_backfill
+			 WHERE status IN ('queued', 'running')
+			 ORDER BY created_at`)
+		if err != nil {
+			return fmt.Errorf("capture: reading the live backfills: %w", err)
+		}
+		defer rows.Close()
+		ids0, err = pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+		return err
+	})
+	return ids0, err
+}

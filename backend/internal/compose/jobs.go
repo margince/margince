@@ -445,6 +445,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, CaptureTraceSweepArgs{}),
 		periodicFor(cfg, OrgNamePromotionArgs{}),
 		periodicFor(cfg, CaptureDigestArgs{}),
+		periodicFor(cfg, CaptureBackfillReconcileArgs{}),
 		periodicFor(cfg, BriefGenerateArgs{}),
 		periodicFor(cfg, WeeklyReviewGenerateArgs{}),
 		periodicFor(cfg, GmailSyncArgs{}),

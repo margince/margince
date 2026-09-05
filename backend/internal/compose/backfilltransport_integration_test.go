@@ -28,7 +28,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/riverdriver/riverpgxv5"
+	"github.com/riverqueue/river/rivertest"
 	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/compose/costestimate"
@@ -705,4 +709,88 @@ func assertAStepOnAVanishedRunIsTerminal(t *testing.T, b *backfillWireEnv) {
 // authztest.AdmittedFromPair for why the body is not written out here.
 func (r backfillAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+}
+
+// The nightly reconcile puts a pager back behind a run that lost its own, and
+// leaves a healthy run alone (ADR-0063, #1857).
+//
+// THE TRAP IT REPAIRS is two correct decisions meeting badly. A pager is
+// inserted with ONE attempt, because the run row owns the outcome and a River
+// retry would re-page a run the engine already ended; and a run is protected by
+// a unique index over its connection while it is queued or running, so one
+// import cannot start on top of another. Lose that single attempt to something
+// the engine never sees — a worker killed mid-page, a rescue, a queue that
+// dropped it — and the row stays live with no job behind it. The index then
+// refuses every future StartBackfill for that connection, and the only symptom
+// is a person who cannot start one.
+//
+// The stranded state is built the way the strand happens rather than described:
+// StartBackfill is given an enqueue that does nothing, so the run is committed
+// live with no pager, which is exactly the row a lost attempt leaves.
+func TestTheNightlyReconcileRestoresAPagerAndDoesNotDoubleOne(t *testing.T) {
+	b := setupBackfillWire(t)
+	ctx := principal.WithWorkspaceID(context.Background(), b.env.WS)
+	// The client is built here rather than taken from platform/jobs, which holds
+	// its own unexported — an insert-only client, exactly the shape
+	// jobs.NewInserter builds, so what this drives is the real insert path.
+	client, err := river.NewClient(riverpgxv5.New(b.env.Pool), &river.Config{
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	if err != nil {
+		t.Fatalf("river.NewClient: %v", err)
+	}
+	jobCtx := rivertest.WorkContext(ctx, client)
+
+	runID := strandedBackfill(t, b)
+	worker := &captureBackfillReconcileWorker{
+		pool: b.env.Pool, registry: b.registry,
+		log: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	}
+
+	if n := pagersFor(t, b.env.Pool, runID); n != 0 {
+		t.Fatalf("the fixture starts with %d pager(s); it must strand the run, or this proves nothing", n)
+	}
+	if err := worker.reconcileWorkspace(jobCtx, b.env.WS); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+	if n := pagersFor(t, b.env.Pool, runID); n != 1 {
+		t.Fatalf("%d pager(s) after the reconcile, want 1 — a live run with no job blocks its connection permanently", n)
+	}
+
+	// AND AGAIN, because the pass runs nightly against runs that are usually
+	// healthy. The insert carries the start's own ByArgs uniqueness, so the
+	// second night dedupes onto the job the first one queued rather than
+	// stacking a second pager on the same run.
+	if err := worker.reconcileWorkspace(jobCtx, b.env.WS); err != nil {
+		t.Fatalf("second reconcile: %v", err)
+	}
+	if n := pagersFor(t, b.env.Pool, runID); n != 1 {
+		t.Fatalf("%d pager(s) after a second reconcile, want 1 — the pass must dedupe onto a live job, not stack another", n)
+	}
+}
+
+// strandedBackfill opens a run with an enqueue that does nothing, leaving the
+// row live with no pager — the state a lost attempt produces.
+func strandedBackfill(t *testing.T, b *backfillWireEnv) ids.UUID {
+	t.Helper()
+	run, err := b.registry.StartBackfill(b.human, "gmail", ids.From[ids.UserKind](b.env.Rep1), 6, 25,
+		func(context.Context, pgx.Tx, ids.UUID) error { return nil })
+	if err != nil {
+		t.Fatalf("StartBackfill: %v", err)
+	}
+	return run.ID
+}
+
+// pagersFor counts the live pagers naming one run.
+func pagersFor(t *testing.T, pool *pgxpool.Pool, runID ids.UUID) int {
+	t.Helper()
+	var n int
+	if err := pool.QueryRow(context.Background(), `
+		SELECT count(*) FROM river_job
+		 WHERE kind = $1 AND args->>'backfill_id' = $2
+		   AND state IN ('available', 'scheduled', 'retryable', 'pending', 'running')`,
+		CaptureBackfillArgs{}.Kind(), runID.String()).Scan(&n); err != nil {
+		t.Fatalf("counting pagers: %v", err)
+	}
+	return n
 }
