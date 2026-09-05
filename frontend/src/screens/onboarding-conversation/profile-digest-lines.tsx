@@ -64,7 +64,9 @@ export function DigestLine({
             // Typed by a person, or carried in from a profile that already
             // existed. It gets no number because there is no page to open, and
             // saying so is the honest half of citing everything else.
-            <span className="pdigest-yours">{t("ob.digest.yours")}</span>
+            <span className="pdigest-yours t-caption">
+              {t("ob.digest.yours")}
+            </span>
           ) : (
             <sup className="pdigest-ref">{ordinalNumber(n)}</sup>
           )}

@@ -66,11 +66,6 @@
   font-weight: var(--fw-semibold);
   color: var(--textPrimary);
 }
-.acctmail {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
-
 /* ===== the menu =====
    Downward and anchored to the trigger's RIGHT edge, which is the top bar's
    arrangement: the trigger sits at the top-right of the viewport, so a menu

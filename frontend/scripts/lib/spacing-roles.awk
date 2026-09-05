@@ -3,12 +3,13 @@
 # One parser, two modes, because the gate's two questions are the same question
 # asked of two trees:
 #
-#   mode=owned   over frontend/src/design-system/*.css — print two claims per
+#   mode=owned   over frontend/src/design-system/*.css — print three claims per
 #                rule: `spaced <class>` for a class this tier gives an interval
-#                to, and `own <class>` for a class it declares ON ITS OWN, with
-#                no ancestor above it in the selector. The gate keeps the
-#                intersection, which is the set of primitives, derived from the
-#                owner rather than listed there.
+#                to, `sized <class>` for one it gives a type to, and `own <class>`
+#                for a class it declares ON ITS OWN, with no ancestor above it in
+#                the selector. The gate keeps the two intersections, which are
+#                the primitives by what they own, derived from the owner rather
+#                than listed there.
 #
 #                Both halves are needed, and the second is what keeps the corpus
 #                honest: a design-system sheet may space a class belonging to a
@@ -19,7 +20,7 @@
 #                it is what owning it looks like.
 #
 #   mode=check   over one screen stylesheet — report every declaration that
-#                either re-spaces one of those owned classes or spells a raw
+#                either re-shapes one of those owned classes or spells a raw
 #                rung in a context that has a named role. Two inputs, in this
 #                order: the owned list, then the stylesheet.
 #
@@ -100,6 +101,21 @@ function spacing_prop(p) {
   return p ~ /^(padding|margin)(-[a-z]+)*$/ || p ~ /^(gap|row-gap|column-gap)$/
 }
 
+# The type a primitive sets is as much its shape as its interval: a screen that
+# re-sizes `.badge` or re-tracks `.t-label` has made the same second opinion a
+# re-spaced `.panel-head` is. Each kind is owned separately — a class the tier
+# only sizes has no interval a screen could contradict — so the two arms read
+# two corpora. The vocabulary of a size is held elsewhere (type.test.ts, one
+# ramp) and its spelling elsewhere again (type-one-spelling.test.ts); this is
+# only the question of WHOSE it is.
+function type_prop(p) {
+  return p ~ /^(font-size|line-height|letter-spacing)$/
+}
+
+function shape_prop(p) {
+  return spacing_prop(p) || type_prop(p)
+}
+
 # A value that measures nothing: every length in it is zero, and it reaches for
 # no token. `margin: 0 auto` centres, `padding: 0` resets — neither is a rhythm
 # decision, and a gate that argued with them would be arguing with correct code.
@@ -144,14 +160,24 @@ function report(tag, lineno, decl, message,   shown) {
 # most specific message first: a screen re-spacing a primitive is told that,
 # rather than being told to pick a role token for a surface it does not own.
 function judge(sel, prop, value, lineno, decl,   subj, i, n, parts, bad) {
-  if (!spacing_prop(prop) || !measures(value)) return
+  if (!shape_prop(prop) || !measures(value)) return
 
   n = split_parts(sel, parts)
   for (i = 1; i <= n; i++) {
     subj = subject(parts[i])
     if (subj == "") continue
 
-    if (primitives && subj in owned) {
+    if (type_prop(prop)) {
+      # Every size is a rung, so there is no house vocabulary that makes a
+      # re-size a variant rather than a second opinion; a genuine one is waived.
+      if (primitives && subj in sized) {
+        report("primitive", lineno, decl,
+               "." subj " is a design-system primitive — its type is set where it is declared; size your own element, or say why not")
+      }
+      return
+    }
+
+    if (primitives && subj in spaced) {
       # A variant spelled in the house's own vocabulary is not a second
       # opinion: `padding: var(--padCard)` on a rail's panel body says which
       # surface it means and moves when that surface is retuned. An ad-hoc rung
@@ -265,19 +291,22 @@ function inspect(decl, waived,   prop, value) {
   gsub(/^[ \t]+|[ \t]+$/, "", value)
   gsub(/[ \t]+/, " ", value)
   if (mode == "owned") {
-    collect(selstack[depth], spacing_prop(prop) && measures(value))
+    collect(selstack[depth],
+            spacing_prop(prop) && measures(value),
+            type_prop(prop) && measures(value))
     return
   }
   judge(selstack[depth], prop, value, pending_line, decl)
 }
 
 # mode=owned: what one design-system rule claims about the classes in it.
-function collect(sel, spaces,   i, n, parts, subj, bare) {
+function collect(sel, spaces, sizes,   i, n, parts, subj, bare) {
   n = split_parts(sel, parts)
   for (i = 1; i <= n; i++) {
     subj = subject(parts[i])
     if (subj == "") continue
     if (spaces) print "spaced " subj
+    if (sizes) print "sized " subj
     # `.card`, `.panel-head:has(.panel-head-sub)` and `.card.card-inset` all
     # declare their own subject; `.panel-body > .empty` and `.settinglist >
     # .disclosure` place someone else's inside them.
@@ -304,7 +333,10 @@ FNR == 1 { part++; incomment = 0; pending = ""; pending_line = 0; pending_waived
 
 mode == "owned" { feed(FNR, $0); next }
 
-# mode=check reads the owned list first, then the stylesheet it is judging.
-part == 1 { owned[$0] = 1; next }
+# mode=check reads the owned list first — `spaced <class>` and `sized <class>`
+# lines — then the stylesheet it is judging.
+part == 1 && $1 == "spaced" { spaced[$2] = 1; next }
+part == 1 && $1 == "sized" { sized[$2] = 1; next }
+part == 1 { next }
 
 { feed(FNR, $0) }

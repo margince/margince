@@ -204,7 +204,7 @@ export function OAuthConnectPanel({
           that screen without having been told reasonably concludes something
           is wrong with the thing they just pressed. A caution about what a
           button does belongs beside the button, never behind a fold. */}
-      <p className="t-small ob-google-unverified">{t(copy.unverified)}</p>
+      <p className="t-caption ob-google-unverified">{t(copy.unverified)}</p>
       {/* Last thing read before the grant screen, because after it the mailbox
           is connected and the telling is too late. */}
       <CaptureNotice />
@@ -335,7 +335,7 @@ export function OAuthReturnPanel({
       </div>
       <p className="ob-sub">{t("ob.s4.connectOkBody")}</p>
       {connections.isPending && (
-        <p className="t-small">{t("ob.s4.connectVerifying")}</p>
+        <p className="t-caption">{t("ob.s4.connectVerifying")}</p>
       )}
       {live && (
         <>

@@ -1759,7 +1759,7 @@ function MailOnlyFields({
           from a record page it named no conversation at all, so a reader could
           press "Draft with AI" without knowing who they were writing to. */}
       {answering !== null && (
-        <p className="t-small mw-answering">{answering}</p>
+        <p className="t-caption mw-answering">{answering}</p>
       )}
       <MailRow label={t("compose.to")}>
         <RecipientField

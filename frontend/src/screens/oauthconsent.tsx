@@ -162,7 +162,7 @@ function ConsentSelector({
             label={
               <>
                 <strong>{t(`passport.scope.${scope}`)}</strong>{" "}
-                <span className="t-small">
+                <span className="t-caption">
                   {t(`consent.scopeNote.${scope}`)}
                 </span>
               </>
@@ -170,7 +170,7 @@ function ConsentSelector({
           />
         ))}
       </div>
-      <p className="t-small">{t("consent.ceiling")}</p>
+      <p className="t-caption">{t("consent.ceiling")}</p>
       {data.offline && <p>{t("consent.offline")}</p>}
       <div
         style={{
@@ -194,7 +194,7 @@ function ConsentSelector({
           <Button type="submit">{t("consent.deny")}</Button>
         </form>
         {granted.size === 0 && (
-          <p className="t-small">{t("consent.pickOne")}</p>
+          <p className="t-caption">{t("consent.pickOne")}</p>
         )}
       </div>
     </Card>
@@ -331,7 +331,7 @@ function RedirectDisclosure({ redirectURI }: { redirectURI: string }) {
     return null;
   }
   return (
-    <p className="t-small">
+    <p className="t-caption">
       {t("consent.redirectsTo", { host })}
       {loopback ? ` ${t("consent.redirectsToLoopback")}` : ""}
     </p>

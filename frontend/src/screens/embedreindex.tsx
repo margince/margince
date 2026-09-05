@@ -99,7 +99,7 @@ function StatusHeader({
     <div className="embedreindex-status">
       <Badge tone={tone}>{label}</Badge>
       {data.reindex_needed && !isRunning && (
-        <span className="t-small">
+        <span className="t-caption">
           {t("embedreindex.entitiesPending", {
             count: formatNumber(data.entities_pending, locale),
           })}
@@ -118,7 +118,7 @@ function StatusHeader({
         // small number here and a stalled one grows without bound. That is what
         // makes the judgment possible, and it is why the label says "last
         // progress" rather than "reindexing since".
-        <span className="t-small">
+        <span className="t-caption">
           {t("embedreindex.lastProgress", {
             duration: formatDuration(
               Math.max(0, Date.now() - new Date(data.updated_at).getTime()),
@@ -150,13 +150,13 @@ function EstimateBody({
         <strong>{formatNumber(preview.entities_pending, locale)}</strong>
       </p>
       {preview.estimated_ai_tokens !== undefined && (
-        <p className="t-small">
+        <p className="t-caption">
           {t("embedreindex.estimateTokens")} ~
           {formatNumber(preview.estimated_ai_tokens, locale)}
         </p>
       )}
       {preview.estimated_cost_minor !== undefined && (
-        <p className="t-small">
+        <p className="t-caption">
           {t("embedreindex.estimateCost")} ~
           {formatMoney(
             preview.estimated_cost_minor,
@@ -165,15 +165,15 @@ function EstimateBody({
           )}
         </p>
       )}
-      <p className="t-small">{t("embedreindex.estimateQualityHeuristic")}</p>
+      <p className="t-caption">{t("embedreindex.estimateQualityHeuristic")}</p>
       {preview.utilization_impact && (
         <>
-          <p className="t-small">{t("embedreindex.utilizationTitle")}</p>
+          <p className="t-caption">{t("embedreindex.utilizationTitle")}</p>
           <p>
             <Badge tone={bandTone(preview.utilization_impact)}>
               {impactLabel(preview.utilization_impact, t)}
             </Badge>{" "}
-            <span className="t-small">
+            <span className="t-caption">
               {t("embedreindex.workspacePending", {
                 count: formatNumber(preview.entities_pending, locale),
               })}
@@ -424,7 +424,7 @@ export function EmbedReindexCard() {
                   }}
                 >
                   {preview.isPending && (
-                    <p className="t-small">
+                    <p className="t-caption">
                       {t("embedreindex.previewLoading")}
                     </p>
                   )}

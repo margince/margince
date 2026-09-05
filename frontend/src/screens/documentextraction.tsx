@@ -210,12 +210,12 @@ export function DocumentExtractionPanel({
   });
 
   if (dismissed) {
-    return <p className="t-small">{t("extraction.dismissed")}</p>;
+    return <p className="t-caption">{t("extraction.dismissed")}</p>;
   }
   if (accepted !== null) {
     return (
       <section className="real-card" aria-label={t("extraction.acceptedLabel")}>
-        <p className="t-small">
+        <p className="t-caption">
           {plural("extraction.acceptedHeading", accepted, {
             count: formatNumber(accepted, locale),
           })}
@@ -287,7 +287,7 @@ function ReadOffer({
   const t = useT();
   return (
     <div className="staging-card">
-      <p className="t-small">{t("extraction.neverRead")}</p>
+      <p className="t-caption">{t("extraction.neverRead")}</p>
       <Button
         onClick={onRead}
         pending={pending}
@@ -334,7 +334,7 @@ function ExtractionBody({
     // who to ask.
     return (
       <div className="staging-card">
-        <p className="t-small">{t("extraction.failed")}</p>
+        <p className="t-caption">{t("extraction.failed")}</p>
         {extraction.status_detail && (
           <p className="t-caption">{extraction.status_detail}</p>
         )}
@@ -347,7 +347,7 @@ function ExtractionBody({
     // what keeps it from reading as a broken feature.
     return (
       <div className="staging-card">
-        <p className="t-small">{t("extraction.groundedNothing")}</p>
+        <p className="t-caption">{t("extraction.groundedNothing")}</p>
         {extraction.status_detail && (
           <p className="t-caption">{extraction.status_detail}</p>
         )}
@@ -358,7 +358,7 @@ function ExtractionBody({
 
   return (
     <StagingCard>
-      <p className="t-small">
+      <p className="t-caption">
         {plural("extraction.heading", extraction.fields.length, {
           count: formatNumber(extraction.fields.length, locale),
         })}

@@ -72,7 +72,7 @@ export function CaptureActivityDrawer({
       placement="right"
     >
       <h2 id="capture-pipeline-title">{t("pipeline.title")}</h2>
-      <p className="capture-activity__drawer-sub">{t("pipeline.sub")}</p>
+      <p className="capture-activity__drawer-sub t-sub">{t("pipeline.sub")}</p>
       {/* WHICH message this ladder is about, named the way every other citation
           of a message in the product names one. The reader arrived here from a
           row that showed a sender and a subject in the trace's own layout; this
@@ -100,7 +100,7 @@ export function CaptureActivityDrawer({
       ) : trace.data ? (
         <>
           {trace.data.connector && (
-            <p className="capture-activity__drawer-transport">
+            <p className="capture-activity__drawer-transport t-sub">
               {t("pipeline.transport")}{" "}
               <strong>{providerLabel(trace.data.connector)}</strong>
             </p>

@@ -125,7 +125,7 @@ function hoursMinutes(msRemaining: number): string {
 const META = (
   <>
     <AutonomyDot tier="confirm" />
-    <span className="t-small">Send an email</span>
+    <span className="t-caption">Send an email</span>
     <DecisionToolChip verb="send_email" label={(verb) => `via ${verb}`} />
   </>
 );
@@ -245,7 +245,7 @@ export const FieldChange: Story = {
     meta: (
       <>
         <AutonomyDot tier="confirm" />
-        <span className="t-small">Move an account's stage</span>
+        <span className="t-caption">Move an account's stage</span>
         {/* An unmapped kind gives the caller no verb, and the tool chip stays
             silent rather than naming a tool nobody could check. */}
         <DecisionToolChip verb={undefined} label={(verb) => `via ${verb}`} />
@@ -281,7 +281,7 @@ const CLOSE_DATE = approval({
 const CLOSE_DATE_META = (
   <>
     <AutonomyDot tier="confirm" />
-    <span className="t-small">Correct a close date</span>
+    <span className="t-caption">Correct a close date</span>
   </>
 );
 
@@ -342,7 +342,7 @@ export const Decided: Story = {
     decided: true,
     meta: (
       <>
-        <span className="t-small">Send an email</span>
+        <span className="t-caption">Send an email</span>
         <DecisionStatusChip
           approval={approval({ status: "approved" })}
           decided
@@ -399,7 +399,7 @@ export const DecidedRejected: Story = {
     }),
     meta: (
       <>
-        <span className="t-small">Send an email</span>
+        <span className="t-caption">Send an email</span>
         <DecisionStatusChip
           approval={approval({ status: "rejected" })}
           decided

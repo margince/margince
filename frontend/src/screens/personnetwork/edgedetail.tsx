@@ -41,7 +41,7 @@ export function EdgeDetail({
   );
   if (!node || edges.length === 0) {
     return (
-      <p className="pn-counts">
+      <p className="pn-counts t-sub">
         {t("person.graph.noEdge", { name: node?.label ?? "" })}
       </p>
     );
@@ -69,7 +69,7 @@ export function EdgeDetail({
               <Badge>{t(`person.band.${edge.strength_bucket}`)}</Badge>
               {withWhom && <span>{withWhom}</span>}
             </p>
-            <p className="pn-counts">
+            <p className="pn-counts t-sub">
               {t("person.graph.counts", {
                 total: formatNumber(edge.interactions_90d, locale),
                 inbound: formatNumber(edge.inbound_90d ?? 0, locale),
@@ -79,7 +79,7 @@ export function EdgeDetail({
             {receipts.length > 0 ? (
               <ReceiptList receipts={receipts} />
             ) : (
-              <p className="pn-counts">{t("person.graph.countsOnly")}</p>
+              <p className="pn-counts t-sub">{t("person.graph.countsOnly")}</p>
             )}
           </div>
         );

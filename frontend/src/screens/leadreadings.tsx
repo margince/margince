@@ -96,10 +96,10 @@ function ScoreCard({
   // a score of ZERO the absence is the truth, whether or not a breakdown was
   // retained.
   const basis = explain.isPending ? (
-    <p className="t-small">{t("lead.scoreLoading")}</p>
+    <p className="t-caption">{t("lead.scoreLoading")}</p>
   ) : explain.isError ? (
     <>
-      <p className="t-small">{t("lead.scoreFactorsFailed")}</p>
+      <p className="t-caption">{t("lead.scoreFactorsFailed")}</p>
       <Button small variant="ghost" onClick={() => explain.refetch()}>
         {t("common.retry")}
       </Button>
@@ -114,9 +114,9 @@ function ScoreCard({
       }))}
     />
   ) : explain.data?.explained || lead.score === 0 ? (
-    <p className="t-small">{t("lead.scoreNoFactors")}</p>
+    <p className="t-caption">{t("lead.scoreNoFactors")}</p>
   ) : (
-    <p className="t-small">{t("lead.scoreNotStoredYet")}</p>
+    <p className="t-caption">{t("lead.scoreNotStoredYet")}</p>
   );
   return (
     <StatCard

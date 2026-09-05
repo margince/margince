@@ -169,7 +169,9 @@ function ProvenanceMark({
     return <ProvenanceTag provenance={{ kind: "human", self: true }} />;
   }
   return (
-    <span className="ob-triage-row-provenance">{t(STATE_WORD[state])}</span>
+    <span className="ob-triage-row-provenance t-label">
+      {t(STATE_WORD[state])}
+    </span>
   );
 }
 
@@ -311,10 +313,13 @@ function FieldRow({
           </span>
           <span className="ob-triage-row-meta">
             {row.confidence !== null && (
-              <span className="ob-triage-score">
+              <span className="ob-triage-score t-caption">
                 {formatNumber(Math.round(row.confidence * 100), locale)}
+                {/* How many sources back the score — always at most one today,
+                    since a proposal field carries a single evidence pair, but
+                    said as a count rather than assumed. */}
                 {row.evidence !== null && (
-                  <span className="ob-triage-source">
+                  <span className="ob-triage-source t-caption">
                     {/* A row carries at most one evidence record, so this
                         count is the literal one — a single digit no locale
                         groups or punctuates differently. */}
@@ -352,7 +357,7 @@ function FieldRow({
       <div className="ob-triage-row-head">
         <label className="t-label" htmlFor={controlId}>
           {row.label}
-          <em>{t(STATE_WORD[row.state])}</em>
+          <em className="t-caption">{t(STATE_WORD[row.state])}</em>
         </label>
         <button
           type="button"
@@ -528,7 +533,7 @@ function SectionBadge({
   }
   if (blocking.length === 0) {
     return (
-      <span className="ob-triage-nav-advisory">
+      <span className="ob-triage-nav-advisory t-caption">
         <b aria-hidden>{formatNumber(advisory.length, locale)}</b>
         <span className="sr-only">
           {t("ob.conv.triage.sectionAdvisory", {
@@ -585,7 +590,7 @@ function NavOutstandingList({
         <li key={row.field}>
           <button
             type="button"
-            className="ob-triage-nav-item"
+            className="ob-triage-nav-item t-caption"
             data-blocking={isBlocking ? "true" : undefined}
             onClick={() => jumpToFindings([row.field])}
           >
@@ -602,7 +607,7 @@ function NavOutstandingList({
         </li>
       ))}
       {overflow > 0 && (
-        <li className="ob-triage-nav-more">
+        <li className="ob-triage-nav-more t-caption">
           {t("ob.conv.triage.sectionMore", {
             count: formatNumber(overflow, locale),
           })}
@@ -638,7 +643,7 @@ function SectionQuantity({
     );
   }
   return (
-    <span className="ob-triage-nav-quantity">
+    <span className="ob-triage-nav-quantity t-caption">
       <b aria-hidden>{formatNumber(count, locale)}</b>
       <span className="sr-only">
         {t(labelKey, { count: formatNumber(count, locale) })}
@@ -812,14 +817,14 @@ function CompanyIdentityCard({
           this whole surface is about the only anonymous one. */}
       <Avatar name={name} size="md" />
       <div className="ob-company-card-body">
-        <h3>{name}</h3>
+        <h3 className="t-h3">{name}</h3>
         {facts.length > 0 && (
           <dl className="ob-company-card-facts">
             {facts.map((fact) => {
               const { field } = fact;
               return (
                 <div key={fact.label}>
-                  <dt>{fact.label}</dt>
+                  <dt className="t-eyebrow">{fact.label}</dt>
                   <dd>
                     {field === null ? (
                       fact.value
@@ -866,10 +871,14 @@ function PersonRow({ person }: Readonly<{ person: SitePerson }>) {
       <span className="ob-triage-person-name">{person.name}</span>
       <span className="ob-triage-person-role">{person.role}</span>
       {person.published_email && (
-        <span className="ob-triage-person-meta">{person.published_email}</span>
+        <span className="ob-triage-person-meta t-caption">
+          {person.published_email}
+        </span>
       )}
       {person.linkedin_url && (
-        <span className="ob-triage-person-meta">{person.linkedin_url}</span>
+        <span className="ob-triage-person-meta t-caption">
+          {person.linkedin_url}
+        </span>
       )}
       {evidence && <EvidenceChip evidence={evidence} collapsed />}
     </li>
@@ -894,7 +903,7 @@ function PeopleGroupSection({
       <div className="ob-triage-group-head">
         <h3>{t("ob.conv.triage.peopleLabel")}</h3>
         {people.length > 0 && (
-          <span>
+          <span className="t-caption">
             {t("ob.conv.triage.peopleCount", {
               count: formatNumber(people.length, locale),
             })}
@@ -990,7 +999,7 @@ function FactRow({
       </button>
       <span className="ob-triage-fact-value">{fact.value}</span>
       <span className="ob-triage-fact-meta">
-        <span className="ob-triage-score">
+        <span className="ob-triage-score t-caption">
           {formatNumber(Math.round(fact.confidence * 100), locale)}
         </span>
         <EvidenceChip evidence={evidence} collapsed />
@@ -1030,7 +1039,7 @@ function FactTypeGroup({
       summary={
         <>
           {coldFieldLabel(field, t)}
-          <span className="ob-triage-fact-type-count">
+          <span className="ob-triage-fact-type-count t-caption">
             {formatNumber(facts.length, locale)}
           </span>
         </>
@@ -1075,7 +1084,7 @@ function FactsGroupSection({
     <section id={groupDomId(FACTS_KEY)} className="ob-triage-group">
       <div className="ob-triage-group-head">
         <h3>{t("ob.conv.triage.factsLabel")}</h3>
-        <span>
+        <span className="t-caption">
           {t("ob.factsSelected", {
             selected: formatNumber(selection.selectedCount, locale),
             total: formatNumber(facts.length, locale),
@@ -1124,7 +1133,7 @@ function FieldGroupSection({
     <section id={groupDomId(group.key)} className="ob-triage-group">
       <div className="ob-triage-group-head">
         <h3>{t(group.labelKey)}</h3>
-        <span>
+        <span className="t-caption">
           {formatNumber(filled, locale)}/
           {formatNumber(group.order.length, locale)}
         </span>
@@ -1138,7 +1147,7 @@ function FieldGroupSection({
               group.workCount > 0 &&
               solidCount > 0 && (
                 <li className="ob-triage-solid-divider" aria-hidden>
-                  <span>
+                  <span className="t-eyebrow">
                     {t("ob.conv.triage.looksSolid", {
                       count: formatNumber(solidCount, locale),
                     })}
@@ -1455,7 +1464,9 @@ export function CompanyConfirmCard(props: CompanyConfirmCardProps) {
           under a tail head of its own. */}
       {props.read != null && (
         <div className="ob-triage-readmore">
-          <p className="ob-triage-rest-head">{t("ob.conv.triage.restTitle")}</p>
+          <p className="ob-triage-rest-head t-eyebrow">
+            {t("ob.conv.triage.restTitle")}
+          </p>
           <CoverageCard
             pages={props.read.pages}
             warnings={props.read.warnings}

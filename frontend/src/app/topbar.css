@@ -106,8 +106,6 @@
   border: 1px solid var(--paneEdge);
   border-radius: var(--r-sm);
   background: var(--pane);
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
   text-align: left;
   cursor: pointer;
 }

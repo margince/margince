@@ -160,7 +160,7 @@ export function VoiceInsights({
   const { locale } = useLocale();
   return (
     <div className="vdna-insights">
-      <div className="vdna-provenance t-small">
+      <div className="vdna-provenance t-caption">
         {t("voice.insights.provenance", {
           n: identifierNumber(profileVersion),
         })}
@@ -171,7 +171,7 @@ export function VoiceInsights({
       {(data.words !== null ||
         data.sources !== null ||
         data.meanSentence !== null) && (
-        <div className="t-small">
+        <div className="t-caption">
           {/* All three counts through the same formatter. A number handed to
               `t` straight is interpolated with `String`, which groups nothing
               and puts a decimal POINT where a German reader writes a comma — so
@@ -269,7 +269,7 @@ function SampleDrafts({ drafts }: Readonly<{ drafts: VoiceSampleDraft[] }>) {
             <span className="vdna-pill">{t("voice.insights.draftOnly")}</span>
             {draft.subject && <b>{draft.subject}</b>}
             {draft.score !== null && (
-              <span className="t-small">
+              <span className="t-caption">
                 {t("voice.insights.voiceScore", {
                   pct: formatNumber(Math.round(draft.score * 100), locale),
                 })}
@@ -279,7 +279,7 @@ function SampleDrafts({ drafts }: Readonly<{ drafts: VoiceSampleDraft[] }>) {
           <p>{draft.body}</p>
         </Card>
       ))}
-      <p className="t-small vdna-disclosure">
+      <p className="t-caption vdna-disclosure">
         {t("voice.insights.disclosure")}
       </p>
     </div>

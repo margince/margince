@@ -86,7 +86,7 @@ export function CompanyLastOffer({
       <span className="t-caption">
         {t("commercial.lastOffer", { deal: leading.name })}
       </span>
-      <span className="co-row-meta">
+      <span className="co-row-meta t-caption">
         <button
           type="button"
           className="co-rowlink"
@@ -214,7 +214,7 @@ export function CompanyContractState({
           count: formatNumber(contracts.active_count, locale),
         })}
       </span>
-      <span className="co-row-meta">
+      <span className="co-row-meta t-caption">
         {contractValues(contracts, locale, (amount) =>
           t("contracts.perYear", { amount }),
         ).map((value) => (

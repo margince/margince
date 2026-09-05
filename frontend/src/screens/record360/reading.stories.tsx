@@ -24,7 +24,7 @@ function Reference({ title }: Readonly<{ title: string }>) {
   return (
     <Panel title={title}>
       <PanelBody>
-        <p className="t-small">
+        <p className="t-caption">
           A reference section a reader consults rather than reads.
         </p>
       </PanelBody>

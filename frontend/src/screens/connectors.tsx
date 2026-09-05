@@ -405,7 +405,7 @@ function TelegramNotice({
 }: Readonly<{ query: ReturnType<typeof useChannelConnections> }>) {
   const t = useT();
   if (query.isPending) {
-    return <p className="t-small">{t("connectors.loading")}</p>;
+    return <p className="t-caption">{t("connectors.loading")}</p>;
   }
   if (query.isError) {
     return (
@@ -548,7 +548,7 @@ function TelegramConnectorsPanel() {
           }
         }}
       >
-        <p className="t-small">{t("connectors.telegramDisconnectBody")}</p>
+        <p className="t-caption">{t("connectors.telegramDisconnectBody")}</p>
       </ConfirmModal>
     </Panel>
   );
@@ -1163,7 +1163,7 @@ function MailConnectorsPanel() {
         <p className="settings-panel-sub">{t("connectors.sub")}</p>
         <OAuthOutcomeNote />
         {connectors.isPending && (
-          <p className="t-small">{t("connectors.loading")}</p>
+          <p className="t-caption">{t("connectors.loading")}</p>
         )}
         {connectors.isError && (
           <Callout tone="danger" live="alert">
@@ -1222,8 +1222,10 @@ function MailConnectorsPanel() {
           }
         }}
       >
-        <p className="t-small">{t("connectors.disconnectBody")}</p>
-        {disconnectNoteKey && <p className="t-small">{t(disconnectNoteKey)}</p>}
+        <p className="t-caption">{t("connectors.disconnectBody")}</p>
+        {disconnectNoteKey && (
+          <p className="t-caption">{t(disconnectNoteKey)}</p>
+        )}
       </ConfirmModal>
       <ImapConnectForm
         open={imapConnectOpen}
