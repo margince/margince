@@ -120,7 +120,7 @@ func (w *assuranceWorkspaceWorker) check(ctx context.Context, ws ids.UUID) error
 	}
 	w.log.InfoContext(ctx, "the forecast's inputs were checked",
 		"workspace_id", ws, "run_id", result.RunID,
-		"eligible_deals", result.EligibleDeals, "findings", result.Findings,
+		"eligible_deals", result.EligibleDeals, "findings", result.Findings, "cleared", result.Cleared,
 		"readiness", result.Readiness, "status", result.Status)
 	return nil
 }
