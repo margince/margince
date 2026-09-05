@@ -236,3 +236,66 @@ func TestASecondDailySnapshotForTheSameDayIsRefused(t *testing.T) {
 			"arbitrated, and a call is a real reason to freeze another state", err)
 	}
 }
+
+// A movement compares two readings of the SAME window.
+//
+// The ids come from the caller, and nothing else in the request checks that
+// they describe one period. A week differenced against the quarter containing
+// it reports the change of WINDOW as deals that moved: every line of the
+// waterfall is then a number describing no decision anybody made, and the
+// figures are large enough to look real.
+func TestAMovementAcrossTwoDifferentWindowsIsRefused(t *testing.T) {
+	t.Parallel()
+	e := setupSnapshot(t)
+	ctx := e.as()
+
+	zone, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2026, time.September, 14, 12, 0, 0, 0, zone)
+	quarter, err := ResolvePeriod(PeriodQuarter, at, 1, zone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The Monday of that same week, so the two windows overlap and only their
+	// bounds tell them apart — the case a length check alone would miss.
+	week, err := ResolveWeek(time.Date(2026, time.September, 14, 0, 0, 0, 0, zone), zone)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	take := func(period Period, when time.Time) ids.UUID {
+		t.Helper()
+		var id ids.UUID
+		if err := e.store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+			var err error
+			id, err = e.store.TakeSnapshot(ctx, tx, NewSnapshot{
+				Period: period, Scope: Scope{Kind: ScopeWorkspace},
+				Trigger: TriggerDaily, BaseCurrency: "EUR",
+				Readings: mixedPopulation(t), TakenAt: when,
+			})
+			return err
+		}); err != nil {
+			t.Fatalf("taking the snapshot: %v", err)
+		}
+		return id
+	}
+	quarterly := take(quarter, at)
+	weekly := take(week, at)
+
+	if _, err := e.store.Movement(ctx, ReadingWeighted, quarterly, weekly); err == nil {
+		t.Fatal("a quarter was differenced against a week and answered as though the " +
+			"result described deals moving")
+	}
+
+	// And the ADMISSION case, or the refusal above could be a comparison that
+	// refuses everything. A different local DAY, because the daily arbiter
+	// allows one snapshot per period per day — which is the constraint working
+	// rather than a defect, and the same reason the fixture above picks its own
+	// quarter.
+	later := take(quarter, at.AddDate(0, 0, 1))
+	if _, err := e.store.Movement(ctx, ReadingWeighted, quarterly, later); err != nil {
+		t.Fatalf("two readings of the same quarter were refused: %v", err)
+	}
+}

@@ -6,9 +6,9 @@
   "catalog": {
     "tools": 73,
     "system_frame_tokens": 353,
-    "tokens": 21485,
+    "tokens": 21497,
     "median_tool_tokens": 263,
-    "mean_tool_tokens": 293
+    "mean_tool_tokens": 294
   },
   "agents": [
     {
@@ -159,12 +159,12 @@
       "tokens": 349
     },
     {
-      "name": "search_context",
-      "tokens": 345
+      "name": "forecast_readings",
+      "tokens": 349
     },
     {
-      "name": "forecast_readings",
-      "tokens": 337
+      "name": "search_context",
+      "tokens": 345
     },
     {
       "name": "prep_for_meeting",

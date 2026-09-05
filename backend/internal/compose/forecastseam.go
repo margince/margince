@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -173,11 +174,48 @@ func ForecastPeriodAt(
 		return forecasting.Period{}, "", fmt.Errorf(
 			"compose: the installation zone %q is not a zone: %w", zoneName, err)
 	}
-	period, err := forecasting.ResolvePeriod(kind, at, fiscalStart, zone)
+	period, err := resolveWindow(ctx, tx, kind, at, fiscalStart, zone)
 	if err != nil {
 		return forecasting.Period{}, "", err
 	}
 	return period, baseCurrency, nil
+}
+
+// resolveWindow picks the resolver the window length needs.
+//
+// A week is not a division of the financial year — a fiscal year opening in
+// April moves every quarter and month boundary and moves no Monday — so it is
+// cut from the Monday weekly.WeekStartOf names rather than from month
+// arithmetic. Asking that function rather than finding a Monday here is what
+// keeps ONE answer to "what week is it": a second derivation would file a
+// Sunday-night job's work under a different week from the review beside it.
+func resolveWindow(
+	ctx context.Context, tx pgx.Tx, kind forecasting.PeriodKind,
+	at time.Time, fiscalStart int, zone *time.Location,
+) (forecasting.Period, error) {
+	if kind != forecasting.PeriodWeek {
+		return forecasting.ResolvePeriod(kind, at, fiscalStart, zone)
+	}
+	// `at` is a real instant by the time it reaches here: a caller-supplied
+	// `as_of` DATE is anchored at midday UTC by forecasting.DayNamed before the
+	// transport hands it on, and a caller who sent none is asking about their
+	// own moment. So this converts through the zone like any instant, with no
+	// guess about which kind of value arrived — the guess was the bug, in both
+	// directions: reading every input as a date moved Monday morning in Tokyo
+	// back a week, and reading every input as an instant moved a named Monday
+	// in Los Angeles back a week.
+	monday, err := weekly.WeekStartOf(ctx, tx, at)
+	if err != nil {
+		return forecasting.Period{}, err
+	}
+	// WeekStartOf answers a calendar DATE and stamps it UTC — briefs.LocalDayAt
+	// returns the local day as a zoneless marker, which is what its callers
+	// compare against `date` columns. Rebuilt at local midnight here, because a
+	// period is compared against instants too, and handing the UTC marker
+	// straight on would place the week two hours late in Berlin and a day early
+	// in Auckland.
+	return forecasting.ResolveWeek(
+		time.Date(monday.Year(), monday.Month(), monday.Day(), 0, 0, 0, 0, zone), zone)
 }
 
 // ForecastWritableScope answers the population a caller may ASSERT about, in

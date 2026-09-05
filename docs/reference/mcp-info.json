@@ -10,16 +10,16 @@
   "totals": {
     "tools": 73,
     "resources": 12,
-    "tool_catalog_bytes": 208289,
+    "tool_catalog_bytes": 208337,
     "resource_catalog_bytes": 4584,
-    "approx_wire_tokens_total": 53218,
+    "approx_wire_tokens_total": 53230,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 50780,
-      "input_schema_bytes": 42930,
+      "input_schema_bytes": 42978,
       "output_schema_bytes": 98827,
-      "description_plus_input_schema_bytes": 93710
+      "description_plus_input_schema_bytes": 93758
     }
   },
   "tools": {
@@ -4505,10 +4505,11 @@
               "type": "string"
             },
             "period": {
-              "description": "The window length. Quarters follow the installation's own financial year, which may not start in January.",
+              "description": "The window length. Quarters and months follow the installation's own financial year, which may not start in January; a week runs Monday to Sunday.",
               "enum": [
                 "quarter",
-                "month"
+                "month",
+                "week"
               ],
               "type": "string"
             },
