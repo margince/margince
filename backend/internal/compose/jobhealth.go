@@ -28,7 +28,7 @@ import (
 )
 
 // dispatcherKinds answers the untenanted kinds the job-health read admits:
-// every kind api/jobs.yaml declares as a dispatcher.
+// every kind api/jobs.yaml declares FLEET-WIDE.
 //
 // river_job has no workspace column and so no RLS, which is why this arm
 // exists at all — a dispatcher's rows carry no workspace, and the scope has
@@ -43,7 +43,7 @@ import (
 func dispatcherKinds() []string {
 	var kinds []string
 	for kind, spec := range jobs.Declared() {
-		if spec.Role == jobs.Dispatcher {
+		if spec.Fleet {
 			kinds = append(kinds, kind)
 		}
 	}

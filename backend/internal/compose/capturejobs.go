@@ -134,39 +134,23 @@ func (OrgNamePromotionArgs) Kind() string { return "org_name_promotion" }
 func (OrgNamePromotionArgs) FleetWide() {}
 
 // orgNamePromotionWorker is the dispatcher for the corroborated-name sweep.
+// orgNamePromotionWorker promotes names for every live workspace.
+//
+// One worker where there were two (ADR-0103).
 type orgNamePromotionWorker struct {
-	pool *pgxpool.Pool
-}
-
-func (w *orgNamePromotionWorker) Work(ctx context.Context, _ *river.Job[OrgNamePromotionArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(OrgNamePromotionWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return OrgNamePromotionWorkspaceArgs{Workspace: ws} }))
-}
-
-// OrgNamePromotionWorkspaceArgs is one workspace's org-name promotion pass.
-type OrgNamePromotionWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (OrgNamePromotionWorkspaceArgs) Kind() string { return "org_name_promotion_workspace" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a OrgNamePromotionWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// orgNamePromotionWorkspaceWorker runs one workspace's pass: a database-only
-// walk over the org_name evidence the enrich job collects.
-type orgNamePromotionWorkspaceWorker struct {
+	pool     *pgxpool.Pool
 	promoter *OrgNamePromoter
 }
 
-func (w *orgNamePromotionWorkspaceWorker) Work(ctx context.Context, job *river.Job[OrgNamePromotionWorkspaceArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	return jobs.FaultContext(ctx, w.promoter.RunWorkspace(wsCtx, job.Args.Workspace))
+func (w *orgNamePromotionWorker) Work(ctx context.Context, _ *river.Job[OrgNamePromotionArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.promoteWorkspace))
+}
+
+// orgNamePromotionWorkspaceWorker runs one workspace's pass: a database-only
+// walk over the org_name evidence the enrich job collects.
+func (w *orgNamePromotionWorker) promoteWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	return jobs.FaultContext(ctx, w.promoter.RunWorkspace(wsCtx, workspace))
 }
 
 // CaptureDigestArgs builds the morning digests (CAP-DDL-6; the nightly
@@ -198,42 +182,22 @@ type captureDigestWorker struct {
 // worker holds no model lane at all — and ai_capture exists to keep long,
 // model-bound work from evicting short jobs. Queueing the morning digest
 // behind two model workers would delay it for no reason.
+// The GRANULARITY returns to one row for the fleet (ADR-0103). A per-workspace
+// child gave a retry that re-ran only the workspace that failed; the pass joins
+// its failures again, as it did before that split, and a retry re-runs the
+// walk. Assembling a digest for a workspace that already has today's is a
+// re-build of the same day, which the payload's as-of-now truths make
+// idempotent — that is why the split was affordable to undo.
 func (w *captureDigestWorker) Work(ctx context.Context, _ *river.Job[CaptureDigestArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(CaptureDigestWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return CaptureDigestWorkspaceArgs{Workspace: ws} }))
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.digestWorkspace))
 }
 
-// CaptureDigestWorkspaceArgs builds one workspace's morning digests.
-type CaptureDigestWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (CaptureDigestWorkspaceArgs) Kind() string { return "capture_digest_workspace" }
-
-// WorkspaceID binds this build to its tenant (jobs.WorkspaceScoped).
-func (a CaptureDigestWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// captureDigestWorkspaceWorker assembles one workspace's digests. A failed
-// workspace already failed the job before this split — the pass joined its
-// failures rather than swallowing them — so what changes here is the
-// GRANULARITY: one row per workspace instead of one joined error for the
-// fleet, and a retry that re-runs only the workspace that failed.
-type captureDigestWorkspaceWorker struct {
-	digests *captureDigestWorker
-}
-
-func (w *captureDigestWorkspaceWorker) Work(ctx context.Context, job *river.Job[CaptureDigestWorkspaceArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	clock := w.digests.now
+func (w *captureDigestWorker) digestWorkspace(ctx context.Context, workspace ids.UUID) error {
+	clock := w.now
 	if clock == nil {
 		clock = time.Now
 	}
-	return jobs.FaultContext(ctx, w.digests.registry.BuildDigests(wsCtx, clock().UTC()))
+	return w.registry.BuildDigests(principal.WithWorkspaceID(ctx, workspace), clock().UTC())
 }
 
 // CaptureBackfillArgs pages ONE bounded backfill run (ADR-0063). Unique by
@@ -341,8 +305,13 @@ func (w *captureBackfillWorker) enqueueDigest(ctx context.Context, args CaptureB
 			"backfill", args.BackfillID, "err", err)
 		return
 	}
-	child := CaptureDigestWorkspaceArgs{Workspace: args.Workspace}
-	if _, err := client.Insert(ctx, child, oneOffChildOpts(child.Kind())); err != nil {
+	// The PASS, not a per-workspace child: the child kind went with the fan-out
+	// (ADR-0103). A backfill's same-day digest is wanted for the workspace it
+	// imported into, and the pass covers that workspace along with the rest —
+	// on the single-workspace installations this product supports, the same
+	// work.
+	child := CaptureDigestArgs{}
+	if _, err := client.Insert(ctx, child, oneOffPassOpts(child.Kind())); err != nil {
 		w.log.WarnContext(ctx, "capture backfill: digest enqueue failed",
 			"backfill", args.BackfillID, "err", err)
 	}

@@ -30,7 +30,7 @@ const PREVIEW_ROUTE = "POST /connectors/gmail/backfill/preview";
 const START_ROUTE = "POST /connectors/gmail/backfill";
 const CANCEL_ROUTE = "DELETE /connectors/gmail/backfill";
 
-function render(initial: BackfillStatus, onFinish = vi.fn()) {
+function render(initial: BackfillStatus, onDone = vi.fn()) {
   const view = rtlRender(
     <QueryClientProvider
       client={
@@ -41,12 +41,12 @@ function render(initial: BackfillStatus, onFinish = vi.fn()) {
         <OnboardingBackread
           provider="gmail"
           initial={initial}
-          onFinish={onFinish}
+          onDone={onDone}
         />
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return { ...view, onFinish };
+  return { ...view, onDone };
 }
 
 const previewOf = (body: Record<string, unknown>) =>
@@ -251,6 +251,36 @@ describe("starting the read", () => {
     expect(
       await screen.findByRole("heading", { name: "Reading your mailbox" }),
     ).toBeInTheDocument();
+  });
+
+  // A read that stopped is history, not a mailbox that can never be read: the
+  // step used to end on the stopped run with only the exit, so a reader who
+  // pressed stop had no way back to the pick.
+  it("offers a stopped read again, on the window it already ran", async () => {
+    const starts: unknown[] = [];
+    installFetchStub({
+      [PREVIEW_ROUTE]: () =>
+        previewOf({ window: "12m", estimated_messages: 90 }),
+      [START_ROUTE]: (body) => {
+        starts.push(body);
+        return jsonResponse({ state: "queued" }, 202);
+      },
+    });
+    render({ state: "cancelled", window: "12m", counts: { captured: 4 } });
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Start another import" }),
+    );
+    expect(
+      (screen.getByRole("radio", { name: /12 months/ }) as HTMLInputElement)
+        .checked,
+    ).toBe(true);
+
+    await screen.findByText("About 90 messages in that window.");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Connect and read" }),
+    );
+    await waitFor(() => expect(starts).toEqual([{ window: "12m" }]));
   });
 
   it("says a start failed and never claims a running read", async () => {
@@ -473,7 +503,7 @@ describe("outcomes", () => {
     installFetchStub({
       [STATUS_ROUTE]: () => jsonResponse({ code: "internal" }, 500),
     });
-    const onFinish = vi.fn();
+    const onDone = vi.fn();
     rtlRender(
       <QueryClientProvider
         client={
@@ -481,7 +511,7 @@ describe("outcomes", () => {
         }
       >
         <LocaleProvider initial="en">
-          <OnboardingBackread provider="gmail" onFinish={onFinish} />
+          <OnboardingBackread provider="gmail" onDone={onDone} />
         </LocaleProvider>
       </QueryClientProvider>,
     );
@@ -489,13 +519,13 @@ describe("outcomes", () => {
     expect(
       await screen.findByText(/import status can't be read right now/),
     ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /^continue$/i }));
-    expect(onFinish).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByRole("button", { name: /^done$/i }));
+    expect(onDone).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("leaving", () => {
-  it("walks into the app with the read still running", async () => {
+  it("closes with the read still running", async () => {
     const cancels: unknown[] = [];
     installFetchStub({
       [CANCEL_ROUTE]: (body) => {
@@ -505,7 +535,7 @@ describe("leaving", () => {
       [STATUS_ROUTE]: () =>
         jsonResponse({ state: "running", counts: { messages_scanned: 5 } }),
     });
-    const { onFinish } = render({
+    const { onDone } = render({
       state: "running",
       counts: { messages_scanned: 5 },
     });
@@ -513,11 +543,38 @@ describe("leaving", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "Continue while it reads" }),
     );
-    // The mailbox is connected on this path, so the CONNECT step is not
-    // skipped — only the history read would have been.
-    expect(onFinish).toHaveBeenCalledTimes(1);
-    expect(onFinish).toHaveBeenCalledWith(false);
+    // Leaving the backread is not leaving the step: the read keeps running
+    // and nothing is cancelled.
+    expect(onDone).toHaveBeenCalledTimes(1);
     expect(cancels).toEqual([]);
+  });
+
+  it("keeps every exit shut while a decision about the mailbox is still being written", async () => {
+    installFetchStub({
+      [STATUS_ROUTE]: () =>
+        jsonResponse({ state: "running", counts: { messages_scanned: 5 } }),
+    });
+    const onDone = vi.fn();
+    rtlRender(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <LocaleProvider initial="en">
+          <OnboardingBackread provider="gmail" disabled onDone={onDone} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+
+    // The posture write needs this surface mounted to show a refusal; an
+    // exit that pressed mid-write would leave it nowhere to land.
+    const exit = await screen.findByRole("button", {
+      name: "Continue while it reads",
+    });
+    expect(exit).toBeDisabled();
+    await userEvent.click(exit);
+    expect(onDone).not.toHaveBeenCalled();
   });
 
   it("declines the history read without starting one", async () => {
@@ -529,15 +586,14 @@ describe("leaving", () => {
         return jsonResponse({ state: "queued" }, 202);
       },
     });
-    const { onFinish } = render({ state: "none" });
+    const { onDone } = render({ state: "none" });
 
     await screen.findByText("About 1,234 messages in that window.");
     await userEvent.click(
       screen.getByRole("button", { name: "Do not read history now" }),
     );
 
-    expect(onFinish).toHaveBeenCalledTimes(1);
-    expect(onFinish).toHaveBeenCalledWith(false);
+    expect(onDone).toHaveBeenCalledTimes(1);
     expect(starts).toEqual([]);
   });
 

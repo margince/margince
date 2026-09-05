@@ -59,7 +59,7 @@ func TestAnUnreadablePreferenceStillSends(t *testing.T) {
 	}
 	body := string(source)
 
-	start := strings.Index(body, "func (w *weeklyGenerateWorkspaceWorker) optedOutOfWeekly")
+	start := strings.Index(body, "func (w *weeklyGenerateWorker) optedOutOfWeekly")
 	if start < 0 {
 		t.Fatal("no preference read found, so this test judged nothing")
 	}

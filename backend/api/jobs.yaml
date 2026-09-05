@@ -224,6 +224,7 @@ kinds:
 
   capture_auto_enrich_sweep:
     role: worker
+    fleet: true
     go_type: CaptureAutoEnrichSweepArgs
     queue: default
     timeout: 5m
@@ -247,6 +248,7 @@ kinds:
 
   finance_sync_sweep:
     role: worker
+    fleet: true
     go_type: FinanceSyncSweepArgs
     queue: default
     timeout: 5m
@@ -295,6 +297,7 @@ kinds:
 
   capture_classify:
     role: worker
+    fleet: true
     go_type: CaptureClassifyArgs
     queue: default
     timeout: 15m
@@ -309,6 +312,7 @@ kinds:
 
   owed_verdict:
     role: worker
+    fleet: true
     go_type: OwedVerdictArgs
     queue: default
     timeout: 15m
@@ -323,6 +327,7 @@ kinds:
 
   capture_counterparty_verdict:
     role: worker
+    fleet: true
     go_type: CounterpartyVerdictArgs
     queue: default
     timeout: 20m
@@ -339,6 +344,7 @@ kinds:
 
   capture_confidentiality_verdict:
     role: worker
+    fleet: true
     go_type: ConfidentialityVerdictArgs
     queue: default
     timeout: 20m
@@ -355,6 +361,7 @@ kinds:
 
   capture_trace_sweep:
     role: worker
+    fleet: true
     go_type: CaptureTraceSweepArgs
     queue: default
     timeout: 5m
@@ -368,43 +375,27 @@ kinds:
 
 
   capture_digest:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: CaptureDigestArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: 24h
     registration: {when: [GmailRegistry], absent: registers_nothing}
-    fans_out_to: capture_digest_workspace
-    fan_out_unit: workspace
     reason: >-
       Daily, after the overnight passes it summarizes. The boot pass backfills
       a missed night, so a morning is never silently empty.
 
-  capture_digest_workspace:
-    role: worker
-    go_type: CaptureDigestWorkspaceArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 3
-    opts_owner: fan_out
-    registration: {when: [GmailRegistry], absent: registers_nothing}
-    args:
-      Workspace: id
-    reason: >-
-      A database-only assembly, one digest per connected user — this worker
-      holds no model lane at all, which is also why it fans out onto default
-      rather than ai_capture.
 
   brief_generate:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: BriefGenerateArgs
     queue: default
-    timeout: 2m
+    timeout: 10m
     opts_owner: caller
     cadence: 1h
-    fans_out_to: brief_generate_workspace
-    fan_out_unit: workspace
     reason: >-
       Hourly, not daily, because the morning it aims at is the installation's
       local one — an hourly tick crosses the briefing hour in every zone the
@@ -413,14 +404,13 @@ kinds:
       backfills a night the worker was down for.
 
   weekly_review_generate:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: WeeklyReviewGenerateArgs
     queue: default
-    timeout: 2m
+    timeout: 10m
     opts_owner: caller
     cadence: 6h
-    fans_out_to: weekly_review_generate_workspace
-    fan_out_unit: workspace
     reason: >-
       Every six hours rather than weekly, for the same reason the brief ticks
       hourly: the Monday it aims at is the installation's local one, and a tick
@@ -429,39 +419,11 @@ kinds:
       uniqueness collapses the extra ticks into one review, and the same
       property backfills a Monday the worker was down for.
 
-  weekly_review_generate_workspace:
-    role: worker
-    go_type: WeeklyReviewGenerateWorkspaceArgs
-    queue: default
-    timeout: 10m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      One deterministic measuring pass per full-seat rep whose local Monday has
-      arrived — database-only counting, so it fans out onto default rather than
-      a model lane. Ten minutes covers a large team's serial passes; a rep whose
-      pass failed is retried with the rest, and the week uniqueness makes that
-      safe.
 
-  brief_generate_workspace:
-    role: worker
-    go_type: BriefGenerateWorkspaceArgs
-    queue: default
-    timeout: 10m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      One deterministic ranking pass per full-seat rep whose local morning has
-      arrived — database-only, so it fans out onto default rather than a model
-      lane. Ten minutes covers a large team's serial passes; a rep whose pass
-      failed is retried with the rest, and the day uniqueness makes that safe.
 
   capture_enrich:
     role: worker
+    fleet: true
     go_type: CaptureEnrichArgs
     queue: default
     timeout: 20m
@@ -508,14 +470,13 @@ kinds:
       is walked only for a fault the sidecar's backoff does not own.
 
   assurance_sweep:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: AssuranceSweepArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: 24h
-    fans_out_to: assurance_workspace
-    fan_out_unit: workspace
     reason: >-
       Daily, because the check is what the Forecast tab's readiness verdict,
       coverage line and findings are all read from, and a check that never runs
@@ -525,48 +486,16 @@ kinds:
       the gap between an install starting and its first check is time a person
       spends looking at what reads like a broken page.
 
-  assurance_workspace:
-    role: worker
-    go_type: AssuranceWorkspaceArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      One tenant's input check: every rule asked of every live open deal, with
-      the sources the run could reach recorded beside the findings. Three
-      attempts, the house number — a run that could not read an upstream
-      finishes as `incomplete` rather than failing, so a retry here is for a
-      pass that did not finish at all, and the next daily tick supersedes
-      whatever the last one came to.
 
   close_date_sweep:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: CloseDateSweepArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: {operator: CloseDateInterval}
-    fans_out_to: close_date_workspace
-    fan_out_unit: workspace
 
-  close_date_workspace:
-    role: worker
-    go_type: CloseDateWorkspaceArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 5
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      A database-only hygiene pass over one tenant's deals with past close
-      dates, each correction its own audited write. Five attempts rather than
-      three because both deals passes tick DAILY: a workspace that failed a
-      transient blip would otherwise wait a full day for its next chance, and
-      River's ladder spans minutes at these rungs — comfortably inside one tick.
 
   comms_send_email:
     role: worker
@@ -655,6 +584,7 @@ kinds:
 
   embed_drift_sweep:
     role: worker
+    fleet: true
     go_type: EmbedDriftSweepArgs
     queue: default
     timeout:
@@ -722,6 +652,7 @@ kinds:
 
   embed_reindex:
     role: worker
+    fleet: true
     go_type: EmbedReindexArgs
     queue: ai_capture
     timeout:
@@ -762,14 +693,13 @@ kinds:
       three would quietly cost the installation its pass.
 
   forecast_snapshot_sweep:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: ForecastSnapshotSweepArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: 24h
-    fans_out_to: forecast_snapshot_workspace
-    fan_out_unit: workspace
     reason: >-
       Daily, because a snapshot is the frozen state the movement waterfall
       differences and the shares point at, and a forecast that is never frozen
@@ -778,46 +708,16 @@ kinds:
       day after — with nothing to difference, movement is empty either way, and
       the sooner the first one exists the sooner the second is worth taking.
 
-  forecast_snapshot_workspace:
-    role: worker
-    go_type: ForecastSnapshotWorkspaceArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      One tenant's daily snapshot: resolve the period, read the deals in it and
-      freeze the readings with the rows they were summed from. Three attempts,
-      the house number — the pass ticks daily and the store arbitrates `daily`
-      to one row per local day, so a retry that lands after a successful one
-      writes nothing rather than a duplicate.
 
   follow_up_reconcile:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: FollowUpReconcileArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: {operator: ReconcileInterval}
-    fans_out_to: follow_up_workspace
-    fan_out_unit: workspace
 
-  follow_up_workspace:
-    role: worker
-    go_type: FollowUpWorkspaceArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 5
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      A database-only overnight pass over one tenant's open follow-ups, staging
-      what it proposes rather than acting. Five attempts for the reason
-      close_date_workspace takes five: both deals passes tick DAILY, so three
-      would cost a workspace a full day over a transient blip.
 
   fx_rate_refresh:
     role: worker
@@ -908,34 +808,19 @@ kinds:
       connection, and the write that advances watch_expires_at behind it.
 
   graph_edge_reconcile:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: GraphEdgeReconcileArgs
     queue: default
-    timeout: 2m
+    timeout: 15m
     opts_owner: caller
     cadence: 24h
-    fans_out_to: graph_edge_workspace
-    fan_out_unit: workspace
     reason: >-
       Daily, because the 90-day window counts go stale through the passage of
       time and nothing emits an event for that. This pass is what bounds the
       staleness the migration states, and doubles as the corruption remedy, so
       loosening the cadence without amending the migration makes it a lie.
 
-  graph_edge_workspace:
-    role: worker
-    go_type: GraphEdgeWorkspaceArgs
-    queue: default
-    timeout: 15m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      The whole interaction projection cleared and refilled in ONE transaction,
-      so a reader never sees an empty graph — which also means a pass cut short
-      loses all of it and starts over. The cap has to clear the refold of the
-      longest-history tenant, and the daily cadence leaves the room to do it.
 
   # One job, not a dispatcher and a child (ADR-0103 §1): one indexed scan over
   # an installation-wide table, so there is nothing to fan out over.
@@ -1075,99 +960,56 @@ kinds:
       changing history nobody kept.
 
   idempotency_retention:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: IdempotencyRetentionArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: 1h
-    fans_out_to: idempotency_retention_workspace
-    fan_out_unit: workspace
     reason: >-
       Hourly rather than daily: the rows hold verbatim record snapshots and the
       replay window they serve is only 24h, so a daily pass would leave a day of
       expired personal data sitting past its purpose.
 
-  idempotency_retention_workspace:
-    role: worker
-    go_type: IdempotencyRetentionWorkspaceArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      An indexed delete of one tenant's claims past the 24h replay window —
-      database-only, and hourly, so a pass never faces more than an hour's
-      arrivals once an installation has caught up.
 
   linkedin_rematch:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: LinkedInRematchArgs
     queue: default
-    timeout: 2m
+    timeout: 10m
     opts_owner: caller
     cadence: 1h
-    fans_out_to: linkedin_rematch_workspace
-    fan_out_unit: workspace
     reason: >-
       Hourly rather than daily, because the window it covers is a workspace's
       first day: an export uploaded during onboarding waits on a capture
       backfill that finishes in minutes, and a rep who imported their network in
       the morning should not wait until tomorrow to see it on an account.
 
-  linkedin_rematch_workspace:
-    role: worker
-    go_type: LinkedInRematchWorkspaceArgs
-    queue: default
-    timeout: 10m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      A company-key renormalize and merge, then a match plus a staging pass per
-      ghost owner. Database-only, but sized by an uploaded export rather than by
-      a batch bound — a real one measured 5,064 rows, and every owner in the
-      workspace is walked.
 
   org_name_promotion:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: OrgNamePromotionArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: 24h
-    fans_out_to: org_name_promotion_workspace
-    fan_out_unit: workspace
     reason: >-
       Daily, after the enrich pass has had a night to collect the signatures
       this one weighs.
 
-  org_name_promotion_workspace:
-    role: worker
-    go_type: OrgNamePromotionWorkspaceArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      A database-only walk over the org_name evidence the enrich pass collected;
-      it needs no model, which is why it registers even where enrich does not.
 
   overlay_reconcile:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: OverlayReconcileArgs
-    queue: default
-    timeout: 2m
+    queue: overlay_reconcile
+    timeout: 20m
     opts_owner: caller
     cadence: {operator: OverlayInterval}
     registration: {when: [OverlayVault], absent: registers_nothing}
-    fans_out_to: overlay_reconcile_workspace
-    fan_out_unit: workspace
     reason: >-
       The unit is what a child row STANDS FOR, and this one stands for a
       workspace: the due-scan issues one query per overlay-mode tenant and so
@@ -1177,42 +1019,6 @@ kinds:
       connection at work time on purpose, so a tenant that changed between the
       scan and the sweep is swept under its CURRENT identity.
 
-  overlay_reconcile_workspace:
-    role: worker
-    go_type: OverlayReconcileWorkspaceArgs
-    queue: overlay_reconcile
-    timeout: 20m
-    max_attempts: 1
-    opts_owner: fan_out
-    registration: {when: [OverlayVault], absent: registers_nothing}
-    fault:
-      nil_after_logging: >-
-        two nil paths, neither a swallowed sweep failure. The disconnect
-        fence: every fenced write aborted with ErrConnectionGone, so there
-        is nothing to retry and nothing to back off. And a failed
-        RecordSweepSuccess, which leaves the previous backoff in place --
-        the next due-scan is simply later than it needed to be, never
-        earlier. A genuine sweep failure IS returned; the row fails and
-        stays failed, because this kind takes a single attempt and its retry
-        is the backoff the worker just recorded.
-    args:
-      Workspace: id
-    reason: >-
-      The longest outbound pass in the tree — the owners directory, the
-      email-mapping revalidation, and every object class paged over the network.
-      It is bounded rather than absent because it lands on a SERIAL queue, so
-      the cap is also how long one tenant's slow portal may hold every other
-      tenant's sweep. Being cut short costs at most one page: the backfill
-      checkpoints overlay_backfill_cursor after every page and the incremental
-      phase rides a per-class watermark, so the next due tick resumes.
-
-      One attempt, not three: this kind's retry is the sweep backoff the worker
-      itself records (overlay_sync_state.next_sweep_at — at least minutes out,
-      and longer for a rate limit), and the dispatcher's due-scan is gated on
-      it. River's own ladder does not read that column, so a second rung would
-      re-sweep a throttled incumbent seconds after the worker deliberately
-      paced it. The failed row stays failed and visible; the next due tick is
-      the retry.
 
   overlay_refetch:
     role: worker
@@ -1237,14 +1043,13 @@ kinds:
       whatever it misses, so a slow one is dropped rather than waited on.
 
   link_reconcile:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: LinkReconcileArgs
     queue: default
-    timeout: 2m
+    timeout: 10m
     opts_owner: caller
     cadence: 24h
-    fans_out_to: link_reconcile_workspace
-    fan_out_unit: workspace
     reason: >-
       Nightly. The cohort-promote consumer already repairs an ordering as it
       happens, so this is the backstop for the deliveries it did not get — a
@@ -1252,48 +1057,20 @@ kinds:
       consumer existed. Daily because the damage is invisible on every surface
       until it is repaired: a company page simply reports a contact went quiet.
 
-  link_reconcile_workspace:
-    role: worker
-    go_type: LinkReconcileWorkspaceArgs
-    queue: default
-    timeout: 10m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      linkReconcilePeoplePerTick (200) contacts, each one bounded repair
-      transaction of its own so a lock or a concurrent merge costs that contact
-      and not the pass. A caught-up workspace costs one query and writes nothing.
 
   participant_backfill:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: ParticipantBackfillArgs
     queue: default
-    timeout: 2m
+    timeout: 10m
     opts_owner: caller
     cadence: 24h
-    fans_out_to: participant_backfill_workspace
-    fan_out_unit: workspace
     reason: >-
       Daily. The pass is a catch-up and not a deadline — new mail already
       arrives with its participants stamped — but it stays periodic because a
       restore or an import can reintroduce unattributed rows.
 
-  participant_backfill_workspace:
-    role: worker
-    go_type: ParticipantBackfillWorkspaceArgs
-    queue: default
-    timeout: 10m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      participantBackfillBatchesPerTick (25) write transactions of
-      participantBackfillBatch (500) activities each — 12,500 rows, deliberately
-      competing with live capture for the same rows, then a yield. A caught-up
-      workspace stops at the first empty batch.
 
   # One job, not a dispatcher and a child (ADR-0103 §1): it keeps the
   # dispatcher's kind and cadence and the child's queue, timeout and attempt
@@ -1340,15 +1117,14 @@ kinds:
       each rung risks buying the same answer again.
 
   provider_run_poll_sweep:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: ProviderRunPollSweepArgs
     queue: default
     timeout: 2m
     opts_owner: caller
     cadence: 30s
     registration: {when: [ProviderRuns.Registry, ProviderRuns.Vault], absent: registers_nothing}
-    fans_out_to: provider_run_poll
-    fan_out_unit: workspace
     reason: >-
       Surfe resolves a bulk enrichment in seconds, so a 30-second scan keeps
       the person page's in-progress state honest without hammering the fleet —
@@ -1356,33 +1132,16 @@ kinds:
       argument. A caught-up workspace costs one indexed probe of the due
       partial index.
 
-  provider_run_poll:
-    role: worker
-    go_type: ProviderRunPollArgs
-    queue: default
-    timeout: 2m
-    max_attempts: 3
-    opts_owner: fan_out
-    registration: {when: [ProviderRuns.Registry, ProviderRuns.Vault], absent: registers_nothing}
-    args:
-      Workspace: id
-    reason: >-
-      One workspace's drain: poll the in-progress runs, re-attempt pending
-      claim hand-offs, re-dispatch stranded submissions and expire dead
-      in-flight markers. Each run is a bounded provider call; the sweep's next
-      tick resumes whatever a cut-off pass left, so two minutes bounds one
-      pass rather than the backlog.
 
   provider_lookup_sweep:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: ProviderLookupSweepArgs
     queue: default
     timeout: 2m
     opts_owner: caller
     cadence: 1m
     registration: {when: [ProviderRuns.Registry, ProviderRuns.Vault], absent: registers_nothing}
-    fans_out_to: provider_lookup
-    fan_out_unit: workspace
     reason: >-
       The catch-up pass over contacts a run never covered — everybody who
       existed before the provider was connected. A minute, not the poll
@@ -1391,32 +1150,15 @@ kinds:
       only make the ceiling arrive sooner. A caught-up workspace costs one
       indexed probe.
 
-  provider_lookup:
-    role: worker
-    go_type: ProviderLookupArgs
-    queue: default
-    timeout: 2m
-    max_attempts: 1
-    opts_owner: fan_out
-    registration: {when: [ProviderRuns.Registry, ProviderRuns.Vault], absent: registers_nothing}
-    args:
-      Workspace: id
-    reason: >-
-      One workspace's catch-up tick: queue up to the budget, and apply the
-      purchases that completed before a record could hold them. ONE attempt on
-      purpose — a retry would queue a second batch for the same tick, and the
-      next tick a minute later is the retry. Nothing is lost by not retrying:
-      whatever this pass did not reach is still uncovered when it runs again.
 
   signal_scan:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: SignalScanArgs
     queue: default
-    timeout: 2m
+    timeout: 20m
     opts_owner: caller
     cadence: 1h
-    fans_out_to: signal_scan_workspace
-    fan_out_unit: workspace
     reason: >-
       Hourly, like capture_classify and for the same reason: a caught-up
       workspace costs one indexed probe, and an account whose own mail ends a
@@ -1425,25 +1167,6 @@ kinds:
       child's, and this half enumerates the fleet and inserts one row per
       workspace.
 
-  signal_scan_workspace:
-    role: worker
-    go_type: SignalScanWorkspaceArgs
-    queue: ai_capture
-    timeout: 20m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      Three producers in series, and the middle one sizes the budget. The
-      deterministic ghosted-thread rule is one indexed scan and an insert per
-      account; the extractor then reads up to extractThreadCap (200) settled
-      conversations at one model call each; the proposal reconciler walks every
-      open signal afterwards. Twenty minutes is what
-      capture_counterparty_verdict_workspace takes for the same 200 serial
-      calls, which is also why this lands on ai_capture rather than default.
-      Each conversation commits with its own watermark, so a cut-off pass keeps
-      every reading it paid for and the next tick resumes on the backlog.
 
   site_deep_read:
     role: worker
@@ -1710,29 +1433,14 @@ kinds:
       Telegram.
 
   time_scan:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: TimeScanArgs
     queue: default
-    timeout: 2m
+    timeout: 10m
     opts_owner: caller
     cadence: {operator: TimeScanInterval}
-    fans_out_to: time_scan_workspace
-    fan_out_unit: workspace
 
-  time_scan_workspace:
-    role: worker
-    go_type: TimeScanWorkspaceArgs
-    queue: default
-    timeout: 10m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      A coarse activity pre-filter, then one automation dispatch per matched
-      clock-triggered instance. Database-only — the actions in the closed
-      catalog write rows and stage approvals, they do not transmit — but the
-      matched set is a tenant's standing automations rather than a batch bound.
 
   voice_build:
     role: worker

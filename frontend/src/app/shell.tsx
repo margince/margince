@@ -868,6 +868,15 @@ export function Shell({
             navigation, so there is no repeated block ahead of the content for a
             reader to skip past (WCAG 2.4.1). */}
         <main className="main">
+          {/* The import a reader started during setup keeps running while they
+              answer the rest of it, and the step that drew the run is behind
+              them by then — so the gauge belongs here too. Onboarding only:
+              the other rail-less routes are the anonymous surfaces, which have
+              no connections to read, and the consent screen, which is one
+              request in flight and nothing else. Unlinked, because these
+              routes carry no navigation and a reader mid-flow has a place to
+              lose. */}
+          {route.screen === "onboarding" && <CaptureChip linked={false} />}
           <div className="scroll" ref={scroller}>
             {children}
           </div>
@@ -924,7 +933,7 @@ export function Shell({
             long as mail is arriving. Inside `.main` rather than beside the
             edge below, because it is positioned against the content column
             and not the window. */}
-          <CaptureChip route={route} />
+          <CaptureChip linked />
           {/* Focusable only as the skip link's destination — never a tab stop of
             its own, which is what tabIndex -1 buys. A reader who takes the skip
             lands here, PAST the strip, and the next Tab continues into the page's

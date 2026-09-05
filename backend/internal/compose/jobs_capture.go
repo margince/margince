@@ -42,7 +42,6 @@ func addGmailCaptureJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConf
 	}
 	digests := &captureDigestWorker{registry: cfg.GmailRegistry, pool: pool, log: log}
 	addDeclaredWorker[CaptureDigestArgs](reg, digests)
-	addDeclaredWorker[CaptureDigestWorkspaceArgs](reg, &captureDigestWorkspaceWorker{digests: digests})
 	addDeclaredWorker[GmailSyncArgs](reg, &gmailSyncWorker{registry: cfg.GmailRegistry, log: log})
 	// The sync dispatcher scans every registered connector, so a Google
 	// Calendar connection (the same Google OAuth app) syncs on the identical
@@ -127,8 +126,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// the enrich pass already wrote, so it needs no model. Gating it on a brain
 	// would leave an AI-less deployment unable to act on signatures it had
 	// already collected.
-	addDeclaredWorker[OrgNamePromotionArgs](reg, &orgNamePromotionWorker{pool: pool})
-	addDeclaredWorker[OrgNamePromotionWorkspaceArgs](reg, &orgNamePromotionWorkspaceWorker{promoter: NewOrgNamePromoter(pool, log)})
+	addDeclaredWorker[OrgNamePromotionArgs](reg, &orgNamePromotionWorker{pool: pool, promoter: NewOrgNamePromoter(pool, log)})
 
 	// Registered unconditionally for a different reason: only the counterparty
 	// verdict's JUDGING stage needs a model, and the worker skips that stage

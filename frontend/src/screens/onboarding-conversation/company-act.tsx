@@ -385,7 +385,7 @@ export function CompanyAct({
       // Checkpoint the confirmed company so the classic coordinator resumes
       // at the right step and role if the user switches shells.
       void persist({
-        step: machine.current.memberPath ? "connect" : "invite",
+        step: "basis",
         mode: prevSnapshot.current !== null ? "website" : "manual",
         readId: prevSnapshot.current?.id ?? null,
         values: draftRef.current.values,

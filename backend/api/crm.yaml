@@ -431,11 +431,13 @@ paths:
         The signed-in human rotates their own credential. The CURRENT PASSWORD is the
         authority, not the session: a session is what a stolen laptop already has, and
         letting one set a new password would turn a borrowed browser into a permanent
-        takeover. Every credential that could act as the account ends with the change —
+        takeover. Every credential that existed before the change is dead afterwards —
         sessions, OAuth grants and their refresh chains, unconsumed authorization codes,
-        locally minted passports — INCLUDING the session making the call, so the caller
-        signs in again with the password they just chose. A new password equal to the
-        current one is refused rather than accepted as a no-op. Audited.
+        locally minted passports, unredeemed set-password tokens — INCLUDING the session
+        making the call. The caller continues on a fresh session minted by the change
+        itself, delivered in the session cookie of the response, so the password they
+        just proved is not asked for a third time. A new password equal to the current
+        one is refused rather than accepted as a no-op. Audited.
       requestBody:
         required: true
         content:
@@ -448,7 +450,7 @@ paths:
                 current_password: { type: string, minLength: 1 }
                 new_password: { type: string, minLength: 12, maxLength: 256 }
       responses:
-        '204': { description: 'Password changed; every credential for the account, including this session, is revoked.' }
+        '204': { description: 'Password changed; every credential that existed before it, this session included, is revoked, and the session cookie now carries the one the change minted.' }
         '401':
           description: >
             No session, or an authenticated refusal the caller can act on. The machine `code`
@@ -10860,6 +10862,61 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /installation/authentication-policy:
+    get:
+      tags: [Identity]
+      operationId: getAuthenticationPolicy
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Which sign-in methods this installation offers.
+      description: |
+        The sign-in half of the installation's settings, read on its own.
+
+        It is a separate operation rather than a field on `GET /installation/settings`
+        because the two have different readers. Every role reads the installation's name,
+        timezone and base currency — a rep reading amounts benefits from knowing the
+        currency. Who may sign in and how is authentication administration, and showing it
+        to every seat that holds `installation_settings.read` would be handing out the shape
+        of the login surface to readers with no business in it.
+
+        The aggregate could not simply carry the narrower grant. Its fields are read through
+        one settings catalog whose entries each declare one object, so gating the sign-in
+        field there would make the WHOLE aggregate demand this grant and take the ordinary
+        installation read down with it. Hence a projection: same values, own gate.
+
+        `sign_in_providers` reports every provider this DEPLOYMENT mounted, each marked with
+        whether the installation has CHOSEN to offer it. Chosen is not the same as working:
+        a provider mounted without a stored OAuth app and without environment credentials
+        is still listed, and still reads as enabled, because this is the screen an operator
+        goes to in order to finish configuring it — the login page withholds it until they
+        do. A client rendering this as "what a visitor sees today" would be wrong. The
+        effective set is
+        the intersection — an admin can only ever narrow what the deployment configured,
+        never invent a client id — and a nil stored choice means every configured provider,
+        so an installation that upgrades into the setting keeps the login screen it had.
+
+        PASSWORD IS NOT LISTED and cannot be disabled. It is the method every installation
+        always has, and the one an admin must not be able to strand everybody by removing.
+
+        Governed by `authentication_policy` for this READ. Two things it does not yet
+        govern, both tracked and both visible from here rather than discovered later:
+        `GET /installation/settings` still returns the same `sign_in_providers` field to
+        any holder of `installation_settings.read`, and `PATCH /installation/settings`
+        still accepts `enabled_oidc_providers` on `installation_settings.update`. Closing
+        either means removing a published field or verb, which is a breaking change and a
+        deprecation cycle rather than an edit. Until then this endpoint is the narrower
+        surface, not a narrower authority.
+
+        Human-only: an agent never reads how humans sign in.
+      responses:
+        '200':
+          description: The sign-in policy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthenticationPolicy' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
   /installation/settings:
     get:
       tags: [Identity]
@@ -20906,7 +20963,7 @@ components:
       description: |
         The installation's identity and reporting basis (ADR-0090/A135). Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, base_currency_locked, max_upload_bytes, sign_in_providers]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers]
       properties:
         name:
           type: string
@@ -20989,6 +21046,22 @@ components:
             a file too large is refused before it is sent instead of after. The ceiling bounds
             the whole request, part framing included, which is why a client should leave a
             little room rather than compare a file against it exactly.
+        forecast_forward_measure:
+          type: string
+          enum: [commit_evidence, weighted, manager_call]
+          x-enum-varnames: [SettingsForwardMeasureCommitEvidence, SettingsForwardMeasureWeighted, SettingsForwardMeasureManagerCall]
+          description: |
+            Which remaining-pipeline reading a projected landing is built from. A setting
+            rather than a fixed choice, because it is a question about how this installation
+            SELLS rather than about the software: a team with a disciplined commit stage means
+            something by it, and one that commits everything does not — their weighted number
+            is the honest one.
+
+            `commit_evidence` is the default and the strictest: committed deals whose close
+            date somebody confirmed, a provisional date being a guess that stays out.
+            `manager_call` takes the authored call as the whole period's landing and is not
+            added to what is already won; with no current call the read falls back to
+            `commit_evidence` and says so in the landing's `caveat`.
     UpdateInstallationSettingsRequest:
       type: object
       description: A sparse installation-settings patch (admin/ops, human-only).
@@ -21033,6 +21106,13 @@ components:
             Password sign-in is not a member of this list and cannot be removed by any value of
             it. Omit the field to leave the choice unchanged; send an empty array to offer
             password only.
+        forecast_forward_measure:
+          type: string
+          enum: [commit_evidence, weighted, manager_call]
+          description: |
+            Which remaining-pipeline reading a projected landing is built from. Never frozen:
+            it is applied on READ and stores nothing, so changing it re-computes every landing
+            at once and re-means no stored row.
 
     CaptureActivityResponse:
       type: object
@@ -21506,6 +21586,24 @@ components:
             answers sends them to debug a mismatch that was never the cause.
           items:
             $ref: '#/components/schemas/ConnectorAppRedirectUri'
+    AuthenticationPolicy:
+      type: object
+      description: |
+        Which sign-in methods this installation offers, apart from the rest of its settings.
+
+        Carries only what `authentication_policy` governs. The installation's name, timezone
+        and currency are NOT here — every role reads those, and repeating them in a document
+        governed by a narrower grant would make the same fact answer to two authorities.
+      required: [sign_in_providers]
+      properties:
+        sign_in_providers:
+          type: array
+          description: |
+            Every provider this deployment mounted, each marked with whether the
+            installation has chosen to offer it — which is a stored choice, not a
+            guarantee the provider has working credentials. Password is never listed: it
+            is the method every installation always has and cannot switch off.
+          items: { $ref: '#/components/schemas/SignInProvider' }
     SignInProvider:
       type: object
       additionalProperties: false
@@ -24101,6 +24199,16 @@ components:
             case: asked for on its own it makes the vendor hunt for an email nobody bought,
             fail, and skip the number — returning a run that COMPLETED with nothing in it.
             A buy button asks for both or neither; the server refuses the lone request.
+        follows:
+          type: [string, 'null']
+          description: >-
+            The category whose EMPTY answer triggers this one, for a category that is a
+            fallback rather than a purchase of its own. Surfe's personal email is the case:
+            the cascade fires only when the professional address comes back with nothing, so
+            a request naming the fallback alone never issues it and the server refuses it.
+            Sent beside `requires` because the two are different relations with the same
+            consequence for a button — ask for both or neither — and `cost` already prices
+            the pair.
 
     ProviderLookupBacklog:
       type: object
@@ -33083,6 +33191,103 @@ components:
             count: a count of what somebody may not read is itself a statement about how
             much of it there is, so the reader is told the figure is partial and not by
             how much.
+        landing: { $ref: '#/components/schemas/ForecastLanding' }
+        sufficiency: { $ref: '#/components/schemas/ForecastSufficiency' }
+      additionalProperties: false
+    ForecastLanding:
+      type: object
+      description: >-
+        Where the period finishes if nothing changes, and what that answer rests on.
+
+        The four money readings say what is IN the pipeline; none of them answers "what
+        will we land on?", and a reader left to add two of them together picks the wrong
+        two. This is that sum, made once and labelled with the measure it used.
+      required: [amount_minor, measure, won_minor, remaining_minor]
+      properties:
+        amount_minor:
+          type: integer
+          format: int64
+          description: The projection itself, in the installation's base currency.
+        measure:
+          type: string
+          enum: [commit_evidence, weighted, manager_call]
+          x-enum-varnames: [ForwardMeasureCommitEvidence, ForwardMeasureWeighted, ForwardMeasureManagerCall]
+          description: >-
+            Which reading the forward half was built from — the one ACTUALLY used, which
+            is not always the one configured: a manager-call installation with no current
+            call falls back to commit evidence and says so in `caveat`.
+        won_minor:
+          type: integer
+          format: int64
+          description: The money already banked, the backward half of the sum.
+        remaining_minor:
+          type: integer
+          format: int64
+          description: >-
+            The forward half. Zero for a manager call, which is a single authored TOTAL
+            rather than a remainder — a call is not added to won_minor, and a
+            reconciliation line drawing this must say the call instead of a split.
+        caveat:
+          type: string
+          enum: [call_absent, call_below_actual]
+          x-enum-varnames: [LandingCaveatCallAbsent, LandingCaveatCallBelowActual]
+          description: >-
+            Why this answer is not the plain one, absent when it is. `call_absent` is a
+            manager-call installation with no current call. `call_below_actual` is an
+            authored call less than the money already won — reported and never corrected,
+            because the call is somebody's stated belief and the server does not overrule
+            it.
+      additionalProperties: false
+    ForecastSufficiency:
+      type: object
+      description: >-
+        Whether the open pipeline supports the reference landing, and what the reference
+        is.
+
+        NOT a target. Margince has no target model: `basis` names where the reference came
+        from so a reader can disagree with the basis rather than with the arithmetic, and
+        the reference is always from OUTSIDE the current projection — a coverage figure
+        divided by a target derived from the same pipeline is always fine and says
+        nothing.
+      properties:
+        absent:
+          type: string
+          enum: [insufficient_basis, insufficient_history]
+          x-enum-varnames: [SufficiencyAbsenceInsufficientBasis, SufficiencyAbsenceInsufficientHistory]
+          description: >-
+            Why there is no answer, when there is none. Every other field is then absent
+            and the surface says this rather than drawing a figure. `insufficient_basis` is
+            neither a manager call nor four completed comparable periods;
+            `insufficient_history` is too few closed deals for a conversion rate to be a
+            rate rather than an anecdote.
+        basis:
+          type: string
+          enum: [manager_call, historical_median]
+          x-enum-varnames: [SufficiencyBasisManagerCall, SufficiencyBasisHistoricalMedian]
+          description: >-
+            Where the reference came from. A current authored call outranks history: a
+            manager who wrote a number down has said what this period is for, and the
+            median of the last four completed comparable periods is the fallback for when
+            nobody has.
+        reference_landing_minor: { type: integer, format: int64 }
+        remaining_to_support_minor:
+          type: integer
+          format: int64
+          description: >-
+            The reference minus what is already won, floored at zero — a period already
+            past its reference needs no more pipeline.
+        needed_open_minor:
+          type: integer
+          format: int64
+          description: The open pipeline that remainder implies at the conversion rate.
+        current_open_minor: { type: integer, format: int64 }
+        coverage_bp:
+          type: integer
+          format: int64
+          description: >-
+            Current over needed in BASIS POINTS, so the server chooses no rounding for the
+            client. Nothing needed is 10000 (full) rather than a division by zero or an
+            unbounded ratio, because "covered" is actionable and "infinity" is not.
       additionalProperties: false
     InputCheck:
       type: object
@@ -35407,14 +35612,17 @@ components:
         expected_version: { type: integer, minimum: 0, description: Zero creates; otherwise the version last read. }
         step:
           type: string
-          enum: [read, confirm, invite, team, voice, results, connect, complete]
+          enum: [read, confirm, basis, invite, team, voice, results, connect, complete]
           description: >
-            Where the creator's setup stands. `invite` is the question asked once the company is
-            confirmed — whether the person setting the installation up will also work in it, which
-            is what decides whether the optional `voice` and `connect` steps are offered at all.
-            `team` is where a creator who will not work in it invites the first person who will.
-            `results` is kept for rows written before that question existed; a client treats it as
-            the connect step being next.
+            Where the setup stands. `basis` is the installation's reporting basis — base currency
+            and reporting timezone — asked of the creator once the company is confirmed, before any
+            step about the person answering. `invite` is the question asked next: whether the person
+            setting the installation up will also work in it, which is what decides whether the
+            `voice` and `connect` steps are walked now or by the first person they invite. `team` is
+            where a creator who will not work in it invites that person. A member's route begins at
+            `voice`: the company and its basis are already settled, so their steps are the personal
+            ones alone. `results` is kept for rows written before the invite existed; a client treats
+            it as the connect step being next.
         source_mode: { type: [string, 'null'], enum: [website, manual, null] }
         website_url: { type: [string, 'null'], format: uri }
         site_read_id: { type: [string, 'null'], format: uuid }
@@ -35432,7 +35640,7 @@ components:
       required: [path, step, source_mode, company_draft, selected_fact_keys, voice_skipped, connect_skipped, version, created_at, updated_at]
       properties:
         path: { type: string, enum: [creator, member], readOnly: true }
-        step: { type: string, enum: [read, confirm, invite, team, voice, results, connect, complete] }
+        step: { type: string, enum: [read, confirm, basis, invite, team, voice, results, connect, complete] }
         source_mode: { type: [string, 'null'], enum: [website, manual, null] }
         website_url: { type: [string, 'null'], format: uri }
         site_read_id: { type: [string, 'null'], format: uuid }

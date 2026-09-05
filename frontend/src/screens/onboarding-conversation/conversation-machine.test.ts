@@ -16,7 +16,7 @@ import { entityQuestion, run, speakerQuestion } from "./test-fixtures";
 // build-retry semantics live in conversation-correlation.test.ts.
 
 describe("conversationReducer happy path", () => {
-  it("walks the creator journey across all six acts", () => {
+  it("walks the creator journey across all seven acts", () => {
     let state = run([{ type: "START", memberPath: false }]);
     expect(state).toMatchObject({ act: "company", phase: "co.intro" });
 
@@ -80,9 +80,9 @@ describe("conversationReducer happy path", () => {
       ],
       state,
     );
-    // A creator is asked whether they will work in Margince themselves
-    // before either personal act opens.
-    expect(state).toMatchObject({ act: "invite", phase: "in.ask" });
+    // The installation's reporting basis comes right after the company,
+    // before anything about the person answering.
+    expect(state).toMatchObject({ act: "basis", phase: "bs.ask" });
     // The read terminal appends nothing: it is silent success, and the
     // outcome right after COMPANY_CONFIRMED proves no bubble sits between
     // them.
@@ -91,6 +91,11 @@ describe("conversationReducer happy path", () => {
       i18nKey: "ob.conv.company.confirmed",
       tone: "success",
     });
+
+    // Only then is a creator asked whether they will work in Margince
+    // themselves, before either personal act opens.
+    state = run([{ type: "BASIS_DONE" }], state);
+    expect(state).toMatchObject({ act: "invite", phase: "in.ask" });
 
     state = run([{ type: "INVITE_ACCEPTED" }], state);
     expect(state).toMatchObject({ act: "voice", phase: "vo.collecting" });
@@ -128,7 +133,7 @@ describe("conversationReducer happy path", () => {
     state = run(
       [
         {
-          type: "LINKEDIN_CONNECTED",
+          type: "LINKEDIN_SAVED",
           profile: "https://www.linkedin.com/in/x",
         },
       ],
@@ -139,7 +144,7 @@ describe("conversationReducer happy path", () => {
     expect(state).toMatchObject({
       act: "connect",
       phase: "cn.consent",
-      linkedinStatus: "connected",
+      linkedinStatus: "saved",
     });
 
     // Leaving connect is not the end: every path closes on the preferences
@@ -167,7 +172,7 @@ describe("conversationReducer happy path", () => {
       [{ type: "MANUAL_CHOSEN" }, { type: "COMPANY_CONFIRMED" }],
       state,
     );
-    expect(state).toMatchObject({ act: "invite", phase: "in.ask" });
+    expect(state).toMatchObject({ act: "basis", phase: "bs.ask" });
   });
 
   it("declining the invite opens the team act, and leaving it ends the journey", () => {
@@ -177,6 +182,7 @@ describe("conversationReducer happy path", () => {
       { type: "READ_TERMINAL", readId: "r1", status: "ready" },
       { type: "REVIEW_READY" },
       { type: "COMPANY_CONFIRMED" },
+      { type: "BASIS_DONE" },
       { type: "INVITE_DECLINED" },
     ]);
     expect(state).toMatchObject({ act: "team", phase: "tm.ask" });
@@ -204,6 +210,7 @@ describe("conversationReducer happy path", () => {
       { type: "READ_TERMINAL", readId: "r1", status: "ready" },
       { type: "REVIEW_READY" },
       { type: "COMPANY_CONFIRMED" },
+      { type: "BASIS_DONE" },
       { type: "INVITE_ACCEPTED" },
       { type: "BUILD_STARTED", buildId: "b1" },
       { type: "BUILD_TERMINAL", buildId: "b1", status: "succeeded" },
@@ -232,6 +239,7 @@ describe("conversationReducer happy path", () => {
       { type: "READ_TERMINAL", readId: "r1", status: "ready" },
       { type: "REVIEW_READY" },
       { type: "COMPANY_CONFIRMED" },
+      { type: "BASIS_DONE" },
       { type: "INVITE_ACCEPTED" },
       { type: "VOICE_SKIPPED" },
       { type: "VOICE_DONE" },
@@ -272,20 +280,21 @@ describe("restore normalization out of co.confirmed", () => {
     memberPath,
   });
 
-  it("routes a restored creator to the invite", () => {
+  it("routes a restored creator to the basis act, as the live confirmation does", () => {
     expect(
       conversationReducer(restored(false), { type: "RESUME" }),
-    ).toMatchObject({ act: "invite", phase: "in.ask" });
+    ).toMatchObject({ act: "basis", phase: "bs.ask" });
   });
 
-  it("routes a restored member to consent", () => {
+  it("routes a restored member to the voice act, where their journey begins", () => {
     expect(
       conversationReducer(restored(true), { type: "RESUME" }),
-    ).toMatchObject({ act: "connect", phase: "cn.consent" });
+    ).toMatchObject({ act: "voice", phase: "vo.collecting" });
   });
 
   it("fast-forwards a creator to the stable point the target names", () => {
     const targets = [
+      { target: "bs.ask", act: "basis" },
       { target: "vo.collecting", act: "voice" },
       { target: "vo.skipped", act: "voice" },
       { target: "in.ask", act: "invite" },
@@ -299,13 +308,24 @@ describe("restore normalization out of co.confirmed", () => {
     }
   });
 
-  it("resolves any target to consent on the member path", () => {
-    expect(
-      conversationReducer(restored(true), {
-        type: "RESUME",
-        target: "in.ask",
-      }),
-    ).toMatchObject({ act: "connect", phase: "cn.consent" });
+  it("fast-forwards a member to their own stable points, and never into a creator act", () => {
+    const own = [
+      { target: "vo.collecting", act: "voice" },
+      { target: "vo.skipped", act: "voice" },
+      { target: "cn.consent", act: "connect" },
+    ] as const;
+    for (const { target, act } of own) {
+      expect(
+        conversationReducer(restored(true), { type: "RESUME", target }),
+      ).toMatchObject({ act, phase: target });
+    }
+    // A member landed in the invite would stand in an act whose every event
+    // is illegal for them — a screen with no way out.
+    for (const target of ["bs.ask", "in.ask", "tm.ask"] as const) {
+      expect(
+        conversationReducer(restored(true), { type: "RESUME", target }),
+      ).toMatchObject({ act: "voice", phase: "vo.collecting" });
+    }
   });
 
   it("ignores RESUME outside co.confirmed", () => {
@@ -358,36 +378,43 @@ describe("restore seeding through START", () => {
 });
 
 describe("member path", () => {
-  it("confirming company jumps straight to connect, skipping voice and results", () => {
-    const state = run([
-      { type: "START", memberPath: true },
-      { type: "READ_STARTED", readId: "r1" },
-      { type: "READ_TERMINAL", readId: "r1", status: "ready" },
-      { type: "REVIEW_READY" },
-      { type: "COMPANY_CONFIRMED" },
+  // A member's company was confirmed before they arrived: START opens in
+  // co.confirmed and RESUME lands them on the first act that is theirs.
+  const member = () =>
+    run([
+      { type: "START", memberPath: true, companyConfirmed: true },
+      { type: "RESUME" },
     ]);
-    // A member skips the creator acts but NOT the network ask: a colleague's
-    // LinkedIn card sits right there on the connect screen, exactly the
-    // reach the workspace is missing.
+
+  it("walks voice, connect and preferences — the personal acts, nothing else", () => {
+    let state = member();
+    expect(state).toMatchObject({ act: "voice", phase: "vo.collecting" });
+    state = run(
+      [
+        { type: "BUILD_STARTED", buildId: "b1" },
+        { type: "BUILD_TERMINAL", buildId: "b1", status: "succeeded" },
+        { type: "VOICE_DONE" },
+      ],
+      state,
+    );
     expect(state).toMatchObject({ act: "connect", phase: "cn.consent" });
+    state = run(
+      [
+        { type: "LINKEDIN_SKIPPED" },
+        { type: "CONNECT_DONE" },
+        { type: "PREFS_DONE" },
+      ],
+      state,
+    );
+    expect(state).toMatchObject({ act: "done", phase: "pf.done" });
   });
 
   it("ignores every creator-only event", () => {
-    const state = run([
-      { type: "START", memberPath: true },
-      { type: "READ_STARTED", readId: "r1" },
-      { type: "READ_TERMINAL", readId: "r1", status: "ready" },
-      { type: "REVIEW_READY" },
-      { type: "COMPANY_CONFIRMED" },
-    ]);
+    const state = member();
+    // The installation's questions: its basis, whether its creator works in
+    // it, and who to invite if not. None of them is a member's to answer.
     const creatorOnly: ConversationEvent[] = [
-      { type: "VOICE_SKIPPED" },
-      { type: "UPLOAD_ADDED", id: "u1", name: "notes.txt" },
-      { type: "SPEAKER_NEEDED", question: speakerQuestion },
-      { type: "BUILD_STARTED", buildId: "b1" },
-      { type: "BUILD_STAGE", buildId: "b1", stage: "snapshot" },
-      { type: "BUILD_TERMINAL", buildId: "b1", status: "succeeded" },
-      { type: "VOICE_DONE" },
+      { type: "BASIS_DONE" },
       { type: "INVITE_ACCEPTED" },
       { type: "INVITE_DECLINED" },
       { type: "TEAM_DONE" },
@@ -395,12 +422,12 @@ describe("member path", () => {
     for (const event of creatorOnly) {
       expect(conversationReducer(state, event)).toBe(state);
     }
-    const atInbox = conversationReducer(state, { type: "LINKEDIN_SKIPPED" });
-    expect(atInbox).toMatchObject({ act: "connect", phase: "cn.consent" });
-    const prefs = conversationReducer(atInbox, { type: "CONNECT_DONE" });
-    expect(prefs).toMatchObject({ act: "prefs", phase: "pf.ask" });
-    const done = conversationReducer(prefs, { type: "PREFS_DONE" });
-    expect(done).toMatchObject({ act: "done", phase: "pf.done" });
+    // The voice act is theirs, with every event in it.
+    const skipped = run(
+      [{ type: "VOICE_SKIPPED" }, { type: "VOICE_DONE" }],
+      state,
+    );
+    expect(skipped).toMatchObject({ act: "connect", phase: "cn.consent" });
   });
 });
 

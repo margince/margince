@@ -4532,6 +4532,9 @@ export const en = {
     "It will retry on its own; everything captured so far is kept.",
   "backfill.cancel": "Stop the import",
   "backfill.cancelledNote": "Stopped. Everything captured so far is kept.",
+  // On a run that has stopped — cancelled, failed or finished. The window it
+  // opens on is the one that ran, because the server only ever widens.
+  "backfill.restart": "Start another import",
   "backfill.unsupportedNote":
     "This mailbox type can't be backfilled — only new mail is captured from now on.",
   "backfill.narrowingNote":
@@ -4939,7 +4942,6 @@ export const en = {
   "ob.s4.capturedTitle": "Mailbox connected",
   "ob.s4.capturedBody":
     "Your CRM is building itself. New mail lands here as the first sweep runs, usually in minutes.",
-  "ob.s4.enterCrm": "Continue",
   "ob.s4.connectFailed": "Couldn't connect that mailbox",
   "ob.s4.notNow": "Not now",
 
@@ -5116,7 +5118,7 @@ export const en = {
     "Pick one. This is where your people, companies and history come from.",
   "ob.conv.connect.networkTitle": "Your network",
   "ob.conv.connect.networkHint":
-    "Optional but worth it. Turns who you know into accounts and watches them for triggers.",
+    "Save your profile so the network you import later is attributed to you. The import itself lives in Settings.",
   "ob.conv.connect.required": "required",
   "ob.conv.connect.recommended": "recommended",
   // Neither grant carries calendar or contacts — those are their own,
@@ -5128,12 +5130,15 @@ export const en = {
   "ob.conv.connect.microsoftBrings": "Mail read and sent via Microsoft",
   "ob.conv.connect.imapBrings":
     "Mail from any host, with your email address and an app password",
-  "ob.conv.connect.linkedinAuth": "Profile link, read only",
+  "ob.conv.connect.linkedinAuth": "Profile link, saved to your account",
+  "ob.conv.connect.saveCta": "save →",
+  "ob.conv.connect.dialogDone": "Done",
   "ob.conv.connect.scopeGoogle": "OAuth, read and send scopes",
   "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",
   "ob.conv.connect.scopeImap": "Mail address and password",
   "ob.conv.connect.connectCta": "connect →",
   "ob.conv.connect.connectedCta": "connected",
+  "ob.conv.connect.savedCta": "saved",
   "ob.conv.connect.blockedCard":
     "You already picked a mailbox. Disconnect it in Settings to switch.",
   "ob.conv.connect.guaranteesToggle": "What connecting actually does",
@@ -5149,7 +5154,7 @@ export const en = {
     "{brings}. I read it once to build your people and history, then keep it in sync.",
   "ob.conv.connect.dialogClose": "Close",
   "ob.conv.connect.linkedinName": "LinkedIn",
-  "ob.conv.connect.linkedinConnected": "Connected",
+  "ob.conv.connect.linkedinSaved": "Profile saved",
   "ob.conv.connect.linkedinSkippedNote": "Skipped: add it later in Settings",
   "ob.conv.connect.rosterFailedTitle": "Could not check your mailboxes",
   "ob.conv.connect.rosterFailedBody":
@@ -5246,39 +5251,26 @@ export const en = {
   "ob.conv.connect.mailboxNeeded":
     "A mailbox is still needed: mail is what gets read and drafted. Connect one above, or continue without one for now.",
   "ob.conv.linkedin.cardBody":
-    "Turns your network into accounts and people, and flags it when a connection changes jobs.",
-  "ob.conv.linkedin.limitsToggle": "What Margince can and cannot see",
-  "ob.conv.linkedin.scope1Lead": "Your connection list \u2014",
-  "ob.conv.linkedin.scope1Rest":
-    "name, position, company and the date you connected.",
-  "ob.conv.linkedin.scope2Lead": "Nothing else.",
-  "ob.conv.linkedin.scope2Rest":
-    "No messages, no posts, no who-viewed-you, no activity.",
-  "ob.conv.linkedin.scope3Lead": "Your network stays yours.",
-  "ob.conv.linkedin.scope3Rest":
-    "It is attributed to you, never to the company, and disconnecting removes it.",
-  "ob.conv.linkedin.scope4Lead": "Nobody is contacted.",
-  "ob.conv.linkedin.scope4Rest":
-    "Connecting sends no invitations and no messages, ever.",
-  "ob.conv.linkedin.neverContacts":
-    "Your connections never become people here. They answer one question: who here already knows them?",
+    "Your profile address, so an imported connection reads “Anna knows them”, never “the company knows them”.",
+  "ob.conv.linkedin.dialogHeadline": "Your LinkedIn profile",
   "ob.conv.linkedin.profileLabel": "Your LinkedIn profile URL",
   "ob.conv.linkedin.profilePlaceholder": "https://www.linkedin.com/in/…",
   "ob.conv.linkedin.profileWhy":
     "So the network is attributed to you: “Anna knows them”, never “the company knows them”.",
-  "ob.conv.linkedin.authorize": "Authorize with LinkedIn",
-  "ob.conv.linkedin.appPending":
-    "Our LinkedIn app is still awaiting approval, so nothing syncs yet. Upload Connections.csv in Settings.",
+  "ob.conv.linkedin.save": "Save profile",
   "ob.conv.linkedin.skip": "Skip LinkedIn for now",
-  "ob.conv.linkedin.connected":
-    "LinkedIn authorized. Your connections will sync as soon as the app is approved.",
+  "ob.conv.linkedin.importLater":
+    "Your connections themselves come in through Settings, from a Connections.csv export.",
+  "ob.conv.linkedin.saved":
+    "LinkedIn profile saved. Your imported network will be attributed to you.",
   "ob.conv.linkedin.skipped":
-    "Skipped LinkedIn. You can connect it any time in Settings.",
+    "Skipped LinkedIn. You can add your profile any time in Settings.",
 
-  // The setup rail: five stops, one word each. Long enough to name the step,
-  // short enough that five of them fit a column at 10px.
+  // The setup rail: six stops, one word each. Long enough to name the step,
+  // short enough that six of them fit a column at 10px.
   "ob.rail.read": "Read",
   "ob.rail.confirm": "Confirm",
+  "ob.rail.basis": "Basis",
   "ob.rail.voice": "Voice",
   "ob.rail.connect": "Connect",
   "ob.rail.prefs": "Preferences",
@@ -5312,11 +5304,19 @@ export const en = {
   "ob.conv.team.finish": "Finish setup",
   "ob.conv.team.done":
     "Setup is complete. Anyone you add can train their voice and connect their accounts from Settings.",
+  // The basis act: the installation's reporting basis, asked once the company
+  // is confirmed and before any step about the person answering.
+  "ob.conv.basis.title": "First, how the numbers are reported.",
+  "ob.conv.basis.body":
+    "Base currency and reporting timezone are the installation's: every deal, report and brief is priced and dated on them. Both are prefilled and can be changed later in Settings, until a deal has frozen the currency.",
+  "ob.conv.basis.reportingTitle": "Reporting basis",
+  "ob.conv.basis.timezoneNeeded": "A reporting timezone is needed.",
+  "ob.conv.basis.continue": "Continue",
+  "ob.conv.basis.done": "Reporting basis settled.",
+
   "ob.conv.prefs.title": "Last, a few preferences.",
   "ob.conv.prefs.body":
     "Everything here is prefilled from what is already recorded, and can be changed later in Settings. Press Done if it all reads right.",
-  "ob.conv.prefs.reportingTitle": "How the numbers are reported",
-  "ob.conv.prefs.timezoneNeeded": "A reporting timezone is needed.",
   "ob.conv.prefs.autonomyTitle": "What it may change on its own",
   "ob.conv.prefs.autonomyBody":
     "Each kind of change below is proposed to you first. Switch one on and it applies without asking; switch it back any time.",
@@ -5571,13 +5571,11 @@ export const en = {
   "password.hint": "At least 12 characters.",
   "password.tooShort": "Too short. Use at least 12 characters.",
   "password.mismatch": "These two don't match.",
-  "password.signsYouOut":
-    "Changing it signs you out everywhere, including here. Sign in again with the new password.",
   "password.changing": "Changing your password…",
   "password.open": "Change password",
   "password.cancel": "Cancel",
   "password.submit": "Save new password",
-  "password.done": "Password changed. Sign in again with the new one.",
+  "password.done": "Password changed. Every other device has been signed out.",
   // Deliberately says nothing about WHICH field: this is the fallback for a
   // refusal the server did not explain, and naming the current password would
   // send someone hunting a mistake that may not be theirs.
@@ -6863,6 +6861,36 @@ export const en = {
   "installationSettings.fiscalYearStart": "Financial year starts",
   "installationSettings.fiscalYearStartHint":
     "The month your business year begins. Reports group by this year and quarter — a year that does not start in January is labelled with both calendar years it spans, like FY2026/27. Changing it re-labels every report at once, and a saved report view filtered on a period will then ask for different months.",
+  "installationSettings.forwardMeasure": "Projected landing built from",
+  "installationSettings.forwardMeasureHint":
+    "Which remaining pipeline a projected landing adds to the money already won. Commit evidence is the strictest: committed deals whose close date somebody confirmed. Weighted counts every open deal at its stage probability, which is the honest reading for a team that commits everything. A manager's call replaces the projection entirely rather than adding to what is won — with no call recorded for a period, that period falls back to commit evidence and says so.",
+  "installationSettings.forwardMeasure.commit_evidence":
+    "Commit evidence — confirmed close dates only",
+  "installationSettings.forwardMeasure.weighted":
+    "Weighted pipeline — every open deal at its stage probability",
+  "installationSettings.forwardMeasure.manager_call":
+    "The manager's call — the authored number for the period",
+  "forecast.landing": "Projected landing",
+  "forecast.landingFrom": "{won} already won plus {remaining} still to come.",
+  "forecast.landingFromCall":
+    "The call for this period, which replaces the projection rather than adding to the {won} already won.",
+  "forecast.landing.caveat.call_absent":
+    "Nobody has called this period, so this is commit evidence instead.",
+  "forecast.landing.caveat.call_below_actual":
+    "The call is below the money already won. It is shown as recorded rather than corrected.",
+  "forecast.pipelineNeeded": "Pipeline needed",
+  "forecast.pipelineNeededDetail":
+    "{current} open against {needed} needed to reach {reference}.",
+  "forecast.pipelineBasis.manager_call":
+    "Measured against the call for this period.",
+  "forecast.pipelineBasis.historical_median":
+    "Measured against the median of the last four comparable periods.",
+  "forecast.pipelineAbsentTitle": "No coverage figure for this period",
+  "forecast.pipelineAbsent.insufficient_basis":
+    "Nothing to measure against: no call has been recorded for this period, and fewer than four comparable periods have finished. A coverage figure measured against a number derived from this same pipeline would always look fine.",
+  "forecast.pipelineAbsent.insufficient_history":
+    "Too few closed deals to read a conversion rate from. A rate drawn from a handful of deals moves further than the answer is worth.",
+  "forecast.coverage": "{percent}% of the pipeline this needs",
   "installationSettings.baseCurrency": "Base currency",
   "installationSettings.baseCurrencyHint":
     "ISO-4217 code every amount converts to for roll-ups. Changeable until the first amount converts against it.",

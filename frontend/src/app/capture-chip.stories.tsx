@@ -37,7 +37,7 @@ function importing(scanned: number, estimated: number | null) {
     });
 }
 
-function story(connectors: () => Response) {
+function story(connectors: () => Response, linked = true) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
@@ -49,7 +49,7 @@ function story(connectors: () => Response) {
           className="main"
           style={{ position: "relative", minHeight: "40vh" }}
         >
-          <CaptureChip route={{ screen: "deals" }} />
+          <CaptureChip linked={linked} />
         </div>
       </StoryProviders>
     );
@@ -74,3 +74,12 @@ export const Unpreviewed: Story = { render: story(importing(37, null)) };
 
 /** Nearly done: a full ring is the last thing drawn before the chip leaves. */
 export const AlmostDone: Story = { render: story(importing(2_880, 2_900)) };
+
+/**
+ * On a rail-less route — onboarding, where the import usually starts. The same
+ * gauge with nothing to press: a link out of a flow the reader is midway
+ * through would lose their place in it.
+ */
+export const Unlinked: Story = {
+  render: story(importing(1_204, 2_900), false),
+};

@@ -1,8 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, CheckCircle2, History, Mail, Users } from "lucide-react";
-import { useEffect, useState } from "react";
-import { api } from "../api/client";
+import { useState } from "react";
 import type { components } from "../api/schema";
+import { useDrawsImportRun } from "../app/import-onscreen";
 import { Badge, Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { CountUp } from "../design-system/countup";
@@ -14,12 +13,8 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  ProblemError,
-  problemCode,
-  problemMessageOf,
-  throwProblem,
-} from "./common";
+import { type ImportWindow, isLiveRun, useBackfillRun } from "./backfill-run";
+import { ProblemError, problemCode, problemMessageOf } from "./common";
 import "./backfill.css";
 
 // The bounded connect-time backfill (ADR-0063): pick a window, see the scope
@@ -43,13 +38,11 @@ import "./backfill.css";
 
 type BackfillStatus = components["schemas"]["BackfillStatus"];
 type Provider = components["schemas"]["CaptureConnection"]["provider"];
-type BackfillWindow = "3m" | "6m" | "12m" | "24m" | "60m";
 
 // The CAP-PARAM-4 set, in reach order (ADR-0063, widened to 24/60 by
-// ADR-0106). The default selection stays 6m: a multi-year import is worth
-// offering and wrong to default into, since it spends the customer's own
-// inference budget on the day they have least reason to trust the estimate.
-const WINDOWS: { value: BackfillWindow; label: MessageKey }[] = [
+// ADR-0106). Which one the picker OPENS on is `DEFAULT_IMPORT_WINDOW`, beside
+// the operations both surfaces share.
+const WINDOWS: { value: ImportWindow; label: MessageKey }[] = [
   { value: "3m", label: "backfill.window3m" },
   { value: "6m", label: "backfill.window6m" },
   { value: "12m", label: "backfill.window12m" },
@@ -72,9 +65,6 @@ const STALE_AFTER_MS = 3 * 60_000;
 // them is lying to the reader about what they are about to spend. The symbol
 // itself is never spelled here — Intl derives it from the code and the locale.
 const FALLBACK_CURRENCY = "USD";
-
-const isLiveState = (state: BackfillStatus["state"] | undefined) =>
-  state === "running" || state === "queued";
 
 // Both preview and start can answer connector_unsupported (a provider with no
 // Backfiller — IMAP today) or window_narrowing (start only, a widen-only
@@ -121,10 +111,6 @@ function staleness(
   };
 }
 
-// statusQueryKey is shared by every reader of the run row so a start or
-// cancel invalidates them all.
-const statusQueryKey = (provider: string) => ["backfill-status", provider];
-
 export function BackfillPanel({
   provider,
   initial,
@@ -135,101 +121,18 @@ export function BackfillPanel({
   initial?: BackfillStatus;
 }) {
   const t = useT();
-  const qc = useQueryClient();
-  const [window, setWindow] = useState<BackfillWindow>("6m");
   const [skipped, setSkipped] = useState(false);
-
-  const status = useQuery({
-    queryKey: statusQueryKey(provider),
-    queryFn: async () => {
-      const { data, error } = await api.GET("/connectors/{provider}/backfill", {
-        params: { path: { provider } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    initialData: initial,
-    // The embedded snapshot already answered this read once; skip the
-    // mount-time re-fetch it would otherwise trigger (react-query treats
-    // fresh-but-present data as needing revalidation by default) and rely on
-    // the live poll below, or an explicit invalidate (start/cancel), for a
-    // fresher row. Without a seed, behave exactly as before: fetch on mount.
-    staleTime: initial !== undefined ? Number.POSITIVE_INFINITY : 0,
-    // Poll while a run is live: the status read is a single indexed row
-    // (CAP-PARAM-2), so polling is indistinguishable from push here.
-    refetchInterval: (q) => (isLiveState(q.state.data?.state) ? 2500 : false),
-  });
-
-  const preview = useMutation({
-    mutationFn: async (w: BackfillWindow) => {
-      const { data, error } = await api.POST(
-        "/connectors/{provider}/backfill/preview",
-        { params: { path: { provider } }, body: { window: w } },
-      );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-
-  const start = useMutation({
-    mutationFn: async (w: BackfillWindow) => {
-      const { data, error } = await api.POST(
-        "/connectors/{provider}/backfill",
-        {
-          params: { path: { provider } },
-          body: { window: w },
-        },
-      );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: statusQueryKey(provider) }),
-  });
-
-  const cancel = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await api.DELETE(
-        "/connectors/{provider}/backfill",
-        { params: { path: { provider } } },
-      );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: statusQueryKey(provider) }),
-  });
+  const importRun = useBackfillRun({ provider, initial, previewHeld: skipped });
+  const { status, preview, start, cancel, window, setWindow } = importRun;
 
   const { unsupported, narrowing } = classifyBackfillErrors(
     preview.error,
     start.error,
   );
 
-  // Auto-load the scope for the selected window the moment the setup view is
-  // live (no run yet, not skipped) — the user sees honest scope immediately.
-  // The mutation is single-flight per window; previewedWindow guards against
-  // re-firing on unrelated re-renders while still refreshing on a window
-  // change. This never spends: the estimate is a read; the import waits for
-  // the explicit start.
-  const isSetup = !skipped && status.data?.state === "none";
-  const [previewedWindow, setPreviewedWindow] = useState<BackfillWindow | null>(
-    null,
-  );
-  useEffect(() => {
-    if (!isSetup || previewedWindow === window || preview.isPending) {
-      return;
-    }
-    setPreviewedWindow(window);
-    preview.mutate(window);
-  }, [isSetup, window, previewedWindow, preview]);
+  // This card draws the run in full, so the shell's capture chip stands down
+  // while it is on screen rather than gauging the same import twice.
+  useDrawsImportRun(isLiveRun(status.data?.state));
 
   if (skipped) {
     return (
@@ -246,7 +149,7 @@ export function BackfillPanel({
   }
 
   const run = status.data;
-  if (run.state === "none") {
+  if (importRun.isSetup) {
     return (
       <BackfillSetup
         window={window}
@@ -274,6 +177,7 @@ export function BackfillPanel({
       cancelling={cancel.isPending}
       cancelError={cancel.isError ? problemMessageOf(cancel.error, t) : null}
       onCancel={() => cancel.mutate()}
+      onRestart={() => importRun.restart(run)}
     />
   );
 }
@@ -296,8 +200,8 @@ function BackfillSetup({
   onStart,
   onSkip,
 }: {
-  window: BackfillWindow;
-  onWindowChange: (w: BackfillWindow) => void;
+  window: ImportWindow;
+  onWindowChange: (w: ImportWindow) => void;
   unsupported: boolean;
   narrowing: boolean;
   previewPending: boolean;
@@ -473,17 +377,22 @@ function RunView({
   cancelling,
   cancelError,
   onCancel,
+  onRestart,
 }: {
   run: BackfillStatus;
   cancelling: boolean;
   cancelError: string | null;
   onCancel: () => void;
+  // Put the window picker back in front of the reader. Offered on every run
+  // that has stopped, which is every state this view draws that is not live:
+  // stopping an import is a decision about this run, never about the mailbox.
+  onRestart: () => void;
 }) {
   const t = useT();
   const { locale } = useLocale();
   const counts = run.counts;
   const scanned = counts?.messages_scanned ?? 0;
-  const live = isLiveState(run.state);
+  const live = isLiveRun(run.state);
   const done = run.state === "done";
   const { stale, agoMs } = staleness(run, live);
   // The card wears the AI family only while the machine is actually reading:
@@ -533,13 +442,17 @@ function RunView({
           {run.last_error_class ? ` (${run.last_error_class})` : ""}
         </p>
       )}
-      {live && (
-        <div className="backfill-foot">
+      <div className="backfill-foot">
+        {live ? (
           <Button small disabled={cancelling} onClick={onCancel}>
             {t("backfill.cancel")}
           </Button>
-        </div>
-      )}
+        ) : (
+          <Button small onClick={onRestart}>
+            {t("backfill.restart")}
+          </Button>
+        )}
+      </div>
       {live && cancelError && (
         <p className="t-caption backfill-error">{cancelError}</p>
       )}

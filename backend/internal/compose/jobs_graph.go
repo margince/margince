@@ -33,10 +33,8 @@ func addGraphJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log
 	// gets a periodic entry, and the workspace worker reuses its wiring.
 	participants := newParticipantBackfillWorker(pool, log)
 	addDeclaredWorker[ParticipantBackfillArgs](reg, participants)
-	addDeclaredWorker[ParticipantBackfillWorkspaceArgs](reg, &participantBackfillWorkspaceWorker{participantBackfillWorker: participants})
 	graphEdges := newGraphEdgeReconcileWorker(pool, log)
 	addDeclaredWorker[GraphEdgeReconcileArgs](reg, graphEdges)
-	addDeclaredWorker[GraphEdgeWorkspaceArgs](reg, &graphEdgeWorkspaceWorker{graphEdgeReconcileWorker: graphEdges})
 	// The link-reconcile sweep runs the same cohort repair the capture paths
 	// do, so it carries the same audience derivation: a meeting it files is a
 	// meeting whose no-record hold has stopped being true.
@@ -44,10 +42,8 @@ func addGraphJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log
 		people.NewStore(InstallationDB(pool)).
 			WithAudienceRecompute(activities.RecomputeAudienceTx), log)
 	addDeclaredWorker[LinkReconcileArgs](reg, links)
-	addDeclaredWorker[LinkReconcileWorkspaceArgs](reg, &linkReconcileWorkspaceWorker{linkReconcileWorker: links})
 	rematch := newLinkedInRematchWorker(pool, people.NewStore(InstallationDB(pool)), identity.NewService(pool), log)
 	addDeclaredWorker[LinkedInRematchArgs](reg, rematch)
-	addDeclaredWorker[LinkedInRematchWorkspaceArgs](reg, &linkedInRematchWorkspaceWorker{linkedInRematchWorker: rematch})
 	return slices.Concat(
 		periodicFor(cfg, ParticipantBackfillArgs{}),
 		periodicFor(cfg, GraphEdgeReconcileArgs{}),

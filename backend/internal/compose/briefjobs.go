@@ -49,36 +49,16 @@ func (BriefGenerateArgs) Kind() string { return "brief_generate" }
 // and does no tenant work of its own (jobs.FleetWide).
 func (BriefGenerateArgs) FleetWide() {}
 
-// briefGenerateWorker is the dispatcher for the overnight assembly.
-type briefGenerateWorker struct {
-	pool *pgxpool.Pool
-}
-
-func (w *briefGenerateWorker) Work(ctx context.Context, _ *river.Job[BriefGenerateArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(BriefGenerateWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return BriefGenerateWorkspaceArgs{Workspace: ws} }))
-}
-
-// BriefGenerateWorkspaceArgs assembles one workspace's morning briefs.
-type BriefGenerateWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (BriefGenerateWorkspaceArgs) Kind() string { return "brief_generate_workspace" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a BriefGenerateWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// briefGenerateWorkspaceWorker assembles one workspace's briefs.
+// briefGenerateWorker assembles every live workspace's briefs.
+//
+// One worker where there were two (ADR-0103).
 //
 // The engine here carries no L2 ranker: the worker role holds no brief_ranking
 // model lane, so the overnight run is the deterministic §10.1 composite order.
 // That is the floor the whole feature is built on rather than a degradation —
 // the model re-order stays what the api role adds when a rep refreshes — and a
 // run assembled without it is still a complete, ranked, cited brief.
-type briefGenerateWorkspaceWorker struct {
+type briefGenerateWorker struct {
 	engine *briefs.BriefEngine
 	pool   *pgxpool.Pool
 	users  *identity.Service
@@ -93,16 +73,16 @@ type briefGenerateWorkspaceWorker struct {
 	now func() time.Time
 }
 
-func (w *briefGenerateWorkspaceWorker) Work(ctx context.Context, job *river.Job[BriefGenerateWorkspaceArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+func (w *briefGenerateWorker) Work(ctx context.Context, _ *river.Job[BriefGenerateArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.assembleOneWorkspace))
+}
+
+func (w *briefGenerateWorker) assembleOneWorkspace(ctx context.Context, workspace ids.UUID) error {
 	clock := w.now
 	if clock == nil {
 		clock = time.Now
 	}
-	return jobs.FaultContext(ctx, w.assembleWorkspace(wsCtx, job.Args.Workspace, clock().UTC()))
+	return w.assembleWorkspace(principal.WithWorkspaceID(ctx, workspace), workspace, clock().UTC())
 }
 
 // assembleWorkspace snapshots a run for every rep in this workspace whose
@@ -113,7 +93,7 @@ func (w *briefGenerateWorkspaceWorker) Work(ctx context.Context, job *river.Job[
 // that stopped at the first failure would leave a whole team without briefs
 // because one seat had a broken authority row, and River's retry would keep
 // hitting the same seat first.
-func (w *briefGenerateWorkspaceWorker) assembleWorkspace(ctx context.Context, wsID ids.UUID, now time.Time) error {
+func (w *briefGenerateWorker) assembleWorkspace(ctx context.Context, wsID ids.UUID, now time.Time) error {
 	// The enumeration runs as the system: it reads the workspace's mode, the
 	// installation timezone and the seat roster — installation-level facts about
 	// WHO is due a brief, which belong to no rep. Every read of a rep's own data
@@ -176,7 +156,7 @@ type morningPass struct {
 // Read AFTER the assembly above so the runs it just wrote are included, and in
 // its own transaction for the same reason: the candidate read happened before
 // those runs existed.
-func (w *briefGenerateWorkspaceWorker) mailTheMorning(
+func (w *briefGenerateWorker) mailTheMorning(
 	ctx context.Context, wsID ids.UUID, pass morningPass, now time.Time,
 ) error {
 	var awaiting []briefs.BriefRun
@@ -208,7 +188,7 @@ func (w *briefGenerateWorkspaceWorker) mailTheMorning(
 // A fresh correlation id per rep, so one morning's work for one person is one
 // recoverable trace in the audit spine rather than a fleet pass nobody can take
 // apart.
-func (w *briefGenerateWorkspaceWorker) repContext(
+func (w *briefGenerateWorker) repContext(
 	ctx context.Context, wsID, userID ids.UUID,
 ) (context.Context, error) {
 	rbac, seat, err := w.users.EffectiveAuthority(ctx, wsID, userID)
@@ -239,7 +219,7 @@ func (w *briefGenerateWorkspaceWorker) repContext(
 // The MAIL is not here. It is a pass of its own over whatever is still unmailed
 // once the whole workspace is assembled — mailTheMorning says why, and the short
 // version is that a run may be mailed hours after it is written.
-func (w *briefGenerateWorkspaceWorker) assembleFor(ctx context.Context, wsID, userID ids.UUID, now time.Time) error {
+func (w *briefGenerateWorker) assembleFor(ctx context.Context, wsID, userID ids.UUID, now time.Time) error {
 	repCtx, err := w.repContext(ctx, wsID, userID)
 	if err != nil {
 		return err
@@ -278,7 +258,7 @@ func (w *briefGenerateWorkspaceWorker) assembleFor(ctx context.Context, wsID, us
 // Agents are excluded: a brief is a person's morning, and an agent seat has no
 // morning to prepare. Read seats are excluded because the brief's whole content
 // is deals to act on.
-func (w *briefGenerateWorkspaceWorker) morningPassFor(ctx context.Context, wsID ids.UUID, now time.Time) (morningPass, error) {
+func (w *briefGenerateWorker) morningPassFor(ctx context.Context, wsID ids.UUID, now time.Time) (morningPass, error) {
 	var pass morningPass
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		overlay, err := overlayModeOf(ctx, tx)

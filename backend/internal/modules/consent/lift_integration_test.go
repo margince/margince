@@ -15,10 +15,14 @@ package consent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -314,7 +318,7 @@ func TestALiftNeedsAReasonSomebodyCanReview(t *testing.T) {
 	for name, reason := range map[string]string{
 		"empty":      "",
 		"whitespace": "   \t\n ",
-		"too long":   strings.Repeat("x", liftReasonMax+1),
+		"too long":   strings.Repeat("x", reasonMax+1),
 	} {
 		err := e.store.Lift(e.ctx, LiftInput{
 			PersonID: e.person, SuppressionID: row, Reason: reason,
@@ -337,8 +341,161 @@ func TestALiftNeedsAReasonSomebodyCanReview(t *testing.T) {
 	// The bound admits its own limit, so the check is a ceiling and not an
 	// off-by-one that refuses a legitimate 500-character explanation.
 	if err := e.store.Lift(e.ctx, LiftInput{
-		PersonID: e.person, SuppressionID: row, Reason: strings.Repeat("x", liftReasonMax),
+		PersonID: e.person, SuppressionID: row, Reason: strings.Repeat("x", reasonMax),
 	}); err != nil {
 		t.Errorf("a reason at exactly the limit was refused: %v", err)
 	}
+}
+
+// lastLiftPayload decodes the consent.suppression_lifted envelope the lift just
+// staged. Read from the outbox rather than returned by the store, because the
+// row a consumer will actually receive is the thing under test.
+func lastLiftPayload(t *testing.T, e *channelConsentEnv) crmcontracts.PublicEventConsentSuppressionLifted {
+	t.Helper()
+	var raw []byte
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT envelope->'payload' FROM event_outbox
+		 WHERE envelope->>'type' = 'consent.suppression_lifted'
+		 ORDER BY created_at DESC, id DESC
+		 LIMIT 1`).Scan(&raw); err != nil {
+		t.Fatalf("reading the staged lift event: %v", err)
+	}
+	var payload crmcontracts.PublicEventConsentSuppressionLifted
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatalf("decoding the lift payload: %v", err)
+	}
+	return payload
+}
+
+// TestALiftSaysWhatStillStands is the whole reason the event carries more than
+// two authority levels.
+//
+// A person can hold several stops at once — their own objection and a rep's
+// separate note. Lifting one leaves the others standing, and an event that says
+// only "a stop was lifted" reads to an outside consumer as "you may write to
+// them now". Margince itself is safe either way, because the engine re-reads the
+// strongest live row inside the sending transaction; the consumers reading this
+// event are the ones that would resume mail to somebody who objected.
+func TestALiftSaysWhatStillStands(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	// Two stops. The user-level one is liftable by an admin; the subject's own
+	// is not, and is what must still be reported after the lift.
+	liftable := plantSuppression(t, e, e.person, string(commsauthz.LevelUser))
+	subjects := plantSuppression(t, e, e.person, string(commsauthz.LevelSubject))
+
+	if err := e.store.Lift(e.ctx, LiftInput{
+		PersonID:      e.person,
+		SuppressionID: liftable,
+		Reason:        "the rep confirmed this note was filed against the wrong contact",
+	}); err != nil {
+		t.Fatalf("lifting the user-level stop as admin: %v", err)
+	}
+
+	payload := lastLiftPayload(t, e)
+	if payload.SuppressionId == nil || *payload.SuppressionId != openapi_types.UUID(liftable) {
+		t.Errorf("event names suppression %s, want the one that was lifted (%s)",
+			derefUUID(payload.SuppressionId), liftable)
+	}
+	if payload.RemainingSuppressions == nil || *payload.RemainingSuppressions != 1 {
+		t.Errorf("remaining_suppressions = %d, want 1: the subject's own objection still stands",
+			payload.RemainingSuppressions)
+	}
+	if payload.StillSuppressed == nil || !*payload.StillSuppressed {
+		t.Error("still_suppressed = false while the subject's objection is live — " +
+			"a consumer reading this event would resume mail to somebody who objected")
+	}
+	if !stillLive(t, e, subjects) {
+		t.Error("the subject's objection was revoked by a lift aimed at another row")
+	}
+}
+
+// TestALiftOfTheLastStopSaysSo is the other direction: when nothing remains,
+// the event must say so, or a consumer holding mail back forever is the bug.
+func TestALiftOfTheLastStopSaysSo(t *testing.T) {
+	e := setupChannelConsent(t)
+	only := plantSuppression(t, e, e.person, string(commsauthz.LevelUser))
+
+	if err := e.store.Lift(e.ctx, LiftInput{
+		PersonID:      e.person,
+		SuppressionID: only,
+		Reason:        "recorded in error against this contact",
+	}); err != nil {
+		t.Fatalf("lifting the only stop: %v", err)
+	}
+
+	payload := lastLiftPayload(t, e)
+	if payload.RemainingSuppressions == nil || *payload.RemainingSuppressions != 0 ||
+		payload.StillSuppressed == nil || *payload.StillSuppressed {
+		t.Errorf("remaining = %d, still_suppressed = %v; want 0 and false with no stop left",
+			derefInt(payload.RemainingSuppressions), derefBool(payload.StillSuppressed))
+	}
+}
+
+// TestALiftReportsAnAddressPinnedStopAsStanding holds the count's match rule.
+//
+// A hard bounce is pinned to an ADDRESS and carries no person_id. The engine
+// still refuses every message to that mailbox, because liveSuppression matches
+// person OR lead OR address. A count that asked only about person_id would
+// answer "nothing stands" for exactly that subject, and still_suppressed would
+// tell a consumer to resume mail the engine will not send. Under-reporting is
+// the one direction this field must never fail in.
+func TestALiftReportsAnAddressPinnedStopAsStanding(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	address := "bounced-" + e.person.String() + "@example.test"
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
+		 VALUES ($1, lower($2), true, 'test', 'human:x')`, e.person, address); err != nil {
+		t.Fatalf("giving the person an address: %v", err)
+	}
+	// Pinned to the address alone, the way a bounce handler writes it.
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO communication_suppression
+		     (id, address, kind, source, captured_by, decided_by_level)
+		 VALUES ($1, lower($2), 'hard_bounce', 'test', 'system', 'machine')`,
+		ids.NewV7(), address); err != nil {
+		t.Fatalf("planting the address-pinned bounce: %v", err)
+	}
+
+	liftable := plantSuppression(t, e, e.person, string(commsauthz.LevelUser))
+	if err := e.store.Lift(e.ctx, LiftInput{
+		PersonID:      e.person,
+		SuppressionID: liftable,
+		Reason:        "filed against the wrong contact",
+	}); err != nil {
+		t.Fatalf("lifting the person-level stop: %v", err)
+	}
+
+	payload := lastLiftPayload(t, e)
+	if payload.StillSuppressed == nil || !*payload.StillSuppressed ||
+		payload.RemainingSuppressions == nil || *payload.RemainingSuppressions != 1 {
+		t.Errorf("remaining = %d, still_suppressed = %v; want 1 and true — the bounce on "+
+			"%s is still live and the engine will still refuse this mail",
+			derefInt(payload.RemainingSuppressions), derefBool(payload.StillSuppressed), address)
+	}
+}
+
+// The three fields are optional on the wire so an older consumer keeps
+// validating, but this writer always sets them — so a nil in a failure message
+// is itself the news, and these print it rather than an address.
+func derefInt(v *int) any {
+	if v == nil {
+		return "absent"
+	}
+	return *v
+}
+
+func derefBool(v *bool) any {
+	if v == nil {
+		return "absent"
+	}
+	return *v
+}
+
+func derefUUID(v *openapi_types.UUID) any {
+	if v == nil {
+		return "absent"
+	}
+	return *v
 }

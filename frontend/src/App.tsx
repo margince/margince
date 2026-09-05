@@ -50,7 +50,11 @@ import {
 } from "./screens/auth";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./screens/common";
 import { ForcedPasswordChangeScreen } from "./screens/forcedpassword";
-import { OnboardingScreen, useCompany } from "./screens/onboarding";
+import {
+  OnboardingScreen,
+  useCompany,
+  useOnboardingProgress,
+} from "./screens/onboarding";
 import { isPersonTab } from "./screens/persontab";
 import { ReleaseSkewScreen, useSkewedApiRelease } from "./screens/releaseskew";
 import { fetchSetupStatus, SetupClaimScreen } from "./screens/setupclaim";
@@ -743,6 +747,30 @@ function UnavailableOrClaimable({
   return <AvailabilityScreen kind={kind} onRetry={retryBoth} />;
 }
 
+// The second half of the onboarding gate, for a DESCRIBED installation: a
+// human whose own journey — voice, mailbox, preferences — is not recorded as
+// finished is walked through it, a member invited later exactly as the
+// creator was. `wanted` is false for a read seat: it cannot write the
+// checkpoint the journey ends on, and a gate with no exit is a trap. It is
+// false for an undescribed installation too, which the first half already
+// gates.
+//
+// A read that FAILED does not gate: the shell renders, and the journey is
+// asked for again on the next load. An unfinished row, or none, does.
+function useJourneyProgress(wanted: boolean): Readonly<{
+  pending: boolean;
+  unfinished: boolean;
+}> {
+  const progress = useOnboardingProgress(wanted);
+  return {
+    pending: wanted && progress.isPending,
+    unfinished:
+      wanted &&
+      progress.isSuccess &&
+      (progress.data === null || progress.data.step !== "complete"),
+  };
+}
+
 // AuthGate: everything behind the session probes GET /v1/me, and the
 // boundary branches on the TYPED failure (§4 of the login spec):
 // 401 → login, network/5xx → connection problem, 503 → installation
@@ -795,6 +823,9 @@ function AuthedApp({
   const authed = !me.isPending && !me.isError;
   const company = useCompany(authed);
   const described = company.data !== null && company.data !== undefined;
+  const progress = useJourneyProgress(
+    authed && described && me.data?.authorization?.seat_type === "full",
+  );
   // The organization's clock, for every record date under this boundary. Read
   // here rather than per screen so all of them agree, and gated on the session
   // for the same reason the company probe is: an unauthenticated read would
@@ -810,7 +841,7 @@ function AuthedApp({
     if (
       authed &&
       company.isSuccess &&
-      !described &&
+      (!described || progress.unfinished) &&
       !ONBOARDING_GATE_EXEMPT_SCREENS.has(route.screen)
     ) {
       // Replacing, not pushing: this is a redirect, and the address it sends
@@ -819,7 +850,7 @@ function AuthedApp({
       // onboarding by the one key that exists for getting out of things.
       navigateReplacing({ screen: "onboarding", id: "company" });
     }
-  }, [authed, company.isSuccess, described, route.screen]);
+  }, [authed, company.isSuccess, described, progress.unfinished, route.screen]);
 
   const [paletteOpen, setPaletteOpen] = useState(false);
   const commands = useBuiltinCommands();
@@ -886,7 +917,10 @@ function AuthedApp({
   // onboarding and OAuth consent among them. A read that FAILS falls through
   // to the shell, where each screen renders its own error state and its own
   // retry; the splash is for waiting, not for having waited.
-  if (company.isPending || recordZone.pending) {
+  // The progress read joins the splash for the same reason the company read
+  // does: a shell painted before it answers is a home page the gate then
+  // pulls away from under the reader.
+  if (company.isPending || recordZone.pending || progress.pending) {
     return (
       <RaillessFrame>
         <AuthSplash />

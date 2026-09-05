@@ -787,6 +787,12 @@ test("AC-onboarding-1: onboarding is the rail-less conversational shell", async 
   // exists — nobody should meet the whole tool on their first screen. So the AC
   // asserts what it always meant (rail-less, no stepper) against the surface
   // that is actually first, and that the single question is the whole ask.
+  //
+  // That first screen belongs to an installation nobody has described yet.
+  // Under the global seed the journey is finished, and a finished reader on
+  // this route is sent home — so this AC layers the unstarted journey on top
+  // (the most recently registered route answers first).
+  await mockApi(page, { journey: "unstarted" });
   await page.goto("/#/onboarding");
   await expect(page.locator("nav.rail")).toHaveCount(0);
   await expect(page.locator(".stepper")).toHaveCount(0);

@@ -312,6 +312,7 @@ describe("voice build", () => {
       { type: "READ_TERMINAL", readId: "r1", status: "ready" },
       { type: "REVIEW_READY" },
       { type: "COMPANY_CONFIRMED" },
+      { type: "BASIS_DONE" },
       { type: "INVITE_ACCEPTED" },
       { type: "BUILD_STARTED", buildId: "b1" },
     ]);

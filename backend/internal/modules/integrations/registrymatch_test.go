@@ -171,3 +171,51 @@ func TestAPrerequisiteChainIsRefusedAtRegistration(t *testing.T) {
 		})
 	}
 }
+
+// cascadingTo replaces a descriptor's cascades, so a case can declare the graph
+// an author would write by hand.
+type cascadingTo struct {
+	provider.Adapter
+	cascades []provider.Cascade
+}
+
+func (c cascadingTo) Descriptor() provider.Descriptor {
+	d := c.Adapter.Descriptor()
+	d.Cascades = c.cascades
+	return d
+}
+
+// Two cascades for one fallback are refused where the author declares them.
+//
+// The catalog prices a fallback with EVERY trigger that can fire it and names
+// ONE, because a buy button asks for a pair. Declared twice, the button quotes
+// the price of both triggers and posts one, and the server refuses the press
+// for the trigger left out — a number on a button that nobody can spend.
+func TestTwoCascadesForOneFallbackAreRefusedAtRegistration(t *testing.T) {
+	t.Parallel()
+
+	// The shipped fake registers as it is, so the case below is not passing
+	// over a descriptor refused for some other reason.
+	shipped := NewOfflineProvider(0, time.Now).Descriptor()
+	if len(shipped.Cascades) == 0 {
+		t.Fatal("the shipped fake declares no cascade, so no dev stack or test exercises this rule")
+	}
+	if _, err := NewRegistry(NewOfflineProvider(0, time.Now)); err != nil {
+		t.Fatalf("the shipped adapter is refused by its own rule: %v", err)
+	}
+
+	_, err := NewRegistry(cascadingTo{
+		Adapter: NewOfflineProvider(0, time.Now),
+		cascades: []provider.Cascade{
+			{Category: "personal_email", After: "professional_email", Cost: map[provider.Pool]int{"email": 2}},
+			{Category: "personal_email", After: "linkedin_profile", Cost: map[provider.Pool]int{"email": 2}},
+		},
+	})
+	if err == nil {
+		t.Fatal("an adapter declaring one fallback after two triggers registered: the catalog would price " +
+			"both and name one, and every press of that button is refused")
+	}
+	if !strings.Contains(err.Error(), "linkedin_profile") {
+		t.Errorf("the refusal does not name the second trigger, so an author cannot act on it: %v", err)
+	}
+}

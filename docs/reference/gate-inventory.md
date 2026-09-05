@@ -50,6 +50,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `enumsync_test.go` | H3 | The enum-vocabulary sync as a fitness function: where domain logic branches on a typed Go enum, its constant set must equal the schema's CHECK (col IN (...)) set for the column it mirrors. |
 | `filtervocabularyparity_test.go` | H3 | Two surfaces answer a filtered question: the list/segment compiler in `platform/database/storekit`, and the query compiler in `modules/search`. |
 | `forecastperiodparity_test.go` | H3 | Every period the contract offers must be a window the server can resolve. |
+| `forwardmeasureparity_test.go` | H3 | Every forward measure must be spelled the same on all three sides. |
 | `frontendapprovalkinds_test.go` | H1 | Every kind a proposal can be staged under must have words a reader recognises, or the queue prints the wire enum at them. |
 | `frontendattentionsources_test.go` | H1 | Every source the Worklist can carry must have a body the decision lane knows how to draw, or the lane asks the wrong endpoint about it. |
 | `frontendaudiencereasons_test.go` | H3 | A held message says WHY, or the reader cannot argue with the verdict. |
@@ -105,12 +106,13 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (112)
+## Census (113)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
 | `activityprojectionfields_test.go` | H2 | Every writer of `Activity.AudienceReason` is named here with the test that proves it withholds the reason from a reader who may not see the content. |
 | `agentgrantscopes_test.go` | H2 | A credential that does not fund the tools its agent declares buys a run that starts, discovers it cannot do its job, and stops. |
+| `agentwritepin_test.go` | H2 | A tool whose tier is resolved by READING a record carries that reading's version into its write. |
 | `aggregateaudience_test.go` | H2 | A reader that COUNTS messages asks the audience, exactly as one that shows them does. |
 | `aggregategatereach_test.go` | H3 | Every job the `ci` aggregate depends on can actually RUN on the merge queue. |
 | `aitaskcensus_test.go` | H3 | The census as a fitness function: the contract says which AI tasks ship and what their invocation sites are called, and this build must register exactly those. |

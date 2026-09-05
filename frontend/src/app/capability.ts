@@ -76,12 +76,42 @@ export type RbacAction = components["schemas"]["RbacAction"];
  * answer would hide a page a read seat may genuinely see.
  */
 export function useCan(object: RbacObject, action: RbacAction): boolean {
-  const me = useMe();
+  return grants(useMe().data, object, action);
+}
+
+/**
+ * The access snapshot every predicate here reads: `/me`, or nothing yet.
+ *
+ * Optional all the way down because each level is genuinely absent in a state
+ * the app reaches — the query before it resolves, a server too old to send the
+ * field, an object this principal holds no grant on.
+ */
+export type AccessSnapshot = components["schemas"]["MeResponse"] | undefined;
+
+/**
+ * Whether `snapshot` grants `action` on `object` — the same question `useCan`
+ * answers, without the hook.
+ *
+ * Split out because the settings catalog has to evaluate a page's requirement
+ * outside a component: navigation, the palette, search and the page itself must
+ * agree about which settings exist, and the only way they cannot disagree is
+ * that one function answers all four. A second copy of this chain is how the
+ * rail and the palette came to disagree about the company page.
+ *
+ * Fails closed on every uncertainty. An unknown object resolves to the zero
+ * grant on the server too, so a missing key is a denial rather than a gap to
+ * fill in optimistically.
+ */
+export function grants(
+  snapshot: AccessSnapshot,
+  object: RbacObject,
+  action: RbacAction,
+): boolean {
   // Two optional steps, both load-bearing. `objects` is an index signature, so
   // TypeScript types a miss as PRESENT — only the chain makes an absent grant
   // deny at runtime; and the chain must cover `objects` itself, or a snapshot
   // that arrived without it would throw in render rather than deny.
-  const grant = me.data?.authorization?.objects?.[object];
+  const grant = snapshot?.authorization?.objects?.[object];
   return grant?.[action] ?? false;
 }
 

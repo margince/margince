@@ -358,17 +358,6 @@ func EnsureVisibleForSubjectRights(ctx context.Context, tx pgx.Tx, table string,
 	return nil
 }
 
-// EnsureLinkTarget verifies an activity link's target row exists AND is
-// visible to the caller — an explicit row-scope probe, because the FK that
-// would otherwise catch a bad id is checked as the table owner and carries
-// no row scope at all: it accepts any id that exists, so without this a
-// guessed foreign UUID would persist a link to a record the caller may not
-// read. A link to an archived record is equally refused: the link would
-// outlive the row it names.
-func EnsureLinkTarget(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
-	return EnsureVisibleLive(ctx, tx, table, id)
-}
-
 // VisibleTo probes whether one row passes the caller's row scope WITHOUT
 // erroring — for the dedupe pre-checks, which must answer 409 either way
 // but may only disclose the existing row's id when the caller could read

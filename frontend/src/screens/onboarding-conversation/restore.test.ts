@@ -108,16 +108,26 @@ describe("restorePlan", () => {
   });
 
   it("falls back to company-exists as the member signal ONLY without a state row", () => {
+    // A member's first visit: the company was confirmed before they arrived,
+    // so their journey opens confirmed and lands on the voice act, with no
+    // recap because nothing of theirs has happened yet.
     expect(
       restorePlan({
         state: null,
         profile,
-        voice: null,
+        voice: emptyVoice,
         read: null,
         routeConnect: false,
         locale: "en",
       }),
-    ).toMatchObject({ memberPath: true });
+    ).toEqual({
+      kind: "start",
+      memberPath: true,
+      companyConfirmed: true,
+      resumeTarget: "vo.collecting",
+      adoptRead: null,
+      recap: [],
+    });
     // A returning creator has both a saved company and a state row saying
     // creator; the profile must not demote them to the member path.
     expect(
@@ -147,6 +157,40 @@ describe("restorePlan", () => {
       companyConfirmed: true,
       resumeTarget: "cn.consent",
     });
+  });
+
+  it("resumes a member where their own row says, voice recap included", () => {
+    const plan = restorePlan({
+      state: stateRow({ path: "member", step: "voice", voice_skipped: true }),
+      profile,
+      voice: emptyVoice,
+      read: null,
+      routeConnect: false,
+      locale: "en",
+    });
+    expect(plan).toMatchObject({
+      memberPath: true,
+      resumeTarget: "vo.skipped",
+    });
+    if (plan.kind !== "start") {
+      throw new Error("expected a start plan");
+    }
+    expect(plan.recap).toContainEqual(
+      expect.objectContaining({ i18nKey: "ob.conv.recap.voiceSkipped" }),
+    );
+  });
+
+  it("reopens the basis act for a creator who left it open", () => {
+    expect(
+      restorePlan({
+        state: stateRow({ step: "basis" }),
+        profile,
+        voice: emptyVoice,
+        read: null,
+        routeConnect: false,
+        locale: "en",
+      }),
+    ).toMatchObject({ memberPath: false, resumeTarget: "bs.ask" });
   });
 
   it("keeps the company act open for step read and confirm", () => {

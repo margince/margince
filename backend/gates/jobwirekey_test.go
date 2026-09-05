@@ -29,7 +29,9 @@ import (
 // would read green. The tree holds 30 workspace-scoped kinds today; the floor
 // only has to be low enough never to false-alarm and high enough to catch a
 // walker that broke, so it keeps six kinds of headroom under the count.
-const workspaceArgFloor = 24
+// It falls with ADR-0103: the collapse retires the workspace CHILDREN, so the
+// count of workspace-scoped kinds drops by 27 as the passes absorb them.
+const workspaceArgFloor = 18
 
 // dispatcherArgFloor is workspaceArgFloor's other half. assertNoWorkspaceArg
 // only runs on types the walker routes to it as FleetWide; if a future

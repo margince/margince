@@ -82,6 +82,7 @@ const buildTerminalTones: Record<BuildTerminalStatus, OutcomeTone> = {
 // Which act owns each restorable landing point; RESUME derives the act from
 // the phase so the pair can never disagree.
 const resumeActs: Record<ResumePoint, ConversationAct> = {
+  "bs.ask": "basis",
   "in.ask": "invite",
   "tm.ask": "team",
   "vo.collecting": "voice",
@@ -183,19 +184,25 @@ function applyReadTerminal(
   );
 }
 
+// The landing points that exist only on the creator's route. A member
+// resumed there would stand in an act whose every event is illegal for them,
+// so the member path resolves these to the first act that is theirs.
+const creatorOnlyResume = new Set<ResumePoint>(["bs.ask", "in.ask", "tm.ask"]);
+
 // Restore normalization out of co.confirmed: the same routing the live
 // confirmation takes, without repeating the confirmation outcome. A target
-// fast-forwards a creator to the stable point the wizard state recorded;
-// the member path has no creator acts to land in, so any target still
-// resolves to consent.
+// fast-forwards to the stable point the wizard state recorded; without one, a
+// creator opens the basis act the confirmation would have opened, and a
+// member opens the voice act their journey begins with.
 function applyResume(
   state: ConversationState,
   event: Extract<ConversationEvent, { type: "RESUME" }>,
 ): ConversationState {
-  if (state.memberPath) {
-    return withEntries(state, { act: "connect", phase: "cn.consent" });
+  let phase: ResumePoint =
+    event.target ?? (state.memberPath ? "vo.collecting" : "bs.ask");
+  if (state.memberPath && creatorOnlyResume.has(phase)) {
+    phase = "vo.collecting";
   }
-  const phase = event.target ?? "in.ask";
   return withEntries(state, { act: resumeActs[phase], phase });
 }
 
@@ -309,22 +316,25 @@ function applyEvent(
         { kind: "user", id: "manual:chosen", i18nKey: "ob.conv.manual.chosen" },
       ]);
     case "COMPANY_CONFIRMED":
-      return withEntries(
-        state,
-        state.memberPath
-          ? { act: "connect", phase: "cn.consent" }
-          : { act: "invite", phase: "in.ask" },
-        [
-          {
-            kind: "outcome",
-            id: "company:confirmed",
-            i18nKey: "ob.conv.company.confirmed",
-            tone: "success",
-          },
-        ],
-      );
+      return withEntries(state, { act: "basis", phase: "bs.ask" }, [
+        {
+          kind: "outcome",
+          id: "company:confirmed",
+          i18nKey: "ob.conv.company.confirmed",
+          tone: "success",
+        },
+      ]);
     case "RESUME":
       return applyResume(state, event);
+    case "BASIS_DONE":
+      return withEntries(state, { act: "invite", phase: "in.ask" }, [
+        {
+          kind: "outcome",
+          id: "basis:done",
+          i18nKey: "ob.conv.basis.done",
+          tone: "success",
+        },
+      ]);
     case "INVITE_ACCEPTED":
       return withEntries(state, { act: "voice", phase: "vo.collecting" }, [
         {
@@ -436,12 +446,12 @@ function applyEvent(
       ]);
     // Neither resolution moves the act: both sections of the connect screen
     // stay on the same phase, and only mail's own consent gates CONNECT_DONE.
-    case "LINKEDIN_CONNECTED":
-      return withEntries(state, { linkedinStatus: "connected" }, [
+    case "LINKEDIN_SAVED":
+      return withEntries(state, { linkedinStatus: "saved" }, [
         {
           kind: "outcome",
-          id: "linkedin:connected",
-          i18nKey: "ob.conv.linkedin.connected",
+          id: "linkedin:saved",
+          i18nKey: "ob.conv.linkedin.saved",
           tone: "success",
         },
       ]);
