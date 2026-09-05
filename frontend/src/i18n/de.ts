@@ -3319,6 +3319,7 @@ export const de = {
   "analytics.count": "Deals",
   "analytics.unweighted": "Ungewichtet",
   "analytics.weighted": "Gewichtet",
+  "analytics.priced": "{priced} von {total} bepreist",
   "analytics.planNote":
     "der ausgeführte Plan und die Zeilen, auf die sich die Zahl zurückrechnet",
   "analytics.reportDeals": "Offene Pipeline nach Phase",

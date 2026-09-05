@@ -3286,6 +3286,7 @@ export const vi = {
   "analytics.count": "Deal",
   "analytics.unweighted": "Chưa trọng số",
   "analytics.weighted": "Có trọng số",
+  "analytics.priced": "{priced}/{total} đã định giá",
   "analytics.planNote":
     "kế hoạch đã chạy và những dòng mà con số này đối chiếu về",
   "analytics.reportDeals": "Pipeline đang mở theo giai đoạn",
