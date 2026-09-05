@@ -635,7 +635,7 @@ describe("what the ranked queue tells a reader", () => {
     expect(screen.getAllByText("My team").length).toBeGreaterThan(0);
   });
 
-  it("warns rather than claiming a clear day it could not read", async () => {
+  it("AC-WORKLIST-SDR-05: warns rather than claiming a clear day it could not read", async () => {
     stub(
       day({
         sources_unavailable: [{ source: "capture_health", reason: "failed" }],
@@ -1031,7 +1031,7 @@ describe("the draft_reply verb says what the click does", () => {
 // fixture must keep them distinct for the count to mean what it says, which is
 // what `seen.size` being asserted at 3 holds.
 describe("every obligation is drawn once", () => {
-  it("renders no row twice, including the one at the top", async () => {
+  it("AC-WORKLIST-SDR-02: renders no row twice, including the one at the top", async () => {
     stub(
       day({
         queue: [

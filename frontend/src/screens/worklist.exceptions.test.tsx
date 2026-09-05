@@ -68,7 +68,7 @@ describe("what needs the lead", () => {
     expect(screen.getByText(en["worklist.exceptions.nobody"])).toBeTruthy();
   });
 
-  it("admits a bounded page is not a clear team", async () => {
+  it("AC-WORKLIST-MGR-04: admits a bounded page is not a clear team", async () => {
     stubExceptions({
       as_of: "2026-09-05T09:00:00Z",
       // The server read to its own bound. A lead taking this list for the
