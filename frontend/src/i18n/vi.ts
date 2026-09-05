@@ -2338,6 +2338,7 @@ export const vi = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Chỉ deal đình trệ",
   "deals.filterOwnerMe": "Deal của tôi",
+  "deals.totalsNeedOwnerFilter": "Không có tổng — lọc theo Deal của tôi",
   "deals.filterPartner": "Đối tác",
   "deals.filterPartnerAnyOne": "Mọi đối tác",
   "deals.filterForecast": "Dự báo",

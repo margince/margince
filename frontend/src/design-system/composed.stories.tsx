@@ -338,6 +338,25 @@ const absentMoneyColumns: BoardMoneyColumn[] = [
     ],
   },
   {
+    // A sum hidden for a reason of the CALLER's, not the mixed-currency one
+    // above. The deals board withholds its totals when its card list and its
+    // totals query would measure different populations, and a column that drew
+    // the mixed-currency sentence there would state a reason that is not true.
+    stage: "withheld",
+    label: "Total withheld",
+    probabilityPct: 50,
+    rawMinor: null,
+    weightedMinor: null,
+    currency: null,
+    sumHidden: true,
+    sumHiddenReason: "No total — filter to My deals",
+    count: 2,
+    deals: [
+      boardDeal("a6", "Northwind renewal", 12_000, 3),
+      boardDeal("a7", "Tailspin expansion", 45_000, 9),
+    ],
+  },
+  {
     stage: "loading",
     label: "Totals in flight",
     probabilityPct: 60,

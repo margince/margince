@@ -2358,6 +2358,7 @@ export const de = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Nur ins Stocken geraten",
   "deals.filterOwnerMe": "Meine Deals",
+  "deals.totalsNeedOwnerFilter": "Keine Summe — auf Meine Deals filtern",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Alle Partner",
   "deals.filterForecast": "Forecast",

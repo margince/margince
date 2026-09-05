@@ -2399,6 +2399,7 @@ export const en = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Stalled only",
   "deals.filterOwnerMe": "My deals",
+  "deals.totalsNeedOwnerFilter": "No total — filter to My deals",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Any partner",
   "deals.filterForecast": "Forecast",

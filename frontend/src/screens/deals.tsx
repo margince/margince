@@ -386,7 +386,31 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
 // row, which buildStageTotals reads as "hide the sum" — the report never
 // includes archived deals (like every report), so the totals reflect the
 // live pipeline regardless of the board's "show archived" toggle.
-function useStageTotals(f: DealFilters) {
+// measuresTheSamePopulation reports whether the totals query would count the
+// same deals the board is showing.
+//
+// It does not, unless the owner filter names the viewer. `GET /deals` returns
+// every deal the reader may SEE — a deal is readable by every seat, plus
+// anything shared with them — while `POST /reports/{report}` carries no scope
+// parameter at all, so the report engine measures the caller's OWN population:
+// their records, or their teams' if they manage any. The two sets differ for
+// every rep who can read a colleague's deal, which is all of them.
+//
+// That is how a Qualified column came to say "1 deal" above eight cards. The
+// header was counting the reader's own one; the board was drawing every deal
+// the reader could see.
+//
+// Naming the viewer in the owner filter collapses the difference: both queries
+// then ask for the same person's deals, and the report's own narrowing becomes
+// a no-op rather than a second, invisible filter.
+function measuresTheSamePopulation(
+  f: DealFilters,
+  viewerID: string | undefined,
+): boolean {
+  return viewerID !== undefined && f.filters.owner_id === viewerID;
+}
+
+function useStageTotals(f: DealFilters, viewerID: string | undefined) {
   return useQuery({
     // Under ["deals"] on purpose, so the ONE invalidation every deal mutation
     // already fires refreshes the column headers along with the cards. Keyed
@@ -401,7 +425,16 @@ function useStageTotals(f: DealFilters) {
     // under it is a number the reader has no way to reconcile. Withheld is the
     // honest answer, and buildStageTotals already draws the no-sum column for
     // the mixed-currency case.
-    enabled: !f.overlay && parseTagIDs(f.filters.tag_id).length === 0,
+    //
+    // Nor unless the owner filter names the viewer, for the same reason in a
+    // different clause: the report measures the caller's own population and the
+    // board draws everything they may read, so any other owner selection — or
+    // none — puts a number over cards it did not count. See
+    // measuresTheSamePopulation.
+    enabled:
+      !f.overlay &&
+      parseTagIDs(f.filters.tag_id).length === 0 &&
+      measuresTheSamePopulation(f, viewerID),
     queryFn: async () => {
       const { data, error } = await api.POST("/reports/{report}", {
         params: { path: { report: "deals-by-stage" } },
@@ -1307,6 +1340,10 @@ export function buildColumns(
   deals: Deal[],
   totals: Map<string, StageTotals>,
   naming: CompanyNaming,
+  // What to say where a stage total would go when the totals query was not
+  // asked at all — see measuresTheSamePopulation. Undefined when totals are in
+  // play, which is the ordinary case.
+  totalsWithheld?: string,
 ): BoardMoneyColumn[] {
   return [...stages]
     .sort((a, b) => a.position - b.position)
@@ -1328,7 +1365,11 @@ export function buildColumns(
         // count while totals are still loading, so the column shows SOME
         // number rather than a misleading 0.
         count: stageTotals?.count ?? stageDeals.length,
-        sumHidden: stageTotals?.sumHidden ?? false,
+        // Withheld totals hide the sum for their own reason, which is NOT the
+        // mixed-currency one the column says by default.
+        sumHidden:
+          totalsWithheld !== undefined || (stageTotals?.sumHidden ?? false),
+        sumHiddenReason: totalsWithheld,
       };
     });
 }
@@ -1895,6 +1936,14 @@ function DealBoardBody({
                     loadedDeals,
                     stageTotalsQuery.data ?? new Map(),
                     orgMarks,
+                    // A query that was never enabled has no data and never
+                    // will, which is a different state from one still loading.
+                    // Saying so is the point: the alternative is a column
+                    // sitting silently over cards it did not count.
+                    stageTotalsQuery.fetchStatus === "idle" &&
+                      !stageTotalsQuery.isSuccess
+                      ? t("deals.totalsNeedOwnerFilter")
+                      : undefined,
                   )}
                   onOpen={openDeal}
                   cardDragHandlers={cardDragHandlers}
@@ -2476,7 +2525,7 @@ export function DealsScreen({
   // over EVERY matching deal, not just the capped page useDeals fetches —
   // built from the SAME filter dials so cards and totals never disagree
   // about which deals are in view.
-  const stageTotalsQuery = useStageTotals(dealFilters);
+  const stageTotalsQuery = useStageTotals(dealFilters, meQuery.data?.user.id);
   // A stage-keyed board cannot place a mirror deal (its pipeline/stage is the
   // null pipeline/stage), so overlay mode opens on the flat table and hides the toggle
   // (below) — the mode is fixed for the page's life, so a static initial value

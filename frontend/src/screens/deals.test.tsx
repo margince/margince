@@ -1063,7 +1063,17 @@ describe("DealsScreen", () => {
   // cards. The seeded card's own amount×probability would give a different,
   // WRONG figure if the board still computed it client-side — this proves
   // it renders the server's number instead.
+  // The board asks for stage totals only while the owner filter names the
+  // viewer, because that is the only selection under which the report's
+  // population and the board's card list are the same set of deals. Every test
+  // below whose subject IS the totals request has to put the board in that
+  // state first, the way a reader does by choosing "My deals".
+  function narrowToMyDeals() {
+    window.location.hash = "#/deals?owner_id=u-me";
+  }
+
   it("renders the board's column total from the deals-by-stage report, not from the loaded cards", async () => {
+    narrowToMyDeals();
     vi.stubGlobal(
       "fetch",
       stubBackend([deal({ id: "a", stage_id: "s1", amount_minor: 1 })], {
@@ -1091,7 +1101,38 @@ describe("DealsScreen", () => {
     expect(screen.getByText("250 deals")).toBeTruthy();
   });
 
+  // The defect this guard exists for: `GET /deals` returns every deal the
+  // reader may SEE, while the deals-by-stage report measures the caller's OWN
+  // population. A Qualified column said "1 deal" over eight cards because the
+  // header counted the reader's one and the board drew all eight.
+  //
+  // With no owner filter the two sets differ, so the board asks for no total
+  // and says why, rather than printing a number it did not measure.
+  it("asks for no stage total, and says so, until the owner filter names the viewer", async () => {
+    let totalsAsked = false;
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({ id: "a", stage_id: "s1" })], {
+        onStageTotalsBody: () => {
+          totalsAsked = true;
+        },
+      }),
+    );
+    render(<DealsScreen />);
+    await waitFor(() =>
+      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+    );
+
+    expect(totalsAsked).toBe(false);
+    // Once per stage column: each one owes the reader a reason where its
+    // figure would be, not a blank that reads as a stage worth nothing.
+    expect(
+      screen.getAllByText("No total — filter to My deals").length,
+    ).toBeGreaterThan(0);
+  });
+
   it("sends the board's active filters to the deals-by-stage totals request", async () => {
+    narrowToMyDeals();
     let sentBody: unknown;
     vi.stubGlobal(
       "fetch",
@@ -2427,10 +2468,15 @@ describe("the partner filter", () => {
       return stubBackend([d], { single: d })(request);
     });
 
+    // Totals are asked for only while the owner filter names the viewer: it is
+    // the one selection under which the report's population and the board's
+    // card list are the same deals. Set on the address, because a filter
+    // already applied opens the bar as a chip rather than as the "Filter"
+    // button this test then clicks.
+    window.location.hash = "#/deals?owner_id=u-me";
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
     await userEvent.click(screen.getByRole("button", { name: "Table" }));
-    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
     const menu = screen.getByRole("group", { name: "Filter" });
     await userEvent.click(
       within(menu).getByRole("button", { name: "Partner" }),
