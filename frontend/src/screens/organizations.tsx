@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { refetchAiActivity } from "../app/ai-activity";
+import { watchStartedAiRun } from "../app/ai-activity";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
@@ -1051,9 +1051,10 @@ function DeepReadCard({ orgId }: Readonly<{ orgId: string }>) {
         queryKey: ["site-read-latest", orgId],
       });
       // The read is queued the moment the 202 lands, and the rail's feed is
-      // what draws the crawl on the Core — so ask it now rather than on its
-      // next idle poll.
-      refetchAiActivity(queryClient);
+      // what draws the crawl on the Core — but the occurrence reaches that feed
+      // through the outbox, so it is not there yet. This is what makes the rail
+      // watch for it rather than meet it on its next idle poll.
+      watchStartedAiRun(queryClient);
     },
   });
 

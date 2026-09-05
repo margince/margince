@@ -3,7 +3,7 @@
 
 import type { QueryClient } from "@tanstack/react-query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { api } from "../api/client";
 import { useModelCallsInFlight } from "../api/model-inflight";
 import type { components } from "../api/schema";
@@ -31,19 +31,64 @@ const POLL_IDLE_MS = 30_000;
  */
 const ASK_LINGER_MS = 900;
 
+/**
+ * How long the feed is watched at the live cadence for a run this tab started.
+ *
+ * A durable run is not in the feed when its own request answers, and cannot be:
+ * the 202 means the row is committed, and the occurrence reaches the projection
+ * through the outbox — the relay's own poll, then the bus, then the consumer's
+ * upsert. So the read fired on the 202 asks at the one instant the answer is
+ * guaranteed to be no, and with nothing running the cadence then drops to
+ * POLL_IDLE_MS. That is how a website read a rep pressed and then watched
+ * announced itself on the rail up to half a minute later, or — for a reading
+ * that settled inside the window — never.
+ *
+ * The ceiling is the idle period itself, because past it the ordinary cadence
+ * has asked anyway: watching longer would not be watching, it would be polling
+ * fast for a run that is not coming. It ends on the clock rather than on the
+ * feed carrying the run, because from that moment the live rule below is what
+ * holds the cadence — the watch only has to cover the gap before it.
+ */
+const START_WATCH_MS = POLL_IDLE_MS;
+
 const ACTIVITY_KEY = ["me", "ai-activity"] as const;
 
 /**
- * Ask the feed again now, because this tab just did something the feed will
- * carry.
- *
- * For the surfaces that START a durable run and answer 202 — a website read
- * from a company page — rather than hold a model call open: those never count
- * as an ask in flight, so without this the orb would light on the next idle
- * poll, up to half a minute after the button, and the reader who pressed it
- * would see nothing move. Same shape as the refetch on an ask's edges below.
+ * How many durable runs this tab has started. A counter and not a flag: two
+ * presses are two waits, and the second must re-arm the first's rather than
+ * expire on its clock.
  */
-export function refetchAiActivity(client: QueryClient): void {
+let starts = 0;
+const startListeners = new Set<() => void>();
+
+function startCount(): number {
+  return starts;
+}
+
+function subscribeToStarts(onChange: () => void): () => void {
+  startListeners.add(onChange);
+  return () => {
+    startListeners.delete(onChange);
+  };
+}
+
+/**
+ * Report that this tab just started a durable run, so the feed goes looking for
+ * it instead of waiting for it.
+ *
+ * For the surfaces that START a run and answer 202 — a website read from a
+ * company page, a document reading from an attachment — rather than hold a
+ * model call open: those never count as an ask in flight, so nothing else here
+ * knows the agent has been given work. The immediate read is kept for the case
+ * it can actually answer — a request that JOINED a crawl already in flight,
+ * whose occurrence has been in the feed for minutes — and the watch covers the
+ * one it cannot.
+ */
+export function watchStartedAiRun(client: QueryClient): void {
+  starts += 1;
+  for (const listener of startListeners) {
+    listener();
+  }
   void client.refetchQueries({ queryKey: ACTIVITY_KEY });
 }
 
@@ -85,6 +130,7 @@ export function useAiActivity(): AiActivity {
   const client = useQueryClient();
   const [visible, setVisible] = useState(() => !document.hidden);
   const open = useModelCallsInFlight();
+  const watching = useStartedRunWatch();
 
   useEffect(() => {
     const onVisibilityChange = () => {
@@ -134,8 +180,12 @@ export function useAiActivity(): AiActivity {
     // a run that lasted five seconds was read at thirty-second resolution.
     // The raw count and not the lingering flag: the linger is presentation,
     // and the cadence follows the fact.
+    //
+    // A run this tab started is the third thing that makes the cadence live,
+    // and the only one neither of the other two can see: the feed does not
+    // carry it yet and no model call is open for it.
     refetchInterval: (q) =>
-      open > 0 || (q.state.data?.running ?? NOTHING).length > 0
+      watching || open > 0 || (q.state.data?.running ?? NOTHING).length > 0
         ? POLL_LIVE_MS
         : POLL_IDLE_MS,
   });
@@ -194,6 +244,43 @@ export function useAiActivity(): AiActivity {
     working: running.some((item) => item.state !== "stalled"),
     asking,
   };
+}
+
+/**
+ * Whether this tab is still looking for a run it started.
+ *
+ * The start is module state rather than a prop for the same reason the
+ * in-flight count is (`api/model-inflight.ts`): the surface that presses the
+ * button and the rail that reports the work are on opposite sides of the app,
+ * and threading a callback between them would put the rail's cadence in the
+ * hands of every screen that starts anything.
+ *
+ * The count seen at mount is not a start this tab is waiting on — it happened
+ * before this rail existed — so the ref opens on it rather than on zero, and a
+ * remounted rail does not arm a watch nobody asked for.
+ */
+function useStartedRunWatch(): boolean {
+  const started = useSyncExternalStore(
+    subscribeToStarts,
+    startCount,
+    startCount,
+  );
+  const [watching, setWatching] = useState(false);
+  const seen = useRef(started);
+  useEffect(() => {
+    if (started === seen.current) {
+      return undefined;
+    }
+    seen.current = started;
+    setWatching(true);
+    const timer = setTimeout(() => {
+      setWatching(false);
+    }, START_WATCH_MS);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [started]);
+  return watching;
 }
 
 /**
