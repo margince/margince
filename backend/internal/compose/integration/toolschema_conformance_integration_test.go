@@ -417,7 +417,7 @@ func oneFinishedInputCheck(ctx context.Context, t *testing.T, e *Env) {
 		}); err != nil {
 			return err
 		}
-		return store.FinishRun(ctx, tx, run, 1, 0, assurance.StatusComplete, "ready")
+		return store.FinishRun(ctx, tx, run, 1, 0, 0, assurance.StatusComplete, "ready")
 	}); err != nil {
 		t.Fatalf("recording a finished input check for the forecast tools: %v", err)
 	}

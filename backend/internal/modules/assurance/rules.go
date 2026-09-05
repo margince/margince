@@ -107,7 +107,13 @@ type Rule struct {
 	// or vanishing because a rule moved is not the business moving, and a
 	// reader comparing two nights has to be able to tell.
 	Version string
-	Ask     func(asOf time.Time, s Subject, cfg Config) *Finding
+	// Needs names the coverage sources this rule's absence claim stands on.
+	// A rule that reads only the deal graph needs none: the subjects read
+	// itself proves the graph was reachable. buyerSilent needs the mailbox —
+	// its finding must NOT be auto-cleared on a night the mailbox was not
+	// read, because "no silence observed" would then mean "nothing observed".
+	Needs []string
+	Ask   func(asOf time.Time, s Subject, cfg Config) *Finding
 }
 
 // Config is what an installation decides rather than the product.
@@ -198,13 +204,16 @@ func closePushed() Rule {
 // The deal says one number and the offer that was sent says another. The buyer
 // is looking at the offer.
 func amountVsOffer() Rule {
-	return Rule{Type: TypeAmountVsOffer, Version: "v1", Ask: func(_ time.Time, s Subject, cfg Config) *Finding {
+	return Rule{Type: TypeAmountVsOffer, Version: "v1", Needs: []string{"offers"}, Ask: func(_ time.Time, s Subject, cfg Config) *Finding {
 		return amountDisagreement(TypeAmountVsOffer, s, s.OfferTotalMinor, "offer_total", cfg)
 	}}
 }
 
 // The deal says one number and the signed contract says another. Worse than
 // the offer case: this one has a signature on it.
+// No Needs: the contract table is native to the run's own database, so the
+// subjects read succeeding is what proves it was reachable — there is no
+// graded coverage source for it to stand on.
 func amountVsContract() Rule {
 	return Rule{Type: TypeAmountVsContract, Version: "v1", Ask: func(_ time.Time, s Subject, cfg Config) *Finding {
 		f := amountDisagreement(TypeAmountVsContract, s, s.ContractTotalMinor, "contract_total", cfg)
@@ -282,7 +291,7 @@ func noEconomicBuyer() Rule {
 // answered in ninety days — and the deal looks alive to every screen reading
 // it. This rule reads the buyer's own side.
 func buyerSilent() Rule {
-	return Rule{Type: TypeBuyerSilent, Version: "v1", Ask: func(asOf time.Time, s Subject, cfg Config) *Finding {
+	return Rule{Type: TypeBuyerSilent, Version: "v1", Needs: []string{"mail"}, Ask: func(asOf time.Time, s Subject, cfg Config) *Finding {
 		if s.LastInboundAt == nil {
 			// Nobody has ever heard from them. A different finding from
 			// silence after a conversation, and not one this rule claims: a

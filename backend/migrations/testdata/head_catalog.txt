@@ -752,7 +752,7 @@ public.assurance_exception.assurance_exception_amount_currency_pair CHECK (((aff
 public.assurance_exception.assurance_exception_pkey PRIMARY KEY (id)
 public.assurance_exception.assurance_exception_seen_ordered CHECK ((last_seen_at >= first_seen_at))
 public.assurance_exception.assurance_exception_severity_check CHECK ((severity = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text])))
-public.assurance_exception.assurance_exception_status_check CHECK ((status = ANY (ARRAY['open'::text, 'resolved'::text, 'expired'::text])))
+public.assurance_exception.assurance_exception_status_check CHECK ((status = ANY (ARRAY['open'::text, 'resolved'::text, 'expired'::text, 'condition_cleared'::text])))
 public.assurance_exception.assurance_exception_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'offer'::text, 'contract'::text])))
 public.assurance_exception.captured_by text NOT NULL gen=- def=-
 public.assurance_exception.claim jsonb NOT NULL gen=- def='{}'::jsonb
