@@ -188,11 +188,9 @@ type sweepWorker struct {
 // table is the content and the loop above is four assertions.
 func fleetWideShapesInTheTree() map[string]string {
 	return map[string]string{
-		"dispatchPerWorkspace over the live fleet": `
+		"runPerWorkspace over the live fleet": `
 			func (w *sweepWorker) Work(ctx context.Context, _ *river.Job[SweepArgs]) error {
-				return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-					workspaceSweepOpts(SweepWorkspaceArgs{}.Kind()),
-					func(ws ids.UUID) river.JobArgs { return SweepWorkspaceArgs{Workspace: ws} }))
+				return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.sweepWorkspace))
 			}`,
 		"dispatchWith over an archived-inclusive enumeration": `
 			func (w *sweepWorker) Work(ctx context.Context, _ *river.Job[SweepArgs]) error {
@@ -242,14 +240,11 @@ func fleetWideShapesInTheTree() map[string]string {
 			}`,
 		"a due-scan that reads a tenant table before fanning out": `
 			func (w *sweepWorker) Work(ctx context.Context, _ *river.Job[SweepArgs]) error {
-				rows, err := w.pool.Query(ctx, ` + "`SELECT workspace_id FROM connection WHERE next_sweep_at <= now() FOR UPDATE`" + `)
+				due, err := dueWorkspaces(ctx, w.pool)
 				if err != nil {
 					return jobs.FaultContext(ctx, err)
 				}
-				defer rows.Close()
-				return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-					workspaceSweepOpts(SweepWorkspaceArgs{}.Kind()),
-					func(ws ids.UUID) river.JobArgs { return SweepWorkspaceArgs{Workspace: ws} }))
+				return jobs.FaultContext(ctx, runEach(ctx, due, w.sweepWorkspace))
 			}`,
 	}
 }

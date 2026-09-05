@@ -165,7 +165,18 @@ func Stats(ctx context.Context, pool *pgxpool.Pool) (Snapshot, error) {
 // connection, is enrolled by the declaration that made it so. Both arrays are
 // built in one pass so they stay index-aligned by construction.
 func subWorkspaceFanOuts() (kinds, argsKeys []string) {
-	units := FanOutUnits()
+	return subWorkspaceFanOutsOf(FanOutUnits())
+}
+
+// subWorkspaceFanOutsOf is the selection itself, over a table it is handed.
+//
+// Separate from its caller so the partition can be exercised against a table a
+// test builds. ADR-0103 retired every workspace fan-out, so no live declaration
+// stands on that side of the split any more — and the rule did not retire with
+// them: the unit still exists for an extension to declare, and a
+// workspace-grain fan-out must still be kept out of the unit pair, because
+// margince_sweep_workspaces already states exactly that number.
+func subWorkspaceFanOutsOf(units map[string]FanOutUnit) (kinds, argsKeys []string) {
 	for _, kind := range slices.Sorted(maps.Keys(units)) {
 		key := units[kind].ArgsKey()
 		if units[kind] == FanOutWorkspace || key == "" {

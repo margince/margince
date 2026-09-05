@@ -236,7 +236,7 @@ func TestTheUntenantedArmResolvesItsKindsFromTheDeclaredRole(t *testing.T) {
 	// It falls with the collapse: ADR-0103 is retiring the workspace
 	// dispatchers, and what is left at the end is the fan-outs over a
 	// CONNECTION or a BUILD, which stay.
-	if len(want) < 10 {
+	if len(want) < 20 {
 		t.Fatalf("the contract declares only %d fleet-wide kinds; the filter is not resolving them", len(want))
 	}
 

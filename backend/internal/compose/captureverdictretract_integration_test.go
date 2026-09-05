@@ -17,7 +17,6 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -137,9 +136,7 @@ func TestTheReconcileSweepRetractsContactsANoiseVerdictAlreadyCovered(t *testing
 	seedSenderOverride(t, e, e.Rep1, "vertrieb.partner@haendler.example", "business")
 
 	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, people.NewStore(InstallationDB(e.Pool)))
-	if err := worker.Work(context.Background(), &river.Job[LinkReconcileWorkspaceArgs]{
-		Args: LinkReconcileWorkspaceArgs{Workspace: e.WS},
-	}); err != nil {
+	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
 	}
 
