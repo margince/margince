@@ -462,11 +462,10 @@ func renderPredicates(preds []boundPredicate) string {
 }
 
 func aggregatePhrase(agg reportAggregate) (string, error) {
-	// Keyed off the engine's own constants, and covering ALL of them. This map
-	// once listed five of seven as bare strings, so stage-age and win-loss
-	// minted derivation links whose default percentile aggregates this very
-	// function then refused. TestEveryEngineAggregateRendersAPhrase holds the
-	// two sides equal in both directions.
+	// Keyed off the engine's own constants and covering ALL of them: five of
+	// seven as bare strings once left the percentile defaults of stage-age and
+	// win-loss minting links this very function then refused. Held equal to the
+	// engine by TestEveryEngineAggregateRendersAPhrase.
 	verbs := map[string]string{
 		aggFnCount:  "the number of matching records",
 		aggFnSum:    "the sum of",
