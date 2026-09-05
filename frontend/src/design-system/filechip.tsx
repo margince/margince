@@ -45,6 +45,9 @@ export function FileChip({
   );
 }
 
+// The mark for a kind tag, decided from the same upper-cased extension the
+// tag shows: three glyphs, never a guess at anything finer, so a reader learns
+// paper / picture / other at a glance and reads the tag for the rest.
 function glyphFor(kind: string) {
   if (kind === "PDF") {
     return FileText;
