@@ -1035,6 +1035,10 @@ func (stubs) SetOauthApp(w nethttp.ResponseWriter, r *nethttp.Request, provider 
 	httperr.NotImplemented(w, r, "SetOauthApp")
 }
 
+func (stubs) GetSeatUsage(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetSeatUsage")
+}
+
 func (stubs) GetInstallationSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetInstallationSettings")
 }
@@ -1197,6 +1201,10 @@ func (stubs) PreviewLeadPromotion(w nethttp.ResponseWriter, r *nethttp.Request, 
 
 func (stubs) ExplainLeadScore(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ExplainLeadScoreParams) {
 	httperr.NotImplemented(w, r, "ExplainLeadScore")
+}
+
+func (stubs) GetMagic(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetMagicParams) {
+	httperr.NotImplemented(w, r, "GetMagic")
 }
 
 func (stubs) GetCurrentPrincipal(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -1673,6 +1681,10 @@ func (stubs) RecordQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request,
 
 func (stubs) SuppressPerson(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "SuppressPerson")
+}
+
+func (stubs) LiftSuppression(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, suppressionId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "LiftSuppression")
 }
 
 func (stubs) DraftPersonEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

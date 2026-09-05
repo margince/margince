@@ -99,3 +99,42 @@ func withDealFacts(deal RiskyDeal) RiskyDeal {
 	deal.AmountMinor, deal.Currency = &minor, &currency
 	return deal
 }
+
+// The reason and the fact are two answers, and a client reads both.
+//
+// The tests above prove the `because` line fires; this proves the typed field
+// beside it says the same thing. They are separate code paths — classifyRisk
+// appends the reason from the lane item, dealFactsOf projects the facts object
+// — so one carrying the tri-state proves nothing about the other. A card
+// drawing a champion-coverage badge reads the field, not the reason.
+func TestTheDealCardSaysNobodyIsCarryingIt(t *testing.T) {
+	uncovered := true
+	row := oneRiskRow(t, withDealFacts(RiskyDeal{
+		DealID: ids.NewV7(), Name: "Fleet retrofit",
+		QuietDays: 19, NoChampion: &uncovered,
+	}))
+	if row.Deal == nil {
+		t.Fatal("the row carries no deal facts at all")
+	}
+	if row.Deal.NoChampion == nil || !*row.Deal.NoChampion {
+		t.Errorf("the card states no_champion=%v, want a stated true", row.Deal.NoChampion)
+	}
+}
+
+// Absent, never false — the distinction the contract spells out at length.
+//
+// `false` here would be the card claiming the committee is covered, over a
+// read that never saw the committee. A rep reading that stops looking for a
+// champion on a deal whose champion they simply may not see.
+func TestTheCardMakesNoChampionClaimAboutAWithheldCommittee(t *testing.T) {
+	row := oneRiskRow(t, withDealFacts(RiskyDeal{
+		DealID: ids.NewV7(), Name: "Fleet retrofit",
+		QuietDays: 19, NoChampion: nil,
+	}))
+	if row.Deal == nil {
+		t.Fatal("the row carries no deal facts at all")
+	}
+	if row.Deal.NoChampion != nil {
+		t.Errorf("the card answers %v about a committee it could not read, want no answer", *row.Deal.NoChampion)
+	}
+}

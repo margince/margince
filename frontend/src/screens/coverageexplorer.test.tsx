@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { CoverageExplorer } from "./coverageexplorer";
 
 // The grid exists to answer "where are we thin" without becoming a contact ×
@@ -134,7 +135,7 @@ describe("comparing the colleagues a reader chooses", () => {
     await screen.findByText("Dana Buyer");
 
     await user.type(
-      screen.getByRole("searchbox", { name: "Find a contact" }),
+      screen.getByRole("searchbox", { name: en["acctCoverage.findContact"] }),
       "Sam",
     );
     expect(screen.queryByText("Dana Buyer")).toBeNull();

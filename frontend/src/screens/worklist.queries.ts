@@ -35,6 +35,10 @@ export type WorklistCategory = WorklistItem["category"];
 export type WorklistDisposition = NonNullable<
   WorklistItem["dispositions"]
 >[number];
+// What a snooze waits for. Derived from the contract's shared schema for the
+// reason the disposition union is: a hand-written union goes stale the moment
+// the server gains a fourth condition, and nothing compares the two.
+export type ReopenCondition = components["schemas"]["ReopenCondition"];
 export type TeamBoard = components["schemas"]["TeamBoard"];
 export type TeamExceptions = components["schemas"]["TeamExceptions"];
 export type HandledForYou = components["schemas"]["HandledForYou"];
@@ -430,14 +434,19 @@ export function useSetDisposition() {
       activityId: string;
       disposition: WorklistDisposition;
       snoozedUntil?: string;
+      reopenOn?: ReopenCondition;
+      reopenRef?: string;
     }) => {
       const { error } = await api.PUT("/activities/{id}/disposition", {
         params: { path: { id: input.activityId } },
         body: {
           disposition: input.disposition,
-          // Only a snooze names a moment. Sending one on the others is a 422,
-          // because a hand-off that expires on a Thursday is not a hand-off.
+          // Only a snooze names a moment or a condition. Sending either on the
+          // others is a 422, because a hand-off that expires on a Thursday is
+          // not a hand-off.
           ...(input.snoozedUntil ? { snoozed_until: input.snoozedUntil } : {}),
+          ...(input.reopenOn ? { reopen_on: input.reopenOn } : {}),
+          ...(input.reopenRef ? { reopen_ref: input.reopenRef } : {}),
         },
       });
       if (error) {

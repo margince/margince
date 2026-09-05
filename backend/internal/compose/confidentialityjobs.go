@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ConfidentialityVerdictArgs runs one fleet-wide confidentiality dispatch.
@@ -31,59 +32,39 @@ func (ConfidentialityVerdictArgs) Kind() string { return "capture_confidentialit
 // tenant work of its own (jobs.FleetWide).
 func (ConfidentialityVerdictArgs) FleetWide() {}
 
-// confidentialityVerdictWorker enqueues one pass per workspace.
+// confidentialityVerdictWorker drains every live workspace's thread backlog.
+//
+// One worker where there were two (ADR-0103).
 type confidentialityVerdictWorker struct {
-	pool *pgxpool.Pool
-}
-
-func (w *confidentialityVerdictWorker) Work(ctx context.Context, _ *river.Job[ConfidentialityVerdictArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(ConfidentialityVerdictWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return ConfidentialityVerdictWorkspaceArgs{Workspace: ws} }))
-}
-
-// ConfidentialityVerdictWorkspaceArgs runs one workspace's confidentiality pass.
-type ConfidentialityVerdictWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (ConfidentialityVerdictWorkspaceArgs) Kind() string {
-	return "capture_confidentiality_verdict_workspace"
-}
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a ConfidentialityVerdictWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// confidentialityVerdictWorkspaceWorker drains one workspace's thread backlog.
-type confidentialityVerdictWorkspaceWorker struct {
+	pool   *pgxpool.Pool
 	engine *ConfidentialityVerdictEngine
 }
 
-func (w *confidentialityVerdictWorkspaceWorker) Work(ctx context.Context, job *river.Job[ConfidentialityVerdictWorkspaceArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+func (w *confidentialityVerdictWorker) Work(ctx context.Context, _ *river.Job[ConfidentialityVerdictArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.judgeWorkspace))
+}
+
+func (w *confidentialityVerdictWorker) judgeWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	// A deployment with no model bound holds every thread, which is the correct
 	// answer rather than a fault: RunWorkspace returns cleanly. Failing the job
 	// instead would fill the log with an alarm about a configuration somebody
 	// chose.
 	if err := w.engine.RunWorkspace(wsCtx, 0); err != nil {
-		return jobs.FaultContext(ctx, err)
+		return err
 	}
 	// Threads that spent every attempt without an answer end at `unsure`, which
 	// HOLDS. Retiring runs after judging so a thread that exhausted its last
 	// attempt this tick is retired in the same pass rather than sitting
 	// claimable-but-never-claimed until the next one.
 	if _, err := w.engine.RetireExhausted(wsCtx); err != nil {
-		return jobs.FaultContext(ctx, err)
+		return err
 	}
 	// And the answers that never reached their messages. After retiring, so a
 	// thread that just became `unsure` has its messages settled in the same
 	// tick rather than waiting for the next one.
 	if _, err := w.engine.FinishSettledThreads(wsCtx); err != nil {
-		return jobs.FaultContext(ctx, err)
+		return err
 	}
 	return nil
 }

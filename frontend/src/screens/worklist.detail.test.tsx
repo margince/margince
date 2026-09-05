@@ -220,7 +220,7 @@ describe("the supporting line each source sends", () => {
       what: "stale object classes",
       kind: "objects_stale",
       detail: "deals, contacts",
-      says: "Out of date here: deals, contacts.",
+      says: "Out of date here: deals, people.",
       never: "deals, contacts",
     },
   ])(

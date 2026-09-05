@@ -34,6 +34,8 @@ type Answers = Readonly<{
    *  from nowhere else, so a story for one is a story about this feed. */
   running?: readonly unknown[];
   recent?: readonly unknown[];
+  /** A mailbox import in flight, as the connections read reports it. */
+  importing?: Readonly<{ scanned: number; estimated: number | null }>;
 }>;
 
 /** One occurrence as the wire spells it. */
@@ -125,6 +127,13 @@ function story(answers: Answers, collapsed = false, grants = OPERATOR) {
               provider: "gmail",
               status: answers.connectorStatus,
               account_label: "ada@acme.test",
+              backfill: answers.importing
+                ? {
+                    state: "running",
+                    estimated_messages: answers.importing.estimated,
+                    counts: { messages_scanned: answers.importing.scanned },
+                  }
+                : { state: "none" },
             },
           ],
         }),
@@ -186,6 +195,22 @@ export const Ingest: Story = {
     ...HEALTHY,
     running: [occurrence({ kind: "document_extract" })],
   }),
+};
+
+/** Ingest, from a mailbox import: the one long run the feed cannot carry,
+ *  read off the connections list instead. The ring is the import's share and
+ *  the line says so with it. */
+export const ImportingMail: Story = {
+  render: story({
+    ...HEALTHY,
+    importing: { scanned: 1_204, estimated: 2_900 },
+  }),
+};
+
+/** The same import with no preview behind it: the orb ingests, the line names
+ *  the import, and no ring is drawn at a guessed share. */
+export const ImportingMailUnpreviewed: Story = {
+  render: story({ ...HEALTHY, importing: { scanned: 37, estimated: null } }),
 };
 
 /** Working: the agent reasoning over evidence it already holds. Nothing this

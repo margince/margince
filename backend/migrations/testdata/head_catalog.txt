@@ -148,6 +148,25 @@ BEGIN
     RETURN NEW;
 END;
 
+public.activity_meeting_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity_meeting_history.activity_id uuid NOT NULL gen=- def=-
+public.activity_meeting_history.activity_meeting_history_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.activity_meeting_history.activity_meeting_history_pkey PRIMARY KEY (id)
+public.activity_meeting_history.activity_meeting_history_source_pairing CHECK (((source_id IS NULL) = (source_system IS NULL)))
+public.activity_meeting_history.activity_meeting_history_status_check CHECK ((status = ANY (ARRAY['booked'::text, 'held'::text, 'no_show'::text, 'canceled'::text])))
+public.activity_meeting_history.actor text NOT NULL gen=- def=-
+public.activity_meeting_history.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_meeting_history.effective_at timestamp with time zone NOT NULL gen=- def=-
+public.activity_meeting_history.id uuid NOT NULL gen=- def=uuidv7()
+public.activity_meeting_history.partial_pre_history boolean NOT NULL gen=- def=false
+public.activity_meeting_history.scheduled_start timestamp with time zone gen=- def=-
+public.activity_meeting_history.source_id text gen=- def=-
+public.activity_meeting_history.source_system text gen=- def=-
+public.activity_meeting_history.status text NOT NULL gen=- def=-
+public.activity_meeting_history_by_activity CREATE INDEX activity_meeting_history_by_activity ON public.activity_meeting_history USING btree (activity_id, effective_at)
+public.activity_meeting_history_by_status_time CREATE INDEX activity_meeting_history_by_status_time ON public.activity_meeting_history USING btree (status, effective_at)
+public.activity_meeting_history_pkey CREATE UNIQUE INDEX activity_meeting_history_pkey ON public.activity_meeting_history USING btree (id)
+public.activity_meeting_history_source_once CREATE UNIQUE INDEX activity_meeting_history_source_once ON public.activity_meeting_history USING btree (source_system, source_id, status) WHERE (source_system IS NOT NULL)
 public.activity_meeting_no_overlap CREATE INDEX activity_meeting_no_overlap ON public.activity USING gist (host_user_id, tsrange(timezone('UTC'::text, occurred_at), (timezone('UTC'::text, occurred_at) + '01:00:00'::interval))) WHERE ((kind = 'meeting'::text) AND (host_user_id IS NOT NULL) AND (archived_at IS NULL))
 public.activity_participant acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_participant.activity_id uuid NOT NULL gen=- def=-
@@ -180,8 +199,12 @@ public.activity_reader_state.activity_reader_state_activity_id_fkey FOREIGN KEY 
 public.activity_reader_state.activity_reader_state_known CHECK ((state = ANY (ARRAY['snoozed'::text, 'not_mine'::text])))
 public.activity_reader_state.activity_reader_state_pkey PRIMARY KEY (activity_id, reader_id)
 public.activity_reader_state.activity_reader_state_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.activity_reader_state.activity_reader_state_shaped CHECK ((((state = 'snoozed'::text) AND (snoozed_until IS NOT NULL)) OR ((state = 'not_mine'::text) AND (snoozed_until IS NULL))))
+public.activity_reader_state.activity_reader_state_reopen_known CHECK (((reopen_on IS NULL) OR (reopen_on = ANY (ARRAY['time'::text, 'reply'::text, 'meeting'::text]))))
+public.activity_reader_state.activity_reader_state_reopen_ref_shaped CHECK ((NOT ((reopen_ref IS NOT NULL) IS DISTINCT FROM (NOT (reopen_on IS DISTINCT FROM 'meeting'::text)))))
+public.activity_reader_state.activity_reader_state_shaped CHECK ((((state = 'snoozed'::text) AND (reopen_on IS NOT NULL) AND (NOT ((snoozed_until IS NOT NULL) IS DISTINCT FROM (reopen_on = 'time'::text)))) OR ((state = 'not_mine'::text) AND (snoozed_until IS NULL) AND (reopen_on IS NULL))))
 public.activity_reader_state.reader_id uuid NOT NULL gen=- def=-
+public.activity_reader_state.reopen_on text gen=- def=-
+public.activity_reader_state.reopen_ref uuid gen=- def=-
 public.activity_reader_state.set_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_reader_state.set_by text NOT NULL gen=- def=-
 public.activity_reader_state.snoozed_until timestamp with time zone gen=- def=-
@@ -814,6 +837,16 @@ public.assurance_run.rule_versions jsonb NOT NULL gen=- def='{}'::jsonb
 public.assurance_run.status text NOT NULL gen=- def='running'::text
 public.assurance_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_run.version bigint NOT NULL gen=- def=1
+public.assurance_run_finding acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.assurance_run_finding.assurance_run_finding_exception_id_fkey FOREIGN KEY (exception_id) REFERENCES assurance_exception(id) ON DELETE CASCADE
+public.assurance_run_finding.assurance_run_finding_pkey PRIMARY KEY (run_id, exception_id)
+public.assurance_run_finding.assurance_run_finding_run_id_fkey FOREIGN KEY (run_id) REFERENCES assurance_run(id) ON DELETE CASCADE
+public.assurance_run_finding.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.assurance_run_finding.exception_id uuid NOT NULL gen=- def=-
+public.assurance_run_finding.observed_at timestamp with time zone NOT NULL gen=- def=-
+public.assurance_run_finding.run_id uuid NOT NULL gen=- def=-
+public.assurance_run_finding_by_exception CREATE INDEX assurance_run_finding_by_exception ON public.assurance_run_finding USING btree (exception_id, observed_at DESC)
+public.assurance_run_finding_pkey CREATE UNIQUE INDEX assurance_run_finding_pkey ON public.assurance_run_finding USING btree (run_id, exception_id)
 public.assurance_run_pkey CREATE UNIQUE INDEX assurance_run_pkey ON public.assurance_run USING btree (id)
 public.assurance_source_coverage acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.assurance_source_coverage.assurance_source_coverage_date_matches_state CHECK (((state = 'checked'::text) OR (checked_through IS NULL)))
@@ -979,8 +1012,11 @@ public.brief_item.brief_item_finding_length CHECK (((finding IS NULL) OR (char_l
 public.brief_item.brief_item_lineage_whole CHECK (((returned_after_dismissal_on IS NULL) = (returned_with_activity_at IS NULL)))
 public.brief_item.brief_item_pkey PRIMARY KEY (id)
 public.brief_item.brief_item_rank_check CHECK ((rank >= 1))
+public.brief_item.brief_item_reopen_belongs_to_a_snooze CHECK ((NOT ((reopen_on IS NOT NULL) IS DISTINCT FROM (state = 'snoozed'::text))))
+public.brief_item.brief_item_reopen_known CHECK (((reopen_on IS NULL) OR (reopen_on = ANY (ARRAY['time'::text, 'reply'::text, 'meeting'::text]))))
+public.brief_item.brief_item_reopen_ref_shaped CHECK ((NOT ((reopen_ref IS NOT NULL) IS DISTINCT FROM (NOT (reopen_on IS DISTINCT FROM 'meeting'::text)))))
 public.brief_item.brief_item_run_fkey FOREIGN KEY (brief_run_id) REFERENCES brief_run(id) ON DELETE CASCADE
-public.brief_item.brief_item_snooze_shape CHECK (((snoozed_until IS NOT NULL) = (state = 'snoozed'::text)))
+public.brief_item.brief_item_snooze_shape CHECK ((NOT ((snoozed_until IS NOT NULL) IS DISTINCT FROM (NOT (reopen_on IS DISTINCT FROM 'time'::text)))))
 public.brief_item.brief_item_state_check CHECK ((state = ANY (ARRAY['new'::text, 'acted'::text, 'dismissed'::text, 'snoozed'::text])))
 public.brief_item.brief_item_state_stamped CHECK (((state = 'new'::text) = (state_at IS NULL)))
 public.brief_item.brief_run_id uuid NOT NULL gen=- def=-
@@ -991,6 +1027,8 @@ public.brief_item.feature_vector jsonb NOT NULL gen=- def=-
 public.brief_item.finding text gen=- def=-
 public.brief_item.id uuid NOT NULL gen=- def=uuidv7()
 public.brief_item.rank integer NOT NULL gen=- def=-
+public.brief_item.reopen_on text gen=- def=-
+public.brief_item.reopen_ref uuid gen=- def=-
 public.brief_item.returned_after_dismissal_on date gen=- def=-
 public.brief_item.returned_with_activity_at timestamp with time zone gen=- def=-
 public.brief_item.snoozed_until timestamp with time zone gen=- def=-
@@ -4733,6 +4771,8 @@ public.signing_key.signing_key_pkey PRIMARY KEY (kid)
 public.signing_key.workspace_signing_key_alg_check CHECK ((alg = 'EdDSA'::text))
 public.signing_key_pkey CREATE UNIQUE INDEX signing_key_pkey ON public.signing_key USING btree (kid)
 public.site_read acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.site_read.attempt integer NOT NULL gen=- def=1
+public.site_read.attempt_at timestamp with time zone NOT NULL gen=- def=now()
 public.site_read.confirmed_at timestamp with time zone gen=- def=-
 public.site_read.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.site_read.draft_version integer NOT NULL gen=- def=1
@@ -4755,6 +4795,7 @@ public.site_read.proposal_hash text NOT NULL gen=- def=''::text
 public.site_read.proposal_ids uuid[] NOT NULL gen=- def='{}'::uuid[]
 public.site_read.requested_by text NOT NULL gen=- def=-
 public.site_read.seed_url text NOT NULL gen=- def=-
+public.site_read.site_read_attempt_check CHECK ((attempt >= 1))
 public.site_read.site_read_draft_version_check CHECK ((draft_version > 0))
 public.site_read.site_read_org_fkey FOREIGN KEY (organization_id) REFERENCES organization(id) ON DELETE CASCADE
 public.site_read.site_read_outcome_shape CHECK ((((status = 'deferred'::text) AND (status_code = 'budget_deferred'::text) AND (status_detail IS NOT NULL) AND (next_attempt_at IS NOT NULL)) OR ((status = 'failed'::text) AND (status_code IS NOT NULL) AND (status_code = ANY (ARRAY['bot_blocked'::text, 'http_client_error'::text, 'http_server_error'::text, 'timeout'::text, 'dns'::text, 'tls'::text, 'robots_disallowed'::text, 'unreadable'::text, 'internal'::text, 'stale_reclaim'::text])) AND (status_detail IS NOT NULL)) OR ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'partial'::text, 'cancelled'::text])) AND (status_code IS NULL) AND (status_detail IS NULL) AND (next_attempt_at IS NULL))))

@@ -36,6 +36,7 @@
 .ob-fr-form .panel-body {
   display: flex;
   flex-direction: column;
+  /* ds:ignore a body holding a stack of questions declares the air between them */
   gap: var(--space-5);
   /* And no inset either, now that there is no edge to sit inside: the board's
      own padding already holds this form off the card. */

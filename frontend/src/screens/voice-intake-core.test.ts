@@ -5,7 +5,6 @@ import {
   intakePaste,
   intakeTranscript,
   intakeUpload,
-  isAcceptedCorpusFile,
   refusalOf,
   routePreview,
   sourceRef,
@@ -354,20 +353,6 @@ describe("the outcomes an intake can end as", () => {
     expect(outcome).toMatchObject({ kind: "refused", reason: null });
     if (outcome.kind === "refused") {
       expect(outcome.problem).toBeTruthy();
-    }
-  });
-});
-
-describe("which files are offered to the server at all", () => {
-  it("accepts the text formats the corpus can read", () => {
-    for (const name of ["a.txt", "b.md", "c.vtt", "d.srt", "e.json"]) {
-      expect(isAcceptedCorpusFile(name)).toBe(true);
-    }
-  });
-
-  it("rejects everything else by name, before any upload", () => {
-    for (const name of ["photo.png", "deck.pdf", "sheet.xlsx", "noext"]) {
-      expect(isAcceptedCorpusFile(name)).toBe(false);
     }
   });
 });

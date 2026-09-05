@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { Paperclip, X } from "lucide-react";
+import { X } from "lucide-react";
 import { type ReactNode, useId } from "react";
 
 import { api } from "../api/client";
@@ -11,6 +11,7 @@ import { splitEmailBody } from "../format/emailtext";
 import { formatBytes, formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
 import { Button, Modal } from "./atoms";
+import { FileChip } from "./filechip";
 import { SurfaceState } from "./surfacestate";
 import "./emaildetail.css";
 
@@ -43,24 +44,14 @@ export function EmailDetail({
   onClose,
   formatWhen,
   renderAccess,
-  renderAccessMarkers,
 }: Readonly<{
   activityId: string;
   onClose: () => void;
   /** The caller owns the reader's timezone, so it owns the formatting. */
   formatWhen: (iso: string) => string;
   /**
-   * What this message's access IS, as markers beside the subject.
-   *
-   * Separate from `renderAccess` because the two answer different questions at
-   * different moments: this is the glance a reader takes before reading, and
-   * that is the sentence and the control they reach for after. Splitting them
-   * is also what keeps the header short — a paragraph beside a subject line
-   * pushes the message itself below the fold.
-   */
-  renderAccessMarkers?: (access: EmailPresentation["access"]) => ReactNode;
-  /**
-   * Who reads this message, and the control to change it.
+   * Who reads this message, and the control to change it — drawn under the
+   * subject, before the message.
    *
    * Passed in rather than mounted here because the editor performs WRITES: it
    * reaches the audience service and the roster reads, which live in `screens/`
@@ -131,17 +122,18 @@ export function EmailDetail({
           <h2 id={titleId} className="emaildetail__title">
             {title}
           </h2>
-          {/* WHAT this message's access is, beside its subject. A limit is a
-              fact about a message like its date, and a reader wants it before
-              they read rather than after: under the body these markers sat
-              below the attachments, so on anything longer than a screen the
-              first sign a message was confidential arrived once the reader had
-              already finished it.
+          {/* WHO may read this message, and the verb that changes it, under
+              its subject. A limit is a fact about a message like its date, and
+              a reader wants it before they read rather than after: under the
+              body it sat below the attachments, so on anything longer than a
+              screen the first sign a message was confidential arrived once the
+              reader had already finished it — and the button that flipped it
+              sat three paragraphs from the word it flipped.
 
               Drawn from the read the drawer has already made, so a header with
-              no markers is a message whose access block did not arrive — never
-              one whose access nobody asked about. */}
-          {read.data && renderAccessMarkers?.(read.data.access)}
+              no access line is a message whose access block did not arrive —
+              never one whose access nobody asked about. */}
+          {read.data && renderAccess?.(read.data)}
         </div>
         <Button
           small
@@ -173,11 +165,7 @@ export function EmailDetail({
           {null}
         </SurfaceState>
       ) : (
-        <EmailBody
-          presentation={read.data}
-          formatWhen={formatWhen}
-          renderAccess={renderAccess}
-        />
+        <EmailBody presentation={read.data} formatWhen={formatWhen} />
       )}
     </Modal>
   );
@@ -186,11 +174,9 @@ export function EmailDetail({
 function EmailBody({
   presentation,
   formatWhen,
-  renderAccess,
 }: Readonly<{
   presentation: EmailPresentation;
   formatWhen: (iso: string) => string;
-  renderAccess?: (presentation: EmailPresentation) => ReactNode;
 }>) {
   const t = useT();
   if (presentation.access.content_state === "withheld") {
@@ -237,12 +223,6 @@ function EmailBody({
         </details>
       )}
       <Attachments files={presentation.attachments} />
-      {/* Who reads this, last: a reader came for the message, and the limit on
-          it is what they check after reading rather than before. The withheld
-          branch above returns before here on purpose — that reader is told the
-          message is not shared with them, which is the whole of what the
-          access block would say, and `can_change` is false for them anyway. */}
-      {renderAccess?.(presentation)}
     </div>
   );
 }
@@ -254,10 +234,11 @@ function EmailBody({
  * message — so a reader outside the audience is never told that a contract
  * arrived, which is a fact about the message like any other.
  *
- * The NAME is the download, the pattern the account and contact file lists
- * already use: a separate action word at the far end of the row is a second
- * thing to find for the only thing this row does. The href is the attachment
- * endpoint that has always served these bytes; nothing new is fetched here.
+ * Each file is the same `FileChip` card the account and contact file lists
+ * draw, so paper looks like paper wherever it is met: the name is the
+ * download, the kind is stamped on the card, and a photo is tellable from a
+ * contract before the click. The href is the attachment endpoint that has
+ * always served these bytes; nothing new is fetched here.
  */
 function Attachments({ files }: Readonly<{ files: EmailAttachmentSummary[] }>) {
   const { locale } = useLocale();
@@ -275,22 +256,18 @@ function Attachments({ files }: Readonly<{ files: EmailAttachmentSummary[] }>) {
       </p>
       <ul className="emaildetail__fileList">
         {files.map((file) => (
-          <li key={file.id} className="emaildetail__file">
-            <Paperclip aria-hidden="true" />
-            <a
-              className="link-button"
+          <li key={file.id}>
+            <FileChip
               href={`/v1/attachments/${file.id}`}
-              download={file.filename}
-            >
-              {file.filename}
-            </a>
-            {/* Absent rather than zero when the server sent no size: a size it
-                could not record is not a file of no bytes. */}
-            {file.byte_size != null && (
-              <span className="emaildetail__fileSize">
-                {formatBytes(file.byte_size, locale)}
-              </span>
-            )}
+              filename={file.filename}
+              // Absent rather than zero when the server sent no size: a size
+              // it could not record is not a file of no bytes.
+              size={
+                file.byte_size == null
+                  ? undefined
+                  : formatBytes(file.byte_size, locale)
+              }
+            />
           </li>
         ))}
       </ul>

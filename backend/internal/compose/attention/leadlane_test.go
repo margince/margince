@@ -322,7 +322,7 @@ func TestATaskAboutALeadTheQueueDoesNotShowSurvives(t *testing.T) {
 // Past the eighth, an overdue lead sorts BELOW the other kinds without ceasing
 // to be one.
 //
-// leadLead is not a cap on the source — every lead stays on the page and keeps
+// crowdLead is not a cap on the source — every lead stays on the page and keeps
 // its level. It bounds how much of ONE kind a reader meets before they see the
 // others, so a morning of nine late leads does not bury the meeting that starts
 // in ten minutes.
@@ -330,11 +330,11 @@ func TestATaskAboutALeadTheQueueDoesNotShowSurvives(t *testing.T) {
 // The lane sorts by deadline ASCENDING, so the LONGEST wait sorts first and the
 // SHORTEST is ninth. Seeded backwards from that: "lead 0" is the oldest.
 func TestPastTheEighthAnOverdueLeadStopsLeadingThePage(t *testing.T) {
-	rows := make([]OwedLead, 0, leadLead+1)
-	for i := range leadLead + 1 {
+	rows := make([]OwedLead, 0, crowdLead+1)
+	for i := range crowdLead + 1 {
 		rows = append(rows, OwedLead{
 			ID: ids.NewV7(), Name: fmt.Sprintf("lead %d", i),
-			DeadlineAt: readInstant.Add(-time.Duration(leadLead+1-i) * time.Hour),
+			DeadlineAt: readInstant.Add(-time.Duration(crowdLead+1-i) * time.Hour),
 			State:      "breached",
 		})
 	}
@@ -346,17 +346,17 @@ func TestPastTheEighthAnOverdueLeadStopsLeadingThePage(t *testing.T) {
 	}
 
 	// All nine are still on the page — the cut demotes, it does not drop.
-	if got := len(day.Queue); got != leadLead+1 {
-		t.Fatalf("the page carried %d rows, wanted all %d leads", got, leadLead+1)
+	if got := len(day.Queue); got != crowdLead+1 {
+		t.Fatalf("the page carried %d rows, wanted all %d leads", got, crowdLead+1)
 	}
 	// The BAND is what crowding decides: a crowded row stops claiming to need
 	// answering today. Asserting position instead proves nothing here — nine
 	// leads alike differ in nothing else, so their order is unchanged either
 	// way and the test passes with the cut deleted.
-	if got := bandOf(t, day, fmt.Sprintf("lead %d", leadLead-1)); got != bandNow {
+	if got := bandOf(t, day, fmt.Sprintf("lead %d", crowdLead-1)); got != bandNow {
 		t.Errorf("the eighth lead landed in band %q, wanted %q — it still leads the page", got, bandNow)
 	}
-	if got := bandOf(t, day, fmt.Sprintf("lead %d", leadLead)); got != bandKeepMomentum {
+	if got := bandOf(t, day, fmt.Sprintf("lead %d", crowdLead)); got != bandKeepMomentum {
 		t.Errorf("the ninth lead landed in band %q, wanted %q — the crowding cut did not bite", got, bandKeepMomentum)
 	}
 }

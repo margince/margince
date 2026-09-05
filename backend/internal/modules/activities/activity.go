@@ -233,6 +233,19 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		return crmcontracts.Activity{}, false, err
 	}
 
+	// The first transition, where this capture named a status. A meeting
+	// arrives `booked` far more often than not, and that booking is the fact
+	// every "how many did we book this period" question counts.
+	if err := recordMeetingTransition(ctx, tx, meetingTransition{
+		ActivityID:     id,
+		Status:         meetingStatusOrNone(in.MeetingStatus),
+		ScheduledStart: &occurredAt,
+		SourceSystem:   in.SourceSystem,
+		SourceID:       in.SourceID,
+	}); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+
 	if err := insertActivityLinks(ctx, tx, id, in.Kind, in.Links); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}

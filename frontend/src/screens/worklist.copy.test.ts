@@ -174,6 +174,15 @@ describe("the verbs the row can and cannot take a reader to", () => {
   // THE distinction the wider vocabulary made necessary. One hardcoded label
   // was right while draft_reply was the only verb; over an opening outreach it
   // names a conversation nobody has had.
+  it("names existing work without promising an email", () => {
+    const item: WorklistItem = {
+      ...movingRow("open_task", "task-1"),
+      subject: { type: "deal", id: "d-1" },
+    };
+    expect(moveLabel(item, t)).toBe("Open existing task");
+    expect(moveHref(item)).toBeDefined();
+  });
+
   it("names a first message as writing, not as replying", () => {
     expect(moveLabel(movingRow("draft_email"), t)).toBe("Draft the email");
     expect(moveLabel(movingRow("draft_reply"), t)).toBe("Draft the reply");

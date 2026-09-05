@@ -3,12 +3,12 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { routeHash } from "../app/router";
-import { Avatar, Button, Disclosure } from "../design-system/atoms";
+import { Button, Disclosure } from "../design-system/atoms";
 import { AvatarStack } from "../design-system/avatarstack";
-import { EvidenceMark } from "../design-system/evidencemark";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
+import { RecordCard } from "../design-system/recordcard";
 import {
   type SectionState,
   SurfaceState,
@@ -26,6 +26,7 @@ import { NewDealAction } from "./companyactions";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { DetailsGrid } from "./companyraildetails";
 import {
+  contactRole,
   peopleSlice,
   SectionSummary,
   sectionAnswered,
@@ -33,7 +34,6 @@ import {
 } from "./companyrailshared";
 import { CompanyTagsSection } from "./companyrailtags";
 import { CounterpartyHoldRow } from "./counterparty-hold";
-import { roleOf } from "./provider-status";
 import { signalKindLabel, signalTone } from "./record360";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
@@ -124,7 +124,7 @@ export function CompanyRail({
           <PanelBody>
             <DetailsGrid organization={view?.organization ?? org} />
           </PanelBody>
-          <div className="co-card-actions">
+          <div className="card-actions">
             {/* "All fields", not "Profile": the Profile TAB carries that name a
                 few pixels away, and two controls with one accessible name in
                 one view is a dead end for anyone moving by name rather than by
@@ -287,7 +287,7 @@ function DealsSection({
         </PanelBody>
       )}
       {state === "ready" && (
-        <div className="co-card-actions">
+        <div className="card-actions">
           <Button small variant="ghost" onClick={() => onTab("deals")}>
             {count != null
               ? t("co.rail.all", { count: formatNumber(count, locale) })
@@ -320,7 +320,7 @@ function DealsEmptyVerb({
   const readOnlyReason = useCompanyReadOnlyReason(organization);
   if (betweenCycles || readOnlyReason) {
     return (
-      <div className="co-card-actions">
+      <div className="card-actions">
         <Button small variant="ghost" onClick={() => onTab("deals")}>
           {t("co.rail.add")}
         </Button>
@@ -457,11 +457,13 @@ function PeopleSection({
       {state === "ready" ? (
         // The top of the byReach order: the rail glances at who matters most
         // on the account, and the People tab is the full roster.
-        contacts.slice(0, RAIL_ROW_LIMIT).map((contact) => (
-          <PanelRow key={contact.person_id} className="co-person-row">
-            <PersonRow contact={contact} />
-          </PanelRow>
-        ))
+        <ul className="record-card-list">
+          {contacts.slice(0, RAIL_ROW_LIMIT).map((contact) => (
+            <li key={contact.person_id}>
+              <PersonCard contact={contact} />
+            </li>
+          ))}
+        </ul>
       ) : (
         <PanelBody>
           <SurfaceState
@@ -484,7 +486,7 @@ function PeopleSection({
         </PanelBody>
       )}
       {state === "ready" && (
-        <div className="co-card-actions">
+        <div className="card-actions">
           <Button small variant="ghost" onClick={() => onTab("people")}>
             {count != null
               ? t("co.rail.all", { count: formatNumber(count, locale) })
@@ -496,76 +498,56 @@ function PeopleSection({
   );
 }
 
-function PersonRow({ contact }: Readonly<{ contact: Contact }>) {
+function PersonCard({ contact }: Readonly<{ contact: Contact }>) {
   const t = useT();
   const colleagues = contact.routes?.top ?? [];
   return (
-    <>
-      <Avatar name={contact.full_name} />
-      <span className="co-person-id">
-        {/* Same target the People tab offers, and the same reach: the row is
-            the link, not the eight characters of a short name. */}
-        <a
-          className="co-rowlink co-person-name co-rowcover"
-          href={routeHash({ screen: "contacts", id: contact.person_id })}
-        >
-          {contact.full_name}
-        </a>
-        {/* The same fallback the tab makes, because a rail that disagreed
-            with the tab about somebody's role is worse than neither showing
-            one. The server decides the precedence; both surfaces read it.
-            Branched on the VALUE, not on title_source — that field is
-            optional, and a server sending a purchased title without it would
-            otherwise render an empty, padded span. */}
-        {roleOf(contact) && (
-          <span className="co-person-role">
-            {contact.title_source === "provider" ? (
-              <EvidenceMark
-                value={roleOf(contact)}
-                source={{
-                  provenance: { kind: "connector", connector: "provider" },
-                }}
-              />
-            ) : (
-              roleOf(contact)
-            )}
+    <RecordCard
+      kind="person"
+      name={contact.full_name}
+      identity={contact.person_id}
+      href={routeHash({ screen: "contacts", id: contact.person_id })}
+      position={contactRole(contact)}
+      email={contact.primary_email ?? undefined}
+      aside={
+        colleagues.length > 0 && (
+          /* The rail's own wrapper: whether the stack's trigger wears a
+             pointer is this surface's decision, not the card's.
+
+             A bare monogram is a mark only its owner recognises, so the stack
+             opens to the sentence it stands for: which colleagues are already
+             in touch with this person. Hover for a passing reader, click and
+             focus for everyone a hover never reaches; the sr-only names
+             double as the trigger's accessible name. */
+          <span className="co-person-routes">
+            <Popover
+              onHover
+              label={
+                <>
+                  <span className="sr-only">
+                    {colleagues.map((route) => route.display_name).join(", ")}
+                  </span>
+                  <AvatarStack
+                    people={colleagues.map((route) => ({
+                      name: route.display_name,
+                    }))}
+                  />
+                </>
+              }
+            >
+              <p className="t-caption">{t("co.rail.people.inTouch")}</p>
+              <ul className="co-person-routes-list">
+                {colleagues.map((route) => (
+                  // Keyed on the id, not the name: two colleagues can share a
+                  // display name, and a name key would fold their rows.
+                  <li key={route.user_id}>{route.display_name}</li>
+                ))}
+              </ul>
+            </Popover>
           </span>
-        )}
-      </span>
-      {colleagues.length > 0 && (
-        <span className="co-person-routes">
-          {/* A bare monogram is a mark only its owner recognises, so the
-              stack opens to the sentence it stands for: which colleagues are
-              already in touch with this person. Hover for a passing reader,
-              click and focus for everyone a hover never reaches; the sr-only
-              names double as the trigger's accessible name. */}
-          <Popover
-            onHover
-            label={
-              <>
-                <span className="sr-only">
-                  {colleagues.map((route) => route.display_name).join(", ")}
-                </span>
-                <AvatarStack
-                  people={colleagues.map((route) => ({
-                    name: route.display_name,
-                  }))}
-                />
-              </>
-            }
-          >
-            <p className="t-caption">{t("co.rail.people.inTouch")}</p>
-            <ul className="co-person-routes-list">
-              {colleagues.map((route) => (
-                // Keyed on the id, not the name: two colleagues can share a
-                // display name, and a name key would fold their rows.
-                <li key={route.user_id}>{route.display_name}</li>
-              ))}
-            </ul>
-          </Popover>
-        </span>
-      )}
-    </>
+        )
+      }
+    />
   );
 }
 

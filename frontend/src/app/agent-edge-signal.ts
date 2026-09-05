@@ -19,7 +19,24 @@ import { useSyncExternalStore } from "react";
  */
 
 /**
- * The one fact the margins draw: whether work is in flight.
+ * Which register the margins speak in.
+ *
+ * Both are work in flight and the margin lights for both, but they are not the
+ * same kind of work and were not being read as the same kind. An agent run is
+ * seconds to a minute: a rim that swells and sends a head of light round the
+ * frame says NOW, and is gone before it can become wallpaper. A mailbox import
+ * is minutes to hours, and the same rim over that span is a lamp left on in the
+ * corner of every screen a person works in. So the import takes a thinner,
+ * calmer register — still lit, still moving, still saying mail is arriving —
+ * and the agent's own register is a little thicker and livelier, so the two
+ * read as two things rather than as one thing at two volumes. What each draws
+ * at is in `agent-edge-gl.ts`.
+ */
+export type AgentEdgeRegister = "agent" | "capture";
+
+/**
+ * The one fact the margins draw: whether work is in flight, and in which
+ * register.
  *
  * A STAGED DECISION IS NOT PUBLISHED HERE. It used to be, as a second boolean
  * closing the margin into a still contour, and on any installation with an
@@ -31,10 +48,19 @@ import { useSyncExternalStore } from "react";
 export type AgentEdgeReading = Readonly<{
   /** Work is in flight: the agent is reading or acting THIS moment. */
   reading: boolean;
+  /**
+   * Which register the light is in. It means nothing while dark, so a dark
+   * reading always wears the agent's: one spelling for rest, whatever the light
+   * was doing before it went out.
+   */
+  register: AgentEdgeRegister;
 }>;
 
 /** Nothing is happening, which is the honest answer whenever no rail is mounted. */
-export const AGENT_EDGE_STILL: AgentEdgeReading = { reading: false };
+export const AGENT_EDGE_STILL: AgentEdgeReading = {
+  reading: false,
+  register: "agent",
+};
 
 let shown: AgentEdgeReading = AGENT_EDGE_STILL;
 const listeners = new Set<() => void>();
@@ -48,10 +74,16 @@ const listeners = new Set<() => void>();
  * already on screen.
  */
 export function publishAgentEdge(next: AgentEdgeReading): void {
-  if (next.reading === shown.reading) {
+  const settled: AgentEdgeReading = next.reading
+    ? { reading: true, register: next.register }
+    : AGENT_EDGE_STILL;
+  if (
+    settled.reading === shown.reading &&
+    settled.register === shown.register
+  ) {
     return;
   }
-  shown = { reading: next.reading };
+  shown = settled;
   for (const listener of listeners) {
     listener();
   }

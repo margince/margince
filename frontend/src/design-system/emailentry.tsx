@@ -7,7 +7,7 @@ import type { components } from "../api/schema";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { Badge } from "./atoms";
+import { VisibilityBadge } from "./visibility";
 import "./emailentry.css";
 
 // One retained email, as a row.
@@ -25,30 +25,11 @@ import "./emailentry.css";
 // shows the subject and the date and no preview.
 
 type EmailSummary = components["schemas"]["EmailSummary"];
-type EmailAccessStatus = components["schemas"]["EmailAccessStatus"];
-
-// What each access state says on the row. One word, because a badge that ran
-// to a sentence would out-weigh the subject beside it — the detail carries the
-// sentence.
-const STATUS_LABEL: Record<EmailAccessStatus, MessageKey> = {
-  team: "email.access.team",
-  participants: "email.access.participants",
-  selected: "email.access.selected",
-  withheld: "email.access.withheld",
-};
 
 const MOVE_LABEL: Record<string, MessageKey> = {
   needs_reply: "email.move.needsReply",
   waiting_for_them: "email.move.waitingForThem",
 };
-
-// `withheld` is the one state about the READER rather than the message, so it
-// is the one drawn as a caution. The other three describe a message working as
-// intended and take the quiet form: a column of filled pills is decoration a
-// reader learns to skip.
-function statusTone(status: EmailAccessStatus): "warn" | undefined {
-  return status === "withheld" ? "warn" : undefined;
-}
 
 // The row's direction line, as one whole sentence.
 //
@@ -174,9 +155,11 @@ export function EmailEntry({
         <span className="emailentry__preview">{row.preview}</span>
       )}
       <span className="emailentry__marks">
-        <Badge tone={statusTone(summary.display_status)} quiet={!row.withheld}>
-          {t(STATUS_LABEL[summary.display_status])}
-        </Badge>
+        {/* Who may read it, as the one mark the drawer and the contact panel
+            draw too. `display_status` is the server's word and the mark's
+            vocabulary contains every value of it, so the row prints the state
+            it was sent and never re-derives one. */}
+        <VisibilityBadge state={summary.display_status} />
         {row.move && <span className="emailentry__move">{t(row.move)}</span>}
         {row.attachments > 0 && (
           <span className="emailentry__files">

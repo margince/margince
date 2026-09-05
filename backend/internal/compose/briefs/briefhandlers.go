@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // Handlers wires the brief transport to the engine.
@@ -93,21 +94,39 @@ func (h Handlers) MarkBriefItemDismissed(w http.ResponseWriter, r *http.Request,
 	httperr.WriteJSON(w, http.StatusOK, briefItemToWire(item))
 }
 
-// SnoozeBriefItem hides a queue item until the requested instant, after
-// which it re-surfaces as actionable (A77/AC-home-6). A snooze that is
-// already over would be a no-op wearing a success code — refused as
-// client error instead.
+// SnoozeBriefItem sets a queue item aside until its reopen condition is met,
+// after which it re-surfaces as actionable.
+//
+// A `time` snooze already over would be a no-op wearing a success code, so it is
+// refused as a client error. The other two conditions carry no instant to check
+// — whether they are already satisfied is a question for the re-surface read,
+// not for this transport.
 func (h Handlers) SnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemID openapi_types.UUID) {
 	var req crmcontracts.BriefSnoozeRequest
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	var raw *string
+	if req.ReopenOn != nil {
+		on := string(*req.ReopenOn)
+		raw = &on
+	}
+	on, err := values.ParseReopenCondition(raw, "reopen_on")
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	now := time.Now().UTC()
-	if !req.SnoozedUntil.After(now) {
+	if on == values.ReopenOnTime && req.SnoozedUntil != nil && !req.SnoozedUntil.After(now) {
 		httperr.Write(w, r, httperr.Validation("snoozed_until", "not_in_future", "snoozed_until must lie in the future"))
 		return
 	}
-	item, err := h.engine.MarkSnoozed(r.Context(), ids.UUID(itemID), req.SnoozedUntil, now)
+	var ref *ids.UUID
+	if req.ReopenRef != nil {
+		id := ids.UUID(*req.ReopenRef)
+		ref = &id
+	}
+	item, err := h.engine.MarkSnoozed(r.Context(), ids.UUID(itemID), on, req.SnoozedUntil, ref, now)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -219,7 +238,29 @@ func briefItemToWire(item BriefRunItem) crmcontracts.MorningBriefItem {
 		State:        crmcontracts.MorningBriefItemState(item.State),
 		StateAt:      item.StateAt,
 		SnoozedUntil: item.SnoozedUntil,
+		ReopenOn:     reopenToWire(item.ReopenOn),
+		ReopenRef:    reopenRefToWire(item.ReopenRef),
 		Finding:      nullableText(item.Finding),
 		Lineage:      lineageToWire(item.Lineage),
 	}
+}
+
+// reopenToWire carries the condition only while one is set. An item that is not
+// snoozed is waiting for nothing, and the empty string would render as a fourth
+// condition the client has no name for.
+func reopenToWire(on values.ReopenCondition) *crmcontracts.MorningBriefItemReopenOn {
+	if on == "" {
+		return nil
+	}
+	wire := crmcontracts.MorningBriefItemReopenOn(on)
+	return &wire
+}
+
+// reopenRefToWire is the same carry for the meeting a condition may name.
+func reopenRefToWire(ref *ids.UUID) *openapi_types.UUID {
+	if ref == nil {
+		return nil
+	}
+	wire := openapi_types.UUID(*ref)
+	return &wire
 }

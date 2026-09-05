@@ -51,9 +51,9 @@ existed**, wrote a reasonable-looking component, and passed review on it. So:
   the table never names, a rich-text editor having already gone missing from it.
 
 Some of this is held deterministically — `make native-controls` and
-`catalog.test.ts` (vitest suites), plus the `check-ds-purity.sh`,
-`check-ds-spacing.sh` and `check-space-tokens.sh` script gates — but none can
-tell that the component you just wrote already existed under another name. The
+`catalog.test.ts`, plus the `check-ds-purity.sh`, `check-ds-spacing.sh`,
+`check-ds-spacing-roles.sh` and `check-space-tokens.sh` script gates — but none
+can tell that the component you just wrote already existed under another name. The
 catalog gate keeps it findable; the grep is still yours.
 
 ### Indigo is a claim about provenance

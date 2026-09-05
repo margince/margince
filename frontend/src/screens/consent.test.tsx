@@ -303,7 +303,7 @@ describe("ConsentSection", () => {
     await screen.findByText("Marketing");
     // One row requires DOI in the fixture; the note belongs to it alone.
     expect(
-      screen.getAllByText(/confirmed by the contact themselves/i),
+      screen.getAllByText(/confirmed by the person themselves/i),
     ).toHaveLength(1);
   });
 

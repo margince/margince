@@ -134,7 +134,7 @@ export function IntroDecisionDrawer({
         )}
       </Field>
 
-      <div className="pn-actions">
+      <div className="form-actions">
         <Button onClick={onClose} variant="ghost">
           {t("person.intro.cancel")}
         </Button>

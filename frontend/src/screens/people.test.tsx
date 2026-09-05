@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { activityTimeline } from "../design-system/activitytimeline";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { ContactsScreen, PersonScreen } from "./people";
 
 // B-EP09.10a acceptance: per-row provenance chips, row→360 navigation, and
@@ -924,7 +925,7 @@ describe("PersonScreen — archived is read-only (P-3)", () => {
       // sentence the control does not point at reaches no reader who needed it.
       const describedBy = control.getAttribute("aria-describedby");
       expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
-        "This contact is archived. Restore them to change anything here.",
+        en["person.rail.archivedReadOnly"],
       );
     }
   });

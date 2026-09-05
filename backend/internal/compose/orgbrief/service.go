@@ -28,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/org360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -159,7 +160,11 @@ func (s *Service) GetScoped(
 		return cached.wire(orgID, scope), nil
 	}
 
-	sections, by, err := Write(ctx, s.lane, orgID.String(), in, lang)
+	// The account is NAMED to the rail here, where the assembled input holds
+	// the name the product shows for it everywhere else: the router sees only
+	// a task and a prompt, so without this the reader's rail could say "this
+	// company" and nothing more.
+	sections, by, err := Write(ai.WithSubject(ctx, orgID.Ref(), in.Name), s.lane, orgID.String(), in, lang)
 	if err != nil {
 		return crmcontracts.OrganizationBrief{}, err
 	}
@@ -211,7 +216,8 @@ func (s *Service) AskScoped(
 	if err != nil {
 		return crmcontracts.OrganizationAnswer{}, err
 	}
-	sentences, by, err := Answer(ctx, s.lane, question, orgID.String(), in, identity.BaseLanguageForPrompt(ctx, s.pool))
+	sentences, by, err := Answer(ai.WithSubject(ctx, orgID.Ref(), in.Name), s.lane, question, orgID.String(), in,
+		identity.BaseLanguageForPrompt(ctx, s.pool))
 	if err != nil {
 		return crmcontracts.OrganizationAnswer{}, err
 	}

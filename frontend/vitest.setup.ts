@@ -1,4 +1,4 @@
-import { beforeEach, vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 
 // Node ≥23 ships its own global Web Storage: a `localStorage` getter that
 // yields undefined unless the process was started with --localstorage-file.
@@ -29,6 +29,24 @@ if (jsdomWindow) {
 // per file with `@vitest-environment jsdom`). Unguarded, they threw
 // "window is not defined" at setup time and took 20 unrelated suites with them.
 if (typeof window !== "undefined") {
+  // UNMOUNT what a case rendered. Testing Library arms this for itself only
+  // when the runner has put `afterEach` on the global, and `globals` is off in
+  // vite.config.ts — so RTL's own guard (`typeof afterEach === "function"`)
+  // sees nothing and never fires. Nothing reports that: a render simply
+  // outlives the case that made it, its React tree still mounted and its query
+  // observers still subscribed, so the next case queries a document holding
+  // every tree before it, and `notifyManager` goes on flushing renders into
+  // trees no test owns — including after the file's own teardown. Calling
+  // `cleanup()` per file is a habit rather than a guarantee, and the files that
+  // forgot left whole screens subscribed. Registered ONCE, here, so a file
+  // cannot forget; scripts/autocleanup.test.tsx fails if it stops arming.
+  //
+  // Imported HERE rather than at the top of the file: this setup runs for every
+  // suite and most are node-environment, which would otherwise pay for
+  // react-dom to register a hook with no DOM to unmount from.
+  const { cleanup } = await import("@testing-library/react");
+  afterEach(cleanup);
+
   // jsdom ships no matchMedia, and every motion-aware component asks it for
   // prefers-reduced-motion on first render. Default to "no preference" so the
   // animated path is what the tests exercise; a test that wants the reduced path

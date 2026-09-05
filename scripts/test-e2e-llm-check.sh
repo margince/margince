@@ -202,8 +202,93 @@ else
 	echo "ok: the lane stops on a run that never happened, before scoring it"
 fi
 
+# CASE 6's TWO HALVES, against three answers a real sweep actually produced.
+#
+# The scenario asks whether the assistant notices that the post-mortem's "im
+# Oktober" disagrees with the 18 September email the record carries. Judging
+# that needs two regexes pointing in opposite directions, and each has a way to
+# be wrong that the lane's own verdict cannot show you:
+#
+#   too narrow  a correct finding stated in other words is called a failure,
+#               and the lane reports a regression that is not there. One sweep
+#               scored 1/3 on this scenario with two of the three answers
+#               correct, because only one of them used the word "contradicts".
+#   too loose   a wrong answer is called correct — the direction with no
+#               failing assertion anywhere to notice it.
+#
+# So the fixtures are three whole answers rather than three crafted sentences:
+# a synonym check is only worth anything against prose somebody did not write
+# to satisfy it. They are transcripts in the CLI's own stream-json shape, as
+# above, carrying the answer verbatim and the one tool call must_call names.
+scenario="$root/e2e/llm/scenarios/case6-ask-the-company.yaml"
+
+# scores <fixture> <expected-exit> [substring the output must carry ...]
+#
+# EVERY remaining argument is required, because case 6's two halves mask each
+# other: the wrong answer fails on must_not_mention whatever must_mention does,
+# so an exit code alone cannot tell a pattern that missed it from one that
+# matched an unrelated sentence. A case that cares about both says both.
+scores() {
+	local fixture="$1" want="$2" out status=0 carries
+	shift 2
+	out="$(python3 "$check" --check "$scenario" "$root/e2e/llm/testdata/case6/$fixture.jsonl" 2>&1)" || status=$?
+	if [[ $status -ne $want ]]; then
+		echo "FAIL: case6/$fixture — exit $status, want $want"
+		echo "$out" | sed 's/^/    /'
+		failures=$((failures + 1))
+		return
+	fi
+	for carries in "$@"; do
+		if [[ "$out" != *"$carries"* ]]; then
+			echo "FAIL: case6/$fixture — output does not carry '$carries'"
+			echo "$out" | sed 's/^/    /'
+			failures=$((failures + 1))
+			return
+		fi
+	done
+	echo "ok: case6/$fixture"
+}
+
+# The answer the pattern was written around: "the post-mortem contradicts the
+# timeline ... or the post-mortem is misremembering".
+scores flags-the-disagreement 0 ""
+
+# THE SAME FINDING, none of the same words — "the post-mortem is recalling the
+# date loosely", "an October escalation nobody logged", "not in this system".
+# This one is why the alternation is a list of synonyms rather than a list of
+# phrasings, and it is the case that regresses first if anybody trims it.
+scores flags-it-in-other-words 0 ""
+
+# The wrong answer, and it has to fail on BOTH halves, each named. It never
+# flags the disagreement, and it then writes "repeated it in October" in its
+# own voice — an October complaint invented out of the note's faulty prose.
+#
+# Naming both is what holds the ANCHORS. This answer also carries "nobody
+# recorded the response" — true, about the missing reply, and saying nothing
+# about the two dates. Drop the anchors from must_mention and that sentence
+# satisfies it, so the scenario would credit this answer with a finding it
+# never made; the exit code would not move, because the forbidden half fails it
+# either way. The missing-mention line is the only thing that notices.
+scores adopts-october 1 "repeated it in October" "never said anything matching"
+
+# THE TWO WAYS A HAND-WRITTEN PATTERN GOES WRONG, one case each. Both were found
+# by review rather than by a sweep, which is the point of keeping them: the three
+# answers above are real and none of them happens to take either shape.
+#
+# An answer may state the finding by QUOTING the note — "the post-mortem says it
+# was raised in October, but the record is dated 18 September" — which is the
+# comparison made out loud, and the forbidden half was rejecting it for the
+# quotation. Only an unattributed October is the assistant adopting the date.
+scores attributed-october 0 ""
+
+# And a bare verb of disagreement is not the finding. This answer disagrees with
+# rotating account managers, which is an opinion about the practice, and never
+# compares the two dates at all — so it fails, and it must fail on the MISSING
+# mention rather than on anything it said.
+scores disagrees-about-something-else 1 "never said anything matching"
+
 if [[ $failures -ne 0 ]]; then
 	echo "FAIL: $failures e2e-llm checker case(s) did not hold" >&2
 	exit 1
 fi
-echo "OK: a refused run is named as one, and a genuinely bad answer is still a finding"
+echo "OK: a refused run is named as one, a genuinely bad answer is still a finding, and case 6 judges the finding rather than its wording"

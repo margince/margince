@@ -48,6 +48,32 @@ func loadCanonicalQuestions(t *testing.T) []canonicalQuestion {
 	return doc.Questions
 }
 
+// questionSurfaces are the tools this suite can drive.
+//
+// run_analytics_query is the agent's typed grammar; run_report is the HTTP
+// report path. They are different reaches, not two names for one.
+var questionSurfaces = map[string]bool{"run_analytics_query": true, "run_report": true}
+
+// caseSurfaces names which surface each proof ACTUALLY drives, so the corpus
+// cannot claim one and prove another.
+//
+// Kept beside the case map rather than derived from it: a proof's body is what
+// decides its surface, and reading that from the source would be a census over
+// a thing this file already knows by hand.
+//
+// gatekit:fixture the surface each canonical proof actually drives
+var caseSurfaces = map[string]string{
+	"G01": "run_analytics_query",
+	"G02": "run_analytics_query",
+	"G03": "run_analytics_query",
+	"M04": "run_analytics_query",
+	"M05": "run_analytics_query",
+	"M06": "run_analytics_query",
+	"M07": "run_report",
+	"M08": "run_analytics_query",
+	"M12": "run_analytics_query",
+}
+
 // canonicalCases maps each corpus id to its executable proof.
 func canonicalCases() map[string]func(t *testing.T) {
 	return map[string]func(t *testing.T){
@@ -55,7 +81,11 @@ func canonicalCases() map[string]func(t *testing.T) {
 		"G02": proveG02WorkspaceRefused,
 		"G03": proveG03OneBaseCurrencyNumber,
 		"M04": proveM04OneRowPerStage,
+		"M05": proveM05ConcentrationNeedsCountAndValue,
 		"M06": proveM06MedianUnderTheFloor,
+		"M07": proveM07StuckDealsUseTheSharedRule,
+		"M08": proveM08WinRateByCountAndValue,
+		"M12": proveM12WonRevenueByLeadSource,
 	}
 }
 
@@ -63,9 +93,24 @@ func TestEveryCanonicalQuestionHasExecutableProof(t *testing.T) {
 	cases := canonicalCases()
 	seen := map[string]bool{}
 	for _, q := range loadCanonicalQuestions(t) {
-		if q.Tool != "run_analytics_query" {
+		// Two tools, because two surfaces answer these questions and one cannot
+		// answer all of them: the analytics schema publishes a spec's dimensions
+		// and measures, so a question turning on a report FILTER (M07's
+		// `stalled`) is reachable over HTTP and not through the typed grammar.
+		//
+		// The tool a question NAMES has to be the surface its proof drives, and
+		// that is checked below rather than assumed. Accepting the value alone
+		// would let a question declare one surface while its case exercised
+		// another — which is how a corpus comes to claim the agent can answer
+		// something only the web app can.
+		if _, known := questionSurfaces[q.Tool]; !known {
 			t.Errorf("%s names tool %q, which this suite does not drive — either the corpus "+
 				"or the case map is ahead of the other", q.ID, q.Tool)
+		}
+		if surface := caseSurfaces[q.ID]; surface != "" && surface != q.Tool {
+			t.Errorf("%s says it is answered by %q and its proof drives %q — a corpus that "+
+				"names the wrong surface claims a reach the product does not have",
+				q.ID, q.Tool, surface)
 		}
 		if _, proved := cases[q.ID]; !proved {
 			t.Errorf("%s (%q) has no executable case — a question without proof is prose", q.ID, q.Question)

@@ -309,7 +309,12 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 			JOIN brief_run br ON br.id = bi.brief_run_id
 			WHERE br.user_id = $%d AND bi.deal_id = d.id AND bi.state <> 'new'
 			  AND CASE WHEN bi.state = 'snoozed'
-			      THEN bi.snoozed_until > $%d
+			      -- Still suppressed while the snooze holds. A time snooze
+			      -- holds until its moment; the other two hold until the
+			      -- shared predicate says the world moved.
+			      THEN CASE WHEN bi.reopen_on = 'time'
+			           THEN bi.snoozed_until > $%d
+			           ELSE NOT %s END
 			      ELSE NOT EXISTS (
 				SELECT 1 FROM activity a
 				JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
@@ -320,7 +325,9 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 				  -- lineage read bounds itself the same way, so an unbounded
 				  -- one here would return deals whose card can say nothing.
 				  AND a.occurred_at <= $%d) END)`,
-		briefBaseValueSQL(fmt.Sprintf("$%d", asOfPos), fmt.Sprintf("$%d", basePos), "d"), userPos, asOfPos, asOfPos)
+		briefBaseValueSQL(fmt.Sprintf("$%d", asOfPos), fmt.Sprintf("$%d", basePos), "d"), userPos, asOfPos,
+		briefSnoozeLiftedSQL("d.id", "bi.reopen_on", "bi.reopen_ref", "bi.state_at", fmt.Sprintf("$%d", asOfPos)),
+		asOfPos)
 	if scope != "" {
 		q += " AND " + scope
 	}

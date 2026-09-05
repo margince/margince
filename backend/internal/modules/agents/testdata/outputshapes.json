@@ -7153,6 +7153,13 @@
                 "rank": {
                   "type": "integer"
                 },
+                "reopen_on": {
+                  "type": "string"
+                },
+                "reopen_ref": {
+                  "type": "string",
+                  "format": "uuid"
+                },
                 "snoozed_until": {
                   "type": "string"
                 },

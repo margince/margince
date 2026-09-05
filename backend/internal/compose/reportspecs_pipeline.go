@@ -66,8 +66,15 @@ func pipelineCurrentSpec() reportSpec {
 			fieldPartnerOrgID:   colPartnerOrgID,
 			fieldProjectID:      colProjectID,
 		},
-		filterScopes:    projectFilterScope,
-		referenceScopes: map[string]string{colPartnerOrgID: tableOrganization},
+		filterScopes: projectFilterScope,
+		// Both organization references. organization_id is a filter and not a
+		// dimension here, and a count filtered to one company answers whether
+		// that company exists and has a deal — the disclosure does not need
+		// the id to be printed.
+		referenceScopes: map[string]string{
+			colPartnerOrgID:   tableOrganization,
+			colOrganizationID: tableOrganization,
+		},
 		// By STAGE alone. deals-by-stage groups by stage and currency, so a
 		// stage trading in three currencies draws three rows and no total —
 		// which is honest while the money is unconverted and pointless once it
