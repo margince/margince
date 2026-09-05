@@ -765,6 +765,19 @@
   border-top: 1px solid var(--borderSubtle);
 }
 
+/* ===== The foot =====
+ *
+ * The panel's one control, at the far end of the last line: everything above it
+ * reports, and a setting sitting to the left among the readings would be read as
+ * one more of them. No hairline of its own — the strip above already drew the
+ * one rule this end of the panel needs, and a second would fence off a single
+ * switch. */
+.arfoot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 var(--space-3) var(--space-3);
+}
+
 .aritem {
   display: flex;
   align-items: baseline;

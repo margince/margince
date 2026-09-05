@@ -308,6 +308,18 @@ numbers appear here when releases start.
 
 ### Added
 
+- **The lit window edge can be switched off.** The agent's own periphery — the
+  waves that travel the rim of the window while a run or a mailbox import is in
+  flight — now has a switch in the foot of the agent panel, the card that opens
+  from the agent block at the bottom of the rail. It is on by default and off is
+  remembered per browser, beside the theme, so a reader who cannot work next to
+  movement in their peripheral vision, or simply does not want it, turns it off
+  once. Nothing is lost by turning it off: every reading the margin carries is
+  already written in words in the rail beside it, which is why the surface is
+  decoration a screen reader never sees in the first place. A machine that asks
+  for reduced motion still calms the waves on its own, for the reader who never
+  opens the panel.
+
 - **An introduction is something the product records, not something a rep
   remembers.** The Network tab already answered "who here can reach this
   contact"; asking them was a conversation that happened elsewhere and came

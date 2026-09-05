@@ -106,6 +106,10 @@ export const LABELS = {
   allClear: "Nothing needs you",
   /** The shape of the month's spend, for the reader who cannot see the line. */
   spendShape: "What the agent has cost, day by day",
+  /** The panel's one setting: whether the window's own margins light while the
+   *  agent works. Named for what a reader SEES rather than for the surface that
+   *  draws it — nobody outside this tree calls it the edge. */
+  edgeLight: "Screen edge light",
   nothingPriced: "nothing priced yet",
   runningOn: "running on",
 } as const;

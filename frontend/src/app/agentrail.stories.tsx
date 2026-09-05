@@ -269,8 +269,16 @@ export const CollapsedRail: Story = {
   render: story(HEALTHY, true),
 };
 
-/** The panel open, showing the recap, the runtime row and the workspace
- *  section together — the detail the block itself has no room for. */
+/**
+ * The panel open, showing the recap, the runtime row and the workspace section
+ * together — the detail the block itself has no room for, with the panel's one
+ * control in its foot.
+ *
+ * That switch governs the lit window edge, and it is deliberately the only
+ * story it gets: the preference is one per browser (`agent-edge-preference.ts`),
+ * so a second story that opened with it off would set it off for every other
+ * story in the catalog after it. Its two appearances are `Switch`'s own.
+ */
 export const PanelOpen: Story = {
   render: story({ ...HEALTHY, approvals: 3 }),
   play: async ({ canvasElement }) => {
