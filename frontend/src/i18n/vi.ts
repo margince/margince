@@ -1575,7 +1575,7 @@ export const vi = {
   "compose.reason.counterparty": "Được giữ, thư với bên này",
   "compose.reason.explicitlyConfidential": "Được đánh dấu bảo mật",
   "compose.reason.noCounterparty": "Được giữ, không có hồ sơ để lưu",
-  "compose.audience": "Đổi hiển thị",
+  "compose.audience": "Đổi phạm vi hiển thị",
   "compose.audienceTitle": "Ai được đọc tin nhắn này?",
   "compose.audienceLegend": "Hiển thị của riêng tin nhắn này",
   "email.aMessage": "Một thư",
