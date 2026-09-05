@@ -3,6 +3,7 @@ import { ListChecks, RefreshCw, Sparkles } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCan } from "../app/capability";
 import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -20,6 +21,7 @@ import {
   TodayPanel,
   WrittenBy,
 } from "./record360";
+import { TaskDetailModal, useTaskUpdate } from "./taskactions";
 import "./dealstatus.css";
 
 // Deal360 — the deal page's written briefing, read before a call, in the
@@ -354,6 +356,7 @@ function hasMoveControl(move: DealStatusCardMove): boolean {
   switch (move.action) {
     case "create_task":
       return Boolean(move.arguments);
+    case "open_task":
     case "open_meeting_brief":
       return activityIdOf(move) !== null;
     default:
@@ -396,6 +399,13 @@ function MoveButton({
   const t = useT();
   const queryClient = useQueryClient();
   const [briefOpen, setBriefOpen] = useState(false);
+  const [taskOpen, setTaskOpen] = useState(false);
+  const canUpdateTask = useCan("activity", "update");
+  const taskUpdate = useTaskUpdate([
+    ["deal-status", dealId],
+    ["tasks"],
+    ["worklist"],
+  ]);
   const activityId = activityIdOf(move);
   const createTask = useMutation({
     mutationKey: ["deal-status-create-task"],
@@ -419,6 +429,23 @@ function MoveButton({
 
   const taskBody = move.arguments;
   switch (move.action) {
+    case "open_task":
+      if (!activityId) return null;
+      return (
+        <>
+          <Button small onClick={() => setTaskOpen(true)}>
+            {t("deal360.openTask")}
+          </Button>
+          {taskOpen && (
+            <TaskDetailModal
+              activityId={activityId}
+              readOnly={!canUpdateTask}
+              onClose={() => setTaskOpen(false)}
+              update={taskUpdate}
+            />
+          )}
+        </>
+      );
     case "create_task":
       // No body, no button: a click that sent {} would only be refused.
       if (!taskBody) {

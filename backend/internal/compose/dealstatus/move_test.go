@@ -39,21 +39,19 @@ func inboundMail(at time.Time) crmcontracts.Activity {
 	return a
 }
 
-func TestAnOpenTaskNoLongerEndsTheReasoning(t *testing.T) {
-	// The card this replaces read the task's title back to the reader and
-	// said it had nothing to add. An open task is evidence now, not a reason
-	// to stay silent, so the deal still gets a move.
+func TestAnOpenTaskIsReusedInsteadOfDuplicated(t *testing.T) {
+	taskID := ids.NewV7()
 	f := facts{
 		deal: openDeal(), now: testNow,
 		timeline:  []crmcontracts.Activity{act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -12))},
-		openTasks: []activities.OpenTask{{ID: ids.NewV7(), Subject: "Agree the next step"}},
+		openTasks: []activities.OpenTask{{ID: taskID, Subject: "Agree the next step"}},
 	}
 	mv := decideMove(f)
-	if mv.Action == ActionNone {
-		t.Fatalf("a deal with an open task got no move: %+v", mv)
+	if mv.Action != ActionOpenTask || mv.Arguments == nil {
+		t.Fatalf("existing work offered another write: %+v", mv)
 	}
-	if mv.Action != ActionCreateTask {
-		t.Fatalf("action = %q, want the next-step task", mv.Action)
+	if len(mv.Evidence) != 1 || mv.Evidence[0].ActivityId == nil || *mv.Evidence[0].ActivityId != openapi_types.UUID(taskID) {
+		t.Fatalf("move does not name the existing task: %+v", mv)
 	}
 }
 

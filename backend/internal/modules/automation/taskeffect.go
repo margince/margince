@@ -14,9 +14,11 @@ package automation
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -79,13 +81,19 @@ func anchorReminderTaskEffect(
 // nobody to give it to, and the unassigned queue is where it belongs until
 // somebody claims the record.
 //
-// A record this read cannot reach mints an unassigned task too, rather than
-// failing the run. The reminder is the point; losing it entirely because its
-// owner could not be looked up trades a misfiled task for no task at all.
+// A deleted target skips the firing; other read failures must not create work
+// under an unknown owner.
 func ownedTaskEffect(
 	ctx context.Context, ex Executors, ev workflow.Event, subject string, dueAt time.Time,
 ) (workflow.Effect, error) {
-	return taskCreateEffectFor(ev, subject, dueAt, recordOwner(ctx, ex, ev))
+	if ex.Provider == nil {
+		return taskCreateEffectFor(ev, subject, dueAt, nil)
+	}
+	owner, err := recordOwner(ctx, ex, ev)
+	if err != nil {
+		return workflow.Effect{}, err
+	}
+	return taskCreateEffectFor(ev, subject, dueAt, owner)
 }
 
 // recordOwner reads who answers for the record that fired, or nil.
@@ -93,19 +101,20 @@ func ownedTaskEffect(
 // One shape for every record type the task-minting handlers fire on: deal,
 // lead, person and organization all spell their owner `owner_id`, so one decode
 // answers all four and a per-type switch would be four spellings of one fact.
-func recordOwner(ctx context.Context, ex Executors, ev workflow.Event) *ids.UUID {
-	if ex.Provider == nil {
-		return nil
-	}
+func recordOwner(ctx context.Context, ex Executors, ev workflow.Event) (*ids.UUID, error) {
 	rec, err := ex.Provider.Read(ctx, ev.Entity)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		// The event may outlive a promoted lead or an archived record.
+		return nil, declineFiring("the target record is no longer available")
+	}
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	var owned struct {
 		OwnerID *ids.UUID `json:"owner_id"`
 	}
 	if err := json.Unmarshal(rec.Fields, &owned); err != nil {
-		return nil
+		return nil, fmt.Errorf("reading the task owner: %w", err)
 	}
-	return owned.OwnerID
+	return owned.OwnerID, nil
 }
