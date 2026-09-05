@@ -22,38 +22,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// closePushWindow bounds how far back the close-date-push count looks. One
-// quarter: the closePushed rule asks whether the date keeps moving NOW, and a
-// push from a year ago is history, not a pattern anybody should be paged about.
-const closePushWindow = 90 * 24 * time.Hour
-
-// AssuranceSubjects reads every live open deal the run should examine.
-//
-// Deliberately UNSCOPED, and that is a decision rather than an oversight. The
-// pass runs as the system so it covers the whole pipeline: a duplicate-detection
-// rule that saw only one rep's deals would report no duplicates, and a coverage
-// count taken from a narrowed read would say the installation was checked when
-// most of it was not.
-//
-// What that costs is paid on the way out, not here. An exception stores the
-// subject's owner, and EVERY reader of the exception list passes through the
-// caller's own row scope before rendering — the list endpoint, the headline
-// counts, the brief candidate, the worklist row and the task subject line. A
-// finding about a deal the reader cannot open is a finding they never see.
-//
-// Every field a rule reads is assembled here, and the two sides are held equal
-// by TestEveryRuleInputHasAnAssembledSource: this seam once populated nine of
-// fourteen fields, so a scheduled pass would have raised "no next step" and
-// "no economic buyer" against every deal in the installation — the unpopulated
-// zero value is exactly the shape those rules fire on.
-//
-// The two money comparisons only carry a total in the DEAL's own currency. An
-// offer or contract in a different currency is not comparable minor-for-minor,
-// and handing the rule such a number would report a "discrepancy" that is
-// entirely exchange rate.
-func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, error) {
-	now := time.Now().UTC()
-	rows, err := tx.Query(ctx, `
+// assuranceSubjectsSQL is AssuranceSubjects' one read, held at package
+// level so the function stays within the length a reader holds at once.
+const assuranceSubjectsSQL = `
 		SELECT d.id, d.owner_id, d.amount_minor, d.currency,
 		       d.expected_close_date, d.close_date_provisional,
 		       d.forecast_category, s.name,
@@ -89,16 +60,14 @@ func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, err
 		           AND (au.after ->> 'expected_close_date') IS NOT NULL
 		           AND (au.after ->> 'expected_close_date')::date
 		               > (au.before ->> 'expected_close_date')::date) AS close_date_pushes,
-		       (SELECT a.subject
+		       EXISTS (SELECT 1
 		          FROM activity a
 		          JOIN activity_link al ON al.activity_id = a.id
 		         WHERE al.deal_id = d.id
 		           AND a.archived_at IS NULL
 		           AND ((a.kind = 'task' AND a.is_done = false)
 		                OR (a.kind = 'meeting' AND a.meeting_status = 'booked'
-		                    AND a.occurred_at > $2))
-		         ORDER BY a.occurred_at
-		         LIMIT 1) AS next_step,
+		                    AND a.occurred_at > $2))) AS has_next_step,
 		       EXISTS (SELECT 1
 		          FROM relationship r
 		         WHERE r.kind = 'deal_stakeholder'
@@ -108,7 +77,40 @@ func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, err
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
 		WHERE d.archived_at IS NULL AND d.status = 'open'
-		ORDER BY d.id`,
+		ORDER BY d.id`
+
+// closePushWindow bounds how far back the close-date-push count looks. One
+// quarter: the closePushed rule asks whether the date keeps moving NOW, and a
+// push from a year ago is history, not a pattern anybody should be paged about.
+const closePushWindow = 90 * 24 * time.Hour
+
+// AssuranceSubjects reads every live open deal the run should examine.
+//
+// Deliberately UNSCOPED, and that is a decision rather than an oversight. The
+// pass runs as the system so it covers the whole pipeline: a duplicate-detection
+// rule that saw only one rep's deals would report no duplicates, and a coverage
+// count taken from a narrowed read would say the installation was checked when
+// most of it was not.
+//
+// What that costs is paid on the way out, not here. An exception stores the
+// subject's owner, and EVERY reader of the exception list passes through the
+// caller's own row scope before rendering — the list endpoint, the headline
+// counts, the brief candidate, the worklist row and the task subject line. A
+// finding about a deal the reader cannot open is a finding they never see.
+//
+// Every field a rule reads is assembled here, and the two sides are held equal
+// by TestEveryRuleInputHasAnAssembledSource: this seam once populated nine of
+// fourteen fields, so a scheduled pass would have raised "no next step" and
+// "no economic buyer" against every deal in the installation — the unpopulated
+// zero value is exactly the shape those rules fire on.
+//
+// The two money comparisons only carry a total in the DEAL's own currency. An
+// offer or contract in a different currency is not comparable minor-for-minor,
+// and handing the rule such a number would report a "discrepancy" that is
+// entirely exchange rate.
+func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, error) {
+	now := time.Now().UTC()
+	rows, err := tx.Query(ctx, assuranceSubjectsSQL,
 		now.Add(-closePushWindow), now, dealrole.EconomicBuyer)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals to check: %w", err)
@@ -119,12 +121,12 @@ func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, err
 		var out assurance.Subject
 		var dealID ids.UUID
 		var owner *ids.UUID
-		var currency, category, stage, nextStep *string
+		var currency, category, stage *string
 		var lastInbound *time.Time
 		err := row.Scan(&dealID, &owner, &out.AmountMinor, &currency,
 			&out.ExpectedClose, &out.CloseProvisional, &category, &stage, &lastInbound,
 			&out.OfferTotalMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
-			&nextStep, &out.HasEconomicBuyer)
+			&out.HasNextStep, &out.HasEconomicBuyer)
 		out.DealID = dealID.String()
 		if owner != nil {
 			out.Owner = owner.String()
@@ -137,9 +139,6 @@ func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, err
 		}
 		if stage != nil {
 			out.StageName = *stage
-		}
-		if nextStep != nil {
-			out.NextStep = *nextStep
 		}
 		out.LastInboundAt = lastInbound
 		return out, err
@@ -159,10 +158,14 @@ func AssuranceCoverage(ctx context.Context, tx pgx.Tx, now time.Time) []assuranc
 	}
 }
 
+// sourceMail names the mailbox in coverage rows; the assurance store's CHECK
+// constraint owns the vocabulary.
+const sourceMail = "mail"
+
 // mailProviders are the capture connectors that carry mail. gcal is calendar
 // and the chat providers are messaging; a healthy WhatsApp says nothing about
 // whether anybody read the mailbox a close date would be checked against.
-var mailProviders = []string{"gmail", "imap", "graph", "offline_demo"}
+var mailProviders = []string{providerGmail, "imap", providerGraph, "offline_demo"}
 
 // mailCoverage grades the mailbox by CONNECTOR health, not by mail volume.
 //
@@ -172,40 +175,45 @@ var mailProviders = []string{"gmail", "imap", "graph", "offline_demo"}
 // recent mail read as checked. The sync checkpoint is the fact this state
 // actually claims: when the connector last successfully read the source.
 func mailCoverage(ctx context.Context, tx pgx.Tx, now time.Time) assurance.SourceCoverage {
-	var connections int
-	var reauth int
-	var oldestSuccess, newestSuccess *time.Time
+	// Aggregates fail CLOSED over every live, not-deliberately-disconnected
+	// connection: min() ignores NULL, so a never-synced broken mailbox next to
+	// a healthy one would otherwise vanish from the aggregate and the run
+	// would claim checked over a source it never read.
+	var live, reauth, unsynced int
+	var oldestSuccess *time.Time
 	if err := tx.QueryRow(ctx, `
-		SELECT count(*),
+		SELECT count(*) FILTER (WHERE c.status <> 'disconnected'),
 		       count(*) FILTER (WHERE c.status = 'reauth_required'),
-		       min(s.last_success_at),
-		       max(s.last_success_at)
+		       count(*) FILTER (WHERE c.status <> 'disconnected' AND s.last_success_at IS NULL),
+		       min(s.last_success_at) FILTER (WHERE c.status <> 'disconnected')
 		FROM capture_connection c
 		LEFT JOIN capture_sync_state s ON s.connection_id = c.id
 		WHERE c.provider = ANY($1) AND c.archived_at IS NULL`,
-		mailProviders).Scan(&connections, &reauth, &oldestSuccess, &newestSuccess); err != nil {
-		return assurance.SourceCoverage{Source: "mail", State: assurance.CoverageUnavailable}
+		mailProviders).Scan(&live, &reauth, &unsynced, &oldestSuccess); err != nil {
+		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageUnavailable}
 	}
 	switch {
-	case connections == 0:
-		// Never configured. Different from broken: there is nothing to fix,
-		// only something to decide, and the two route to different people.
-		return assurance.SourceCoverage{Source: "mail", State: assurance.CoverageNotConnected}
+	case live == 0:
+		// Never configured, or every mailbox deliberately disconnected. Either
+		// way there is nothing to fix, only something to decide, and the two
+		// route to different people than a broken connector does.
+		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageNotConnected}
 	case reauth > 0:
 		// Somebody must re-grant access; until then part of the mailbox is
 		// unreadable for a permission reason, not a technical one.
-		return assurance.SourceCoverage{Source: "mail", State: assurance.CoveragePermissionLimited}
-	case oldestSuccess == nil:
-		// Connected but no sync has ever succeeded.
-		return assurance.SourceCoverage{Source: "mail", State: assurance.CoverageUnavailable}
+		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoveragePermissionLimited}
+	case unsynced > 0:
+		// At least one live mailbox has never been read. One healthy sibling
+		// does not make the source checked — the claim covers all of them.
+		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageUnavailable}
 	case now.Sub(*oldestSuccess) > staleAfter:
-		// The slowest mailbox is what the run's claim stands on: "mail was
-		// checked" over three mailboxes means all three, so the oldest
-		// checkpoint decides, and it also caps the checked-through date below.
-		return assurance.SourceCoverage{Source: "mail", State: assurance.CoverageStale}
+		// The slowest mailbox decides: "mail was checked" over three mailboxes
+		// means all three, so the oldest checkpoint grades the source and caps
+		// the checked-through date below.
+		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageStale}
 	default:
 		return assurance.SourceCoverage{
-			Source: "mail", State: assurance.CoverageChecked, CheckedThrough: oldestSuccess,
+			Source: sourceMail, State: assurance.CoverageChecked, CheckedThrough: oldestSuccess,
 		}
 	}
 }

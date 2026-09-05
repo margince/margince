@@ -54,7 +54,7 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 
 	task := integration.SeedIDRow(t, owner, `
 		INSERT INTO activity (id, kind, subject, occurred_at, is_done, source, captured_by)
-		VALUES ($1, 'task', 'Send the revised offer', now(), false, 'manual', 'test')`)
+		VALUES ($1, 'task', 'Agree next step', now(), false, 'manual', 'test')`)
 	integration.LinkActivity(t, owner, task, "deal", deal)
 
 	if _, err := owner.Exec(ctx, `
@@ -164,9 +164,6 @@ func TestEveryRuleInputHasAnAssembledSource(t *testing.T) {
 		t.Errorf("close-date pushes = %d, want 2: two moves later count, the pull-in does not",
 			subject.CloseDatePushes)
 	}
-	if subject.NextStep != "Send the revised offer" {
-		t.Errorf("next step = %q, want the open task's subject", subject.NextStep)
-	}
 }
 
 // The mailbox is graded by connector health, not mail volume: a quiet mailbox
@@ -234,6 +231,26 @@ func TestMailCoverageGradesTheConnectorNotTheTraffic(t *testing.T) {
 	}
 	if got := read(); got.State != assurance.CoveragePermissionLimited {
 		t.Fatalf("a connector needing re-auth reads %q, want permission_limited", got.State)
+	}
+
+	// One healthy mailbox must not mask a broken sibling: min() ignores NULL,
+	// so without the fail-closed count a never-synced second connection would
+	// vanish from the aggregate and the source would read checked.
+	if _, err := owner.Exec(ctx, `
+		UPDATE capture_connection SET status = 'connected' WHERE id = $1;`, conn); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := owner.Exec(ctx, `
+		UPDATE capture_sync_state SET last_success_at = now() - interval '1 hour'
+		WHERE connection_id = $1`, conn); err != nil {
+		t.Fatal(err)
+	}
+	integration.SeedIDRow(t, owner, `
+		INSERT INTO capture_connection (id, provider, user_id, status)
+		VALUES ($1, 'imap', $2, 'connected')`, e.Rep2)
+	if got := read(); got.State != assurance.CoverageUnavailable {
+		t.Fatalf("a healthy mailbox beside a never-synced one reads %q, want unavailable "+
+			"— the checked claim covers every live mailbox", got.State)
 	}
 }
 
