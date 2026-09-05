@@ -14,10 +14,10 @@
 // disappearance needs its way back offered at the moment of the disappearance;
 // finding it again afterwards means knowing which of three judgements you made.
 
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 
 import { useFoldedViewport } from "../app/viewport";
-import { Button } from "../design-system/atoms";
+import { Button, OverflowMenu } from "../design-system/atoms";
 import { Popover } from "../design-system/popover";
 import { SwipeRow } from "../design-system/swiperow";
 import { useToast } from "../design-system/toast";
@@ -160,13 +160,20 @@ export function PutDownByThumb({
   children,
 }: Readonly<{ item: WorklistItem; children: React.ReactNode }>) {
   const folded = useFoldedViewport();
+  // ONE MUTATION PER ROW, held here because this is the component both
+  // placements sit inside. Two `usePutDown` calls on one row are two mutations
+  // with two `pending` flags, and neither disables the other: a menu press
+  // followed by a swipe confirm wrote the same judgement twice and raised two
+  // toasts, each offering an Undo for a state the other had already cleared.
+  // Measured before this was lifted — two PUTs from one row.
   // PER SIDE, because the walk is a position in one direction's list. A single
   // counter shared by both would be moved by a flick the other way, so a reader
   // alternating directions would never step through either side's judgements.
   const [walked, setWalked] = useState({ start: 0, end: 0 });
-  const { offered, put, t } = usePutDown(item);
+  const write = usePutDown(item);
+  const { offered, put, t } = write;
   if (!folded || offered.length === 0) {
-    return children;
+    return <PutDown value={write}>{children}</PutDown>;
   }
   return (
     <SwipeRow
@@ -180,8 +187,80 @@ export function PutDownByThumb({
       }
       {...swipeActions(offered, t, put, walked)}
     >
-      {children}
+      <PutDown value={write}>{children}</PutDown>
     </SwipeRow>
+  );
+}
+
+// The row's one write, handed to whichever control the width leaves standing.
+//
+// A context rather than a prop, because the verbs are drawn deep inside the
+// row's own tree — the caller composes them beside the title and the rank, and
+// threading the write through every one of those would make the row's shape
+// the write's business.
+const PutDownContext = createContext<PutDown | null>(null);
+
+function PutDown({
+  value,
+  children,
+}: Readonly<{ value: PutDown; children: React.ReactNode }>) {
+  return (
+    <PutDownContext.Provider value={value}>{children}</PutDownContext.Provider>
+  );
+}
+
+type PutDown = ReturnType<typeof usePutDown>;
+
+// The same judgements, reachable without a pointer.
+//
+// A swipe is not a control a keyboard, a switch or a screen reader can operate,
+// so below the fold the three judgements had exactly one route and it needed a
+// finger. The staged bar the gesture opens carries real buttons, but only a
+// drag opens it.
+//
+// A MENU rather than the buttons back. Restoring them is the 44px band that was
+// removed to bring the row under its ceiling, so the fix would undo the change
+// it is fixing; a menu is one tab stop and one line of text, and it is what the
+// design system already offers for "the verbs a record offers but a reader
+// rarely wants". The swipe stays the fast path for a thumb and this is the one
+// that answers to a key.
+//
+// Its children mount on first open, which is the default and matters here: a
+// queue draws one of these per row.
+//
+// It takes the WRITE rather than opening its own. A second usePutDown on the
+// same row is a second mutation with its own `pending`, so a press here and a
+// swipe confirm beside it both fire: two writes for one judgement, and two
+// toasts each offering an Undo for a state the other already cleared.
+function PutDownMenu({
+  offered,
+  put,
+  pending,
+  t,
+}: Readonly<{
+  offered: readonly WorklistDisposition[];
+  put: (disposition: WorklistDisposition) => void;
+  pending: boolean;
+  t: T;
+}>) {
+  return (
+    <OverflowMenu label={t("worklist.disposition.menu")}>
+      {offered.map((disposition) => (
+        <Button
+          key={disposition}
+          small
+          variant="ghost"
+          // PENDING, never disabled. A disabled control leaves the tab order,
+          // so a keyboard reader who presses one is dropped to the body — the
+          // exact failure this menu exists to fix. The atom refuses the press
+          // through aria-disabled and keeps the control reachable.
+          pending={pending}
+          onClick={() => put(disposition)}
+        >
+          {t(`worklist.disposition.verb.${disposition}` as const)}
+        </Button>
+      ))}
+    </OverflowMenu>
   );
 }
 
@@ -197,15 +276,28 @@ export function PutDownByThumb({
 // which is the state the spans were added to end. Restoring them means another
 // control in the row, which is the 44px band this change removed; that trade is
 // a product decision, filed as issue #4313 rather than settled here.
-//
-// The same fold leaves these three judgements reachable by pointer alone — the
-// staged bar's buttons are tabbable, but only after a drag opens it. Issue
-// #4314 carries that, and the shape of its answer is the same trade.
+
 export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
   const folded = useFoldedViewport();
-  const { offered, put, pending, t } = usePutDown(item);
-  if (folded || offered.length === 0) {
+  // The row's own write, from the wrapper that holds it — one mutation per row,
+  // so a press here and a swipe confirm beside it cannot write twice.
+  //
+  // The fallback is for the callers that draw these verbs OUTSIDE a row, the
+  // Brief's Do Next section among them: they get their own write rather than
+  // throwing on a missing provider. Both hooks run either way, because a hook
+  // cannot be called conditionally; the unused one registers a mutation nobody
+  // fires, which costs a registration and never a request.
+  const shared = useContext(PutDownContext);
+  const own = usePutDown(item);
+  const { offered, put, pending, t } = shared ?? own;
+  if (offered.length === 0) {
     return null;
+  }
+  // Below the fold the band goes and the menu stands in its place: one tab stop
+  // rather than four 44px controls, so the judgements stay reachable by key
+  // without the height that put the row over its ceiling.
+  if (folded) {
+    return <PutDownMenu offered={offered} put={put} pending={pending} t={t} />;
   }
   return (
     <div className="worklist-row-dispositions">
