@@ -61,6 +61,20 @@ type Counts struct {
 	BriefItemsDismissed int `json:"brief_items_dismissed"`
 }
 
+// quiet reports whether the week did nothing worth a sentence.
+//
+// EVERY count, not a chosen few. A week that closed nothing but carried three
+// promises over is not quiet to the person carrying them, and one that only
+// dismissed brief items still spent somebody's attention. The one question
+// this answers is whether "nothing happened" could be true, and any non-zero
+// count settles it.
+func (c Counts) quiet() bool {
+	return c.TasksDue == 0 && c.TasksDone == 0 && c.TasksCarriedOver == 0 &&
+		c.DealsMoved == 0 && c.DealsWon == 0 && c.DealsLost == 0 &&
+		c.ProposalsAccepted == 0 && c.ProposalsRejected == 0 &&
+		c.BriefItemsActed == 0 && c.BriefItemsDismissed == 0
+}
+
 // Deal is one line from the week, by the name it carried then.
 type Deal struct {
 	Label   string `json:"label"`
@@ -80,9 +94,28 @@ Every number and every name you write must appear in the summary. Never add a fa
 
 Do not restate the whole summary. The reader has the counts and the deal list in front of them; you are saying what they add up to. A sentence that only repeats two numbers has told them nothing.
 
-Say when a week was quiet. "A quiet week — nothing closed and nothing slipped" is a true and useful sentence, and inventing significance to fill the space is the one failure that costs the reader their trust in every other week.
-
 Never advise, never congratulate, never scold. State it.
+`
+
+// quietWeekRule is added ONLY to a week whose counts are all zero.
+//
+// It used to be part of the standing prompt, which handed the model "A quiet
+// week — nothing closed and nothing slipped" as a ready sentence on every
+// week, including one that closed three deals for EUR 12,500. The greeting
+// above it said so and the metric beside it said so, and the prose said
+// nothing had happened.
+//
+// An exemplar is the most quotable line in a prompt. Offering it where it
+// cannot be true is asking for it back.
+const quietWeekRule = `
+Say when a week was quiet. "A quiet week — nothing closed and nothing slipped" is a true and useful sentence, and inventing significance to fill the space is the one failure that costs the reader their trust in every other week.
+`
+
+// happenedRule is its opposite, for a week that did something. It names the
+// contradiction rather than the wording, because the wording is only one way
+// of writing it.
+const happenedRule = `
+THIS WEEK WAS NOT QUIET: the counts below are not all zero. Never write that nothing closed, nothing moved, nothing slipped or that the week was quiet — the reader is looking at the numbers that say otherwise, in the same panel.
 `
 
 // systemFor names THIS call's data boundary; see promptfence.Fence.Rule.
@@ -105,11 +138,22 @@ func systemFor(fence promptfence.Fence, lang string) string {
 func Request(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
-		System:         systemFor(fence, lang),
+		System:         systemFor(fence, lang) + weekShapeRule(in),
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
 	}
+}
+
+// weekShapeRule is the half of the prompt that depends on what the week held.
+//
+// One of the two, never both and never neither: a week either did something or
+// it did not, and the model is told which before it is asked to describe it.
+func weekShapeRule(in Input) string {
+	if in.Counts.quiet() {
+		return quietWeekRule
+	}
+	return happenedRule
 }
 
 // encodeInput renders the week as the JSON the prompt reads. Every field is a
@@ -129,7 +173,7 @@ func encodeInput(in Input) string {
 // A refusal is not a failure of the week — the caller keeps the deterministic
 // review and records that no sentence was written. So every rejection here is
 // silent to the reader and loud in the log.
-func Parse(reply string) (string, error) {
+func Parse(reply string, in Input) (string, error) {
 	// A POINTER, so a missing field and a present-but-empty one are different
 	// answers. Decoded into a plain string, `{}` and `{"narrative":null}` both
 	// land as "" — and the caller stores that as "a pass ran and found the week
@@ -155,5 +199,56 @@ func Parse(reply string) (string, error) {
 		return "", fmt.Errorf("weekly narrative: %d characters, over the %d the column holds",
 			n, MaxNarrativeRunes)
 	}
+	if err := refuseContradiction(sentence, in); err != nil {
+		return "", err
+	}
 	return sentence, nil
+}
+
+// quietClaims are the ways a sentence says the week held nothing.
+//
+// A CLOSED list of phrases, and deliberately not a general check that every
+// number in the prose appears in the input. That was the other option and it
+// is worse than nothing: dates, localised amounts, percentages and numbers
+// inside company names all read as figures, so it refuses honest sentences
+// while a wrong number attached to the right metric still passes.
+//
+// This is narrower and it holds. One claim, "the week was quiet", checked
+// against the one fact that settles it. English only, matching the corpus this
+// prompt is certified against — a sentence written in another language is not
+// caught here, which is why the prompt states the rule as well.
+var quietClaims = []string{
+	"quiet week",
+	"a quiet one",
+	"nothing closed",
+	"nothing moved",
+	"nothing slipped",
+	"nothing happened",
+}
+
+// refuseContradiction rejects a sentence that says the week held nothing when
+// the counts beside it say otherwise.
+//
+// The reader sees both at once: the greeting says "You closed 3 deals", the Won
+// metric says "3 · €12,500", and the prose said "A quiet week — nothing closed
+// and nothing slipped". One panel disagreeing with itself about the same week
+// costs the reader their trust in every week, including the ones that were
+// right.
+//
+// Refusing keeps the deterministic review and drops the sentence, which is what
+// every other rejection here does. A week with no prose reads as a week nobody
+// wrote about; a week whose prose contradicts its own numbers reads as a
+// product that does not know what happened.
+func refuseContradiction(sentence string, in Input) error {
+	if in.Counts.quiet() {
+		return nil
+	}
+	folded := strings.ToLower(sentence)
+	for _, claim := range quietClaims {
+		if strings.Contains(folded, claim) {
+			return fmt.Errorf(
+				"weekly narrative: the sentence says %q about a week that was not quiet", claim)
+		}
+	}
+	return nil
 }
