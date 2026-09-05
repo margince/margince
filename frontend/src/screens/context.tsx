@@ -8,6 +8,7 @@ import { ENTITY_KINDS, type EntityKind } from "../app/entity";
 import { Card, EmptyState } from "../design-system/atoms";
 import { EvidenceChip, toEvidence } from "../design-system/trust";
 import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import {
   OverlayUnavailable,
   QueryGate,
@@ -25,6 +26,15 @@ import "./context.css";
 // ContextEntityRef.type but not a 360) renders as plain text, same convention
 // as SearchHit in search.tsx.
 type ContextResponse = components["schemas"]["ContextResponse"];
+const SECTION_LABELS: Readonly<Record<string, MessageKey>> = {
+  recent_touches: "context.recentTouches",
+  open_tasks: "context.openTasks",
+  related_people: "context.relatedPeople",
+  related_organizations: "context.relatedCompanies",
+  related_deals: "context.relatedDeals",
+  related_projects: "context.relatedProjects",
+  who_knows: "context.whoKnows",
+};
 const LINKABLE = new Set<EntityKind>(ENTITY_KINDS);
 
 // The walk starts at the anchor, so the anchor comes back inside it — and a row
@@ -99,7 +109,11 @@ export function RecordContextPanel({
             <div className="context-sections">
               {sections.map((section) => (
                 <div key={section.name} className="context-section">
-                  <h3 className="t-label">{section.name}</h3>
+                  <h3 className="t-label">
+                    {SECTION_LABELS[section.name]
+                      ? t(SECTION_LABELS[section.name])
+                      : section.name.replaceAll("_", " ")}
+                  </h3>
                   <ul className="context-items">
                     {section.items.map((item) => {
                       const self = `${item.ref.type}:${item.ref.id}`;

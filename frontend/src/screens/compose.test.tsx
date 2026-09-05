@@ -1675,7 +1675,7 @@ describe("ComposeModal — channel reply", () => {
     // Confirming an irreversible send under the name of a channel this
     // message will never travel on is a lie the rep cannot check.
     expect(screen.getByText("Send this message?")).toBeTruthy();
-    expect(screen.queryByText("Send this email?")).toBeNull();
+    expect(screen.queryByText("Draft email")).toBeNull();
     // The heading is the only place the channel is named, so it cannot also
     // be the only place the irreversibility is: the modal chrome around it
     // is a tier dot and two buttons.
@@ -1779,7 +1779,7 @@ describe("TimelineActions", () => {
     stubRoutes();
     render(<TimelineActions activity={note} entityType="deal" entityId="d1" />);
     await userEvent.click(screen.getByRole("button", { name: "Reply" }));
-    expect(await screen.findByText("Send this email?")).toBeTruthy();
+    expect(await screen.findByText("Draft email")).toBeTruthy();
   });
 
   it("opens the composer when Reply is clicked", async () => {
@@ -1788,8 +1788,8 @@ describe("TimelineActions", () => {
       <TimelineActions activity={email} entityType="deal" entityId="d1" />,
     );
     await userEvent.click(screen.getByRole("button", { name: "Reply" }));
-    // The ConfirmModal titled "Send this email?" mounts only once Reply opens it.
-    expect(await screen.findByText("Send this email?")).toBeTruthy();
+    // The ConfirmModal titled "Draft email" mounts only once Reply opens it.
+    expect(await screen.findByText("Draft email")).toBeTruthy();
   });
 
   it("offers no reply when the person is unreachable", async () => {

@@ -19707,16 +19707,15 @@ export interface components {
         };
         /**
          * @description The one thing to do next, and what performing it means. `action` is one of
-         *     `draft_email`, `create_task`, `open_meeting_brief`, `none` — the same verbs
-         *     the retired next-best-action carried, so a client that already performs them
-         *     needs no new code. `arguments` is the body or operand the verb takes, ready
+         *     `draft_email`, `create_task`, `open_task`, `open_meeting_brief`, `none`.
+         *     `open_task` opens existing work without creating another task. `arguments` is the body or operand the verb takes, ready
          *     to send; absent for `none`.
          */
         DealStatusCardMove: {
             action: string;
             /** @description One sentence saying why this move and not another. */
             reason: string;
-            /** @description `draft_email` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body. */
+            /** @description `draft_email`, `open_task` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body. */
             arguments?: {
                 [key: string]: unknown;
             };
@@ -30875,7 +30874,7 @@ export interface components {
              *     and no thread behind it.
              *
              *     `draft_email` opens a new message, `create_task` agrees a next step,
-             *     `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
+             *     `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
              *     sends the reader to reauthorize a source that stopped answering.
              *
              *     `none` is a producer's answer that there is nothing to do — a closed deal has
@@ -30885,7 +30884,7 @@ export interface components {
              *     client that meets one anyway draws nothing, which is the same outcome.
              * @enum {string}
              */
-            action: "draft_reply" | "draft_email" | "create_task" | "open_meeting_brief" | "reconnect" | "none";
+            action: "draft_reply" | "draft_email" | "create_task" | "open_task" | "open_meeting_brief" | "reconnect" | "none";
             /**
              * Format: uuid
              * @description The record the verb acts on, where the verb acts on one: the message for
