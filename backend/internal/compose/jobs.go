@@ -406,6 +406,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addGraphJobs(reg, pool, cfg, log),
 		addEmbedDriftSweepJob(reg, pool, cfg, log),
 		addScheduledSendRecoveryJob(reg, pool, cfg, log),
+		addControllerPayloadSweepJob(reg, pool, cfg, log),
 		addPrivacyRetentionJobs(reg, pool, cfg, log),
 		addWebhookRetryJobs(reg, pool, cfg),
 		addGeocodeBackfillJobs(reg, pool, cfg),
