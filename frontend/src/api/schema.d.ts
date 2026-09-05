@@ -14266,6 +14266,21 @@ export interface components {
              *     little room rather than compare a file against it exactly.
              */
             max_upload_bytes: number;
+            /**
+             * @description Which remaining-pipeline reading a projected landing is built from. A setting
+             *     rather than a fixed choice, because it is a question about how this installation
+             *     SELLS rather than about the software: a team with a disciplined commit stage means
+             *     something by it, and one that commits everything does not — their weighted number
+             *     is the honest one.
+             *
+             *     `commit_evidence` is the default and the strictest: committed deals whose close
+             *     date somebody confirmed, a provisional date being a guess that stays out.
+             *     `manager_call` takes the authored call as the whole period's landing and is not
+             *     added to what is already won; with no current call the read falls back to
+             *     `commit_evidence` and says so in the landing's `caveat`.
+             * @enum {string}
+             */
+            forecast_forward_measure: "commit_evidence" | "weighted" | "manager_call";
         };
         /** @description A sparse installation-settings patch (admin/ops, human-only). */
         UpdateInstallationSettingsRequest: {
@@ -14305,6 +14320,13 @@ export interface components {
              *     password only.
              */
             enabled_oidc_providers?: string[];
+            /**
+             * @description Which remaining-pipeline reading a projected landing is built from. Never frozen:
+             *     it is applied on READ and stores nothing, so changing it re-computes every landing
+             *     at once and re-means no stored row.
+             * @enum {string}
+             */
+            forecast_forward_measure?: "commit_evidence" | "weighted" | "manager_call";
         };
         CaptureActivityResponse: {
             funnel: components["schemas"]["CaptureActivityFunnel"];
@@ -24307,6 +24329,74 @@ export interface components {
             current_call?: components["schemas"]["ForecastCall"];
             /** @description True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much. */
             scope_limited?: boolean;
+            landing?: components["schemas"]["ForecastLanding"];
+            sufficiency?: components["schemas"]["ForecastSufficiency"];
+        };
+        /**
+         * @description Where the period finishes if nothing changes, and what that answer rests on.
+         *     The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
+         */
+        ForecastLanding: {
+            /**
+             * Format: int64
+             * @description The projection itself, in the installation's base currency.
+             */
+            amount_minor: number;
+            /**
+             * @description Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`.
+             * @enum {string}
+             */
+            measure: "commit_evidence" | "weighted" | "manager_call";
+            /**
+             * Format: int64
+             * @description The money already banked, the backward half of the sum.
+             */
+            won_minor: number;
+            /**
+             * Format: int64
+             * @description The forward half. Zero for a manager call, which is a single authored TOTAL rather than a remainder — a call is not added to won_minor, and a reconciliation line drawing this must say the call instead of a split.
+             */
+            remaining_minor: number;
+            /**
+             * @description Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+             * @enum {string}
+             */
+            caveat?: "call_absent" | "call_below_actual";
+        };
+        /**
+         * @description Whether the open pipeline supports the reference landing, and what the reference is.
+         *     NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
+         */
+        ForecastSufficiency: {
+            /**
+             * @description Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
+             * @enum {string}
+             */
+            absent?: "insufficient_basis" | "insufficient_history";
+            /**
+             * @description Where the reference came from. A current authored call outranks history: a manager who wrote a number down has said what this period is for, and the median of the last four completed comparable periods is the fallback for when nobody has.
+             * @enum {string}
+             */
+            basis?: "manager_call" | "historical_median";
+            /** Format: int64 */
+            reference_landing_minor?: number;
+            /**
+             * Format: int64
+             * @description The reference minus what is already won, floored at zero — a period already past its reference needs no more pipeline.
+             */
+            remaining_to_support_minor?: number;
+            /**
+             * Format: int64
+             * @description The open pipeline that remainder implies at the conversion rate.
+             */
+            needed_open_minor?: number;
+            /** Format: int64 */
+            current_open_minor?: number;
+            /**
+             * Format: int64
+             * @description Current over needed in BASIS POINTS, so the server chooses no rounding for the client. Nothing needed is 10000 (full) rather than a division by zero or an unbounded ratio, because "covered" is actionable and "infinity" is not.
+             */
+            coverage_bp?: number;
         };
         /** @description One finding from the nightly input check. */
         InputCheck: {

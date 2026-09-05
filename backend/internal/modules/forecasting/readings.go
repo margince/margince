@@ -39,6 +39,11 @@ type Deal struct {
 	Category string
 	// Integer percent, the stage's own win probability.
 	StageProbability int
+	// StageID is which stage the deal stands in, empty where the reader could
+	// not name one. Frozen onto the contribution so a later conversion read can
+	// ask what happened to deals that REACHED a stage — a question the deal's
+	// current stage cannot answer, because it has moved since.
+	StageID string
 }
 
 // Readings are the four money answers plus the counts that say what they do not
@@ -81,6 +86,10 @@ type Contribution struct {
 	CloseProvisional bool
 	Category         string
 	StageProbability int
+	// StageID is the stage the deal stood in when this was frozen, empty where
+	// it could not be read. Carried so a conversion rate can be measured per
+	// stage from what was recorded rather than from where the deal ended up.
+	StageID string
 	// The deal's own weighted amount, ALREADY ROUNDED. Stored beside the base
 	// amount because the weighted headline is the sum of these, and a headline
 	// whose parts are not persisted cannot be reconciled against anything.
@@ -211,6 +220,7 @@ func contribute(period Period, asOfDay time.Time, deal Deal) (Contribution, erro
 		CloseProvisional: deal.CloseProvisional,
 		Category:         EffectiveCategory(asOfDay, deal),
 		StageProbability: deal.StageProbability,
+		StageID:          deal.StageID,
 	}
 	switch {
 	case deal.AmountMinor == nil:

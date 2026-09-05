@@ -177,7 +177,7 @@ func (s *Store) writeContributions(
 		[]string{
 			"snapshot_id", "deal_id", "owner_id", colAmountMinor, colCurrency,
 			"base_minor", "fx_rate", "fx_date", "effective_close_date",
-			"close_provisional", "category", "stage_probability", "weighted_minor",
+			"close_provisional", "category", "stage_probability", "stage_id", "weighted_minor",
 			"in_won", "in_evidence", "in_best_case", "in_open", "exclusion_reason",
 			"audit_id", "approval_id", "captured_by",
 		},
@@ -198,7 +198,7 @@ func (s *Store) writeContributions(
 				snapshotID, dealID, nullableID(row.Owner), row.AmountMinor,
 				nullIfEmpty(row.Currency), row.BaseMinor, nil, nil,
 				row.EffectiveClose, row.CloseProvisional, nullIfEmpty(row.Category),
-				nullableInt(row.StageProbability), weighted,
+				nullableInt(row.StageProbability), nullableID(row.StageID), weighted,
 				row.InWon, row.InEvidence, row.InBestCase, row.InOpen,
 				nullIfEmpty(row.ExclusionReason),
 				row.AuditID, row.ApprovalID, capturedBy,

@@ -29,6 +29,11 @@ type InstallationSettings struct {
 	BaseLanguage string
 	// FiscalYearStartMonth is the month the business year begins, 1..12.
 	FiscalYearStartMonth int
+	// ForecastForwardMeasure is which remaining-pipeline reading a projected
+	// landing is built from. A string here rather than a values.ForwardMeasure
+	// because this struct is what the setting STORED, and reporting it as the
+	// typed vocabulary would claim a validation the read did not perform.
+	ForecastForwardMeasure string
 	// BaseCurrencyLocked and its reason let a client render the field
 	// read-only instead of discovering the refusal by attempting a write —
 	// the same information the write path would give, offered before the
@@ -47,11 +52,12 @@ type InstallationSettings struct {
 // them are *string and a transposed pair would write a language into the
 // currency row and pass the type checker.
 type InstallationPatch struct {
-	Name                 *string
-	Timezone             *string
-	BaseCurrency         *string
-	BaseLanguage         *string
-	FiscalYearStartMonth *int
+	Name                   *string
+	Timezone               *string
+	BaseCurrency           *string
+	BaseLanguage           *string
+	FiscalYearStartMonth   *int
+	ForecastForwardMeasure *string
 	// EnabledOidcProviders replaces the whole list. A nil pointer leaves it
 	// unchanged; a pointer to an empty slice is a real choice — offer password
 	// only — so the two cannot be collapsed.
@@ -130,6 +136,10 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
+	measure, err := settings.Get(ctx, s.settings, ForecastForwardMeasure)
+	if err != nil {
+		return InstallationSettings{}, err
+	}
 	providers, err := settings.Get(ctx, s.settings, EnabledOidcProviders)
 	if err != nil {
 		return InstallationSettings{}, err
@@ -140,8 +150,9 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	}
 	return InstallationSettings{
 		Name: name, Timezone: zone, BaseCurrency: currency, BaseLanguage: language,
-		FiscalYearStartMonth: fiscalStart,
-		BaseCurrencyLocked:   locked, BaseCurrencyLockedReason: why,
+		FiscalYearStartMonth:   fiscalStart,
+		ForecastForwardMeasure: measure,
+		BaseCurrencyLocked:     locked, BaseCurrencyLockedReason: why,
 		EnabledOidcProviders: providers,
 	}, nil
 }
@@ -235,11 +246,15 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
+	measure, err := encodePatchField(ForecastForwardMeasure, in.ForecastForwardMeasure)
+	if err != nil {
+		return nil, err
+	}
 	providers, err := encodePatchField(EnabledOidcProviders, in.EnabledOidcProviders)
 	if err != nil {
 		return nil, err
 	}
-	return []pendingWrite{name, zone, currency, language, fiscal, providers}, nil
+	return []pendingWrite{name, zone, currency, language, fiscal, measure, providers}, nil
 }
 
 // UpdateInstallation applies a sparse patch. Named for the same reason as

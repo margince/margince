@@ -199,6 +199,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		forecastHandlers: forecasting.NewHandlers(
 			forecasting.NewStore(InstallationDB(pool)),
 			ForecastDeals, ForecastPeriodAt, ForecastWritableScope,
+			ForecastConversionHistory, ForecastForwardMeasure,
 			func() time.Time { return time.Now().UTC() },
 		),
 		// The floor comes from the constant rather than a setting for now:
