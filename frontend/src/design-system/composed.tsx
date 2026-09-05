@@ -261,20 +261,27 @@ export function DealCard({
       onClick={(event) => onOpen?.(deal, event)}
       {...dragHandlers}
     >
-      <span className="deal-name">{deal.name}</span>
+      {/* The company leads and the deal's own name follows it: a board is read
+          by account first — which pile of cards is this customer's — and the
+          card is scanned rather than read, so the line the eye reaches first is
+          the one it groups by. Weight still says which record the card opens. */}
       <DealCardCompany deal={deal} />
+      <span className="deal-name">{deal.name}</span>
       <RowTags tags={deal.tags} />
       <span className="deal-meta">
         <span className="deal-value">
           {formatMoneyOrAbsent(deal.valueMinor, deal.currency, locale)}
         </span>
-        <span>{formatDuration(deal.ageMs, locale)}</span>
         {deal.archived && <Badge>{t("deal.archived")}</Badge>}
         {deal.stalled && <Badge tone="warn">{t("deal.stalled")}</Badge>}
         {deal.singleThreaded && (
           <Badge tone="danger">{t("deal.singleThreaded")}</Badge>
         )}
         {deal.staged && <Badge tone="ai">{t("deal.staged")}</Badge>}
+        {/* LAST, because the meta line pushes it to the far edge: what it is
+            pushed away from has to be every other item on that line, or a card
+            that carries a badge puts the badge at the edge instead. */}
+        <span className="deal-age">{formatDuration(deal.ageMs, locale)}</span>
       </span>
     </a>
   );
