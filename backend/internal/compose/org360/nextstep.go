@@ -106,6 +106,8 @@ func recommendedNextStep(orgID ids.OrganizationID, in suggestionInputs) nextStep
 // is where the click happens: a rep pressing the button on this card is the
 // author of the task, and recording anything else would put an actor in the
 // audit trail who did not decide it.
+//
+//nolint:staticcheck // ST1003: the field names mirror the oapi-codegen type this must assign to
 func taskBody(
 	subject string, entityType crmcontracts.CreateTaskRequestLinksEntityType, entityID ids.UUID,
 ) crmcontracts.CreateTaskRequest {
