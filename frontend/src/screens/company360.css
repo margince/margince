@@ -428,9 +428,10 @@
   font-size: var(--fs-meta);
   color: var(--textMeta);
 }
-.co-cite-origin + .btn,
-.co-cite-quote + .btn {
-  margin-top: var(--space-2);
+/* The way to the record, set off from the words above it. The interval is
+   this line's own, not the button's: a primitive keeps its own spacing. */
+.co-cite-open {
+  margin: var(--space-2) 0 0;
 }
 .co-move-do {
   display: flex;
