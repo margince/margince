@@ -1,13 +1,7 @@
-/* The company view's cards. The rails stack cards vertically at a tighter
-   rhythm than the main column, because a rail card is a glance and a main
-   column card is something you read. */
-
-.record-rail,
-.record-aside {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+/* The company view's cards. The rails' own rhythm is the SHELL's — every
+   record page draws those two columns, so `.record-rail` / `.record-aside`
+   live with `RecordView` in design-system/composed.css. What is here is what
+   the account's cards need on top of it. */
 
 /* A pane in the margin pays the card's inset, not the work column's. The
    panel's own --space-5 is sized for a body a reader reads across; in a

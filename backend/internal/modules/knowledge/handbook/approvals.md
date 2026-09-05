@@ -141,6 +141,37 @@ own effect. So:
 - Members you could not decide individually are neither shown nor decided, so a
   bundle may report fewer members than it actually holds.
 
+## Worked example: a meeting transcript becomes a task
+
+The most common way a card reaches your inbox without an agent being involved.
+Every step here is one you take yourself.
+
+1. Open the **contact** who was in the meeting. Start from the person, not from
+   the company: a meeting is with a person, and a company page will ask you who
+   was there before it can log one.
+2. **Log activity**, and choose **Meeting**.
+3. Give it a subject you will recognise later, then tick **This text is a
+   transcript** and paste the transcript into the body. The tick matters: it
+   routes the text through the normaliser that numbers the lines, and those line
+   numbers are what the evidence below points at.
+4. **Log**.
+5. Open **History** and find the meeting. Margince queues a reading when you
+   log a transcript. If no reading is underway or complete, click **Read
+   transcript** to request one.
+6. Wait for **Done**. It reports what it found: "{count} next steps waiting for
+   your review", or "Read in full. This conversation states no next steps."
+7. Go to the **Worklist**, then **Decisions**. A busy queue can bury a new
+   proposal, so look for the subject you chose in step 3.
+8. Open the card's evidence. It shows the transcript lines the proposal was
+   read from, verbatim. Read them before you answer: a proposal is a reading of
+   what somebody said, and the lines are how you check the reading.
+9. **Approve** to create the task, or **Reject** with a reason. An approved
+   proposal becomes an ordinary task on the contact and on their company.
+
+What this does **not** do: it does not send anything or create tasks without
+your approval. Reading the transcript proposes next steps; accepting a proposal
+is what creates its task.
+
 ## Where you see them
 
 The approval inbox is reachable in its own right, and staged items also surface

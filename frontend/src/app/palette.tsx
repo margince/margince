@@ -13,7 +13,7 @@ import {
   type SettingsTabId,
   settingsAddress,
   useSettingsEntryVisibility,
-} from "../screens/settings";
+} from "../screens/settingsnav";
 import {
   CUSTOM_SCREEN,
   customPaletteScreens,
@@ -85,10 +85,12 @@ const SETTINGS_ALIASES: Readonly<
 export function useBuiltinCommands(): Command[] {
   const t = useT();
   const { locale } = useLocale();
-  // Without the company rollout probe: the palette offers no shortcut to General,
-  // and that probe is a network read this hook would otherwise fire on every
-  // screen (see useSettingsEntryVisibility).
-  const visible = useSettingsEntryVisibility(false);
+  // The same snapshot the settings rail reads, so the two cannot disagree about
+  // which pages exist. This used to pass `false` to skip a network probe the
+  // hook fired for the company-rollout fact alone — which meant the palette
+  // answered that question differently from the rail. The fact rides /me now,
+  // so there is no request to skip and no parameter to pass.
+  const visible = useSettingsEntryVisibility();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
       id: `screen:${item.screen}`,

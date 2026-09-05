@@ -241,6 +241,13 @@ export const de = {
   "search.tier.mirrored": "aus einem verbundenen System",
   "search.tier.unverified": "nicht verifiziert",
 
+  "context.recentTouches": "Letzte Gespräche",
+  "context.openTasks": "Offene Aufgaben",
+  "context.relatedPeople": "Zugehörige Personen",
+  "context.relatedCompanies": "Zugehörige Unternehmen",
+  "context.relatedProjects": "Verknüpfte Projekte",
+  "context.whoKnows": "Wer sie kennt",
+  "context.relatedDeals": "Zugehörige Deals",
   "context.title": "Verwandte Belege",
   "context.empty": "Noch nichts Verwandtes.",
 
@@ -516,6 +523,7 @@ export const de = {
   "common.loading": "Wird geladen…",
   "ref.nameLoadFailed": "Name konnte nicht geladen werden",
   "ref.notInRoster": "Aktuell zugeordnet (nicht mehr in der Nutzerliste)",
+  "picker.noMatch": "Kein Treffer",
 
   // "Funktioniert nicht mehr", nicht "Fehler aufgetreten": die Ansicht ist
   // stehengeblieben, und das ist die Beobachtung, die der Lesende selbst
@@ -866,10 +874,9 @@ export const de = {
   "co.strip.lastTouch.theirs": "Die Gegenseite hat zuletzt geschrieben",
   "co.strip.lastTouch.ours": "Du hast zuletzt geschrieben",
   "co.strip.lastTouch.never": "Noch kein Austausch",
-  "co.strip.next": "Als Nächstes",
+  "co.strip.nextMeeting": "Nächster Termin",
   "co.strip.next.none": "Nichts geplant",
   "co.strip.open.history": "Verlauf öffnen",
-  "co.strip.open.tasks": "Aufgaben öffnen",
   "co.360.thread": "Was passiert ist",
   "co.360.threadCount": "Was passiert ist · {count}",
   "co.360.fullHistory": "Gesamter Verlauf",
@@ -1015,6 +1022,8 @@ export const de = {
   "roompage.text.welcomeLabel": "Begrüßungstext",
   "roompage.viewAsBuyer": "Als Käufer ansehen",
   "roompage.previewArchived": "Ein archivierter Raum hat keine Vorschau.",
+  "roompage.previewNotYours":
+    "Ihr Zugriff auf diesen Deal umfasst die Käufer-Vorschau nicht.",
   "access.title": "Zugang",
   "access.sub": "Wer eintreten darf und was jede Person tun kann.",
   "access.invite": "Einladen",
@@ -2358,6 +2367,9 @@ export const de = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Nur ins Stocken geraten",
   "deals.filterOwnerMe": "Meine Deals",
+  "deals.totalsNeedOwnerFilter":
+    "Nur geladene — für die Summe auf Meine Deals filtern",
+  "deals.totalsNoTagFilter": "Nur geladene — keine Summe bei Tag-Filter",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Alle Partner",
   "deals.filterForecast": "Forecast",
@@ -2473,17 +2485,6 @@ export const de = {
   "home.pipelinePartial":
     "{count} Deals fehlen in diesen Zahlen – Ihre Berechtigung deckt sie nicht ab.",
   "home.pipelineUnavailable": "Diese Zahl konnte nicht geladen werden.",
-  "home.asOf": "Stand {at}",
-  "home.generating": "Stelle zusammen…",
-  "home.generate": "Briefing jetzt holen",
-  "home.noneBody":
-    "Dein Morgenbriefing sortiert die Deals, die deine erste Stunde verdienen — Gewinnchance, Umsatz, Timing, Momentum und Nähe, jeder Faktor mit Beleg. Es entsteht über Nacht und liegt morgen früh bereit, sobald offene Deals da sind.",
-  "home.honestShort":
-    "Nur {count} Deals haben die Schwelle geschafft — die Liste wird nie aufgefüllt.",
-  "home.overflow":
-    "Es werden die {shown} höchstplatzierten von {count} qualifizierten Deals gezeigt.",
-  "home.narrativeNoPass":
-    "Heute keine Nacht-Zusammenfassung — Margince hat für diese Lage keinen Durchgang gemacht. Die Reihenfolge unten ist trotzdem die von heute.",
   "home.panel.weekly": "Letzte Woche",
   "home.weekly.weekOf": "Woche ab {day}",
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
@@ -2491,7 +2492,6 @@ export const de = {
   "plan.title": "Nächste Woche planen",
   // Der Kopf der sortierten Liste, auf der Seite, die zuerst geöffnet wird —
   // dieselben Zeilen wie in der Arbeitsliste, in der Reihenfolge des Servers.
-  "brief.donext.title": "Als Nächstes",
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
   // Seite zeigt — nie von einem Modell geschrieben.
   "brief.eyebrow": "Dein Morgen",
@@ -2521,10 +2521,19 @@ export const de = {
   "brief.week.quiet":
     "Eine ruhige Woche — nichts abgeschlossen, nichts bewegt.",
 
-  "brief.donext.sub": "Eine Reihenfolge, aus deiner Arbeitsliste.",
-  "brief.donext.loading": "Was auf dich wartet, wird gelesen",
-  "brief.donext.clear": "Gerade wartet nichts auf dich.",
-  "brief.donext.rest": "{count} weitere in der Arbeitsliste",
+  "brief.changed.lead": "Seit dem Briefing geändert:",
+  "brief.changed.more": "+{count} weitere",
+  "brief.changed.open": "Arbeitsliste öffnen",
+  "brief.feed.title": "Heute",
+  "brief.feed.sub": "Eine Reihenfolge, einmal entschieden.",
+  "brief.feed.loading": "Dein Morgen wird gelesen",
+  "brief.feed.clear": "Gerade wartet nichts auf dich.",
+  "brief.feed.rest": "{count} weitere in der Arbeitsliste",
+  "brief.feed.section.respond_now": "Jetzt antworten",
+  "brief.feed.section.prepare_conversations": "Gespräche vorbereiten",
+  "brief.feed.section.move_revenue": "Umsatz bewegen",
+  "brief.feed.section.build_pipeline": "Pipeline aufbauen",
+  "brief.feed.section.review_and_repair": "Prüfen und reparieren",
 
   // Die Woche eines Teams, eingefroren beim Abschluss. Zwei Wochen sind
   // vergleichbar, weil keine sich unter dem Vergleich bewegt.
@@ -2644,10 +2653,6 @@ export const de = {
   "home.weekly.outcome.moved": "bewegt",
   "home.weekly.outcome.won": "gewonnen",
   "home.weekly.outcome.lost": "verloren",
-  "home.focus.allAbove":
-    "Alles aus der Nacht steht schon oben, bei dem, was auf dich wartet.",
-  "home.quietRun":
-    "Heute Morgen hat nichts die Schwelle geschafft. Keine erfundene Dringlichkeit — genieß die Ruhe.",
   "home.act": "Erledigt",
   "home.dismiss": "Ausblenden",
   "home.actedState": "erledigt",
@@ -2686,7 +2691,6 @@ export const de = {
   "home.glance.introWeekly": "Das ist deine abgeschlossene Woche.",
   "home.glance.intro": "Das ist dein Tag.",
   "home.panel.decisions": "Wartet auf dich",
-  "home.panel.focus": "Wenn Zeit bleibt",
   "home.panel.overnight": "Über Nacht",
   "home.panel.position": "Bestand",
   "home.panel.schedule": "Heutiger Kalender",
@@ -2701,22 +2705,27 @@ export const de = {
   "home.readings.label": "Dein Morgen in fünf Kennzahlen",
   "home.readings.truncated":
     "Eine Quelle wurde bis zur Grenze gelesen, jede Zahl oben ist also ein Mindestwert.",
+  "home.readings.urgent": "Dringende Schritte",
+  "home.readings.urgentBasis": "jemand wartet oder eine Zusage bricht",
+  "home.readings.decisions": "Offene Entscheidungen",
+  "home.readings.decisionsBasis":
+    "jemand kommt erst weiter, wenn du antwortest",
+  "home.readings.pipeline": "Pipeline",
+  "home.readings.pipelineWorkspace": "Pipeline · gesamte Organisation",
+  "home.readings.pipelineBasis":
+    "{weighted} gewichtet · {priced} von {eligible} bewertet",
+  "home.readings.pipelineUnread": "die Pipeline war nicht lesbar",
+  "home.readings.pipelineReading": "Pipeline wird gelesen",
   "home.readings.openLane": "Diese öffnen",
-  "home.readings.waiting": "Kunden warten",
-  "home.readings.waitingBasis": "warten auf eine Antwort",
   "home.readings.meetings": "Termine heute",
   "home.readings.meetingsBasis": "im heutigen Kalender",
   "home.readings.needsPrep_one": "1 unvorbereitet",
   "home.readings.needsPrep_other": "{count} unvorbereitet",
   "home.readings.prepUnknown": "nicht alle prüfbar",
   "home.readings.prepared": "alle vorbereitet",
-  "home.readings.promises": "Zusagen fällig",
-  "home.readings.promisesBasis": "Zusagen werden noch nicht erfasst",
   "home.readings.leads": "Erstkontakt",
   "home.readings.leadsBasis": "warten auf die erste Antwort",
   "home.readings.leadsDue": "nächste fällig {value}",
-  "home.readings.quota": "Ziel-Tempo",
-  "home.readings.quotaBasis": "kein Ziel hinterlegt",
   "home.rail": "Kontext",
   "home.pct": "{pct} %",
   "home.deck.later": "Später",
@@ -3118,6 +3127,7 @@ export const de = {
   "log.transcriptUploadRejected": "Nur eine .txt-Datei wird akzeptiert.",
   "log.transcriptUploadFailed":
     "Die Datei konnte nicht gelesen werden — versuchen Sie stattdessen, den Text einzufügen.",
+  "log.attendee": "Wer war dabei",
   "log.subject": "Betreff",
   "log.body": "Details",
   "log.dueAt": "Fällig am",
@@ -3234,7 +3244,7 @@ export const de = {
     "Das ist eine Antwort auf ihre eigene Nachricht — dafür brauchst du keinen Grund anzugeben.",
   "compose.sendLaterLabel": "Später senden (optional)",
   "compose.send": "Senden",
-  "compose.sendConfirmTitle": "Diese E-Mail senden?",
+  "compose.sendConfirmTitle": "E-Mail entwerfen",
   "compose.threadHeading": "Dieser Verlauf",
   "compose.continueHeading": "Einen Verlauf fortsetzen?",
   "compose.threadLeave": "Anderen wählen",
@@ -3243,7 +3253,7 @@ export const de = {
   "compose.threadContinuing": "Der letzte Austausch, den dies fortsetzt",
   "compose.threadPending": "Verlauf wird geladen\u2026",
   "compose.sendBody":
-    "Sie senden diese E-Mail jetzt. Dies ist eine ausgehende, unwiderrufliche Aktion.",
+    "Prüfen und bearbeiten Sie Ihren Entwurf. Ein Klick auf Senden verschickt die E-Mail und kann nicht rückgängig gemacht werden.",
   "compose.schedule": "Einplanen",
   "compose.scheduleConfirmTitle": "Diese E-Mail einplanen?",
   // The composer computed that it had scheduled a send and said nothing —
@@ -3311,6 +3321,62 @@ export const de = {
   "analytics.sections": "Analytics-Bereiche",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
+  "analytics.sectionPerformance": "Ergebnisse",
+  "analytics.noClosedDeals": "Es wurden noch keine Deals abgeschlossen.",
+  "analytics.sectionOutcomes": "Meine Ergebnisse",
+  "analytics.sectionCoverage": "Datenabdeckung",
+  "analytics.sectionDelivery": "Lieferung",
+  "analytics.reportProjectsByPhase": "Projekte nach Phase",
+  "analytics.reportProjectCommitments": "Projektzusagen",
+  "analytics.reportProjectsGoneQuiet": "Verstummte Projekte",
+  "analytics.projects": "Projekte",
+  "analytics.project": "Projekt",
+  "analytics.openDealValue": "Offener Deal-Wert ({currency})",
+  "analytics.wonDealValue": "Gewonnener Deal-Wert ({currency})",
+  "analytics.openCommitments": "Offen",
+  "analytics.overdueCommitments": "Überfällig",
+  "analytics.quietSince": "Still seit",
+  "analytics.nothingQuiet": "Kein Projekt in Lieferung ist verstummt.",
+  "analytics.noProjectsYet":
+    "Noch keine Projekte — ein gewonnener Deal eröffnet eines.",
+  "analytics.coverageSub":
+    "Welche Quellen die nächtliche Prüfung lesen konnte, und wie weit. Eine stille, aber gelesene Quelle gilt als geprüft; eine ungelesene sagt warum.",
+  "analytics.covSource": "Quelle",
+  "analytics.covState": "Zustand",
+  "analytics.covThrough": "Geprüft bis",
+  "analytics.covChecked": "Geprüft",
+  "analytics.covStale": "Veraltet — zuletzt nichts gelesen",
+  "analytics.covUnavailable":
+    "Nicht verfügbar — die Prüfung konnte nicht lesen",
+  "analytics.covPermissionLimited": "Zugriff muss neu erteilt werden",
+  "analytics.covNotConnected":
+    "Nicht verbunden — nichts zu reparieren, etwas zu entscheiden",
+  "analytics.coverageInputsElsewhere":
+    "Probleme auf Datensatzebene werden in der Forecast-Eingangsprüfung gelistet und gelöst.",
+  "analytics.myPipeline": "Meine offene Pipeline",
+  "analytics.myMeetings": "Meine Termine",
+  "analytics.meetingsAsTheyStand":
+    "Von Ihnen gehaltene Termine, nach heutigem Stand — ein stattgefundener Termin zählt nicht mehr als gebucht.",
+  "analytics.meetingsBooked": "Gebucht",
+  "analytics.meetingsHeld": "Stattgefunden",
+  "analytics.meetingsNoShow": "Nicht erschienen",
+  "analytics.meetingsCanceled": "Abgesagt",
+  "analytics.outcomesOwnLensOnly":
+    "Diese Ansicht antwortet für einen einzelnen Platz. Ihre Sicht umfasst mehr als Ihre eigenen Datensätze; Ihre Zahlen stehen in den breiteren Bereichen.",
+  "analytics.openOutcomeDeals": "Die {outcome}-Deals öffnen",
+  "analytics.reportWinLoss": "Gewonnen und verloren",
+  "analytics.reportStageAge": "Verweildauer je Phase",
+  "analytics.outcome": "Ausgang",
+  "analytics.won": "Gewonnen",
+  "analytics.lost": "Verloren",
+  "analytics.baseValue": "Wert ({currency})",
+  "analytics.medianDaysToClose": "Median Tage bis Abschluss",
+  "analytics.p75DaysToClose": "P75 Tage bis Abschluss",
+  "analytics.medianDaysInStage": "Median Tage in der Phase",
+  "analytics.p75DaysInStage": "P75 Tage in der Phase",
+  "analytics.tooFewForMedian": "Zu wenige für eine Aussage",
+  "analytics.days": "{days} Tage",
+  "analytics.unknownStage": "Frühere Phase",
   "analytics.share.open": "Ansicht teilen",
   "analytics.share.title": "Diese Ansicht teilen",
   "analytics.share.kindLegend": "Was der Link zeigt",
@@ -3342,6 +3408,14 @@ export const de = {
   "review.needsReview": "Prüfung nötig",
   "review.checksIncomplete": "Prüfung unvollständig",
   "review.allSourcesRead": "Alle Quellen wurden gelesen.",
+  "review.source.mail": "das Postfach",
+  "review.source.calendar": "der Kalender",
+  "review.source.documents": "Dokumente",
+  "review.source.contracts": "Verträge",
+  "review.source.incumbent": "das Altsystem",
+  "analytics.coverageNeverRun":
+    "Noch keine Prüfung gelaufen. Eine frische Installation wurde noch nicht angesehen — etwas anderes als eine, die geprüft und für gesund befunden wurde.",
+  "review.source.offers": "Angebote",
   "review.sourcesUnread":
     "Nicht gelesen: {sources}. Die Befunde unten decken nur ab, was geprüft werden konnte.",
   "review.notCheckedYet":
@@ -3546,6 +3620,26 @@ export const de = {
     "Ich bin bei {name} nur teilweise durchgekommen und habe gestoppt.",
   "agent.activity.documentExtractNamed.failed":
     "Ich konnte {name} nicht lesen.",
+  "agent.activity.siteRead.queued":
+    "Die Firmenwebsite steht zum Lesen in der Warteschlange.",
+  "agent.activity.siteRead.running": "Ich lese die Firmenwebsite.",
+  "agent.activity.siteRead.stalled":
+    "Das Lesen der Firmenwebsite dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.siteRead.done": "Ich habe die Firmenwebsite gelesen.",
+  "agent.activity.siteRead.degraded":
+    "Ich habe die Firmenwebsite nicht zu Ende gelesen.",
+  "agent.activity.siteRead.failed": "Ich konnte die Firmenwebsite nicht lesen.",
+  "agent.activity.siteReadNamed.queued":
+    "Die Website von {name} steht zum Lesen in der Warteschlange.",
+  "agent.activity.siteReadNamed.running": "Ich lese die Website von {name}.",
+  "agent.activity.siteReadNamed.stalled":
+    "Das Lesen der Website von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.siteReadNamed.done":
+    "Ich habe die Website von {name} gelesen.",
+  "agent.activity.siteReadNamed.degraded":
+    "Ich habe die Website von {name} nicht zu Ende gelesen.",
+  "agent.activity.siteReadNamed.failed":
+    "Ich konnte die Website von {name} nicht lesen.",
   "agent.activity.summarize.queued":
     "Das Zusammentragen zu diesem Unternehmen steht in der Warteschlange.",
   "agent.activity.summarize.running":
@@ -4353,7 +4447,7 @@ export const de = {
   "overnightGrant.help":
     "Es liest deine Deals und E-Mails, um zu ordnen, was heute wichtig ist, und schreibt Notizen zurück. Senden kann es nicht: die Erlaubnis hier deckt Lesen und Schreiben ab, niemals Senden.",
   "overnightGrant.danger":
-    "ACHTUNG: Ohne diese Freigabe bleiben dein Morgen-Überblick, deine Arbeitsliste und dein Wochenrückblick leer. Das sind die Bildschirme, mit denen Margince startet — der größte Teil des Produkts wirkt dann, als würde er nicht funktionieren.",
+    "Ohne diese Berechtigung kann der Agent Ihren Brief über Nacht weder lesen noch kommentieren. Ihre Datensätze, Arbeitsliste und der geplante Wochenrückblick bleiben verfügbar.",
   "overnightGrant.saveFailed":
     "Deine Antwort auf die Nacht-Frage konnte nicht gespeichert werden. Alles andere ist verbunden — stelle es unter Einstellungen → Verbindungen ein, sobald du drin bist.",
   "overnightGrant.renew":
@@ -5570,6 +5664,7 @@ export const de = {
   "recordmail.send": "E-Mail schreiben",
   "deal360.rewrite": "Neu schreiben",
   "deal360.readFull": "Vollständige Einschätzung lesen",
+  "deal360.openTask": "Vorhandene Aufgabe öffnen",
   "deal360.createTask": "Aufgabe anlegen",
   "deal360.openBrief": "Meeting-Briefing öffnen",
   "deal360.unreadable":
@@ -7997,19 +8092,25 @@ export const de = {
   "worklist.bandClear.keep_momentum": "Nichts Vereinbartes bleibt liegen.",
   "worklist.bandClear.review": "Nichts zu prüfen.",
   "worklist.disposition.verb.snooze": "Schlummern",
+  "worklist.disposition.snoozeForDays_one": "{value} Tag schlummern",
+  "worklist.disposition.snoozeForDays_other": "{value} Tage schlummern",
   "worklist.disposition.snoozeFor": "Für wie lange",
   "worklist.disposition.snoozeDays_one": "{value} Tag",
   "worklist.disposition.snoozeDays_other": "{value} Tage",
+  "worklist.disposition.snoozeUntil.reply": "Bis sie antworten",
   "worklist.disposition.verb.not_mine": "Nicht meins",
   "worklist.disposition.verb.not_sales": "Kein Kunde",
   "worklist.disposition.done.snooze": "Morgen wieder auf deiner Liste.",
   "worklist.disposition.doneSnooze_one": "Morgen wieder auf deiner Liste.",
   "worklist.disposition.doneSnooze_other":
     "In {value} Tagen wieder auf deiner Liste.",
+  "worklist.disposition.doneSnoozeUntil.reply":
+    "Wieder auf deiner Liste, sobald sie antworten.",
   "worklist.disposition.done.not_mine":
     "Von deiner Liste. Wer zuständig ist, sieht es weiterhin.",
   "worklist.disposition.done.not_sales": "Von allen Listen entfernt.",
   "worklist.disposition.swipeCancel": "Behalten",
+  "worklist.disposition.menu": "Aus der Liste nehmen",
   "worklist.disposition.undo": "Rückgängig",
   "worklist.disposition.undoFailed":
     "Das konnte nicht rückgängig gemacht werden. Die Nachricht ist weiterhin von deiner Liste.",

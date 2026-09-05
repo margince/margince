@@ -11,7 +11,7 @@ import {
 import type { Locale, useT } from "../i18n";
 import { translatePlural } from "../i18n";
 import { BRIEF_PARAM, COMPOSE_PARAM } from "./personpage.address";
-import { settingsAddress } from "./settings";
+import { settingsAddress } from "./settingsnav";
 import type {
   Worklist,
   WorklistComparison,
@@ -260,9 +260,49 @@ export function isUnprepared(item: WorklistItem): boolean {
   return item.because.some((reason) => reason.kind === BADGED);
 }
 
-/** The reasons a row says in its phrase line — everything the badges do not. */
-export function phrasedReasons(item: WorklistItem): WorklistReason[] {
-  return item.because.filter((reason) => reason.kind !== BADGED);
+/**
+ * The reason kinds the WHEN line already says.
+ *
+ * Each is the moment in a coarser register: a task row printed "due 06.07.2026,
+ * 15:00" and then "due today" underneath it, an overdue one said "overdue" a
+ * third time beside the badge that already says so, and a meeting said "starts
+ * 14:12" over "starting shortly". One clock, twice, reading as two findings.
+ * The moment wins because it names the hour a rep is racing rather than the day.
+ *
+ * A SET rather than one kind, because the duplication is structural. `overdue`
+ * and `due_today` are the two arms of a single `if` in the task lane, both
+ * guarded by the same `due_at` the moment is drawn from, so a rule naming one
+ * of them names half a condition. `meeting_soon` fires only where the meeting
+ * has a `due_at`, which is exactly when its own when line is drawn, so it has
+ * no non-duplicating case at all.
+ *
+ * The other deadline reasons stay OUT of this set and that is the non-obvious
+ * half: `closing_soon`, `response_overdue` and `response_due_soon` ride on
+ * sources — `deal_at_risk`, `brief_item`, `lead_response` — for which
+ * `whenKeyFor` answers null. Nothing draws their moment, so their phrase is the
+ * only place the fact is said.
+ *
+ * DROPPED ONLY WHERE THE MOMENT IS DRAWN. A row whose `due_at` the when line
+ * refuses — an approval's lapse instant, which is a fact about the staged work
+ * and not a deadline the rep owes — still says its phrase, or the row would
+ * lose the fact entirely rather than say it once.
+ */
+const SAID_BY_THE_WHEN_LINE = new Set<string>([
+  "due_today",
+  "overdue",
+  "meeting_soon",
+]);
+
+/** The reasons a row says in its phrase line — everything said elsewhere. */
+export function phrasedReasons(
+  item: WorklistItem,
+  whenDrawn: boolean,
+): WorklistReason[] {
+  return item.because.filter(
+    (reason) =>
+      reason.kind !== BADGED &&
+      !(whenDrawn && SAID_BY_THE_WHEN_LINE.has(reason.kind)),
+  );
 }
 
 export function reasonText(
@@ -499,6 +539,7 @@ const NAVIGABLE_MOVES = new Set([
   "draft_reply",
   "draft_email",
   "open_meeting_brief",
+  "open_task",
 ]);
 
 /**
@@ -513,7 +554,10 @@ const NAVIGABLE_MOVES = new Set([
  * and there is no earlier record for it to name.
  */
 function moveIsComplete(move: NonNullable<WorklistItem["move"]>): boolean {
-  return move.action !== "draft_reply" || move.activity_id !== undefined;
+  return (
+    !["draft_reply", "open_task"].includes(move.action) ||
+    move.activity_id !== undefined
+  );
 }
 
 /**
@@ -542,6 +586,7 @@ export function moveHref(item: WorklistItem): string | undefined {
     return briefHref(item);
   }
   const record = subjectHref(item);
+  if (move.action === "open_task") return record;
   if (!record || item.subject?.type !== "person") {
     return record;
   }
@@ -573,6 +618,7 @@ export function moveOpensComposer(item: WorklistItem): boolean {
 // composer opens, the verb is the act; where the link only reaches the record,
 // it says so.
 export function moveLabel(item: WorklistItem, t: T): string {
+  if (item.move?.action === "open_task") return t("deal360.openTask");
   const opens = moveOpensComposer(item);
   if (item.move?.action === "draft_email") {
     return t(

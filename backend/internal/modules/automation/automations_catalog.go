@@ -30,7 +30,7 @@ type CatalogEntry struct {
 	Validate     func(params map[string]any) error
 	// Seeded marks the entry as one of the SIX starter templates
 	// SeedStarterAutomationsTx (automations.go) enrolls into a fresh
-	// workspace, enabled, on bootstrap (UAT.md:72 — "exactly the six
+	// workspace on bootstrap (UAT.md:72 — "exactly the six
 	// seeded templates"). An entry with Seeded false is still fully
 	// instantiable through the API (the catalog stays the closed,
 	// authorable set) — it just never lands in a workspace unasked.

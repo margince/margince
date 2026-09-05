@@ -13,6 +13,7 @@ import {
 import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { buyingRoleLabel } from "./companypeople/summary";
+import { owedPromises, owedPromisesTruncated } from "./personowed";
 import { daysSinceInbound, isQuiet } from "./personquiet";
 import type { PersonTab } from "./persontab";
 
@@ -249,9 +250,11 @@ function PromisesCard({
     return withheldCard(label, t);
   }
   const asOf = Date.parse(view.as_of);
-  const ours = (view.claims ?? []).filter(
-    (claim) => claim.kind === "commitment_ours" && claim.status === "open",
-  );
+  // BOTH places a promise is written down, which is the rule the headline
+  // above this card already applies. Counting claims alone put "0 · nothing
+  // owed" directly under "You owe them" — the same page contradicting itself
+  // about the same person, on a record whose only open promise was a task.
+  const ours = owedPromises(view);
   if (ours.length === 0) {
     return (
       <StatCard
@@ -264,8 +267,8 @@ function PromisesCard({
   }
   // The most overdue promise decides the card's tone: one late promise is the
   // thing the reader came to be told about, however many are on time.
-  const lateness = ours.flatMap((claim) => {
-    const late = claim.due_at ? daysPast(Date.parse(claim.due_at), asOf) : null;
+  const lateness = ours.flatMap((owed) => {
+    const late = owed.dueAt ? daysPast(Date.parse(owed.dueAt), asOf) : null;
     return late?.late ? [late.days] : [];
   });
   const worst = Math.max(0, ...lateness);
@@ -273,7 +276,16 @@ function PromisesCard({
   return (
     <StatCard
       label={label}
-      value={formatNumber(ours.length, locale)}
+      // A FLOOR where the server holds more than it sent: next_steps is a
+      // page, and a card reporting its length as the total states a number it
+      // did not measure.
+      value={
+        owedPromisesTruncated(view)
+          ? t("person.loops.atLeast", {
+              count: formatNumber(ours.length, locale),
+            })
+          : formatNumber(ours.length, locale)
+      }
       numeric
       detail={
         overdue
@@ -288,11 +300,11 @@ function PromisesCard({
       dot={overdue}
       basis={
         <FactList
-          facts={ours.map((claim) => ({
-            key: claim.id,
+          facts={ours.map((owed) => ({
+            key: owed.key,
             term: t("person.loops.ours"),
-            value: claim.body,
-            note: claim.source_label ?? undefined,
+            value: owed.body,
+            note: owed.note,
           }))}
         />
       }

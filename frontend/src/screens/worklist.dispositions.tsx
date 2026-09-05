@@ -14,16 +14,17 @@
 // disappearance needs its way back offered at the moment of the disappearance;
 // finding it again afterwards means knowing which of three judgements you made.
 
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 
 import { useFoldedViewport } from "../app/viewport";
-import { Button } from "../design-system/atoms";
+import { Button, OverflowMenu } from "../design-system/atoms";
 import { Popover } from "../design-system/popover";
 import { SwipeRow } from "../design-system/swiperow";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import {
+  type ReopenCondition,
   useClearDisposition,
   useSetDisposition,
   type WorklistDisposition,
@@ -36,7 +37,7 @@ import {
 // a rep reaching for it at ten in the morning means tomorrow morning, not this
 // afternoon. It stays the default the plain press takes, so the fast path is
 // still one click.
-const SNOOZE_DAYS = 1;
+export const SNOOZE_DAYS = 1;
 
 // The spans a reader can choose instead.
 //
@@ -49,9 +50,28 @@ const SNOOZE_DAYS = 1;
 // moment is a claim about the reader's calendar: "Monday" from a Friday is
 // three days and from a Monday is seven, and a queue that guessed wrong would
 // hide work for four days nobody asked for. A span says exactly what it does.
-const SNOOZE_SPANS = [1, 3, 7] as const;
+export const SNOOZE_SPANS = [1, 3, 7] as const;
 
 type SnoozeSpan = (typeof SNOOZE_SPANS)[number];
+
+// The two answers a span cannot give.
+//
+// Every span above is a guess about when the world will move, and a rep making
+// that guess is usually wrong in one of two directions: too short and the row
+// is back while the customer is still silent, too long and the customer waited
+// on them. These say what they are actually waiting for, and the server decides
+// when it happened.
+//
+// `meeting` is deliberately NOT here. It needs the rep to name WHICH meeting,
+// which is a picker over the record's calendar rather than a line in this list
+// — offering it without one would send a condition the server refuses. The
+// server takes it today; this surface does not yet ask for it.
+export const SNOOZE_EVENTS = ["reply"] as const satisfies readonly Exclude<
+  ReopenCondition,
+  "time" | "meeting"
+>[];
+
+type SnoozeEvent = (typeof SNOOZE_EVENTS)[number];
 
 // Which undo REACH each judgement takes back.
 //
@@ -107,18 +127,31 @@ export function usePutDown(item: WorklistItem) {
   const set = useSetDisposition();
   const clear = useClearDisposition();
   const offered = item.dispositions ?? [];
-  const put = (disposition: WorklistDisposition, days?: SnoozeSpan) => {
+  const put = (
+    disposition: WorklistDisposition,
+    // A span or an event, never both: the two are alternative answers to "come
+    // back when", and the server refuses a snooze carrying a moment it does not
+    // wait for.
+    until?: SnoozeSpan | SnoozeEvent,
+  ) => {
+    const event = typeof until === "string" ? until : undefined;
+    const days = typeof until === "number" ? until : undefined;
     set.mutate(
       {
         activityId: item.id,
         disposition,
         ...(disposition === "snooze"
-          ? { snoozedUntil: snoozeUntil(days).toISOString() }
+          ? event
+            ? { reopenOn: event }
+            : {
+                reopenOn: "time" as const,
+                snoozedUntil: snoozeUntil(days).toISOString(),
+              }
           : {}),
       },
       {
         onSuccess: () =>
-          toast.show(doneText(disposition, days, t, locale), {
+          toast.show(doneText(disposition, until, t, locale), {
             action: {
               label: t("worklist.disposition.undo"),
               // A failed undo needs saying. The toast dismisses itself the
@@ -141,7 +174,7 @@ export function usePutDown(item: WorklistItem) {
       },
     );
   };
-  return { offered, put, pending: set.isPending, t };
+  return { offered, put, pending: set.isPending, t, locale };
 }
 
 // The whole row, answerable with the thumb where there is no width for verbs.
@@ -160,13 +193,20 @@ export function PutDownByThumb({
   children,
 }: Readonly<{ item: WorklistItem; children: React.ReactNode }>) {
   const folded = useFoldedViewport();
+  // ONE MUTATION PER ROW, held here because this is the component both
+  // placements sit inside. Two `usePutDown` calls on one row are two mutations
+  // with two `pending` flags, and neither disables the other: a menu press
+  // followed by a swipe confirm wrote the same judgement twice and raised two
+  // toasts, each offering an Undo for a state the other had already cleared.
+  // Measured before this was lifted — two PUTs from one row.
   // PER SIDE, because the walk is a position in one direction's list. A single
   // counter shared by both would be moved by a flick the other way, so a reader
   // alternating directions would never step through either side's judgements.
   const [walked, setWalked] = useState({ start: 0, end: 0 });
-  const { offered, put, t } = usePutDown(item);
+  const write = usePutDown(item);
+  const { offered, put, t } = write;
   if (!folded || offered.length === 0) {
-    return children;
+    return <PutDown value={write}>{children}</PutDown>;
   }
   return (
     <SwipeRow
@@ -180,8 +220,128 @@ export function PutDownByThumb({
       }
       {...swipeActions(offered, t, put, walked)}
     >
-      {children}
+      <PutDown value={write}>{children}</PutDown>
     </SwipeRow>
+  );
+}
+
+// The row's one write, handed to whichever control the width leaves standing.
+//
+// A context rather than a prop, because the verbs are drawn deep inside the
+// row's own tree — the caller composes them beside the title and the rank, and
+// threading the write through every one of those would make the row's shape
+// the write's business.
+const PutDownContext = createContext<PutDown | null>(null);
+
+function PutDown({
+  value,
+  children,
+}: Readonly<{ value: PutDown; children: React.ReactNode }>) {
+  return (
+    <PutDownContext.Provider value={value}>{children}</PutDownContext.Provider>
+  );
+}
+
+type PutDown = ReturnType<typeof usePutDown>;
+
+// The same judgements, reachable without a pointer.
+//
+// A swipe is not a control a keyboard, a switch or a screen reader can operate,
+// so below the fold the three judgements had exactly one route and it needed a
+// finger. The staged bar the gesture opens carries real buttons, but only a
+// drag opens it.
+//
+// A MENU rather than the buttons back. Restoring them is the 44px band that was
+// removed to bring the row under its ceiling, so the fix would undo the change
+// it is fixing; a menu is one tab stop and one line of text, and it is what the
+// design system already offers for "the verbs a record offers but a reader
+// rarely wants". The swipe stays the fast path for a thumb and this is the one
+// that answers to a key.
+//
+// Its children mount on first open, which is the default and matters here: a
+// queue draws one of these per row.
+//
+// It takes the WRITE rather than opening its own. A second usePutDown on the
+// same row is a second mutation with its own `pending`, so a press here and a
+// swipe confirm beside it both fire: two writes for one judgement, and two
+// toasts each offering an Undo for a state the other already cleared.
+function PutDownMenu({
+  offered,
+  put,
+  pending,
+  t,
+  locale,
+}: Readonly<{
+  offered: readonly WorklistDisposition[];
+  // The SPAN reaches the write, not only the judgement: the menu's longer
+  // lines are the answers the default day cannot give.
+  put: (
+    disposition: WorklistDisposition,
+    until?: SnoozeSpan | SnoozeEvent,
+  ) => void;
+  pending: boolean;
+  t: T;
+  locale: Locale;
+}>) {
+  return (
+    <OverflowMenu label={t("worklist.disposition.menu")}>
+      {offered.map((disposition) => (
+        <Button
+          key={disposition}
+          small
+          variant="ghost"
+          // PENDING, never disabled. A disabled control leaves the tab order,
+          // so a keyboard reader who presses one is dropped to the body — the
+          // exact failure this menu exists to fix. The atom refuses the press
+          // through aria-disabled and keeps the control reachable.
+          pending={pending}
+          onClick={() => put(disposition)}
+        >
+          {t(`worklist.disposition.verb.${disposition}` as const)}
+        </Button>
+      ))}
+      {/* The LONGER SPANS, as lines of their own rather than behind a second
+          control. Above the fold they live in a Popover beside the snooze verb,
+          which keeps the common case one press; a popover inside a menu is a
+          second layer over a surface already floating, and a keyboard reader
+          would open two things to say "next week".
+          The verb above still sends the default day, so the fast path is
+          unchanged and these are the answers it cannot give. Each carries its
+          own sentence — "Snooze for 3 days" — because a bare "3 days" standing
+          beside "Snooze" is a fragment whose subject a reader has to guess. */}
+      {offered.includes("snooze") &&
+        SNOOZE_SPANS.filter((days) => days !== SNOOZE_DAYS).map((days) => (
+          <Button
+            key={days}
+            small
+            variant="ghost"
+            pending={pending}
+            onClick={() => put("snooze", days)}
+          >
+            {translatePlural(
+              locale,
+              "worklist.disposition.snoozeForDays",
+              days,
+              { value: formatNumber(days, locale) },
+            )}
+          </Button>
+        ))}
+      {/* The event answers, as lines of the same list. They sit after the spans
+          because a rep reaching for this menu most often still means a
+          duration; what these add is the case a duration cannot state. */}
+      {offered.includes("snooze") &&
+        SNOOZE_EVENTS.map((event) => (
+          <Button
+            key={event}
+            small
+            variant="ghost"
+            pending={pending}
+            onClick={() => put("snooze", event)}
+          >
+            {t(`worklist.disposition.snoozeUntil.${event}` as const)}
+          </Button>
+        ))}
+    </OverflowMenu>
   );
 }
 
@@ -191,21 +351,43 @@ export function PutDownByThumb({
 // design-system/swiperow.tsx's header. PutDownByThumb carries every JUDGEMENT
 // there, on the row itself.
 //
-// The snooze SPANS do not survive the fold, and that is a gap rather than a
-// design. The gesture sends the default day, so below 720px a rep who knows a
-// customer is away all week can no longer say so — they press again tomorrow,
-// which is the state the spans were added to end. Restoring them means another
-// control in the row, which is the 44px band this change removed; that trade is
-// a product decision, filed as issue #4313 rather than settled here.
-//
-// The same fold leaves these three judgements reachable by pointer alone — the
-// staged bar's buttons are tabbable, but only after a drag opens it. Issue
-// #4314 carries that, and the shape of its answer is the same trade.
+// The snooze SPANS travel with them, as lines in that menu. They were lost for
+// one release: the gesture sends the default day, so a rep who knew a customer
+// was away all week pressed the same button every morning — the state the spans
+// were added to end. A menu line costs no height where a fourth 44px control
+// did, which is what made room for them without the band coming back.
+
 export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
   const folded = useFoldedViewport();
-  const { offered, put, pending, t } = usePutDown(item);
-  if (folded || offered.length === 0) {
+  // The row's own write, from the wrapper that holds it — one mutation per row,
+  // so a press here and a swipe confirm beside it cannot write twice.
+  //
+  // The fallback is for a caller that draws these verbs outside a row: it gets
+  // its own write rather than throwing on a missing provider. Every caller
+  // today goes through WorklistRow, the Brief's feed included, so nothing
+  // reaches it — it is what keeps a future caller from a crash it cannot read.
+  // Both hooks run either way, because a hook cannot be called conditionally;
+  // the unused one registers a mutation nobody fires, which costs a
+  // registration and never a request.
+  const shared = useContext(PutDownContext);
+  const own = usePutDown(item);
+  const { offered, put, pending, t, locale } = shared ?? own;
+  if (offered.length === 0) {
     return null;
+  }
+  // Below the fold the band goes and the menu stands in its place: one tab stop
+  // rather than four 44px controls, so the judgements stay reachable by key
+  // without the height that put the row over its ceiling.
+  if (folded) {
+    return (
+      <PutDownMenu
+        offered={offered}
+        put={put}
+        pending={pending}
+        t={t}
+        locale={locale}
+      />
+    );
   }
   return (
     <div className="worklist-row-dispositions">
@@ -225,7 +407,10 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
           choose a duration every time would charge the common case for the
           rare one. */}
       {offered.includes("snooze") && (
-        <SnoozeSpans pending={pending} onPick={(days) => put("snooze", days)} />
+        <SnoozeSpans
+          pending={pending}
+          onPick={(until) => put("snooze", until)}
+        />
       )}
     </div>
   );
@@ -277,7 +462,10 @@ export function swipeActions(
 function SnoozeSpans({
   pending,
   onPick,
-}: Readonly<{ pending: boolean; onPick: (days: SnoozeSpan) => void }>) {
+}: Readonly<{
+  pending: boolean;
+  onPick: (until: SnoozeSpan | SnoozeEvent) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   return (
@@ -299,6 +487,17 @@ function SnoozeSpans({
             })}
           </Button>
         ))}
+        {SNOOZE_EVENTS.map((event) => (
+          <Button
+            key={event}
+            small
+            variant="ghost"
+            disabled={pending}
+            onClick={() => onPick(event)}
+          >
+            {t(`worklist.disposition.snoozeUntil.${event}` as const)}
+          </Button>
+        ))}
       </div>
     </Popover>
   );
@@ -317,14 +516,17 @@ function SnoozeSpans({
 // keep the sentence they had.
 function doneText(
   disposition: WorklistDisposition,
-  days: SnoozeSpan | undefined,
+  until: SnoozeSpan | SnoozeEvent | undefined,
   t: T,
   locale: Locale,
 ): string {
   if (disposition !== "snooze") {
     return t(`worklist.disposition.done.${disposition}` as const);
   }
-  const span = days ?? SNOOZE_DAYS;
+  if (typeof until === "string") {
+    return t(`worklist.disposition.doneSnoozeUntil.${until}` as const);
+  }
+  const span = until ?? SNOOZE_DAYS;
   return translatePlural(locale, "worklist.disposition.doneSnooze", span, {
     value: formatNumber(span, locale),
   });

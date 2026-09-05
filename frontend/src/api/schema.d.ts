@@ -6911,6 +6911,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/magic": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the machinery did, what it needs, what it could not finish, and what it is watching.
+         * @description The receipt for everything that ran without being asked.
+         *
+         *     Automation writes constantly — the lead ladder, close-date hygiene, capture
+         *     linking, enrichment, follow-up proposals — and a rep saw almost none of it. The
+         *     work landed in `audit_log` and in the records themselves, so the product looked
+         *     either idle or spooky: changes appeared with no author a reader could name.
+         *
+         *     FOUR LANES, and the split is what each one ASKS OF THE READER:
+         *
+         *     * `done` — machine actions that already happened. Nothing to decide; the reader
+         *       may disagree, and every line says whether it can be undone and why not when it
+         *       cannot.
+         *     * `needs_you` — a decision waiting. The same staged approvals `/attention` serves,
+         *       in one place with the rest of the machinery's output.
+         *     * `could_not_complete` — work that was approved or scheduled and did not land.
+         *       NOT part of `done`: a failure reported as an achievement is the one thing this
+         *       surface must never do.
+         *     * `watching` — sources and automations whose health an administrator must restore.
+         *
+         *     A RECEIPT, NOT A SECOND INBOX. Nothing here is answered from this endpoint: a
+         *     pending approval is decided where approvals are decided, an undo calls the
+         *     record's own restore route. The lanes report; the surfaces that own each verb
+         *     keep it.
+         *
+         *     `not_shown` is what the read deliberately left out, by kind and count. A machine
+         *     write with no customer-facing meaning — a maintenance sweep, a projection
+         *     refresh — is not Magic, and folding it in would turn internal churn into apparent
+         *     value. Counting it instead means the preview can never imply completeness it does
+         *     not have.
+         *
+         *     Bounded by `limit`, over a deterministic `occurred_at, id` order, and bounded
+         *     again by how far back it will look: a receipt answers "since you last looked",
+         *     never "since installation".
+         *
+         *     Not cursor-paginated yet. The window and the bound are what keep the read
+         *     honest today; a cursor arrives with the lane that needs one, rather than being
+         *     declared and ignored.
+         */
+        get: operations["getMagic"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/worklist": {
         parameters: {
             query?: never;
@@ -9030,6 +9086,44 @@ export interface paths {
          *     bounce is a fact about a mailbox only the mail path observes.
          */
         post: operations["suppressPerson"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/{id}/consent/suppress/{suppressionId}/lift": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /**
+                 * @description The stop to take back. The row and not the person: a subject may carry more than
+                 *     one, and lifting "the suppression" would take back whichever came first.
+                 */
+                suppressionId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back a stop, if you outrank the level that set it.
+         * @description Revokes one suppression. **You may lift a decision made below your level, never at or
+         *     above it** — a rep's stop is liftable by an admin and not by another rep, and an
+         *     admin's is liftable by an admin other than by the one who set it only through this
+         *     same rule.
+         *
+         *     **Nothing lifts the subject's own act.** An Art. 21 objection and a withdrawal are
+         *     theirs, not the installation's, so no seat reaches them here whatever their role.
+         *
+         *     A row already revoked, belonging to another subject, or never in existence all answer
+         *     `404` alike: a caller learns nothing about rows they would not have been allowed to
+         *     touch either way.
+         */
+        post: operations["liftSuppression"];
         delete?: never;
         options?: never;
         head?: never;
@@ -19613,16 +19707,15 @@ export interface components {
         };
         /**
          * @description The one thing to do next, and what performing it means. `action` is one of
-         *     `draft_email`, `create_task`, `open_meeting_brief`, `none` — the same verbs
-         *     the retired next-best-action carried, so a client that already performs them
-         *     needs no new code. `arguments` is the body or operand the verb takes, ready
+         *     `draft_email`, `create_task`, `open_task`, `open_meeting_brief`, `none`.
+         *     `open_task` opens existing work without creating another task. `arguments` is the body or operand the verb takes, ready
          *     to send; absent for `none`.
          */
         DealStatusCardMove: {
             action: string;
             /** @description One sentence saying why this move and not another. */
             reason: string;
-            /** @description `draft_email` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body. */
+            /** @description `draft_email`, `open_task` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body. */
             arguments?: {
                 [key: string]: unknown;
             };
@@ -21523,16 +21616,23 @@ export interface components {
              * @enum {string}
              */
             disposition: "snooze" | "not_mine" | "not_sales";
+            reopen_on?: components["schemas"]["ReopenCondition"];
             /**
              * Format: date-time
-             * @description When a snooze lifts. REQUIRED for `snooze` and refused for the other two — a snooze
-             *     with no moment would never lift, and a moment on `not_mine` would make a hand-off
-             *     expire on a Thursday.
+             * @description When a snooze lifts. REQUIRED for `snooze` with `reopen_on: time`, and refused
+             *     everywhere else — a snooze waiting on a reply lifts when the reply arrives, and a
+             *     moment on `not_mine` would make a hand-off expire on a Thursday.
              *
              *     A moment already past is refused rather than stored: it would write a row that hides
              *     nothing, and read to the rep as a snooze that did not take.
              */
             snoozed_until?: string;
+            /**
+             * Format: uuid
+             * @description The meeting to wait for. REQUIRED for `snooze` with `reopen_on: meeting` and
+             *     refused otherwise.
+             */
+            reopen_ref?: string;
         };
         /**
          * @description One user or team admitted to a message besides its participants. The same shape the
@@ -25280,9 +25380,11 @@ export interface components {
          *     What a reader is SHOWN is a separate decision and belongs to the client: a complete
          *     record is the server's obligation, an edited one is the interface's.
          *
-         *     Three names come from a durable carrier that owns its own occurrence and can say
-         *     queued and running: the two scheduled kinds match a name in runner.Catalog(), and
-         *     `document_extract` is a reading of an attached document a human asked for. Every other
+         *     Four names come from a durable carrier that owns its own occurrence and can say
+         *     queued and running: the two scheduled kinds match a name in runner.Catalog(),
+         *     `document_extract` is a reading of an attached document a human asked for, and
+         *     `site_read` is a deep read of a company's website — one occurrence for the whole crawl,
+         *     where the site tasks below are the individual model calls it makes. Every other
          *     name is an api/ai-tasks.yaml task announced by the router on the task's own behalf —
          *     settled when it appears, because the router learns of a call once the call is over.
          *
@@ -25291,7 +25393,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "propose_roles" | "owed_verdict";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "propose_roles" | "owed_verdict";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -27599,6 +27701,8 @@ export interface components {
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
+            /** @description Whether THIS caller may open the buyer preview of THIS room — the same question `POST /deal-rooms/{id}/preview` answers, computed here so a screen can say no before the press rather than after it. Four things must hold, and a plain `writable` would answer only one: the caller holds `update` on deal rooms, is a person rather than an agent (a preview is a seat's own view, and a system caller has no seat to preview from), the underlying deal is writable AND live, and the room is not archived. False is not "this room is broken" — it is the ordinary reading for a colleague who may read the room and not present it. */
+            readonly preview_available?: boolean;
             version?: components["schemas"]["RowVersion"];
             /** Format: date-time */
             created_at: string;
@@ -28477,9 +28581,19 @@ export interface components {
             state_at?: string | null;
             /**
              * Format: date-time
-             * @description When a snoozed item re-surfaces (A77/AC-home-6); set exactly while state=snoozed, null otherwise.
+             * @description When a snoozed item re-surfaces; set exactly while reopen_on=time, null otherwise — the other conditions lift on an event rather than a date.
              */
             snoozed_until?: string | null;
+            /**
+             * @description What the item is waiting for; set exactly while state=snoozed, null otherwise.
+             * @enum {string|null}
+             */
+            reopen_on?: "time" | "reply" | "meeting" | null;
+            /**
+             * Format: uuid
+             * @description The meeting being waited for; set exactly while reopen_on=meeting.
+             */
+            reopen_ref?: string | null;
             lineage?: components["schemas"]["MorningBriefItemLineage"];
             /**
              * @description What the overnight agent found about this deal — why it is on the list, what changed,
@@ -28840,14 +28954,36 @@ export interface components {
              */
             cited_evidence: string[];
         };
-        /** @description Snooze a brief item until a future instant (A77/AC-home-6); it re-surfaces once the instant passes. */
+        /**
+         * @description Set a brief item aside until something happens. The something is `reopen_on`: a moment
+         *     on the clock, the customer writing back, or a named meeting being over.
+         */
         BriefSnoozeRequest: {
+            reopen_on?: components["schemas"]["ReopenCondition"];
             /**
              * Format: date-time
-             * @description When the item re-surfaces; must be in the future.
+             * @description When the item re-surfaces. REQUIRED for `time` and refused for the other two — a
+             *     snooze waiting on a reply lifts when the reply arrives, not on a date. Must be in
+             *     the future.
              */
-            snoozed_until: string;
+            snoozed_until?: string;
+            /**
+             * Format: uuid
+             * @description The meeting to wait for. REQUIRED for `meeting` and refused otherwise, because
+             *     "after the meeting" names nothing without saying which meeting.
+             */
+            reopen_ref?: string;
         };
+        /**
+         * @description What lifts a snooze. `time` is the original behaviour and the default, so a client
+         *     written before the other two keeps working unchanged. `reply` waits for the
+         *     counterparty to write back on a conversation linked to the record. `meeting` waits for
+         *     a named meeting to be over — an archived meeting counts as over, so a cancelled one
+         *     returns the work rather than holding it forever.
+         * @default time
+         * @enum {string}
+         */
+        ReopenCondition: "time" | "reply" | "meeting";
         /** @description The §10.1 factor decomposition, each normalized 0..1 — the composite reconciles to it. */
         MorningBriefFeatureVector: {
             /** @description stage win probability / 100. */
@@ -30456,6 +30592,164 @@ export interface components {
             changed_since_brief?: boolean;
         };
         /**
+         * @description What the machinery did since a reader last looked, in four lanes.
+         *
+         *     The lanes are separate arrays rather than one list with a kind, because they ask
+         *     different things of the reader and a client draws them differently: `done` is a
+         *     receipt, `needs_you` is a queue, `could_not_complete` is a fault to chase,
+         *     `watching` is a source to restore. One list would let a failure sort in beside a
+         *     success.
+         */
+        MagicReceipt: {
+            /**
+             * Format: date-time
+             * @description The instant this read was taken.
+             */
+            as_of: string;
+            /**
+             * Format: date-time
+             * @description The start of the window reported, resolved by the server. A client shows it, because "nothing happened" over an hour and over a day are different claims.
+             */
+            since: string;
+            done: components["schemas"]["MagicLine"][];
+            needs_you: components["schemas"]["MagicLine"][];
+            could_not_complete: components["schemas"]["MagicLine"][];
+            watching: components["schemas"]["MagicLine"][];
+            totals: components["schemas"]["MagicTotals"];
+            /**
+             * @description What this read left out, by kind and count.
+             *
+             *     A machine write with no customer-facing meaning is not Magic, and folding it
+             *     in would turn internal churn into apparent value. Reporting the count instead
+             *     means a preview showing five lines can never imply it is showing everything.
+             */
+            not_shown: components["schemas"]["MagicNotShown"][];
+            /** @description Lanes that could not be read. "All clear" is forbidden while one is here: a lane the reader may not see and a lane with nothing in it are different answers. */
+            sources_unavailable: components["schemas"]["WorklistSourceUnavailable"][];
+        };
+        /**
+         * @description How many each lane holds ON THIS PAGE.
+         *
+         *     Not a window total, and the difference matters to a client: a preview drawing
+         *     five of these lines may say "5 of 8" from `done`, and may NOT say "5 of 8 things
+         *     happened today". The window's own size arrives with the cursor, which is the
+         *     thing that makes it worth counting; a figure asserted before then would be
+         *     neither the page nor the window.
+         */
+        MagicTotals: {
+            done: number;
+            needs_you: number;
+            could_not_complete: number;
+            watching: number;
+        };
+        /** @description One kind of thing this read left out, and how many of it there were. */
+        MagicNotShown: {
+            /**
+             * @description `unadmitted_action` — a machine write whose action carries no customer-facing
+             *     meaning: a maintenance sweep, a projection refresh.
+             *     `unknown_entity_type` — an entity kind this build cannot scope, and therefore
+             *     cannot safely show. Counted rather than served: showing a row this read cannot
+             *     place is showing a row it cannot prove the reader may see.
+             *     `out_of_scope` — a row about a record outside the reader's own scope. Counted
+             *     so the total is honest, and never named.
+             * @enum {string}
+             */
+            reason: "unadmitted_action" | "unknown_entity_type" | "out_of_scope";
+            count: number;
+        };
+        /**
+         * @description One thing the machinery did, needs, could not finish, or is watching.
+         *
+         *     EVERY LINE IS ATTRIBUTABLE. `actor` names who acted and on whose behalf; a change
+         *     with no author a reader can name is the spookiness this surface exists to remove.
+         */
+        MagicLine: {
+            /**
+             * Format: uuid
+             * @description The underlying row's id — an audit entry, an approval.
+             */
+            id: string;
+            /** Format: date-time */
+            occurred_at: string;
+            /**
+             * @description Which lane this line belongs to. Carried on the line as well as by the array it sits in, so a client that flattens the four for a preview does not lose which one a line came from.
+             * @enum {string}
+             */
+            lane: "done" | "needs_you" | "could_not_complete" | "watching";
+            summary: components["schemas"]["MagicSentence"];
+            entity?: components["schemas"]["MagicEntityRef"];
+            /** @description The fields this change moved, as they were. MASKED to what the reader may see, through the same field mask the record's own history uses — a receipt is not a way around the boundary the record keeps. */
+            before?: {
+                [key: string]: unknown;
+            };
+            /** @description The same fields, as they are now, under the same mask. */
+            after?: {
+                [key: string]: unknown;
+            };
+            /** @description What this means for the reader, where the action has one to state. A key, not a sentence: the product ships three languages. */
+            consequence?: string;
+            undo?: components["schemas"]["MagicUndo"];
+            actor: components["schemas"]["MagicActor"];
+        };
+        /**
+         * @description What happened, as a key and the values to fill it with.
+         *
+         *     Typed rather than composed on the server for the reason every other sentence in
+         *     this contract is: the product ships three languages, and a sentence assembled here
+         *     reaches a German reader in English.
+         */
+        MagicSentence: {
+            key: string;
+            values?: {
+                [key: string]: string;
+            };
+        };
+        /** @description The record this line is about, where it names one. */
+        MagicEntityRef: {
+            type: string;
+            /** Format: uuid */
+            id: string;
+            /** @description The record's own name, where the reader may see it. Absent rather than invented: a line naming a record it cannot label still says what happened. */
+            label?: string;
+        };
+        /**
+         * @description Who acted, and on whose behalf.
+         *
+         *     `on_behalf_of` is the whole reason this is a shape rather than a string. The
+         *     auto-apply sweep binds a rep's own authority to do what that rep had already
+         *     agreed to, and a receipt saying only "agent" would hide which rep's standing
+         *     decision it was acting on.
+         */
+        MagicActor: {
+            /**
+             * @description Human actors never appear here. This surface reports what ran WITHOUT being asked; a person's own change is their own, and reporting it back to them as machinery would be a lie about who did it.
+             * @enum {string}
+             */
+            type: "agent" | "system" | "connector";
+            id: string;
+            /**
+             * Format: uuid
+             * @description The seat whose authority the action was taken under, where it bound one.
+             */
+            on_behalf_of?: string;
+        };
+        /**
+         * @description Whether this change can be taken back, and why not when it cannot.
+         *
+         *     A greyed control with no reason is the shape this replaces. The reasons are
+         *     compose/undoability's own vocabulary rather than a second set written here.
+         */
+        MagicUndo: {
+            undoable: boolean;
+            /** @description Why not, when it is not. Absent when it is. */
+            reason?: string;
+            /**
+             * Format: uuid
+             * @description The entry a restore would name. Present exactly when `undoable` is true — a client that had one without the other would draw a control with nothing to send.
+             */
+            audit_id?: string;
+        };
+        /**
          * @description How the deal behind a row is STANDING, beside the move that acts on it.
          *
          *     The move says what to do; this says what the reader is walking into. A row
@@ -30619,7 +30913,7 @@ export interface components {
              *     and no thread behind it.
              *
              *     `draft_email` opens a new message, `create_task` agrees a next step,
-             *     `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
+             *     `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
              *     sends the reader to reauthorize a source that stopped answering.
              *
              *     `none` is a producer's answer that there is nothing to do — a closed deal has
@@ -30629,7 +30923,7 @@ export interface components {
              *     client that meets one anyway draws nothing, which is the same outcome.
              * @enum {string}
              */
-            action: "draft_reply" | "draft_email" | "create_task" | "open_meeting_brief" | "reconnect" | "none";
+            action: "draft_reply" | "draft_email" | "create_task" | "open_task" | "open_meeting_brief" | "reconnect" | "none";
             /**
              * Format: uuid
              * @description The record the verb acts on, where the verb acts on one: the message for
@@ -42144,6 +42438,32 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    getMagic: {
+        parameters: {
+            query?: {
+                /** @description The instant to report from. Absent means the acting rep's last brief cutoff, and 24 hours where there is no brief — a window the reader has not already seen, rather than a fixed one that repeats what they read this morning. */
+                since?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The machinery's receipt. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MagicReceipt"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     getWorklist: {
         parameters: {
             query?: {
@@ -44947,6 +45267,47 @@ export interface operations {
         };
         responses: {
             /** @description Recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    liftSuppression: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /**
+                 * @description The stop to take back. The row and not the person: a subject may carry more than
+                 *     one, and lifting "the suppression" would take back whichever came first.
+                 */
+                suppressionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Why the stop is being taken back. Required, unlike the reason for setting
+                     *     one: a record saying somebody asked us not to write, now overruled, is the
+                     *     change most worth being able to explain later.
+                     */
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Lifted. */
             204: {
                 headers: {
                     [name: string]: unknown;

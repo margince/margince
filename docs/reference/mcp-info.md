@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 72 |
-| Resources | 11 |
-| Tool catalog | 200.1 KB |
-| Resource catalog | 4.2 KB |
-| Approx. wire tokens | 52298 |
+| Tools | 73 |
+| Resources | 12 |
+| Tool catalog | 203.4 KB |
+| Resource catalog | 4.5 KB |
+| Approx. wire tokens | 53218 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 95.4 KB | 47% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 48.7 KB | 24% | Yes, every step |
-| Input schemas | 40.9 KB | 20% | Yes, every step |
-| _Names, annotations, punctuation_ | 15.2 KB | 7% | Partly |
-| **Description + input schema** | **89.6 KB** | **44%** | **the recurring cost** |
+| Output schemas | 96.5 KB | 47% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 49.6 KB | 24% | Yes, every step |
+| Input schemas | 41.9 KB | 20% | Yes, every step |
+| _Names, annotations, punctuation_ | 15.4 KB | 7% | Partly |
+| **Description + input schema** | **91.5 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -45,13 +45,14 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 
 ## Index
 
-### Resources (11)
+### Resources (12)
 
 - [`margince://capabilities`](#capabilities) — What this installation can do
 - [`margince://schema/query`](#query_vocabulary) — Workspace query vocabulary
 - [`margince://schema/record-fields`](#record_fields) — Record write vocabulary
 - [`margince://schema/reports`](#report_vocabulary) — Report plan vocabulary
 - [`margince://schema/report-blocks`](#report_blocks) — Report block grammar
+- [`margince://schema/analytics`](#analytics-schema) — Analytics query vocabulary
 - [`ui://margince/account-brief.html`](#account_brief_view) — Morning brief
 - [`ui://margince/relationship-map.html`](#relationship_map_view) — Who knows this contact
 - [`ui://margince/commitments.html`](#commitments_view) — Open commitments
@@ -59,7 +60,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (72)
+### Tools (73)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -113,7 +114,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.0 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes |  | 2.4 KB |
-| [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/account-brief.html`](#account_brief_view) | 3.0 KB |
+| [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/account-brief.html`](#account_brief_view) | 3.1 KB |
 | [`read_import_report`](#read_import_report) | Read an import report | yes |  | 2.9 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
@@ -124,6 +125,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve people and companies | yes |  | 3.6 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
+| [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.2 KB |
 | [`run_report`](#run_report) | Run a report | yes |  | 5.0 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
 | [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
@@ -181,6 +183,14 @@ What each prebuilt report accepts in a run_report plan: the names its group_by, 
 **Report block grammar**
 
 The blocks a report may carry: each kind, whether it renders figures, words or both, and the severities a callout may state. compose_analytics_report names this document instead of carrying it.
+
+### analytics-schema
+
+`margince://schema/analytics` · text/plain
+
+**Analytics query vocabulary**
+
+The populations a run_analytics_query plan may name, each with its group_by dimensions and its measures, derived for this seat. run_analytics_query names this document instead of carrying it.
 
 ### account_brief_view
 
@@ -2437,7 +2447,7 @@ Write a checked import into the workspace, once a person approves. Only from awa
 
 **Compose an analytics report**
 
-Render a report whose every figure comes from a saved analytics run. The document carries the STRUCTURE and the WORDS; each number names a run id and a cell inside it, and the server resolves those handles under the reader's own authority. It writes no number of its own and refuses any document that does. A block carrying a literal figure is refused EVEN WHEN a valid handle sits beside it: the literal is what renders, the two can disagree, and no reader could tell the page shows a figure the database never computed. Save a run first — run an analytics query with save, and cite the run id it answers with. Ask analytics_query for one number when a figure is what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the answer is a report somebody reads. describe_report_blocks holds the block kinds and their fields for a caller that wants them before composing. Never put a number in a block — cite the cell that holds it. A block kind outside the grammar is refused BY NAME with the whole set, so a first attempt costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope "read".)
+Render a report whose every figure comes from a saved analytics run. The document carries the STRUCTURE and the WORDS; each number names a run id and a cell inside it, and the server resolves those handles under the reader's own authority. It writes no number of its own and refuses any document that does. A block carrying a literal figure is refused EVEN WHEN a valid handle sits beside it: the literal is what renders, the two can disagree, and no reader could tell the page shows a figure the database never computed. Save a run first — run an analytics query with save, and cite the run id it answers with. Ask run_analytics_query for one number when a figure is what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the answer is a report somebody reads. describe_report_blocks holds the block kinds and their fields for a caller that wants them before composing. Never put a number in a block — cite the cell that holds it. A block kind outside the grammar is refused BY NAME with the whole set, so a first attempt costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -9890,6 +9900,13 @@ Renders its result in [`ui://margince/account-brief.html`](#account_brief_view),
               "rank": {
                 "type": "integer"
               },
+              "reopen_on": {
+                "type": "string"
+              },
+              "reopen_ref": {
+                "format": "uuid",
+                "type": "string"
+              },
               "snoozed_until": {
                 "type": "string"
               },
@@ -12210,6 +12227,240 @@ Renders its result in [`ui://margince/commitments.html`](#commitments_view), vis
       "required": [
         "as_of",
         "commitments"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### run_analytics_query
+
+**Run an analytics query**
+
+Compute a grouped aggregate — counts, sums, averages, medians — over a governed population, in the database. The answer carries its columns, rows and schema version; groups too small to disclose are withheld, never estimated. Populations, dimensions and measures come from margince://schema/analytics, derived for this seat; a name outside it is refused with what would work. Money measures are minor units. An omitted scope is this seat's own default population, never the workspace. run_report answers a prebuilt report by key; query_workspace lists exact records; the forecast tools answer forecast readings and movement. This one is for a novel aggregate no prebuilt report shapes. Set save to get a run_id whose cells compose_analytics_report can cite; without it the answer is served once and not stored. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "entity": {
+      "description": "A population from margince://schema/analytics. An unknown name is refused with the allowed set.",
+      "type": "string"
+    },
+    "filters": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "op": {
+            "enum": [
+              "eq",
+              "ne",
+              "lt",
+              "lte",
+              "gt",
+              "gte",
+              "is_null",
+              "is_not_null"
+            ]
+          },
+          "value": {}
+        },
+        "required": [
+          "field",
+          "op"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "group_by": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "limit": {
+      "type": "integer"
+    },
+    "measures": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "as": {
+            "type": "string"
+          },
+          "field": {
+            "description": "A measure name. Omit only with fn=count.",
+            "type": "string"
+          },
+          "fn": {
+            "enum": [
+              "count",
+              "count_distinct",
+              "sum",
+              "avg",
+              "min",
+              "max",
+              "median",
+              "p75"
+            ]
+          }
+        },
+        "required": [
+          "fn"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "save": {
+      "description": "Persist the run; the answer then carries a citable run_id.",
+      "type": "boolean"
+    },
+    "scope_id": {
+      "type": "string"
+    },
+    "scope_kind": {
+      "description": "Omit for this seat's own default population.",
+      "enum": [
+        "workspace",
+        "team",
+        "owner"
+      ]
+    }
+  },
+  "required": [
+    "entity",
+    "measures"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "columns": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rows": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "total_safe": {
+          "type": "boolean"
+        },
+        "withheld": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "columns",
+        "rows",
+        "schema_version",
+        "total_safe",
+        "withheld"
       ],
       "type": "object"
     },

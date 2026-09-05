@@ -250,5 +250,13 @@ func fillEmptyLinkedinSlot(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 	}
 	// The slot is part of the person aggregate: the bump invalidates If-Match
 	// tokens held by browsers that never saw it, for touchPerson's reason.
-	return touchPerson(ctx, tx, personID.UUID)
+	if err := touchPerson(ctx, tx, personID.UUID); err != nil {
+		return err
+	}
+	// And the fill says so on its own. The caller's audit row attests to the
+	// EVIDENCE write and reads the same whether this slot was empty or already
+	// held somebody's statement, so without a row of its own the one mutation
+	// that changed what the rail, the provider resolver and the SAR export
+	// answer would leave no trace naming it.
+	return auditLinkedInHandleGained(ctx, tx, personID.UUID)
 }

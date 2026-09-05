@@ -22,6 +22,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -260,8 +261,23 @@ func (s *Service) revokePassportTx(
 	}
 	// Another user's passport reads as absent, not forbidden —
 	// existence-hiding matches the row-scope convention.
-	if onBehalfOf != id.UserID && !id.hasRole(roleAdmin) {
-		return apperrors.ErrNotFound
+	//
+	// Only the CROSS-USER branch is gated. Revoking your own passport is
+	// self-authorized and always was: it needs no member-administration grant,
+	// and requiring one would take from every seat the ability to cut off an
+	// agent acting as them.
+	if onBehalfOf != id.UserID {
+		if err := auth.Require(ctx, objectUserAdmin, principal.ActionUpdate); err != nil {
+			return apperrors.ErrNotFound
+		}
+		// The same ceiling IssuePasswordLink carries, for a smaller reason.
+		// Revoking is denial rather than takeover — but a delegated holder who
+		// could cut off every agent acting for an administrator has reach over
+		// that administrator's work, and one grant should not buy both the
+		// widened list and power over the people it lists.
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, id, onBehalfOf); err != nil {
+			return apperrors.ErrNotFound
+		}
 	}
 	if revokedAt != nil && grantID == nil {
 		return nil // idempotent: a locally minted passport has nothing beneath it

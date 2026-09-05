@@ -28,7 +28,7 @@ import (
 //
 // The won figure is amount_minor_base — each deal's amount at the rate frozen
 // when it closed — so it never moves when today's FX does. The open figure
-// cannot be read the same way: that generated column is null on every open
+// cannot be read the same way: that column is null on every open
 // deal, because the rate freezes on CLOSE (deal_advance), and summing it
 // alone would price every open pipeline at nothing. So an open deal already
 // in the base currency contributes its own amount, and an open deal in

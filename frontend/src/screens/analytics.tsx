@@ -1,12 +1,15 @@
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate, useRoute } from "../app/router";
+import { useCan } from "../app/capability";
+import { ENTITY } from "../app/entity";
+import { navigate, routeHash, useRoute } from "../app/router";
 import {
   Button,
   Card,
   DataTable,
+  EmptyState,
   SectionHeader,
   Skeleton,
   StatCard,
@@ -24,10 +27,12 @@ import {
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
+  type AnalyticsSelection,
   useAnalyticsContext,
   useAnalyticsSelection,
 } from "./analytics.context";
 import { ForecastView } from "./analytics.forecast";
+import { sourceName } from "./analytics.forecast.review";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { ShareViewButton } from "./analytics.share";
 import {
@@ -39,6 +44,7 @@ import {
 } from "./common";
 import { dealsFilteredBy } from "./dealsaddress";
 import { EntityRef } from "./entityref";
+import { isProjectPhase, PHASE_LABEL } from "./projects.form";
 import "./analytics.css";
 
 // Analytics (B-EP09.12c, D-11): a picker over three reports — deals-by-stage
@@ -66,14 +72,28 @@ type StageAgg = {
   weightedMinor: number | null;
 };
 
-type ReportKey = "pipeline-current" | "forecast" | "open-deals-per-company";
+type ReportKey =
+  | "pipeline-current"
+  | "forecast"
+  | "open-deals-per-company"
+  | "win-loss"
+  | "stage-age"
+  | "projects-by-phase"
+  | "project-commitments"
+  | "projects-gone-quiet";
 
 // A SECTION is what the address names and what the tabs choose between; a
 // REPORT is one result inside it. They were the same thing while every section
 // held exactly one report, and keeping them the same would have meant the
 // address changing the day a section grew a second result — breaking every
 // link anyone had saved to it.
-type Section = "forecast" | "pipeline";
+type Section =
+  | "forecast"
+  | "pipeline"
+  | "performance"
+  | "outcomes"
+  | "coverage"
+  | "delivery";
 
 // Which results each section holds, in the order they are drawn. The tab strip
 // and the bodies both read this, so a section cannot come to list a report it
@@ -87,6 +107,16 @@ const SECTION_REPORTS = {
   // divides by category; what it is not is the forecast, which is now an
   // answer rather than a table.
   pipeline: ["pipeline-current", "forecast", "open-deals-per-company"],
+  // Closed outcomes and stage velocity: what happened, and how long things
+  // take. Both are the server's own report vocabulary — no rate or duration
+  // is computed in this file.
+  performance: ["win-loss", "stage-age"],
+  // The rep's own week: a composed view like the forecast, not report cards.
+  outcomes: [],
+  // Source health: an ops view over the nightly check's own coverage rows.
+  coverage: [],
+  // What was sold becoming what is delivered: the three project reports.
+  delivery: ["projects-by-phase", "project-commitments", "projects-gone-quiet"],
 } as const satisfies Record<Section, readonly ReportKey[]>;
 
 const SECTIONS = Object.keys(SECTION_REPORTS) as readonly Section[];
@@ -107,6 +137,11 @@ const SECTION_OF_REPORT: Readonly<Record<string, Section>> = {
   "pipeline-current": "pipeline",
   "deals-by-stage": "pipeline",
   "open-deals-per-company": "pipeline",
+  "win-loss": "performance",
+  "stage-age": "performance",
+  "projects-by-phase": "delivery",
+  "project-commitments": "delivery",
+  "projects-gone-quiet": "delivery",
 };
 
 export function sectionFromAddress(segment: string | undefined): Section {
@@ -161,6 +196,13 @@ const REPORT_GROUP_BY: Record<ReportKey, string[]> = {
   "pipeline-current": ["stage_id"],
   forecast: ["forecast_category"],
   "open-deals-per-company": ["organization_id", FIELD_CURRENCY],
+  "win-loss": ["status"],
+  "stage-age": ["stage_id"],
+  // The specs' own defaults: an empty plan takes each report's declared
+  // grouping and aggregates, which for these three is the whole point.
+  "projects-by-phase": [],
+  "project-commitments": [],
+  "projects-gone-quiet": [],
 };
 
 // A report row arrives as `{ [key: string]: unknown }`, so every read narrows.
@@ -191,6 +233,11 @@ const REPORT_LABEL_KEY = {
   "pipeline-current": "analytics.reportDeals",
   forecast: "analytics.reportForecast",
   "open-deals-per-company": "analytics.reportOpenByCompany",
+  "win-loss": "analytics.reportWinLoss",
+  "stage-age": "analytics.reportStageAge",
+  "projects-by-phase": "analytics.reportProjectsByPhase",
+  "project-commitments": "analytics.reportProjectCommitments",
+  "projects-gone-quiet": "analytics.reportProjectsGoneQuiet",
 } as const satisfies Record<ReportKey, string>;
 
 // The line under a report's title, for the reports whose copy says something
@@ -223,6 +270,20 @@ const REPORT_AGGREGATES: Record<ReportKey, ReportAggregate[]> = {
     { fn: "sum", field: "amount_minor", as: "raw_minor" },
     { fn: "count", as: "deal_count" },
   ],
+  "win-loss": [
+    { fn: "count", as: "deal_count" },
+    { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
+    { fn: "median", field: "days_to_close", as: "median_days" },
+    { fn: "p75", field: "days_to_close", as: "p75_days" },
+  ],
+  "stage-age": [
+    { fn: "count", as: "deal_count" },
+    { fn: "median", field: "days_in_stage", as: "median_days" },
+    { fn: "p75", field: "days_in_stage", as: "p75_days" },
+  ],
+  "projects-by-phase": [],
+  "project-commitments": [],
+  "projects-gone-quiet": [],
 };
 
 // Parse a server-minted `derivation_url` into the typed derivation query.
@@ -648,6 +709,7 @@ const DERIVATION_HEADERS: Readonly<Record<string, MessageKey>> = {
   owner_id: "explain.col.owner",
   pipeline_id: "explain.col.pipeline",
   organization_id: "analytics.company",
+  partner_org_id: "analytics.company",
 };
 
 // A column the vocabulary knows gets its word; anything else keeps the wire
@@ -702,10 +764,23 @@ function renderDerivationCell(
   row: Record<string, unknown>,
   baseCurrency: string | null,
   locale: Locale,
-): string {
+): ReactNode {
   const value = row[col];
   if (value == null) {
     return "";
+  }
+  if (typeof value === "string" && value !== "") {
+    if (col === "pipeline_id")
+      return <DerivationPipelineName pipelineId={value} />;
+    if (col === "stage_id" && typeof row.pipeline_id === "string") {
+      return (
+        <DerivationPipelineName pipelineId={row.pipeline_id} stageId={value} />
+      );
+    }
+    if (col === "owner_id") return <EntityRef kind="user" id={value} />;
+    if (col === "organization_id" || col === "partner_org_id") {
+      return <EntityRef kind="organization" id={value} />;
+    }
   }
   if (col.endsWith("_minor") && typeof value === "number") {
     return formatMoneyOrAbsent(
@@ -715,6 +790,33 @@ function renderDerivationCell(
     );
   }
   return String(value);
+}
+
+function DerivationPipelineName({
+  pipelineId,
+  stageId,
+}: Readonly<{ pipelineId: string; stageId?: string }>) {
+  const t = useT();
+  const pipeline = useQuery({
+    queryKey: ["pipeline", pipelineId],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/pipelines/{id}", {
+        params: { path: { id: pipelineId } },
+      });
+      if (error) throwProblem(error);
+      return data;
+    },
+  });
+  if (pipeline.isPending) return <>{t("common.loading")}</>;
+  if (pipeline.isError) return <>{t("common.error")}</>;
+  return (
+    <>
+      {stageId
+        ? (pipeline.data?.stages?.find((stage) => stage.id === stageId)?.name ??
+          t("common.empty"))
+        : pipeline.data?.name}
+    </>
+  );
 }
 
 // The source rows the explained figure reconciles to. A section INSIDE the
@@ -819,6 +921,677 @@ function ExplainCard({
   );
 }
 
+// A duration cell: the server's median or p75, or the withheld state the
+// engine answers below its sample floor. A dash would read as zero-ish; the
+// words say why there is no number.
+function DaysCell({
+  value,
+  locale,
+}: Readonly<{ value: unknown; locale: Locale }>) {
+  const t = useT();
+  if (value == null) {
+    return <span className="t-caption">{t("analytics.tooFewForMedian")}</span>;
+  }
+  return (
+    <>{t("analytics.days", { days: formatNumber(Number(value), locale) })}</>
+  );
+}
+
+type OutcomeRow = {
+  status: string;
+  count: number;
+  baseMinor: number | null;
+  medianDays: unknown;
+  p75Days: unknown;
+};
+
+// Won and lost, side by side: counts, converted value, and how long the
+// closed deals took. No rate is computed here — a win rate is the server's to
+// answer the day it owns a denominator, and a browser-made quotient would be
+// a second answer to what the cohort is.
+function WinLossTable({
+  rows,
+  locale,
+  baseCurrency,
+}: Readonly<{
+  rows: ReportRow[];
+  locale: Locale;
+  baseCurrency: string | null;
+}>) {
+  const t = useT();
+  const outcomes: OutcomeRow[] = rows
+    .filter((row) => typeof row.status === "string")
+    .map((row) => ({
+      status: String(row.status),
+      count: rowCount(row, "deal_count"),
+      baseMinor: rowMoney(row, "raw_minor"),
+      medianDays: row.median_days,
+      p75Days: row.p75_days,
+    }));
+  if (outcomes.length === 0) {
+    // Nothing closed yet is a real answer, not a broken table: the population
+    // is closed deals, and a young installation has none.
+    return <EmptyState>{t("analytics.noClosedDeals")}</EmptyState>;
+  }
+  return (
+    <DataTable
+      label={t("analytics.reportWinLoss")}
+      columns={[
+        {
+          key: "outcome",
+          header: t("analytics.outcome"),
+          render: (row: OutcomeRow) =>
+            row.status === "won" ? t("analytics.won") : t("analytics.lost"),
+        },
+        {
+          key: "count",
+          header: t("analytics.count"),
+          render: (row: OutcomeRow) => (
+            <CountLink
+              count={row.count}
+              href={dealsFilteredBy("status", row.status)}
+              title={t("analytics.openOutcomeDeals", {
+                outcome:
+                  row.status === "won"
+                    ? t("analytics.won")
+                    : t("analytics.lost"),
+              })}
+            />
+          ),
+        },
+        {
+          key: "value",
+          header: t("analytics.baseValue", { currency: baseCurrency ?? "" }),
+          render: (row: OutcomeRow) =>
+            formatMoneyOrAbsent(row.baseMinor, baseCurrency, locale),
+        },
+        {
+          key: "median",
+          header: t("analytics.medianDaysToClose"),
+          render: (row: OutcomeRow) => (
+            <DaysCell value={row.medianDays} locale={locale} />
+          ),
+        },
+        {
+          key: "p75",
+          header: t("analytics.p75DaysToClose"),
+          render: (row: OutcomeRow) => (
+            <DaysCell value={row.p75Days} locale={locale} />
+          ),
+        },
+      ]}
+      rows={outcomes}
+      rowKey={(row) => row.status}
+    />
+  );
+}
+
+type StageAgeRow = {
+  stageId: string;
+  stageName: string;
+  stagePosition: number;
+  count: number;
+  medianDays: unknown;
+  p75Days: unknown;
+};
+
+// How long open deals have sat in each stage, from the stage history's own
+// entry instants. The median and p75 arrive computed; below the sample floor
+// they arrive withheld, and the count beside the blank still says how many.
+function StageAgeTable({
+  rows,
+  stages,
+  locale,
+}: Readonly<{
+  rows: ReportRow[];
+  stages: readonly Stage[];
+  locale: Locale;
+}>) {
+  const t = useT();
+  const byId = new Map(stages.map((stage) => [stage.id, stage]));
+  const aged: StageAgeRow[] = rows
+    .filter((row) => typeof row.stage_id === "string")
+    .map((row) => {
+      const stage = byId.get(String(row.stage_id));
+      return {
+        stageId: String(row.stage_id),
+        stageName: stage?.name ?? t("analytics.unknownStage"),
+        stagePosition: stage?.position ?? Number.MAX_SAFE_INTEGER,
+        count: rowCount(row, "deal_count"),
+        medianDays: row.median_days,
+        p75Days: row.p75_days,
+      };
+    })
+    .sort((a, b) => a.stagePosition - b.stagePosition);
+  return (
+    <DataTable
+      label={t("analytics.reportStageAge")}
+      columns={[
+        {
+          key: "stage",
+          header: t("deals.stage"),
+          render: (row: StageAgeRow) => row.stageName,
+        },
+        {
+          key: "count",
+          header: t("analytics.count"),
+          render: (row: StageAgeRow) => (
+            <CountLink
+              count={row.count}
+              href={dealsFilteredBy("stage_id", row.stageId, {
+                status: "open",
+              })}
+              title={t("analytics.openStageDeals", { stage: row.stageName })}
+            />
+          ),
+        },
+        {
+          key: "median",
+          header: t("analytics.medianDaysInStage"),
+          render: (row: StageAgeRow) => (
+            <DaysCell value={row.medianDays} locale={locale} />
+          ),
+        },
+        {
+          key: "p75",
+          header: t("analytics.p75DaysInStage"),
+          render: (row: StageAgeRow) => (
+            <DaysCell value={row.p75Days} locale={locale} />
+          ),
+        },
+      ]}
+      rows={aged}
+      rowKey={(row) => row.stageId}
+    />
+  );
+}
+
+// Every word a coverage row's state can carry, spelled per state so an
+// unread source never borrows a read one's copy. A hand-kept mirror of the
+// server's own vocabulary; an unknown state renders its raw word rather than
+// a wrong sentence.
+const COVERAGE_STATE_KEY: Readonly<Record<string, MessageKey>> = {
+  checked: "analytics.covChecked",
+  stale: "analytics.covStale",
+  unavailable: "analytics.covUnavailable",
+  permission_limited: "analytics.covPermissionLimited",
+  not_connected: "analytics.covNotConnected",
+};
+
+// Which connectors the nightly check could read, and how far. Ops-facing: the
+// server gates the read, and a seat without the grant never sees the tab.
+function DataCoverageView({
+  locale,
+  timezone,
+}: Readonly<{ locale: Locale; timezone: string }>) {
+  const t = useT();
+  const coverage = useDataCoverage();
+  const allowed = useCan("data_coverage", "read");
+  if (!allowed) {
+    return <EmptyState>{t("common.permissionDenied")}</EmptyState>;
+  }
+  return (
+    <QueryGate query={coverage} pendingLabel={t("analytics.sectionCoverage")}>
+      {(run) =>
+        run == null ? (
+          <Card title={t("analytics.sectionCoverage")}>
+            <EmptyState>{t("analytics.coverageNeverRun")}</EmptyState>
+          </Card>
+        ) : (
+          <Card title={t("analytics.sectionCoverage")}>
+            <p className="sub">{t("analytics.coverageSub")}</p>
+            <DataTable
+              label={t("analytics.sectionCoverage")}
+              columns={[
+                {
+                  key: "source",
+                  header: t("analytics.covSource"),
+                  render: (row: DataCoverageRow) => sourceName(row.source, t),
+                },
+                {
+                  key: "state",
+                  header: t("analytics.covState"),
+                  render: (row: DataCoverageRow) =>
+                    COVERAGE_STATE_KEY[row.state]
+                      ? t(COVERAGE_STATE_KEY[row.state])
+                      : row.state,
+                },
+                {
+                  key: "through",
+                  header: t("analytics.covThrough"),
+                  render: (row: DataCoverageRow) =>
+                    row.checked_through
+                      ? formatDateTime(row.checked_through, locale, timezone)
+                      : "—",
+                },
+              ]}
+              rows={run.sources}
+              rowKey={(row) => row.source}
+            />
+            {/* Record-level input problems live where they are answered: the
+              Forecast input review. One resolution surface, not two. */}
+            <p className="sub">{t("analytics.coverageInputsElsewhere")}</p>
+          </Card>
+        )
+      }
+    </QueryGate>
+  );
+}
+
+type DataCoverageRow = components["schemas"]["DataCoverage"]["sources"][number];
+
+function useDataCoverage() {
+  const allowed = useCan("data_coverage", "read");
+  return useQuery({
+    enabled: allowed,
+    queryKey: ["analytics-coverage"],
+    retry: false,
+    queryFn: async () => {
+      const { data, error, response } = await api.GET("/analytics/coverage");
+      if (response.status === 404) {
+        // A fresh installation: no run has completed yet. Null, so the view
+        // says that in words rather than drawing headers over blank space —
+        // "nothing has looked yet" and "everything looked fine" are opposite
+        // instructions about whether to trust the numbers elsewhere.
+        return null;
+      }
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+}
+
+type AnalyticsScopeWire = components["schemas"]["AnalyticsScope"];
+
+// The current standing a meeting can hold, in the order a week reads: what is
+// ahead, what happened, what did not, what was called off. A hand-kept mirror
+// of the server's CHECK vocabulary — a status the server grows is absent here
+// until this list learns it, rather than mislabeled.
+const MEETING_STATUSES = [
+  { key: "booked", labelKey: "analytics.meetingsBooked" },
+  { key: "held", labelKey: "analytics.meetingsHeld" },
+  { key: "no_show", labelKey: "analytics.meetingsNoShow" },
+  { key: "canceled", labelKey: "analytics.meetingsCanceled" },
+] as const;
+
+// The seat's own outcomes: open pipeline and meetings, nothing computed here.
+//
+// Drawn only under an OWNER default lens. The report engine's population
+// default is the caller's own row scope, so for a wider lens the same
+// requests would measure a team while the heading said "my" — and there is
+// no per-report scope override on the wire to force self. The tab is hidden
+// for those lenses; a hand-typed address gets the explanation instead.
+function MyOutcomesView({
+  defaultScope,
+  locale,
+}: Readonly<{ defaultScope: AnalyticsScopeWire; locale: Locale }>) {
+  const t = useT();
+  const self = defaultScope.kind === "owner" ? (defaultScope.id ?? null) : null;
+
+  const pipelineQuery = useQuery({
+    queryKey: ["report", "pipeline-current", "outcomes", self],
+    enabled: self != null,
+    queryFn: async () => {
+      const { data, error } = await api.POST("/reports/{report}", {
+        params: { path: { report: "pipeline-current" } },
+        body: {
+          // The seat pinned EXPLICITLY, not left to the server's default
+          // population: the default is also the caller's own today, so the
+          // two agree, but this card's heading says "my" and a heading must
+          // not be true by a coincidence this file cannot see.
+          filters: { owner_id: self },
+          aggregates: [
+            { fn: "count", as: "deal_count" },
+            { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
+          ],
+        },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+
+  const meetingsQuery = useQuery({
+    queryKey: ["report", "activities-by-kind", "outcomes", self],
+    enabled: self != null,
+    queryFn: async () => {
+      const { data, error } = await api.POST("/reports/{report}", {
+        params: { path: { report: "activities-by-kind" } },
+        body: {
+          filters: { kind: "meeting", host_user_id: self },
+          group_by: ["meeting_status"],
+          aggregates: [{ fn: "count", as: "meetings" }],
+        },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+
+  if (self == null) {
+    // A hand-typed address under a manager lens: the numbers this view could
+    // fetch would measure the default population, not the person.
+    return <Callout tone="info">{t("analytics.outcomesOwnLensOnly")}</Callout>;
+  }
+
+  const pipelineRow = pipelineQuery.data?.rows[0];
+  const meetingRows = meetingsQuery.data?.rows ?? [];
+  const meetingsByStatus = new Map(
+    meetingRows
+      .filter((row) => typeof row.meeting_status === "string")
+      .map((row) => [String(row.meeting_status), rowCount(row, "meetings")]),
+  );
+
+  return (
+    <>
+      <Card title={t("analytics.myPipeline")}>
+        <StatStrip>
+          <StatCard
+            label={t("analytics.count")}
+            value={
+              pipelineRow
+                ? formatNumber(rowCount(pipelineRow, "deal_count"), locale)
+                : "…"
+            }
+          />
+          <StatCard
+            label={t("analytics.baseValue", {
+              currency: pipelineQuery.data?.base_currency ?? "",
+            })}
+            value={
+              pipelineRow
+                ? formatMoneyOrAbsent(
+                    rowMoney(pipelineRow, "raw_minor"),
+                    pipelineQuery.data?.base_currency ?? null,
+                    locale,
+                  )
+                : "…"
+            }
+          />
+        </StatStrip>
+      </Card>
+      <Card title={t("analytics.myMeetings")}>
+        {/* Current standing, stated as such: a held meeting was once booked
+            and the record no longer says so, so these are today's facts and
+            not a funnel. */}
+        <p className="sub">{t("analytics.meetingsAsTheyStand")}</p>
+        <StatStrip>
+          {MEETING_STATUSES.map((status) => (
+            <StatCard
+              key={status.key}
+              label={t(status.labelKey)}
+              value={formatNumber(
+                meetingsByStatus.get(status.key) ?? 0,
+                locale,
+              )}
+            />
+          ))}
+        </StatStrip>
+      </Card>
+    </>
+  );
+}
+
+type PhaseRow = {
+  phase: string;
+  projects: number;
+  openMinor: number | null;
+  wonMinor: number | null;
+};
+
+// Projects per phase, with the deal money standing behind each phase — both
+// server-converted sums; this file only formats them.
+function ProjectsByPhaseTable({
+  rows,
+  locale,
+  baseCurrency,
+}: Readonly<{
+  rows: ReportRow[];
+  locale: Locale;
+  baseCurrency: string | null;
+}>) {
+  const t = useT();
+  const phased: PhaseRow[] = rows
+    .filter((row) => typeof row.phase === "string")
+    .map((row) => ({
+      phase: String(row.phase),
+      projects: rowCount(row, "projects"),
+      openMinor: rowMoney(row, "open_deal_value_minor"),
+      wonMinor: rowMoney(row, "won_deal_value_minor"),
+    }));
+  if (phased.length === 0) {
+    return <EmptyState>{t("analytics.noProjectsYet")}</EmptyState>;
+  }
+  return (
+    <DataTable
+      label={t("analytics.reportProjectsByPhase")}
+      columns={[
+        {
+          key: "phase",
+          header: t("project.phaseLabel"),
+          render: (row: PhaseRow) => phaseLabel(row.phase, t),
+        },
+        {
+          key: "projects",
+          header: t("analytics.projects"),
+          render: (row: PhaseRow) => formatNumber(row.projects, locale),
+        },
+        {
+          key: "open",
+          header: t("analytics.openDealValue", {
+            currency: baseCurrency ?? "",
+          }),
+          render: (row: PhaseRow) =>
+            formatMoneyOrAbsent(row.openMinor, baseCurrency, locale),
+        },
+        {
+          key: "won",
+          header: t("analytics.wonDealValue", { currency: baseCurrency ?? "" }),
+          render: (row: PhaseRow) =>
+            formatMoneyOrAbsent(row.wonMinor, baseCurrency, locale),
+        },
+      ]}
+      rows={phased}
+      rowKey={(row) => row.phase}
+    />
+  );
+}
+
+type ProjectListRow = {
+  projectId: string;
+  name: string;
+  phase: string;
+  overdue: number;
+  open: number;
+};
+
+function projectHref(projectId: string): string {
+  // The entity registry owns the route; a hand-written copy goes stale
+  // silently, which is the registry's own stated reason to exist.
+  return routeHash(ENTITY.project.route(projectId));
+}
+
+// A phase spelled to a human, the one way the Projects screen spells it.
+function phaseLabel(phase: string, t: ReturnType<typeof useT>): string {
+  return isProjectPhase(phase) ? t(PHASE_LABEL[phase]) : phase;
+}
+
+// Each project's promises: how many stand open, how many are already late.
+function ProjectCommitmentsTable({
+  rows,
+  locale,
+}: Readonly<{ rows: ReportRow[]; locale: Locale }>) {
+  const t = useT();
+  const listed: ProjectListRow[] = rows
+    .filter((row) => typeof row.project_id === "string")
+    .map((row) => ({
+      projectId: String(row.project_id),
+      name: typeof row.name === "string" ? row.name : "",
+      phase: typeof row.phase === "string" ? row.phase : "",
+      overdue: rowCount(row, "overdue_commitments"),
+      open: rowCount(row, "open_commitments"),
+    }));
+  if (listed.length === 0) {
+    return <EmptyState>{t("analytics.noProjectsYet")}</EmptyState>;
+  }
+  return (
+    <DataTable
+      label={t("analytics.reportProjectCommitments")}
+      columns={[
+        {
+          key: "project",
+          header: t("analytics.project"),
+          render: (row: ProjectListRow) => (
+            <a className="link-button" href={projectHref(row.projectId)}>
+              {row.name}
+            </a>
+          ),
+        },
+        {
+          key: "phase",
+          header: t("project.phaseLabel"),
+          render: (row: ProjectListRow) => phaseLabel(row.phase, t),
+        },
+        {
+          key: "open",
+          header: t("analytics.openCommitments"),
+          render: (row: ProjectListRow) => formatNumber(row.open, locale),
+        },
+        {
+          key: "overdue",
+          header: t("analytics.overdueCommitments"),
+          render: (row: ProjectListRow) => formatNumber(row.overdue, locale),
+        },
+      ]}
+      rows={listed}
+      rowKey={(row) => row.projectId}
+    />
+  );
+}
+
+// Delivering projects nobody has spoken into lately, oldest silence first on
+// the server's own ordering.
+function ProjectsGoneQuietTable({
+  rows,
+  locale,
+  timezone,
+}: Readonly<{ rows: ReportRow[]; locale: Locale; timezone: string | null }>) {
+  const t = useT();
+  const listed = rows
+    .filter((row) => typeof row.project_id === "string")
+    .map((row) => ({
+      projectId: String(row.project_id),
+      name: typeof row.name === "string" ? row.name : "",
+      phase: typeof row.phase === "string" ? row.phase : "",
+      quietSince: typeof row.quiet_since === "string" ? row.quiet_since : null,
+    }));
+  if (listed.length === 0) {
+    // Nothing quiet is the good answer, and it should say so rather than
+    // draw headers over blank space.
+    return <EmptyState>{t("analytics.nothingQuiet")}</EmptyState>;
+  }
+  return (
+    <DataTable
+      label={t("analytics.reportProjectsGoneQuiet")}
+      columns={[
+        {
+          key: "project",
+          header: t("analytics.project"),
+          render: (row: (typeof listed)[number]) => (
+            <a className="link-button" href={projectHref(row.projectId)}>
+              {row.name}
+            </a>
+          ),
+        },
+        {
+          key: "phase",
+          header: t("project.phaseLabel"),
+          render: (row: (typeof listed)[number]) => phaseLabel(row.phase, t),
+        },
+        {
+          key: "quiet",
+          header: t("analytics.quietSince"),
+          render: (row: (typeof listed)[number]) =>
+            row.quietSince && timezone
+              ? formatDateTime(row.quietSince, locale, timezone)
+              : "—",
+        },
+      ]}
+      rows={listed}
+      rowKey={(row) => row.projectId}
+    />
+  );
+}
+
+// Which table a report's rows become — a switch in its own component so the
+// card's render stays a frame plus a choice.
+function ReportBody({
+  report,
+  run,
+  stages,
+  locale,
+}: Readonly<{
+  report: ReportKey;
+  run: {
+    rows: ReportRow[];
+    base_currency?: string | null;
+    timezone?: string | null;
+  };
+  stages: readonly Stage[];
+  locale: Locale;
+}>) {
+  const base = run.base_currency ?? null;
+  switch (report) {
+    case "forecast":
+      return (
+        <ForecastStrip rows={run.rows} baseCurrency={base} locale={locale} />
+      );
+    case "open-deals-per-company":
+      return <CompanyTable rows={run.rows} locale={locale} />;
+    case "pipeline-current":
+      return (
+        <StageTable
+          rows={run.rows}
+          stages={stages}
+          locale={locale}
+          baseCurrency={base}
+        />
+      );
+    case "win-loss":
+      return (
+        <WinLossTable rows={run.rows} locale={locale} baseCurrency={base} />
+      );
+    case "stage-age":
+      return <StageAgeTable rows={run.rows} stages={stages} locale={locale} />;
+    case "projects-by-phase":
+      return (
+        <ProjectsByPhaseTable
+          rows={run.rows}
+          locale={locale}
+          baseCurrency={base}
+        />
+      );
+    case "project-commitments":
+      return <ProjectCommitmentsTable rows={run.rows} locale={locale} />;
+    case "projects-gone-quiet":
+      return (
+        <ProjectsGoneQuietTable
+          rows={run.rows}
+          locale={locale}
+          timezone={run.timezone ?? null}
+        />
+      );
+    default:
+      return null;
+  }
+}
+
 // One report: its own query, its own explain disclosure, its own card. A
 // section may hold several, and each has to be able to load, fail and be
 // explained on its own — a single query per screen would have made a section
@@ -841,6 +1614,9 @@ function ReportCard({
     queryFn: async () => {
       const { data, error } = await api.POST("/reports/{report}", {
         params: { path: { report } },
+        // An empty list and an absent one both take the report's own declared
+        // defaults (report.go branches on len==0), so the delivery reports'
+        // empty plans ask for exactly what their specs declare.
         body: {
           group_by: REPORT_GROUP_BY[report],
           aggregates: REPORT_AGGREGATES[report],
@@ -889,24 +1665,12 @@ function ReportCard({
                 {t(reportSub[report], { currency: run.base_currency ?? "" })}
               </p>
             )}
-            {report === "forecast" && (
-              <ForecastStrip
-                rows={run.rows}
-                baseCurrency={run.base_currency ?? null}
-                locale={locale}
-              />
-            )}
-            {report === "open-deals-per-company" && (
-              <CompanyTable rows={run.rows} locale={locale} />
-            )}
-            {report === "pipeline-current" && (
-              <StageTable
-                rows={run.rows}
-                stages={stages}
-                locale={locale}
-                baseCurrency={run.base_currency ?? null}
-              />
-            )}
+            <ReportBody
+              report={report}
+              run={run}
+              stages={stages}
+              locale={locale}
+            />
             {/* The frame every figure above was cut in: the instant, and the
                 zone that instant is stated in. A total with no zone beside it
                 is a number a reader places by assumption, and the assumption
@@ -1008,15 +1772,31 @@ export function AnalyticsScreen() {
   // Sharing sits beside the tabs rather than inside a section, because the
   // thing being shared is the SECTION the reader is on — a button that moved
   // with the content would read as sharing one card.
+  const canReadCoverage = useCan("data_coverage", "read");
+  const coverageProbe = useDataCoverage();
   const header = (
     <div className="analytics-header">
       <RecordTabs
-        options={SECTIONS}
+        options={SECTIONS.filter((candidate) => {
+          if (candidate === "outcomes") {
+            return context.data?.default_scope.kind === "owner";
+          }
+          if (candidate === "coverage") {
+            // The read starts only with the ops grant; the tab appears
+            // after the server has answered.
+            return canReadCoverage && coverageProbe.isSuccess;
+          }
+          return true;
+        })}
         value={section}
         onChange={setSection}
         labels={{
           forecast: t("analytics.sectionForecast"),
           pipeline: t("analytics.sectionPipeline"),
+          performance: t("analytics.sectionPerformance"),
+          outcomes: t("analytics.sectionOutcomes"),
+          coverage: t("analytics.sectionCoverage"),
+          delivery: t("analytics.sectionDelivery"),
         }}
         label={t("analytics.sections")}
       />
@@ -1045,23 +1825,62 @@ export function AnalyticsScreen() {
   return (
     <div className="wrap">
       {header}
-      {section === "forecast" ? (
-        selection && context.data ? (
-          <ForecastView
-            selection={selection}
-            canSubmit={context.data.capabilities.submit_manager_forecast}
-          />
-        ) : null
-      ) : (
-        SECTION_REPORTS[section].map((report) => (
-          <ReportCard
-            key={report}
-            report={report}
-            stages={pipelineQuery.data?.stages ?? []}
-            locale={locale}
-          />
-        ))
-      )}
+      <SectionBody
+        section={section}
+        locale={locale}
+        context={context.data}
+        selection={selection}
+        stages={pipelineQuery.data?.stages ?? []}
+      />
     </div>
   );
+}
+
+// One section's body, chosen in its own component so the screen's own render
+// stays a header plus a choice rather than a ladder of ternaries.
+function SectionBody({
+  section,
+  locale,
+  context,
+  selection,
+  stages,
+}: Readonly<{
+  section: Section;
+  locale: Locale;
+  context: components["schemas"]["AnalyticsContext"] | undefined;
+  selection: AnalyticsSelection | null;
+  stages: readonly Stage[];
+}>) {
+  switch (section) {
+    case "coverage":
+      // Like the other context-bearing sections: nothing renders before the
+      // frame arrives, so the view never has to guess a zone.
+      return context ? (
+        <DataCoverageView locale={locale} timezone={context.timezone} />
+      ) : null;
+    case "outcomes":
+      return context ? (
+        <MyOutcomesView defaultScope={context.default_scope} locale={locale} />
+      ) : null;
+    case "forecast":
+      return selection && context ? (
+        <ForecastView
+          selection={selection}
+          canSubmit={context.capabilities.submit_manager_forecast}
+        />
+      ) : null;
+    default:
+      return (
+        <>
+          {SECTION_REPORTS[section].map((report) => (
+            <ReportCard
+              key={report}
+              report={report}
+              stages={stages}
+              locale={locale}
+            />
+          ))}
+        </>
+      );
+  }
 }

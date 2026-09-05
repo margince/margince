@@ -238,6 +238,11 @@ describe("a saved view over the deals board", () => {
   });
 
   it("keeps the board's own count, its stage totals and its archived toggle", async () => {
+    // Stage totals are asked for only while the owner filter names the viewer:
+    // `GET /deals` returns every deal the reader may see while the report
+    // measures the caller's own population, so any other selection would put a
+    // number over cards it did not count.
+    window.location.hash = "#/deals?owner_id=u-me";
     const dealUrls: string[] = [];
     const user = userEvent.setup();
     vi.stubGlobal(

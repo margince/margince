@@ -3,7 +3,6 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { translate } from "../i18n";
-import { companyContextCapabilitiesQueryKey } from "./company-context";
 import {
   SETTINGS_TABS,
   SettingsScreen,
@@ -136,6 +135,10 @@ function adminNavBackend(opts: {
   // and expect the nav not to narrow.
   seat?: "full" | "read";
   companyReadEnabled?: boolean;
+  // A server that predates `settings_availability` answers /me without it.
+  // The predicate has to read that as "the surface does not exist" rather than
+  // as permission, so a case can ask for the field to be absent entirely.
+  omitAvailability?: true;
 }) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
@@ -145,6 +148,9 @@ function adminNavBackend(opts: {
           roles: opts.roles,
           seat: opts.seat ?? "full",
           allow: opts.allow ?? {},
+          settingsAvailability: opts.omitAvailability
+            ? null
+            : { company_context: opts.companyReadEnabled ?? false },
         }),
       );
     }
@@ -162,28 +168,6 @@ function adminNavBackend(opts: {
       page: { next_cursor: null, has_more: false },
     });
   });
-}
-
-// The same backend with the rollout answer on a valve the test opens. The nav
-// can then be read at two named moments — flag unanswered, flag answered "off"
-// — instead of whichever of the two the event loop happens to serve first.
-function adminNavBackendHoldingCapabilities(opts: {
-  roles: string[];
-  allow?: GrantSpec;
-}) {
-  const answer = adminNavBackend({ ...opts, companyReadEnabled: false });
-  let release: (() => void) | undefined;
-  const held = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-    const url = String(input instanceof Request ? input.url : input);
-    if (url.includes("/company/context/capabilities")) {
-      await held;
-    }
-    return answer(input);
-  });
-  return { fetchMock, answerCapabilities: () => release?.() };
 }
 
 // The settings entries currently in the nav, in render order — personal group
@@ -680,41 +664,61 @@ describe("SettingsScreen Admin settings group", () => {
     expect(await screen.findByRole("link", { name: "General" })).toBeTruthy();
   });
 
-  it("withholds General from that same admin while the rollout flag is off — before the flag answers and after", async () => {
+  it("withholds General from that same admin while the rollout flag is off", async () => {
     // The flag is a deployment posture, not a permission, so it ANDs with the
     // grant beside it: the company profile may simply not exist on this
-    // installation. An unknown flag therefore reads as "off" — an entry that
-    // appears while the answer is in flight and then vanishes has already offered
-    // a surface this installation may not have.
+    // installation.
+    //
+    // This used to assert two moments — the nav composed while the flag was
+    // still in flight, then again once it answered — because the fact arrived
+    // over its own request and an entry could appear and then vanish. It rides
+    // /me now, so there is no in-flight window to hold open: the nav cannot
+    // render before the snapshot it reads. The race is gone rather than
+    // untested, which is why the second moment went with it.
     //
     // The organization read is the ONLY term of General's predicate this fixture
     // grants, which is what leaves the flag decisive. On a seeded installation
     // every role also holds `installation_settings:read` and General opens on
-    // that regardless — so this case is about the flag's contribution to the
-    // union, not a claim that General is ever unreachable in practice.
-    const { fetchMock, answerCapabilities } =
-      adminNavBackendHoldingCapabilities({
+    // that regardless — so this is about the flag's contribution to the union,
+    // not a claim that General is ever unreachable in practice.
+    vi.stubGlobal(
+      "fetch",
+      adminNavBackend({
         roles: ["admin"],
         allow: readOn("organization"),
-      });
-    vi.stubGlobal("fetch", fetchMock);
-    const { client } = renderNav();
+        companyReadEnabled: false,
+      }),
+    );
+    renderNav();
 
-    // Moment one: the nav is fully composed from /me — its role-gated entries
-    // are on screen — while the flag is still unanswered, because this test
-    // holds the answer.
     await screen.findByRole("link", { name: "Maintenance" });
     expect(navTabs()).toEqual(ADMIN_TABS_WITH_MAINTENANCE);
+    expect(screen.queryByRole("link", { name: "General" })).toBeNull();
+  });
 
-    // Moment two: the answer is in the cache, which is the fact the emptiness
-    // claim needs — the request having been SENT proves nothing about what the
-    // nav has rendered.
-    answerCapabilities();
-    await waitFor(() =>
-      expect(
-        client.getQueryState(companyContextCapabilitiesQueryKey)?.status,
-      ).toBe("success"),
+  it("withholds General when /me carries no availability at all", async () => {
+    // The absent case, which is a DIFFERENT fact from the flag reading false:
+    // a server older than `settings_availability` answers /me without the
+    // object, and a browser holding a cached snapshot from before the field
+    // shipped does the same. Both are states a running deployment reaches
+    // during a rollout, and neither says the company profile exists.
+    //
+    // Without this case the predicate's `?? false` is unheld — flipping it to
+    // `?? true` passes every other test in this file, because they all supply
+    // the field. What that flip ships is an entry offered on an installation
+    // that may not have the surface, which is the one direction a deployment
+    // fact must not fail.
+    vi.stubGlobal(
+      "fetch",
+      adminNavBackend({
+        roles: ["admin"],
+        allow: readOn("organization"),
+        omitAvailability: true,
+      }),
     );
-    expect(navTabs()).toEqual(ADMIN_TABS_WITH_MAINTENANCE);
+    renderNav();
+
+    await screen.findByRole("link", { name: "Maintenance" });
+    expect(screen.queryByRole("link", { name: "General" })).toBeNull();
   });
 });

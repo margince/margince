@@ -120,6 +120,14 @@
   min-width: 0;
 }
 
+/* When, what it is worth, and why — three short fragments that read as one
+   line. It inherits the text column's own arrangement above the fold, so the
+   three keep the stacked shape a wide row has room for; the phone block below
+   is what turns it into a wrapping row. */
+.worklist-row-facts-line {
+  display: contents;
+}
+
 .worklist-row-title {
   align-items: center;
   display: flex;
@@ -375,6 +383,27 @@
   .worklist-row-text {
     flex: 1 1 100%;
     min-width: 0;
+  }
+
+  /* THE THREE SHORT FACTS SHARE A LINE at phone width.
+     Each is a fragment of a dozen characters — "due 15:00", "€40k", "due today
+     · nobody owns it" — and stacked they took three 19px lines of a row whose
+     whole ceiling is 176px. That is 38px spent on the space beside three short
+     phrases, on the one screen with none to spare.
+     They wrap when they do not fit, so a long reason still gets its own line
+     rather than being cut, and the separator makes the join readable as three
+     facts rather than one run-on sentence. */
+  .worklist-row-facts-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-2);
+    min-width: 0;
+  }
+
+  .worklist-row-facts-line > * + *::before {
+    color: var(--textMeta);
+    content: "·";
+    margin-inline-end: var(--space-2);
   }
 
   /* Every group of verbs below the text, and free to wrap. They are separate

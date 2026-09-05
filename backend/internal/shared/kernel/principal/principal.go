@@ -137,6 +137,29 @@ const (
 	RowScopeAll  RowScope = "all"
 )
 
+// Contains reports whether this grant permits everything `other` permits.
+//
+// The question every escalation guard asks: may a caller hand out, or write, an
+// authority bounded by their own. It sits beside RowScope.Wider because that is
+// the same shape of question about the other axis. Three writers had it longhand
+// before, and a missed verb in any one of them is a silent widening that no test
+// distinguishes from a correct admission.
+//
+// Held by: TestGrantDiffAgreesWithContains
+// (backend/internal/compose/integration/harnesspermsparity_integration_test.go),
+// which walks all 256 pairs against the parity gate's own spelling — the one
+// remaining second reader, kept because it must NAME the missing verbs rather
+// than count them.
+//
+// The empty grant is contained by everything, which is what makes "turning every
+// verb off" always allowed: narrowing a role gives nobody anything.
+func (g ObjectGrant) Contains(other ObjectGrant) bool {
+	return (!other.Create || g.Create) &&
+		(!other.Read || g.Read) &&
+		(!other.Update || g.Update) &&
+		(!other.Delete || g.Delete)
+}
+
 // rowScopeRank orders the tiers for Wider; package-level because Wider
 // runs inside the per-request policy merge.
 var rowScopeRank = map[RowScope]int{RowScopeOwn: 1, RowScopeTeam: 2, RowScopeAll: 3}

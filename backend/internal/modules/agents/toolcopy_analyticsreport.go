@@ -27,7 +27,7 @@ var composeAnalyticsReportCopy = toolCopy{
 		"literal is what renders, the two can disagree, and no reader could tell the page " +
 		"shows a figure the database never computed. Save a run first — run an analytics " +
 		"query with save, and cite the run id it answers with.",
-	Instead: "Ask analytics_query for one number when a figure is what is wanted. This " +
+	Instead: "Ask run_analytics_query for one number when a figure is what is wanted. This " +
 		"composes a DOCUMENT of several, which is worth the round trip only when the answer " +
 		"is a report somebody reads. describe_report_blocks holds the block kinds and their " +
 		"fields for a caller that wants them before composing.",

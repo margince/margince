@@ -82,30 +82,6 @@ func (e *BriefEngine) WithL2Ranker(brain briefBrain, log *slog.Logger) *BriefEng
 	return e
 }
 
-// briefBaseValueSQL renders the §6 base-currency value of d (joined to
-// its workspace w): native amount when already in base currency, the
-// frozen amount_minor_base (0065's GENERATED column — round(amount_minor
-// x fx_rate_to_base) computed once at write time) for closed deals, the
-// latest daily rate on or before the as-of date for open ones. A missing
-// rate yields NULL — the revenue factor floors rather than guessing (a
-// wrong number is worse than a missing one). asOfPos is the bind position
-// of the as-of date.
-// THE SECOND SPELLING, AND WHY. compose.BaseValueSQL is the same expression.
-// This package cannot call it — compose imports briefs, so the reverse is a
-// cycle — so the two are held character-identical by
-// TestOneSpellingOfADealsBaseValue rather than left to drift.
-func briefBaseValueSQL(asOfSQL, baseSQL, alias string) string {
-	return fmt.Sprintf(`CASE
-		WHEN %[3]s.amount_minor IS NULL THEN NULL
-		WHEN %[3]s.currency IS NULL OR %[3]s.currency = %[2]s THEN %[3]s.amount_minor
-		WHEN %[3]s.fx_rate_to_base IS NOT NULL THEN %[3]s.amount_minor_base
-		ELSE (SELECT round(%[3]s.amount_minor * fr.rate)::bigint FROM fx_rate fr
-		      WHERE fr.from_currency = %[3]s.currency AND fr.to_currency = %[2]s
-		        AND fr.rate_date <= %[1]s::date
-		      ORDER BY fr.rate_date DESC LIMIT 1)
-	END`, asOfSQL, baseSQL, alias)
-}
-
 // briefFacts is everything ONE transaction gathers for a rank: the candidates
 // and what is known about them, plus the basis every one of them was measured
 // against.
@@ -333,7 +309,12 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 			JOIN brief_run br ON br.id = bi.brief_run_id
 			WHERE br.user_id = $%d AND bi.deal_id = d.id AND bi.state <> 'new'
 			  AND CASE WHEN bi.state = 'snoozed'
-			      THEN bi.snoozed_until > $%d
+			      -- Still suppressed while the snooze holds. A time snooze
+			      -- holds until its moment; the other two hold until the
+			      -- shared predicate says the world moved.
+			      THEN CASE WHEN bi.reopen_on = 'time'
+			           THEN bi.snoozed_until > $%d
+			           ELSE NOT %s END
 			      ELSE NOT EXISTS (
 				SELECT 1 FROM activity a
 				JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
@@ -344,7 +325,9 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 				  -- lineage read bounds itself the same way, so an unbounded
 				  -- one here would return deals whose card can say nothing.
 				  AND a.occurred_at <= $%d) END)`,
-		briefBaseValueSQL(fmt.Sprintf("$%d", asOfPos), fmt.Sprintf("$%d", basePos), "d"), userPos, asOfPos, asOfPos)
+		briefBaseValueSQL(fmt.Sprintf("$%d", asOfPos), fmt.Sprintf("$%d", basePos), "d"), userPos, asOfPos,
+		briefSnoozeLiftedSQL("d.id", "bi.reopen_on", "bi.reopen_ref", "bi.state_at", fmt.Sprintf("$%d", asOfPos)),
+		asOfPos)
 	if scope != "" {
 		q += " AND " + scope
 	}

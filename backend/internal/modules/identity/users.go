@@ -69,11 +69,16 @@ var (
 // again; existing sessions stay revoked and are re-minted on the next login.
 // Idempotent on an already-active member. Admin-only. Emits user.reactivated.
 func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids.UserID) error {
-	if !actor.hasRole(roleAdmin) {
-		return apperrors.ErrPermissionDenied
+	ctx, err := admit(ctx, actor, objectUserAdmin, principal.ActionDelete)
+	if err != nil {
+		return err
 	}
-	ctx = actorCtx(ctx, actor)
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Restoring an admin somebody removed is the mirror of removing one, so
+		// it carries the same ceiling.
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, userID); err != nil {
+			return err
+		}
 		var status, seat string
 		err := tx.QueryRow(ctx,
 			`SELECT status, seat_type FROM app_user WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
@@ -195,11 +200,17 @@ type DeactivateUserInput struct {
 // without polling). Admin-only; idempotent on an already-deactivated
 // user (no duplicate event).
 func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in DeactivateUserInput) error {
-	if !actor.hasRole(roleAdmin) {
-		return apperrors.ErrPermissionDenied
+	ctx, err := admit(ctx, actor, objectUserAdmin, principal.ActionDelete)
+	if err != nil {
+		return err
 	}
-	ctx = actorCtx(ctx, actor)
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// A delegated holder must not lock out an administrator. The last-admin
+		// invariant below is a different question — it stops the LAST one going
+		// whoever asks — and neither substitutes for the other.
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, in.UserID); err != nil {
+			return err
+		}
 		var status string
 		err := tx.QueryRow(ctx,
 			`SELECT status FROM app_user WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
@@ -346,11 +357,22 @@ func userDeactivatedPayload(userID ids.UserID, by ids.UserID, reason *string) cr
 // grant. from_role rides the payload only when the previous state was a
 // single role — a multi-role history has no one "from". Admin-only.
 func (s *Service) ChangeUserRole(ctx context.Context, actor Identity, userID ids.UserID, toRole string) error {
-	if !actor.hasRole(roleAdmin) {
-		return apperrors.ErrPermissionDenied
+	ctx, err := admit(ctx, actor, objectUserAdmin, principal.ActionUpdate)
+	if err != nil {
+		return err
 	}
-	ctx = actorCtx(ctx, actor)
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Both halves of the ceiling. Who the target IS bounds whether this
+		// caller may touch them at all; what the new role CONFERS bounds what
+		// they may hand out. A caller passing the first and not the second would
+		// promote an ordinary member into authority the caller lacks, and then
+		// hold it by proxy.
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, userID); err != nil {
+			return err
+		}
+		if err := refuseUnlessCallerMayAssign(ctx, tx, actor, toRole); err != nil {
+			return err
+		}
 		// The target is read rather than merely proved to exist, because what it
 		// IS decides the answer: an agent seat holds no role at all.
 		var isAgent bool

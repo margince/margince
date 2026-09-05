@@ -67,22 +67,24 @@ var fxConversionExempt = gatekit.Waive(map[string]string{
 	"internal/modules/deals/basecurrencyfreeze.go": "the CLOSE-time freeze, which is a different question: a " +
 		"closed deal stores the rate it was converted at, where this engine answers what an OPEN one converts " +
 		"at today",
-	"internal/modules/deals/deal_advance.go": "the same freeze at the moment it happens — advancing to won " +
-		"reads the rate once and stores it on the deal, which is why a closed figure never moves again",
+	"internal/modules/deals/basecurrencyfreezewrite.go": "the same freeze at the moment it happens — closing " +
+		"reads the rate once and stores it, with the amount it converts to, on the deal, which is why a " +
+		"closed figure never moves again. The conversion itself is ConvertToBase, the engine this gate " +
+		"protects, called here rather than re-spelled",
 	"internal/compose/rateproposals_integration_test.go": "a test seeding and asserting on rate rows. It reads " +
 		"the table to arrange and to check, never to convert an amount for a reader",
 	"gates/onecurrencyconversion_test.go": "this gate itself: the probes below are planted defects, and " +
 		"judging them would report its own evidence as a finding. The file holds nothing but the gate, so " +
 		"skipping it whole costs no coverage — unlike a census whose probes sit beside real code, where the " +
 		"exemption belongs on the declaration",
-	"internal/compose/basecurrencysql.go": "the SAME fourth conversion as briefs/briefrank.go below, and the " +
+	"internal/compose/basecurrencysql.go": "the SAME fourth conversion as briefs/briefbasevalue.go below, and the " +
 		"reason it is now spelled in two files rather than one is a Go import cycle: compose imports briefs, " +
 		"so briefs cannot call this. Both are held character-identical by TestOneSpellingOfADealsBaseValue, " +
 		"which fails in both directions. It answers the wider question the brief's copy answers — a CLOSED " +
 		"deal reads its frozen amount_minor_base rather than converting — and moving the pair into the " +
 		"engine means teaching the engine that frozen case, which is its own change. Recorded as a known " +
 		"copy rather than an unnoticed one",
-	"internal/compose/briefs/briefrank.go": "a FOURTH conversion, and the only ratified one that could reach " +
+	"internal/compose/briefs/briefbasevalue.go": "a FOURTH conversion, and the only ratified one that could reach " +
 		"the engine — it is in compose. It converts inside a larger ranking query and answers a wider " +
 		"question than the engine does: a CLOSED deal reads its frozen amount_minor_base, which is a stored " +
 		"figure rather than a conversion. Moving it means restructuring that query and teaching the engine " +

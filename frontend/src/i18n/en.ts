@@ -262,6 +262,13 @@ export const en = {
   "search.tier.mirrored": "from a connected system",
   "search.tier.unverified": "unverified",
 
+  "context.recentTouches": "Recent conversations",
+  "context.openTasks": "Open tasks",
+  "context.relatedPeople": "Related people",
+  "context.relatedCompanies": "Related companies",
+  "context.relatedProjects": "Related projects",
+  "context.whoKnows": "Who knows them",
+  "context.relatedDeals": "Related deals",
   "context.title": "Related evidence",
   "context.empty": "Nothing related yet.",
 
@@ -557,6 +564,11 @@ export const en = {
   // a destination.
   "ref.nameLoadFailed": "Name didn't load",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
+
+  // A record search that ANSWERED and found nothing. Distinct from a search
+  // that has not run: both drew the same empty space before, and a reader
+  // could not tell "nobody here" from a field still thinking.
+  "picker.noMatch": "No match",
 
   // The app-level boundary's fallback. It says what happened and what to do
   // next, and nothing about the error itself: a render throw carries our own
@@ -917,10 +929,12 @@ export const en = {
   "co.strip.lastTouch.theirs": "They wrote last",
   "co.strip.lastTouch.ours": "You wrote last",
   "co.strip.lastTouch.never": "No exchange yet",
-  "co.strip.next": "Next",
+  // Named for what the card READS. "Next" over a meeting date, on a card whose
+  // door opened the task list, let a company with a due task and no meeting
+  // booked read as a contradiction with itself.
+  "co.strip.nextMeeting": "Next meeting",
   "co.strip.next.none": "Nothing scheduled",
   "co.strip.open.history": "Open history",
-  "co.strip.open.tasks": "Open tasks",
   "co.360.thread": "What happened",
   "co.360.threadCount": "What happened · {count}",
   "co.360.fullHistory": "Full history",
@@ -1072,6 +1086,12 @@ export const en = {
   "roompage.text.welcomeLabel": "Welcome message",
   "roompage.viewAsBuyer": "View as buyer",
   "roompage.previewArchived": "An archived room has nothing to preview.",
+  // Deliberately does NOT say "only the owner". The preview also opens for a
+  // manager, an admin and anybody holding a write grant on the deal, so naming
+  // the owner would send a reader who already has the right access to ask the
+  // wrong person for it.
+  "roompage.previewNotYours":
+    "Your access to this deal does not include the buyer preview.",
   "access.title": "Access",
   "access.sub": "Who may enter, and what each person may do.",
   "access.invite": "Invite",
@@ -2399,6 +2419,13 @@ export const en = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Stalled only",
   "deals.filterOwnerMe": "My deals",
+  // Both reasons say "loaded only" rather than naming the sum alone: with no
+  // server aggregate the column's figure is the cards LOADED, and the board
+  // pages on demand, so that number grows as the reader presses Load more.
+  // Naming only the total would leave the count reading as final.
+  "deals.totalsNeedOwnerFilter":
+    "Loaded only — filter to My deals for the total",
+  "deals.totalsNoTagFilter": "Loaded only — no total while a tag filters",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Any partner",
   "deals.filterForecast": "Forecast",
@@ -2520,20 +2547,9 @@ export const en = {
   "home.pipelinePartial":
     "{count} deals are not in these figures — your access does not cover them.",
   "home.pipelineUnavailable": "This figure could not be loaded.",
-  "home.asOf": "as of {at}",
-  "home.generating": "Assembling…",
-  "home.generate": "Get today's brief now",
-  "home.noneBody":
-    "Your morning brief ranks the deals worth your first hour — winnability, revenue, timing, momentum, and warmth, each factor with its evidence. It is assembled overnight, so it is waiting for you tomorrow morning once you have open deals.",
-  "home.honestShort":
-    "Only {count} deals cleared the bar — the queue is never padded.",
-  "home.overflow":
-    "Showing the {shown} highest-ranked of {count} qualifying deals.",
   // The morning brief's own narrative. The "no pass" line is the honest degrade:
   // a run nobody annotated and a night with nothing in it read identically as
   // silence, so the screen says which one this is.
-  "home.narrativeNoPass":
-    "No overnight summary today — Margince did not run a pass on this brief. The ranking below is still today's.",
   // The week just gone. No nav entry of its own: Today is the single door to
   // the work that waits on a person, and this is a view of that same work.
   "home.panel.weekly": "Last week",
@@ -2543,7 +2559,6 @@ export const en = {
   "plan.title": "Plan next week",
   // The head of the ranked queue, on the page a rep opens first. The same rows
   // the Worklist draws, in the order the server decided.
-  "brief.donext.title": "Do next",
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
   "brief.eyebrow": "Your morning",
@@ -2573,10 +2588,19 @@ export const en = {
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet": "A quiet week — nothing closed and nothing moved.",
 
-  "brief.donext.sub": "One order, from your worklist.",
-  "brief.donext.loading": "Reading what waits on you",
-  "brief.donext.clear": "Nothing is waiting on you right now.",
-  "brief.donext.rest": "{count} more on the worklist",
+  "brief.changed.lead": "Changed since the brief:",
+  "brief.changed.more": "+{count} more",
+  "brief.changed.open": "Open the worklist",
+  "brief.feed.title": "Today",
+  "brief.feed.sub": "One order, decided once.",
+  "brief.feed.loading": "Reading your morning",
+  "brief.feed.clear": "Nothing is waiting on you right now.",
+  "brief.feed.rest": "{count} more on the worklist",
+  "brief.feed.section.respond_now": "Respond now",
+  "brief.feed.section.prepare_conversations": "Prepare conversations",
+  "brief.feed.section.move_revenue": "Move revenue",
+  "brief.feed.section.build_pipeline": "Build pipeline",
+  "brief.feed.section.review_and_repair": "Review and repair",
 
   // A team's week, frozen when it closed. Two weeks compare because neither
   // moves under the comparison.
@@ -2696,10 +2720,6 @@ export const en = {
   "home.weekly.outcome.moved": "moved",
   "home.weekly.outcome.won": "won",
   "home.weekly.outcome.lost": "lost",
-  "home.focus.allAbove":
-    "Everything the night suggested is already above, in what waits on you.",
-  "home.quietRun":
-    "Nothing cleared the bar this morning. No invented urgency — enjoy the quiet.",
   "home.act": "Done",
   "home.dismiss": "Dismiss",
   "home.actedState": "acted",
@@ -2738,7 +2758,6 @@ export const en = {
   "home.glance.introWeekly": "This is the week you just closed.",
   "home.glance.intro": "Here is your day.",
   "home.panel.decisions": "Waiting on you",
-  "home.panel.focus": "Focus when time opens",
   "home.panel.overnight": "Overnight",
   "home.panel.position": "Position",
   "home.panel.schedule": "Today's schedule",
@@ -2753,22 +2772,26 @@ export const en = {
   "home.readings.label": "Your morning, in five readings",
   "home.readings.truncated":
     "A source was read to its limit, so every figure above is a floor.",
+  "home.readings.urgent": "Urgent moves",
+  "home.readings.urgentBasis": "somebody waiting or a promise breaking",
+  "home.readings.decisions": "Decisions waiting",
+  "home.readings.decisionsBasis": "somebody is blocked until you answer",
+  "home.readings.pipeline": "Pipeline outlook",
+  "home.readings.pipelineWorkspace": "Pipeline outlook · whole organization",
+  "home.readings.pipelineBasis":
+    "{weighted} weighted · {priced} of {eligible} priced",
+  "home.readings.pipelineUnread": "the pipeline could not be read",
+  "home.readings.pipelineReading": "reading the pipeline",
   "home.readings.openLane": "Open these",
-  "home.readings.waiting": "Customer waiting",
-  "home.readings.waitingBasis": "waiting on an answer",
   "home.readings.meetings": "Meetings ahead",
   "home.readings.meetingsBasis": "on today's calendar",
   "home.readings.needsPrep_one": "1 needs prep",
   "home.readings.needsPrep_other": "{count} need prep",
   "home.readings.prepUnknown": "not all could be checked",
   "home.readings.prepared": "all prepared",
-  "home.readings.promises": "Promises due",
-  "home.readings.promisesBasis": "promises are not tracked yet",
   "home.readings.leads": "Lead response",
   "home.readings.leadsBasis": "owed a first answer",
   "home.readings.leadsDue": "next due {value}",
-  "home.readings.quota": "Quota pace",
-  "home.readings.quotaBasis": "no target is set",
   "home.rail": "Context",
   "home.pct": "{pct}%",
   "home.deck.later": "Later",
@@ -3157,6 +3180,7 @@ export const en = {
   "log.kindTask": "Task",
   "log.kindMeeting": "Meeting",
   "log.kindCall": "Call",
+  "log.attendee": "Who was there",
   "log.subject": "Subject",
   "log.body": "Details",
   "log.transcriptLabel": "Transcript",
@@ -3284,7 +3308,7 @@ export const en = {
     "This continues their own message, so it needs no reason from you.",
   "compose.sendLaterLabel": "Send later (optional)",
   "compose.send": "Send",
-  "compose.sendConfirmTitle": "Send this email?",
+  "compose.sendConfirmTitle": "Draft email",
   "compose.threadHeading": "This conversation",
   "compose.continueHeading": "Continue a conversation?",
   "compose.threadLeave": "Choose another",
@@ -3293,7 +3317,7 @@ export const en = {
   "compose.threadContinuing": "The last exchange, which this will continue",
   "compose.threadPending": "Loading the conversation\u2026",
   "compose.sendBody":
-    "You are sending this email now. This is an outbound, irreversible action.",
+    "Review and edit your draft. Clicking Send sends this email and cannot be undone.",
   // A moment picked in the field above turns this dialog into a different
   // promise, so it says a different thing. The three sentences it replaces all
   // claim the send is happening NOW and is irreversible; a scheduled message is
@@ -3364,6 +3388,60 @@ export const en = {
   "analytics.sections": "Analytics sections",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
+  "analytics.sectionPerformance": "Performance",
+  "analytics.noClosedDeals": "No deals have closed yet.",
+  "analytics.sectionOutcomes": "My outcomes",
+  "analytics.sectionCoverage": "Data coverage",
+  "analytics.sectionDelivery": "Delivery",
+  "analytics.reportProjectsByPhase": "Projects by phase",
+  "analytics.reportProjectCommitments": "Project promises",
+  "analytics.reportProjectsGoneQuiet": "Projects gone quiet",
+  "analytics.projects": "Projects",
+  "analytics.project": "Project",
+  "analytics.openDealValue": "Open deal value ({currency})",
+  "analytics.wonDealValue": "Won deal value ({currency})",
+  "analytics.openCommitments": "Open",
+  "analytics.overdueCommitments": "Overdue",
+  "analytics.quietSince": "Quiet since",
+  "analytics.nothingQuiet": "No delivering project has gone quiet.",
+  "analytics.noProjectsYet": "No projects yet — a won deal opens one.",
+  "analytics.coverageSub":
+    "Which sources the nightly check could read, and how far. A quiet source that was read is checked; an unread one says why.",
+  "analytics.covSource": "Source",
+  "analytics.covState": "State",
+  "analytics.covThrough": "Checked through",
+  "analytics.covChecked": "Checked",
+  "analytics.covStale": "Stale — nothing read recently",
+  "analytics.covUnavailable": "Unavailable — the check could not read it",
+  "analytics.covPermissionLimited": "Access needs re-granting",
+  "analytics.covNotConnected":
+    "Not connected — nothing to fix, something to decide",
+  "analytics.coverageInputsElsewhere":
+    "Record-level input problems are listed and resolved in the Forecast input review.",
+  "analytics.myPipeline": "My open pipeline",
+  "analytics.myMeetings": "My meetings",
+  "analytics.meetingsAsTheyStand":
+    "Meetings you host, by where each stands today — a held meeting no longer counts as booked.",
+  "analytics.meetingsBooked": "Booked",
+  "analytics.meetingsHeld": "Held",
+  "analytics.meetingsNoShow": "No-show",
+  "analytics.meetingsCanceled": "Canceled",
+  "analytics.outcomesOwnLensOnly":
+    "This view answers for one seat. Your lens covers more than your own records, so the wider sections carry your numbers.",
+  "analytics.openOutcomeDeals": "Open the {outcome} deals",
+  "analytics.reportWinLoss": "Won and lost",
+  "analytics.reportStageAge": "Time in stage",
+  "analytics.outcome": "Outcome",
+  "analytics.won": "Won",
+  "analytics.lost": "Lost",
+  "analytics.baseValue": "Value ({currency})",
+  "analytics.medianDaysToClose": "Median days to close",
+  "analytics.p75DaysToClose": "P75 days to close",
+  "analytics.medianDaysInStage": "Median days in stage",
+  "analytics.p75DaysInStage": "P75 days in stage",
+  "analytics.tooFewForMedian": "Too few to say",
+  "analytics.days": "{days} days",
+  "analytics.unknownStage": "Former stage",
   "analytics.share.open": "Share view",
   "analytics.share.title": "Share this view",
   "analytics.share.kindLegend": "What the link shows",
@@ -3395,6 +3473,18 @@ export const en = {
   "review.needsReview": "Needs review",
   "review.checksIncomplete": "Checks incomplete",
   "review.allSourcesRead": "Every source was read.",
+  // The sources a run reads, named for the reader rather than by the server's
+  // own vocabulary. The unread line printed the wire keys verbatim, so a German
+  // reader was told "mail, offers" in English — words that name a table, not a
+  // thing they would go and fix.
+  "review.source.mail": "the mailbox",
+  "review.source.calendar": "the calendar",
+  "review.source.documents": "documents",
+  "review.source.contracts": "contracts",
+  "review.source.incumbent": "the incumbent system",
+  "analytics.coverageNeverRun":
+    "No check has run yet. A fresh installation has not been looked at — different from one that was looked at and found healthy.",
+  "review.source.offers": "offers",
   "review.sourcesUnread":
     "Not read: {sources}. Findings below cover only what could be checked.",
   "review.notCheckedYet":
@@ -3600,6 +3690,25 @@ export const en = {
   "agent.activity.documentExtractNamed.degraded":
     "I got partway through {name} and stopped.",
   "agent.activity.documentExtractNamed.failed": "I couldn't read {name}.",
+  // A company's website being read. The same shape as the document lines: the
+  // unnamed pair says which kind of thing, the named one says which company.
+  "agent.activity.siteRead.queued": "The company website is queued to be read.",
+  "agent.activity.siteRead.running": "I'm reading the company website.",
+  "agent.activity.siteRead.stalled":
+    "Reading the company website has taken unusually long. It may have stopped.",
+  "agent.activity.siteRead.done": "I've read the company website.",
+  "agent.activity.siteRead.degraded":
+    "I stopped before finishing the company website.",
+  "agent.activity.siteRead.failed": "I couldn't read the company website.",
+  "agent.activity.siteReadNamed.queued":
+    "The {name} website is queued to be read.",
+  "agent.activity.siteReadNamed.running": "I'm reading the {name} website.",
+  "agent.activity.siteReadNamed.stalled":
+    "Reading the {name} website has taken unusually long. It may have stopped.",
+  "agent.activity.siteReadNamed.done": "I've read the {name} website.",
+  "agent.activity.siteReadNamed.degraded":
+    "I stopped before finishing the {name} website.",
+  "agent.activity.siteReadNamed.failed": "I couldn't read the {name} website.",
   // The AI work a person ASKS for and then waits on. Same rules as the
   // scheduled lines above — first person, result first, and never a word that
   // reads as finished on a run that stopped part-way.
@@ -4406,7 +4515,7 @@ export const en = {
   "overnightGrant.help":
     "It reads your deals and mail to rank what needs you today, and writes notes back. It cannot send: the permission you give here covers reading and writing only, never sending.",
   "overnightGrant.danger":
-    "Without this, your morning brief, your worklist lanes and your weekly review stay empty. These are the screens Margince opens on, so most of the product will look like it is not working.",
+    "Without this permission, the overnight agent cannot read or annotate your brief. Your records, worklist and scheduled weekly review remain available.",
   "overnightGrant.saveFailed":
     "Your answer to the overnight question could not be saved. Everything else is connected — set it under Settings → Connections when you are in.",
   "overnightGrant.renew":
@@ -5653,6 +5762,7 @@ export const en = {
   "recordmail.send": "Write email",
   "deal360.rewrite": "Write it again",
   "deal360.readFull": "Read the full briefing",
+  "deal360.openTask": "Open existing task",
   "deal360.createTask": "Add this task",
   "deal360.openBrief": "Open the meeting brief",
   "deal360.unreadable":
@@ -8090,18 +8200,24 @@ export const en = {
   "worklist.bandClear.keep_momentum": "Nothing agreed is drifting.",
   "worklist.bandClear.review": "Nothing to review.",
   "worklist.disposition.verb.snooze": "Snooze",
+  "worklist.disposition.snoozeForDays_one": "Snooze for {value} day",
+  "worklist.disposition.snoozeForDays_other": "Snooze for {value} days",
   "worklist.disposition.snoozeFor": "For how long",
   "worklist.disposition.snoozeDays_one": "{value} day",
   "worklist.disposition.snoozeDays_other": "{value} days",
+  "worklist.disposition.snoozeUntil.reply": "Until they reply",
   "worklist.disposition.verb.not_mine": "Not mine",
   "worklist.disposition.verb.not_sales": "Not a customer",
   "worklist.disposition.done.snooze": "Back on your list tomorrow.",
   "worklist.disposition.doneSnooze_one": "Back on your list tomorrow.",
   "worklist.disposition.doneSnooze_other": "Back on your list in {value} days.",
+  "worklist.disposition.doneSnoozeUntil.reply":
+    "Back on your list when they reply.",
   "worklist.disposition.done.not_mine":
     "Off your list. Whoever owns it still sees it.",
   "worklist.disposition.done.not_sales": "Off everyone's list.",
   "worklist.disposition.swipeCancel": "Keep it",
+  "worklist.disposition.menu": "Take off the list",
   "worklist.disposition.undo": "Undo",
   "worklist.disposition.undoFailed":
     "That could not be undone. The message is still off your list.",

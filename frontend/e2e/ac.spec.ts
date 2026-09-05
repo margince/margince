@@ -1339,29 +1339,23 @@ test.describe("§3.8: 390px mobile", () => {
   // The approval is FIXED: its decision moved into a drawer, and the row went
   // from 657px to 205px, inside its 208px ceiling.
   //
-  // The second is an ORDINARY TASK at 284px against 176px, and no drawer
-  // touches it. Measured 2026-09-05, its parts are: rank 19, title 49 (it
-  // wraps to two lines at 390px), when/because/consequence 57, dispositions
-  // 44, verbs 44, and ~71 of gap and padding. Every one of those was added
-  // deliberately and the 44px floor is the touch target the row owes a thumb,
-  // so there is no slack to reclaim by tightening. A 176px row cannot hold
-  // this anatomy on a phone: something has to be dropped or folded, and which
-  // is a product decision rather than a fix. Left failing rather than
-  // relaxed, so the decision is made by someone rather than by a number
-  // quietly rising.
+  // The second is an ORDINARY TASK, and no drawer touches it. It measures
+  // 205px against a 176px ceiling. Its parts: title 49 (the category badge
+  // wraps to a second line at 390px), the three facts on ONE line 19,
+  // consequence 19, the primary verbs 44, rank 19, and the rest gap and
+  // padding.
   //
-  // The tall row measures 227px against its 176px ceiling. Its parts: title 49
-  // (two lines at 390px), when/because/consequence 57, the primary verbs 44,
-  // rank 19, and ~58 of gap and padding. The set-aside verbs are no longer
-  // among them — below the fold they leave the row and it is swiped instead
-  // (screens/worklist.dispositions.tsx, design-system/swiperow.tsx).
+  // Two rounds have now taken what can be taken. The set-aside verbs left the
+  // row for a swipe (284 -> 227), and the deadline stopped being printed twice
+  // — `when` gives the hour and `due_today` gave the day underneath it, so the
+  // phrase gives way and the remaining facts share one line (227 -> 205).
   //
-  // The 44px band that remains is the row's PRIMARY actions, which is how a rep
-  // does the work: putting those behind a gesture would empty the queue of what
-  // it exists for, and 44px is the touch target rather than a style. So closing
-  // the last 51px means folding the caption block, raising a ceiling that was
-  // never measured, or dropping the rank badge on a phone — each a product
-  // decision rather than a fix.
+  // What is left is not padding. The 44px band is the row's PRIMARY actions,
+  // which is how a rep does the work; 44px is the touch target rather than a
+  // style. The 49px title is 49 because the category badge wraps, and the badge
+  // says what kind of work the row is. Closing the last 29px means dropping a
+  // fact rather than a duplicate — or raising a ceiling that was never measured
+  // and which the decision rows already set at 208.
   //
   // Left failing rather than relaxed, so the decision is made by someone rather
   // than by a number quietly rising to agree with the defect.

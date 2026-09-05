@@ -113,7 +113,7 @@ func (c *weeklyNarrativeCase) Run(ctx context.Context, completer aitasks.Complet
 // judge, and scoring it against the expectation would credit or blame a model
 // for prose the product would have thrown away.
 func (c *weeklyNarrativeCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
-	sentence, err := narrative.Parse(trace.Output)
+	sentence, err := narrative.Parse(trace.Output, c.in)
 	if err != nil {
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeInvalid,
