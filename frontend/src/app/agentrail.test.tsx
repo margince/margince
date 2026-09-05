@@ -219,7 +219,7 @@ function stubAgentRailApi(routes: FetchRoutes = {}) {
     if (pathname.endsWith("/me/ai-activity")) {
       return routes.agentActivity
         ? routes.agentActivity()
-        : jsonResponse({ running: [], recent: [] });
+        : jsonResponse({ running: [], recent: [], faults: [] });
     }
     if (pathname.endsWith("/me")) {
       return routes.me
@@ -969,16 +969,35 @@ describe("AgentRail", () => {
 
   const withRuns = (...running: readonly unknown[]) =>
     stubAgentRailApi({
-      agentActivity: () => jsonResponse({ running, recent: [] }),
+      agentActivity: () => jsonResponse({ running, recent: [], faults: [] }),
     });
 
   /** A run that has SETTLED. The read puts these in `recent` and never in
    *  `running` (compose/agentactivity `recentSQL` vs `runningSQL`), and
    *  `degrade_reason` and `summary` are written alongside the terminal status —
    *  so this is the only shape those two fields ever arrive in. */
+  // Faults are DERIVED from the settled rows here exactly as the server derives
+  // them: a run that failed a minute ago is in both arms, because both
+  // statements about it are true. A stub that carried a failed run in `recent`
+  // alone would be describing a server that does not exist.
+  const faultsAmong = (rows: readonly unknown[]) =>
+    rows.filter((row) => {
+      const state = (row as { state?: string }).state;
+      return state === "failed" || state === "degraded";
+    });
+
   const withSettled = (...recent: readonly unknown[]) =>
     stubAgentRailApi({
-      agentActivity: () => jsonResponse({ running: [], recent }),
+      agentActivity: () =>
+        jsonResponse({ running: [], recent, faults: faultsAmong(recent) }),
+    });
+
+  // The case this arm exists for: a fault that has already been pushed out of
+  // `recent` by ten later successes, and is still unacknowledged.
+  const withEvictedFault = (fault: unknown, settled: readonly unknown[]) =>
+    stubAgentRailApi({
+      agentActivity: () =>
+        jsonResponse({ running: [], recent: settled, faults: [fault] }),
     });
 
   const BRIEF_RUNNING = "I'm putting your morning brief together.";
@@ -1062,7 +1081,8 @@ describe("AgentRail", () => {
   it("keeps the agent's line and the tool's narration in separate slots", async () => {
     vi.useFakeTimers();
     stubAgentRailApi({
-      agentActivity: () => jsonResponse({ running: [RUN()], recent: [] }),
+      agentActivity: () =>
+        jsonResponse({ running: [RUN()], recent: [], faults: [] }),
     });
     const { container } = render(ROUTE);
     // Inside the ticker's LINGER_MS, so the mount-time reads it named are still
@@ -1093,7 +1113,8 @@ describe("AgentRail", () => {
           over_limit: false,
           checked_at: "2026-08-01T09:00:00Z",
         }),
-      agentActivity: () => jsonResponse({ running: [RUN()], recent: [] }),
+      agentActivity: () =>
+        jsonResponse({ running: [RUN()], recent: [], faults: [] }),
     });
     const { container } = render(ROUTE);
     await waitFor(() =>
@@ -1164,6 +1185,37 @@ describe("AgentRail", () => {
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("error"),
     );
+    await openPanel(user, container);
+    await waitFor(() =>
+      expect(block(container).getAttribute("data-core-state")).toBe("idle"),
+    );
+  });
+
+  // THE DEFECT THIS ARM EXISTS FOR. The overnight run fails at four, and by the
+  // time its owner looks, ten later runs have settled — so it is gone from
+  // `recent`, which keeps the newest ten of any outcome. Read from there, the
+  // orb released a fault nobody had ever seen: the product knew its overnight
+  // work failed and stopped saying so.
+  it("holds a failed run the day's later successes have pushed out of recent", async () => {
+    window.localStorage.removeItem("margince.agent.faults-seen");
+    const overnight = RUN({
+      id: "019f7e65-fbf7-7114-b114-40af4af63b03",
+      state: "failed",
+    });
+    // Ten settled runs, none of them the fault — the shape `recent` has by
+    // mid-morning on any working day.
+    const later = Array.from({ length: 10 }, (_, i) =>
+      RUN({ id: `019f7e65-fbf7-7114-b114-40af4af640${10 + i}`, state: "done" }),
+    );
+    withEvictedFault(overnight, later);
+    const user = userEvent.setup();
+    const { container } = render(ROUTE);
+
+    await waitFor(() =>
+      expect(block(container).getAttribute("data-core-state")).toBe("error"),
+    );
+    // And it still clears the ordinary way, so the arm changed where the fault
+    // is read from and nothing about how it is answered.
     await openPanel(user, container);
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("idle"),

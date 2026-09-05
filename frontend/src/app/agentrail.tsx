@@ -1101,7 +1101,7 @@ export function AgentRail({
   const ticker = useAgentTicker();
   const spend = useAiSpend();
   const { locale } = useLocale();
-  const { fault, acknowledge } = useAgentFault(server.recent);
+  const { fault, acknowledge } = useAgentFault(server.faults);
   const { state, cause } = derive(signals, server, fault);
 
   // What the screen's margins draw, published rather than re-derived: the reads

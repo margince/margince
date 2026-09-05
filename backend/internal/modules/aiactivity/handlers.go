@@ -26,7 +26,7 @@ import (
 // rather than in SQL — can be pinned without a database. *Store is the
 // production implementation.
 type Reader interface {
-	Mine(ctx context.Context, startOfToday time.Time, kinds []string) (live, settled []Item, err error)
+	Mine(ctx context.Context, startOfToday time.Time, kinds []string) (Feed, error)
 }
 
 // Handlers serves one person's view of the AI's work.
@@ -66,15 +66,21 @@ func (h Handlers) GetMyAiActivity(w http.ResponseWriter, r *http.Request, params
 		return
 	}
 	now := h.now()
-	live, settled, err := h.store.Mine(r.Context(), startOfDay(now), kinds)
+	feed, err := h.store.Mine(r.Context(), startOfDay(now), kinds)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AiActivity{
 		AsOf:    now,
-		Running: toWire(live),
-		Recent:  toWire(settled),
+		Running: toWire(feed.Live),
+		Recent:  toWire(feed.Settled),
+		// What went wrong today, carried beside what settled rather than found
+		// inside it. `recent` is the newest ten occurrences of any outcome, so
+		// ten later successes push a fault off it — and the rail holds a fault
+		// until somebody acknowledges it, which is precisely the case where
+		// nobody has looked yet.
+		Faults: toWire(feed.Faults),
 	})
 }
 
