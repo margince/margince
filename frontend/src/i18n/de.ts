@@ -6833,6 +6833,10 @@ export const de = {
   "ownerIdentities.confirm": "Hinzufügen",
   "ownerIdentities.kindLabel": "Was geben Sie an?",
   "ownerIdentities.kind.address": "Eine Adresse",
+  "ownerIdentities.learned.deliveredTo":
+    "Automatisch gefunden — Mail an diese Adresse landet in deinem verbundenen Postfach. Entfern sie, wenn das nicht du bist.",
+  "ownerIdentities.learned.provider":
+    "Von deinem Mailanbieter als eine deiner eigenen Adressen gemeldet. Entfern sie, wenn das nicht du bist.",
   "ownerIdentities.kind.domain": "Eine ganze Domain",
   "ownerIdentities.valueLabel": "Adresse oder Domain",
   "ownerIdentities.addressPlaceholder": "sie@beispiel.de",

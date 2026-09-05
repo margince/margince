@@ -50,7 +50,19 @@ const (
 	// request, and asking for a wider scope is a decision about what the
 	// product asks of a user rather than a detail of this store.
 	IdentitySourceProvider = "provider"
+	// IdentitySourceDeliveredTo is a forwarding alias the product discovered
+	// from the receiving server's own delivery header (aliasdiscovery.go). Its
+	// own word rather than 'user', because a seat looking at an address they
+	// never typed deserves to see that it was inferred — and to remove it.
+	IdentitySourceDeliveredTo = "delivered_to"
 )
+
+// aliasDiscoveryActor is what created_by records for an identity nobody typed.
+// The column takes a principal in the contract's declared grammar, and the
+// discovery runs under the capturing connector — but naming that connector
+// would say a provider attested this address, which is what
+// IdentitySourceProvider means and is not what happened.
+const aliasDiscoveryActor = "system:alias-discovery"
 
 // OwnerIdentity is one of a seat's own addresses as stored.
 type OwnerIdentity struct {

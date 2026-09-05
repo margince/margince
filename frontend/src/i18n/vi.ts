@@ -6762,6 +6762,10 @@ export const vi = {
   "ownerIdentities.confirm": "Thêm",
   "ownerIdentities.kindLabel": "Bạn đang khai báo gì?",
   "ownerIdentities.kind.address": "Một địa chỉ",
+  "ownerIdentities.learned.deliveredTo":
+    "Được tìm thấy tự động — thư gửi tới địa chỉ này rơi vào hộp thư bạn đã kết nối. Hãy xoá nếu đó không phải là bạn.",
+  "ownerIdentities.learned.provider":
+    "Nhà cung cấp thư của bạn báo đây là một trong các địa chỉ của chính bạn. Hãy xoá nếu đó không phải là bạn.",
   "ownerIdentities.kind.domain": "Cả một tên miền",
   "ownerIdentities.valueLabel": "Địa chỉ hoặc tên miền",
   "ownerIdentities.addressPlaceholder": "ban@vidu.com",

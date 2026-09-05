@@ -6893,6 +6893,10 @@ export const en = {
   "ownerIdentities.confirm": "Add",
   "ownerIdentities.kindLabel": "What are you declaring?",
   "ownerIdentities.kind.address": "One address",
+  "ownerIdentities.learned.deliveredTo":
+    "Found automatically — mail addressed here delivers into your connected mailbox. Remove it if that is not you.",
+  "ownerIdentities.learned.provider":
+    "Reported by your mail provider as one of your own addresses. Remove it if that is not you.",
   "ownerIdentities.kind.domain": "A whole domain",
   "ownerIdentities.valueLabel": "Address or domain",
   "ownerIdentities.addressPlaceholder": "you@example.com",

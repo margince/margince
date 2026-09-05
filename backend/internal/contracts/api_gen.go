@@ -2328,13 +2328,16 @@ func (e CaptureExclusionScope) Valid() bool {
 
 // Defines values for CaptureOwnerIdentitySource.
 const (
-	CaptureOwnerIdentitySourceProvider CaptureOwnerIdentitySource = "provider"
-	CaptureOwnerIdentitySourceUser     CaptureOwnerIdentitySource = "user"
+	CaptureOwnerIdentitySourceDeliveredTo CaptureOwnerIdentitySource = "delivered_to"
+	CaptureOwnerIdentitySourceProvider    CaptureOwnerIdentitySource = "provider"
+	CaptureOwnerIdentitySourceUser        CaptureOwnerIdentitySource = "user"
 )
 
 // Valid indicates whether the value is a known member of the CaptureOwnerIdentitySource enum.
 func (e CaptureOwnerIdentitySource) Valid() bool {
 	switch e {
+	case CaptureOwnerIdentitySourceDeliveredTo:
+		return true
 	case CaptureOwnerIdentitySourceProvider:
 		return true
 	case CaptureOwnerIdentitySourceUser:
@@ -18676,6 +18679,15 @@ type CaptureOwnerIdentity struct {
 	// Source Where the claim came from. `user` is the seat typing it in. `provider` is an address a mail
 	// provider attests; nothing writes it yet, because reading a provider's send-as list needs a
 	// scope the connection grant does not request.
+	//
+	// `delivered_to` is a FORWARDING ALIAS the product discovered: an address that delivers into
+	// the connected mailbox but is never the From of anything it sends, so nothing on the send
+	// side could have found it. It is learned only from the receiving server's own delivery
+	// header, read from a position a sender could not have authored, and only once two distinct
+	// messages carry the same claim.
+	//
+	// It is its own word rather than `user` because a seat looking at an address they never typed
+	// is owed the difference — and, seeing it, may remove it like any other.
 	Source CaptureOwnerIdentitySource `json:"source"`
 
 	// Value The folded address or domain.
@@ -18690,6 +18702,15 @@ type CaptureOwnerIdentityListResponse struct {
 // CaptureOwnerIdentitySource Where the claim came from. `user` is the seat typing it in. `provider` is an address a mail
 // provider attests; nothing writes it yet, because reading a provider's send-as list needs a
 // scope the connection grant does not request.
+//
+// `delivered_to` is a FORWARDING ALIAS the product discovered: an address that delivers into
+// the connected mailbox but is never the From of anything it sends, so nothing on the send
+// side could have found it. It is learned only from the receiving server's own delivery
+// header, read from a position a sender could not have authored, and only once two distinct
+// messages carry the same claim.
+//
+// It is its own word rather than `user` because a seat looking at an address they never typed
+// is owed the difference — and, seeing it, may remove it like any other.
 type CaptureOwnerIdentitySource string
 
 // CaptureProviderAvailability Whether a connect started right now would proceed, decided by the same predicate the connect

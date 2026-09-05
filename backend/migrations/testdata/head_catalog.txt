@@ -1023,6 +1023,18 @@ public.brief_run.revenue_norm_minor bigint NOT NULL gen=- def=-
 public.brief_run.uq_brief_run_user_day UNIQUE (user_id, local_day)
 public.brief_run.user_id uuid NOT NULL gen=- def=-
 public.brief_run_pkey CREATE UNIQUE INDEX brief_run_pkey ON public.brief_run USING btree (id)
+public.capture_alias_sighting acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_alias_sighting.capture_alias_sighting_once_per_message UNIQUE (user_id, value, source)
+public.capture_alias_sighting.capture_alias_sighting_pkey PRIMARY KEY (id)
+public.capture_alias_sighting.capture_alias_sighting_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.capture_alias_sighting.capture_alias_sighting_value_check CHECK (((value = lower(value)) AND (value <> ''::text)))
+public.capture_alias_sighting.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_alias_sighting.id uuid NOT NULL gen=- def=uuidv7()
+public.capture_alias_sighting.source text NOT NULL gen=- def=-
+public.capture_alias_sighting.user_id uuid NOT NULL gen=- def=-
+public.capture_alias_sighting.value text NOT NULL gen=- def=-
+public.capture_alias_sighting_once_per_message CREATE UNIQUE INDEX capture_alias_sighting_once_per_message ON public.capture_alias_sighting USING btree (user_id, value, source)
+public.capture_alias_sighting_pkey CREATE UNIQUE INDEX capture_alias_sighting_pkey ON public.capture_alias_sighting USING btree (id)
 public.capture_auto_enrich_budget acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_auto_enrich_budget.budget_date date NOT NULL gen=- def=-
 public.capture_auto_enrich_budget.capture_auto_enrich_budget_pkey PRIMARY KEY (budget_date)
@@ -1181,7 +1193,7 @@ public.capture_import_user_idx CREATE INDEX capture_import_user_idx ON public.ca
 public.capture_owner_identity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_owner_identity.capture_owner_identity_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text])))
 public.capture_owner_identity.capture_owner_identity_pkey PRIMARY KEY (id)
-public.capture_owner_identity.capture_owner_identity_source_check CHECK ((source = ANY (ARRAY['user'::text, 'provider'::text])))
+public.capture_owner_identity.capture_owner_identity_source_check CHECK ((source = ANY (ARRAY['user'::text, 'provider'::text, 'delivered_to'::text])))
 public.capture_owner_identity.capture_owner_identity_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.capture_owner_identity.capture_owner_identity_user_value_key UNIQUE (user_id, kind, value)
 public.capture_owner_identity.capture_owner_identity_value_check CHECK (((value = lower(value)) AND (value <> ''::text)))
