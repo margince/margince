@@ -217,7 +217,7 @@ describe("FieldTable", () => {
       />,
     );
     expect(
-      screen.getByText(/No custom fields on Contact yet/i),
+      screen.getByText(/No custom fields on Person yet/i),
     ).toBeInTheDocument();
   });
 
@@ -389,7 +389,7 @@ describe("CustomFieldsAdmin", () => {
     await waitFor(() =>
       expect(screen.getByText("Renewal date")).toBeInTheDocument(),
     );
-    for (const name of [/Deal/, /Company/, /Contact/, /Lead/]) {
+    for (const name of [/Deal/, /Company/, /Person/, /Lead/]) {
       expect(screen.getByRole("button", { name })).toBeInTheDocument();
     }
   });
