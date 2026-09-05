@@ -4365,6 +4365,7 @@ export const vi = {
     "Hiện chưa đọc được trạng thái nhập — bản thân việc thu thập vẫn chạy.",
   "backfill.queuedTitle": "Đã xếp hàng lượt nhập",
   "backfill.runningTitle": "Đang nhập lịch sử thư của bạn",
+  "backfill.readingBadge": "Margince đang đọc",
   "backfill.doneTitle": "Đã nhập xong lịch sử",
   "backfill.errorTitle": "Lượt nhập gặp trục trặc",
   "backfill.cancelledTitle": "Đã huỷ lượt nhập",

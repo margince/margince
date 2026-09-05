@@ -3,9 +3,15 @@ import { Building2, CheckCircle2, History, Mail, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
-import { formatDuration, formatMoney, formatNumber } from "../format/format";
+import { CountUp } from "../design-system/countup";
+import {
+  formatDuration,
+  formatMoney,
+  formatNumber,
+  formatPercent,
+} from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -413,9 +419,11 @@ function EstimateCard({
 }
 
 // The three headline figures of a capture run — captured mail and the two
-// record kinds it grows. Each is a live persisted-row count; the value's
-// `key` changes with the number so the CSS pop fires on every increment
-// (reduced-motion users get the number without the motion).
+// record kinds it grows. Each is a live persisted-row count. While the run is
+// still reading, the figure is a `CountUp`: a number still being earned climbs
+// to where the poll put it instead of jumping there. Once the run has settled
+// it is the plain number, because a figure the server has finished with has
+// nothing left to count towards.
 const CAPTURE_STATS: {
   key: "captured" | "people_created" | "organizations_created";
   label: MessageKey;
@@ -435,19 +443,27 @@ function CaptureStat({
   label,
   icon: Icon,
   locale,
+  counting,
 }: {
   value: number;
   label: string;
   icon: typeof Mail;
   locale: Locale;
+  counting: boolean;
 }) {
   return (
     <div className="capture-stat">
-      <Icon aria-hidden />
-      <b key={value} className="capture-stat-value">
-        {formatNumber(value, locale)}
+      <span className="capture-stat-glyph" aria-hidden>
+        <Icon />
+      </span>
+      <b className="capture-stat-value">
+        {counting ? (
+          <CountUp value={value} locale={locale} />
+        ) : (
+          formatNumber(value, locale)
+        )}
       </b>
-      <span>{label}</span>
+      <span className="capture-stat-label">{label}</span>
     </div>
   );
 }
@@ -467,37 +483,33 @@ function RunView({
   const { locale } = useLocale();
   const counts = run.counts;
   const scanned = counts?.messages_scanned ?? 0;
-  const live = run.state === "running" || run.state === "queued";
+  const live = isLiveState(run.state);
   const done = run.state === "done";
+  const { stale, agoMs } = staleness(run, live);
+  // The card wears the AI family only while the machine is actually reading:
+  // indigo is a claim about who is doing the work, so a queued run that has
+  // not started and a stalled one that has stopped both stay on plain ground.
+  const reading = run.state === "running" && !stale;
   // A percentage needs a denominator that is still true. The provider-side
   // count is a FLOOR — Gmail's exact count is capped at a page budget, and a
   // multi-year window reaches that cap far more often than a 12-month one —
   // so a run can scan past its own estimate. Clamping to 100% there would
   // show a full bar for an hour while the import kept going; the honest move
   // is the absolute counts this screen already falls back to when there is no
-  // estimate at all, because at that moment there effectively is none.
+  // estimate at all, because at that moment there effectively is none. A run
+  // that is not moving forward does not get a bar that implies otherwise.
   const denominator = run.estimated_messages ?? 0;
   const fraction =
-    denominator > 0 && scanned <= denominator ? scanned / denominator : null;
-  const { stale, agoMs } = staleness(run, live);
+    live && !stale && denominator > 0 && scanned <= denominator
+      ? scanned / denominator
+      : null;
+  const heroClass = ["capture-hero", done && "done", reading && "reading"]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <div className={`capture-hero${done ? " done" : ""}`} aria-live="polite">
-      <h3 className="backfill-h">
-        {done ? (
-          <>
-            <CheckCircle2 aria-hidden /> {t("backfill.doneTitle")}
-          </>
-        ) : (
-          <>
-            <History
-              aria-hidden
-              className={live && !stale ? "spin-slow" : ""}
-            />{" "}
-            {t(stateTitle(run.state))}
-          </>
-        )}
-      </h3>
+    <div className={heroClass}>
+      <RunHead state={run.state} reading={reading} />
       <div className="capture-stats">
         {CAPTURE_STATS.map((stat) => (
           <CaptureStat
@@ -506,18 +518,15 @@ function RunView({
             label={t(stat.label)}
             icon={stat.icon}
             locale={locale}
+            counting={reading}
           />
         ))}
       </div>
       <RunProgress
-        live={live}
-        stale={stale}
+        scanned={scanned}
         fraction={fraction}
-        agoMs={agoMs}
+        staleForMs={stale ? agoMs : null}
       />
-      <p className="t-small capture-scanned">
-        {t("backfill.countScanned")} {formatNumber(scanned, locale)}
-      </p>
       {run.state === "error" && (
         <p className="t-small backfill-error">
           {t("backfill.errorNote")}
@@ -541,36 +550,97 @@ function RunView({
   );
 }
 
-// Either the live progress bar or the staleness note, never both: a run that
-// isn't moving forward doesn't get to keep the bar that implies otherwise.
-function RunProgress({
-  live,
-  stale,
-  fraction,
-  agoMs,
+// The state's glyph on its disc, the title, and — only while the machine is
+// reading — the pill that says so in words, because the indigo the card wears
+// then is a claim about who is doing the work and colour is never the only
+// signal.
+function RunHead({
+  state,
+  reading,
 }: {
-  live: boolean;
-  stale: boolean;
+  state: BackfillStatus["state"];
+  reading: boolean;
+}) {
+  const t = useT();
+  return (
+    <div className="capture-head" aria-live="polite">
+      <span className="capture-mark" aria-hidden>
+        {state === "done" ? (
+          <CheckCircle2 />
+        ) : (
+          <History className={reading ? "spin-slow" : ""} />
+        )}
+      </span>
+      <h3 className="backfill-h">{t(stateTitle(state))}</h3>
+      {reading && (
+        <span className="capture-head-tag">
+          <Badge tone="ai">{t("backfill.readingBadge")}</Badge>
+        </span>
+      )}
+    </div>
+  );
+}
+
+// Either the bar or the staleness note over the scanned line, never both: a run
+// that is not moving forward does not get to keep the bar that implies
+// otherwise. The percentage rides the line only when the bar is drawn — the two
+// state one number twice, in a shape and in words.
+function RunProgress({
+  scanned,
+  fraction,
+  staleForMs,
+}: {
+  scanned: number;
   fraction: number | null;
-  agoMs: number;
+  // How long a live run has gone without moving, or null while it moves.
+  staleForMs: number | null;
 }) {
   const t = useT();
   const { locale } = useLocale();
-  if (stale) {
-    return (
-      <p className="t-small backfill-stale">
-        {t("backfill.staleUpdated", {
-          duration: formatDuration(agoMs, locale),
-        })}
+  return (
+    <>
+      {staleForMs !== null && (
+        <p className="t-small backfill-stale">
+          {t("backfill.staleUpdated", {
+            duration: formatDuration(staleForMs, locale),
+          })}
+        </p>
+      )}
+      {fraction !== null && <RunBar fraction={fraction} />}
+      <p className="t-small capture-scanned" aria-live="polite">
+        <span>
+          {t("backfill.countScanned")} {formatNumber(scanned, locale)}
+        </span>
+        {fraction !== null && (
+          <span className="capture-pct">{formatPercent(fraction, locale)}</span>
+        )}
       </p>
-    );
-  }
-  if (fraction !== null && live) {
-    return (
-      <progress value={fraction} aria-label={t("backfill.progressLabel")} />
-    );
-  }
-  return null;
+    </>
+  );
+}
+
+// The bar draws the fraction the line under it states in words, and exposes
+// the same number to assistive tech through the progressbar role rather than
+// through a native `<progress>`, whose track and fill are the browser's colours
+// and the one thing on this card no token could reach.
+function RunBar({ fraction }: { fraction: number }) {
+  const t = useT();
+  const percent = Math.round(fraction * 100);
+  return (
+    <div
+      className="capture-bar"
+      role="progressbar"
+      aria-label={t("backfill.progressLabel")}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={percent}
+    >
+      <span
+        className="capture-bar-fill"
+        style={{ inlineSize: `${percent}%` }}
+      />
+    </div>
+  );
 }
 
 function stateTitle(state: BackfillStatus["state"]): MessageKey {
