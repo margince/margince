@@ -125,6 +125,26 @@ describe("moveHref — the draft_reply move", () => {
     }
   });
 
+  // WHICH message, not just which person. A contact reachable two ways would
+  // otherwise have the reply drafted into whichever they lead with — the reason
+  // this link returned a bare record href until the composer could honour it.
+  it("names the message the row is about", () => {
+    const href = moveHref(replyRow({ type: "person", id: "p-1" }));
+    expect(href).toContain("thread=a-1");
+  });
+
+  // A fresh message names no thread, and must not: draft_email OPENS a
+  // conversation rather than continuing one, so a thread id here would anchor
+  // it on something the reader is not answering.
+  it("names no thread for a move that opens a conversation", () => {
+    const fresh = {
+      ...replyRow({ type: "person", id: "p-1" }),
+      move: { action: "draft_email" },
+    } as unknown as WorklistItem;
+    expect(moveHref(fresh)).toContain("compose=reply");
+    expect(moveHref(fresh)).not.toContain("thread=");
+  });
+
   it("offers no move at all where the row names no record", () => {
     expect(moveHref(replyRow(undefined))).toBeUndefined();
   });

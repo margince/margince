@@ -7734,6 +7734,8 @@ export const en = {
     "Optional — e.g. ask for a date in the first week of September",
   "person.composer.draftWithAi": "Draft with AI",
   "person.composer.intentAgenda": "propose an agenda for the upcoming meeting",
+  "person.composer.threadGone":
+    "The conversation this link named can no longer be answered — the channel or address it was on is gone. This is a new message to them.",
   "person.composer.intentReply": "reply to their last message",
   "person.composer.intentCommitment": "deliver what we promised them",
   "person.composer.intentFollowUp": "follow up — it has gone quiet",
