@@ -3178,6 +3178,28 @@ export const vi = {
   "compose.why.contract": "Về hợp đồng của họ",
   "compose.why.account": "Về tài khoản của họ",
   "compose.why.marketing": "Tiếp thị",
+  "sendPermission.refused": "Bạn không thể gửi tin nhắn này.",
+  "sendPermission.sayWhy": "Nêu lý do bạn được phép viết",
+  "sendPermission.unproven":
+    "Margince không có ghi nhận nào về lý do bạn được phép viết cho họ.",
+  "sendPermission.unprovenHint":
+    "Nếu bạn biết lý do — họ đã đề nghị, bạn đã gặp họ, họ là khách hàng — hãy nêu ra và điều đó được ghi lại dưới tên bạn.",
+  "sendPermission.reason.objected":
+    "Họ đã từ chối nhận quảng cáo. Không ai ở đây có thể gỡ bỏ điều đó, kể cả quản trị viên.",
+  "sendPermission.reason.withdrawn":
+    "Họ đã rút lại sự đồng ý. Không ai ở đây có thể gỡ bỏ điều đó, kể cả quản trị viên.",
+  "sendPermission.reason.restricted":
+    "Dữ liệu của họ đang bị hạn chế xử lý. Không ai ở đây có thể gỡ bỏ điều đó, kể cả quản trị viên.",
+  "sendPermission.reason.bounced":
+    "Địa chỉ đó không nhận được thư. Sửa lại địa chỉ mới là cách giải quyết, không phải bỏ qua.",
+  "sendPermission.reason.tooMany":
+    "Họ đã nhận đủ số tin quảng cáo mà quy định ở đây cho phép lúc này. Điều này sẽ tự hết.",
+  "sendPermission.reason.ambiguous":
+    "Nhiều bản ghi dùng chung địa chỉ này, nên không xác định được tin nhắn dành cho ai. Gộp chúng lại là cách giải quyết.",
+  "sendPermission.reason.unconfirmed":
+    "Họ chưa xác nhận muốn nhận tin từ chúng ta. Chỉ họ mới làm được điều đó.",
+  "sendPermission.reason.other":
+    "Tin nhắn này không thể gửi, và không vai trò nào ở đây có thể bỏ qua điều đó.",
   "compose.derivedReply":
     "Đây là trả lời tin nhắn của chính họ, nên bạn không cần nêu lý do.",
   "compose.sendLaterLabel": "Gửi sau (tùy chọn)",

@@ -3258,6 +3258,28 @@ export const en = {
   "compose.why.contract": "About their contract",
   "compose.why.account": "About their account",
   "compose.why.marketing": "Marketing",
+  "sendPermission.refused": "You cannot send this message.",
+  "sendPermission.sayWhy": "Say why you may write",
+  "sendPermission.unproven":
+    "Margince has no record of why you may write to them.",
+  "sendPermission.unprovenHint":
+    "If you know why — they asked you to, you met, they are a customer — say so and it is recorded against your name.",
+  "sendPermission.reason.objected":
+    "They asked not to receive marketing. Nobody here can lift that, including an administrator.",
+  "sendPermission.reason.withdrawn":
+    "They took back their permission. Nobody here can lift that, including an administrator.",
+  "sendPermission.reason.restricted":
+    "Their data is under a processing restriction. Nobody here can lift that, including an administrator.",
+  "sendPermission.reason.bounced":
+    "That address does not accept mail. Correcting it is the fix, not an override.",
+  "sendPermission.reason.tooMany":
+    "They have had as many marketing messages as the rules here allow for now. This clears on its own.",
+  "sendPermission.reason.ambiguous":
+    "More than one record shares this address, so Margince cannot tell who the message is for. Merging them is the fix.",
+  "sendPermission.reason.unconfirmed":
+    "They have not confirmed they want to hear from us. Only they can do that.",
+  "sendPermission.reason.other":
+    "This message cannot be sent, and it is not something a seat here can overrule.",
   "compose.derivedReply":
     "This continues their own message, so it needs no reason from you.",
   "compose.sendLaterLabel": "Send later (optional)",
