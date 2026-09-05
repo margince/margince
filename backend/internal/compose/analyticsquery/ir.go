@@ -80,12 +80,18 @@ const (
 	Min AggFn = "min"
 	// Max is the largest.
 	Max AggFn = "max"
+	// Median is the 50th percentile, null below the sample floor: a median
+	// over three deals is one deal's value wearing a statistic's name.
+	Median AggFn = "median"
+	// P75 is the 75th percentile, under the same floor as Median.
+	P75 AggFn = "p75"
 )
 
 // aggregatesOverValues are the aggregates that need a field to aggregate.
 // CountAll is the one that does not, which is why it is absent here.
 var aggregatesOverValues = map[AggFn]bool{
 	CountDistinct: true, Sum: true, Avg: true, Min: true, Max: true,
+	Median: true, P75: true,
 }
 
 // numericAggregates are the aggregates that need a NUMBER.
@@ -94,7 +100,7 @@ var aggregatesOverValues = map[AggFn]bool{
 // earliest date and the latest stage all mean something over a non-numeric
 // column, and refusing them would be this compiler inventing a restriction
 // the database does not have.
-var numericAggregates = map[AggFn]bool{Sum: true, Avg: true}
+var numericAggregates = map[AggFn]bool{Sum: true, Avg: true, Median: true, P75: true}
 
 // Filter is one narrowing.
 type Filter struct {
@@ -205,7 +211,7 @@ func validateMeasures(entity Entity, measures []Measure) error {
 			return &RefusalError{
 				Kind:    RefusalUnsupported,
 				Message: fmt.Sprintf("no aggregate named %q", m.Fn),
-				Suggest: "use one of: " + strings.Join(aggregateNames(), ", "),
+				Suggest: "use one of: " + strings.Join(AggregateNames(), ", "),
 			}
 		}
 		if !aggregatesOverValues[m.Fn] {
@@ -298,7 +304,7 @@ func validateFilters(entity Entity, filters []Filter) error {
 			return &RefusalError{
 				Kind:    RefusalUnsupported,
 				Message: fmt.Sprintf("no comparison named %q", f.Op),
-				Suggest: "use one of: " + strings.Join(filterOpNames(), ", "),
+				Suggest: "use one of: " + strings.Join(FilterOpNames(), ", "),
 			}
 		}
 		if _, ok := entity.Lookup(f.Field); !ok {
@@ -344,9 +350,12 @@ func unknownField(entity Entity, name string, kind FieldKind) error {
 // refused as unsupported rather than reaching the renderer.
 var knownAggregates = map[AggFn]bool{
 	CountAll: true, CountDistinct: true, Sum: true, Avg: true, Min: true, Max: true,
+	Median: true, P75: true,
 }
 
-func aggregateNames() []string {
+// AggregateNames is the closed aggregate vocabulary, sorted — read by the
+// refusals here and by the published schema document, so the two say one set.
+func AggregateNames() []string {
 	out := make([]string, 0, len(knownAggregates))
 	for fn := range knownAggregates {
 		out = append(out, string(fn))
@@ -355,7 +364,9 @@ func aggregateNames() []string {
 	return out
 }
 
-func filterOpNames() []string {
+// FilterOpNames is the closed operator vocabulary, sorted, for the same two
+// readers as AggregateNames.
+func FilterOpNames() []string {
 	out := make([]string, 0, len(filterSQL))
 	for op := range filterSQL {
 		out = append(out, string(op))

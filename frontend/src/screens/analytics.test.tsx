@@ -64,6 +64,8 @@ type ReportsStubOpts = {
   stageRows?: Record<string, unknown>[];
   forecastRows?: Record<string, unknown>[];
   companyRows?: Record<string, unknown>[];
+  winLossRows?: Record<string, unknown>[];
+  stageAgeRows?: Record<string, unknown>[];
   derivation?: Record<string, unknown>;
   onDerivation?: (url: string) => void;
   context?: Record<string, unknown>;
@@ -130,16 +132,20 @@ function reportsStub(opts: ReportsStubOpts = {}) {
       const rows =
         key === "forecast"
           ? (opts.forecastRows ?? [])
-          : key === "open-deals-per-company"
-            ? (opts.companyRows ?? [])
-            : (opts.stageRows ?? [
-                {
-                  stage_id: "pl-s1",
-                  raw_minor: 100000,
-                  deal_count: 2,
-                  currency: "EUR",
-                },
-              ]);
+          : key === "win-loss"
+            ? (opts.winLossRows ?? [])
+            : key === "stage-age"
+              ? (opts.stageAgeRows ?? [])
+              : key === "open-deals-per-company"
+                ? (opts.companyRows ?? [])
+                : (opts.stageRows ?? [
+                    {
+                      stage_id: "pl-s1",
+                      raw_minor: 100000,
+                      deal_count: 2,
+                      currency: "EUR",
+                    },
+                  ]);
       return jsonResponse({
         report: key,
         plan: {},
@@ -171,6 +177,82 @@ async function openPipeline() {
     .setup()
     .click(await screen.findByRole("button", { name: "Pipeline" }));
 }
+
+async function openPerformance() {
+  await userEvent
+    .setup()
+    .click(await screen.findByRole("button", { name: "Performance" }));
+}
+
+describe("the performance section", () => {
+  it("renders won and lost with converted value and computed durations", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        winLossRows: [
+          {
+            status: "won",
+            deal_count: 8,
+            raw_minor: 500000,
+            median_days: 21,
+            p75_days: 40,
+          },
+          {
+            status: "lost",
+            deal_count: 4,
+            raw_minor: 200000,
+            median_days: 55,
+            p75_days: null,
+          },
+        ],
+        stageAgeRows: [
+          { stage_id: "pl-s1", deal_count: 6, median_days: 12, p75_days: 30 },
+        ],
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await openPerformance();
+
+    // Both outcomes, by their words rather than a status key.
+    expect(await screen.findByText("Won")).toBeTruthy();
+    expect(screen.getByText("Lost")).toBeTruthy();
+    // The value arrives converted; the screen only formats it.
+    expect(screen.getByText(formatMoney(500000, "EUR", "en"))).toBeTruthy();
+    // Durations are the server's medians, never a quotient made here.
+    expect(screen.getByText("21 days")).toBeTruthy();
+    // A withheld percentile is words, not a zero and not a dash: below the
+    // sample floor the engine answers null, and the cell says why.
+    expect(screen.getByText("Too few to say")).toBeTruthy();
+    // The stage-age card names the stage from the pipeline, not by UUID.
+    expect(screen.getByText("Qualify")).toBeTruthy();
+    expect(screen.getByText("12 days")).toBeTruthy();
+  });
+
+  it("asks the server for the vocabulary it renders, computing nothing", async () => {
+    const bodies: { key: string; body: Record<string, unknown> }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        onRun: (key, body) => bodies.push({ key, body }),
+        winLossRows: [],
+        stageAgeRows: [],
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await openPerformance();
+    await waitFor(() => {
+      expect(bodies.some((sent) => sent.key === "win-loss")).toBe(true);
+      expect(bodies.some((sent) => sent.key === "stage-age")).toBe(true);
+    });
+    const winLoss = bodies.find((sent) => sent.key === "win-loss");
+    expect(winLoss?.body.aggregates).toEqual([
+      { fn: "count", as: "deal_count" },
+      { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
+      { fn: "median", field: "days_to_close", as: "median_days" },
+      { fn: "p75", field: "days_to_close", as: "p75_days" },
+    ]);
+  });
+});
 
 describe("AnalyticsScreen", () => {
   it("renders unweighted/weighted columns under Pipeline", async () => {
@@ -533,8 +615,14 @@ describe("reports never sum money across currencies", () => {
       reportsStub({ onRun: (key, body) => bodies.push({ key, body }) }),
     );
     render(<AnalyticsScreen />);
+    // Every section, so a report added to a NEW section enters this census by
+    // construction rather than by somebody remembering to widen the walk.
     await openPipeline();
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
+    await openPerformance();
+    await waitFor(() =>
+      expect(bodies.some((sent) => sent.key === "stage-age")).toBe(true),
+    );
 
     expect(bodies.length).toBeGreaterThan(0);
     let nativePlans = 0;

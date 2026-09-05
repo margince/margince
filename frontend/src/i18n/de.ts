@@ -516,6 +516,7 @@ export const de = {
   "common.loading": "Wird geladen…",
   "ref.nameLoadFailed": "Name konnte nicht geladen werden",
   "ref.notInRoster": "Aktuell zugeordnet (nicht mehr in der Nutzerliste)",
+  "picker.noMatch": "Kein Treffer",
 
   // "Funktioniert nicht mehr", nicht "Fehler aufgetreten": die Ansicht ist
   // stehengeblieben, und das ist die Beobachtung, die der Lesende selbst
@@ -866,12 +867,11 @@ export const de = {
   "co.strip.lastTouch.theirs": "Die Gegenseite hat zuletzt geschrieben",
   "co.strip.lastTouch.ours": "Du hast zuletzt geschrieben",
   "co.strip.lastTouch.never": "Noch kein Austausch",
-  "co.strip.next": "Als Nächstes",
+  "co.strip.nextMeeting": "Nächster Termin",
   "co.strip.next.none": "Nichts geplant",
   "co.strip.open.history": "Verlauf öffnen",
-  "co.strip.open.tasks": "Aufgaben öffnen",
-  "co.360.readThread": "Den Verlauf lesen · {count}",
-  "co.360.hideThread": "Verlauf ausblenden",
+  "co.360.thread": "Was passiert ist",
+  "co.360.threadCount": "Was passiert ist · {count}",
   "co.360.fullHistory": "Gesamter Verlauf",
   "co.strip.healthQuiet": "Still geworden",
   "co.strip.noInboundEver": "Sie haben nie geschrieben",
@@ -2358,6 +2358,9 @@ export const de = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Nur ins Stocken geraten",
   "deals.filterOwnerMe": "Meine Deals",
+  "deals.totalsNeedOwnerFilter":
+    "Nur geladene — für die Summe auf Meine Deals filtern",
+  "deals.totalsNoTagFilter": "Nur geladene — keine Summe bei Tag-Filter",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Alle Partner",
   "deals.filterForecast": "Forecast",
@@ -2473,17 +2476,6 @@ export const de = {
   "home.pipelinePartial":
     "{count} Deals fehlen in diesen Zahlen – Ihre Berechtigung deckt sie nicht ab.",
   "home.pipelineUnavailable": "Diese Zahl konnte nicht geladen werden.",
-  "home.asOf": "Stand {at}",
-  "home.generating": "Stelle zusammen…",
-  "home.generate": "Briefing jetzt holen",
-  "home.noneBody":
-    "Dein Morgenbriefing sortiert die Deals, die deine erste Stunde verdienen — Gewinnchance, Umsatz, Timing, Momentum und Nähe, jeder Faktor mit Beleg. Es entsteht über Nacht und liegt morgen früh bereit, sobald offene Deals da sind.",
-  "home.honestShort":
-    "Nur {count} Deals haben die Schwelle geschafft — die Liste wird nie aufgefüllt.",
-  "home.overflow":
-    "Es werden die {shown} höchstplatzierten von {count} qualifizierten Deals gezeigt.",
-  "home.narrativeNoPass":
-    "Heute keine Nacht-Zusammenfassung — Margince hat für diese Lage keinen Durchgang gemacht. Die Reihenfolge unten ist trotzdem die von heute.",
   "home.panel.weekly": "Letzte Woche",
   "home.weekly.weekOf": "Woche ab {day}",
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
@@ -2491,7 +2483,6 @@ export const de = {
   "plan.title": "Nächste Woche planen",
   // Der Kopf der sortierten Liste, auf der Seite, die zuerst geöffnet wird —
   // dieselben Zeilen wie in der Arbeitsliste, in der Reihenfolge des Servers.
-  "brief.donext.title": "Als Nächstes",
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
   // Seite zeigt — nie von einem Modell geschrieben.
   "brief.eyebrow": "Dein Morgen",
@@ -2521,10 +2512,16 @@ export const de = {
   "brief.week.quiet":
     "Eine ruhige Woche — nichts abgeschlossen, nichts bewegt.",
 
-  "brief.donext.sub": "Eine Reihenfolge, aus deiner Arbeitsliste.",
-  "brief.donext.loading": "Was auf dich wartet, wird gelesen",
-  "brief.donext.clear": "Gerade wartet nichts auf dich.",
-  "brief.donext.rest": "{count} weitere in der Arbeitsliste",
+  "brief.feed.title": "Heute",
+  "brief.feed.sub": "Eine Reihenfolge, einmal entschieden.",
+  "brief.feed.loading": "Dein Morgen wird gelesen",
+  "brief.feed.clear": "Gerade wartet nichts auf dich.",
+  "brief.feed.rest": "{count} weitere in der Arbeitsliste",
+  "brief.feed.section.respond_now": "Jetzt antworten",
+  "brief.feed.section.prepare_conversations": "Gespräche vorbereiten",
+  "brief.feed.section.move_revenue": "Umsatz bewegen",
+  "brief.feed.section.build_pipeline": "Pipeline aufbauen",
+  "brief.feed.section.review_and_repair": "Prüfen und reparieren",
 
   // Die Woche eines Teams, eingefroren beim Abschluss. Zwei Wochen sind
   // vergleichbar, weil keine sich unter dem Vergleich bewegt.
@@ -2644,10 +2641,6 @@ export const de = {
   "home.weekly.outcome.moved": "bewegt",
   "home.weekly.outcome.won": "gewonnen",
   "home.weekly.outcome.lost": "verloren",
-  "home.focus.allAbove":
-    "Alles aus der Nacht steht schon oben, bei dem, was auf dich wartet.",
-  "home.quietRun":
-    "Heute Morgen hat nichts die Schwelle geschafft. Keine erfundene Dringlichkeit — genieß die Ruhe.",
   "home.act": "Erledigt",
   "home.dismiss": "Ausblenden",
   "home.actedState": "erledigt",
@@ -2686,7 +2679,6 @@ export const de = {
   "home.glance.introWeekly": "Das ist deine abgeschlossene Woche.",
   "home.glance.intro": "Das ist dein Tag.",
   "home.panel.decisions": "Wartet auf dich",
-  "home.panel.focus": "Wenn Zeit bleibt",
   "home.panel.overnight": "Über Nacht",
   "home.panel.position": "Bestand",
   "home.panel.schedule": "Heutiger Kalender",
@@ -3118,6 +3110,7 @@ export const de = {
   "log.transcriptUploadRejected": "Nur eine .txt-Datei wird akzeptiert.",
   "log.transcriptUploadFailed":
     "Die Datei konnte nicht gelesen werden — versuchen Sie stattdessen, den Text einzufügen.",
+  "log.attendee": "Wer war dabei",
   "log.subject": "Betreff",
   "log.body": "Details",
   "log.dueAt": "Fällig am",
@@ -3311,6 +3304,22 @@ export const de = {
   "analytics.sections": "Analytics-Bereiche",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
+  "analytics.sectionPerformance": "Ergebnisse",
+  "analytics.noClosedDeals": "Es wurden noch keine Deals abgeschlossen.",
+  "analytics.openOutcomeDeals": "Die {outcome}-Deals öffnen",
+  "analytics.reportWinLoss": "Gewonnen und verloren",
+  "analytics.reportStageAge": "Verweildauer je Phase",
+  "analytics.outcome": "Ausgang",
+  "analytics.won": "Gewonnen",
+  "analytics.lost": "Verloren",
+  "analytics.baseValue": "Wert ({currency})",
+  "analytics.medianDaysToClose": "Median Tage bis Abschluss",
+  "analytics.p75DaysToClose": "P75 Tage bis Abschluss",
+  "analytics.medianDaysInStage": "Median Tage in der Phase",
+  "analytics.p75DaysInStage": "P75 Tage in der Phase",
+  "analytics.tooFewForMedian": "Zu wenige für eine Aussage",
+  "analytics.days": "{days} Tage",
+  "analytics.unknownStage": "Frühere Phase",
   "analytics.share.open": "Ansicht teilen",
   "analytics.share.title": "Diese Ansicht teilen",
   "analytics.share.kindLegend": "Was der Link zeigt",
@@ -3342,6 +3351,8 @@ export const de = {
   "review.needsReview": "Prüfung nötig",
   "review.checksIncomplete": "Prüfung unvollständig",
   "review.allSourcesRead": "Alle Quellen wurden gelesen.",
+  "review.source.mail": "das Postfach",
+  "review.source.offers": "Angebote",
   "review.sourcesUnread":
     "Nicht gelesen: {sources}. Die Befunde unten decken nur ab, was geprüft werden konnte.",
   "review.notCheckedYet":
@@ -8010,6 +8021,7 @@ export const de = {
     "Von deiner Liste. Wer zuständig ist, sieht es weiterhin.",
   "worklist.disposition.done.not_sales": "Von allen Listen entfernt.",
   "worklist.disposition.swipeCancel": "Behalten",
+  "worklist.disposition.menu": "Aus der Liste nehmen",
   "worklist.disposition.undo": "Rückgängig",
   "worklist.disposition.undoFailed":
     "Das konnte nicht rückgängig gemacht werden. Die Nachricht ist weiterhin von deiner Liste.",

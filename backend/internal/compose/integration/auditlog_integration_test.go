@@ -40,9 +40,14 @@ func TestAuditLogReadRequiresAdminHuman(t *testing.T) {
 	// with scope `all` — pinned by policy's own suite — and the governance
 	// matrix reserves the compliance read for the admin alone: it is oversight
 	// of ops' own machine-origin actions, so it cannot sit with the role it
-	// oversees. Ops carries the admin object grid here because production does,
-	// which is what makes its refusal evidence about the ROLE rather than about
-	// a missing grant.
+	// oversees.
+	//
+	// What refuses them is now the GRANT and no longer the role name. The trail
+	// moved onto audit_log, which the seed gives admin alone, and OpsPerms
+	// mirrors production by carrying the admin object grid minus exactly that
+	// governance set. So this proves the object gate rather than a role check —
+	// and it still fails if the gate is removed, which is what makes it evidence
+	// rather than a restatement of the fixture.
 	for _, unbounded := range []principal.Permissions{OpsPerms, ReadOnlyPerms} {
 		ctx := e.As(ids.NewV7(), []ids.UUID{e.Team1}, unbounded)
 		if _, err := privacy.ListAuditLog(ctx, e.DB(), privacy.AuditFilter{}); !errors.Is(err, apperrors.ErrPermissionDenied) {

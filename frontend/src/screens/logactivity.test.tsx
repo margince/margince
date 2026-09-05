@@ -409,6 +409,100 @@ describe("log activity from a 360", () => {
     expect(calendarDay(occurred, INSTALLATION_ZONE)).toBe(noteDay.value);
   });
 
+  // A meeting and a call are WITH A PERSON, and the server refuses either one
+  // linked to a company — per link, so naming the company alongside the person
+  // is refused too. Opened on a company the form offered no way to say who was
+  // there, and the reader met a 422 with no field to correct.
+  describe("a meeting logged from a company", () => {
+    const contacts = {
+      // full_name, the field the contract sends — a fixture naming a person by
+      // display_name would pass here and find nothing against the real API.
+      data: [
+        { ...person, id: "p1", full_name: "Frédéric de Gombert" },
+        { ...person, id: "p2", full_name: "Marie Lefevre" },
+      ],
+      page: { next_cursor: null },
+    };
+
+    it("asks who was there, and refuses to send until it is answered", async () => {
+      const user = userEvent.setup();
+      stubApi({
+        "POST /activities": createdActivity,
+        "GET /people": () => jsonResponse(contacts),
+      });
+      render(<LogActivity entityType="organization" entityId="o1" />);
+      await pickOption(user, screen.getByLabelText("Type"), "Meeting");
+      await user.type(screen.getByLabelText("Subject *"), "Kickoff");
+
+      // The subject alone is not enough here, unlike every other kind.
+      const log = screen.getByRole("button", { name: "Log" });
+      expect(log.hasAttribute("disabled")).toBe(true);
+
+      await user.type(screen.getByLabelText("Who was there"), "Fré");
+      await user.click(
+        await screen.findByRole("button", { name: "Frédéric de Gombert" }),
+      );
+      await waitFor(() => expect(log.hasAttribute("disabled")).toBe(false));
+    });
+
+    it("links the person and NOT the company, which the server refuses", async () => {
+      const user = userEvent.setup();
+      const captured: Captured[] = [];
+      stubApi(
+        {
+          "POST /activities": createdActivity,
+          "GET /people": () => jsonResponse(contacts),
+        },
+        captured,
+      );
+      render(<LogActivity entityType="organization" entityId="o1" />);
+      await pickOption(user, screen.getByLabelText("Type"), "Meeting");
+      await user.type(screen.getByLabelText("Subject *"), "Kickoff");
+      await user.type(screen.getByLabelText("Who was there"), "Fré");
+      await user.click(
+        await screen.findByRole("button", { name: "Frédéric de Gombert" }),
+      );
+      await user.click(screen.getByRole("button", { name: "Log" }));
+
+      await waitFor(() =>
+        expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+          true,
+        ),
+      );
+      const post = captured.find((entry) => entry.key === "POST /activities");
+      if (!post) throw new Error("expected a POST /activities to be captured");
+      const links = (
+        post.body as { links: { entity_type: string; entity_id: string }[] }
+      ).links;
+      // One link, the person. An organization link alongside it is refused by
+      // the database trigger whatever else is present, and a frontend test
+      // whose POST is stubbed cannot see that refusal — so the shape is
+      // asserted here rather than trusted to a green submit.
+      expect(links).toEqual([{ entity_type: "person", entity_id: "p1" }]);
+    });
+
+    it("asks nobody for a note, which a company can hold on its own", async () => {
+      stubApi({ "POST /activities": createdActivity });
+      render(<LogActivity entityType="organization" entityId="o1" />);
+      expect(screen.queryByLabelText("Who was there")).toBeNull();
+    });
+
+    it("says the company has no contacts rather than offering none silently", async () => {
+      const user = userEvent.setup();
+      stubApi({
+        "POST /activities": createdActivity,
+        "GET /people": () =>
+          jsonResponse({ data: [], page: { next_cursor: null } }),
+      });
+      render(<LogActivity entityType="organization" entityId="o1" />);
+      await pickOption(user, screen.getByLabelText("Type"), "Meeting");
+      await user.type(screen.getByLabelText("Who was there"), "any");
+      // The picker's own empty-search wording, so a company with nobody on it
+      // reads as an answered question rather than a field that never responded.
+      expect(await screen.findByText(/no match/i)).toBeTruthy();
+    });
+  });
+
   it("files a note on the day the writer overrode to, when the record's clock already calls it yesterday", async () => {
     // The other side of the same boundary. At 16:00 in Los Angeles the record's
     // clock has already turned over, so the writer's own today is the record's

@@ -45,6 +45,22 @@ import (
 // read cannot be handed to one. A mode read that fails propagates, so an
 // unresolved mode refuses the call rather than defaulting to native.
 
+// nativeOnlyAnalyticsRunner guards run_analytics_query, for the report
+// guard's reason: the typed engine reads native tables an overlay workspace
+// has no rows in.
+func nativeOnlyAnalyticsRunner(mode overlayModeChecker, run agents.AnalyticsQueryRunner) agents.AnalyticsQueryRunner {
+	return func(ctx context.Context, query json.RawMessage) (json.RawMessage, error) {
+		overlay, err := mode.isOverlayUncached(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if overlay {
+			return nil, apperrors.ErrUnsupportedBySoR
+		}
+		return run(ctx, query)
+	}
+}
+
 // nativeOnlyReportRunner guards run_report. The spec names this capability
 // as one an incumbent has no analogue for, so the refusal is the declared
 // answer, not a degradation.

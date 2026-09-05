@@ -109,7 +109,15 @@ export function SwipeRow({
     // A primary pointer only. A second finger arriving mid-scroll would
     // otherwise restart the measurement from its own landing point and turn a
     // two-finger scroll into a drag that travelled the width of the hand.
-    if (!event.isPrimary) {
+    //
+    // AND NOT A PRESS THAT LANDED ON A CONTROL. The caller mounts this around
+    // a whole row, so its buttons and links are inside the surface and their
+    // pointer events bubble here: a thumb that slips 56px while reaching for a
+    // menu or a verb would otherwise stage a judgement nobody asked for, and
+    // the staged bar would then stand over the control that was actually being
+    // pressed. A row's own controls answer their own presses.
+    const on = event.target instanceof Element ? event.target : null;
+    if (!event.isPrimary || on?.closest("button, a, [role='button']")) {
       return;
     }
     from.current = { x: event.clientX, y: event.clientY };

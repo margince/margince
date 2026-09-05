@@ -183,11 +183,14 @@ type stubBriefing struct {
 	// entries is ran=true, a night that produced nothing is ran=false. The
 	// zero value is the no-run morning, so a test must opt in to a run.
 	ran bool
-	err error
+	// asOf is the run's DATA CUTOFF, and the zero value is the no-run morning —
+	// which is what leaves a row's changed_since_brief absent rather than false.
+	asOf time.Time
+	err  error
 }
 
-func (s stubBriefing) Queue(context.Context) ([]BriefEntry, bool, error) {
-	return s.rows, s.ran || len(s.rows) > 0, s.err
+func (s stubBriefing) Queue(context.Context) ([]BriefEntry, bool, time.Time, error) {
+	return s.rows, s.ran || len(s.rows) > 0, s.asOf, s.err
 }
 
 func approval(summary string) crmcontracts.Approval {

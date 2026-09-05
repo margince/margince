@@ -9,6 +9,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
@@ -54,13 +55,13 @@ type attentionBriefing struct {
 // no amount, no close date, no reason and no name, still offering act, set
 // aside and dismiss over a deal that has been deleted, and counting toward the
 // day's total. A row that can name nothing is not a suggestion.
-func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, bool, error) {
+func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, bool, time.Time, error) {
 	run, err := a.engine.LatestRun(ctx, a.now())
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return nil, false, nil
+		return nil, false, time.Time{}, nil
 	}
 	if err != nil {
-		return nil, false, err
+		return nil, false, time.Time{}, err
 	}
 	unanswered := make([]attention.BriefEntry, 0, len(run.Items))
 	named := make([]ids.UUID, 0, len(run.Items))
@@ -70,13 +71,13 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, b
 		}
 		unanswered = append(unanswered, attention.BriefEntry{
 			ID: item.ID, DealID: item.DealID, Rank: item.Rank,
-			Finding: item.Finding,
+			Composite: item.Composite, Finding: item.Finding,
 		})
 		named = append(named, item.DealID)
 	}
 	resolvable, err := a.figures.Figures(ctx, named)
 	if err != nil {
-		return nil, false, err
+		return nil, false, time.Time{}, err
 	}
 	entries := make([]attention.BriefEntry, 0, len(unanswered))
 	for _, entry := range unanswered {
@@ -84,5 +85,5 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, b
 			entries = append(entries, entry)
 		}
 	}
-	return entries, true, nil
+	return entries, true, run.AsOf, nil
 }

@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // errUnknownObject is the write-path refusal for an object outside the
@@ -90,12 +91,12 @@ type roleRow struct {
 // stored. Nothing on this path feeds an authorization decision, so showing it
 // grants nothing.
 func (s *Service) ListRoles(ctx context.Context, actor Identity) ([]roleRow, error) {
-	if !actor.hasRole(roleAdmin) {
-		return nil, apperrors.ErrPermissionDenied
+	ctx, err := admit(ctx, actor, objectRoleAdmin, principal.ActionRead)
+	if err != nil {
+		return nil, err
 	}
-	ctx = actorCtx(ctx, actor)
 	var out []roleRow
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
 			`SELECT key, name, is_system, version, permissions
 			   FROM role WHERE archived_at IS NULL ORDER BY key`)
@@ -137,15 +138,26 @@ func (s *Service) ListRoles(ctx context.Context, actor Identity) ([]roleRow, err
 // also make the feature useless: a fresh installation has six system roles and
 // nothing else, so no role could ever hold an extension grant.
 func (s *Service) SetRoleObjectGrant(ctx context.Context, actor Identity, roleKey, object string, grant storedGrant, ifVersion *int64) (roleRow, error) {
-	if !actor.hasRole(roleAdmin) {
-		return roleRow{}, apperrors.ErrPermissionDenied
+	ctx, err := admit(ctx, actor, objectRoleAdmin, principal.ActionUpdate)
+	if err != nil {
+		return roleRow{}, err
 	}
 	if !policy.IsGrantableObject(object) {
 		return roleRow{}, errUnknownObject
 	}
-	ctx = actorCtx(ctx, actor)
+	// The editor is security-administrator authority, not an ordinary toggle: a
+	// holder writing a verb they do not themselves hold would grant themselves
+	// that authority through whichever role they can already be assigned. So the
+	// caller must already hold every verb this write turns on.
+	//
+	// Turning a verb OFF is not checked, and that asymmetry is deliberate: a
+	// delegated holder narrowing a role gives nobody anything. Widening is the
+	// direction that escalates.
+	if err := refuseUnlessCallerHoldsGrant(actor, object, grant); err != nil {
+		return roleRow{}, err
+	}
 	var updated roleRow
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		updated, err = applyRoleObjectGrant(ctx, tx, roleKey, object, grant, ifVersion)
 		return err

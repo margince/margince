@@ -63,7 +63,10 @@ import (
 // otherwise costs.
 func nativeOnlyAgentTools(anchor ids.UUID) map[string]string {
 	return map[string]string{
-		"run_report":               `{"report":"deals-by-stage"}`,
+		"run_report": `{"report":"deals-by-stage"}`,
+		// The typed analytics engine reads the same native tables run_report
+		// does; a well-formed plan is enough, the guard lands first.
+		"run_analytics_query":      `{"entity":"deals-by-stage","measures":[{"fn":"count"}]}`,
 		"catch_me_up_on":           fmt.Sprintf(`{"record_type":"person","record_id":%q}`, anchor),
 		"prep_for_meeting":         fmt.Sprintf(`{"record_type":"person","record_id":%q}`, anchor),
 		"whats_slipping_this_week": `{}`,

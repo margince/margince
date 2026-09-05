@@ -31,10 +31,11 @@ type Access struct {
 // yet — the invite screen's question. Admin-only: the matrix is the
 // installation's configuration.
 func (s *Service) PreviewAccess(ctx context.Context, actor Identity, role string, teamIDs []ids.UUID) (Access, error) {
-	if !actor.hasRole(roleAdmin) {
-		return Access{}, apperrors.ErrPermissionDenied
+	ctx, err := admit(ctx, actor, objectRoleAdmin, principal.ActionRead)
+	if err != nil {
+		return Access{}, err
 	}
-	teamIDs, err := validTeamIDs(teamIDs)
+	teamIDs, err = validTeamIDs(teamIDs)
 	if err != nil {
 		return Access{}, err
 	}
@@ -48,11 +49,12 @@ func (s *Service) PreviewAccess(ctx context.Context, actor Identity, role string
 
 // UserAccess evaluates an existing member's roles and teams as they stand.
 func (s *Service) UserAccess(ctx context.Context, actor Identity, userID ids.UserID) (Access, error) {
-	if !actor.hasRole(roleAdmin) {
-		return Access{}, apperrors.ErrPermissionDenied
+	ctx, err := admit(ctx, actor, objectRoleAdmin, principal.ActionRead)
+	if err != nil {
+		return Access{}, err
 	}
 	var out Access
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var exists bool
 		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM app_user WHERE id = $1 AND archived_at IS NULL)`, userID).Scan(&exists); err != nil {
 			return err

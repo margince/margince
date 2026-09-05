@@ -8,7 +8,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatTimeOfDay, MONEY_ABSENT } from "../format/format";
+import { formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
@@ -21,11 +21,9 @@ import {
   jsonResponse,
   pendingPage,
   proposal,
-  readSnoozedUntil,
   render,
   run,
   stubApi,
-  threeRanked,
   workOrder,
   writeRoutes,
   writes,
@@ -300,18 +298,22 @@ describe("HomeScreen — the order of the page follows the day", () => {
     render(<HomeScreen />);
 
     await screen.findByText("Send the Weber follow-up");
-    expect(workOrder()).toEqual(["home-decisions", "home-focus"]);
+    expect(workOrder()).toEqual(["home-decisions", "brief-feed"]);
   });
 
   it("leads with the ranked queue once the deck is clear", async () => {
     stubApi({
       "GET /brief": () => jsonResponse(run),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+      // A row in the one feed, so the assertion waits on the surface it is
+      // about rather than on a panel that no longer exists.
+      "GET /worklist": () =>
+        jsonResponse(readingsDay({}, [overnightRow("bi-1", "d-1")])),
     });
     render(<HomeScreen />);
 
-    await screen.findByText("Fleet retrofit");
-    expect(workOrder()).toEqual(["home-focus", "home-decisions"]);
+    await screen.findByRole("region", { name: en["brief.feed.title"] });
+    expect(workOrder()).toEqual(["brief-feed", "home-decisions"]);
   });
 });
 
@@ -561,6 +563,8 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
       "GET /approvals": () => new Promise<Response>(() => {}),
       "GET /brief": () => jsonResponse(run),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+      "GET /worklist": () =>
+        jsonResponse(readingsDay({}, [overnightRow("bi-1", "d-1")])),
     });
     render(<HomeScreen />);
 
@@ -573,7 +577,12 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
     // The wait belongs to the deck alone. Five independent reads exist so that
     // one of them being slow cannot blank the other four.
     expect(deckSection().querySelector("[aria-busy='true']")).toBeTruthy();
-    expect(screen.getByText("Fleet retrofit")).toBeTruthy();
+    // The day's own feed is drawn and populated: a slow decisions read blanks
+    // the deck and nothing else.
+    expect(
+      screen.getByRole("region", { name: en["brief.feed.title"] }),
+    ).toBeTruthy();
+    expect(document.querySelector(".brief-feed-list")).toBeTruthy();
   });
 
   it("shows a failed decisions read in the deck alone, with the ranked queue intact", async () => {
@@ -581,6 +590,8 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
       "GET /approvals": () => jsonResponse({ title: "Server Error" }, 500),
       "GET /brief": () => jsonResponse(run),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+      "GET /worklist": () =>
+        jsonResponse(readingsDay({}, [overnightRow("bi-1", "d-1")])),
     });
     render(<HomeScreen />);
 
@@ -592,8 +603,10 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
       within(deckSection()).getByText("This section did not load."),
     ).toBeTruthy();
     // A healthy ranked queue is not hidden behind a failed decisions read.
-    expect(screen.getByText("Fleet retrofit")).toBeTruthy();
-    expect(screen.getByText("2 evidence rows")).toBeTruthy();
+    expect(
+      screen.getByRole("region", { name: en["brief.feed.title"] }),
+    ).toBeTruthy();
+    expect(document.querySelector(".brief-feed-list")).toBeTruthy();
   });
 
   // Home reads ONE page of deals. Past it every reading taken from those rows is
@@ -658,352 +671,5 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
     // (home.tsx expiringToday) went with it. Whether the deck should say that
     // across the whole queue is a product question, filed rather than guessed.
     expect(within(deckSection()).getByText(/expires/i)).toBeTruthy();
-  });
-});
-
-// ── The ranked queue ──
-
-describe("HomeScreen — the ranked queue", () => {
-  // ONE brief run reaches this page through TWO endpoints: `GET /worklist`
-  // ranks each suggestion into the one order as a `brief_item` row, and
-  // `GET /brief` serves the same records with the factors behind them, under the
-  // same ids. So a suggestion that ranks into "Do next" is on the page twice
-  // unless "Focus when time opens" leaves out what the lead already drew — once
-  // as a worklist row and once as a card, each offering its own controls over
-  // the same deal.
-  it("draws an overnight suggestion once, even when it also leads the page", async () => {
-    stubApi({
-      "GET /brief": () => jsonResponse(threeRanked),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-      "GET /worklist": () =>
-        jsonResponse(readingsDay({}, [overnightRow("bi-1", "d-1")])),
-    });
-    render(<HomeScreen />);
-
-    // The suggestions that did not lead are drawn as cards, so the section is
-    // skipping ONE record rather than going quiet. Awaited first: it is the
-    // slowest of the reads this assertion depends on.
-    expect(await screen.findByTestId("brief-item-bi-2")).toBeTruthy();
-    expect(screen.getByTestId("brief-item-bi-3")).toBeTruthy();
-    // The one that leads is drawn ONCE — as a worklist row, not again as a card.
-    const lead = screen.getByRole("region", {
-      name: en["brief.donext.title"],
-    });
-    expect(within(lead).getAllByRole("listitem")).toHaveLength(1);
-    expect(screen.queryByTestId("brief-item-bi-1")).toBeNull();
-  });
-
-  // The other half of the same rule. Nothing led the page, so the section below
-  // owns every suggestion — a filter that dropped one here would hide work.
-  it("draws every suggestion when none of them leads the page", async () => {
-    stubApi({
-      "GET /brief": () => jsonResponse(threeRanked),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-    });
-    render(<HomeScreen />);
-
-    expect(await screen.findByTestId("brief-item-bi-1")).toBeTruthy();
-    expect(screen.getByTestId("brief-item-bi-2")).toBeTruthy();
-    expect(screen.getByTestId("brief-item-bi-3")).toBeTruthy();
-  });
-
-  // A morning whose every suggestion already leads. "Nothing cleared the bar"
-  // would contradict the rows the reader can see directly above.
-  it("says the work is above rather than that the night found nothing", async () => {
-    stubApi({
-      "GET /brief": () => jsonResponse(threeRanked),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-      "GET /worklist": () =>
-        jsonResponse(
-          readingsDay({}, [
-            overnightRow("bi-1", "d-1"),
-            overnightRow("bi-2", "d-2"),
-            overnightRow("bi-3", "d-3"),
-          ]),
-        ),
-    });
-    render(<HomeScreen />);
-
-    expect(await screen.findByText(en["home.focus.allAbove"])).toBeTruthy();
-    expect(screen.queryByText(en["home.quietRun"])).toBeNull();
-  });
-
-  it("renders the run: the deal, its money, the decomposition, the evidence and the honest-short line", async () => {
-    stubApi({
-      "GET /brief": () => jsonResponse(run),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-    });
-    render(<HomeScreen />);
-
-    const card = await screen.findByTestId("brief-item-bi-1");
-    expect(within(card).getByText("Fleet retrofit")).toBeTruthy();
-    expect(card.textContent).toContain("#1");
-    expect(within(card).getByText("Score")).toBeTruthy();
-    expect(within(card).getByText("74%")).toBeTruthy();
-    expect(within(card).getByText("Winnability")).toBeTruthy();
-    expect(within(card).getByText("Warmth")).toBeTruthy();
-    expect(within(card).getByText("2 evidence rows")).toBeTruthy();
-    expect(within(card).getByText("€48,000.00")).toBeTruthy();
-    expect(
-      screen.getByText(
-        "Only 1 deals cleared the bar — the queue is never padded.",
-      ),
-    ).toBeTruthy();
-  });
-
-  // A money figure is an amount AND its currency. The amount on its own is not
-  // one: naming a currency for it puts a euro sign on money that might be dong.
-  it("states no figure for a brief deal with an amount and no currency", async () => {
-    stubApi({
-      "GET /brief": () => jsonResponse(run),
-      "GET /deals": () =>
-        jsonResponse({ data: [{ ...fleetDeal, currency: null }] }),
-    });
-    render(<HomeScreen />);
-
-    const card = await screen.findByTestId("brief-item-bi-1");
-    expect(
-      within(card).getByText(MONEY_ABSENT, {
-        selector: ".brief-item-amount",
-      }),
-    ).toBeTruthy();
-    expect(within(card).queryByText(/48,000/)).toBeNull();
-  });
-
-  it("fetches today's brief on demand when the night has not left one, and renders it", async () => {
-    let generated = false;
-    stubApi({
-      "GET /brief": () =>
-        generated
-          ? jsonResponse(run)
-          : jsonResponse({ title: "Not Found" }, 404),
-      "POST /brief": () => {
-        generated = true;
-        return jsonResponse(run, 201);
-      },
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-    });
-    const user = userEvent.setup();
-    render(<HomeScreen />);
-
-    await screen.findByText(/ranks the deals worth your first hour/);
-    await user.click(
-      screen.getByRole("button", { name: /Get today's brief now/ }),
-    );
-    expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
-  });
-
-  it("says the quiet out loud when a run ranked nothing — no invented urgency", async () => {
-    stubApi({
-      "GET /brief": () =>
-        jsonResponse({ ...run, candidate_count: 0, items: [] }),
-    });
-    render(<HomeScreen />);
-
-    expect(
-      await screen.findByText(
-        "Nothing cleared the bar this morning. No invented urgency — enjoy the quiet.",
-      ),
-    ).toBeTruthy();
-  });
-
-  it("marks an item acted in place, still visible and receded", async () => {
-    stubApi({
-      "GET /brief": () => jsonResponse(run),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-      "POST /brief/items/bi-1/act": () =>
-        jsonResponse({
-          ...run.items[0],
-          state: "acted",
-          state_at: "2026-07-05T06:00:00Z",
-        }),
-    });
-    const user = userEvent.setup();
-    render(<HomeScreen />);
-
-    await screen.findByText("Fleet retrofit");
-    await user.click(screen.getByRole("button", { name: /Done/ }));
-    expect(await screen.findByText("acted")).toBeTruthy();
-    expect(screen.getByText("Fleet retrofit")).toBeTruthy();
-  });
-
-  // The contract requires a FUTURE instant, and the product has no picker yet:
-  // Home's promise is "back tomorrow morning", in the reader's own zone.
-  it("snoozes an item until tomorrow morning in the reader's own zone", async () => {
-    // "Tomorrow" is a claim about the reader's calendar, so the clock is pinned:
-    // a case that derives its own expectation from the live clock agrees with the
-    // component even when both are wrong, and it changes verdict overnight.
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    vi.setSystemTime(new Date(2026, 6, 5, 12, 0, 0));
-    const calls = stubApi({
-      "GET /brief": () => jsonResponse(run),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-      "POST /brief/items/bi-1/snooze": () =>
-        jsonResponse({
-          ...run.items[0],
-          state: "snoozed",
-          state_at: "2026-07-05T06:00:00Z",
-          snoozed_until: "2026-07-06T06:00:00Z",
-        }),
-    });
-    const user = userEvent.setup();
-    render(<HomeScreen />);
-
-    await screen.findByText("Fleet retrofit");
-    await user.click(screen.getByRole("button", { name: /Snooze/ }));
-    await waitFor(() =>
-      expect(writeRoutes(calls)).toEqual(["POST /brief/items/bi-1/snooze"]),
-    );
-
-    const sent = writes(calls)[0].body;
-    const until = new Date(readSnoozedUntil(sent));
-    expect(until.getTime()).toBeGreaterThan(Date.now());
-    expect(until).toEqual(new Date(2026, 6, 6, 8, 0, 0));
-    expect(await screen.findByText("snoozed")).toBeTruthy();
-  });
-});
-
-// ── What the night said, and whether it spoke at all ──
-//
-// Three states, and the third is the one worth the tests. A brief with no
-// narrative means either "the pass ran and had nothing to say" or "no pass ran
-// at all" — and those read identically as silence. `annotated_at` is what
-// separates them, so a screen that showed nothing in both cases would tell a
-// rep the product had nothing to explain when in fact nobody looked.
-
-describe("HomeScreen — the sentence about the night", () => {
-  it("shows the narrative, marked as agent-authored", async () => {
-    stubApi({
-      "GET /brief": () =>
-        jsonResponse({
-          ...run,
-          narrative: "Two replies overnight, one deal went quiet.",
-          annotated_at: "2026-07-05T05:35:00Z",
-        }),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-    });
-    render(<HomeScreen />);
-
-    await screen.findByText("Two replies overnight, one deal went quiet.");
-    // The prose is model-authored and sits beside numbers a deterministic
-    // engine computed; nothing else on the panel would tell them apart.
-    expect(
-      screen.getAllByText(en["trust.agentUnnamed"]).length,
-    ).toBeGreaterThan(0);
-  });
-
-  it("says a pass did not run, rather than showing nothing", async () => {
-    stubApi({
-      "GET /brief": () =>
-        jsonResponse({ ...run, narrative: null, annotated_at: null }),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-    });
-    render(<HomeScreen />);
-
-    // The honest degrade the plan asks for: never a blank morning, never a
-    // silent one. A rep reading silence would conclude there was nothing to
-    // explain.
-    await screen.findByText(en["home.narrativeNoPass"]);
-  });
-
-  it("stays silent when a pass ran and had nothing to say", async () => {
-    stubApi({
-      "GET /brief": () =>
-        jsonResponse({
-          ...run,
-          narrative: null,
-          annotated_at: "2026-07-05T05:35:00Z",
-        }),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-    });
-    render(<HomeScreen />);
-
-    await screen.findByText("Fleet retrofit");
-    // A quiet night honestly has no sentence, and inventing one — or claiming
-    // no pass ran — would both be false.
-    expect(screen.queryByText(en["home.narrativeNoPass"])).toBeNull();
-  });
-
-  it("shows a per-item finding above the factor meters", async () => {
-    stubApi({
-      "GET /brief": () =>
-        jsonResponse({
-          ...run,
-          annotated_at: "2026-07-05T05:35:00Z",
-          items: [
-            {
-              ...run.items[0],
-              finding: "He asked about the delivery date yesterday.",
-            },
-          ],
-        }),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-    });
-    render(<HomeScreen />);
-
-    await screen.findByText("He asked about the delivery date yesterday.");
-  });
-});
-
-// ── The one control that promised what the click could not do ──
-
-describe("HomeScreen — the brief is generated, never re-ranked", () => {
-  // POST /brief answers "today's run already existed; this is it, unchanged".
-  // It assembles a brief where none exists and re-ranks nothing — so a control
-  // labelled "Refresh brief" beside an existing run promised a re-rank the
-  // click could not perform, and a rep who pressed it and saw the same order
-  // concluded the ranking was stuck.
-  it("offers no refresh once today's run exists", async () => {
-    stubApi({
-      "GET /brief": () => jsonResponse(run),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-    });
-    render(<HomeScreen />);
-
-    await screen.findByText("Fleet retrofit");
-    expect(screen.queryByTestId("brief-refresh")).toBeNull();
-  });
-
-  // And the affordance that DOES something stays: a rep whose overnight pass
-  // has not run has a real button to press, and it is the only one.
-  it("offers to generate one when there is none", async () => {
-    stubApi({
-      "GET /brief": () => new Response(null, { status: 404 }),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-    });
-    render(<HomeScreen />);
-
-    const generate = await screen.findByTestId("brief-refresh");
-    expect(generate.textContent).toContain(en["home.generate"]);
-  });
-
-  // And what it says WHILE it works names the same act. The button assembles a
-  // first run; a pending label reading "Ranking…" describes re-ordering one
-  // that already exists, which is the confusion the button's own wording was
-  // changed to avoid. Nothing asserted this label, so the two drifted.
-  it("names assembling, not ranking, while the run is being built", async () => {
-    let releasePost: (() => void) | undefined;
-    const posted = new Promise<void>((resolve) => {
-      releasePost = resolve;
-    });
-    stubApi({
-      "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
-      "POST /brief": async () => {
-        await posted;
-        return jsonResponse(run, 201);
-      },
-    });
-    const user = userEvent.setup();
-    render(<HomeScreen />);
-
-    // Deliberately NOT awaited: the click's promise settles only once the write
-    // does, and the pending label is what the button says in between.
-    void user.click(await screen.findByTestId("brief-refresh"));
-    expect(
-      (await screen.findByText(en["home.generating"])).textContent,
-    ).toContain(en["home.generating"]);
-
-    releasePost?.();
   });
 });

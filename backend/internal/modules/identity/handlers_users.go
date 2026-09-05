@@ -12,8 +12,8 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -172,10 +172,12 @@ func (h Handlers) IssueUserPasswordLink(w http.ResponseWriter, r *http.Request, 
 	// issuance budget — a denial-of-recovery primitive — and read the
 	// installation's email posture off the 409 code, both before ever being
 	// told they are not an admin.
-	if !actor.hasRole(roleAdmin) {
-		httperr.Write(w, r, apperrors.ErrPermissionDenied)
+	ctx, err := admit(r.Context(), actor, objectUserAdmin, principal.ActionUpdate)
+	if err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
+	r = r.WithContext(ctx)
 	// A request this installation can never serve must not consume the budget
 	// that protects one it can, so the configuration gates precede the limiter.
 	if refusal := h.passwordLinkRefusal(); refusal != nil {

@@ -16,8 +16,6 @@ import type { Worklist, WorklistItem } from "./worklist.queries";
 // It is also why the sentence carries NO agent tag: indigo means "Margince
 // decided this" everywhere in the product, and marking a client-composed
 // sentence that way would be a claim about authorship that is simply false.
-// The overnight narrative is agent-written and IS tagged, one line further
-// down, where TodayNarrative draws it.
 
 /**
  * What the sentence says, as a key and the parts to fill it with.
@@ -104,40 +102,6 @@ export function briefSentence(
     values,
   };
 }
-
-/** How many rows lead the page — what "Do next" draws. */
-export const LEAD = 3;
-
-/** The rows "Do next" draws: the head of the one ranked order. */
-export function leadRows(day: Worklist | undefined): readonly WorklistItem[] {
-  return waitingRows(day).slice(0, LEAD);
-}
-
-/**
- * Which overnight suggestions "Do next" has ALREADY drawn.
- *
- * The Brief reads the same brief run through two endpoints. `GET /worklist`
- * ranks each suggestion into the one order as a `brief_item` row, and
- * `GET /brief` serves the same records with the factors behind them — same ids,
- * because `briefItem` sends the entry's own id (`attention/render.go`). So a
- * suggestion that ranks into the lead is on the page twice unless the section
- * below leaves out what the section above took: once as a worklist row, once as
- * a card, each offering its own controls over one record.
- *
- * The split lives HERE rather than in either section because both must read the
- * same answer. Kept in one of them, the other would drift the first time `LEAD`
- * moved, and the duplicate would come back silently.
- */
-export function ledAlready(day: Worklist | undefined): ReadonlySet<string> {
-  return new Set(
-    leadRows(day)
-      .filter((item) => item.source === OVERNIGHT)
-      .map((item) => item.id),
-  );
-}
-
-/** The source a row carries when it came from the overnight run. */
-const OVERNIGHT = "brief_item";
 
 /**
  * The row the page opens with.
