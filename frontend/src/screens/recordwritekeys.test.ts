@@ -35,7 +35,15 @@ describe("recordWriteKeys", () => {
 // that never used it. Every restore callback in this tree hand-spelled ONE
 // key, and each picked a different one, so the gate is derived from the tree
 // rather than from a list kept beside it.
-describe("every restore callback goes through the helper", () => {
+//
+// A generous budget, stated rather than defaulted, as every gate that parses
+// the whole tree declares: this is synchronous CPU work over several hundred
+// files, about two seconds alone and past vitest's default ten under a loaded
+// runner. There is no hang for a tight timeout to catch, so the ceiling is the
+// floor under a slow runner and nothing else.
+const scanBudget = { timeout: 60_000 };
+
+describe("every restore callback goes through the helper", scanBudget, () => {
   it("finds no onRestored that invalidates by hand", () => {
     const offenders: string[] = [];
     for (const file of sourceFiles()) {
