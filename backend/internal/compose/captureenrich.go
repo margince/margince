@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -116,6 +117,29 @@ func NewCaptureEnricher(pool *pgxpool.Pool, brain completer, log *slog.Logger) *
 // exactly at the limit. The continuation costs one job that lists no candidates
 // and stops, which is the cheap side of the trade.
 func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err error) {
+	// ONE PASS AT A TIME, or two of them pay for the same page.
+	//
+	// The candidate list is a plain read, so two passes select the same people,
+	// make the same model calls and each spend for them. Three doors can put a
+	// pass in flight — the nightly tick, the arrival trigger and a pass's own
+	// continuation — and the first two dedupe against each other on the queue's
+	// uniqueness window while the third deliberately cannot: it is enqueued from
+	// inside a RUNNING job with the same args, so a window that suppressed it
+	// would end the chain the continuation exists to keep.
+	//
+	// So the mutual exclusion is here, where the spending is. Taken and released
+	// rather than waited on: a pass that finds another running has nothing to
+	// add — the holder is reading the same candidates now — and its successor
+	// will be queued by whoever is holding it.
+	held, release, err := e.holdThePass(ctx)
+	if err != nil {
+		return false, err
+	}
+	if !held {
+		e.log.InfoContext(ctx, "signature enrich: another pass holds this installation, so this one stands down")
+		return false, nil
+	}
+	defer release()
 	// The store's apply writes audit + outbox rows, so the pass binds
 	// the system actor and an operation scope like every worker job.
 	wsCtx := principal.WithCorrelationID(principal.WithActor(ctx, principal.Principal{
@@ -346,3 +370,54 @@ func signatureEnrichSchema() json.RawMessage {
 		"fields",
 	))
 }
+
+// enrichPassLock names the lock the pass holds, as text rather than as a
+// number: an advisory key is an integer namespace shared by the whole database,
+// and a bare constant is how two unrelated passes come to hold one key.
+const enrichPassLock = "capture_signature_enrich_pass"
+
+// holdThePass takes the pass's advisory lock, and answers a release for it.
+//
+// SESSION-scoped, on a connection held for the pass, because the pass is many
+// transactions — the candidate read, one apply per person, the watermark — and
+// a transaction lock would be gone before the first model call. That also makes
+// the release crash-safe in the way a lease row is not: a worker that dies
+// drops its connection, and Postgres drops the lock with it, where a `held_until`
+// column would keep the next pass out until the clock caught up.
+//
+// TRY, not wait. A pass that queued behind another would wake to the candidate
+// set the holder had just emptied and spend a slot proving it, and on a
+// contended installation the queue itself is what would grow.
+func (e *CaptureEnricher) holdThePass(ctx context.Context) (bool, func(), error) {
+	conn, err := e.pool.Acquire(ctx)
+	if err != nil {
+		return false, nil, fmt.Errorf("taking a connection for the enrich pass lock: %w", err)
+	}
+	var held bool
+	if err := conn.QueryRow(ctx,
+		`SELECT pg_try_advisory_lock(hashtextextended($1, 0))`, enrichPassLock).Scan(&held); err != nil {
+		conn.Release()
+		return false, nil, fmt.Errorf("taking the enrich pass lock: %w", err)
+	}
+	if !held {
+		conn.Release()
+		return false, nil, nil
+	}
+	return true, func() {
+		// Released on a context of its own: the pass's may already be cancelled
+		// — a worker timeout is exactly when the lock most needs dropping — and
+		// an unlock that never ran would hold this installation's passes out
+		// until the connection was recycled.
+		unlockCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), enrichUnlockTimeout)
+		defer cancel()
+		if _, err := conn.Exec(unlockCtx,
+			`SELECT pg_advisory_unlock(hashtextextended($1, 0))`, enrichPassLock); err != nil {
+			e.log.WarnContext(ctx, "signature enrich: releasing the pass lock", "err", err)
+		}
+		conn.Release()
+	}, nil
+}
+
+// enrichUnlockTimeout bounds the release, which runs after the pass is over and
+// must not become the reason a worker hangs.
+const enrichUnlockTimeout = 5 * time.Second
