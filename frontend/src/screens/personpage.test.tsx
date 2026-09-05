@@ -300,7 +300,7 @@ describe("a moment action that opens the composer", () => {
     await user.click(within(header).getByRole("button", { name: "Email" }));
 
     expect(
-      await screen.findByRole("dialog", { name: /Send this email/ }),
+      await screen.findByRole("dialog", { name: /Draft email/ }),
     ).toBeTruthy();
     expect(
       screen.queryByRole("textbox", { name: "What should it be about?" }),

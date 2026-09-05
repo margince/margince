@@ -27,7 +27,7 @@
 .consent-row-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--gapActions);
   flex-wrap: wrap;
 }
 /* The token field gets its own line below the actions row (the .field label-

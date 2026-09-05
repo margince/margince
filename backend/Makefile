@@ -578,11 +578,18 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 		-out-specs internal/platform/jobs/specs_gen.go \
 		-out-kinds internal/compose/jobkinds_gen.go
 
-drift: gen ## Fail when any generated file drifted from the contract
+drift: gen perfdoc ## Fail when a committed generated file drifted from what its generator produces
 	# gen regenerates the committed per-unit manifests too (via composition);
 	# without them here a stale or hand-edited extensions/<name>/manifest.generated.json
 	# would be silently healed by the mutating gen step instead of failing.
-	git diff --exit-code -- '*_gen.go' internal/contracts/ ../config/margince.schema.json '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json 'internal/modules/knowledge/handbook/*.md'
+	# The performance page is rendered from the committed records and belongs
+	# here for the reason the others do: it is generated, and a hand-edit or a
+	# skipped re-render survives review looking exactly like a measurement. It
+	# drifted that way — a record updated without perfdoc run after it, and the
+	# page went on publishing an older machine's numbers under a date no record
+	# held. A page that is merely stale says so; one that disagrees with its own
+	# source reads as current and is believed.
+	git diff --exit-code -- '*_gen.go' internal/contracts/ ../config/margince.schema.json '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md
 	# git diff ignores UNTRACKED files, so a new (or gen-recreated after a
 	# committed deletion) manifest that was never `git add`ed would slip past
 	# the diff above — fail explicitly when a generated manifest is uncommitted.

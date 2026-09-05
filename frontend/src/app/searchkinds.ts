@@ -3,7 +3,7 @@
 
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
-import { settingsAddress } from "../screens/settings";
+import { settingsAddress } from "../screens/settingsnav";
 import { ENTITY, type EntityKind, isEntityKind } from "./entity";
 import type { Route } from "./router";
 

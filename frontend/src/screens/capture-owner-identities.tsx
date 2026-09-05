@@ -272,7 +272,7 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
             {problemMessageOf(add.error, t)}
           </Callout>
         )}
-        <div className="modal-actions">
+        <div className="actions">
           <Button variant="ghost" onClick={onClose} type="button">
             {t("create.cancel")}
           </Button>

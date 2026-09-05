@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { QueryClient } from "@tanstack/react-query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
@@ -31,6 +32,20 @@ const POLL_IDLE_MS = 30_000;
 const ASK_LINGER_MS = 900;
 
 const ACTIVITY_KEY = ["me", "ai-activity"] as const;
+
+/**
+ * Ask the feed again now, because this tab just did something the feed will
+ * carry.
+ *
+ * For the surfaces that START a durable run and answer 202 — a website read
+ * from a company page — rather than hold a model call open: those never count
+ * as an ask in flight, so without this the orb would light on the next idle
+ * poll, up to half a minute after the button, and the reader who pressed it
+ * would see nothing move. Same shape as the refetch on an ask's edges below.
+ */
+export function refetchAiActivity(client: QueryClient): void {
+  void client.refetchQueries({ queryKey: ACTIVITY_KEY });
+}
 
 /** One frozen empty list, so an absent read never mints a new array identity. */
 const NOTHING: readonly AiActivityItem[] = Object.freeze([]);

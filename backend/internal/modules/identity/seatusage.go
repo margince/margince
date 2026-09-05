@@ -25,6 +25,14 @@ import (
 // rep reads their own seat elsewhere (UC-ADMIN-03 F1).
 const licenseObject = "license"
 
+// seatUsageObject gates the seat COUNT on its own, apart from the entitlement it
+// is normally read beside. The two answer different questions to different
+// readers: how many seats are in use is capacity, which a manager plans against,
+// while what the license grants and what it cost is the installation's
+// commercial standing. One object for both meant a role could not be shown the
+// first without also being handed the second.
+const seatUsageObject = "seat_usage"
+
 // SeatUsageStore counts the seats an entitlement is measured against.
 type SeatUsageStore struct {
 	db *database.DB
@@ -58,6 +66,29 @@ func (s *SeatUsageStore) FullSeatsInUse(ctx context.Context) (int, error) {
 	if err := auth.Require(ctx, licenseObject, principal.ActionRead); err != nil {
 		return 0, err
 	}
+	return s.countFullSeats(ctx)
+}
+
+// SeatsInUse answers the same count for a reader holding `seat_usage` rather
+// than `license`: the capacity question without the commercial one.
+//
+// It runs countFullSeats rather than a statement of its own, and that is the
+// point of splitting the GRANT instead of writing a second store. Two counts of
+// one installation's seats would drift, and the one that drifted would be the
+// one nobody was refused a seat by — a meter disagreeing with the ceiling it
+// measures. There is one meter; this is a second door onto it, and the doors
+// differ only in which grant opens them.
+func (s *SeatUsageStore) SeatsInUse(ctx context.Context) (int, error) {
+	if err := auth.Require(ctx, seatUsageObject, principal.ActionRead); err != nil {
+		return 0, err
+	}
+	return s.countFullSeats(ctx)
+}
+
+// countFullSeats runs the meter. It carries no gate of its own, which is why it
+// is unexported: both entry points above check one first, and a caller reaching
+// the count without checking would be the defect this shape prevents.
+func (s *SeatUsageStore) countFullSeats(ctx context.Context) (int, error) {
 	var used int
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, fullSeatsInUseQuery).Scan(&used)

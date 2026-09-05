@@ -185,7 +185,7 @@ export function ContractRenewModal({
         </p>
       )}
 
-      <div className="modal-actions">
+      <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
         <Button
           variant="primary"
@@ -291,7 +291,7 @@ export function ContractStatusModal({
         </p>
       )}
 
-      <div className="modal-actions">
+      <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
         {/* recordAssignment (patch.go) records a SET regardless of whether
             the new value equals the old one, so a same-status submit would
@@ -436,7 +436,7 @@ export function ContractCancelModal({
         </p>
       )}
 
-      <div className="modal-actions">
+      <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
         <Button
           variant="danger"

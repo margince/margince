@@ -129,3 +129,46 @@ func TestAValueThatIsNotAProfileLinkStaysEvidenceOnly(t *testing.T) {
 		t.Errorf("linkedin slot = %q, want empty: a URL off LinkedIn's host is not a profile link", got)
 	}
 }
+
+// A slot that was filled says so in a row of its own.
+//
+// The caller's audit row attests to the EVIDENCE write and reads the same
+// whether the slot was empty or already held somebody's statement, so a reader
+// asking when this contact gained its profile link had nothing to read. The
+// LinkedIn-match decision has recorded it since it shipped; both writers now
+// land on the same helper, so the answer does not depend on which filled it.
+func TestAFilledSlotIsNamedInAnAuditRowOfItsOwn(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	personID, _ := e.seedEmployedPerson(ctx, t,
+		"Tuva Lien", "tuva@slotfill.test", "Lien AS", "slotfill.test")
+
+	if _, err := e.store.ApplyDiscoveredFields(ctx, personID, []DiscoveredField{{
+		Field:           "linkedin",
+		Value:           "https://www.linkedin.com/in/tuva-lien",
+		EvidenceSnippet: "Tuva Lien — Lien AS",
+		SourceRef:       "search:slotfill",
+	}}); err != nil {
+		t.Fatalf("ApplyDiscoveredFields: %v", err)
+	}
+	if got := countAuditRowsHolding(ctx, t, e.store, "person", personID.UUID, "social"); got != 1 {
+		t.Errorf("audit rows naming the social write = %d, want 1 — a fill nothing records is a "+
+			"change to what the rail, the resolver and the SAR export answer, with no trace of when", got)
+	}
+
+	// The control, and the half the finding was actually about: a SECOND
+	// discovery against the now-occupied slot writes evidence and no handle,
+	// and must not claim the social write a third reader would then look for.
+	if _, err := e.store.ApplyDiscoveredFields(ctx, personID, []DiscoveredField{{
+		Field:           "linkedin",
+		Value:           "https://www.linkedin.com/in/tuva-lien-2",
+		EvidenceSnippet: "Tuva Lien — a second reading",
+		SourceRef:       "search:slotfill-again",
+	}}); err != nil {
+		t.Fatalf("second ApplyDiscoveredFields: %v", err)
+	}
+	if got := countAuditRowsHolding(ctx, t, e.store, "person", personID.UUID, "social"); got != 1 {
+		t.Errorf("audit rows naming the social write = %d after a fill that found the slot occupied, "+
+			"want the original 1 — the two writes must not read alike", got)
+	}
+}

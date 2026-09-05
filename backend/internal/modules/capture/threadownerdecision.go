@@ -47,21 +47,31 @@ func (s *ThreadVerdictStore) DecideAsOwner(
 	if share {
 		status = VerdictSharedByOwner
 	}
+	// A thread this call opens fresh (never through EnsureTx — a message born
+	// open under a `shared` mailbox never did) needs an anchor of its own, or
+	// heldthreadslist's existence check has nothing to join against and reports
+	// an intact message as erased. The earliest of the seat's own live
+	// messages in the thread, the same messages ThreadActivityIDsTx names.
+	anchor, err := firstThreadActivityTx(ctx, tx, threadKey, actor.UserID)
+	if err != nil {
+		return err
+	}
 	// Upserted, because a thread the owner decides about may have no ledger row
 	// at all: a message born open under a `shared` mailbox never opened a
 	// question, and its owner may still want it held.
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO capture_thread_verdict
-		  (thread_key, user_id, status, disposition_reason, resolved_at, next_attempt_at)
-		VALUES ($1, $2, $3, $4, now(), NULL)
+		  (thread_key, user_id, first_activity_id, status, disposition_reason, resolved_at, next_attempt_at)
+		VALUES ($1, $2, $3, $4, $5, now(), NULL)
 		ON CONFLICT (thread_key, user_id) DO UPDATE
-		   SET status = EXCLUDED.status,
+		   SET first_activity_id = coalesce(capture_thread_verdict.first_activity_id, EXCLUDED.first_activity_id),
+		       status = EXCLUDED.status,
 		       disposition_reason = EXCLUDED.disposition_reason,
 		       resolved_at = now(),
 		       next_attempt_at = NULL,
 		       claimed_by = NULL, claimed_until = NULL,
 		       updated_at = now()`,
-		threadKey, actor.UserID, status, ownerDecisionReason); err != nil {
+		threadKey, actor.UserID, anchor, status, ownerDecisionReason); err != nil {
 		return fmt.Errorf("capture: recording the owner's decision about a thread: %w", err)
 	}
 	// The seat's own import rows for the thread, which is what the audience
@@ -89,6 +99,26 @@ func (s *ThreadVerdictStore) DecideAsOwner(
 // ownerDecisionReason marks a ledger row a person settled, so a reader can tell
 // it from one a classifier reached.
 const ownerDecisionReason = "owner_decision"
+
+// firstThreadActivityTx names the earliest of the seat's own live messages in
+// a thread, for a ledger row that needs an anchor and does not have one yet.
+// Built over ThreadActivityIDsTx rather than a hand-rolled query: it already
+// reads exactly this seat's own thread and ids sort chronologically (ids.UUID
+// is a v7). The store re-derives its own answer rather than trusting a
+// caller's — DecideAsOwner's one caller happens to have already run this same
+// read, but a store that assumed so would break the day a second caller did
+// not. A thread with nothing to anchor to answers nil rather than the zero
+// UUID, which heldthreadslist reads as "no message" if it were ever written.
+func firstThreadActivityTx(ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID) (*ids.UUID, error) {
+	activityIDs, err := ThreadActivityIDsTx(ctx, tx, threadKey, user)
+	if err != nil {
+		return nil, err
+	}
+	if len(activityIDs) == 0 {
+		return nil, nil //nolint:nilnil // deliberate: no message to anchor to is not an error
+	}
+	return &activityIDs[0], nil
+}
 
 // ThreadActivityIDsTx lists the messages of one thread this seat imported.
 //

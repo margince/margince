@@ -75,6 +75,23 @@ case_is "a later re-run does not overwrite the verdict at merge time" "$pr" \
 	'{"check_runs":[{"name":"ci","status":"completed","conclusion":"failure","completed_at":"2026-08-24T02:29:56Z"},{"name":"ci","status":"completed","conclusion":"success","completed_at":"2026-08-25T09:00:00Z"}]}' \
 	1 'reported `failure`'
 
+# THE OTHER SIDE OF THAT RULE, and the case it was missing: BOTH runs before the
+# merge. A red lane cleared by a re-run and then merged by a human is the
+# ordinary way a flake is repaired, and the required check was green at the
+# moment the merge was made — the red is the run the merger looked at and
+# correctly disregarded. Judging the oldest accused that merge of landing over a
+# verdict that had already been superseded, which is the alarm firing on the
+# repair rather than on anything.
+case_is "a re-run BEFORE the merge is the verdict the merger saw" "$pr" \
+	'{"check_runs":[{"name":"ci","status":"completed","conclusion":"failure","completed_at":"2026-08-24T02:29:56Z"},{"name":"ci","status":"completed","conclusion":"success","completed_at":"2026-08-24T02:40:00Z"}]}' \
+	0 "merged behind a green"
+
+# And the pair either side of it, which is the shape that must still accuse: red
+# before, green only after. The merge was made over the red one.
+case_is "a re-run after the merge cannot clear a red the merger saw" "$pr" \
+	'{"check_runs":[{"name":"ci","status":"completed","conclusion":"failure","completed_at":"2026-08-24T02:29:56Z"},{"name":"ci","status":"completed","conclusion":"success","completed_at":"2026-08-24T03:10:00Z"}]}' \
+	1 'reported `failure`'
+
 # The other finding, and the loudest: nothing reviewed this at all.
 case_is "no pull request at all" '[]' '{"check_runs":[]}' 1 "no pull request naming it"
 

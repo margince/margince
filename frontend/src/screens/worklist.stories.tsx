@@ -17,20 +17,20 @@ const aLoadedTeam: TeamBoard = {
     {
       user_id: "00000000-0000-4000-8000-000000000001",
       display_name: "Lena Fischer",
-      counts: { waiting: 14, at_risk: 3, overdue: 6 },
+      counts: { waiting: 14, at_risk: 3, overdue: 6, promises_due: 2 },
     },
     {
       user_id: "00000000-0000-4000-8000-000000000002",
       display_name: "Marc Weber",
-      counts: { waiting: 2, at_risk: 0, overdue: 0 },
+      counts: { waiting: 2, at_risk: 0, overdue: 0, promises_due: 0 },
     },
     {
       user_id: "00000000-0000-4000-8000-000000000003",
       display_name: "Sofia Ruiz",
-      counts: { waiting: 0, at_risk: 1, overdue: 0 },
+      counts: { waiting: 0, at_risk: 1, overdue: 0, promises_due: 4 },
     },
   ],
-  unassigned: { waiting: 3, at_risk: 0, overdue: 1 },
+  unassigned: { waiting: 3, at_risk: 0, overdue: 1, promises_due: 0 },
   truncated: false,
 };
 

@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -95,7 +96,8 @@ func setupTranscript(t *testing.T) *transcriptEnv {
 	e := &transcriptEnv{Env: integration.Setup(t), owner: integration.OwnerConn(t)}
 	e.ctx = e.As(e.Rep1, []ids.UUID{e.Team1}, transcriptPerms)
 	e.svc = approvals.NewService(e.DB())
-	e.svc.WithEffect(TranscriptProposalKind, transcriptProposalEffect(e.svc, e.Activities))
+	e.svc.WithEffect(TranscriptProposalKind,
+		transcriptProposalEffect(e.svc, e.Activities, identity.NewService(e.Pool)))
 
 	subject := "Rollout call"
 	sourceSystem := "transcript"
@@ -516,5 +518,231 @@ func TestARepWhoMayNotAddToTheTimelineCannotStartAReading(t *testing.T) {
 
 	if _, _, err := e.Activities.StartTranscriptReadQueued(ctx, e.activity, "human:"+e.Rep1.String(), nil); err == nil {
 		t.Fatal("a caller who could not accept any outcome of the reading has nothing to gain from starting it")
+	}
+}
+
+// datedReply is groundedReply with the deadline the transcript stated.
+func datedReply(t *testing.T, line int, due string) string {
+	t.Helper()
+	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
+		"summary": "Send the revised pricing", "owner": "Priya",
+		"due_date": due, "source_lines": []int{line}, "confidence": 0.9,
+	}}})
+	if err != nil {
+		t.Fatalf("building the model reply: %v", err)
+	}
+	return string(raw)
+}
+
+// A deadline stated in the meeting becomes the task's own date.
+//
+// It did not. The proposal carried the day in its title and nothing else, so
+// the accepted task read "No date" on the contact and on the company while its
+// own subject named the eighth — a task nobody would be reminded about, whose
+// text said when it was due.
+//
+// The instant is the END of the named day in the installation's zone: a task
+// due "the 8th" filed at that day's midnight is overdue for the whole of the
+// 8th, which is not what anybody in the meeting agreed to.
+func TestAStatedDeadlineBecomesTheTasksDueDate(t *testing.T) {
+	e := setupTranscript(t)
+	// The zone is PINNED rather than read back out of settings. Reading it
+	// back would compare the conversion against itself: a broken conversion
+	// and a broken read agree, and the harness runs in UTC where the two are
+	// the same answer anyway.
+	e.WsExec(t, `UPDATE setting SET value = '"Europe/Berlin"'::jsonb
+		WHERE key = 'installation.timezone'`)
+	read := e.read(t, cannedBrain{reply: datedReply(t, 3, "2026-09-08")})
+	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
+	if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
+		t.Fatalf("approving the proposal: %v", err)
+	}
+
+	due := e.wsString(t, `SELECT coalesce(to_char(due_at AT TIME ZONE 'Europe/Berlin',
+		'YYYY-MM-DD HH24:MI:SS'), '') FROM activity
+		WHERE kind = 'task' ORDER BY created_at DESC LIMIT 1`)
+	if due == "" {
+		t.Fatal("the task carries no due date, so the deadline lives only in its " +
+			"title — which is the state a reader sees as \"No date\"")
+	}
+	if due != "2026-09-08 23:59:59" {
+		t.Errorf("the task is due %q, want the end of 8 September in the "+
+			"installation's own zone", due)
+	}
+}
+
+// A next step nobody dated carries no date, rather than today's.
+//
+// The common case, and the one an invented deadline would corrupt: a task due
+// the day it was created is overdue tomorrow, and nobody in the meeting agreed
+// to that either.
+func TestAnUndatedNextStepCarriesNoDeadline(t *testing.T) {
+	e := setupTranscript(t)
+	read := e.read(t, cannedBrain{reply: datedReply(t, 3, "")})
+	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
+	if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
+		t.Fatalf("approving the proposal: %v", err)
+	}
+
+	dated := e.WsCount(t, `SELECT count(*) FROM activity
+		WHERE kind = 'task' AND due_at IS NOT NULL`)
+	if dated != 0 {
+		t.Errorf("%d task(s) carry a due date the transcript never stated", dated)
+	}
+}
+
+// A deadline on a day that is not 24 hours long still means that day.
+//
+// The instant was built by adding a day and taking a second back, which is
+// wrong exactly twice a year: on Europe/Berlin's spring-forward day the local
+// day is 23 hours, so the arithmetic landed at 00:59 the NEXT morning and a
+// task due the 29th was due the 30th. The autumn day is 25 hours and it landed
+// an hour early.
+//
+// Both boundaries, because they fail in opposite directions and a fix for one
+// can leave the other.
+func TestADeadlineOnADaylightSavingBoundaryStaysOnItsOwnDay(t *testing.T) {
+	for _, c := range []struct {
+		name, day string
+	}{
+		{"spring forward, a 23-hour day", "2026-03-29"},
+		{"autumn back, a 25-hour day", "2026-10-25"},
+		{"an ordinary 24-hour day", "2026-09-08"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			e := setupTranscript(t)
+			// A zone that actually observes daylight saving. The harness runs
+			// in UTC, where this defect cannot appear at all.
+			e.WsExec(t, `UPDATE setting SET value = '"Europe/Berlin"'::jsonb
+				WHERE key = 'installation.timezone'`)
+
+			read := e.read(t, cannedBrain{reply: datedReply(t, 3, c.day)})
+			approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
+			if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
+				t.Fatalf("approving the proposal: %v", err)
+			}
+
+			due := e.wsString(t, `SELECT to_char(due_at AT TIME ZONE 'Europe/Berlin',
+				'YYYY-MM-DD HH24:MI:SS') FROM activity
+				WHERE kind = 'task' ORDER BY created_at DESC LIMIT 1`)
+			if want := c.day + " 23:59:59"; due != want {
+				t.Errorf("a task due %s is due %q in the installation's own zone, want %q",
+					c.day, due, want)
+			}
+		})
+	}
+}
+
+// The colleague a transcript names gets the task.
+//
+// The owner arrived as prose and went into the task's BODY and nowhere else, so
+// the task said whose promise it was and belonged to nobody: it appeared on no
+// assignee's list, and reminded no one.
+func TestTheNamedColleagueGetsTheTask(t *testing.T) {
+	e := setupTranscript(t)
+	// One seat with a name a transcript could state. The harness gives all
+	// three humans the display name "Rep", which is the ambiguous case the
+	// next test uses.
+	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
+
+	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman")})
+	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
+	if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
+		t.Fatalf("approving the proposal: %v", err)
+	}
+
+	assignee := e.wsString(t, `SELECT coalesce(assignee_id::text, '') FROM activity
+		WHERE kind = 'task' ORDER BY created_at DESC LIMIT 1`)
+	if assignee == "" {
+		t.Fatal("the task belongs to nobody, so it is on no list and reminds no one")
+	}
+	if assignee != e.Rep2.String() {
+		t.Errorf("the task went to %s, want the colleague the transcript named", assignee)
+	}
+}
+
+// A name that could be two colleagues assigns to NEITHER.
+//
+// A promise given to the wrong colleague is worse than one given to nobody: the
+// wrong colleague does not do it, and the right one never learns it was theirs.
+// The body still names who promised, so a person can route it.
+func TestAnAmbiguousOwnerLeavesTheTaskUnassigned(t *testing.T) {
+	e := setupTranscript(t)
+	// The harness's three humans all display as "Rep".
+	read := e.read(t, cannedBrain{reply: ownedReply(t, "Rep")})
+	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
+	if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
+		t.Fatalf("approving the proposal: %v", err)
+	}
+
+	assigned := e.WsCount(t, `SELECT count(*) FROM activity
+		WHERE kind = 'task' AND assignee_id IS NOT NULL`)
+	if assigned != 0 {
+		t.Errorf("%d task(s) were assigned on a name three colleagues answer to", assigned)
+	}
+	body := e.wsString(t, `SELECT body FROM activity WHERE kind = 'task'
+		ORDER BY created_at DESC LIMIT 1`)
+	if !strings.Contains(body, "Rep") {
+		t.Error("an unassigned task must still name who promised, or nobody can route it")
+	}
+}
+
+// A name nobody answers to assigns to nobody, and does not fall back to the
+// person who approved it. Approving a proposal is answering a question about
+// somebody else's commitment, not volunteering for it.
+func TestAnOutsidersPromiseIsNotGivenToTheApprover(t *testing.T) {
+	e := setupTranscript(t)
+	read := e.read(t, cannedBrain{reply: ownedReply(t, "Frédéric de Gombert")})
+	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
+	if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
+		t.Fatalf("approving the proposal: %v", err)
+	}
+
+	assigned := e.WsCount(t, `SELECT count(*) FROM activity
+		WHERE kind = 'task' AND assignee_id IS NOT NULL`)
+	if assigned != 0 {
+		t.Errorf("%d task(s) were assigned for a promise made by somebody outside "+
+			"the installation", assigned)
+	}
+}
+
+// ownedReply is groundedReply with the owner the transcript named.
+//
+// Line 3 is where this suite's transcript states the promise, so every case
+// cites it and the line is not a parameter.
+func ownedReply(t *testing.T, owner string) string {
+	t.Helper()
+	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
+		"summary": "Send the revised pricing", "owner": owner,
+		"due_date": "", "source_lines": []int{3}, "confidence": 0.9,
+	}}})
+	if err != nil {
+		t.Fatalf("building the model reply: %v", err)
+	}
+	return string(raw)
+}
+
+// A FIRST NAME is not a colleague. It is consistent with one, and with anybody
+// else who shares it, and a writer cannot tell which from the string.
+//
+// The near-miss is the dangerous shape: a substring search finds exactly one
+// row, so a resolver that took its first candidate would assign the work
+// confidently and wrongly. Only an exact name or email resolves.
+func TestAFirstNameAloneDoesNotResolveToAColleague(t *testing.T) {
+	e := setupTranscript(t)
+	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
+
+	// "Priya" narrows the roster to exactly her, and still must not resolve.
+	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya")})
+	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
+	if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
+		t.Fatalf("approving the proposal: %v", err)
+	}
+
+	assigned := e.WsCount(t, `SELECT count(*) FROM activity
+		WHERE kind = 'task' AND assignee_id IS NOT NULL`)
+	if assigned != 0 {
+		t.Errorf("%d task(s) were assigned on a first name — the one match a "+
+			"substring search finds is not the one a person meant", assigned)
 	}
 }

@@ -202,6 +202,10 @@ export const en = {
   "shell.more": "More",
   "shell.unknownPage": "Not found",
   "shell.closeMenu": "Close",
+  "shell.capture.importing": "Importing mail history",
+  "shell.capture.share": "{percent} · {scanned} of {total} messages",
+  "shell.capture.count": "{scanned} messages so far",
+  "shell.capture.open": "Open the import",
   // The sidebar's second level. The control READS one word at every depth; its
   // accessible name says where it leads, and the level of destinations needs a
   // name of its own to be led back to.
@@ -262,6 +266,13 @@ export const en = {
   "search.tier.mirrored": "from a connected system",
   "search.tier.unverified": "unverified",
 
+  "context.recentTouches": "Recent conversations",
+  "context.openTasks": "Open tasks",
+  "context.relatedPeople": "Related people",
+  "context.relatedCompanies": "Related companies",
+  "context.relatedProjects": "Related projects",
+  "context.whoKnows": "Who knows them",
+  "context.relatedDeals": "Related deals",
   "context.title": "Related evidence",
   "context.empty": "Nothing related yet.",
 
@@ -3301,7 +3312,7 @@ export const en = {
     "This continues their own message, so it needs no reason from you.",
   "compose.sendLaterLabel": "Send later (optional)",
   "compose.send": "Send",
-  "compose.sendConfirmTitle": "Send this email?",
+  "compose.sendConfirmTitle": "Draft email",
   "compose.threadHeading": "This conversation",
   "compose.continueHeading": "Continue a conversation?",
   "compose.threadLeave": "Choose another",
@@ -3310,7 +3321,7 @@ export const en = {
   "compose.threadContinuing": "The last exchange, which this will continue",
   "compose.threadPending": "Loading the conversation\u2026",
   "compose.sendBody":
-    "You are sending this email now. This is an outbound, irreversible action.",
+    "Review and edit your draft. Clicking Send sends this email and cannot be undone.",
   // A moment picked in the field above turns this dialog into a different
   // promise, so it says a different thing. The three sentences it replaces all
   // claim the send is happening NOW and is irreversible; a scheduled message is
@@ -3375,6 +3386,7 @@ export const en = {
   "analytics.count": "Deals",
   "analytics.unweighted": "Unweighted",
   "analytics.weighted": "Weighted",
+  "analytics.priced": "{priced} of {total} priced",
   "analytics.planNote":
     "the executed plan and the rows this number reconciles to",
   "analytics.reportDeals": "Open pipeline by stage",
@@ -3385,6 +3397,19 @@ export const en = {
   "analytics.noClosedDeals": "No deals have closed yet.",
   "analytics.sectionOutcomes": "My outcomes",
   "analytics.sectionCoverage": "Data coverage",
+  "analytics.sectionDelivery": "Delivery",
+  "analytics.reportProjectsByPhase": "Projects by phase",
+  "analytics.reportProjectCommitments": "Project promises",
+  "analytics.reportProjectsGoneQuiet": "Projects gone quiet",
+  "analytics.projects": "Projects",
+  "analytics.project": "Project",
+  "analytics.openDealValue": "Open deal value ({currency})",
+  "analytics.wonDealValue": "Won deal value ({currency})",
+  "analytics.openCommitments": "Open",
+  "analytics.overdueCommitments": "Overdue",
+  "analytics.quietSince": "Quiet since",
+  "analytics.nothingQuiet": "No delivering project has gone quiet.",
+  "analytics.noProjectsYet": "No projects yet — a won deal opens one.",
   "analytics.coverageSub":
     "Which sources the nightly check could read, and how far. A quiet source that was read is checked; an unread one says why.",
   "analytics.covSource": "Source",
@@ -3670,6 +3695,25 @@ export const en = {
   "agent.activity.documentExtractNamed.degraded":
     "I got partway through {name} and stopped.",
   "agent.activity.documentExtractNamed.failed": "I couldn't read {name}.",
+  // A company's website being read. The same shape as the document lines: the
+  // unnamed pair says which kind of thing, the named one says which company.
+  "agent.activity.siteRead.queued": "The company website is queued to be read.",
+  "agent.activity.siteRead.running": "I'm reading the company website.",
+  "agent.activity.siteRead.stalled":
+    "Reading the company website has taken unusually long. It may have stopped.",
+  "agent.activity.siteRead.done": "I've read the company website.",
+  "agent.activity.siteRead.degraded":
+    "I stopped before finishing the company website.",
+  "agent.activity.siteRead.failed": "I couldn't read the company website.",
+  "agent.activity.siteReadNamed.queued":
+    "The {name} website is queued to be read.",
+  "agent.activity.siteReadNamed.running": "I'm reading the {name} website.",
+  "agent.activity.siteReadNamed.stalled":
+    "Reading the {name} website has taken unusually long. It may have stopped.",
+  "agent.activity.siteReadNamed.done": "I've read the {name} website.",
+  "agent.activity.siteReadNamed.degraded":
+    "I stopped before finishing the {name} website.",
+  "agent.activity.siteReadNamed.failed": "I couldn't read the {name} website.",
   // The AI work a person ASKS for and then waits on. Same rules as the
   // scheduled lines above — first person, result first, and never a word that
   // reads as finished on a run that stopped part-way.
@@ -3677,16 +3721,34 @@ export const en = {
   // These four were deliberately not narrated until the router could say
   // `running`: reporting them settled-only meant a line that appeared already
   // finished, which tells a waiting reader nothing they did not already know.
-  "agent.activity.summarize.queued": "Reading up on this company is queued.",
-  "agent.activity.summarize.running":
-    "I'm pulling together what I know about this company.",
-  "agent.activity.summarize.done": "What I know about this company is ready.",
+  //
+  // summarize is five sites over three kinds of record — a company, a person,
+  // a meeting — so the unnamed lines name none of them: "this company" was a
+  // guess that was wrong two times in five, and a guess at a name is worse
+  // than no name. The NAMED pair below is the line a reader should see; these
+  // are what an occurrence without a subject falls back to.
+  "agent.activity.summarize.queued": "A summary is queued.",
+  "agent.activity.summarize.running": "I'm pulling a summary together.",
+  "agent.activity.summarize.done": "Your summary is ready.",
   "agent.activity.summarize.degraded":
-    "I gathered some of what I know about this company and stopped.",
-  "agent.activity.summarize.failed":
-    "I couldn't finish reading up on this company.",
+    "I gathered part of a summary and stopped.",
+  "agent.activity.summarize.failed": "I couldn't finish the summary.",
   "agent.activity.summarize.stalled":
-    "Reading up on this company has taken unusually long. It may have stopped.",
+    "The summary has taken unusually long. It may have stopped.",
+  // The same six with the record NAMED — the company, the person or the
+  // meeting the summary is about, in the name the product shows for it
+  // elsewhere. Whenever the rail names what it is working on, it names the
+  // actual record: "what I know about Acme", never "about this company".
+  "agent.activity.summarizeNamed.queued": "Reading up on {name} is queued.",
+  "agent.activity.summarizeNamed.running":
+    "I'm pulling together what I know about {name}.",
+  "agent.activity.summarizeNamed.done": "What I know about {name} is ready.",
+  "agent.activity.summarizeNamed.degraded":
+    "I gathered some of what I know about {name} and stopped.",
+  "agent.activity.summarizeNamed.failed":
+    "I couldn't finish reading up on {name}.",
+  "agent.activity.summarizeNamed.stalled":
+    "Reading up on {name} has taken unusually long. It may have stopped.",
   "agent.activity.draftReply.queued": "Your reply is queued to be drafted.",
   "agent.activity.draftReply.running": "I'm drafting your reply.",
   "agent.activity.draftReply.done": "Your draft reply is ready.",
@@ -4476,7 +4538,7 @@ export const en = {
   "overnightGrant.help":
     "It reads your deals and mail to rank what needs you today, and writes notes back. It cannot send: the permission you give here covers reading and writing only, never sending.",
   "overnightGrant.danger":
-    "Without this, your morning brief, your worklist lanes and your weekly review stay empty. These are the screens Margince opens on, so most of the product will look like it is not working.",
+    "Without this permission, the overnight agent cannot read or annotate your brief. Your records, worklist and scheduled weekly review remain available.",
   "overnightGrant.saveFailed":
     "Your answer to the overnight question could not be saved. Everything else is connected — set it under Settings → Connections when you are in.",
   "overnightGrant.renew":
@@ -5723,6 +5785,7 @@ export const en = {
   "recordmail.send": "Write email",
   "deal360.rewrite": "Write it again",
   "deal360.readFull": "Read the full briefing",
+  "deal360.openTask": "Open existing task",
   "deal360.createTask": "Add this task",
   "deal360.openBrief": "Open the meeting brief",
   "deal360.unreadable":
@@ -7209,9 +7272,29 @@ export const en = {
   "person.intro.factDirect": "Direct relationship",
   "person.intro.factIndirect": "Through a colleague",
   "person.intro.factReceipts": "{count} visible receipts",
-  "person.intro.stripPath": "Best path",
+  "person.intro.verdictDirect":
+    "Ask {name} — they already write to each other.",
+  "person.intro.verdictOneSided":
+    "Ask {name} — they have written, with no reply yet.",
+  "person.intro.verdictVia": "Ask {name} — they reach them through {through}.",
+  "person.intro.evidenceEyebrow": "The evidence behind it",
+  "person.intro.evidenceExchanges": "Exchanges",
+  "person.intro.evidenceWindow": "in 90 days",
+  "person.intro.evidenceFrom": "{count} from {name}",
+  "person.intro.evidenceLastContact": "Last contact",
+  "person.intro.lastToday": "Today",
+  "person.intro.lastYesterday": "Yesterday",
+  "person.intro.lastDays": "{days} days ago",
+  "person.intro.lastNever": "None in 90 days",
+  "person.intro.stripWho": "Who reaches them",
+  "person.intro.stripWhoCount_one": "Only {name}",
+  "person.intro.stripWhoCount_other": "{count} colleagues",
+  "person.intro.stripWhoMix": "{direct} direct · {indirect} through a contact",
+  "person.intro.otherRoutesTitle": "Other ways in",
+  "person.intro.otherRoutesSub":
+    "Ranked by how much two-way correspondence backs each one.",
+  "person.intro.relayDue": "due {date}",
   "person.intro.stripDirect": "Direct relationship",
-  "person.intro.stripVia": "Through {through}",
   "person.intro.stripNoPath": "Nobody here reaches them yet",
   "person.intro.stripWhyNow": "Why now",
   "person.intro.stripWhyNowSub": "The most recent change on this relationship",
@@ -7252,7 +7335,6 @@ export const en = {
   "person.intro.routesSub":
     "Best first. Pick the one you can actually use — the second is here because the first is not always available.",
   "person.intro.best": "Best",
-  "person.intro.alternative": "Alternative",
   "person.intro.evidenceTwoWay_one":
     "{total} two-way exchange in 90 days · {when}",
   "person.intro.evidenceTwoWay_other":
@@ -8160,14 +8242,19 @@ export const en = {
   "worklist.bandClear.keep_momentum": "Nothing agreed is drifting.",
   "worklist.bandClear.review": "Nothing to review.",
   "worklist.disposition.verb.snooze": "Snooze",
+  "worklist.disposition.snoozeForDays_one": "Snooze for {value} day",
+  "worklist.disposition.snoozeForDays_other": "Snooze for {value} days",
   "worklist.disposition.snoozeFor": "For how long",
   "worklist.disposition.snoozeDays_one": "{value} day",
   "worklist.disposition.snoozeDays_other": "{value} days",
+  "worklist.disposition.snoozeUntil.reply": "Until they reply",
   "worklist.disposition.verb.not_mine": "Not mine",
   "worklist.disposition.verb.not_sales": "Not a customer",
   "worklist.disposition.done.snooze": "Back on your list tomorrow.",
   "worklist.disposition.doneSnooze_one": "Back on your list tomorrow.",
   "worklist.disposition.doneSnooze_other": "Back on your list in {value} days.",
+  "worklist.disposition.doneSnoozeUntil.reply":
+    "Back on your list when they reply.",
   "worklist.disposition.done.not_mine":
     "Off your list. Whoever owns it still sees it.",
   "worklist.disposition.done.not_sales": "Off everyone's list.",
@@ -8248,6 +8335,12 @@ export const en = {
   "worklist.board.atRisk": "Deals at risk",
   "worklist.board.overdue": "Past due",
   "worklist.board.nobody": "Nobody yet",
+  "worklist.coaching.title": "Worth a word this morning",
+  "worklist.coaching.promises":
+    "{name} owes {count} promises that are due — the customer is already expecting them.",
+  "worklist.coaching.waiting": "{count} customers are waiting on {name}.",
+  "worklist.coaching.overdue": "{name} has {count} tasks past their due date.",
+  "worklist.board.promises": "Promises due",
   "worklist.board.truncated":
     "There is more work than this could count. These are floors, not totals.",
   "worklist.readings.label": "What today is worth",

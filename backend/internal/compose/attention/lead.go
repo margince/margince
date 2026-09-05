@@ -64,12 +64,6 @@ const sourceLeadResponse = "lead_response"
 // "draft the reply" verb on a row with no thread behind it.
 const categoryLeads = "leads"
 
-// leadLead is how many overdue leads lead the page, mirroring waitingLead.
-//
-// A cap on how much of ONE kind a reader meets before they see the others,
-// rather than a cap on the source: the rest stay ranked and reachable.
-const leadLead = 8
-
 // classifyLead ranks one lead against everything else on the day.
 //
 // Breached sits at levelWaiting beside a waiting customer, because it is the

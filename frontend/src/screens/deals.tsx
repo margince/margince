@@ -1919,45 +1919,41 @@ function DealBoardBody({
   // this map as well would read each company twice.
   const orgMarks = useOrgMarks(loadedDeals, orgs, orgsSettled);
   return (
-    <>
-      <QueryGate query={pipelinesQuery} pendingLabel={t("nav.deals")}>
-        {() =>
-          effectivePipeline ? (
-            // Only the INITIAL load goes through the gate. An infinite
-            // query reports isError when ANY page fails, later ones
-            // included, so keeping the gate around a loaded board would
-            // let one failed "load more" throw away every card already on
-            // screen. Past the first page the board stands and the button
-            // retries — exactly what OverlayDealsTable does above, and for
-            // the same reason.
-            (dealsQuery.data?.pages ?? []).length === 0 ? (
-              <QueryGate query={dealsQuery} pendingLabel={t("nav.deals")}>
-                {() => null}
-              </QueryGate>
-            ) : (
-              <>
-                <PipelineBoard
-                  cardHref={(deal) =>
-                    routeHash({ screen: "deals", id: deal.id })
-                  }
-                  columns={buildColumns(
-                    effectivePipeline.stages ?? [],
-                    loadedDeals,
-                    stageTotalsQuery.data ?? new Map(),
-                    orgMarks,
-                    totalsWithheld ? t(totalsWithheld) : undefined,
-                  )}
-                  onOpen={openDeal}
-                  cardDragHandlers={cardDragHandlers}
-                  columnDropHandlers={columnDropHandlers}
-                />
-                <LoadMoreButton query={dealsQuery} />
-              </>
-            )
-          ) : null
-        }
-      </QueryGate>
-    </>
+    <QueryGate query={pipelinesQuery} pendingLabel={t("nav.deals")}>
+      {() =>
+        effectivePipeline ? (
+          // Only the INITIAL load goes through the gate. An infinite
+          // query reports isError when ANY page fails, later ones
+          // included, so keeping the gate around a loaded board would
+          // let one failed "load more" throw away every card already on
+          // screen. Past the first page the board stands and the button
+          // retries — exactly what OverlayDealsTable does above, and for
+          // the same reason.
+          (dealsQuery.data?.pages ?? []).length === 0 ? (
+            <QueryGate query={dealsQuery} pendingLabel={t("nav.deals")}>
+              {() => null}
+            </QueryGate>
+          ) : (
+            <>
+              <PipelineBoard
+                cardHref={(deal) => routeHash({ screen: "deals", id: deal.id })}
+                columns={buildColumns(
+                  effectivePipeline.stages ?? [],
+                  loadedDeals,
+                  stageTotalsQuery.data ?? new Map(),
+                  orgMarks,
+                  totalsWithheld ? t(totalsWithheld) : undefined,
+                )}
+                onOpen={openDeal}
+                cardDragHandlers={cardDragHandlers}
+                columnDropHandlers={columnDropHandlers}
+              />
+              <LoadMoreButton query={dealsQuery} />
+            </>
+          )
+        ) : null
+      }
+    </QueryGate>
   );
 }
 
@@ -2690,13 +2686,10 @@ export function DealsScreen({
         bodyOwnsPaging={overlay || view === "board"}
         bodyCount={
           view === "board" &&
-          dealsQuery.data && (
-            <>
-              {t("board.count", {
-                count: formatNumber(loadedDeals.length, locale),
-              })}
-            </>
-          )
+          dealsQuery.data &&
+          t("board.count", {
+            count: formatNumber(loadedDeals.length, locale),
+          })
         }
         // The pipeline picker is screen state, not a filter, so switching it
         // changes every row without touching `filters`. Naming it here is
@@ -3251,11 +3244,7 @@ function DealPeoplePanels({
   if (overlay) {
     return null;
   }
-  return (
-    <div style={{ marginTop: "var(--space-4)" }}>
-      <RelationshipsTab scope={{ deal_id: dealId }} />
-    </div>
-  );
+  return <RelationshipsTab scope={{ deal_id: dealId }} />;
 }
 
 // This deal's VERBS — split out of DealScreen's render so the record-view
@@ -4236,15 +4225,13 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 </>
               }
               actions={
-                <>
-                  <DealActions
-                    deal={deal}
-                    orgs={orgs.data?.data ?? []}
-                    meId={me.data?.user.id ?? ""}
-                    openStages={openStages}
-                    archivedReasonId={archivedReasonId}
-                  />
-                </>
+                <DealActions
+                  deal={deal}
+                  orgs={orgs.data?.data ?? []}
+                  meId={me.data?.user.id ?? ""}
+                  openStages={openStages}
+                  archivedReasonId={archivedReasonId}
+                />
               }
               band={dealBand({ deal, reasonId: archivedReasonId, t })}
               timeline={timelineEntries}
@@ -4296,67 +4283,73 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 // record rather than as a way to see more of it.
                 trailing={<PageAsideToggle />}
               />
+              {/* One stack for the whole overview: the work column draws its
+                  children with no interval of its own, so the reading and the
+                  people under it take the record's rhythm from here rather
+                  than from a margin one of them carries. */}
               {tab === "overview" && (
-                <DealOverviewPane
-                  deal={deal}
-                  stages={stages}
-                  dealApprovals={dealApprovals}
-                  onDecide={(input) => decide.mutate(input)}
-                  offers={offersQuery.data?.data}
-                  creatingOffer={createOffer.isPending}
-                  locale={locale}
-                  baseCurrency={baseCurrency}
-                  onCreateOffer={(currency) => createOffer.mutate(currency)}
-                  overlay={overlay}
-                  advancing={advance.isPending}
-                  pulse={dealPulse({
-                    card: statusQuery.data,
-                    timeline: timelineQuery.activities,
-                    overlay,
-                  })}
-                  spine={
-                    <TimelineThread
-                      thread={threadQuery}
-                      commercial={{ next_close_on: deal.expected_close_date }}
-                      onOpenEmail={setOpenEmail}
-                    />
-                  }
-                  coverage={coverageRead}
-                  onOpenHistory={() => setTab("history")}
-                  // An archived deal is not moved through the pipeline, and
-                  // the mirror answers an advance with unsupported_by_sor —
-                  // a control that can only fail is worse than none.
-                  //
-                  // A CLOSED deal is refused here too, but for a different
-                  // reason: reopening is its own deliberate action, with a
-                  // dialog that says the close date and the frozen rate are
-                  // being cleared. A stepper button that reopened silently
-                  // would be a second, quieter door to the same write.
-                  advanceRefused={
-                    deal.archived_at != null ||
-                    overlay ||
-                    deal.status !== "open"
-                  }
-                  onAdvance={(toStage) => {
-                    // The version this record was drawn from, exactly as the
-                    // board pins the version its card was drawn from: the
-                    // write names the deal as the reader saw it, so a change
-                    // made elsewhere meanwhile fails loud.
-                    const input = {
-                      dealId: deal.id,
-                      version: deal.version,
-                      toStage,
-                    };
-                    if (toStage.semantic === "open") {
-                      advance.mutate(input);
-                    } else {
-                      setPending(input);
+                <div className="record-stack">
+                  <DealOverviewPane
+                    deal={deal}
+                    stages={stages}
+                    dealApprovals={dealApprovals}
+                    onDecide={(input) => decide.mutate(input)}
+                    offers={offersQuery.data?.data}
+                    creatingOffer={createOffer.isPending}
+                    locale={locale}
+                    baseCurrency={baseCurrency}
+                    onCreateOffer={(currency) => createOffer.mutate(currency)}
+                    overlay={overlay}
+                    advancing={advance.isPending}
+                    pulse={dealPulse({
+                      card: statusQuery.data,
+                      timeline: timelineQuery.activities,
+                      overlay,
+                    })}
+                    spine={
+                      <TimelineThread
+                        thread={threadQuery}
+                        commercial={{
+                          next_close_on: deal.expected_close_date,
+                        }}
+                        onOpenEmail={setOpenEmail}
+                      />
                     }
-                  }}
-                />
-              )}
-              {tab === "overview" && (
-                <DealPeoplePanels dealId={deal.id} overlay={overlay} />
+                    coverage={coverageRead}
+                    onOpenHistory={() => setTab("history")}
+                    // An archived deal is not moved through the pipeline, and
+                    // the mirror answers an advance with unsupported_by_sor —
+                    // a control that can only fail is worse than none.
+                    //
+                    // A CLOSED deal is refused here too, but for a different
+                    // reason: reopening is its own deliberate action, with a
+                    // dialog that says the close date and the frozen rate are
+                    // being cleared. A stepper button that reopened silently
+                    // would be a second, quieter door to the same write.
+                    advanceRefused={
+                      deal.archived_at != null ||
+                      overlay ||
+                      deal.status !== "open"
+                    }
+                    onAdvance={(toStage) => {
+                      // The version this record was drawn from, exactly as the
+                      // board pins the version its card was drawn from: the
+                      // write names the deal as the reader saw it, so a change
+                      // made elsewhere meanwhile fails loud.
+                      const input = {
+                        dealId: deal.id,
+                        version: deal.version,
+                        toStage,
+                      };
+                      if (toStage.semantic === "open") {
+                        advance.mutate(input);
+                      } else {
+                        setPending(input);
+                      }
+                    }}
+                  />
+                  <DealPeoplePanels dealId={deal.id} overlay={overlay} />
+                </div>
               )}
               {tab === "files" && !overlay && <DealFiles dealId={deal.id} />}
               {tab === "files" && overlay && <OverlayUnavailable />}

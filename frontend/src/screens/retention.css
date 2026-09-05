@@ -40,7 +40,7 @@
 
 .retention-actions {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--gapActions);
   flex-wrap: wrap;
 }
 

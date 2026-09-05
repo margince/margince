@@ -68,7 +68,7 @@ func ExplainAnalyticsCell(
 	// whole query, scope included. A drill-through narrowed differently from
 	// its own headline opens records the number never counted.
 	plan, err := analyticsquery.CompileExplain(
-		in, schema, analyticsScope(ctx, tx, spec, requestedFromQuery(in.Query)))
+		in, schema, analyticsScope(ctx, tx, spec, in.Query))
 	if err != nil {
 		return AnalyticsExplanation{}, err
 	}

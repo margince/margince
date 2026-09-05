@@ -57,13 +57,50 @@ async function throttle(page: Page) {
   });
 }
 
-/** Nearest-rank p95, the same method the Go harness reports — so a value here
- * is a latency that actually happened rather than an interpolation between two
- * that did not. */
-function p95(samples: number[]): number {
+/** Nearest-rank quantile, the same method the Go harness reports — so a value
+ * here is a latency that actually happened rather than an interpolation between
+ * two that did not. One spelling for every quantile this file reports: the
+ * published record used to inline the same arithmetic twice more, and three
+ * copies of a rank formula are three chances to be off by one. */
+function nearestRank(samples: number[], quantile: number): number {
   const sorted = [...samples].sort((a, b) => a - b);
-  const rank = Math.ceil(sorted.length * 0.95) - 1;
+  const rank = Math.ceil(sorted.length * quantile) - 1;
   return sorted[Math.min(Math.max(rank, 0), sorted.length - 1)];
+}
+
+/**
+ * Open one record from the list, and answer what the click cost.
+ *
+ * Extracted so the discarded first open below runs the SAME path as a measured
+ * one. A warm-up that took a shortcut would leave whatever it skipped to be
+ * paid by sample 1, which is the defect it exists to remove.
+ */
+async function openOneRecord(page: Page): Promise<number> {
+  await page.goto("/#/contacts");
+  // Anchor on a settled screen before measuring, for the reason ac.spec.ts
+  // records: a click during hydration lands on a row whose handler is not
+  // attached, the navigation never happens, and the assertion times out as a
+  // phantom perf failure. Under throttling this is likelier, not less likely.
+  await page.waitForLoadState("networkidle");
+  // By ROLE, for the reason ac.spec.ts records: a record's name is asserted
+  // through the element the view actually draws — here a table row — so the
+  // locator still names one thing when another surface repeats the name. The
+  // row stays a substring match, because a row's accessible name is every cell
+  // of it joined and the person's name is a fragment of that by construction.
+  const row = page.getByRole("row", { name: "Anna Weber" });
+  await expect(row).toBeVisible();
+
+  const start = Date.now();
+  await row.click();
+  // The record's OWN header, not the shell's: the head shows only the trail
+  // on a record route and renders from the router before any record read
+  // returns, so waiting on it would measure routing rather than the open.
+  // Exact: the whole name is what says the right record opened, and `name`
+  // matches by substring without it.
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Anna Weber", exact: true }),
+  ).toBeVisible();
+  return Date.now() - start;
 }
 
 test("MOBILE-AC-2: record open holds the 300ms perceived budget on Fast-3G at 390px", async ({
@@ -72,39 +109,44 @@ test("MOBILE-AC-2: record open holds the 300ms perceived budget on Fast-3G at 39
   await mockApi(page);
   await throttle(page);
 
+  // ONE DISCARDED OPEN FIRST, and it is not a kindness to the number.
+  //
+  // The first open in a session pays for what every later one finds already
+  // there — the record route's code chunk, and its first data over a link
+  // throttled to Fast-3G. That cost is real and a user meets it, but it is the
+  // cost of ARRIVING, paid once per session; MOBILE-AC-2 is the cost of opening
+  // a record, which a user pays all day. One number over both measures neither,
+  // and the gap is not a rounding error: the cold open runs to roughly twenty
+  // times a warm one.
+  //
+  // Which matters here more than the average of it, because of where p95 lands.
+  // Nearest rank over 20 samples is the SECOND-HIGHEST of them, so a single
+  // guaranteed outlier rests the whole assertion on the worst remaining sample
+  // and leaves the lane one unlucky sample from red — a budget with sixfold
+  // room to spare, breaching on a busy runner while nothing about opening a
+  // record has changed. Discarding the arrival is what buys the headroom back.
+  await openOneRecord(page);
+
   const samples: number[] = [];
   for (let i = 0; i < SAMPLES; i++) {
-    await page.goto("/#/contacts");
-    // Anchor on a settled screen before measuring, for the reason ac.spec.ts
-    // records: a click during hydration lands on a row whose handler is not
-    // attached, the navigation never happens, and the assertion times out as a
-    // phantom perf failure. Under throttling this is likelier, not less likely.
-    await page.waitForLoadState("networkidle");
-    // By ROLE, for the reason ac.spec.ts records: a record's name is asserted
-    // through the element the view actually draws — here a table row — so the
-    // locator still names one thing when another surface repeats the name. The
-    // row stays a substring match, because a row's accessible name is every cell
-    // of it joined and the person's name is a fragment of that by construction.
-    const row = page.getByRole("row", { name: "Anna Weber" });
-    await expect(row).toBeVisible();
-
-    const start = Date.now();
-    await row.click();
-    // The record's OWN header, not the shell's: the head shows only the trail
-    // on a record route and renders from the router before any record read
-    // returns, so waiting on it would measure routing rather than the open.
-    // Exact: the whole name is what says the right record opened, and `name`
-    // matches by substring without it.
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Anna Weber", exact: true }),
-    ).toBeVisible();
-    samples.push(Date.now() - start);
+    samples.push(await openOneRecord(page));
   }
 
-  const measured = p95(samples);
+  const measured = nearestRank(samples, 0.95);
   console.log(
     `perfbench [fast-3g/390px]: record_open_perceived p95=${measured}ms ` +
       `(budget ${PERCEIVED_BUDGET_MS}ms, ${SAMPLES} samples)`,
+  );
+  // The SHAPE as well as the verdict, because this lane can report two breaches
+  // that need opposite answers and a lone p95 does not separate them: a
+  // distribution that has moved is a regression to bisect, a tight one behind a
+  // single straggler is a runner that was busy. Whoever reads the breach reads
+  // this log and nothing else, so the log has to carry the difference.
+  console.log(
+    `perfbench [fast-3g/390px]: record_open_perceived ` +
+      `p50=${nearestRank(samples, 0.5)}ms p99=${nearestRank(samples, 0.99)}ms ` +
+      `min=${Math.min(...samples)}ms max=${Math.max(...samples)}ms ` +
+      `samples=${JSON.stringify([...samples].sort((a, b) => a - b))}`,
   );
   // Written BEFORE the assertion, deliberately: a breach is the run whose
   // number a reader most wants to see, and recording afterwards would leave
@@ -142,7 +184,6 @@ function recordingEnabled(): boolean {
  * what it is.
  */
 function writeRecord(samples: number[], measured: number) {
-  const sorted = [...samples].sort((a, b) => a - b);
   const record = {
     target: "bench-mobile",
     // The DAY, not the instant: a record that changed every run would churn the
@@ -164,11 +205,11 @@ function writeRecord(samples: number[], measured: number) {
       {
         id: "MOBILE-AC-2",
         name: "record_open_perceived",
-        p50_ms: sorted[Math.max(Math.ceil(sorted.length * 0.5) - 1, 0)],
+        p50_ms: nearestRank(samples, 0.5),
         p95_ms: measured,
-        p99_ms: sorted[Math.max(Math.ceil(sorted.length * 0.99) - 1, 0)],
+        p99_ms: nearestRank(samples, 0.99),
         budget_ms: PERCEIVED_BUDGET_MS,
-        samples: sorted.length,
+        samples: samples.length,
       },
     ],
   };

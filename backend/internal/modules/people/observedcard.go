@@ -150,20 +150,22 @@ func cardFields(entry VCardEntry) []cardField {
 // isLinkedinURL reports whether a URL names a LinkedIn profile, by host rather
 // than by substring: a website whose path merely mentions linkedin is not one.
 //
-// Subdomains count, because LinkedIn's own localized profile links carry them —
-// de.linkedin.com and www.linkedin.com are the same site, and a reader who
-// pasted either meant their profile. Hostname() rather than Host, so an
-// explicit port does not turn a profile into a website.
+// The host comes from the NORMALIZER rather than from a parse of its own, so
+// this classifier and the value that would be stored agree about what the host
+// is. Deciding on the raw string admitted `javascript://linkedin.com/x` as a
+// profile and left the scheme for the storing writer to refuse two calls
+// later — a value classified LinkedIn and then not stored as one, which the
+// vCard import and the card reader both act on before that second call.
+// Hostname() rather than Host, so an explicit port does not turn a profile
+// into a website.
 func isLinkedinURL(raw string) bool {
-	parsed, err := url.Parse(raw)
+	normalized, err := NormalizeLinkedInURL(raw)
 	if err != nil {
 		return false
 	}
-	host := strings.ToLower(parsed.Hostname())
-	if host == "" {
-		// A bare "linkedin.com/in/x" with no scheme parses as a path.
-		host, _, _ = strings.Cut(strings.ToLower(raw), "/")
-		host, _, _ = strings.Cut(host, ":")
+	parsed, err := url.Parse(normalized)
+	if err != nil {
+		return false
 	}
-	return host == "linkedin.com" || strings.HasSuffix(host, ".linkedin.com")
+	return onHost(strings.ToLower(parsed.Hostname()), LinkedInSlotHosts())
 }
