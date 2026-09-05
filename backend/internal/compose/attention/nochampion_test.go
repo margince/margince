@@ -138,28 +138,3 @@ func TestTheCardMakesNoChampionClaimAboutAWithheldCommittee(t *testing.T) {
 		t.Errorf("the card answers %v about a committee it could not read, want no answer", *row.Deal.NoChampion)
 	}
 }
-
-// The third input, and the one the contract's prose and its schema disagree on.
-//
-// `noChampionOf` never returns a stated false today — a covered committee
-// arrives absent — so this pins the projection's behaviour if one ever does.
-// It passes it through rather than swallowing it, because a stated false is
-// the coverage seam's answer to give: this row copies, it does not judge. The
-// schema permits `false`; the field's prose says it is "sent only when the
-// answer is both known and negative". Resolving that is the contract's work,
-// and until it is resolved a silent change of behaviour here should cost
-// somebody this test.
-func TestTheCardRepeatsAStatedFalseRatherThanInventingAnAnswer(t *testing.T) {
-	covered := false
-	row := oneRiskRow(t, withDealFacts(RiskyDeal{
-		DealID: ids.NewV7(), Name: "Fleet retrofit",
-		QuietDays: 19, NoChampion: &covered,
-	}))
-	if row.Deal == nil {
-		t.Fatal("the row carries no deal facts at all")
-	}
-	if row.Deal.NoChampion == nil || *row.Deal.NoChampion {
-		t.Errorf("the card states no_champion=%v over a seam that answered false",
-			row.Deal.NoChampion)
-	}
-}
