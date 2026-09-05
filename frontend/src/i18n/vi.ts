@@ -2545,10 +2545,16 @@ export const vi = {
   "teamweekly.movement.moved": "Đã tiến triển",
   "teamweekly.movement.meetings": "Cuộc họp đã diễn ra",
   "teamweekly.movement.leads": "Lead được phân",
-  "teamweekly.coach.title": "Đồng hành tuần này",
-  "teamweekly.coach.sub":
-    "Một trọng tâm cho mỗi thành viên, kể cả người có tuần tốt.",
-  "teamweekly.coach.empty": "Tuần đó không có ai trong nhóm này.",
+  "teamweekly.agenda.title": "Chương trình họp thứ Hai",
+  "teamweekly.agenda.sub":
+    "Các mục của chính tuần này, việc cần nêu trước nằm trên cùng. Mỗi thành viên một mục, kể cả người có tuần tốt.",
+  "teamweekly.agenda.empty":
+    "Không đọc được tuần của bất kỳ ai trong nhóm này, nên không có gì để mang tới buổi họp.",
+  "teamweekly.agenda.summary": "{count} mục cho thứ Hai, bắt đầu với {first}.",
+  "teamweekly.agenda.copy": "Sao chép chương trình",
+  "teamweekly.agenda.copied": "Đã sao chép",
+  "teamweekly.agenda.copyFailed":
+    "Trình duyệt này không cho phép truy cập bộ nhớ tạm. Hãy chọn danh sách và tự sao chép.",
   "teamweekly.focus.help_requested": "Đã nhờ giúp đỡ",
   "teamweekly.focus.leads_breached": "Lead không được trả lời",
   "teamweekly.focus.commitments_missed": "Cam kết kế hoạch bị bỏ lỡ",

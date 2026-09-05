@@ -2568,10 +2568,17 @@ export const de = {
   "teamweekly.movement.moved": "Vorangebracht",
   "teamweekly.movement.meetings": "Gehaltene Termine",
   "teamweekly.movement.leads": "Zugewiesene Leads",
-  "teamweekly.coach.title": "Diese Woche begleiten",
-  "teamweekly.coach.sub":
-    "Ein Schwerpunkt pro Mitglied — auch für das Mitglied, dessen Woche gut lief.",
-  "teamweekly.coach.empty": "In dieser Woche war niemand in diesem Team.",
+  "teamweekly.agenda.title": "Agenda für Montag",
+  "teamweekly.agenda.sub":
+    "Die Themen dieser Woche, das Wichtigste zuerst. Eines pro Mitglied — auch für das Mitglied, dessen Woche gut lief.",
+  "teamweekly.agenda.empty":
+    "Für dieses Team ließ sich niemandes Woche lesen, also gibt es nichts für das Meeting.",
+  "teamweekly.agenda.summary":
+    "{count} Themen für Montag, beginnend mit {first}.",
+  "teamweekly.agenda.copy": "Agenda kopieren",
+  "teamweekly.agenda.copied": "Kopiert",
+  "teamweekly.agenda.copyFailed":
+    "Dieser Browser gibt die Zwischenablage nicht frei. Markier die Liste und kopier sie.",
   "teamweekly.focus.help_requested": "Hat um Hilfe gebeten",
   "teamweekly.focus.leads_breached": "Leads blieben unbeantwortet",
   "teamweekly.focus.commitments_missed": "Planzusagen verpasst",

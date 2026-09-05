@@ -31737,11 +31737,26 @@ type TeamWeeklyRepFocusKind string
 
 // TeamWeeklyReview One team's week, as it was measured when the week closed.
 type TeamWeeklyReview struct {
-	AsOf           time.Time          `json:"as_of"`
-	Counts         TeamWeeklyCounts   `json:"counts"`
-	GeneratedAt    time.Time          `json:"generated_at"`
-	Id             openapi_types.UUID `json:"id"`
-	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+	// Agenda The Monday agenda: every id in `reps`, permuted into the order a lead should raise
+	// them. Derived on read from the same focus ranking that picked each rep's
+	// `focus_kind` — a rep who ASKED for help first, a quiet week last — so the meeting
+	// takes the week in the order the review already decided, rather than alphabetically.
+	//
+	// An ORDER over `reps` rather than a second list of them. The items are the reps'
+	// own focuses and are already on the wire; publishing them again would be one agenda
+	// spelled twice, and the two would eventually disagree. A client renders `reps` in
+	// this order and has the whole agenda.
+	//
+	// As many items as there are members, never a fixed count: a week with two things
+	// worth discussing is a two-item meeting, and padding it to a layout's number would
+	// be inventing an item. Empty exactly when `reps` is — a team whose week could not be
+	// read has no agenda, which a client says rather than drawing an empty list.
+	Agenda         []openapi_types.UUID `json:"agenda"`
+	AsOf           time.Time            `json:"as_of"`
+	Counts         TeamWeeklyCounts     `json:"counts"`
+	GeneratedAt    time.Time            `json:"generated_at"`
+	Id             openapi_types.UUID   `json:"id"`
+	LocalWeekStart openapi_types.Date   `json:"local_week_start"`
 
 	// Pipeline What the team's week did to the pipeline. ABSENT when any member's week could not
 	// be converted — summing only the ones that did would be a confident number quietly
@@ -31749,7 +31764,8 @@ type TeamWeeklyReview struct {
 	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
 
 	// Reps Who was on the team that week — the frozen membership, which a join against the
-	// live team could never answer.
+	// live team could never answer. Ordered by name, because that is what a membership
+	// list is read as; the order a MEETING takes them in is `agenda`.
 	Reps []TeamWeeklyRep `json:"reps"`
 
 	// RepsUnread Members whose week could not be read at all. Zero is the claim that every member's

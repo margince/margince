@@ -2620,10 +2620,17 @@ export const en = {
   "teamweekly.movement.moved": "Advanced",
   "teamweekly.movement.meetings": "Meetings held",
   "teamweekly.movement.leads": "Leads routed",
-  "teamweekly.coach.title": "Coach this week",
-  "teamweekly.coach.sub":
-    "One focus per member, including the member whose week went well.",
-  "teamweekly.coach.empty": "Nobody was on this team that week.",
+  "teamweekly.agenda.title": "Monday agenda",
+  "teamweekly.agenda.sub":
+    "The week's own items, first to raise at the top. One per member, including the member whose week went well.",
+  "teamweekly.agenda.empty":
+    "Nobody's week could be read for this team, so there is nothing to take to the meeting.",
+  "teamweekly.agenda.summary":
+    "{count} to take to Monday, starting with {first}.",
+  "teamweekly.agenda.copy": "Copy agenda",
+  "teamweekly.agenda.copied": "Copied",
+  "teamweekly.agenda.copyFailed":
+    "This browser would not hand over the clipboard. Select the list and copy it.",
   "teamweekly.focus.help_requested": "Asked for help",
   "teamweekly.focus.leads_breached": "Leads went unanswered",
   "teamweekly.focus.commitments_missed": "Plan commitments missed",
