@@ -144,3 +144,71 @@ func TestHardBouncesForRefusesAReaderWithoutTheActivityGrant(t *testing.T) {
 		t.Fatalf("HardBouncesFor without the activity grant = %v, want the permission sentinel", err)
 	}
 }
+
+// WHICH address refused, carried from the row the send was written to.
+//
+// A database test rather than a unit one because the address is read from
+// `comms_outbound.recipients`, a jsonb column, through a scan whose column
+// count has to agree with the statement's. Nothing in Go checks that agreement:
+// add a column to the SELECT and forget the scan target and the read fails at
+// runtime, on a lane whose whole job is to report other failures.
+//
+// Seeded through sentDelivery — the same writer the lane reads behind — so the
+// recipients column holds what a real send puts there rather than what this
+// test thinks it should.
+func TestHardBouncesForNamesTheAddressThatRefused(t *testing.T) {
+	e := setupStore(t)
+	person := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Anna Weber', 'test', 'human:x')`, person); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO activity_link (id, activity_id, entity_type, person_id) VALUES ($1, $2, 'person', $3)`,
+		ids.NewV7(), e.activity, person); err != nil {
+		t.Fatal(err)
+	}
+	// Staged with an EXPLICIT recipient rather than through sentDelivery, whose
+	// shared fixture hardcodes buyer@example.com. A test seeded from that would
+	// pass against a read that returned the constant, and prove nothing about
+	// the address travelling. The message id is what the bounce is matched on;
+	// the recipient is the separate fact under test.
+	// TWO recipients, and the one that bounced is NOT the first. A read taking
+	// `recipients->>0` would name the bystander — the exact defect the
+	// bounce_recipient column was added for, whose migration says a send with a
+	// CC would otherwise mark every address on it as the one that refused.
+	staged := e.stage(t, func() StageInput {
+		in := e.baseInput(e.activity, "dana-msg")
+		in.Recipients = []string{"colleague@turbinenbau.de", "dana@turbinenbau.de"}
+		return in
+	}())
+	if err := e.store.RecordSent(e.ctx, staged,
+		connector.SendReceipt{ProviderMessageID: "prov-dana-msg"}); err != nil {
+		t.Fatalf("recording the send: %v", err)
+	}
+	// The report names the same address the send was aimed at. bounceFor's
+	// shared fixture hardcodes buyer@example.com, and RecordBounce matches on
+	// the pair, so borrowing it here would leave the bounce unmatched.
+	report := connector.BounceReport{
+		MessageID: "dana-msg", Recipient: "dana@turbinenbau.de",
+		Kind: connector.BounceHard, Reason: "550 5.1.1 user unknown",
+	}
+	if marked, err := e.store.RecordBounce(
+		e.asCapturingConnector(e.user.UUID), report); err != nil || !marked {
+		t.Fatalf("recording the hard bounce: marked=%v err=%v", marked, err)
+	}
+
+	bounced, err := e.store.HardBouncesFor(
+		readerCtx(e.ws, e.user), e.clockValue.Add(-7*24*time.Hour), 8)
+	if err != nil {
+		t.Fatalf("reading the bounce lane: %v", err)
+	}
+	if len(bounced) != 1 {
+		t.Fatalf("the lane carries %d bounces, want the one just recorded", len(bounced))
+	}
+	if bounced[0].Recipient != "dana@turbinenbau.de" {
+		t.Errorf("the bounce names %q as the address that refused, want dana@turbinenbau.de — "+
+			"without it a reader opening a contact with three addresses cannot tell which is dead",
+			bounced[0].Recipient)
+	}
+}

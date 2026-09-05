@@ -27,14 +27,18 @@ type HardBounce struct {
 	Reason    string
 	BouncedAt time.Time
 	PersonID  ids.UUID
+	// Recipient is the address that refused it, so a reader knows WHICH of a
+	// person's addresses is dead. Empty when the send carries none.
+	Recipient string
 }
 
 // bounceLane is the lane's three words: the receiving side's own refusal, the
 // moment the report landed, and hard reports only.
 var bounceLane = sendLane{
-	reasonColumn: "bounce_reason",
-	atColumn:     "bounced_at",
-	only:         "o.bounce_kind = 'hard'",
+	reasonColumn:    "bounce_reason",
+	atColumn:        "bounced_at",
+	only:            "o.bounce_kind = 'hard'",
+	recipientColumn: "bounce_recipient",
 }
 
 // HardBouncesFor answers the calling person's own hard-bounced sends since
@@ -48,7 +52,7 @@ func (s *Store) HardBouncesFor(ctx context.Context, since time.Time, limit int) 
 	for _, send := range sends {
 		bounced = append(bounced, HardBounce{
 			ID: send.ID, Subject: send.Subject, Reason: send.Reason,
-			BouncedAt: send.At, PersonID: send.PersonID,
+			BouncedAt: send.At, PersonID: send.PersonID, Recipient: send.Recipient,
 		})
 	}
 	return bounced, nil

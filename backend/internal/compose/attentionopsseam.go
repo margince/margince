@@ -127,6 +127,7 @@ func (b attentionBounces) HardBounces(ctx context.Context, since time.Time, limi
 			Reason:    send.Reason,
 			BouncedAt: send.BouncedAt,
 			PersonID:  send.PersonID,
+			Recipient: send.Recipient,
 		})
 	}
 	return out, nil
