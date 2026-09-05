@@ -220,6 +220,14 @@ type JobRunnerConfig struct {
 	// FAILS with a message the rep can see rather than sitting queued behind a
 	// worker that will never pick it up.
 	TranscriptProposeBrain completer
+	// AccountScanBrain is the model lane the account scan reads with
+	// (modelPath.AccountScan). May be nil: the worker registers regardless,
+	// and a queued scan settles on the rules' floor with a reason rather
+	// than sitting queued behind a job no one works.
+	AccountScanBrain completer
+	// AccountScanRoutingVersion identifies the binding the scan's fingerprint
+	// carries, read live from the path (ModelPath.RoutingVersion).
+	AccountScanRoutingVersion func() string
 	// Geocoder resolves a company's address to a point. Nil in a deployment
 	// that geocodes nothing — an offline demo, or one that has not been given
 	// a provider — and the worker records that rather than retrying forever.

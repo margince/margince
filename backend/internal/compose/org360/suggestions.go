@@ -212,23 +212,23 @@ func appendIf(
 // left to infer it from the evidence order — an ordering nobody promised.
 func setDraftReply(out *crmcontracts.Organization360Suggestion, activityID ids.UUID) {
 	id := openapi_types.UUID(activityID)
-	out.Action = newSuggestionAction(crmcontracts.Organization360SuggestionActionKindDraftReply)
+	out.Action = NewSuggestionAction(crmcontracts.Organization360SuggestionActionKindDraftReply)
 	out.Action.ActivityId = &id
 }
 
 // setOpenDeal points at the deal that stalled.
 func setOpenDeal(out *crmcontracts.Organization360Suggestion, dealID ids.UUID) {
 	id := openapi_types.UUID(dealID)
-	out.Action = newSuggestionAction(crmcontracts.Organization360SuggestionActionKindOpenDeal)
+	out.Action = NewSuggestionAction(crmcontracts.Organization360SuggestionActionKindOpenDeal)
 	out.Action.DealId = &id
 }
 
-// newSuggestionAction builds the generated anonymous action struct. The shape is
+// NewSuggestionAction builds the generated anonymous action struct. The shape is
 // spelled here and only here: a second literal would drift the moment the
 // contract gains a field.
 //
 //nolint:staticcheck // ST1003: the field names mirror the oapi-codegen type this must assign to
-func newSuggestionAction(kind crmcontracts.Organization360SuggestionActionKind) *struct {
+func NewSuggestionAction(kind crmcontracts.Organization360SuggestionActionKind) *struct {
 	ActivityId *openapi_types.UUID                              `json:"activity_id,omitempty"`
 	DealId     *openapi_types.UUID                              `json:"deal_id,omitempty"`
 	Kind       crmcontracts.Organization360SuggestionActionKind `json:"kind"`
@@ -363,7 +363,7 @@ func noNextStepSuggestion(
 	// date of its own. Inventing one would make a reading into a deadline.
 	// No deal named: the account has several open, and picking one for the
 	// reader would be a guess dressed as advice.
-	out.Action = newSuggestionAction(crmcontracts.Organization360SuggestionActionKindAddTask)
+	out.Action = NewSuggestionAction(crmcontracts.Organization360SuggestionActionKindAddTask)
 	return out
 }
 

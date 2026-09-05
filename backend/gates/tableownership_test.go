@@ -448,6 +448,9 @@ var tableOwners = map[string]string{
 	"org_brief":      "internal/compose/orgbrief",
 	"org_dossier":    "internal/compose/orgdossier",
 	"org_growth_fit": "internal/compose/orgdossier",
+	// The account scan's per-user row: the last findings the model read for
+	// this reader, and the job carrier of the read in flight. Same ruling.
+	"org_scan": "internal/compose/orgscan",
 	// The relationship brief's per-user cache — the person-side sibling of
 	// org_brief, and the same ruling for the same reasons.
 	"person_brief": "internal/compose/personbrief",

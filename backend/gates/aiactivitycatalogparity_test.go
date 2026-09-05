@@ -25,6 +25,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/margince/margince/backend/internal/compose/orgscan"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -96,7 +97,7 @@ func alignEnum(missing []string) string {
 // direction is a producer half-gated, and the half that is missing is whichever
 // one nobody thought about.
 func producedKinds() []string {
-	out := []string{documentReadingKind}
+	out := []string{documentReadingKind, orgscan.ActivityKind}
 	for _, spec := range runner.Catalog() {
 		out = append(out, spec.Name)
 	}

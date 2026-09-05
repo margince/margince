@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/org360"
 	"github.com/margince/margince/backend/internal/compose/orgbrief"
 	"github.com/margince/margince/backend/internal/compose/orgdossier"
+	"github.com/margince/margince/backend/internal/compose/orgscan"
 	"github.com/margince/margince/backend/internal/compose/person360"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -144,6 +145,7 @@ type Server struct {
 	leadDraftHandlers
 	orgBriefHandlers
 	orgDossierHandlers
+	orgScanHandlers
 	accountDraftHandlers
 	financeHandlers
 	integrationsHandlers
@@ -426,6 +428,11 @@ type Server struct {
 	// fresh handler set from a half-remembered pair would do.
 	orgDossierSvc   *orgdossier.Service
 	orgGrowthFitSvc *orgdossier.GrowthFitService
+	// orgScanSvc is the account scan, held so WithAccountScan can rebind its
+	// lane and its job runner over the SAME composite read and dismissals the
+	// 360 serves, and so the 360's dismissal endpoint can recognise a finding
+	// the scan raised.
+	orgScanSvc *orgscan.Service
 
 	// resetRuntime is the non-Postgres purge set POST /admin/reset-data runs —
 	// the job queue, the event bus, the cache-flush announcement — injected by
