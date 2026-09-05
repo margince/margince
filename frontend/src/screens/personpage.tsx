@@ -55,7 +55,7 @@ import { PersonComposer, PersonResearchDrawer } from "./persondrawers";
 import { PersonFilesTab } from "./personfiles";
 import { PersonMemory } from "./personmemory";
 import { PersonNetworkTab } from "./personnetwork";
-import { BRIEF_PARAM, COMPOSE_PARAM } from "./personpage.address";
+import { BRIEF_PARAM, COMPOSE_PARAM, THREAD_PARAM } from "./personpage.address";
 import { PersonRail } from "./personrail";
 import { PersonReadings } from "./personreadings";
 import { PersonResearchTab } from "./personresearch";
@@ -528,6 +528,7 @@ export function PersonPageV2({
           guard={guard.data}
           open={composer.open}
           intent={composer.intent}
+          threadId={composer.threadId}
           onClose={composer.close}
         />
         {/* One drawer over the record. The timeline's rows and the rail's
@@ -622,7 +623,12 @@ function useComposer(
   pressedOpen: boolean,
   pressedIntent: string,
   onPressedClose: () => void,
-): Readonly<{ open: boolean; intent: string; close: () => void }> {
+): Readonly<{
+  open: boolean;
+  intent: string;
+  threadId: string | undefined;
+  close: () => void;
+}> {
   const [params, setParams] = useUrlParams();
   const asked = params.get(COMPOSE_PARAM);
   const key = asked ? COMPOSER_INTENT_KEYS[asked] : undefined;
@@ -639,6 +645,14 @@ function useComposer(
   return {
     open: pressedOpen || key !== undefined,
     intent: key ? t(key) : pressedIntent,
+    // Which conversation, when the address named one. Read beside the intent
+    // rather than folded into it: the intent is words for the reader, and this
+    // decides which transport the composer opens on.
+    //
+    // Only for an address-opened composer. A rep who pressed Write is not
+    // answering anything in particular, and carrying a thread id from a link
+    // they already dismissed would anchor that press on it.
+    threadId: (key !== undefined && params.get(THREAD_PARAM)) || undefined,
     close,
   };
 }

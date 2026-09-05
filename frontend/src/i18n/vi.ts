@@ -7522,6 +7522,8 @@ export const vi = {
     "Tùy chọn — ví dụ: xin một buổi hẹn trong tuần đầu tháng 9",
   "person.composer.draftWithAi": "Soạn bằng AI",
   "person.composer.intentAgenda": "đề xuất chương trình cho buổi hẹn sắp tới",
+  "person.composer.threadGone":
+    "Cuộc trò chuyện mà liên kết này trỏ tới không còn trả lời được nữa — kênh hoặc địa chỉ của nó đã không còn. Đây là một tin nhắn mới.",
   "person.composer.intentReply": "trả lời tin nhắn gần nhất của họ",
   "person.composer.intentCommitment": "thực hiện điều chúng ta đã hứa",
   "person.composer.intentFollowUp": "nhắc lại — đã lâu không có phản hồi",

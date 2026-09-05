@@ -11,6 +11,7 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, Modal, TextInput } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
 import {
   liveProjects,
   ProjectPicker,
@@ -26,7 +27,7 @@ import { refusalOf, SendRefusal, scheduleFields } from "./compose";
 import { useConsentPurposes } from "./consent";
 import { PersonProviderSection } from "./personprovider";
 import type { Transport } from "./persontransports";
-import { useTransports } from "./persontransports";
+import { transportForActivity, useTransports } from "./persontransports";
 
 // The three surfaces the person page opens over itself: the composer, the
 // research drawer, and the meeting brief.
@@ -326,20 +327,34 @@ function ToLine({
 // A hook rather than three lines in the composer because the composer is at its
 // complexity ceiling and this is one idea — "which way is this going" — that a
 // reader should be able to take in on its own.
-function useTransportChoice(view: Person360) {
+function useTransportChoice(view: Person360, threadId?: string) {
   const transports = useTransports(view);
   // The composer opens on the first way this person can be reached. An empty
   // selection resolves to that rather than being seeded, so a contact whose
   // reachability arrives after the first render does not stay stuck on the
   // transport that existed before it.
   const [transportId, setTransportId] = useState("");
+  // UNLESS A CALLER NAMED A CONVERSATION. A worklist row is about one message,
+  // and the transport that message is on is the one to answer it from — the
+  // person's own lead transport is the right default for somebody who pressed
+  // Write on the record and the wrong one for a link that named a thread.
+  //
+  // The reader's own pick still wins: this decides what the composer OPENS on,
+  // and changing the dial afterwards is a choice they are entitled to make.
+  const anchored = transportForActivity(transports, view, threadId);
   const transport =
-    transports.find((option) => option.id === transportId) ?? transports[0];
+    transports.find((option) => option.id === transportId) ??
+    anchored.chosen ??
+    transports[0];
   return {
     transports,
     transport,
     isChannel: transport != null && transport.id !== "email",
     setTransportId,
+    // The named conversation cannot be answered any more — disconnected,
+    // removed, or off the end of the page's own window. The composer is open on
+    // something else, and the reader is told rather than left to notice.
+    staleThread: anchored.stale,
   };
 }
 
@@ -431,6 +446,26 @@ async function sendChannelReply(
 // One transport gets the composer this contact has always had: a picker with a
 // single option is a control that cannot be used, and it would appear on every
 // mail-only contact in the installation to say nothing.
+// THE CONVERSATION THAT WAS NAMED AND IS NOT THERE.
+//
+// A link from the day names the message it is about. If that thread can no
+// longer be answered — a channel disconnected, an address removed, the message
+// off the end of the page's own window — the composer still opens, on this
+// contact's own lead transport, and says which of the two it is doing.
+// Swapping one conversation for another without a word is the thing the whole
+// anchor exists to prevent.
+//
+// Its own component so the composer keeps one branch fewer: it is already at
+// the complexity ceiling, and a notice that renders nothing most of the time
+// should not cost the surface around it a decision.
+function ThreadGoneNotice({ stale }: Readonly<{ stale: boolean }>) {
+  const t = useT();
+  if (!stale) {
+    return null;
+  }
+  return <Callout tone="warn">{t("person.composer.threadGone")}</Callout>;
+}
+
 function TransportPicker({
   transports,
   selected,
@@ -559,12 +594,17 @@ export function PersonComposer({
   guard,
   open,
   intent: initialIntent,
+  threadId,
   onClose,
 }: Readonly<{
   personId: string;
   view: Person360;
   guard: PersonConsentGuard | undefined;
   open: boolean;
+  // The conversation this composer was opened to answer, when a caller named
+  // one. It decides which transport the composer OPENS on; the reader may
+  // still change it.
+  threadId?: string;
   // What the rep (or the moment action that opened this) wants the draft to be
   // about. A rung that fired knows WHY — "their reply is overdue", "the meeting
   // needs an agenda" — and that reason shaped nothing until it arrived here.
@@ -601,8 +641,8 @@ export function PersonComposer({
   const [projectId, setProjectId] = useState("");
   const projects = liveProjects(view.projects);
   useSoleProjectDefault(projects, projectId, setProjectId);
-  const { transports, transport, isChannel, setTransportId } =
-    useTransportChoice(view);
+  const { transports, transport, isChannel, setTransportId, staleThread } =
+    useTransportChoice(view, threadId);
 
   // One spelling of "this composer holds no message", for the two moments that
   // need it: the recipient changing, and a send succeeding.
@@ -738,6 +778,7 @@ export function PersonComposer({
       />
 
       <div className="drawer-body">
+        <ThreadGoneNotice stale={staleThread} />
         <TransportPicker
           transports={transports}
           selected={transport}

@@ -7617,6 +7617,8 @@ export const de = {
   "person.composer.draftWithAi": "Mit KI entwerfen",
   "person.composer.intentAgenda":
     "eine Agenda für den anstehenden Termin vorschlagen",
+  "person.composer.threadGone":
+    "Das Gespräch, auf das dieser Link zeigt, kann nicht mehr beantwortet werden — der Kanal oder die Adresse dazu gibt es nicht mehr. Das hier ist eine neue Nachricht.",
   "person.composer.intentReply": "auf die letzte Nachricht antworten",
   "person.composer.intentCommitment": "einlösen, was wir zugesagt haben",
   "person.composer.intentFollowUp": "nachfassen — es ist still geworden",
