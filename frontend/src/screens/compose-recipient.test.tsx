@@ -12,6 +12,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { primaryEmail } from "../format/primaryemail";
 import { LocaleProvider } from "../i18n";
 import { ComposeModal } from "./compose";
+import {
+  allowedPreview,
+  isPreviewDoor,
+  previewedAddresses,
+} from "./sendpermission.testkit";
 
 // Who the composer says a reply goes to, before a draft is asked for.
 //
@@ -76,6 +81,9 @@ function stubRoutes(
       if (override) return override();
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
       if (key === "GET /voice-profiles") return jsonResponse({ data: [] });
+      if (isPreviewDoor(url.pathname)) {
+        return jsonResponse(allowedPreview(previewedAddresses(body)));
+      }
       return jsonResponse({});
     }),
   );

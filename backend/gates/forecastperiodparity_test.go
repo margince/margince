@@ -80,6 +80,8 @@ func TestTheSiteListCoversEveryPeriodEnumInTheContract(t *testing.T) {
 //
 // The path recorded is the one this gate's own site list spells, so a site the
 // walk finds and the list omits names itself in the failure.
+//
+//craft:ignore naked-any a decoded YAML document is untyped by nature — mappings, sequences and scalars arrive as any, and the switch below is the narrowing
 func walkPeriodEnums(node any, at []string, found map[string]bool) {
 	switch shape := node.(type) {
 	case map[string]any:

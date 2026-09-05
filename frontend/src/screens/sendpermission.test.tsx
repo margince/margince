@@ -35,10 +35,18 @@ function preview(...recipients: Recipient[]): Preview {
 
 afterEach(cleanup);
 
-function draw(ui: Preview | undefined, onOverride?: () => void) {
+function draw(
+  ui: Preview | undefined,
+  onOverride?: () => void,
+  unanswered = false,
+) {
   return render(
     <LocaleProvider initial="en">
-      <SendPermission preview={ui} onOverride={onOverride} />
+      <SendPermission
+        preview={ui}
+        onOverride={onOverride}
+        unanswered={unanswered}
+      />
     </LocaleProvider>,
   );
 }
@@ -240,5 +248,53 @@ describe("what a rep is shown", () => {
     );
     expect(screen.queryByText(/frequency_cap_reached/)).toBeNull();
     expect(screen.getByText(/clears on its own/i)).toBeInTheDocument();
+  });
+});
+
+describe("what the hint tells a rep to do", () => {
+  // With the control, the hint says how to answer. Without it, "say so" would
+  // be the dead button in prose: an instruction the surface cannot take.
+  it("tells a rep how to answer only where there is a way to", () => {
+    draw(
+      preview(answer({ would_refuse: true, can_be_overruled: true })),
+      () => {},
+    );
+    expect(screen.getByText(/say so/i)).toBeInTheDocument();
+    expect(screen.queryByText(/will be refused/i)).toBeNull();
+  });
+
+  it("says what happens to the message where nobody can answer here", () => {
+    draw(preview(answer({ would_refuse: true, can_be_overruled: true })));
+    expect(screen.getByText(/will be refused/i)).toBeInTheDocument();
+    expect(screen.queryByText(/say so/i)).toBeNull();
+  });
+});
+
+describe("when the question did not arrive", () => {
+  // Silence is what "allowed" looks like. A failed check has to say it failed,
+  // or the rep learns of the refusal from the Send button — the exact failure
+  // the component exists to end.
+  it("says the check did not happen rather than falling silent", () => {
+    draw(undefined, undefined, true);
+    expect(screen.getByRole("status")).toHaveTextContent(/could not check/i);
+  });
+
+  // A stale answer must not outrank the fact that the latest ask failed: the
+  // preview on hand describes a message that may since have changed.
+  it("outranks an earlier answer", () => {
+    draw(
+      preview(
+        answer({
+          reason_code: "marketing_objection",
+          decided_by: "subject",
+          would_refuse: true,
+          can_be_overruled: false,
+        }),
+      ),
+      undefined,
+      true,
+    );
+    expect(screen.getByText(/could not check/i)).toBeInTheDocument();
+    expect(screen.queryByText(/asked not to receive marketing/i)).toBeNull();
   });
 });

@@ -12,6 +12,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { ComposeModal } from "./compose";
+import {
+  allowedPreview,
+  isPreviewDoor,
+  previewedAddresses,
+} from "./sendpermission.testkit";
 
 // What a sent message files under.
 //
@@ -116,6 +121,9 @@ function stubRoutes(
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
       if (key === "GET /voice-profiles") return jsonResponse({ data: [] });
       if (key === "GET /organizations/org-1/360") return jsonResponse(ORG_VIEW);
+      if (isPreviewDoor(url.pathname)) {
+        return jsonResponse(allowedPreview(previewedAddresses(body)));
+      }
       return jsonResponse({});
     }),
   );
