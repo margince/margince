@@ -30058,16 +30058,24 @@ components:
           description: |
             What the reader decided. `not_sales` binds the thread for everybody; `snooze` and
             `not_mine` bind only the caller.
+        reopen_on:
+          $ref: '#/components/schemas/ReopenCondition'
         snoozed_until:
           type: string
           format: date-time
           description: |
-            When a snooze lifts. REQUIRED for `snooze` and refused for the other two — a snooze
-            with no moment would never lift, and a moment on `not_mine` would make a hand-off
-            expire on a Thursday.
+            When a snooze lifts. REQUIRED for `snooze` with `reopen_on: time`, and refused
+            everywhere else — a snooze waiting on a reply lifts when the reply arrives, and a
+            moment on `not_mine` would make a hand-off expire on a Thursday.
 
             A moment already past is refused rather than stored: it would write a row that hides
             nothing, and read to the rep as a snooze that did not take.
+        reopen_ref:
+          type: string
+          format: uuid
+          description: |
+            The meeting to wait for. REQUIRED for `snooze` with `reopen_on: meeting` and
+            refused otherwise.
 
     AudienceMember:
       type: object
@@ -38226,7 +38234,15 @@ components:
           description: The source rows (deal / activity / relationship) behind the factors; never empty (evidence-or-omit).
         state: { type: string, enum: [new, acted, dismissed, snoozed], description: The acting rep's queue state for this item. }
         state_at: { type: [string, 'null'], format: date-time, description: When the rep acted/dismissed/snoozed; null while new. }
-        snoozed_until: { type: [string, 'null'], format: date-time, description: 'When a snoozed item re-surfaces (A77/AC-home-6); set exactly while state=snoozed, null otherwise.' }
+        snoozed_until: { type: [string, 'null'], format: date-time, description: 'When a snoozed item re-surfaces; set exactly while reopen_on=time, null otherwise — the other conditions lift on an event rather than a date.' }
+        reopen_on:
+          type: [string, 'null']
+          enum: [time, reply, meeting, null]
+          description: 'What the item is waiting for; set exactly while state=snoozed, null otherwise.'
+        reopen_ref:
+          type: [string, 'null']
+          format: uuid
+          description: 'The meeting being waited for; set exactly while reopen_on=meeting.'
         lineage:
           $ref: '#/components/schemas/MorningBriefItemLineage'
         finding:
@@ -38623,10 +38639,45 @@ components:
 
     BriefSnoozeRequest:
       type: object
-      description: Snooze a brief item until a future instant (A77/AC-home-6); it re-surfaces once the instant passes.
-      required: [snoozed_until]
+      description: |
+        Set a brief item aside until something happens. The something is `reopen_on`: a moment
+        on the clock, the customer writing back, or a named meeting being over.
       properties:
-        snoozed_until: { type: string, format: date-time, description: When the item re-surfaces; must be in the future. }
+        reopen_on:
+          $ref: '#/components/schemas/ReopenCondition'
+        snoozed_until:
+          type: string
+          format: date-time
+          description: |
+            When the item re-surfaces. REQUIRED for `time` and refused for the other two — a
+            snooze waiting on a reply lifts when the reply arrives, not on a date. Must be in
+            the future.
+        reopen_ref:
+          type: string
+          format: uuid
+          description: |
+            The meeting to wait for. REQUIRED for `meeting` and refused otherwise, because
+            "after the meeting" names nothing without saying which meeting.
+
+    ReopenCondition:
+      type: string
+      enum: [time, reply, meeting]
+      default: time
+      # NAMED EXPLICITLY, like the pair in ListCustomFieldsParams above and for
+      # a sharper version of the same reason. oapi-codegen prefixes an enum's
+      # constants only when it sees a clash, so adding a shared schema whose
+      # values are this generic re-decides that for every OTHER enum in the
+      # file: `time`/`reply`/`meeting` freed the prefixes off
+      # ListPeopleParamsCapturedByKind, whose bare `System` then collided with
+      # GetWorklistParamsFilter's and stopped the package compiling. Spelling
+      # these keeps this schema out of that calculation entirely.
+      x-enum-varnames: [ReopenOnTime, ReopenOnReply, ReopenOnMeeting]
+      description: |
+        What lifts a snooze. `time` is the original behaviour and the default, so a client
+        written before the other two keeps working unchanged. `reply` waits for the
+        counterparty to write back on a conversation linked to the record. `meeting` waits for
+        a named meeting to be over — an archived meeting counts as over, so a cancelled one
+        returns the work rather than holding it forever.
 
     MorningBriefFeatureVector:
       type: object

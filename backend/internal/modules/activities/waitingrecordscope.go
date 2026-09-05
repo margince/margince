@@ -58,6 +58,13 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 	if err != nil {
 		return "", err
 	}
+	// The same gate for the reply that may LIFT a snooze. A reply this
+	// reader cannot see must not put the row back on their day: the row
+	// reappearing is itself the disclosure that it arrived.
+	backContent, err := auth.ActivityContentClause(ctx, "back", arg)
+	if err != nil {
+		return "", err
+	}
 	linkVisible, err := auth.LinkTargetVisibleClause(ctx, "wl", arg)
 	if err != nil {
 		return "", err
@@ -100,7 +107,8 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 			reader,
 			entityClause,
 			neverRelaxed, neverRelaxed,
-			neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains))) +
+			neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
+			messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent)) +
 		") waiting_thread)", nil
 }
 
