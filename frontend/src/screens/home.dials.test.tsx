@@ -245,7 +245,7 @@ describe("the Brief's dials", () => {
   it("shows the morning's work only on the morning", async () => {
     stubHome(["mine"]);
     render(<HomeScreen />);
-    expect(await screen.findByText(en["brief.donext.title"])).toBeTruthy();
+    expect(await screen.findByText(en["brief.feed.title"])).toBeTruthy();
 
     cleanup();
     vi.unstubAllGlobals();
@@ -255,7 +255,7 @@ describe("the Brief's dials", () => {
 
     await screen.findByRole("group", { name: en["brief.view.label"] });
     await waitFor(() =>
-      expect(screen.queryByText(en["brief.donext.title"])).toBeNull(),
+      expect(screen.queryByText(en["brief.feed.title"])).toBeNull(),
     );
   });
 });

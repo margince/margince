@@ -1,0 +1,20 @@
+/* The morning's one feed. The rows carry their own layout from worklist.css;
+   this is the list they sit in and the run-length section label above them. */
+.brief-feed-list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The label sits ABOVE its first row rather than beside it, so a reader
+   scanning the left edge sees the morning's shape without the badges competing
+   with the rank numbers for the same column. */
+.brief-feed-section {
+  margin: var(--space-3) 0 var(--space-1);
+}
+
+.brief-feed-list > li:first-child .brief-feed-section {
+  margin-top: 0;
+}
