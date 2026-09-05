@@ -522,6 +522,7 @@ export const vi = {
   "ref.nameLoadFailed": "Không tải được tên",
   "ref.notInRoster":
     "Hiện đang được giao (không còn trong danh sách người dùng)",
+  "picker.noMatch": "Không có kết quả",
 
   "app.errorTitle": "Màn hình này đã ngừng hoạt động.",
   "app.errorBody": "Hãy thử lại. Nếu vẫn tiếp tục lỗi, hãy tải lại trang.",
@@ -3090,6 +3091,7 @@ export const vi = {
   "log.transcriptUploadRejected": "Chỉ chấp nhận tệp .txt.",
   "log.transcriptUploadFailed":
     "Không thể đọc tệp đó — hãy thử dán văn bản thay vào đó.",
+  "log.attendee": "Ai đã tham dự",
   "log.subject": "Tiêu đề",
   "log.body": "Nội dung",
   "log.dueAt": "Ngày đến hạn",

@@ -516,6 +516,7 @@ export const de = {
   "common.loading": "Wird geladen…",
   "ref.nameLoadFailed": "Name konnte nicht geladen werden",
   "ref.notInRoster": "Aktuell zugeordnet (nicht mehr in der Nutzerliste)",
+  "picker.noMatch": "Kein Treffer",
 
   // "Funktioniert nicht mehr", nicht "Fehler aufgetreten": die Ansicht ist
   // stehengeblieben, und das ist die Beobachtung, die der Lesende selbst
@@ -3121,6 +3122,7 @@ export const de = {
   "log.transcriptUploadRejected": "Nur eine .txt-Datei wird akzeptiert.",
   "log.transcriptUploadFailed":
     "Die Datei konnte nicht gelesen werden — versuchen Sie stattdessen, den Text einzufügen.",
+  "log.attendee": "Wer war dabei",
   "log.subject": "Betreff",
   "log.body": "Details",
   "log.dueAt": "Fällig am",
