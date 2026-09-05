@@ -37,7 +37,7 @@ export function SorModeChip() {
       // Integrations, not Connections: the mirror that is answering every read is
       // installation-wide wiring, and the personal Connections entry now holds
       // only a reader's own mailbox and network.
-      href="#/settings/admin/integrations"
+      href="#/settings/integrations"
       className="badge badge-accent"
       title={explanation}
       aria-label={explanation}
