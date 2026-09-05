@@ -26,6 +26,6 @@
 ## Accountability
 
 By opening this PR I confirm I am **accountable** for this change and can
-**explain every line** in it — human-written or AI-assisted. Commits are signed
-off (`git commit -s`, DCO). See [CONTRIBUTING.md](/CONTRIBUTING.md) and the
+**explain every line** in it — human-written or AI-assisted. See
+[CONTRIBUTING.md](/CONTRIBUTING.md) and the
 [Code of Conduct](/CODE_OF_CONDUCT.md).

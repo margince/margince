@@ -128,16 +128,14 @@ check monitoring. Read-only inspection (`git status`, `diff`, `log`) can stay
 sandboxed.
 
 1. Branch off `main`: `git switch -c <type>/<slug> origin/main`.
-2. Sign off every commit (`git commit -s`) — the DCO gate rejects any commit
-   without a `Signed-off-by` trailer.
-3. Run `make check` before pushing — it is both halves, `frontend/` included,
+2. Run `make check` before pushing — it is both halves, `frontend/` included,
    with nothing to add on top. The pre-push hook runs `craft static --strict`
    diff-scoped too — fix what it finds, never bypass it; install it via `make hooks`.
-4. Push and open a PR.
-5. CI, DCO, CodeRabbit and SonarCloud must all pass. Address review findings
+3. Push and open a PR.
+4. CI, CodeRabbit and SonarCloud must all pass. Address review findings
    rather than dismissing them.
-6. Merge only when everything is green: `gh pr merge <n> --squash`, never with a
-   replaced body — it drops the commits' sign-off. Then delete the branch.
+5. Merge only when everything is green: `gh pr merge <n> --squash`. Then delete
+   the branch.
 
 **Commit only product.** Before `git add`, check `git status` for build caches
 (`node_modules/`, `.pnpm-store/`, binaries), working notes — those go in the

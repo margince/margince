@@ -8,7 +8,7 @@
 # error, or a UI regression fails the merge instead of shipping.
 #
 # Job names follow the craftsmanship wiring (ADR-0045,
-# cli/craft/wiring): external/fork PRs hit the same dco + deterministic-gates
+# cli/craft/wiring): external/fork PRs hit the same deterministic-gates
 # + craftsmanship + craft-residue jobs as internal work, and craftsmanship
 # runs only after the deterministic gates are green.
 name: ci
@@ -277,39 +277,6 @@ jobs:
               # dependency PR.
               - '.github/workflows/**'
               - '.github/actions/**'
-
-  # Every commit that merges carries a Developer Certificate of Origin sign-off.
-  #
-  # This runs on the merge queue as well as on the pull request, and the queue is
-  # the one that counts: the merge_group payload carries base_sha/head_sha of the
-  # tree that is about to land, so the sign-off is checked against what actually
-  # merges. The alternative — exempting a pull_request-only job from the aggregate
-  # verdict, which refuses a skip on merge_group — would have reopened the
-  # skip-as-pass hole for the one gate that proves provenance.
-  #
-  # History predating this gate is not retro-required.
-  dco:
-    name: dco
-    timeout-minutes: 20
-    if: >-
-      github.event_name == 'merge_group'
-      || (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - name: Every merging commit is signed off (DCO)
-        working-directory: .
-        env:
-          # `||` coalesces on falsiness, and the unselected event's payload is
-          # empty — so each var takes whichever event actually fired.
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
-        run: ./scripts/check-dco.sh "$BASE_SHA" "$HEAD_SHA"
 
   # The deterministic merge gate: build, vet, lint (baseline + new-code
   # strict), arch-lint, unit + root fitness tests (incl. audit_log enum
@@ -674,7 +641,7 @@ jobs:
   #
   # That split cannot survive the merge queue. The `ci` aggregate refuses a skipped
   # job on merge_group, so a pull_request-only lane here would fail every queue
-  # entry and stop merging — the same trap `dco` sits in, and the same fix. It is
+  # entry and stop merging, so it runs on both events. It is
   # also the better answer on its own terms: a denied licence should be caught
   # BEFORE the merge, not by the artifact producer that runs after it. sbom.yml
   # still gates its own signing path, which is what that copy exists for.
@@ -847,7 +814,7 @@ jobs:
       # What makes it safe is the `needs.ci.result == 'success'` clause above, and
       # nothing weaker would: this job's other conditions cover only its COVERAGE
       # producers, so without that clause a merge_group build whose secret-scan,
-      # license-gate, craft-residue or dco failed would still publish. That tree
+      # license-gate or craft-residue failed would still publish. That tree
       # does not merge — and it would have replaced the stored analysis every
       # scheduled check reads for main, describing a tree main never became.
       # Requiring the aggregate verdict is what makes "published as main" mean
@@ -1059,7 +1026,7 @@ jobs:
   # part of it. It is not: #2543's keyserver hang cancelled that job and the pull
   # request stayed mergeable, because this aggregate alone decides.
   #
-  # This list is EXACTLY the nine contexts the ruleset required before the
+  # This list is EXACTLY the contexts the ruleset required before the
   # aggregate replaced them, and that equality is the point: this change moves
   # where the verdict is computed, not what the verdict covers. Adding a lane and
   # collapsing the contexts in one step would mean a red merge queue with two
@@ -1082,7 +1049,6 @@ jobs:
     # which is the whole failure mode this job exists to end.
     if: always()
     needs:
-      - dco
       - deterministic-gates
       - craftsmanship
       - craft-residue
