@@ -303,6 +303,9 @@ elif ! grep -q "scanned no stylesheets" "$TMP/out"; then
 fi
 
 if [[ "$FAILURES" -ne 0 ]]; then
+  # The fixtures outlive a red run: the message below asks the reader to run the
+  # gate against one, and a swept tree would leave them nothing to run it on.
+  trap - EXIT
   echo "" >&2
   echo "check-ds-spacing-roles.sh no longer says what it claims to say. Run it" >&2
   echo "against one of the fixtures under $TMP by hand:" >&2
