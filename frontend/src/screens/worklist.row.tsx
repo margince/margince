@@ -149,6 +149,20 @@ export function WorklistRow({
           selected={selected}
           onSelect={onSelect}
         />
+        {/* WHAT KIND of work, in its own column, so a reader running down the
+            queue reads the kinds as a list without reading a title first — and
+            in the warn tone on the rows the day put first, where the kind is
+            also why it is first. The title line keeps the states that are
+            about this row alone: overdue, unprepared. */}
+        <span
+          className={
+            item.band === "now"
+              ? "t-eyebrow worklist-row-kind worklist-row-kind-now"
+              : "t-eyebrow worklist-row-kind"
+          }
+        >
+          {t(`worklist.category.${item.category}` as const)}
+        </span>
         <div className="worklist-row-text">
           {/* A waiting EMAIL names itself with the canonical row — the same one
             the timeline draws — so the queue shows the message rather than a
@@ -164,7 +178,6 @@ export function WorklistRow({
             ) : (
               title
             )}
-            <Badge>{t(`worklist.category.${item.category}` as const)}</Badge>
             {item.overdue && (
               <Badge tone="danger">{t("worklist.overdue")}</Badge>
             )}

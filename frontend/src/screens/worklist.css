@@ -7,8 +7,19 @@
   margin-bottom: var(--space-4);
 }
 
+/* The sentence and the scope share a line: the sentence takes the room, the
+   scope sits at the far edge, and on a phone the scope drops under it. */
+.worklist-header-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
 .worklist-lead {
   margin: 0;
+  color: var(--textContent);
 }
 
 /* A manager's control over one row: the picker or the question, then the verbs
@@ -105,10 +116,48 @@
   margin: 0;
 }
 
+/* Four columns a reader runs down as four lists: the rank, the KIND of work,
+   the work itself, and the verbs. The kind column is fixed so the titles beside
+   it start at one x whatever the kind says, which is what lets the eye read the
+   kinds alone and then the titles alone. Everything after the verbs — the
+   dispositions, the pin, a reassignment, a decision drawn inside the row — is
+   the row's own tail and takes the full width under the four. */
 .worklist-row {
   align-items: flex-start;
-  display: flex;
-  gap: var(--space-3);
+  display: grid;
+  grid-template-columns: auto var(--worklist-kind-w, 7.5rem) minmax(0, 1fr) auto;
+  column-gap: var(--space-3);
+  row-gap: var(--space-2);
+}
+.worklist-row > :nth-child(n + 5) {
+  grid-column: 2 / -1;
+}
+
+/* The kind, as an eyebrow in the muted tone; in the warn tone on a row the day
+   put in its first band, where the kind is also the reason it is there. Wraps
+   rather than elides: "Customer waiting" is two words and both are the fact. */
+.worklist-row-kind {
+  color: var(--textSecondary);
+  padding-top: var(--space-1);
+  text-wrap: balance;
+}
+.worklist-row-kind-now {
+  color: var(--warn);
+}
+
+/* On a phone the kind sits above the title rather than beside it: a 390px row
+   has no column to give a second word. */
+@media (max-width: 40rem) {
+  .worklist-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .worklist-row-kind {
+    grid-column: 2 / -1;
+    padding-top: 0;
+  }
+  .worklist-row > :nth-child(n + 4) {
+    grid-column: 2 / -1;
+  }
 }
 
 /* The rank reads as a marker beside the row rather than as part of the

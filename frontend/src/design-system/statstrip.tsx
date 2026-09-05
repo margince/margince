@@ -27,8 +27,16 @@ export function StatStrip({
   testId,
   label,
   floor,
+  flat,
 }: Readonly<{
   children: ReactNode;
+  /**
+   * The row drawn as ONE plate with hairlines between the slots, rather than
+   * as a row of panes. For a page whose readings open it — the Brief — where
+   * five panes above the work read as five more cards to work through; the
+   * figures are the same, the frame around each is not.
+   */
+  flat?: boolean;
   // How the strip SITS in the layout around it — it lands on the strip's
   // outer box, which is the element the parent lays out. Not for restyling
   // the row of slots itself: the row's grid, gaps and fold are this
@@ -66,7 +74,7 @@ export function StatStrip({
   };
   const row = (
     <section
-      className="stat-strip"
+      className={flat ? "stat-strip stat-strip-flat" : "stat-strip"}
       style={vars}
       aria-label={label}
       data-testid={testId}
