@@ -1919,45 +1919,41 @@ function DealBoardBody({
   // this map as well would read each company twice.
   const orgMarks = useOrgMarks(loadedDeals, orgs, orgsSettled);
   return (
-    <>
-      <QueryGate query={pipelinesQuery} pendingLabel={t("nav.deals")}>
-        {() =>
-          effectivePipeline ? (
-            // Only the INITIAL load goes through the gate. An infinite
-            // query reports isError when ANY page fails, later ones
-            // included, so keeping the gate around a loaded board would
-            // let one failed "load more" throw away every card already on
-            // screen. Past the first page the board stands and the button
-            // retries — exactly what OverlayDealsTable does above, and for
-            // the same reason.
-            (dealsQuery.data?.pages ?? []).length === 0 ? (
-              <QueryGate query={dealsQuery} pendingLabel={t("nav.deals")}>
-                {() => null}
-              </QueryGate>
-            ) : (
-              <>
-                <PipelineBoard
-                  cardHref={(deal) =>
-                    routeHash({ screen: "deals", id: deal.id })
-                  }
-                  columns={buildColumns(
-                    effectivePipeline.stages ?? [],
-                    loadedDeals,
-                    stageTotalsQuery.data ?? new Map(),
-                    orgMarks,
-                    totalsWithheld ? t(totalsWithheld) : undefined,
-                  )}
-                  onOpen={openDeal}
-                  cardDragHandlers={cardDragHandlers}
-                  columnDropHandlers={columnDropHandlers}
-                />
-                <LoadMoreButton query={dealsQuery} />
-              </>
-            )
-          ) : null
-        }
-      </QueryGate>
-    </>
+    <QueryGate query={pipelinesQuery} pendingLabel={t("nav.deals")}>
+      {() =>
+        effectivePipeline ? (
+          // Only the INITIAL load goes through the gate. An infinite
+          // query reports isError when ANY page fails, later ones
+          // included, so keeping the gate around a loaded board would
+          // let one failed "load more" throw away every card already on
+          // screen. Past the first page the board stands and the button
+          // retries — exactly what OverlayDealsTable does above, and for
+          // the same reason.
+          (dealsQuery.data?.pages ?? []).length === 0 ? (
+            <QueryGate query={dealsQuery} pendingLabel={t("nav.deals")}>
+              {() => null}
+            </QueryGate>
+          ) : (
+            <>
+              <PipelineBoard
+                cardHref={(deal) => routeHash({ screen: "deals", id: deal.id })}
+                columns={buildColumns(
+                  effectivePipeline.stages ?? [],
+                  loadedDeals,
+                  stageTotalsQuery.data ?? new Map(),
+                  orgMarks,
+                  totalsWithheld ? t(totalsWithheld) : undefined,
+                )}
+                onOpen={openDeal}
+                cardDragHandlers={cardDragHandlers}
+                columnDropHandlers={columnDropHandlers}
+              />
+              <LoadMoreButton query={dealsQuery} />
+            </>
+          )
+        ) : null
+      }
+    </QueryGate>
   );
 }
 
@@ -2690,13 +2686,10 @@ export function DealsScreen({
         bodyOwnsPaging={overlay || view === "board"}
         bodyCount={
           view === "board" &&
-          dealsQuery.data && (
-            <>
-              {t("board.count", {
-                count: formatNumber(loadedDeals.length, locale),
-              })}
-            </>
-          )
+          dealsQuery.data &&
+          t("board.count", {
+            count: formatNumber(loadedDeals.length, locale),
+          })
         }
         // The pipeline picker is screen state, not a filter, so switching it
         // changes every row without touching `filters`. Naming it here is
@@ -4236,15 +4229,13 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 </>
               }
               actions={
-                <>
-                  <DealActions
-                    deal={deal}
-                    orgs={orgs.data?.data ?? []}
-                    meId={me.data?.user.id ?? ""}
-                    openStages={openStages}
-                    archivedReasonId={archivedReasonId}
-                  />
-                </>
+                <DealActions
+                  deal={deal}
+                  orgs={orgs.data?.data ?? []}
+                  meId={me.data?.user.id ?? ""}
+                  openStages={openStages}
+                  archivedReasonId={archivedReasonId}
+                />
               }
               band={dealBand({ deal, reasonId: archivedReasonId, t })}
               timeline={timelineEntries}
