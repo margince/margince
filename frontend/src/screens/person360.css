@@ -4,16 +4,6 @@
    pages share the RecordView shell and the design system beneath it; what is
    here is only what the person's own anatomy needs. */
 
-/* The rails stack cards vertically at a tighter rhythm than the main column,
-   because a rail card is a glance and a main-column card is something you
-   read. Same reasoning — and the same numbers — as the company page. */
-.record-rail,
-.record-aside {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
 /* The relationship state strip (§5.3) is the design system's `StatStrip` — one
    plate of ruled slots, the same shape and the same type scale the company
    record's readings row draws. Nothing about it is the person page's own, so
