@@ -148,6 +148,25 @@ BEGIN
     RETURN NEW;
 END;
 
+public.activity_meeting_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity_meeting_history.activity_id uuid NOT NULL gen=- def=-
+public.activity_meeting_history.activity_meeting_history_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.activity_meeting_history.activity_meeting_history_pkey PRIMARY KEY (id)
+public.activity_meeting_history.activity_meeting_history_source_pairing CHECK (((source_id IS NULL) = (source_system IS NULL)))
+public.activity_meeting_history.activity_meeting_history_status_check CHECK ((status = ANY (ARRAY['booked'::text, 'held'::text, 'no_show'::text, 'canceled'::text])))
+public.activity_meeting_history.actor text NOT NULL gen=- def=-
+public.activity_meeting_history.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_meeting_history.effective_at timestamp with time zone NOT NULL gen=- def=-
+public.activity_meeting_history.id uuid NOT NULL gen=- def=uuidv7()
+public.activity_meeting_history.partial_pre_history boolean NOT NULL gen=- def=false
+public.activity_meeting_history.scheduled_start timestamp with time zone gen=- def=-
+public.activity_meeting_history.source_id text gen=- def=-
+public.activity_meeting_history.source_system text gen=- def=-
+public.activity_meeting_history.status text NOT NULL gen=- def=-
+public.activity_meeting_history_by_activity CREATE INDEX activity_meeting_history_by_activity ON public.activity_meeting_history USING btree (activity_id, effective_at)
+public.activity_meeting_history_by_status_time CREATE INDEX activity_meeting_history_by_status_time ON public.activity_meeting_history USING btree (status, effective_at)
+public.activity_meeting_history_pkey CREATE UNIQUE INDEX activity_meeting_history_pkey ON public.activity_meeting_history USING btree (id)
+public.activity_meeting_history_source_once CREATE UNIQUE INDEX activity_meeting_history_source_once ON public.activity_meeting_history USING btree (source_system, source_id, status) WHERE (source_system IS NOT NULL)
 public.activity_meeting_no_overlap CREATE INDEX activity_meeting_no_overlap ON public.activity USING gist (host_user_id, tsrange(timezone('UTC'::text, occurred_at), (timezone('UTC'::text, occurred_at) + '01:00:00'::interval))) WHERE ((kind = 'meeting'::text) AND (host_user_id IS NOT NULL) AND (archived_at IS NULL))
 public.activity_participant acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_participant.activity_id uuid NOT NULL gen=- def=-

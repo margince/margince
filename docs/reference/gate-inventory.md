@@ -101,7 +101,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (110)
+## Census (111)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -163,6 +163,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `mailboxproofwriters_test.go` | H2 | A MailboxProof is set in exactly one place, and that place spends the token that earns it. |
 | `makefilepaths_test.go` | H1 | Every config file the Makefiles name is a config file that exists. |
 | `mcpfaultcoverage_test.go` | H2 | A module's typed refusal must be legible on EVERY surface that can reach it, not just the one it was written for. |
+| `meetinghistorywriters_test.go` | H2 | Every statement that writes activity.meeting\_status also records the transition. |
 | `metricsuffix_test.go` | H2 | A `\_total` suffix means COUNTER, in both directions. |
 | `migrationcitations_test.go` | H1 | No file acquires a citation of a migration version that does not exist. |
 | `onecallerpredicatebudget_test.go` | H2 | The ceiling on a statement whose predicate the CALLER wrote is one number, declared in platform/database as CallerPredicateBudget. |
