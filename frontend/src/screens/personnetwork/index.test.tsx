@@ -586,6 +586,7 @@ describe("what changed lately", () => {
       {},
       {
         view: {
+          sections_omitted: [],
           relationship_changes: [
             { kind: "replied_after_gap", at: "2026-08-20T09:00:00Z", days: 41 },
             {
@@ -616,7 +617,14 @@ describe("what changed lately", () => {
   });
 
   it("says nothing moved rather than drawing an empty list", async () => {
-    renderTab(graph, "en", {}, { view: { relationship_changes: [] } });
+    renderTab(
+      graph,
+      "en",
+      {},
+      {
+        view: { sections_omitted: [], relationship_changes: [] },
+      },
+    );
 
     expect(
       await screen.findByText(en["person.network.noMoments"]),
