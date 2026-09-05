@@ -462,19 +462,25 @@ func renderPredicates(preds []boundPredicate) string {
 }
 
 func aggregatePhrase(agg reportAggregate) (string, error) {
+	// Keyed off the engine's own constants and covering ALL of them: five of
+	// seven as bare strings once left the percentile defaults of stage-age and
+	// win-loss minting links this very function then refused. Held equal to the
+	// engine by TestEveryEngineAggregateRendersAPhrase.
 	verbs := map[string]string{
-		"count": "the number of matching records",
-		"sum":   "the sum of",
-		"avg":   "the average of",
-		"min":   "the minimum of",
-		"max":   "the maximum of",
+		aggFnCount:  "the number of matching records",
+		aggFnSum:    "the sum of",
+		aggFnAvg:    "the average of",
+		aggFnMin:    "the minimum of",
+		aggFnMax:    "the maximum of",
+		aggFnMedian: "the median of",
+		aggFnP75:    "the 75th percentile of",
 	}
 	verb, ok := verbs[agg.Fn]
 	if !ok {
 		return "", &FieldNotAllowedError{Field: "fn=" + agg.Fn}
 	}
 	phrase := verb
-	if agg.Fn != "count" {
+	if agg.Fn != aggFnCount {
 		phrase += " " + agg.Field
 	}
 	if agg.As != "" {
