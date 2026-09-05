@@ -105,6 +105,7 @@ var cannotReachIdentity = gatekit.Waive(map[string]string{
 // what made it a defect rather than a preference.
 var deliberatelyNotLiveness = gatekit.Waive(map[string]string{
 	"internal/modules/identity/roster.go":                                      "listUsersAllQuery is the ADMIN roster and says so: every non-archived member REGARDLESS of status, because a deactivated member has to be visible to reactivate",
+	"internal/modules/identity/escalation.go":                                  "the escalation ceiling LOCKS the target row rather than asking whether they may sign in. A deactivated member is exactly who a caller reactivates, and an admin whose account is deactivated is still an admin a delegated holder must not reach — so requiring liveness here would skip the guard on the targets that need it most. archived_at alone, because an archived row is genuinely gone",
 	"internal/modules/identity/reset.go":                                       "OperatorResetPassword is the operator CLI's lockout path, never exposed over HTTP; it must reach an account whose status is not active, which is what administrator lockout means. Login itself calls the helper (lockout.go)",
 	"internal/compose/integration/agentaccess/oauth_grant_integration_test.go": "the fixture deactivates every seat that CAN still act, to prove revocation binds mid-session; the archived half would narrow nothing, because every seat in it was created by the harness moments earlier and none is archived",
 })

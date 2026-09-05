@@ -25,10 +25,11 @@ import (
 )
 
 // linkRequest issues one POST /users/{id}/password-link as the given roles.
-func linkRequest(h Handlers, target ids.UserID, roles ...string) *httptest.ResponseRecorder {
+func linkRequest(t *testing.T, h Handlers, target ids.UserID, roles ...string) *httptest.ResponseRecorder {
+	t.Helper()
 	rec := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/v1/users/"+target.String()+"/password-link", nil)
-	actor := Identity{UserID: ids.UserID{UUID: ids.NewV7()}, Roles: roles}
+	actor := seededIdentity(t, roles...)
 	r = r.WithContext(withIdentity(r.Context(), actor))
 	h.IssueUserPasswordLink(rec, r, crmcontracts.Id(target.UUID))
 	return rec
@@ -48,7 +49,7 @@ func TestPasswordLinkRefusesANonAdminBeforeAnythingElse(t *testing.T) {
 	h := NewHandlers(&Service{}).WithPasswordReset(nopMailer{}).WithPasswordLinkBase("https://crm.example.test")
 
 	for _, roles := range [][]string{{"rep"}, {"manager"}, {"ops"}, {"read_only"}, nil} {
-		rec := linkRequest(h, target, roles...)
+		rec := linkRequest(t, h, target, roles...)
 		if rec.Code != http.StatusForbidden {
 			t.Errorf("roles %v = %d, want 403 (and never a 409 disclosing email posture)", roles, rec.Code)
 		}
@@ -63,21 +64,21 @@ func TestPasswordLinkNonAdminCannotSpendTheTargetsIssuanceBudget(t *testing.T) {
 	// refused as unauthorized WITHOUT touching the limiter — a rep able to
 	// drain another member's budget is a denial-of-recovery primitive.
 	for range 12 {
-		if rec := linkRequest(h, target, "rep"); rec.Code != http.StatusForbidden {
+		if rec := linkRequest(t, h, target, "rep"); rec.Code != http.StatusForbidden {
 			t.Fatalf("non-admin attempt = %d, want 403", rec.Code)
 		}
 	}
 	// The target's budget must be untouched by all of that: an admin asking
 	// straight afterwards is answered on the merits (here 404, since the test
 	// context binds no workspace) and never 429.
-	if rec := linkRequest(h, target, "admin"); rec.Code == http.StatusTooManyRequests {
+	if rec := linkRequest(t, h, target, "admin"); rec.Code == http.StatusTooManyRequests {
 		t.Fatal("admin was rate-limited — the non-admin attempts consumed the target's issuance budget")
 	}
 }
 
 func TestPasswordLinkRefusesWhenTheInstallationMailsInstead(t *testing.T) {
 	h := NewHandlers(&Service{}).WithPasswordReset(nopMailer{}).WithPasswordLinkBase("https://crm.example.test")
-	rec := linkRequest(h, ids.UserID{UUID: ids.NewV7()}, "admin")
+	rec := linkRequest(t, h, ids.UserID{UUID: ids.NewV7()}, "admin")
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("mailer wired = %d, want 409", rec.Code)
 	}
@@ -90,7 +91,7 @@ func TestPasswordLinkRefusesWithoutAPublicBaseURL(t *testing.T) {
 	// No mailer AND no base: nothing could deliver a link, and nothing could
 	// build one either. The refusal names the operator's missing setting rather
 	// than failing later with an unusable "/#/reset-password?token=..." link.
-	rec := linkRequest(NewHandlers(&Service{}), ids.UserID{UUID: ids.NewV7()}, "admin")
+	rec := linkRequest(t, NewHandlers(&Service{}), ids.UserID{UUID: ids.NewV7()}, "admin")
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("no base URL = %d, want 409", rec.Code)
 	}
@@ -131,11 +132,17 @@ func TestRedemptionIsReachableOnAnEmailLessInstallation(t *testing.T) {
 }
 
 func TestMeAdvertisesTheLinkActionOnlyToAnAdminWhoCanUseIt(t *testing.T) {
+	// Seeded from the real role documents, not hand-built. A caller carrying a
+	// role NAME and no permissions holds nothing now that this predicate reads a
+	// grant, so `Identity{Roles: []string{"admin"}}` would describe a stranger
+	// and every assertion below would pass for the wrong reason.
+	//
 	// A real session always carries a seat; an unset one is fail-closed, so the
-	// fixtures name it rather than leaning on a default.
-	admin := Identity{Roles: []string{"admin"}, SeatType: "full"}
-	rep := Identity{Roles: []string{"rep"}, SeatType: "full"}
-	readSeatAdmin := Identity{Roles: []string{"admin"}, SeatType: "read"}
+	// read-seat fixture names it rather than leaning on a default.
+	admin := seededIdentity(t, "admin")
+	rep := seededIdentity(t, "rep")
+	readSeatAdmin := seededIdentity(t, "admin")
+	readSeatAdmin.SeatType = "read"
 
 	emailLess := emailLessInstallation()
 	if !emailLess.canIssuePasswordLink(admin) {
@@ -170,7 +177,7 @@ func TestAConfigurationRefusalDoesNotSpendTheTargetsBudget(t *testing.T) {
 	mailed := NewHandlers(&Service{}).WithPasswordReset(nopMailer{}).WithPasswordLinkBase("https://crm.example.test")
 	target := ids.UserID{UUID: ids.NewV7()}
 	for range 8 { // past the 5/hour per-target ceiling
-		if rec := linkRequest(mailed, target, "admin"); rec.Code != http.StatusConflict {
+		if rec := linkRequest(t, mailed, target, "admin"); rec.Code != http.StatusConflict {
 			t.Fatalf("configuration refusal = %d, want 409", rec.Code)
 		}
 	}

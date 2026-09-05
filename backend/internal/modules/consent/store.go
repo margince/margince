@@ -95,6 +95,14 @@ type ProofEvent struct {
 // config-sized (a handful of rows); the page shape exists for contract
 // symmetry, not because anyone paginates it.
 func (s *Store) ListPurposes(ctx context.Context) ([]Purpose, error) {
+	// READ stays on person, and only the writes moved to consent_config. The
+	// catalog is a vocabulary rather than an admin screen: every seat resolves a
+	// purpose_id against it to record consent from the person page, so gating the
+	// read on installation config would 403 the Person 360 for every rep.
+	//
+	// The asymmetry is the point. Defining what the workspace may contact people
+	// for is compliance configuration; knowing what it already defined is part of
+	// working a record.
 	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -119,11 +127,12 @@ func (s *Store) ListPurposes(ctx context.Context) ([]Purpose, error) {
 	return out, err
 }
 
-// CreatePurpose defines one purpose. Purposes are compliance
-// configuration — gated like pipeline config until the features/04
-// matrix names a consent-config object (filed as feedback).
+// CreatePurpose defines one purpose. Purposes are compliance configuration, and
+// consent_config is the object that says so — it replaced a borrowed
+// pipeline.create, which let anyone who could add a pipeline stage define the
+// vocabulary every outreach decision is judged against.
 func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDOI bool) (Purpose, error) {
-	if err := auth.Require(ctx, "pipeline", principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, "consent_config", principal.ActionCreate); err != nil {
 		return Purpose{}, err
 	}
 	key = normalizedPurposeKey(key)

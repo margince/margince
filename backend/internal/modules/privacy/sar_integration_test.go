@@ -163,6 +163,10 @@ func exportContext(ws, user ids.UUID) context.Context {
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
 				"person": {Create: true, Read: true, Update: true, Delete: true},
+				// The trail moved off the literal admin role onto its own object.
+				// Without it the audience suites reach a permission denial rather
+				// than the audience decision they are about.
+				"audit_log": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

@@ -284,6 +284,14 @@ func strictlyWider(seed map[string]map[string]principal.ObjectGrant, wide, narro
 
 // grantDiff names the verbs `held` grants that `against` does not.
 func grantDiff(held, against principal.ObjectGrant) []string {
+	// The same question principal.ObjectGrant.Contains answers, kept separate
+	// because this one has to NAME the missing verbs: a parity failure that says
+	// "narrower" sends the reader back to two maps to work out which verb, and
+	// the whole value of this gate is landing on the line to change.
+	//
+	// Held by: TestGrantDiffAgreesWithContains below, so the two cannot drift —
+	// a gate reporting no difference while the guard refuses, or the reverse, is
+	// the failure that would otherwise be invisible in both directions.
 	var missing []string
 	for _, verb := range []struct {
 		name      string
@@ -299,4 +307,124 @@ func grantDiff(held, against principal.ObjectGrant) []string {
 		}
 	}
 	return missing
+}
+
+// The admin fixture holds every grant the seeded admin role holds.
+//
+// The arm above compares fixtures to EACH OTHER, so it answers "is the widest
+// stand-in narrower than something it stands in for". It cannot answer the
+// question that actually bit: is the widest stand-in narrower than the SEAT
+// itself. Removing a grant from AdminPerms leaves it passing, because every
+// other fixture is narrower still.
+//
+// That gap is how thirteen objects went missing at once. When a settings surface
+// moves off a literal `admin` role check onto a grant, every integration test
+// driving that surface as an admin starts failing — and the 403 it produces is
+// indistinguishable from a correctly refused request, so the repair looks like
+// "the test was wrong" rather than "the fixture is short".
+//
+// Compared object by object rather than as a whole, because the fixture is
+// allowed to be narrower in one deliberate direction: it omits objects no
+// integration test drives. What it may never do is hold a NARROWER grant on an
+// object it does name — that is a fixture claiming to be an admin while
+// answering like somebody else.
+func TestTheAdminFixtureIsNotNarrowerThanTheSeededAdminRole(t *testing.T) {
+	seeded := seededRoleGrants(t)[seatRole(t, adminFixture)]
+	if len(seeded) == 0 {
+		t.Fatal("the seeded admin document decoded to no objects — this gate is comparing " +
+			"against nothing and would pass whatever the fixture held")
+	}
+	// Iterating the SEED and not the fixture. Walking the fixture visits only
+	// objects it already names, so an object deleted from it is never looked at
+	// — the shape that let this gate pass its own first mutation, and the same
+	// under-recognition the whole file is written against.
+	for object, granted := range seeded {
+		if _, named := AdminPerms.Objects[object]; !named {
+			// Deliberately narrower: the fixture omits objects no integration
+			// test drives, and adding all of them would make several suites pass
+			// for the wrong reason. Absence is a decision; a NARROWER grant on an
+			// object it does name is not.
+			continue
+		}
+		for _, verb := range grantDiff(granted, AdminPerms.Objects[object]) {
+			t.Errorf("the seeded admin role holds %s.%s and %s does not — every integration "+
+				"test driving that surface as an admin gets a 403 that reads exactly like a "+
+				"correct refusal, so the fixture is repaired by widening it here, never by "+
+				"weakening the test", object, verb, adminFixture)
+		}
+	}
+}
+
+// The ops fixture matches the seeded ops role on every governance object.
+//
+// OpsPerms is the admin grid minus what ops does not hold, and that subtraction
+// is hand-maintained. It was correct while the difference was a role NAME — the
+// fixture could take the admin map whole and the literal-admin gates did the
+// separating. Now the difference lives in grants, so the subtraction is load
+// bearing: one object too few and a suite proves ops is refused where production
+// admits it; one too many and a refusal test passes against a fixture that was
+// never going to be admitted anyway.
+//
+// Only the governance objects are compared. Everywhere else ops genuinely holds
+// the admin grid, and the arm above already refuses a fixture narrower than the
+// seat it stands in for.
+func TestTheOpsFixtureMatchesTheSeededOpsRoleOnGovernance(t *testing.T) {
+	seed := seededRoleGrants(t)
+	ops := seed[seatRole(t, "OpsPerms")]
+	if len(ops) == 0 {
+		t.Fatal("the seeded ops document decoded to no objects — this gate is comparing " +
+			"against nothing")
+	}
+	// Derived from the seed rather than listed: an object added later that ops
+	// holds differently from admin is inside this census without anybody
+	// remembering to add it, which is the way a hand-listed corpus fails short.
+	admin := seed[seatRole(t, adminFixture)]
+	for object, adminGrant := range admin {
+		opsGrant := ops[object]
+		if opsGrant == adminGrant {
+			continue
+		}
+		if fixture, named := OpsPerms.Objects[object]; named {
+			if fixture != opsGrant {
+				t.Errorf("the seed grants ops %+v on %s; the fixture carries %+v — a suite "+
+					"driving that surface as ops reaches a different answer than production",
+					opsGrant, object, fixture)
+			}
+			continue
+		}
+		if opsGrant != (principal.ObjectGrant{}) {
+			t.Errorf("the seed grants ops %+v on %s and the fixture names it nowhere — "+
+				"a refusal test on that surface passes without ever testing the gate",
+				opsGrant, object)
+		}
+	}
+}
+
+// grantDiff and principal.ObjectGrant.Contains answer the same question.
+//
+// One returns which verbs are missing and the other whether any are, so they are
+// two functions on purpose. What must not happen is them disagreeing: this gate
+// would then pass a fixture the escalation guards refuse, or fail one they
+// admit, and either way the number it reports would be about itself.
+//
+// Exhaustive over all 256 pairs, because the defect is per-verb and a sampled
+// table would miss exactly the verb somebody forgot.
+func TestGrantDiffAgreesWithContains(t *testing.T) {
+	grants := make([]principal.ObjectGrant, 0, 16)
+	for bits := range 16 {
+		grants = append(grants, principal.ObjectGrant{
+			Create: bits&1 != 0, Read: bits&2 != 0,
+			Update: bits&4 != 0, Delete: bits&8 != 0,
+		})
+	}
+	for _, held := range grants {
+		for _, against := range grants {
+			contained := against.Contains(held)
+			if missing := grantDiff(held, against); contained != (len(missing) == 0) {
+				t.Errorf("held=%+v against=%+v: Contains says %v, grantDiff reports %v — "+
+					"the parity gate and the escalation guards would reach opposite answers "+
+					"about the same pair", held, against, contained, missing)
+			}
+		}
+	}
 }
