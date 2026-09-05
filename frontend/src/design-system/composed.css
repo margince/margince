@@ -561,6 +561,27 @@
   min-width: 0;
 }
 
+/* The break between the record's bodies and its story, at the same step the
+   stack above puts between two bodies — the chronology is one more of them.
+   Only when something stands above it: on a Timeline tab the section IS the
+   body, and an interval there would push it off the strip that chose it. */
+.record-timeline:not(:first-child) {
+  margin-block-start: var(--space-6);
+}
+
+/* The columns of context beside the work, at a tighter step than the stack
+   above: a rail card is a glance and a work-column card is something you read.
+   `RecordView` puts these classes on the columns themselves, so the rhythm
+   belongs with the component that names them — every record page draws these
+   two columns, and a screen stylesheet spelling them again is one record's
+   answer to a question the shell already answers for all of them. */
+.record-rail,
+.record-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 /* The record page's zones — the grid itself is `PageZones` (pagezones.css),
    which the record page composes rather than owns: the ratios and the two folds
    are a page shape, not a record's. `.record-zones` is what the record adds ON
