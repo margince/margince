@@ -290,6 +290,12 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// not. Both tools take the read scope and neither stages anything.
 		{"describe_report_blocks", `{}`},
 		{"compose_analytics_report", `{"blocks":[{"kind":"title","text":"Pipeline this quarter"}]}`},
+		// The typed query behind those blocks, over the same population the
+		// report tool above names. Unsaved on purpose: `save` is what mints a
+		// citable run_id, and what this lane holds is the ANSWER shape — which
+		// carries columns and rows either way, and whose empty-not-null slices
+		// are exactly what a schema alone cannot hold.
+		{"run_analytics_query", `{"entity":"deals-by-stage","measures":[{"fn":"count"}]}`},
 		// The confirm-first queue read back through its own doors.
 		{"list_approvals", `{}`},
 		{"read_approval", `{"staged_action_id":"` + waiting.String() + `"}`},
