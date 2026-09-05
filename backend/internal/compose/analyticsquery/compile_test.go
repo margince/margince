@@ -287,8 +287,8 @@ func TestTheCallersAuthorityReachesTheStatement(t *testing.T) {
 
 // A percentile renders under the sample floor: below five values the answer
 // is NULL, not a number — a median over three deals is one deal's value
-// wearing a statistic's name. The same refusal the report engine writes, at
-// the same threshold, so a screen and a tool cannot disagree about one week.
+// wearing a statistic's name. The report engine writes the same refusal at
+// the same threshold, through the same renderer.
 func TestAPercentileAnswersNullBelowTheSampleFloor(t *testing.T) {
 	t.Parallel()
 	plan, err := Compile(Query{
@@ -312,16 +312,28 @@ func TestAPercentileAnswersNullBelowTheSampleFloor(t *testing.T) {
 	}
 }
 
-// A percentile over a non-numeric field is refused before rendering: the 50th
+// A percentile over a non-numeric field is refused at the bar every refusal
+// holds: typed, named invalid, and suggesting a measure that works — the 50th
 // percentile of a stage id means nothing, and Postgres computing it anyway is
 // exactly why the refusal is written here.
 func TestAPercentileOverANonNumericFieldIsRefused(t *testing.T) {
 	t.Parallel()
-	_, err := Compile(Query{
-		Entity:   "deals",
-		Measures: []Measure{{Fn: Median, Field: "stage"}},
-	}, testSchema(), noScope)
-	if err == nil {
-		t.Fatal("median over a dimension compiled; it must be refused by name")
+	for _, fn := range []AggFn{Median, P75} {
+		_, err := Compile(Query{
+			Entity:   "deals",
+			Measures: []Measure{{Fn: fn, Field: "stage"}},
+		}, testSchema(), noScope)
+		var refusal *RefusalError
+		if !errors.As(err, &refusal) {
+			t.Fatalf("%s over a dimension answered %v", fn, err)
+		}
+		if refusal.Kind != RefusalInvalid {
+			t.Errorf("%s over a dimension is %q; it means nothing rather than being unbuilt",
+				fn, refusal.Kind)
+		}
+		if !strings.Contains(refusal.Suggest, "amount") {
+			t.Errorf("the refusal suggests %q, which does not name a measure that works",
+				refusal.Suggest)
+		}
 	}
 }

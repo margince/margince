@@ -14,8 +14,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/analyticsquery"
-
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -463,17 +461,4 @@ func aggregateFunctionsInSource(t *testing.T) []string {
 	})
 	slices.Sort(out)
 	return out
-}
-
-// The two engines hold one percentile floor. The report engine and the typed
-// query compiler both answer "typical days in stage"; a different threshold on
-// either side would make a screen and a tool disagree about the same team's
-// week, each blaming the other's blank.
-func TestBothEnginesShareOnePercentileFloor(t *testing.T) {
-	t.Parallel()
-	if percentileSampleFloor != analyticsquery.PercentileSampleFloor {
-		t.Errorf("the report engine withholds a percentile below %d values and the "+
-			"typed compiler below %d — one question, two answers",
-			percentileSampleFloor, analyticsquery.PercentileSampleFloor)
-	}
 }
