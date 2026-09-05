@@ -7413,6 +7413,7 @@ func (e OnboardingStateSourceMode) Valid() bool {
 
 // Defines values for OnboardingStateStep.
 const (
+	OnboardingStateStepBasis    OnboardingStateStep = "basis"
 	OnboardingStateStepComplete OnboardingStateStep = "complete"
 	OnboardingStateStepConfirm  OnboardingStateStep = "confirm"
 	OnboardingStateStepConnect  OnboardingStateStep = "connect"
@@ -7426,6 +7427,8 @@ const (
 // Valid indicates whether the value is a known member of the OnboardingStateStep enum.
 func (e OnboardingStateStep) Valid() bool {
 	switch e {
+	case OnboardingStateStepBasis:
+		return true
 	case OnboardingStateStepComplete:
 		return true
 	case OnboardingStateStepConfirm:
@@ -10125,6 +10128,7 @@ func (e PutOnboardingStateRequestSourceMode) Valid() bool {
 
 // Defines values for PutOnboardingStateRequestStep.
 const (
+	PutOnboardingStateRequestStepBasis    PutOnboardingStateRequestStep = "basis"
 	PutOnboardingStateRequestStepComplete PutOnboardingStateRequestStep = "complete"
 	PutOnboardingStateRequestStepConfirm  PutOnboardingStateRequestStep = "confirm"
 	PutOnboardingStateRequestStepConnect  PutOnboardingStateRequestStep = "connect"
@@ -10138,6 +10142,8 @@ const (
 // Valid indicates whether the value is a known member of the PutOnboardingStateRequestStep enum.
 func (e PutOnboardingStateRequestStep) Valid() bool {
 	switch e {
+	case PutOnboardingStateRequestStepBasis:
+		return true
 	case PutOnboardingStateRequestStepComplete:
 		return true
 	case PutOnboardingStateRequestStepConfirm:
@@ -18321,6 +18327,19 @@ type AuthCapabilities struct {
 
 	// ReleaseVersion The release this api was built from (`YYYY.<edition>`). A client compares it against its OWN release and refuses to run against a different one — a mixed-release set must not serve. ABSENT is not a mismatch: it means this api carries no release version (a build that was not published as one), and a client MUST then make no comparison rather than treat the absence as a difference.
 	ReleaseVersion *string `json:"release_version,omitempty"`
+}
+
+// AuthenticationPolicy Which sign-in methods this installation offers, apart from the rest of its settings.
+//
+// Carries only what `authentication_policy` governs. The installation's name, timezone
+// and currency are NOT here — every role reads those, and repeating them in a document
+// governed by a narrower grant would make the same fact answer to two authorities.
+type AuthenticationPolicy struct {
+	// SignInProviders Every provider this deployment mounted, each marked with whether the
+	// installation has chosen to offer it — which is a stored choice, not a
+	// guarantee the provider has working credentials. Password is never listed: it
+	// is the method every installation always has and cannot switch off.
+	SignInProviders []SignInProvider `json:"sign_in_providers"`
 }
 
 // Authorization What this principal may do, as the server itself computed it — never a client-side re-derivation from role keys, which drifts the moment an installation's stored grants differ from the compiled-in defaults.
@@ -30149,7 +30168,7 @@ type PutOnboardingStateRequest struct {
 	SiteReadId       *openapi_types.UUID                  `json:"site_read_id,omitempty"`
 	SourceMode       *PutOnboardingStateRequestSourceMode `json:"source_mode"`
 
-	// Step Where the creator's setup stands. `invite` is the question asked once the company is confirmed — whether the person setting the installation up will also work in it, which is what decides whether the optional `voice` and `connect` steps are offered at all. `team` is where a creator who will not work in it invites the first person who will. `results` is kept for rows written before that question existed; a client treats it as the connect step being next.
+	// Step Where the setup stands. `basis` is the installation's reporting basis — base currency and reporting timezone — asked of the creator once the company is confirmed, before any step about the person answering. `invite` is the question asked next: whether the person setting the installation up will also work in it, which is what decides whether the `voice` and `connect` steps are walked now or by the first person they invite. `team` is where a creator who will not work in it invites that person. A member's route begins at `voice`: the company and its basis are already settled, so their steps are the personal ones alone. `results` is kept for rows written before the invite existed; a client treats it as the connect step being next.
 	Step         PutOnboardingStateRequestStep `json:"step"`
 	VoiceSkipped bool                          `json:"voice_skipped"`
 	WebsiteUrl   *string                       `json:"website_url,omitempty"`
@@ -30158,7 +30177,7 @@ type PutOnboardingStateRequest struct {
 // PutOnboardingStateRequestSourceMode defines model for PutOnboardingStateRequest.SourceMode.
 type PutOnboardingStateRequestSourceMode string
 
-// PutOnboardingStateRequestStep Where the creator's setup stands. `invite` is the question asked once the company is confirmed — whether the person setting the installation up will also work in it, which is what decides whether the optional `voice` and `connect` steps are offered at all. `team` is where a creator who will not work in it invites the first person who will. `results` is kept for rows written before that question existed; a client treats it as the connect step being next.
+// PutOnboardingStateRequestStep Where the setup stands. `basis` is the installation's reporting basis — base currency and reporting timezone — asked of the creator once the company is confirmed, before any step about the person answering. `invite` is the question asked next: whether the person setting the installation up will also work in it, which is what decides whether the `voice` and `connect` steps are walked now or by the first person they invite. `team` is where a creator who will not work in it invites that person. A member's route begins at `voice`: the company and its basis are already settled, so their steps are the personal ones alone. `results` is kept for rows written before the invite existed; a client treats it as the connect step being next.
 type PutOnboardingStateRequestStep string
 
 // QualifyDealRequest Open a deal in the same transaction as the promotion. Omit both ids to use the
@@ -49302,6 +49321,9 @@ type ServerInterface interface {
 	// Reverse a completed CSV import run.
 	// (POST /imports/{id}/undo)
 	UndoImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Which sign-in methods this installation offers.
+	// (GET /installation/authentication-policy)
+	GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request)
 	// The installation's entitlement and seat usage (admin/ops).
 	// (GET /installation/license)
 	GetLicenseEntitlement(w http.ResponseWriter, r *http.Request)
@@ -51849,6 +51871,12 @@ func (_ Unimplemented) GetImportRunReport(w http.ResponseWriter, r *http.Request
 // Reverse a completed CSV import run.
 // (POST /imports/{id}/undo)
 func (_ Unimplemented) UndoImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which sign-in methods this installation offers.
+// (GET /installation/authentication-policy)
+func (_ Unimplemented) GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63946,6 +63974,26 @@ func (siw *ServerInterfaceWrapper) UndoImportRun(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UndoImportRun(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAuthenticationPolicy operation middleware
+func (siw *ServerInterfaceWrapper) GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAuthenticationPolicy(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -80330,6 +80378,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/imports/{id}/undo", wrapper.UndoImportRun)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/authentication-policy", wrapper.GetAuthenticationPolicy)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/license", wrapper.GetLicenseEntitlement)

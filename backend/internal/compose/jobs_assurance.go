@@ -46,27 +46,19 @@ func (AssuranceSweepArgs) Kind() string { return "assurance_sweep" }
 // tenant work of its own (jobs.FleetWide).
 func (AssuranceSweepArgs) FleetWide() {}
 
-// AssuranceWorkspaceArgs is one workspace's input check.
-type AssuranceWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (AssuranceWorkspaceArgs) Kind() string { return "assurance_workspace" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a AssuranceWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
 // assuranceSweepWorker is the dispatcher: it enumerates and enqueues, and
 // touches no tenant data itself.
+// assuranceSweepWorker checks every live tenant's forecast inputs.
+//
+// One worker where there were two (ADR-0103).
 type assuranceSweepWorker struct {
 	pool *pgxpool.Pool
+	now  func() time.Time
+	log  *slog.Logger
 }
 
 func (w *assuranceSweepWorker) Work(ctx context.Context, _ *river.Job[AssuranceSweepArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(AssuranceWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return AssuranceWorkspaceArgs{Workspace: ws} }))
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.assureWorkspace))
 }
 
 // assuranceActor is the principal the nightly pass runs as, and therefore the
@@ -76,25 +68,13 @@ func (w *assuranceSweepWorker) Work(ctx context.Context, _ *river.Job[AssuranceS
 // one of them moved.
 const assuranceActor = "system:assurance"
 
-// assuranceWorkspaceWorker checks one tenant's forecast inputs.
-type assuranceWorkspaceWorker struct {
-	pool *pgxpool.Pool
-	now  func() time.Time
-	log  *slog.Logger
-}
-
-func (w *assuranceWorkspaceWorker) Work(
-	ctx context.Context, job *river.Job[AssuranceWorkspaceArgs],
-) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+func (w *assuranceSweepWorker) assureWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	wsCtx = principal.WithActor(wsCtx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: assuranceActor,
 	})
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
-	return jobs.FaultContext(ctx, w.check(wsCtx, job.Args.Workspace))
+	return w.check(wsCtx, workspace)
 }
 
 // check runs one pass and reports what it came to.
@@ -109,7 +89,7 @@ func (w *assuranceWorkspaceWorker) Work(
 // saying the check happened: the surfaces read the row, not the log, so a pass
 // that had stopped running entirely would otherwise be visible only as a page
 // that stopped changing.
-func (w *assuranceWorkspaceWorker) check(ctx context.Context, ws ids.UUID) error {
+func (w *assuranceSweepWorker) check(ctx context.Context, ws ids.UUID) error {
 	scanner := assurance.NewScanner(
 		assurance.NewStore(InstallationDB(w.pool)),
 		AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig(),

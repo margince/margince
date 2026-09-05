@@ -91,10 +91,10 @@ export const AwaitingConsentGerman: Story = {
   render: act(state("cn.consent"), {}, "de"),
 };
 
-/** LinkedIn connected while mail is still outstanding, which is the case that
- *  proves it is not a gate. */
+/** The LinkedIn profile saved while mail is still outstanding, which is the
+ *  case that proves it is not a gate. */
 export const LinkedinSettledMailPending: Story = {
-  render: act(state("cn.consent", { linkedinStatus: "connected" })),
+  render: act(state("cn.consent", { linkedinStatus: "saved" })),
 };
 
 /** LinkedIn declined. The act still finishes on mail alone — a recommended

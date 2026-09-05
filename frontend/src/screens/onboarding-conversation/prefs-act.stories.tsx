@@ -12,25 +12,13 @@ import { initialConversationState } from "./conversation-machine";
 import type { ConversationState } from "./conversation-types";
 import { PrefsAct } from "./prefs-act";
 
-// The last word before the app, in the two shapes it takes: an admin sees the
-// installation's reporting basis above what the agent may change on its own;
-// a member sees only the second, because the first is not theirs to change.
+// The last word before the app: what the agent may change on its own. The
+// creator's rail and the member's differ only in the stops behind this one.
 
 const asking: ConversationState = {
   ...initialConversationState,
   act: "prefs",
   phase: "pf.ask",
-};
-
-const settings = {
-  name: "Brandt Automotive",
-  timezone: "Europe/Berlin",
-  base_currency: "EUR",
-  base_language: "en",
-  fiscal_year_start_month: 1,
-  sign_in_providers: [],
-  base_currency_locked: false,
-  max_upload_bytes: 26214400,
 };
 
 const autonomy = {
@@ -56,7 +44,6 @@ function act(admin: boolean, locale?: "de") {
   return () => {
     installFetchStub({
       "GET /me": meRoute(admin ? { installation_settings: ["update"] } : {}),
-      "GET /installation/settings": () => jsonResponse(settings),
       "GET /autonomy": () => jsonResponse(autonomy),
     });
     return (
@@ -78,10 +65,10 @@ const meta: Meta<typeof PrefsAct> = {
 export default meta;
 type Story = StoryObj<typeof PrefsAct>;
 
-/** An admin: the reporting basis, prefilled, above the autonomy switches. */
+/** The creator, on the last of six stops. */
 export const Admin: Story = { render: act(true) };
 
-/** A member: only what the agent may change on their own behalf. */
+/** A member, on the last of three. */
 export const Member: Story = { render: act(false) };
 
 /** The German act. */

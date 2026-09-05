@@ -227,7 +227,7 @@ export interface paths {
         put?: never;
         /**
          * Change your own password.
-         * @description The signed-in human rotates their own credential. The CURRENT PASSWORD is the authority, not the session: a session is what a stolen laptop already has, and letting one set a new password would turn a borrowed browser into a permanent takeover. Every credential that could act as the account ends with the change — sessions, OAuth grants and their refresh chains, unconsumed authorization codes, locally minted passports — INCLUDING the session making the call, so the caller signs in again with the password they just chose. A new password equal to the current one is refused rather than accepted as a no-op. Audited.
+         * @description The signed-in human rotates their own credential. The CURRENT PASSWORD is the authority, not the session: a session is what a stolen laptop already has, and letting one set a new password would turn a borrowed browser into a permanent takeover. Every credential that existed before the change is dead afterwards — sessions, OAuth grants and their refresh chains, unconsumed authorization codes, locally minted passports, unredeemed set-password tokens — INCLUDING the session making the call. The caller continues on a fresh session minted by the change itself, delivered in the session cookie of the response, so the password they just proved is not asked for a third time. A new password equal to the current one is refused rather than accepted as a no-op. Audited.
          */
         post: operations["changePassword"];
         delete?: never;
@@ -7421,6 +7421,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/installation/authentication-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which sign-in methods this installation offers.
+         * @description The sign-in half of the installation's settings, read on its own.
+         *
+         *     It is a separate operation rather than a field on `GET /installation/settings`
+         *     because the two have different readers. Every role reads the installation's name,
+         *     timezone and base currency — a rep reading amounts benefits from knowing the
+         *     currency. Who may sign in and how is authentication administration, and showing it
+         *     to every seat that holds `installation_settings.read` would be handing out the shape
+         *     of the login surface to readers with no business in it.
+         *
+         *     The aggregate could not simply carry the narrower grant. Its fields are read through
+         *     one settings catalog whose entries each declare one object, so gating the sign-in
+         *     field there would make the WHOLE aggregate demand this grant and take the ordinary
+         *     installation read down with it. Hence a projection: same values, own gate.
+         *
+         *     `sign_in_providers` reports every provider this DEPLOYMENT mounted, each marked with
+         *     whether the installation has CHOSEN to offer it. Chosen is not the same as working:
+         *     a provider mounted without a stored OAuth app and without environment credentials
+         *     is still listed, and still reads as enabled, because this is the screen an operator
+         *     goes to in order to finish configuring it — the login page withholds it until they
+         *     do. A client rendering this as "what a visitor sees today" would be wrong. The
+         *     effective set is
+         *     the intersection — an admin can only ever narrow what the deployment configured,
+         *     never invent a client id — and a nil stored choice means every configured provider,
+         *     so an installation that upgrades into the setting keeps the login screen it had.
+         *
+         *     PASSWORD IS NOT LISTED and cannot be disabled. It is the method every installation
+         *     always has, and the one an admin must not be able to strand everybody by removing.
+         *
+         *     Governed by `authentication_policy` for this READ. Two things it does not yet
+         *     govern, both tracked and both visible from here rather than discovered later:
+         *     `GET /installation/settings` still returns the same `sign_in_providers` field to
+         *     any holder of `installation_settings.read`, and `PATCH /installation/settings`
+         *     still accepts `enabled_oidc_providers` on `installation_settings.update`. Closing
+         *     either means removing a published field or verb, which is a breaking change and a
+         *     deprecation cycle rather than an edit. Until then this endpoint is the narrower
+         *     surface, not a narrower authority.
+         *
+         *     Human-only: an agent never reads how humans sign in.
+         */
+        get: operations["getAuthenticationPolicy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/installation/settings": {
         parameters: {
             query?: never;
@@ -14593,6 +14650,22 @@ export interface components {
             source: "stored" | "environment" | "none";
             /** @description Every callback URL that must be registered as a redirect URI on the vendor's OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause. */
             redirect_uris: components["schemas"]["ConnectorAppRedirectUri"][];
+        };
+        /**
+         * @description Which sign-in methods this installation offers, apart from the rest of its settings.
+         *
+         *     Carries only what `authentication_policy` governs. The installation's name, timezone
+         *     and currency are NOT here — every role reads those, and repeating them in a document
+         *     governed by a narrower grant would make the same fact answer to two authorities.
+         */
+        AuthenticationPolicy: {
+            /**
+             * @description Every provider this deployment mounted, each marked with whether the
+             *     installation has chosen to offer it — which is a stored choice, not a
+             *     guarantee the provider has working credentials. Password is never listed: it
+             *     is the method every installation always has and cannot switch off.
+             */
+            sign_in_providers: components["schemas"]["SignInProvider"][];
         };
         /** @description One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen. */
         SignInProvider: {
@@ -25969,10 +26042,10 @@ export interface components {
             /** @description Zero creates; otherwise the version last read. */
             expected_version: number;
             /**
-             * @description Where the creator's setup stands. `invite` is the question asked once the company is confirmed — whether the person setting the installation up will also work in it, which is what decides whether the optional `voice` and `connect` steps are offered at all. `team` is where a creator who will not work in it invites the first person who will. `results` is kept for rows written before that question existed; a client treats it as the connect step being next.
+             * @description Where the setup stands. `basis` is the installation's reporting basis — base currency and reporting timezone — asked of the creator once the company is confirmed, before any step about the person answering. `invite` is the question asked next: whether the person setting the installation up will also work in it, which is what decides whether the `voice` and `connect` steps are walked now or by the first person they invite. `team` is where a creator who will not work in it invites that person. A member's route begins at `voice`: the company and its basis are already settled, so their steps are the personal ones alone. `results` is kept for rows written before the invite existed; a client treats it as the connect step being next.
              * @enum {string}
              */
-            step: "read" | "confirm" | "invite" | "team" | "voice" | "results" | "connect" | "complete";
+            step: "read" | "confirm" | "basis" | "invite" | "team" | "voice" | "results" | "connect" | "complete";
             /** @enum {string|null} */
             source_mode: "website" | "manual" | null;
             /** Format: uri */
@@ -25988,7 +26061,7 @@ export interface components {
             /** @enum {string} */
             readonly path: "creator" | "member";
             /** @enum {string} */
-            step: "read" | "confirm" | "invite" | "team" | "voice" | "results" | "connect" | "complete";
+            step: "read" | "confirm" | "basis" | "invite" | "team" | "voice" | "results" | "connect" | "complete";
             /** @enum {string|null} */
             source_mode: "website" | "manual" | null;
             /** Format: uri */
@@ -32080,7 +32153,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Password changed; every credential for the account, including this session, is revoked. */
+            /** @description Password changed; every credential that existed before it, this session included, is revoked, and the session cookie now carries the one the change minted. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -43369,6 +43442,28 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getAuthenticationPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The sign-in policy. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthenticationPolicy"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getInstallationSettings: {

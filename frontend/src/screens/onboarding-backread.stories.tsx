@@ -26,7 +26,7 @@ function backreadStory(
         <OnboardingBackread
           provider="gmail"
           initial={initial}
-          onFinish={() => {}}
+          onDone={() => {}}
         />
       </StoryProviders>
     );

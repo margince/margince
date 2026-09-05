@@ -9,17 +9,11 @@ import type {
 // retry/resume/dedupe). conversation-machine.ts consults isLegal before
 // applying anything; an event rejected here leaves the state untouched.
 
-// A member joining an existing installation only confirms company context and
-// consent; voice and results events belong to the creator path exclusively.
+// A member joining an existing installation walks only the personal acts —
+// voice, connect, preferences. The installation's basis, the invite and the
+// team act are the creator's questions and never legal on the member path.
 const creatorOnlyEvents = new Set<ConversationEvent["type"]>([
-  "VOICE_SKIPPED",
-  "UPLOAD_ADDED",
-  "SPEAKER_NEEDED",
-  "BUILD_STARTED",
-  "BUILD_STAGE",
-  "BUILD_TERMINAL",
-  "VOICE_DONE",
-  "VOICE_REVISE",
+  "BASIS_DONE",
   "INVITE_ACCEPTED",
   "INVITE_DECLINED",
   "TEAM_DONE",
@@ -55,6 +49,7 @@ const legalPhases: Record<
   MANUAL_CHOSEN: new Set(["co.intro", "co.reading", "co.review"]),
   COMPANY_CONFIRMED: new Set(["co.review", "co.manual"]),
   RESUME: new Set(["co.confirmed"]),
+  BASIS_DONE: new Set(["bs.ask"]),
   INVITE_ACCEPTED: new Set(["in.ask"]),
   INVITE_DECLINED: new Set(["in.ask"]),
   TEAM_DONE: new Set(["tm.ask"]),
@@ -72,8 +67,8 @@ const legalPhases: Record<
   VOICE_REVISE: new Set(["vo.result"]),
   // Both live on the connect screen alongside mail; eventGuards restricts
   // them further to linkedinStatus "pending", so a stray dispatch cannot
-  // re-run the authorization or overwrite an already-recorded skip.
-  LINKEDIN_CONNECTED: new Set(["cn.consent"]),
+  // re-save the profile or overwrite an already-recorded skip.
+  LINKEDIN_SAVED: new Set(["cn.consent"]),
   LINKEDIN_SKIPPED: new Set(["cn.consent"]),
   CONNECT_DONE: new Set(["cn.consent"]),
   PREFS_DONE: new Set(["pf.ask"]),
@@ -199,10 +194,9 @@ function eventGuards(
       return state.phase === "vo.result"
         ? state.lastBuildStatus === "deferred" && event.status !== "deferred"
         : true;
-    // LinkedIn resolves exactly once: connecting after a skip (or skipping
-    // after a connect) would either re-run the authorization or overwrite an
-    // outcome already recorded.
-    case "LINKEDIN_CONNECTED":
+    // LinkedIn resolves exactly once: saving after a skip (or skipping after
+    // a save) would overwrite an outcome already recorded.
+    case "LINKEDIN_SAVED":
     case "LINKEDIN_SKIPPED":
       return state.linkedinStatus === "pending";
     default:

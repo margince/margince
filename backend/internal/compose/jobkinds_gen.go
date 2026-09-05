@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "0a375082693bae67e27eac085a426f0bdb967e58c8812a3bcb6cb6ed9d0de02a"
+const jobContractHash = "d58204c8ec9dc118a1ec758594e670ee273f2a3d739b77beca8a7423f0d91800"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -34,7 +34,6 @@ type declaredJobArgs interface {
 		ApprovalAutoApplyArgs |
 		ApprovalExpiryArgs |
 		AssuranceSweepArgs |
-		AssuranceWorkspaceArgs |
 		BriefGenerateArgs |
 		CaptureAutoEnrichSweepArgs |
 		CaptureBackfillArgs |
@@ -47,7 +46,6 @@ type declaredJobArgs interface {
 		CaptureTraceSweepArgs |
 		CheckOrganizationVatArgs |
 		CloseDateSweepArgs |
-		CloseDateWorkspaceArgs |
 		AuthzDisagreementArgs |
 		ScheduledSendArgs |
 		ScheduledSendRecoveryArgs |
@@ -57,7 +55,6 @@ type declaredJobArgs interface {
 		EmbedReindexArgs |
 		FinanceSyncSweepArgs |
 		FollowUpReconcileArgs |
-		FollowUpWorkspaceArgs |
 		ForecastSnapshotSweepArgs |
 		ForecastSnapshotWorkspaceArgs |
 		FxRateRefreshArgs |
@@ -79,7 +76,6 @@ type declaredJobArgs interface {
 		LinkedInRematchArgs |
 		LinkedInRematchWorkspaceArgs |
 		OrgNamePromotionArgs |
-		OrgNamePromotionWorkspaceArgs |
 		OverlayReconcileArgs |
 		OverlayReconcileWorkspaceArgs |
 		OverlayRefetchArgs |
@@ -101,7 +97,6 @@ type declaredJobArgs interface {
 		TelegramPollArgs |
 		TelegramPollSweepArgs |
 		TimeScanArgs |
-		TimeScanWorkspaceArgs |
 		TranscriptProposeArgs |
 		VCardIngestArgs |
 		VoiceBuildArgs |
@@ -140,9 +135,6 @@ func addDeclaredWorkerWithTimeout[T declaredJobArgs](reg *jobRegistry, w jobs.Wo
 // The declared dispatchers: each enumerates the fleet and enqueues, and does
 // no tenant work of its own.
 var (
-	_ jobs.FleetWide = AssuranceSweepArgs{}
-	_ jobs.FleetWide = CloseDateSweepArgs{}
-	_ jobs.FleetWide = FollowUpReconcileArgs{}
 	_ jobs.FleetWide = ForecastSnapshotSweepArgs{}
 	_ jobs.FleetWide = GmailSyncArgs{}
 	_ jobs.FleetWide = GmailWatchArgs{}
@@ -151,14 +143,12 @@ var (
 	_ jobs.FleetWide = IdempotencyRetentionArgs{}
 	_ jobs.FleetWide = LinkReconcileArgs{}
 	_ jobs.FleetWide = LinkedInRematchArgs{}
-	_ jobs.FleetWide = OrgNamePromotionArgs{}
 	_ jobs.FleetWide = OverlayReconcileArgs{}
 	_ jobs.FleetWide = ParticipantBackfillArgs{}
 	_ jobs.FleetWide = ProviderLookupSweepArgs{}
 	_ jobs.FleetWide = ProviderRunPollSweepArgs{}
 	_ jobs.FleetWide = SignalScanArgs{}
 	_ jobs.FleetWide = TelegramPollSweepArgs{}
-	_ jobs.FleetWide = TimeScanArgs{}
 	_ jobs.FleetWide = VoiceBuildRetryArgs{}
 )
 
@@ -167,15 +157,12 @@ var (
 var (
 	_ jobs.WorkspaceScoped = AccountScanArgs{}
 	_ jobs.WorkspaceScoped = AiModelRateRefreshArgs{}
-	_ jobs.WorkspaceScoped = AssuranceWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
 	_ jobs.WorkspaceScoped = CaptureSyncArgs{}
 	_ jobs.WorkspaceScoped = CheckOrganizationVatArgs{}
-	_ jobs.WorkspaceScoped = CloseDateWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = ScheduledSendArgs{}
 	_ jobs.WorkspaceScoped = SendEmailArgs{}
 	_ jobs.WorkspaceScoped = DocumentExtractArgs{}
-	_ jobs.WorkspaceScoped = FollowUpWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = ForecastSnapshotWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = FxRateRefreshArgs{}
 	_ jobs.WorkspaceScoped = GeocodeOrganizationArgs{}
@@ -186,7 +173,6 @@ var (
 	_ jobs.WorkspaceScoped = KnowledgeIngestArgs{}
 	_ jobs.WorkspaceScoped = LinkReconcileWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = LinkedInRematchWorkspaceArgs{}
-	_ jobs.WorkspaceScoped = OrgNamePromotionWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = OverlayReconcileWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = OverlayRefetchArgs{}
 	_ jobs.WorkspaceScoped = ParticipantBackfillWorkspaceArgs{}
@@ -198,7 +184,6 @@ var (
 	_ jobs.WorkspaceScoped = TechnicalEnrichOrganizationArgs{}
 	_ jobs.WorkspaceScoped = TelegramIngestArgs{}
 	_ jobs.WorkspaceScoped = TelegramPollArgs{}
-	_ jobs.WorkspaceScoped = TimeScanWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = TranscriptProposeArgs{}
 	_ jobs.WorkspaceScoped = VCardIngestArgs{}
 	_ jobs.WorkspaceScoped = VoiceBuildArgs{}

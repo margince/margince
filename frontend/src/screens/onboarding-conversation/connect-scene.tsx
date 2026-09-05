@@ -12,21 +12,24 @@ import { ConnectDialog } from "./connect-dialog";
 import { WayOnward } from "./way-onward";
 
 // The connect act's work surface: two sections of real-width cards — the
-// required mailbox choice, and the optional network one beside it — each
-// card opening its OWN dialog rather than growing an inline panel under
-// itself. A card names the provider AND what connecting it grants (its
-// accessible name carries both), so a reader never has to open it to learn
-// what it is for.
+// required mailbox choice, and the network one beside it — each card opening
+// its OWN dialog rather than growing an inline panel under itself. A card
+// names the provider AND what it gives (its accessible name carries both), so
+// a reader never has to open it to learn what it is for.
+//
+// LinkedIn is not a connection here. Nothing is authorized and nothing syncs:
+// the member records which profile their imported network is attributed to,
+// so a connection they bring in later reads "Anna knows them" rather than
+// "the company knows them". The import itself lives in Settings.
 //
 // The four step-level consent guarantees render HERE, on the surface, in a
 // real-width grid: they are substance about what this step does, and the
-// rail narrates, it does not host a step's substance. Each provider's OWN
-// disclosure (its OAuth hint, or LinkedIn's own scope list) lives one level
-// deeper, inside that provider's dialog.
+// rail narrates, it does not host a step's substance. Each mail provider's
+// OWN disclosure (its OAuth hint) lives one level deeper, inside its dialog.
 
 export type MailProvider = "google" | "microsoft" | "imap";
 
-export type LinkedinStatus = "pending" | "connected" | "skipped";
+export type LinkedinStatus = "pending" | "saved" | "skipped";
 
 // The mark key each provider card carries, straight from `ProviderMark`'s own
 // vocabulary. `imap` has no brand of its own, so it takes the neutral mark the
@@ -181,7 +184,7 @@ export function ConnectScene({
   onWantsOvernightChange,
   overnightFailed,
   linkedinStatus,
-  onLinkedinConnect,
+  onLinkedinSave,
   onLinkedinSkip,
   linkedinPending,
   linkedinError,
@@ -225,7 +228,7 @@ export function ConnectScene({
    * so rather than blocking — the question is askable again in Settings. */
   overnightFailed: boolean;
   linkedinStatus: LinkedinStatus;
-  onLinkedinConnect: (profileUrl: string) => void;
+  onLinkedinSave: (profileUrl: string) => void;
   onLinkedinSkip: () => void;
   linkedinPending: boolean;
   linkedinError: string | null;
@@ -311,7 +314,7 @@ export function ConnectScene({
 
       <LinkedinCard
         status={linkedinStatus}
-        onConnect={onLinkedinConnect}
+        onSave={onLinkedinSave}
         onSkip={onLinkedinSkip}
         pending={linkedinPending}
         error={linkedinError}
@@ -557,6 +560,8 @@ function ConnectorCard({
   disabled,
   onOpen,
   settingsLink = false,
+  idleCta,
+  settledCta,
 }: Readonly<{
   markKey: string;
   name: string;
@@ -569,6 +574,13 @@ function ConnectorCard({
    *  deployment does not serve at all has no setting to reach, and a link to
    *  an empty form is worse than no link. */
   settingsLink?: boolean;
+  /** What the idle tile's affordance says. Mail cards connect; a tile whose
+   *  verb is something else names it, so the surface never invites a reader
+   *  to "connect" a thing that is only being written down. */
+  idleCta?: string;
+  /** What the settled tile's affordance says, for the same reason: a saved
+   *  address is not a connected integration and must not read as one. */
+  settledCta?: string;
 }>) {
   const t = useT();
   const face = (
@@ -599,8 +611,8 @@ function ConnectorCard({
           : state !== "blocked" && (
               <span className="ob-connect-card-cta">
                 {state === "connected"
-                  ? t("ob.conv.connect.connectedCta")
-                  : t("ob.conv.connect.connectCta")}
+                  ? (settledCta ?? t("ob.conv.connect.connectedCta"))
+                  : (idleCta ?? t("ob.conv.connect.connectCta"))}
               </span>
             )}
       </span>
@@ -629,20 +641,20 @@ function ConnectorCard({
 }
 
 /**
- * The LinkedIn card: a brief payoff line and a Connect action while pending,
- * its own dialog once clicked, or a resolved state (connected / skipped)
- * once `linkedinStatus` says it is settled. Split out of ConnectScene so the
- * scene itself stays about composition.
+ * The LinkedIn card: what saving the profile is for while pending, its own
+ * dialog once clicked, or a resolved state (saved / skipped) once
+ * `linkedinStatus` says it is settled. Split out of ConnectScene so the scene
+ * itself stays about composition.
  */
 function LinkedinCard({
   status,
-  onConnect,
+  onSave,
   onSkip,
   pending,
   error,
 }: Readonly<{
   status: LinkedinStatus;
-  onConnect: (profileUrl: string) => void;
+  onSave: (profileUrl: string) => void;
   onSkip: () => void;
   pending: boolean;
   error: string | null;
@@ -656,15 +668,17 @@ function LinkedinCard({
         markKey="linkedin"
         name={t("ob.conv.connect.linkedinName")}
         brings={
-          status === "connected"
-            ? t("ob.conv.connect.linkedinConnected")
+          status === "saved"
+            ? t("ob.conv.connect.linkedinSaved")
             : status === "skipped"
               ? t("ob.conv.connect.linkedinSkippedNote")
               : t("ob.conv.linkedin.cardBody")
         }
         auth={t("ob.conv.connect.linkedinAuth")}
+        idleCta={t("ob.conv.connect.saveCta")}
+        settledCta={t("ob.conv.connect.savedCta")}
         state={
-          status === "connected"
+          status === "saved"
             ? "connected"
             : status === "skipped"
               ? "blocked"
@@ -680,7 +694,7 @@ function LinkedinCard({
           // X, Escape, and backdrop all resolve to this ONE handler, so
           // guarding it here is the one place that keeps every dismissal
           // route from racing the save: a successful PUT landing after the
-          // reader already backed out would leave LinkedIn connected against
+          // reader already backed out would leave the profile saved against
           // a dialog that already closed on a different decision.
           onClose={() => {
             if (!pending) {
@@ -688,17 +702,15 @@ function LinkedinCard({
             }
           }}
           providerMarkKey="linkedin"
-          headline={t("ob.conv.connect.dialogHeadlineAccess", {
-            name: t("ob.conv.connect.linkedinName"),
-          })}
+          headline={t("ob.conv.linkedin.dialogHeadline")}
         >
           <LinkedinPanel
-            // No `setOpen(false)` here: a failed authorization has to stay
-            // on screen so `error` (below) is actually seen and retried, and
-            // a successful one already unmounts this dialog on its own —
-            // `status` flips to "connected" and the guard above stops
-            // rendering it.
-            onConnect={onConnect}
+            // No `setOpen(false)` here: a failed save has to stay on screen
+            // so `error` (below) is actually seen and retried, and a
+            // successful one already unmounts this dialog on its own —
+            // `status` flips to "saved" and the guard above stops rendering
+            // it.
+            onSave={onSave}
             onSkip={() => {
               onSkip();
               setOpen(false);
@@ -712,25 +724,16 @@ function LinkedinCard({
   );
 }
 
-// What the live integration will request, named one by one. A member handing
-// over their professional network deserves the list before they click, not a
-// summary afterwards. This is LinkedIn's OWN disclosure — the step-level
-// guarantees moved to `ConnectGuarantees`, but this list stays exactly where
-// the reader authorizes: inside the LinkedIn dialog.
-const linkedinScopes: { lead: MessageKey; rest: MessageKey }[] = [
-  { lead: "ob.conv.linkedin.scope1Lead", rest: "ob.conv.linkedin.scope1Rest" },
-  { lead: "ob.conv.linkedin.scope2Lead", rest: "ob.conv.linkedin.scope2Rest" },
-  { lead: "ob.conv.linkedin.scope3Lead", rest: "ob.conv.linkedin.scope3Rest" },
-  { lead: "ob.conv.linkedin.scope4Lead", rest: "ob.conv.linkedin.scope4Rest" },
-];
-
+// The profile ask: one URL and why it is wanted. No scope list, because
+// nothing is being granted — the address is written to the member's own
+// account and read by nobody but the import that attributes their network.
 function LinkedinPanel({
-  onConnect,
+  onSave,
   onSkip,
   pending,
   error,
 }: Readonly<{
-  onConnect: (profileUrl: string) => void;
+  onSave: (profileUrl: string) => void;
   onSkip: () => void;
   pending: boolean;
   error: string | null;
@@ -741,27 +744,6 @@ function LinkedinPanel({
 
   return (
     <div className="ob-connect-linkedin-panel">
-      {/* Shut, like every other disclosure in the product: what this dialog
-          asks for is already in its headline and its intro, and a fold that
-          arrives open is a fold in name only — it teaches the reader that the
-          summary line is decoration rather than a control. The scopes stay one
-          click away, named by the summary, for the reader who wants them. */}
-      <Disclosure summary={t("ob.conv.linkedin.limitsToggle")}>
-        <div className="ob-conv-scopes">
-          {linkedinScopes.map((scope) => (
-            <p key={scope.lead}>
-              <Check aria-hidden />
-              {/* Lead and rest share ONE flex item so the row wraps as a
-                  single line of prose — two items each shrinking to their own
-                  width is what broke the bold lead across lines. */}
-              <span>
-                <b>{t(scope.lead)}</b> {t(scope.rest)}
-              </span>
-            </p>
-          ))}
-          <p className="t-sub">{t("ob.conv.linkedin.neverContacts")}</p>
-        </div>
-      </Disclosure>
       <label className="ob-conv-field" htmlFor="linkedin-profile">
         {t("ob.conv.linkedin.profileLabel")}
         <input
@@ -778,18 +760,18 @@ function LinkedinPanel({
         <Button
           variant="primary"
           disabled={trimmed === "" || pending}
-          onClick={() => onConnect(trimmed)}
+          onClick={() => onSave(trimmed)}
         >
-          {t("ob.conv.linkedin.authorize")}
+          {t("ob.conv.linkedin.save")}
         </Button>
         <button
           type="button"
           className="ob-connect-dialog-notnow"
-          // Skipping and connecting are the two answers to the same
-          // question, so they cannot both be in flight at once: a skip that
-          // lands while the connect PUT is still pending would leave the
-          // account skipped locally against a save that lands connected
-          // right after, with nothing to reconcile the two.
+          // Skipping and saving are the two answers to the same question, so
+          // they cannot both be in flight at once: a skip that lands while
+          // the save PUT is still pending would leave the account skipped
+          // locally against a save that lands right after, with nothing to
+          // reconcile the two.
           disabled={pending}
           onClick={onSkip}
         >
@@ -801,7 +783,7 @@ function LinkedinPanel({
           {error}
         </p>
       )}
-      <p className="t-sub">{t("ob.conv.linkedin.appPending")}</p>
+      <p className="t-sub">{t("ob.conv.linkedin.importLater")}</p>
     </div>
   );
 }

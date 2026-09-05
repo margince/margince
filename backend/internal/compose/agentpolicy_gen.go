@@ -241,6 +241,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/forecast/shared/{token}/export.csv":                         {Op: "exportForecastShare", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/imports/{id}":                                               {Op: "getImportRun", Access: "tool", Tool: "read_import_run", RecordType: "import_run", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/imports/{id}/report":                                        {Op: "getImportRunReport", Access: "tool", Tool: "read_import_report", RecordType: "import_run", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/installation/authentication-policy":                         {Op: "getAuthenticationPolicy", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/installation/license":                                       {Op: "getLicenseEntitlement", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/installation/oauth-apps/{provider}":                         {Op: "getOauthApp", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/installation/seat-usage":                                    {Op: "getSeatUsage", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

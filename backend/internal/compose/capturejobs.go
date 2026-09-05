@@ -134,39 +134,23 @@ func (OrgNamePromotionArgs) Kind() string { return "org_name_promotion" }
 func (OrgNamePromotionArgs) FleetWide() {}
 
 // orgNamePromotionWorker is the dispatcher for the corroborated-name sweep.
+// orgNamePromotionWorker promotes names for every live workspace.
+//
+// One worker where there were two (ADR-0103).
 type orgNamePromotionWorker struct {
-	pool *pgxpool.Pool
-}
-
-func (w *orgNamePromotionWorker) Work(ctx context.Context, _ *river.Job[OrgNamePromotionArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(OrgNamePromotionWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return OrgNamePromotionWorkspaceArgs{Workspace: ws} }))
-}
-
-// OrgNamePromotionWorkspaceArgs is one workspace's org-name promotion pass.
-type OrgNamePromotionWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (OrgNamePromotionWorkspaceArgs) Kind() string { return "org_name_promotion_workspace" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a OrgNamePromotionWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// orgNamePromotionWorkspaceWorker runs one workspace's pass: a database-only
-// walk over the org_name evidence the enrich job collects.
-type orgNamePromotionWorkspaceWorker struct {
+	pool     *pgxpool.Pool
 	promoter *OrgNamePromoter
 }
 
-func (w *orgNamePromotionWorkspaceWorker) Work(ctx context.Context, job *river.Job[OrgNamePromotionWorkspaceArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	return jobs.FaultContext(ctx, w.promoter.RunWorkspace(wsCtx, job.Args.Workspace))
+func (w *orgNamePromotionWorker) Work(ctx context.Context, _ *river.Job[OrgNamePromotionArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.promoteWorkspace))
+}
+
+// orgNamePromotionWorkspaceWorker runs one workspace's pass: a database-only
+// walk over the org_name evidence the enrich job collects.
+func (w *orgNamePromotionWorker) promoteWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	return jobs.FaultContext(ctx, w.promoter.RunWorkspace(wsCtx, workspace))
 }
 
 // CaptureDigestArgs builds the morning digests (CAP-DDL-6; the nightly

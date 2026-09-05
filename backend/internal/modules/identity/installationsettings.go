@@ -146,6 +146,40 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	}, nil
 }
 
+// signInPolicyReadActor names the entry read this projection performs after it
+// has already admitted the caller. A SYSTEM actor for the same reason the login
+// screen's read uses one: the question is what this INSTALLATION offers, not
+// what this reader may see, and the reader's own authority was settled one line
+// above.
+const signInPolicyReadActor = "system:sign_in_policy_read"
+
+// SignInPolicy answers which sign-in providers the installation offers, gated on
+// `authentication_policy` rather than on the settings aggregate around it.
+//
+// THE GATE HERE IS THE WHOLE SECURITY OF THIS READ. The entry itself is defined
+// on installation_settings — moving it would make every read of the aggregate
+// demand this grant and take the name, timezone and currency with it, which
+// every role is meant to read — so this checks the caller first and then reads
+// the entry as the installation. A system principal bypasses object RBAC
+// entirely, so removing or weakening the Require below does not merely widen
+// this endpoint, it removes its only gate.
+func (s *InstallationSettingsStore) SignInPolicy(ctx context.Context) ([]string, error) {
+	if err := auth.Require(ctx, authenticationPolicyObject, principal.ActionRead); err != nil {
+		return nil, err
+	}
+	// Only after the caller is admitted. The workspace and correlation id ride
+	// from the request so the read stays attributable to the trace that asked.
+	readCtx := principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem,
+		ID:   signInPolicyReadActor,
+	})
+	chosen, err := settings.Get(readCtx, s.settings, EnabledOidcProviders)
+	if err != nil {
+		return nil, fmt.Errorf("identity: reading the sign-in policy: %w", err)
+	}
+	return chosen, nil
+}
+
 // baseCurrencyLock asks the entry's own probe, so the answer the read reports
 // and the answer the write enforces come from one place. A read with the probe
 // unwired reports "changeable", which is what the write would then do — the

@@ -481,14 +481,12 @@ kinds:
       is walked only for a fault the sidecar's backoff does not own.
 
   assurance_sweep:
-    role: dispatcher
+    role: worker
     go_type: AssuranceSweepArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: 24h
-    fans_out_to: assurance_workspace
-    fan_out_unit: workspace
     reason: >-
       Daily, because the check is what the Forecast tab's readiness verdict,
       coverage line and findings are all read from, and a check that never runs
@@ -498,48 +496,15 @@ kinds:
       the gap between an install starting and its first check is time a person
       spends looking at what reads like a broken page.
 
-  assurance_workspace:
-    role: worker
-    go_type: AssuranceWorkspaceArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      One tenant's input check: every rule asked of every live open deal, with
-      the sources the run could reach recorded beside the findings. Three
-      attempts, the house number — a run that could not read an upstream
-      finishes as `incomplete` rather than failing, so a retry here is for a
-      pass that did not finish at all, and the next daily tick supersedes
-      whatever the last one came to.
 
   close_date_sweep:
-    role: dispatcher
+    role: worker
     go_type: CloseDateSweepArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: {operator: CloseDateInterval}
-    fans_out_to: close_date_workspace
-    fan_out_unit: workspace
 
-  close_date_workspace:
-    role: worker
-    go_type: CloseDateWorkspaceArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 5
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      A database-only hygiene pass over one tenant's deals with past close
-      dates, each correction its own audited write. Five attempts rather than
-      three because both deals passes tick DAILY: a workspace that failed a
-      transient blip would otherwise wait a full day for its next chance, and
-      River's ladder spans minutes at these rungs — comfortably inside one tick.
 
   comms_send_email:
     role: worker
@@ -768,29 +733,13 @@ kinds:
       writes nothing rather than a duplicate.
 
   follow_up_reconcile:
-    role: dispatcher
+    role: worker
     go_type: FollowUpReconcileArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: {operator: ReconcileInterval}
-    fans_out_to: follow_up_workspace
-    fan_out_unit: workspace
 
-  follow_up_workspace:
-    role: worker
-    go_type: FollowUpWorkspaceArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 5
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      A database-only overnight pass over one tenant's open follow-ups, staging
-      what it proposes rather than acting. Five attempts for the reason
-      close_date_workspace takes five: both deals passes tick DAILY, so three
-      would cost a workspace a full day over a transient blip.
 
   fx_rate_refresh:
     role: worker
@@ -1106,30 +1055,16 @@ kinds:
       workspace is walked.
 
   org_name_promotion:
-    role: dispatcher
+    role: worker
     go_type: OrgNamePromotionArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: 24h
-    fans_out_to: org_name_promotion_workspace
-    fan_out_unit: workspace
     reason: >-
       Daily, after the enrich pass has had a night to collect the signatures
       this one weighs.
 
-  org_name_promotion_workspace:
-    role: worker
-    go_type: OrgNamePromotionWorkspaceArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      A database-only walk over the org_name evidence the enrich pass collected;
-      it needs no model, which is why it registers even where enrich does not.
 
   overlay_reconcile:
     role: dispatcher
@@ -1683,29 +1618,13 @@ kinds:
       Telegram.
 
   time_scan:
-    role: dispatcher
+    role: worker
     go_type: TimeScanArgs
     queue: default
-    timeout: 2m
+    timeout: 10m
     opts_owner: caller
     cadence: {operator: TimeScanInterval}
-    fans_out_to: time_scan_workspace
-    fan_out_unit: workspace
 
-  time_scan_workspace:
-    role: worker
-    go_type: TimeScanWorkspaceArgs
-    queue: default
-    timeout: 10m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      A coarse activity pre-filter, then one automation dispatch per matched
-      clock-triggered instance. Database-only — the actions in the closed
-      catalog write rows and stage approvals, they do not transmit — but the
-      matched set is a tenant's standing automations rather than a batch bound.
 
   voice_build:
     role: worker

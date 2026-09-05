@@ -203,7 +203,8 @@ func (c *client) get(path string, query url.Values, out any) error { //craft:ign
 const seedAdminPassword = "demo-password-123"
 
 // replaceOperatorPassword takes the bootstrap account off its first-login
-// hold, and returns a client signed in afterwards.
+// hold, and returns the client that made the change, now on the session the
+// change minted.
 //
 // A configured bootstrap sets must_change_password (migration 0273), and every
 // write is refused with 403 password_change_required until the operator's
@@ -212,8 +213,9 @@ const seedAdminPassword = "demo-password-123"
 // one", which is the rule working: the operator's password is meant to have no
 // life beyond the first login.
 //
-// The change ends every session including the one that made it, so this signs
-// in again and hands back the new client.
+// The change ends every session including the one that made it and answers
+// with the cookie of the one it minted, which the client's jar keeps — so the
+// same client carries on.
 //
 // The bootstrap password may ALREADY be seedAdminPassword: `make dev` writes
 // that value into config/margince-admin-password and still sets the hold.
@@ -222,9 +224,9 @@ const seedAdminPassword = "demo-password-123"
 // 403 password_change_required on the anchor company — a seeded installation
 // with seats but no company, which the UI correctly showed as cold-start
 // onboarding. So that case rotates through a detour value and back.
-func replaceOperatorPassword(baseURL, email, password string, c *client) (*client, string, error) {
+func replaceOperatorPassword(password string, c *client) (*client, string, error) {
 	if password == seedAdminPassword {
-		return replaceViaDetour(baseURL, email, c)
+		return replaceViaDetour(c)
 	}
 	body := jsonBody{"current_password": password, "new_password": seedAdminPassword}
 	if err := c.post("/v1/auth/change-password", body, nil); err != nil {
@@ -235,12 +237,8 @@ func replaceOperatorPassword(baseURL, email, password string, c *client) (*clien
 		}
 		return nil, password, fmt.Errorf("replacing the operator-supplied password: %w", err)
 	}
-	fresh, err := login(baseURL, email, seedAdminPassword)
-	if err != nil {
-		return nil, password, fmt.Errorf("signing in after replacing the password: %w", err)
-	}
 	fmt.Printf("admin:         operator password replaced with %q\n", seedAdminPassword)
-	return fresh, seedAdminPassword, nil
+	return c, seedAdminPassword, nil
 }
 
 // seedAdminDetour is the value the bootstrap passes THROUGH when it already
@@ -259,7 +257,7 @@ const seedAdminDetour = "demo-password-123-first-change"
 //
 // A failure between the two leaves the account on the detour value, so the
 // error says so rather than making the next run guess.
-func replaceViaDetour(baseURL, email string, c *client) (*client, string, error) {
+func replaceViaDetour(c *client) (*client, string, error) {
 	away := jsonBody{"current_password": seedAdminPassword, "new_password": seedAdminDetour}
 	if err := c.post("/v1/auth/change-password", away, nil); err != nil {
 		// Not on hold after all, and already on the documented password:
@@ -269,22 +267,14 @@ func replaceViaDetour(baseURL, email string, c *client) (*client, string, error)
 		}
 		return nil, seedAdminPassword, fmt.Errorf("lifting the first-login hold: %w", err)
 	}
-	mid, err := login(baseURL, email, seedAdminDetour)
-	if err != nil {
-		return nil, seedAdminDetour, fmt.Errorf("signing in on the detour password: %w", err)
-	}
 	back := jsonBody{"current_password": seedAdminDetour, "new_password": seedAdminPassword}
-	if err := mid.post("/v1/auth/change-password", back, nil); err != nil {
+	if err := c.post("/v1/auth/change-password", back, nil); err != nil {
 		return nil, seedAdminDetour, fmt.Errorf(
 			"restoring %q (the account is on %q until this succeeds): %w",
 			seedAdminPassword, seedAdminDetour, err)
 	}
-	fresh, err := login(baseURL, email, seedAdminPassword)
-	if err != nil {
-		return nil, seedAdminDetour, fmt.Errorf("signing in after restoring the password: %w", err)
-	}
 	fmt.Printf("admin:         first-login hold lifted, password is %q\n", seedAdminPassword)
-	return fresh, seedAdminPassword, nil
+	return c, seedAdminPassword, nil
 }
 
 // delete sends a DELETE, which for some resources is how a state is REACHED

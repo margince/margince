@@ -540,10 +540,17 @@ describe("the conversational company act", () => {
     expect((body.profile as Record<string, unknown>).website).toBe(
       "https://gradion.com",
     );
-    // The machine advanced straight into the invite — the one thing on
+    // The machine advanced straight into the basis act — the one thing on
     // screen that proves the write actually landed, since the transcript
     // that used to narrate "Company profile confirmed" is gone — and
-    // accepting it opens the voice act's collect scene.
+    // accepting the invite after it opens the voice act's collect scene.
+    // The basis act stands between the confirmation and the invite: its
+    // heading is the first proof the confirm landed, and Continue carries the
+    // installation's prefilled reporting basis forward unchanged.
+    await screen.findByRole("heading", {
+      name: "First, how the numbers are reported.",
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.click(
       await screen.findByRole("radio", { name: /Yes, I'll work in Margince/ }),
     );
@@ -626,12 +633,12 @@ describe("the conversational company act", () => {
     // The confirmation this click was blocked from making had, in fact,
     // already landed (a duplicate submit, or another tab) — the reader is
     // moved on exactly as a fresh success would, not invited to press
-    // Confirm again for a state that can never succeed that way. The
-    // invite's own question is the proof: nothing on screen narrates the
+    // Confirm again for a state that can never succeed that way. The basis
+    // act's own heading is the proof: nothing on screen narrates the
     // confirmation any more.
     expect(
       await screen.findByRole("heading", {
-        name: "Will you be working in Margince yourself?",
+        name: "First, how the numbers are reported.",
       }),
     ).toBeTruthy();
     expect(screen.queryByText(/already confirmed/)).toBeNull();
@@ -686,6 +693,13 @@ describe("the conversational company act", () => {
     );
 
     await userEvent.click(accept);
+    // The basis act stands between the confirmation and the invite: its
+    // heading is the first proof the confirm landed, and Continue carries the
+    // installation's prefilled reporting basis forward unchanged.
+    await screen.findByRole("heading", {
+      name: "First, how the numbers are reported.",
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.click(
       await screen.findByRole("radio", { name: /Yes, I'll work in Margince/ }),
     );
