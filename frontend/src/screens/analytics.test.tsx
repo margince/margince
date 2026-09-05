@@ -66,6 +66,7 @@ type ReportsStubOpts = {
   companyRows?: Record<string, unknown>[];
   winLossRows?: Record<string, unknown>[];
   stageAgeRows?: Record<string, unknown>[];
+  meetingRows?: Record<string, unknown>[];
   derivation?: Record<string, unknown>;
   onDerivation?: (url: string) => void;
   context?: Record<string, unknown>;
@@ -132,20 +133,22 @@ function reportsStub(opts: ReportsStubOpts = {}) {
       const rows =
         key === "forecast"
           ? (opts.forecastRows ?? [])
-          : key === "win-loss"
-            ? (opts.winLossRows ?? [])
-            : key === "stage-age"
-              ? (opts.stageAgeRows ?? [])
-              : key === "open-deals-per-company"
-                ? (opts.companyRows ?? [])
-                : (opts.stageRows ?? [
-                    {
-                      stage_id: "pl-s1",
-                      raw_minor: 100000,
-                      deal_count: 2,
-                      currency: "EUR",
-                    },
-                  ]);
+          : key === "activities-by-kind"
+            ? (opts.meetingRows ?? [])
+            : key === "win-loss"
+              ? (opts.winLossRows ?? [])
+              : key === "stage-age"
+                ? (opts.stageAgeRows ?? [])
+                : key === "open-deals-per-company"
+                  ? (opts.companyRows ?? [])
+                  : (opts.stageRows ?? [
+                      {
+                        stage_id: "pl-s1",
+                        raw_minor: 100000,
+                        deal_count: 2,
+                        currency: "EUR",
+                      },
+                    ]);
       return jsonResponse({
         report: key,
         plan: {},
@@ -183,6 +186,100 @@ async function openPerformance() {
     .setup()
     .click(await screen.findByRole("button", { name: "Performance" }));
 }
+
+// A context whose default lens is one seat: the rep's own.
+const ownLensContext = {
+  default_scope: { kind: "owner", id: "u-rep-1", label: "Riley Rep" },
+  allowed_scopes: [{ kind: "owner", id: "u-rep-1", label: "Riley Rep" }],
+  capabilities: {
+    view_manager_forecast: false,
+    submit_manager_forecast: false,
+  },
+  as_of: "2026-09-04T00:00:00Z",
+  timezone: "Europe/Berlin",
+  base_currency: "EUR",
+};
+
+describe("the my-outcomes section", () => {
+  it("shows the tab under an owner lens and answers with the seat's own facts", async () => {
+    const bodies: { key: string; body: Record<string, unknown> }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        context: ownLensContext,
+        onRun: (key, body) => bodies.push({ key, body }),
+        stageRows: [{ deal_count: 4, raw_minor: 250000 }],
+        meetingRows: [
+          { meeting_status: "held", meetings: 3 },
+          { meeting_status: "booked", meetings: 2 },
+        ],
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "My outcomes" }));
+
+    // The meetings card states current standing, not a funnel.
+    expect(
+      await screen.findByText(
+        "Meetings you host, by where each stands today — a held meeting no longer counts as booked.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("Held")).toBeTruthy();
+    expect(screen.getByText("3")).toBeTruthy();
+    // A status with no meetings is an honest zero, not an absent tile.
+    expect(screen.getByText("No-show")).toBeTruthy();
+
+    // The meetings question is pinned to the seat: hosted by this user, and
+    // only meetings — the server filters, the browser never sifts rows.
+    const meetings = bodies.find((sent) => sent.key === "activities-by-kind");
+    expect(meetings?.body.filters).toEqual({
+      kind: "meeting",
+      host_user_id: "u-rep-1",
+    });
+    expect(meetings?.body.group_by).toEqual(["meeting_status"]);
+
+    // The pipeline card is pinned to the seat too — the heading says "my",
+    // and the request must say it rather than trusting a server default.
+    const pipeline = bodies.find(
+      (sent) => sent.key === "pipeline-current" && sent.body.filters != null,
+    );
+    expect(pipeline?.body.filters).toEqual({ owner_id: "u-rep-1" });
+    expect(await screen.findByText("4")).toBeTruthy();
+  });
+
+  it("explains itself instead of fetching under a wider lens", async () => {
+    const bodies: { key: string; body: Record<string, unknown> }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({ onRun: (key, body) => bodies.push({ key, body }) }),
+    );
+    window.location.hash = "#/analytics/outcomes";
+    try {
+      render(<AnalyticsScreen />);
+      expect(
+        await screen.findByText(
+          "This view answers for one seat. Your lens covers more than your own records, so the wider sections carry your numbers.",
+        ),
+      ).toBeTruthy();
+      // And it fetched nothing: numbers under this heading would have
+      // measured the default population, not the person.
+      expect(bodies.some((sent) => sent.key === "activities-by-kind")).toBe(
+        false,
+      );
+    } finally {
+      window.location.hash = "";
+    }
+  });
+
+  it("hides the tab when the lens covers more than one seat", async () => {
+    vi.stubGlobal("fetch", reportsStub());
+    render(<AnalyticsScreen />);
+    await screen.findByRole("button", { name: "Pipeline" });
+    expect(screen.queryByRole("button", { name: "My outcomes" })).toBeNull();
+  });
+});
 
 describe("the performance section", () => {
   it("renders won and lost with converted value and computed durations", async () => {

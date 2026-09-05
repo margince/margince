@@ -3370,6 +3370,17 @@ export const en = {
   "analytics.sectionPipeline": "Pipeline",
   "analytics.sectionPerformance": "Performance",
   "analytics.noClosedDeals": "No deals have closed yet.",
+  "analytics.sectionOutcomes": "My outcomes",
+  "analytics.myPipeline": "My open pipeline",
+  "analytics.myMeetings": "My meetings",
+  "analytics.meetingsAsTheyStand":
+    "Meetings you host, by where each stands today — a held meeting no longer counts as booked.",
+  "analytics.meetingsBooked": "Booked",
+  "analytics.meetingsHeld": "Held",
+  "analytics.meetingsNoShow": "No-show",
+  "analytics.meetingsCanceled": "Canceled",
+  "analytics.outcomesOwnLensOnly":
+    "This view answers for one seat. Your lens covers more than your own records, so the wider sections carry your numbers.",
   "analytics.openOutcomeDeals": "Open the {outcome} deals",
   "analytics.reportWinLoss": "Won and lost",
   "analytics.reportStageAge": "Time in stage",
