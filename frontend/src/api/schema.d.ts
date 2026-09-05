@@ -11145,9 +11145,10 @@ export interface paths {
          *     nobody read the mailbox — and that cannot be acted on.
          *
          *     `sources` is why. Every source the run tried carries the state it reached:
-         *     `checked` with the instant it read through, or `stale`, `unavailable` or
-         *     `permission_limited` with no date at all — a date on an unread source would claim
-         *     coverage that did not happen.
+         *     `checked` with the instant it read through, or `stale`, `unavailable`,
+         *     `permission_limited` or `not_connected` with no date at all — a date on an unread
+         *     source would claim coverage that did not happen. `not_connected` means the
+         *     workspace never configured the source: nothing to fix, something to decide.
          *
          *     `eligible_deals` is how much there was to check, counted once per deal actually
          *     evaluated. Compared against the previous run it shows a pass that covered less of
@@ -23884,7 +23885,7 @@ export interface components {
             /** @enum {string} */
             source: "mail" | "calendar" | "documents" | "contracts" | "offers" | "incumbent";
             /** @enum {string} */
-            state: "checked" | "stale" | "unavailable" | "permission_limited";
+            state: "checked" | "stale" | "unavailable" | "permission_limited" | "not_connected";
             /**
              * Format: date-time
              * @description How current the source was. Present only for a `checked` source: a date on an unread one would read as "checked up to then" when nothing was read at all.

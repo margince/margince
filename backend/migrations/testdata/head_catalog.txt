@@ -820,7 +820,7 @@ public.assurance_source_coverage.assurance_source_coverage_date_matches_state CH
 public.assurance_source_coverage.assurance_source_coverage_pkey PRIMARY KEY (id)
 public.assurance_source_coverage.assurance_source_coverage_run_fkey FOREIGN KEY (run_id) REFERENCES assurance_run(id) ON DELETE CASCADE
 public.assurance_source_coverage.assurance_source_coverage_source_check CHECK ((source = ANY (ARRAY['mail'::text, 'calendar'::text, 'documents'::text, 'contracts'::text, 'offers'::text, 'incumbent'::text])))
-public.assurance_source_coverage.assurance_source_coverage_state_check CHECK ((state = ANY (ARRAY['checked'::text, 'stale'::text, 'unavailable'::text, 'permission_limited'::text])))
+public.assurance_source_coverage.assurance_source_coverage_state_check CHECK ((state = ANY (ARRAY['checked'::text, 'stale'::text, 'unavailable'::text, 'permission_limited'::text, 'not_connected'::text])))
 public.assurance_source_coverage.captured_by text NOT NULL gen=- def=-
 public.assurance_source_coverage.checked_through timestamp with time zone gen=- def=-
 public.assurance_source_coverage.created_at timestamp with time zone NOT NULL gen=- def=now()

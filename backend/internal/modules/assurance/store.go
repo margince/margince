@@ -55,6 +55,10 @@ const (
 	CoverageStale             = "stale"
 	CoverageUnavailable       = "unavailable"
 	CoveragePermissionLimited = "permission_limited"
+	// CoverageNotConnected is a source the workspace never configured. Distinct
+	// from unavailable: there is nothing to fix, only something to decide, and
+	// the two route to different people.
+	CoverageNotConnected = "not_connected"
 )
 
 // SourceCoverage is one source and how far the run reached into it.
