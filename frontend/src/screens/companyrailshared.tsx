@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
+import { EvidenceMark } from "../design-system/evidencemark";
 import { type SectionState, sectionState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
+import { roleOf } from "./provider-status";
 
 // Small pieces the rail's own sections draw off — a leaf so companyrail.tsx
 // and companyrailtags.tsx do not import each other, the same no-cycle shape
@@ -82,4 +85,37 @@ export function peopleSlice(
 // know yet" from the reader's side of the count badge.
 export function sectionAnswered(state: SectionState): boolean {
   return state === "ready" || state === "empty";
+}
+
+// A contact's role as both company surfaces draw it: the title the server
+// chose, wearing its receipt when the title was bought rather than typed.
+// Null when there is no title at all — a function rather than a component so
+// that absence reaches the caller as nothing, where an element that renders
+// null still reads as a value and leaves an empty, padded line behind it.
+//
+// The rail and the glance had each been on their way to spelling this — one
+// with the mark, one without — which would have made a purchased title look
+// like a typed one on the card a click away from the row.
+export function contactRole(
+  contact: Pick<
+    components["schemas"]["Organization360Contact"],
+    "title" | "provider_title" | "title_source"
+  >,
+): ReactNode {
+  const role = roleOf(contact);
+  if (!role) {
+    return null;
+  }
+  // Branched on the VALUE, not on title_source: that field is optional, and a
+  // server sending a purchased title without it would otherwise leave an
+  // unmarked claim standing as the installation's own.
+  if (contact.title_source !== "provider") {
+    return role;
+  }
+  return (
+    <EvidenceMark
+      value={role}
+      source={{ provenance: { kind: "connector", connector: "provider" } }}
+    />
+  );
 }
