@@ -52,7 +52,9 @@ const transcriptProposalActor = "agent:transcript-proposer"
 //
 // The write stays additionally idempotent on (source_system, source_id) keyed
 // to the approval, which is what makes a REPLAY of the whole effect safe.
-func transcriptProposalEffect(svc *approvals.Service, store *activities.Store) approvals.ApprovedEffect {
+func transcriptProposalEffect(
+	svc *approvals.Service, store *activities.Store, users *identity.Service,
+) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		proposal, err := UnmarshalTranscriptStepProposal(proposedChange)
 		if err != nil {
@@ -83,6 +85,9 @@ func transcriptProposalEffect(svc *approvals.Service, store *activities.Store) a
 				Links:        proposal.Links,
 			}
 			if err := stampTranscriptDue(ctx, tx, &in, proposal.DueDate); err != nil {
+				return err
+			}
+			if err := stampTranscriptAssignee(ctx, users, &in, proposal.Owner); err != nil {
 				return err
 			}
 			_, _, err := store.LogActivityTx(execCtx, tx, in)
@@ -149,6 +154,41 @@ func stampTranscriptDue(ctx context.Context, tx pgx.Tx, in *activities.LogActivi
 	// than computing a duration towards it.
 	due := time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 23, 59, 59, 0, loc).UTC()
 	in.DueAt = &due
+	return nil
+}
+
+// stampTranscriptAssignee gives the task to the colleague the transcript named,
+// where the name resolves to exactly one of them.
+//
+// The owner arrives as PROSE — "Lena Fischer", "Frédéric", "the team" — because
+// that is what a transcript states. It was carried into the task's body and
+// nowhere else, so the task said whose promise it was and belonged to nobody: it
+// appeared on no assignee's list and reminded no one.
+//
+// Resolution is deliberately strict (identity.ResolveColleague): an exact name
+// or email, one live human seat, or nothing. An ambiguous name leaves the task
+// UNASSIGNED rather than guessing, because a promise given to the wrong
+// colleague is worse than one given to nobody — the wrong colleague does not do
+// it, and the right one never learns it was theirs. The body still names who
+// promised, so an unassigned task can be routed by the person reading it.
+//
+// It never falls back to the approver. Approving a proposal is answering a
+// question about somebody else's commitment, not volunteering for it.
+func stampTranscriptAssignee(
+	ctx context.Context, users *identity.Service, in *activities.LogActivityInput, owner string,
+) error {
+	if users == nil || strings.TrimSpace(owner) == "" {
+		return nil
+	}
+	found, ok, err := users.ResolveColleague(ctx, owner)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return nil
+	}
+	assignee := ids.From[ids.UserKind](found.UserID)
+	in.AssigneeID = &assignee
 	return nil
 }
 
