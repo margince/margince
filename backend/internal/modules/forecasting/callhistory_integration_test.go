@@ -10,13 +10,11 @@ package forecasting
 // Each case works in its OWN period, and the distinct years are load-bearing.
 // An installation holds exactly one workspace, so these tests share a database:
 // two cases calling the same (period, scope) would see each other's rows, and
-// the count assertions would fail on a collision rather than on a defect.
+// the count assertions would fail on a collision rather than on a defect. That
+// stays true now they run in sequence — the periods keep them independent of
+// each other's ORDER, not only of each other's timing.
 //
-// They run in sequence, not under t.Parallel(). The fixture they share ends
-// every case with testdb.AssertPoolsQuiesced, which asks whether ANY connection
-// of the package's shared pool is still out — a question a sibling case still
-// mid-transaction answers with a false leak, and it did, on a loaded runner,
-// against whichever case happened to finish first.
+// They no longer call t.Parallel(); setupSnapshot says why.
 //
 // These need real Postgres for the reason the snapshot tests do: the ordering
 // is SQL's, the scope match is SQL's, and the NULL-versus-value distinction

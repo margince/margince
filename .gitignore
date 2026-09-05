@@ -192,3 +192,10 @@ e2e/llm/records/
 # the reason every other compiled path above is: a build artifact committed
 # once is a stale binary every later reader has to notice is stale.
 /backend/bin/
+
+# Redis writes dump.rdb into whatever directory it was started from, so a
+# `redis-server` run from inside the tree — a local stand-in for `make db-up`
+# on a machine that cannot pull the compose images — leaves one behind. It is a
+# snapshot of one machine's test data, so it is neither product nor an artifact
+# anybody regenerates.
+dump.rdb

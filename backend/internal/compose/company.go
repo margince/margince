@@ -254,8 +254,12 @@ func toContractCompany(c people.Company) crmcontracts.CompanyProfile {
 		// shell draws the installation's mark from this profile and the record
 		// screens draw it from Organization.logo_url, and a company with two
 		// faces is a company nobody recognises.
-		LogoUrl:   people.LogoURL(c.OrganizationID.UUID, c.LogoObjectKey),
-		UpdatedAt: &c.UpdatedAt,
+		LogoUrl: people.LogoURL(c.OrganizationID.UUID, c.LogoObjectKey, people.LogoWide),
+		// The square badge the collapsed sidebar draws, absent until somebody
+		// uploads one — which is what makes the rail fall back to the wide mark
+		// for every installation that has not.
+		LogoIconUrl: people.LogoURL(c.OrganizationID.UUID, c.LogoIconObjectKey, people.LogoIcon),
+		UpdatedAt:   &c.UpdatedAt,
 	}
 	profileFields := make([]crmcontracts.CompanyProfileField, 0, len(c.ProfileFields))
 	for _, field := range c.ProfileFields {

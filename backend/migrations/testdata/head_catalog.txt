@@ -3505,6 +3505,8 @@ public.organization.legal_hold boolean NOT NULL gen=- def=false
 public.organization.legal_name text gen=- def=-
 public.organization.lifecycle text NOT NULL gen=- def='unknown'::text
 public.organization.linkedin_url text gen=- def=-
+public.organization.logo_icon_object_key text gen=- def=-
+public.organization.logo_icon_origin text gen=- def=-
 public.organization.logo_object_key text gen=- def=-
 public.organization.logo_origin text gen=- def=-
 public.organization.merged_into_id uuid gen=- def=-

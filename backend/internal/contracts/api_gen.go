@@ -16448,6 +16448,11 @@ type AiActivity struct {
 	// AsOf When the server read this.
 	AsOf time.Time `json:"as_of"`
 
+	// Faults What went wrong for this caller today — `failed` and `degraded`, newest-settled first — since the same midnight `recent` is bounded by.
+	// NOT a subset of `recent`, which is why it is here. `recent` carries the newest ten occurrences of ANY outcome, so ten later successes push a fault out of it; a client holding a fault until somebody acknowledges it would then release one nobody ever saw, which is exactly the overnight run that failed at four in the morning. The two overlap and are both true: a fault that settled a minute ago appears in each.
+	// A run live past its lease is absent on purpose — it is reported as `stalled` in `running`, and listing it here as well would report one occurrence as two.
+	Faults []AiActivityItem `json:"faults"`
+
 	// Recent Occurrences that SETTLED since midnight in the server's own timezone (not the reader's, and not UTC unless the server runs on it), newest-settled first, at most 10.
 	Recent []AiActivityItem `json:"recent"`
 
@@ -19675,6 +19680,14 @@ type CompanyProfile struct {
 
 	// LegalName The registered legal entity, when it differs from display_name.
 	LegalName *string `json:"legal_name,omitempty"`
+
+	// LogoIconUrl Where to fetch the installation's own SQUARE logo icon — the `getOrganizationLogoIcon`
+	// path, cookie-authenticated and same-origin, carrying a revision query on the same terms
+	// as `logo_url`. This is the badge a collapsed sidebar draws, where the wide mark above
+	// would be unreadable; the two are chosen separately and only `uploadCompanyLogoIcon`
+	// ever fills this one. ABSENT entirely (not null) when the company has no icon, which is
+	// never an error: a client falls back to `logo_url`, then to the deterministic monogram.
+	LogoIconUrl *string `json:"logo_icon_url,omitempty"`
 
 	// LogoUrl Where to fetch the installation's own company logo — the same `getOrganizationLogo`
 	// path `Organization.logo_url` carries for that record, cookie-authenticated and
@@ -26663,8 +26676,21 @@ type Organization360Suggestion struct {
 
 		// Kind `draft_reply` — open the composer on the message that went unanswered.
 		// `open_deal` — open the deal that stalled.
-		// `add_task` — log the next step this account does not have.
+		// `add_task` — write the step named in `task`, through `POST /tasks`.
 		Kind Organization360SuggestionActionKind `json:"kind"`
+
+		// Task The step an `add_task` writes, prepared here as the exact body `POST /tasks` takes
+		// — subject, and the record it hangs on. Present on every `add_task`, null otherwise.
+		//
+		// The client SENDS IT UNCHANGED. Composing a task out of the row's words would put a
+		// second author on the same sentence, and the two would drift the first time either
+		// side was reworded; it would also give the client a say in what the task is linked
+		// to, which is a decision the rule that fired already made from records.
+		//
+		// Writing it is still the rep's move: this is a prepared body, not a staged row, and
+		// nothing exists until they press the button. The write goes through the same
+		// governed endpoint the task form uses, so it is theirs, audited and undoable.
+		Task *CreateTaskRequest `json:"task,omitempty"`
 	} `json:"action,omitempty"`
 
 	// DueAt The date the EVIDENCE carries — when the thread went quiet, when the deal last moved.
@@ -26717,7 +26743,7 @@ type Organization360Suggestion struct {
 
 // Organization360SuggestionActionKind `draft_reply` — open the composer on the message that went unanswered.
 // `open_deal` — open the deal that stalled.
-// `add_task` — log the next step this account does not have.
+// `add_task` — write the step named in `task`, through `POST /tasks`.
 type Organization360SuggestionActionKind string
 
 // Organization360SuggestionKind `no_reply` — an outbound message on a thread nobody answered.
@@ -35918,6 +35944,11 @@ type UploadCompanyLogoMultipartBody struct {
 	File openapi_types.File `json:"file"`
 }
 
+// UploadCompanyLogoIconMultipartBody defines parameters for UploadCompanyLogoIcon.
+type UploadCompanyLogoIconMultipartBody struct {
+	File openapi_types.File `json:"file"`
+}
+
 // StartCompanySiteReadParams defines parameters for StartCompanySiteRead.
 type StartCompanySiteReadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -40004,6 +40035,9 @@ type PutCompanyJSONRequestBody = CompanyProfileInput
 
 // UploadCompanyLogoMultipartRequestBody defines body for UploadCompanyLogo for multipart/form-data ContentType.
 type UploadCompanyLogoMultipartRequestBody UploadCompanyLogoMultipartBody
+
+// UploadCompanyLogoIconMultipartRequestBody defines body for UploadCompanyLogoIcon for multipart/form-data ContentType.
+type UploadCompanyLogoIconMultipartRequestBody UploadCompanyLogoIconMultipartBody
 
 // StartCompanySiteReadJSONRequestBody defines body for StartCompanySiteRead for application/json ContentType.
 type StartCompanySiteReadJSONRequestBody = StartCompanySiteReadRequest
@@ -48776,6 +48810,12 @@ type ServerInterface interface {
 	// Replace the installation's own company logo with an uploaded image.
 	// (POST /company/logo)
 	UploadCompanyLogo(w http.ResponseWriter, r *http.Request)
+	// Take the installation's own square logo icon off the record.
+	// (DELETE /company/logo/icon)
+	DeleteCompanyLogoIcon(w http.ResponseWriter, r *http.Request)
+	// Replace the installation's own square logo icon with an uploaded image.
+	// (POST /company/logo/icon)
+	UploadCompanyLogoIcon(w http.ResponseWriter, r *http.Request)
 	// Start an optional progressive website read before the anchor company exists.
 	// (POST /company/site-reads)
 	StartCompanySiteRead(w http.ResponseWriter, r *http.Request, params StartCompanySiteReadParams)
@@ -49442,6 +49482,9 @@ type ServerInterface interface {
 	// Stream an organization's logo image.
 	// (GET /organizations/{id}/logo)
 	GetOrganizationLogo(w http.ResponseWriter, r *http.Request, id Id)
+	// Stream an organization's square logo icon.
+	// (GET /organizations/{id}/logo/icon)
+	GetOrganizationLogoIcon(w http.ResponseWriter, r *http.Request, id Id)
 	// Merge this organization into a target (non-lossy).
 	// (POST /organizations/{id}/merge)
 	MergeOrganization(w http.ResponseWriter, r *http.Request, id Id, params MergeOrganizationParams)
@@ -50984,6 +51027,18 @@ func (_ Unimplemented) UploadCompanyLogo(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Take the installation's own square logo icon off the record.
+// (DELETE /company/logo/icon)
+func (_ Unimplemented) DeleteCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace the installation's own square logo icon with an uploaded image.
+// (POST /company/logo/icon)
+func (_ Unimplemented) UploadCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Start an optional progressive website read before the anchor company exists.
 // (POST /company/site-reads)
 func (_ Unimplemented) StartCompanySiteRead(w http.ResponseWriter, r *http.Request, params StartCompanySiteReadParams) {
@@ -52313,6 +52368,12 @@ func (_ Unimplemented) DraftIntroRequest(w http.ResponseWriter, r *http.Request,
 // Stream an organization's logo image.
 // (GET /organizations/{id}/logo)
 func (_ Unimplemented) GetOrganizationLogo(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Stream an organization's square logo icon.
+// (GET /organizations/{id}/logo/icon)
+func (_ Unimplemented) GetOrganizationLogoIcon(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58727,6 +58788,46 @@ func (siw *ServerInterfaceWrapper) UploadCompanyLogo(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UploadCompanyLogo(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCompanyLogoIcon operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCompanyLogoIcon(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadCompanyLogoIcon operation middleware
+func (siw *ServerInterfaceWrapper) UploadCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadCompanyLogoIcon(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -68790,6 +68891,38 @@ func (siw *ServerInterfaceWrapper) GetOrganizationLogo(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetOrganizationLogo(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetOrganizationLogoIcon operation middleware
+func (siw *ServerInterfaceWrapper) GetOrganizationLogoIcon(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetOrganizationLogoIcon(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -79625,6 +79758,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/company/logo", wrapper.UploadCompanyLogo)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/company/logo/icon", wrapper.DeleteCompanyLogoIcon)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/company/logo/icon", wrapper.UploadCompanyLogoIcon)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/company/site-reads", wrapper.StartCompanySiteRead)
 	})
 	r.Group(func(r chi.Router) {
@@ -80289,6 +80428,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/organizations/{id}/logo", wrapper.GetOrganizationLogo)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/organizations/{id}/logo/icon", wrapper.GetOrganizationLogoIcon)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/organizations/{id}/merge", wrapper.MergeOrganization)

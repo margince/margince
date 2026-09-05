@@ -7,6 +7,13 @@ package compose
 // upload, re-encode it, store the bytes, point the record at them — and give
 // the field back when they ask for the mark to go.
 //
+// Two slots, four routes, ONE body each way. A company is drawn at two widths
+// and needs a picture for each (people/orglogowrite.go), but nothing about the
+// transport differs between them: the same formats decode, the same ceiling
+// bounds the body, the same object store takes the bytes. So the slot is an
+// argument rather than a second pair of handlers, and the refusals a person
+// meets cannot drift between their wordmark and their badge.
+//
 // The bytes are never served as they arrived. Every stored logo is this
 // server's own aspect-preserving PNG re-encode, which is what lets the endpoint that
 // streams them declare one media type for all of them and serve no
@@ -22,6 +29,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -44,14 +52,25 @@ const companyLogoEdge = 512
 const companyLogoNameMax = 120
 
 func (h companyHandlers) UploadCompanyLogo(w http.ResponseWriter, r *http.Request) {
+	h.uploadCompanyMark(w, r, people.LogoWide, "uploadCompanyLogo")
+}
+
+// UploadCompanyLogoIcon takes the square badge a collapsed sidebar draws. Same
+// decode, same storage, same precedence — a different slot on the record, which
+// is the whole difference between the two routes.
+func (h companyHandlers) UploadCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
+	h.uploadCompanyMark(w, r, people.LogoIcon, "uploadCompanyLogoIcon")
+}
+
+func (h companyHandlers) uploadCompanyMark(w http.ResponseWriter, r *http.Request, slot people.LogoSlot, operation string) {
 	if h.store == nil {
-		httperr.NotImplemented(w, r, "uploadCompanyLogo")
+		httperr.NotImplemented(w, r, operation)
 		return
 	}
 	if h.blob == nil {
 		// No object store: the bytes have nowhere to live, and the endpoint
 		// that would serve them answers the same way.
-		httperr.NotImplemented(w, r, "uploadCompanyLogo")
+		httperr.NotImplemented(w, r, operation)
 		return
 	}
 	// Read the company BEFORE taking the upload apart: an installation that has
@@ -80,7 +99,7 @@ func (h companyHandlers) UploadCompanyLogo(w http.ResponseWriter, r *http.Reques
 		httperr.Write(w, r, err)
 		return
 	}
-	superseded, setErr := h.store.SetCompanyLogo(r.Context(), key, filename)
+	superseded, setErr := h.store.SetCompanyLogo(r.Context(), slot, key, filename)
 	if setErr != nil {
 		// The bytes stay. A failed write here does not prove the transaction
 		// did not commit — a cancelled context, a dropped connection — and
@@ -94,11 +113,19 @@ func (h companyHandlers) UploadCompanyLogo(w http.ResponseWriter, r *http.Reques
 }
 
 func (h companyHandlers) DeleteCompanyLogo(w http.ResponseWriter, r *http.Request) {
+	h.clearCompanyMark(w, r, people.LogoWide, "deleteCompanyLogo")
+}
+
+func (h companyHandlers) DeleteCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
+	h.clearCompanyMark(w, r, people.LogoIcon, "deleteCompanyLogoIcon")
+}
+
+func (h companyHandlers) clearCompanyMark(w http.ResponseWriter, r *http.Request, slot people.LogoSlot, operation string) {
 	if h.store == nil {
-		httperr.NotImplemented(w, r, "deleteCompanyLogo")
+		httperr.NotImplemented(w, r, operation)
 		return
 	}
-	removed, err := h.store.ClearCompanyLogo(r.Context())
+	removed, err := h.store.ClearCompanyLogo(r.Context(), slot)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -123,9 +150,9 @@ func (h companyHandlers) writeCompany(w http.ResponseWriter, r *http.Request) {
 // the file part, decoded as an image and re-encoded as this server's own PNG.
 // It writes the refusal itself and reports whether the caller may continue.
 func decodeCompanyLogoUpload(w http.ResponseWriter, r *http.Request) (png []byte, filename string, ok bool) {
-	// upload:route /v1/company/logo — the ceiling this parse runs under is
-	// granted to that path in compose.uploadCeilings, and
-	// TestEveryMultipartParseNamesItsRoute holds the two together.
+	// upload:route /v1/company/logo, /v1/company/logo/icon — the ceiling this
+	// parse runs under is granted to both paths in compose.uploadCeilings, and
+	// TestEveryMultipartParseNamesItsRoute holds them together.
 	//nolint:gosec // G120 wants a bound here, and the bound is the route ceiling the chassis already applied: this argument is only the in-memory/spill threshold.
 	if err := r.ParseMultipartForm(companyLogoSpillBytes); err != nil {
 		httperr.WriteMultipartRefusal(w, r, err, companyLogoUploadBytes)

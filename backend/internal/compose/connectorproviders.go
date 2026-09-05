@@ -39,8 +39,33 @@ func isOAuthProvider(provider string) bool {
 	return slices.Contains(oauthProviders, provider)
 }
 
-// listedProviders are the mail providers a person picks between on the
-// connect screen: gmail, graph, and imap. gcal and graphcal are omitted,
-// since each is created by its paired MAIL grant rather than picked directly,
-// so there is nothing for the screen to ask about them on their own.
-var listedProviders = []string{providerGmail, providerGraph, providerIMAP}
+// MailProviders are the providers that connect a MAILBOX. The other two —
+// gcal and graphcal — connect a calendar, and the difference is not a detail of
+// presentation: a calendar has no mail history to import backward from a date,
+// no posture to take towards mail it does not carry, and no signature block to
+// read a contact out of. Every mail-shaped operation is refused for one, and the
+// connections screen draws none of those rows against one.
+//
+// The whole reason this is a named set rather than a comparison at each door:
+// the screen listed a calendar as a "mailbox", drew it under an envelope beside
+// the member's own email address, and offered it a mail-history import that
+// answered "this mailbox type cannot be backfilled". A reader took that as the
+// product refusing to import their mail.
+//
+// Held equal to frontend/src/screens/connectorproviders.ts's MAIL_PROVIDERS by
+// backend/gates/frontendmailproviders_test.go: a screen that drew a mail row
+// against a calendar and a server that refused it would disagree in front of a
+// user, which is how this was reported.
+func MailProviders() []string { return []string{providerGmail, providerGraph, providerIMAP} }
+
+// IsMailProvider reports whether this provider connects a mailbox.
+func IsMailProvider(provider string) bool {
+	return slices.Contains(MailProviders(), provider)
+}
+
+// listedProviders are what the connect screen offers, which is the mail set:
+// gcal and graphcal are each created by their paired MAIL grant rather than
+// picked directly, so there is nothing for the screen to ask about them on
+// their own. Derived rather than listed again — the two answers were the same
+// three names written twice.
+var listedProviders = MailProviders()

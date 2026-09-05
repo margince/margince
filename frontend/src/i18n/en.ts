@@ -1523,6 +1523,9 @@ export const en = {
   "co.suggest.byline": "Margince suggests",
   "co.suggest.dismissFailed":
     "That could not be dismissed — it is still showing for you",
+  // Said plainly, because the reader's next move depends on it: a step they
+  // believe was written is a step nobody goes looking for again.
+  "co.suggest.addTaskFailed": "That step was not written — nothing was saved",
   "co.suggest.viewTasks": "View tasks",
   "co.suggest.commitment.overdueCount": "{count} overdue",
   "co.suggest.commitment.openCount": "{count} open",
@@ -4547,7 +4550,7 @@ export const en = {
 
   // Connected inboxes (Settings → Connections): the "manage in Settings"
   // surface the onboarding copy promises.
-  "connectors.title": "Connected inboxes",
+  "connectors.title": "Connected mailboxes and calendars",
   // The rep's standing overnight authority — one question, asked beside the
   // mailbox connect in onboarding and again in Settings. The danger line names
   // the features that go empty, because "some things stop working" is not
@@ -4655,10 +4658,10 @@ export const en = {
   "connectors.originUnreachable": "Not answering",
   "connectors.originUnchecked": "Not checked yet",
   "connectors.sub":
-    "Mailboxes capturing into your CRM. Disconnect any one when you need to — already-captured records stay.",
+    "Mailboxes and calendars capturing into your CRM. Disconnect any one when you need to — already-captured records stay.",
   "connectors.loading": "Loading your connections…",
   "connectors.loadFailed": "Couldn't load your connections.",
-  "connectors.empty": "No inbox is connected yet.",
+  "connectors.empty": "No mailbox or calendar is connected yet.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
   "connectors.provGraph": "Outlook",
@@ -4781,7 +4784,7 @@ export const en = {
   "connectors.addOpen": "Connect an account",
   "connectors.connect": "Connect",
   "connectors.connectProvider": "Connect {provider}",
-  "connectors.rosterLabel": "Mailboxes capturing",
+  "connectors.rosterLabel": "Capturing into your CRM",
   "connectors.addGmailBrings":
     "The mail you send and receive, from Google. Margince can send from it too.",
   "connectors.addGcalBrings":
@@ -6625,17 +6628,33 @@ export const en = {
     "Confirmed knowledge only — website text never becomes instructions.",
   "settings.companyConfirmed": "confirmed statements",
   "settings.companyMark": "Company logo",
-  "settings.companyMarkPresent":
-    "Shown here and as the main brand at the top of the sidebar.",
-  "settings.companyMarkNone":
+  "settings.companyMarkIntro":
+    "Two marks, because the sidebar shows your company at two widths. Fill the wide one and the collapsed sidebar will use it too, until you add a square icon.",
+  "settings.companyMarkWide": "Wide logo",
+  "settings.companyMarkWidePresent":
+    "Shown here and as the main brand at the top of the open sidebar.",
+  "settings.companyMarkWideNone":
     "No logo yet, so the initials stand in. A website read can fill this in, or add one here.",
-  "settings.companyMarkAdd": "Add a logo",
+  "settings.companyMarkIcon": "Square icon",
+  "settings.companyMarkIconPresent":
+    "Shown in the collapsed sidebar, where the wide logo would be too small to read.",
+  "settings.companyMarkIconNone":
+    "No icon yet, so the collapsed sidebar falls back to the wide logo.",
+  "settings.companyMarkAdd": "Add",
   "settings.companyMarkReplace": "Replace",
   "settings.companyMarkRemove": "Remove",
-  "settings.companyMarkPick": "Company logo",
-  "settings.companyMarkHint":
+  "settings.companyMarkAddWide": "Add a wide logo",
+  "settings.companyMarkReplaceWide": "Replace the wide logo",
+  "settings.companyMarkRemoveWide": "Remove the wide logo",
+  "settings.companyMarkAddIcon": "Add a square icon",
+  "settings.companyMarkReplaceIcon": "Replace the square icon",
+  "settings.companyMarkRemoveIcon": "Remove the square icon",
+  "settings.companyMarkWideHint":
     "Best results: SVG or a transparent PNG around 800 × 240 px (up to 4:1), under 5 MB. JPEG, GIF, WebP and ICO also work. Your logo keeps its proportions.",
+  "settings.companyMarkIconHint":
+    "Best results: SVG or a transparent PNG around 256 × 256 px, square, under 5 MB. A wide file is not cropped — it keeps its proportions and simply sits small in the square.",
   "settings.companyMarkEmpty": "Drop your logo here, or choose a file",
+  "settings.companyMarkIconEmpty": "Drop your icon here, or choose a file",
   "settings.companyWebsite": "Public company website",
   "settings.companyWebsiteHint":
     "The public site every website read starts from.",
@@ -7262,6 +7281,13 @@ export const en = {
   "person.graph.routeDirect": "{name} already corresponds with them.",
   "person.graph.routeVia":
     "{name} corresponds with {through} at the same company.",
+  // The same two sentences when the colleague is the reader. A route to the
+  // person reading it is the strongest one this page can find, and printing
+  // their own name back at them read as a third party they would have to go
+  // and ask.
+  "person.graph.routeDirectYou": "You already correspond with them.",
+  "person.graph.routeViaYou":
+    "You correspond with {through} at the same company.",
   "person.graph.noRoute":
     "Nobody here corresponds with them or with anyone at their company yet.",
   "person.graph.noDirect": "Nobody here has corresponded with them.",
@@ -7286,6 +7312,9 @@ export const en = {
   "person.intro.leadRouteBadge": "Strong route",
   "person.intro.heroDirect": "knows them directly",
   "person.intro.heroIndirect": "reaches them through {through}",
+  "person.intro.heroYou": "You",
+  "person.intro.heroDirectYou": "know them directly",
+  "person.intro.heroIndirectYou": "reach them through {through}",
   "person.intro.factReciprocal": "Reciprocal",
   "person.intro.factOneSided": "One-sided",
   "person.intro.factDirect": "Direct relationship",
@@ -7296,10 +7325,19 @@ export const en = {
   "person.intro.verdictOneSided":
     "Ask {name} — they have written, with no reply yet.",
   "person.intro.verdictVia": "Ask {name} — they reach them through {through}.",
+  "person.intro.verdictDirectYou": "You already write to each other.",
+  "person.intro.verdictOneSidedYou":
+    "You have written to them, with no reply yet.",
+  "person.intro.verdictViaYou": "You reach them through {through}.",
+  // What stands where the ask would be on the reader's own route. The panel
+  // is the page's one recommendation, so it says what to do rather than
+  // leaving the strongest way in with no move under it.
+  "person.intro.ownRouteNoAsk": "Nobody to ask — write to them yourself.",
   "person.intro.evidenceEyebrow": "The evidence behind it",
   "person.intro.evidenceExchanges": "Exchanges",
   "person.intro.evidenceWindow": "in 90 days",
   "person.intro.evidenceFrom": "{count} from {name}",
+  "person.intro.evidenceFromYou": "{count} from you",
   "person.intro.evidenceLastContact": "Last contact",
   "person.intro.lastToday": "Today",
   "person.intro.lastYesterday": "Yesterday",
@@ -7309,6 +7347,9 @@ export const en = {
   "person.intro.stripWhoCount_one": "Only {name}",
   "person.intro.stripWhoCount_other": "{count} colleagues",
   "person.intro.stripWhoMix": "{direct} direct · {indirect} through a contact",
+  "person.intro.stripWhoOnlyYou": "Only you",
+  "person.intro.stripWhoWithYou_one": "You and {count} colleague",
+  "person.intro.stripWhoWithYou_other": "You and {count} colleagues",
   "person.intro.otherRoutesTitle": "Other ways in",
   "person.intro.otherRoutesSub":
     "Ranked by how much two-way correspondence backs each one.",
@@ -7704,6 +7745,8 @@ export const en = {
     "Optional — e.g. ask for a date in the first week of September",
   "person.composer.draftWithAi": "Draft with AI",
   "person.composer.intentAgenda": "propose an agenda for the upcoming meeting",
+  "person.composer.threadGone":
+    "The conversation this link named can no longer be answered — the channel or address it was on is gone. This is a new message to them.",
   "person.composer.intentReply": "reply to their last message",
   "person.composer.intentCommitment": "deliver what we promised them",
   "person.composer.intentFollowUp": "follow up — it has gone quiet",

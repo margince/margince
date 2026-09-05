@@ -211,7 +211,9 @@ describe("SettingsScreen connections and integrations tabs", () => {
     // Every surface here reads a per-user seam: the connector list is scoped to
     // the calling human server-side, and both LinkedIn cards read /me.
     expect(
-      await screen.findByRole("heading", { name: "Connected inboxes" }),
+      await screen.findByRole("heading", {
+        name: "Connected mailboxes and calendars",
+      }),
     ).toBeTruthy();
     expect(
       screen.getByRole("heading", { name: "LinkedIn connections" }),
@@ -252,7 +254,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
       expect(screen.getByRole("heading", { name: heading })).toBeTruthy();
     }
     for (const heading of [
-      "Connected inboxes",
+      "Connected mailboxes and calendars",
       "LinkedIn connections",
       "Where your network reaches",
     ]) {

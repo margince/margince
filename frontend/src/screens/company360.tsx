@@ -508,11 +508,18 @@ function CommercialFigure({
  */
 export function NextSteps({
   view,
+  proposed,
   renderAction,
   onOpenTask,
   update,
 }: Readonly<{
   view: Organization360;
+  // The steps nobody has accepted yet, drawn above the ones on the list. They
+  // are the caller's rows because only a caller that can WRITE one should offer
+  // it — a read-only account draws none — and they lead rather than follow: a
+  // reader whose account has no open task at all would otherwise meet the
+  // empty-list sentence and stop reading before the recommendation.
+  proposed?: ReactNode;
   renderAction?: (step: NextStep) => ReactNode;
   // Given, the subject opens the task where it is listed. Absent, it stays
   // plain text rather than a button that goes nowhere.
@@ -540,6 +547,7 @@ export function NextSteps({
   }
   return (
     <Panel title={t("co.next.title")}>
+      {proposed}
       {state === "unavailable" && (
         <PanelBody>
           <p className="surfacestate-withheld">{t("co.section.unavailable")}</p>
@@ -615,6 +623,9 @@ export function NextSteps({
 
 type Question = components["schemas"]["OrganizationQuestion"];
 type Suggestion = components["schemas"]["Organization360Suggestion"];
+// The body an `add_task` suggestion carries, and the body POST /tasks takes —
+// one type, so a step the server prepared cannot be posted as something else.
+type CreateTaskRequest = components["schemas"]["CreateTaskRequest"];
 type Answer = components["schemas"]["OrganizationAnswer"];
 // The prepared questions, in the order the card offers them: what is open now,
 // then what to walk in with, then what has moved.
@@ -1624,26 +1635,51 @@ export function recordNamesIn(view?: Organization360) {
 
 function SuggestionActionButton({
   action,
+  pending,
   onPerform,
 }: Readonly<{
   action: SuggestionAction;
+  // Whether this row's own write is in flight. Only this row's: one task being
+  // written must not freeze the reader's other choices.
+  pending?: boolean;
   onPerform: (action: SuggestionAction) => void;
 }>) {
   const t = useT();
-  // Only the draft is the agent's own work. Opening a deal and adding a task
-  // are things the reader does, and painting them indigo would spend the one
-  // mark that means "a machine wrote this" on two clicks where nothing did.
-  const byMargince = action.kind === "draft_reply";
+  // The draft and the prepared step are the agent's own work — a rule wrote the
+  // sentence, and pressing the button accepts it. Opening a deal is not: it is
+  // navigation, and painting it indigo would spend the one mark that means "a
+  // machine wrote this" on a click where nothing did.
+  const byMargince = action.kind !== "open_deal";
   return (
     <Button
       small
       variant={byMargince ? "ai" : "primary"}
+      pending={pending}
       onClick={() => onPerform(action)}
     >
       {byMargince && <Sparkles aria-hidden="true" />}
       {t(SUGGESTION_ACTION_LABELS[action.kind])}
     </Button>
   );
+}
+
+/**
+ * Whether a row can offer this action as a button.
+ *
+ * `add_task` is the section's OWN verb: the server prepared the body, so the
+ * row writes it and needs no caller to open anything. It still refuses to draw
+ * without that body — the contract promises one on every `add_task`, and a
+ * button that posted nothing would be the control-that-does-nothing this whole
+ * surface is careful not to draw.
+ *
+ * The other two open a surface that lives above this section — the composer,
+ * the deal page — so without a caller to open it there is no button.
+ */
+function performable(
+  action: SuggestionAction,
+  onPerform?: (action: SuggestionAction) => void,
+): boolean {
+  return action.kind === "add_task" ? Boolean(action.task) : Boolean(onPerform);
 }
 
 // nextCommitmentLine is the daily brief's own footer reading: what is owed
@@ -1691,13 +1727,20 @@ export function useSuggestionsBody({
   view,
   onOpenRecord,
   onPerform,
+  keep,
 }: Readonly<{
   orgId: string;
   view?: Organization360;
   onOpenRecord?: (entityType: string, entityId: string) => void;
-  // Performing the advice is the page's job, not this section's: the
-  // composer, the deal and the task form all live above it.
+  // Opening a surface is the page's job, not this section's: the composer and
+  // the deal page both live above it. Writing the prepared step is this
+  // section's own verb and needs no caller — see `performable`.
   onPerform?: (action: SuggestionAction) => void;
+  // Which advice this caller draws. Absent, all of it — the advice card. The
+  // Tasks tab passes a predicate because it shows the steps and not the moves,
+  // and a tab called Tasks listing a stalled deal would be the advice card
+  // again under a heading that says otherwise.
+  keep?: (suggestion: Suggestion) => boolean;
 }>): {
   // Whether the section has rows worth showing. A withheld, empty or
   // unavailable suggestion block carries none — advice is additive, and
@@ -1733,28 +1776,66 @@ export function useSuggestionsBody({
     onSuccess: () =>
       client.invalidateQueries({ queryKey: ["organization360", orgId] }),
   });
+  const write = useMutation({
+    // The body is the SERVER's, passed as a variable: the click posts the step
+    // the row was drawn from, never one recomposed here from the row's words.
+    mutationFn: async (body: CreateTaskRequest) => {
+      const { error } = await api.POST("/tasks", { body });
+      if (error) {
+        throwProblem(error, t);
+      }
+    },
+    // Three reads change. The 360 decides whether the advice still stands — it
+    // fired on there being no open task, and there is one now — while the task
+    // lists elsewhere gain the row this just wrote.
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ["organization360", orgId] });
+      client.invalidateQueries({ queryKey: ["activities"] });
+      client.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+  // Performing the advice. `add_task` is this section's own verb and is written
+  // here; the rest opens a surface only the caller can reach.
+  const perform = (action: SuggestionAction) => {
+    if (action.kind !== "add_task") {
+      onPerform?.(action);
+      return;
+    }
+    if (action.task) {
+      write.mutate(action.task);
+    }
+  };
 
-  const suggestions: Suggestion[] = view?.suggestions ?? [];
+  const all: Suggestion[] = view?.suggestions ?? [];
   const nameOf = recordNamesIn(view);
   const dropped = view?.suggestions_dropped;
   const state = sectionState(
     view,
     "suggestions",
     Boolean(view?.suggestions),
-    suggestions.length,
+    all.length,
   );
-  if (state !== "ready") {
+  // The state is read off the WHOLE section, because that is what the grant and
+  // the omission are about. `keep` then narrows what this caller draws, and a
+  // caller left with nothing has nothing to show — the same answer an empty
+  // section gives.
+  const suggestions = keep ? all.filter(keep) : all;
+  if (state !== "ready" || suggestions.length === 0) {
     return { ready: false, rows: null, count: 0 };
   }
+  // How many the cap dropped that THIS caller should report. The count
+  // describes the whole list, so a narrowed caller reports none: "2 more" under
+  // a filtered card counts advice that card was never going to draw.
+  const notShown = keep ? 0 : (dropped ?? 0);
   const footer =
-    (dropped !== undefined && dropped > 0) || dismiss.isError ? (
+    notShown > 0 || dismiss.isError || write.isError ? (
       <>
         {/* A truncated list with no count reads as "that is everything".
             Absent means the section was never computed, which this card
             does not render at all. */}
-        {dropped !== undefined && dropped > 0 && (
+        {notShown > 0 && (
           <p className="co-row-meta t-caption">
-            {t("co.suggest.more", { count: formatNumber(dropped, locale) })}
+            {t("co.suggest.more", { count: formatNumber(notShown, locale) })}
           </p>
         )}
         {/* The row staying put with no word reads as a click that missed,
@@ -1763,6 +1844,14 @@ export function useSuggestionsBody({
           <p className="surfacestate-withheld">
             {t("co.suggest.dismissFailed")}
             {` ${problemMessageOf(dismiss.error, t)}`}
+          </p>
+        )}
+        {/* Same rule for the write, and it matters more: a rep who thinks the
+            step was written stops looking for it. */}
+        {write.isError && (
+          <p className="surfacestate-withheld">
+            {t("co.suggest.addTaskFailed")}
+            {` ${problemMessageOf(write.error, t)}`}
           </p>
         )}
       </>
@@ -1793,10 +1882,13 @@ export function useSuggestionsBody({
       // could not name one carries null and this renders nothing rather than
       // a control that does nothing.
       action={
-        suggestion.action && onPerform ? (
+        suggestion.action && performable(suggestion.action, onPerform) ? (
           <SuggestionActionButton
             action={suggestion.action}
-            onPerform={onPerform}
+            pending={
+              write.isPending && write.variables === suggestion.action.task
+            }
+            onPerform={perform}
           />
         ) : undefined
       }
@@ -1810,6 +1902,52 @@ export function useSuggestionsBody({
     />
   ));
   return { ready: true, rows, count: suggestions.length, footer };
+}
+
+// A suggestion that would BECOME a task. The action is what decides it, not the
+// kind: a rule that names a prepared step is offering one whatever it fired on,
+// and reading the kind here would leave the next such rule silently out.
+function proposesAStep(suggestion: Suggestion): boolean {
+  return suggestion.action?.kind === "add_task";
+}
+
+/**
+ * ProposedNextSteps is the advice that would become a task, drawn where the
+ * tasks are.
+ *
+ * A recommended step nobody has accepted yet is not on the list, so it used to
+ * live only in the day's brief — and a reader who opened Tasks to find out what
+ * happens next met an account with nothing scheduled and no way to learn that
+ * something had been worked out for it two cards away.
+ *
+ * Only the advice that names a step. A stalled deal and an unanswered mail are
+ * moves too, and neither is a task; drawing them here would make this a second
+ * copy of the advice card under a heading that says otherwise.
+ */
+export function ProposedNextSteps({
+  orgId,
+  view,
+  onOpenRecord,
+}: Readonly<{
+  orgId: string;
+  view?: Organization360;
+  onOpenRecord?: (entityType: string, entityId: string) => void;
+}>) {
+  const body = useSuggestionsBody({
+    orgId,
+    view,
+    onOpenRecord,
+    keep: proposesAStep,
+  });
+  if (!body.ready) {
+    return null;
+  }
+  return (
+    <>
+      {body.rows}
+      {body.footer && <PanelBody>{body.footer}</PanelBody>}
+    </>
+  );
 }
 
 /**

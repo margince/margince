@@ -1452,6 +1452,7 @@ export const vi = {
   "co.suggest.byline": "Margince đề xuất",
   "co.suggest.dismissFailed":
     "Không bỏ qua được mục này — mục đó vẫn hiển thị với bạn",
+  "co.suggest.addTaskFailed": "Chưa tạo được bước này — không có gì được lưu",
   "co.suggest.viewTasks": "Xem công việc",
   "co.suggest.commitment.overdueCount": "{count} quá hạn",
   "co.suggest.commitment.openCount": "{count} đang mở",
@@ -4414,7 +4415,7 @@ export const vi = {
   "extUnits.workspace.sub":
     "Những tiện ích bản cài đặt này chạy bằng một thông tin đăng nhập dùng chung. Thiết lập ở đây áp dụng cho mọi người.",
 
-  "connectors.title": "Hộp thư đã kết nối",
+  "connectors.title": "Hộp thư và lịch đã kết nối",
   // Quyền thường trực cho công việc ban đêm — một câu hỏi, được hỏi khi kết
   // nối hộp thư trong onboarding và một lần nữa trong phần cài đặt.
   "overnightGrant.title": "Chuẩn bị qua đêm",
@@ -4522,10 +4523,10 @@ export const vi = {
   "connectors.originUnreachable": "Kh\u00f4ng ph\u1ea3n h\u1ed3i",
   "connectors.originUnchecked": "Ch\u01b0a ki\u1ec3m tra",
   "connectors.sub":
-    "Các hộp thư đang thu thập vào CRM của bạn. Cần thì ngắt kết nối hộp nào cũng được — bản ghi đã thu thập vẫn giữ nguyên.",
+    "Các hộp thư và lịch đang thu thập vào CRM của bạn. Cần thì ngắt kết nối cái nào cũng được — bản ghi đã thu thập vẫn giữ nguyên.",
   "connectors.loading": "Đang tải các kết nối…",
   "connectors.loadFailed": "Không tải được các kết nối.",
-  "connectors.empty": "Chưa có hộp thư nào được kết nối.",
+  "connectors.empty": "Chưa có hộp thư hay lịch nào được kết nối.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
   "connectors.provGraph": "Outlook",
@@ -4646,7 +4647,7 @@ export const vi = {
   "connectors.addOpen": "Kết nối một tài khoản",
   "connectors.connect": "Kết nối",
   "connectors.connectProvider": "Kết nối {provider}",
-  "connectors.rosterLabel": "Hộp thư đang thu thập",
+  "connectors.rosterLabel": "Đang thu thập vào CRM",
   "connectors.addGmailBrings":
     "Thư bạn gửi và nhận, từ Google. Margince cũng có thể gửi thư qua kết nối này.",
   "connectors.addGcalBrings":
@@ -6454,17 +6455,33 @@ export const vi = {
     "Chỉ tri thức đã xác nhận — văn bản website không bao giờ trở thành chỉ dẫn.",
   "settings.companyConfirmed": "nhận định đã xác nhận",
   "settings.companyMark": "Logo công ty",
-  "settings.companyMarkPresent":
-    "Hiển thị tại đây và là thương hiệu chính ở đầu thanh bên.",
-  "settings.companyMarkNone":
+  "settings.companyMarkIntro":
+    "Hai dấu hiệu, vì thanh bên hiển thị công ty của bạn ở hai độ rộng. Điền dấu hiệu rộng thì thanh bên thu gọn cũng dùng nó, cho đến khi bạn thêm biểu tượng vuông.",
+  "settings.companyMarkWide": "Logo rộng",
+  "settings.companyMarkWidePresent":
+    "Hiển thị tại đây và là thương hiệu chính ở đầu thanh bên khi mở.",
+  "settings.companyMarkWideNone":
     "Chưa có logo nên chữ viết tắt đứng thay. Một lượt đọc website có thể bổ sung, hoặc bạn thêm tại đây.",
-  "settings.companyMarkAdd": "Thêm logo",
+  "settings.companyMarkIcon": "Biểu tượng vuông",
+  "settings.companyMarkIconPresent":
+    "Hiển thị trong thanh bên thu gọn, nơi logo rộng sẽ quá nhỏ để đọc.",
+  "settings.companyMarkIconNone":
+    "Chưa có biểu tượng nên thanh bên thu gọn dùng tạm logo rộng.",
+  "settings.companyMarkAdd": "Thêm",
   "settings.companyMarkReplace": "Thay",
   "settings.companyMarkRemove": "Gỡ",
-  "settings.companyMarkPick": "Logo công ty",
-  "settings.companyMarkHint":
+  "settings.companyMarkAddWide": "Thêm logo rộng",
+  "settings.companyMarkReplaceWide": "Thay logo rộng",
+  "settings.companyMarkRemoveWide": "Gỡ logo rộng",
+  "settings.companyMarkAddIcon": "Thêm biểu tượng vuông",
+  "settings.companyMarkReplaceIcon": "Thay biểu tượng vuông",
+  "settings.companyMarkRemoveIcon": "Gỡ biểu tượng vuông",
+  "settings.companyMarkWideHint":
     "Tốt nhất: SVG hoặc PNG nền trong suốt khoảng 800 × 240 px (tối đa 4:1), dưới 5 MB. JPEG, GIF, WebP và ICO cũng dùng được. Logo giữ nguyên tỷ lệ.",
+  "settings.companyMarkIconHint":
+    "Tốt nhất: SVG hoặc PNG nền trong suốt khoảng 256 × 256 px, hình vuông, dưới 5 MB. Tệp rộng không bị cắt — nó giữ nguyên tỷ lệ và chỉ nằm nhỏ trong ô vuông.",
   "settings.companyMarkEmpty": "Kéo logo vào đây, hoặc chọn tệp",
+  "settings.companyMarkIconEmpty": "Kéo biểu tượng vào đây, hoặc chọn tệp",
   "settings.companyWebsite": "Website công khai của công ty",
   "settings.companyWebsiteHint":
     "Website công khai mà mỗi lần đọc website đều bắt đầu từ đó.",
@@ -7095,6 +7112,8 @@ export const vi = {
   "person.graph.loading": "Đang đọc mạng lưới quanh người này…",
   "person.graph.routeDirect": "{name} đã có trao đổi với họ.",
   "person.graph.routeVia": "{name} có trao đổi với {through} ở cùng công ty.",
+  "person.graph.routeDirectYou": "Bạn đã có trao đổi với họ.",
+  "person.graph.routeViaYou": "Bạn có trao đổi với {through} ở cùng công ty.",
   "person.graph.noRoute":
     "Chưa ai bên mình trao đổi với họ hay với ai ở công ty họ.",
   "person.graph.noDirect": "Chưa ai bên mình trao đổi với họ.",
@@ -7118,6 +7137,9 @@ export const vi = {
   "person.intro.leadRouteBadge": "Hướng mạnh",
   "person.intro.heroDirect": "quen trực tiếp",
   "person.intro.heroIndirect": "tiếp cận qua {through}",
+  "person.intro.heroYou": "Bạn",
+  "person.intro.heroDirectYou": "quen họ trực tiếp",
+  "person.intro.heroIndirectYou": "tiếp cận họ qua {through}",
   "person.intro.factReciprocal": "Hai chiều",
   "person.intro.factOneSided": "Một chiều",
   "person.intro.factDirect": "Quan hệ trực tiếp",
@@ -7128,10 +7150,15 @@ export const vi = {
   "person.intro.verdictOneSided":
     "Hỏi {name} — đã gửi thư nhưng chưa được hồi âm.",
   "person.intro.verdictVia": "Hỏi {name} — tiếp cận được họ qua {through}.",
+  "person.intro.verdictDirectYou": "Bạn và họ đã trao đổi thư từ với nhau.",
+  "person.intro.verdictOneSidedYou": "Bạn đã gửi thư nhưng chưa được hồi âm.",
+  "person.intro.verdictViaYou": "Bạn tiếp cận được họ qua {through}.",
+  "person.intro.ownRouteNoAsk": "Không cần nhờ ai — bạn tự viết cho họ.",
   "person.intro.evidenceEyebrow": "Bằng chứng phía sau",
   "person.intro.evidenceExchanges": "Lượt trao đổi",
   "person.intro.evidenceWindow": "trong 90 ngày",
   "person.intro.evidenceFrom": "{count} từ {name}",
+  "person.intro.evidenceFromYou": "{count} từ bạn",
   "person.intro.evidenceLastContact": "Liên hệ gần nhất",
   "person.intro.lastToday": "Hôm nay",
   "person.intro.lastYesterday": "Hôm qua",
@@ -7141,6 +7168,9 @@ export const vi = {
   "person.intro.stripWhoCount_one": "Chỉ {name}",
   "person.intro.stripWhoCount_other": "{count} đồng nghiệp",
   "person.intro.stripWhoMix": "{direct} trực tiếp · {indirect} qua một liên hệ",
+  "person.intro.stripWhoOnlyYou": "Chỉ bạn",
+  "person.intro.stripWhoWithYou_one": "Bạn và {count} đồng nghiệp",
+  "person.intro.stripWhoWithYou_other": "Bạn và {count} đồng nghiệp",
   "person.intro.otherRoutesTitle": "Các lối vào khác",
   "person.intro.otherRoutesSub":
     "Xếp theo mức trao đổi hai chiều làm cơ sở cho từng lối.",
@@ -7516,6 +7546,8 @@ export const vi = {
     "Tùy chọn — ví dụ: xin một buổi hẹn trong tuần đầu tháng 9",
   "person.composer.draftWithAi": "Soạn bằng AI",
   "person.composer.intentAgenda": "đề xuất chương trình cho buổi hẹn sắp tới",
+  "person.composer.threadGone":
+    "Cuộc trò chuyện mà liên kết này trỏ tới không còn trả lời được nữa — kênh hoặc địa chỉ của nó đã không còn. Đây là một tin nhắn mới.",
   "person.composer.intentReply": "trả lời tin nhắn gần nhất của họ",
   "person.composer.intentCommitment": "thực hiện điều chúng ta đã hứa",
   "person.composer.intentFollowUp": "nhắc lại — đã lâu không có phản hồi",

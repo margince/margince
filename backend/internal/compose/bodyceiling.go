@@ -49,6 +49,10 @@ func uploadCeilings(limits deployconfig.UploadLimits) map[string]int64 {
 		// the right one, and a dial nobody can have a reason to turn is a
 		// question asked of every operator for no answer.
 		"/v1/company/logo": companyLogoUploadBytes, // uploadCompanyLogo
+		// The square badge, on the same terms and through the same decode: it
+		// is the same kind of upload of the same company's face, so a second
+		// number here would be a difference with no reason behind it.
+		"/v1/company/logo/icon": companyLogoUploadBytes, // uploadCompanyLogoIcon
 	}
 }
 

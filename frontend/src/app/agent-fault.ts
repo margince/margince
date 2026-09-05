@@ -31,10 +31,10 @@ type AiActivityItem = components["schemas"]["AiActivityItem"];
 const SEEN_KEY = "margince.agent.faults-seen";
 
 /**
- * How many acknowledgements are kept. Faults are rare and `recent` is bounded to
- * one local day, so a short list outlives every id that could still be raised,
- * and the oldest falling off can only ever re-raise a run from a previous day
- * that the feed no longer carries.
+ * How many acknowledgements are kept. Faults are rare and the arm behind them is
+ * bounded to one local day, so a short list outlives every id that could still be
+ * raised, and the oldest falling off can only ever re-raise a run from a previous
+ * day that the feed no longer carries.
  */
 const SEEN_CAP = 20;
 
@@ -101,17 +101,21 @@ export type AgentFaultReading = Readonly<{
 }>;
 
 /**
- * The fault standing over the settled runs, and the way to clear it.
+ * The fault standing over today's runs, and the way to clear it.
  *
- * It reads `recent` and not `running`, because a run only reports `failed` or
- * `degraded` once it has settled, and a settled run is in `recent` by
- * construction. `stalled` is the other way round: it is derived at read time for
- * a live run past its own lease, so it lives in `running` and clears itself when
- * the run settles. Nobody has to acknowledge a stall, which is why it is not
- * here.
+ * It reads the feed's own `faults` arm and not `recent`, and the difference is
+ * the whole of what this hook promises. `recent` is the newest ten occurrences
+ * of ANY outcome, so ten later successes push a fault off it — and a fault held
+ * until somebody acknowledges it would then be released with nobody having
+ * looked, which is exactly the run that failed at four in the morning. The arm
+ * is bounded on faults alone, so only another fault can displace one.
+ *
+ * `stalled` is not here and is not an omission: it is derived at read time for a
+ * live run past its own lease, so it lives in `running` and clears itself when
+ * the run settles. Nobody has to acknowledge a stall.
  */
 export function useAgentFault(
-  recent: readonly AiActivityItem[],
+  faults: readonly AiActivityItem[],
 ): AgentFaultReading {
   const [seen, setSeen] = useState<readonly string[]>(readSeen);
 
@@ -123,13 +127,13 @@ export function useAgentFault(
   // the rule this module exists to keep.
   const unacknowledged = useMemo(
     () =>
-      recent.flatMap((item) => {
+      faults.flatMap((item) => {
         const severity = severityOf(item.state);
         return severity === null || seen.includes(item.id)
           ? []
           : [{ item, severity }];
       }),
-    [recent, seen],
+    [faults, seen],
   );
 
   const acknowledge = useCallback(() => {
@@ -146,7 +150,7 @@ export function useAgentFault(
     });
   }, [unacknowledged]);
 
-  // The orb carries one state, so it carries the FIRST fault: `recent` is
-  // newest-first, and the newest break is the one worth colouring for.
+  // The orb carries one state, so it carries the FIRST fault: the faults arm
+  // is newest-first, and the newest break is the one worth colouring for.
   return { fault: unacknowledged[0] ?? null, acknowledge };
 }

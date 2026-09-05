@@ -348,6 +348,26 @@ storing one. The monogram is not a fallback of last resort: it renders
 the image fails, and what a company without a resolved logo simply has. A
 company is never a broken image or an empty slot.
 
+### The installation's second mark
+
+The record above wears ONE picture. The installation's own company wears two,
+because the sidebar draws it at two widths: the wide lockup an open panel has
+room for, and a **square icon** for the 56px rail, where a wordmark scaled into
+a 32px box is a row of illegible strokes.
+
+The icon is a second pair of columns on the same row (`logo_icon_object_key`,
+`logo_icon_origin`), read back as `CompanyProfile.logo_icon_url` and streamed
+from `GET /organizations/{id}/logo/icon` on exactly the terms above — same
+re-encode, same headers, same 404 for absent, invisible and non-existent alike.
+What differs is who writes it: `uploadCompanyLogoIcon` and nothing else. No
+website read resolves a second picture, so this slot has no machine writer to
+hold off and no precedence rule of its own, and every organization but the
+anchor answers 404 for it.
+
+The two slots are chosen and cleared separately in settings, and the collapsed
+rail falls back to the wide mark when there is no icon — which is what every
+installation did before the slot existed.
+
 ## The connections card
 
 `GET /organizations/{id}/graph` is a **second** read serving the same page: the

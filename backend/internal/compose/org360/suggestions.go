@@ -27,7 +27,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -225,6 +224,19 @@ func setOpenDeal(out *crmcontracts.Organization360Suggestion, dealID ids.UUID) {
 	out.Action.DealId = &id
 }
 
+// setAddTask names the step to write and hands over the body that writes it.
+// The client posts that body unchanged, so the sentence the reader accepted and
+// the task they get are the same sentence.
+func setAddTask(out *crmcontracts.Organization360Suggestion, step nextStep) {
+	out.Action = newSuggestionAction(crmcontracts.Organization360SuggestionActionKindAddTask)
+	body := step.body
+	out.Action.Task = &body
+	if step.dealID != nil {
+		id := openapi_types.UUID(*step.dealID)
+		out.Action.DealId = &id
+	}
+}
+
 // newSuggestionAction builds the generated anonymous action struct. The shape is
 // spelled here and only here: a second literal would drift the moment the
 // contract gains a field.
@@ -234,11 +246,13 @@ func newSuggestionAction(kind crmcontracts.Organization360SuggestionActionKind) 
 	ActivityId *openapi_types.UUID                              `json:"activity_id,omitempty"`
 	DealId     *openapi_types.UUID                              `json:"deal_id,omitempty"`
 	Kind       crmcontracts.Organization360SuggestionActionKind `json:"kind"`
+	Task       *crmcontracts.CreateTaskRequest                  `json:"task,omitempty"`
 } {
 	action := new(struct {
 		ActivityId *openapi_types.UUID                              `json:"activity_id,omitempty"`
 		DealId     *openapi_types.UUID                              `json:"deal_id,omitempty"`
 		Kind       crmcontracts.Organization360SuggestionActionKind `json:"kind"`
+		Task       *crmcontracts.CreateTaskRequest                  `json:"task,omitempty"`
 	})
 	action.Kind = kind
 	return action
@@ -318,106 +332,6 @@ func stalledDealSuggestions(stalled []stalledDeal) []crmcontracts.Organization36
 			out[len(out)-1].DueAt = ptrTime(deal.IdleSince)
 		}
 		setOpenDeal(&out[len(out)-1], deal.ID)
-	}
-	return out
-}
-
-// noNextStepSuggestion fires on an account that is live — it has an open
-// deal — and has nobody's next action written down.
-//
-// It is deliberately NOT raised for a quiet account with no open deal: there
-// is nothing to advance, and "you have no task on this dormant account" is
-// noise the rep would learn to scroll past, which costs the whole surface its
-// credibility.
-func noNextStepSuggestion(
-	orgID ids.OrganizationID, in suggestionInputs,
-) *crmcontracts.Organization360Suggestion {
-	if in.scheduled || in.open.OpenCount == 0 {
-		return nil
-	}
-	open := in.open
-	evidence := openDealEvidence(orgID, open.Open)
-	// The digest over EVERY open deal rides the fingerprint, so closing one or
-	// opening another re-raises this rather than leaving a dismissal in force
-	// over a pipeline the account no longer has — including a change to a deal
-	// no card listed, which a fingerprint built from a fetched page would miss.
-	out := &crmcontracts.Organization360Suggestion{
-		Kind:        suggestNoNextStep,
-		Reason:      noNextStepReason(open),
-		Fingerprint: fingerprint(string(suggestNoNextStep), open.OpenDigest, evidence),
-		Evidence:    evidence,
-		Title:       ptrString("Set the next step"),
-	}
-	// No date: this rule fires on the ABSENCE of a task, and an absence has no
-	// date of its own. Inventing one would make a reading into a deadline.
-	// No deal named: the account has several open, and picking one for the
-	// reader would be a guess dressed as advice.
-	out.Action = newSuggestionAction(crmcontracts.Organization360SuggestionActionKindAddTask)
-	return out
-}
-
-// How many deals the advice names before it stops naming them. Past three the
-// list stops being a reason and becomes an inventory, and the deals section
-// above it is already the inventory.
-const namedDeals = 3
-
-// The reason, with the deals in it.
-//
-// A count alone is a claim a reader cannot check without leaving the card, and
-// on an account with one open deal it is also worse writing than the deal's own
-// name. Past the cap it stays a count: the reader is being told there is no
-// next step, not being handed the pipeline.
-func noNextStepReason(open pipeline) string {
-	names := make([]string, 0, namedDeals)
-	for _, deal := range open.Open {
-		if len(names) == namedDeals {
-			break
-		}
-		names = append(names, strconv.Quote(deal.Name))
-	}
-	switch {
-	case len(names) == 0:
-		// The count survived a read the names did not. Rare, and the advice is
-		// still true: something is open and nothing says what happens next.
-		return fmt.Sprintf("%d deals are open here and no task says what happens next.", open.OpenCount)
-	case open.OpenCount == 1:
-		return fmt.Sprintf("%s is open and no task says what happens next.", names[0])
-	case open.OpenCount > len(names):
-		return fmt.Sprintf(
-			"%d deals are open here, including %s, and no task says what happens next.",
-			open.OpenCount, strings.Join(names, ", "),
-		)
-	default:
-		return fmt.Sprintf(
-			"%s are open and no task says what happens next.", strings.Join(names, ", "),
-		)
-	}
-}
-
-// What the advice was read from: the open deals themselves, so the receipt
-// opens the records the claim is about.
-//
-// The organization stands in when the deals did not survive the read. The
-// suggestion is dismissible and its dismissal is keyed on this list, so an
-// empty one would key every account's dismissal alike.
-func openDealEvidence(
-	orgID ids.OrganizationID, deals []openDeal,
-) []crmcontracts.OrganizationBriefEvidence {
-	if len(deals) == 0 {
-		return []crmcontracts.OrganizationBriefEvidence{{
-			EntityType: crmcontracts.OrganizationBriefEvidenceEntityTypeOrganization,
-			EntityId:   openapi_types.UUID(orgID.UUID),
-		}}
-	}
-	out := make([]crmcontracts.OrganizationBriefEvidence, 0, min(len(deals), namedDeals))
-	for _, deal := range deals {
-		if len(out) == namedDeals {
-			break
-		}
-		out = append(out, crmcontracts.OrganizationBriefEvidence{
-			EntityType: crmcontracts.OrganizationBriefEvidenceEntityTypeDeal,
-			EntityId:   openapi_types.UUID(deal.ID),
-		})
 	}
 	return out
 }

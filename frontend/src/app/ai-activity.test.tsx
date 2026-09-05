@@ -39,7 +39,12 @@ const A_RUN: AiActivityItem = {
 };
 
 function activity(running: readonly AiActivityItem[]): AiActivity {
-  return { as_of: "2026-08-21T05:00:01Z", running: [...running], recent: [] };
+  return {
+    as_of: "2026-08-21T05:00:01Z",
+    running: [...running],
+    recent: [],
+    faults: [],
+  };
 }
 
 function jsonResponse(body: unknown, status = 200): Response {

@@ -23,9 +23,9 @@ import (
 // stubReader answers with whatever the case under test wants, and records the
 // day boundary it was handed — the one derived value the transport owns.
 type stubReader struct {
-	live, settled []Item
-	gotUser       ids.UUID
-	gotStartOfDay time.Time
+	live, settled, faults []Item
+	gotUser               ids.UUID
+	gotStartOfDay         time.Time
 	// gotKinds is what the transport passed down, and nil vs empty is the
 	// distinction the case cares about: nil asks for every kind, and an empty
 	// slice would ask for none.
@@ -33,10 +33,10 @@ type stubReader struct {
 	called   bool
 }
 
-func (s *stubReader) Mine(ctx context.Context, startOfToday time.Time, kinds []string) ([]Item, []Item, error) {
+func (s *stubReader) Mine(ctx context.Context, startOfToday time.Time, kinds []string) (Feed, error) {
 	actor, _ := principal.Actor(ctx)
 	s.called, s.gotUser, s.gotStartOfDay, s.gotKinds = true, actor.UserID, startOfToday, kinds
-	return s.live, s.settled, nil
+	return Feed{Live: s.live, Settled: s.settled, Faults: s.faults}, nil
 }
 
 // fixedNow is the suite's clock. Stated rather than read, because "today" is

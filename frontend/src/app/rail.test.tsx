@@ -659,6 +659,58 @@ describe("Rail levels (a section's entries as the second level)", () => {
     expect(container.querySelector(".ws-chip .avatar")?.textContent).toBe("DG");
   });
 
+  // A company has two marks because the panel has two widths, and the whole
+  // point of the square one is that it is the one drawn at 56px. The wide mark
+  // is still what stands there when no icon was uploaded — a real logo squeezed
+  // small reads as that company, where initials would not — so both directions
+  // are asserted rather than only the interesting one.
+  const TWO_MARKS = {
+    organization_id: "55555555-5555-4555-8555-555555555555",
+    display_name: "Demo GmbH",
+    logo_url: "/v1/organizations/55555555-5555-4555-8555-555555555555/logo",
+    logo_icon_url:
+      "/v1/organizations/55555555-5555-4555-8555-555555555555/logo/icon",
+  };
+
+  it("draws the square icon when the panel is collapsed", () => {
+    const client = newClient();
+    client.setQueryData(["company"], TWO_MARKS);
+    const { container } = renderWith(
+      client,
+      <WorkspaceRail route={{ screen: "home" }} collapsed />,
+    );
+    expect(
+      container.querySelector(".company-logo img")?.getAttribute("src"),
+    ).toBe(TWO_MARKS.logo_icon_url);
+  });
+
+  it("draws the wide mark when the panel is expanded", () => {
+    const client = newClient();
+    client.setQueryData(["company"], TWO_MARKS);
+    const { container } = renderWith(
+      client,
+      <WorkspaceRail route={{ screen: "home" }} />,
+    );
+    expect(
+      container.querySelector(".company-logo img")?.getAttribute("src"),
+    ).toBe(TWO_MARKS.logo_url);
+  });
+
+  it("keeps the wide mark in the collapsed panel when no icon was uploaded", () => {
+    const client = newClient();
+    client.setQueryData(["company"], {
+      ...TWO_MARKS,
+      logo_icon_url: undefined,
+    });
+    const { container } = renderWith(
+      client,
+      <WorkspaceRail route={{ screen: "home" }} collapsed />,
+    );
+    expect(
+      container.querySelector(".company-logo img")?.getAttribute("src"),
+    ).toBe(TWO_MARKS.logo_url);
+  });
+
   // The other half of the same rule: outside a level the head is the head. The
   // brand assertion alone is satisfied by a rail that hides the words everywhere,
   // or by one that hides them nowhere.

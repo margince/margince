@@ -138,7 +138,7 @@ func (g *graphAssembly) placeRelated(related []graphRelatedOrg) {
 			Id:      openapi_types.UUID(row.orgID),
 			Kind:    crmcontracts.OrganizationGraphNodeKindOrganization,
 			Label:   row.displayName,
-			LogoUrl: people.LogoURL(row.orgID, row.logoObjectKey),
+			LogoUrl: people.LogoURL(row.orgID, row.logoObjectKey, people.LogoWide),
 		})
 		from, to, kind := g.relatedEdge(row)
 		g.addEdge(from, to, kind, nil)

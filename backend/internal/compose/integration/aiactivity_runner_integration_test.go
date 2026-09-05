@@ -122,12 +122,12 @@ func (f *runnerFixture) feed(t *testing.T) (live, settled []aiactivity.Item) {
 		`SELECT date_trunc('day', now())`).Scan(&midnight); err != nil {
 		t.Fatalf("reading the database's idea of today: %v", err)
 	}
-	live, settled, err := aiactivity.NewStore(f.env.DB()).
+	feed, err := aiactivity.NewStore(f.env.DB()).
 		Mine(f.env.As(f.owner, nil, principal.Permissions{}), midnight, nil)
 	if err != nil {
 		t.Fatalf("Mine: %v", err)
 	}
-	return live, settled
+	return feed.Live, feed.Settled
 }
 
 // A scheduled run reaches the rail through the projection, attributed to the
