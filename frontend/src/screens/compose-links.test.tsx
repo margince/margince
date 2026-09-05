@@ -139,9 +139,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// The account-started composer carries three dropdowns (recipient, deal,
-// purpose), so each pick names the one it means rather than taking the only
-// combobox on screen.
+// The account-started composer carries three dropdowns (recipient, deal, why),
+// so each pick names the one it means rather than taking the only combobox on
+// screen.
 async function pickBy(labelText: string, option: string) {
   const select = screen.getByLabelText(labelText);
   await pickOption(userEvent.setup(), select, option);
@@ -177,7 +177,7 @@ describe("what a sent message files under", () => {
     await screen.findByLabelText("Related to");
     await pickBy("Related to", "Acme Renewal");
     await fillBody();
-    await pickBy("Consent purpose", "Deal messages");
+    await pickBy("Why are you writing?", "About a deal we are working on");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -211,7 +211,7 @@ describe("what a sent message files under", () => {
     // The choice is visible, and so is what it does to the draft.
     expect(screen.getByText("Scoped to ERP-27")).toBeTruthy();
     await fillBody();
-    await pickBy("Consent purpose", "Deal messages");
+    await pickBy("Why are you writing?", "About a deal we are working on");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -299,7 +299,7 @@ describe("what a sent message files under", () => {
 
     expect(await screen.findByText("Scoped to ERP-27")).toBeTruthy();
     await fillBody();
-    await pickBy("Consent purpose", "Deal messages");
+    await pickBy("Why are you writing?", "About a deal we are working on");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -326,7 +326,7 @@ describe("what a sent message files under", () => {
 
     await screen.findByLabelText("Related to");
     await fillBody();
-    await pickBy("Consent purpose", "Deal messages");
+    await pickBy("Why are you writing?", "About a deal we are working on");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -366,7 +366,7 @@ describe("what a sent message files under", () => {
     await screen.findByLabelText("Related to");
     await pickBy("Related to", "Acme Renewal");
     await fillBody();
-    await pickBy("Consent purpose", "Deal messages");
+    await pickBy("Why are you writing?", "About a deal we are working on");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
@@ -399,7 +399,7 @@ describe("what a sent message files under", () => {
 
     await screen.findByPlaceholderText("Subject");
     await fillBody();
-    await pickBy("Consent purpose", "Deal messages");
+    await pickBy("Why are you writing?", "About a deal we are working on");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() =>

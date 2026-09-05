@@ -234,6 +234,84 @@ export function useReassignTask() {
   });
 }
 
+// Give one record a new owner, through the module that owns it.
+//
+// The exception's SUBJECT decides the endpoint, and this table is the whole
+// dispatch. A generic worklist writer that set an owner across deals, leads and
+// activities would be a second writer of a field five modules already own, and
+// each of them audits and events its own writes — the plan's rule for takeover
+// is that it reuses the source owner's operation rather than reaching past it.
+//
+// Exhaustive over AttentionSubject's own union, so a seventh subject type is a
+// compile error here rather than a button that quietly does nothing. The field
+// differs on activities because a task is ASSIGNED rather than owned, and the
+// two words are the modules' own — collapsing them would write a field that
+// does not exist and fail at runtime on exactly one subject type.
+const OWNER_WRITE = {
+  deal: { path: "/deals/{id}", field: "owner_id" },
+  lead: { path: "/leads/{id}", field: "owner_id" },
+  person: { path: "/people/{id}", field: "owner_id" },
+  organization: { path: "/organizations/{id}", field: "owner_id" },
+  project: { path: "/projects/{id}", field: "owner_id" },
+  activity: { path: "/activities/{id}", field: "assignee_id" },
+} as const satisfies Record<
+  NonNullable<TeamException["subject"]["type"]>,
+  { path: string; field: "owner_id" | "assignee_id" }
+>;
+
+/**
+ * Whether this subject can be handed to somebody at all.
+ *
+ * Every type in the union has an owner write today, so this is true for all of
+ * them — but it is asked rather than assumed, because the honest answer when a
+ * source has no owner write is a control that is absent with a reason, not one
+ * that fails when pressed.
+ */
+export function subjectAcceptsAnOwner(
+  subject: TeamException["subject"],
+): boolean {
+  return subject.type !== undefined && subject.type in OWNER_WRITE;
+}
+
+// Take one exception's record for yourself.
+//
+// Every queue is invalidated, not just the reader's: the record left somebody
+// else's day and arrived in this one, and refetching only the view in front of
+// the caller would leave the other queue claiming work it no longer holds.
+export function useTakeOwnership() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      subject: TeamException["subject"];
+      userId: string;
+    }) => {
+      const write = input.subject.type && OWNER_WRITE[input.subject.type];
+      if (!write) {
+        // Not reachable through the control, which is drawn only where
+        // subjectAcceptsAnOwner agrees. Thrown rather than returned so a future
+        // caller that skips that check fails loudly instead of reporting a
+        // handover that never happened.
+        throw new Error(`no owner write for subject ${input.subject.type}`);
+      }
+      const { error } = await api.PATCH(write.path as "/deals/{id}", {
+        params: { path: { id: input.subject.id } },
+        body: { [write.field]: input.userId },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onSuccess: () => {
+      // worklistKey alone, which the exceptions read is keyed UNDER
+      // ([...worklistKey, "exceptions"]) — so this one invalidation reaches
+      // the panel the press was made from as well as every queue. A second
+      // call naming the exceptions key separately would be the same refetch
+      // asked for twice, and a hand-typed key is how the two drift apart.
+      queryClient.invalidateQueries({ queryKey: worklistKey });
+    },
+  });
+}
+
 // Leave a note on a teammate's queue.
 //
 // Nothing is invalidated here: the notice lands in the RECIPIENT's day, which

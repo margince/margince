@@ -17,7 +17,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -57,7 +56,7 @@ type MergeResult struct {
 // still set (identity.Service.SetRoleObjectGrant), which this gate does not
 // itself refuse.
 func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID, expectedTargetVersion int64) (MergeResult, error) {
-	if err := auth.Require(ctx, "tag", principal.ActionUpdate); err != nil {
+	if err := requireVocabularyAuthority(ctx, principal.ActionUpdate); err != nil {
 		return MergeResult{}, err
 	}
 	// An absent into_tag_id decodes to the zero UUID with no error, so without

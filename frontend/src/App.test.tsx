@@ -50,6 +50,77 @@ describe("the custom-fields admin, at its address inside settings", () => {
   // send you there. It is a section of Settings → Data model now, so the claim
   // this test makes is that the surface still MOUNTS through the real router —
   // and the address it mounts at is the one that changed.
+  // The palette's half of #3850 ends here: it owns no page, so it puts the
+  // message in the ADDRESS and the router hands it to the screen. The screen's
+  // own test proves it opens what it is given; this proves the route gives it.
+  it("opens the message a search address names", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request | string | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith("/v1/me")) {
+          return new Response(JSON.stringify(meFixture({ roles: ["admin"] })), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        // A saved company profile, or the onboarding gate takes the address
+        // and the screen under test never mounts.
+        if (url.endsWith("/v1/company")) {
+          return new Response(
+            JSON.stringify({
+              organization_id: "018f3a1b-0000-7000-8000-0000000000a1",
+              display_name: "Gradion",
+              website: "gradion.com",
+              offer_summary: "Revenue software for manufacturers",
+              icp: "Mid-market manufacturers",
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        if (url.includes("/email-presentation")) {
+          return new Response(JSON.stringify({ code: "unavailable" }), {
+            status: 503,
+            headers: { "Content-Type": "application/problem+json" },
+          });
+        }
+        return new Response(
+          JSON.stringify({
+            data: [],
+            page: { next_cursor: null, has_more: false },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }),
+    );
+    window.location.hash = "#/search/renewal/a1";
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <App />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+
+    // That it ASKS for this message is the claim. What the drawer then draws
+    // is emaildetail's own contract, and the read is stubbed as failing here
+    // precisely so this cannot accidentally assert on that.
+    await waitFor(() =>
+      expect(
+        vi
+          .mocked(fetch)
+          .mock.calls.some((call) =>
+            String(call[0] instanceof Request ? call[0].url : call[0]).includes(
+              "/activities/a1/email-presentation",
+            ),
+          ),
+      ).toBe(true),
+    );
+  });
+
   it("mounts the field builder on the Data model page", async () => {
     // Every query the surface fires must resolve, or QueryGate paints its error
     // card instead of the heading: /me (an admin holding the custom_field write

@@ -76,10 +76,15 @@ describe("CompanyScreen — a live record that is not the viewer's to change", (
     });
     render(<CompanyScreen id="o-1" />);
 
+    // Each control WAITED for, not read in the tick the first one arrived in.
+    // openRecordMenu waits for `edit-record`; the two below were then fetched
+    // with a non-retrying getByTestId in the same breath, so a menu whose
+    // items mount a beat apart threw here — the failure this file sees under a
+    // loaded full run and never in isolation.
     const refused = [
       await openRecordMenu(user, "edit-record"),
-      screen.getByTestId("archive-record"),
-      screen.getByTestId("share-record"),
+      await screen.findByTestId("archive-record"),
+      await screen.findByTestId("share-record"),
     ];
     for (const control of refused) {
       expect(control.hasAttribute("disabled")).toBe(true);

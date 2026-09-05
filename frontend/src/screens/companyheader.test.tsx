@@ -426,11 +426,14 @@ describe("an archived account's verbs", () => {
     await user.click(
       await screen.findByRole("button", { name: "More actions" }),
     );
+    // Each WAITED for. Only the first was, so the three below were read in
+    // the tick it arrived in — and a menu whose items mount a beat apart threw
+    // here, which is the shape that fails under a loaded run and never alone.
     const refused = [
       await screen.findByTestId("edit-record"),
-      screen.getByTestId("merge-record"),
-      screen.getByTestId("archive-record"),
-      screen.getByTestId("share-record"),
+      await screen.findByTestId("merge-record"),
+      await screen.findByTestId("archive-record"),
+      await screen.findByTestId("share-record"),
     ];
     for (const control of refused) {
       expect(control.hasAttribute("disabled")).toBe(true);

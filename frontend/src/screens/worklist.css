@@ -139,6 +139,46 @@
   margin: 0;
 }
 
+/* The reasons past the first few, a tap away rather than gone.
+
+   A native <details>, so the toggle is the summary itself and keyboard and
+   screen-reader behaviour come for free. It carries no chevron and no box: a
+   row is not a section, and furniture around one caption line would cost more
+   height than the fold saves.
+
+   The marker is removed on both spellings — ::marker is the standard one and
+   ::-webkit-details-marker is what Safari still uses — because the "+N more"
+   text IS the affordance, and a triangle beside it says the same thing twice.
+   `display: inline` on the summary is what makes the reasons and the "+N more"
+   read as one sentence rather than a line with a control under it. */
+.worklist-row-because-fold > summary {
+  cursor: pointer;
+  display: inline;
+  list-style: none;
+}
+
+.worklist-row-because-fold > summary::marker,
+.worklist-row-because-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* The count reads as the control, so it takes the accent the rest of the line
+   does not. Underlined on hover rather than always: a caption line that is
+   permanently underlined mid-sentence reads as a broken link. */
+.worklist-row-because-more {
+  color: var(--accentText);
+}
+
+.worklist-row-because-fold > summary:hover .worklist-row-because-more {
+  text-decoration: underline;
+}
+
+/* The opened remainder sits under the line it belongs to, not indented: it is
+   more of the same sentence rather than a nested thing. */
+.worklist-row-because-fold[open] > .worklist-row-because {
+  margin-block-start: var(--space-1);
+}
+
 /* The queue is an ordered list for assistive technology and a plain stack on
    screen: the rank number is already drawn in the row. */
 .worklist-list {

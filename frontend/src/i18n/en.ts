@@ -3241,9 +3241,19 @@ export const en = {
   "compose.scheduleTomorrow": "Tomorrow morning",
   "compose.scheduleMonday": "Monday morning",
   "compose.scheduleNow": "Send now instead",
-  "compose.purpose": "Consent purpose",
-  "compose.purposeHint":
-    "The send is allowed only if every recipient has granted consent for this purpose.",
+  "compose.why": "Why are you writing?",
+  "compose.whyHint":
+    "The record decides what is allowed; this says what you are doing so the answer can be checked against it.",
+  "compose.why.requestedFollowup": "They asked me to get in touch",
+  "compose.why.activeDeal": "About a deal we are working on",
+  "compose.why.quote": "A quote or proposal they asked for",
+  "compose.why.service": "Support for something they bought",
+  "compose.why.invoice": "About an invoice or a payment",
+  "compose.why.contract": "About their contract",
+  "compose.why.account": "About their account",
+  "compose.why.marketing": "Marketing",
+  "compose.derivedReply":
+    "This continues their own message, so it needs no reason from you.",
   "compose.sendLaterLabel": "Send later (optional)",
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Send this email?",
@@ -3303,7 +3313,7 @@ export const en = {
   "compose.emptyRecipients": "Add at least one recipient.",
   "compose.missingSubject": "Give this email a subject.",
   "compose.missingBody": "Write the message before sending it.",
-  "compose.missingPurpose": "Choose what this message is for.",
+  "compose.missingWhy": "Say why you are writing to them.",
   "compose.removeRecipient": "Remove {recipient}",
   "compose.actionFailed": "The request failed. Please try again.",
 
@@ -6564,6 +6574,8 @@ export const en = {
   "aicalls.title": "AI call trace",
   "aicalls.withheld":
     "Only an operator can read the per-call trace. It records every model call the installation made, so it is not shown more widely.",
+  "aiHealth.withheld":
+    "Only an operator can read whether the model lanes are answering. It is the installation's own wiring, not a fact about your work.",
   "aicalls.sub":
     "Every model call — routing identity, tokens, retries, captured payload.",
   "aicalls.col.detail": "Detail",
@@ -8067,6 +8079,13 @@ export const en = {
   "worklist.manager.reassign": "Reassign",
   "worklist.manager.reassignTo": "Hand it to",
   "worklist.manager.reassignConfirm": "Hand it over",
+  "worklist.manager.takeOwnership": "Take this on",
+  "worklist.manager.takeOwnershipAsk":
+    "This moves the record out of their queue and into yours.",
+  "worklist.manager.takeOwnershipConfirm": "Take it on",
+  "worklist.manager.tookOwnership": "It is yours now.",
+  "worklist.manager.takeOwnershipFailed":
+    "That could not be handed over. It is still theirs.",
   "worklist.manager.reassigned": "Handed over.",
   "worklist.manager.reassignFailed": "That could not be handed over.",
   "worklist.manager.coach": "Leave a note",
@@ -8103,6 +8122,7 @@ export const en = {
   "worklist.exceptions.subject": "About",
   "worklist.exceptions.owner": "Who answers",
   "worklist.exceptions.basis": "Judged against",
+  "worklist.exceptions.intervene": "Intervention",
   "worklist.exceptions.nobody": "Nobody yet",
   "worklist.exceptions.ownerWithheld": "Not shown to you",
   "worklist.exceptions.truncated":
@@ -8175,6 +8195,8 @@ export const en = {
   "worklist.because.pinned": "You pinned this",
   "worklist.because.buyer_wrote_last": "They wrote last",
   "worklist.because.waiting_days": "waiting",
+  "worklist.because.more_one": "+{count} more reason",
+  "worklist.because.more_other": "+{count} more reasons",
   "worklist.because.waiting_days.value_one": "waiting {value} day",
   "worklist.because.waiting_days.value_other": "waiting {value} days",
   "worklist.because.overdue": "overdue",

@@ -3162,9 +3162,19 @@ export const vi = {
   "compose.scheduleTomorrow": "Sáng mai",
   "compose.scheduleMonday": "Sáng thứ Hai",
   "compose.scheduleNow": "Gửi ngay bây giờ",
-  "compose.purpose": "Mục đích chấp thuận",
-  "compose.purposeHint":
-    "Lượt gửi chỉ được phép nếu mọi người nhận đều đã chấp thuận cho mục đích này.",
+  "compose.why": "Vì sao bạn viết?",
+  "compose.whyHint":
+    "Hồ sơ quyết định điều gì được phép; phần này nói bạn đang làm gì để đối chiếu được.",
+  "compose.why.requestedFollowup": "Họ đã nhờ tôi liên hệ",
+  "compose.why.activeDeal": "Về một thương vụ đang tiến hành",
+  "compose.why.quote": "Báo giá hoặc đề xuất họ đã hỏi",
+  "compose.why.service": "Hỗ trợ cho thứ họ đã mua",
+  "compose.why.invoice": "Về hóa đơn hoặc thanh toán",
+  "compose.why.contract": "Về hợp đồng của họ",
+  "compose.why.account": "Về tài khoản của họ",
+  "compose.why.marketing": "Tiếp thị",
+  "compose.derivedReply":
+    "Đây là trả lời tin nhắn của chính họ, nên bạn không cần nêu lý do.",
   "compose.sendLaterLabel": "Gửi sau (tùy chọn)",
   "compose.send": "Gửi",
   "compose.sendConfirmTitle": "Gửi email này?",
@@ -3218,7 +3228,7 @@ export const vi = {
   "compose.emptyRecipients": "Hãy thêm ít nhất một người nhận.",
   "compose.missingSubject": "Hãy đặt tiêu đề cho email này.",
   "compose.missingBody": "Hãy viết nội dung trước khi gửi.",
-  "compose.missingPurpose": "Hãy chọn mục đích của tin nhắn này.",
+  "compose.missingWhy": "Hãy cho biết vì sao bạn viết cho họ.",
   "compose.removeRecipient": "Gỡ {recipient}",
   "compose.actionFailed": "Yêu cầu thất bại. Hãy thử lại.",
 
@@ -6432,6 +6442,8 @@ export const vi = {
   "aicalls.title": "Dấu vết lượt gọi AI",
   "aicalls.withheld":
     "Chỉ người vận hành mới đọc được dấu vết từng lượt gọi. Nó ghi lại mọi lượt gọi mô hình của bản cài đặt, nên không hiển thị rộng hơn.",
+  "aiHealth.withheld":
+    "Chỉ người vận hành mới xem được các tầng mô hình có đang trả lời hay không. Đó là hệ thống của bản cài đặt, không phải điều gì về công việc của bạn.",
   "aicalls.sub":
     "Mọi lượt gọi mô hình — danh tính định tuyến, token, số lần thử lại, nội dung đã ghi.",
   "aicalls.col.detail": "Chi tiết",
@@ -7888,6 +7900,13 @@ export const vi = {
   "worklist.manager.reassign": "Giao lại",
   "worklist.manager.reassignTo": "Giao cho",
   "worklist.manager.reassignConfirm": "Giao lại",
+  "worklist.manager.takeOwnership": "Nhận việc này",
+  "worklist.manager.takeOwnershipAsk":
+    "Thao tác này chuyển bản ghi khỏi danh sách của họ sang của bạn.",
+  "worklist.manager.takeOwnershipConfirm": "Nhận",
+  "worklist.manager.tookOwnership": "Bây giờ là của bạn.",
+  "worklist.manager.takeOwnershipFailed":
+    "Không thể chuyển giao. Bản ghi vẫn thuộc về họ.",
   "worklist.manager.reassigned": "Đã giao lại.",
   "worklist.manager.reassignFailed": "Không thể giao lại việc này.",
   "worklist.manager.coach": "Để lại ghi chú",
@@ -7924,6 +7943,7 @@ export const vi = {
   "worklist.exceptions.subject": "Về",
   "worklist.exceptions.owner": "Ai chịu trách nhiệm",
   "worklist.exceptions.basis": "Căn cứ theo",
+  "worklist.exceptions.intervene": "Can thiệp",
   "worklist.exceptions.nobody": "Chưa có ai",
   "worklist.exceptions.ownerWithheld": "Không hiển thị với bạn",
   "worklist.exceptions.truncated":
@@ -7999,6 +8019,8 @@ export const vi = {
   "worklist.because.pinned": "Bạn đã ghim mục này",
   "worklist.because.buyer_wrote_last": "Họ viết sau cùng",
   "worklist.because.waiting_days": "đang chờ",
+  "worklist.because.more_one": "+{count} lý do khác",
+  "worklist.because.more_other": "+{count} lý do khác",
   "worklist.because.waiting_days.value_one": "đã chờ {value} ngày",
   "worklist.because.waiting_days.value_other": "đã chờ {value} ngày",
   "worklist.because.overdue": "quá hạn",

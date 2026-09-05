@@ -488,7 +488,9 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
       ) : (
         <ScreenNotice messageKey="screen.pending" />
       ),
-    search: ({ id }) => <SearchScreen q={id ? safeDecode(id) : ""} />,
+    search: ({ id, id2 }) => (
+      <SearchScreen q={id ? safeDecode(id) : ""} openActivityId={id2} />
+    ),
     tags: ({ id }) => <TagResultScreen tagID={id} />,
     share: ({ id, id2 }) => <ShareRoute id={id} id2={id2} />,
     onboarding: () => <OnboardingScreen />,

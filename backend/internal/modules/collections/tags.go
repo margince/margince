@@ -111,7 +111,7 @@ func (s *Store) CreateTag(ctx context.Context, name string, color, description *
 }
 
 func (s *Store) ArchiveTag(ctx context.Context, id ids.TagID) (tagRow, error) {
-	if err := auth.Require(ctx, "tag", principal.ActionDelete); err != nil {
+	if err := requireVocabularyAuthority(ctx, principal.ActionDelete); err != nil {
 		return tagRow{}, err
 	}
 	var out tagRow
