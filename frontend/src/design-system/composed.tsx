@@ -31,6 +31,7 @@ import { FieldGuard } from "./rbac";
 import { RowTags } from "./rowtags";
 import { useTruncationTooltip } from "./tooltip";
 import { type Provenance, ProvenanceTag } from "./trust";
+import { VisibilityBadge } from "./visibility";
 import "./composed.css";
 
 // Composed surfaces (B-EP09.3b): the pipeline board and the record view — each
@@ -523,6 +524,7 @@ export type TimelineGroup = {
 };
 
 type EmailSummary = components["schemas"]["EmailSummary"];
+type ActivityAudience = components["schemas"]["ActivityAudience"];
 
 export type TimelineEntry = {
   id: string;
@@ -623,6 +625,15 @@ export type TimelineEntry = {
    * README § "Absent, disabled, or withheld").
    */
   withheld?: boolean;
+  /**
+   * Who may read this row's content, for a row that is not an email. An email
+   * carries it inside `emailSummary` and the canonical row draws it; a note or
+   * a logged call limited by a human carried it nowhere, so the one row on a
+   * timeline a reader most needed to recognise as sealed looked like every
+   * other. `workspace` draws nothing: it is the default, and a mark on every
+   * open row is decoration a reader learns to skip.
+   */
+  audience?: ActivityAudience | null;
   /**
    * Rendered content for a row whose substance is not prose — the old→new
    * diff on a `change` row. Sits where the body would, so a change reads at
@@ -1564,6 +1575,17 @@ export function TimelineRow({
             </span>
           )}
           {entry.via}
+          {/* Who may read it, when that is worth a mark: sealed rows and
+              withheld ones. Withheld first, because a held row's `audience`
+              is not the reader's to see and the mark must not claim one. */}
+          {entry.withheld ? (
+            <VisibilityBadge state="withheld" />
+          ) : (
+            entry.audience &&
+            entry.audience !== "workspace" && (
+              <VisibilityBadge state={entry.audience} />
+            )
+          )}
           {flag}
         </span>
         {entry.withheld ? (

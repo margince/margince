@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Who reads this message, said in the drawer, and changed there.
+// Who reads this message, said under its subject, and changed there.
 //
 // The timeline row already had an audience dialog. It could not do this one
 // thing: start from the set that is already on the message. A list row carries
@@ -27,6 +27,7 @@ import { Badge, Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { emailDetailKey } from "../design-system/emaildetail";
+import { VisibilityLine } from "../design-system/visibility";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -48,96 +49,60 @@ type ActivityAudience = components["schemas"]["ActivityAudience"];
 type AudienceMember = components["schemas"]["AudienceMember"];
 type EmailAccessStatus = components["schemas"]["EmailAccessStatus"];
 
-// The sentence version of the row's one-word badge. The row shows "Selected"
-// because a badge that ran to a sentence would out-weigh the subject beside
-// it; here there is room to say what it means for the person reading.
-const STATUS_SENTENCE: Record<EmailAccessStatus, MessageKey> = {
+// The sentence under the mark: the mark says "Participants" in a word, and
+// this says what that means for the person reading. `withheld` has no entry
+// on purpose — the body below a withheld message already says it is not shared
+// with this reader, and the same sentence twice on one screen reads as a
+// surface that does not know what it has said.
+const STATUS_SENTENCE: Partial<Record<EmailAccessStatus, MessageKey>> = {
   team: "email.access.sentence.team",
   participants: "email.access.sentence.participants",
   selected: "email.access.sentence.selected",
-  withheld: "email.access.sentence.withheld",
 };
 
 /**
- * WHAT this message's access is, as markers beside its subject.
+ * WHO reads this message, and the control to change it when this reader may.
  *
- * In the HEADER, because a limit is a fact about a message like its date and
- * its sender, and a reader wants it before they read rather than after. Under
- * the body it sat below the attachments, so on anything longer than a screen
- * the first sign that a message was confidential came after the reader had
- * finished reading it.
- *
- * Quiet badges, which the catalog asks for where a surface carries more than
- * one: a row of filled pills reads as decoration and a reader learns to skip
- * it. `withheld` is the exception and stays filled — it is the one state about
- * the READER rather than the message, and it is why the body below is empty.
- *
- * The sentence does NOT come along. A header holds what a glance needs; the
- * paragraph explaining what "Participants" means to this reader belongs beside
- * the control that changes it.
- */
-export function EmailAccessMarkers({
-  access,
-}: Readonly<{ access: EmailAccess }>) {
-  const t = useT();
-  const withheld = access.display_status === "withheld";
-  // WHY, when the server gave a reason. `explanation` is a TOKEN, not a
-  // sentence — `readEmailAccess` fills it from the same `audience_reason`
-  // column the timeline row reads — so it is translated through the shared
-  // map. Printing it raw would put `pending_verdict` on the screen, and a
-  // reason the server learned to give and the map has not draws nothing.
-  const reasonKey = AUDIENCE_REASON_LABEL[access.explanation ?? ""];
-  return (
-    <div className="emailaccess__markers">
-      <Badge tone={withheld ? "warn" : undefined} quiet={!withheld}>
-        {t(STATUS_LABEL[access.display_status])}
-      </Badge>
-      {reasonKey && <Badge quiet>{t(reasonKey)}</Badge>}
-    </div>
-  );
-}
-
-/**
- * WHO reads this message, said in full, and the control to change it when this
- * reader may.
+ * One line under the subject: the mark, the reason the message is held when
+ * the server gave one, and the verb at the far end — then the sentence and
+ * the names under it. The verb sits BESIDE the fact it flips: a button that
+ * changes who reads a message belongs next to the word that says who does,
+ * not under the body where a reader has to connect the two for themselves.
  *
  * Always drawn, even for a reader who may change nothing: a reader without
- * standing sees the sentence and no button, which is the honest rendering of
- * "you can see that this is limited, and it is not yours to widen".
- *
- * The markers above are its other half and are NOT repeated here — the header
- * carries the badge, this carries the sentence, the names and the verb.
+ * standing sees the mark and the sentence and no button, which is the honest
+ * rendering of "you can see that this is limited, and it is not yours to
+ * widen".
  */
 export function EmailAccessEditor({
   presentation,
 }: Readonly<{ presentation: EmailPresentation }>) {
   const t = useT();
   const { access } = presentation;
+  // WHY, when the server gave a reason. `explanation` is a TOKEN, not a
+  // sentence — `readEmailAccess` fills it from the same `audience_reason`
+  // column the timeline row reads — so it is translated through the shared
+  // map. Printing it raw would put `pending_verdict` on the screen, and a
+  // reason the server learned to give and the map has not draws nothing.
+  const reasonKey = AUDIENCE_REASON_LABEL[access.explanation ?? ""];
+  const sentence = STATUS_SENTENCE[access.display_status];
+  // The control only where the server says this caller's write would be
+  // taken. `can_change` and `change_mode` are decided by the authority that
+  // would execute the write, so a button drawn from them is a button the write
+  // accepts — nothing here re-derives it from the row.
+  const changeable = access.can_change && access.change_mode !== "none";
   return (
     <div className="emailaccess">
-      <p className="emailaccess__sentence">
-        {t(STATUS_SENTENCE[access.display_status])}
-      </p>
+      <VisibilityLine
+        state={access.display_status}
+        marks={reasonKey && <Badge quiet>{t(reasonKey)}</Badge>}
+        action={changeable && <ChangeAccess presentation={presentation} />}
+      />
+      {sentence && <p className="emailaccess__sentence">{t(sentence)}</p>}
       <NamedMembers access={access} />
-      {/* The control only where the server says this caller's write would be
-          taken. `can_change` and `change_mode` are decided by the authority
-          that would execute the write, so a button drawn from them is a button
-          the write accepts — nothing here re-derives it from the row. */}
-      {access.can_change && access.change_mode !== "none" && (
-        <ChangeAccess presentation={presentation} />
-      )}
     </div>
   );
 }
-
-// The one-word label, shared with the row's badge so both say the same word
-// about the same message.
-const STATUS_LABEL: Record<EmailAccessStatus, MessageKey> = {
-  team: "email.access.team",
-  participants: "email.access.participants",
-  selected: "email.access.selected",
-  withheld: "email.access.withheld",
-};
 
 /**
  * Who is named, when the message is limited to a set and this reader may see
@@ -227,7 +192,11 @@ function ThreadContribution({
     return null;
   }
   return (
-    <div className="emailaccess__change">
+    <span className="emailaccess__change">
+      {/* The verb names where the message GOES, not where it is: a shared
+          thread offers "Make private", a held one "Share". A verb that named
+          the current state would read as the opposite of what the press
+          does. */}
       <Button
         small
         pending={mutation.isPending}
@@ -236,19 +205,26 @@ function ThreadContribution({
           mutation.mutate({ threadKey, share: !shared });
         }}
       >
-        {shared ? t("compose.threadKeepPrivate") : t("compose.threadShare")}
+        {shared ? t("compose.threadMakePrivate") : t("compose.threadShare")}
       </Button>
+      {/* What the press REACHES, from the server's own word for it. This
+          reader's write is to their side of the whole thread, and a button
+          drawn beside one message would otherwise read as a change to that
+          message alone. */}
+      {presentation.access.change_scope === "thread" && (
+        <span className="t-caption">{t("compose.threadScope")}</span>
+      )}
       {held !== null && (
         <span className="t-caption">
           {t("compose.threadStillHeld").replace("{count}", String(held))}
         </span>
       )}
       {mutation.isError && (
-        <p className="emailaccess__error">
+        <span className="emailaccess__error">
           {problemMessageOf(mutation.error, t)}
-        </p>
+        </span>
       )}
-    </div>
+    </span>
   );
 }
 
@@ -285,7 +261,7 @@ function MessageAudience({
   const unchanged =
     choice === current && (choice !== "selected" || sameSet(members, standing));
   return (
-    <div className="emailaccess__change">
+    <span className="emailaccess__change">
       <Button
         small
         onClick={() => {
@@ -341,7 +317,7 @@ function MessageAudience({
           </div>
         </ConfirmModal>
       )}
-    </div>
+    </span>
   );
 }
 

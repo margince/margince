@@ -1549,8 +1549,9 @@ export const de = {
   "timeline.withheld": "Inhalt nur f\u00fcr Beteiligte",
   "compose.deadRecipients":
     "E-Mails an {addresses} kommen nicht an. Die letzte Zustellung dorthin wurde abgelehnt, und seitdem ist keine Zustellung mehr durchgekommen. Trotzdem senden oder eine andere Adresse verwenden.",
-  "compose.threadShare": "Verlauf teilen",
-  "compose.threadKeepPrivate": "Privat halten",
+  "compose.threadShare": "Mit dem Unternehmen teilen",
+  "compose.threadMakePrivate": "Privat machen",
+  "compose.threadScope": "Gilt für den ganzen Verlauf.",
   "compose.threadStillHeld":
     "Weiterhin zurückgehalten: {count} weitere Person(en) in diesem Verlauf haben ihn nicht freigegeben.",
   "compose.reason.posture": "Durch Ihre Einstellung zurückgehalten",
@@ -1562,7 +1563,7 @@ export const de = {
   "compose.reason.counterparty": "Gehalten, Mail mit dieser Partei",
   "compose.reason.explicitlyConfidential": "Als vertraulich markiert",
   "compose.reason.noCounterparty": "Gehalten, niemand zum Zuordnen",
-  "compose.audience": "Sichtbarkeit",
+  "compose.audience": "Sichtbarkeit ändern",
   "compose.audienceTitle": "Wer darf diese Nachricht lesen?",
   "compose.audienceLegend": "Sichtbarkeit dieser einen Nachricht",
   "email.aMessage": "Eine Nachricht",
@@ -1572,17 +1573,16 @@ export const de = {
   "email.received": "Erhalten",
   "email.sentTo": "Gesendet an {who}",
   "email.sent": "Gesendet",
-  "email.access.team": "Team",
-  "email.access.participants": "Beteiligte",
-  "email.access.selected": "Ausgewählte",
-  "email.access.withheld": "Zurückgehalten",
   "email.access.sentence.team": "Alle im Unternehmen können das lesen.",
   "email.access.sentence.participants":
     "Nur die Beteiligten dieser Nachricht können sie lesen.",
   "email.access.sentence.selected":
     "Nur die unten genannten Personen können das lesen.",
-  "email.access.sentence.withheld":
-    "Diese Nachricht ist nicht für Sie freigegeben.",
+  "visibility.team": "Team",
+  "visibility.participants": "Beteiligte",
+  "visibility.selected": "Ausgewählte",
+  "visibility.private": "Nur Sie",
+  "visibility.withheld": "Zurückgehalten",
   "email.access.unnamedMember": "Jemand, der nicht mehr hier ist",
   "email.move.needsReply": "Antwort offen",
   "email.move.waitingForThem": "Warten auf Antwort",
