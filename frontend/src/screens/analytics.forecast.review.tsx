@@ -172,12 +172,22 @@ function CoverageLine({ run }: Readonly<{ run: Assurance }>) {
 // recognise. An unknown source falls back to its wire key: a source this
 // release has not heard of is better named badly than not named at all, since
 // the whole point of the line is which one to go and fix.
-function sourceName(source: string, t: ReturnType<typeof useT>): string {
+// Exported for the Data coverage table, which draws the same source enum:
+// two screens naming one vocabulary share one translator.
+export function sourceName(source: string, t: ReturnType<typeof useT>): string {
   switch (source) {
     case "mail":
       return t("review.source.mail");
     case "offers":
       return t("review.source.offers");
+    case "calendar":
+      return t("review.source.calendar");
+    case "documents":
+      return t("review.source.documents");
+    case "contracts":
+      return t("review.source.contracts");
+    case "incumbent":
+      return t("review.source.incumbent");
     default:
       return source;
   }

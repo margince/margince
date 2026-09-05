@@ -85,8 +85,24 @@ func setupPassports(t *testing.T) *passportsEnv {
 	return e
 }
 
+// identityFor builds the identity ListPassports actually reads. Since
+// 8996cef8e ("A settings surface is gated on the grant it named, not on
+// being an admin") the admin widening asks auth.Require(ctx, "user_admin",
+// ActionRead) against id.Permissions, not id.hasRole("admin") against
+// id.Roles — Roles still rides along (other identity verbs' escalation
+// ceiling reads it), but a caller here meaning "admin" has to grant the
+// object too, or the check the production code runs sees nobody.
 func (e *passportsEnv) identityFor(user ids.UUID, roles []string) identity.Identity {
-	return identity.Identity{UserID: ids.From[ids.UserKind](user), WorkspaceID: ids.From[ids.WorkspaceKind](e.WS), Roles: roles}
+	perms := principal.Permissions{RowScope: principal.RowScopeAll}
+	for _, r := range roles {
+		if r == "admin" {
+			perms.Objects = map[string]principal.ObjectGrant{"user_admin": {Read: true}}
+		}
+	}
+	return identity.Identity{
+		UserID: ids.From[ids.UserKind](user), WorkspaceID: ids.From[ids.WorkspaceKind](e.WS),
+		Roles: roles, Permissions: perms,
+	}
 }
 
 func (e *passportsEnv) ctx() context.Context {

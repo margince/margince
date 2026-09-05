@@ -141,6 +141,10 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"list_records", `{"record_type":"deal","filters":{"pipeline_id":"` + pipeline.String() + `"}}`},
 		{"list_records", `{"record_type":"person","limit":5}`},
 		{"run_report", `{"report":"deals-by-stage"}`},
+		// The typed engine's own door, over the same pipeline the fixture above
+		// already holds a deal in — so the count answers 1 rather than an
+		// unproven empty page.
+		{"run_analytics_query", `{"entity":"pipeline-current","measures":[{"fn":"count","as":"deals"}]}`},
 		// No arguments: the directory answers what the installation composed, so
 		// there is nothing for a caller to narrow by — and the empty object is
 		// the shape the schema declares.

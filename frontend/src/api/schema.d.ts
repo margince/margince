@@ -27605,6 +27605,8 @@ export interface components {
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
+            /** @description Whether THIS caller may open the buyer preview of THIS room — the same question `POST /deal-rooms/{id}/preview` answers, computed here so a screen can say no before the press rather than after it. Four things must hold, and a plain `writable` would answer only one: the caller holds `update` on deal rooms, is a person rather than an agent (a preview is a seat's own view, and a system caller has no seat to preview from), the underlying deal is writable AND live, and the room is not archived. False is not "this room is broken" — it is the ordinary reading for a colleague who may read the room and not present it. */
+            readonly preview_available?: boolean;
             version?: components["schemas"]["RowVersion"];
             /** Format: date-time */
             created_at: string;

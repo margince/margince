@@ -17,7 +17,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgtype"
+
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -69,13 +72,27 @@ func seedRollupOpenDeal(t *testing.T, e *Env, st rollupStages, org ids.UUID, amo
 
 // seedRollupWonDeal closes a deal with the frozen FX rate the
 // deal_closed_fx CHECK demands — the rate the quarter sum must reuse.
+//
+// amount_minor_base is set alongside it rather than left to a trigger: since
+// 1788583500 the column is filled by the real close path (deals.freezeBaseRate),
+// never generated — a generated expression cannot reach the base currency's own
+// minor-unit scale. Computed here with deals.ConvertToBase, the same exported
+// arithmetic that writer calls, rather than a second copy of the formula.
 func seedRollupWonDeal(t *testing.T, e *Env, st rollupStages, org ids.UUID,
 	amountMinor int64, currency, fxRateToBase string, closedAt time.Time,
 ) {
 	t.Helper()
-	e.WsExec(t, `INSERT INTO deal (id, name, amount_minor, currency, fx_rate_to_base, pipeline_id, stage_id, organization_id, status, closed_at, source, captured_by)
-		VALUES ($1, 'Won Deal', $2, $3, $4, $5, $6, $7, 'won', $8, 'manual', 'human:test')`,
-		ids.NewV7(), amountMinor, currency, fxRateToBase, st.pipeline, st.won, org, closedAt)
+	var rate pgtype.Numeric
+	if err := rate.Scan(fxRateToBase); err != nil {
+		t.Fatalf("rate %q is not a number: %v", fxRateToBase, err)
+	}
+	amountMinorBase, err := deals.ConvertToBase(amountMinor, rate, currency, "EUR")
+	if err != nil {
+		t.Fatalf("converting %d %s to base: %v", amountMinor, currency, err)
+	}
+	e.WsExec(t, `INSERT INTO deal (id, name, amount_minor, currency, fx_rate_to_base, amount_minor_base, pipeline_id, stage_id, organization_id, status, closed_at, source, captured_by)
+		VALUES ($1, 'Won Deal', $2, $3, $4, $5, $6, $7, $8, 'won', $9, 'manual', 'human:test')`,
+		ids.NewV7(), amountMinor, currency, fxRateToBase, amountMinorBase, st.pipeline, st.won, org, closedAt)
 }
 
 func seedRollupFxRate(t *testing.T, e *Env, fromCurrency, rate string, day time.Time) {
