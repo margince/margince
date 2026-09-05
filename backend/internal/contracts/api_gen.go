@@ -877,7 +877,9 @@ const (
 	AnalyticsCount         AnalyticsMeasureFn = "count"
 	AnalyticsCountDistinct AnalyticsMeasureFn = "count_distinct"
 	AnalyticsMax           AnalyticsMeasureFn = "max"
+	AnalyticsMedian        AnalyticsMeasureFn = "median"
 	AnalyticsMin           AnalyticsMeasureFn = "min"
+	AnalyticsP75           AnalyticsMeasureFn = "p75"
 	AnalyticsSum           AnalyticsMeasureFn = "sum"
 )
 
@@ -892,7 +894,11 @@ func (e AnalyticsMeasureFn) Valid() bool {
 		return true
 	case AnalyticsMax:
 		return true
+	case AnalyticsMedian:
+		return true
 	case AnalyticsMin:
+		return true
+	case AnalyticsP75:
 		return true
 	case AnalyticsSum:
 		return true
@@ -16794,11 +16800,11 @@ type AnalyticsMeasure struct {
 	// Field What to aggregate. Required for every fn but `count`.
 	Field *string `json:"field,omitempty"`
 
-	// Fn The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.
+	// Fn The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population. `median` and `p75` answer null below a five-value sample floor: a percentile over three deals is one deal's value wearing a statistic's name, and the count beside the blank still says how many there were.
 	Fn AnalyticsMeasureFn `json:"fn"`
 }
 
-// AnalyticsMeasureFn The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.
+// AnalyticsMeasureFn The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population. `median` and `p75` answer null below a five-value sample floor: a percentile over three deals is one deal's value wearing a statistic's name, and the count beside the blank still says how many there were.
 type AnalyticsMeasureFn string
 
 // AnalyticsQuery One question, in the vocabulary the schema returned.

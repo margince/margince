@@ -284,3 +284,44 @@ func TestTheCallersAuthorityReachesTheStatement(t *testing.T) {
 		t.Errorf("the caller's own narrowing is absent from:\n%s", plan.SQL)
 	}
 }
+
+// A percentile renders under the sample floor: below five values the answer
+// is NULL, not a number — a median over three deals is one deal's value
+// wearing a statistic's name. The same refusal the report engine writes, at
+// the same threshold, so a screen and a tool cannot disagree about one week.
+func TestAPercentileAnswersNullBelowTheSampleFloor(t *testing.T) {
+	t.Parallel()
+	plan, err := Compile(Query{
+		Entity: "deals",
+		Measures: []Measure{
+			{Fn: Median, Field: "amount", As: "typical"},
+			{Fn: P75, Field: "amount", As: "upper"},
+		},
+	}, testSchema(), noScope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantMedian := "(CASE WHEN count(t.amount_minor) >= 5 THEN " +
+		"percentile_cont(0.5) WITHIN GROUP (ORDER BY t.amount_minor) END)"
+	if !strings.Contains(plan.SQL, wantMedian) {
+		t.Errorf("median renders without the floor:\n got: %s\nwant it to contain: %s",
+			plan.SQL, wantMedian)
+	}
+	if !strings.Contains(plan.SQL, "percentile_cont(0.75)") {
+		t.Errorf("p75 does not ask for the 75th percentile: %s", plan.SQL)
+	}
+}
+
+// A percentile over a non-numeric field is refused before rendering: the 50th
+// percentile of a stage id means nothing, and Postgres computing it anyway is
+// exactly why the refusal is written here.
+func TestAPercentileOverANonNumericFieldIsRefused(t *testing.T) {
+	t.Parallel()
+	_, err := Compile(Query{
+		Entity:   "deals",
+		Measures: []Measure{{Fn: Median, Field: "stage"}},
+	}, testSchema(), noScope)
+	if err == nil {
+		t.Fatal("median over a dimension compiled; it must be refused by name")
+	}
+}

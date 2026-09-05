@@ -254,8 +254,30 @@ func aggregateSQL(entity Entity, m Measure) (string, error) {
 	if m.Fn == CountDistinct {
 		return fmt.Sprintf("count(DISTINCT %s)", field.Expr), nil
 	}
+	if m.Fn == Median || m.Fn == P75 {
+		// NULL below the sample floor rather than a number, the same refusal
+		// the report engine writes (report.go, aggregateSelect) and for the
+		// same reason: a percentile over three deals is one deal's value
+		// wearing a statistic's name. NULL rather than an error because the
+		// row is still a real answer — a count beside the blank says how many
+		// deals there were, and failing the whole query would take that too.
+		fraction := "0.5"
+		if m.Fn == P75 {
+			fraction = "0.75"
+		}
+		return fmt.Sprintf(
+			"(CASE WHEN count(%s) >= %d THEN percentile_cont(%s) WITHIN GROUP (ORDER BY %s) END)",
+			field.Expr, PercentileSampleFloor, fraction, field.Expr), nil
+	}
 	return fmt.Sprintf("%s(%s)", m.Fn, field.Expr), nil
 }
+
+// PercentileSampleFloor is how many values a percentile needs before it means
+// anything. Exported so the compose report engine's identical floor can be
+// asserted equal to this one; the two engines answering the same question with
+// different thresholds would make a screen and a tool disagree about the same
+// team's week.
+const PercentileSampleFloor = 5
 
 // measureName is what the caller calls the column, and it is measureAlias —
 // one spelling, because validateAliases refuses a collision and this renders
