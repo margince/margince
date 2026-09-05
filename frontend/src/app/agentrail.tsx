@@ -1167,6 +1167,17 @@ export function AgentRail({
     state === "idle"
       ? resting
       : barLine(state, signals, t("auth.coreDevelopment"), agentLine);
+  // ONE line under the orb, whoever is talking. While this tab is fetching
+  // something it can name, that sentence is the orb's line — "Reading Acme" is
+  // the status a reader is waiting on at that moment — and the agent's own line
+  // has the slot back the instant the read settles. Two stacked lines read as
+  // two statuses, and a reader asked which one was the status.
+  //
+  // A fault keeps the slot regardless: the colour and the caption are always
+  // about the same thing, and an amber orb captioned "Reading the pipeline"
+  // tells a reader the pipeline is the fault.
+  const holdsFault = state === "warning" || state === "error";
+  const shown = ticker.length > 0 && !holdsFault ? ticker[0].said : line;
   return (
     <section
       className="arblock"
@@ -1235,24 +1246,10 @@ export function AgentRail({
         {/* Hidden by the stylesheet on the collapsed rail, where the orb and the
             count are the whole report and the button's name carries the rest. */}
         <span className="arwords">
-          {/* The agent's line, and it is the agent's alone. It used to be shared
-              with the tool's own narration below, which meant the one sentence
-              about the agent vanished for as long as anything was loading: the
-              two subjects took turns in one slot, and a reader could not tell
-              which of them was talking. */}
-          <span className="arline">{line}</span>
-          {/* What the TOOL is fetching for this reader, one named thing at a
-              time, in its own quieter register underneath. It is true at the
-              same moment as the line above and about something else, so it sits
-              beside it rather than replacing it. Keyed on the event id so a
-              repeated phrase still arrives as a new line rather than sitting
-              there looking stuck: what a reader is counting is EVENTS, and two
-              identical sentences in a row are two of them. */}
-          {ticker.length > 0 && (
-            <span className="artool" key={ticker[0].id}>
-              {ticker[0].said}
-            </span>
-          )}
+          {/* The one line: the tool's named read while one is in flight, the
+              agent's own sentence otherwise. The panel keeps the agent's line
+              regardless, because it is the agent's report. */}
+          <span className="arline">{shown}</span>
           {/* The spend sits in the bar and not only in the panel: it is the one
               figure somebody is accountable for, and a number nobody opens a
               panel to see is a number nobody sees. Absent when this seat may not

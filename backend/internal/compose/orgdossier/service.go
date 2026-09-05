@@ -171,7 +171,9 @@ func (s *Service) Get(ctx context.Context, orgID ids.OrganizationID, force bool)
 		return cached.wire(orgID, s.now().UTC()), nil
 	}
 
-	sections, by, laneFailed := WriteDossier(ctx, s.lane, in, lang)
+	// The company is NAMED to the rail here, from the same input the dossier
+	// is written from.
+	sections, by, laneFailed := WriteDossier(ai.WithSubject(ctx, orgID.Ref(), in.Name), s.lane, in, lang)
 	if laneFailed && found && cached.usable(fingerprint) {
 		// The floor is a real answer, but it is a plainer one than the model
 		// already wrote for these same facts. A transient outage must not

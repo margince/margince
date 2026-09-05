@@ -991,13 +991,27 @@ describe("AgentRail", () => {
   // the copy existing is not the claim — the claim is that a live summarize
   // reaches the reader's own line, in their own words, through the same feed
   // the overnight run uses.
-  it("narrates a summary the reader asked for while it is still being written", async () => {
-    withRuns(RUN({ kind: "summarize" }));
+  //
+  // NAMED, because that is the line that answers the reader: the server sends
+  // the record the summary is about as `subject_label`, and the rail says
+  // "about Acme" rather than "about this company" — which was wrong for a
+  // person or a meeting and told a rep nothing for a company.
+  it("names the record a summary is about while it is still being written", async () => {
+    withRuns(RUN({ kind: "summarize", subject_label: "Acme" }));
     const { container } = render(ROUTE);
     await settlesOnLine(
       container,
-      "I'm pulling together what I know about this company.",
+      "I'm pulling together what I know about Acme.",
     );
+  });
+
+  // An occurrence that arrived without a name — an older server, or a record
+  // with no name to give — falls back to a line that names NO record, rather
+  // than guessing at one.
+  it("names no record for a summary that carried no name", async () => {
+    withRuns(RUN({ kind: "summarize" }));
+    const { container } = render(ROUTE);
+    await settlesOnLine(container, "I'm pulling a summary together.");
   });
 
   it("moves the Core to working when a server run is live and this tab is idle", async () => {
@@ -1055,28 +1069,53 @@ describe("AgentRail", () => {
     });
   });
 
-  // Two subjects, two slots. They used to share one, so the agent's sentence
-  // disappeared for as long as anything was loading and a reader could not tell
-  // which of the two was talking. Both are true at the same moment here: an
-  // overnight brief is running, and this tab is fetching its own sources.
-  it("keeps the agent's line and the tool's narration in separate slots", async () => {
+  // ONE line under the orb. While this tab is fetching something it can name,
+  // that sentence is the orb's line; the agent's own sentence has the slot
+  // back once the read settles. Both are true at the same moment here — an
+  // overnight brief is running, and this tab is fetching its own sources — and
+  // the reader sees one status at a time, never two stacked.
+  it("gives the tool's named read the orb's one line, then hands it back", async () => {
     vi.useFakeTimers();
     stubAgentRailApi({
       agentActivity: () => jsonResponse({ running: [RUN()], recent: [] }),
     });
     const { container } = render(ROUTE);
     // Inside the ticker's LINGER_MS, so the mount-time reads it named are still
-    // standing while the agent's own line has answered. That overlap IS the
-    // case: the two used to take turns in one slot, and the whole point of the
-    // change is that this moment shows both.
+    // standing while the agent's own line has answered. WHICH of them is newest
+    // is a race between stubs and no part of the claim: that the tool's
+    // sentence holds the one slot, and nothing sits under it, is the claim.
     await act(() => vi.advanceTimersByTimeAsync(300));
+    const inFlight = container.querySelector(".arline")?.textContent;
+    expect(inFlight).toBeTruthy();
+    expect(inFlight).not.toBe(BRIEF_RUNNING);
+    expect(container.querySelectorAll(".arwords > span").length).toBe(1);
+    // Past every linger the mount reads can hold, the agent's line is back.
+    await act(() => vi.advanceTimersByTimeAsync(2500));
     expect(container.querySelector(".arline")?.textContent).toBe(BRIEF_RUNNING);
-    // WHICH of the mount reads is newest is a race between stubs and no part of
-    // the claim. That the tool has a line of its own, saying something other
-    // than the agent's, is the whole claim.
-    const tool = container.querySelector(".artool")?.textContent;
-    expect(tool).toBeTruthy();
-    expect(tool).not.toBe(BRIEF_RUNNING);
+  });
+
+  // A fault keeps the line while reads are in flight: the colour and the
+  // caption are about the same thing, and an amber orb captioned with a read
+  // would tell a reader the read is the fault. Proven by the caption standing
+  // still across the window the case above shows the tool taking.
+  it("never lets a read caption a fault", async () => {
+    vi.useFakeTimers();
+    stubAgentRailApi({
+      license: () =>
+        jsonResponse({
+          state: "rejected",
+          seats_used: 1,
+          over_limit: false,
+          checked_at: "2026-08-01T09:00:00Z",
+        }),
+      agentActivity: () => jsonResponse({ running: [], recent: [] }),
+    });
+    const { container } = render(ROUTE);
+    await act(() => vi.advanceTimersByTimeAsync(300));
+    expect(block(container).getAttribute("data-core-state")).toBe("warning");
+    const inFlight = container.querySelector(".arline")?.textContent;
+    await act(() => vi.advanceTimersByTimeAsync(2500));
+    expect(container.querySelector(".arline")?.textContent).toBe(inFlight);
   });
 
   // The colour and the sentence are always about the SAME thing. A workspace in

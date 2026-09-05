@@ -3677,16 +3677,34 @@ export const en = {
   // These four were deliberately not narrated until the router could say
   // `running`: reporting them settled-only meant a line that appeared already
   // finished, which tells a waiting reader nothing they did not already know.
-  "agent.activity.summarize.queued": "Reading up on this company is queued.",
-  "agent.activity.summarize.running":
-    "I'm pulling together what I know about this company.",
-  "agent.activity.summarize.done": "What I know about this company is ready.",
+  //
+  // summarize is five sites over three kinds of record — a company, a person,
+  // a meeting — so the unnamed lines name none of them: "this company" was a
+  // guess that was wrong two times in five, and a guess at a name is worse
+  // than no name. The NAMED pair below is the line a reader should see; these
+  // are what an occurrence without a subject falls back to.
+  "agent.activity.summarize.queued": "A summary is queued.",
+  "agent.activity.summarize.running": "I'm pulling a summary together.",
+  "agent.activity.summarize.done": "Your summary is ready.",
   "agent.activity.summarize.degraded":
-    "I gathered some of what I know about this company and stopped.",
-  "agent.activity.summarize.failed":
-    "I couldn't finish reading up on this company.",
+    "I gathered part of a summary and stopped.",
+  "agent.activity.summarize.failed": "I couldn't finish the summary.",
   "agent.activity.summarize.stalled":
-    "Reading up on this company has taken unusually long. It may have stopped.",
+    "The summary has taken unusually long. It may have stopped.",
+  // The same six with the record NAMED — the company, the person or the
+  // meeting the summary is about, in the name the product shows for it
+  // elsewhere. Whenever the rail names what it is working on, it names the
+  // actual record: "what I know about Acme", never "about this company".
+  "agent.activity.summarizeNamed.queued": "Reading up on {name} is queued.",
+  "agent.activity.summarizeNamed.running":
+    "I'm pulling together what I know about {name}.",
+  "agent.activity.summarizeNamed.done": "What I know about {name} is ready.",
+  "agent.activity.summarizeNamed.degraded":
+    "I gathered some of what I know about {name} and stopped.",
+  "agent.activity.summarizeNamed.failed":
+    "I couldn't finish reading up on {name}.",
+  "agent.activity.summarizeNamed.stalled":
+    "Reading up on {name} has taken unusually long. It may have stopped.",
   "agent.activity.draftReply.queued": "Your reply is queued to be drafted.",
   "agent.activity.draftReply.running": "I'm drafting your reply.",
   "agent.activity.draftReply.done": "Your draft reply is ready.",

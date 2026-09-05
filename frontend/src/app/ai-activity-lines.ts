@@ -192,9 +192,10 @@ export const PANEL_HEADING: Readonly<Record<"running", MessageKey>> = {
  * PARTIAL on purpose, where `ACTIVITY_LINE` is total: a named variant is not
  * something every kind can have. Most occurrences are about no single record,
  * and the ones that are only carry a name when their emitter sends
- * `subject_label` — which today is the document reading and nothing else. A
- * total map here would demand copy for sentences no server can produce, which
- * is the boilerplate the notDisplayed branch exists to avoid.
+ * `subject_label` — the document reading names its document, and the summary
+ * sites name the company, person or meeting they were asked about. A total
+ * map here would demand copy for sentences no server can produce, which is
+ * the boilerplate the notDisplayed branch exists to avoid.
  *
  * Each entry is a strict alternative to the unnamed line, never a suffix: "I'm
  * reading Q3-offer.pdf" is one sentence in every locale this ships in, and
@@ -209,6 +210,18 @@ export const NAMED_LINE: Readonly<Partial<Record<ActivityKind, LineSet>>> = {
     done: "agent.activity.documentExtractNamed.done",
     degraded: "agent.activity.documentExtractNamed.degraded",
     failed: "agent.activity.documentExtractNamed.failed",
+  },
+  // One table for three kinds of record, because the sentence is the same
+  // shape for each: "what I know about Acme", "about Ana Roth", "about the
+  // cutover review". The label is what the product calls the record elsewhere,
+  // sent by the site that assembled the summary's input.
+  summarize: {
+    queued: "agent.activity.summarizeNamed.queued",
+    running: "agent.activity.summarizeNamed.running",
+    stalled: "agent.activity.summarizeNamed.stalled",
+    done: "agent.activity.summarizeNamed.done",
+    degraded: "agent.activity.summarizeNamed.degraded",
+    failed: "agent.activity.summarizeNamed.failed",
   },
 };
 

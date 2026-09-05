@@ -215,6 +215,7 @@ func (m *CallMeter) announceRail(ctx context.Context, tx pgx.Tx, terminal Call) 
 		// no live attempt whose believability could expire.
 		DegradeReason: railDegradeReason(terminal),
 	}
+	terminal.Subject.stamp(&payload)
 	if err := storekit.EmitPipelinePayload(ctx, tx, ledgerID, payload); err != nil {
 		return fmt.Errorf("ai: publish rail state change: %w", err)
 	}
