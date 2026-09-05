@@ -305,7 +305,8 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	// against a rate the deal never closed at.
 	if DealStatus(status) != DealOpen && current.AmountMinor != nil && current.Currency != nil {
 		rateBefore, rateDateBefore := frozenBefore(current)
-		if err := s.freezeBaseRate(ctx, tx, p, string(*current.Currency), *closedAt, rateBefore, rateDateBefore); err != nil {
+		if err := s.freezeBaseRate(ctx, tx, p, current.Id, string(*current.Currency),
+			*current.AmountMinor, *closedAt, rateBefore, rateDateBefore); err != nil {
 			return nil, "", fmt.Errorf("freeze fx at close: %w", err)
 		}
 	}
@@ -322,116 +323,13 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 		rateBefore, rateDateBefore := frozenBefore(current)
 		p.Set(fxRateColumn, rateBefore, nil)
 		p.SetDate(fxRateDateColumn, rateDateBefore, nil)
+		// The converted amount goes with the rate it was converted at, so the
+		// reopen clears both. clearFrozenConversion owns that, beside the writer
+		// that sets it: two places deciding what a frozen conversion consists of
+		// is how one of them comes to leave half of it behind.
+		if err := clearFrozenConversion(ctx, tx, p, current); err != nil {
+			return nil, "", err
+		}
 	}
 	return p, status, nil
-}
-
-// MissingFxRateError maps to 422: closing a foreign-currency deal needs a
-// same-day-or-earlier fx_rate row to freeze.
-type MissingFxRateError struct{ From, To string }
-
-func (e *MissingFxRateError) Error() string {
-	return "no fx_rate from " + e.From + " to " + e.To + " to freeze at close"
-}
-
-// MessageFault names the condition and no field: the spec's hard-fail
-// (formulas §6.1) fires because the workspace holds no rate for this currency
-// pair — server-side data, not an argument. Naming fx_rate_to_base would tell
-// an agent to correct an input it never sent and cannot supply.
-func (e *MissingFxRateError) MessageFault() (code, message string) {
-	return "fx_rate_unavailable", e.Error() + " — an admin must load the rate for this currency pair before this close can succeed"
-}
-
-// FreezeRateAt resolves what a currency converts at, as of a day, against the
-// installation's own base — the same reading a closing deal freezes.
-//
-// Exported for a caller outside this module that has to freeze the same
-// number: a contract, at activation. It could read fx_rate itself — the table
-// is deals', and the ownership gate binds writes rather than reads — and then
-// there would be two spellings of "the latest rate on or before this day", free
-// to disagree about the boundary, the same-currency shortcut, or what a missing
-// rate means. One of them would be corrected.
-//
-// Handed over as a function rather than as this store, so the caller takes a
-// seam and not a module (the shape counters' BaseCurrencyFunc already uses).
-func (s *Store) FreezeRateAt(ctx context.Context, tx pgx.Tx, currency string, asOf time.Time) (string, time.Time, error) {
-	base, err := s.installation.BaseCurrency(ctx, tx)
-	if err != nil {
-		return "", time.Time{}, err
-	}
-	return s.freezeFx(ctx, tx, base, currency, asOf)
-}
-
-// frozenBefore is a deal's currently frozen pair in the shape the patch records
-// it. The rate is already a decimal string; the date sheds the contract's Date
-// wrapper, which is what Patch.SetDate takes on both sides.
-func frozenBefore(deal crmcontracts.Deal) (rate *string, rateDate *time.Time) {
-	return deal.FxRateToBase, storekit.PlainDate(deal.FxRateDate)
-}
-
-// freezeBaseRate stamps a frozen conversion onto a patch: FreezeRateAt above
-// decides WHAT the rate is, and this decides which two columns carry it.
-//
-// It is built on that seam rather than resolving the base currency itself,
-// because "the latest rate on or before this day" is one question and two
-// spellings of it would be free to disagree about the day boundary, the
-// same-currency shortcut, or what a missing rate means.
-//
-// A closed deal must carry a rate for the currency it is priced in. Re-pricing
-// one into a DIFFERENT currency and leaving the old rate would convert the wrong
-// pair, which corrupts the base-currency roll-up silently; and a deal closed
-// with no amount has no frozen rate at all, so the write that first prices it
-// trips deal_closed_fx unless it freezes one in the same statement.
-//
-// asOf is the caller's, because it is the only thing the three writers disagree
-// about: a stage advance closing the deal freezes as of the close, while the two
-// re-pricing doors freeze as of the ORIGINAL close date, for the reason freezeFx
-// states below.
-//
-// The caller passes what the row held, because two of the three writers reach
-// here for a deal that ALREADY carries a frozen rate — deal_closed_fx requires
-// one on any closed deal with an amount — and re-pricing replaces it. Recording
-// the pre-image as nil would put "there was no rate" in the audit diff of every
-// re-price, which is the one row a reversal reads to restore the old one.
-//
-// The error comes back unwrapped: a caller closing a deal, re-pricing one and
-// accepting an offer each tell an operator more by naming which than a shared
-// sentence could.
-func (s *Store) freezeBaseRate(ctx context.Context, tx pgx.Tx, p *storekit.Patch,
-	currency string, asOf time.Time, rateBefore *string, rateDateBefore *time.Time,
-) error {
-	rate, rateDate, err := s.FreezeRateAt(ctx, tx, currency, asOf)
-	if err != nil {
-		return err
-	}
-	p.Set(fxRateColumn, rateBefore, rate)
-	p.SetDate(fxRateDateColumn, rateDateBefore, &rateDate)
-	return nil
-}
-
-// freezeFx resolves the frozen currency→base conversion for a closed
-// deal: the latest fx_rate on or before asOf. Used at close (asOf = now)
-// and when a closed deal is re-priced (asOf = its close date), so the
-// frozen rate always reflects the deal's close, never the edit.
-func (s *Store) freezeFx(ctx context.Context, tx pgx.Tx,
-	base, currency string, asOf time.Time,
-) (string, time.Time, error) {
-	asOfDate := asOf.UTC().Truncate(24 * time.Hour)
-	if currency == base {
-		return "1", asOfDate, nil
-	}
-	var err error
-	var rate string
-	err = tx.QueryRow(ctx,
-		`SELECT rate::text FROM fx_rate
-		 WHERE from_currency = $1 AND to_currency = $2 AND rate_date <= $3
-		 ORDER BY rate_date DESC LIMIT 1`,
-		currency, base, asOfDate).Scan(&rate)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", time.Time{}, &MissingFxRateError{From: currency, To: base}
-	}
-	if err != nil {
-		return "", time.Time{}, err
-	}
-	return rate, asOfDate, nil
 }
