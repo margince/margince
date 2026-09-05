@@ -305,7 +305,7 @@ func (w *weeklyGenerateWorkspaceWorker) narrate(ctx context.Context, review week
 	bounded, cancel := context.WithTimeout(ctx, narrateBudget)
 	defer cancel()
 	reply, err := ai.Ask(bounded, w.narrator, narrative.Request(in, lang), func(text string) error {
-		_, err := narrative.Parse(text)
+		_, err := narrative.Parse(text, in)
 		return err
 	})
 	if err != nil {
@@ -313,7 +313,7 @@ func (w *weeklyGenerateWorkspaceWorker) narrate(ctx context.Context, review week
 			"week", review.LocalWeekStart.Format(time.DateOnly), "cause", err)
 		return
 	}
-	sentence, err := narrative.Parse(reply.Text)
+	sentence, err := narrative.Parse(reply.Text, in)
 	if err != nil {
 		w.log.WarnContext(ctx, "the weekly review has no sentence: the reply was refused",
 			"week", review.LocalWeekStart.Format(time.DateOnly), "cause", err)

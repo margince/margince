@@ -28,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -122,7 +123,9 @@ func (s *Service) Get(ctx context.Context, personID ids.PersonID, force bool) (c
 		return cached.wire(personID), nil
 	}
 
-	sentences, by, err := Write(ctx, s.lane, personID.String(), in, lang)
+	// The contact is NAMED to the rail here, where the assembled input holds
+	// the name the product shows for them everywhere else.
+	sentences, by, err := Write(ai.WithSubject(ctx, personID.Ref(), in.Name), s.lane, personID.String(), in, lang)
 	if err != nil {
 		return crmcontracts.PersonBrief{}, err
 	}

@@ -193,6 +193,106 @@ describe("what we owe them", () => {
       within(card(grid, "Open promises")).getByText("nothing owed"),
     ).toBeTruthy();
   });
+
+  // A task IS a promise. An accepted transcript proposal becomes one, and the
+  // record's headline ("You owe them") counts it — so a counter reading claims
+  // alone put "0 · nothing owed" directly under a line saying the opposite,
+  // about the same person, on the same screen.
+  it("counts an open task, which is what an accepted transcript promise becomes", () => {
+    const grid = show(
+      view({
+        claims: [],
+        next_steps: {
+          data: [
+            {
+              id: "t1",
+              kind: "task",
+              source: "manual",
+              captured_by: "human:u1",
+              created_at: AS_OF,
+              updated_at: AS_OF,
+              subject: "Prepare the translation checklist",
+              due_at: "2026-08-05T09:00:00Z",
+              is_done: false,
+              occurred_at: AS_OF,
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        },
+      }),
+    );
+    const promises = card(grid, "Open promises");
+    expect(within(promises).getByText("1")).toBeTruthy();
+    expect(within(promises).getByText("overdue 19 days")).toBeTruthy();
+  });
+
+  // A finished promise is not owed, and the other party's promise is not ours.
+  it("counts neither a done task nor what they owe us", () => {
+    const grid = show(
+      view({
+        claims: [
+          {
+            id: "c1",
+            kind: "commitment_theirs",
+            body: "Confirm the plan",
+            status: "open",
+            source_activity_id: "a1",
+            source_quote: "",
+            needs_review: false,
+          },
+        ],
+        next_steps: {
+          data: [
+            {
+              id: "t1",
+              kind: "task",
+              source: "manual",
+              captured_by: "human:u1",
+              created_at: AS_OF,
+              updated_at: AS_OF,
+              subject: "Already sent",
+              is_done: true,
+              occurred_at: AS_OF,
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        },
+      }),
+    );
+    expect(
+      within(card(grid, "Open promises")).getByText("nothing owed"),
+    ).toBeTruthy();
+  });
+
+  // The count is a FLOOR when the server holds more than it sent: next_steps
+  // is a page, and "1" over a record with more open tasks is a number the card
+  // did not measure.
+  it("says at least, rather than a total, when the page was cut", () => {
+    const grid = show(
+      view({
+        claims: [],
+        next_steps: {
+          data: [
+            {
+              id: "t1",
+              kind: "task",
+              source: "manual",
+              captured_by: "human:u1",
+              created_at: AS_OF,
+              updated_at: AS_OF,
+              subject: "Prepare the checklist",
+              is_done: false,
+              occurred_at: AS_OF,
+            },
+          ],
+          page: { next_cursor: "next", has_more: true },
+        },
+      }),
+    );
+    expect(
+      within(card(grid, "Open promises")).getByText("at least 1"),
+    ).toBeTruthy();
+  });
 });
 
 describe("what they decide and when we next meet", () => {

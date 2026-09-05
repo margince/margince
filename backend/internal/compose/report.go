@@ -280,17 +280,27 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 	}
 
 	req.Filters = withThresholdDefaults(spec, req.Filters)
-	groupBy := req.GroupBy
-	if len(groupBy) == 0 {
-		groupBy = spec.defaultBy
+	// What the caller asked for by name, kept before the defaults land: the
+	// grant check below refuses a field the caller NAMED and must not start
+	// refusing one the spec supplied for them.
+	asked := req.GroupBy
+	// The default group-by becomes the REQUEST's. Everything downstream that
+	// asks what this query groups by — the plan echo, the derivation handle,
+	// and the reference-scope set deciding which referenced records the answer
+	// may name — reads req. A default held only in a local answered "nothing"
+	// to the last of those while the SQL grouped by an organization id, and
+	// open-deals-per-company then named companies its reader cannot open.
+	if len(req.GroupBy) == 0 {
+		req.GroupBy = spec.defaultBy
 	}
+	groupBy := req.GroupBy
 	aggregates := req.Aggregates
 	if len(aggregates) == 0 {
 		aggregates = grantedDefaultAggregates(ctx, spec)
 	}
 	// What the caller asked for by name is refused by name; what they did not
 	// ask for was narrowed above.
-	if err := requireVocabularyGrants(ctx, spec, slices.Concat(req.GroupBy, aggregateFields(req.Aggregates))); err != nil {
+	if err := requireVocabularyGrants(ctx, spec, slices.Concat(asked, aggregateFields(req.Aggregates))); err != nil {
 		return reportOutcome{}, err
 	}
 

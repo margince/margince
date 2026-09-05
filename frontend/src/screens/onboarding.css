@@ -522,6 +522,7 @@
 }
 .ob-core-dialog > .btn {
   width: 100%;
+  /* ds:ignore the dialog's one verb pays its interval off the field above it */
   margin-top: var(--space-4);
 }
 .ob-core-link {
@@ -645,7 +646,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--gapActions);
   margin-top: var(--space-3);
 }
 .ob-manual-actions .ob-core-link {
@@ -893,6 +894,7 @@
   color: var(--textPrimary);
 }
 .mw-conversation .ob-core-dialog > .btn {
+  /* ds:ignore the workbench draws that same dialog tighter */
   margin-top: var(--space-2);
 }
 .mw-conversation .ob-core-link {
@@ -1199,7 +1201,7 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-4);
+  padding: var(--padCard);
   color: var(--textPrimary);
   text-align: left;
   border: 1px solid var(--borderSubtle);

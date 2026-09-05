@@ -129,9 +129,12 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       //
       // The details pane beside the work: the same pane, fold and memory of
       // it as every other record page.
+      // The cards stand straight in the pane: `RecordView` gives the aside
+      // column the rail's own rhythm, and a wrapper of ours inside it was a
+      // second answer to how far apart a record's rail cards sit.
       aside={
         details.open ? (
-          <div className="project-rail">
+          <>
             <ProjectCompanies
               projectId={project.id}
               companies={project.organizations}
@@ -145,7 +148,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
             <ProjectContractsCard view={view} />
             <ProjectDocumentsCard view={view} />
             <PhaseHistoryCard view={view} />
-          </div>
+          </>
         ) : undefined
       }
       name={project.name}
@@ -192,7 +195,9 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       }
       {...chronology}
     >
-      <div className="project-main">
+      {/* The record's work column, at the record's own step — the one every
+          other record page's bodies are read down. */}
+      <div className="record-stack">
         <div id={PROJECT_DEALS_ANCHOR}>
           <ProjectDealsCard
             view={view}

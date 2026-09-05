@@ -93,6 +93,38 @@ func TestOneOwnersShareCannotPublishAColleaguesHeldMessage(t *testing.T) {
 	}
 }
 
+func TestTheLastOwnersShareReportsTheMessageOpen(t *testing.T) {
+	// One message, two mailboxes, both `classified` at import — the default
+	// posture, so this is the ordinary two-importer case. The first owner's
+	// share is refused honestly: the colleague still holds. The second owner's
+	// share releases the LAST hold, and the answer must say so on both fields —
+	// a posture is what the mailbox asked of mail in general, and a seat's
+	// explicit shared_by_owner ends its say. The recompute already opens the
+	// message here; an answer still counting the posture as a hold tells the
+	// person who just published a conversation that it stayed private.
+	e := integration.Setup(t)
+	id := seedHeldThreadOn(t, e, "thread-last-holder", "kunde@example.test", e.Rep1)
+	addImportRowFor(t, e, id, e.Rep2)
+
+	first := decideThread(t, e, e.Rep1, "thread-last-holder", true)
+	if first.Shared || first.HeldByOthers != 1 {
+		t.Fatalf("first share: shared=%v held_by_others=%d, want false and 1 — the colleague is still holding",
+			first.Shared, first.HeldByOthers)
+	}
+
+	last := decideThread(t, e, e.Rep2, "thread-last-holder", true)
+	if last.HeldByOthers != 0 {
+		t.Fatalf("held_by_others=%d after both owners shared, want 0 — a shared_by_owner seat is not holding, "+
+			"whatever posture the message arrived under", last.HeldByOthers)
+	}
+	if !last.Shared {
+		t.Fatal("the last holder's share reported the message private while it opened to the workspace")
+	}
+	if got := activityAudience(t, e, id); got != "workspace" {
+		t.Fatalf("the message is %q after both owners shared, want workspace", got)
+	}
+}
+
 func TestAThreadYouDidNotImportIsNotFound(t *testing.T) {
 	// A thread key is the sender-controlled References root in a namespace the
 	// whole workspace shares, so it is guessable. Answering not-found rather

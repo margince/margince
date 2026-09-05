@@ -74,12 +74,15 @@ func TestNotifyFiringWithNoTransportLandsAVisibleSkippedRun(t *testing.T) {
 	engine.RegisterSystemWorkflow(notifyNoTransportProbe{})
 
 	ctx := context.Background()
-	if err := engine.HandleEvent(ctx, kevents.Envelope{
+	event := kevents.Envelope{
 		EventID: ids.NewV7(), Type: "deal.stage_changed",
 		OccurredAt: time.Now().UTC(),
 		Entity:     kevents.EntityRef{Type: "deal", ID: dealID},
-	}); err != nil {
-		t.Fatal(err)
+	}
+	for range 2 {
+		if err := engine.HandleEvent(ctx, event); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	var status string
@@ -221,6 +224,14 @@ func TestDraftEmailFiringLandsTheComposedDraftOnTheRunRecord(t *testing.T) {
 	var status string
 	var appliedJSON []byte
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		var count int
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM workflow_run
+			WHERE handler = 'task11a_draft_email_probe'`).Scan(&count); err != nil {
+			return err
+		}
+		if count != 1 {
+			t.Fatalf("redelivery created %d draft runs, want one", count)
+		}
 		return tx.QueryRow(
 			context.Background(),
 			`SELECT status, applied FROM workflow_run WHERE handler = 'task11a_draft_email_probe'`,

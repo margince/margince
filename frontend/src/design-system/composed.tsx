@@ -357,26 +357,6 @@ function BoardLayout<Record extends BoardRecord>({
       },
     };
   }
-  // Whether a column has to carry its own tab stop.
-  //
-  // A column that holds nothing is still a SCROLL REGION — every one declares
-  // `overflow-y: auto` — and a scroll region a keyboard cannot reach is a WCAG
-  // 2.2 AA failure (axe: scrollable-region-focusable). A column with cards is
-  // reachable through them and a collapsible one through its own head; an empty,
-  // uncollapsible stage has neither.
-  //
-  // Only where it is needed. A stop on every column would put five extra presses
-  // in front of a full board whose cards are already the way in. On the empty
-  // ones it earns its place twice over: the column is a drop target, and a reader
-  // moving a deal by keyboard needs somewhere to land.
-  function ownTabStop<Record extends BoardRecord>(
-    column: BoardColumn<Record>,
-  ): 0 | undefined {
-    return column.deals.length === 0 && column.collapsed === undefined
-      ? 0
-      : undefined;
-  }
-
   return (
     <div className="board">
       {columns.map((column) => {
@@ -389,7 +369,19 @@ function BoardLayout<Record extends BoardRecord>({
             }
             data-stage={column.stage}
             aria-label={column.label}
-            tabIndex={ownTabStop(column)}
+            // listtable.css gives every column `overflow-y: auto` so a stage
+            // with many deals scrolls its own cards instead of stretching the
+            // rest to match it. A column with too few cards to overflow, or
+            // none at all, is still declared scrollable — and a card's own
+            // link makes a full column keyboard-reachable but says nothing
+            // about an EMPTY one, which axe's scrollable-region-focusable
+            // rule catches. The section is the scroller, so it takes the
+            // fallback stop itself rather than depending on what is inside it —
+            // the WCAG-sanctioned fix for a non-interactive scrollable region,
+            // which is exactly why the a11y linter's default posture forbids
+            // tabIndex on a section at all.
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: the scrollable region itself needs the keyboard stop; see the comment above.
+            tabIndex={0}
             {...columnDropHandlers?.(column)}
           >
             {/* THE STAGE AND HOW MUCH IS IN IT, on one line and stuck to the
@@ -982,7 +974,14 @@ export function RecordView({
           <>
             {children}
             {timeline && (
-              <section aria-label={t("record.timeline")}>
+              /* The record's story, under whatever the open tab drew. It owns
+                 the break above it because the work column owns no interval —
+                 the deal's and the project's bodies met the chronology's
+                 heading at the border. */
+              <section
+                className="record-timeline"
+                aria-label={t("record.timeline")}
+              >
                 <h2 className="t-sub">{t("record.timeline")}</h2>
                 {/* The dials above the list are one block with one rhythm: the
                     cuts through the chronology, then the narrowing of whichever

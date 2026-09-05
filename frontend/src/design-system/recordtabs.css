@@ -27,6 +27,15 @@
      both. Without the `work` container the fallback is the reading column's
      own gutter, which is the narrower, safe answer. */
   margin-inline: calc(-1 * var(--pageGutter));
+  /* AND it may shrink, which is what makes the strip's own scrolling reachable.
+     A flex or grid item is `min-inline-size: auto`, so it refuses to go narrower
+     than its content — and this element's content is every tab laid end to end.
+     Inside a `work` container that never shows, because the block below pins an
+     explicit `inline-size` and the strip scrolls within it. Outside one, on a
+     screen whose header is a flex row, the strip's `overflow-x: auto` could
+     never engage: the tabs pushed the page sideways instead, which is the one
+     thing this component is built not to do. */
+  min-inline-size: 0;
 }
 
 /* A record with a RAIL is the exception, and it has to be: the rail is a

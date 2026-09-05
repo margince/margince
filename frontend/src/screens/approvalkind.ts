@@ -429,6 +429,15 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
         lead: true,
       },
       { field: "owner", label: "approval.field.owner", as: "text" },
+      // The day the transcript stated, editable before the task exists. The
+      // calendar control rather than a text box, because the payload wants
+      // 2026-09-08 and a reviewer typing the date the way they say it out loud
+      // writes something acceptance refuses.
+      //
+      // Empty is the ordinary reading and stays editable: a next step nobody
+      // dated is not overdue, and a reviewer who knows the deadline can supply
+      // it here rather than opening the task afterwards to add one.
+      { field: "due_date", label: "approval.field.due_date", as: "date" },
     ],
     // An automation composed this reply. Subject and body are the draft the card
     // already renders; `intent` is why the rule fired.

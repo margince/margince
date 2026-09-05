@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -36,6 +37,10 @@ import (
 type Facts interface {
 	ListOrganizationProfileFields(ctx context.Context, id ids.OrganizationID) ([]crmcontracts.CompanyProfileField, error)
 	ListOrganizationFacts(ctx context.Context, id ids.OrganizationID) ([]crmcontracts.OrganizationFact, error)
+	// GetOrganization is read for the company's NAME and nothing else: the
+	// dossier is written from the sidecars above, but the rail that narrates
+	// the writing has to say which company, and neither sidecar carries that.
+	GetOrganization(ctx context.Context, id ids.OrganizationID, archived storekit.ArchivedFilter) (crmcontracts.Organization, error)
 }
 
 // Input is the assembled factual picture of one company.
@@ -46,8 +51,12 @@ type Facts interface {
 // drops whole, taking their other, valid citations with them.
 type Input struct {
 	OrganizationID string `json:"-"`
-	ProfileFields  []crmcontracts.CompanyProfileField
-	Facts          []crmcontracts.OrganizationFact
+	// Name is withheld from the model for the id's reason — it grounds
+	// nothing — and from the fingerprint because a rename is not a change in
+	// what the company IS. It exists so the rail can say whose dossier this is.
+	Name          string `json:"-"`
+	ProfileFields []crmcontracts.CompanyProfileField
+	Facts         []crmcontracts.OrganizationFact
 }
 
 // The citable record kinds, DERIVED from the contract's own enum rather than
@@ -70,8 +79,17 @@ func BuildInput(ctx context.Context, facts Facts, id ids.OrganizationID) (Input,
 	if err != nil {
 		return Input{}, err
 	}
+	// IncludeArchived, because the sidecars above answered for this company
+	// whether or not it is archived, and the name read must not be the one
+	// read that refuses: a dossier a reader could open yesterday would go
+	// missing the day the company was archived.
+	org, err := facts.GetOrganization(ctx, id, storekit.IncludeArchived)
+	if err != nil {
+		return Input{}, err
+	}
 	return Input{
 		OrganizationID: id.String(),
+		Name:           org.DisplayName,
 		ProfileFields:  fields,
 		Facts:          extracted,
 	}, nil
