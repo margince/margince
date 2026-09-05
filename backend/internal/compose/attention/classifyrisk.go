@@ -96,6 +96,10 @@ func dealFactsOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistDealFact
 		OwnerId:     item.Deal.OwnerId,
 		AmountMinor: item.Deal.AmountMinor,
 		Currency:    item.Deal.Currency,
+		// Copied verbatim: absent is not false. A committee this reader could
+		// not read in full arrives nil, and normalizing it to false would tell
+		// a rep nobody is carrying a deal whose champion they simply cannot see.
+		NoChampion: item.Deal.NoChampion,
 	}
 	// The close date rides on the lane item's own due moment, and the idle
 	// count on its own typed field. Both were already resolved; only this projection

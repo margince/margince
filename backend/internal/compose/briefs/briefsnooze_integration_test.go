@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func TestBriefSnoozeIsOwnerOnlyStampedAndConflictSafe(t *testing.T) {
@@ -38,11 +39,11 @@ func TestBriefSnoozeIsOwnerOnlyStampedAndConflictSafe(t *testing.T) {
 
 	// Only the run's owner may snooze: another rep sees not-found.
 	rep2 := b.As(b.Rep2, []ids.UUID{b.Team1}, integration.AdminPerms)
-	if _, err := b.engine.MarkSnoozed(rep2, itemA.ID, until, snoozeAt); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := b.engine.MarkSnoozed(rep2, itemA.ID, values.ReopenOnTime, &until, nil, snoozeAt); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("foreign snooze → %v, want ErrNotFound (existence-hiding)", err)
 	}
 
-	snoozed, err := b.engine.MarkSnoozed(b.repCtx, itemA.ID, until, snoozeAt)
+	snoozed, err := b.engine.MarkSnoozed(b.repCtx, itemA.ID, values.ReopenOnTime, &until, nil, snoozeAt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +71,8 @@ func TestBriefSnoozeIsOwnerOnlyStampedAndConflictSafe(t *testing.T) {
 	}
 
 	// An acted item cannot be snoozed — the snooze only defers actionable work.
-	if _, err := b.engine.MarkSnoozed(b.repCtx, itemA.ID, until.Add(72*time.Hour), until.Add(2*time.Minute)); !errors.Is(err, apperrors.ErrConflict) {
+	later := until.Add(72 * time.Hour)
+	if _, err := b.engine.MarkSnoozed(b.repCtx, itemA.ID, values.ReopenOnTime, &later, nil, until.Add(2*time.Minute)); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("snooze on an acted item → %v, want ErrConflict", err)
 	}
 
@@ -108,7 +110,7 @@ func TestBriefSnoozedItemHidesUntilExpiryThenResurfaces(t *testing.T) {
 	// than by this one. Hours are what a rep snoozes for anyway — "not before
 	// the afternoon" — and the flip this test is about is the same flip.
 	until := briefClock.Add(8 * time.Hour)
-	if _, err := b.engine.MarkSnoozed(b.repCtx, itemA.ID, until, briefClock.Add(time.Hour)); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, itemA.ID, values.ReopenOnTime, &until, nil, briefClock.Add(time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 

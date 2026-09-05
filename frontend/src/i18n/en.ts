@@ -202,6 +202,10 @@ export const en = {
   "shell.more": "More",
   "shell.unknownPage": "Not found",
   "shell.closeMenu": "Close",
+  "shell.capture.importing": "Importing mail history",
+  "shell.capture.share": "{percent} · {scanned} of {total} messages",
+  "shell.capture.count": "{scanned} messages so far",
+  "shell.capture.open": "Open the import",
   // The sidebar's second level. The control READS one word at every depth; its
   // accessible name says where it leads, and the level of destinations needs a
   // name of its own to be led back to.
@@ -8223,11 +8227,14 @@ export const en = {
   "worklist.disposition.snoozeFor": "For how long",
   "worklist.disposition.snoozeDays_one": "{value} day",
   "worklist.disposition.snoozeDays_other": "{value} days",
+  "worklist.disposition.snoozeUntil.reply": "Until they reply",
   "worklist.disposition.verb.not_mine": "Not mine",
   "worklist.disposition.verb.not_sales": "Not a customer",
   "worklist.disposition.done.snooze": "Back on your list tomorrow.",
   "worklist.disposition.doneSnooze_one": "Back on your list tomorrow.",
   "worklist.disposition.doneSnooze_other": "Back on your list in {value} days.",
+  "worklist.disposition.doneSnoozeUntil.reply":
+    "Back on your list when they reply.",
   "worklist.disposition.done.not_mine":
     "Off your list. Whoever owns it still sees it.",
   "worklist.disposition.done.not_sales": "Off everyone's list.",

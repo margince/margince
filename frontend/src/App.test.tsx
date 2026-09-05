@@ -174,22 +174,27 @@ describe("the custom-fields admin, at its address inside settings", () => {
     // The SURFACE's own section header, at level 2. The shell's page head titles
     // the PAGE — "Data model" — so anchoring at level 1 would pass even if this
     // section never mounted.
+    // WAITING FOR A CHUNK, not for a request. The settings screen arrives on a
+    // chunk of its own and the shell no longer carries it — the catalog, the
+    // addresses and the visibility predicate moved out so that src/app/** could
+    // ask its three questions without pulling every settings card into the
+    // always-loaded bundle. What the shell stopped paying for on every page, a
+    // settings route now pays once on arrival, and in jsdom that import is
+    // resolved by the test runner rather than served from a browser cache.
     //
-    // A wider wait than the default second, and its own ceiling with it (see
-    // vitest.budget.ts): this is a whole-app mount whose route arrives through
-    // a lazy chunk, and under the full lane — where it shares the runner with a
-    // five-hundred-case import suite — the heading crossed 1000ms while still
-    // arriving. Measured, not guessed: the file's own time rose by a quarter the
-    // day that suite landed, and the two waits that failed were the two that
-    // sat exactly at the default.
+    // It lands just past the 1000ms default: this passes at 1500ms on an idle
+    // machine and failed at the default on a loaded runner, which is the wrong
+    // way round for a threshold to sit. Stated as a literal because
+    // scripts/test-budget.test.ts folds these numbers to check them against the
+    // per-test ceiling, and a timeout it cannot read is a budget nobody checked.
     expect(
       await screen.findByRole(
         "heading",
         { level: 2, name: "Custom fields" },
-        { timeout: 5000 },
+        { timeout: 3000 },
       ),
     ).toBeTruthy();
-  }, 15000);
+  });
 });
 
 // The VANILLA extension lane, end to end through the real router and the real
@@ -250,15 +255,14 @@ describe("locale switch", () => {
     // also what makes this an app-level claim: the choice is made on one route
     // and has to hold on the next one, not just inside the card that made it.
     window.location.hash = "#/settings/account";
-    // The account page arrives through the settings chunk, lazily, on top of a
-    // whole-app mount — the same wait the custom-fields case above widens, for
-    // the same measured reason.
+    // The settings chunk again, for the reason spelled out on the Data model
+    // case above: this waits for the module to arrive, not for a request.
     await pickOption(
       userEvent.setup(),
       await screen.findByRole(
         "combobox",
         { name: "Language" },
-        { timeout: 5000 },
+        { timeout: 3000 },
       ),
       "Deutsch",
     );
@@ -268,7 +272,7 @@ describe("locale switch", () => {
       expect(screen.getByRole("link", { name: "Personen" })).toBeTruthy(),
     );
     expect(screen.queryByRole("link", { name: "People" })).toBeNull();
-  }, 15000);
+  });
 });
 
 describe("auth boundary states (login spec §4)", () => {

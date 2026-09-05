@@ -19,7 +19,12 @@ import {
   MarginceCoreScene,
   type MarginceCoreState,
 } from "../design-system/margince-core";
-import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
+import {
+  formatMoney,
+  formatNumber,
+  formatPercent,
+  INTL_LOCALE,
+} from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { usePendingApprovals } from "../screens/approvals.queries";
@@ -40,6 +45,7 @@ import { lineFor, PANEL_HEADING } from "./ai-activity-lines";
 import { laneFor } from "./ai-activity-orb";
 import { useAgentTierMap } from "./autonomy";
 import { useCan, useHoldsAdminRole } from "./capability";
+import { type CaptureProgress, liveCapture } from "./capture-progress";
 import { usePopoverDismiss } from "./popover";
 import type { Route } from "./router";
 import { usePhoneViewport } from "./viewport";
@@ -91,6 +97,13 @@ type Signals = Readonly<{
   license: LicensePosture | undefined;
   /** The licence posture in the reader's words, for the line and the panel. */
   licenseLine: string;
+  /**
+   * Mail being imported this moment, with the sentence that says so; null
+   * while no mailbox is importing. Read off the same connections list as
+   * `offline`, so the orb never reports a mailbox as both unreachable and
+   * mid-import from two answers.
+   */
+  capture: Readonly<{ progress: CaptureProgress; line: string }> | null;
 }>;
 
 /**
@@ -145,14 +158,17 @@ function useAiPosture(): AiPosture {
 
 function useSignals(): Signals {
   const t = useT();
+  const { locale } = useLocale();
   const approvals = usePendingApprovals();
   const connectors = useConnectors();
   const ai = useAiPosture();
   const license = useLicensePosture();
 
-  const offline = (connectors.data?.data ?? [])
+  const connections = connectors.data?.data ?? [];
+  const offline = connections
     .filter((connection) => connection.status !== "connected")
     .map((connection) => connection.account_label ?? connection.provider);
+  const capture = liveCapture(connections);
 
   return {
     // Absent `data` means the read has not answered, or was refused. A 0 here
@@ -165,7 +181,27 @@ function useSignals(): Signals {
       license === "refused"
         ? t("shell.license.refused")
         : t("shell.license.none"),
+    capture:
+      capture === null
+        ? null
+        : { progress: capture, line: captureLine(capture, t, locale) },
   };
+}
+
+/**
+ * The one line an import puts under the orb: what is happening, and how far
+ * along where a preview gave it a denominator. Without one the sentence stops
+ * at the verb rather than inventing a share.
+ */
+function captureLine(
+  capture: CaptureProgress,
+  t: (key: MessageKey) => string,
+  locale: Locale,
+): string {
+  const said = t("shell.capture.importing");
+  return capture.fraction === null
+    ? said
+    : `${said} · ${formatPercent(capture.fraction, locale)}`;
 }
 
 /**
@@ -827,6 +863,17 @@ function usePanelFrame(
  * moment before the feed arrives and settles into its own lane after. A guess
  * the owner of the fact overrules is the right shape for a bridge.
  *
+ * A mailbox import is the third observer, and the one the feed cannot replace:
+ * the feed carries capture as per-message classifications the router announces
+ * once each call is over, so an import that runs for an hour reaches it as a
+ * trickle of settled lines and never as work in flight. The run's own status
+ * row (capture-progress.ts) is the server's projection of that work, read from
+ * the connections list this section already holds, and it is `ingest` by
+ * definition: mail arriving that the agent did not hold a moment ago. It ranks
+ * below a named occurrence for the same reason `asking` does — the feed names
+ * a run and this names a lane — and above `asking`, because it knows which
+ * half of the lifecycle it is in.
+ *
  * The order is severity, and it starts with the faults that stop the agent
  * running AT ALL, because an agent with no model bound is not a broken run, it
  * is no runs. Under those, a run that actually broke. Under that, the licence.
@@ -895,6 +942,12 @@ function derive(
   const live = server.running.find((item) => item.state !== "stalled");
   if (live) {
     return { state: laneFor(live), cause: live };
+  }
+  // Mail being imported. No cause travels with it because it is not an
+  // occurrence the feed can name; the line under the orb is the import's own,
+  // from the signals (`barLine`), with its share where a preview gave it one.
+  if (signals.capture !== null) {
+    return { state: "ingest", cause: null };
   }
   // This tab's own ask, which the feed has not caught up with yet. `working`
   // rather than a lane read from the kind, because the kind is exactly what is
@@ -1043,7 +1096,7 @@ function barLine(
     return agentLine ?? LABELS.working;
   }
   if (state === "ingest") {
-    return agentLine ?? LABELS.reading;
+    return agentLine ?? signals.capture?.line ?? LABELS.reading;
   }
   if (signals.waiting !== undefined && signals.waiting > 0) {
     return `${signals.waiting} ${LABELS.waiting}`;
@@ -1057,6 +1110,27 @@ function barLine(
     return devLine;
   }
   return LABELS.idle;
+}
+
+/**
+ * How far the import has got, drawn as the ring around the orb.
+ *
+ * The ring is the IMPORT's and not the state's: it is drawn whenever mail is
+ * being taken in and the orb is live, whichever occurrence the feed named for
+ * the colour, because a morning brief starting mid-import does not stop the
+ * import. It goes with a fault, though — a red or amber orb wearing a
+ * progress ring would say the work is going well and badly at once — and it is
+ * absent without a denominator, since a ring at a guessed share is a ring drawn
+ * wrong. `undefined` is what the Core reads as "no ring".
+ */
+function importRing(
+  state: MarginceCoreState,
+  capture: Signals["capture"],
+): number | undefined {
+  if (capture === null || !RUNNING.has(state)) {
+    return undefined;
+  }
+  return capture.progress.fraction ?? undefined;
 }
 
 /**
@@ -1183,6 +1257,7 @@ export function AgentRail({
   // tells a reader the pipeline is the fault.
   const holdsFault = state === "warning" || state === "error";
   const shown = ticker.length > 0 && !holdsFault ? ticker[0].said : line;
+  const ring = importRing(state, signals.capture);
   return (
     <section
       className="arblock"
@@ -1245,6 +1320,7 @@ export function AgentRail({
         <MarginceCoreScene
           state={state}
           feed={false}
+          progress={ring}
           size="md"
           className="arorb"
         />

@@ -234,6 +234,13 @@ func (s *Store) countWaiting(
 	if err != nil {
 		return 0, err
 	}
+	// The same gate for the reply that may LIFT a snooze. A reply this
+	// reader cannot see must not put the row back on their day: the row
+	// reappearing is itself the disclosure that it arrived.
+	backContent, err := auth.ActivityContentClause(ctx, "back", arg)
+	if err != nil {
+		return 0, err
+	}
 	linkVisible, err := auth.LinkTargetVisibleClause(ctx, "wl", arg)
 	if err != nil {
 		return 0, err
@@ -275,7 +282,8 @@ func (s *Store) countWaiting(
 		arg(relax.reader),
 		scopeUnbounded,
 		notSales, unlinked,
-		colleague, ownDomainSenderSQL("a", arg(ownDomains)))
+		colleague, ownDomainSenderSQL("a", arg(ownDomains)),
+		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent))
 	var count int
 	// Counted around the whole statement rather than by replacing its SELECT
 	// list: the query GROUPs and LIMITs, so the row count IS the answer and a

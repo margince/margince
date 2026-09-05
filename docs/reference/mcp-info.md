@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 73 |
 | Resources | 12 |
-| Tool catalog | 203.3 KB |
+| Tool catalog | 203.4 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 53199 |
+| Approx. wire tokens | 53218 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 96.4 KB | 47% | **No** — a result's shape, never listed to a model |
+| Output schemas | 96.5 KB | 47% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 49.6 KB | 24% | Yes, every step |
 | Input schemas | 41.9 KB | 20% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.4 KB | 7% | Partly |
-| **Description + input schema** | **91.5 KB** | **45%** | **the recurring cost** |
+| **Description + input schema** | **91.5 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -114,7 +114,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.0 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes |  | 2.4 KB |
-| [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/account-brief.html`](#account_brief_view) | 3.0 KB |
+| [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/account-brief.html`](#account_brief_view) | 3.1 KB |
 | [`read_import_report`](#read_import_report) | Read an import report | yes |  | 2.9 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
@@ -9899,6 +9899,13 @@ Renders its result in [`ui://margince/account-brief.html`](#account_brief_view),
               },
               "rank": {
                 "type": "integer"
+              },
+              "reopen_on": {
+                "type": "string"
+              },
+              "reopen_ref": {
+                "format": "uuid",
+                "type": "string"
               },
               "snoozed_until": {
                 "type": "string"

@@ -204,10 +204,19 @@ func insertBriefItem(t *testing.T, conn *pgx.Conn, run, deal ids.UUID, rank int,
 	state string, stateAt, snoozedUntil *time.Time,
 ) {
 	t.Helper()
+	// A snooze carries what it is waiting for, and the column's CHECK pairs the
+	// two. Derived from the state rather than taken as a parameter, because
+	// every caller here seeds the clock kind and asking each to say so would
+	// spread one row's shape across the file.
+	var reopenOn *string
+	if state == "snoozed" {
+		clock := "time"
+		reopenOn = &clock
+	}
 	if _, err := conn.Exec(context.Background(),
-		`INSERT INTO brief_item (brief_run_id, deal_id, rank, composite, feature_vector, evidence_ids, state, state_at, snoozed_until)
-		 VALUES ($1, $2, $3, 0.5, '{}'::jsonb, ARRAY[]::uuid[], $4, $5, $6)`,
-		run, deal, rank, state, stateAt, snoozedUntil); err != nil {
+		`INSERT INTO brief_item (brief_run_id, deal_id, rank, composite, feature_vector, evidence_ids, state, state_at, snoozed_until, reopen_on)
+		 VALUES ($1, $2, $3, 0.5, '{}'::jsonb, ARRAY[]::uuid[], $4, $5, $6, $7)`,
+		run, deal, rank, state, stateAt, snoozedUntil, reopenOn); err != nil {
 		t.Fatalf("seeding a brief item: %v", err)
 	}
 }

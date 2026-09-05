@@ -84,6 +84,8 @@ func briefRunToTool(run briefs.BriefRun) agents.ReadBriefResult {
 			// evidence was never queued.
 			EvidenceIDs:  append(make([]ids.UUID, 0, len(item.EvidenceIDs)), item.EvidenceIDs...),
 			SnoozedUntil: item.SnoozedUntil,
+			ReopenOn:     item.ReopenOn,
+			ReopenRef:    item.ReopenRef,
 		})
 	}
 	return agents.ReadBriefResult{

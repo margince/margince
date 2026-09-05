@@ -281,8 +281,17 @@
    `.surfacestate-part` stands in that stack: a labelled part is where a screen's
    own blocks go when the surface has a name, so the stack passes through it. Any
    wrapper that comes to stand there belongs in this list — it is the page's
-   rhythm, and a wrapper is not a reason to lose it. */
-:is(.wrap, .surfacestate-part) > :is(.card, .panel) + :is(.card, .panel) {
+   rhythm, and a wrapper is not a reason to lose it.
+
+   `.page-zones-main` is the record's work column, where a tab's body goes. It
+   is the same stack under a different name, and the same thing happens without
+   this: a tab that draws two panels draws them edge to edge. A record's own
+   step is the wider one its bodies take from `.record-stack` (composed.css) —
+   this is the floor under a body that has not, not a second answer to how a
+   record reads. */
+:is(.wrap, .surfacestate-part, .page-zones-main)
+  > :is(.card, .panel)
+  + :is(.card, .panel) {
   margin-top: var(--space-4);
 }
 

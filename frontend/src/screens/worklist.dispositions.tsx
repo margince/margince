@@ -24,6 +24,7 @@ import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import {
+  type ReopenCondition,
   useClearDisposition,
   useSetDisposition,
   type WorklistDisposition,
@@ -52,6 +53,25 @@ export const SNOOZE_DAYS = 1;
 export const SNOOZE_SPANS = [1, 3, 7] as const;
 
 type SnoozeSpan = (typeof SNOOZE_SPANS)[number];
+
+// The two answers a span cannot give.
+//
+// Every span above is a guess about when the world will move, and a rep making
+// that guess is usually wrong in one of two directions: too short and the row
+// is back while the customer is still silent, too long and the customer waited
+// on them. These say what they are actually waiting for, and the server decides
+// when it happened.
+//
+// `meeting` is deliberately NOT here. It needs the rep to name WHICH meeting,
+// which is a picker over the record's calendar rather than a line in this list
+// — offering it without one would send a condition the server refuses. The
+// server takes it today; this surface does not yet ask for it.
+export const SNOOZE_EVENTS = ["reply"] as const satisfies readonly Exclude<
+  ReopenCondition,
+  "time" | "meeting"
+>[];
+
+type SnoozeEvent = (typeof SNOOZE_EVENTS)[number];
 
 // Which undo REACH each judgement takes back.
 //
@@ -107,18 +127,31 @@ export function usePutDown(item: WorklistItem) {
   const set = useSetDisposition();
   const clear = useClearDisposition();
   const offered = item.dispositions ?? [];
-  const put = (disposition: WorklistDisposition, days?: SnoozeSpan) => {
+  const put = (
+    disposition: WorklistDisposition,
+    // A span or an event, never both: the two are alternative answers to "come
+    // back when", and the server refuses a snooze carrying a moment it does not
+    // wait for.
+    until?: SnoozeSpan | SnoozeEvent,
+  ) => {
+    const event = typeof until === "string" ? until : undefined;
+    const days = typeof until === "number" ? until : undefined;
     set.mutate(
       {
         activityId: item.id,
         disposition,
         ...(disposition === "snooze"
-          ? { snoozedUntil: snoozeUntil(days).toISOString() }
+          ? event
+            ? { reopenOn: event }
+            : {
+                reopenOn: "time" as const,
+                snoozedUntil: snoozeUntil(days).toISOString(),
+              }
           : {}),
       },
       {
         onSuccess: () =>
-          toast.show(doneText(disposition, days, t, locale), {
+          toast.show(doneText(disposition, until, t, locale), {
             action: {
               label: t("worklist.disposition.undo"),
               // A failed undo needs saying. The toast dismisses itself the
@@ -242,7 +275,10 @@ function PutDownMenu({
   offered: readonly WorklistDisposition[];
   // The SPAN reaches the write, not only the judgement: the menu's longer
   // lines are the answers the default day cannot give.
-  put: (disposition: WorklistDisposition, days?: SnoozeSpan) => void;
+  put: (
+    disposition: WorklistDisposition,
+    until?: SnoozeSpan | SnoozeEvent,
+  ) => void;
   pending: boolean;
   t: T;
   locale: Locale;
@@ -288,6 +324,21 @@ function PutDownMenu({
               days,
               { value: formatNumber(days, locale) },
             )}
+          </Button>
+        ))}
+      {/* The event answers, as lines of the same list. They sit after the spans
+          because a rep reaching for this menu most often still means a
+          duration; what these add is the case a duration cannot state. */}
+      {offered.includes("snooze") &&
+        SNOOZE_EVENTS.map((event) => (
+          <Button
+            key={event}
+            small
+            variant="ghost"
+            pending={pending}
+            onClick={() => put("snooze", event)}
+          >
+            {t(`worklist.disposition.snoozeUntil.${event}` as const)}
           </Button>
         ))}
     </OverflowMenu>
@@ -356,7 +407,10 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
           choose a duration every time would charge the common case for the
           rare one. */}
       {offered.includes("snooze") && (
-        <SnoozeSpans pending={pending} onPick={(days) => put("snooze", days)} />
+        <SnoozeSpans
+          pending={pending}
+          onPick={(until) => put("snooze", until)}
+        />
       )}
     </div>
   );
@@ -408,7 +462,10 @@ export function swipeActions(
 function SnoozeSpans({
   pending,
   onPick,
-}: Readonly<{ pending: boolean; onPick: (days: SnoozeSpan) => void }>) {
+}: Readonly<{
+  pending: boolean;
+  onPick: (until: SnoozeSpan | SnoozeEvent) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   return (
@@ -430,6 +487,17 @@ function SnoozeSpans({
             })}
           </Button>
         ))}
+        {SNOOZE_EVENTS.map((event) => (
+          <Button
+            key={event}
+            small
+            variant="ghost"
+            disabled={pending}
+            onClick={() => onPick(event)}
+          >
+            {t(`worklist.disposition.snoozeUntil.${event}` as const)}
+          </Button>
+        ))}
       </div>
     </Popover>
   );
@@ -448,14 +516,17 @@ function SnoozeSpans({
 // keep the sentence they had.
 function doneText(
   disposition: WorklistDisposition,
-  days: SnoozeSpan | undefined,
+  until: SnoozeSpan | SnoozeEvent | undefined,
   t: T,
   locale: Locale,
 ): string {
   if (disposition !== "snooze") {
     return t(`worklist.disposition.done.${disposition}` as const);
   }
-  const span = days ?? SNOOZE_DAYS;
+  if (typeof until === "string") {
+    return t(`worklist.disposition.doneSnoozeUntil.${until}` as const);
+  }
+  const span = until ?? SNOOZE_DAYS;
   return translatePlural(locale, "worklist.disposition.doneSnooze", span, {
     value: formatNumber(span, locale),
   });
