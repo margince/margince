@@ -837,6 +837,16 @@ public.assurance_run.rule_versions jsonb NOT NULL gen=- def='{}'::jsonb
 public.assurance_run.status text NOT NULL gen=- def='running'::text
 public.assurance_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_run.version bigint NOT NULL gen=- def=1
+public.assurance_run_finding acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.assurance_run_finding.assurance_run_finding_exception_id_fkey FOREIGN KEY (exception_id) REFERENCES assurance_exception(id) ON DELETE CASCADE
+public.assurance_run_finding.assurance_run_finding_pkey PRIMARY KEY (run_id, exception_id)
+public.assurance_run_finding.assurance_run_finding_run_id_fkey FOREIGN KEY (run_id) REFERENCES assurance_run(id) ON DELETE CASCADE
+public.assurance_run_finding.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.assurance_run_finding.exception_id uuid NOT NULL gen=- def=-
+public.assurance_run_finding.observed_at timestamp with time zone NOT NULL gen=- def=-
+public.assurance_run_finding.run_id uuid NOT NULL gen=- def=-
+public.assurance_run_finding_by_exception CREATE INDEX assurance_run_finding_by_exception ON public.assurance_run_finding USING btree (exception_id, observed_at DESC)
+public.assurance_run_finding_pkey CREATE UNIQUE INDEX assurance_run_finding_pkey ON public.assurance_run_finding USING btree (run_id, exception_id)
 public.assurance_run_pkey CREATE UNIQUE INDEX assurance_run_pkey ON public.assurance_run USING btree (id)
 public.assurance_source_coverage acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.assurance_source_coverage.assurance_source_coverage_date_matches_state CHECK (((state = 'checked'::text) OR (checked_through IS NULL)))
