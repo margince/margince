@@ -38724,6 +38724,23 @@ components:
             sentence, and every one of those uses would go quietly wrong together.
         relationship:
           $ref: '#/components/schemas/AttentionRelationshipFacts'
+        with_person:
+          type: string
+          format: uuid
+          description: |
+            Whose record a `meeting` row's brief is read on. Sent only for
+            `source: meeting`, and only where the meeting names a person this caller may
+            see.
+
+            It is not the row's SUBJECT, which is the meeting itself — the row is about
+            the appointment, and the brief happens to be reached through somebody's page:
+            it opens as `?prep=<activity>` on a person's record rather than as a page of
+            its own. Both ids are needed to name it, and the row already carried only one.
+
+            ABSENT rather than empty for an internal meeting, and for one whose only
+            attendees are people the caller may not read — the two are indistinguishable
+            here on purpose, since both mean the same thing to a client: there is no page
+            to read this brief on, so offer no way in rather than one that opens nothing.
         cause_ref:
           type: string
           description: |
@@ -38854,6 +38871,14 @@ components:
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         owner_id: { type: [string, 'null'], format: uuid }
+        no_champion:
+          type: [boolean, 'null']
+          description: |
+            `true` when the account has a buying committee and nobody engaged on it holds
+            the champion seat. Null is not `false`: it is sent only when the answer is both
+            known and negative, and stays absent for a committee the caller may not read in
+            full, for a deal carrying no seats at all, and for a server that does not assess
+            coverage. See `WorklistDealFacts.no_champion`, which carries the same fact out.
 
     AttentionRelationshipFacts:
       type: object
@@ -39856,6 +39881,22 @@ components:
             no merge. A row that named neither record could only ask a reader to go and
             look, which is the hand-off this queue exists to remove.
         move: { $ref: '#/components/schemas/WorklistMove' }
+        with_person:
+          type: string
+          format: uuid
+          description: |
+            Whose record a `meeting` row's brief is read on, carried out from
+            `AttentionItem.with_person`.
+
+            Sent only for `source: meeting`, and only where the meeting names a person
+            this caller may see. It is not the row's SUBJECT — the row is about the
+            appointment — and it exists because the brief is not a page of its own: it
+            opens as `?prep=<activity>` on a person's record, so the address needs both
+            ids and the subject carries only one.
+
+            A client MUST NOT draw a way into the brief without it. Absent means there is
+            no page to read this brief on, which an internal meeting and a meeting whose
+            attendees are all withheld both produce, and both mean the same thing here.
         due_at: { type: string, format: date-time, description: 'When this is due, or when the meeting starts.' }
         overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }
         occurred_at: { type: string, format: date-time, description: 'When the thing being reported happened.' }
@@ -40115,6 +40156,19 @@ components:
         expected_minor_base: { type: [integer, 'null'], format: int64, description: 'The deal amount converted to the base currency, NOT weighted by win_probability. Null when the amount or the conversion rate is unknown.' }
         expected_close_date: { type: [string, 'null'], format: date }
         quiet_days: { type: [integer, 'null'], minimum: 0 }
+        no_champion:
+          type: [boolean, 'null']
+          description: |
+            `true` when the account has a buying committee and nobody engaged on it holds
+            the champion seat — a deal drifting because nobody INSIDE is arguing for it,
+            which needs a different move from the rep than a deal nobody outside has touched.
+
+            Null is not `false`. It is sent only when the answer is both known and negative,
+            and stays absent in the three cases that would otherwise be rounded down to a
+            finding: a committee the caller may not read in full (a champion they cannot see
+            is still a champion), a deal carrying no seats at all (no committee, so no gap),
+            and a server that does not assess coverage. A client MUST NOT render an absent
+            value as "nobody is carrying this".
 
     WorklistSourceUnavailable:
       type: object

@@ -17498,9 +17498,16 @@ type AttentionCounts struct {
 // client already holds the pipelines vocabulary and writes the label in the
 // reader's own language; a label composed server-side would not be.
 type AttentionDealFacts struct {
-	AmountMinor *int64              `json:"amount_minor,omitempty"`
-	Currency    *string             `json:"currency,omitempty"`
-	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
+	AmountMinor *int64  `json:"amount_minor,omitempty"`
+	Currency    *string `json:"currency,omitempty"`
+
+	// NoChampion `true` when the account has a buying committee and nobody engaged on it holds
+	// the champion seat. Null is not `false`: it is sent only when the answer is both
+	// known and negative, and stays absent for a committee the caller may not read in
+	// full, for a deal carrying no seats at all, and for a server that does not assess
+	// coverage. See `WorklistDealFacts.no_champion`, which carries the same fact out.
+	NoChampion *bool               `json:"no_champion,omitempty"`
+	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// StageId The deal's current stage; null for an overlay-mirror deal, whose stage lives with the incumbent.
 	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
@@ -17667,6 +17674,21 @@ type AttentionItem struct {
 	// three languages, so a duplicate pair sends its `kind` and `confidence`
 	// and the client writes the line in the reader's own.
 	Title *string `json:"title,omitempty"`
+
+	// WithPerson Whose record a `meeting` row's brief is read on. Sent only for
+	// `source: meeting`, and only where the meeting names a person this caller may
+	// see.
+	//
+	// It is not the row's SUBJECT, which is the meeting itself — the row is about
+	// the appointment, and the brief happens to be reached through somebody's page:
+	// it opens as `?prep=<activity>` on a person's record rather than as a page of
+	// its own. Both ids are needed to name it, and the row already carried only one.
+	//
+	// ABSENT rather than empty for an internal meeting, and for one whose only
+	// attendees are people the caller may not read — the two are indistinguishable
+	// here on purpose, since both mean the same thing to a client: there is no page
+	// to read this brief on, so offer no way in rather than one that opens nothing.
+	WithPerson *openapi_types.UUID `json:"with_person,omitempty"`
 }
 
 // AttentionItemActions defines model for AttentionItem.Actions.
@@ -33512,11 +33534,23 @@ type WorklistDealFacts struct {
 	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
 
 	// ExpectedMinorBase The deal amount converted to the base currency, NOT weighted by win_probability. Null when the amount or the conversion rate is unknown.
-	ExpectedMinorBase *int64              `json:"expected_minor_base,omitempty"`
-	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
-	QuietDays         *int                `json:"quiet_days,omitempty"`
-	StageId           *openapi_types.UUID `json:"stage_id,omitempty"`
-	WinProbability    *int                `json:"win_probability,omitempty"`
+	ExpectedMinorBase *int64 `json:"expected_minor_base,omitempty"`
+
+	// NoChampion `true` when the account has a buying committee and nobody engaged on it holds
+	// the champion seat — a deal drifting because nobody INSIDE is arguing for it,
+	// which needs a different move from the rep than a deal nobody outside has touched.
+	//
+	// Null is not `false`. It is sent only when the answer is both known and negative,
+	// and stays absent in the three cases that would otherwise be rounded down to a
+	// finding: a committee the caller may not read in full (a champion they cannot see
+	// is still a champion), a deal carrying no seats at all (no committee, so no gap),
+	// and a server that does not assess coverage. A client MUST NOT render an absent
+	// value as "nobody is carrying this".
+	NoChampion     *bool               `json:"no_champion,omitempty"`
+	OwnerId        *openapi_types.UUID `json:"owner_id,omitempty"`
+	QuietDays      *int                `json:"quiet_days,omitempty"`
+	StageId        *openapi_types.UUID `json:"stage_id,omitempty"`
+	WinProbability *int                `json:"win_probability,omitempty"`
 }
 
 // WorklistItem One thing to do, with the reason it sits where it sits.
@@ -33731,6 +33765,20 @@ type WorklistItem struct {
 
 	// Title The server's own sentence for this item, where it has one.
 	Title *string `json:"title,omitempty"`
+
+	// WithPerson Whose record a `meeting` row's brief is read on, carried out from
+	// `AttentionItem.with_person`.
+	//
+	// Sent only for `source: meeting`, and only where the meeting names a person
+	// this caller may see. It is not the row's SUBJECT — the row is about the
+	// appointment — and it exists because the brief is not a page of its own: it
+	// opens as `?prep=<activity>` on a person's record, so the address needs both
+	// ids and the subject carries only one.
+	//
+	// A client MUST NOT draw a way into the brief without it. Absent means there is
+	// no page to read this brief on, which an internal meeting and a meeting whose
+	// attendees are all withheld both produce, and both mean the same thing here.
+	WithPerson *openapi_types.UUID `json:"with_person,omitempty"`
 }
 
 // WorklistItemActions defines model for WorklistItem.Actions.
