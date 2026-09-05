@@ -14,8 +14,12 @@
 // disappearance needs its way back offered at the moment of the disappearance;
 // finding it again afterwards means knowing which of three judgements you made.
 
+import { useState } from "react";
+
+import { useFoldedViewport } from "../app/viewport";
 import { Button } from "../design-system/atoms";
 import { Popover } from "../design-system/popover";
+import { SwipeRow } from "../design-system/swiperow";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
@@ -60,17 +64,49 @@ function undoScope(disposition: WorklistDisposition): "mine" | "thread" {
 
 type T = ReturnType<typeof useT>;
 
-// The set-aside verbs for one row, drawn only where the server offers them.
-export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
+// Which side of a swipe each judgement answers.
+//
+// `snooze` goes with the finger's forward direction because it is the one a rep
+// reaches for most and the one they take back most: it puts the row down for a
+// day rather than deciding anything about it. The two that say "this is not my
+// work" go the other way, together, so the direction a reader learns is the
+// direction that MEANS something rather than one verb's private habit.
+//
+// ONE SIDE EACH, and every judgement named.
+//
+// A gesture has two directions and the contract offers three judgements, so a
+// map alone cannot place them: two sharing a side means the second is
+// unreachable, which is the capability-lost-on-a-phone failure the row ceiling
+// was already hiding. The side is therefore the ORDER a repeated swipe walks —
+// `swipeActions` cycles the judgements on a side rather than taking the first —
+// and this map decides which walk a direction starts.
+//
+// `snooze` leads the forward walk because it is the one a rep reaches for most
+// and takes back most: it puts the row down for a day rather than deciding
+// anything about it. The two that say "this is not my work" share the other
+// direction, in the order a reader meets them.
+//
+// EXHAUSTIVE rather than partial: `Record` so a fourth disposition added to the
+// contract fails the build here, instead of shipping a verb no phone can reach.
+export const SWIPE_SIDES = {
+  snooze: "end",
+  not_mine: "start",
+  not_sales: "start",
+} as const satisfies Record<WorklistDisposition, "start" | "end">;
+
+// Putting one row down, as an action the CALLER places.
+//
+// The verbs and the swipe are two placements of one capability, so the write
+// lives here and neither owns the other: the row draws buttons where there is
+// width and hands the same `put` to the gesture where there is not. Two copies
+// of this mutation is how one placement keeps working after the other stops.
+export function usePutDown(item: WorklistItem) {
   const t = useT();
   const { locale } = useLocale();
   const toast = useToast();
   const set = useSetDisposition();
   const clear = useClearDisposition();
   const offered = item.dispositions ?? [];
-  if (offered.length === 0) {
-    return null;
-  }
   const put = (disposition: WorklistDisposition, days?: SnoozeSpan) => {
     set.mutate(
       {
@@ -105,6 +141,72 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
       },
     );
   };
+  return { offered, put, pending: set.isPending, t };
+}
+
+// The whole row, answerable with the thumb where there is no width for verbs.
+//
+// It wraps the ROW rather than the verbs, and that is the difference between a
+// feature and a demo: `.worklist-row` is a flex container and its verbs are one
+// item in it, so a gesture mounted around them would ask a reader to swipe an
+// 83px chip and would draw an empty box on a row whose only judgements are the
+// ones the chip does not carry.
+//
+// Above the fold it draws the row and nothing else. The buttons are still the
+// row's own, drawn beside the work by DispositionVerbs, and this adds nothing
+// they do not already offer.
+export function PutDownByThumb({
+  item,
+  children,
+}: Readonly<{ item: WorklistItem; children: React.ReactNode }>) {
+  const folded = useFoldedViewport();
+  // PER SIDE, because the walk is a position in one direction's list. A single
+  // counter shared by both would be moved by a flick the other way, so a reader
+  // alternating directions would never step through either side's judgements.
+  const [walked, setWalked] = useState({ start: 0, end: 0 });
+  const { offered, put, t } = usePutDown(item);
+  if (!folded || offered.length === 0) {
+    return children;
+  }
+  return (
+    <SwipeRow
+      cancelLabel={t("worklist.disposition.swipeCancel")}
+      // Advanced on the STAGE rather than the confirm. The walk is how a second
+      // flick reaches the second judgement a direction carries, and a counter
+      // that moved only when the reader committed would never move for one who
+      // dismisses — leaving that judgement unreachable on a phone.
+      onStage={(side) =>
+        setWalked((seen) => ({ ...seen, [side]: seen[side] + 1 }))
+      }
+      {...swipeActions(offered, t, put, walked)}
+    >
+      {children}
+    </SwipeRow>
+  );
+}
+
+// The set-aside verbs, drawn where there is width for them.
+//
+// Below the fold they are GONE rather than smaller, for the width arithmetic in
+// design-system/swiperow.tsx's header. PutDownByThumb carries every JUDGEMENT
+// there, on the row itself.
+//
+// The snooze SPANS do not survive the fold, and that is a gap rather than a
+// design. The gesture sends the default day, so below 720px a rep who knows a
+// customer is away all week can no longer say so — they press again tomorrow,
+// which is the state the spans were added to end. Restoring them means another
+// control in the row, which is the 44px band this change removed; that trade is
+// a product decision, filed as issue #4313 rather than settled here.
+//
+// The same fold leaves these three judgements reachable by pointer alone — the
+// staged bar's buttons are tabbable, but only after a drag opens it. Issue
+// #4314 carries that, and the shape of its answer is the same trade.
+export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
+  const folded = useFoldedViewport();
+  const { offered, put, pending, t } = usePutDown(item);
+  if (folded || offered.length === 0) {
+    return null;
+  }
   return (
     <div className="worklist-row-dispositions">
       {offered.map((disposition) => (
@@ -112,7 +214,7 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
           key={disposition}
           small
           variant="ghost"
-          disabled={set.isPending}
+          disabled={pending}
           onClick={() => put(disposition)}
         >
           {t(`worklist.disposition.verb.${disposition}` as const)}
@@ -123,13 +225,41 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
           choose a duration every time would charge the common case for the
           rare one. */}
       {offered.includes("snooze") && (
-        <SnoozeSpans
-          pending={set.isPending}
-          onPick={(days) => put("snooze", days)}
-        />
+        <SnoozeSpans pending={pending} onPick={(days) => put("snooze", days)} />
       )}
     </div>
   );
+}
+
+// The two sides, built from what the SERVER offered rather than from the map.
+//
+// A judgement the server did not offer draws no gesture, the same rule the
+// buttons follow — the client keeping its own idea of which rows a rep may
+// judge is how a verb 404s or a rep loses one they were entitled to. Where a
+// side has no offered judgement it is simply absent, and SwipeRow stages
+// nothing that way.
+export function swipeActions(
+  offered: readonly WorklistDisposition[],
+  t: T,
+  put: (disposition: WorklistDisposition) => void,
+  walked: Readonly<{ start: number; end: number }>,
+) {
+  const side = (which: "start" | "end") => {
+    const here = offered.filter((one) => SWIPE_SIDES[one] === which);
+    if (here.length === 0) {
+      return undefined;
+    }
+    // Repeated swipes WALK the side rather than restaging the same judgement,
+    // so a direction carrying two of them reaches both. Modulo rather than a
+    // stop at the end: a reader who has swiped past what they wanted gets it
+    // again on the next flick instead of a direction that stops answering.
+    const one = here[walked[which] % here.length];
+    return {
+      label: t(`worklist.disposition.verb.${one}` as const),
+      onAct: () => put(one),
+    };
+  };
+  return { start: side("start"), end: side("end") };
 }
 
 /**

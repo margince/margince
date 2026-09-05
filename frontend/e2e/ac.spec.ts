@@ -1350,13 +1350,21 @@ test.describe("§3.8: 390px mobile", () => {
   // relaxed, so the decision is made by someone rather than by a number
   // quietly rising.
   //
-  // RE-MEASURED 2026-09-05 after the drawer landed, and the four buttons are
-  // the whole of what is left: Später 65, Nicht meins 97, Für wie lange 83,
-  // Anheften 81. That is 326px of control against 308px of usable row width,
-  // so they wrap to two 44px bands and no layout rule can undo it — the groups
-  // were made to share a line in the same change, and this row still cannot
-  // fit. Dropping or folding a verb is the only way under 176px, and which
-  // verb is Lars's call.
+  // The tall row measures 227px against its 176px ceiling. Its parts: title 49
+  // (two lines at 390px), when/because/consequence 57, the primary verbs 44,
+  // rank 19, and ~58 of gap and padding. The set-aside verbs are no longer
+  // among them — below the fold they leave the row and it is swiped instead
+  // (screens/worklist.dispositions.tsx, design-system/swiperow.tsx).
+  //
+  // The 44px band that remains is the row's PRIMARY actions, which is how a rep
+  // does the work: putting those behind a gesture would empty the queue of what
+  // it exists for, and 44px is the touch target rather than a style. So closing
+  // the last 51px means folding the caption block, raising a ceiling that was
+  // never measured, or dropping the rank badge on a phone — each a product
+  // decision rather than a fix.
+  //
+  // Left failing rather than relaxed, so the decision is made by someone rather
+  // than by a number quietly rising to agree with the defect.
   test.fixme("AC-WORKLIST-SDR-07: no row outgrows its ceiling at 390x844", async ({
     page,
   }) => {

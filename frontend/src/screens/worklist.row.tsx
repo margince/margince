@@ -33,7 +33,7 @@ import {
   rowHref,
   whenText,
 } from "./worklist.copy";
-import { DispositionVerbs } from "./worklist.dispositions";
+import { DispositionVerbs, PutDownByThumb } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
 import { ReassignControl } from "./worklist.manager";
 import { PairDecision } from "./worklist.pair";
@@ -134,39 +134,46 @@ export function WorklistRow({
         selected ? "worklist-row worklist-row-selected" : "worklist-row"
       }
     >
-      <Rank
-        position={position}
-        title={title}
-        selected={selected}
-        onSelect={onSelect}
-      />
-      <div className="worklist-row-text">
-        {/* A waiting EMAIL names itself with the canonical row — the same one
+      {/* Below the fold the row itself answers the set-aside judgements, whose
+          verbs do not fit beside the work at 390px. It wraps the row rather
+          than the verbs because the row is what a thumb lands on; above the
+          fold it draws its children and nothing else. */}
+      <PutDownByThumb item={item}>
+        <Rank
+          position={position}
+          title={title}
+          selected={selected}
+          onSelect={onSelect}
+        />
+        <div className="worklist-row-text">
+          {/* A waiting EMAIL names itself with the canonical row — the same one
             the timeline draws — so the queue shows the message rather than a
             sentence about it. Everything else keeps the title line it had, and
             the badges below stay on both: they say where the row sits in the
             day, which the email row does not answer. */}
-        {emailOpener && <WaitingEmailLine item={item} onOpen={emailOpener} />}
-        <p className="t-body worklist-row-title">
-          {emailOpener ? null : href ? (
-            <a className="entity-link" href={href}>
-              {title}
-            </a>
-          ) : (
-            title
-          )}
-          <Badge>{t(`worklist.category.${item.category}` as const)}</Badge>
-          {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
-          {/* A state of the meeting, not a reason among reasons: a rep
+          {emailOpener && <WaitingEmailLine item={item} onOpen={emailOpener} />}
+          <p className="t-body worklist-row-title">
+            {emailOpener ? null : href ? (
+              <a className="entity-link" href={href}>
+                {title}
+              </a>
+            ) : (
+              title
+            )}
+            <Badge>{t(`worklist.category.${item.category}` as const)}</Badge>
+            {item.overdue && (
+              <Badge tone="danger">{t("worklist.overdue")}</Badge>
+            )}
+            {/* A state of the meeting, not a reason among reasons: a rep
               scanning for the one to open before it starts has to see it
               without reading the line under the title. Warn rather than
               danger — an unprepared meeting is work to do, not a deadline
               already missed. */}
-          {isUnprepared(item) && (
-            <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
-          )}
-        </p>
-        {/* The supporting line, from every source that sends PROSE.
+            {isUnprepared(item) && (
+              <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
+            )}
+          </p>
+          {/* The supporting line, from every source that sends PROSE.
 
             It was drawn for `notice` alone, because three sources used this
             field as a typed channel — two wrote a bare day count, one wrote the
@@ -183,40 +190,43 @@ export function WorklistRow({
             from that pair rather than drawn, by worklist.synchealth.ts. A value
             that build does not recognise draws nothing, which is what this row
             did for every sync value before. */}
-        {detail && <p className="t-caption worklist-row-detail">{detail}</p>}
-        {sample.length > 0 && (
-          // A group nobody can see into is a group nobody trusts, and an
-          // untrusted group is worse than the pile it replaced.
-          <p className="t-caption worklist-row-sample">{sample.join(" · ")}</p>
+          {detail && <p className="t-caption worklist-row-detail">{detail}</p>}
+          {sample.length > 0 && (
+            // A group nobody can see into is a group nobody trusts, and an
+            // untrusted group is worse than the pile it replaced.
+            <p className="t-caption worklist-row-sample">
+              {sample.join(" · ")}
+            </p>
+          )}
+          <RowCaptions
+            when={when}
+            facts={facts}
+            reasons={reasons}
+            consequence={consequence}
+            above={above}
+          />
+        </div>
+        {item.batch && onReview ? (
+          <BatchVerb onReview={onReview} />
+        ) : (
+          <RowVerbs item={item} href={href} move={moveHref(item)} />
         )}
-        <RowCaptions
-          when={when}
-          facts={facts}
-          reasons={reasons}
-          consequence={consequence}
-          above={above}
-        />
-      </div>
-      {item.batch && onReview ? (
-        <BatchVerb onReview={onReview} />
-      ) : (
-        <RowVerbs item={item} href={href} move={moveHref(item)} />
-      )}
-      {/* The ways this row can be PUT DOWN, as the server declares them. Drawn
+        {/* The ways this row can be PUT DOWN, as the server declares them. Drawn
           from `dispositions` rather than inferred from `source`: which rows a
           rep may judge is a server rule, and a client keeping its own copy
           draws a verb that 404s or hides one the rep is entitled to. */}
-      <DispositionVerbs item={item} />
-      {/* The reader's own override, on every row that can carry one. It is not
+        <DispositionVerbs item={item} />
+        {/* The reader's own override, on every row that can carry one. It is not
           a disposition — those put a row DOWN, and this lifts one up — so it is
           drawn beside them rather than among them. */}
-      <PinVerb item={item} />
-      {/* Only a task carries an assignee, so only a task can be handed on. A
+        <PinVerb item={item} />
+        {/* Only a task carries an assignee, so only a task can be handed on. A
           group row stands for a pile and names no single activity to move. */}
-      {owner !== "" && item.source === "task" && !item.batch && (
-        <ReassignControl item={item} owner={owner} />
-      )}
-      <RowAnswer item={item} />
+        {owner !== "" && item.source === "task" && !item.batch && (
+          <ReassignControl item={item} owner={owner} />
+        )}
+        <RowAnswer item={item} />
+      </PutDownByThumb>
     </PanelRow>
   );
 }

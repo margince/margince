@@ -8089,7 +8089,7 @@ export const en = {
   "worklist.bandClear.build_pipeline": "No new pipeline work waiting.",
   "worklist.bandClear.keep_momentum": "Nothing agreed is drifting.",
   "worklist.bandClear.review": "Nothing to review.",
-  "worklist.disposition.verb.snooze": "Later",
+  "worklist.disposition.verb.snooze": "Snooze",
   "worklist.disposition.snoozeFor": "For how long",
   "worklist.disposition.snoozeDays_one": "{value} day",
   "worklist.disposition.snoozeDays_other": "{value} days",
@@ -8101,6 +8101,7 @@ export const en = {
   "worklist.disposition.done.not_mine":
     "Off your list. Whoever owns it still sees it.",
   "worklist.disposition.done.not_sales": "Off everyone's list.",
+  "worklist.disposition.swipeCancel": "Keep it",
   "worklist.disposition.undo": "Undo",
   "worklist.disposition.undoFailed":
     "That could not be undone. The message is still off your list.",

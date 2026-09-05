@@ -7996,7 +7996,7 @@ export const de = {
   "worklist.bandClear.build_pipeline": "Keine neue Pipeline-Arbeit offen.",
   "worklist.bandClear.keep_momentum": "Nichts Vereinbartes bleibt liegen.",
   "worklist.bandClear.review": "Nichts zu prüfen.",
-  "worklist.disposition.verb.snooze": "Später",
+  "worklist.disposition.verb.snooze": "Schlummern",
   "worklist.disposition.snoozeFor": "Für wie lange",
   "worklist.disposition.snoozeDays_one": "{value} Tag",
   "worklist.disposition.snoozeDays_other": "{value} Tage",
@@ -8009,6 +8009,7 @@ export const de = {
   "worklist.disposition.done.not_mine":
     "Von deiner Liste. Wer zuständig ist, sieht es weiterhin.",
   "worklist.disposition.done.not_sales": "Von allen Listen entfernt.",
+  "worklist.disposition.swipeCancel": "Behalten",
   "worklist.disposition.undo": "Rückgängig",
   "worklist.disposition.undoFailed":
     "Das konnte nicht rückgängig gemacht werden. Die Nachricht ist weiterhin von deiner Liste.",

@@ -7907,7 +7907,7 @@ export const vi = {
   "worklist.bandClear.keep_momentum":
     "Không có việc đã thống nhất nào bị đình trệ.",
   "worklist.bandClear.review": "Không có gì để rà soát.",
-  "worklist.disposition.verb.snooze": "Để sau",
+  "worklist.disposition.verb.snooze": "Tạm gác",
   "worklist.disposition.snoozeFor": "Trong bao lâu",
   "worklist.disposition.snoozeDays_one": "{value} ngày",
   "worklist.disposition.snoozeDays_other": "{value} ngày",
@@ -7921,6 +7921,7 @@ export const vi = {
   "worklist.disposition.done.not_mine":
     "Đã rời danh sách của bạn. Người phụ trách vẫn thấy nó.",
   "worklist.disposition.done.not_sales": "Đã rời danh sách của mọi người.",
+  "worklist.disposition.swipeCancel": "Giữ lại",
   "worklist.disposition.undo": "Hoàn tác",
   "worklist.disposition.undoFailed":
     "Không thể hoàn tác. Tin nhắn vẫn nằm ngoài danh sách của bạn.",
