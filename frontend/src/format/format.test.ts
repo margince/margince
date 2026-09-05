@@ -84,15 +84,19 @@ describe("money formatting (B-EP09.17)", () => {
 });
 
 // The KPI-slot formatter had no test of its own, and that is how it came to
-// render one stored figure two ways. `maximumFractionDigits: 1` with no minimum
-// leaves the minimum to Intl, whose default under `style: "currency"` is the
-// currency's own digit count — so a round €420,000 kept a forced ".0" on one
-// ICU build and dropped it on another. One figure, two renderings, decided by
-// the reader's browser rather than by this file.
+// render every round figure with a digit it had nothing to put in.
+// `maximumFractionDigits: 1` with no minimum leaves the minimum to Intl, whose
+// default under `style: "currency"` is the currency's own digit count, and
+// ECMA-402 only clamps that DOWN to the maximum — `min(2, 1)` is 1. So "at most
+// one digit" resolved to EXACTLY one, and €420,000 drew "€420.0k".
 //
-// EXACT strings for that reason. `toContain("420")` is satisfied by both
-// spellings AND by the uncompacted "€420,000.00", which is the assertion shape
-// that let the divergence run: it could not tell the three apart.
+// Deterministic, not environmental: the clamp is specified, so every reader saw
+// the same wrong figure rather than some seeing it. That is what made the
+// screen test above it fail identically on an idle machine and a loaded one.
+//
+// EXACT strings, because the assertion shape is what let it run unnoticed:
+// `toContain("420")` is satisfied by "€420k", by "€420.0k" AND by the
+// uncompacted "€420,000.00", so it could not tell the three apart.
 describe("a money figure abbreviated for a KPI slot", () => {
   it("drops a decimal a round figure does not need", () => {
     expect(formatMoneyCompact(42_000_000, "EUR", "en")).toBe("€420k");
