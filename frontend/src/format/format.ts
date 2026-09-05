@@ -102,6 +102,15 @@ export function formatMoneyCompact(
     // and carries every digit, so the threshold is where abbreviating buys
     // something.
     notation: Math.abs(major) >= 10_000 ? "compact" : "standard",
+    // SPELLED OUT, because the currency style does not default it to zero.
+    // `minimumFractionDigits` starts at the currency's own minor-unit digits —
+    // two for EUR — and ECMA-402 only clamps that DOWN to
+    // `maximumFractionDigits`. So `maximumFractionDigits: 1` alone reads as "at
+    // most one digit" and resolves to EXACTLY one: €420,000 rendered "€420.0k",
+    // and in German, where 420k does not abbreviate at all, "420.000,0 €". The
+    // digit is only ever there to carry a remainder the compact form would
+    // otherwise drop.
+    minimumFractionDigits: 0,
     maximumFractionDigits: Math.abs(major) >= 10_000 ? 1 : 0,
   }).format(major);
 }
