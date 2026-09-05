@@ -7,26 +7,23 @@
  * all of it and carries none of it alone.
  */
 
-/* The wrapper the fold measures. The panel goes beside the picture only when
- * the picture's OWN column has room for both, and that column is not the
- * window: with the nav open and the record's details pane open, a 1440px
- * window leaves this map barely half of it, and a fold that read the window
- * kept the panel beside a drawing it had squeezed off the right edge. */
-.rmap {
-  container: rmap / inline-size;
+/* The frame is a size container, because what decides whether the panel
+ * fits BESIDE the drawing is the width of the box the map sits in, not the
+ * viewport: a record page with its details rail open is a wide viewport and
+ * a narrow box, and a panel beside the drawing there squeezed the picture to
+ * two thirds of its size. */
+.rmap-frame {
+  container-type: inline-size;
 }
 
-.rmap-layout {
+.rmap {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-/* 960px is the width at which the map's track still shows the drawing at
- * roughly six-sevenths of its natural size once the panel and the gap are paid
- * for — the smallest the names stay comfortably readable at. */
-@container rmap (min-width: 960px) {
-  .rmap-layout {
+@container (min-width: 56rem) {
+  .rmap {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 280px;
     grid-template-areas: "map panel" "note panel";
@@ -47,11 +44,11 @@
   }
 }
 
-/* The drawing has an intrinsic width. In a box narrower than that it scales
- * down to fit, so a half-width column shows the whole picture and not its
- * left third — down to a floor where the names would stop being legible,
- * below which it scrolls inside its own box rather than making the page
- * scroll sideways. */
+/* The drawing has an intrinsic width. In a box slightly narrower than that
+ * it scales down to fit rather than showing its left edge and a scrollbar;
+ * the floor is high, because a picture shrunk to two thirds reads as a
+ * thumbnail, and below it the drawing keeps its size and scrolls inside its
+ * own box rather than making the page scroll sideways. */
 .rmap-scroll {
   overflow-x: auto;
   background: var(--pane);
@@ -60,12 +57,10 @@
   padding: var(--space-3);
 }
 
-/* Never larger than drawn: the width attribute is the ceiling, so a wide
- * column leaves the picture at its natural size rather than blowing it up. */
 .rmap-svg {
   display: block;
   max-width: 100%;
-  min-width: 560px;
+  min-width: 680px;
   height: auto;
 }
 

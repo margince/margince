@@ -261,14 +261,14 @@ export const ReducedMotion: Story = {
 /**
  * The map in the column it actually gets on a record page with the details
  * pane open — about half the window. The panel folds under the picture and
- * the picture shrinks to its box, so nothing is cut off at the right edge;
- * the fold reads this column's width, not the window's.
+ * the picture fits its box, so nothing is cut off at the right edge; the
+ * fold reads this column's width, not the window's.
  */
 export const BesideDetailsPane: Story = {
   args: { focusId: "p-1" },
   decorators: [
     (Story) => (
-      <div style={{ maxWidth: "44rem" }}>
+      <div style={{ maxWidth: "46rem" }}>
         <Story />
       </div>
     ),

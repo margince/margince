@@ -173,14 +173,12 @@ export function RelationshipMap({
   };
 
   return (
-    <div className="rmap" data-motion={still ? "none" : "in"}>
-      {/* The outer element is what the fold measures, and an element cannot
-          query its own width — so the grid is one level down. */}
-      <div className="rmap-layout">
+    <div className="rmap-frame">
+      <div className="rmap" data-motion={still ? "none" : "in"}>
         <div className="rmap-scroll">
           {/* biome-ignore lint/a11y/useSemanticElements: the rule suggests
-              <fieldset>, which cannot live inside an SVG. role="group" with a
-              label is how an SVG names itself to a reader who cannot see it. */}
+            <fieldset>, which cannot live inside an SVG. role="group" with a
+            label is how an SVG names itself to a reader who cannot see it. */}
           <svg
             ref={svgRef}
             className="rmap-svg"
@@ -193,14 +191,14 @@ export function RelationshipMap({
           >
             <title>{labels.region}</title>
             {/* One hidden layer rather than a hidden attribute per line: a <g>
-                is not focusable in any engine, so the intent is unambiguous, and
-                the edges' facts reach a reader through the node names and the
-                panel instead. */}
+              is not focusable in any engine, so the intent is unambiguous, and
+              the edges' facts reach a reader through the node names and the
+              panel instead. */}
             {/* biome-ignore lint/a11y/noAriaHiddenOnFocusable: a <g> is not a
-                focusable element; the rule flags any aria-hidden inside an SVG.
-                Hiding the edge layer is correct rather than lossy — what a line
-                says in thickness and dash reaches a reader through the node
-                accessible names and the panel. */}
+              focusable element; the rule flags any aria-hidden inside an SVG.
+              Hiding the edge layer is correct rather than lossy — what a line
+              says in thickness and dash reaches a reader through the node
+              accessible names and the panel. */}
             <g aria-hidden="true">
               {model.edges.map((edge) => (
                 <Edge

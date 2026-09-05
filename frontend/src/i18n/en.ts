@@ -3386,6 +3386,7 @@ export const en = {
   "analytics.count": "Deals",
   "analytics.unweighted": "Unweighted",
   "analytics.weighted": "Weighted",
+  "analytics.priced": "{priced} of {total} priced",
   "analytics.planNote":
     "the executed plan and the rows this number reconciles to",
   "analytics.reportDeals": "Open pipeline by stage",
