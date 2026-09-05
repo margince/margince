@@ -29953,8 +29953,8 @@ export interface components {
             counts: components["schemas"]["TeamBoardCounts"];
         };
         /**
-         * @description Three counts of work somebody owes, all read under the CALLER's visibility rather
-         *     than the teammate's — so this is how much of their load the reader can see.
+         * @description Counts of work somebody owes, all read under the CALLER's visibility rather than the
+         *     teammate's — so this is how much of their load the reader can see.
          */
         TeamBoardCounts: {
             /**
@@ -29967,6 +29967,15 @@ export interface components {
             at_risk: number;
             /** @description Open tasks whose due moment has already passed. */
             overdue: number;
+            /**
+             * @description Commitments due by the instant the board was read, from the same extracted claims
+             *     the rep's own day counts — not from open tasks, which are a different question
+             *     wearing the same heading.
+             *
+             *     A zero here means they owe nothing, not that nobody asked: claims have a writer on
+             *     every installation, so this count is always read.
+             */
+            promises_due: number;
         };
         /**
          * @description One outcome band and how much of it this page is showing — the headings a client draws,

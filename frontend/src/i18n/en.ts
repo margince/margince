@@ -8334,6 +8334,12 @@ export const en = {
   "worklist.board.atRisk": "Deals at risk",
   "worklist.board.overdue": "Past due",
   "worklist.board.nobody": "Nobody yet",
+  "worklist.coaching.title": "Worth a word this morning",
+  "worklist.coaching.promises":
+    "{name} owes {count} promises that are due — the customer is already expecting them.",
+  "worklist.coaching.waiting": "{count} customers are waiting on {name}.",
+  "worklist.coaching.overdue": "{name} has {count} tasks past their due date.",
+  "worklist.board.promises": "Promises due",
   "worklist.board.truncated":
     "There is more work than this could count. These are floors, not totals.",
   "worklist.readings.label": "What today is worth",

@@ -8221,6 +8221,14 @@ export const de = {
   "worklist.board.atRisk": "Gefährdete Deals",
   "worklist.board.overdue": "Überfällig",
   "worklist.board.nobody": "Noch niemand",
+  "worklist.coaching.title": "Heute früh ein Gespräch wert",
+  "worklist.coaching.promises":
+    "{name} schuldet {count} fällige Zusagen — die Kundschaft wartet bereits darauf.",
+  "worklist.coaching.waiting":
+    "{count} Kundinnen und Kunden warten auf {name}.",
+  "worklist.coaching.overdue":
+    "{name} hat {count} Aufgaben, deren Frist verstrichen ist.",
+  "worklist.board.promises": "Fällige Zusagen",
   "worklist.board.truncated":
     "Es gibt mehr Arbeit, als hier gezählt werden konnte. Das sind Untergrenzen, keine Gesamtzahlen.",
   "worklist.readings.label": "Was heute auf dem Spiel steht",
