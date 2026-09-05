@@ -154,3 +154,51 @@ func (e *BriefEngine) MailFailed(ctx context.Context, runID ids.UUID, cause stri
 		return err
 	})
 }
+
+// RunsAwaitingMail lists this local day's runs that have not spent their mail
+// attempt, oldest rep first so one morning reads the same way twice.
+//
+// It exists because a run is assembled ONCE and may be mailed LATER. The
+// overnight pass writes a rep's run at the installation's briefing hour, but
+// `delivery_hour_local` can hold the message back for hours after that — and
+// the pass's own candidate query lists only reps who hold NO run for the day,
+// so by the time the chosen hour comes round that rep is no longer in it. Read
+// this way instead, the message is picked up by whichever hourly tick first
+// finds the hour arrived.
+//
+// A tx and not the engine's own pool: the caller is enumerating an
+// installation-level fact across every rep, the way the candidate query beside
+// it does, and it runs inside that pass's transaction rather than opening a
+// second one that could see a different set of runs.
+func RunsAwaitingMail(ctx context.Context, tx pgx.Tx, day time.Time) ([]BriefRun, error) {
+	rows, err := tx.Query(ctx, runSelect+`
+		WHERE local_day = $1 AND mail_attempted_at IS NULL
+		ORDER BY user_id`, day)
+	if err != nil {
+		return nil, fmt.Errorf("brief: listing the runs still owed a message: %w", err)
+	}
+	defer rows.Close()
+	runs := []BriefRun{}
+	for rows.Next() {
+		run, scanErr := scanRun(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		runs = append(runs, run)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	// THE ITEMS TOO, because the caller decides whether to send from them: a
+	// morning with nothing waiting is only mailed to a rep who asked to hear
+	// about quiet days. Read after the rows are closed rather than inside the
+	// loop, since a second query on the same transaction cannot run while the
+	// first one's rows are open.
+	for i := range runs {
+		runs[i].Items, err = readRunItems(ctx, tx, runs[i].ID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return runs, nil
+}
