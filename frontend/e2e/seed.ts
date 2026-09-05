@@ -2497,6 +2497,30 @@ export async function mockApi(
       conn.mail_posture = posture;
       return json(conn);
     }
+    // The readings the morning strip's pipeline slot draws, and the same read
+    // Analytics makes. Served here because the fallback below answers a PAGED
+    // envelope, which this route's schema is not: the card then held a body
+    // with no `base_currency`, and formatting money against it threw and took
+    // the whole of `#/home` down to the app's error boundary.
+    if (path === "/forecast") {
+      return json({
+        period_start: "2026-07-01",
+        period_end: "2026-09-30",
+        scope_kind: "owner",
+        won_minor: 1_250_00,
+        evidence_minor: 900_00,
+        best_case_minor: 4_100_00,
+        open_minor: 3_200_00,
+        weighted_minor: 1_480_00,
+        eligible_count: 9,
+        priced_count: 7,
+        confirmed_date_count: 4,
+        fx_missing_count: 0,
+        as_of: "2026-08-21T05:00:00Z",
+        timezone: "Europe/Berlin",
+        base_currency: "EUR",
+      });
+    }
     if (path === "/connectors") {
       return json({ data: captureConnections });
     }
