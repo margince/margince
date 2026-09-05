@@ -3346,14 +3346,14 @@
   outline-offset: 1px;
 }
 
-/* ---- the preferences act: the last word before the app ---- */
+/* ---- the basis act: the reporting basis and the autonomy switches ---- */
 
-.ob-prefs-scene {
+.ob-basis-scene {
   max-width: 48rem;
   gap: var(--space-5);
 }
 
-.ob-prefs-section {
+.ob-basis-section {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -3363,13 +3363,13 @@
   background: var(--bgElevated);
 }
 
-.ob-prefs-section h3 {
+.ob-basis-section h3 {
   margin: 0;
   color: var(--textPrimary);
   font: var(--fw-semibold) var(--fs-h3) / var(--lh-tight) var(--f-display);
 }
 
-.ob-prefs-lead {
+.ob-basis-lead {
   margin: 0;
   color: var(--textSecondary);
   font-size: var(--fs-sm);

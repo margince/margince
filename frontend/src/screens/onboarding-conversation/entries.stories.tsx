@@ -149,8 +149,8 @@ const choreography: ReadonlyArray<{
     },
   },
   {
-    label: "pf.done",
-    state: { ...initialConversationState, act: "done", phase: "pf.done" },
+    label: "done",
+    state: { ...initialConversationState, act: "done", phase: "done" },
   },
 ];
 

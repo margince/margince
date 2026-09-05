@@ -378,7 +378,7 @@ describe("dismissing a clarify in the company act", () => {
     // heading is the first proof the confirm landed, and Continue carries the
     // installation's prefilled reporting basis forward unchanged.
     await screen.findByRole("heading", {
-      name: "First, how the numbers are reported.",
+      name: "First, the basis.",
     });
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.click(
