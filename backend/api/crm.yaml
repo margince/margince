@@ -33473,7 +33473,10 @@ components:
          webhook_subscription, fx_rate, ai_model_rate, capture_settings, project,
          channel_connection, import_run, installation_settings, finance, integrations,
          retention_policy, capture_trace, license, contract, ai_routing, commission, deal_room,
-         knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage]
+         knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage,
+         user_admin, role_admin, team_admin, privacy_request, audit_log, job_health,
+         extension_access, system_reset, ai_diagnostics, consent_config, authentication_policy,
+         oauth_application, seat_usage]
 
     RbacAction:
       type: string

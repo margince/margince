@@ -3,213 +3,16 @@
 
 package policy
 
-// The seeded system-role matrix: the grant rows every default is built from,
-// the five role documents themselves, and the positional zip that turns one
-// line per role into a map. Split from policy.go, which owns the document
-// SHAPE and the read paths (Parse, Merge) — this file owns what the server
-// writes at workspace creation, and the two change for different reasons.
+// The six seeded system-role documents. Every grant row, the `grid` builder
+// they are assembled with and the object-name constants they repeat live in
+// grants.go; this file is only the six decisions about who holds what.
 
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-)
-
-// crud/read are the two grant rows every default builds from.
-var (
-	crud       = grant{Create: true, Read: true, Update: true, Delete: true}
-	readOnly   = grant{Read: true}
-	readUpdate = grant{Read: true, Update: true}
-	// writeNoDelete is the append-forward config posture: create + read +
-	// same-day-correct (update), never delete. The rate sheets (fx_rate,
-	// ai_model_rate) have no delete surface at all — a past-dated row prices
-	// historical rollups and must never disappear — so no role holds delete.
-	writeNoDelete = grant{Create: true, Read: true, Update: true}
-	// createRead is the posture of a record nobody edits: a forecast reading is
-	// derived, and a current call SUPERSEDES rather than being rewritten, so
-	// neither update nor delete has a surface to gate. A grant for a verb the
-	// product does not offer reads as an oversight the next author has to
-	// research.
-	createRead = grant{Create: true, Read: true}
-	// none is the zero grant, named so a role's override map says WHY a line is
-	// there. Inside a `map[string]grant` the literal simplifies to a bare `{}`,
-	// which reads as an oversight rather than as "this role holds nothing on
-	// this object" — and holding nothing is a decision every bit as deliberate
-	// as holding crud.
-	none = grant{}
-)
-
-// defaults are the seeded system-role policies (they encode
-// the choices: reps work team-scoped without delete; managers are
-// team-scoped with delete; pipeline, automation and custom-field config
-// are admin/ops-owned — each reshapes what the system does
-// (or stores) on everyone's records, so they follow the pipeline-config
-// posture: everyone reads the catalog, only admin/ops change it.
-// computed_field is read-only for every role, admin/ops included —
-// RD-AC-7: no runtime formula-authoring surface exists, so there is no
-// write to grant). offer_template follows the SAME posture as product/
-// offer, not the pipeline-config posture: it's the offer's own branding
-// input, not a locked-down schema surface, so reps create and work
-// templates like any other offer-adjacent record; delete stays manager/
-// admin/ops (archiveOfferTemplate carries no x-agent-access gate — any
-// role holding delete may call it directly). overlay_connection follows
-// the SAME posture as custom_field, and for the same reason:
-// connecting/disconnecting the workspace's incumbent binding is
-// destructive workspace-wide config (it purges the mirror and flips
-// sor_mode for everyone), so create/update/delete are admin/ops-only;
-// every role may read the connection status (a rep needs to see whether
-// overlay mode is live, the same as a custom_field catalog read).
-// embedding_reindex has no create/delete surface at all — it is a single
-// deployment-level trigger, not a record kind — so only read and update
-// are ever granted, and both are admin/ops-only: admin/ops may update
-// (trigger a reindex; the confirm route itself carries x-agent-access:
-// human-only in the contract, so this grant only ever fires from a
-// human session, never an agent), and admin/ops alone may read it — the
-// banner/card that consumes the read is itself ops-gated in the SPA, so
-// manager/rep/read_only have no legitimate consumer of this object and
-// get the zero grant, unlike the custom_field catalog or
-// overlay_connection's status which every role legitimately reads.
-// webhook_subscription follows the SAME admin/ops-owned posture: a
-// subscription registers outbound egress of governed events, so managing
-// the fan-out surface is workspace integration config (create/update/
-// delete admin/ops-only); every role may read subscriptions and their
-// delivery health. (UC-E10-04 narrates a Rep registering one; that
-// posture question is tracked upstream against the spec, not settled
-// here.)
-// channel_connection follows overlay_connection's posture exactly: a bot
-// bound at the workspace level carries every seat's inbound channel traffic,
-// so create/update/delete are admin/ops-only, while every role may read the
-// binding's status (a rep needs to know whether the channel is live before
-// expecting a reply to arrive there).
-// import_run is admin/ops-only on EVERY verb, read included: a
-// migration run is a workspace-wide bulk mutation of the estate (the
-// overlay→native flip executes through it), and unlike custom_field or
-// overlay_connection there is no per-rep read surface — the mode-flip
-// and migrate-in screens are admin surfaces.
-// grid builds one role's document: every core object at `base`, then the
-// objects that differ. It replaces a 44-argument positional zip in which the
-// object a grant belonged to was decided by COUNTING — a transposed pair
-// typechecked, read identically in review, and would have been caught only by
-// the replay fixture. Here each grant is written beside the object it governs,
-// and a role states only where it departs from its own baseline, which is the
-// sentence the reader actually wants: not "what does rep hold on all 44" but
-// "where is rep NOT the record posture".
-//
-// An override naming an object outside coreObjects panics at package init: a
-// typo has to be a build failure rather than a grant that silently governs
-// nothing, which is the rule `Parse` already applies to a stored document.
-func grid(base grant, overrides map[string]grant) map[string]grant {
-	out := make(map[string]grant, len(coreObjects))
-	for _, object := range coreObjects {
-		out[object] = base
-	}
-	for object, g := range overrides {
-		if _, ok := out[object]; !ok {
-			//craft:ignore panic-in-domain runs only during package initialization (the `defaults` var) — a role naming an object the vocabulary does not have is a typo in this file, and booting with it would seed that role a grant short forever
-			panic(fmt.Sprintf("policy: a default grant names %q, which is not a core object", object))
-		}
-		out[object] = g
-	}
-	return out
-}
-
-// The object names a role's overrides repeat. Constants rather than repeated
-// literals so a typo is a compile error here too, not only inside `grid` at
-// init: these fourteen appear in three or more role documents, and a misspelt
-// one in a single map would otherwise take that role's grant with it.
-const (
-	// The rate sheets. Append-forward on every role that holds them —
-	// create, read, same-day-correct, never delete — because a past-dated row
-	// prices a historical rollup and must not disappear. No delete surface
-	// exists at all, so no role holds one.
-	objAiModelRate = "ai_model_rate"
-	// Which vendor this installation's text is sent to (ai-operational-spec
-	// §1.4). Deliberately NOT folded into installation_settings: whoever may
-	// rename the organization has no business re-pointing where its people's
-	// correspondence is processed, and those become one grant the moment the
-	// two share an object.
-	//
-	// Narrow on BOTH verbs, unlike most read-broad objects here. Nobody needs
-	// this grant to see which models are bound — the AI profile surface answers
-	// that from the running config, not from a settings read — so a read grant
-	// would buy a rep nothing and widen the reach of the object governing egress.
-	objAiRouting = "ai_routing"
-	// Everyone reads (a rep sees whether auto-enrich is on); only admin/ops
-	// toggle it or carve a domain back out of the consumer-mail baseline.
-	// `create` is the one write a rep holds: contributing a consumer domain the
-	// shipped baseline missed (CAP-PARAM-5) is everyday judgment about the mail
-	// they read, not workspace config.
-	objCaptureSettings = "capture_settings"
-	// The workspace's SHARED-CHANNEL capture trace (a bot binding's inbound
-	// traffic). Read-only for everyone who holds it, because nothing writes it
-	// but the pipeline and nothing deletes it but its 24h sweep — there is no
-	// create/update/delete anyone could hold.
-	//
-	// It reaches ONLY rows with no member behind them. A member's own capture
-	// traffic is personal data and no grant widens it, which is why rep and
-	// read_only hold nothing here rather than holding read: there is no
-	// shared-channel debugging in their job, and a grant that looked harmless
-	// would be the one somebody later widened.
-	objCaptureTrace = "capture_trace"
-	// Read-only for every role, admin/ops included — RD-AC-7: no runtime
-	// formula-authoring surface exists, so there is no write to grant.
-	objComputedField = "computed_field"
-	// Nothing, below admin/ops. Source health is connector freshness,
-	// permission-limited checks and import backlog: an OPERATOR's view. A rep
-	// shown their installation's connector health has been handed somebody
-	// else's job, and the screen that would tell them is one they cannot act on.
-	objDataCoverage = "data_coverage"
-	// No create/delete surface at all — it is a single deployment-level
-	// trigger, not a record kind — so only read and update are ever granted,
-	// and both are admin/ops-only. Admin/ops may update (trigger a reindex; the
-	// confirm route carries x-agent-access: human-only in the contract, so the
-	// grant only ever fires from a human session, never an agent), and admin/ops
-	// alone may read it: the banner that consumes the read is itself ops-gated,
-	// so manager/rep/read_only have no legitimate consumer and get nothing —
-	// unlike the custom_field catalog or overlay_connection's status, which
-	// every role legitimately reads.
-	objEmbeddingReindex = "embedding_reindex"
-	// createRead everywhere it is held: a reading is derived, and a current
-	// call SUPERSEDES rather than being rewritten, so neither update nor delete
-	// has a surface to gate. A grant for a verb the product does not offer
-	// reads as an oversight the next author has to research.
-	objForecast = "forecast"
-	// Append-forward like ai_model_rate, and for the same reason: a past-dated
-	// row prices a historical rollup.
-	objFxRate = "fx_rate"
-	// Admin/ops-only on EVERY verb, read included: a migration run is a
-	// workspace-wide bulk mutation of the estate (the overlay→native flip
-	// executes through it), and unlike custom_field or overlay_connection there
-	// is no per-rep read surface — the mode-flip and migrate-in screens are
-	// admin surfaces.
-	objImportRun = "import_run"
-	// The organization's own identity and reporting calendar (ADR-0090/A135).
-	// Read is broad — the base currency and the business timezone shape what
-	// every seat sees — and only admin/ops change it.
-	objInstallationSettings = "installation_settings"
-	// Asking a colleague to open a door, and answering an ask made of you, are
-	// both the job, so every seat holds it. WHICH of the two parties a caller is
-	// on a given row is the row's own check, and no grant stands in for it.
-	//
-	// No delete on ANY role, admin included: an ask that was made is a thing
-	// that happened, so it is withdrawn rather than erased. That is a property
-	// of the object rather than a posture per role, which is why the backfill
-	// migration grants the same — a database that upgraded into this object and
-	// one created after it answer alike.
-	objIntroduction = "introduction"
-	// READ IS THE ONLY VERB, for admin as much as anyone: the token is resolved
-	// from the deployment file at boot, so there is no write path for a grant to
-	// govern. Admin/ops-only — a rep reads their own seat elsewhere; the
-	// workspace's entitlement is not theirs to see (UC-ADMIN-03 F1).
-	objLicense = "license"
-	// Admin/ops-only, read included (UC-GDPR-09, GCS-WIRE-1..5). The retain-only
-	// posture setting is gated by this same object, so whoever may author a
-	// policy may also suspend every destructive one.
-	objRetentionPolicy = "retention_policy"
-	// The rep's own per-user view state, owner-scoped in the store, so full
-	// self-service is correct for every seat — read_only included.
-	objSavedView = "saved_view"
 )
 
 // The objects whose posture is not visible from any one role's overrides,
@@ -258,8 +61,9 @@ const (
 // was planned is a thing that happened, and a commitment is dropped rather than
 // erased.
 
-// managerObjects is the grid a team lead (`manager`) and the whole-organization
-// `management` seat share; only their row scope differs.
+// managerObjects is the team lead's grid. `management` starts from it and
+// departs in exactly the ways managementObjects names below; the two used to be
+// one variable, and the administration objects are what separated them.
 var managerObjects = grid(crud, map[string]grant{
 	objAiModelRate:          none,
 	objAiRouting:            none,
@@ -286,7 +90,48 @@ var managerObjects = grid(crud, map[string]grant{
 	objRetentionPolicy:      none,
 	"tag":                   readOnly,
 	"webhook_subscription":  readOnly,
+
+	// A team lead administers records, never the installation. Every
+	// administration object is spelled out rather than left to the crud base,
+	// because the base is what a NEW object inherits, and a settings surface
+	// added later must not arrive already granted to every team lead.
+	objUserAdmin:            none,
+	objRoleAdmin:            none,
+	objTeamAdmin:            none,
+	objPrivacyRequest:       none,
+	objAuditLog:             none,
+	objJobHealth:            none,
+	objExtensionAccess:      none,
+	objSystemReset:          none,
+	objAiDiagnostics:        none,
+	objConsentConfig:        none,
+	objAuthenticationPolicy: none,
+	objOauthApplication:     none,
+	objSeatUsage:            none,
 })
+
+// managementObjects is managerObjects with the five administration reads a
+// sales leader answers for: the AI spend, the consent vocabulary their team is
+// bound by, the sign-in posture, which OAuth applications the workspace issued,
+// and how many seats are used. Every one is a READ — management sees what it is
+// accountable for and changes none of it.
+//
+// Derived from managerObjects by copy rather than by aliasing it: the two grids
+// now differ, and one variable serving both is how a later edit to a team lead's
+// records posture would silently widen the organization-scoped seat too.
+var managementObjects = func() map[string]grant {
+	out := maps.Clone(managerObjects)
+	for _, object := range []string{
+		objAiDiagnostics,
+		objConsentConfig,
+		objAuthenticationPolicy,
+		objOauthApplication,
+		objSeatUsage,
+	} {
+		out[object] = readOnly
+	}
+	return out
+}()
 
 var defaults = map[string]Document{
 	// The installation's administrator: every object, every verb, except where
@@ -309,17 +154,31 @@ var defaults = map[string]Document{
 			objInstallationSettings: readUpdate,
 			objIntroduction:         writeNoDelete,
 			objLicense:              readOnly,
+
+			// The administration objects. Admin holds every one, but not at crud:
+			// each is spelled to the verbs its surface actually offers, so a grant
+			// never names an action no endpoint implements.
+			objTeamAdmin:            writeNoDelete,
+			objPrivacyRequest:       readUpdate,
+			objAuditLog:             readOnly,
+			objJobHealth:            readOnly,
+			objExtensionAccess:      readOnly,
+			objSystemReset:          deleteOnly,
+			objAiDiagnostics:        readOnly,
+			objAuthenticationPolicy: readUpdate,
+			objSeatUsage:            readOnly,
 		}),
 		RowScope: principal.RowScopeAll,
 	},
 	// management is the sales leader's seat (ADR-0110): the manager grid over
-	// EVERY row in the organization, and no admin power. Governance actions
-	// (inviting users, changing roles, editing role policy, binding another
-	// user's passport, issuing password links) key on the literal admin role,
-	// so an unbounded row scope here widens what management sees, never what
-	// it administers. The two grids are one variable so they cannot drift.
+	// EVERY row in the organization, plus the five administration READS a sales
+	// leader answers for, and no administration write at all. Inviting users,
+	// changing roles, editing role policy, binding another user's passport and
+	// issuing password links are objUserAdmin and objRoleAdmin, which this seat
+	// does not hold — so an unbounded row scope widens what management sees,
+	// never what it administers.
 	"management": {
-		Objects:  managerObjects,
+		Objects:  managementObjects,
 		RowScope: principal.RowScopeAll,
 	},
 	"manager": {
@@ -396,6 +255,24 @@ var defaults = map[string]Document{
 			"signal":            writeNoDelete,
 			"voice_profile":     writeNoDelete,
 			"weekly_plan":       writeNoDelete,
+
+			// The administration objects. The base here is readOnly, so every one
+			// must be named: leaving them to the base would let a rep read the
+			// audit trail and the roster's privileged view on the day the object
+			// was added, which is the opposite of what adding it was for.
+			objUserAdmin:            none,
+			objRoleAdmin:            none,
+			objTeamAdmin:            none,
+			objPrivacyRequest:       none,
+			objAuditLog:             none,
+			objJobHealth:            none,
+			objExtensionAccess:      none,
+			objSystemReset:          none,
+			objAiDiagnostics:        none,
+			objConsentConfig:        none,
+			objAuthenticationPolicy: none,
+			objOauthApplication:     none,
+			objSeatUsage:            none,
 		}),
 		RowScope: principal.RowScopeOwn,
 	},
@@ -416,6 +293,24 @@ var defaults = map[string]Document{
 			objLicense:          none,
 			objRetentionPolicy:  none,
 			objSavedView:        crud,
+
+			// The administration objects. The base here is readOnly, so every one
+			// must be named: leaving them to the base would let a rep read the
+			// audit trail and the roster's privileged view on the day the object
+			// was added, which is the opposite of what adding it was for.
+			objUserAdmin:            none,
+			objRoleAdmin:            none,
+			objTeamAdmin:            none,
+			objPrivacyRequest:       none,
+			objAuditLog:             none,
+			objJobHealth:            none,
+			objExtensionAccess:      none,
+			objSystemReset:          none,
+			objAiDiagnostics:        none,
+			objConsentConfig:        none,
+			objAuthenticationPolicy: none,
+			objOauthApplication:     none,
+			objSeatUsage:            none,
 		}),
 		RowScope: principal.RowScopeAll,
 	},
@@ -437,6 +332,26 @@ var defaults = map[string]Document{
 			objInstallationSettings: readUpdate,
 			objIntroduction:         writeNoDelete,
 			objLicense:              readOnly,
+
+			// The administration objects, and the sharpest place admin and ops
+			// differ. Ops administers the installation's WIRING: the consent
+			// vocabulary, the OAuth applications, the queues, the composed units.
+			// It does not administer PEOPLE — no user_admin, no team_admin — and it
+			// does not read the audit trail or hold the reset, because an operator
+			// is not the party those two exist to hold to account. role_admin is
+			// read: answering "why can this person not see that" needs the policy
+			// in front of you, and changing it does not.
+			objUserAdmin:            none,
+			objRoleAdmin:            readOnly,
+			objTeamAdmin:            none,
+			objPrivacyRequest:       none,
+			objAuditLog:             none,
+			objJobHealth:            readOnly,
+			objExtensionAccess:      readOnly,
+			objSystemReset:          none,
+			objAiDiagnostics:        readOnly,
+			objAuthenticationPolicy: readOnly,
+			objSeatUsage:            readOnly,
 		}),
 		RowScope: principal.RowScopeAll,
 	},
