@@ -1015,6 +1015,8 @@ export const de = {
   "roompage.text.welcomeLabel": "Begrüßungstext",
   "roompage.viewAsBuyer": "Als Käufer ansehen",
   "roompage.previewArchived": "Ein archivierter Raum hat keine Vorschau.",
+  "roompage.previewNotYours":
+    "Ihr Zugriff auf diesen Deal umfasst die Käufer-Vorschau nicht.",
   "access.title": "Zugang",
   "access.sub": "Wer eintreten darf und was jede Person tun kann.",
   "access.invite": "Einladen",

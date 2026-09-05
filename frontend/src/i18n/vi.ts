@@ -1004,6 +1004,8 @@ export const vi = {
   "roompage.text.welcomeLabel": "Lời chào",
   "roompage.viewAsBuyer": "Xem như người mua",
   "roompage.previewArchived": "Phòng đã lưu trữ không có gì để xem trước.",
+  "roompage.previewNotYours":
+    "Quyền truy cập của bạn với deal này không bao gồm bản xem trước cho người mua.",
   "access.title": "Quyền truy cập",
   "access.sub": "Ai được vào, và mỗi người được làm gì.",
   "access.invite": "Mời",

@@ -1079,6 +1079,12 @@ export const en = {
   "roompage.text.welcomeLabel": "Welcome message",
   "roompage.viewAsBuyer": "View as buyer",
   "roompage.previewArchived": "An archived room has nothing to preview.",
+  // Deliberately does NOT say "only the owner". The preview also opens for a
+  // manager, an admin and anybody holding a write grant on the deal, so naming
+  // the owner would send a reader who already has the right access to ask the
+  // wrong person for it.
+  "roompage.previewNotYours":
+    "Your access to this deal does not include the buyer preview.",
   "access.title": "Access",
   "access.sub": "Who may enter, and what each person may do.",
   "access.invite": "Invite",

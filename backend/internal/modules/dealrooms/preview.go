@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -55,16 +56,8 @@ type IssuedPreview struct {
 // Superseding the unconsumed CREDENTIAL is enough to keep a minted-but-unopened
 // link from lying around, and issueCredentialFor already does exactly that.
 func (s *Store) PreviewRoom(ctx context.Context, roomID ids.DealRoomID) (IssuedPreview, error) {
-	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
+	if err := previewAllowedForCaller(ctx); err != nil {
 		return IssuedPreview{}, err
-	}
-	if err := auth.RequireHuman(ctx); err != nil {
-		return IssuedPreview{}, err
-	}
-	// RequireHuman admits the system principal; a preview is a person's act
-	// on their own seat and a system caller has no seat to preview from.
-	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalHuman {
-		return IssuedPreview{}, apperrors.ErrPermissionDenied
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
@@ -104,6 +97,48 @@ func (s *Store) PreviewRoom(ctx context.Context, roomID ids.DealRoomID) (IssuedP
 		return nil
 	})
 	return out, err
+}
+
+// previewAllowedForCaller is the half of the preview gate that depends on WHO
+// is asking rather than on which room.
+//
+// Extracted so a room read can answer PreviewAvailable with the same rule the
+// press will apply. Two spellings of "may this person preview" would agree
+// until one of them changed, and the visible cost of that is a button offered
+// and then refused — which is the state this exists to leave behind.
+func previewAllowedForCaller(ctx context.Context) error {
+	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
+		return err
+	}
+	if err := auth.RequireHuman(ctx); err != nil {
+		return err
+	}
+	// RequireHuman admits the system principal; a preview is a person's act
+	// on their own seat and a system caller has no seat to preview from.
+	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalHuman {
+		return apperrors.ErrPermissionDenied
+	}
+	return nil
+}
+
+// PreviewAvailableFor answers whether THIS caller could open THIS room's buyer
+// preview, for a read that wants to say so before the press.
+//
+// Every condition PreviewRoom applies, asked in the same order and through the
+// same helpers: the caller's authority, the deal being writable and live, and
+// the room not being archived. It mints nothing and writes nothing.
+//
+// An error from any probe is FALSE rather than an error of its own: this
+// answers a screen's question about a button, and a room the caller can read is
+// still a room they can read when the answer is no.
+func PreviewAvailableFor(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom) bool {
+	if previewAllowedForCaller(ctx) != nil {
+		return false
+	}
+	if ensureDealWritable(ctx, tx, room) != nil {
+		return false
+	}
+	return room.State != stateArchived
 }
 
 // previewSeat finds the caller's preview participant in the room, or creates
