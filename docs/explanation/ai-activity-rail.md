@@ -155,13 +155,14 @@ orphan guard in `i18n.test.ts` counts a key as rendered when it starts with a
 template stem, so an interpolated key would vouch for the whole namespace forever
 and a retired kind's copy would sit in three catalogs with nothing to flag it.
 
-**Six kinds are narrated**, in en/de/vi, total over all six states:
+**Seven kinds are narrated**, in en/de/vi, total over all six states:
 
 | Kind | Reported by | The line a rep sees |
 |---|---|---|
 | `morning_brief` | carrier (`agent_runner`) | the scheduled brief |
 | `overnight_at_risk_sweep` | carrier (`agent_runner`) | the scheduled sweep |
 | `document_extract` | carrier (`attachment_extraction`) | reading a document you attached |
+| `account_scan` | carrier (`account_scan`, the `org_scan` row) | "I'm reading Brandt Automotive's exchanges and deals." — named for the account, because the reader who opened three accounts and moved on needs to know which is ready |
 | `summarize` | router | "I'm writing your summary." |
 | `draft_reply` | router | "I'm drafting your reply." |
 | `offer_draft` | router | "I'm drafting your offer." |

@@ -152,6 +152,7 @@ import { groupChronology } from "./timelinegroups";
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { useAccountScan } from "./accountscan";
 import { LogActivityAction } from "./logactivity";
 import { invalidateRecord } from "./recordwritekeys";
 
@@ -2411,6 +2412,10 @@ function CompanyOverviewStack({
     entityType === "user"
       ? colleagues.get(entityId)
       : records(entityType, entityId);
+  // The reader's scan of this account, asked for on open. Only once the 360
+  // has answered natively: the scan is read from the same records, and an
+  // overlay workspace has none of them here.
+  const scan = useAccountScan(org.id, !overlay && view !== undefined);
   // ONE reading of the account, drawn in two panes: the 360's call at the
   // full measure, and the needs list in the left column under it. Computed
   // here, once, so the verdict and the queue cannot disagree.
@@ -2423,6 +2428,7 @@ function CompanyOverviewStack({
     onDraftTo,
     onOpenRecord,
     onPerform,
+    scan,
   });
   return (
     <div className="co-overview-stack">

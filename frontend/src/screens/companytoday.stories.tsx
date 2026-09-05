@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import type { AccountScan } from "./accountscan";
 import {
   Company360Call,
   TodayOnThisAccount,
@@ -159,7 +160,13 @@ function Brief({
   view,
   loading = false,
   failed = false,
-}: Readonly<{ view?: View; loading?: boolean; failed?: boolean }>) {
+  scan,
+}: Readonly<{
+  view?: View;
+  loading?: boolean;
+  failed?: boolean;
+  scan?: AccountScan;
+}>) {
   return (
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
@@ -168,6 +175,7 @@ function Brief({
           view={view}
           loading={loading}
           failed={failed}
+          scan={scan}
         />
       </div>
     </StoryProviders>
@@ -175,6 +183,64 @@ function Brief({
 }
 
 export const Populated: Story = { render: () => <Brief view={populated} /> };
+
+// Margince reading the account: the rules' rows stand, and the pending row
+// above them says more is coming rather than that this is everything.
+export const BeingRead: Story = {
+  render: () => (
+    <Brief
+      view={populated}
+      scan={{
+        organization_id: "o-1",
+        state: "running",
+        findings: populated.suggestions ?? [],
+        findings_dropped: 0,
+      }}
+    />
+  ),
+};
+
+// The read has answered: the model's finding beside the rule's row, each
+// with its receipt, and the foot saying who wrote what from how much.
+export const Scanned: Story = {
+  render: () => (
+    <Brief
+      view={populated}
+      scan={{
+        organization_id: "o-1",
+        state: "done",
+        generated_at: "2026-08-07T08:58:00Z",
+        generated_by: "model",
+        read: { exchanges: 14, deals: 2 },
+        findings: [
+          ...(populated.suggestions ?? []),
+          {
+            kind: "question_unanswered",
+            fingerprint: "f-2",
+            title: "Confirm the depot installation",
+            reason:
+              "Dana asked whether installation can happen at their Kassel depot, and nothing of yours since answers it.",
+            written_by: "model",
+            due_at: "2026-08-03T14:20:00Z",
+            evidence: [
+              {
+                entity_type: "activity",
+                entity_id: "a-3",
+                name: "Re: Fleet retrofit 2026 — proposal",
+                quote:
+                  "can you confirm whether the installation can be done at our depot in Kassel rather than at your site?",
+                at: "2026-08-03T14:20:00Z",
+                origin: "Email they sent",
+              },
+            ],
+            action: { kind: "draft_reply", activity_id: "a-3" },
+          },
+        ],
+        findings_dropped: 0,
+      }}
+    />
+  ),
+};
 
 // The call, with the three rated dimensions under it. Payment is unrated here
 // on purpose: the finance read the rating comes from is not stubbed, which is

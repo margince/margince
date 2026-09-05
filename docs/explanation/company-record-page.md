@@ -32,7 +32,9 @@ Six endpoints serve one screen. Which one owns which part:
                                                     deprecated, no UI)
              │
  POST …/view-ack             advance the visit baseline (explicit, human-only)
- POST …/suggestions/dismiss  per-user, "not this, not now"
+ POST …/suggestions/dismiss  per-user, "not this, not now" — a rule's row or a scan's
+ POST …/scan                 ensure the reader's account scan is current (human-only)
+ GET  …/scan                 the scan as it stands: state, merged advice, the read's foot
  GET  …/logo                 resolved from the site read; monogram floor
 ```
 
@@ -260,6 +262,78 @@ endpoint an authenticated write sink, and capping the stored count silently
 deletes the earliest judgments so a rep working through a long list has
 dismissed advice come back.
 
+## The account scan
+
+The rules say what the *records* show. The account scan is what the
+*exchanges* say, read by a model — and it is the one model call the page
+makes on its own account, so how it is bounded is the whole design.
+
+**What it reads.** The scan's input is the reader's own composite read (the
+brief's projection of it — the same deals, tasks and subjects, so the two
+surfaces cannot disagree about what a record is called) plus the last twenty
+exchanges with their own words, each body cut at 1,200 characters and the
+cut reported. The words are read under the activity **content** gate, not the
+discover gate: a message the reader may know exists but may not read is not
+in the input, so the model cannot quote it, and a reader with no activity
+grant is refused rather than shown a quiet account.
+
+**What it may say.** Four *read* kinds, beside the four rule kinds:
+`commitment_unmet` (we said we would do something and nothing says it
+happened), `question_unanswered` (they asked and no later message of ours
+answers), `risk_raised` and `need_raised`. A finding names one message by an
+id the model was handed and quotes it verbatim. The reply schema is built per
+call with that reader's message ids as the citation enum, so a fabricated id
+fails the provider's own validation; the parser then holds every finding to
+the input — the kind, the id, the quote as a whitespace-folded substring of
+that message's text (`claims.Quoted`, shared with the field extract and the
+corpus ask), no id in the prose — and drops one whole rather than showing it
+with its citation stripped. What survives is the same suggestion shape the
+rules produce, `written_by: model`, carrying the message's subject, date,
+channel and the quote as its receipt, and a fingerprint from the same helper
+the rules use (`org360.SuggestionFingerprint`).
+
+**One list, one dismissal.** `GET …/scan` answers the merged advice: the
+rules run live through `org360.Service.UndismissedAdvice`, the model's stored
+findings are filtered through `KeepUndismissed`, the two are deduplicated by
+fingerprint, capped at five with the cap reported. Dismissing a finding goes
+through the same endpoint as dismissing a rule's row: the 360's dismissal
+asks the scan, through `RecogniseScanFindings`, whether a fingerprint its
+rules do not raise is one the reader's stored scan does.
+
+**On demand, never a sweep.** Opening the page calls `POST …/scan` once. The
+server fingerprints the input — the floor and prompt versions, the routing
+version read live, the language, the encoded input — and answers with the
+stored findings when it matches, the same findings marked `stale` when the
+account moved but the reader's last read is younger than the **one-hour
+rescan floor**, and a queued read otherwise. A read in flight is returned as
+it stands rather than started twice; `force` skips the floor and the
+fingerprint, never the in-flight check. A reader who never opens an account
+never pays for it, and a busy inbox does not re-read the account on every
+message.
+
+**The row is the carrier.** `org_scan` holds one row per (reader, account):
+the read in flight — `status` in the AI activity rail's own vocabulary,
+attempt, lease-bearing timestamps, `next_attempt_at` for a budget deferral —
+and the last findings that settled, kept while a new read runs so the page
+is never blank exactly when the account is busiest. The api role writes the
+row and the `account_scan` job in one transaction; the worker role claims the
+row, re-binds the **reader's own principal** (their grants, teams and seat
+through `identity.EffectiveAuthority`, never a system principal with their
+name on it — a system principal reads every audience away) with the row id
+as the correlation id, reads, and settles. Every transition announces itself
+on the rail with the account's name as the subject, so the reader who opened
+three accounts and moved on finds out which is ready. A budget deferral
+parks the row and snoozes the job; no lane, no exchanges the reader may read,
+or a reply the grounding refused whole settles `degraded` with a reason the
+reader can read, and the rules' rows stand alone.
+
+**The page.** While the read runs, the needs list keeps the rules' rows and
+draws the `AiPending` row above them — the indigo tile breathing, the answer's
+ragged lines — polled every three seconds until the row settles. Then the
+merged list replaces the 360's own rows, and the foot says who wrote them,
+how many exchanges and deals were read, that the account has moved since
+where it has, or why the model did not write them.
+
 ## The state strip and health
 
 Both replaced a single 0-100 relationship score the header used to lead with.
@@ -434,6 +508,10 @@ list, approval, signal) and durably own no business entity. See
 | The state strip, last touch, health | `backend/internal/compose/org360/accountstate.go` |
 | Suggestion rules and their reads | `backend/internal/compose/org360/{suggestions,suggestionreads}.go` |
 | Dismissals (`suggestion_dismissal`) | `backend/internal/compose/org360/dismissal.go` |
+| The advice seam the scan merges with, and the shared fingerprint | `backend/internal/compose/org360/advice.go` |
+| The account scan: input, words, prompt, grounding | `backend/internal/compose/orgscan/{input,words,write}.go` |
+| The account scan: row, rail carrier, ensure rule, merge | `backend/internal/compose/orgscan/{store,service}.go` |
+| The account scan's job, and its wiring into both roles | `backend/internal/compose/jobs_accountscan.go` |
 | The visit baseline (`user_record_view`) | `backend/internal/compose/org360/viewbaseline.go` |
 | The connections graph | `backend/internal/compose/org360/{graph,graphreads,graphplace,graphourside}.go` |
 | HTTP transport + the overlay refusal | `backend/internal/compose/org360/handlers.go` |
@@ -444,9 +522,10 @@ list, approval, signal) and durably own no business entity. See
 | Logo resolve (candidates, normalize, store) | `backend/internal/compose/{sitelogo,sitelogocandidates}.go` |
 | Logo row, provenance precedence, `LogoURL` | `backend/internal/modules/people/organizationlogo.go` |
 | Logo streaming handler | `backend/internal/modules/people/handlers_organization.go` |
-| Contract | `backend/api/crm.yaml` — `/organizations/{id}/{360,graph,brief,ask,view-ack,suggestions/dismiss,logo}` |
+| Contract | `backend/api/crm.yaml` — `/organizations/{id}/{360,graph,brief,ask,view-ack,suggestions/dismiss,scan,logo}` |
 | Table-ownership ruling | `backend/gates/tableownership_test.go` |
 | The screen | `frontend/src/screens/organizations.tsx` (`CompanyScreen`) |
+| The scan on the page: ensure on open, poll, the pending row | `frontend/src/screens/accountscan.tsx`, `companytoday.tsx` |
 | Data layer + right-rail cards | `frontend/src/screens/company360.tsx`, `company360.css` |
 | The connections card | `frontend/src/screens/network.tsx`, with `organizationgraph.ts` as its read |
 | Header actions (new deal, tag, list) | `frontend/src/screens/companyactions.tsx` |

@@ -2024,3 +2024,18 @@
   margin: 0;
   color: var(--textMeta);
 }
+
+/* The read's own line under the needs list: who wrote the findings, what was
+   read, and what the reader should know beside them. Inline, like the
+   commitment badge it sits with. */
+.co-scan-foot {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* The row Margince fills while it reads: the pending block takes the row's
+   own padding and nothing else. */
+.co-move-reading {
+  display: block;
+}

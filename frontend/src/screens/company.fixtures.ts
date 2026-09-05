@@ -154,6 +154,15 @@ function rollupResponse(rollup: unknown): Response {
  * one of them passes its own body through `options` — or, for the roll-up, a
  * whole `Response` when what it asserts is a refusal.
  */
+// A reader who has never asked for this account's scan: the state the page
+// meets on a first open, before its own ensure answers.
+export const neverScanned = {
+  organization_id: "o-1",
+  state: "never",
+  findings: [],
+  findings_dropped: 0,
+};
+
 export function stubFetch(
   responder: (
     url: string,
@@ -163,6 +172,7 @@ export function stubFetch(
   options?: Readonly<{
     strength?: unknown;
     org360?: unknown;
+    scan?: unknown;
     rollup?: unknown;
     brief?: unknown;
   }>,
@@ -191,6 +201,11 @@ export function stubFetch(
     }
     if (pathname.endsWith("/brief")) {
       return jsonResponse(options?.brief ?? emptyBrief);
+    }
+    // The account scan the page asks for on open: `never` unless a suite
+    // hands in one, so a page test is not also a scan test.
+    if (pathname.endsWith("/scan")) {
+      return jsonResponse(options?.scan ?? neverScanned);
     }
     return responder(request.url, request.method, request);
   });

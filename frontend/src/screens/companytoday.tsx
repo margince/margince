@@ -4,14 +4,16 @@
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
+import { AiPending } from "../design-system/aipending";
 import { Badge, Button, EmptyState, Skeleton } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { PanelBody, PanelRow } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
 import { stable } from "../format/collate";
-import { formatNumber } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { type AccountScan, scanHasSettled, scanIsLive } from "./accountscan";
 import {
   ENGAGEMENT_LABELS,
   ENGAGEMENT_TONE,
@@ -40,6 +42,7 @@ import {
   TodayPanel,
   TodoRow,
   WithheldNotice,
+  WrittenBy,
 } from "./record360";
 import "./company360.css";
 
@@ -122,6 +125,10 @@ type TodayReadingInputs = Readonly<{
   // Performing a suggestion's own action. The composer, the deal and the
   // task form all live above this brief.
   onPerform?: (action: SuggestionAction) => void;
+  // The reader's scan of the account, when the page holds one: its merged
+  // advice replaces the 360's own rows, a read in flight draws the pending
+  // row, and the foot says who read what and when.
+  scan?: AccountScan;
 }>;
 
 export function useTodayReading({
@@ -133,9 +140,11 @@ export function useTodayReading({
   onDraftTo,
   onOpenRecord,
   onPerform,
+  scan,
 }: TodayReadingInputs): TodayReading {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // Called before the loading/failed branches below, like every other hook
   // here: React requires it, and it answers "nothing rated" on its own.
   const verdict = useAccountStanding(orgId, view?.health);
@@ -144,6 +153,9 @@ export function useTodayReading({
     view,
     onOpenRecord,
     onPerform,
+    advice: scan
+      ? { findings: scan.findings, dropped: scan.findings_dropped }
+      : undefined,
   });
   if (loading) {
     return { state: "loading" };
@@ -203,6 +215,23 @@ export function useTodayReading({
           />,
         ]
       : []),
+    // The read in flight, above the rows it will add to: the rules' rows
+    // stand while Margince reads, and the pending row is what says more is
+    // coming rather than that this is everything.
+    ...(scanIsLive(scan)
+      ? [
+          <PanelRow key="scan" className="co-move co-move-reading">
+            <AiPending
+              label={t(
+                scan?.state === "running"
+                  ? "today.scan.reading"
+                  : "today.scan.queued",
+              )}
+              lines={2}
+            />
+          </PanelRow>,
+        ]
+      : []),
     suggestions.rows,
     ...manualMoveRows({ view, t, onPrepareMeeting, onDraftTo }),
   ];
@@ -213,7 +242,11 @@ export function useTodayReading({
     restsOn: verdict.restsOn,
     dimensions,
     rows,
-    footer: briefFooter(commitment, suggestions.footer),
+    footer: briefFooter(
+      commitment,
+      suggestions.footer,
+      scanFoot({ scan, t, locale, recordZone }),
+    ),
     notice:
       (view.sections_omitted?.length ?? 0) > 0 ? (
         <TodayWithheld view={view} />
@@ -381,8 +414,9 @@ export function TodayOnThisAccount({
 function briefFooter(
   commitment: ReturnType<typeof nextCommitmentLine>,
   fromAdvice: ReactNode,
+  fromScan: ReactNode,
 ): ReactNode | undefined {
-  if (!commitment && !fromAdvice) {
+  if (!commitment && !fromAdvice && !fromScan) {
     return undefined;
   }
   return (
@@ -393,7 +427,64 @@ function briefFooter(
         </Badge>
       )}
       {fromAdvice}
+      {fromScan}
     </>
+  );
+}
+
+/**
+ * The read's own line under the rows: who wrote the findings, what was read,
+ * and — said beside the rows rather than instead of them — that the account
+ * has moved since, or that the AI budget put the read off. Nothing until a
+ * read has settled: a foot under a scan still running would be describing a
+ * reading that does not exist yet.
+ */
+function scanFoot({
+  scan,
+  t,
+  locale,
+  recordZone,
+}: Readonly<{
+  scan?: AccountScan;
+  t: ReturnType<typeof useT>;
+  locale: Locale;
+  recordZone: string;
+}>): ReactNode {
+  if (!scan) {
+    return null;
+  }
+  if (scanIsLive(scan) && scan.resumes_at) {
+    return (
+      <p className="co-row-meta">
+        {t("today.scan.resumes", {
+          when: formatDateTime(scan.resumes_at, locale, recordZone),
+        })}
+      </p>
+    );
+  }
+  if (!scanHasSettled(scan) || !scan.generated_by) {
+    return null;
+  }
+  return (
+    <span className="co-scan-foot">
+      <WrittenBy by={scan.generated_by} />
+      {scan.read && (
+        <span className="co-row-meta">
+          {t("today.scan.read", {
+            exchanges: formatNumber(scan.read.exchanges, locale),
+            deals: formatNumber(scan.read.deals, locale),
+          })}
+        </span>
+      )}
+      {scan.stale && (
+        <span className="co-row-meta">{t("today.scan.stale")}</span>
+      )}
+      {/* Server-authored, in the reader's terms: why the model did not
+          write these rows. Shown as-is, like a rule's own reason. */}
+      {scan.degrade_reason && (
+        <span className="co-row-meta">{scan.degrade_reason}</span>
+      )}
+    </span>
   );
 }
 

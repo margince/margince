@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import type { AccountScan } from "./accountscan";
 import { TodayOnThisAccount } from "./companytoday";
 
 // The section earns its place by carrying what nothing else on the page says,
@@ -36,6 +37,7 @@ function show(
     failed?: boolean;
     onDraftTo?: (personId: string) => void;
     onPrepareMeeting?: (activityId: string) => void;
+    scan?: AccountScan;
   } = {},
 ) {
   const client = new QueryClient({
@@ -51,6 +53,7 @@ function show(
           failed={opts.failed ?? false}
           onDraftTo={opts.onDraftTo}
           onPrepareMeeting={opts.onPrepareMeeting}
+          scan={opts.scan}
         />
       </LocaleProvider>
     </QueryClientProvider>,
@@ -407,5 +410,102 @@ describe("a page is not the account", () => {
     });
     expect(screen.getByText("1+ overdue")).toBeTruthy();
     expect(screen.queryByText("1 overdue")).toBeNull();
+  });
+});
+
+// The scan on the needs list: the pending row while Margince reads, the
+// merged list once it has answered, and the foot that says who wrote it.
+describe("the account scan on the needs list", () => {
+  const ruleRow = {
+    kind: "no_reply" as const,
+    fingerprint: "f-1",
+    reason: "You reached out 15 days ago and nobody has come back.",
+    evidence: [],
+  };
+  const modelRow = {
+    kind: "question_unanswered" as const,
+    fingerprint: "f-2",
+    title: "Confirm the depot installation",
+    reason: "Dana asked whether installation can happen at their depot.",
+    written_by: "model" as const,
+    evidence: [
+      {
+        entity_type: "activity" as const,
+        entity_id: "a-3",
+        name: "Re: proposal",
+        quote:
+          "can you confirm whether the installation can be done at our depot",
+        at: "2026-08-03T14:20:00Z",
+        origin: "Email they sent",
+      },
+    ],
+  };
+
+  it("draws the pending row above the rules' rows while Margince reads", () => {
+    show(
+      { ...BASE, suggestions: [ruleRow] },
+      {
+        scan: {
+          organization_id: "o-1",
+          state: "running",
+          findings: [ruleRow],
+          findings_dropped: 0,
+        },
+      },
+    );
+    expect(
+      screen.getByText(
+        "Margince is reading this account's exchanges and deals.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(/nobody has come back/)).toBeTruthy();
+  });
+
+  it("draws the merged list once the read has answered, with the read's own foot", () => {
+    show(
+      { ...BASE, suggestions: [ruleRow] },
+      {
+        scan: {
+          organization_id: "o-1",
+          state: "done",
+          generated_at: "2026-08-07T08:58:00Z",
+          generated_by: "model",
+          read: { exchanges: 14, deals: 2 },
+          stale: true,
+          findings: [ruleRow, modelRow],
+          findings_dropped: 0,
+        },
+      },
+    );
+    expect(screen.getByText("Confirm the depot installation")).toBeTruthy();
+    expect(screen.getByText(/nobody has come back/)).toBeTruthy();
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByText("Written by Margince")).toBeTruthy();
+    expect(screen.getByText("Read 14 exchanges and 2 deals")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "The account has moved since. It is read again within the hour.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("says why the model did not write the rows when the read degraded", () => {
+    show(
+      { ...BASE, suggestions: [ruleRow] },
+      {
+        scan: {
+          organization_id: "o-1",
+          state: "degraded",
+          generated_at: "2026-08-07T08:58:00Z",
+          generated_by: "deterministic",
+          degrade_reason:
+            "No model lane is configured, so the rules' own advice stands alone.",
+          findings: [ruleRow],
+          findings_dropped: 0,
+        },
+      },
+    );
+    expect(screen.getByText(/No model lane is configured/)).toBeTruthy();
+    expect(screen.queryByText("Written by Margince")).toBeNull();
   });
 });

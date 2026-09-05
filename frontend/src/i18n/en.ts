@@ -1501,6 +1501,10 @@ export const en = {
   "co.suggest.kind.stalled_deal": "Stalled deal",
   "co.suggest.kind.no_next_step": "Nothing scheduled",
   "co.suggest.kind.lifecycle_conflict": "Record disagrees",
+  "co.suggest.kind.commitment_unmet": "Promise open",
+  "co.suggest.kind.question_unanswered": "Question unanswered",
+  "co.suggest.kind.risk_raised": "Risk raised",
+  "co.suggest.kind.need_raised": "Need raised",
   "co.suggest.more": "{count} more not shown here.",
   "co.suggest.basedOn": "What this is based on",
   "co.cite.open": "Open the record",
@@ -3678,6 +3682,26 @@ export const en = {
   // These four were deliberately not narrated until the router could say
   // `running`: reporting them settled-only meant a line that appeared already
   // finished, which tells a waiting reader nothing they did not already know.
+  // The account scan: one reader's read of one account, filed under them
+  // and named for the account the rail can say which one is ready.
+  "agent.activity.accountScan.queued": "Reading an account is queued.",
+  "agent.activity.accountScan.running":
+    "I'm reading an account's exchanges and deals.",
+  "agent.activity.accountScan.stalled":
+    "Reading an account has taken unusually long. It may have stopped.",
+  "agent.activity.accountScan.done": "What an account needs is ready.",
+  "agent.activity.accountScan.degraded":
+    "I read an account as far as the records let me and stopped.",
+  "agent.activity.accountScan.failed": "I couldn't finish reading an account.",
+  "agent.activity.accountScanNamed.queued": "Reading {name} is queued.",
+  "agent.activity.accountScanNamed.running":
+    "I'm reading {name}'s exchanges and deals.",
+  "agent.activity.accountScanNamed.stalled":
+    "Reading {name} has taken unusually long. It may have stopped.",
+  "agent.activity.accountScanNamed.done": "What {name} needs is ready.",
+  "agent.activity.accountScanNamed.degraded":
+    "I read {name} as far as the records let me and stopped.",
+  "agent.activity.accountScanNamed.failed": "I couldn't finish reading {name}.",
   "agent.activity.summarize.queued": "Reading up on this company is queued.",
   "agent.activity.summarize.running":
     "I'm pulling together what I know about this company.",
@@ -7677,6 +7701,13 @@ export const en = {
   // The licensed data provider (ADR-0101). Two surfaces share this
   // vocabulary — the Settings card and the person page — so a state reads
   // the same wherever it appears.
+  "today.scan.queued": "Margince will read this account in a moment.",
+  "today.scan.reading":
+    "Margince is reading this account's exchanges and deals.",
+  "today.scan.read": "Read {exchanges} exchanges and {deals} deals",
+  "today.scan.stale":
+    "The account has moved since. It is read again within the hour.",
+  "today.scan.resumes": "Reading resumes {when}; the AI budget deferred it.",
   "provider.title": "Contact data",
   "provider.readOnly":
     "Read-only view — connecting a provider spends money, so it is an admin or ops action.",

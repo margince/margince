@@ -1687,6 +1687,7 @@ export function useSuggestionsBody({
   view,
   onOpenRecord,
   onPerform,
+  advice,
 }: Readonly<{
   orgId: string;
   view?: Organization360;
@@ -1694,6 +1695,11 @@ export function useSuggestionsBody({
   // Performing the advice is the page's job, not this section's: the
   // composer, the deal and the task form all live above it.
   onPerform?: (action: SuggestionAction) => void;
+  // The merged advice — the rules' rows and the scan's findings as one list
+  // — when the page holds a scan. It replaces the 360's own rows rather than
+  // joining them: the server merged, deduplicated and capped once, and a
+  // second list here would be a second answer to "what needs a person".
+  advice?: { findings: Suggestion[]; dropped: number };
 }>): {
   // Whether the section has rows worth showing. A withheld, empty or
   // unavailable suggestion block carries none — advice is additive, and
@@ -1727,16 +1733,21 @@ export function useSuggestionsBody({
     // row goes when the re-read says it does. Hiding it locally on click would
     // hide it even when the dismissal never reached the server.
     onSuccess: () =>
-      client.invalidateQueries({ queryKey: ["organization360", orgId] }),
+      Promise.all([
+        client.invalidateQueries({ queryKey: ["organization360", orgId] }),
+        // The scan serves the merged list, so it re-reads too — else a
+        // dismissed model finding would stand until the next open.
+        client.invalidateQueries({ queryKey: ["account-scan", orgId] }),
+      ]),
   });
 
-  const suggestions: Suggestion[] = view?.suggestions ?? [];
+  const suggestions: Suggestion[] = advice?.findings ?? view?.suggestions ?? [];
   const nameOf = recordNamesIn(view);
-  const dropped = view?.suggestions_dropped;
+  const dropped = advice ? advice.dropped : view?.suggestions_dropped;
   const state = sectionState(
     view,
     "suggestions",
-    Boolean(view?.suggestions),
+    Boolean(advice ?? view?.suggestions),
     suggestions.length,
   );
   if (state !== "ready") {

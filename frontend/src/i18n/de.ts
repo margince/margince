@@ -1433,6 +1433,10 @@ export const de = {
   "co.suggest.kind.stalled_deal": "Deal steht",
   "co.suggest.kind.no_next_step": "Nichts geplant",
   "co.suggest.kind.lifecycle_conflict": "Widerspruch im Datensatz",
+  "co.suggest.kind.commitment_unmet": "Zusage offen",
+  "co.suggest.kind.question_unanswered": "Frage unbeantwortet",
+  "co.suggest.kind.risk_raised": "Risiko benannt",
+  "co.suggest.kind.need_raised": "Bedarf benannt",
   "co.suggest.more": "{count} weitere hier nicht gezeigt.",
   "co.suggest.basedOn": "Worauf das beruht",
   "co.cite.open": "Datensatz öffnen",
@@ -3600,6 +3604,28 @@ export const de = {
     "Ich bin bei {name} nur teilweise durchgekommen und habe gestoppt.",
   "agent.activity.documentExtractNamed.failed":
     "Ich konnte {name} nicht lesen.",
+  "agent.activity.accountScan.queued":
+    "Das Lesen eines Accounts steht in der Warteschlange.",
+  "agent.activity.accountScan.running":
+    "Ich lese die Korrespondenz und die Deals eines Accounts.",
+  "agent.activity.accountScan.stalled":
+    "Das Lesen eines Accounts dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.accountScan.done": "Was ein Account braucht, ist fertig.",
+  "agent.activity.accountScan.degraded":
+    "Ich habe einen Account so weit gelesen, wie die Datensätze es zuließen, und dann aufgehört.",
+  "agent.activity.accountScan.failed":
+    "Ich konnte das Lesen eines Accounts nicht abschließen.",
+  "agent.activity.accountScanNamed.queued":
+    "Das Lesen von {name} steht in der Warteschlange.",
+  "agent.activity.accountScanNamed.running":
+    "Ich lese die Korrespondenz und die Deals von {name}.",
+  "agent.activity.accountScanNamed.stalled":
+    "Das Lesen von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.accountScanNamed.done": "Was {name} braucht, ist fertig.",
+  "agent.activity.accountScanNamed.degraded":
+    "Ich habe {name} so weit gelesen, wie die Datensätze es zuließen, und dann aufgehört.",
+  "agent.activity.accountScanNamed.failed":
+    "Ich konnte das Lesen von {name} nicht abschließen.",
   "agent.activity.summarize.queued":
     "Das Zusammentragen zu diesem Unternehmen steht in der Warteschlange.",
   "agent.activity.summarize.running":
@@ -7597,6 +7623,14 @@ export const de = {
   // Der Datenanbieter (ADR-0101). Zwei Oberflächen teilen sich diese
   // Begriffe — die Einstellungskarte und die Personenseite —, damit ein
   // Zustand überall gleich heißt.
+  "today.scan.queued": "Margince liest diesen Account gleich.",
+  "today.scan.reading":
+    "Margince liest die Korrespondenz und die Deals dieses Accounts.",
+  "today.scan.read": "{exchanges} Nachrichten und {deals} Deals gelesen",
+  "today.scan.stale":
+    "Der Account hat sich seitdem verändert. Er wird innerhalb einer Stunde erneut gelesen.",
+  "today.scan.resumes":
+    "Das Lesen wird {when} fortgesetzt; das KI-Budget hat es aufgeschoben.",
   "provider.readOnly":
     "Nur-Lese-Ansicht — einen Anbieter zu verbinden kostet Geld und ist eine Admin- oder Ops-Aktion.",
   "provider.title": "Kontaktdaten",

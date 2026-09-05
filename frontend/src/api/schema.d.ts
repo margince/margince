@@ -17355,9 +17355,8 @@ export interface components {
              * @description The account has changed since the stored findings were written and they have not
              *     been re-read, because the reader's last scan is younger than the rescan floor.
              *     The findings still answer; the flag is said beside them rather than instead of them.
-             * @default false
              */
-            stale: boolean;
+            stale?: boolean;
             /**
              * Format: date-time
              * @description When a read the AI budget deferred will try again. Null unless the scan is in

@@ -24825,7 +24825,6 @@ components:
           description: Which writer produced the stored findings. Absent until a read has settled.
         stale:
           type: boolean
-          default: false
           description: |
             The account has changed since the stored findings were written and they have not
             been re-read, because the reader's last scan is younger than the rescan floor.
