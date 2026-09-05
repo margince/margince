@@ -236,6 +236,43 @@ export const Performance: Story = {
   play: clickButton("Performance"),
 };
 
+// The seat's own outcomes: pipeline and meetings under an owner lens. Its own
+// route map, because serving /analytics/context to every story above would
+// grow a scope picker into renders that exist to show something else.
+const ownLensRoutes: RouteMap = {
+  ...routes,
+  "GET /analytics/context": () =>
+    jsonResponse({
+      default_scope: { kind: "owner", id: "u-rep-1", label: "Riley Rep" },
+      allowed_scopes: [{ kind: "owner", id: "u-rep-1", label: "Riley Rep" }],
+      capabilities: {
+        view_manager_forecast: false,
+        submit_manager_forecast: false,
+      },
+      as_of: "2026-09-04T00:00:00Z",
+      timezone: "Europe/Berlin",
+      base_currency: "EUR",
+    }),
+  "POST /reports/activities-by-kind": () =>
+    run("activities-by-kind", [
+      { meeting_status: "booked", meetings: 2 },
+      { meeting_status: "held", meetings: 3 },
+      { meeting_status: "no_show", meetings: 1 },
+    ]),
+};
+
+export const MyOutcomes: Story = {
+  render: () => {
+    installFetchStub(ownLensRoutes);
+    return (
+      <StoryProviders>
+        <AnalyticsScreen />
+      </StoryProviders>
+    );
+  },
+  play: clickButton("My outcomes"),
+};
+
 export const Explain: Story = {
   render: screenStory,
   // Pipeline first: the explain verb belongs to a report card's action row, and

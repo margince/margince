@@ -79,7 +79,7 @@ type ReportKey =
 // held exactly one report, and keeping them the same would have meant the
 // address changing the day a section grew a second result — breaking every
 // link anyone had saved to it.
-type Section = "forecast" | "pipeline" | "performance";
+type Section = "forecast" | "pipeline" | "performance" | "outcomes";
 
 // Which results each section holds, in the order they are drawn. The tab strip
 // and the bodies both read this, so a section cannot come to list a report it
@@ -97,6 +97,8 @@ const SECTION_REPORTS = {
   // take. Both are the server's own report vocabulary — no rate or duration
   // is computed in this file.
   performance: ["win-loss", "stage-age"],
+  // The rep's own week: a composed view like the forecast, not report cards.
+  outcomes: [],
 } as const satisfies Record<Section, readonly ReportKey[]>;
 
 const SECTIONS = Object.keys(SECTION_REPORTS) as readonly Section[];
@@ -1031,6 +1033,136 @@ function StageAgeTable({
   );
 }
 
+type AnalyticsScopeWire = components["schemas"]["AnalyticsScope"];
+
+// The current standing a meeting can hold, in the order a week reads: what is
+// ahead, what happened, what did not, what was called off. The server's CHECK
+// owns the vocabulary; a status outside it renders nothing rather than a
+// mislabeled tile.
+const MEETING_STATUSES = [
+  { key: "booked", labelKey: "analytics.meetingsBooked" },
+  { key: "held", labelKey: "analytics.meetingsHeld" },
+  { key: "no_show", labelKey: "analytics.meetingsNoShow" },
+  { key: "canceled", labelKey: "analytics.meetingsCanceled" },
+] as const;
+
+// The seat's own outcomes: open pipeline and meetings, nothing computed here.
+//
+// Drawn only under an OWNER default lens. The report engine's population
+// default is the caller's own row scope, so for a wider lens the same
+// requests would measure a team while the heading said "my" — and there is
+// no per-report scope override on the wire to force self. The tab is hidden
+// for those lenses; a hand-typed address gets the explanation instead.
+function MyOutcomesView({
+  defaultScope,
+  locale,
+}: Readonly<{ defaultScope: AnalyticsScopeWire; locale: Locale }>) {
+  const t = useT();
+  const self = defaultScope.kind === "owner" ? (defaultScope.id ?? null) : null;
+
+  const pipelineQuery = useQuery({
+    queryKey: ["report", "pipeline-current", "outcomes"],
+    enabled: self != null,
+    queryFn: async () => {
+      const { data, error } = await api.POST("/reports/{report}", {
+        params: { path: { report: "pipeline-current" } },
+        body: {
+          aggregates: [
+            { fn: "count", as: "deal_count" },
+            { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
+          ],
+        },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+
+  const meetingsQuery = useQuery({
+    queryKey: ["report", "activities-by-kind", "outcomes", self],
+    enabled: self != null,
+    queryFn: async () => {
+      const { data, error } = await api.POST("/reports/{report}", {
+        params: { path: { report: "activities-by-kind" } },
+        body: {
+          filters: { kind: "meeting", host_user_id: self },
+          group_by: ["meeting_status"],
+          aggregates: [{ fn: "count", as: "meetings" }],
+        },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+
+  if (self == null) {
+    // A hand-typed address under a manager lens: the numbers this view could
+    // fetch would measure the default population, not the person.
+    return <Callout tone="info">{t("analytics.outcomesOwnLensOnly")}</Callout>;
+  }
+
+  const pipelineRow = pipelineQuery.data?.rows[0];
+  const meetingRows = meetingsQuery.data?.rows ?? [];
+  const meetingsByStatus = new Map(
+    meetingRows
+      .filter((row) => typeof row.meeting_status === "string")
+      .map((row) => [String(row.meeting_status), rowCount(row, "meetings")]),
+  );
+
+  return (
+    <>
+      <Card title={t("analytics.myPipeline")}>
+        <StatStrip>
+          <StatCard
+            label={t("analytics.count")}
+            value={
+              pipelineRow
+                ? formatNumber(rowCount(pipelineRow, "deal_count"), locale)
+                : "…"
+            }
+          />
+          <StatCard
+            label={t("analytics.baseValue", {
+              currency: pipelineQuery.data?.base_currency ?? "",
+            })}
+            value={
+              pipelineRow
+                ? formatMoneyOrAbsent(
+                    rowMoney(pipelineRow, "raw_minor"),
+                    pipelineQuery.data?.base_currency ?? null,
+                    locale,
+                  )
+                : "…"
+            }
+          />
+        </StatStrip>
+      </Card>
+      <Card title={t("analytics.myMeetings")}>
+        {/* Current standing, stated as such: a held meeting was once booked
+            and the record no longer says so, so these are today's facts and
+            not a funnel. */}
+        <p className="sub">{t("analytics.meetingsAsTheyStand")}</p>
+        <StatStrip>
+          {MEETING_STATUSES.map((status) => (
+            <StatCard
+              key={status.key}
+              label={t(status.labelKey)}
+              value={formatNumber(
+                meetingsByStatus.get(status.key) ?? 0,
+                locale,
+              )}
+            />
+          ))}
+        </StatStrip>
+      </Card>
+    </>
+  );
+}
+
 // One report: its own query, its own explain disclosure, its own card. A
 // section may hold several, and each has to be able to load, fail and be
 // explained on its own — a single query per screen would have made a section
@@ -1233,13 +1365,18 @@ export function AnalyticsScreen() {
   const header = (
     <div className="analytics-header">
       <RecordTabs
-        options={SECTIONS}
+        options={SECTIONS.filter(
+          (candidate) =>
+            candidate !== "outcomes" ||
+            context.data?.default_scope.kind === "owner",
+        )}
         value={section}
         onChange={setSection}
         labels={{
           forecast: t("analytics.sectionForecast"),
           pipeline: t("analytics.sectionPipeline"),
           performance: t("analytics.sectionPerformance"),
+          outcomes: t("analytics.sectionOutcomes"),
         }}
         label={t("analytics.sections")}
       />
@@ -1268,7 +1405,14 @@ export function AnalyticsScreen() {
   return (
     <div className="wrap">
       {header}
-      {section === "forecast" ? (
+      {section === "outcomes" ? (
+        context.data ? (
+          <MyOutcomesView
+            defaultScope={context.data.default_scope}
+            locale={locale}
+          />
+        ) : null
+      ) : section === "forecast" ? (
         selection && context.data ? (
           <ForecastView
             selection={selection}

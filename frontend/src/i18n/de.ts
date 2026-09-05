@@ -3306,6 +3306,17 @@ export const de = {
   "analytics.sectionPipeline": "Pipeline",
   "analytics.sectionPerformance": "Ergebnisse",
   "analytics.noClosedDeals": "Es wurden noch keine Deals abgeschlossen.",
+  "analytics.sectionOutcomes": "Meine Ergebnisse",
+  "analytics.myPipeline": "Meine offene Pipeline",
+  "analytics.myMeetings": "Meine Termine",
+  "analytics.meetingsAsTheyStand":
+    "Von Ihnen gehaltene Termine, nach heutigem Stand — ein stattgefundener Termin zählt nicht mehr als gebucht.",
+  "analytics.meetingsBooked": "Gebucht",
+  "analytics.meetingsHeld": "Stattgefunden",
+  "analytics.meetingsNoShow": "Nicht erschienen",
+  "analytics.meetingsCanceled": "Abgesagt",
+  "analytics.outcomesOwnLensOnly":
+    "Diese Ansicht antwortet für einen einzelnen Platz. Ihre Sicht umfasst mehr als Ihre eigenen Datensätze; Ihre Zahlen stehen in den breiteren Bereichen.",
   "analytics.openOutcomeDeals": "Die {outcome}-Deals öffnen",
   "analytics.reportWinLoss": "Gewonnen und verloren",
   "analytics.reportStageAge": "Verweildauer je Phase",

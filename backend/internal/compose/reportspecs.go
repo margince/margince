@@ -12,11 +12,15 @@ import (
 // an unrelated surface that happens to use the same words: renaming a report
 // dimension must never rename a capture target type.
 const (
-	fieldKind      = "kind"
-	fieldDirection = "direction"
-	fieldProject   = "project"
-	colKind        = "t.kind"
-	colDirection   = "t.direction"
+	fieldKind          = "kind"
+	fieldMeetingStatus = "meeting_status"
+	fieldHostUserID    = "host_user_id"
+	fieldDirection     = "direction"
+	fieldProject       = "project"
+	colKind            = "t.kind"
+	colMeetingStatus   = "t.meeting_status"
+	colHostUserID      = "t.host_user_id"
+	colDirection       = "t.direction"
 
 	// activityProjectIDExpr is the project an activity is filed under, read
 	// off its activity_link row. It is a scalar because the schema admits at
@@ -253,6 +257,12 @@ var prebuiltReports = map[string]reportSpec{
 		dimensions: map[string]string{
 			fieldKind:      colKind,
 			fieldDirection: colDirection,
+			// A meeting's CURRENT standing — booked, held, no_show, canceled —
+			// which is a fact about today's record, not an event history: a
+			// held meeting was once booked and this column no longer says so.
+			// NULL for every non-meeting, so the grouping means something only
+			// under a kind=meeting filter.
+			fieldMeetingStatus: colMeetingStatus,
 			// Grouping by the project an activity is filed under answers
 			// which bodies of work consumed the meeting and call effort; an
 			// unfiled activity lands in the NULL group, which the wire reads
@@ -262,9 +272,13 @@ var prebuiltReports = map[string]reportSpec{
 		},
 		measures: map[string]string{},
 		filters: map[string]string{
-			fieldKind:      colKind,
-			fieldDirection: colDirection,
-			fieldProjectID: activityProjectIDExpr,
+			fieldKind:          colKind,
+			fieldDirection:     colDirection,
+			fieldMeetingStatus: colMeetingStatus,
+			// The seat hosting the meeting — the one per-person handle the
+			// activity table itself carries, set exactly for meetings.
+			fieldHostUserID: colHostUserID,
+			fieldProjectID:  activityProjectIDExpr,
 		},
 		filterScopes: projectFilterScope,
 		// The project a filed activity names is row-scoped; grouping by it

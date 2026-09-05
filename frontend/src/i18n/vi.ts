@@ -3273,6 +3273,17 @@ export const vi = {
   "analytics.sectionPipeline": "Kênh bán",
   "analytics.sectionPerformance": "Hiệu suất",
   "analytics.noClosedDeals": "Chưa có deal nào được chốt.",
+  "analytics.sectionOutcomes": "Kết quả của tôi",
+  "analytics.myPipeline": "Pipeline đang mở của tôi",
+  "analytics.myMeetings": "Cuộc họp của tôi",
+  "analytics.meetingsAsTheyStand":
+    "Các cuộc họp bạn chủ trì, theo trạng thái hôm nay — cuộc họp đã diễn ra không còn tính là đã đặt.",
+  "analytics.meetingsBooked": "Đã đặt",
+  "analytics.meetingsHeld": "Đã diễn ra",
+  "analytics.meetingsNoShow": "Không đến",
+  "analytics.meetingsCanceled": "Đã hủy",
+  "analytics.outcomesOwnLensOnly":
+    "Trang này trả lời cho một chỗ ngồi. Phạm vi của bạn rộng hơn dữ liệu của riêng bạn, nên số liệu của bạn nằm ở các mục rộng hơn.",
   "analytics.openOutcomeDeals": "Mở các deal {outcome}",
   "analytics.reportWinLoss": "Thắng và thua",
   "analytics.reportStageAge": "Thời gian ở giai đoạn",
