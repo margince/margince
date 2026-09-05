@@ -5110,14 +5110,13 @@ export const vi = {
   "ob.conv.linkedin.skipped":
     "Đã bỏ qua LinkedIn. Bạn thêm hồ sơ lúc nào cũng được trong Cài đặt.",
 
-  // The setup rail: six stops, one word each. Long enough to name the step,
-  // short enough that six of them fit a column at 10px.
+  // The setup rail: five stops, one word each. Long enough to name the step,
+  // short enough that five of them fit a column at 10px.
   "ob.rail.read": "Đọc",
   "ob.rail.confirm": "Xác nhận",
   "ob.rail.basis": "Cơ sở",
   "ob.rail.voice": "Giọng văn",
   "ob.rail.connect": "Kết nối",
-  "ob.rail.prefs": "Tùy chọn",
 
   "ob.conv.invite.title": "Bạn có tự mình làm việc trong Margince không?",
   "ob.conv.invite.body":
@@ -5143,23 +5142,18 @@ export const vi = {
   "ob.conv.team.finish": "Hoàn tất thiết lập",
   "ob.conv.team.done":
     "Thiết lập đã hoàn tất. Người bạn thêm vào có thể tự huấn luyện giọng văn và kết nối tài khoản trong Cài đặt.",
-  "ob.conv.basis.title": "Trước hết, cách các con số được báo cáo.",
+  "ob.conv.team.persistFailed":
+    "Tôi không thể ghi nhận rằng thiết lập đã hoàn tất. Thử lại, hoặc để đó và hoàn tất sau trong Cài đặt.",
+  "ob.conv.basis.title": "Trước hết, cơ sở.",
   "ob.conv.basis.body":
-    "Đơn vị tiền tệ cơ sở và múi giờ báo cáo là của toàn hệ thống: mọi thương vụ, báo cáo và bản tóm tắt đều định giá và ghi ngày theo đó. Cả hai được điền sẵn và có thể đổi sau trong Cài đặt, cho đến khi một thương vụ đã khóa đơn vị tiền tệ.",
+    "Đơn vị tiền tệ cơ sở và múi giờ báo cáo là của toàn hệ thống: mọi thương vụ, báo cáo và bản tóm tắt đều định giá và ghi ngày theo đó. Những gì nó được tự thay đổi mà không hỏi là do bạn quyết định. Tất cả được điền sẵn và có thể đổi sau trong Cài đặt, cho đến khi một thương vụ đã khóa đơn vị tiền tệ.",
   "ob.conv.basis.reportingTitle": "Cơ sở báo cáo",
   "ob.conv.basis.timezoneNeeded": "Cần một múi giờ báo cáo.",
+  "ob.conv.basis.autonomyTitle": "Những gì nó có thể tự thay đổi",
+  "ob.conv.basis.autonomyBody":
+    "Mỗi loại thay đổi bên dưới sẽ được đề xuất cho bạn trước. Bật một loại và nó sẽ áp dụng mà không hỏi; tắt lại bất cứ lúc nào.",
   "ob.conv.basis.continue": "Tiếp tục",
   "ob.conv.basis.done": "Đã chốt cơ sở báo cáo.",
-
-  "ob.conv.prefs.title": "Cuối cùng, vài tùy chọn.",
-  "ob.conv.prefs.body":
-    "Mọi thứ ở đây được điền sẵn từ những gì đã ghi nhận, và có thể đổi sau trong Cài đặt. Nhấn Xong nếu tất cả đều đúng.",
-  "ob.conv.prefs.autonomyTitle": "Những gì nó có thể tự thay đổi",
-  "ob.conv.prefs.autonomyBody":
-    "Mỗi loại thay đổi bên dưới sẽ được đề xuất cho bạn trước. Bật một loại và nó sẽ áp dụng mà không hỏi; tắt lại bất cứ lúc nào.",
-  "ob.conv.prefs.done": "Xong",
-  "ob.conv.prefs.persistFailed":
-    "Tôi không thể ghi nhận rằng thiết lập đã hoàn tất. Thử lại, hoặc để đó và hoàn tất sau trong Cài đặt.",
 
   // --- the gate: the first screen after sign-in -------------------------
   // One question and nothing else. Nobody should meet the whole tool on their
