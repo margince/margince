@@ -2514,6 +2514,9 @@ export const de = {
   "brief.week.quiet":
     "Eine ruhige Woche — nichts abgeschlossen, nichts bewegt.",
 
+  "brief.changed.lead": "Seit dem Briefing geändert:",
+  "brief.changed.more": "+{count} weitere",
+  "brief.changed.open": "Arbeitsliste öffnen",
   "brief.feed.title": "Heute",
   "brief.feed.sub": "Eine Reihenfolge, einmal entschieden.",
   "brief.feed.loading": "Dein Morgen wird gelesen",

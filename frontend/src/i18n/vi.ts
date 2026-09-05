@@ -2491,6 +2491,9 @@ export const vi = {
   "brief.week.quiet":
     "Một tuần yên ắng — không chốt được gì và không có gì chuyển động.",
 
+  "brief.changed.lead": "Thay đổi kể từ bản tóm tắt:",
+  "brief.changed.more": "+{count} mục khác",
+  "brief.changed.open": "Mở danh sách công việc",
   "brief.feed.title": "Hôm nay",
   "brief.feed.sub": "Một thứ tự, quyết định một lần.",
   "brief.feed.loading": "Đang đọc buổi sáng của bạn",
