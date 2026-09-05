@@ -52,7 +52,7 @@ type BriefMailConfig struct {
 // the mail still has the whole brief on Home, so a relay outage must not fail a
 // job that assembled a team's morning. What it must not do is send twice, and
 // that is the claim's job rather than this function's.
-func (w *briefGenerateWorkspaceWorker) mailMorning(
+func (w *briefGenerateWorker) mailMorning(
 	ctx context.Context, run briefs.BriefRun, now time.Time, localHour int,
 ) {
 	if w.mail.Mailer == nil {
@@ -114,7 +114,7 @@ func (w *briefGenerateWorkspaceWorker) mailMorning(
 // Separate so the failure path has one spelling: the two callers above differ
 // only in what went wrong, and a second copy of the log-and-store pair is how
 // one of them comes to store nothing.
-func (w *briefGenerateWorkspaceWorker) recordMailFailure(
+func (w *briefGenerateWorker) recordMailFailure(
 	ctx context.Context, runID ids.UUID, cause string,
 ) {
 	if err := w.engine.MailFailed(ctx, runID, cause); err != nil {
@@ -151,7 +151,7 @@ const briefMailBudget = 45 * time.Second
 // everyone who never chose would mail the whole company "nothing is waiting on
 // you" every quiet morning, and that message teaches its own readers to filter
 // the ones that matter.
-func (w *briefGenerateWorkspaceWorker) wantsMorningMail(
+func (w *briefGenerateWorker) wantsMorningMail(
 	ctx context.Context, run briefs.BriefRun, localHour int,
 ) bool {
 	settings, err := w.users.MyDelivery(ctx)

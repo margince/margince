@@ -44,7 +44,7 @@ type WeeklyMailConfig struct {
 // the mail still has the whole review on Home, so a relay outage must not fail
 // a job that measured a team's week. What it must not do is send twice, and
 // that is the claim's job rather than this function's.
-func (w *weeklyGenerateWorkspaceWorker) mailWeekly(
+func (w *weeklyGenerateWorker) mailWeekly(
 	ctx context.Context, reviewID ids.UUID, now time.Time,
 ) {
 	if w.mail.Mailer == nil {
@@ -113,7 +113,7 @@ func (w *weeklyGenerateWorkspaceWorker) mailWeekly(
 // Separate so the failure path has one spelling: the two callers above differ
 // only in what went wrong, and a second copy of the log-and-store pair is how
 // one of them comes to store nothing.
-func (w *weeklyGenerateWorkspaceWorker) recordMailFailure(ctx context.Context, reviewID ids.UUID, cause string) {
+func (w *weeklyGenerateWorker) recordMailFailure(ctx context.Context, reviewID ids.UUID, cause string) {
 	if err := w.engine.MailFailed(ctx, reviewID, cause); err != nil {
 		w.log.WarnContext(ctx, "the weekly mail's failure could not be recorded",
 			"review", reviewID, "cause", err)
@@ -135,7 +135,7 @@ const mailBudget = 45 * time.Second
 // rep who wanted their weekly and did not get it is worse served than one who
 // gets a message they meant to switch off. The second is an annoyance they can
 // fix from the same page; the first is silence they have no way to notice.
-func (w *weeklyGenerateWorkspaceWorker) optedOutOfWeekly(ctx context.Context) bool {
+func (w *weeklyGenerateWorker) optedOutOfWeekly(ctx context.Context) bool {
 	settings, err := w.users.MyDelivery(ctx)
 	if err != nil {
 		w.log.WarnContext(ctx, "the weekly delivery preference could not be read; sending anyway",

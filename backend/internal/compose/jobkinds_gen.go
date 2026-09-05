@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "d1b084a36d62cbd9b19a925414211f4b0f997e678f267f223289da645b5bd8e4"
+const jobContractHash = "96a8c061619ec1c669ba4111f95293a2a35b2e37df06ba294adefef02266593f"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -35,14 +35,12 @@ type declaredJobArgs interface {
 		AssuranceSweepArgs |
 		AssuranceWorkspaceArgs |
 		BriefGenerateArgs |
-		BriefGenerateWorkspaceArgs |
 		CaptureAutoEnrichSweepArgs |
 		CaptureBackfillArgs |
 		CaptureClassifyArgs |
 		ConfidentialityVerdictArgs |
 		CounterpartyVerdictArgs |
 		CaptureDigestArgs |
-		CaptureDigestWorkspaceArgs |
 		CaptureEnrichArgs |
 		CaptureSyncArgs |
 		CaptureTraceSweepArgs |
@@ -108,8 +106,7 @@ type declaredJobArgs interface {
 		VoiceBuildArgs |
 		VoiceBuildRetryArgs |
 		WebhookRetryArgs |
-		WeeklyReviewGenerateArgs |
-		WeeklyReviewGenerateWorkspaceArgs
+		WeeklyReviewGenerateArgs
 }
 
 // addDeclaredWorker is the sanctioned registration path. Its type parameter
@@ -143,8 +140,6 @@ func addDeclaredWorkerWithTimeout[T declaredJobArgs](reg *jobRegistry, w jobs.Wo
 // no tenant work of its own.
 var (
 	_ jobs.FleetWide = AssuranceSweepArgs{}
-	_ jobs.FleetWide = BriefGenerateArgs{}
-	_ jobs.FleetWide = CaptureDigestArgs{}
 	_ jobs.FleetWide = CloseDateSweepArgs{}
 	_ jobs.FleetWide = FollowUpReconcileArgs{}
 	_ jobs.FleetWide = ForecastSnapshotSweepArgs{}
@@ -164,7 +159,6 @@ var (
 	_ jobs.FleetWide = TelegramPollSweepArgs{}
 	_ jobs.FleetWide = TimeScanArgs{}
 	_ jobs.FleetWide = VoiceBuildRetryArgs{}
-	_ jobs.FleetWide = WeeklyReviewGenerateArgs{}
 )
 
 // The declared tenant-scoped kinds: each says which workspace it is for
@@ -172,9 +166,7 @@ var (
 var (
 	_ jobs.WorkspaceScoped = AiModelRateRefreshArgs{}
 	_ jobs.WorkspaceScoped = AssuranceWorkspaceArgs{}
-	_ jobs.WorkspaceScoped = BriefGenerateWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
-	_ jobs.WorkspaceScoped = CaptureDigestWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureSyncArgs{}
 	_ jobs.WorkspaceScoped = CheckOrganizationVatArgs{}
 	_ jobs.WorkspaceScoped = CloseDateWorkspaceArgs{}
@@ -208,5 +200,4 @@ var (
 	_ jobs.WorkspaceScoped = TranscriptProposeArgs{}
 	_ jobs.WorkspaceScoped = VCardIngestArgs{}
 	_ jobs.WorkspaceScoped = VoiceBuildArgs{}
-	_ jobs.WorkspaceScoped = WeeklyReviewGenerateWorkspaceArgs{}
 )

@@ -233,7 +233,7 @@ func TestFanOutChildOptsRefusesACallerOwnedKindWithNoOpts(t *testing.T) {
 // a value that merely happened not to carry them is one field away from doing
 // so, and neither failure is visible at the call site.
 func TestOneOffChildOptsTakeTheDeclaredQueueButNotTheFleetPassMarkings(t *testing.T) {
-	kind := CaptureDigestWorkspaceArgs{}.Kind()
+	kind := CaptureSyncArgs{}.Kind()
 	spec := specFor(t, kind)
 	opts := oneOffChildOpts(kind)
 
