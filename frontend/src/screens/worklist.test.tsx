@@ -433,28 +433,47 @@ describe("what the ranked queue tells a reader", () => {
     const { container } = renderWorklist();
 
     await screen.findByText("A buyer is waiting on a funded deal");
-    // The first three are said outright.
-    for (const kind of [
-      "buyer_wrote_last",
-      "stale",
-      "no_reply_history",
-    ] as const) {
-      expect(container.textContent).toContain(en[`worklist.because.${kind}`]);
+    const fold = container.querySelector("details.worklist-row-because-fold");
+    expect(fold).not.toBeNull();
+    // Read the two halves SEPARATELY. Asserting over the whole page cannot
+    // tell "in the summary" from "in the fold", so it passes just as well on a
+    // row that put the strongest reasons behind the tap — which is the exact
+    // inversion this component exists to prevent.
+    const summary = fold?.querySelector("summary")?.textContent ?? "";
+    const hidden = fold?.querySelector("p")?.textContent ?? "";
+
+    // THE SERVER'S ORDER, kept. `because` arrives "in the order they were
+    // weighed", so the head is the strongest three and the fold falls in the
+    // right place by construction. Nothing held that until now: reversing the
+    // list before the slice passed every test in this file, and a reversed
+    // fold buries the weak reasons and promotes the ones a reader already has.
+    // Positions, checked for PRESENCE first. indexOf answers -1 for a phrase
+    // that is not there, and -1 is less than every real index — so an ordering
+    // assertion alone passes when the reason it names has vanished entirely.
+    const at = (kind: "buyer_wrote_last" | "stale" | "no_reply_history") => {
+      const found = summary.indexOf(en[`worklist.because.${kind}`]);
+      expect(found, `${kind} is missing from the summary`).toBeGreaterThan(-1);
+      return found;
+    };
+    expect(at("buyer_wrote_last")).toBeLessThan(at("stale"));
+    expect(at("stale")).toBeLessThan(at("no_reply_history"));
+
+    // The rest are PRESENT — folded, never discarded — and specifically NOT in
+    // the summary. The one that decided the rank is in here, which is the whole
+    // reason a cap was wrong.
+    for (const kind of ["asks_nothing", "expected_revenue"] as const) {
+      expect(hidden).toContain(en[`worklist.because.${kind}`]);
+      expect(summary).not.toContain(en[`worklist.because.${kind}`]);
     }
-    // The rest are PRESENT — folded, never discarded. The one that decided the
-    // rank is in here, which is the whole reason a cap was wrong.
-    expect(container.textContent).toContain(
-      en["worklist.because.expected_revenue"],
+
+    // The count names how many are ACTUALLY hidden, so a reader can decide
+    // whether to spend the tap. Asserted as the whole rendered phrase against
+    // the summary alone: `toContain("2")` matched any digit 2 anywhere on the
+    // page, so a summary promising "+22 more reasons" over two hidden facts
+    // passed it.
+    expect(summary).toContain(
+      en["worklist.because.more_other"].replace("{count}", "2"),
     );
-    expect(container.textContent).toContain(
-      en["worklist.because.asks_nothing"],
-    );
-    // And the fold names HOW MANY, so a reader can decide whether to spend the
-    // tap. "+2 more reasons", not "more".
-    expect(container.textContent).toContain("2");
-    expect(
-      container.querySelector("details.worklist-row-because-fold"),
-    ).not.toBeNull();
   });
 
   // Three reasons still fit on one line at 390px, so folding them would cost a
