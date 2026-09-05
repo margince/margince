@@ -389,6 +389,29 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 	if where, err = appendWaitingReplyClause(ctx, in, arg, where); err != nil {
 		return "", nil, "", nil, err
 	}
+	where = append(where, activityRowClauses(in, arg)...)
+	if in.Cursor != nil && *in.Cursor != "" {
+		if in.OpenAndDueBy != nil {
+			return "", nil, "", nil, errOpenAndDueByWithCursor
+		}
+		c, decodeErr := storekit.DecodeCursor(*in.Cursor)
+		if decodeErr != nil {
+			return "", nil, "", nil, decodeErr
+		}
+		where = append(where, sprintf("(a.occurred_at, a.id) < ($%d, $%d)", arg(c.CreatedAt), arg(c.ID)))
+	}
+	return join, where, content, args, nil
+}
+
+// activityRowClauses narrows on columns of the activity row itself: the
+// thread it belongs to, the words in it, when it happened, whether its
+// outcome is still open.
+//
+// None of them consults the caller's scope, so none can fail — which row is
+// in reach was already decided by the gate its caller picked, and these only
+// shrink that set further.
+func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
+	var where []string
 	if in.ThreadKey != nil && *in.ThreadKey != "" {
 		where = append(where, sprintf("a.thread_key = $%d", arg(*in.ThreadKey)))
 	}
@@ -410,17 +433,7 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 		// and excluding it would empty this question on a connected calendar.
 		where = append(where, "(a.meeting_status IS NULL OR a.meeting_status = 'booked')")
 	}
-	if in.Cursor != nil && *in.Cursor != "" {
-		if in.OpenAndDueBy != nil {
-			return "", nil, "", nil, errOpenAndDueByWithCursor
-		}
-		c, decodeErr := storekit.DecodeCursor(*in.Cursor)
-		if decodeErr != nil {
-			return "", nil, "", nil, decodeErr
-		}
-		where = append(where, sprintf("(a.occurred_at, a.id) < ($%d, $%d)", arg(c.CreatedAt), arg(c.ID)))
-	}
-	return join, where, content, args, nil
+	return where
 }
 
 // filtersOnContent reports whether the list narrows on fields a withheld row
