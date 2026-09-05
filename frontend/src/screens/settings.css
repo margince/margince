@@ -49,6 +49,7 @@
    Without the reset the default (24 above, 12 below) gave 40 and 28 — a heading
    barely closer to what it names than to what it follows. */
 .settings-stack > .section-header {
+  /* ds:ignore a heading in this stack adds to the gap rather than competing with it */
   margin: var(--space-4) 0 0;
 }
 

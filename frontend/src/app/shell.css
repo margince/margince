@@ -292,7 +292,7 @@
 :is(.wrap, .surfacestate-part, .page-zones-main)
   > :is(.card, .panel)
   + :is(.card, .panel) {
-  margin-top: var(--space-4);
+  margin-top: var(--gapCards);
 }
 
 /* List header row: the section title grows, the create action sits beside it.
@@ -1213,6 +1213,7 @@
   margin: var(--space-1);
 }
 .palette-list .pending {
+  /* ds:ignore the palette draws its rows on the list's own inset */
   padding: var(--space-2);
 }
 

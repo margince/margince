@@ -77,6 +77,7 @@
   font-size: var(--fs-meta);
   color: var(--textMeta);
   line-height: 1.45;
+  /* ds:ignore a field's hint sits tighter than a caption standing alone */
   margin: var(--space-1) 0;
 }
 
@@ -125,7 +126,7 @@
 
 .cf-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--gapActions);
   margin-top: var(--space-4);
 }
 

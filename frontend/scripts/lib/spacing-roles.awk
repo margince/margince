@@ -3,21 +3,29 @@
 # One parser, two modes, because the gate's two questions are the same question
 # asked of two trees:
 #
-#   mode=owned   over frontend/src/design-system/*.css — print the class each
-#                rule SPACES, which is the set of classes the design system owns
-#                the spacing of. This is the gate's corpus, derived from the
-#                owner rather than listed here, so a primitive added tomorrow is
-#                protected the day it exists.
+#   mode=owned   over frontend/src/design-system/*.css — print two claims per
+#                rule: `spaced <class>` for a class this tier gives an interval
+#                to, and `own <class>` for a class it declares ON ITS OWN, with
+#                no ancestor above it in the selector. The gate keeps the
+#                intersection, which is the set of primitives, derived from the
+#                owner rather than listed there.
 #
-#   mode=check   over one screen stylesheet — report the declarations this
-#                branch adds that either re-space one of those owned classes or
-#                spell a raw rung in a context that has a named role. Three
-#                inputs, in this order: the owned list, the file's
-#                `git diff --unified=0`, the file itself.
+#                Both halves are needed, and the second is what keeps the corpus
+#                honest: a design-system sheet may space a class belonging to a
+#                SCREEN (`.mw-conversation .ob-conv-thread` places the screen's
+#                thread inside the workbench). Spacing alone would read that as
+#                the tier owning `.ob-conv-thread` and turn the screen's own
+#                base rule into a finding. Declaring a class with nothing above
+#                it is what owning it looks like.
 #
-# Why the file itself and not the diff alone: a declaration, a comment and a
-# selector can each span lines, and a diff line read in isolation carries none
-# of that state. The diff says WHICH lines are new; the file says what they mean.
+#   mode=check   over one screen stylesheet — report every declaration that
+#                either re-spaces one of those owned classes or spells a raw
+#                rung in a context that has a named role. Two inputs, in this
+#                order: the owned list, then the stylesheet.
+#
+# A declaration, a comment and a selector can each span lines, so the scanner
+# carries all three states across them: the unit judged is one declaration,
+# whatever it was spelled over and whatever ended it.
 
 function decomment(line,   out, p) {
   out = ""
@@ -38,19 +46,54 @@ function decomment(line,   out, p) {
   return out
 }
 
-# The class a compound selector actually styles: the LAST class in it, with
-# pseudo-classes, pseudo-elements and attribute tests removed. `.panel-body`
-# alone is the panel's body; `.panel-body.co-360-head` is a screen's own
-# element that happens to also be one, and the screen owns what it spaces.
-function subject(part,   n, i, arr, last) {
+# The class a selector actually styles: the last class of its LAST compound,
+# with pseudo-classes, pseudo-elements and attribute tests removed.
+#
+# The last compound and not the last class anywhere in the selector, because
+# `.rdeck-card input` styles the INPUT — the card is where it sits. Reading the
+# trailing class out of the whole selector made every rule that reached a plain
+# element inside a card look like a rule about the card.
+#
+# `.panel-body` alone is the panel's body; `.panel-body.co-360-head` is a
+# screen's own element that happens to also be one, and the screen owns what it
+# spaces. A last compound carrying no class at all (`.panel-body > p`) makes no
+# claim: this gate is about named surfaces.
+function subject(part,   n, i, arr, comp, last) {
   gsub(/\[[^]]*\]/, " ", part)
   gsub(/::?[a-zA-Z-]+(\([^)]*\))?/, " ", part)
-  n = split(part, arr, /[^A-Za-z0-9_.-]+/)
+  gsub(/[>+~]/, " ", part)
+  gsub(/^[ \t]+|[ \t]+$/, "", part)
+  n = split(part, arr, /[ \t]+/)
+  comp = arr[n]
   last = ""
+  n = split(comp, arr, /[^A-Za-z0-9_.-]+/)
   for (i = 1; i <= n; i++) {
     if (arr[i] ~ /^\./) last = substr(arr[i], 2)
   }
   return last
+}
+
+# Splits a selector LIST on its top-level commas. `:is(.card, .panel)` carries
+# commas of its own, and a plain split on "," cuts that pseudo in half — which
+# leaves fragments that still parse as selectors and name classes nobody wrote a
+# rule about.
+function split_parts(sel, parts,   n, i, depth, ch, cur) {
+  n = 0
+  depth = 0
+  cur = ""
+  for (i = 1; i <= length(sel); i++) {
+    ch = substr(sel, i, 1)
+    if (ch == "(") depth++
+    else if (ch == ")") { if (depth > 0) depth-- }
+    if (ch == "," && depth == 0) {
+      parts[++n] = cur
+      cur = ""
+      continue
+    }
+    cur = cur ch
+  }
+  parts[++n] = cur
+  return n
 }
 
 function spacing_prop(p) {
@@ -80,6 +123,15 @@ function strip_literal(s, lit,   out, p) {
   return out s
 }
 
+# The value with every role token cut out of it, so what is left is whatever
+# the declaration says that the role layer does not.
+function without_roles(value,   rest) {
+  rest = strip_literal(value, role_hint(roleActions))
+  rest = strip_literal(rest, role_hint(roleCards))
+  rest = strip_literal(rest, role_hint(padCard))
+  return strip_literal(rest, role_hint(padPanel))
+}
+
 function report(tag, lineno, decl, message,   shown) {
   shown = decl
   gsub(/[ \t]+/, " ", shown)
@@ -94,14 +146,20 @@ function report(tag, lineno, decl, message,   shown) {
 function judge(sel, prop, value, lineno, decl,   subj, i, n, parts, bad) {
   if (!spacing_prop(prop) || !measures(value)) return
 
-  n = split(sel, parts, ",")
+  n = split_parts(sel, parts)
   for (i = 1; i <= n; i++) {
     subj = subject(parts[i])
     if (subj == "") continue
 
-    if (subj in owned) {
-      report("primitive", lineno, decl,
-             "." subj " is a design-system primitive and carries its own spacing")
+    if (primitives && subj in owned) {
+      # A variant spelled in the house's own vocabulary is not a second
+      # opinion: `padding: var(--padCard)` on a rail's panel body says which
+      # surface it means and moves when that surface is retuned. An ad-hoc rung
+      # says only a number, and the number is what drifts.
+      if (measures(without_roles(value))) {
+        report("primitive", lineno, decl,
+               "." subj " is a design-system primitive — vary it with a role token, or say why not")
+      }
       return
     }
 
@@ -141,6 +199,15 @@ function judge(sel, prop, value, lineno, decl,   subj, i, n, parts, bad) {
 function feed(lineno, raw,   code, p, ch, seg, waived) {
   code = decomment(raw)
   waived = (raw ~ /ds:ignore/)
+  # A waiver on a line of its own waives the declaration UNDER it, which is
+  # where a CSS comment normally goes and the only place a long reason fits:
+  # the formatter wraps a declaration whose trailing comment overruns, and a
+  # value broken across three lines to make room for its excuse is worse code
+  # than the one being excused.
+  if (waived && code !~ /[^ \t]/) {
+    armed = 1
+    return
+  }
   if (waived) pending_waived = 1
   while (length(code) > 0) {
     p = 0
@@ -187,54 +254,57 @@ function feed(lineno, raw,   code, p, ch, seg, waived) {
 # `var(--padcard)` is a different (undefined) property from `var(--padCard)`.
 function inspect(decl, waived,   prop, value) {
   if (index(decl, ":") == 0) return
-  if (!(pending_line in added) || pending_waived || waived) return
+  if (armed) {
+    armed = 0
+    return
+  }
+  if (pending_waived || waived) return
   prop = tolower(substr(decl, 1, index(decl, ":") - 1))
   value = substr(decl, index(decl, ":") + 1)
   gsub(/^[ \t]+|[ \t]+$/, "", prop)
   gsub(/^[ \t]+|[ \t]+$/, "", value)
   gsub(/[ \t]+/, " ", value)
   if (mode == "owned") {
-    if (spacing_prop(prop) && measures(value)) collect(selstack[depth])
+    collect(selstack[depth], spacing_prop(prop) && measures(value))
     return
   }
   judge(selstack[depth], prop, value, pending_line, decl)
 }
 
-# mode=owned: the subject of every rule the design system spaces.
-function collect(sel,   i, n, parts, subj) {
-  n = split(sel, parts, ",")
+# mode=owned: what one design-system rule claims about the classes in it.
+function collect(sel, spaces,   i, n, parts, subj, bare) {
+  n = split_parts(sel, parts)
   for (i = 1; i <= n; i++) {
     subj = subject(parts[i])
-    if (subj != "") print subj
+    if (subj == "") continue
+    if (spaces) print "spaced " subj
+    # `.card`, `.panel-head:has(.panel-head-sub)` and `.card.card-inset` all
+    # declare their own subject; `.panel-body > .empty` and `.settinglist >
+    # .disclosure` place someone else's inside them.
+    bare = parts[i]
+    gsub(/\[[^]]*\]/, " ", bare)
+    gsub(/::?[a-zA-Z-]+(\([^)]*\))?/, " ", bare)
+    gsub(/^[ \t]+|[ \t]+$/, "", bare)
+    if (bare ~ /^\.[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*$/) print "own " subj
   }
 }
 
 BEGIN {
   depth = 0
   part = 0
+  armed = 0
+  # A document that does not load the class layer cannot collide with it; the
+  # caller says so by passing primitives=0. Everything else is judged.
+  if (primitives == "") primitives = 1
 }
 
-# Each new input file opens the next part. In mode=owned there is only one part
-# and every line of it is a subject, so `added` is filled unconditionally there.
-FNR == 1 { part++; incomment = 0; pending = ""; pending_line = 0; pending_waived = 0 }
+# Each new input file opens the next part, and resets the state that belongs to
+# one file rather than to the run.
+FNR == 1 { part++; incomment = 0; pending = ""; pending_line = 0; pending_waived = 0; armed = 0 }
 
-mode == "owned" { added[FNR] = 1; feed(FNR, $0); next }
+mode == "owned" { feed(FNR, $0); next }
 
+# mode=check reads the owned list first, then the stylesheet it is judging.
 part == 1 { owned[$0] = 1; next }
 
-# The diff: which line numbers of the NEW file this branch adds. A hunk header
-# resets the counter, an added line consumes one, and a removed line consumes
-# none because it does not exist in the new file.
-part == 2 {
-  if (/^@@/) {
-    match($0, /\+[0-9]+/)
-    ln = substr($0, RSTART + 1, RLENGTH - 1) + 0
-    next
-  }
-  if (/^\+\+\+/ || /^-/ || /^\\/) next
-  if (/^\+/) { added[ln++] = 1; next }
-  ln++
-  next
-}
-
-part == 3 { feed(FNR, $0) }
+{ feed(FNR, $0) }

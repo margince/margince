@@ -370,16 +370,20 @@ ds-spacing:
 	frontend/scripts/check-ds-spacing.sh
 	bash frontend/scripts/check-ds-spacing.test.sh
 
-## ds-spacing-roles — the other half of the spacing rule: new screen CSS may not
+## ds-spacing-roles — the other half of the spacing rule: a screen may not
 ## re-space a design-system primitive, and where the design language has a role
 ## for a context it spells the role rather than the rung it equals today
 ## (var(--gapActions) between two buttons, var(--padCard)/var(--padPanel) inside
 ## a surface, var(--gapCards) between siblings). ds-spacing holds the vocabulary
 ## — a token, never a raw px — and passes `gap: var(--space-5)` between two
 ## buttons, which is how one relationship came to be spelled 8, 12 and 20.
-## Diff-scoped vs origin/main. Its test runs beside it: this gate CAN be tested
-## for its verdict, against a fixture checkout, and an untested arm that stopped
-## firing would read exactly like a clean branch.
+##
+## WHOLE-TREE, unlike its diff-scoped sibling: the tree was cleared to zero
+## before this bar was armed. It also has to be, to hold what a diff cannot see
+## — promoting a class INTO the design system turns every untouched screen rule
+## about it into a second opinion, and no line of that diff is in a screen.
+## Its test runs beside it: this gate's verdict is testable against fixture
+## trees, and an arm that stopped firing would read exactly like a clean tree.
 ds-spacing-roles:
 	frontend/scripts/check-ds-spacing-roles.sh
 	bash frontend/scripts/check-ds-spacing-roles.test.sh
