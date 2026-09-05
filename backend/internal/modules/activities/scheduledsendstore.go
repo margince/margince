@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // scheduledSendColumns is the read shape, spelled once so the list and the
@@ -49,7 +50,7 @@ const scheduledSendColumns = `
 	` + scheduledSendStatusExpr + ` AS status,
 	scheduled_at, scheduled_tz, origin_kind,
 	anchor_activity_id, payload, scheduled_by, activity_id,
-	held_reason, version, created_at, updated_at`
+	held_reason, version, created_at, updated_at, origin_links`
 
 // ListScheduledSends returns the caller's pending and held messages.
 func (s *Store) ListScheduledSends(ctx context.Context, status string) ([]ScheduledSend, error) {
@@ -275,18 +276,36 @@ func scanScheduledSend(rows pgx.Rows) (ScheduledSend, error) {
 		payloadRaw []byte
 		activityID *ids.UUID
 		heldReason *string
+		// SQL NULL on a reply row, which the origin-shape CHECK requires: a
+		// reply's records come from its anchor, and the ones it adds beyond
+		// those travel in also_links, which the fire reads and this does not.
+		originLinks []byte
 	)
 	if err := rows.Scan(
 		&row.ID, &row.Status, &row.ScheduledAt, &row.ScheduledTZ, &row.OriginKind,
 		&anchor, &payloadRaw, &row.ScheduledBy, &activityID,
-		&heldReason, &row.Version, &row.CreatedAt, &row.UpdatedAt,
+		&heldReason, &row.Version, &row.CreatedAt, &row.UpdatedAt, &originLinks,
 	); err != nil {
 		return ScheduledSend{}, fmt.Errorf("scheduled send: reading a row: %w", err)
 	}
+	// payload_version is not checked on this read, and the fire's refusal of a
+	// payload this build did not write is what makes that safe: a stale row can
+	// never send, so the worst this read can do is describe a message that will
+	// be held — and a rep has to be able to see it to withdraw it.
 	var payload scheduledPayload
 	if err := json.Unmarshal(payloadRaw, &payload); err != nil {
 		return ScheduledSend{}, fmt.Errorf("scheduled send: reading the frozen message: %w", err)
 	}
+	links, err := thawOriginLinks(originLinks)
+	if err != nil {
+		return ScheduledSend{}, err
+	}
+	row.Links = links
+	evidence, err := payload.Evidence.thaw()
+	if err != nil {
+		return ScheduledSend{}, err
+	}
+	row.Evidence = evidence
 	if anchor != nil {
 		row.Anchor = ids.ActivityID{UUID: *anchor}
 	}
@@ -301,5 +320,8 @@ func scanScheduledSend(rows pgx.Rows) (ScheduledSend, error) {
 	row.Cc = payload.Cc
 	row.Bcc = payload.Bcc
 	row.Body = payload.Body
+	row.Context = commsauthz.Category(payload.Context)
+	row.MarketingPurpose = payload.MarketingPurpose
+	row.ConsentPurpose = payload.ConsentPurpose
 	return row, nil
 }

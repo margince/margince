@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { throwProblem } from "./common";
 
 // Asking the engine whether a message would be allowed, before anybody presses
 // Send.
@@ -34,6 +35,24 @@ export function useSendPermission(args: {
    */
   links?: readonly components["schemas"]["ActivityLinkInput"][];
   context?: components["schemas"]["CommunicationContext"];
+  /**
+   * Which marketing purpose, when the claim is `marketing`. Part of the
+   * question: a marketing send previewed without it is asked about a
+   * different message than the one that will go.
+   */
+  marketingPurpose?: string;
+  /**
+   * The deprecated purpose key, where the surface still holds one. The send
+   * consults it where the record supports no category, so a preview asked
+   * without it answers a different question than the send.
+   */
+  consentPurpose?: string;
+  /**
+   * The records named in support of the message. Evidence is what makes a
+   * claimed category supported: asked without it, the engine answers
+   * "unproven" about a message the send allows.
+   */
+  evidence?: components["schemas"]["CommunicationEvidence"];
   /** Off while the rep is still choosing a recipient — nothing to ask about yet. */
   enabled?: boolean;
 }): { preview: Preview | undefined; asking: boolean; unanswered: boolean } {
@@ -59,6 +78,9 @@ export function useSendPermission(args: {
       recipients,
       links,
       args.context ?? "",
+      args.marketingPurpose ?? "",
+      args.consentPurpose ?? "",
+      args.evidence ?? {},
     ],
     enabled,
     // A refusal is live state — somebody may unsubscribe between the preview
@@ -66,23 +88,44 @@ export function useSendPermission(args: {
     // cached verdict that outlives what it described.
     staleTime: 0,
     queryFn: async () => {
-      const body = { to: [...recipients], communication_context: args.context };
-      if (args.anchorActivityId) {
-        const { data, error } = await api.POST(
-          "/activities/{id}/send-email:preview",
-          {
+      const body = {
+        to: [...recipients],
+        communication_context: args.context,
+        marketing_purpose: args.marketingPurpose,
+        consent_purpose: args.consentPurpose,
+        evidence: args.evidence,
+      };
+      const answered = args.anchorActivityId
+        ? await api.POST("/activities/{id}/send-email:preview", {
             params: { path: { id: args.anchorActivityId } },
             body,
+          })
+        : await api.POST("/emails:preview", {
+            body: { ...body, links: [...links] },
+          });
+      // Only a real 2xx is an answer. openapi-fetch reports a falsy `error` for
+      // a bodiless non-2xx — an empty 502 from a gateway — and taking that as
+      // success would resolve with no preview, which renders as ALLOWED: a
+      // permission check that failed, drawn as permission granted.
+      if (!answered.response.ok) {
+        throwProblem(
+          answered.error ?? {
+            title: `send permission: the preview answered ${answered.response.status}`,
           },
         );
-        if (error) throw error;
-        return data;
       }
-      const { data, error } = await api.POST("/emails:preview", {
-        body: { ...body, links: [...links] },
-      });
-      if (error) throw error;
-      return data;
+      // An answer this build cannot read is not an answer. A 200 with no
+      // recipients — a proxy's page, a server of another version — must read
+      // as "could not check" on this one notice, never take down the composer
+      // around it: the message is still the rep's to send, and the server
+      // still refuses it at the door if it must.
+      const preview = answered.data;
+      if (!preview || !Array.isArray(preview.recipients)) {
+        throwProblem({
+          title: "send permission: the preview answered without recipients",
+        });
+      }
+      return preview;
     },
   });
 

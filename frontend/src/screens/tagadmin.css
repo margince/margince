@@ -32,7 +32,7 @@
 .tagadmin-verbs {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--gapActions);
   flex-wrap: wrap;
   /* Pushed to the row's trailing edge while the row is wide enough for one
      line, and carried onto its own line when it is not. */

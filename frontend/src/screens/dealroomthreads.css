@@ -81,6 +81,7 @@
    second, unrelated form under the card. */
 .board-doc > .thread-composer,
 .board-doc > .card-actions {
+  /* ds:ignore the composer's indent, shared with the thread beside it */
   padding-left: var(--space-3);
   border-left: 2px solid var(--borderSubtle);
 }

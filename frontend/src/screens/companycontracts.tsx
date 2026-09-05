@@ -26,6 +26,7 @@ import {
   isTerminalContractStatus,
 } from "./contractlifecycle";
 import { useContractPaper } from "./contractpaper";
+import { EntityRef } from "./entityref";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in
@@ -308,6 +309,17 @@ function ContractRow({
           )}
           <ContractTerm contract={contract} />
           <ContractTermState contract={contract} />
+          {/* A bare EntityRef here would read as an org name or a person —
+              the other siblings on this line are all self-identifying by
+              format (a mono number, a date range, a state pill), and a deal's
+              name is not. Same {label}{" "}<EntityRef/> shape deals.tsx uses
+              for its own second, non-obvious reference (partner_org_id). */}
+          {contract.deal_id && (
+            <span className="t-caption">
+              {t("contracts.deal")}{" "}
+              <EntityRef kind="deal" id={contract.deal_id} />
+            </span>
+          )}
         </span>
         {/* The paper sits under the agreement's own line: a file is about the
             agreement, not about any one of the facts beside it. */}

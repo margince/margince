@@ -102,8 +102,12 @@ const facts = [
   },
 ];
 
+// Every story below states its own ADDRESS. The company page reads its open
+// tab off the route (useCompanyTab), so a story that left the hash alone would
+// draw whichever tab the story before it happened to set.
 export const CompaniesList: Story = {
   render: () => {
+    globalThis.location.hash = "#/companies";
     installFetchStub({
       "GET /me": meRoute({ organization: ["read", "update"] }),
       "GET /organizations": () =>
@@ -245,6 +249,7 @@ const overviewRoutes = {
 // site-read content, alongside the existing static firmographics dl.
 export const CompanyOverview: Story = {
   render: () => {
+    globalThis.location.hash = "#/companies/o-1";
     installFetchStub({
       "GET /me": meRoute({ organization: ["read", "update"] }),
       ...overviewRoutes,
@@ -264,6 +269,7 @@ export const CompanyOverview: Story = {
 // facts card renders nothing at all.
 export const CompanyOverviewEmpty: Story = {
   render: () => {
+    globalThis.location.hash = "#/companies/o-1";
     installFetchStub({
       "GET /me": meRoute({ organization: ["read", "update"] }),
       ...overviewRoutes,
@@ -282,6 +288,7 @@ export const CompanyOverviewEmpty: Story = {
 // drawing the empty state a reader would take for "this account has none".
 export const CompanyOverviewWithheldSection: Story = {
   render: () => {
+    globalThis.location.hash = "#/companies/o-1";
     installFetchStub({
       "GET /me": meRoute({ organization: ["read", "update"] }),
       ...overviewRoutes,
@@ -290,6 +297,48 @@ export const CompanyOverviewWithheldSection: Story = {
           ...org360,
           deals: undefined,
           sections_omitted: ["deals"],
+        }),
+      "GET /organizations/o-1/profile-fields": () => jsonResponse({ data: [] }),
+      "GET /organizations/o-1/facts": () => jsonResponse({ data: [] }),
+    });
+    return (
+      <StoryProviders>
+        <CompanyScreen id="o-1" />
+      </StoryProviders>
+    );
+  },
+};
+
+// The Deals tab with BOTH its panels: what the account is under contract for,
+// and the pipeline under it. The two-panel state is the one worth drawing —
+// the work column carries no interval of its own, so this is where a reader
+// can see that the tab body takes the record's own rhythm rather than letting
+// the two panels meet at the border.
+//
+// The tab comes off the ADDRESS (useCompanyTab), so the story sets it the way
+// a reader arriving on a link would rather than by pressing the strip.
+export const CompanyDeals: Story = {
+  render: () => {
+    globalThis.location.hash = "#/companies/o-1/deals";
+    installFetchStub({
+      "GET /me": meRoute({ organization: ["read", "update"] }),
+      ...overviewRoutes,
+      "GET /organizations/o-1/360": () =>
+        jsonResponse({
+          ...org360,
+          // The contract slice is present only for a reader holding the
+          // contract grant; without it the upper panel is not drawn at all and
+          // the tab is back to a single card.
+          state_strip: {
+            contracts: {
+              active_count: 2,
+              priced_count: 2,
+              annualized_value_minor_base: 9_600_000,
+              base_currency: "EUR",
+              nearest_renewal_on: "2027-01-31",
+              cancellation_pending: false,
+            },
+          },
         }),
       "GET /organizations/o-1/profile-fields": () => jsonResponse({ data: [] }),
       "GET /organizations/o-1/facts": () => jsonResponse({ data: [] }),

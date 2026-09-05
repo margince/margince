@@ -123,8 +123,12 @@ func (s *Store) OpenCommitmentsDue(ctx context.Context, owner ids.UserID, by tim
 // assembled from a second copy of these arms would answer a different question
 // from the cards under it, one arm at a time, and nothing would fail to say so.
 //
-// %[1]d is the owner, %[2]d the bound, %[3]s the activity-content scope and
-// %[4]s the person scope.
+// %[1]s is the OWNER TEST — `pr.owner_id = $n` for one rep, `= ANY($n)` for a
+// board counting several. A fragment rather than a fixed comparison because the
+// board would otherwise need its own copy of every arm below to change that one
+// term, and the count under a lead's table would drift from the cards a rep
+// opens. %[2]d is the bound, %[3]s the activity-content scope and %[4]s the
+// person scope.
 //
 // Held by: TestTheCommitmentCountAnswersTheSameQuestionAsThePage
 // (backend/internal/compose/integration/commitmentlane_integration_test.go)
@@ -140,7 +144,7 @@ const openCommitmentsDueFrom = `
 		   -- and again tomorrow. The task lane beside this one reads it the
 		   -- same way, and the two decide the same afternoon.
 		   AND c.due_at IS NOT NULL AND c.due_at < $%[2]d
-		   AND pr.owner_id = $%[1]d
+		   AND %[1]s
 		   AND (%[3]s) AND (%[4]s)`
 
 // CountOpenCommitmentsDue answers how many promises are due by an instant, with
@@ -179,7 +183,8 @@ func (s *Store) CountOpenCommitmentsDue(ctx context.Context, owner ids.UserID, b
 			personScope = sqlAlwaysVisible
 		}
 		return tx.QueryRow(ctx, fmt.Sprintf(`SELECT count(*)`+openCommitmentsDueFrom,
-			ownerPos, byPos, activityScope, personScope), args...).Scan(&total)
+			fmt.Sprintf("pr.owner_id = $%d", ownerPos), byPos, activityScope, personScope),
+			args...).Scan(&total)
 	})
 	if err != nil {
 		return 0, fmt.Errorf("count the rep's commitments coming due: %w", err)
@@ -215,7 +220,8 @@ func openCommitmentsDue(
 		       a.occurred_at, c.due_at`+openCommitmentsDueFrom+`
 		 ORDER BY c.due_at ASC, c.id
 		 LIMIT %[5]d`,
-		ownerPos, byPos, activityScope, personScope, commitmentsDueLimit(limit)), args...)
+		fmt.Sprintf("pr.owner_id = $%d", ownerPos), byPos, activityScope, personScope,
+		commitmentsDueLimit(limit)), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the rep's commitments coming due: %w", err)
 	}
@@ -233,4 +239,72 @@ func openCommitmentsDue(
 		return nil, fmt.Errorf("read the rep's commitments coming due: %w", err)
 	}
 	return out, nil
+}
+
+// CountOpenCommitmentsDueByOwner answers the same question as
+// CountOpenCommitmentsDue for several owners at once, for the team board.
+//
+// ONE query rather than one per teammate. A board is capped at a hundred
+// people, and a hundred sequential round trips on a surface a lead opens every
+// morning is a slow page for no reason — worse, each ran in its own transaction,
+// so a person's records changing hands mid-loop could have them counted twice or
+// not at all. This reads one snapshot.
+//
+// It shares openCommitmentsDueFrom with the single-owner count and the page, so
+// what a lead's column totals is what that rep's own cards show. Owners not
+// named in the result owe nothing; the caller fills the zero.
+func (s *Store) CountOpenCommitmentsDueByOwner(
+	ctx context.Context, owners []ids.UserID, by time.Time,
+) (map[ids.UUID]int, error) {
+	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	per := map[ids.UUID]int{}
+	if len(owners) == 0 {
+		return per, nil
+	}
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var args []any
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		ownersPos := arg(owners)
+		byPos := arg(by)
+		activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+		if err != nil {
+			return err
+		}
+		if activityScope == "" {
+			activityScope = sqlAlwaysVisible
+		}
+		personScope, err := auth.ScopeClauseFor(ctx, "person", "pr", arg)
+		if err != nil {
+			return err
+		}
+		if personScope == "" {
+			personScope = sqlAlwaysVisible
+		}
+		rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT pr.owner_id, count(*)`+
+			openCommitmentsDueFrom+` GROUP BY pr.owner_id`,
+			fmt.Sprintf("pr.owner_id = ANY($%d)", ownersPos), byPos, activityScope, personScope),
+			args...)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var owner ids.UUID
+			var due int
+			if err := rows.Scan(&owner, &due); err != nil {
+				return err
+			}
+			per[owner] = due
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, fmt.Errorf("count the team's commitments coming due: %w", err)
+	}
+	return per, nil
 }

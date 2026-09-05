@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -26,7 +27,7 @@ import (
 // are rendered into, which is Go code and so the half a digest cannot reach. It
 // rides the fingerprint so a card built from the old shape is rewritten rather
 // than served forever.
-const projectionVersion = "deal-status-projection-2"
+const projectionVersion = "deal-status-projection-4"
 
 // promptVersion is DERIVED from the prompt as it is SENT — boundary rule
 // included — so rewording it rewrites the cards whether or not anybody
@@ -52,10 +53,23 @@ func project(f facts, move crmcontracts.DealStatusCardMove) StatusInput {
 		if len(in.Timeline) == maxTimelineRows {
 			break
 		}
+		// An UNFINISHED task is not something that happened, and the timeline
+		// is the list of things that did. It reached here labelled "past" the
+		// moment its due date went by — and the prompt defines "past" as
+		// "something that has happened" — so an overdue follow-up read as
+		// evidence the follow-up was made. That is how a card came to say "I
+		// followed up on the proposal" about a task still sitting open in the
+		// worklist, citing the task as its proof.
+		//
+		// It is not dropped from the model's view, only from the list of
+		// EVENTS: open_tasks carries it, as the work it still is.
+		if unfinishedTask(a) {
+			continue
+		}
 		in.Timeline = append(in.Timeline, actIn(a, f.now))
 	}
 	for _, t := range f.openTasks {
-		in.OpenTasks = append(in.OpenTasks, taskIn(t))
+		in.OpenTasks = append(in.OpenTasks, taskIn(t, f.now))
 	}
 	in.Room = roomIn(f)
 	if inbound, ok := unansweredInbound(f); ok {
@@ -103,6 +117,17 @@ func actIn(a crmcontracts.Activity, now time.Time) ActIn {
 	return out
 }
 
+// unfinishedTask reports whether a timeline row is a task nobody has completed.
+//
+// A COMPLETED task stays: finishing a promise is an event, and a card that
+// could not see it would have no way to say the work was done. `is_done` is
+// nil on every kind but task, so the check is the kind and the flag together
+// rather than the flag alone.
+func unfinishedTask(a crmcontracts.Activity) bool {
+	return a.Kind == crmcontracts.ActivityKindTask &&
+		(a.IsDone == nil || !*a.IsDone)
+}
+
 // whenOf says whether a row has happened. The deal's timeline holds booked
 // meetings alongside past contact, and only this tells them apart.
 func whenOf(a crmcontracts.Activity, now time.Time) string {
@@ -116,10 +141,17 @@ func withheld(a crmcontracts.Activity) bool {
 	return a.ContentState != nil && *a.ContentState == crmcontracts.ActivityContentStateWithheld
 }
 
-func taskIn(t activities.OpenTask) TaskIn {
-	out := TaskIn{ID: t.ID.String(), Subject: t.Subject}
+func taskIn(t activities.OpenTask, now time.Time) TaskIn {
+	out := TaskIn{ID: t.ID.String(), Subject: t.Subject, State: TaskStateOpen}
 	if t.DueAt != nil {
 		out.Due = t.DueAt.Format("2006-01-02")
+	}
+	// deadline.Passed, not a comparison of our own: whether a promise due at
+	// this instant is already late is ONE decision, and the surfaces that
+	// answered it separately disagreed with each other in front of the same
+	// reader.
+	if deadline.Passed(t.DueAt, now) {
+		out.State = TaskStateOverdue
 	}
 	return out
 }

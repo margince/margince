@@ -173,7 +173,7 @@ describe("handing a file to the Settings voice card", () => {
     stubApi(PROSE);
     render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
     const input = fileInput();
-    expect(input.accept).toBe(".txt,.md,.vtt,.srt,.json");
+    expect(input.accept).toBe(".txt,.md,.vtt,.srt,.json,.pdf,.docx");
     expect(input.multiple).toBe(true);
     expect(screen.getByLabelText("Add writing samples")).toBe(input);
     // The zone says what teaches the voice, beside the control, every time.
@@ -357,7 +357,9 @@ describe("handing a file to the Settings voice card", () => {
     dropOnZone([new File(["binary"], "photo.png", { type: "image/png" })]);
 
     expect(
-      await screen.findByText(/photo\.png was skipped — only text files/),
+      await screen.findByText(
+        /photo\.png was skipped — I read .txt, .md, .pdf, .docx/,
+      ),
     ).toBeTruthy();
     expect(bodies).toHaveLength(0);
   });

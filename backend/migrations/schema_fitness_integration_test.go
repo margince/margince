@@ -246,8 +246,15 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 		"it to the surviving person inside the merge's own gated path (people/mergerelink.go), and the only other " +
 		"statements are privacy's subject-addressed ones: erasure and the retention action delete WHERE person_id, " +
 		"and the subject-access read selects the subject's own rows",
-	"activity_link.activity_id":  "child row: written only inside LogActivity for the new activity",
-	"lead_score_history.lead_id": "child row: one point in a lead's own score series, appended only from inside the lead's gated write paths — CreateLead/CreateLeadTx (lead:create), UpdateLead (lead:update) and RecomputeLeadScore (lead:update), each of which has already admitted the caller before the append runs in its transaction",
+	"activity_link.activity_id": "child row: written only inside LogActivity for the new activity",
+	// A meeting's own status transitions (core 1788616400). Both writers pass
+	// through recordMeetingTransition's single chokepoint (activities/meetinghistory.go),
+	// held by TestEveryMeetingStatusWriterRecordsHistory — LogActivity for the
+	// activity id that same transaction just created, and UpdateActivity for the
+	// id auth.EnsureActivityWritableIn already admitted earlier in that same
+	// transaction. Neither path takes the id from anywhere else.
+	"activity_meeting_history.activity_id": "child row: written only through recordMeetingTransition, from an activity id its own transaction already created (LogActivity) or already admitted via auth.EnsureActivityWritableIn (UpdateActivity)",
+	"lead_score_history.lead_id":           "child row: one point in a lead's own score series, appended only from inside the lead's gated write paths — CreateLead/CreateLeadTx (lead:create), UpdateLead (lead:update) and RecomputeLeadScore (lead:update), each of which has already admitted the caller before the append runs in its transaction",
 	// comms_outbound is delivery machinery for one activity, not a
 	// standalone record (comms/doc.go): StageTx writes only inside the
 	// caller's own transaction, alongside the activity write it reports on

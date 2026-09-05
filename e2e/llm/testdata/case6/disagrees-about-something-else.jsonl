@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__search_context"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__search_context", "input": {"query": "Wechsel der Ansprechpartner Beschwerde"}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "I searched the CRM. Reply Deutschland, valantic AG and Körber Digital all complained in September 2025 after a change of contact.\n\nThe post-mortem from 2025-12-03 says: „Der Kunde hat das im Oktober klar angesprochen; wir haben zu spät reagiert.\"\n\nI disagree with the decision to rotate managers so often. It costs more than it saves, and the record here shows why.\n\nPrepare for a complaint within the first week."}

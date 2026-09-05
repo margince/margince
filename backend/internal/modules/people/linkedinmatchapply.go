@@ -237,9 +237,22 @@ func auditLinkedInMatch(ctx context.Context, tx pgx.Tx, connectionID, personID i
 	if !wroteURL {
 		return nil
 	}
-	// The handle lands in person_social, never on a column of the person, so
-	// there is no field image to carry — what the contact gained is the whole
-	// of it.
+	return auditLinkedInHandleGained(ctx, tx, personID)
+}
+
+// auditLinkedInHandleGained records that a contact's empty LinkedIn slot was
+// filled, as its own audit row and its own person.updated.
+//
+// Both writers of person_social's linkedin slot land here — this decision and
+// the research-claim slot fill — because a reader asking "when did this contact
+// gain its profile link" must get the same answer whichever put it there. The
+// slot fill in particular has no other way to say it: its caller's audit row
+// describes the evidence write, and that row reads identically whether the slot
+// was filled or was already occupied.
+//
+// The handle lands in person_social, never on a column of the person, so there
+// is no field image to carry — what the contact gained is the whole of it.
+func auditLinkedInHandleGained(ctx context.Context, tx pgx.Tx, personID ids.UUID) error {
 	personAudit, err := storekit.AuditEvent(ctx, tx, "update", entityPerson, personID,
 		map[string]any{auditKeySocial: []string{socialLinkedIn}})
 	if err != nil {

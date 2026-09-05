@@ -381,3 +381,106 @@ func TestTheTeamScopeFailsClosedWithoutTheMembershipReader(t *testing.T) {
 		t.Fatalf("the team scope answered %d rows with no membership reader bound", len(got))
 	}
 }
+
+// promisesSaying is the counting reader over a fixed tally, recording which
+// owners it was asked about — the board passes its own roster, so a reader that
+// silently answered for somebody not on it would be counting a stranger's load
+// into a manager's team.
+type promisesSaying struct {
+	per   map[ids.UUID]int
+	asked []ids.UUID
+}
+
+func (p *promisesSaying) DuePerOwner(
+	_ context.Context, owners []ids.UUID, _ time.Time,
+) (map[ids.UUID]int, error) {
+	p.asked = append(p.asked, owners...)
+	return p.per, nil
+}
+
+func TestTheBoardCountsPromisesDuePerOwner(t *testing.T) {
+	t.Parallel()
+
+	svc := boardService(
+		TeamMember{UserID: theReader, DisplayName: "Aa Reader"},
+		TeamMember{UserID: theColleague, DisplayName: "Bb Colleague"},
+	)
+	svc.promiseLoad = &promisesSaying{per: map[ids.UUID]int{theColleague: 3}}
+
+	board, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam))
+	if err != nil {
+		t.Fatalf("the board refused a team-scoped reader: %v", err)
+	}
+	if got := board.Members[1].Counts.PromisesDue; got != 3 {
+		t.Fatalf("the colleague's promises read %d, wanted 3", got)
+	}
+	// The reader owes none, and zero is the answer about them rather than a
+	// gap: the source was asked and said so.
+	if got := board.Members[0].Counts.PromisesDue; got != 0 {
+		t.Fatalf("a person the source did not name read %d, wanted 0", got)
+	}
+}
+
+// The board asks about the people it is drawing, and nobody else. A reader free
+// to answer for anyone would fold a stranger's promises into a team's row.
+func TestTheBoardAsksAboutItsOwnRosterAndNoOneElse(t *testing.T) {
+	t.Parallel()
+
+	svc := boardService(
+		TeamMember{UserID: theReader, DisplayName: "Aa Reader"},
+		TeamMember{UserID: theColleague, DisplayName: "Bb Colleague"},
+	)
+	asked := &promisesSaying{per: map[ids.UUID]int{}}
+	svc.promiseLoad = asked
+
+	if _, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam)); err != nil {
+		t.Fatalf("the board refused a team-scoped reader: %v", err)
+	}
+	if len(asked.asked) != 2 {
+		t.Fatalf("the board asked about %d owners over a team of two", len(asked.asked))
+	}
+	for _, owner := range asked.asked {
+		if owner != theReader && owner != theColleague {
+			t.Fatalf("the board asked about %v, who is not on its roster", owner)
+		}
+	}
+}
+
+// An UNBOUND promise source leaves every count at zero, which is what the
+// contract now says: claims have a writer on every installation, so production
+// always binds this reader. Unbound is a test shape, not a deployment.
+func TestAnUnboundPromiseSourceLeavesTheColumnAtZero(t *testing.T) {
+	t.Parallel()
+
+	svc := boardService(TeamMember{UserID: theReader, DisplayName: "Aa Reader"})
+
+	board, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam))
+	if err != nil {
+		t.Fatalf("the board refused a team-scoped reader: %v", err)
+	}
+	if got := board.Members[0].Counts.PromisesDue; got != 0 {
+		t.Fatalf("an unread source drew %d, wanted 0", got)
+	}
+}
+
+// A promise source that CANNOT answer fails the board, exactly as the other
+// three do. A column of zeros over a source that errored would tell a lead
+// their team is clear.
+func TestAPromiseSourceThatCouldNotAnswerFailsRatherThanReadingAsZero(t *testing.T) {
+	t.Parallel()
+
+	svc := boardService(TeamMember{UserID: theReader, DisplayName: "Aa Reader"})
+	svc.promiseLoad = promisesFailing{}
+
+	if _, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam)); err == nil {
+		t.Fatal("a board built over a source that could not answer was served as though it had")
+	}
+}
+
+type promisesFailing struct{}
+
+func (promisesFailing) DuePerOwner(
+	context.Context, []ids.UUID, time.Time,
+) (map[ids.UUID]int, error) {
+	return nil, errors.New("counting promises due")
+}

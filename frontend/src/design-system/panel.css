@@ -29,7 +29,7 @@
   align-items: center;
   gap: var(--space-3);
   min-height: 52px;
-  padding: 0 var(--space-5);
+  padding: 0 var(--padPanel);
   border-bottom: 1px solid var(--borderSubtle);
 }
 /* The zone's title in the display face: the one word a reader finds a zone
@@ -79,7 +79,7 @@
 
 .panel-body {
   position: relative;
-  padding: var(--space-5);
+  padding: var(--padPanel);
 }
 /* A group's head inside the pane: its name at the eyebrow's weight and its verb
    at the far end, on a shorter interval than a body — it labels the rows under
@@ -126,7 +126,7 @@
 .panel-row + .panel-body::before {
   content: "";
   position: absolute;
-  inset: 0 var(--space-5) auto;
+  inset: 0 var(--padPanel) auto;
   height: 1px;
   background: var(--borderSubtle);
 }
@@ -174,7 +174,7 @@
  * brings the body's 20px, which a row does not. Only the FIRST row after a body
  * pays it; the rows under that one keep the list's own 12px rhythm. */
 .panel-body + .panel-row {
-  padding-top: var(--space-5);
+  padding-top: var(--padPanel);
 }
 
 /* A hairline row whose CONTENT runs edge to edge, in the panel's own margin
@@ -189,13 +189,13 @@
  * alone grew its own `+ { border-top }` rather than take the hover with it. */
 .panel-row {
   position: relative;
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--padPanel);
 }
 
 .panel-row::before {
   content: "";
   position: absolute;
-  inset: 0 var(--space-5) auto;
+  inset: 0 var(--padPanel) auto;
   height: 1px;
   background: var(--borderSubtle);
 }
@@ -219,7 +219,7 @@
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--padPanel);
   border-top: 1px solid var(--borderSubtle);
   font-size: var(--fs-sm);
   color: var(--textMeta);
@@ -232,8 +232,8 @@
 .panel-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-  padding: 0 var(--space-5) var(--space-5);
+  gap: var(--gapActions);
+  padding: 0 var(--padPanel) var(--padPanel);
 }
 /* Directly under the header there is no body above to be spaced off, so the
  * strip pays for its own top interval. */
@@ -246,7 +246,7 @@
  * width like every other row and is told apart by its ground alone. */
 .panel-plate {
   margin: 0;
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--padPanel);
   border-radius: 0;
   background: var(--bgCard);
 }

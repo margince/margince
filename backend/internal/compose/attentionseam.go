@@ -386,7 +386,8 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// board. Counted rather than listed, because the task lane above stops
 		// at a dozen and a board built from it would call every loaded rep
 		// equally loaded.
-		WithOverdueLoad(attentionOverdue{store: activities.NewStore(db)})
+		WithOverdueLoad(attentionOverdue{store: activities.NewStore(db)}).
+		WithPromiseLoad(attentionPromiseLoad{store: people.NewStore(db)})
 }
 
 // attentionZone binds the feed's day boundary to the installation's timezone,

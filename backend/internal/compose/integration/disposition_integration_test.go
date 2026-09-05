@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // waitsFor reads the waiting lane as one person and reports whether the subject
@@ -87,8 +88,9 @@ func TestOneRepsSnoozeDoesNotHideTheRowFromAnother(t *testing.T) {
 		t.Fatal("the second rep never saw the message, so this proves nothing about hiding it")
 	}
 
+	twoDays := waitingInstant.Add(48 * time.Hour)
 	if err := atWaitingInstant(e).SnoozeMessage(
-		e.As(e.Rep1, nil, AdminPerms), id, waitingInstant.Add(48*time.Hour)); err != nil {
+		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnTime, &twoDays, nil); err != nil {
 		t.Fatalf("the first rep snoozing the message: %v", err)
 	}
 
@@ -213,7 +215,7 @@ func TestASnoozeLiftsWhenItsMomentPasses(t *testing.T) {
 
 	until := waitingInstant.Add(24 * time.Hour)
 	if err := atWaitingInstant(e).SnoozeMessage(
-		e.As(e.Rep1, nil, AdminPerms), id, until); err != nil {
+		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnTime, &until, nil); err != nil {
 		t.Fatalf("snoozing the message: %v", err)
 	}
 
@@ -291,8 +293,9 @@ func TestASnoozeIntoThePastIsRefused(t *testing.T) {
 
 	// Judged against the SAME clock the accepting cases use, so what is refused
 	// here is the moment being behind rather than the fixture being historical.
+	past := waitingInstant.Add(-time.Hour)
 	err := atWaitingInstant(e).SnoozeMessage(
-		e.As(e.Rep1, nil, AdminPerms), id, waitingInstant.Add(-time.Hour))
+		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnTime, &past, nil)
 	if err == nil {
 		t.Fatal("a snooze into the past was accepted, and hides nothing")
 	}

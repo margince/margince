@@ -85,21 +85,23 @@
   margin-bottom: var(--space-3);
 }
 
-/* The subject with its access markers under it, as one block beside the close
+/* The subject with its access line under it, as one block beside the close
    button. Stacked rather than inline: a subject runs to a line and a half on a
-   narrow drawer, and badges sharing that line would sit wherever it happened
+   narrow drawer, and a mark sharing that line would sit wherever it happened
    to end. */
 .emaildetail__heading {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   flex: 1;
   min-width: 0;
 }
 
-/* What came with the message. A list, not a grid: filenames run to very
-   different lengths and a column would either truncate the long ones or leave
-   a gutter beside the short ones. */
+/* What came with the message: a shelf of `FileChip` cards under a count.
+   The cards flow and wrap rather than stacking one per line — three short
+   names share a row, a scanner's sixty-character name takes a row alone and
+   truncates inside its card, and either way the shelf reads as "the files"
+   rather than as a second list under the message. */
 .emaildetail__files {
   display: flex;
   flex-direction: column;
@@ -113,33 +115,15 @@
 }
 .emaildetail__fileList {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: var(--space-2);
   list-style: none;
 }
-.emaildetail__file {
+/* A card holds its name only as far as the shelf lets it: the item shrinks so
+   the chip's own ellipsis can act, instead of the longest name pushing the
+   drawer wide. */
+.emaildetail__fileList > li {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
   min-width: 0;
-}
-.emaildetail__file svg {
-  flex: none;
-  width: 14px;
-  height: 14px;
-  color: var(--textTertiary);
-}
-/* The filename truncates, the size does not: a size is four characters and
-   losing them tells the reader nothing, while a long filename is the thing
-   the row is about. */
-.emaildetail__file a {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.emaildetail__fileSize {
-  flex: none;
-  font-size: var(--fs-meta);
-  color: var(--textTertiary);
+  max-width: 100%;
 }

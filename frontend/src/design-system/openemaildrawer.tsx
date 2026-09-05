@@ -3,10 +3,7 @@
 
 import { formatDateTime } from "../format/format";
 import { useLocale } from "../i18n";
-import {
-  EmailAccessEditor,
-  EmailAccessMarkers,
-} from "../screens/emailaccesseditor";
+import { EmailAccessEditor } from "../screens/emailaccesseditor";
 import { EmailDetail } from "./emaildetail";
 
 /**
@@ -41,7 +38,6 @@ export function OpenEmailDrawer({
       activityId={activityId}
       onClose={onClose}
       formatWhen={(iso) => formatDateTime(iso, locale, zone)}
-      renderAccessMarkers={(access) => <EmailAccessMarkers access={access} />}
       renderAccess={(presentation) => (
         <EmailAccessEditor presentation={presentation} />
       )}

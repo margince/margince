@@ -42,6 +42,7 @@ export function meFixture({
   seat = "full",
   allow = {},
   rowScope = "own",
+  settingsAvailability = { company_context: true },
 }: {
   roles?: string[];
   seat?: "full" | "read";
@@ -53,6 +54,19 @@ export function meFixture({
    * make every test agree with a widening nobody wrote.
    */
   rowScope?: RowScope;
+  /**
+   * Which settings surfaces exist in this installation. Defaults to the company
+   * page being available, because that is the compiled default the deployment
+   * config resolves to — a fixture omitting it should describe an ordinary
+   * installation, not one with the rollout switched off.
+   *
+   * Pass `null` for the third state, which is neither of those: a server older
+   * than the field, or a snapshot cached before it shipped, answers /me with no
+   * `settings_availability` at all. That is not the same record as one saying
+   * the surface is off, and a reader has to fail closed on both — so the
+   * absence needs its own spelling rather than riding the default.
+   */
+  settingsAvailability?: MeResponse["settings_availability"] | null;
 } = {}): MeResponse {
   const objects: Record<string, RbacObjectGrant> = {};
   for (const [object, actions] of Object.entries(allow)) {
@@ -78,6 +92,7 @@ export function meFixture({
     data_reset_available: false,
     admin_password_link: false,
     authorization: { seat_type: seat, objects, row_scope: rowScope },
+    settings_availability: settingsAvailability ?? undefined,
   };
   return me;
 }

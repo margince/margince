@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // scheduleCeiling bounds how far ahead a message may be scheduled. A year-out
@@ -114,9 +115,24 @@ type ScheduledSend struct {
 	ScheduledBy ids.UUID
 	ActivityID  ids.UUID
 	HeldReason  string
-	Version     int64
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	// Links are the records an account-started message files itself under,
+	// frozen at composition. Empty on a reply, whose records come from its
+	// anchor; the ones a reply adds beyond those travel in also_links and are
+	// the fire's concern, not this read's.
+	Links []ActivityLinkInput
+	// What the sender said about the message — the claimed category, the
+	// marketing purpose, the legacy purpose key, the evidence — frozen with it
+	// so a surface previewing the row asks the engine the SAME question the
+	// fire will. These are every input the frozen payload holds that the
+	// preview door accepts; a preview asked with fewer answers about a
+	// different message and disagrees with the send.
+	Context          commsauthz.Category
+	MarketingPurpose string
+	ConsentPurpose   string
+	Evidence         commsauthz.Evidence
+	Version          int64
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 // Scheduled-send states.
@@ -258,21 +274,7 @@ func (s *Store) scheduleSend(
 		return ScheduledSend{}, err
 	}
 
-	row := ScheduledSend{
-		ID:          ids.NewV7(),
-		Status:      ScheduledStatusScheduled,
-		ScheduledAt: sched.At.UTC(),
-		ScheduledTZ: sched.TZ,
-		OriginKind:  originKind(origin),
-		Anchor:      origin.anchor,
-		Subject:     in.Subject,
-		Recipients:  in.Recipients,
-		Cc:          in.Cc,
-		Bcc:         in.Bcc,
-		Body:        in.Body,
-		ScheduledBy: actor.UserID,
-		Version:     1,
-	}
+	row := freshScheduledRow(origin, in, sched, actor.UserID)
 
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		prov := provenanceOf(actor)
@@ -368,6 +370,34 @@ func nullableAnchor(o SendOrigin) *ids.UUID {
 // Null when there are none, and null on an account origin, whose whole set is
 // origin_links. A reply that named nothing is every reply sent before the
 // column existed.
+// freshScheduledRow is the row a scheduling writes, as the list and the detail
+// will read it back. The 201 and the GET are one record: a create answer that
+// dropped the records or the claim would let a client ask the engine about a
+// different message than the one it just scheduled, and the account-send
+// preview refuses a message naming no records.
+func freshScheduledRow(origin SendOrigin, in SendEmailInput, sched SendSchedule, scheduledBy ids.UUID) ScheduledSend {
+	return ScheduledSend{
+		ID:               ids.NewV7(),
+		Status:           ScheduledStatusScheduled,
+		ScheduledAt:      sched.At.UTC(),
+		ScheduledTZ:      sched.TZ,
+		OriginKind:       originKind(origin),
+		Anchor:           origin.anchor,
+		Subject:          in.Subject,
+		Recipients:       in.Recipients,
+		Cc:               in.Cc,
+		Bcc:              in.Bcc,
+		Body:             in.Body,
+		ScheduledBy:      scheduledBy,
+		Links:            origin.links,
+		Context:          in.Context,
+		MarketingPurpose: in.MarketingPurpose,
+		ConsentPurpose:   in.ConsentPurpose,
+		Evidence:         in.Evidence,
+		Version:          1,
+	}
+}
+
 func marshalAlsoLinks(o SendOrigin) ([]byte, error) {
 	if !o.isReply() || len(o.also) == 0 {
 		return nil, nil

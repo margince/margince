@@ -137,6 +137,11 @@ func (lc *logicalCall) announceRailStartOnce(ctx context.Context, r *Router, tas
 	if cid, ok := principal.CorrelationID(ctx); ok {
 		c.CorrelationID = &cid
 	}
+	// The subject rides the same context value the settle reads at
+	// newAttemptTrace, so the two announcements name one record or neither.
+	if subject, ok := SubjectOf(ctx); ok {
+		c.Subject = subject
+	}
 	starter.AnnounceRailStart(ctx, c, railLease(ladder))
 }
 
@@ -225,6 +230,7 @@ func (m *CallMeter) announceRailStartTx(ctx context.Context, tx pgx.Tx, c Call, 
 		StartedAt:    &started,
 		LeaseSeconds: &seconds,
 	}
+	c.Subject.stamp(&payload)
 	if err := storekit.EmitPipelinePayload(ctx, tx, ledgerID, payload); err != nil {
 		return fmt.Errorf("ai: publish rail start: %w", err)
 	}

@@ -6,7 +6,7 @@ import { readHue } from "../design-system/margince-core-gl";
 import { usePrefersReducedMotion } from "../design-system/motion";
 import type { EdgeHues } from "./agent-edge-gl";
 import { type EdgeLoop, runEdgeLoop } from "./agent-edge-loop";
-import { useAgentEdge } from "./agent-edge-signal";
+import { type AgentEdgeRegister, useAgentEdge } from "./agent-edge-signal";
 import "./agent-edge.css";
 
 /**
@@ -24,6 +24,15 @@ import "./agent-edge.css";
  * acting, with the colour drifting inside them, and they stop when the work
  * does — so movement here always means something is happening.
  *
+ * In two registers, because two kinds of work light it and they are not read
+ * the same way. The agent's own — a run, a call — is seconds to a minute, and
+ * the rim is a little thicker and livelier for it. A mailbox import is minutes
+ * to hours, and the same rim over that span was a lamp left on in the corner of
+ * every screen; it takes a thinner, calmer rim that still travels, so mail
+ * arriving is still visibly happening without being the loudest thing on the
+ * page all afternoon. Which register is the rail's call, published with the
+ * reading (agent-edge-signal.ts).
+ *
  * At rest it draws nothing at all.
  *
  * A STAGED DECISION IS NOT DRAWN HERE. It used to close the margin into a
@@ -38,7 +47,7 @@ import "./agent-edge.css";
  * loses nothing.
  */
 export function AgentEdge() {
-  const { reading } = useAgentEdge();
+  const { reading, register } = useAgentEdge();
   // The edge outlives the reading that lit it, by exactly as long as it takes to
   // go out. Unmounting on `reading` alone cut the light dead the instant the work
   // finished, and a light that vanishes reads as something breaking; the shader
@@ -53,7 +62,11 @@ export function AgentEdge() {
   return (
     <div className="agentedge" aria-hidden="true">
       {(reading || lingering) && (
-        <LitEdge lit={reading} onDark={() => setLingering(false)} />
+        <LitEdge
+          lit={reading}
+          register={register}
+          onDark={() => setLingering(false)}
+        />
       )}
     </div>
   );
@@ -81,7 +94,15 @@ export function AgentEdge() {
  * test can reach it. What stays here is the mounting: read the hues off the
  * document, start the loop, and wear the static rim if the host cannot run it.
  */
-function LitEdge({ lit, onDark }: { lit: boolean; onDark: () => void }) {
+function LitEdge({
+  lit,
+  register,
+  onDark,
+}: {
+  lit: boolean;
+  register: AgentEdgeRegister;
+  onDark: () => void;
+}) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const loop = useRef<EdgeLoop | null>(null);
   const [live, setLive] = useState(false);
@@ -98,6 +119,8 @@ function LitEdge({ lit, onDark }: { lit: boolean; onDark: () => void }) {
   // without taking it as a dependency.
   const litRef = useRef(lit);
   litRef.current = lit;
+  const registerRef = useRef(register);
+  registerRef.current = register;
 
   useEffect(() => {
     const element = canvas.current;
@@ -136,6 +159,9 @@ function LitEdge({ lit, onDark }: { lit: boolean; onDark: () => void }) {
       onDark: () => onDarkRef.current(),
     });
     loop.current = started;
+    // The register before the light: a fresh loop takes its register at once
+    // while dark, so the first lit frame is already in the right one.
+    started?.setRegister(registerRef.current);
     // A fresh loop opens with its light asked for. When this rebuild happened
     // while the edge was already on its way out (a motion-preference change
     // mid-fade), the replacement relit and stayed lit, because the effect below
@@ -147,6 +173,15 @@ function LitEdge({ lit, onDark }: { lit: boolean; onDark: () => void }) {
       loop.current = null;
     };
   }, [reduced]);
+
+  // Only while the light is asked for. The signal wears the agent's register
+  // the moment the work stops, whatever it was lit in, and taking that word
+  // while the light is going out would thicken a rim on its way to nothing.
+  useEffect(() => {
+    if (lit && live) {
+      loop.current?.setRegister(register);
+    }
+  }, [register, lit, live]);
 
   // `live` is a dependency, not decoration: losing the context clears the loop
   // while `lit` may already be false, and without re-running here nothing would
@@ -175,6 +210,10 @@ function LitEdge({ lit, onDark }: { lit: boolean; onDark: () => void }) {
       // which is honest: the fallback says the agent is working without claiming
       // to show how.
       className={live ? "agentedge-canvas" : "agentedge-canvas agentedge-still"}
+      // For the static rim, which has no loop to ease and wears its register
+      // from here; and it is the one place a test can read which register the
+      // edge was told, since the shader's frames never reach the DOM.
+      data-register={register}
     />
   );
 }
