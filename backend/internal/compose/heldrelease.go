@@ -127,6 +127,7 @@ func sendFromHeldDraft(p automation.HeldDraftProposal) (activities.SendOrigin, a
 		Subject:        p.Subject,
 		Body:           p.Body,
 		ConsentPurpose: p.ConsentPurpose,
+		Context:        p.CommunicationContext,
 	}
 }
 
@@ -241,6 +242,10 @@ func heldDraftPrecheck(
 // The PURPOSE. It is the lawful basis the send is made under, chosen by the
 // operator when the automation was configured. Editing it at release would let
 // somebody re-license a message at the moment of sending it.
+//
+// The CONTEXT, which the engine actually decides on. Same violation, quieter
+// shape: a purpose reads as a permission and a context reads as a description,
+// so an edit to it looks like a correction to the words.
 // The refusal is approvals' OWN RetargetedEditError, not a new error beside it.
 // This is the same violation the edit scope refuses for entity references, in a
 // field whose shape that check cannot see — so it should read identically to the
@@ -252,6 +257,13 @@ func refuseRetargetedDraft(staged, edited automation.HeldDraftProposal) error {
 	}
 	if edited.ConsentPurpose != staged.ConsentPurpose {
 		moved = append(moved, "consent_purpose")
+	}
+	// The CONTEXT, for the purpose's own reason. It is what the engine decides
+	// on, so editing it at release re-licenses the message just as surely as
+	// editing the purpose does — and more quietly, because a context reads as a
+	// description rather than as a permission.
+	if edited.CommunicationContext != staged.CommunicationContext {
+		moved = append(moved, "communication_context")
 	}
 	if len(moved) == 0 {
 		return nil

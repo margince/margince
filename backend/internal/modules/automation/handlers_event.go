@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -311,6 +312,13 @@ const postMeetingRecapName = "post_meeting_recap"
 // Art 6(1)(b)/(f), and consent with its German evidence standard belongs to
 // marketing. Spelled once here so a starter and its tests cannot disagree
 // about which purpose a recap is sent under.
+//
+// It rides ALONGSIDE the context rather than being replaced by it. The context
+// is what the engine decides on; the purpose is what the legacy fallback reads
+// when a record supports no category on its own evidence. A recap into a thread
+// with a real inbound anchor never reaches that fallback, but one whose anchor
+// has since been archived does, and dropping the key would turn that into a
+// denial rather than the answer the old model gave.
 const purposeBusinessCorrespondence = "business_correspondence"
 
 func (postMeetingRecap) Spec() workflow.Spec {
@@ -348,8 +356,9 @@ func (postMeetingRecap) Plan(_ context.Context, ev workflow.Event) (workflow.Eff
 	// starter whose recipient and register are both fixed by the template, so
 	// its purpose is fixed with them.
 	args, err := json.Marshal(draftEmailArgs{
-		Intent:         recapIntent,
-		ConsentPurpose: purposeBusinessCorrespondence,
+		Intent:               recapIntent,
+		ConsentPurpose:       purposeBusinessCorrespondence,
+		CommunicationContext: commsauthz.CategoryReplyToInbound,
 	})
 	if err != nil {
 		return workflow.Effect{}, fmt.Errorf("automation: encoding the draft_email action: %w", err)
