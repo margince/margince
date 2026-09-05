@@ -350,3 +350,58 @@ func TestARepWithNoChosenHourIsMailedByTheAssemblingPass(t *testing.T) {
 		t.Error("a rep with no chosen hour was held back by a floor they never set")
 	}
 }
+
+// A SEAT THAT WENT BETWEEN THE ASSEMBLY AND THE MAIL does not take the rest of
+// the workspace's morning with it.
+//
+// The mail is a pass of its own over the day's unmailed runs, and it resolves
+// each rep's own authority to make the claim and read the preference under it.
+// A seat deactivated since its run was written cannot be resolved — and the
+// loop must carry on, because the alternative is one departure costing every
+// colleague their brief.
+//
+// Reachable through the delivery hour rather than by mocking the resolver: a
+// run held back until nine is a run still waiting when the seat goes, which is
+// exactly the window this guard covers.
+func TestADepartedSeatDoesNotCostTheOthersTheirMorning(t *testing.T) {
+	relay := &countingMailer{}
+	b := setupBriefJob(t).withMailer(relay)
+	seedWorkFor(t, b.Env, b.Rep1)
+	setDeliveryHour(t, b.Rep1, 9)
+	setDeliveryHour(t, b.Rep2, 9)
+
+	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
+	b.now = morning
+	if err := b.run(t); err != nil {
+		t.Fatalf("the seven o'clock pass failed: %v", err)
+	}
+	// The premise: both runs exist and neither has spent its attempt, so the
+	// nine o'clock pass has two to mail rather than one.
+	for _, rep := range []ids.UUID{b.Rep1, b.Rep2} {
+		if at, _ := mailAttemptOf(t, rep, morning); at != nil {
+			t.Fatalf("a run was mailed at seven for a rep who asked for nine")
+		}
+	}
+
+	if _, err := integration.OwnerConn(t).Exec(context.Background(),
+		`UPDATE app_user SET status = 'deactivated', archived_at = now() WHERE id = $1`,
+		b.Rep1); err != nil {
+		t.Fatal(err)
+	}
+
+	b.now = morning.Add(2 * time.Hour)
+	if err := b.run(t); err != nil {
+		t.Fatalf("a departed seat failed the whole workspace's pass: %v", err)
+	}
+
+	if sent := sentTo(t, relay, b.Rep2); sent != 1 {
+		t.Errorf("the colleague received %d message(s), want the one their own hour was due — "+
+			"a seat that went must not cost anybody else their morning", sent)
+	}
+	// And the departed seat's own attempt is left unspent rather than burned on
+	// a message nobody could be sent: the row still says the mail never went.
+	if at, _ := mailAttemptOf(t, b.Rep1, morning); at != nil {
+		t.Errorf("the departed seat's attempt was spent at %v, so the row claims a message "+
+			"was tried for somebody the pass could not even resolve", at)
+	}
+}
