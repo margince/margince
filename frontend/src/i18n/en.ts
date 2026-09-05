@@ -2870,7 +2870,7 @@ export const en = {
   "deepread.kindTeam": "Team",
   "deepread.kindServices": "Services",
   "deepread.kindProducts": "Products",
-  "deepread.kindContact": "Person",
+  "deepread.kindContact": "Contact",
   "deepread.kindOther": "Other",
 
   "transcriptread.title": "Read this transcript",
@@ -8628,7 +8628,7 @@ export const en = {
   "ob.digest.pageKind.team": "Team page",
   "ob.digest.pageKind.services": "Services page",
   "ob.digest.pageKind.products": "Products page",
-  "ob.digest.pageKind.contact": "Person page",
+  "ob.digest.pageKind.contact": "Contact page",
   "ob.digest.pageKind.other": "Page",
   "ob.deck.counter": "{n} of {m}",
   "ob.deck.left": "{n} of {m} left",

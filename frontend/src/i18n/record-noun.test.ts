@@ -19,6 +19,13 @@ const RECORD_NOUN: Record<string, RegExp> = {
   vi: /liên hệ|\bcontacts?\b/i,
 };
 
+// A company website's Contact page, as the deep read and the onboarding
+// digest classify what they cited: a kind of page, not a record.
+const WEBSITE_PAGE_KIND_KEYS = [
+  "deepread.kindContact",
+  "ob.digest.pageKind.contact",
+];
+
 // Shared across the locales: the act of reaching someone, and the details one
 // reaches them by. A locale adds the keys where only its own wording says the
 // word — German says "Kontaktstand" where English says "Engagement".
@@ -47,6 +54,7 @@ const ACT_OR_DETAIL_KEYS_SHARED = [
   "provider.title",
   "provider.sub",
   "provider.profile.title",
+  ...WEBSITE_PAGE_KIND_KEYS,
 ];
 
 // The buyer room: "your contact" is the steward on the seller's side, a
@@ -63,8 +71,6 @@ const ACT_OR_DETAIL_KEYS: Record<string, readonly string[]> = {
   en: [
     ...ACT_OR_DETAIL_KEYS_SHARED,
     ...BUYER_COUNTERPART_KEYS,
-    // `{contact}` is the placeholder's name, not a word the reader sees.
-    "co.intro.who",
     // What a phone exports is called contacts by the phone.
     "vcardImport.whichFile",
     "coverage.quiet",
@@ -125,7 +131,6 @@ const ACT_OR_DETAIL_KEYS: Record<string, readonly string[]> = {
     "co.rail.people.inTouch",
     "co.people.engagement",
     "co.people.filter.status",
-    "co.intro.who",
     "lead.source.inbound",
     "lead.statusContacted",
     "lead.status.contacted",
@@ -139,6 +144,12 @@ const ACT_OR_DETAIL_KEYS: Record<string, readonly string[]> = {
 
 const CATALOGS: Record<string, Catalog> = { en, de, vi };
 
+// `{contact}` in "introduce you to {contact}" is the placeholder's name, which
+// the reader never sees; only the visible words are judged.
+function visibleWords(value: string): string {
+  return value.replace(/\{[^}]*\}/g, "");
+}
+
 describe.each(Object.keys(CATALOGS))(
   "%s names the record a person",
   (locale) => {
@@ -148,14 +159,17 @@ describe.each(Object.keys(CATALOGS))(
 
     it("says contact only where the key is waived as the act or the details", () => {
       const offenders = Object.entries(catalog)
-        .filter(([key, value]) => !waived.has(key) && pattern.test(value))
+        .filter(
+          ([key, value]) =>
+            !waived.has(key) && pattern.test(visibleWords(value)),
+        )
         .map(([key, value]) => `${key}: ${value}`);
       expect(offenders).toEqual([]);
     });
 
     it("keeps every waiver pointing at a value that still says contact", () => {
       const stale = [...waived].filter(
-        (key) => !(key in catalog) || !pattern.test(catalog[key]),
+        (key) => !(key in catalog) || !pattern.test(visibleWords(catalog[key])),
       );
       expect(stale).toEqual([]);
     });

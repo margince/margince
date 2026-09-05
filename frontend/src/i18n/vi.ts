@@ -2777,7 +2777,7 @@ export const vi = {
   "deepread.kindTeam": "Đội ngũ",
   "deepread.kindServices": "Dịch vụ",
   "deepread.kindProducts": "Sản phẩm",
-  "deepread.kindContact": "Người",
+  "deepread.kindContact": "Liên hệ",
   "deepread.kindOther": "Khác",
 
   "transcriptread.title": "Đọc bản chép lời này",
@@ -8406,7 +8406,7 @@ export const vi = {
   "ob.digest.pageKind.team": "Trang đội ngũ",
   "ob.digest.pageKind.services": "Trang dịch vụ",
   "ob.digest.pageKind.products": "Trang sản phẩm",
-  "ob.digest.pageKind.contact": "Trang hồ sơ người",
+  "ob.digest.pageKind.contact": "Trang liên hệ",
   "ob.digest.pageKind.other": "Trang",
   "ob.deck.counter": "{n} / {m}",
   "ob.deck.left": "Còn {n} / {m}",
