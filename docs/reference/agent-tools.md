@@ -155,6 +155,7 @@ Columns:
 | `relink_thread` | dynamic | `write` | — | Native activity-link write, carrying no mode guard — see the note below |
 | `remove_tag` | 🟢 | `write` | — | Takes a tag off a record; native, for the reason `apply_tag` gives |
 | `review_commitments` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard): the mirror holds no task projection |
+| `run_analytics_query` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard): the typed engine reads native tables |
 | `run_report` | 🟢 | `read` | — | `unsupported_by_sor` (no incumbent analogue) |
 | `compose_analytics_report` | 🟢 | `read` | — | Renders a document whose every figure cites a saved analytics run; it writes no number of its own and stores nothing |
 | `forecast_readings` | 🟢 | `read` | — | Reads deals, stages and the installation's fiscal settings, so it answers only where those live |

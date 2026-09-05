@@ -211,7 +211,7 @@ func validateMeasures(entity Entity, measures []Measure) error {
 			return &RefusalError{
 				Kind:    RefusalUnsupported,
 				Message: fmt.Sprintf("no aggregate named %q", m.Fn),
-				Suggest: "use one of: " + strings.Join(aggregateNames(), ", "),
+				Suggest: "use one of: " + strings.Join(AggregateNames(), ", "),
 			}
 		}
 		if !aggregatesOverValues[m.Fn] {
@@ -304,7 +304,7 @@ func validateFilters(entity Entity, filters []Filter) error {
 			return &RefusalError{
 				Kind:    RefusalUnsupported,
 				Message: fmt.Sprintf("no comparison named %q", f.Op),
-				Suggest: "use one of: " + strings.Join(filterOpNames(), ", "),
+				Suggest: "use one of: " + strings.Join(FilterOpNames(), ", "),
 			}
 		}
 		if _, ok := entity.Lookup(f.Field); !ok {
@@ -353,7 +353,9 @@ var knownAggregates = map[AggFn]bool{
 	Median: true, P75: true,
 }
 
-func aggregateNames() []string {
+// AggregateNames is the closed aggregate vocabulary, sorted — read by the
+// refusals here and by the published schema document, so the two say one set.
+func AggregateNames() []string {
 	out := make([]string, 0, len(knownAggregates))
 	for fn := range knownAggregates {
 		out = append(out, string(fn))
@@ -362,7 +364,9 @@ func aggregateNames() []string {
 	return out
 }
 
-func filterOpNames() []string {
+// FilterOpNames is the closed operator vocabulary, sorted, for the same two
+// readers as AggregateNames.
+func FilterOpNames() []string {
 	out := make([]string, 0, len(filterSQL))
 	for op := range filterSQL {
 		out = append(out, string(op))
