@@ -4342,7 +4342,7 @@ export const de = {
   "extUnits.workspace.sub":
     "Erweiterungen, die diese Installation mit einem gemeinsamen Zugang betreibt. Was du hier einstellst, gilt für alle.",
 
-  "connectors.title": "Verbundene Postfächer",
+  "connectors.title": "Verbundene Postfächer und Kalender",
   // Die dauerhafte Nacht-Vollmacht der Nutzerin — eine Frage, gestellt beim
   // Postfach-Verbinden im Onboarding und noch einmal in den Einstellungen.
   "overnightGrant.title": "Vorbereitung über Nacht",
@@ -4450,10 +4450,10 @@ export const de = {
   "connectors.originUnreachable": "Antwortet nicht",
   "connectors.originUnchecked": "Noch nicht gepr\u00fcft",
   "connectors.sub":
-    "Postfächer, die dein CRM automatisch füllen. Trenne eines bei Bedarf — bereits erfasste Datensätze bleiben.",
+    "Die Postfächer und Kalender, die dein CRM automatisch füllen. Trenne eines bei Bedarf — bereits erfasste Datensätze bleiben.",
   "connectors.loading": "Verbindungen werden geladen…",
   "connectors.loadFailed": "Verbindungen konnten nicht geladen werden.",
-  "connectors.empty": "Noch kein Postfach verbunden.",
+  "connectors.empty": "Noch kein Postfach und kein Kalender verbunden.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Kalender",
   "connectors.provGraph": "Outlook",
@@ -4577,7 +4577,7 @@ export const de = {
   "connectors.addOpen": "Konto verbinden",
   "connectors.connect": "Verbinden",
   "connectors.connectProvider": "{provider} verbinden",
-  "connectors.rosterLabel": "Erfassende Postfächer",
+  "connectors.rosterLabel": "Erfassen in dein CRM",
   "connectors.addGmailBrings":
     "Die Mails, die du sendest und empfängst, von Google. Margince kann auch darüber senden.",
   "connectors.addGcalBrings":

@@ -4394,7 +4394,7 @@ export const en = {
 
   // Connected inboxes (Settings → Connections): the "manage in Settings"
   // surface the onboarding copy promises.
-  "connectors.title": "Connected inboxes",
+  "connectors.title": "Connected mailboxes and calendars",
   // The rep's standing overnight authority — one question, asked beside the
   // mailbox connect in onboarding and again in Settings. The danger line names
   // the features that go empty, because "some things stop working" is not
@@ -4502,10 +4502,10 @@ export const en = {
   "connectors.originUnreachable": "Not answering",
   "connectors.originUnchecked": "Not checked yet",
   "connectors.sub":
-    "Mailboxes capturing into your CRM. Disconnect any one when you need to — already-captured records stay.",
+    "The mailboxes and calendars capturing into your CRM. Disconnect any one when you need to — already-captured records stay.",
   "connectors.loading": "Loading your connections…",
   "connectors.loadFailed": "Couldn't load your connections.",
-  "connectors.empty": "No inbox is connected yet.",
+  "connectors.empty": "No mailbox or calendar is connected yet.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
   "connectors.provGraph": "Outlook",
@@ -4628,7 +4628,7 @@ export const en = {
   "connectors.addOpen": "Connect an account",
   "connectors.connect": "Connect",
   "connectors.connectProvider": "Connect {provider}",
-  "connectors.rosterLabel": "Mailboxes capturing",
+  "connectors.rosterLabel": "Capturing into your CRM",
   "connectors.addGmailBrings":
     "The mail you send and receive, from Google. Margince can send from it too.",
   "connectors.addGcalBrings":
