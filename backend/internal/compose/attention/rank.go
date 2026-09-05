@@ -116,10 +116,20 @@ type ranked struct {
 	// reader's ordering preference move a figure their manager reads.
 	pinned        bool
 	semanticLevel int
-	waitingDays   int
-	waitingRank   int
-	strength      int
-	occurredAt    time.Time
+	// opportunity is the overnight brief's own composite for this deal, between
+	// 0 and 1, and zero where the night did not rank it.
+	//
+	// A TIE-BREAK INSIDE A LEVEL and never a level of its own. The night ranks
+	// deals against each other on facts the day's lanes do not gather; the
+	// levels are the product's hard rule about what kind of work outranks what.
+	// Letting this cross a level would be the second ranking system the one feed
+	// exists to end, so ranksteps.go reads it only after every earlier step has
+	// tied, and TestTheOpportunityStepNeverChangesARowsSemanticLevel holds it.
+	opportunity float64
+	waitingDays int
+	waitingRank int
+	strength    int
+	occurredAt  time.Time
 	// asOf is the one instant every row in the same page was classified
 	// against, carried onto the row rather than threaded through every step
 	// signature. The occurrence step reads it to turn occurredAt into how many
@@ -248,6 +258,13 @@ func renderInOrder(rows []ranked, reader ids.UUID) []crmcontracts.WorklistItem {
 		// describes a row's place on the page it is actually on.
 		band := crmcontracts.WorklistItemBand(bandOfRow(row))
 		item.Band = &band
+		// Which part of the morning it belongs to — a LABEL, not an order.
+		// Stamped after the band because it reads the band, and after the sort
+		// for the same reason the band is: it describes a row's place on the
+		// page it is actually on. briefsections.go states why a client may draw
+		// this and may not partition by it.
+		section := BriefSectionOf(item)
+		item.BriefSection = &section
 		// Who answers for it, as the PRODUCER said. Stamped here beside the
 		// band and the primary action, and for the same reason those are: a
 		// source added later carries it by arriving in this loop rather than by
@@ -395,6 +412,16 @@ func deadlineValue(at time.Time) *crmcontracts.WorklistValue {
 func daysValue(days int) *crmcontracts.WorklistValue {
 	value := days
 	return &crmcontracts.WorklistValue{Kind: "days", Days: &value}
+}
+
+// scoreValue carries a ranking judgement between 0 and 1 onto a comparison.
+//
+// Typed as its own kind rather than reused as a day count or a level, because a
+// client draws it differently: the number orders the queue and is not a figure a
+// reader can check, so the copy for it is a band and not a decimal.
+func scoreValue(score float64) *crmcontracts.WorklistValue {
+	value := float32(score)
+	return &crmcontracts.WorklistValue{Kind: "score", Score: &value}
 }
 
 // overdueAt reports whether a due moment is behind the read instant, through the

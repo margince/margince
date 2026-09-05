@@ -13351,6 +13351,7 @@ const (
 	WorklistComparisonComparatorDeadline        WorklistComparisonComparator = "deadline"
 	WorklistComparisonComparatorExpectedRevenue WorklistComparisonComparator = "expected_revenue"
 	WorklistComparisonComparatorLevel           WorklistComparisonComparator = "level"
+	WorklistComparisonComparatorOpportunity     WorklistComparisonComparator = "opportunity"
 	WorklistComparisonComparatorOrder           WorklistComparisonComparator = "order"
 	WorklistComparisonComparatorPin             WorklistComparisonComparator = "pin"
 	WorklistComparisonComparatorRelationship    WorklistComparisonComparator = "relationship"
@@ -13367,6 +13368,8 @@ func (e WorklistComparisonComparator) Valid() bool {
 	case WorklistComparisonComparatorExpectedRevenue:
 		return true
 	case WorklistComparisonComparatorLevel:
+		return true
+	case WorklistComparisonComparatorOpportunity:
 		return true
 	case WorklistComparisonComparatorOrder:
 		return true
@@ -13513,6 +13516,33 @@ func (e WorklistItemBand) Valid() bool {
 	case Now:
 		return true
 	case Review:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistItemBriefSection.
+const (
+	BriefSectionBuildPipeline        WorklistItemBriefSection = "build_pipeline"
+	BriefSectionMoveRevenue          WorklistItemBriefSection = "move_revenue"
+	BriefSectionPrepareConversations WorklistItemBriefSection = "prepare_conversations"
+	BriefSectionRespondNow           WorklistItemBriefSection = "respond_now"
+	BriefSectionReviewAndRepair      WorklistItemBriefSection = "review_and_repair"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemBriefSection enum.
+func (e WorklistItemBriefSection) Valid() bool {
+	switch e {
+	case BriefSectionBuildPipeline:
+		return true
+	case BriefSectionMoveRevenue:
+		return true
+	case BriefSectionPrepareConversations:
+		return true
+	case BriefSectionRespondNow:
+		return true
+	case BriefSectionReviewAndRepair:
 		return true
 	default:
 		return false
@@ -13997,6 +14027,7 @@ const (
 	WorklistValueKindLevel WorklistValueKind = "level"
 	WorklistValueKindMoney WorklistValueKind = "money"
 	WorklistValueKindNone  WorklistValueKind = "none"
+	WorklistValueKindScore WorklistValueKind = "score"
 )
 
 // Valid indicates whether the value is a known member of the WorklistValueKind enum.
@@ -14011,6 +14042,8 @@ func (e WorklistValueKind) Valid() bool {
 	case WorklistValueKindMoney:
 		return true
 	case WorklistValueKindNone:
+		return true
+	case WorklistValueKindScore:
 		return true
 	default:
 		return false
@@ -15057,31 +15090,31 @@ func (e ListOrganizationsParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListOrganizationsParamsLifecycle.
 const (
-	Customer       ListOrganizationsParamsLifecycle = "customer"
-	Disqualified   ListOrganizationsParamsLifecycle = "disqualified"
-	FormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
-	Opportunity    ListOrganizationsParamsLifecycle = "opportunity"
-	Prospect       ListOrganizationsParamsLifecycle = "prospect"
-	Target         ListOrganizationsParamsLifecycle = "target"
-	Unknown        ListOrganizationsParamsLifecycle = "unknown"
+	ListOrganizationsParamsLifecycleCustomer       ListOrganizationsParamsLifecycle = "customer"
+	ListOrganizationsParamsLifecycleDisqualified   ListOrganizationsParamsLifecycle = "disqualified"
+	ListOrganizationsParamsLifecycleFormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
+	ListOrganizationsParamsLifecycleOpportunity    ListOrganizationsParamsLifecycle = "opportunity"
+	ListOrganizationsParamsLifecycleProspect       ListOrganizationsParamsLifecycle = "prospect"
+	ListOrganizationsParamsLifecycleTarget         ListOrganizationsParamsLifecycle = "target"
+	ListOrganizationsParamsLifecycleUnknown        ListOrganizationsParamsLifecycle = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationsParamsLifecycle enum.
 func (e ListOrganizationsParamsLifecycle) Valid() bool {
 	switch e {
-	case Customer:
+	case ListOrganizationsParamsLifecycleCustomer:
 		return true
-	case Disqualified:
+	case ListOrganizationsParamsLifecycleDisqualified:
 		return true
-	case FormerCustomer:
+	case ListOrganizationsParamsLifecycleFormerCustomer:
 		return true
-	case Opportunity:
+	case ListOrganizationsParamsLifecycleOpportunity:
 		return true
-	case Prospect:
+	case ListOrganizationsParamsLifecycleProspect:
 		return true
-	case Target:
+	case ListOrganizationsParamsLifecycleTarget:
 		return true
-	case Unknown:
+	case ListOrganizationsParamsLifecycleUnknown:
 		return true
 	default:
 		return false
@@ -15375,19 +15408,19 @@ func (e ListPeopleParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListPeopleParamsTagMode.
 const (
-	All  ListPeopleParamsTagMode = "all"
-	Any  ListPeopleParamsTagMode = "any"
-	None ListPeopleParamsTagMode = "none"
+	ListPeopleParamsTagModeAll  ListPeopleParamsTagMode = "all"
+	ListPeopleParamsTagModeAny  ListPeopleParamsTagMode = "any"
+	ListPeopleParamsTagModeNone ListPeopleParamsTagMode = "none"
 )
 
 // Valid indicates whether the value is a known member of the ListPeopleParamsTagMode enum.
 func (e ListPeopleParamsTagMode) Valid() bool {
 	switch e {
-	case All:
+	case ListPeopleParamsTagModeAll:
 		return true
-	case Any:
+	case ListPeopleParamsTagModeAny:
 		return true
-	case None:
+	case ListPeopleParamsTagModeNone:
 		return true
 	default:
 		return false
@@ -33911,6 +33944,33 @@ type WorklistItem struct {
 	// Because The facts that put this item at this level, in the order they were weighed.
 	Because []WorklistReason `json:"because"`
 
+	// BriefItemId The overnight brief entry this row also stands for, where the night
+	// surfaced the same deal the day's own lanes did.
+	//
+	// One deal is ONE row. The brief ranks deals and the at-risk lane raises
+	// them, so a deal the night picked and the day also found arrived twice —
+	// the same name, the same figures, two places to answer it. The rows are
+	// folded into one, and this carries the brief entry's id so the verbs that
+	// belong to the brief (`/brief/items/{id}/act`, and its set-aside and
+	// dismiss) still reach it. Absent on a row the night did not raise.
+	BriefItemId *openapi_types.UUID `json:"brief_item_id,omitempty"`
+
+	// BriefSection Which part of the morning this row belongs to, as a LABEL and never as an
+	// order.
+	//
+	// The server has already ranked the page, and this says nothing about where a
+	// row sits. A client may draw the label, and may group runs of consecutive
+	// rows that share it — but partitioning the page by this field and
+	// concatenating the parts would be a second ranking, and the two would
+	// disagree the first time a `respond_now` row ranked below a `move_revenue`
+	// one, which is ordinary and correct.
+	//
+	// Derived on the server from the row's own category, source and band, so
+	// every surface reads one answer. Exhaustive over the categories:
+	// `backend/internal/compose/attention/briefsections.go` names every one, and
+	// a gate derives that census from the generated contract.
+	BriefSection *WorklistItemBriefSection `json:"brief_section,omitempty"`
+
 	// Category The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
 	Category WorklistItemCategory `json:"category"`
 
@@ -33925,6 +33985,21 @@ type WorklistItem struct {
 	// failures of one thing into one row. Opaque identity, never rendered and never
 	// parsed. Absent on a row that reports no shared condition.
 	CauseRef *string `json:"cause_ref,omitempty"`
+
+	// ChangedSinceBrief Whether the thing this row reports happened AFTER the overnight run's data
+	// cutoff — the run's `as_of`, not its `generated_at`, which is only when the
+	// row was written.
+	//
+	// The distinction is the whole of this field's value: a run generated at 06:42
+	// over data read at 06:00 has a 42-minute window in which a buyer can reply,
+	// and comparing against the wrong instant either hides that reply or reports
+	// every row as new. Stamped from the material timestamp each producer already
+	// owns rather than from one generic `occurred_at`, so the browser never guesses
+	// freshness.
+	//
+	// Absent when there is no run today to compare against, which is different from
+	// false: false says the night saw this, absent says there was no night.
+	ChangedSinceBrief *bool `json:"changed_since_brief,omitempty"`
 
 	// Consequence What happens if the reader does nothing. Derived per ITEM rather than per
 	// source, because one source has several honest answers: a deal past its close
@@ -34125,6 +34200,22 @@ type WorklistItemActions string
 // the queue arrives already sorted, and every row of one band is contiguous. A client
 // draws a heading when the band changes and never re-sorts.
 type WorklistItemBand string
+
+// WorklistItemBriefSection Which part of the morning this row belongs to, as a LABEL and never as an
+// order.
+//
+// The server has already ranked the page, and this says nothing about where a
+// row sits. A client may draw the label, and may group runs of consecutive
+// rows that share it — but partitioning the page by this field and
+// concatenating the parts would be a second ranking, and the two would
+// disagree the first time a `respond_now` row ranked below a `move_revenue`
+// one, which is ordinary and correct.
+//
+// Derived on the server from the row's own category, source and band, so
+// every surface reads one answer. Exhaustive over the categories:
+// `backend/internal/compose/attention/briefsections.go` names every one, and
+// a gate derives that census from the generated contract.
+type WorklistItemBriefSection string
 
 // WorklistItemCategory The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
 type WorklistItemCategory string
@@ -34497,6 +34588,15 @@ type WorklistValue struct {
 
 	// Minor Money in minor units of `currency`.
 	Minor *int64 `json:"minor,omitempty"`
+
+	// Score A ranking judgement between 0 and 1 — today, the overnight brief's composite
+	// for a deal.
+	//
+	// Drawn as a BAND rather than as a number. The value orders the queue, and a
+	// client printing "0.72 against 0.68" would be offering a precision the score
+	// does not carry and a reader cannot check; the same two rows read honestly as
+	// "the night rated this one higher".
+	Score *float32 `json:"score,omitempty"`
 }
 
 // WorklistValueKind defines model for WorklistValue.Kind.

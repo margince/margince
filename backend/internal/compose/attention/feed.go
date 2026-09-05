@@ -130,6 +130,13 @@ type Service struct {
 	// to do and not how the deal is standing, which is what every deal row did
 	// before this seam. dealstanding.go states the three-source order.
 	dealStandings DealStandings
+	// briefScores is one read's answer, on the per-request copy readingScores
+	// makes. The classifier reads it to stamp `opportunity`, which is why it
+	// cannot travel as an argument the way the findings do.
+	briefScores map[ids.UUID]float64
+	// briefCutoff is the same read's brief run data cutoff, on the same copy and
+	// for the same reason.
+	briefCutoff time.Time
 	// fx is OPTIONAL in the same way, and money is one read's answer from it,
 	// written per read onto the request's own copy the way taskScope is.
 	// basemoney.go states what each means and why the copy matters.
@@ -251,16 +258,14 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 // brief ran empty would inherit them because nothing would overwrite what
 // nothing wrote. That is another rep's mail-derived prose on this rep's row,
 // and an unsynchronised map write under concurrent requests besides.
-func (s *Service) assembleDay(
-	ctx context.Context,
-) (crmcontracts.Attention, map[ids.UUID]string, error) {
+func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theNight, error) {
 	asOf := s.now().UTC()
 	// The day's end, resolved ONCE for the whole assembly: every due-dated lane
 	// is judged against the same instant, and the installation is asked for its
 	// timezone once rather than per lane.
 	until, err := s.endOfDay(ctx, asOf)
 	if err != nil {
-		return crmcontracts.Attention{}, nil, err
+		return crmcontracts.Attention{}, theNight{}, err
 	}
 	// Every lane starts as an empty slice, never nil. The contract declares
 	// them as arrays, and a withheld lane leaves its field unset — which
@@ -275,14 +280,14 @@ func (s *Service) assembleDay(
 	}
 	var omitted []crmcontracts.AttentionLanesOmitted
 
-	morning, morningState, findings, err := s.thisMorning(ctx)
+	night, err := s.thisMorning(ctx)
 	omitted, err = fill(omitted, "this_morning", err, func() {
-		out.ThisMorning = morning
-		out.Counts.ThisMorning = len(morning)
-		out.ThisMorningState = &morningState
+		out.ThisMorning = night.items
+		out.Counts.ThisMorning = len(night.items)
+		out.ThisMorningState = &night.state
 	})
 	if err != nil {
-		return crmcontracts.Attention{}, nil, err
+		return crmcontracts.Attention{}, theNight{}, err
 	}
 
 	needsYou, count, err := s.decisionsToDepth(ctx, s.decisionsDepth())
@@ -295,7 +300,7 @@ func (s *Service) assembleDay(
 		}
 	})
 	if err != nil {
-		return crmcontracts.Attention{}, nil, err
+		return crmcontracts.Attention{}, theNight{}, err
 	}
 
 	planned, plannedTotal, err := s.planned(ctx, asOf, until, s.taskScope)
@@ -304,7 +309,7 @@ func (s *Service) assembleDay(
 		out.Counts.Planned = plannedTotal
 	})
 	if err != nil {
-		return crmcontracts.Attention{}, nil, err
+		return crmcontracts.Attention{}, theNight{}, err
 	}
 
 	// The three OPTIONAL lanes, each bound or absent. optionalLane holds the
@@ -312,14 +317,14 @@ func (s *Service) assembleDay(
 	for _, lane := range s.optionalLanes(ctx, asOf, until, &out) {
 		omitted, err = lane.collect(omitted)
 		if err != nil {
-			return crmcontracts.Attention{}, nil, err
+			return crmcontracts.Attention{}, theNight{}, err
 		}
 	}
 
 	done, err := s.done(ctx, asOf)
 	omitted, err = fill(omitted, "done_for_you", err, func() { out.DoneForYou = done })
 	if err != nil {
-		return crmcontracts.Attention{}, nil, err
+		return crmcontracts.Attention{}, theNight{}, err
 	}
 
 	if len(omitted) > 0 {
@@ -328,9 +333,9 @@ func (s *Service) assembleDay(
 	// Last, over the assembled lanes: every card that names a record gets its
 	// display name under this reader's own grants (labels.go).
 	if err := s.fillSubjectLabels(ctx, &out); err != nil {
-		return crmcontracts.Attention{}, nil, err
+		return crmcontracts.Attention{}, theNight{}, err
 	}
-	return out, findings, nil
+	return out, night, nil
 }
 
 // laneCount carries the totals behind a lane the reader only sees a slice of.
