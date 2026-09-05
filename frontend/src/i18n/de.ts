@@ -3314,6 +3314,21 @@ export const de = {
   "analytics.sectionPerformance": "Ergebnisse",
   "analytics.noClosedDeals": "Es wurden noch keine Deals abgeschlossen.",
   "analytics.sectionOutcomes": "Meine Ergebnisse",
+  "analytics.sectionCoverage": "Datenabdeckung",
+  "analytics.coverageSub":
+    "Welche Quellen die nächtliche Prüfung lesen konnte, und wie weit. Eine stille, aber gelesene Quelle gilt als geprüft; eine ungelesene sagt warum.",
+  "analytics.covSource": "Quelle",
+  "analytics.covState": "Zustand",
+  "analytics.covThrough": "Geprüft bis",
+  "analytics.covChecked": "Geprüft",
+  "analytics.covStale": "Veraltet — zuletzt nichts gelesen",
+  "analytics.covUnavailable":
+    "Nicht verfügbar — die Prüfung konnte nicht lesen",
+  "analytics.covPermissionLimited": "Zugriff muss neu erteilt werden",
+  "analytics.covNotConnected":
+    "Nicht verbunden — nichts zu reparieren, etwas zu entscheiden",
+  "analytics.coverageInputsElsewhere":
+    "Probleme auf Datensatzebene werden in der Forecast-Eingangsprüfung gelistet und gelöst.",
   "analytics.myPipeline": "Meine offene Pipeline",
   "analytics.myMeetings": "Meine Termine",
   "analytics.meetingsAsTheyStand":

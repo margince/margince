@@ -3381,6 +3381,20 @@ export const en = {
   "analytics.sectionPerformance": "Performance",
   "analytics.noClosedDeals": "No deals have closed yet.",
   "analytics.sectionOutcomes": "My outcomes",
+  "analytics.sectionCoverage": "Data coverage",
+  "analytics.coverageSub":
+    "Which sources the nightly check could read, and how far. A quiet source that was read is checked; an unread one says why.",
+  "analytics.covSource": "Source",
+  "analytics.covState": "State",
+  "analytics.covThrough": "Checked through",
+  "analytics.covChecked": "Checked",
+  "analytics.covStale": "Stale — nothing read recently",
+  "analytics.covUnavailable": "Unavailable — the check could not read it",
+  "analytics.covPermissionLimited": "Access needs re-granting",
+  "analytics.covNotConnected":
+    "Not connected — nothing to fix, something to decide",
+  "analytics.coverageInputsElsewhere":
+    "Record-level input problems are listed and resolved in the Forecast input review.",
   "analytics.myPipeline": "My open pipeline",
   "analytics.myMeetings": "My meetings",
   "analytics.meetingsAsTheyStand":

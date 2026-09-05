@@ -261,6 +261,43 @@ const ownLensRoutes: RouteMap = {
     ]),
 };
 
+// Source health under the ops grant: one read source with its instant, and
+// every unread state in its own words.
+const coverageRoutes: RouteMap = {
+  ...routes,
+  "GET /analytics/coverage": () =>
+    jsonResponse({
+      run_id: "r1",
+      as_of: "2026-09-05T02:00:00Z",
+      sources: [
+        {
+          source: "mail",
+          state: "checked",
+          checked_through: "2026-09-05T01:30:00Z",
+        },
+        {
+          source: "offers",
+          state: "checked",
+          checked_through: "2026-09-05T02:00:00Z",
+        },
+        { source: "calendar", state: "stale" },
+        { source: "documents", state: "not_connected" },
+      ],
+    }),
+};
+
+export const DataCoverage: Story = {
+  render: () => {
+    installFetchStub(coverageRoutes);
+    return (
+      <StoryProviders>
+        <AnalyticsScreen />
+      </StoryProviders>
+    );
+  },
+  play: clickButton("Data coverage"),
+};
+
 export const MyOutcomes: Story = {
   render: () => {
     installFetchStub(ownLensRoutes);

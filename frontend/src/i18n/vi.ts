@@ -3281,6 +3281,20 @@ export const vi = {
   "analytics.sectionPerformance": "Hiệu suất",
   "analytics.noClosedDeals": "Chưa có deal nào được chốt.",
   "analytics.sectionOutcomes": "Kết quả của tôi",
+  "analytics.sectionCoverage": "Độ phủ dữ liệu",
+  "analytics.coverageSub":
+    "Những nguồn nào kiểm tra hằng đêm đọc được, và đến đâu. Nguồn im ắng nhưng đã đọc là đã kiểm tra; nguồn chưa đọc sẽ nói lý do.",
+  "analytics.covSource": "Nguồn",
+  "analytics.covState": "Trạng thái",
+  "analytics.covThrough": "Đã kiểm tra đến",
+  "analytics.covChecked": "Đã kiểm tra",
+  "analytics.covStale": "Cũ — gần đây không đọc được gì",
+  "analytics.covUnavailable": "Không khả dụng — kiểm tra không đọc được",
+  "analytics.covPermissionLimited": "Cần cấp lại quyền truy cập",
+  "analytics.covNotConnected":
+    "Chưa kết nối — không có gì để sửa, có việc cần quyết định",
+  "analytics.coverageInputsElsewhere":
+    "Vấn đề ở cấp bản ghi được liệt kê và xử lý trong phần rà soát đầu vào của Forecast.",
   "analytics.myPipeline": "Pipeline đang mở của tôi",
   "analytics.myMeetings": "Cuộc họp của tôi",
   "analytics.meetingsAsTheyStand":

@@ -25,6 +25,7 @@ import {
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
+  type AnalyticsSelection,
   useAnalyticsContext,
   useAnalyticsSelection,
 } from "./analytics.context";
@@ -79,7 +80,12 @@ type ReportKey =
 // held exactly one report, and keeping them the same would have meant the
 // address changing the day a section grew a second result — breaking every
 // link anyone had saved to it.
-type Section = "forecast" | "pipeline" | "performance" | "outcomes";
+type Section =
+  | "forecast"
+  | "pipeline"
+  | "performance"
+  | "outcomes"
+  | "coverage";
 
 // Which results each section holds, in the order they are drawn. The tab strip
 // and the bodies both read this, so a section cannot come to list a report it
@@ -99,6 +105,8 @@ const SECTION_REPORTS = {
   performance: ["win-loss", "stage-age"],
   // The rep's own week: a composed view like the forecast, not report cards.
   outcomes: [],
+  // Source health: an ops view over the nightly check's own coverage rows.
+  coverage: [],
 } as const satisfies Record<Section, readonly ReportKey[]>;
 
 const SECTIONS = Object.keys(SECTION_REPORTS) as readonly Section[];
@@ -1033,6 +1041,92 @@ function StageAgeTable({
   );
 }
 
+// Every word a coverage row's state can carry, spelled per state so an
+// unread source never borrows a read one's copy. A hand-kept mirror of the
+// server's own vocabulary; an unknown state renders its raw word rather than
+// a wrong sentence.
+const COVERAGE_STATE_KEY: Readonly<Record<string, MessageKey>> = {
+  checked: "analytics.covChecked",
+  stale: "analytics.covStale",
+  unavailable: "analytics.covUnavailable",
+  permission_limited: "analytics.covPermissionLimited",
+  not_connected: "analytics.covNotConnected",
+};
+
+// Which connectors the nightly check could read, and how far. Ops-facing: the
+// server gates the read, and a seat without the grant never sees the tab.
+function DataCoverageView({
+  locale,
+  timezone,
+}: Readonly<{ locale: Locale; timezone: string | null }>) {
+  const t = useT();
+  const coverage = useDataCoverage();
+  return (
+    <QueryGate query={coverage} pendingLabel={t("analytics.sectionCoverage")}>
+      {(run) => (
+        <Card title={t("analytics.sectionCoverage")}>
+          <p className="sub">{t("analytics.coverageSub")}</p>
+          <DataTable
+            label={t("analytics.sectionCoverage")}
+            columns={[
+              {
+                key: "source",
+                header: t("analytics.covSource"),
+                render: (row: DataCoverageRow) => row.source,
+              },
+              {
+                key: "state",
+                header: t("analytics.covState"),
+                render: (row: DataCoverageRow) =>
+                  COVERAGE_STATE_KEY[row.state]
+                    ? t(COVERAGE_STATE_KEY[row.state])
+                    : row.state,
+              },
+              {
+                key: "through",
+                header: t("analytics.covThrough"),
+                render: (row: DataCoverageRow) =>
+                  // The instant renders only once the frame's own zone is
+                  // known — a screen must not name a zone of its own, and a
+                  // date placed in a guessed one is worse than a beat of "—".
+                  row.checked_through && timezone
+                    ? formatDateTime(row.checked_through, locale, timezone)
+                    : "—",
+              },
+            ]}
+            rows={run.sources}
+            rowKey={(row) => row.source}
+          />
+          {/* Record-level input problems live where they are answered: the
+              Forecast input review. One resolution surface, not two. */}
+          <p className="sub">{t("analytics.coverageInputsElsewhere")}</p>
+        </Card>
+      )}
+    </QueryGate>
+  );
+}
+
+type DataCoverageRow = components["schemas"]["DataCoverage"]["sources"][number];
+
+function useDataCoverage() {
+  return useQuery({
+    queryKey: ["analytics-coverage"],
+    retry: false,
+    queryFn: async () => {
+      const { data, error, response } = await api.GET("/analytics/coverage");
+      if (response.status === 404) {
+        // A fresh installation: no run has completed. The gate renders the
+        // typed empty state rather than an error.
+        return { run_id: "", as_of: "", sources: [] };
+      }
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+}
+
 type AnalyticsScopeWire = components["schemas"]["AnalyticsScope"];
 
 // The current standing a meeting can hold, in the order a week reads: what is
@@ -1367,14 +1461,22 @@ export function AnalyticsScreen() {
   // Sharing sits beside the tabs rather than inside a section, because the
   // thing being shared is the SECTION the reader is on — a button that moved
   // with the content would read as sharing one card.
+  const coverageProbe = useDataCoverage();
   const header = (
     <div className="analytics-header">
       <RecordTabs
-        options={SECTIONS.filter(
-          (candidate) =>
-            candidate !== "outcomes" ||
-            context.data?.default_scope.kind === "owner",
-        )}
+        options={SECTIONS.filter((candidate) => {
+          if (candidate === "outcomes") {
+            return context.data?.default_scope.kind === "owner";
+          }
+          if (candidate === "coverage") {
+            // The server gates this read on the ops grant. The tab appears
+            // when the probe ANSWERS — hidden while pending, so a seat the
+            // server refuses never sees it flicker in and out.
+            return coverageProbe.isSuccess;
+          }
+          return true;
+        })}
         value={section}
         onChange={setSection}
         labels={{
@@ -1382,6 +1484,7 @@ export function AnalyticsScreen() {
           pipeline: t("analytics.sectionPipeline"),
           performance: t("analytics.sectionPerformance"),
           outcomes: t("analytics.sectionOutcomes"),
+          coverage: t("analytics.sectionCoverage"),
         }}
         label={t("analytics.sections")}
       />
@@ -1410,30 +1513,63 @@ export function AnalyticsScreen() {
   return (
     <div className="wrap">
       {header}
-      {section === "outcomes" ? (
-        context.data ? (
-          <MyOutcomesView
-            defaultScope={context.data.default_scope}
-            locale={locale}
-          />
-        ) : null
-      ) : section === "forecast" ? (
-        selection && context.data ? (
-          <ForecastView
-            selection={selection}
-            canSubmit={context.data.capabilities.submit_manager_forecast}
-          />
-        ) : null
-      ) : (
-        SECTION_REPORTS[section].map((report) => (
-          <ReportCard
-            key={report}
-            report={report}
-            stages={pipelineQuery.data?.stages ?? []}
-            locale={locale}
-          />
-        ))
-      )}
+      <SectionBody
+        section={section}
+        locale={locale}
+        context={context.data}
+        selection={selection}
+        stages={pipelineQuery.data?.stages ?? []}
+      />
     </div>
   );
+}
+
+// One section's body, chosen in its own component so the screen's own render
+// stays a header plus a choice rather than a ladder of ternaries.
+function SectionBody({
+  section,
+  locale,
+  context,
+  selection,
+  stages,
+}: Readonly<{
+  section: Section;
+  locale: Locale;
+  context: components["schemas"]["AnalyticsContext"] | undefined;
+  selection: AnalyticsSelection | null;
+  stages: readonly Stage[];
+}>) {
+  switch (section) {
+    case "coverage":
+      return (
+        <DataCoverageView
+          locale={locale}
+          timezone={context?.timezone ?? null}
+        />
+      );
+    case "outcomes":
+      return context ? (
+        <MyOutcomesView defaultScope={context.default_scope} locale={locale} />
+      ) : null;
+    case "forecast":
+      return selection && context ? (
+        <ForecastView
+          selection={selection}
+          canSubmit={context.capabilities.submit_manager_forecast}
+        />
+      ) : null;
+    default:
+      return (
+        <>
+          {SECTION_REPORTS[section].map((report) => (
+            <ReportCard
+              key={report}
+              report={report}
+              stages={stages}
+              locale={locale}
+            />
+          ))}
+        </>
+      );
+  }
 }
