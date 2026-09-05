@@ -4409,6 +4409,12 @@ export const vi = {
   "connectors.reconnect": "Kết nối lại",
   "connectors.disconnect": "Ngắt kết nối",
   "connectors.signatureEnrich.label": "Đọc thông tin liên hệ từ hộp thư này",
+  "connectors.contextTag.label": "Lưu những gì trình kết nối này mang về dưới",
+  "connectors.contextTag.none": "Không có thẻ",
+  "connectors.contextTag.hint":
+    "Một thẻ đã có sẵn. Mọi liên hệ trình kết nối này tạo ra từ giờ sẽ được lưu dưới thẻ đó, để bạn hỏi được những gì đã đến từ nguồn này. Các liên hệ đã có giữ nguyên thẻ của mình.",
+  "connectors.contextTag.archived":
+    "{name} đã được lưu trữ nên không có gì được lưu dưới thẻ đó nữa. Hãy chọn thẻ khác, hoặc không chọn.",
   "connectors.signatureEnrich.followingDefault":
     "Đang theo thiết lập của tổ chức. Đổi ở đây thì hộp thư này giữ lựa chọn riêng.",
   "connectors.signatureEnrich.ownAnswer":

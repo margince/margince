@@ -6741,6 +6741,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/connectors/{provider}/context-tag": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
+                 */
+                provider: components["parameters"]["CaptureProvider"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the word this connector files what it captures under.
+         * @description The mailbox owner's own answer, and only for their own mailbox: the write matches on
+         *     the authenticated user, so there is no id that reaches a colleague's connection.
+         *
+         *     The word must ALREADY be in the vocabulary and not archived — the same constraint an
+         *     import's context tag takes, and for the same reason: a tag vocabulary is a shared,
+         *     human-curated thing, and machinery that minted words into it would make it useless for
+         *     the browsing it exists for.
+         *
+         *     Checked HERE rather than when a record lands. A word archived after this call leaves
+         *     the connector filing nothing and says so on the connection (`context_tag.archived`); it
+         *     never fails a capture, because a mailbox going unread is a far worse answer to a
+         *     vocabulary edit than a connector going quiet.
+         *
+         *     It governs what this connector creates AFTERWARDS. Records already captured keep the
+         *     filing they have — refiling a year of history under a word chosen today would claim
+         *     they arrived with it.
+         *
+         *     Human-only: which word a source is filed under is a decision about a shared
+         *     vocabulary, not one an agent makes as a side effect of syncing.
+         */
+        put: operations["setConnectorContextTag"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/connectors/{provider}/backfill/preview": {
         parameters: {
             query?: never;
@@ -14550,10 +14599,50 @@ export interface components {
              * @enum {string}
              */
             readonly mail_posture?: "shared" | "classified" | "held";
+            context_tag?: components["schemas"]["ConnectorContextTag"];
             /** Format: date-time */
             readonly created_at?: string;
             /** Format: date-time */
             readonly updated_at?: string;
+        };
+        /**
+         * @description The one existing word every record this connector creates is filed under, so
+         *     "which records came in from this source" has an answer. Absent when the operator
+         *     chose none, which is the honest default rather than a guess.
+         *
+         *     The connector is the batch, not a sync window: a mailbox polls forever, and a word
+         *     per window would mint one nobody chose, growing without bound. The other half of
+         *     the question — "in this period" — is answered by the record's own `created_at`
+         *     and needs no word at all.
+         */
+        ConnectorContextTag: {
+            /** Format: uuid */
+            id?: string;
+            /** @description The word as the vocabulary spells it today, so a reader need not resolve the id. */
+            name?: string;
+            /**
+             * @description The chosen word has since been archived. The connector then files NOTHING —
+             *     an archived word is one the workspace retired, and applying it anyway would
+             *     keep a retired vocabulary alive from a setting nobody looks at.
+             *
+             *     Said here rather than left silent, because the alternative is a connector that
+             *     quietly stopped filing and an operator with no way to see why. Choose another
+             *     word, or clear it.
+             */
+            archived: boolean;
+        };
+        /** @description The word this connector files what it captures under. */
+        SetConnectorContextTagRequest: {
+            /**
+             * Format: uuid
+             * @description An EXISTING tag, refused with 422 when it names one the vocabulary does not
+             *     carry or one already archived — the same constraint an import's context tag
+             *     takes. Null clears the choice, and the connector then files nothing.
+             *
+             *     Validated here, at the moment it is set, rather than when a record lands: a
+             *     capture must never fail over a word somebody archived afterwards.
+             */
+            tag_id: string | null;
         };
         /** @description One mailbox's answer to the nightly signature pass. */
         SetSignatureEnrichmentRequest: {
@@ -41606,6 +41695,45 @@ export interface operations {
         };
         responses: {
             /** @description The connection, with its posture as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    setConnectorContextTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 *     the same operation; every provider but imap authorizes by OAuth redirect, imap by
+                 *     credential submission. `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a person can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
+                 */
+                provider: components["parameters"]["CaptureProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetConnectorContextTagRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection, with the word as it now stands. */
             200: {
                 headers: {
                     [name: string]: unknown;

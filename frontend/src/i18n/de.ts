@@ -4455,6 +4455,13 @@ export const de = {
   "connectors.reconnect": "Neu verbinden",
   "connectors.disconnect": "Trennen",
   "connectors.signatureEnrich.label": "Kontaktdaten aus diesem Postfach lesen",
+  "connectors.contextTag.label":
+    "Was dieser Connector einbringt, ablegen unter",
+  "connectors.contextTag.none": "Kein Tag",
+  "connectors.contextTag.hint":
+    "Ein vorhandenes Tag. Jeder Kontakt, den dieser Connector ab jetzt anlegt, wird darunter abgelegt — so kannst du fragen, was aus dieser Quelle kam. Kontakte, die schon da sind, behalten ihre Tags.",
+  "connectors.contextTag.archived":
+    "{name} ist archiviert, also wird nichts mehr darunter abgelegt. Wähl ein anderes Tag oder keins.",
   "connectors.signatureEnrich.followingDefault":
     "Folgt der Einstellung Ihrer Organisation. Wird sie hier geändert, behält dieses Postfach seine eigene Antwort.",
   "connectors.signatureEnrich.ownAnswer":

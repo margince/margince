@@ -10023,6 +10023,51 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /connectors/{provider}/context-tag:
+    parameters:
+      - $ref: '#/components/parameters/CaptureProvider'
+    put:
+      tags: [Connectors]
+      operationId: setConnectorContextTag
+      summary: Set the word this connector files what it captures under.
+      description: |
+        The mailbox owner's own answer, and only for their own mailbox: the write matches on
+        the authenticated user, so there is no id that reaches a colleague's connection.
+
+        The word must ALREADY be in the vocabulary and not archived — the same constraint an
+        import's context tag takes, and for the same reason: a tag vocabulary is a shared,
+        human-curated thing, and machinery that minted words into it would make it useless for
+        the browsing it exists for.
+
+        Checked HERE rather than when a record lands. A word archived after this call leaves
+        the connector filing nothing and says so on the connection (`context_tag.archived`); it
+        never fails a capture, because a mailbox going unread is a far worse answer to a
+        vocabulary edit than a connector going quiet.
+
+        It governs what this connector creates AFTERWARDS. Records already captured keep the
+        filing they have — refiling a year of history under a word chosen today would claim
+        they arrived with it.
+
+        Human-only: which word a source is filed under is a decision about a shared
+        vocabulary, not one an agent makes as a side effect of syncing.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetConnectorContextTagRequest' }
+      responses:
+        '200':
+          description: The connection, with the word as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /connectors/{provider}/backfill/preview:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
@@ -21502,8 +21547,54 @@ components:
             Set through PUT /connectors/{provider}/mail-posture. Moving it governs mail captured
             AFTERWARDS; already-captured mail keeps the audience it has unless the same call asks
             for `apply_to_history`.
+        context_tag: { $ref: '#/components/schemas/ConnectorContextTag' }
         created_at: { type: string, format: date-time, readOnly: true }
         updated_at: { type: string, format: date-time, readOnly: true }
+    ConnectorContextTag:
+      type: object
+      additionalProperties: false
+      readOnly: true
+      required: [archived]
+      description: |
+        The one existing word every record this connector creates is filed under, so
+        "which records came in from this source" has an answer. Absent when the operator
+        chose none, which is the honest default rather than a guess.
+
+        The connector is the batch, not a sync window: a mailbox polls forever, and a word
+        per window would mint one nobody chose, growing without bound. The other half of
+        the question — "in this period" — is answered by the record's own `created_at`
+        and needs no word at all.
+      properties:
+        id: { type: string, format: uuid }
+        name:
+          type: string
+          description: The word as the vocabulary spells it today, so a reader need not resolve the id.
+        archived:
+          type: boolean
+          description: |
+            The chosen word has since been archived. The connector then files NOTHING —
+            an archived word is one the workspace retired, and applying it anyway would
+            keep a retired vocabulary alive from a setting nobody looks at.
+
+            Said here rather than left silent, because the alternative is a connector that
+            quietly stopped filing and an operator with no way to see why. Choose another
+            word, or clear it.
+    SetConnectorContextTagRequest:
+      type: object
+      additionalProperties: false
+      required: [tag_id]
+      description: The word this connector files what it captures under.
+      properties:
+        tag_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            An EXISTING tag, refused with 422 when it names one the vocabulary does not
+            carry or one already archived — the same constraint an import's context tag
+            takes. Null clears the choice, and the connector then files nothing.
+
+            Validated here, at the moment it is set, rather than when a record lands: a
+            capture must never fail over a word somebody archived afterwards.
     SetSignatureEnrichmentRequest:
       type: object
       additionalProperties: false
