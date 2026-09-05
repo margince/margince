@@ -49,7 +49,7 @@
   text-decoration: underline;
 }
 .capturechip-link:focus-visible {
-  outline: 2px solid var(--ai);
+  outline: var(--focus-ring);
   outline-offset: 2px;
 }
 
