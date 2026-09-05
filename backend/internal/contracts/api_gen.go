@@ -18284,6 +18284,19 @@ type AuthCapabilities struct {
 	ReleaseVersion *string `json:"release_version,omitempty"`
 }
 
+// AuthenticationPolicy Which sign-in methods this installation offers, apart from the rest of its settings.
+//
+// Carries only what `authentication_policy` governs. The installation's name, timezone
+// and currency are NOT here — every role reads those, and repeating them in a document
+// governed by a narrower grant would make the same fact answer to two authorities.
+type AuthenticationPolicy struct {
+	// SignInProviders Every provider this deployment mounted, each marked with whether the
+	// installation has chosen to offer it — which is a stored choice, not a
+	// guarantee the provider has working credentials. Password is never listed: it
+	// is the method every installation always has and cannot switch off.
+	SignInProviders []SignInProvider `json:"sign_in_providers"`
+}
+
 // Authorization What this principal may do, as the server itself computed it — never a client-side re-derivation from role keys, which drifts the moment an installation's stored grants differ from the compiled-in defaults.
 // Two independent axes, both of which must permit an action: the licensing seat ceiling (A62/ADR-0047), checked BEFORE RBAC and clamped on HTTP method, and the object grants. A client that collapses them into one predicate will be wrong in both directions.
 // This is a snapshot, not an authority. A role change does not revoke live sessions, so a client refetches on window focus and after any 403, and treats the server's answer as the only one that counts. It does not express the human-principal gate, nor the few routes that still key on the literal admin role independently of any grant — a permitted grant here is necessary, never sufficient.
@@ -49140,6 +49153,9 @@ type ServerInterface interface {
 	// Reverse a completed CSV import run.
 	// (POST /imports/{id}/undo)
 	UndoImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Which sign-in methods this installation offers.
+	// (GET /installation/authentication-policy)
+	GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request)
 	// The installation's entitlement and seat usage (admin/ops).
 	// (GET /installation/license)
 	GetLicenseEntitlement(w http.ResponseWriter, r *http.Request)
@@ -51681,6 +51697,12 @@ func (_ Unimplemented) GetImportRunReport(w http.ResponseWriter, r *http.Request
 // Reverse a completed CSV import run.
 // (POST /imports/{id}/undo)
 func (_ Unimplemented) UndoImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which sign-in methods this installation offers.
+// (GET /installation/authentication-policy)
+func (_ Unimplemented) GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63766,6 +63788,26 @@ func (siw *ServerInterfaceWrapper) UndoImportRun(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UndoImportRun(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAuthenticationPolicy operation middleware
+func (siw *ServerInterfaceWrapper) GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAuthenticationPolicy(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -80086,6 +80128,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/imports/{id}/undo", wrapper.UndoImportRun)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/authentication-policy", wrapper.GetAuthenticationPolicy)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/license", wrapper.GetLicenseEntitlement)

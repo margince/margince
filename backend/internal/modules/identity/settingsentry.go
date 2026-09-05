@@ -35,6 +35,20 @@ import (
 // benefits from knowing which one it is — and write is admin/ops.
 const installationSettingsObject = "installation_settings"
 
+// authenticationPolicyObject gates the sign-in half of the installation's
+// settings, read apart from the rest.
+//
+// Not the entry's object, and it cannot be. EnabledOidcProviders is defined on
+// installationSettingsObject and the settings catalog gates BOTH verbs on an
+// entry's one object (settings.Raw, settings.SetRawTx), so moving the entry here
+// would make every read of the aggregate demand this grant — the name, the
+// timezone and the base currency with it, which every role is meant to read.
+//
+// So the projection carries the gate instead: SignInPolicy checks this before
+// reading the entry as the installation itself, which is the same shape the
+// login screen already uses to resolve providers for an anonymous visitor.
+const authenticationPolicyObject = "authentication_policy"
+
 // SettingsObject is the same object, for compose.
 //
 // Exported because the installation-setup surface takes this gate itself: its
