@@ -11,7 +11,7 @@ import {
 import type { Locale, useT } from "../i18n";
 import { translatePlural } from "../i18n";
 import { BRIEF_PARAM, COMPOSE_PARAM } from "./personpage.address";
-import { settingsAddress } from "./settings";
+import { settingsAddress } from "./settingsnav";
 import type {
   Worklist,
   WorklistComparison,
@@ -539,6 +539,7 @@ const NAVIGABLE_MOVES = new Set([
   "draft_reply",
   "draft_email",
   "open_meeting_brief",
+  "open_task",
 ]);
 
 /**
@@ -553,7 +554,10 @@ const NAVIGABLE_MOVES = new Set([
  * and there is no earlier record for it to name.
  */
 function moveIsComplete(move: NonNullable<WorklistItem["move"]>): boolean {
-  return move.action !== "draft_reply" || move.activity_id !== undefined;
+  return (
+    !["draft_reply", "open_task"].includes(move.action) ||
+    move.activity_id !== undefined
+  );
 }
 
 /**
@@ -582,6 +586,7 @@ export function moveHref(item: WorklistItem): string | undefined {
     return briefHref(item);
   }
   const record = subjectHref(item);
+  if (move.action === "open_task") return record;
   if (!record || item.subject?.type !== "person") {
     return record;
   }
@@ -613,6 +618,7 @@ export function moveOpensComposer(item: WorklistItem): boolean {
 // composer opens, the verb is the act; where the link only reaches the record,
 // it says so.
 export function moveLabel(item: WorklistItem, t: T): string {
+  if (item.move?.action === "open_task") return t("deal360.openTask");
   const opens = moveOpensComposer(item);
   if (item.move?.action === "draft_email") {
     return t(

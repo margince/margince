@@ -241,6 +241,13 @@ export const de = {
   "search.tier.mirrored": "aus einem verbundenen System",
   "search.tier.unverified": "nicht verifiziert",
 
+  "context.recentTouches": "Letzte Gespräche",
+  "context.openTasks": "Offene Aufgaben",
+  "context.relatedPeople": "Zugehörige Personen",
+  "context.relatedCompanies": "Zugehörige Unternehmen",
+  "context.relatedProjects": "Verknüpfte Projekte",
+  "context.whoKnows": "Wer sie kennt",
+  "context.relatedDeals": "Zugehörige Deals",
   "context.title": "Verwandte Belege",
   "context.empty": "Noch nichts Verwandtes.",
 
@@ -3237,7 +3244,7 @@ export const de = {
     "Das ist eine Antwort auf ihre eigene Nachricht — dafür brauchst du keinen Grund anzugeben.",
   "compose.sendLaterLabel": "Später senden (optional)",
   "compose.send": "Senden",
-  "compose.sendConfirmTitle": "Diese E-Mail senden?",
+  "compose.sendConfirmTitle": "E-Mail entwerfen",
   "compose.threadHeading": "Dieser Verlauf",
   "compose.continueHeading": "Einen Verlauf fortsetzen?",
   "compose.threadLeave": "Anderen wählen",
@@ -3246,7 +3253,7 @@ export const de = {
   "compose.threadContinuing": "Der letzte Austausch, den dies fortsetzt",
   "compose.threadPending": "Verlauf wird geladen\u2026",
   "compose.sendBody":
-    "Sie senden diese E-Mail jetzt. Dies ist eine ausgehende, unwiderrufliche Aktion.",
+    "Prüfen und bearbeiten Sie Ihren Entwurf. Ein Klick auf Senden verschickt die E-Mail und kann nicht rückgängig gemacht werden.",
   "compose.schedule": "Einplanen",
   "compose.scheduleConfirmTitle": "Diese E-Mail einplanen?",
   // The composer computed that it had scheduled a send and said nothing —
@@ -4450,7 +4457,7 @@ export const de = {
   "overnightGrant.help":
     "Es liest deine Deals und E-Mails, um zu ordnen, was heute wichtig ist, und schreibt Notizen zurück. Senden kann es nicht: die Erlaubnis hier deckt Lesen und Schreiben ab, niemals Senden.",
   "overnightGrant.danger":
-    "ACHTUNG: Ohne diese Freigabe bleiben dein Morgen-Überblick, deine Arbeitsliste und dein Wochenrückblick leer. Das sind die Bildschirme, mit denen Margince startet — der größte Teil des Produkts wirkt dann, als würde er nicht funktionieren.",
+    "Ohne diese Berechtigung kann der Agent Ihren Brief über Nacht weder lesen noch kommentieren. Ihre Datensätze, Arbeitsliste und der geplante Wochenrückblick bleiben verfügbar.",
   "overnightGrant.saveFailed":
     "Deine Antwort auf die Nacht-Frage konnte nicht gespeichert werden. Alles andere ist verbunden — stelle es unter Einstellungen → Verbindungen ein, sobald du drin bist.",
   "overnightGrant.renew":
@@ -5667,6 +5674,7 @@ export const de = {
   "recordmail.send": "E-Mail schreiben",
   "deal360.rewrite": "Neu schreiben",
   "deal360.readFull": "Vollständige Einschätzung lesen",
+  "deal360.openTask": "Vorhandene Aufgabe öffnen",
   "deal360.createTask": "Aufgabe anlegen",
   "deal360.openBrief": "Meeting-Briefing öffnen",
   "deal360.unreadable":

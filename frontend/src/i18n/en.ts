@@ -262,6 +262,13 @@ export const en = {
   "search.tier.mirrored": "from a connected system",
   "search.tier.unverified": "unverified",
 
+  "context.recentTouches": "Recent conversations",
+  "context.openTasks": "Open tasks",
+  "context.relatedPeople": "Related people",
+  "context.relatedCompanies": "Related companies",
+  "context.relatedProjects": "Related projects",
+  "context.whoKnows": "Who knows them",
+  "context.relatedDeals": "Related deals",
   "context.title": "Related evidence",
   "context.empty": "Nothing related yet.",
 
@@ -3301,7 +3308,7 @@ export const en = {
     "This continues their own message, so it needs no reason from you.",
   "compose.sendLaterLabel": "Send later (optional)",
   "compose.send": "Send",
-  "compose.sendConfirmTitle": "Send this email?",
+  "compose.sendConfirmTitle": "Draft email",
   "compose.threadHeading": "This conversation",
   "compose.continueHeading": "Continue a conversation?",
   "compose.threadLeave": "Choose another",
@@ -3310,7 +3317,7 @@ export const en = {
   "compose.threadContinuing": "The last exchange, which this will continue",
   "compose.threadPending": "Loading the conversation\u2026",
   "compose.sendBody":
-    "You are sending this email now. This is an outbound, irreversible action.",
+    "Review and edit your draft. Clicking Send sends this email and cannot be undone.",
   // A moment picked in the field above turns this dialog into a different
   // promise, so it says a different thing. The three sentences it replaces all
   // claim the send is happening NOW and is irreversible; a scheduled message is
@@ -4526,7 +4533,7 @@ export const en = {
   "overnightGrant.help":
     "It reads your deals and mail to rank what needs you today, and writes notes back. It cannot send: the permission you give here covers reading and writing only, never sending.",
   "overnightGrant.danger":
-    "Without this, your morning brief, your worklist lanes and your weekly review stay empty. These are the screens Margince opens on, so most of the product will look like it is not working.",
+    "Without this permission, the overnight agent cannot read or annotate your brief. Your records, worklist and scheduled weekly review remain available.",
   "overnightGrant.saveFailed":
     "Your answer to the overnight question could not be saved. Everything else is connected — set it under Settings → Connections when you are in.",
   "overnightGrant.renew":
@@ -5773,6 +5780,7 @@ export const en = {
   "recordmail.send": "Write email",
   "deal360.rewrite": "Write it again",
   "deal360.readFull": "Read the full briefing",
+  "deal360.openTask": "Open existing task",
   "deal360.createTask": "Add this task",
   "deal360.openBrief": "Open the meeting brief",
   "deal360.unreadable":
