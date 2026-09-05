@@ -1836,7 +1836,6 @@ export const de = {
   "co.recent.emptyDetail":
     "Sobald Sie eine E-Mail senden, einen Anruf festhalten oder sich treffen, steht der Austausch hier, mit dem, was jede Seite getan hat.",
   "co.recent.empty": "Noch nichts mit ihnen erfasst.",
-  "co.recent.viewHistory": "Verlauf ansehen",
   "co.recent.kind.email": "E-Mail",
   "co.recent.kind.call": "Anruf",
   "co.recent.kind.meeting": "Termin",

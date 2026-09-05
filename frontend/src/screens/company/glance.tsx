@@ -39,10 +39,15 @@ export function ThreadFold({
   view,
   loading,
   onOpenHistory,
+  onOpenRecord,
 }: Readonly<{
   view?: Organization360;
   loading: boolean;
   onOpenHistory?: () => void;
+  // The page's own router, the same door the spine above this fold takes. The
+  // fold draws the account's messages in full — sender, subject, preview — so
+  // without this it shows a reader the message and refuses to open it.
+  onOpenRecord?: (entityType: string, entityId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -67,6 +72,7 @@ export function ThreadFold({
           <CompanyRecentList
             activities={logged.slice(0, THREAD_LIMIT)}
             nameOf={recordNamesIn(view)}
+            onOpenRecord={onOpenRecord}
           />
         ) : (
           <PanelBody>

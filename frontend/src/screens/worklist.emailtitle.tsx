@@ -37,11 +37,13 @@ export function WaitingEmailLine({
 }: Readonly<{
   item: WorklistItem;
   /**
-   * Opens the message. Omitted on a surface with no drawer to open it into —
-   * the row then shows the message and does not pretend to open it, which is
-   * better than a control that answers nothing.
+   * Opens the message. REQUIRED: this line draws the whole message — sender,
+   * subject, preview, access badge — so a surface that draws it and cannot
+   * open it shows a reader something and then refuses it. Both surfaces that
+   * draw a waiting row mount a drawer; a surface that cannot should not draw
+   * this line at all.
    */
-  onOpen?: (activityId: string) => void;
+  onOpen: (activityId: string) => void;
 }>) {
   const { locale } = useLocale();
   const summary = item.email_summary;
@@ -52,7 +54,7 @@ export function WaitingEmailLine({
     <EmailEntry
       summary={summary}
       timestamp={formatDateTime(summary.occurred_at, locale, viewerZone())}
-      onOpen={onOpen ? () => onOpen(summary.activity_id) : undefined}
+      onOpen={() => onOpen(summary.activity_id)}
     />
   );
 }

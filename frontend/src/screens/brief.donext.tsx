@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useState } from "react";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { leadRows, waitingRows } from "./brief.sentence";
 import type { Worklist } from "./worklist.queries";
@@ -41,6 +44,7 @@ export function DoNext({
 }: Readonly<{ day: Worklist | undefined; state: SectionState }>) {
   const t = useT();
   const { locale } = useLocale();
+  const [openEmail, setOpenEmail] = useState<string | null>(null);
   // The optional chain reaches the FIELD, not just the payload. A worklist
   // answer that carried no queue crashed the whole page — the same mistake the
   // team gate above made, and a page that throws is a worse answer than one
@@ -94,6 +98,7 @@ export function DoNext({
                     // No pane and no filter on this surface, so the rank draws
                     // as a number rather than as a control that opens nothing.
                     // WorklistRow leaves both out when they are absent.
+                    onOpenEmail={setOpenEmail}
                   />
                 </li>
               ))}
@@ -101,6 +106,16 @@ export function DoNext({
           )}
         </SurfaceState>
       </Panel>
+      {/* The section's own reader. A waiting row here draws the whole message
+          — sender, subject, preview, access badge — and a row that shows a
+          reader the message and refuses to open it is the defect this mount
+          removes. One drawer for the section, at its level rather than inside
+          a row, so two rows can never mount two dialogs. */}
+      <OpenEmailDrawer
+        activityId={openEmail}
+        zone={viewerZone()}
+        onClose={() => setOpenEmail(null)}
+      />
     </section>
   );
 }
