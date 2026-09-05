@@ -33,6 +33,8 @@ import {
   throwProblem,
 } from "./common";
 import { scheduleFields } from "./compose";
+import { SendPermission } from "./sendpermission";
+import { useSendPermission } from "./usesendpermission";
 
 // The queue behind "send later", and the reason it has to exist: a rep who can
 // schedule a message must be able to reach it again. Without this page the
@@ -294,6 +296,21 @@ function SendRow({
   const heldReasonKey = send.held_reason
     ? HELD_REASON_LABEL[send.held_reason]
     : undefined;
+  // What the engine says about this message NOW, for a message that will still
+  // go. Asked the way the fire will ask it — every addressee, the frozen claim,
+  // the frozen records — so the row cannot say "will send" about a message the
+  // fire then holds. A closed row is not asked: nothing about it will change on
+  // its own, and a verdict on a cancelled message is noise.
+  const permission = useSendPermission({
+    recipients: [...send.to, ...(send.cc ?? []), ...(send.bcc ?? [])],
+    anchorActivityId: send.anchor_activity_id ?? undefined,
+    links: send.links,
+    context: send.communication_context,
+    marketingPurpose: send.marketing_purpose,
+    consentPurpose: send.consent_purpose,
+    evidence: send.evidence,
+    enabled: actionable,
+  });
   return (
     <Card as="div" style={{ marginBottom: "var(--space-2)" }}>
       <div
@@ -333,6 +350,16 @@ function SendRow({
         <p className="t-caption" style={{ marginTop: "var(--space-1)" }}>
           {t(heldReasonKey)}
         </p>
+      )}
+      {/* The held reason above says a gate stopped it; this says WHOSE decision
+          that was and whether anybody may change it, in the same words the
+          composer uses. Read-only: the queue moves or withdraws a message, and
+          an override belongs where the message is written. */}
+      {actionable && (
+        <SendPermission
+          preview={permission.preview}
+          unanswered={permission.unanswered}
+        />
       )}
     </Card>
   );

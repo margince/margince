@@ -912,8 +912,7 @@ describe("reports never sum money across currencies", () => {
       const aggregates = (body.aggregates ?? []) as { field?: string }[];
       const sumsNative = aggregates.some(
         (aggregate) =>
-          aggregate.field != null &&
-          aggregate.field.endsWith("_minor") &&
+          aggregate.field?.endsWith("_minor") &&
           !aggregate.field.endsWith("_base_minor"),
       );
       if (!sumsNative) {

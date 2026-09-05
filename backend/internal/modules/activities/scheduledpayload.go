@@ -14,6 +14,7 @@ package activities
 // reason, rather than asserting the handful somebody remembered.
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -91,6 +92,23 @@ func (f frozenEvidence) thaw() (commsauthz.Evidence, error) {
 		*field.into = id
 	}
 	return out, nil
+}
+
+// thawOriginLinks reads the records an account-started row froze, for the list,
+// the detail and the fire alike. The shape carries no JSON tags, so what holds
+// it is every reader decoding it the same way, and a decoding of its own in
+// each caller would be three places for that to stop being true. A NULL column
+// — a reply row, which the origin-shape CHECK requires it of — reads as no
+// records rather than as an error.
+func thawOriginLinks(raw []byte) ([]ActivityLinkInput, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	var links []ActivityLinkInput
+	if err := json.Unmarshal(raw, &links); err != nil {
+		return nil, fmt.Errorf("scheduled send: reading the frozen record links: %w", err)
+	}
+	return links, nil
 }
 
 // idText renders an id for the row, and an unnamed record as the empty string.

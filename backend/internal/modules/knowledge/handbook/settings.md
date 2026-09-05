@@ -34,8 +34,11 @@ Three properties in one sentence. It affects your drafts. Nobody else sees it. I
 learns only from what you give it.
 
 Samples arrive as files: drop them on the zone or click it to choose (`.txt`,
-`.md`, `.vtt`, `.srt`, `.json`, several at once). The card says beside the zone
-what teaches the voice (sent emails first, then proposals and posts, then call
+`.md`, `.pdf`, `.docx`, `.vtt`, `.srt`, `.json`, several at once). A PDF or
+Word document is read to its text in the browser before anything is sent; a
+scanned PDF with no text layer counts as empty, and one that is
+password-protected is named so you can paste its text instead. The card says
+beside the zone what teaches the voice (sent emails first, then proposals and posts, then call
 transcripts) and what to leave out (other people's writing, AI drafts). A file
 whose words are at least half attributed to named speakers is a conversation:
 the card asks "Which speaker is you?" and keeps only that speaker's turns. Below

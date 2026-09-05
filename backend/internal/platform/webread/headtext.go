@@ -19,6 +19,12 @@ import (
 	"golang.org/x/net/html"
 )
 
+// tagScript is the element three harvests in this package read: the
+// fingerprint's asset scan, the module count, and the JSON-LD claims. Shared
+// rather than spelled at each, so a typo in any of them is a compile error
+// instead of a scan that quietly matches nothing.
+const tagScript = "script"
+
 // headTextRunes bounds one harvested head declaration. A description is a
 // sentence or two by convention; anything longer is a page stuffing the tag,
 // and it would be spent out of a prompt budget that belongs to the page's own
@@ -97,7 +103,7 @@ func countScripts(rawHTML string) (external, modules int) {
 			continue
 		}
 		name, hasAttr := tokenizer.TagName()
-		if string(name) != "script" || !hasAttr {
+		if string(name) != tagScript || !hasAttr {
 			continue
 		}
 		attrs := tagAttrs(tokenizer)

@@ -135,8 +135,8 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// when none is configured. Gating the whole worker on a brain would mean an
 	// AI-less deployment never staged a review for an existing unsure row and
 	// never redacted mail it had already hidden.
-	addDeclaredWorker[CounterpartyVerdictArgs](reg, &counterpartyVerdictWorker{pool: pool})
-	addDeclaredWorker[CounterpartyVerdictWorkspaceArgs](reg, &counterpartyVerdictWorkspaceWorker{
+	addDeclaredWorker[CounterpartyVerdictArgs](reg, &counterpartyVerdictWorker{
+		pool:   pool,
 		engine: NewCounterpartyVerdictEngine(pool, cfg.VerdictBrain, log),
 		// The personal-mail purge, and only when an object store is bound. A
 		// nil store means no purger and the stage is skipped: destroying the
@@ -156,8 +156,8 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// terminal `unsure` instead of leaving it claimable forever. Gating the
 	// worker on a brain would leave exactly that deployment with a backlog
 	// nothing ever ends.
-	addDeclaredWorker[ConfidentialityVerdictArgs](reg, &confidentialityVerdictWorker{pool: pool})
-	addDeclaredWorker[ConfidentialityVerdictWorkspaceArgs](reg, &confidentialityVerdictWorkspaceWorker{
+	addDeclaredWorker[ConfidentialityVerdictArgs](reg, &confidentialityVerdictWorker{
+		pool:   pool,
 		engine: NewConfidentialityVerdictEngine(pool, cfg.ConfidentialityBrain, log),
 	})
 	// The trace sweep, registered unconditionally and deliberately so: it is
@@ -165,7 +165,6 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// posture that retention is a promise about message content. A deployment
 	// that composed capture at all must expire it.
 	addDeclaredWorker[CaptureTraceSweepArgs](reg, &captureTraceSweepWorker{pool: pool})
-	addDeclaredWorker[CaptureTraceSweepWorkspaceArgs](reg, &captureTraceSweepWorkspaceWorker{pool: pool})
 }
 
 // GraphWatchConfig configures the Microsoft Graph subscription-renewal pass.
