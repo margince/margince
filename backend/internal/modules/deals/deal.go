@@ -328,7 +328,8 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	if string(current.Status) != "open" && resultingAmount != nil && (amountMoved || currencyMoved) {
 		// deal_closed_at guarantees ClosedAt on a non-open row.
 		rateBefore, rateDateBefore := frozenBefore(current)
-		if err := s.freezeBaseRate(ctx, tx, p, string(*resultingCurrency), *current.ClosedAt, rateBefore, rateDateBefore); err != nil {
+		if err := s.freezeBaseRate(ctx, tx, p, current.Id, string(*resultingCurrency),
+			*resultingAmount, *current.ClosedAt, rateBefore, rateDateBefore); err != nil {
 			return fmt.Errorf("re-freeze fx for closed deal: %w", err)
 		}
 	}
@@ -408,12 +409,14 @@ const amountField = "amount_minor"
 // closeDateField names the column a slipped forecast moves.
 const closeDateField = "expected_close_date"
 
-// The frozen base-currency pair, which moves together or not at all: a rate
-// without the date it was taken on cannot be reproduced, and a date without a
-// rate converts nothing.
+// The frozen base-currency columns, which move together or not at all: a rate
+// without the date it was taken on cannot be reproduced, a date without a rate
+// converts nothing, and the converted amount is stored beside them because
+// deriving it later would ask every reader to apply both minor-unit scales.
 const (
 	fxRateColumn     = "fx_rate_to_base"
 	fxRateDateColumn = "fx_rate_date"
+	baseAmountColumn = "amount_minor_base"
 )
 
 // missingMoneyHalf names whichever half of the pair was left out.

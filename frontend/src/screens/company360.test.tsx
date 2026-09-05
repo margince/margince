@@ -2258,7 +2258,7 @@ describe("the money slot says its reason once and borrows no figure", () => {
     // The other two doors: the last touch and the calendar, whatever the
     // money slot could or could not read.
     expect(within(region).getByText("Last touch")).toBeTruthy();
-    expect(within(region).getByText("Next")).toBeTruthy();
+    expect(within(region).getByText("Next meeting")).toBeTruthy();
     expect(within(region).getByText("Finance")).toBeTruthy();
   });
 
@@ -2285,7 +2285,7 @@ describe("the money slot says its reason once and borrows no figure", () => {
       }),
     ).toBeTruthy();
     expect(within(region).getByText("Last touch")).toBeTruthy();
-    expect(within(region).getByText("Next")).toBeTruthy();
+    expect(within(region).getByText("Next meeting")).toBeTruthy();
     expect(within(region).getByText("Net invoiced · 12 mo")).toBeTruthy();
     expect(within(region).getByText(/186(\.4)?K/i)).toBeTruthy();
     // "Finance" is the label of a slot that has nothing to report, so it must

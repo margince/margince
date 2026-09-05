@@ -23,6 +23,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func liveTokenCount(t *testing.T, e *revocationEnv, userID ids.UserID) int {
@@ -149,7 +150,14 @@ func TestIssuePasswordLinkRefusesANonAdminAndANonActiveMember(t *testing.T) {
 		t.Fatalf("invite: %v", err)
 	}
 
-	rep := Identity{UserID: member, WorkspaceID: e.admin.WorkspaceID, Roles: []string{"rep"}}
+	// A FULL seat deliberately. An unset seat fails closed to read, and the seat
+	// ceiling sits above RBAC — so a seatless fixture would be refused for the
+	// wrong reason and this assertion would pass without ever reaching the
+	// authority gate it is about.
+	rep := Identity{
+		UserID: member, WorkspaceID: e.admin.WorkspaceID, Roles: []string{"rep"},
+		SeatType: string(principal.SeatFull),
+	}
 	if _, _, err := e.svc.IssuePasswordLink(e.wsCtx(rep), rep, member); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("non-admin issue = %v, want ErrPermissionDenied", err)
 	}

@@ -522,6 +522,7 @@ export const vi = {
   "ref.nameLoadFailed": "Không tải được tên",
   "ref.notInRoster":
     "Hiện đang được giao (không còn trong danh sách người dùng)",
+  "picker.noMatch": "Không có kết quả",
 
   "app.errorTitle": "Màn hình này đã ngừng hoạt động.",
   "app.errorBody": "Hãy thử lại. Nếu vẫn tiếp tục lỗi, hãy tải lại trang.",
@@ -854,10 +855,9 @@ export const vi = {
   "co.strip.lastTouch.theirs": "Họ viết gần nhất",
   "co.strip.lastTouch.ours": "Bạn viết gần nhất",
   "co.strip.lastTouch.never": "Chưa có trao đổi",
-  "co.strip.next": "Tiếp theo",
+  "co.strip.nextMeeting": "Cuộc họp tiếp theo",
   "co.strip.next.none": "Chưa có lịch",
   "co.strip.open.history": "Mở lịch sử",
-  "co.strip.open.tasks": "Mở công việc",
   "co.360.thread": "Những gì đã diễn ra",
   "co.360.threadCount": "Những gì đã diễn ra · {count}",
   "co.360.fullHistory": "Toàn bộ lịch sử",
@@ -2338,6 +2338,9 @@ export const vi = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Chỉ deal đình trệ",
   "deals.filterOwnerMe": "Deal của tôi",
+  "deals.totalsNeedOwnerFilter":
+    "Chỉ phần đã tải — chọn Deal của tôi để xem tổng",
+  "deals.totalsNoTagFilter": "Chỉ phần đã tải — không có tổng khi lọc theo thẻ",
   "deals.filterPartner": "Đối tác",
   "deals.filterPartnerAnyOne": "Mọi đối tác",
   "deals.filterForecast": "Dự báo",
@@ -2450,17 +2453,6 @@ export const vi = {
   "home.pipelinePartial":
     "{count} deal không nằm trong các số này — quyền của bạn không bao gồm chúng.",
   "home.pipelineUnavailable": "Không tải được số liệu này.",
-  "home.asOf": "tính đến {at}",
-  "home.generating": "Đang tổng hợp…",
-  "home.generate": "Lấy tóm tắt hôm nay",
-  "home.noneBody":
-    "Tóm tắt buổi sáng xếp hạng những deal đáng dành giờ đầu tiên — khả năng thắng, doanh thu, thời điểm, đà tiến và độ thân thiết, mỗi yếu tố kèm bằng chứng của nó. Bản tóm tắt được dựng qua đêm nên sẽ sẵn sàng vào sáng mai, khi bạn đã có deal đang mở.",
-  "home.honestShort":
-    "Chỉ {count} deal vượt ngưỡng — danh sách không bao giờ được độn thêm.",
-  "home.overflow":
-    "Đang hiển thị {shown} deal được xếp hạng cao nhất trong {count} deal đạt ngưỡng.",
-  "home.narrativeNoPass":
-    "Hôm nay không có tóm tắt ban đêm — Margince chưa chạy lượt nào cho bản tin này. Thứ tự bên dưới vẫn là của hôm nay.",
   "home.panel.weekly": "Tuần trước",
   "home.weekly.weekOf": "Tuần từ {day}",
   // Tuần tới. Bản tổng kết đã đóng băng nói điều đã xảy ra; đây là phần duy nhất
@@ -2468,7 +2460,6 @@ export const vi = {
   "plan.title": "Lập kế hoạch tuần tới",
   // Phần đầu của danh sách đã xếp hạng, trên trang mở đầu tiên — cùng những
   // dòng mà Danh sách công việc hiển thị, theo thứ tự máy chủ đã quyết định.
-  "brief.donext.title": "Làm tiếp theo",
   // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
   // không do mô hình viết.
   "brief.eyebrow": "Buổi sáng của bạn",
@@ -2498,10 +2489,16 @@ export const vi = {
   "brief.week.quiet":
     "Một tuần yên ắng — không chốt được gì và không có gì chuyển động.",
 
-  "brief.donext.sub": "Một thứ tự, từ danh sách công việc của bạn.",
-  "brief.donext.loading": "Đang đọc những gì đang chờ bạn",
-  "brief.donext.clear": "Hiện không có gì đang chờ bạn.",
-  "brief.donext.rest": "{count} mục khác trong danh sách công việc",
+  "brief.feed.title": "Hôm nay",
+  "brief.feed.sub": "Một thứ tự, quyết định một lần.",
+  "brief.feed.loading": "Đang đọc buổi sáng của bạn",
+  "brief.feed.clear": "Hiện không có gì đang chờ bạn.",
+  "brief.feed.rest": "{count} mục khác trong danh sách công việc",
+  "brief.feed.section.respond_now": "Trả lời ngay",
+  "brief.feed.section.prepare_conversations": "Chuẩn bị cho các cuộc trao đổi",
+  "brief.feed.section.move_revenue": "Thúc đẩy doanh thu",
+  "brief.feed.section.build_pipeline": "Xây dựng pipeline",
+  "brief.feed.section.review_and_repair": "Xem xét và khắc phục",
 
   // Tuần của một nhóm, đóng băng khi tuần khép lại. Hai tuần so sánh được vì
   // không tuần nào dịch chuyển dưới phép so sánh.
@@ -2620,10 +2617,6 @@ export const vi = {
   "home.weekly.outcome.moved": "đã chuyển",
   "home.weekly.outcome.won": "thắng",
   "home.weekly.outcome.lost": "thua",
-  "home.focus.allAbove":
-    "Mọi gợi ý từ đêm qua đã nằm ở trên, trong phần đang chờ bạn.",
-  "home.quietRun":
-    "Sáng nay không có gì vượt ngưỡng. Không bịa ra việc gấp — hãy tận hưởng sự yên tĩnh.",
   "home.act": "Đánh dấu xong",
   "home.dismiss": "Bỏ qua",
   "home.actedState": "đã xử lý",
@@ -2662,7 +2655,6 @@ export const vi = {
   "home.glance.introWeekly": "Đây là tuần bạn vừa khép lại.",
   "home.glance.intro": "Đây là ngày của bạn.",
   "home.panel.decisions": "Đang chờ bạn",
-  "home.panel.focus": "Khi có thời gian",
   "home.panel.overnight": "Qua đêm",
   "home.panel.position": "Vị thế",
   "home.panel.schedule": "Lịch hôm nay",
@@ -3087,6 +3079,7 @@ export const vi = {
   "log.transcriptUploadRejected": "Chỉ chấp nhận tệp .txt.",
   "log.transcriptUploadFailed":
     "Không thể đọc tệp đó — hãy thử dán văn bản thay vào đó.",
+  "log.attendee": "Ai đã tham dự",
   "log.subject": "Tiêu đề",
   "log.body": "Nội dung",
   "log.dueAt": "Ngày đến hạn",
@@ -3278,6 +3271,22 @@ export const vi = {
   "analytics.sections": "Các mục phân tích",
   "analytics.sectionForecast": "Dự báo",
   "analytics.sectionPipeline": "Kênh bán",
+  "analytics.sectionPerformance": "Hiệu suất",
+  "analytics.noClosedDeals": "Chưa có deal nào được chốt.",
+  "analytics.openOutcomeDeals": "Mở các deal {outcome}",
+  "analytics.reportWinLoss": "Thắng và thua",
+  "analytics.reportStageAge": "Thời gian ở giai đoạn",
+  "analytics.outcome": "Kết quả",
+  "analytics.won": "Thắng",
+  "analytics.lost": "Thua",
+  "analytics.baseValue": "Giá trị ({currency})",
+  "analytics.medianDaysToClose": "Số ngày chốt trung vị",
+  "analytics.p75DaysToClose": "Số ngày chốt P75",
+  "analytics.medianDaysInStage": "Số ngày trung vị ở giai đoạn",
+  "analytics.p75DaysInStage": "Số ngày P75 ở giai đoạn",
+  "analytics.tooFewForMedian": "Quá ít để kết luận",
+  "analytics.days": "{days} ngày",
+  "analytics.unknownStage": "Giai đoạn trước đây",
   "analytics.share.open": "Chia sẻ chế độ xem",
   "analytics.share.title": "Chia sẻ chế độ xem này",
   "analytics.share.kindLegend": "Liên kết hiển thị điều gì",
@@ -3309,6 +3318,8 @@ export const vi = {
   "review.needsReview": "Cần xem lại",
   "review.checksIncomplete": "Kiểm tra chưa đầy đủ",
   "review.allSourcesRead": "Đã đọc mọi nguồn.",
+  "review.source.mail": "hộp thư",
+  "review.source.offers": "báo giá",
   "review.sourcesUnread":
     "Chưa đọc: {sources}. Các phát hiện bên dưới chỉ bao gồm những gì kiểm tra được.",
   "review.notCheckedYet":
@@ -7220,7 +7231,7 @@ export const vi = {
   "person.strip.lastOutbound": "Gửi gần nhất",
   "person.strip.reciprocity": "Mức qua lại",
   "person.strip.inOut": "{inbound} vào · {outbound} ra",
-  "person.strip.nextMeeting": "Cuộc họp kế tiếp",
+  "person.strip.nextMeeting": "Cuộc họp tiếp theo",
   "person.strip.never": "Chưa bao giờ",
   "person.strip.today": "Hôm nay",
   "person.strip.yesterday": "Hôm qua",
@@ -7922,6 +7933,7 @@ export const vi = {
     "Đã rời danh sách của bạn. Người phụ trách vẫn thấy nó.",
   "worklist.disposition.done.not_sales": "Đã rời danh sách của mọi người.",
   "worklist.disposition.swipeCancel": "Giữ lại",
+  "worklist.disposition.menu": "Đưa khỏi danh sách",
   "worklist.disposition.undo": "Hoàn tác",
   "worklist.disposition.undoFailed":
     "Không thể hoàn tác. Tin nhắn vẫn nằm ngoài danh sách của bạn.",

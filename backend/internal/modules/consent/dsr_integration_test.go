@@ -113,6 +113,10 @@ func setupDSR(t *testing.T) *dsrEnv {
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
 				"person": {Create: true, Read: true, Update: true, Delete: true},
+				// The subject queue moved off a compound person+admin gate onto
+				// its own object, so an operator working it needs the grant that
+				// names the work rather than one that names people.
+				"privacy_request": {Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

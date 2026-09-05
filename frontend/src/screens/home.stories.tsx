@@ -13,8 +13,6 @@ import {
   NOT_FOUND,
   narratedWeek,
   pipelineRows,
-  quietRun,
-  ranked,
   readingsDay,
   report,
   singles,
@@ -22,7 +20,7 @@ import {
   type WeeklyReview,
   type Worklist,
 } from "./home.fixtures";
-import type { MorningBrief, MorningDigest } from "./home.queries";
+import type { MorningDigest } from "./home.queries";
 import {
   installFetchStub,
   jsonResponse,
@@ -61,7 +59,6 @@ type Frame = {
    *  state that flips the page's order and is never a default worth guessing. */
   approvals: Approval[];
   /** The ranked run, or null for the honest 404 (no run has been made yet). */
-  brief: MorningBrief | null;
   /** The nightly digest, or null for the 404 an installation answers before its
    *  first run. */
   digest?: MorningDigest | null;
@@ -91,7 +88,6 @@ type Frame = {
  */
 function home({
   approvals,
-  brief,
   digest: overnight = digest,
   weekly = narratedWeek,
   pipeline = () => report(pipelineRows),
@@ -117,8 +113,6 @@ function home({
         decided.add(singles[0].id);
         return jsonResponse({ ...singles[0], status: "approved" });
       },
-      "GET /brief": () =>
-        brief ? jsonResponse(brief) : jsonResponse(NOT_FOUND, 404),
       "GET /weekly-reviews": () => jsonResponse({ weeks: [WEEK_START] }),
       "GET /weekly-reviews/latest": () =>
         weekly ? jsonResponse(weekly) : jsonResponse(NOT_FOUND, 404),
@@ -167,20 +161,20 @@ type Story = StoryObj<typeof HomeScreen>;
 // one act's bundle), a ranked queue under them, and the context rail beside.
 // Decisions LEAD, because they are the only thing here with a deadline.
 export const MorningDeck: Story = {
-  render: home({ approvals: [...singles, ...bundle], brief: ranked }),
+  render: home({ approvals: [...singles, ...bundle] }),
 };
 
 // The last card. "0 more behind" is drawn rather than hidden: a reader deciding
 // one at a time is owed the size of what is left, including when it is nothing.
 export const LastCard: Story = {
-  render: home({ approvals: [singles[0]], brief: ranked }),
+  render: home({ approvals: [singles[0]] }),
 };
 
 // The tray, which is the undo the backend does not have: a recorded decision
 // cannot be reversed, so the verdict sits here — locally, nothing sent — until
 // somebody presses commit.
 export const StagedTray: Story = {
-  render: home({ approvals: [...singles], brief: ranked }),
+  render: home({ approvals: [...singles] }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -195,7 +189,7 @@ export const StagedTray: Story = {
 // keeps its card pending, which is what leaves the deck with nothing waiting
 // while the queue still holds something.
 export const DeckCleared: Story = {
-  render: home({ approvals: [singles[0], singles[1]], brief: ranked }),
+  render: home({ approvals: [singles[0], singles[1]] }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -209,32 +203,18 @@ export const DeckCleared: Story = {
   },
 };
 
-// Nothing is waiting, so the ORDER FLIPS: the ranked queue leads and the deck
+// Nothing is waiting, so the ORDER FLIPS: the day's feed leads and the deck
 // stands under it saying so. The question has stopped being "what needs me" and
 // become "what do I do first".
 export const RankedQueueLeads: Story = {
-  render: home({ approvals: [], brief: ranked }),
+  render: home({ approvals: [] }),
 };
 
 // A proposal that ran out of time. The card keeps its place and its content —
 // the reader still needs to know what was proposed — but the Accept control is
 // gone rather than drawn to be refused.
 export const ExpiredCard: Story = {
-  render: home({ approvals: [lapsed], brief: ranked }),
-};
-
-// ── The ranked queue ────────────────────────────────────────────────────────
-
-// The first morning: no run has ever been made, so the page offers to make one
-// instead of drawing an empty queue that looks like a failure.
-export const NoBriefYet: Story = {
-  render: home({ approvals: [], brief: null }),
-};
-
-// A run that ranked nothing. The honest quiet, with no invented urgency —
-// distinct from the frame above, which has no run at all.
-export const QuietRun: Story = {
-  render: home({ approvals: [], brief: quietRun }),
+  render: home({ approvals: [lapsed] }),
 };
 
 // ── The rail ────────────────────────────────────────────────────────────────
@@ -243,7 +223,7 @@ export const QuietRun: Story = {
 // absent rather than a row of zeros: a fabricated count is worse than a missing
 // one, because a reader cannot tell it apart from a real one.
 export const DigestAbsent: Story = {
-  render: home({ approvals: [...singles], brief: ranked, digest: null }),
+  render: home({ approvals: [...singles], digest: null }),
 };
 
 // The one place connector health reaches a reader without visiting Settings. A
@@ -253,7 +233,6 @@ export const DigestAbsent: Story = {
 export const ConnectorUnhealthy: Story = {
   render: home({
     approvals: [...singles],
-    brief: ranked,
     digest: {
       ...digest,
       connectors: [
@@ -277,7 +256,6 @@ export const ConnectorUnhealthy: Story = {
 export const WeeklyWithoutItsSentence: Story = {
   render: home({
     approvals: [],
-    brief: ranked,
     weekly: { ...narratedWeek, narrative: null, narrated_at: null },
   }),
 };
@@ -287,7 +265,6 @@ export const WeeklyWithoutItsSentence: Story = {
 export const WeeklyQuietlyNarrated: Story = {
   render: home({
     approvals: [],
-    brief: ranked,
     weekly: { ...narratedWeek, narrative: null },
   }),
 };
@@ -295,7 +272,6 @@ export const WeeklyQuietlyNarrated: Story = {
 export const OnePanelRefused: Story = {
   render: home({
     approvals: [...singles],
-    brief: ranked,
     pipeline: () =>
       jsonResponse({ title: "Forbidden", code: "forbidden" }, 403),
   }),
@@ -307,7 +283,6 @@ export const OnePanelRefused: Story = {
 export const PipelinePartial: Story = {
   render: home({
     approvals: [],
-    brief: ranked,
     pipeline: () => report(pipelineRows, 4),
   }),
 };

@@ -56,18 +56,6 @@
   gap: var(--space-6);
 }
 
-.home-today-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-/* The honest tail under a ranked queue: how many candidates there were, when
- * the run shows fewer. */
-.home-honesty {
-  color: var(--textSecondary);
-}
-
 .home-error {
   color: var(--danger);
   margin: 0;
@@ -213,27 +201,6 @@
   .glance-count {
     font-size: var(--fs-body);
   }
-}
-
-/* The night's sentence, above the queue it explains. */
-.home-narrative {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin-bottom: var(--space-4);
-}
-
-.home-narrative > p {
-  margin: 0;
-  color: var(--textContent);
-  line-height: 1.5;
-}
-
-/* The honest degrade reads quieter than a real summary: it is an explanation of
-   an absence, not the summary itself, and giving it the same weight would make
-   "nobody looked" compete with the queue for the reader's eye. */
-.home-narrative-absent {
-  color: var(--textMeta);
 }
 
 /* Scope and, for the morning, the moment the queue below was read — the label

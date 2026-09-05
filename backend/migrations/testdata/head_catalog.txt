@@ -1763,7 +1763,7 @@ public.data_subject_request.updated_at timestamp with time zone NOT NULL gen=- d
 public.data_subject_request_pkey CREATE UNIQUE INDEX data_subject_request_pkey ON public.data_subject_request USING btree (id)
 public.deal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal.amount_minor bigint gen=- def=-
-public.deal.amount_minor_base bigint gen=s def=(round(((amount_minor)::numeric * fx_rate_to_base)))::bigint
+public.deal.amount_minor_base bigint gen=- def=-
 public.deal.archived_at timestamp with time zone gen=- def=-
 public.deal.captured_by text NOT NULL gen=- def=-
 public.deal.close_date_provisional boolean NOT NULL gen=- def=false

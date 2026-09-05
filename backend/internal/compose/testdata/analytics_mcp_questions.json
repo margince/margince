@@ -1,0 +1,40 @@
+{
+  "comment": "The canonical persona questions the analytics MCP surface answers deterministically. The exact question string here is THE question — no test may refer to an older draft. Every entry has an executable case in analyticsmcpquestions_integration_test.go, held in both directions by TestEveryCanonicalQuestionHasExecutableProof.",
+  "questions": [
+    {
+      "id": "G01",
+      "persona": "rep",
+      "question": "How much pipeline do I have right now?",
+      "tool": "run_analytics_query",
+      "expects": "An omitted scope resolves to the rep's own deals, never the workspace."
+    },
+    {
+      "id": "G02",
+      "persona": "rep",
+      "question": "Show me the whole company's pipeline by owner.",
+      "tool": "run_analytics_query",
+      "expects": "Refused outright — never quietly narrowed to a population the answer does not name."
+    },
+    {
+      "id": "G03",
+      "persona": "management",
+      "question": "Add our EUR, USD, and VND pipeline and give me one number.",
+      "tool": "run_analytics_query",
+      "expects": "Per-deal conversion to the base currency; a deal with no applicable rate is excluded from the money and still counted, never guessed at rate 1."
+    },
+    {
+      "id": "M04",
+      "persona": "team manager",
+      "question": "How much open pipeline does my team have in each stage right now?",
+      "tool": "run_analytics_query",
+      "expects": "One row per stage, open deals only, the caller's own population — a colleague's deals and closed deals both stay out."
+    },
+    {
+      "id": "M06",
+      "persona": "team manager",
+      "question": "Which stages are taking longer than normal for my team?",
+      "tool": "run_analytics_query",
+      "expects": "Asked under the caller's own lens; a median below the five-value sample floor is null beside an honest count, never one deal's value wearing a statistic's name."
+    }
+  ]
+}

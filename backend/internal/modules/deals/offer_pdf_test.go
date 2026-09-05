@@ -231,6 +231,48 @@ func TestRenderOfferPDF_OmitsBuyerSectionWhenBuyerBlockNil(t *testing.T) {
 	if bytes.Contains(pdfDrawnText(t, withoutBuyer), []byte("Kunde")) {
 		t.Fatalf("a nil buyer block must omit the buyer section entirely:\n%s", withoutBuyer)
 	}
+
+	// A block carrying ONLY our internal id names no buyer, so it draws no
+	// section either. The alternative it replaced was a heading over a bare
+	// UUID: the id identifies the record to us and nothing to the customer
+	// holding the page.
+	idOnly, err := RenderOfferPDF(o, testRenderLines(),
+		map[string]any{"organization_id": "org-1"}, "Margince GmbH", "de-DE", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(pdfDrawnText(t, idOnly), []byte("Kunde")) {
+		t.Fatalf("a buyer block naming nobody must omit the section rather than "+
+			"heading a blank one:\n%s", idOnly)
+	}
+}
+
+// The internal organization id never reaches the page.
+//
+// It used to be the FIRST line of the buyer block, under a hardcoded English
+// "Organization ID: " label on a document translated into the buyer's own
+// language. Nothing failed when it was there, so nothing would fail if it came
+// back; this is that test.
+func TestRenderOfferPDF_NeverPrintsTheInternalOrganizationID(t *testing.T) {
+	o := testRenderOffer(100000, 19000, 119000)
+	rendered, err := RenderOfferPDF(o, testRenderLines(),
+		map[string]any{"organization_id": "org-1", "display_name": "Acme GmbH"},
+		"Margince GmbH", "de-DE", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	drawn := pdfDrawnText(t, rendered)
+	// The buyer IS named — without this the assertions below would pass over a
+	// renderer that drew no buyer section at all.
+	if !bytes.Contains(drawn, []byte("Acme GmbH")) {
+		t.Fatalf("the buyer's name must be on the page:\n%s", drawn)
+	}
+	for _, forbidden := range []string{"org-1", "Organization ID"} {
+		if bytes.Contains(drawn, []byte(forbidden)) {
+			t.Errorf("the offer PDF must not print %q — it identifies the record "+
+				"to us and nothing to the customer:\n%s", forbidden, drawn)
+		}
+	}
 }
 
 // TestRenderOfferPDF_TwoTemplatesWithDistinctLayoutsProduceDifferentBytes

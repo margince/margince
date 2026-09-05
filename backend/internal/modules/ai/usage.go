@@ -96,7 +96,7 @@ func BudgetBand(spent, budget int64) string {
 // configuration (the pipeline-config posture); agent principals are
 // refused upstream by the contract's human-only marker.
 func (m *Meter) UsageReport(ctx context.Context, budget BudgetPolicy, rates *RateStore, from, to time.Time) ([]DayUsage, BudgetStatus, error) {
-	if err := auth.Require(ctx, "automation", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
 		return nil, BudgetStatus{}, err
 	}
 	rawWS, ok := principal.WorkspaceID(ctx)

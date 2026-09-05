@@ -157,7 +157,10 @@ func (h jobHealthHandlers) GetJobHealth(w http.ResponseWriter, r *http.Request) 
 		httperr.Write(w, r, err)
 		return
 	}
-	if err := auth.RequireAdmin(ctx); err != nil {
+	// Queue depth and retry ladders: what an operator on call needs, so ops holds
+	// the read too. RequireHuman above is unchanged — this is an operator surface,
+	// not an agent one.
+	if err := auth.Require(ctx, "job_health", principal.ActionRead); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

@@ -23,15 +23,24 @@ package gates
 // the scales and nothing else would notice.
 //
 // WHAT THIS CANNOT SEE, stated so the next reader does not trust it further
-// than it goes: the SQL spellings of the same rule, in
-// organization_open_pipeline_rollup. Those read
-// currency_minor_digits, the database mirror of the Go digit table, and their
-// agreement with Go is held where it can be: the minor-unit parity test and the
-// one-account-one-number test, both in the integration lane against a live
-// database (backend/internal/compose/integration/minorunits_integration_test.go
-// and openpipelineagreement_integration_test.go). A unit test over source text
-// cannot execute SQL, and pretending otherwise here would be the census that
-// fails short.
+// than it goes: the SQL spellings of the same rule. There are THREE, not one —
+// organization_open_pipeline_rollup, compose.BaseValueSQL and its
+// character-identical twin briefs.briefBaseValueSQL. All three read
+// currency_minor_digits, the database mirror of the Go digit table.
+//
+// Their agreement is held where it can be, in the integration lane against a
+// live database: the minor-unit parity test and the one-account-one-number test
+// for the rollup (minorunits_integration_test.go,
+// openpipelineagreement_integration_test.go), and the scale cases plus the
+// closed-deal freeze for the other two (basecurrencyscale_integration_test.go),
+// whose expected amounts are literal so a scale dropped from either side fails
+// them. The twins are additionally held identical to each other by
+// TestOneSpellingOfADealsBaseValue, which is a text comparison and would pass
+// over two identically wrong copies — that is why the literal-amount cases
+// exist beside it.
+//
+// A unit test over source text cannot execute SQL, and pretending otherwise
+// here would be the census that fails short.
 
 import (
 	"go/ast"

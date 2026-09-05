@@ -558,6 +558,11 @@ export const en = {
   "ref.nameLoadFailed": "Name didn't load",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
 
+  // A record search that ANSWERED and found nothing. Distinct from a search
+  // that has not run: both drew the same empty space before, and a reader
+  // could not tell "nobody here" from a field still thinking.
+  "picker.noMatch": "No match",
+
   // The app-level boundary's fallback. It says what happened and what to do
   // next, and nothing about the error itself: a render throw carries our own
   // internals, which the reader can neither read nor act on. Two sentences,
@@ -917,10 +922,12 @@ export const en = {
   "co.strip.lastTouch.theirs": "They wrote last",
   "co.strip.lastTouch.ours": "You wrote last",
   "co.strip.lastTouch.never": "No exchange yet",
-  "co.strip.next": "Next",
+  // Named for what the card READS. "Next" over a meeting date, on a card whose
+  // door opened the task list, let a company with a due task and no meeting
+  // booked read as a contradiction with itself.
+  "co.strip.nextMeeting": "Next meeting",
   "co.strip.next.none": "Nothing scheduled",
   "co.strip.open.history": "Open history",
-  "co.strip.open.tasks": "Open tasks",
   "co.360.thread": "What happened",
   "co.360.threadCount": "What happened · {count}",
   "co.360.fullHistory": "Full history",
@@ -2399,6 +2406,13 @@ export const en = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Stalled only",
   "deals.filterOwnerMe": "My deals",
+  // Both reasons say "loaded only" rather than naming the sum alone: with no
+  // server aggregate the column's figure is the cards LOADED, and the board
+  // pages on demand, so that number grows as the reader presses Load more.
+  // Naming only the total would leave the count reading as final.
+  "deals.totalsNeedOwnerFilter":
+    "Loaded only — filter to My deals for the total",
+  "deals.totalsNoTagFilter": "Loaded only — no total while a tag filters",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Any partner",
   "deals.filterForecast": "Forecast",
@@ -2520,20 +2534,9 @@ export const en = {
   "home.pipelinePartial":
     "{count} deals are not in these figures — your access does not cover them.",
   "home.pipelineUnavailable": "This figure could not be loaded.",
-  "home.asOf": "as of {at}",
-  "home.generating": "Assembling…",
-  "home.generate": "Get today's brief now",
-  "home.noneBody":
-    "Your morning brief ranks the deals worth your first hour — winnability, revenue, timing, momentum, and warmth, each factor with its evidence. It is assembled overnight, so it is waiting for you tomorrow morning once you have open deals.",
-  "home.honestShort":
-    "Only {count} deals cleared the bar — the queue is never padded.",
-  "home.overflow":
-    "Showing the {shown} highest-ranked of {count} qualifying deals.",
   // The morning brief's own narrative. The "no pass" line is the honest degrade:
   // a run nobody annotated and a night with nothing in it read identically as
   // silence, so the screen says which one this is.
-  "home.narrativeNoPass":
-    "No overnight summary today — Margince did not run a pass on this brief. The ranking below is still today's.",
   // The week just gone. No nav entry of its own: Today is the single door to
   // the work that waits on a person, and this is a view of that same work.
   "home.panel.weekly": "Last week",
@@ -2543,7 +2546,6 @@ export const en = {
   "plan.title": "Plan next week",
   // The head of the ranked queue, on the page a rep opens first. The same rows
   // the Worklist draws, in the order the server decided.
-  "brief.donext.title": "Do next",
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
   "brief.eyebrow": "Your morning",
@@ -2573,10 +2575,16 @@ export const en = {
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet": "A quiet week — nothing closed and nothing moved.",
 
-  "brief.donext.sub": "One order, from your worklist.",
-  "brief.donext.loading": "Reading what waits on you",
-  "brief.donext.clear": "Nothing is waiting on you right now.",
-  "brief.donext.rest": "{count} more on the worklist",
+  "brief.feed.title": "Today",
+  "brief.feed.sub": "One order, decided once.",
+  "brief.feed.loading": "Reading your morning",
+  "brief.feed.clear": "Nothing is waiting on you right now.",
+  "brief.feed.rest": "{count} more on the worklist",
+  "brief.feed.section.respond_now": "Respond now",
+  "brief.feed.section.prepare_conversations": "Prepare conversations",
+  "brief.feed.section.move_revenue": "Move revenue",
+  "brief.feed.section.build_pipeline": "Build pipeline",
+  "brief.feed.section.review_and_repair": "Review and repair",
 
   // A team's week, frozen when it closed. Two weeks compare because neither
   // moves under the comparison.
@@ -2696,10 +2704,6 @@ export const en = {
   "home.weekly.outcome.moved": "moved",
   "home.weekly.outcome.won": "won",
   "home.weekly.outcome.lost": "lost",
-  "home.focus.allAbove":
-    "Everything the night suggested is already above, in what waits on you.",
-  "home.quietRun":
-    "Nothing cleared the bar this morning. No invented urgency — enjoy the quiet.",
   "home.act": "Done",
   "home.dismiss": "Dismiss",
   "home.actedState": "acted",
@@ -2738,7 +2742,6 @@ export const en = {
   "home.glance.introWeekly": "This is the week you just closed.",
   "home.glance.intro": "Here is your day.",
   "home.panel.decisions": "Waiting on you",
-  "home.panel.focus": "Focus when time opens",
   "home.panel.overnight": "Overnight",
   "home.panel.position": "Position",
   "home.panel.schedule": "Today's schedule",
@@ -3157,6 +3160,7 @@ export const en = {
   "log.kindTask": "Task",
   "log.kindMeeting": "Meeting",
   "log.kindCall": "Call",
+  "log.attendee": "Who was there",
   "log.subject": "Subject",
   "log.body": "Details",
   "log.transcriptLabel": "Transcript",
@@ -3364,6 +3368,22 @@ export const en = {
   "analytics.sections": "Analytics sections",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
+  "analytics.sectionPerformance": "Performance",
+  "analytics.noClosedDeals": "No deals have closed yet.",
+  "analytics.openOutcomeDeals": "Open the {outcome} deals",
+  "analytics.reportWinLoss": "Won and lost",
+  "analytics.reportStageAge": "Time in stage",
+  "analytics.outcome": "Outcome",
+  "analytics.won": "Won",
+  "analytics.lost": "Lost",
+  "analytics.baseValue": "Value ({currency})",
+  "analytics.medianDaysToClose": "Median days to close",
+  "analytics.p75DaysToClose": "P75 days to close",
+  "analytics.medianDaysInStage": "Median days in stage",
+  "analytics.p75DaysInStage": "P75 days in stage",
+  "analytics.tooFewForMedian": "Too few to say",
+  "analytics.days": "{days} days",
+  "analytics.unknownStage": "Former stage",
   "analytics.share.open": "Share view",
   "analytics.share.title": "Share this view",
   "analytics.share.kindLegend": "What the link shows",
@@ -3395,6 +3415,12 @@ export const en = {
   "review.needsReview": "Needs review",
   "review.checksIncomplete": "Checks incomplete",
   "review.allSourcesRead": "Every source was read.",
+  // The sources a run reads, named for the reader rather than by the server's
+  // own vocabulary. The unread line printed the wire keys verbatim, so a German
+  // reader was told "mail, offers" in English — words that name a table, not a
+  // thing they would go and fix.
+  "review.source.mail": "the mailbox",
+  "review.source.offers": "offers",
   "review.sourcesUnread":
     "Not read: {sources}. Findings below cover only what could be checked.",
   "review.notCheckedYet":
@@ -8102,6 +8128,7 @@ export const en = {
     "Off your list. Whoever owns it still sees it.",
   "worklist.disposition.done.not_sales": "Off everyone's list.",
   "worklist.disposition.swipeCancel": "Keep it",
+  "worklist.disposition.menu": "Take off the list",
   "worklist.disposition.undo": "Undo",
   "worklist.disposition.undoFailed":
     "That could not be undone. The message is still off your list.",

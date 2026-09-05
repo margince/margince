@@ -27,6 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -35,20 +36,24 @@ import (
 // would be a second copy that could go stale against the accessors.
 type extensionsHandlers struct{}
 
-// ListExtensions (GET /v1/extensions). Admin-only.
+// ListExtensions (GET /v1/extensions). Gated on extension_access.read.
 //
-// The admin check is auth.RequireAdmin, the same gate every other
-// installation-wide admin endpoint takes, and it is taken HERE rather than in a
-// service because there is no service: nothing is read from the database, so
-// there is no store to own the gate. Admin is the right bar even though the
-// answer is identical for every caller and changes only on deploy — it enumerates the installation's internal
-// surface (routes, jobs, unit versions), which is operator information, and the
-// one caller that needs it is the admin role editor.
+// The check is taken HERE rather than in a service because there is no service:
+// nothing is read from the database, so there is no store to own the gate.
+//
+// A grant and not the literal admin role, so an installation can hand the
+// inventory to an operator without handing them member administration with it —
+// admin and ops hold the read by default. The bar is still an operator one even
+// though the answer is identical for every caller and changes only on deploy: it
+// enumerates the installation's internal surface (routes, jobs, unit versions).
+//
+// Read is the only verb it will ever carry. Presence under extensions/ IS the
+// enablement, so there is no runtime toggle for a write to gate.
 //
 // Agents never reach it at all: the operation is `x-agent-access: human-only`,
 // enforced by the generated policy table before this runs.
 func (extensionsHandlers) ListExtensions(w http.ResponseWriter, r *http.Request) {
-	if err := auth.RequireAdmin(r.Context()); err != nil {
+	if err := auth.Require(r.Context(), "extension_access", principal.ActionRead); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

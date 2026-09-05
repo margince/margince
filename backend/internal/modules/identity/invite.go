@@ -16,8 +16,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // InviteUserInput carries the admin-supplied details for a new member. No
@@ -43,8 +43,9 @@ type InviteUserInput struct {
 // The seat is charged from this moment regardless — an invitation occupies a
 // licensed seat, which is what refuseWhenNoSeatIsLeft below is enforcing.
 func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserInput) (ids.UserID, string, error) {
-	if !actor.hasRole(roleAdmin) {
-		return ids.UserID{}, "", apperrors.ErrPermissionDenied
+	ctx, err := admit(ctx, actor, objectUserAdmin, principal.ActionCreate)
+	if err != nil {
+		return ids.UserID{}, "", err
 	}
 	teams, err := validTeamIDs(in.TeamIDs)
 	if err != nil {
@@ -72,6 +73,18 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 		}
 		if roleErr != nil {
 			return roleErr
+		}
+		// After the lookup, so an unknown key still answers errUnknownRole, and
+		// before the insert, so no row exists if the ceiling refuses.
+		//
+		// Without this an invite IS an account takeover in one call: it creates
+		// the user, assigns whatever role the caller named, and returns the raw
+		// set-password token. A delegated user_admin.create holder could invite
+		// themselves an admin and walk in with the token in the response body.
+		// ChangeUserRole carries the same ceiling for the same reason; handing
+		// out a role is handing out a role whichever verb spells it.
+		if err := refuseUnlessCallerMayAssign(ctx, tx, actor, in.Role); err != nil {
+			return err
 		}
 		insErr := tx.QueryRow(ctx,
 			`INSERT INTO app_user (email, password_hash, display_name, status)
