@@ -43,6 +43,11 @@ export type CapabilityExpression =
   | { kind: "always" }
   | { kind: "grant"; object: RbacObject; action: RbacAction }
   | { kind: "availability"; key: SettingsAvailabilityKey }
+  // Whether this BUILD composed any extension unit keeping secrets at `scope`.
+  // A composition fact, not a permission and not a deployment flag: the unit's
+  // settings live on the page below and there is no other route to them, so a
+  // page that ignored this would strand an installation's only way in.
+  | { kind: "units"; scope: UnitSecretScope }
   | { kind: "any"; of: readonly CapabilityExpression[] }
   | { kind: "all"; of: readonly CapabilityExpression[] };
 
@@ -55,6 +60,33 @@ export const reads = (object: RbacObject): CapabilityExpression => ({
 export const available = (
   key: SettingsAvailabilityKey,
 ): CapabilityExpression => ({ kind: "availability", key });
+export const composedUnits = (
+  scope: UnitSecretScope,
+): CapabilityExpression => ({
+  kind: "units",
+  scope,
+});
+
+/**
+ * Where a composed unit keeps its secrets. Mirrored rather than imported: the
+ * extensions registry reaches `@composition/screens` and so pulls React and a
+ * build alias into whatever imports it, which is the one thing this module may
+ * not do — being importable from anywhere is its whole purpose.
+ *
+ * `settingscatalog.units.test.ts` holds the two spellings equal.
+ */
+export type UnitSecretScope = "workspace" | "user";
+
+/**
+ * How the caller answers the composition question.
+ *
+ * Injected rather than read, for the import reason above. `holds` takes it as
+ * an option so the pure table stays evaluable in a test, a story or a script
+ * with no registry at all — and the one caller that has a registry passes it.
+ */
+export type CatalogContext = {
+  composedUnitScopes?: readonly UnitSecretScope[];
+};
 export const anyOf = (
   ...of: readonly CapabilityExpression[]
 ): CapabilityExpression => ({ kind: "any", of });
@@ -78,6 +110,7 @@ export const always: CapabilityExpression = { kind: "always" };
 export function holds(
   expression: CapabilityExpression,
   snapshot: AccessSnapshot,
+  context: CatalogContext = {},
 ): boolean {
   switch (expression.kind) {
     case "always":
@@ -86,10 +119,15 @@ export function holds(
       return grants(snapshot, expression.object, expression.action);
     case "availability":
       return snapshot?.settings_availability?.[expression.key] ?? false;
+    case "units":
+      // Not from the snapshot: which units this binary composed is fixed at
+      // build time and identical for every reader. Absent context means none,
+      // which fails closed the same way every other arm does.
+      return (context.composedUnitScopes ?? []).includes(expression.scope);
     case "any":
-      return expression.of.some((each) => holds(each, snapshot));
+      return expression.of.some((each) => holds(each, snapshot, context));
     case "all":
-      return expression.of.every((each) => holds(each, snapshot));
+      return expression.of.every((each) => holds(each, snapshot, context));
   }
 }
 
@@ -218,7 +256,10 @@ export const SETTINGS_PAGES = [
     requires: anyOf(
       reads("overlay_connection"),
       reads("webhook_subscription"),
-      reads("integrations"),
+      // A composed workspace-scoped unit puts its settings on this page and
+      // nowhere else, so the page has to open for it even when the reader holds
+      // none of the grants above.
+      composedUnits("workspace"),
     ),
   },
   {
@@ -309,6 +350,9 @@ export type SettingsPageId = (typeof SETTINGS_PAGES)[number]["id"];
 /** The pages this snapshot may open, in declaration order. */
 export function visibleSettingsPages(
   snapshot: AccessSnapshot,
+  context: CatalogContext = {},
 ): readonly (typeof SETTINGS_PAGES)[number][] {
-  return SETTINGS_PAGES.filter((page) => holds(page.requires, snapshot));
+  return SETTINGS_PAGES.filter((page) =>
+    holds(page.requires, snapshot, context),
+  );
 }
