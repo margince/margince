@@ -6911,6 +6911,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/magic": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the machinery did, what it needs, what it could not finish, and what it is watching.
+         * @description The receipt for everything that ran without being asked.
+         *
+         *     Automation writes constantly — the lead ladder, close-date hygiene, capture
+         *     linking, enrichment, follow-up proposals — and a rep saw almost none of it. The
+         *     work landed in `audit_log` and in the records themselves, so the product looked
+         *     either idle or spooky: changes appeared with no author a reader could name.
+         *
+         *     FOUR LANES, and the split is what each one ASKS OF THE READER:
+         *
+         *     * `done` — machine actions that already happened. Nothing to decide; the reader
+         *       may disagree, and every line says whether it can be undone and why not when it
+         *       cannot.
+         *     * `needs_you` — a decision waiting. The same staged approvals `/attention` serves,
+         *       in one place with the rest of the machinery's output.
+         *     * `could_not_complete` — work that was approved or scheduled and did not land.
+         *       NOT part of `done`: a failure reported as an achievement is the one thing this
+         *       surface must never do.
+         *     * `watching` — sources and automations whose health an administrator must restore.
+         *
+         *     A RECEIPT, NOT A SECOND INBOX. Nothing here is answered from this endpoint: a
+         *     pending approval is decided where approvals are decided, an undo calls the
+         *     record's own restore route. The lanes report; the surfaces that own each verb
+         *     keep it.
+         *
+         *     `not_shown` is what the read deliberately left out, by kind and count. A machine
+         *     write with no customer-facing meaning — a maintenance sweep, a projection
+         *     refresh — is not Magic, and folding it in would turn internal churn into apparent
+         *     value. Counting it instead means the preview can never imply completeness it does
+         *     not have.
+         *
+         *     Cursor-paginated with a bounded `limit`, over a deterministic
+         *     `occurred_at, id` order, so the five-line preview on the morning page is a page
+         *     rather than a sample.
+         */
+        get: operations["getMagic"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/worklist": {
         parameters: {
             query?: never;
@@ -30496,6 +30548,163 @@ export interface components {
             changed_since_brief?: boolean;
         };
         /**
+         * @description What the machinery did since a reader last looked, in four lanes.
+         *
+         *     The lanes are separate arrays rather than one list with a kind, because they ask
+         *     different things of the reader and a client draws them differently: `done` is a
+         *     receipt, `needs_you` is a queue, `could_not_complete` is a fault to chase,
+         *     `watching` is a source to restore. One list would let a failure sort in beside a
+         *     success.
+         */
+        MagicReceipt: {
+            /**
+             * Format: date-time
+             * @description The instant this read was taken.
+             */
+            as_of: string;
+            /**
+             * Format: date-time
+             * @description The start of the window reported, resolved by the server. A client shows it, because "nothing happened" over an hour and over a day are different claims.
+             */
+            since: string;
+            done: components["schemas"]["MagicLine"][];
+            needs_you: components["schemas"]["MagicLine"][];
+            could_not_complete: components["schemas"]["MagicLine"][];
+            watching: components["schemas"]["MagicLine"][];
+            totals: components["schemas"]["MagicTotals"];
+            page?: components["schemas"]["PageInfo"];
+            /**
+             * @description What this read left out, by kind and count.
+             *
+             *     A machine write with no customer-facing meaning is not Magic, and folding it
+             *     in would turn internal churn into apparent value. Reporting the count instead
+             *     means a preview showing five lines can never imply it is showing everything.
+             */
+            not_shown: components["schemas"]["MagicNotShown"][];
+            /** @description Lanes that could not be read. "All clear" is forbidden while one is here: a lane the reader may not see and a lane with nothing in it are different answers. */
+            sources_unavailable: components["schemas"]["WorklistSourceUnavailable"][];
+        };
+        /**
+         * @description How many each lane holds, over the WINDOW rather than over the page.
+         *
+         *     A preview drawing five lines must be able to say "5 of 23" without paging to find
+         *     out. Reading the count off the array it was handed would report the page as the
+         *     total, which is the shape a capped list takes when nobody carries its real size.
+         */
+        MagicTotals: {
+            done: number;
+            needs_you: number;
+            could_not_complete: number;
+            watching: number;
+        };
+        /** @description One kind of thing this read left out, and how many of it there were. */
+        MagicNotShown: {
+            /**
+             * @description `unadmitted_action` — a machine write whose action carries no customer-facing
+             *     meaning: a maintenance sweep, a projection refresh.
+             *     `unknown_entity_type` — an entity kind this build cannot scope, and therefore
+             *     cannot safely show. Counted rather than served: showing a row this read cannot
+             *     place is showing a row it cannot prove the reader may see.
+             *     `out_of_scope` — a row about a record outside the reader's own scope. Counted
+             *     so the total is honest, and never named.
+             * @enum {string}
+             */
+            reason: "unadmitted_action" | "unknown_entity_type" | "out_of_scope";
+            count: number;
+        };
+        /**
+         * @description One thing the machinery did, needs, could not finish, or is watching.
+         *
+         *     EVERY LINE IS ATTRIBUTABLE. `actor` names who acted and on whose behalf; a change
+         *     with no author a reader can name is the spookiness this surface exists to remove.
+         */
+        MagicLine: {
+            /**
+             * Format: uuid
+             * @description The underlying row's id — an audit entry, an approval.
+             */
+            id: string;
+            /** Format: date-time */
+            occurred_at: string;
+            /**
+             * @description Which lane this line belongs to. Carried on the line as well as by the array it sits in, so a client that flattens the four for a preview does not lose which one a line came from.
+             * @enum {string}
+             */
+            lane: "done" | "needs_you" | "could_not_complete" | "watching";
+            summary: components["schemas"]["MagicSentence"];
+            entity?: components["schemas"]["MagicEntityRef"];
+            /** @description The fields this change moved, as they were. MASKED to what the reader may see, through the same field mask the record's own history uses — a receipt is not a way around the boundary the record keeps. */
+            before?: {
+                [key: string]: unknown;
+            };
+            /** @description The same fields, as they are now, under the same mask. */
+            after?: {
+                [key: string]: unknown;
+            };
+            /** @description What this means for the reader, where the action has one to state. A key, not a sentence: the product ships three languages. */
+            consequence?: string;
+            undo?: components["schemas"]["MagicUndo"];
+            actor: components["schemas"]["MagicActor"];
+        };
+        /**
+         * @description What happened, as a key and the values to fill it with.
+         *
+         *     Typed rather than composed on the server for the reason every other sentence in
+         *     this contract is: the product ships three languages, and a sentence assembled here
+         *     reaches a German reader in English.
+         */
+        MagicSentence: {
+            key: string;
+            values?: {
+                [key: string]: string;
+            };
+        };
+        /** @description The record this line is about, where it names one. */
+        MagicEntityRef: {
+            type: string;
+            /** Format: uuid */
+            id: string;
+            /** @description The record's own name, where the reader may see it. Absent rather than invented: a line naming a record it cannot label still says what happened. */
+            label?: string;
+        };
+        /**
+         * @description Who acted, and on whose behalf.
+         *
+         *     `on_behalf_of` is the whole reason this is a shape rather than a string. The
+         *     auto-apply sweep binds a rep's own authority to do what that rep had already
+         *     agreed to, and a receipt saying only "agent" would hide which rep's standing
+         *     decision it was acting on.
+         */
+        MagicActor: {
+            /**
+             * @description Human actors never appear here. This surface reports what ran WITHOUT being asked; a person's own change is their own, and reporting it back to them as machinery would be a lie about who did it.
+             * @enum {string}
+             */
+            type: "agent" | "system" | "connector";
+            id: string;
+            /**
+             * Format: uuid
+             * @description The seat whose authority the action was taken under, where it bound one.
+             */
+            on_behalf_of?: string;
+        };
+        /**
+         * @description Whether this change can be taken back, and why not when it cannot.
+         *
+         *     A greyed control with no reason is the shape this replaces. The reasons are
+         *     compose/undoability's own vocabulary rather than a second set written here.
+         */
+        MagicUndo: {
+            undoable: boolean;
+            /** @description Why not, when it is not. Absent when it is. */
+            reason?: string;
+            /**
+             * Format: uuid
+             * @description The entry a restore would name. Present exactly when `undoable` is true — a client that had one without the other would draw a control with nothing to send.
+             */
+            audit_id?: string;
+        };
+        /**
          * @description How the deal behind a row is STANDING, beside the move that acts on it.
          *
          *     The move says what to do; this says what the reader is walking into. A row
@@ -42178,6 +42387,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Attention"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getMagic: {
+        parameters: {
+            query?: {
+                /** @description The instant to report from. Absent means the acting rep's last brief cutoff, and 24 hours where there is no brief — a window the reader has not already seen, rather than a fixed one that repeats what they read this morning. */
+                since?: string;
+                limit?: number;
+                /** @description The `next_cursor` of a previous page. */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The machinery's receipt. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MagicReceipt"];
                 };
             };
             401: components["responses"]["Unauthorized"];
