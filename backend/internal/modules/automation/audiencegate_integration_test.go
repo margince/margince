@@ -419,3 +419,36 @@ func TestTheAudienceGateDoesNotInheritTheEnginesSystemPrincipal(t *testing.T) {
 			"reads every row, so it admits every firing while looking like a gate")
 	}
 }
+
+// The honest race: an activity erased or archived between the firing and this
+// check. It is not an outage and must not be retried as one — the row is not
+// there to derive from, so the firing is refused and says which of the two
+// refusals it was.
+//
+// Reachable rather than theoretical: an event is queued when the message
+// lands and this gate runs when the engine reaches it, and erasure destroys
+// rows on its own schedule in between.
+func TestAnOwnerlessFiringOnAMessageThatIsGoneIsBlocked(t *testing.T) {
+	fx := setupAutomationDB(t)
+	applyCalls := 0
+	handler := scriptedWorkflow{
+		name: "system_seeded",
+		apply: func(workflow.Event) (workflow.RunResult, error) {
+			applyCalls++
+			return workflow.RunResult{}, nil
+		},
+	}
+	fx.seedAutomation(t, handler.name)
+
+	engine := NewWorkflowEngine(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)), nil)
+	engine.RegisterWorkflow(handler)
+
+	// An id no row carries: the message this fired on is gone.
+	if err := engine.HandleEvent(context.Background(), activityEventFor(ids.NewV7())); err != nil {
+		t.Fatalf("HandleEvent: %v — a missing row is a refusal, not an error to retry", err)
+	}
+	if applyCalls != 0 {
+		t.Errorf("Apply called %d times, want 0 — there was no message left to derive content from",
+			applyCalls)
+	}
+}
