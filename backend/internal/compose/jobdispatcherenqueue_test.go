@@ -24,7 +24,13 @@ import (
 // and the enqueue door itself is held separately, by the generated closed
 // union that refuses an undeclared args type and by forbidigo's ban on a
 // direct river.AddWorker.
-const dispatcherLiteralFloor = 18
+// FALLING WITH THE COLLAPSE. ADR-0103 is retiring the workspace dispatchers
+// one batch at a time, so this number goes down as the pair count does; it
+// bottoms out at the fan-outs that stay, which are the ones over a CONNECTION
+// or a BUILD rather than a workspace. It is a floor and not an equality for
+// that reason — it stops the walk passing on nothing without pinning a number
+// that a sanctioned retirement has to come back and edit.
+const dispatcherLiteralFloor = 15
 
 // periodicForArgs answers every composite literal this package's own sources
 // hand to periodicFor, keyed by node so the second walk can ask of a literal it

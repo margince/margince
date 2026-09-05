@@ -36,7 +36,7 @@ func TestDispatchWithEnqueuesTheWholeFleetInOneInsert(t *testing.T) {
 		return nil
 	}
 
-	if err := dispatchWith(context.Background(), fleet, insert, workspaceSweepOpts(CloseDateWorkspaceArgs{}.Kind()), closeDateWorkspaceArgsFor); err != nil {
+	if err := dispatchWith(context.Background(), fleet, insert, workspaceSweepOpts(SignalScanWorkspaceArgs{}.Kind()), signalScanWorkspaceArgsFor); err != nil {
 		t.Fatalf("dispatching a healthy fleet: %v", err)
 	}
 	if calls != 1 {
@@ -60,7 +60,7 @@ func TestDispatchWithFailsTheDispatcherWhenTheInsertIsRefused(t *testing.T) {
 	refused := errors.New("insert refused")
 	insert := func(context.Context, []river.InsertManyParams) error { return refused }
 
-	err := dispatchWith(context.Background(), fleet, insert, workspaceSweepOpts(CloseDateWorkspaceArgs{}.Kind()), closeDateWorkspaceArgsFor)
+	err := dispatchWith(context.Background(), fleet, insert, workspaceSweepOpts(SignalScanWorkspaceArgs{}.Kind()), signalScanWorkspaceArgsFor)
 	if err == nil {
 		t.Fatal("a refused fan-out must surface, so the dispatcher row fails and the tick retries")
 	}
@@ -77,7 +77,7 @@ func TestDispatchWithEnqueuesNothingForAnEmptyFleet(t *testing.T) {
 		called = true
 		return nil
 	}
-	if err := dispatchWith(context.Background(), nil, insert, workspaceSweepOpts(CloseDateWorkspaceArgs{}.Kind()), closeDateWorkspaceArgsFor); err != nil {
+	if err := dispatchWith(context.Background(), nil, insert, workspaceSweepOpts(SignalScanWorkspaceArgs{}.Kind()), signalScanWorkspaceArgsFor); err != nil {
 		t.Fatalf("an empty fleet is not a failure: %v", err)
 	}
 	if called {
@@ -267,8 +267,8 @@ func TestOneOffChildOptsRefusesAKindWhoseOptsItDoesNotOwn(t *testing.T) {
 	oneOffChildOpts(TelegramPollArgs{}.Kind()) // opts_owner: args
 }
 
-func closeDateWorkspaceArgsFor(ws ids.UUID) river.JobArgs {
-	return CloseDateWorkspaceArgs{Workspace: ws}
+func signalScanWorkspaceArgsFor(ws ids.UUID) river.JobArgs {
+	return SignalScanWorkspaceArgs{Workspace: ws}
 }
 
 // TestDispatchWithMarksEveryChildAsOneWorkspacesShareOfAFleetPass — the
@@ -288,7 +288,7 @@ func TestDispatchWithMarksEveryChildAsOneWorkspacesShareOfAFleetPass(t *testing.
 	fleet := []ids.UUID{ids.NewV7(), ids.NewV7()}
 
 	if err := dispatchWith(context.Background(), fleet, insert,
-		workspaceSweepOpts(CloseDateWorkspaceArgs{}.Kind()), closeDateWorkspaceArgsFor); err != nil {
+		workspaceSweepOpts(SignalScanWorkspaceArgs{}.Kind()), signalScanWorkspaceArgsFor); err != nil {
 		t.Fatalf("dispatchWith: %v", err)
 	}
 
@@ -311,7 +311,7 @@ func TestDispatchWithMarksEveryChildAsOneWorkspacesShareOfAFleetPass(t *testing.
 // it in place would accumulate one tag per workspace on a struct the caller
 // still owns.
 func TestTheFanOutTagDoesNotMutateTheCallersInsertOpts(t *testing.T) {
-	opts := workspaceSweepOpts(CloseDateWorkspaceArgs{}.Kind())
+	opts := workspaceSweepOpts(SignalScanWorkspaceArgs{}.Kind())
 	// Spare CAPACITY is the case a length check cannot see: append would
 	// write into the caller's own backing array and leave len unchanged, so
 	// the aliasing this test exists to catch would go unnoticed.
@@ -322,7 +322,7 @@ func TestTheFanOutTagDoesNotMutateTheCallersInsertOpts(t *testing.T) {
 
 	for range 3 {
 		if err := dispatchWith(context.Background(), []ids.UUID{ids.NewV7()}, insert, opts,
-			closeDateWorkspaceArgsFor); err != nil {
+			signalScanWorkspaceArgsFor); err != nil {
 			t.Fatalf("dispatchWith: %v", err)
 		}
 	}

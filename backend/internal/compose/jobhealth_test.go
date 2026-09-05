@@ -226,11 +226,14 @@ func TestTheUntenantedArmResolvesItsKindsFromTheDeclaredRole(t *testing.T) {
 			want = append(want, kind)
 		}
 	}
-	// A vacuous pass is the failure mode of any derived gate. The contract
-	// declares 24 dispatchers today; the floor sits below that so retiring a
-	// pass does not drag the gate along, while a filter that matched nothing
-	// still trips it.
-	if len(want) < 20 {
+	// A vacuous pass is the failure mode of any derived gate. The floor sits
+	// below the number the contract declares, so retiring a pass does not drag
+	// the gate along, while a filter that matched nothing still trips it.
+	//
+	// It falls with the collapse: ADR-0103 is retiring the workspace
+	// dispatchers, and what is left at the end is the fan-outs over a
+	// CONNECTION or a BUILD, which stay.
+	if len(want) < 15 {
 		t.Fatalf("the contract declares only %d dispatchers; the filter is not resolving them", len(want))
 	}
 
