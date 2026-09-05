@@ -31,6 +31,13 @@ func readerAt(tier principal.RowScope) context.Context {
 // A rep sees their own work. The default matters more than it looks: an admin
 // account can read every deal in the installation, and a queue that showed all
 // of them would hand a rep several hundred colleagues' rows and call it a day.
+//
+// EVERY tier, managers included. A design proposed landing a manager on their
+// team's exceptions instead, on the reasoning that a manager's job is the team;
+// it was declined, and this test is what holds the decision. A manager is also
+// a seller — their own promises and their own buyers are waiting too — and a
+// queue that opened on somebody else's work would bury that behind a switch.
+// The team view is a scope this reader can reach, not the one they land in.
 func TestEveryReaderDefaultsToTheirOwnWork(t *testing.T) {
 	for _, tier := range []principal.RowScope{principal.RowScopeOwn, principal.RowScopeTeam, principal.RowScopeAll} {
 		scope, err := resolveScope(readerAt(tier), "")

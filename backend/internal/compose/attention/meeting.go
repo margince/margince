@@ -39,6 +39,16 @@ import (
 // The brief itself is still its own surface with its own cited sections. This
 // names the way in; a queue that tried to summarise it here would be a second
 // answer to "prepare me for this".
+//
+// It offers no OUTCOME either, and that is the same fact rather than a second
+// gap. Recording what a meeting came to is a write on the activity —
+// `meeting_status` on PATCH /activities/{id} takes booked, held, no_show and
+// canceled, and the log-activity screen already sends `held` — so the write
+// exists and it is the row that has nowhere to put it: the card's subject is a
+// timeline entry with no page, which is why it carries no `open`. Giving the
+// outcome a verb here means either a control that answers inline, the way the
+// approval card does, or a destination for an activity that has none. Both are
+// larger than wiring, and neither is decided.
 func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 	subject := meeting.Subject
 	starts := meeting.StartsAt
