@@ -42,6 +42,13 @@ import (
 // that will own it lands with the preference centre. The row shape is the one
 // liveSuppression reads, and when that writer arrives this helper is what
 // should be repointed at it.
+//
+// decided_by_level is named rather than defaulted, because the column has no
+// default: the migration that added it dropped the scaffolding one on purpose,
+// so that a writer states who decided or the INSERT fails where its author can
+// see it. 'subject' is what this row IS — a marketing objection is the person's
+// own act under Art. 21, the one tier no seat in the installation may lift —
+// and it is the level that migration's own backfill gives the same kind.
 func suppressPerson(t *testing.T, e *apptest.AppEnv, personID string) {
 	t.Helper()
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
