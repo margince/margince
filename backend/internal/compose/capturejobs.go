@@ -366,37 +366,16 @@ func (CounterpartyVerdictArgs) FleetWide() {}
 // never costs a verdict that was already paid for — the rows it missed are
 // picked up by the next tick, because the backlog is a query, not a queue this
 // worker holds.
+// It runs ALL of one workspace's stages, in dependency order, inside ONE job.
+// The stages are not independent — retiring puts a stranded row in front of the
+// review queue, reconciling declines keeps staging from re-asking an answered
+// question, and ageing out runs after staging so a row whose window closed this
+// tick has had its last chance — so splitting them into separate jobs per
+// workspace would break the ordering the pass depends on.
+//
+// One worker where there were two (ADR-0103).
 type counterpartyVerdictWorker struct {
-	pool *pgxpool.Pool
-}
-
-func (w *counterpartyVerdictWorker) Work(ctx context.Context, _ *river.Job[CounterpartyVerdictArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(CounterpartyVerdictWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return CounterpartyVerdictWorkspaceArgs{Workspace: ws} }))
-}
-
-// CounterpartyVerdictWorkspaceArgs runs one workspace's verdict pass.
-type CounterpartyVerdictWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (CounterpartyVerdictWorkspaceArgs) Kind() string {
-	return "capture_counterparty_verdict_workspace"
-}
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a CounterpartyVerdictWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// counterpartyVerdictWorkspaceWorker runs ALL of one workspace's stages, in
-// dependency order, inside ONE job. The stages are not independent — retiring
-// puts a stranded row in front of the review queue, reconciling declines keeps
-// staging from re-asking an answered question, and ageing out runs after
-// staging so a row whose window closed this tick has had its last chance —
-// so splitting them into separate jobs per workspace would break the ordering
-// the pass depends on.
-type counterpartyVerdictWorkspaceWorker struct {
+	pool   *pgxpool.Pool
 	engine *CounterpartyVerdictEngine
 	// purger destroys personal mail past its window. Nil in a role with no
 	// object store, and the stage is then skipped rather than half-done.
@@ -407,11 +386,12 @@ type counterpartyVerdictWorkspaceWorker struct {
 	log           *slog.Logger
 }
 
-func (w *counterpartyVerdictWorkspaceWorker) Work(ctx context.Context, job *river.Job[CounterpartyVerdictWorkspaceArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+func (w *counterpartyVerdictWorker) Work(ctx context.Context, _ *river.Job[CounterpartyVerdictArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.judgeWorkspace))
+}
+
+func (w *counterpartyVerdictWorker) judgeWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	// The judging pass runs whether or not a model is composed, because not all
 	// of it needs one: an owner's own decision and a role mailbox are answered
 	// from the ledger and the address, and skipping the whole stage left those
@@ -425,30 +405,30 @@ func (w *counterpartyVerdictWorkspaceWorker) Work(ctx context.Context, job *rive
 	// hidden must be redacted on schedule — turning AI off is not consent to
 	// retain the content of messages the workspace already decided were noise.
 	if err := w.engine.RunWorkspace(wsCtx, 0); err != nil {
-		return jobs.FaultContext(ctx, err)
+		return err
 	}
 	if err := w.engine.ReconcileLedgerWorkspace(wsCtx); err != nil {
-		return jobs.FaultContext(ctx, err)
+		return err
 	}
 	if err := w.engine.StageReviewsWorkspace(wsCtx, 0); err != nil {
-		return jobs.FaultContext(ctx, err)
+		return err
 	}
 	// After staging, not before: a row whose window closed this tick has had its
 	// last chance to be offered, and closing it first would withdraw an offer
 	// that was about to be re-staged in the same pass.
 	if err := w.engine.AgeOutStaleReviewsWorkspace(wsCtx, capture.UnsureReviewWindow); err != nil {
-		return jobs.FaultContext(ctx, err)
+		return err
 	}
 	if err := w.engine.HideNoiseStragglersWorkspace(wsCtx); err != nil {
-		return jobs.FaultContext(ctx, err)
+		return err
 	}
 	if err := w.engine.RedactNoiseWorkspace(wsCtx, capture.NoiseUndoWindow, 0); err != nil {
-		return jobs.FaultContext(ctx, err)
+		return err
 	}
 	// After the stages that MOVE the ledger, so a backlog this pass just cleared
 	// is not reported as stalled on its way out.
 	if err := w.engine.NoticeBacklogStalledWorkspace(wsCtx, w.backlogNotice); err != nil {
-		return jobs.FaultContext(ctx, err)
+		return err
 	}
 	// Last, and after redaction: a `personal` verdict destroys rather than
 	// hides, so it is the most irreversible thing this pass does and it runs
@@ -458,11 +438,11 @@ func (w *counterpartyVerdictWorkspaceWorker) Work(ctx context.Context, job *rive
 	}
 	destroyed, err := w.purger.SweepPersonalMail(wsCtx, capture.DefaultPersonalPurgeWindows())
 	if err != nil {
-		return jobs.FaultContext(ctx, err)
+		return err
 	}
 	if destroyed > 0 && w.log != nil {
 		w.log.InfoContext(ctx, "counterparty verdict: destroyed personal mail past its window",
-			"workspace", job.Args.Workspace.String(), "messages", destroyed)
+			"workspace", workspace.String(), "messages", destroyed)
 	}
 	return nil
 }
