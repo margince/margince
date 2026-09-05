@@ -8,6 +8,7 @@ import {
   formatDayMonth,
   formatDuration,
   formatMoney,
+  formatMoneyCompact,
   formatMoneyOrAbsent,
   formatNumber,
   formatSignedMoney,
@@ -79,6 +80,47 @@ describe("money formatting (B-EP09.17)", () => {
 
   it("still scales two-decimal currencies under vi", () => {
     expect(formatMoney(128_400, "EUR", "vi")).toBe("1.284,00\u00a0€");
+  });
+});
+
+// The KPI-slot formatter had no test of its own, and that is how it came to
+// render every round figure with a digit it had nothing to put in.
+// `maximumFractionDigits: 1` with no minimum leaves the minimum to Intl, whose
+// default under `style: "currency"` is the currency's own digit count, and
+// ECMA-402 only clamps that DOWN to the maximum — `min(2, 1)` is 1. So "at most
+// one digit" resolved to EXACTLY one, and €420,000 drew "€420.0k".
+//
+// Deterministic, not environmental: the clamp is specified, so every reader saw
+// the same wrong figure rather than some seeing it. That is what made the
+// screen test above it fail identically on an idle machine and a loaded one.
+//
+// EXACT strings, because the assertion shape is what let it run unnoticed:
+// `toContain("420")` is satisfied by "€420k", by "€420.0k" AND by the
+// uncompacted "€420,000.00", so it could not tell the three apart.
+describe("a money figure abbreviated for a KPI slot", () => {
+  it("drops a decimal a round figure does not need", () => {
+    expect(formatMoneyCompact(42_000_000, "EUR", "en")).toBe("€420k");
+  });
+
+  // The maximum earns its keep here: rounded to whole thousands these two
+  // figures are the same number on the page.
+  it("keeps the decimal that tells two figures apart", () => {
+    expect(formatMoneyCompact(18_640_000, "EUR", "en")).toBe("€186.4k");
+    expect(formatMoneyCompact(18_690_000, "EUR", "en")).toBe("€186.9k");
+  });
+
+  // Below the threshold the long form is no wider and carries every digit, so
+  // abbreviating buys nothing — and the currency's own decimals go with it,
+  // because "€8,332.00" is what the slot has no room for.
+  it("stays exact under ten thousand", () => {
+    expect(formatMoneyCompact(833_200, "EUR", "en")).toBe("€8,332");
+  });
+
+  // The scale is the SERVER's ISO table, not Intl's CLDR one. VND carries no
+  // minor unit, so 420,000 minor units is ₫420k; dividing by Intl's count
+  // instead would draw ₫4.2k, a figure the record does not hold.
+  it("abbreviates on the stored scale, not Intl's own count", () => {
+    expect(formatMoneyCompact(420_000, "VND", "en")).toBe("₫420k");
   });
 });
 
