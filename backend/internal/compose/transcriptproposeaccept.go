@@ -16,11 +16,13 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -71,7 +73,7 @@ func transcriptProposalEffect(svc *approvals.Service, store *activities.Store) a
 		sourceSystem := transcriptProposalSourceSystem
 		sourceID := approvalID.String()
 		return svc.RedeemAndApply(ctx, approvalID, TranscriptProposalKind, diffHash, func(tx pgx.Tx) error {
-			_, _, err := store.LogActivityTx(execCtx, tx, activities.LogActivityInput{
+			in := activities.LogActivityInput{
 				Kind:         "task",
 				Subject:      &subject,
 				Body:         &body,
@@ -79,10 +81,75 @@ func transcriptProposalEffect(svc *approvals.Service, store *activities.Store) a
 				SourceID:     &sourceID,
 				Source:       transcriptProposalSourceSystem,
 				Links:        proposal.Links,
-			})
+			}
+			if err := stampTranscriptDue(ctx, tx, &in, proposal.DueDate); err != nil {
+				return err
+			}
+			_, _, err := store.LogActivityTx(execCtx, tx, in)
 			return err
 		})
 	}
+}
+
+// stampTranscriptDue puts the day a transcript stated onto the task, as the
+// moment that day ENDS in the installation's own zone.
+//
+// End of day rather than its start, because a deadline is the last moment the
+// thing is still on time: a task due "8 September" filed at that day's midnight
+// is overdue for the whole of the 8th, which is not what anybody in the meeting
+// agreed to. It is the same rule the composer's own date box applies when a rep
+// types a due date by hand.
+//
+// The INSTALLATION's zone, not the decider's: a task's due day is a fact about
+// the record, read back by colleagues in other places, and a deadline that fell
+// on a different day depending on who opened it would be two deadlines.
+//
+// A day that will not parse is an ERROR rather than a silent skip: it means a
+// reviewer edited the payload into something acceptance cannot read, and
+// quietly creating an undated task would hide that from them.
+func stampTranscriptDue(ctx context.Context, tx pgx.Tx, in *activities.LogActivityInput, day string) error {
+	// An undated next step leaves DueAt unset, which is what "nobody said when"
+	// looks like on the task. Expressed by not setting the field rather than by
+	// answering a nil instant, so there is one reading of "no deadline" here
+	// instead of two.
+	if day == "" {
+		return nil
+	}
+	zone, err := identity.TimezoneOf(ctx, tx)
+	if err != nil {
+		return err
+	}
+	loc, err := time.LoadLocation(zone)
+	if err != nil {
+		return fmt.Errorf("compose: installation timezone %q: %w", zone, err)
+	}
+	parsed, err := time.ParseInLocation(time.DateOnly, day, loc)
+	if err != nil {
+		return fmt.Errorf(
+			"compose: transcript proposal due date %q is not a date — write it as YYYY-MM-DD: %w",
+			day, err)
+	}
+	// The last second of the named day.
+	//
+	// NOT the same instant the web composer's own date box produces, and the
+	// difference is deliberate. format/calendarday.dueInstant resolves the day
+	// in the BROWSER's zone, because a rep typing a due date is setting a
+	// deadline for themselves. This one resolves in the installation's, for the
+	// reason above: a transcript's deadline is a record fact read back by
+	// colleagues elsewhere. A rep far from the installation's zone will see the
+	// two land an hour or more apart, and on the far side of midnight, a day
+	// apart. Making them agree means deciding which of the two readings a due
+	// date IS, and that is a product question rather than a bug in either.
+	//
+	// Built from the day's OWN parts rather than by adding a day and taking a
+	// second back. A local day is not always 24 hours: on Europe/Berlin's
+	// spring-forward day that arithmetic lands at 00:59 the NEXT morning, so a
+	// task due the 29th would be due the 30th, and on the autumn day it lands
+	// an hour early. Naming 23:59:59 in the zone asks for the moment rather
+	// than computing a duration towards it.
+	due := time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 23, 59, 59, 0, loc).UTC()
+	in.DueAt = &due
+	return nil
 }
 
 // transcriptTaskBody says where the task came from, in the terms the rep can

@@ -518,3 +518,115 @@ func TestARepWhoMayNotAddToTheTimelineCannotStartAReading(t *testing.T) {
 		t.Fatal("a caller who could not accept any outcome of the reading has nothing to gain from starting it")
 	}
 }
+
+// datedReply is groundedReply with the deadline the transcript stated.
+func datedReply(t *testing.T, line int, due string) string {
+	t.Helper()
+	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
+		"summary": "Send the revised pricing", "owner": "Priya",
+		"due_date": due, "source_lines": []int{line}, "confidence": 0.9,
+	}}})
+	if err != nil {
+		t.Fatalf("building the model reply: %v", err)
+	}
+	return string(raw)
+}
+
+// A deadline stated in the meeting becomes the task's own date.
+//
+// It did not. The proposal carried the day in its title and nothing else, so
+// the accepted task read "No date" on the contact and on the company while its
+// own subject named the eighth — a task nobody would be reminded about, whose
+// text said when it was due.
+//
+// The instant is the END of the named day in the installation's zone: a task
+// due "the 8th" filed at that day's midnight is overdue for the whole of the
+// 8th, which is not what anybody in the meeting agreed to.
+func TestAStatedDeadlineBecomesTheTasksDueDate(t *testing.T) {
+	e := setupTranscript(t)
+	// The zone is PINNED rather than read back out of settings. Reading it
+	// back would compare the conversion against itself: a broken conversion
+	// and a broken read agree, and the harness runs in UTC where the two are
+	// the same answer anyway.
+	e.WsExec(t, `UPDATE setting SET value = '"Europe/Berlin"'::jsonb
+		WHERE key = 'installation.timezone'`)
+	read := e.read(t, cannedBrain{reply: datedReply(t, 3, "2026-09-08")})
+	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
+	if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
+		t.Fatalf("approving the proposal: %v", err)
+	}
+
+	due := e.wsString(t, `SELECT coalesce(to_char(due_at AT TIME ZONE 'Europe/Berlin',
+		'YYYY-MM-DD HH24:MI:SS'), '') FROM activity
+		WHERE kind = 'task' ORDER BY created_at DESC LIMIT 1`)
+	if due == "" {
+		t.Fatal("the task carries no due date, so the deadline lives only in its " +
+			"title — which is the state a reader sees as \"No date\"")
+	}
+	if due != "2026-09-08 23:59:59" {
+		t.Errorf("the task is due %q, want the end of 8 September in the "+
+			"installation's own zone", due)
+	}
+}
+
+// A next step nobody dated carries no date, rather than today's.
+//
+// The common case, and the one an invented deadline would corrupt: a task due
+// the day it was created is overdue tomorrow, and nobody in the meeting agreed
+// to that either.
+func TestAnUndatedNextStepCarriesNoDeadline(t *testing.T) {
+	e := setupTranscript(t)
+	read := e.read(t, cannedBrain{reply: datedReply(t, 3, "")})
+	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
+	if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
+		t.Fatalf("approving the proposal: %v", err)
+	}
+
+	dated := e.WsCount(t, `SELECT count(*) FROM activity
+		WHERE kind = 'task' AND due_at IS NOT NULL`)
+	if dated != 0 {
+		t.Errorf("%d task(s) carry a due date the transcript never stated", dated)
+	}
+}
+
+// A deadline on a day that is not 24 hours long still means that day.
+//
+// The instant was built by adding a day and taking a second back, which is
+// wrong exactly twice a year: on Europe/Berlin's spring-forward day the local
+// day is 23 hours, so the arithmetic landed at 00:59 the NEXT morning and a
+// task due the 29th was due the 30th. The autumn day is 25 hours and it landed
+// an hour early.
+//
+// Both boundaries, because they fail in opposite directions and a fix for one
+// can leave the other.
+func TestADeadlineOnADaylightSavingBoundaryStaysOnItsOwnDay(t *testing.T) {
+	for _, c := range []struct {
+		name, day string
+	}{
+		{"spring forward, a 23-hour day", "2026-03-29"},
+		{"autumn back, a 25-hour day", "2026-10-25"},
+		{"an ordinary 24-hour day", "2026-09-08"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			e := setupTranscript(t)
+			// A zone that actually observes daylight saving. The harness runs
+			// in UTC, where this defect cannot appear at all.
+			e.WsExec(t, `UPDATE setting SET value = '"Europe/Berlin"'::jsonb
+				WHERE key = 'installation.timezone'`)
+
+			read := e.read(t, cannedBrain{reply: datedReply(t, 3, c.day)})
+			approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
+			if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
+				t.Fatalf("approving the proposal: %v", err)
+			}
+
+			due := e.wsString(t, `SELECT to_char(due_at AT TIME ZONE 'Europe/Berlin',
+				'YYYY-MM-DD HH24:MI:SS') FROM activity
+				WHERE kind = 'task' ORDER BY created_at DESC LIMIT 1`)
+			if want := c.day + " 23:59:59"; due != want {
+				t.Errorf("a task due %s is due %q in the installation's own zone, want %q",
+					c.day, due, want)
+			}
+		})
+	}
+}

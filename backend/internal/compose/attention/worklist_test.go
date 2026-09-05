@@ -817,7 +817,7 @@ func TestOneKindOfWorkCannotTakeTheWholePage(t *testing.T) {
 	// What changes is only the ORDER: the overdue task is reachable rather than
 	// buried under the whole backlog.
 	for i, row := range out.Queue {
-		if row.Source == "task" && i > waitingLead {
+		if row.Source == "task" && i > crowdLead {
 			t.Fatalf("the overdue task sat at position %d, below the whole backlog", i+1)
 		}
 	}

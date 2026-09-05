@@ -461,6 +461,13 @@ export function hasCommitments(view: Person360): boolean {
 // Tasks lead: one was typed or confirmed by a person, a claim was inferred.
 // The task list arrives ordered by urgency (the next-steps read), and that
 // order is kept.
+//
+// WIDER than personowed.owedPromises, deliberately, and not a second spelling
+// of it. This list is what the record has open in both directions — it carries
+// `commitment_theirs` and an `open_question` too, and keeps a done loop so the
+// card can strike it through. The counter next to it measures only what WE owe
+// and only while it is unfinished, which is the server's own owedPromises
+// rule. Two questions, two answers.
 function openLoops(
   view: Person360,
   viewerId: string | undefined,
