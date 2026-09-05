@@ -8283,6 +8283,13 @@ export const en = {
     "Above the next on how close the relationship is.",
   "worklist.above.crowded":
     "Above the next because that one is one of many of its kind.",
+  "worklist.verdict.live": "Live",
+  "worklist.verdict.drifting": "Drifting",
+  "worklist.verdict.blocked": "Blocked",
+  "worklist.verdict.cold": "Cold",
+  "worklist.verdict.believes": "Margince believes",
+  "worklist.verdict.rule": "Why it is here",
+  "worklist.verdict.asOf": "Read {when}",
   "worklist.consequence.buyer_waits": "If you do nothing, they keep waiting.",
   "worklist.consequence.promise_breaks": "If you do nothing, a promise breaks.",
   "worklist.consequence.deal_drifts":

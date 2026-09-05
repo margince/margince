@@ -265,6 +265,15 @@ type BriefEntry struct {
 	ID     ids.UUID
 	DealID ids.UUID
 	Rank   int
+	// Composite is the night's own deterministic score for this deal, between 0
+	// and 1. Carried so the queue can break a tie INSIDE a level by it rather
+	// than running a second ranking beside the first.
+	Composite float64
+	// Finding is what the overnight pass wrote about this deal, empty when no
+	// pass annotated the run. Grounded and citation-checked when it was written
+	// (briefs.AnnotateCurrentRun refuses one that cites outside the run), which
+	// is what makes it usable as a standing line where no deal card is cached.
+	Finding string
 }
 
 // Commitments is the rep's own outstanding promises, soonest-due first.

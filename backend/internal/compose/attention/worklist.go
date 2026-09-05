@@ -172,6 +172,14 @@ func (s *Service) Worklist(
 	if err := reader.nameTheStep(ctx, out.Queue); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
+	// And how each deal row's deal is STANDING, over the same cut page and for
+	// the same reason. Read after the step because the two are independent: a
+	// row can carry a move and no verdict, or a verdict and no move, and neither
+	// absence is a reason to withhold the other. dealstanding.go states the
+	// three-source order and why its floor is no verdict at all.
+	if err := reader.nameTheStanding(ctx, out.Queue, reader.briefFindings); err != nil {
+		return crmcontracts.Worklist{}, err
+	}
 	// And the name beside each owner id, over the same cut page and for the same
 	// reason: a label is drawn and never ranked, so resolving one for a row this
 	// caller will not receive spends a read on nothing.

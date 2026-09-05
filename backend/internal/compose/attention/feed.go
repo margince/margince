@@ -126,6 +126,15 @@ type Service struct {
 	// dealMoves is OPTIONAL in the same way: nil means a deal row names its
 	// problem and no step, which is what every deal row did before this seam.
 	dealMoves DealMoves
+	// dealStandings is OPTIONAL in the same way: nil means a deal row says what
+	// to do and not how the deal is standing, which is what every deal row did
+	// before this seam. dealstanding.go states the three-source order.
+	dealStandings DealStandings
+	// briefFindings is one read's answer, written per read onto the request's
+	// own copy the way money is: the brief lane holds a finding per deal it
+	// surfaced, and asking the brief again after the page is cut would be a
+	// second read of a queue this feed already has in hand.
+	briefFindings map[ids.UUID]string
 	// fx is OPTIONAL in the same way, and money is one read's answer from it,
 	// written per read onto the request's own copy the way taskScope is.
 	// basemoney.go states what each means and why the copy matters.
@@ -331,6 +340,7 @@ func (s *Service) thisMorning(ctx context.Context) ([]crmcontracts.AttentionItem
 	for _, entry := range queue {
 		items = append(items, briefItem(entry))
 	}
+	s.recordBriefFindings(queue)
 	// The state names WHY the lane holds what it holds. A run that ranked
 	// nothing reads all_answered too: "nothing worth your first hour" and
 	// "you answered everything" are the same message to a reader — nothing

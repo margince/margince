@@ -8102,6 +8102,13 @@ export const vi = {
   "worklist.above.waiting_days.pair": "Trên mục kế: {mine} so với {theirs}.",
   "worklist.above.relationship": "Trên mục kế nhờ quan hệ gần hơn.",
   "worklist.above.crowded": "Trên mục kế vì loại việc đó đang có rất nhiều.",
+  "worklist.verdict.live": "Đang chạy",
+  "worklist.verdict.drifting": "Đang nguội dần",
+  "worklist.verdict.blocked": "Bị chặn",
+  "worklist.verdict.cold": "Nguội",
+  "worklist.verdict.believes": "Margince nhận định",
+  "worklist.verdict.rule": "Vì sao nó ở đây",
+  "worklist.verdict.asOf": "Đọc lúc {when}",
   "worklist.consequence.buyer_waits": "Nếu bạn không làm gì, họ vẫn chờ.",
   "worklist.consequence.promise_breaks":
     "Nếu bạn không làm gì, một lời hứa bị phá vỡ.",

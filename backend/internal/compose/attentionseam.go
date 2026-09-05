@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -356,6 +357,10 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// rows and assembling costs a timeline, seats and possibly a model call
 		// each. A deal nobody has opened simply carries no step.
 		WithDealMoves(newDealStatusService(pool)).
+		// And the standing above that step, from the SAME card and the same
+		// cache. Bound separately because the two are read at different moments
+		// and a caller wanting one should not pay for the other's work.
+		WithDealStandings(attentionDealStandings{cards: newDealStatusService(pool)}).
 		// The base-currency conversion the ranked queue's money comparisons
 		// run in — the same engine every other money surface prices with.
 		WithBaseMoney(AttentionBaseMoney{Pool: pool}).
@@ -390,4 +395,35 @@ func attentionZone(pool *pgxpool.Pool) attention.Zone {
 	return func(ctx context.Context) (*time.Location, error) {
 		return installationZone(ctx, pool)
 	}
+}
+
+// attentionDealStandings carries the deal card's written verdict to the queue.
+//
+// An adapter rather than a direct binding, because the two sides name the same
+// thing with different types: dealstatus answers its own CachedCard, and the
+// queue's seam is declared over a type it owns. A shared type would be a
+// sibling-module import in one direction or the other, which is the edge every
+// seam in this file exists to avoid.
+type attentionDealStandings struct {
+	cards *dealstatus.Service
+}
+
+// CachedStandings answers the already-written standing for each of these deals.
+func (a attentionDealStandings) CachedStandings(
+	ctx context.Context, dealIDs []ids.UUID,
+) (map[ids.UUID]attention.DealStanding, error) {
+	cards, err := a.cards.CachedCards(ctx, dealIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[ids.UUID]attention.DealStanding, len(cards))
+	for id, card := range cards {
+		takenAt := card.GeneratedAt
+		out[id] = attention.DealStanding{
+			Standing:     card.Standing,
+			DecisiveLine: card.DecisiveLine,
+			AsOf:         &takenAt,
+		}
+	}
+	return out, nil
 }

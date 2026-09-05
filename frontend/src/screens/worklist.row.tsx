@@ -34,6 +34,7 @@ import {
   whenText,
 } from "./worklist.copy";
 import { DispositionVerbs, PutDownByThumb } from "./worklist.dispositions";
+import { VerdictLine } from "./worklist.verdict";
 import { WaitingEmailLine } from "./worklist.emailtitle";
 import { ReassignControl } from "./worklist.manager";
 import { PairDecision } from "./worklist.pair";
@@ -198,6 +199,11 @@ export function WorklistRow({
               {sample.join(" · ")}
             </p>
           )}
+          {/* How the deal is standing, above the captions rather than among
+              them. It is a READING and they are facts, and a reader who cannot
+              tell those apart cannot tell what to trust — worklist.verdict.tsx
+              states why the label says which. */}
+          <VerdictLine verdict={item.verdict} zone={zone} />
           <RowCaptions
             when={when}
             facts={facts}
