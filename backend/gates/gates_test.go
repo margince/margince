@@ -41,9 +41,9 @@ const repoRoot = ".."
 
 // describesRatherThanRenders is a frontend file, named relative to
 // frontend/src, that talks ABOUT what renders rather than rendering: a test, a
-// story, a test kit, or the generated contract. Shared by every gate that
-// sweeps the frontend for a second rendering of something, so two gates cannot
-// disagree about what counts as production source.
+// story, a test kit, or the generated contract. Shared by the gates that sweep
+// the frontend for a second rendering of something, so they read the same
+// tree as production source.
 func describesRatherThanRenders(rel string) bool {
 	return strings.HasPrefix(rel, "api/") ||
 		strings.Contains(rel, ".test.") ||
