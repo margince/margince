@@ -36,9 +36,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// insertSite is a literal's address as this gate reports and waives it:
-// the file it is in and the function it is built in. Not a line number, which
-// moves under an edit that changes nothing about the obligation.
+// insertSite is a literal's address as this gate reports and waives it: the
+// file, the function it is built in, and — for the second and later literal in
+// one function — which one.
+//
+// Not a line number, which moves under an edit that changes nothing about the
+// obligation. But not the function alone either: a waiver keyed on the function
+// is inherited by every literal added to it later, and Waived records a match
+// without refusing a repeat, so a second uncapped literal inside a ratified
+// helper would be exempted by a reason written about its neighbour. An ordinal
+// is stable under every edit except adding a literal, which is exactly the edit
+// that must not inherit.
 type insertSite string
 
 // capExemptSites ratifies the literals that must NOT name an attempt cap. Both
@@ -65,6 +73,9 @@ func TestEveryInsertDeclaresAnAttemptCap(t *testing.T) {
 		for _, lit := range insertOptsLiterals(src.File) {
 			seen++
 			site := insertSite(fmt.Sprintf("%s:%s", src.Path, lit.fn))
+			if lit.nth > 1 {
+				site = insertSite(fmt.Sprintf("%s:%s#%d", src.Path, lit.fn, lit.nth))
+			}
 			capExpr, named := lit.attemptCap()
 			if !named {
 				if !capExemptSites.Waived(t, site) {
@@ -80,6 +91,14 @@ func TestEveryInsertDeclaresAnAttemptCap(t *testing.T) {
 			if capExemptSites.Waived(t, site) {
 				t.Errorf("%s names a MaxAttempts and is also ratified in capExemptSites as a site that must "+
 					"not: drop the waiver, which now describes code that is gone", site)
+			}
+			if namesTheDefaultLadder(capExpr) {
+				t.Errorf("%s names River's own default as its MaxAttempts, which is not a cap but the ladder "+
+					"this gate exists to take rows off: %d attempts on attempt⁴ backoff, reaching days. A "+
+					"kind that genuinely runs on the default says so in api/jobs.yaml, where the number "+
+					"carries its reason, and the insert reads it off the declaration",
+					site, jobs.DefaultMaxAttempts)
+				continue
 			}
 			value, resolved := attemptCapValue(capExpr, consts)
 			if !resolved {
@@ -120,7 +139,11 @@ func TestEveryInsertDeclaresAnAttemptCap(t *testing.T) {
 // insertOptsLiteral is one river.InsertOpts composite literal and the function
 // it is built in.
 type insertOptsLiteral struct {
-	fn  string
+	fn string
+	// nth is which literal this is inside fn, counting from one. It is what
+	// keeps a waiver from spreading to a literal added beside the one it was
+	// written about.
+	nth int
 	lit *ast.CompositeLit
 }
 
@@ -153,6 +176,7 @@ func insertOptsLiterals(file *ast.File) []insertOptsLiteral {
 		if !isFunc {
 			continue
 		}
+		nth := 0
 		ast.Inspect(fn, func(node ast.Node) bool {
 			lit, isLit := node.(*ast.CompositeLit)
 			if !isLit {
@@ -160,7 +184,8 @@ func insertOptsLiterals(file *ast.File) []insertOptsLiteral {
 			}
 			if sel, isSel := lit.Type.(*ast.SelectorExpr); isSel && sel.Sel.Name == "InsertOpts" {
 				if pkg, isIdent := sel.X.(*ast.Ident); isIdent && pkg.Name == "river" {
-					found = append(found, insertOptsLiteral{fn: fn.Name.Name, lit: lit})
+					nth++
+					found = append(found, insertOptsLiteral{fn: fn.Name.Name, nth: nth, lit: lit})
 				}
 			}
 			return true
@@ -225,4 +250,25 @@ func untypedIntLiteral(expr ast.Expr) (int, bool) {
 		return 0, false
 	}
 	return value, true
+}
+
+// namesTheDefaultLadder reports whether a cap expression IS River's default,
+// however it is spelled — jobs.DefaultMaxAttempts, or the bare name inside the
+// package that mirrors it.
+//
+// Named separately from attemptCapValue because it is a different refusal.
+// attemptCapValue admits an expression it cannot evaluate, on the ground that
+// the number came off api/jobs.yaml, where it carries its reason — and a
+// declared cap may legitimately BE 25, as capture_sync's is. What may not
+// happen is a Go insert site naming the default itself: that is a site
+// declining to choose while satisfying a gate that asks it to.
+func namesTheDefaultLadder(expr ast.Expr) bool {
+	const defaultName = "DefaultMaxAttempts"
+	switch named := expr.(type) {
+	case *ast.SelectorExpr:
+		return named.Sel.Name == defaultName
+	case *ast.Ident:
+		return named.Name == defaultName
+	}
+	return false
 }
