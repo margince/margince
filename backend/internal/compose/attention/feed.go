@@ -243,12 +243,13 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 	return day, err
 }
 
-// assembleDay is Assemble, plus the night's finding per deal.
+// assembleDay is Assemble, plus everything else the night knows: its finding
+// per deal, its score per deal, and the run's data cutoff.
 //
 // The two are one pass because the brief lane is read ONCE: asking it again
 // after the page is cut would be a second read of a queue this already has in
-// hand. Assemble above discards the findings because /attention draws the brief
-// as its own rows; only the worklist folds a finding onto a deal row.
+// hand. Assemble above discards all three because /attention draws the brief as
+// its own rows; only the worklist reads a finding, a score or the cutoff.
 //
 // A RETURN VALUE AND NOT A FIELD on the Service, which is the point. Written
 // onto the Service the map would be SHARED — Assemble is reached on the

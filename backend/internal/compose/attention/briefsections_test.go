@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func sectioned(over crmcontracts.WorklistItem) crmcontracts.WorklistItemBriefSection {
@@ -142,22 +143,49 @@ func TestADriftingDealIsRevenueToMove(t *testing.T) {
 	}
 }
 
-// EVERY category reaches a section. A row drawn with no section is a row a
-// grouping client cannot place, and the default arm is what guarantees it —
-// this is the test that would fail if somebody made the mapping partial.
-func TestEveryWorklistCategoryHasABriefSection(t *testing.T) {
-	for _, category := range []crmcontracts.WorklistItemCategory{
-		crmcontracts.WorklistItemCategoryCustomerWaiting,
-		crmcontracts.WorklistItemCategoryLeads,
-		crmcontracts.WorklistItemCategoryDealsAtRisk,
-		crmcontracts.WorklistItemCategoryMeetings,
-		crmcontracts.WorklistItemCategoryTasks,
-		crmcontracts.WorklistItemCategoryDecisions,
-		crmcontracts.WorklistItemCategorySystem,
-	} {
-		got := sectioned(crmcontracts.WorklistItem{Category: category})
-		if got == "" {
-			t.Errorf("category %q reaches no section", category)
-		}
+// A category this build cannot place carries NO section rather than an empty one.
+//
+// sectionOfCategory returns "" for a category nobody has placed, which is what
+// makes the census gate fail loudly instead of drawing the row under whatever
+// the fall-through happened to be. That empty string must not reach the wire:
+// the field is an enum, and a client reading "" has a value its own generated
+// types do not carry.
+//
+// The gate is what keeps this arm unreachable in a shipped build. This is what
+// keeps a build where it IS reachable from serving a value no client can read.
+func TestAnUnplaceableRowCarriesNoSectionRatherThanAnEmptyOne(t *testing.T) {
+	unplaced := ranked{item: crmcontracts.WorklistItem{
+		Id:       ids.NewV7().String(),
+		Source:   crmcontracts.WorklistItemSourceTask,
+		Category: "renewals",
+		Actions:  []crmcontracts.WorklistItemActions{},
+	}}
+
+	drawn := renderInOrder([]ranked{unplaced}, ids.UUID{})
+
+	if drawn[0].BriefSection != nil {
+		t.Errorf("brief_section = %q reached the wire for a category this build does not place — "+
+			"a client reading it has an enum value its generated types do not carry",
+			*drawn[0].BriefSection)
+	}
+}
+
+// And a row this build DOES place still carries its section, so the guard above
+// cannot be satisfied by drawing nothing at all.
+func TestAPlaceableRowStillCarriesItsSection(t *testing.T) {
+	placed := ranked{item: crmcontracts.WorklistItem{
+		Id:       ids.NewV7().String(),
+		Source:   crmcontracts.WorklistItemSourceDealAtRisk,
+		Category: crmcontracts.WorklistItemCategoryDealsAtRisk,
+		Actions:  []crmcontracts.WorklistItemActions{},
+	}}
+
+	drawn := renderInOrder([]ranked{placed}, ids.UUID{})
+
+	if drawn[0].BriefSection == nil {
+		t.Fatal("a placeable row carries no section — the guard is drawing nothing at all")
+	}
+	if *drawn[0].BriefSection != crmcontracts.BriefSectionMoveRevenue {
+		t.Errorf("section = %q, want move_revenue", *drawn[0].BriefSection)
 	}
 }

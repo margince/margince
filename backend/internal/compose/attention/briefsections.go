@@ -38,17 +38,53 @@ import (
 // move. The FIRST matching rule wins, and the order below is the product
 // decision — the general category answer is last, after the specific ones.
 func BriefSectionOf(item crmcontracts.WorklistItem) crmcontracts.WorklistItemBriefSection {
+	// The specific rules first, because they cut ACROSS the categories: a lead
+	// owed a reply is somebody waiting rather than pipeline to build, and a deal
+	// whose next step is the meeting brief is a conversation to prepare whatever
+	// lane raised it. Each is a product decision and none of them is derivable
+	// from the category alone.
 	switch {
 	case respondsNow(item):
 		return crmcontracts.BriefSectionRespondNow
 	case preparesAConversation(item):
 		return crmcontracts.BriefSectionPrepareConversations
-	case repairsSomething(item):
-		return crmcontracts.BriefSectionReviewAndRepair
 	case sectionBuildsPipeline(item):
 		return crmcontracts.BriefSectionBuildPipeline
-	default:
+	}
+	return sectionOfCategory(item.Category)
+}
+
+// sectionOfCategory places a row that no specific rule claimed, by its category
+// alone.
+//
+// EVERY CATEGORY IS NAMED and there is no default, which is the whole point of
+// this function existing separately. With a `default` arm the placement was
+// total but not considered: a category nobody had thought about fell through to
+// `move_revenue` and was drawn under a heading that happened to be plausible,
+// and backend/gates/briefsectioncensus_test.go passed because it could only ask
+// whether a section came back at all.
+//
+// Here an eighth category returns the empty string, and that gate fails on it.
+// The gate's question is unchanged; what changed is that this function can now
+// answer it wrongly, which is what makes asking it worth anything.
+func sectionOfCategory(category crmcontracts.WorklistItemCategory) crmcontracts.WorklistItemBriefSection {
+	switch category {
+	case crmcontracts.WorklistItemCategoryCustomerWaiting:
+		return crmcontracts.BriefSectionRespondNow
+	case crmcontracts.WorklistItemCategoryLeads:
+		return crmcontracts.BriefSectionBuildPipeline
+	case crmcontracts.WorklistItemCategoryMeetings:
+		return crmcontracts.BriefSectionPrepareConversations
+	case crmcontracts.WorklistItemCategoryDecisions, crmcontracts.WorklistItemCategorySystem:
+		return crmcontracts.BriefSectionReviewAndRepair
+	case crmcontracts.WorklistItemCategoryDealsAtRisk, crmcontracts.WorklistItemCategoryTasks:
+		// The two that are revenue to move: a deal drifting, and the work
+		// somebody agreed to do about one.
 		return crmcontracts.BriefSectionMoveRevenue
+	default:
+		// A category this build does not place. Empty rather than a guess, so
+		// the census gate says so out loud.
+		return ""
 	}
 }
 
@@ -94,33 +130,22 @@ func preparesAConversation(item crmcontracts.WorklistItem) bool {
 	return item.Move != nil && item.Move.Action == crmcontracts.WorklistMoveActionOpenMeetingBrief
 }
 
-// repairsSomething: a judgement to make or a source to restore, rather than
-// customer work to do.
-func repairsSomething(item crmcontracts.WorklistItem) bool {
-	switch item.Category {
-	case crmcontracts.WorklistItemCategoryDecisions, crmcontracts.WorklistItemCategorySystem:
-		return true
-	}
-	return false
-}
-
 // sectionBuildsPipeline: work that creates future revenue rather than
 // protecting booked revenue.
 //
-// The BAND is asked first, because it is the server's own answer to "what is the
-// reader being asked to do today" and it already carries rows this section wants
-// that no subject test would find. bands.go's buildsPipeline answers the
-// narrower question — is the row filed under a lead — and is reused rather than
-// restated: two spellings of "this builds pipeline" would drift, and the band
-// this file reads is itself derived from that function.
+// bands.go's buildsPipeline is CALLED rather than restated — two spellings of
+// "this builds pipeline" would drift — and the band is deliberately NOT read
+// here, though an earlier version of this function read it first. That version
+// was dead code with a paragraph of justification on top: bandOfRow reaches
+// bandBuildPipeline only through this same buildsPipeline, so the band arm could
+// never be true where the call below is false. Deleting it changed no test,
+// which is how it was found.
 //
-// A relationship going quiet is the third arm and belongs to neither: there is
-// no lead yet and the band is about momentum, but reconnecting is exactly how
-// pipeline gets built.
+// The two arms it does have are the ones buildsPipeline does not answer. A lead
+// row is pipeline by its category even where its subject resolves elsewhere. And
+// a relationship going quiet has no lead and no deal at risk, yet reconnecting is
+// exactly how pipeline gets built.
 func sectionBuildsPipeline(item crmcontracts.WorklistItem) bool {
-	if item.Band != nil && *item.Band == crmcontracts.BuildPipeline {
-		return true
-	}
 	if item.Source == crmcontracts.WorklistItemSourceRelationshipDecay {
 		return true
 	}

@@ -224,9 +224,6 @@ func (s *Service) worklistFrom(
 	// the fold so the surviving row can inherit a score even where the night's
 	// own row is the one that goes.
 	rows = stampOpportunity(rows, s.briefScores)
-	// One deal is ONE row: a deal the night surfaced and the day also found
-	// arrives twice, and the at-risk row keeps the brief's id and its score.
-	rows = foldBriefIntoRisk(rows)
 	// One unanswered message is one row: the deal it belongs to does not also
 	// appear as drifting.
 	rows = dropDealsAlreadyWaiting(rows)
@@ -244,6 +241,19 @@ func (s *Service) worklistFrom(
 	// it judges against is the same wherever it sits. A fourth pass that
 	// removed waiting rows would break that, and would have to run last.
 	rows = dropDecayAlreadyWaiting(rows)
+	// One deal is ONE row: a deal the night surfaced and the day also found
+	// arrives twice, and the row that survives keeps the brief's id and score.
+	//
+	// LAST of the folds, and the three comments above say why. Each of those
+	// drops rows of a source none of the others reads, so their order among
+	// themselves does not matter. This one is different: it attaches the brief's
+	// id to a row the others may then REMOVE. Run earlier, a deal that is both in
+	// the night's brief and has an unanswered message lost its brief verbs
+	// entirely — the at-risk row took the id and dropDealsAlreadyWaiting then
+	// deleted that row, and the waiting row it was absorbed into inherits the
+	// deal's figures and reasons but not the brief's id. So this runs against
+	// whatever actually survives.
+	rows = foldBriefIntoRisk(rows)
 	// The reader's own override, raised AFTER the dedupe passes and before the
 	// ranking. After, because a pin on a row those passes remove is a pin on a
 	// row that is not on the page — the day decides what it holds, and the pin

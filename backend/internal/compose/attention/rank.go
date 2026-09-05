@@ -263,8 +263,18 @@ func renderInOrder(rows []ranked, reader ids.UUID) []crmcontracts.WorklistItem {
 		// for the same reason the band is: it describes a row's place on the
 		// page it is actually on. briefsections.go states why a client may draw
 		// this and may not partition by it.
-		section := BriefSectionOf(item)
-		item.BriefSection = &section
+		// An unplaced category yields no section, and no section is DRAWN rather
+		// than sent empty: the field is optional on the wire, and a client
+		// reading "" would have an enum value its own generated types do not
+		// carry. Absent is the honest answer — the row is still ranked, still
+		// explained, and simply carries no heading.
+		//
+		// backend/gates/briefsectioncensus_test.go is what makes this arm
+		// unreachable in a shipped build; this is what keeps a build where it is
+		// reachable from putting a value on the wire that no client can read.
+		if section := BriefSectionOf(item); section != "" {
+			item.BriefSection = &section
+		}
 		// Who answers for it, as the PRODUCER said. Stamped here beside the
 		// band and the primary action, and for the same reason those are: a
 		// source added later carries it by arriving in this loop rather than by

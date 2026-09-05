@@ -58,12 +58,12 @@ func (s *Service) thisMorning(ctx context.Context) (theNight, error) {
 
 // theNight is everything one read of the brief lane yields.
 //
-// A struct rather than four return values, because only the first two are a
-// LANE. The other two are facts about deals that no lane draws: the findings
-// stand in as a deal's reading where no status card is cached, and the scores
-// break a tie inside a level. Both are consumed by the worklist long after the
-// lane itself has been rendered, and naming them here is what keeps the brief
-// read once for all four.
+// A struct rather than five return values, because only the first two are a
+// LANE. The rest are facts no lane draws: the findings stand in as a deal's
+// reading where no status card is cached, the scores break a tie inside a level,
+// and the cutoff says what the night had already seen. All three are consumed by
+// the worklist long after the lane itself has been rendered, and naming them
+// here is what keeps the brief read once for all of them.
 type theNight struct {
 	items    []crmcontracts.AttentionItem
 	state    crmcontracts.AttentionThisMorningState

@@ -51,14 +51,34 @@ func TestEveryWorklistCategoryIsPlacedInTheMorning(t *testing.T) {
 }
 
 // The census must not be able to pass by reading nothing.
+//
+// The floor is not a number typed here. An earlier version said `< 7`, a
+// constant that agrees with today's answer and would keep agreeing after an
+// eighth category shipped — the guard loosening silently at the moment it was
+// most needed, and a second copy of the enum's size besides.
+//
+// What replaces it is two checks that need no list: the parse must find
+// something, and every word it finds must be one the GENERATED validator admits.
+// The second is what catches a reworded schema that yields junk. It does NOT
+// catch a schema that yields a strict subset — for that the gate would need to
+// know how many categories exist, which is the copy being avoided. The census
+// above is the guard for that case: a category dropped from crm.yaml is one
+// BriefSectionOf still places, and nothing here is judging it any more, but the
+// same drop fails the frontend's own generated types loudly.
 func TestTheCategoryCorpusIsTheContractsOwn(t *testing.T) {
 	t.Parallel()
 	found := worklistCategories(t)
 
-	if len(found) < 7 {
-		t.Fatalf("parsed %d worklist categories out of crm.yaml (%v), want at least the seven the "+
-			"product ships. The schema's shape changed and this gate is now judging a smaller "+
-			"subject than it thinks.", len(found), found)
+	if len(found) == 0 {
+		t.Fatal("parsed no worklist categories out of crm.yaml: the schema's shape changed and " +
+			"this gate is now judging nothing at all. Fix the parse before trusting the census above.")
+	}
+	for _, category := range found {
+		if !crmcontracts.WorklistItemCategory(category).Valid() {
+			t.Errorf("crm.yaml declares category %q, which the generated validator does not know.\n"+
+				"align: run `make gen` — the contract and the generated enum have drifted, and this "+
+				"gate is judging a corpus the code cannot represent.", category)
+		}
 	}
 }
 

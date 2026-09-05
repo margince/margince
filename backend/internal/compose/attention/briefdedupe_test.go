@@ -322,3 +322,159 @@ func TestTheOpportunityStepExplainsItselfWithBothScores(t *testing.T) {
 		t.Errorf("mine %v is not above theirs %v", *above.Mine.Score, *above.Theirs.Score)
 	}
 }
+
+// A brief row AHEAD of the row it folds into.
+//
+// THE case the fold's index bookkeeping exists for, and the one every other test
+// in this file cannot see. The fold walks once, dropping brief rows and
+// recording where each survivor landed; the input index and the output index
+// diverge the moment a row is dropped. Every fixture above puts the brief row
+// LAST, so nothing is dropped before a survivor is recorded and the two indexes
+// stay equal — which means all of them pass against a version that records the
+// input position and writes at it.
+//
+// This one puts the brief row first. The at-risk row is then at input position 1
+// and output position 0, and a fold that confused them writes the brief's id
+// past the end of a one-row slice or onto the wrong row.
+//
+// Mutation-checked: recording `inputAt` instead of `len(kept)` fails this test
+// and passes every other one in the file.
+func TestABriefRowAheadOfItsSurvivorStillLandsOnIt(t *testing.T) {
+	deal, briefItem := ids.NewV7(), ids.NewV7()
+
+	kept := foldBriefIntoRisk([]ranked{
+		rankedBriefRow(briefItem, deal),
+		atRiskRow(deal),
+	})
+
+	if len(kept) != 1 {
+		t.Fatalf("kept %d rows, want the one at-risk row", len(kept))
+	}
+	if kept[0].item.BriefItemId == nil {
+		t.Fatal("the survivor lost the brief's id — the fold wrote it at an input position " +
+			"while the survivors live in the output slice")
+	}
+	if ids.UUID(*kept[0].item.BriefItemId) != briefItem {
+		t.Errorf("brief_item_id = %v, want %v", *kept[0].item.BriefItemId, briefItem)
+	}
+}
+
+// The same divergence, with several rows dropped before the survivor. Two brief
+// rows ahead of it push the input and output indexes two apart.
+func TestSeveralFoldedRowsAheadOfASurvivorStillLandOnIt(t *testing.T) {
+	first, second, deal := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	briefItem := ids.NewV7()
+
+	kept := foldBriefIntoRisk([]ranked{
+		rankedBriefRow(ids.NewV7(), first),
+		rankedBriefRow(ids.NewV7(), second),
+		rankedBriefRow(briefItem, deal),
+		atRiskRow(deal),
+	})
+
+	// The two unmatched brief rows keep their own rows; the third folds.
+	if len(kept) != 3 {
+		t.Fatalf("kept %d rows, want the at-risk row and the two unmatched brief rows", len(kept))
+	}
+	var survivor *ranked
+	for at := range kept {
+		if kept[at].item.Source == crmcontracts.WorklistItemSourceDealAtRisk {
+			survivor = &kept[at]
+		}
+	}
+	if survivor == nil {
+		t.Fatal("the at-risk row is gone")
+	}
+	if survivor.item.BriefItemId == nil || ids.UUID(*survivor.item.BriefItemId) != briefItem {
+		t.Errorf("brief_item_id = %v, want %v — the fold lost track of where the survivor landed",
+			survivor.item.BriefItemId, briefItem)
+	}
+}
+
+// The brief's verbs survive the pass that removes the row they were attached to.
+//
+// THE defect that made this fold run last. A deal can be both in the night's
+// brief and carrying an unanswered message. The at-risk row took the brief's id;
+// dropDealsAlreadyWaiting then deleted that row, because one unanswered message
+// is one row; and the waiting row that absorbs it inherits the deal's figures
+// and reasons but not the brief's id. The entry vanished from the page, and with
+// it the act, set-aside and dismiss verbs that answer the night — which the
+// fold's own header calls a worse outcome than the duplicate it prevents.
+//
+// Written over the two passes IN THE ORDER worklist.go runs them, because the
+// order is the fix: neither pass alone is wrong.
+func TestTheBriefsVerbsSurviveTheRowTheyWereAttachedTo(t *testing.T) {
+	deal, briefItem := ids.NewV7(), ids.NewV7()
+	waiting := waitingRowAbout(deal)
+
+	rows := dropDealsAlreadyWaiting([]ranked{atRiskRow(deal), waiting})
+	rows = foldBriefIntoRisk(append(rows, rankedBriefRow(briefItem, deal)))
+
+	var carrier *ranked
+	for at := range rows {
+		if rows[at].item.BriefItemId != nil {
+			carrier = &rows[at]
+		}
+	}
+	if carrier == nil {
+		t.Fatal("no row on the page names the brief entry — the night can never be told it was " +
+			"answered, and act, set aside and dismiss are gone with it")
+	}
+	if ids.UUID(*carrier.item.BriefItemId) != briefItem {
+		t.Errorf("brief_item_id = %v, want %v", *carrier.item.BriefItemId, briefItem)
+	}
+}
+
+// waitingRowAbout is the customer_waiting row that absorbs a deal's at-risk row.
+func waitingRowAbout(dealID ids.UUID) ranked {
+	return ranked{item: crmcontracts.WorklistItem{
+		Id:       ids.NewV7().String(),
+		Source:   sourceWaiting,
+		Category: crmcontracts.WorklistItemCategoryCustomerWaiting,
+		Level:    1,
+		Actions:  []crmcontracts.WorklistItemActions{"open"},
+		Subject: &crmcontracts.AttentionSubject{
+			Type: subjectDeal, Id: openapi_types.UUID(dealID),
+		},
+	}}
+}
+
+// One reader's night never reaches another reader's page.
+//
+// THE property the predecessor of this branch got wrong, in the same shape: it
+// kept per-read state on the Service, which one process shares across every
+// request, and a reader whose own brief ran empty inherited the last reader's.
+//
+// Written against readingScores rather than against scoresOf, and the
+// distinction is the whole point. scoresOf is pure — it has nowhere to leave a
+// previous caller's answer, so a test over it proves the easy half. The scores
+// and the cutoff are FIELDS on the Service, which is exactly the shape that
+// leaked, so the assertion has to be that the shared value is untouched.
+//
+// Mutation-checked: making readingScores assign through `s` rather than a copy
+// fails both halves.
+func TestOneReadersNightDoesNotReachAnothersPage(t *testing.T) {
+	theirDeal := ids.NewV7()
+	theirCutoff := time.Date(2026, 9, 4, 6, 0, 0, 0, time.UTC)
+	shared := &Service{
+		briefScores: map[ids.UUID]float64{theirDeal: 0.9},
+		briefCutoff: theirCutoff,
+	}
+
+	// The next reader's brief ran empty: no scores, no run, no cutoff.
+	mine := shared.readingScores(nil, time.Time{})
+
+	if len(shared.briefScores) != 1 || shared.briefScores[theirDeal] != 0.9 {
+		t.Errorf("the shared service's scores became %v — one read wrote through the value "+
+			"every request shares", shared.briefScores)
+	}
+	if !shared.briefCutoff.Equal(theirCutoff) {
+		t.Errorf("the shared service's cutoff became %v, want %v", shared.briefCutoff, theirCutoff)
+	}
+	if len(mine.briefScores) != 0 {
+		t.Errorf("my page carries %v — another reader's night", mine.briefScores)
+	}
+	if !mine.briefCutoff.IsZero() {
+		t.Errorf("my page carries cutoff %v, and my brief never ran", mine.briefCutoff)
+	}
+}
