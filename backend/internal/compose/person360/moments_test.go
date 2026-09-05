@@ -373,7 +373,7 @@ func TestARuleDoesNotClaimAbsenceForASectionItCouldNotRead(t *testing.T) {
 	// An open deal with no visible schedule. Allowed to look, the page says
 	// nothing is scheduled; forbidden to look, it must not.
 	visible := &crmcontracts.Person360{Commercial: deal}
-	if got := deriveMoment(readerCtx(), time.Now(), visible).Rule; got != crmcontracts.PersonMomentRuleMissingNextStep {
+	if got := deriveMoment(readerCtx(), now, visible).Rule; got != crmcontracts.PersonMomentRuleMissingNextStep {
 		t.Fatalf("with the schedule readable and empty, the gap IS the finding, got %q", got)
 	}
 
@@ -383,7 +383,7 @@ func TestARuleDoesNotClaimAbsenceForASectionItCouldNotRead(t *testing.T) {
 			crmcontracts.Person360SectionsOmittedNextMeeting,
 		},
 	}
-	if got := deriveMoment(readerCtx(), time.Now(), withheldSchedule).Rule; got == crmcontracts.PersonMomentRuleMissingNextStep {
+	if got := deriveMoment(readerCtx(), now, withheldSchedule).Rule; got == crmcontracts.PersonMomentRuleMissingNextStep {
 		t.Error("the schedule was withheld, so 'nothing is scheduled' is not something this page knows")
 	}
 }
@@ -391,12 +391,12 @@ func TestARuleDoesNotClaimAbsenceForASectionItCouldNotRead(t *testing.T) {
 // And the quiet fall-through says so too, rather than reporting a withheld
 // timeline as a clean bill of health.
 func TestNothingNeededAdmitsWhenItCouldNotSeeEverything(t *testing.T) {
-	full := deriveMoment(readerCtx(), time.Now(), &crmcontracts.Person360{})
+	full := deriveMoment(readerCtx(), now, &crmcontracts.Person360{})
 	if full.Rule != crmcontracts.PersonMomentRuleNothingNeeded {
 		t.Fatalf("an empty readable page is the quiet state, got %q", full.Rule)
 	}
 
-	partial := deriveMoment(readerCtx(), time.Now(), &crmcontracts.Person360{
+	partial := deriveMoment(readerCtx(), now, &crmcontracts.Person360{
 		SectionsOmitted: []crmcontracts.Person360SectionsOmitted{
 			crmcontracts.Person360SectionsOmittedActivities,
 		},
@@ -415,7 +415,7 @@ func TestNothingNeededAdmitsWhenItCouldNotSeeEverything(t *testing.T) {
 // for the whole action vocabulary; what this pins is the JOIN — that the rung
 // this page opens on really does mint a verb that pass has to reach.
 func TestTheQuietRungMintsAVerbTheWithholdingCovers(t *testing.T) {
-	quiet := nothingNeededMoment(readerCtx(), time.Now(), &crmcontracts.Person360{})
+	quiet := nothingNeededMoment(readerCtx(), now, &crmcontracts.Person360{})
 	if quiet.RecommendedAction.Kind != crmcontracts.PersonMomentActionKindLogActivity {
 		t.Fatalf("the quiet moment's action is %q, want log_activity — this test needs that rung", quiet.RecommendedAction.Kind)
 	}
@@ -441,7 +441,7 @@ func TestTheQuietRungMintsAVerbTheWithholdingCovers(t *testing.T) {
 // deadline first, then oldest. The card speaks for the first row, so these
 // pages are built in that order rather than the timeline's.
 func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
-	// The package's fixed noon, not time.Now(): the "due later today" case
+	// The package's fixed noon, not now: the "due later today" case
 	// below asks a CALENDAR-day question, so a real clock decides it by what
 	// hour the suite happens to run. Two hours past 22:00 is tomorrow, and the
 	// sentence flips to "Due in 1 days."
@@ -561,7 +561,6 @@ func readerCtx() context.Context {
 // earlier dismissal suppress the new card, hiding the promise at the moment
 // it became the reader's to deliver.
 func TestReassigningAPromiseRearmsItsDismissal(t *testing.T) {
-	now := time.Now()
 	task := crmcontracts.Activity{
 		Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
 		Subject: ptr("Send the signed contract"), OccurredAt: now.Add(-24 * time.Hour),
@@ -591,7 +590,6 @@ func TestReassigningAPromiseRearmsItsDismissal(t *testing.T) {
 // to its deadline. The reader is likeliest to be able to still act on that
 // one, and which source recorded it says nothing about that.
 func TestTheLatestOverduePromiseWinsWhicheverSourceHoldsIt(t *testing.T) {
-	now := time.Now()
 	claimDue := now.Add(-10 * 24 * time.Hour)
 	overdueClaim := []crmcontracts.ConversationClaim{{
 		Kind:             crmcontracts.CommitmentOurs,
@@ -640,7 +638,6 @@ func TestTheLatestOverduePromiseWinsWhicheverSourceHoldsIt(t *testing.T) {
 // comparing only that one against the tasks named the oldest, least
 // recoverable promise while one that slipped yesterday went unmentioned.
 func TestTheRungLooksPastTheOldestOverduePromise(t *testing.T) {
-	now := time.Now()
 	claimDue := func(days int) *time.Time {
 		at := now.Add(-time.Duration(days) * 24 * time.Hour)
 		return &at
@@ -692,7 +689,6 @@ func TestTheRungLooksPastTheOldestOverduePromise(t *testing.T) {
 // carries must not change when the rule around it is renamed — every task a
 // reader had put away would come back on deploy.
 func TestTheLateTaskCardKeepsItsDismissalKey(t *testing.T) {
-	now := time.Now()
 	due := now.Add(-24 * time.Hour)
 	page := &crmcontracts.Person360{
 		NextSteps: &struct {
@@ -720,7 +716,6 @@ func TestTheLateTaskCardKeepsItsDismissalKey(t *testing.T) {
 // told "nothing needs you today" while the commitments card beneath the fold
 // listed the promise.
 func TestAnUpcomingCommitmentIsTheMomentWithNoTaskFiled(t *testing.T) {
-	now := time.Now()
 	due := now.Add(3 * 24 * time.Hour)
 	said := now.Add(-48 * time.Hour)
 	page := &crmcontracts.Person360{
@@ -756,7 +751,6 @@ func TestAnUpcomingCommitmentIsTheMomentWithNoTaskFiled(t *testing.T) {
 // reverse, so which table a promise sits in never decides what a reader is
 // shown next.
 func TestTheNearestUpcomingPromiseWinsWhicheverSourceHoldsIt(t *testing.T) {
-	now := time.Now()
 	said := now.Add(-48 * time.Hour)
 	pageWith := func(claimDays, taskDays int) *crmcontracts.Person360 {
 		claimDue := now.Add(time.Duration(claimDays) * 24 * time.Hour)
@@ -797,7 +791,6 @@ func TestTheNearestUpcomingPromiseWinsWhicheverSourceHoldsIt(t *testing.T) {
 // The fingerprint cannot separate them: it hashes the source row and its
 // moment and ignores the words, which both claims share.
 func TestTwoPromisesFromOneMessageDismissApart(t *testing.T) {
-	now := time.Now()
 	said := now.Add(-24 * time.Hour)
 	source := openapi_types.UUID(ids.NewV7())
 	due := now.Add(48 * time.Hour)
@@ -835,7 +828,6 @@ func TestTwoPromisesFromOneMessageDismissApart(t *testing.T) {
 // SET — three open promises, one card — so passing over the rung would hide the
 // other two along with the one that was dismissed.
 func TestDismissingOnePromiseShowsTheNext(t *testing.T) {
-	now := time.Now()
 	said := now.Add(-24 * time.Hour)
 	source := openapi_types.UUID(ids.NewV7())
 	claim := func(body string, dueInDays int) crmcontracts.ConversationClaim {
@@ -876,7 +868,6 @@ func TestDismissingOnePromiseShowsTheNext(t *testing.T) {
 // With every promise dismissed there IS nothing left, and the quiet success
 // state is the honest answer rather than a card the reader already put away.
 func TestDismissingEveryPromiseReachesTheQuietState(t *testing.T) {
-	now := time.Now()
 	said := now.Add(-24 * time.Hour)
 	due := now.Add(48 * time.Hour)
 	page := &crmcontracts.Person360{
