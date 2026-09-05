@@ -231,6 +231,45 @@ describe("the brief readings strip", () => {
     expect(strip.textContent).not.toMatch(/on track|target|attainment|gap/i);
   });
 
+  // THE one way this card can be wrong without looking wrong. The scope is left
+  // unnamed so the server resolves it against the caller's lens — a rep gets
+  // their own pipeline. If that resolution ever lands on the workspace instead,
+  // the figure is the whole installation's under a heading that says "your
+  // morning", and nothing about the number itself would give it away.
+  //
+  // So the card reads the answer's own `scope_kind` back and says so.
+  it("says when the pipeline it drew is the whole workspace, not the reader's", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              period_start: "2026-07-01",
+              period_end: "2026-09-30",
+              scope_kind: "workspace",
+              open_minor: 42_000_000,
+              weighted_minor: 16_800_000,
+              best_case_minor: 0,
+              evidence_minor: 0,
+              eligible_count: 12,
+              priced_count: 12,
+              confirmed_date_count: 8,
+              fx_missing_count: 0,
+              as_of: "2026-09-03T06:42:00Z",
+              base_currency: "EUR",
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          ),
+      ),
+    );
+    draw();
+
+    expect(
+      await screen.findByText(en["home.readings.pipelineWorkspace"]),
+    ).toBeTruthy();
+  });
+
   // The caveat belongs under the whole strip, the way the Worklist's strip
   // states it: put on one figure, it invites the reading where the rest are
   // exact.

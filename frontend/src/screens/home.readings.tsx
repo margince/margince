@@ -340,15 +340,21 @@ function meetingsReading(day: Worklist): {
 function PipelineOutlook() {
   const t = useT();
   const { locale } = useLocale();
-  // The reader's OWN pipeline, through an UNNAMED scope. Home is the page about
-  // the person reading it, and a workspace-wide figure here would put the
-  // installation's number under a heading that says "your morning".
+  // The reader's OWN pipeline, through an UNNAMED scope.
   //
   // Unnamed rather than `owner` with the reader's id, because the server already
-  // answers this: forecasting/store.go's ScopeUnset carries an omission through
-  // for the composition to resolve against the caller's own lens — a rep means
-  // their own. Naming the scope here would be a second answer to "whose
-  // forecast", and the client does not hold the lens that decides it.
+  // answers this and the client does not hold the lens that decides it.
+  // compose/forecastseam.go resolves an unset scope against the caller's own
+  // lens — its comment says "a rep's own records" — and forecasting/store.go's
+  // ScopeUnset says the same from the other side. Naming a scope here would be
+  // a second answer to "whose forecast".
+  //
+  // crm.yaml's `scope_kind` carries `default: workspace`, which describes the
+  // PARAMETER and not the omission: the handler treats an absent scope_kind as
+  // unset rather than as workspace, and the seam resolves it. The answer says
+  // which population it measured, and the card reads that back rather than
+  // trusting either document — a workspace figure under a heading that says
+  // "your morning" is the one way this card can be wrong without looking it.
   const readings = useForecastReadings({ kind: "managed_teams", label: "" });
 
   if (readings.isPending) {
@@ -369,7 +375,11 @@ function PipelineOutlook() {
   const data = readings.data;
   return (
     <StatCard
-      label={t("home.readings.pipeline")}
+      label={
+        data.scope_kind === "workspace"
+          ? t("home.readings.pipelineWorkspace")
+          : t("home.readings.pipeline")
+      }
       value={formatMoneyOrAbsent(data.open_minor, data.base_currency, locale)}
       // The weighted figure and the completeness in one line, because they are
       // read together: a weighted number over a partly priced population is a

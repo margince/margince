@@ -2761,6 +2761,7 @@ export const en = {
   "home.readings.decisions": "Decisions waiting",
   "home.readings.decisionsBasis": "somebody is blocked until you answer",
   "home.readings.pipeline": "Pipeline outlook",
+  "home.readings.pipelineWorkspace": "Pipeline outlook · whole workspace",
   "home.readings.pipelineBasis":
     "{weighted} weighted · {priced} of {eligible} priced",
   "home.readings.pipelineUnread": "the pipeline could not be read",

@@ -2675,6 +2675,7 @@ export const vi = {
   "home.readings.decisionsBasis":
     "có người phải chờ bạn trả lời mới đi tiếp được",
   "home.readings.pipeline": "Toàn cảnh pipeline",
+  "home.readings.pipelineWorkspace": "Toàn cảnh pipeline · toàn bộ workspace",
   "home.readings.pipelineBasis":
     "{weighted} theo trọng số · {priced} trên {eligible} đã định giá",
   "home.readings.pipelineUnread": "không đọc được pipeline",
