@@ -37858,6 +37858,14 @@ type SuppressPersonJSONBody struct {
 // SuppressPersonJSONBodyKind defines parameters for SuppressPerson.
 type SuppressPersonJSONBodyKind string
 
+// LiftSuppressionJSONBody defines parameters for LiftSuppression.
+type LiftSuppressionJSONBody struct {
+	// Reason Why the stop is being taken back. Required, unlike the reason for setting
+	// one: a record saying somebody asked us not to write, now overruled, is the
+	// change most worth being able to explain later.
+	Reason string `json:"reason"`
+}
+
 // DraftPersonEmailJSONBody defines parameters for DraftPersonEmail.
 type DraftPersonEmailJSONBody struct {
 	// Intent Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence.
@@ -39910,6 +39918,9 @@ type RecordQualifyingEventJSONRequestBody = RecordQualifyingEventRequest
 
 // SuppressPersonJSONRequestBody defines body for SuppressPerson for application/json ContentType.
 type SuppressPersonJSONRequestBody SuppressPersonJSONBody
+
+// LiftSuppressionJSONRequestBody defines body for LiftSuppression for application/json ContentType.
+type LiftSuppressionJSONRequestBody LiftSuppressionJSONBody
 
 // DraftPersonEmailJSONRequestBody defines body for DraftPersonEmail for application/json ContentType.
 type DraftPersonEmailJSONRequestBody DraftPersonEmailJSONBody
@@ -49165,6 +49176,9 @@ type ServerInterface interface {
 	// Record that this person asked us to stop writing to them.
 	// (POST /people/{id}/consent/suppress)
 	SuppressPerson(w http.ResponseWriter, r *http.Request, id Id)
+	// Take back a stop, if you outrank the level that set it.
+	// (POST /people/{id}/consent/suppress/{suppressionId}/lift)
+	LiftSuppression(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID)
 	// Draft an email to this person, grounded in their record.
 	// (POST /people/{id}/draft-email)
 	DraftPersonEmail(w http.ResponseWriter, r *http.Request, id Id)
@@ -52171,6 +52185,12 @@ func (_ Unimplemented) RecordQualifyingEvent(w http.ResponseWriter, r *http.Requ
 // Record that this person asked us to stop writing to them.
 // (POST /people/{id}/consent/suppress)
 func (_ Unimplemented) SuppressPerson(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take back a stop, if you outrank the level that set it.
+// (POST /people/{id}/consent/suppress/{suppressionId}/lift)
+func (_ Unimplemented) LiftSuppression(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -70395,6 +70415,47 @@ func (siw *ServerInterfaceWrapper) SuppressPerson(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// LiftSuppression operation middleware
+func (siw *ServerInterfaceWrapper) LiftSuppression(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "suppressionId" -------------
+	var suppressionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "suppressionId", chi.URLParam(r, "suppressionId"), &suppressionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "suppressionId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LiftSuppression(w, r, id, suppressionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DraftPersonEmail operation middleware
 func (siw *ServerInterfaceWrapper) DraftPersonEmail(w http.ResponseWriter, r *http.Request) {
 
@@ -79870,6 +79931,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/consent/suppress", wrapper.SuppressPerson)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/people/{id}/consent/suppress/{suppressionId}/lift", wrapper.LiftSuppression)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/draft-email", wrapper.DraftPersonEmail)

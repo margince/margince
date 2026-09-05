@@ -13281,6 +13281,61 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /people/{id}/consent/suppress/{suppressionId}/lift:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: suppressionId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+        description: |
+          The stop to take back. The row and not the person: a subject may carry more than
+          one, and lifting "the suppression" would take back whichever came first.
+    post:
+      tags: [Compliance]
+      operationId: liftSuppression
+      security: [ { cookieAuth: [] } ]   # human session only
+      # HUMAN-ONLY for a stronger reason than the recording door: this one
+      # RESUMES mail to somebody who asked us to stop. An agent inferring that a
+      # stop no longer applies is the shape that ends with a model deciding
+      # somebody has changed their mind.
+      x-agent-access: human-only
+      summary: Take back a stop, if you outrank the level that set it.
+      description: |
+        Revokes one suppression. **You may lift a decision made below your level, never at or
+        above it** — a rep's stop is liftable by an admin and not by another rep, and an
+        admin's is liftable by an admin other than by the one who set it only through this
+        same rule.
+
+        **Nothing lifts the subject's own act.** An Art. 21 objection and a withdrawal are
+        theirs, not the installation's, so no seat reaches them here whatever their role.
+
+        A row already revoked, belonging to another subject, or never in existence all answer
+        `404` alike: a caller learns nothing about rows they would not have been allowed to
+        touch either way.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+                  description: |
+                    Why the stop is being taken back. Required, unlike the reason for setting
+                    one: a record saying somebody asked us not to write, now overruled, is the
+                    change most worth being able to explain later.
+      responses:
+        '204': { description: Lifted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /people/{id}/consent/double-opt-in:
     parameters:
       - $ref: '#/components/parameters/Id'

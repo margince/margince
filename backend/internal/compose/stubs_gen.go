@@ -1663,6 +1663,10 @@ func (stubs) SuppressPerson(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 	httperr.NotImplemented(w, r, "SuppressPerson")
 }
 
+func (stubs) LiftSuppression(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, suppressionId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "LiftSuppression")
+}
+
 func (stubs) DraftPersonEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DraftPersonEmail")
 }

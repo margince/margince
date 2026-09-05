@@ -9036,6 +9036,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/{id}/consent/suppress/{suppressionId}/lift": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /**
+                 * @description The stop to take back. The row and not the person: a subject may carry more than
+                 *     one, and lifting "the suppression" would take back whichever came first.
+                 */
+                suppressionId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back a stop, if you outrank the level that set it.
+         * @description Revokes one suppression. **You may lift a decision made below your level, never at or
+         *     above it** — a rep's stop is liftable by an admin and not by another rep, and an
+         *     admin's is liftable by an admin other than by the one who set it only through this
+         *     same rule.
+         *
+         *     **Nothing lifts the subject's own act.** An Art. 21 objection and a withdrawal are
+         *     theirs, not the installation's, so no seat reaches them here whatever their role.
+         *
+         *     A row already revoked, belonging to another subject, or never in existence all answer
+         *     `404` alike: a caller learns nothing about rows they would not have been allowed to
+         *     touch either way.
+         */
+        post: operations["liftSuppression"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{id}/consent/double-opt-in": {
         parameters: {
             query?: never;
@@ -44949,6 +44987,47 @@ export interface operations {
         };
         responses: {
             /** @description Recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    liftSuppression: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /**
+                 * @description The stop to take back. The row and not the person: a subject may carry more than
+                 *     one, and lifting "the suppression" would take back whichever came first.
+                 */
+                suppressionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Why the stop is being taken back. Required, unlike the reason for setting
+                     *     one: a record saying somebody asked us not to write, now overruled, is the
+                     *     change most worth being able to explain later.
+                     */
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Lifted. */
             204: {
                 headers: {
                     [name: string]: unknown;
