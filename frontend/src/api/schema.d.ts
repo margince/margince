@@ -21616,16 +21616,23 @@ export interface components {
              * @enum {string}
              */
             disposition: "snooze" | "not_mine" | "not_sales";
+            reopen_on?: components["schemas"]["ReopenCondition"];
             /**
              * Format: date-time
-             * @description When a snooze lifts. REQUIRED for `snooze` and refused for the other two — a snooze
-             *     with no moment would never lift, and a moment on `not_mine` would make a hand-off
-             *     expire on a Thursday.
+             * @description When a snooze lifts. REQUIRED for `snooze` with `reopen_on: time`, and refused
+             *     everywhere else — a snooze waiting on a reply lifts when the reply arrives, and a
+             *     moment on `not_mine` would make a hand-off expire on a Thursday.
              *
              *     A moment already past is refused rather than stored: it would write a row that hides
              *     nothing, and read to the rep as a snooze that did not take.
              */
             snoozed_until?: string;
+            /**
+             * Format: uuid
+             * @description The meeting to wait for. REQUIRED for `snooze` with `reopen_on: meeting` and
+             *     refused otherwise.
+             */
+            reopen_ref?: string;
         };
         /**
          * @description One user or team admitted to a message besides its participants. The same shape the
@@ -28574,9 +28581,19 @@ export interface components {
             state_at?: string | null;
             /**
              * Format: date-time
-             * @description When a snoozed item re-surfaces (A77/AC-home-6); set exactly while state=snoozed, null otherwise.
+             * @description When a snoozed item re-surfaces; set exactly while reopen_on=time, null otherwise — the other conditions lift on an event rather than a date.
              */
             snoozed_until?: string | null;
+            /**
+             * @description What the item is waiting for; set exactly while state=snoozed, null otherwise.
+             * @enum {string|null}
+             */
+            reopen_on?: "time" | "reply" | "meeting" | null;
+            /**
+             * Format: uuid
+             * @description The meeting being waited for; set exactly while reopen_on=meeting.
+             */
+            reopen_ref?: string | null;
             lineage?: components["schemas"]["MorningBriefItemLineage"];
             /**
              * @description What the overnight agent found about this deal — why it is on the list, what changed,
@@ -28937,14 +28954,36 @@ export interface components {
              */
             cited_evidence: string[];
         };
-        /** @description Snooze a brief item until a future instant (A77/AC-home-6); it re-surfaces once the instant passes. */
+        /**
+         * @description Set a brief item aside until something happens. The something is `reopen_on`: a moment
+         *     on the clock, the customer writing back, or a named meeting being over.
+         */
         BriefSnoozeRequest: {
+            reopen_on?: components["schemas"]["ReopenCondition"];
             /**
              * Format: date-time
-             * @description When the item re-surfaces; must be in the future.
+             * @description When the item re-surfaces. REQUIRED for `time` and refused for the other two — a
+             *     snooze waiting on a reply lifts when the reply arrives, not on a date. Must be in
+             *     the future.
              */
-            snoozed_until: string;
+            snoozed_until?: string;
+            /**
+             * Format: uuid
+             * @description The meeting to wait for. REQUIRED for `meeting` and refused otherwise, because
+             *     "after the meeting" names nothing without saying which meeting.
+             */
+            reopen_ref?: string;
         };
+        /**
+         * @description What lifts a snooze. `time` is the original behaviour and the default, so a client
+         *     written before the other two keeps working unchanged. `reply` waits for the
+         *     counterparty to write back on a conversation linked to the record. `meeting` waits for
+         *     a named meeting to be over — an archived meeting counts as over, so a cancelled one
+         *     returns the work rather than holding it forever.
+         * @default time
+         * @enum {string}
+         */
+        ReopenCondition: "time" | "reply" | "meeting";
         /** @description The §10.1 factor decomposition, each normalized 0..1 — the composite reconciles to it. */
         MorningBriefFeatureVector: {
             /** @description stage win probability / 100. */

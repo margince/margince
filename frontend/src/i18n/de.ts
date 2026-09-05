@@ -8097,12 +8097,15 @@ export const de = {
   "worklist.disposition.snoozeFor": "Für wie lange",
   "worklist.disposition.snoozeDays_one": "{value} Tag",
   "worklist.disposition.snoozeDays_other": "{value} Tage",
+  "worklist.disposition.snoozeUntil.reply": "Bis sie antworten",
   "worklist.disposition.verb.not_mine": "Nicht meins",
   "worklist.disposition.verb.not_sales": "Kein Kunde",
   "worklist.disposition.done.snooze": "Morgen wieder auf deiner Liste.",
   "worklist.disposition.doneSnooze_one": "Morgen wieder auf deiner Liste.",
   "worklist.disposition.doneSnooze_other":
     "In {value} Tagen wieder auf deiner Liste.",
+  "worklist.disposition.doneSnoozeUntil.reply":
+    "Wieder auf deiner Liste, sobald sie antworten.",
   "worklist.disposition.done.not_mine":
     "Von deiner Liste. Wer zuständig ist, sieht es weiterhin.",
   "worklist.disposition.done.not_sales": "Von allen Listen entfernt.",
