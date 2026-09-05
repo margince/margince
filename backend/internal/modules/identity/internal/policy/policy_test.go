@@ -4,6 +4,8 @@
 package policy
 
 import (
+	"os"
+	"regexp"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -256,6 +258,68 @@ func TestZeroRolesDenyEverything(t *testing.T) {
 		for _, a := range []principal.Action{principal.ActionCreate, principal.ActionRead, principal.ActionUpdate, principal.ActionDelete} {
 			if merged.Allows(object, a) {
 				t.Errorf("a user with no roles was granted %s.%s", object, a)
+			}
+		}
+	}
+}
+
+// The builder's own guard. `grid` is what replaced a 44-argument positional
+// zip, and the one failure the positional form made impossible is the one this
+// form could introduce: a key that names nothing. Silently ignoring it would
+// seed a role missing an object it was written to hold, which reads as a
+// permission bug in the product rather than a typo in this file — and
+// `TestEverySystemRoleHasAValidDefaultDocument` above would not catch it,
+// because the base still covers every object.
+func TestGridRefusesAnOverrideNamingNoCoreObject(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("grid accepted an override naming a non-object; a typo must fail the build, not seed a role that silently governs nothing")
+		}
+	}()
+	grid(readOnly, map[string]grant{"persson": crud})
+}
+
+// The admit case beside it: a real object name is applied, and every other
+// object keeps the base. Without this the test above would pass against a
+// `grid` that panicked on everything.
+func TestGridAppliesAnOverrideAndLeavesTheRestAtBase(t *testing.T) {
+	got := grid(readOnly, map[string]grant{"deal": crud})
+	if got["deal"] != crud {
+		t.Errorf("the overridden object holds %+v, want crud", got["deal"])
+	}
+	if got["person"] != readOnly {
+		t.Errorf("an object with no override holds %+v, want the base readOnly", got["person"])
+	}
+	if len(got) != len(coreObjects) {
+		t.Errorf("the grid covers %d objects, want all %d", len(got), len(coreObjects))
+	}
+}
+
+// A role's override map may not restate its own base. Such a line says nothing
+// — `grid` already gave the object that grant — but it reads as a decision, so
+// the next author weighs it and the one after that preserves it.
+//
+// Read from SOURCE, because the defect is invisible in the result: an override
+// that restates the base produces exactly the map a missing override produces,
+// so no amount of inspecting `defaults` can find it. The parser walks each
+// `grid(base, map[string]grant{...})` call and compares each value expression
+// against that call's base expression, which is the same comparison a reader
+// makes and the only one that can fail.
+func TestNoOverrideRestatesItsOwnBase(t *testing.T) {
+	source, err := os.ReadFile("defaults.go")
+	if err != nil {
+		t.Fatalf("reading the seed: %v", err)
+	}
+	calls := regexp.MustCompile(`grid\((\w+), map\[string\]grant\{([^}]*)\}`).FindAllStringSubmatch(string(source), -1)
+	if len(calls) == 0 {
+		t.Fatal("no grid(base, overrides) call found — this test is reading the wrong shape")
+	}
+	for _, call := range calls {
+		base := call[1]
+		for _, line := range regexp.MustCompile(`(\w+):\s*(\w+),`).FindAllStringSubmatch(call[2], -1) {
+			if line[2] == base {
+				t.Errorf("an override sets %s to %s, which is already the base of that grid — "+
+					"the line changes nothing and reads as a decision", line[1], base)
 			}
 		}
 	}
