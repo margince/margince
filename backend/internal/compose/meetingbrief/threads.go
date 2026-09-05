@@ -30,19 +30,26 @@ type thread struct {
 	First   time.Time
 	Last    time.Time
 	// IDs are the conversation's activities this caller may READ, newest
-	// first. A withheld row is counted in Rows and never listed here: it still
-	// dates the thread, and citing it would send a reader to a record they
-	// cannot open — which also tells them a limited conversation belongs to
-	// this thread, a fact the audience narrowing exists to keep.
+	// first. A withheld row is counted in Rows and never listed here: citing
+	// it would send a reader to a record they cannot open — which also tells
+	// them a limited conversation belongs to this thread, a fact the audience
+	// narrowing exists to keep.
 	IDs []string
 	// Rows is how many conversations the thread holds, readable or not.
-	Rows       int
+	Rows int
+	// Inbound/Outbound/OnDeal/HasMeeting describe only the READABLE rows.
+	// They feed the moment's score and its title, so a withheld row's own
+	// nature — that it was a meeting, was on the deal, got a reply — must not
+	// bias which readable moment ranks highest or which readable subject
+	// becomes the title: either would let hidden content steer what the
+	// reader is shown, through a channel the audience narrowing cannot see.
 	Inbound    int
 	Outbound   int
 	OnDeal     bool
 	HasMeeting bool
 	// Readable is how many of the thread's rows this caller may read. A thread
-	// that is entirely withheld still exists and still dates the arc.
+	// that is entirely withheld (Readable == 0) still exists in Rows, but its
+	// First/Last stay at the zero time — it does not date the arc.
 	Readable int
 }
 
@@ -87,37 +94,39 @@ func threadsOf(history []HistoryIn) []thread {
 		key := threadKeyOf(row)
 		found, ok := byKey[key]
 		if !ok {
-			found = &thread{Key: key, Kind: row.Kind, First: row.At, Last: row.At}
+			found = &thread{Key: key, Kind: row.Kind}
 			byKey[key] = found
 			order = append(order, key)
 		}
 		found.Rows++
 		if !row.Withheld {
 			found.IDs = append(found.IDs, row.ID)
-		}
-		if row.At.Before(found.First) {
-			found.First = row.At
-		}
-		if row.At.After(found.Last) {
-			found.Last = row.At
-		}
-		// The newest readable subject names the thread: a later message in a
-		// chain carries the subject the participants settled on.
-		if !row.Withheld {
+			// First/Last date the arc, so only a row this caller may read may
+			// set them — a withheld row still counts in Rows above, but its
+			// instant must never surface as when the thread started or ended.
+			if found.Readable == 0 || row.At.Before(found.First) {
+				found.First = row.At
+			}
+			if found.Readable == 0 || row.At.After(found.Last) {
+				found.Last = row.At
+			}
+			found.Readable++
+			// The newest readable subject names the thread: a later message in a
+			// chain carries the subject the participants settled on.
 			if found.Subject == "" || row.At.Equal(found.Last) {
 				if row.Subject != "" {
 					found.Subject = row.Subject
 				}
 			}
+			switch row.Direction {
+			case "inbound":
+				found.Inbound++
+			case "outbound":
+				found.Outbound++
+			}
+			found.OnDeal = found.OnDeal || row.OnDeal
+			found.HasMeeting = found.HasMeeting || row.Kind == "meeting"
 		}
-		switch row.Direction {
-		case "inbound":
-			found.Inbound++
-		case "outbound":
-			found.Outbound++
-		}
-		found.OnDeal = found.OnDeal || row.OnDeal
-		found.HasMeeting = found.HasMeeting || row.Kind == "meeting"
 	}
 	threads := make([]thread, 0, len(order))
 	for _, key := range order {

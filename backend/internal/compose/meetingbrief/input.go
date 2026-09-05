@@ -143,7 +143,11 @@ type ClaimIn struct {
 	OccurredAt *time.Time
 }
 
-// ActIn is one recent conversation as the brief reads it.
+// ActIn is one recent conversation as the brief reads it. Every field here is
+// marshalled straight into the model's prompt (encodeInput), so this struct
+// carries only what a reader may already see — WithCounterpart is where a
+// conversation outside this caller's audience is kept out, not a flag on it
+// here that the prompt would then have to be trusted to honour.
 type ActIn struct {
 	ID        string
 	Kind      string
@@ -241,6 +245,19 @@ func WithCounterpart(in *Input, view crmcontracts.Person360) {
 	for _, activity := range view.Activities.Data {
 		if len(in.Recent) == recentCap {
 			break
+		}
+		// A row outside this caller's audience is kept out of Recent the same
+		// way an unreadable row is kept out of History's citable set — it
+		// reached this read as a date and a count, on the person's own page,
+		// and it must not go on to be the model's or the floor's evidence for
+		// a sentence about it. Skipped rather than counted against recentCap,
+		// so a withheld row never costs the section a readable one's slot.
+		//
+		// Spelled as an allow-list, not a deny-list: this feeds the model's
+		// prompt, so an unrecognised future content_state must be excluded by
+		// default rather than let through because it didn't spell "withheld".
+		if activity.ContentState == nil || *activity.ContentState != crmcontracts.ActivityContentStateAvailable {
+			continue
 		}
 		folded := ActIn{
 			ID:   ids.UUID(activity.Id).String(),
