@@ -119,3 +119,25 @@ func TestACitedTaskCarriesASubjectTheReaderCanRead(t *testing.T) {
 		t.Fatalf("kind = %q, want task", got.Kind)
 	}
 }
+
+func TestALongMailKeepsItsSignOffInTheModelsEvidence(t *testing.T) {
+	body := "Hello, the results improved. " + strings.Repeat("The customer measured the change. ", 30) + "\n\nRegards,\nAlex Kim"
+	got := excerpt(body)
+	if !strings.HasPrefix(got, "Hello, the results improved.") || !strings.HasSuffix(got, "Alex Kim") {
+		t.Fatalf("the bounded evidence lost the result or its author: %q", got)
+	}
+	if len([]rune(got)) > maxExcerptLen {
+		t.Fatal("retaining the sign-off exceeded the evidence budget")
+	}
+}
+
+func TestAnExcerptKeepsTheSenderAndDropsQuotedHistory(t *testing.T) {
+	body := "The results improved. " + strings.Repeat("More detail. ", 50) + "\nMetin Ergener\n\nOn Monday, Lena wrote:\nPrevious proposal\nLena Fischer"
+	got := excerpt(body)
+	if !strings.Contains(got, "Metin Ergener") || strings.Contains(got, "Lena Fischer") {
+		t.Fatalf("excerpt confused the sender with quoted history: %q", got)
+	}
+	if got := excerpt("> A quoted message only"); got != "" {
+		t.Fatalf("quoted-only message became authored evidence: %q", got)
+	}
+}

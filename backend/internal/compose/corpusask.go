@@ -141,12 +141,14 @@ type askedAnswer struct {
 // The fence is minted per request: a boundary reused across calls is one some
 // uploaded document may already have been shown, and every passage in this
 // prompt is a third party's own writing.
+// Quoted answers budget for both reasoning and verbatim supporting spans.
+// The ordinary structured-output cap can expire before a grounded answer ends.
 func CorpusAskRequest(question string, passages []knowledge.Passage, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
 		System:         corpusAskSystemFor(fence, lang),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: fence.Wrap(renderCorpusAsk(question, passages))}},
-		MaxTokens:      ai.ReasoningOutputMaxTokens,
+		MaxTokens:      2 * ai.ReasoningOutputMaxTokens,
 		ResponseSchema: corpusAskSchema(passageIDs(passages)),
 		SecretStripper: ai.NewSecretStripper(),
 	}
