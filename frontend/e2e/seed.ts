@@ -2253,6 +2253,35 @@ export async function mockApi(
         base_currency: "EUR",
       });
     }
+    // The readings the home strip and the forecast screen both read. Unmocked,
+    // the catch-all below answered it with a LIST envelope — `{data: [], page}`
+    // — which is truthy, so the screen walked past its own "did the read land"
+    // guard and formatted an undefined currency. `formatMoneyCompact` trims it,
+    // the trim throws, and the whole shell goes with it: every sweep then fails
+    // on a missing nav rail rather than on what it was measuring. Same failure
+    // as `/analytics/context` above, and the same reason it is named in full.
+    if (path === "/forecast") {
+      return json({
+        period_start: "2026-01-01",
+        period_end: "2026-03-31",
+        scope_kind: "workspace",
+        won_minor: 1_200_000,
+        evidence_minor: 900_000,
+        best_case_minor: 2_400_000,
+        open_minor: 4_200_000,
+        weighted_minor: 1_890_000,
+        // Eleven of twelve priced: the gap is what the card's second line is
+        // about, so a fixture where every deal carries a figure would leave
+        // that sentence unmeasured.
+        eligible_count: 12,
+        priced_count: 11,
+        confirmed_date_count: 8,
+        fx_missing_count: 0,
+        as_of: "2026-03-04T09:00:00Z",
+        timezone: "Europe/Berlin",
+        base_currency: "EUR",
+      });
+    }
     if (path.startsWith("/reports/")) {
       return json({
         report: "deals-by-stage",
