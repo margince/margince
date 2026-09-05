@@ -153,6 +153,7 @@ import { groupChronology } from "./timelinegroups";
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
 import { invalidateRecord } from "./recordwritekeys";
+import { LogActivityAction } from "./logactivity";
 
 // Companies list + company 360 (B-EP09.10a/b). Firmographics render
 // evidence-or-omit: a field with no stored value is absent, never guessed.
@@ -1765,7 +1766,18 @@ function useCitedReceipt() {
 // to inherit a recipient from.
 type ComposeAnchor =
   | { kind: "reply"; id: string }
-  | { kind: "account"; id: string };
+  | { kind: "account"; id: string }
+  // The next step the advice says is missing: the task form, opened on a
+  // task. No id, because the rule that asks for it names the account and not
+  // one deal — with several open it would be guessing which.
+  | { kind: "task" };
+
+// A suggestion action kind the page has no handler for. Reached only if the
+// contract grows a kind before this page does, which TypeScript refuses at the
+// switch that calls it — the runtime throw is for a payload the build never saw.
+function unreachableAction(kind: never): never {
+  throw new Error(`no surface performs the suggestion action ${String(kind)}`);
+}
 
 // The composer, opened on whichever anchor the page holds. Extracted so the
 // page does not carry a branch per anchor kind in its own JSX.
@@ -1778,6 +1790,20 @@ function AccountComposer({
   orgId: string;
   onClose: () => void;
 }>) {
+  if (anchor.kind === "task") {
+    // The header's own Add-task form, opened already on a task: the advice
+    // shortcuts to it rather than inventing a second way to set a next step.
+    return (
+      <LogActivityAction
+        entityType="organization"
+        entityId={orgId}
+        askedKind="task"
+        triggerLabel="log.addTask"
+        openOnMount
+        onClose={onClose}
+      />
+    );
+  }
   const reply = anchor.kind === "reply";
   return (
     <ComposeModal
@@ -1988,13 +2014,26 @@ function CompanyPage({
         composing={composing}
         onCompose={setComposing}
         onPerform={(action) => {
-          if (action.kind === "draft_reply" && action.activity_id) {
-            setComposing({ kind: "reply", id: action.activity_id });
-          } else if (action.kind === "open_deal" && action.deal_id) {
-            navigate({ screen: "deals", id: action.deal_id });
+          // Total over the kinds the server can name: a kind this page
+          // cannot perform is a compile error here, never a button that
+          // swallows the click.
+          switch (action.kind) {
+            case "draft_reply":
+              if (action.activity_id) {
+                setComposing({ kind: "reply", id: action.activity_id });
+              }
+              return;
+            case "open_deal":
+              if (action.deal_id) {
+                navigate({ screen: "deals", id: action.deal_id });
+              }
+              return;
+            case "add_task":
+              setComposing({ kind: "task" });
+              return;
+            default:
+              unreachableAction(action.kind);
           }
-          // `add_task` names no surface of its own yet: the row's own dismiss
-          // stays the only control until the brief has one.
         }}
         decisionsOpen={decisionsOpen}
         onDecisionsOpen={setDecisionsOpen}

@@ -1432,6 +1432,7 @@ export const vi = {
   "co.suggest.kind.lifecycle_conflict": "Bản ghi mâu thuẫn",
   "co.suggest.more": "Còn {count} mục không hiện ở đây.",
   "co.suggest.basedOn": "Dựa trên những gì",
+  "co.cite.open": "Mở bản ghi",
   "co.suggest.dismiss": "Để sau",
   "co.suggest.byline": "Margince đề xuất",
   "co.suggest.dismissFailed":

@@ -26503,6 +26503,11 @@ type OrganizationBrief struct {
 
 // OrganizationBriefEvidence One record a brief sentence was written from.
 type OrganizationBriefEvidence struct {
+	// At The instant the evidence is dated — when the message was sent, when
+	// the deal was last worked, when the signal was read. The client
+	// prints it in the reader's own calendar. Absent for a record with no
+	// date of its own.
+	At         *time.Time                          `json:"at,omitempty"`
 	EntityId   openapi_types.UUID                  `json:"entity_id"`
 	EntityType OrganizationBriefEvidenceEntityType `json:"entity_type"`
 
@@ -26513,6 +26518,20 @@ type OrganizationBriefEvidence struct {
 	// leaves this out. Descriptive only — grounding checks type and id,
 	// never the name.
 	Name *string `json:"name,omitempty"`
+
+	// Origin Where the words came from, in the writer's own language and the
+	// reader's terms — "Email you sent", "Open deal, last worked",
+	// "Read from their mail". One short phrase, never a record kind the
+	// client already labels the chip with. Descriptive only, like `name`.
+	Origin *string `json:"origin,omitempty"`
+
+	// Quote The record's own words, verbatim — a message's subject line, a
+	// signal's sentence. Never a paraphrase and never a summary: it is
+	// what a reader checks the claim against without opening the record,
+	// so a writer that has no verbatim words leaves it out. Absent when
+	// the reader may not read the record's content, even where they may
+	// know it exists.
+	Quote *string `json:"quote,omitempty"`
 }
 
 // OrganizationBriefEvidenceEntityType defines model for OrganizationBriefEvidence.EntityType.

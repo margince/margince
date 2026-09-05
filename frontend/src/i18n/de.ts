@@ -1435,6 +1435,7 @@ export const de = {
   "co.suggest.kind.lifecycle_conflict": "Widerspruch im Datensatz",
   "co.suggest.more": "{count} weitere hier nicht gezeigt.",
   "co.suggest.basedOn": "Worauf das beruht",
+  "co.cite.open": "Datensatz öffnen",
   "co.suggest.dismiss": "Nicht jetzt",
   "co.suggest.byline": "Margince schlägt vor",
   "co.suggest.dismissFailed":

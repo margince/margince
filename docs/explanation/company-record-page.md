@@ -215,9 +215,26 @@ Every rule is a comparison a rep could make themselves, and **each suggestion
 carries the rule in the words they read** (`reason` — "the rule that fired, in
 the words the rep reads. Never a score."), plus the `evidence` records it fired
 on and, where the server can name one, an `action` that opens a governed surface
-prefilled from that evidence (`draft_reply`, `open_deal`, `add_task`). A rule
-that cannot name an action carries `null` and the card advises without offering
-a button — a control that does nothing teaches the reader to stop pressing them.
+prefilled from that evidence (`draft_reply` opens the composer on the unanswered
+message, `open_deal` opens the stalled deal, `add_task` opens the account's task
+form already on a task). A rule that cannot name an action carries `null` and
+the card advises without offering a button — a control that does nothing teaches
+the reader to stop pressing them, and so does a button the page cannot perform:
+the page's handler is total over the action kinds, so a kind it has no surface
+for fails the build rather than swallowing the click.
+
+**A citation is a receipt, not a label.** Beside the record it points at, each
+piece of evidence carries what the rule read from it: the record's own words
+(`quote` — a message's opening line, the signal's sentence, verbatim and never
+a paraphrase), the instant it is dated (`at` — when the message was sent, when
+the deal was last worked) and where the words came from (`origin` — "Email you
+sent", "Open deal, last worked"). The chip is labelled with the record's name
+and, rested on, opens exactly that. The words ride the activity's audience
+test and the row does not: a message whose content this reader may not see
+still counts as the newest exchange, and its chip carries the date and the
+channel with no quote. None of it reaches the fingerprint — a subject edited
+after the fact must not resurrect a dismissal. The vocabulary lives in
+`suggestioncites.go`.
 A model could phrase these more warmly; it could not make them **checkable**, and
 checkable is what lets a rep disagree with the *reason* rather than with a
 verdict they cannot inspect.

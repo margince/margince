@@ -1503,6 +1503,7 @@ export const en = {
   "co.suggest.kind.lifecycle_conflict": "Record disagrees",
   "co.suggest.more": "{count} more not shown here.",
   "co.suggest.basedOn": "What this is based on",
+  "co.cite.open": "Open the record",
   "co.suggest.dismiss": "Not now",
   "co.suggest.byline": "Margince suggests",
   "co.suggest.dismissFailed":

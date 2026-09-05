@@ -27,6 +27,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -40,12 +41,27 @@ import (
 )
 
 // lastMessage is the newest two-way exchange on an account, as the no-reply
-// rule needs it: who spoke, when, and which activity to cite.
+// rule needs it: who spoke, when, and which activity to cite — and, where the
+// reader may read the message itself, its own words for the citation to carry.
 type lastMessage struct {
 	ID        ids.UUID
 	Direction string
 	At        time.Time
+	// Kind is the channel the exchange happened on, which is what lets the
+	// citation say "email you sent" rather than "activity".
+	Kind string
+	// Subject and Excerpt are the message's own words. Both are EMPTY when the
+	// reader may know the message exists but not what it says — a limited
+	// audience is a property of the row a human set — so the rule still fires
+	// on the fact of the silence while the citation carries no words.
+	Subject string
+	Excerpt string
 }
+
+// excerptRunes bounds what a citation quotes of a message body. A quote is
+// what a reader checks the claim against at a glance; past this it is the
+// message, and the chip already opens that.
+const excerptRunes = 200
 
 // newestMessage reads the newest two-way exchange linked to the account, or
 // reports that there is none.
@@ -74,16 +90,27 @@ func newestMessage(
 	if activityScope == "" {
 		activityScope = scopeAll
 	}
+	// The WORDS ride the audience test and the ROW does not: which message is
+	// newest is a fact about the account, what it said is content a limited
+	// audience withholds. Filtering the row on the audience would make the
+	// rule fall through to an older message and advise a chase on a thread
+	// somebody else already answered.
+	audience, err := auth.ActivityAudienceArm(ctx, "a", arg)
+	if err != nil {
+		return lastMessage{}, false, err
+	}
 	var found lastMessage
-	var direction *string
+	var direction, subject, excerpt *string
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT a.id, a.direction, a.occurred_at
+		SELECT a.id, a.direction, a.occurred_at, a.kind,
+		       CASE WHEN %[3]s THEN a.subject END,
+		       CASE WHEN %[3]s THEN left(a.body, %[4]d) END
 		FROM activity a
 		WHERE a.kind IN ('email','message','call','meeting') AND a.archived_at IS NULL AND %[1]s
 		  AND %[2]s
 		ORDER BY a.occurred_at DESC, a.id DESC
-		LIMIT 1`, activityScope, activities.OrgLinkedActivityExists(orgPos)), args...).
-		Scan(&found.ID, &direction, &found.At)
+		LIMIT 1`, activityScope, activities.OrgLinkedActivityExists(orgPos), audience, excerptRunes), args...).
+		Scan(&found.ID, &direction, &found.At, &found.Kind, &subject, &excerpt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return lastMessage{}, false, nil
 	}
@@ -93,7 +120,20 @@ func newestMessage(
 	if direction != nil {
 		found.Direction = *direction
 	}
+	if subject != nil {
+		found.Subject = strings.TrimSpace(*subject)
+	}
+	if excerpt != nil {
+		found.Excerpt = oneLine(*excerpt)
+	}
 	return found, true, nil
+}
+
+// oneLine folds a body excerpt into the one line a chip's receipt quotes:
+// whitespace collapsed, because a mail body opens with a run of blank lines
+// and a quote that starts with three of them reads as a quote of nothing.
+func oneLine(text string) string {
+	return strings.Join(strings.Fields(text), " ")
 }
 
 // hasOpenTask answers whether anything at all is scheduled on the account.
@@ -157,9 +197,14 @@ type suggestionInputs struct {
 	// relationship is over. Filled from the shared signal read, so the
 	// contradiction rule and the health section count one query between them.
 	contractEnded bool
-	open          pipeline
-	contractStrip contractStrip
-	scheduled     bool
+	// contractEndedSaid and contractEndedAt are that signal's own sentence and
+	// the instant it was read — the words the contradiction is checked
+	// against, carried on the citation rather than paraphrased in the reason.
+	contractEndedSaid string
+	contractEndedAt   time.Time
+	open              pipeline
+	contractStrip     contractStrip
+	scheduled         bool
 }
 
 // advisable reports whether this caller can be advised at all. Neither input
@@ -239,6 +284,8 @@ func gatherSuggestionInputs(
 		in.open = open
 	}
 	in.contractEnded = facts.ContractEnded
+	in.contractEndedSaid = facts.ContractEndedSaid
+	in.contractEndedAt = facts.ContractEndedAt
 	in.lifecycle = lifecycle
 	return in, nil
 }

@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState, Skeleton } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { PanelBody, PanelRow } from "../design-system/panel";
@@ -27,8 +28,8 @@ import {
 } from "./companylookups";
 import { EntityRef } from "./entityref";
 import {
-  MOMENT_EVIDENCE_LABEL,
   MOMENT_RULE_LABEL,
+  momentGrounding,
   standingTone,
 } from "./persontoday";
 import {
@@ -561,6 +562,8 @@ function MomentRow({
   onOpenRecord?: (entityType: string, entityId: string) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const destination = moment.recommended_action.destination;
   const target =
     moment.recommended_action.state === "available" &&
@@ -581,11 +584,7 @@ function MomentRow({
         <span className="co-move-reason">{moment.why_now}</span>
         <Proof
           label={t("record.restsOn")}
-          items={moment.evidence.map((item) => ({
-            key: `${item.type}-${item.id ?? item.label}`,
-            quote: item.label,
-            from: t(MOMENT_EVIDENCE_LABEL[item.type]),
-          }))}
+          items={momentGrounding(moment.evidence, t, locale, recordZone)}
           count
         />
         {target && onOpenRecord && (

@@ -330,6 +330,45 @@ describe("the day's call, and which record it is read from", () => {
   // "Worth doing next"'s own rows are the OTHER half of the moves section —
   // merged into this one panel rather than a second card repeating the
   // account's own advice.
+  it("quotes the words the moment rests on, never the kind of record twice", () => {
+    show({
+      ...BASE,
+      moment: {
+        claim_key: "moment:open_promise",
+        evidence_fingerprint: "fp-1",
+        rule: "open_promise",
+        headline: "You owe Dana the contract",
+        why_now: "Promised on Monday, and nothing has gone out.",
+        confidence: "observed_fact",
+        evidence: [
+          {
+            type: "activity",
+            id: "a-1",
+            label: "They will send the contract",
+            snippet: "We'll get the contract over to you by Friday.",
+            observed_at: "2026-08-03T09:00:00Z",
+          },
+        ],
+        recommended_action: {
+          kind: "complete_task",
+          label: "Open it from the task list",
+          state: "blocked",
+        },
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /What this rests on/ }));
+    // The verbatim words lead; the claim, the kind of record and the day it
+    // was said sit under them as the origin line.
+    expect(
+      screen.getByText("We'll get the contract over to you by Friday."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "They will send the contract · From an exchange · 03/08/2026",
+      ),
+    ).toBeTruthy();
+  });
+
   it("carries the account's suggestions as moves alongside the context band", () => {
     show({
       ...BASE,

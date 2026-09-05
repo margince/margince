@@ -17593,6 +17593,30 @@ export interface components {
              *     never the name.
              */
             name?: string;
+            /**
+             * @description The record's own words, verbatim — a message's subject line, a
+             *     signal's sentence. Never a paraphrase and never a summary: it is
+             *     what a reader checks the claim against without opening the record,
+             *     so a writer that has no verbatim words leaves it out. Absent when
+             *     the reader may not read the record's content, even where they may
+             *     know it exists.
+             */
+            quote?: string;
+            /**
+             * Format: date-time
+             * @description The instant the evidence is dated — when the message was sent, when
+             *     the deal was last worked, when the signal was read. The client
+             *     prints it in the reader's own calendar. Absent for a record with no
+             *     date of its own.
+             */
+            at?: string;
+            /**
+             * @description Where the words came from, in the writer's own language and the
+             *     reader's terms — "Email you sent", "Open deal, last worked",
+             *     "Read from their mail". One short phrase, never a record kind the
+             *     client already labels the chip with. Descriptive only, like `name`.
+             */
+            origin?: string;
         };
         /**
          * @description What the accounting mirror knows about one customer (ADR-0083/A128).

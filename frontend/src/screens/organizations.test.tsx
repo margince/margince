@@ -1678,6 +1678,40 @@ describe("CompanyScreen — next-step suggestions", () => {
     expect(screen.getByRole("button", { name: "deal" })).toBeTruthy();
   });
 
+  it("opens the task form, on a task, from the advice that nothing is scheduled", async () => {
+    // Through the PAGE, not the card alone: the card only names the action,
+    // and the page is what has to perform it. This is the button that used to
+    // swallow every click.
+    const nextStep = {
+      kind: "no_next_step",
+      title: "Set the next step",
+      reason:
+        '"Fleet retrofit 2026" is open and no task says what happens next.',
+      fingerprint: "fp-next-1",
+      evidence: [
+        {
+          entity_type: "deal",
+          entity_id: "d-1",
+          name: "Fleet retrofit 2026",
+          origin: "Open deal",
+        },
+      ],
+      action: { kind: "add_task" },
+    };
+    stubFetch(companyBackstop, {
+      org360: { ...org360, suggestions: [nextStep] },
+    });
+    render(<CompanyScreen id="o-1" />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Add the next step" }),
+    );
+    // The header's own Add-task form, titled for the verb that opened it.
+    expect(
+      await screen.findByRole("heading", { name: "Add task" }),
+    ).toBeTruthy();
+  });
+
   it("names how many suggestions the card left out", async () => {
     const three60 = {
       ...org360,
