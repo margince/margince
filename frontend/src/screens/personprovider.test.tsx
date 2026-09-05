@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
+import { en } from "../i18n/en";
 import {
   keepPolling,
   PersonProviderSection,
@@ -98,9 +99,7 @@ describe("a contact nobody has bought data for", () => {
 
     // The plate names what is missing AND what a lookup costs. Without it the
     // panel is a blank body whose only verb sits in the header corner.
-    const title = await screen.findByText(
-      "Nothing bought for this contact yet",
-    );
+    const title = await screen.findByText(en["provider.profile.emptyTitle"]);
     expect(await screen.findByText(/It spends Surfe credits/)).toBeDefined();
 
     // The verb lives INSIDE the plate, which is the whole point: a button that
@@ -116,7 +115,7 @@ describe("a contact nobody has bought data for", () => {
     const posted = mount(neverRun(), queuedRun);
 
     await user.click(
-      await screen.findByRole("button", { name: /Look this contact up/ }),
+      await screen.findByRole("button", { name: /Look this person up/ }),
     );
 
     // One request, naming a provider. A body without one is refused by the
@@ -146,7 +145,7 @@ describe("a contact nobody has bought data for", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: /Look this contact up/ }),
+      await screen.findByRole("button", { name: /Look this person up/ }),
     );
 
     // The server's own words, not a generic line: a refusal nobody can read is
@@ -171,9 +170,7 @@ describe("a contact whose data was already bought", () => {
     ).toBeDefined();
     // The plate belongs to the empty case only — a panel with values that also
     // said "nothing bought yet" would contradict what is under it.
-    expect(
-      screen.queryByText("Nothing bought for this contact yet"),
-    ).toBeNull();
+    expect(screen.queryByText(en["provider.profile.emptyTitle"])).toBeNull();
     // "Check again", not "look this contact up": this contact HAS been looked
     // up, and the button offers the same free details a second time in case a
     // job changed. The first-lookup wording on a record already showing a
@@ -183,7 +180,7 @@ describe("a contact whose data was already bought", () => {
       await screen.findByRole("button", { name: /Check again/ }),
     ).toBeDefined();
     expect(
-      screen.queryByRole("button", { name: /Look this contact up/ }),
+      screen.queryByRole("button", { name: /Look this person up/ }),
     ).toBeNull();
   });
 
@@ -197,9 +194,7 @@ describe("a contact whose data was already bought", () => {
     expect(
       await screen.findByText(providerCompletedProfile.emails[0].value),
     ).toBeDefined();
-    expect(
-      screen.queryByText("Nothing bought for this contact yet"),
-    ).toBeNull();
+    expect(screen.queryByText(en["provider.profile.emptyTitle"])).toBeNull();
   });
 });
 
@@ -261,7 +256,7 @@ describe("two providers connected", () => {
     // button, or a body that named the wrong provider, would buy from whoever
     // happened to be first.
     const buttons = await screen.findAllByRole("button", {
-      name: /Look this contact up/,
+      name: /Look this person up/,
     });
     expect(buttons.length).toBe(2);
     await user.click(buttons[1]);
@@ -300,7 +295,7 @@ describe("which contact a lookup is charged to", () => {
         <PersonProviderSection personId="p-1" profiles={[neverRun()]} />
       </StoryProviders>,
     );
-    await screen.findByRole("button", { name: /Look this contact up/ });
+    await screen.findByRole("button", { name: /Look this person up/ });
 
     // The panel stays mounted across the change of subject: the record page
     // keys its subtree by contact today, and this is the case that breaks the
@@ -311,7 +306,7 @@ describe("which contact a lookup is charged to", () => {
       </StoryProviders>,
     );
     await user.click(
-      await screen.findByRole("button", { name: /Look this contact up/ }),
+      await screen.findByRole("button", { name: /Look this person up/ }),
     );
 
     await expect.poll(() => paths).toEqual(["p-2"]);

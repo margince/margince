@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { RecordSpine } from "./spine";
 
 // The thread's one rule: it may only draw what the payload supports. Every
@@ -131,9 +132,7 @@ describe("the silence between the last word and today", () => {
 
     expect(screen.getByText("7 days")).toBeTruthy();
     expect(screen.getByText("They have never written back")).toBeTruthy();
-    expect(
-      screen.getByText("One contact, and no reply from them"),
-    ).toBeTruthy();
+    expect(screen.getByText(en["co.spine.singleThreaded"])).toBeTruthy();
   });
 
   it("draws no gap when they answered after we did", () => {

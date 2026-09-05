@@ -18,7 +18,7 @@ const CONNECTIONS_HREF = "#/settings/connections";
  * A connect-time import runs for minutes to hours and the person who started
  * it goes back to work while it does. The orb in the rail carries its ring, but
  * the rail is the corner of the window and at phone width a cell in the bar;
- * this puts the same reading top-centre of the content, small, for as long as
+ * this puts the same reading bottom-centre of the content, small, for as long as
  * mail is arriving, and takes itself away the moment it stops. A chip rather
  * than a banner: a banner is a sentence about the workspace, and this is a
  * gauge.

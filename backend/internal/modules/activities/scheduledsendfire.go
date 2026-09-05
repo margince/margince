@@ -249,9 +249,9 @@ func (c claimedSend) replay() (SendOrigin, SendEmailInput, error) {
 		// again for exactly that reason.
 		return origin.AlsoFiledUnder(also), in, nil
 	}
-	var links []ActivityLinkInput
-	if err := json.Unmarshal(c.OriginLinks, &links); err != nil {
-		return SendOrigin{}, SendEmailInput{}, fmt.Errorf("scheduled send: reading the frozen record links: %w", err)
+	links, err := thawOriginLinks(c.OriginLinks)
+	if err != nil {
+		return SendOrigin{}, SendEmailInput{}, err
 	}
 	return FromAccount(links), in, nil
 }

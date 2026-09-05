@@ -180,6 +180,17 @@
   /* The agent dock stands at the foot of THIS column rather than of the
      viewport, so the column is what it is positioned against. */
   position: relative;
+  /* The column's layering is the column's own business. Screens stack plenty
+     inside it — the list table alone declares 1 for a sticky header, 2 for the
+     frozen identity column, 3 for its shade and 20 for a menu — and with no
+     stacking context here every one of those numbers competed in the ROOT
+     context against the sidebar's, where the column, being later in the tree,
+     won each tie. What that looked like: a collapsed rail's tooltip cut off at
+     the table's left edge, behind the frozen column, on every list screen.
+     `isolation`, not a z-index of its own: it makes the context WITHOUT making
+     this element a containing block, so the fixed-position descendants the note
+     below is about are still laid out against the viewport. */
+  isolation: isolate;
   /* No `contain: layout` here, tempting as it is for the collapse animation's
      relayout cost: containment makes this element the containing block for every
      fixed-position descendant. The overlays are portalled to the body and so are
@@ -355,8 +366,12 @@
 .rail.collapsed {
   overflow: visible;
   /* Above the work column it is a sibling of: the tooltips below hang past the
-     rail's right edge, and the column, painted later with its own stacking
-     context, covered them. A tooltip behind the page is one nobody reads. */
+     rail's right edge, and the column is later in the tree, so it covers
+     whatever it ties with. A tooltip behind the page is one nobody reads.
+     Two is only above the column's own box; what puts it above everything the
+     column CONTAINS is `.main`'s `isolation: isolate`, which keeps a screen's
+     sticky layers from ever reaching this context. The pair is one invariant
+     and is held from both ends by app/chrome-layering.test.ts. */
   position: relative;
   z-index: 2;
 }

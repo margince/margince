@@ -230,7 +230,7 @@ it("says how many match once a clause is complete", async () => {
   // incomplete — typing a value is what makes it askable.
   await user.type(screen.getByLabelText("Value"), "ann");
 
-  expect(await screen.findByText("12 contacts match")).toBeTruthy();
+  expect(await screen.findByText("12 people match")).toBeTruthy();
 });
 
 it("names the count after the object, not after a placeholder", async () => {
@@ -242,7 +242,7 @@ it("names the count after the object, not after a placeholder", async () => {
   await user.click(screen.getByRole("button", { name: "Add clause" }));
   await user.type(screen.getByLabelText("Value"), "s1");
 
-  // "3 deals match", not "3 contacts match" and not "3 match" — the object is
+  // "3 deals match", not "3 people match" and not "3 match" — the object is
   // part of the sentence, which is why the copy is keyed per object.
   expect(await screen.findByText("3 deals match")).toBeTruthy();
 });
@@ -264,7 +264,7 @@ it("restores a saved filter, count and all, without a clause being retyped", asy
   // The stored clause is on screen AND askable: a view that restores a tree the
   // engine would refuse is a view that fails the moment it is opened.
   expect(await screen.findByDisplayValue("ann")).toBeTruthy();
-  expect(await screen.findByText("7 contacts match")).toBeTruthy();
+  expect(await screen.findByText("7 people match")).toBeTruthy();
 });
 
 it("does not offer a view whose stored filter it cannot read", async () => {
@@ -447,7 +447,7 @@ it("reads a refused preview as a failure, not as an unwritten filter", async () 
 
   await user.click(await screen.findByRole("button", { name: "Add clause" }));
   await user.type(screen.getByLabelText("Value"), "ann");
-  await screen.findByText("2 contacts match");
+  await screen.findByText("2 people match");
 
   // A bodiless 502 — a proxy between the client and the app — is the failure
   // with the least to say, so what the screen says instead is all its own.
@@ -482,7 +482,7 @@ it("names the seat when a read seat is refused a preview", async () => {
 
   await user.click(await screen.findByRole("button", { name: "Add clause" }));
   await user.type(screen.getByLabelText("Value"), "ann");
-  await screen.findByText("2 contacts match");
+  await screen.findByText("2 people match");
 
   vi.stubGlobal(
     "fetch",

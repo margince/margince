@@ -1,13 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "../api/schema";
+import { isAcceptedCorpusFile } from "./voice-corpus-file";
 import type { IntakeOutcome, RefusalReason } from "./voice-intake-core";
-import {
-  intakeTranscript,
-  intakeUpload,
-  isAcceptedCorpusFile,
-  sourceRef,
-} from "./voice-intake-core";
+import { intakeFile, intakeTranscript } from "./voice-intake-core";
 
 // The Settings side of the shared voice-corpus intake: the same core the
 // onboarding act runs on, adapted to a surface that reads its corpus from the
@@ -36,6 +32,7 @@ export type IntakeNotice = Readonly<{
     | "kept"
     | "skippedType"
     | "skippedEmpty"
+    | "skippedUnreadable"
     | "refused"
     | "failed"
     | "dismissed"
@@ -54,6 +51,16 @@ export type IntakeNotice = Readonly<{
 // recent results so it stays a readable summary of what just happened rather
 // than an ever-growing log.
 const MAX_NOTICES = 6;
+
+// Why a file went nowhere, as the notice the card shows for it.
+const skippedKinds: Record<
+  Extract<IntakeOutcome, { kind: "skipped" }>["reason"],
+  IntakeNotice["kind"]
+> = {
+  type: "skippedType",
+  empty: "skippedEmpty",
+  unreadable: "skippedUnreadable",
+};
 
 // How many sources are read and previewed at once. Selecting a folder's worth
 // of files used to start every read and every preview simultaneously, which
@@ -199,7 +206,7 @@ export function useVoiceIntake({ profileId, onChanged }: UseVoiceIntakeArgs) {
             ref: outcome.ref,
             label: outcome.label,
             tone: "warn",
-            kind: outcome.reason === "empty" ? "skippedEmpty" : "skippedType",
+            kind: skippedKinds[outcome.reason],
           });
           return;
       }
@@ -280,14 +287,7 @@ export function useVoiceIntake({ profileId, onChanged }: UseVoiceIntakeArgs) {
           });
           continue;
         }
-        runIntake(file.name, async () => {
-          const text = await file.text();
-          return intakeUpload(
-            sourceRef("upload", file.name, text, knownRefs()),
-            file.name,
-            text,
-          );
-        });
+        runIntake(file.name, () => intakeFile(file, knownRefs()));
       }
     },
     [knownRefs, note, runIntake],

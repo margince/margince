@@ -107,11 +107,16 @@ func (h Handlers) ListForecastCalls(
 	}
 	at := h.now()
 	if params.AsOf != nil {
-		at = params.AsOf.Time
+		at = DayNamed(params.AsOf.Time)
 	}
-	kind := PeriodQuarter
-	if params.Period != nil && *params.Period == crmcontracts.ForecastCallsPeriodMonth {
-		kind = PeriodMonth
+	asked := ""
+	if params.Period != nil {
+		asked = string(*params.Period)
+	}
+	kind, known := PeriodKindOf(asked)
+	if !known {
+		httperr.Write(w, r, unknownPeriod())
+		return
 	}
 
 	calls := []Call{}

@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (82)
+## Parity (84)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -48,6 +48,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `emailsplitterparity_test.go` | H3 | The server composes a row's preview and the browser folds the quoted tail in the drawer, from two copies of one vocabulary. |
 | `enumsync_test.go` | H3 | The enum-vocabulary sync as a fitness function: where domain logic branches on a typed Go enum, its constant set must equal the schema's CHECK (col IN (...)) set for the column it mirrors. |
 | `filtervocabularyparity_test.go` | H3 | Two surfaces answer a filtered question: the list/segment compiler in `platform/database/storekit`, and the query compiler in `modules/search`. |
+| `forecastperiodparity_test.go` | H3 | Every period the contract offers must be a window the server can resolve. |
 | `frontendapprovalkinds_test.go` | H1 | Every kind a proposal can be staged under must have words a reader recognises, or the queue prints the wire enum at them. |
 | `frontendattentionsources_test.go` | H1 | Every source the Worklist can carry must have a body the decision lane knows how to draw, or the lane asks the wrong endpoint about it. |
 | `frontendaudiencereasons_test.go` | H3 | A held message says WHY, or the reader cannot argue with the verdict. |
@@ -77,6 +78,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `mergedecidableauthority_test.go` | H2 | Who may settle a duplicate pair has ONE answer, and the card must ask the same thing the write asks. |
 | `minorunitscale_test.go` | H3 | A currency's minor-unit scale — 100 for EUR, 1000 for KWD, 1 for VND — is one fact, and the table that holds it lives in shared/kernel/values. |
 | `modulecatalogtables_test.go` | H2 | The module catalog's Owns-tables column is the ownership map. |
+| `momentactionvocabulary_test.go` | H3 | Every moment-card verb is classified by whether pressing it writes. |
 | `netguardparity_test.go` | H3 | The egress SSRF denylist exists twice, and this is where the two are held equal. |
 | `onboardinglocales_test.go` | H2 | The onboarding conversation speaks every language the product does. |
 | `onesendauthority_test.go` | H2 | The composer's preview and the send's door are one authority. |
@@ -102,7 +104,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (111)
+## Census (112)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -150,6 +152,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `extensionsignored_test.go` | H3 | The enabled set must be a set git actually has. |
 | `fliponehandle_test.go` | H2 | The overlay flip runs on ONE workspace binding, and this is what keeps it so. |
 | `forecastscopeauthority_test.go` | H2 | Every forecasting store entry point that RECORDS against a scope asks whether its caller answers for that scope. |
+| `frontendsendpermission_test.go` | H2 | Every surface that posts to a send door asks the engine first, through the one component that says what it answered. |
 | `gatecensus_test.go` | H2 | The census over this repo's own gate machinery: a gate's exceptions are held to the standard the gate holds its subjects to. |
 | `gateinventory_test.go` | H3 | The gate inventory: every gate in this package declares its own shape, and the reference page listing them is rendered from those declarations. |
 | `insertattemptcaps_test.go` | H2 | An insert that names no MaxAttempts does not run without a retry ladder — it runs on River's default of 25, on attempt-to-the-fourth backoff, which reaches days. |

@@ -7109,6 +7109,7 @@ func (e MyAgentGrantState) Valid() bool {
 const (
 	NewForecastCallPeriodMonth   NewForecastCallPeriod = "month"
 	NewForecastCallPeriodQuarter NewForecastCallPeriod = "quarter"
+	NewForecastCallPeriodWeek    NewForecastCallPeriod = "week"
 )
 
 // Valid indicates whether the value is a known member of the NewForecastCallPeriod enum.
@@ -7117,6 +7118,8 @@ func (e NewForecastCallPeriod) Valid() bool {
 	case NewForecastCallPeriodMonth:
 		return true
 	case NewForecastCallPeriodQuarter:
+		return true
+	case NewForecastCallPeriodWeek:
 		return true
 	default:
 		return false
@@ -14987,6 +14990,7 @@ func (e GetFilterVocabularyParamsResource) Valid() bool {
 const (
 	GetForecastParamsPeriodMonth   GetForecastParamsPeriod = "month"
 	GetForecastParamsPeriodQuarter GetForecastParamsPeriod = "quarter"
+	GetForecastParamsPeriodWeek    GetForecastParamsPeriod = "week"
 )
 
 // Valid indicates whether the value is a known member of the GetForecastParamsPeriod enum.
@@ -14995,6 +14999,8 @@ func (e GetForecastParamsPeriod) Valid() bool {
 	case GetForecastParamsPeriodMonth:
 		return true
 	case GetForecastParamsPeriodQuarter:
+		return true
+	case GetForecastParamsPeriodWeek:
 		return true
 	default:
 		return false
@@ -15026,6 +15032,7 @@ func (e GetForecastParamsScopeKind) Valid() bool {
 const (
 	ForecastCallsPeriodMonth   ListForecastCallsParamsPeriod = "month"
 	ForecastCallsPeriodQuarter ListForecastCallsParamsPeriod = "quarter"
+	ForecastCallsPeriodWeek    ListForecastCallsParamsPeriod = "week"
 )
 
 // Valid indicates whether the value is a known member of the ListForecastCallsParamsPeriod enum.
@@ -15034,6 +15041,8 @@ func (e ListForecastCallsParamsPeriod) Valid() bool {
 	case ForecastCallsPeriodMonth:
 		return true
 	case ForecastCallsPeriodQuarter:
+		return true
+	case ForecastCallsPeriodWeek:
 		return true
 	default:
 		return false
@@ -30951,19 +30960,46 @@ type ScheduledSend struct {
 
 	// Bcc Visible to the SENDER, who is the only person this record is readable by. A scheduled
 	// message's blind-copy list is not workspace-readable the way a sent activity is.
-	Bcc       *[]openapi_types.Email `json:"bcc,omitempty"`
-	Body      *string                `json:"body,omitempty"`
-	Cc        *[]openapi_types.Email `json:"cc,omitempty"`
-	CreatedAt time.Time              `json:"created_at"`
+	Bcc  *[]openapi_types.Email `json:"bcc,omitempty"`
+	Body *string                `json:"body,omitempty"`
+	Cc   *[]openapi_types.Email `json:"cc,omitempty"`
+
+	// CommunicationContext What the sender claimed the message is, frozen with it. Absent when nothing was
+	// claimed, which is the ordinary case for a reply — the engine derives it from the
+	// anchor.
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
+
+	// ConsentPurpose The deprecated purpose key the sender still supplied, frozen with the message. The
+	// fire consults it where the record supports no category, so a preview that could
+	// not pass it would answer a different question than the send.
+	ConsentPurpose *string   `json:"consent_purpose,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+
+	// Evidence The records the sender named in support of the message, frozen with it. Absent
+	// when none were named. Evidence is what makes a claimed category supported, so a
+	// preview asked without it would answer "unproven" about a message the fire allows.
+	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
 
 	// HeldReason Why a human has to look at it. `consent_withdrawn` — a recipient withdrew consent
 	// after it was scheduled. `sender_inactive` — the scheduler lost their seat or mailbox.
 	// `missed_window` — it came due while nothing was running and is now too late to be the
 	// message that was written. `timer_exhausted` — the job that wakes it ran out of
 	// attempts. `send_refused` — a gate refused for another reason at fire.
-	HeldReason  *ScheduledSendHeldReason `json:"held_reason,omitempty"`
-	Id          openapi_types.UUID       `json:"id"`
-	ScheduledAt time.Time                `json:"scheduled_at"`
+	HeldReason *ScheduledSendHeldReason `json:"held_reason,omitempty"`
+	Id         openapi_types.UUID       `json:"id"`
+
+	// Links The records an account-started message files itself under, as the send named
+	// them. Absent on a reply: a reply's records come from its anchor, and the ones it
+	// was told to file under beyond those (`also_links` on the send) are not carried
+	// here, because the reply preview resolves from the anchor alone. Carried so a
+	// surface can ask the engine the SAME question the fire will ask: the account-send
+	// preview refuses a message that names no records, and a surface that could not
+	// name them would fall silent on exactly the cold sends where consent matters most.
+	Links *[]ActivityLinkInput `json:"links,omitempty"`
+
+	// MarketingPurpose For a marketing send, the consent purpose key it claimed, frozen with the message.
+	MarketingPurpose *string   `json:"marketing_purpose,omitempty"`
+	ScheduledAt      time.Time `json:"scheduled_at"`
 
 	// ScheduledTz The IANA zone the human picked the moment in, kept so it re-renders as meant.
 	ScheduledTz string `json:"scheduled_tz"`
@@ -36636,7 +36672,7 @@ type GetFilterVocabularyParamsResource string
 
 // GetForecastParams defines parameters for GetForecast.
 type GetForecastParams struct {
-	// Period The window length. Quarters follow the installation's financial year.
+	// Period The window length. Quarters and months follow the installation's financial year; a week is the working week, Monday to Sunday in the installation's own zone, and moves with no fiscal year.
 	Period *GetForecastParamsPeriod `form:"period,omitempty" json:"period,omitempty"`
 
 	// AsOf Which period to read, by naming a day inside it. Omitted means today's. A DAY rather than an instant: which period a moment falls in is a question about the installation's calendar, not about the caller's clock.

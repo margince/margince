@@ -167,3 +167,160 @@ func TestAPeriodRefusesInputsItCannotResolve(t *testing.T) {
 		t.Errorf("a valid fiscal year was refused: %v", err)
 	}
 }
+
+// A week runs Monday to Sunday in the installation's own zone.
+func TestAWeekPeriodRunsMondayToSundayInTheInstallationZone(t *testing.T) {
+	t.Parallel()
+	zone, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	monday := time.Date(2026, 6, 1, 0, 0, 0, 0, zone)
+
+	week, err := ResolveWeek(monday, zone)
+	if err != nil {
+		t.Fatalf("resolving the week of %s: %v", monday.Format("2006-01-02"), err)
+	}
+	if week.StartDate.Weekday() != time.Monday {
+		t.Fatalf("the week opened on a %s", week.StartDate.Weekday())
+	}
+	if week.EndDate.Weekday() != time.Sunday {
+		t.Fatalf("the week closed on a %s", week.EndDate.Weekday())
+	}
+	if got := week.EndDate.Sub(week.StartDate).Hours() / 24; got != 6 {
+		t.Fatalf("the window spans %v days between its inclusive ends, wanted 6", got)
+	}
+	// The Sunday is IN the week, which is what a closed upper bound means: a
+	// deal closing on Sunday belongs to the week somebody worked it.
+	if !week.ContainsDay(week.EndDate) {
+		t.Fatal("the week does not contain its own last day")
+	}
+	if week.ContainsDay(week.EndDate.AddDate(0, 0, 1)) {
+		t.Fatal("the week contains the Monday after it")
+	}
+}
+
+// A week crossing a daylight-saving change is still seven local days.
+//
+// Europe/Berlin springs forward on 2026-03-29, so that week is 167 hours. A
+// window built by adding a duration would close an hour early and drop
+// whatever happened in the last hour of Sunday.
+func TestAWeekAcrossADstChangeIsStillSevenLocalDays(t *testing.T) {
+	t.Parallel()
+	zone, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	monday := time.Date(2026, 3, 23, 0, 0, 0, 0, zone)
+
+	week, err := ResolveWeek(monday, zone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := week.End.Sub(week.Start); got == 7*24*time.Hour {
+		t.Fatal("the week spans exactly 168 hours across a spring-forward, " +
+			"so it was built by adding a duration rather than seven local days")
+	}
+	// The last hour of Sunday is still in the week.
+	lastHour := time.Date(2026, 3, 29, 23, 30, 0, 0, zone)
+	if !week.ContainsInstant(lastHour) {
+		t.Fatal("the final evening of a spring-forward week fell outside it")
+	}
+}
+
+// A week is never derived from anything but the Monday handed in.
+//
+// Which day a week opens on is weekly.WeekStartOf's answer, derived through the
+// installation's reporting zone. A resolver that rounded to the nearest Monday
+// would be a second answer, and the two would file a Sunday-night job's work
+// under different weeks.
+func TestAWeekPeriodIsNeverDerivedFromAnythingButTheMondayHandedIn(t *testing.T) {
+	t.Parallel()
+	zone, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []struct {
+		name string
+		at   time.Time
+	}{
+		{"a Wednesday", time.Date(2026, 6, 3, 0, 0, 0, 0, zone)},
+		{"the Sunday before", time.Date(2026, 5, 31, 0, 0, 0, 0, zone)},
+		{"a Monday afternoon", time.Date(2026, 6, 1, 14, 0, 0, 0, zone)},
+	} {
+		t.Run(bad.name, func(t *testing.T) {
+			if _, err := ResolveWeek(bad.at, zone); err == nil {
+				t.Fatal("accepted, so the window it built is not the week weekly.WeekStartOf named")
+			}
+		})
+	}
+}
+
+// ResolvePeriod refuses a week rather than treating it as a quarter.
+//
+// monthsIn returns 3 for anything it does not recognise, so an unrefused week
+// would resolve to a three-month window and every reading would silently be
+// over the wrong period.
+func TestResolvePeriodRefusesAWeekRatherThanReadingItAsAQuarter(t *testing.T) {
+	t.Parallel()
+	zone, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ResolvePeriod(PeriodWeek, time.Date(2026, 6, 3, 9, 0, 0, 0, zone), 1, zone); err == nil {
+		t.Fatal("a week resolved through the financial year, which would be a quarter wearing the word week")
+	}
+}
+
+// A deal expected on the window's own last day is IN the window, whichever side
+// of UTC the installation sits.
+//
+// The two sides carry their midnight in different zones: `expected_close_date`
+// is a Postgres `date` and pgx scans it as UTC midnight, while StartDate and
+// EndDate are midnight where the installation is. Comparing those as instants
+// asks which moment came first, which is not the question — and it answers
+// wrongly at exactly the ends this window is inclusive at.
+//
+// Nine hours east, a deal expected on the last day scans as 09:00 that day and
+// reads as after an EndDate of 00:00; west of UTC the same arithmetic drops the
+// first day instead. Either way the deal leaves the reading with nothing to say
+// where it went.
+func TestADateColumnLandsInsideTheWindowOnBothSidesOfUTC(t *testing.T) {
+	t.Parallel()
+	for _, place := range []struct {
+		name string
+		zone string
+	}{
+		{"east of UTC", "Asia/Tokyo"},
+		{"west of UTC", "America/Los_Angeles"},
+	} {
+		t.Run(place.name, func(t *testing.T) {
+			zone, err := time.LoadLocation(place.zone)
+			if err != nil {
+				t.Fatal(err)
+			}
+			week, err := ResolveWeek(time.Date(2026, 6, 1, 0, 0, 0, 0, zone), zone)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Exactly how pgx hands over a `date`.
+			asScanned := func(y int, m time.Month, d int) time.Time {
+				return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+			}
+			if !week.ContainsDay(asScanned(2026, 6, 1)) {
+				t.Error("a deal expected on the week's first day fell outside it")
+			}
+			if !week.ContainsDay(asScanned(2026, 6, 7)) {
+				t.Error("a deal expected on the week's last day fell outside it")
+			}
+			// And the window still ENDS: the day after must not be admitted, or
+			// the fix above would be a comparison that says yes to everything.
+			if week.ContainsDay(asScanned(2026, 6, 8)) {
+				t.Error("the week admitted the Monday after it")
+			}
+			if week.ContainsDay(asScanned(2026, 5, 31)) {
+				t.Error("the week admitted the Sunday before it")
+			}
+		})
+	}
+}

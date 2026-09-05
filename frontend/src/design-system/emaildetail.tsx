@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { Paperclip, X } from "lucide-react";
+import { X } from "lucide-react";
 import { type ReactNode, useId } from "react";
 
 import { api } from "../api/client";
@@ -11,6 +11,7 @@ import { splitEmailBody } from "../format/emailtext";
 import { formatBytes, formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
 import { Button, Modal } from "./atoms";
+import { FileChip } from "./filechip";
 import { SurfaceState } from "./surfacestate";
 import "./emaildetail.css";
 
@@ -254,10 +255,11 @@ function EmailBody({
  * message — so a reader outside the audience is never told that a contract
  * arrived, which is a fact about the message like any other.
  *
- * The NAME is the download, the pattern the account and contact file lists
- * already use: a separate action word at the far end of the row is a second
- * thing to find for the only thing this row does. The href is the attachment
- * endpoint that has always served these bytes; nothing new is fetched here.
+ * Each file is the same `FileChip` card the account and contact file lists
+ * draw, so paper looks like paper wherever it is met: the name is the
+ * download, the kind is stamped on the card, and a photo is tellable from a
+ * contract before the click. The href is the attachment endpoint that has
+ * always served these bytes; nothing new is fetched here.
  */
 function Attachments({ files }: Readonly<{ files: EmailAttachmentSummary[] }>) {
   const { locale } = useLocale();
@@ -275,22 +277,18 @@ function Attachments({ files }: Readonly<{ files: EmailAttachmentSummary[] }>) {
       </p>
       <ul className="emaildetail__fileList">
         {files.map((file) => (
-          <li key={file.id} className="emaildetail__file">
-            <Paperclip aria-hidden="true" />
-            <a
-              className="link-button"
+          <li key={file.id}>
+            <FileChip
               href={`/v1/attachments/${file.id}`}
-              download={file.filename}
-            >
-              {file.filename}
-            </a>
-            {/* Absent rather than zero when the server sent no size: a size it
-                could not record is not a file of no bytes. */}
-            {file.byte_size != null && (
-              <span className="emaildetail__fileSize">
-                {formatBytes(file.byte_size, locale)}
-              </span>
-            )}
+              filename={file.filename}
+              // Absent rather than zero when the server sent no size: a size
+              // it could not record is not a file of no bytes.
+              size={
+                file.byte_size == null
+                  ? undefined
+                  : formatBytes(file.byte_size, locale)
+              }
+            />
           </li>
         ))}
       </ul>

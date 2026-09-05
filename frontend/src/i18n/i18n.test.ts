@@ -156,6 +156,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "co.brief.cite.deal",
   "co.brief.cite.person",
   "deals.unit",
+  "contracts.renew.deal",
+  "contracts.deal",
   "history.actorAgent",
 
   // Endonyms: a locale's own name for itself, identical in every catalog.

@@ -67,6 +67,9 @@ function readings(over: Record<string, unknown> = {}) {
 type StubOpts = {
   readings?: Record<string, unknown>;
   onCall?: (body: Record<string, unknown>) => void;
+  // Every URL the page READ from, so a test can assert what it asked for
+  // rather than what its controls look like.
+  onRead?: (url: string) => void;
   // assuranceStatus lets a test ask for the answer a FRESH installation gets,
   // where no nightly run has completed. Every other test here stubs a finished
   // run, which is why that case went unrendered until somebody opened the page.
@@ -78,6 +81,9 @@ function forecastStub(opts: StubOpts = {}) {
     const request = input instanceof Request ? input : null;
     const url = String(request ? request.url : input);
     const method = request ? request.method : (init?.method ?? "GET");
+    if (method === "GET") {
+      opts.onRead?.(url);
+    }
     if (method === "POST" && url.includes("/forecast/calls")) {
       const body = request
         ? await request.json()
@@ -169,6 +175,51 @@ describe("ForecastView", () => {
   // The call's amount and note travel as mutation VARIABLES. Read from a
   // closure they would be whatever the last render saw, which is the wrong
   // number exactly when a save races a refetch.
+  // The window every figure on the page is over.
+  //
+  // Asserted through the URL rather than through what the control looks like:
+  // a strip that renders three buttons and asks the server for a quarter
+  // whichever is pressed is the same page it was, with a decoration on top.
+  it("offers week beside month and quarter and asks the API for it", async () => {
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", forecastStub({ onRead: (url) => asked.push(url) }));
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /^Week$/i }));
+
+    await waitFor(() =>
+      expect(asked.some((url) => url.includes("period=week"))).toBe(true),
+    );
+    // And the other two are reachable, so this is a window control rather than
+    // a week switch.
+    expect(screen.getByRole("button", { name: /^Quarter$/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Month$/i })).toBeTruthy();
+  });
+
+  // A call is filed against the window it was formed from.
+  //
+  // The period used to be hard-coded to the quarter, which was harmless while
+  // the quarter was the only window a reader could see. It is the same defect
+  // as the scope one beside it the moment a second window exists: a manager
+  // reading the week and calling a number would have it recorded against three
+  // months.
+  it("files a call against the window the author was reading", async () => {
+    const posted: Record<string, unknown>[] = [];
+    vi.stubGlobal("fetch", forecastStub({ onCall: (b) => posted.push(b) }));
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /^Week$/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /Update the current call/i }),
+    );
+    await user.click(screen.getByRole("button", { name: /Save call/i }));
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0].period).toBe("week");
+  });
+
   it("posts the amount and the note the author typed", async () => {
     const posted: Record<string, unknown>[] = [];
     vi.stubGlobal("fetch", forecastStub({ onCall: (b) => posted.push(b) }));

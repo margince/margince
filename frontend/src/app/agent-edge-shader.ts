@@ -35,7 +35,8 @@ uniform float uDpr;      // device pixels per CSS pixel, so widths stay in CSS p
 uniform float uTime;     // seconds since the edge lit
 uniform float uLevel;    // 0..1 fade in and out, so nothing appears or cuts
 uniform float uThick;    // the rim's resting thickness, CSS px
-uniform float uBeam;     // 1 normally, 0 for a reader who asked for less movement
+uniform float uWave;     // how much the rim breathes: 1 as tuned, less for an import
+uniform float uBeam;     // the head's share: the register's, 0 under reduced motion
 uniform vec3  uHueA;     // cool
 uniform vec3  uHueB;
 uniform vec3  uHueC;
@@ -190,10 +191,13 @@ void main() {
 
   // The rim's thickness undulates with the wave, so the crests are visible as
   // the edge swelling and thinning rather than as a stripe moving inside it.
-  // Amplitude, and it is generous on purpose: the rim nearly doubles at a crest
-  // and thins to well under its resting width in a trough, which is what makes
-  // the wave legible on something only a few pixels across.
-  float thick = uThick * max(0.25, 1.0 + 1.15 * w + 0.85 * beam) + 1.0;
+  // Amplitude, and it is generous on purpose: at full breath the rim nearly
+  // doubles at a crest and thins to well under its resting width in a trough,
+  // which is what makes the wave legible on something only a few pixels across.
+  // uWave scales that breath, and the halo's with it below: it is the one dial
+  // that turns the whole picture calmer without turning it off.
+  float swell = w * uWave;
+  float thick = uThick * max(0.25, 1.0 + 1.15 * swell + 0.85 * beam) + 1.0;
 
   // The whole reason this is a shader: one pixel of smoothstep across the
   // boundary, computed per fragment. There is no raster to displace and nothing
@@ -204,9 +208,13 @@ void main() {
   // Two halos, both exponential falloffs rather than blurs: the near one seats
   // the rim, the far one is the light it throws onto the page. An exponential is
   // what a real falloff looks like and costs two instructions.
-  float reach = mix(4.0, 22.0, clamp(0.5 + 0.5 * w, 0.0, 1.0));
+  float reach = mix(4.0, 22.0, clamp(0.5 + 0.5 * swell, 0.0, 1.0));
   float near = exp(-max(dist - thick, 0.0) / reach);
   float far = exp(-max(dist - thick, 0.0) / 46.0);
+  // A calmer rim throws less light onto the page. Not none: the halo is what
+  // seats the rim against the window, and a thin rim with no seat reads as a
+  // hairline border rather than as light.
+  float glow = mix(0.55, 1.0, clamp(uWave, 0.0, 1.0));
 
   // The gradient MOVES inside the waves, and slower than they do: hue drifting
   // at the wave's own speed would read as one object sliding past.
@@ -220,7 +228,8 @@ void main() {
   // than as a different colour arriving.
   tint = mix(tint, uHueC, 0.55 * beam);
 
-  float alpha = (core * 0.95 + near * (0.34 + 0.30 * beam) + far * (0.13 + 0.10 * beam))
+  float alpha = (core * 0.95
+                 + (near * (0.34 + 0.30 * beam) + far * (0.13 + 0.10 * beam)) * glow)
               * uLevel;
   alpha = clamp(alpha, 0.0, 1.0);
 

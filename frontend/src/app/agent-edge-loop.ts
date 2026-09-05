@@ -3,9 +3,12 @@
 
 import {
   createEdgeRenderer,
+  EDGE_REGISTERS,
+  type EdgeDress,
   type EdgeHues,
   type EdgeRenderer,
 } from "./agent-edge-gl";
+import type { AgentEdgeRegister } from "./agent-edge-signal";
 
 /**
  * The edge's draw loop, separated from the component that mounts it.
@@ -42,6 +45,16 @@ export type EdgeLoop = Readonly<{
    * that dims reads as finishing. The caller keeps this mounted until `onDark`.
    */
   setLit: (lit: boolean) => void;
+  /**
+   * Changes which register the light is in.
+   *
+   * Eased while lit, at the light's own pace: a run that starts mid-import
+   * thickens the rim rather than swapping it, and swapping is exactly the cut
+   * the fade exists to avoid. Taken at once while dark, because a dark edge has
+   * nothing to ease from and the first frame a reader sees should already be in
+   * the right register.
+   */
+  setRegister: (register: AgentEdgeRegister) => void;
 }>;
 
 export type EdgeLoopOptions = Readonly<{
@@ -58,6 +71,29 @@ export type EdgeLoopOptions = Readonly<{
     hues: EdgeHues,
   ) => EdgeRenderer | null;
 }>;
+
+/** One step toward a target, never past it. Shared by the light and the register
+ *  so the two move at the same pace, which is what makes a register change read
+ *  as the same light changing rather than as a second one arriving. */
+function approach(value: number, target: number, step: number): number {
+  return value < target
+    ? Math.min(value + step, target)
+    : Math.max(value - step, target);
+}
+
+/** The dress at a point between the two registers: 0 is the agent's, 1 the import's. */
+function dressAt(weight: number): EdgeDress {
+  const { agent, capture } = EDGE_REGISTERS;
+  // Two products rather than one difference, so both ends are exact: a rim
+  // asked for the import's register should draw the import's numbers, not a
+  // float a rounding error away from them.
+  const mix = (from: number, to: number) => from * (1 - weight) + to * weight;
+  return {
+    thick: mix(agent.thick, capture.thick),
+    beam: mix(agent.beam, capture.beam),
+    wave: mix(agent.wave, capture.wave),
+  };
+}
 
 /**
  * Starts drawing, and returns null when the host cannot.
@@ -91,6 +127,11 @@ export function runEdgeLoop(
   // way, and the way it could not go is the one a reader notices.
   let level = 0;
   let target = 1;
+  // Where between the two registers the light is, and where it is going. The
+  // same integration as the light, for the same reason: reading it off the
+  // register alone could only ever cut.
+  let worn = 0;
+  let wanted = 0;
   let wentDark = false;
 
   const measure = () => {
@@ -143,13 +184,17 @@ export function runEdgeLoop(
     const step = (now - lastAt) / 1000 / FADE;
     lastAt = now;
     drawnAt = now;
-    level = Math.min(Math.max(level + (target === 1 ? step : -step), 0), 1);
+    level = approach(level, target, step);
+    worn = approach(worn, wanted, step);
+    const dress = dressAt(worn);
     renderer.draw({
       time: options.reduced ? 0 : (now - born) / 1000,
       level,
+      thick: dress.thick,
+      wave: dress.wave,
       // Holding the clock still parks the travelling head in a corner rather
       // than stopping it, so the head has to be turned off explicitly.
-      beam: options.reduced ? 0 : 1,
+      beam: options.reduced ? 0 : dress.beam,
     });
     if (target === 0 && level === 0 && !wentDark) {
       // Once. The caller unmounts on this, and a second call would arrive after
@@ -207,6 +252,12 @@ export function runEdgeLoop(
       // the report is armed again rather than being spent for the loop's life.
       if (lit) {
         wentDark = false;
+      }
+    },
+    setRegister(register) {
+      wanted = register === "capture" ? 1 : 0;
+      if (level === 0) {
+        worn = wanted;
       }
     },
   };

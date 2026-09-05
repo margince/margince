@@ -112,7 +112,7 @@ func TestWorkspaceSweepOptsTagsEveryFanOutChild(t *testing.T) {
 // for every fan-out child, and by ARGS because one workspace's job is
 // otherwise indistinguishable from another's.
 func TestWorkspaceSweepOptsDedupesByArgsOnActiveStates(t *testing.T) {
-	opts := workspaceSweepOpts(CaptureClassifyWorkspaceArgs{}.Kind())
+	opts := workspaceSweepOpts(CaptureSyncArgs{}.Kind())
 
 	if !opts.UniqueOpts.ByArgs {
 		t.Fatal("uniqueness must be by args, or one workspace's job is indistinguishable from another's — the whole fleet would collapse to one queued child")
@@ -346,7 +346,7 @@ func TestTheFanOutTagDoesNotMutateTheCallersInsertOpts(t *testing.T) {
 // uniqueness window would change how the fleet is enqueued in order to
 // describe it, which is the one thing an observability change may not do.
 func TestTheFanOutTagCarriesTheCallersEnqueuePolicyThrough(t *testing.T) {
-	opts := workspaceSweepOpts(CaptureClassifyWorkspaceArgs{}.Kind())
+	opts := workspaceSweepOpts(CaptureSyncArgs{}.Kind())
 	marked := markedAsFleetPass(opts)
 
 	if marked.Queue != opts.Queue {
