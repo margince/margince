@@ -26,7 +26,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // scaleCase is one currency's conversion, with the answer written out.
@@ -96,11 +98,16 @@ func TestAConversionAppliesBothMinorUnitScales(t *testing.T) {
 	}
 }
 
-// The two SQL spellings and the Go engine answer the same number for the same
-// deal. They are three implementations of one conversion — the report engine's
-// expression, the morning brief's copy of it, and deals.ConvertToBase — and a
-// reader who opens the forecast and the account page sees two of them at once.
-func TestTheSQLAndGoConversionsAgree(t *testing.T) {
+// The forecast reads the SHARED expression, and both answer the literal figure.
+//
+// Not a Go-versus-SQL comparison despite what the forecast's own path suggests:
+// ForecastDeals reaches BaseValueSQL, so the two readings below are the same
+// expression twice. What it holds is that the forecast has not grown a second,
+// private conversion, and that the shared one answers €84,000 for the deal that
+// read €840 before. The Go engine's agreement is held where it can be — the
+// minor-unit parity test, and the closed-deal case below, which converts
+// through deals.ConvertToBase in the writer.
+func TestTheForecastReadsTheSharedExpression(t *testing.T) {
 	e := Setup(t)
 	st := seedForecastFXPipeline(t, e)
 	seedForecastFXDeal(t, e, st, 2_400_000_000, "VND", midQuarter)
@@ -131,5 +138,72 @@ func TestTheSQLAndGoConversionsAgree(t *testing.T) {
 	}
 	if fromExpr != 8_400_000 {
 		t.Errorf("the shared expression converted to %d, want 8400000 (€84,000)", fromExpr)
+	}
+}
+
+// A CLOSED deal's figure is frozen by the writer, and it applies both scales
+// too.
+//
+// The open cases above reach only the live-rate arm of the expression. The
+// frozen arm reads a column the freeze writer fills, so a writer that stored a
+// hundredth of the truth would leave every case above passing while every
+// closed foreign-currency deal on the installation carried a wrong number —
+// which is the state this whole change exists to leave behind.
+//
+// Seeded through AdvanceDeal, the real writer, rather than an INSERT of the
+// column: a test that supplies its own version of production proves nothing
+// about production.
+func TestClosingADealFreezesTheScaledAmount(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, won := DealFixture(t, e)
+	admin := e.Admin()
+
+	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Hà Nội rollout", pipeline, open, &e.Rep1))
+	amount := int64(2_400_000_000)
+	currency := "VND"
+	if _, err := e.Deals.UpdateDeal(admin, deal, deals.UpdateDealInput{
+		AmountMinor: &amount, Currency: &currency,
+	}); err != nil {
+		t.Fatalf("pricing the deal in VND: %v", err)
+	}
+	e.WsExec(t, `INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date)
+		VALUES ('VND', 'EUR', 0.000035, DATE '2020-01-01')`)
+
+	if _, err := e.Deals.AdvanceDeal(admin, deal, deals.AdvanceDealInput{
+		ToStageID: won, WonWithoutContractReason: WonByImport(),
+	}); err != nil {
+		t.Fatalf("winning the deal: %v", err)
+	}
+
+	var frozen *int64
+	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(admin,
+			`SELECT amount_minor_base FROM deal WHERE id = $1`, deal).Scan(&frozen)
+	}); err != nil {
+		t.Fatalf("reading the frozen base amount: %v", err)
+	}
+	if frozen == nil {
+		t.Fatal("a closed VND deal with a loaded rate froze no base amount, so every " +
+			"rollup that sums the column reads it as contributing nothing")
+	}
+	// ₫2,400,000,000 at 0.000035 is €84,000.00. The unscaled product would be
+	// 84,000 — €840.00, a hundredth of it.
+	if *frozen != 8_400_000 {
+		t.Errorf("the close froze %d, want 8400000 (€84,000)", *frozen)
+	}
+
+	// Reopening takes the figure with the rate it was converted at. Left
+	// behind, it would price a close that no longer exists.
+	if _, err := e.Deals.AdvanceDeal(admin, deal, deals.AdvanceDealInput{ToStageID: open}); err != nil {
+		t.Fatalf("reopening the deal: %v", err)
+	}
+	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(admin,
+			`SELECT amount_minor_base FROM deal WHERE id = $1`, deal).Scan(&frozen)
+	}); err != nil {
+		t.Fatalf("re-reading the base amount after reopen: %v", err)
+	}
+	if frozen != nil {
+		t.Errorf("a reopened deal still carries a frozen base amount of %d", *frozen)
 	}
 }

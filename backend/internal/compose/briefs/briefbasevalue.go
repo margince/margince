@@ -1,46 +1,30 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package briefs
 
 // One deal's money in the installation's base currency, as SQL.
 //
-// Three cases and they are not interchangeable. A deal already in the base
-// currency needs no rate. A CLOSED deal carries the rate it closed at, frozen
-// on the row, and re-converting it at today's rate would rewrite history every
-// time a rate sheet was corrected. An open deal takes the latest daily rate on
-// or before the as-of date.
-//
-// A missing rate yields NULL and never a rate of 1. A guessed number is worse
-// than an absent one here: it looks like pipeline, sums into a headline, and
-// nothing downstream can tell it from money somebody actually expects.
-
-// THE SECOND SPELLING, AND WHY. compose/briefs holds the same expression as
-// briefBaseValueSQL. It cannot call this one: compose imports briefs, so briefs
-// importing compose is a cycle. Moving the pair down a tier is a real option and
-// a separate change. Until then the two are held CHARACTER-IDENTICAL by
-// TestOneSpellingOfADealsBaseValue, which fails in both directions — a rate rule
-// changed in one place and not the other is exactly the drift a forecast and a
-// morning brief must never show a reader.
+// Its own file because it is a SECOND SPELLING of compose.BaseValueSQL, held
+// character-identical to it by a gate, and a reader who finds it inside the
+// ranker reads it as the ranker's own arithmetic rather than as one half of a
+// pair that must move together.
 
 import "fmt"
 
-// BaseValueSQL renders the expression for the deal under `alias`.
-//
-// asOfSQL and baseSQL are SQL EXPRESSIONS carrying the as-of date and the base
-// currency — a bind position a caller registered itself, or a token the report
-// engine substitutes one for when it assembles the statement. Expressions
-// rather than positions because the caller owns its argument slice: a helper
-// that appended to it would have to be called in a particular order to be
-// correct, and the report engine does not know its positions until the whole
-// statement is built.
-//
-// alias is interpolated into SQL, so it is a compile-time literal from the
-// calling spec and never a name off a request. It is a parameter because the
-// forecast reads the deal as `d` and the report engine as `t`, and a second
-// copy of this expression differing only in a letter is exactly the drift the
-// gate below exists to prevent.
-func BaseValueSQL(asOfSQL, baseSQL, alias string) string {
+// briefBaseValueSQL renders the §6 base-currency value of d (joined to
+// its workspace w): native amount when already in base currency, the
+// frozen amount_minor_base (written by the freeze writer at close, across
+// both currencies' minor-unit scales) for closed deals, the
+// latest daily rate on or before the as-of date for open ones. A missing
+// rate yields NULL — the revenue factor floors rather than guessing (a
+// wrong number is worse than a missing one). asOfPos is the bind position
+// of the as-of date.
+// THE SECOND SPELLING, AND WHY. compose.BaseValueSQL is the same expression.
+// This package cannot call it — compose imports briefs, so the reverse is a
+// cycle — so the two are held character-identical by
+// TestOneSpellingOfADealsBaseValue rather than left to drift.
+func briefBaseValueSQL(asOfSQL, baseSQL, alias string) string {
 	return fmt.Sprintf(`CASE
 		WHEN %[3]s.amount_minor IS NULL THEN NULL
 		WHEN %[3]s.currency IS NULL OR %[3]s.currency = %[2]s THEN %[3]s.amount_minor

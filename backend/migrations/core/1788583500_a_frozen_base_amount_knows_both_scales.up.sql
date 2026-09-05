@@ -38,17 +38,38 @@ COMMENT ON COLUMN deal.amount_minor_base IS
 --
 -- The base currency is the installation setting, read here rather than assumed
 -- EUR: an installation that runs in JPY would otherwise be backfilled against
--- the wrong scale. A row whose rate is missing stays NULL, which is what the
--- readers already treat as "no frozen figure".
+-- the wrong scale. A row the arithmetic cannot answer for stays NULL, which is
+-- what every reader already treats as "no frozen figure":
+--
+--   * no rate, or no amount — nothing to convert
+--   * no base-currency setting — the destination scale is unknown, and
+--     defaulting it to two would be the very guess this migration removes
+--   * a product too large for bigint — NULL, never a clamp to the biggest
+--     number that fits, which is the same lie with more digits
+--
+-- The range test runs in numeric, where the product already is, so it decides
+-- the question BEFORE a cast can raise it. An out-of-range cast would abort the
+-- migration itself, after the ALTER above has already run.
 UPDATE deal d
-   SET amount_minor_base = round(
-         d.amount_minor * d.fx_rate_to_base
-           * power(10::numeric, coalesce(
-               (SELECT bd.digits FROM currency_minor_digits bd
-                 WHERE bd.currency = (SELECT value #>> '{}' FROM setting
-                                       WHERE key = 'installation.base_currency')), 2))
-           / power(10::numeric, coalesce(
-               (SELECT dd.digits FROM currency_minor_digits dd
-                 WHERE dd.currency = d.currency), 2)))::bigint
+   SET amount_minor_base = CASE
+         WHEN round(d.amount_minor * d.fx_rate_to_base
+                * power(10::numeric, (SELECT coalesce(bd.digits, 2)
+                                        FROM currency_minor_digits bd
+                                       WHERE bd.currency = base.code))
+                / power(10::numeric, coalesce(
+                    (SELECT dd.digits FROM currency_minor_digits dd
+                      WHERE dd.currency = d.currency), 2)))
+              BETWEEN -9223372036854775808 AND 9223372036854775807
+         THEN round(d.amount_minor * d.fx_rate_to_base
+                * power(10::numeric, (SELECT coalesce(bd.digits, 2)
+                                        FROM currency_minor_digits bd
+                                       WHERE bd.currency = base.code))
+                / power(10::numeric, coalesce(
+                    (SELECT dd.digits FROM currency_minor_digits dd
+                      WHERE dd.currency = d.currency), 2)))::bigint
+         ELSE NULL
+       END
+  FROM (SELECT value #>> '{}' AS code FROM setting
+         WHERE key = 'installation.base_currency') AS base
  WHERE d.fx_rate_to_base IS NOT NULL
    AND d.amount_minor IS NOT NULL;

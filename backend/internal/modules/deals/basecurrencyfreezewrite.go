@@ -77,6 +77,45 @@ func frozenBefore(deal crmcontracts.Deal) (rate *string, rateDate *time.Time) {
 	return deal.FxRateToBase, storekit.PlainDate(deal.FxRateDate)
 }
 
+// clearFrozenConversion strips the converted amount from a deal being REOPENED,
+// the mirror of freezeBaseRate below.
+//
+// Left behind, the figure would be a base amount for a close that no longer
+// exists, and the readers that prefer a frozen figure to a live rate would go
+// on preferring it.
+//
+// It reads the row rather than taking the caller's pre-image, because the deal
+// READ does not select amount_minor_base or fx_rate_to_base — both are internal
+// columns and neither is on the contract — so a caller has no pre-image to give
+// that is not nil. A nil pre-image here would write "there was no converted
+// amount" into the audit diff of every reopen, which is the one row a reversal
+// reads to put the old figure back.
+//
+// A row holding no figure is left alone rather than patched to the null it
+// already is: a patch records every assignment it is given, so an unconditional
+// clear would name the column in the UPDATE and in the audit diff of every
+// reopen a deal ever makes.
+func clearFrozenConversion(ctx context.Context, tx pgx.Tx, p *storekit.Patch,
+	deal crmcontracts.Deal,
+) error {
+	// A deal that was never priced never froze anything, so there is nothing to
+	// read and nothing to clear. Checked before the query rather than after it:
+	// the amount is on the row the caller already holds, and this is the whole
+	// of what makes a frozen figure possible.
+	if deal.AmountMinor == nil {
+		return nil
+	}
+	baseBefore, err := frozenBaseBefore(ctx, tx, deal.Id)
+	if err != nil {
+		return err
+	}
+	if baseBefore == nil {
+		return nil
+	}
+	p.Set(baseAmountColumn, baseBefore, nil)
+	return nil
+}
+
 // frozenBaseBefore reads the frozen base amount a deal currently holds, for the
 // patch's pre-image. A separate read because the column is internal: it is not
 // on crmcontracts.Deal, and a writer that recorded nil instead would put "there

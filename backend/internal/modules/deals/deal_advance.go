@@ -323,22 +323,12 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 		rateBefore, rateDateBefore := frozenBefore(current)
 		p.Set(fxRateColumn, rateBefore, nil)
 		p.SetDate(fxRateDateColumn, rateDateBefore, nil)
-		// The converted amount goes with the rate it was converted at. Left
-		// behind on a reopened deal it would be a base figure for a close that
-		// no longer exists, and the open-deal readers would prefer it to
-		// today's rate.
-		//
-		// Guarded on the frozen RATE, which is what says the column can hold a
-		// figure at all: deal_closed_fx pairs the two, so a row without a rate
-		// has a null base amount and there is nothing here to clear or to read
-		// a pre-image for. The guard is also what keeps this patch buildable
-		// without a database, which the unit tests over it rely on.
-		if rateBefore != nil {
-			baseBefore, err := frozenBaseBefore(ctx, tx, current.Id)
-			if err != nil {
-				return nil, "", err
-			}
-			p.Set(baseAmountColumn, baseBefore, nil)
+		// The converted amount goes with the rate it was converted at, so the
+		// reopen clears both. clearFrozenConversion owns that, beside the writer
+		// that sets it: two places deciding what a frozen conversion consists of
+		// is how one of them comes to leave half of it behind.
+		if err := clearFrozenConversion(ctx, tx, p, current); err != nil {
+			return nil, "", err
 		}
 	}
 	return p, status, nil

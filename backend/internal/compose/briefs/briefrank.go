@@ -82,37 +82,6 @@ func (e *BriefEngine) WithL2Ranker(brain briefBrain, log *slog.Logger) *BriefEng
 	return e
 }
 
-// briefBaseValueSQL renders the §6 base-currency value of d (joined to
-// its workspace w): native amount when already in base currency, the
-// frozen amount_minor_base (written by the freeze writer at close, across
-// both currencies' minor-unit scales) for closed deals, the
-// latest daily rate on or before the as-of date for open ones. A missing
-// rate yields NULL — the revenue factor floors rather than guessing (a
-// wrong number is worse than a missing one). asOfPos is the bind position
-// of the as-of date.
-// THE SECOND SPELLING, AND WHY. compose.BaseValueSQL is the same expression.
-// This package cannot call it — compose imports briefs, so the reverse is a
-// cycle — so the two are held character-identical by
-// TestOneSpellingOfADealsBaseValue rather than left to drift.
-func briefBaseValueSQL(asOfSQL, baseSQL, alias string) string {
-	return fmt.Sprintf(`CASE
-		WHEN %[3]s.amount_minor IS NULL THEN NULL
-		WHEN %[3]s.currency IS NULL OR %[3]s.currency = %[2]s THEN %[3]s.amount_minor
-		WHEN %[3]s.amount_minor_base IS NOT NULL THEN %[3]s.amount_minor_base
-		ELSE (SELECT round(%[3]s.amount_minor * fr.rate
-		                    * power(10::numeric, coalesce(
-		                        (SELECT bd.digits FROM currency_minor_digits bd
-		                          WHERE bd.currency = %[2]s), 2))
-		                    / power(10::numeric, coalesce(
-		                        (SELECT dd.digits FROM currency_minor_digits dd
-		                          WHERE dd.currency = %[3]s.currency), 2)))::bigint
-		      FROM fx_rate fr
-		      WHERE fr.from_currency = %[3]s.currency AND fr.to_currency = %[2]s
-		        AND fr.rate_date <= %[1]s::date
-		      ORDER BY fr.rate_date DESC LIMIT 1)
-	END`, asOfSQL, baseSQL, alias)
-}
-
 // briefFacts is everything ONE transaction gathers for a rank: the candidates
 // and what is known about them, plus the basis every one of them was measured
 // against.
