@@ -69,7 +69,11 @@ function meResponse(seat: SeatType, integrations: Grant): Me {
     admin_password_link: false,
     roles: [],
     teams: [],
-    authorization: { seat_type: seat, objects: { integrations } },
+    authorization: {
+      seat_type: seat,
+      objects: { integrations },
+      row_scope: "own",
+    },
   };
 }
 

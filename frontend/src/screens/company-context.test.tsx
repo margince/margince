@@ -124,7 +124,11 @@ function meResponse(seat: SeatType, organization: Grant): Me {
     admin_password_link: false,
     roles: [],
     teams: [],
-    authorization: { seat_type: seat, objects: { organization } },
+    authorization: {
+      seat_type: seat,
+      objects: { organization },
+      row_scope: "own",
+    },
   };
 }
 

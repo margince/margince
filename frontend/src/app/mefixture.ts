@@ -16,6 +16,9 @@ import type { RbacAction, RbacObject } from "./capability";
 
 type MeResponse = components["schemas"]["MeResponse"];
 type RbacObjectGrant = components["schemas"]["RbacObjectGrant"];
+type RowScope = NonNullable<
+  components["schemas"]["Authorization"]
+>["row_scope"];
 
 const NO_GRANT: RbacObjectGrant = {
   create: false,
@@ -38,10 +41,18 @@ export function meFixture({
   roles = ["admin"],
   seat = "full",
   allow = {},
+  rowScope = "own",
 }: {
   roles?: string[];
   seat?: "full" | "read";
   allow?: GrantSpec;
+  /**
+   * How far the grants reach. Defaults to `own`, the narrowest, for the same
+   * reason the server does: a fixture that does not state a scope describes a
+   * principal whose scope was never resolved, and reading that as `all` would
+   * make every test agree with a widening nobody wrote.
+   */
+  rowScope?: RowScope;
 } = {}): MeResponse {
   const objects: Record<string, RbacObjectGrant> = {};
   for (const [object, actions] of Object.entries(allow)) {
@@ -66,7 +77,7 @@ export function meFixture({
     non_production: false,
     data_reset_available: false,
     admin_password_link: false,
-    authorization: { seat_type: seat, objects },
+    authorization: { seat_type: seat, objects, row_scope: rowScope },
   };
   return me;
 }

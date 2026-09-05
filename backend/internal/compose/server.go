@@ -89,6 +89,9 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// first_run for it rather than only for a role that wired one. Reuses
 	// identitySvc — see its own comment below for why the process holds one.
 	srv.authHandlers = srv.WithFirstRunFn(srv.firstRunAnswer(identitySvc))
+	// After the option loop, so /me's answer and the endpoints' gate resolve one
+	// rollout value whether or not WithCompanyContextRollout ran.
+	srv.publishCompanyContextAvailability()
 
 	api := contractAPI(srv, pool, identitySvc)
 	// ONE identity.Service for the whole process: contractAPI's admission
