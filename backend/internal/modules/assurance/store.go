@@ -52,9 +52,9 @@ const (
 // ExceptionConditionCleared is a finding the SCAN closed: the condition it
 // reported is no longer present in the record. Distinct from resolved on
 // purpose — nobody answered this one, the record changed — because a reason
-// that cannot be told apart later cannot be audited later. The same word as
-// OutcomeConditionCleared deliberately: one fact, spelled once, landing in the
-// status column here and in the outcome column when a resolution row exists.
+// that cannot be told apart later cannot be audited later. The status column
+// here and the outcome column on a resolution row carry the same word for the
+// same event, which is why this is an alias rather than a second literal.
 const ExceptionConditionCleared = OutcomeConditionCleared
 
 // Source coverage states.
