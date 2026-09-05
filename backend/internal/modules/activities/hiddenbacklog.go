@@ -139,9 +139,17 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 	var out HiddenBacklog
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		reader := readerOrNobody(ctx)
+		// The queue's own horizon, measured once and handed to every relaxation
+		// below. Measured per count instead, the guardrail could report a
+		// difference between two scans that came from two different cutoffs
+		// rather than from the rule it was relaxing.
+		measured, err := s.waitingHorizonFor(ctx, tx, asOf)
+		if err != nil {
+			return err
+		}
 		// What the eligibility query finds under the rules as they stand — a
 		// near neighbour of the page's own count, for the reason Shown states.
-		shown, err := s.countWaiting(ctx, tx, asOf, waitingRelaxation{reader: reader})
+		shown, err := s.countWaiting(ctx, tx, asOf, waitingRelaxation{reader: reader}, measured)
 		if err != nil {
 			return err
 		}
@@ -168,7 +176,7 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 			{&out.Unlinked, waitingRelaxation{reader: reader, keepUnlinked: true}},
 			{&out.Colleagues, waitingRelaxation{reader: reader, keepColleagues: true}},
 		} {
-			widened, err := s.countWaiting(ctx, tx, asOf, relaxed.with)
+			widened, err := s.countWaiting(ctx, tx, asOf, relaxed.with, measured)
 			if err != nil {
 				return err
 			}
@@ -217,7 +225,7 @@ type waitingRelaxation struct {
 
 // countWaiting runs the waiting query under one relaxation and counts its rows.
 func (s *Store) countWaiting(
-	ctx context.Context, tx pgx.Tx, asOf time.Time, relax waitingRelaxation,
+	ctx context.Context, tx pgx.Tx, asOf time.Time, relax waitingRelaxation, measured int,
 ) (int, error) {
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -233,7 +241,7 @@ func (s *Store) countWaiting(
 	if linkVisible == "" {
 		linkVisible = scopeUnbounded
 	}
-	horizon := waitingHorizonDays
+	horizon := horizonOrDefault(measured)
 	if relax.wholeHorizon {
 		horizon = hiddenHorizonDays
 	}

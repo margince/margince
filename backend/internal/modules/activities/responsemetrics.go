@@ -65,10 +65,18 @@ type ResponseMetrics struct {
 //
 // The window is bounded by the caller. An unbounded read would answer "how fast
 // have we ever been", which no reader is asking and which grows without limit.
+//
+// The PERCENTILE is the caller's too, and there are exactly two askers. The
+// metrics window takes the median, which is what "how fast do we answer" means
+// to a person reading a number. The waiting horizon takes a high one, because
+// its question is the opposite end: the point past which this installation
+// essentially does not answer at all (waitinghorizon.go). Shared rather than
+// copied because what must not drift is the DEFINITION of an answered sales
+// thread, which is the whole body below.
 const firstResponseSQL = `
 	SELECT count(*),
 	       COALESCE(
-	         percentile_cont(0.5) WITHIN GROUP (
+	         percentile_cont(%[5]s) WITHIN GROUP (
 	           ORDER BY EXTRACT(EPOCH FROM (reply.occurred_at - inbound.occurred_at)) / 60
 	         )::bigint, 0)
 	  FROM activity inbound
@@ -242,7 +250,8 @@ func (s *Store) ResponseWindow(ctx context.Context, from, to time.Time) (Respons
 			content,
 			liveRecord(openDealPredicate, "d"),
 			liveRecord(workingLeadPredicate, "ld"),
-			ownDomainSenderSQL("inbound", arg(ownDomains))),
+			ownDomainSenderSQL("inbound", arg(ownDomains)),
+			medianPercentile),
 			args...).Scan(&out.Answered, &out.MedianMinutes); err != nil {
 			return fmt.Errorf("activities: reading first-response times: %w", err)
 		}
