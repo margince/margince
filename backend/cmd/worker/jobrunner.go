@@ -285,10 +285,10 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// brainless worker settles on the rules' floor with a reason.
 		AccountScanBrain:          modelPath.AccountScan,
 		AccountScanRoutingVersion: modelPath.RoutingVersion,
-		DocumentExtractBrain:   modelPath.DocumentExtract,
-		OverlayVault:           vault,
-		OverlayInterval:        cfg.overlayInterval,
-		OverlayBackfillLimit:   cfg.overlayBackfillLimit,
+		DocumentExtractBrain:      modelPath.DocumentExtract,
+		OverlayVault:              vault,
+		OverlayInterval:           cfg.overlayInterval,
+		OverlayBackfillLimit:      cfg.overlayBackfillLimit,
 		// The poller's OVB meter records against the SAME Redis the relay
 		// uses (rdb) so the worker's poller spend and the api's force-fresh
 		// spend land on one shared per-workspace-per-incumbent count. Built

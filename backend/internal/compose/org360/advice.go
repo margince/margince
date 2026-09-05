@@ -73,7 +73,7 @@ func (s *Service) UndismissedAdvice(
 			return nil
 		}
 		found := candidateSuggestions(orgID, now, in)
-		kept, err = s.keepUndismissed(ctx, tx, orgID, found)
+		kept, err = s.withoutDismissed(ctx, tx, orgID, found)
 		return err
 	})
 	return kept, err
@@ -91,7 +91,7 @@ func (s *Service) KeepUndismissed(
 	var kept []crmcontracts.Organization360Suggestion
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
-		kept, err = s.keepUndismissed(ctx, tx, orgID, found)
+		kept, err = s.withoutDismissed(ctx, tx, orgID, found)
 		return err
 	})
 	return kept, err

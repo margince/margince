@@ -43,11 +43,12 @@ const (
 	// ActivitySource names this carrier to the rail projection. Identity, not
 	// display: two sources must never collide on one occurrence key.
 	ActivitySource = "account_scan"
-	// ActivityKind is the display kind the rail's copy is keyed on, and
-	// ActivityAITask the api/ai-tasks.yaml task the read performs. Exported
-	// so the root gates hold both to the contract without importing this
+	// ActivityKind is the display kind the rail's copy is keyed on. Exported
+	// so the root gates hold it to the contract without importing this
 	// package's internals.
-	ActivityKind   = "account_scan"
+	ActivityKind = "account_scan"
+	// ActivityAITask is the api/ai-tasks.yaml task the read performs, exported
+	// for the same gates.
 	ActivityAITask = "account_scan"
 	// ScanLease is how long a live occurrence stays believable. Past the
 	// job's own timeout with a margin for the settle write, so the rail calls

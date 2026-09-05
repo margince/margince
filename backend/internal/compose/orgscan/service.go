@@ -93,8 +93,10 @@ func NewService(
 	if routingVersion == nil {
 		routingVersion = func() string { return "" }
 	}
-	return &Service{pool: pool, view: view, advice: advice, lane: lane, enqueue: enqueue,
-		routingVersion: routingVersion, now: now, log: log}
+	return &Service{
+		pool: pool, view: view, advice: advice, lane: lane, enqueue: enqueue,
+		routingVersion: routingVersion, now: now, log: log,
+	}
 }
 
 // Get is the reader's scan as it stands. Read-only: nothing here starts a read.
@@ -230,7 +232,7 @@ func (s *Service) Run(ctx context.Context, scanID ids.UUID, orgID ids.Organizati
 		return s.fail(ctx, claimed.ID, "The account could not be read. Try again later.")
 	}
 	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
-	findings, by, laneFailed, err := Read(ctx, s.lane, orgID.String(), in, lang)
+	findings, by, err := Read(ctx, s.lane, orgID.String(), in, lang)
 	var deferral *ai.BudgetDeferralError
 	if errors.As(err, &deferral) {
 		if deferErr := s.deferBudget(ctx, claimed.ID, deferral.NextAttemptAt); deferErr != nil {
@@ -242,9 +244,15 @@ func (s *Service) Run(ctx context.Context, scanID ids.UUID, orgID ids.Organizati
 		Status: StatusDone, Fingerprint: fingerprint, GeneratedBy: by, Findings: findings,
 		ReadExchanges: len(in.Messages), ReadDeals: len(in.Account.OpenDeals),
 	}
+	var lane *LaneError
 	switch {
-	case laneFailed:
+	case errors.As(err, &lane):
+		// The reader sees the floor and why; the cause is for whoever runs
+		// the lane, and the log is where they look.
+		s.log.Warn("account scan: the lane did not answer usably", "scan_id", claimed.ID, "err", lane.Cause)
 		out.Status, out.DegradeReason = StatusDegraded, "The model did not answer in a form the records support, so the rules' own advice stands alone."
+	case err != nil:
+		return err
 	case s.lane == nil:
 		out.Status, out.DegradeReason = StatusDegraded, "No model lane is configured, so the rules' own advice stands alone."
 	case len(in.Messages) == 0:

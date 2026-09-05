@@ -80,7 +80,7 @@ var (
 func (a *assembly) readSuggestions() error {
 	// Resolved first, and unconditionally: dismissals are per user, so a caller
 	// with no user id has no suggestions surface at all. Leaving this to
-	// keepUndismissed — which is skipped when no rule fires — made the section
+	// withoutDismissed — which is skipped when no rule fires — made the section
 	// present for such a caller on a quiet account and omitted on a busy one.
 	if _, err := actingUser(a.ctx); err != nil {
 		return err
@@ -131,7 +131,7 @@ func (s *Service) suggestionsFor(
 	// Dismissals are applied BEFORE the cap, so judging one row reveals the next
 	// instead of shrinking the card. Capping first would spend a slot on a
 	// suggestion the rep has already dealt with.
-	kept, err := s.keepUndismissed(ctx, tx, orgID, found)
+	kept, err := s.withoutDismissed(ctx, tx, orgID, found)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -169,11 +169,11 @@ func candidateSuggestions(
 	return found
 }
 
-// keepUndismissed removes the suggestions this caller has already judged.
+// withoutDismissed removes the suggestions this caller has already judged.
 //
 // The database is asked about THESE fingerprints, not for the caller's whole
 // dismissal history — so the read is bounded by the suggestions in hand.
-func (s *Service) keepUndismissed(
+func (s *Service) withoutDismissed(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID,
 	found []crmcontracts.Organization360Suggestion,
 ) ([]crmcontracts.Organization360Suggestion, error) {

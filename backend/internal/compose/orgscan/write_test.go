@@ -44,7 +44,7 @@ func reply(findings ...map[string]any) string {
 func finding(message MessageIn, quote string) map[string]any {
 	return map[string]any{
 		"kind": "question_unanswered", "title": "Answer where the reports are",
-		"reason": "Jonas asked where the sample reports are and nobody has written back.",
+		"reason":     "Jonas asked where the sample reports are and nobody has written back.",
 		"message_id": message.ID.String(), "quote": quote, "action": "draft_reply",
 	}
 }

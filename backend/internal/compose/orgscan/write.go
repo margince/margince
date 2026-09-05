@@ -131,17 +131,28 @@ func encodeInput(in Input) string {
 	return string(encoded)
 }
 
-// Read asks the model and returns the grounded findings.
-//
-// laneFailed distinguishes "no lane wired" from "the lane broke": the first
-// is a deployment reading its floor by design, the second is a transient the
-// caller must not cache over a good answer. A budget deferral is neither and
-// is returned as the typed error the job carrier snoozes on.
+// LaneError is the lane breaking on an answer: it did not reply, or replied in
+// a form the records do not support. Distinct from "no lane wired", which is a
+// deployment reading its floor by design, and from a budget deferral, which
+// is neither. A caller must not cache a lane failure over a good answer, and
+// Cause says what the lane did so the log can, without the finding becoming
+// the reader's problem.
+type LaneError struct {
+	Cause error
+}
+
+func (e *LaneError) Error() string { return "account scan lane: " + e.Cause.Error() }
+
+func (e *LaneError) Unwrap() error { return e.Cause }
+
+// Read asks the model and returns the grounded findings. A lane that breaks
+// is returned as *LaneError; a budget deferral as the typed error the job
+// carrier snoozes on; no lane or nothing to read as the deterministic floor.
 func Read(
 	ctx context.Context, lane Completer, orgID string, in Input, lang string,
-) (findings []crmcontracts.Organization360Suggestion, by crmcontracts.WrittenBy, laneFailed bool, err error) {
+) ([]crmcontracts.Organization360Suggestion, crmcontracts.WrittenBy, error) {
 	if lane == nil || len(in.Messages) == 0 {
-		return nil, crmcontracts.Deterministic, false, nil
+		return nil, crmcontracts.Deterministic, nil
 	}
 	resp, err := ai.Ask(ctx, lane, ScanRequest(in, lang), func(text string) error {
 		_, refused, parseErr := ParseFindings(text, orgID, in)
@@ -155,16 +166,16 @@ func Read(
 	})
 	var deferral *ai.BudgetDeferralError
 	if errors.As(err, &deferral) {
-		return nil, crmcontracts.Deterministic, false, err
+		return nil, crmcontracts.Deterministic, err
 	}
 	if err != nil {
-		return nil, crmcontracts.Deterministic, true, nil
+		return nil, crmcontracts.Deterministic, &LaneError{Cause: err}
 	}
 	kept, _, err := ParseFindings(resp.Text, orgID, in)
 	if err != nil {
-		return nil, crmcontracts.Deterministic, true, nil
+		return nil, crmcontracts.Deterministic, &LaneError{Cause: err}
 	}
-	return kept, crmcontracts.Model, false, nil
+	return kept, crmcontracts.Model, nil
 }
 
 // rawFinding is the reply's shape before anything is checked.

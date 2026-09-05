@@ -58,7 +58,7 @@ func (l *quotingLane) Complete(_ context.Context, _ model.Request) (model.Respon
 	l.calls++
 	reply, err := json.Marshal(map[string]any{"findings": []map[string]any{{
 		"kind": "question_unanswered", "title": "Send the sample reports",
-		"reason": "Jonas asked for sample driver reports and nothing has gone out.",
+		"reason":     "Jonas asked for sample driver reports and nothing has gone out.",
 		"message_id": l.messageID, "quote": l.quote, "action": "draft_reply",
 	}}})
 	if err != nil {
