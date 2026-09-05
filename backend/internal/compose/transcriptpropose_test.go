@@ -166,7 +166,7 @@ func TestEvidenceTrimsAQuotationLongerThanTheApprovalsCapAccepts(t *testing.T) {
 }
 
 func TestTheRequestNumbersEveryLineAndFencesTheTranscript(t *testing.T) {
-	req := transcriptRequest(meetingLines(), string(textlang.English))
+	req := transcriptRequest(meetingLines(), "2026-03-04", string(textlang.English))
 	if len(req.Messages) != 1 {
 		t.Fatalf("want one user message, got %d", len(req.Messages))
 	}
@@ -221,5 +221,32 @@ func TestConfidenceComparesAgainstTheFloorConstant(t *testing.T) {
 	var c schema.Confidence = 0.75
 	if !(c >= transcriptConfidenceFloor) {
 		t.Errorf("%v must compare at or above the floor %v", c, transcriptConfidenceFloor)
+	}
+}
+
+// A due date is a CALENDAR day or nothing at all.
+//
+// The check stands between the model's answer and acceptance, which parses the
+// same string again hours later with a reviewer no longer in front of it. A
+// value admitted here that acceptance cannot read would fail with nobody to
+// correct it, so the two must admit exactly the same set.
+func TestADueDateIsACalendarDayOrEmpty(t *testing.T) {
+	for _, c := range []struct {
+		day     string
+		admit   bool
+		because string
+	}{
+		{"", true, "no stated deadline is the ordinary answer, not a refusal"},
+		{"2026-09-08", true, "a plain calendar day is the whole point"},
+		{"2026-02-30", false, "February has no thirtieth — a regex would admit this"},
+		{"2026-13-01", false, "there is no thirteenth month"},
+		{"2026-9-8", false, "acceptance parses YYYY-MM-DD, so a short form fails later"},
+		{"Friday", false, "the day a person says out loud is the model's job to resolve"},
+		{"2026-09-08T00:00:00Z", false, "an instant fixes a zone extraction has no business fixing"},
+	} {
+		if got := validProposedDueDate(c.day); got != c.admit {
+			t.Errorf("validProposedDueDate(%q) = %v, want %v — %s",
+				c.day, got, c.admit, c.because)
+		}
 	}
 }

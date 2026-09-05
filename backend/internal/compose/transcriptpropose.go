@@ -100,8 +100,17 @@ func NewTranscriptProposer(
 
 // proposedStep is one next step as the model reports it.
 type proposedStep struct {
-	Summary     string            `json:"summary"`
-	Owner       string            `json:"owner"`
+	Summary string `json:"summary"`
+	Owner   string `json:"owner"`
+	// DueDate is the day the transcript says the thing is due, as YYYY-MM-DD,
+	// or empty where it says none.
+	//
+	// EMPTY IS A REAL ANSWER and the common one. A next step with no stated
+	// deadline is not overdue and is not due today; the accepted task carries
+	// no date, which is what "nobody said when" looks like. The alternative —
+	// inventing a date so the field is always filled — puts a deadline nobody
+	// agreed to in front of a customer.
+	DueDate     string            `json:"due_date"`
 	SourceLines []int             `json:"source_lines"`
 	Confidence  schema.Confidence `json:"confidence"`
 }
@@ -133,7 +142,7 @@ var errRefusedTranscript = errors.New("compose: the reading could not be used")
 // hand-rewritten prompt certifies nothing about what runs.
 //
 //promptvoice:exempt returns next steps and commitments as structured rows quoted from the transcript; the task list that renders them is the surface a person reads.
-func transcriptRequest(lines []string, lang string) model.Request {
+func transcriptRequest(lines []string, meetingDay string, lang string) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
 	prompt.WriteString("One meeting transcript, in order (untrusted). Each line is numbered:\n")
@@ -141,12 +150,18 @@ func transcriptRequest(lines []string, lang string) model.Request {
 		prompt.WriteString(fence.WrapAttr("line", strconv.Itoa(i+1), line) + "\n")
 	}
 	fmt.Fprintf(&prompt,
-		`Return JSON: { "proposals": [ { "summary", "owner", "source_lines", "confidence" } ] } — `+
+		`This meeting happened on %s.`+"\n"+
+			`Return JSON: { "proposals": [ { "summary", "owner", "due_date", "source_lines", "confidence" } ] } — `+
 			`at most %d, and an empty list when the transcript states none. `+
 			`"summary" is one plain sentence naming the thing to be done. `+
 			`"owner" is the party who said they would do it, as the transcript names them. `+
+			`"due_date" is the day it is due, as YYYY-MM-DD, resolving anything said `+
+			`relative to the meeting date above — "by Friday" is the Friday after that day. `+
+			`Use "" when the transcript states no deadline, and when what it states is `+
+			`ambiguous: an empty due date is a next step nobody dated, and a guessed one `+
+			`is a deadline nobody agreed to. `+
 			`"source_lines" are the line numbers it is stated on, between 1 and %d.`,
-		maxTranscriptProposals, len(lines))
+		meetingDay, maxTranscriptProposals, len(lines))
 
 	return model.Request{
 		System:         transcriptSystemFor(fence, lang),
@@ -165,10 +180,11 @@ func transcriptSchema() json.RawMessage {
 				map[string]schema.Node{
 					"summary":               schema.String(),
 					"owner":                 schema.String(),
+					"due_date":              schema.String(),
 					"source_lines":          schema.Array(schema.Number()),
 					extractionConfidenceKey: schema.Number(),
 				},
-				"summary", "owner", "source_lines", extractionConfidenceKey,
+				"summary", "owner", "due_date", "source_lines", extractionConfidenceKey,
 			)),
 		},
 		"proposals",
@@ -234,6 +250,13 @@ func validateProposedStep(step proposedStep, lineCount int) string {
 			clampToken(step.Summary), len(step.SourceLines), maxTranscriptCitedLines)
 	case step.Confidence < 0 || step.Confidence > 1:
 		return fmt.Sprintf("confidence %v is outside [0,1]", step.Confidence)
+	case !validProposedDueDate(step.DueDate):
+		// A date that will not parse is REFUSED rather than dropped to empty.
+		// Dropping it would turn "the model answered Friday and got the format
+		// wrong" into "the transcript stated no deadline", which is a
+		// different fact and one a reviewer cannot tell from the real thing.
+		return fmt.Sprintf("proposal %q states the due date %q, and a due date is "+
+			"YYYY-MM-DD or empty", clampToken(step.Summary), clampToken(step.DueDate))
 	}
 	for _, line := range step.SourceLines {
 		if line < 1 || line > lineCount {
@@ -244,9 +267,23 @@ func validateProposedStep(step proposedStep, lineCount int) string {
 	return ""
 }
 
+// validProposedDueDate admits the empty answer and a plain calendar day.
+//
+// time.DateOnly rather than a looser parse: the day is carried to acceptance as
+// text and turned into an instant there, so a value this admits is one that
+// side must be able to read back. Parsing "Friday" here and storing it would
+// move the failure to a place with no reviewer in front of it.
+func validProposedDueDate(day string) bool {
+	if day == "" {
+		return true
+	}
+	_, err := time.Parse(time.DateOnly, day)
+	return err == nil
+}
+
 // ask puts one transcript to the model and returns what it may act on.
-func (p *TranscriptProposer) ask(ctx context.Context, lines []string) ([]proposedStep, error) {
-	req := transcriptRequest(lines, identity.BaseLanguageForPrompt(ctx, p.pool))
+func (p *TranscriptProposer) ask(ctx context.Context, lines []string, meetingDay string) ([]proposedStep, error) {
+	req := transcriptRequest(lines, meetingDay, identity.BaseLanguageForPrompt(ctx, p.pool))
 	validate := transcriptShapeValid(len(lines))
 	resp, err := ai.Ask(ctx, p.brain, req, validate)
 	if err != nil {

@@ -69,6 +69,10 @@ func TestTheRequestCarriesTheLanguageAndTheVoice(t *testing.T) {
 	}
 }
 
+// quietWeek holds nothing, so a case about the reply's SHAPE is not also a
+// case about whether the sentence contradicts the week.
+var quietWeek = Input{WeekStart: "2026-08-24"}
+
 func TestParseRefusesWhatTheLaneCannotStore(t *testing.T) {
 	long := strings.Repeat("x", MaxNarrativeRunes+1)
 	cases := []struct {
@@ -81,7 +85,7 @@ func TestParseRefusesWhatTheLaneCannotStore(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Parse(tc.reply)
+			got, err := Parse(tc.reply, quietWeek)
 			if err == nil {
 				t.Fatalf("Parse accepted %s and returned %q", tc.name, got)
 			}
@@ -93,7 +97,7 @@ func TestParseRefusesWhatTheLaneCannotStore(t *testing.T) {
 // caller stores the stamp without prose. Reporting it as an error would make
 // the honest quiet week indistinguishable from a broken pass.
 func TestAnEmptySentenceIsAnAnswerRatherThanAFailure(t *testing.T) {
-	got, err := Parse(`{"narrative":"   "}`)
+	got, err := Parse(`{"narrative":"   "}`, quietWeek)
 	if err != nil {
 		t.Fatalf("Parse refused an empty sentence: %v", err)
 	}
@@ -108,7 +112,7 @@ func TestAnEmptySentenceIsAnAnswerRatherThanAFailure(t *testing.T) {
 func TestTheBoundCountsCharactersNotBytes(t *testing.T) {
 	// 600 umlauts: at the ceiling in characters, well over it in bytes.
 	sentence := strings.Repeat("ü", MaxNarrativeRunes)
-	got, err := Parse(`{"narrative":"` + sentence + `"}`)
+	got, err := Parse(`{"narrative":"`+sentence+`"}`, quietWeek)
 	if err != nil {
 		t.Fatalf("Parse refused %d characters that the column holds: %v", MaxNarrativeRunes, err)
 	}
@@ -123,12 +127,82 @@ func TestTheBoundCountsCharactersNotBytes(t *testing.T) {
 // worth saying, which the model never said.
 func TestAMissingFieldIsNotAQuietWeek(t *testing.T) {
 	for _, reply := range []string{`{}`, `{"narrative":null}`} {
-		if _, err := Parse(reply); err == nil {
+		if _, err := Parse(reply, quietWeek); err == nil {
 			t.Errorf("Parse accepted %s as an honest quiet week", reply)
 		}
 	}
 	// And the present-but-empty case still IS one.
-	if _, err := Parse(`{"narrative":""}`); err != nil {
+	if _, err := Parse(`{"narrative":""}`, quietWeek); err != nil {
 		t.Errorf("Parse refused an explicitly empty sentence: %v", err)
+	}
+}
+
+// A week that closed three deals is not a quiet week, and the sentence may not
+// say it was.
+//
+// The stored week of 24 August said all three things at once: the greeting
+// "You closed 3 deals", the Won metric "3 · €12,500", and the prose "A quiet
+// week — nothing closed and nothing slipped". One panel, one week, two answers.
+//
+// The prompt had handed the model that exact sentence as an exemplar, on every
+// week, including this one.
+func TestASentenceMayNotCallABusyWeekQuiet(t *testing.T) {
+	busy := Input{
+		WeekStart: "2026-08-24",
+		Counts:    Counts{DealsWon: 3},
+	}
+	for _, said := range []string{
+		"A quiet week — nothing closed and nothing slipped.",
+		"Nothing closed this week.",
+		"A quiet one, with nothing moved.",
+		"NOTHING HAPPENED worth reporting.",
+	} {
+		if _, err := Parse(`{"narrative":"`+said+`"}`, busy); err == nil {
+			t.Errorf("the lane accepted %q about a week that closed three deals", said)
+		}
+	}
+
+	// The same sentences are the honest answer for a week that held nothing.
+	for _, said := range []string{
+		"A quiet week — nothing closed and nothing slipped.",
+		"Nothing moved.",
+	} {
+		if _, err := Parse(`{"narrative":"`+said+`"}`, quietWeek); err != nil {
+			t.Errorf("the lane refused %q about a week that genuinely held nothing: %v",
+				said, err)
+		}
+	}
+}
+
+// A busy week's ordinary sentence still passes. Without this the check above is
+// satisfied by a lane that refuses everything.
+func TestABusyWeeksOwnSentenceIsAccepted(t *testing.T) {
+	busy := Input{WeekStart: "2026-08-24", Counts: Counts{DealsWon: 3}}
+	said := "Three closes and two promises carried into next week."
+	got, err := Parse(`{"narrative":"`+said+`"}`, busy)
+	if err != nil {
+		t.Fatalf("the lane refused an honest sentence about a busy week: %v", err)
+	}
+	if got != said {
+		t.Errorf("the sentence came back as %q, want it unchanged", got)
+	}
+}
+
+// The prompt itself stops offering the quiet-week wording to a week that was
+// not quiet. The check above is the floor; this is what keeps the model from
+// reaching for the sentence in the first place.
+func TestTheQuietWeekExemplarIsOfferedOnlyToAQuietWeek(t *testing.T) {
+	quiet := Request(quietWeek, "en").System
+	busy := Request(Input{Counts: Counts{DealsWon: 3}}, "en").System
+
+	if !strings.Contains(quiet, "A quiet week") {
+		t.Error("a week that held nothing is not told it may say so")
+	}
+	if strings.Contains(busy, "A quiet week") {
+		t.Error("a week that closed three deals is handed the quiet-week sentence " +
+			"as an exemplar, which is where the contradiction came from")
+	}
+	if !strings.Contains(busy, "THIS WEEK WAS NOT QUIET") {
+		t.Error("a busy week is not told that it was busy")
 	}
 }

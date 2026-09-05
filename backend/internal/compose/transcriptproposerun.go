@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -46,9 +47,20 @@ const transcriptTargetType = string(recordTypeActivity)
 // at accept would let a relink between the two moments silently move where the
 // task lands.
 type TranscriptStepProposal struct {
-	ActivityID  ids.UUID                       `json:"activity_id"`
-	Summary     string                         `json:"summary"`
-	Owner       string                         `json:"owner"`
+	ActivityID ids.UUID `json:"activity_id"`
+	Summary    string   `json:"summary"`
+	Owner      string   `json:"owner"`
+	// DueDate is the day the transcript stated, as YYYY-MM-DD, or empty.
+	//
+	// Text rather than an instant, so the reviewer edits a DAY and acceptance
+	// decides what moment that day ends at. A payload carrying an instant would
+	// have fixed the zone at extraction, hours before anybody looked at it.
+	//
+	// Absent on a proposal staged before this field existed, which decodes to
+	// empty — the same as "the transcript stated no deadline". Those two are
+	// genuinely indistinguishable from the payload alone, and both produce a
+	// task with no date, so nothing is lost by not telling them apart.
+	DueDate     string                         `json:"due_date,omitempty"`
 	SourceLines []int                          `json:"source_lines"`
 	Links       []activities.ActivityLinkInput `json:"links"`
 	// Cited is the transcript's OWN words behind this step, and it is what a
@@ -113,7 +125,18 @@ func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore
 	if err := activities.WithinReadingBounds(reading.Lines); err != nil {
 		return p.fail(ctx, store, readID, err.Error())
 	}
-	steps, err := p.ask(ctx, reading.Lines)
+	// The day the activity is FILED under, which is the best available answer
+	// to "when was this conversation". The composer offers it as an editable
+	// date capped at today, so a rep pasting a three-week-old transcript can
+	// set the day it happened — and it defaults to today, so one who does not
+	// leaves the paste day standing.
+	//
+	// Said plainly because the difference matters: a relative deadline resolves
+	// against whatever this says, so "by Friday" on a backdated transcript
+	// whose date was left at today resolves to the wrong week. The reviewer
+	// sees the resulting date on the card before any task exists, which is
+	// where that is caught.
+	steps, err := p.ask(ctx, reading.Lines, reading.OccurredAt.Format(time.DateOnly))
 	if err != nil {
 		if errors.Is(err, errRefusedTranscript) {
 			p.log.WarnContext(ctx, "transcript reading refused",
@@ -198,6 +221,7 @@ func (p *TranscriptProposer) stage(
 			ActivityID:  activityID.UUID,
 			Summary:     step.Summary,
 			Owner:       step.Owner,
+			DueDate:     step.DueDate,
 			SourceLines: step.SourceLines,
 			Links:       reading.Links,
 			Cited:       quotedFromTranscript(step, reading.Lines),

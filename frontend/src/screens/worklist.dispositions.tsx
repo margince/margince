@@ -36,7 +36,7 @@ import {
 // a rep reaching for it at ten in the morning means tomorrow morning, not this
 // afternoon. It stays the default the plain press takes, so the fast path is
 // still one click.
-const SNOOZE_DAYS = 1;
+export const SNOOZE_DAYS = 1;
 
 // The spans a reader can choose instead.
 //
@@ -49,7 +49,7 @@ const SNOOZE_DAYS = 1;
 // moment is a claim about the reader's calendar: "Monday" from a Friday is
 // three days and from a Monday is seven, and a queue that guessed wrong would
 // hide work for four days nobody asked for. A span says exactly what it does.
-const SNOOZE_SPANS = [1, 3, 7] as const;
+export const SNOOZE_SPANS = [1, 3, 7] as const;
 
 type SnoozeSpan = (typeof SNOOZE_SPANS)[number];
 
@@ -141,7 +141,7 @@ export function usePutDown(item: WorklistItem) {
       },
     );
   };
-  return { offered, put, pending: set.isPending, t };
+  return { offered, put, pending: set.isPending, t, locale };
 }
 
 // The whole row, answerable with the thumb where there is no width for verbs.
@@ -237,11 +237,15 @@ function PutDownMenu({
   put,
   pending,
   t,
+  locale,
 }: Readonly<{
   offered: readonly WorklistDisposition[];
-  put: (disposition: WorklistDisposition) => void;
+  // The SPAN reaches the write, not only the judgement: the menu's longer
+  // lines are the answers the default day cannot give.
+  put: (disposition: WorklistDisposition, days?: SnoozeSpan) => void;
   pending: boolean;
   t: T;
+  locale: Locale;
 }>) {
   return (
     <OverflowMenu label={t("worklist.disposition.menu")}>
@@ -260,6 +264,32 @@ function PutDownMenu({
           {t(`worklist.disposition.verb.${disposition}` as const)}
         </Button>
       ))}
+      {/* The LONGER SPANS, as lines of their own rather than behind a second
+          control. Above the fold they live in a Popover beside the snooze verb,
+          which keeps the common case one press; a popover inside a menu is a
+          second layer over a surface already floating, and a keyboard reader
+          would open two things to say "next week".
+          The verb above still sends the default day, so the fast path is
+          unchanged and these are the answers it cannot give. Each carries its
+          own sentence — "Snooze for 3 days" — because a bare "3 days" standing
+          beside "Snooze" is a fragment whose subject a reader has to guess. */}
+      {offered.includes("snooze") &&
+        SNOOZE_SPANS.filter((days) => days !== SNOOZE_DAYS).map((days) => (
+          <Button
+            key={days}
+            small
+            variant="ghost"
+            pending={pending}
+            onClick={() => put("snooze", days)}
+          >
+            {translatePlural(
+              locale,
+              "worklist.disposition.snoozeForDays",
+              days,
+              { value: formatNumber(days, locale) },
+            )}
+          </Button>
+        ))}
     </OverflowMenu>
   );
 }
@@ -270,26 +300,27 @@ function PutDownMenu({
 // design-system/swiperow.tsx's header. PutDownByThumb carries every JUDGEMENT
 // there, on the row itself.
 //
-// The snooze SPANS do not survive the fold, and that is a gap rather than a
-// design. The gesture sends the default day, so below 720px a rep who knows a
-// customer is away all week can no longer say so — they press again tomorrow,
-// which is the state the spans were added to end. Restoring them means another
-// control in the row, which is the 44px band this change removed; that trade is
-// a product decision, filed as issue #4313 rather than settled here.
+// The snooze SPANS travel with them, as lines in that menu. They were lost for
+// one release: the gesture sends the default day, so a rep who knew a customer
+// was away all week pressed the same button every morning — the state the spans
+// were added to end. A menu line costs no height where a fourth 44px control
+// did, which is what made room for them without the band coming back.
 
 export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
   const folded = useFoldedViewport();
   // The row's own write, from the wrapper that holds it — one mutation per row,
   // so a press here and a swipe confirm beside it cannot write twice.
   //
-  // The fallback is for the callers that draw these verbs OUTSIDE a row, the
-  // Brief's Do Next section among them: they get their own write rather than
-  // throwing on a missing provider. Both hooks run either way, because a hook
-  // cannot be called conditionally; the unused one registers a mutation nobody
-  // fires, which costs a registration and never a request.
+  // The fallback is for a caller that draws these verbs outside a row: it gets
+  // its own write rather than throwing on a missing provider. Every caller
+  // today goes through WorklistRow, the Brief's feed included, so nothing
+  // reaches it — it is what keeps a future caller from a crash it cannot read.
+  // Both hooks run either way, because a hook cannot be called conditionally;
+  // the unused one registers a mutation nobody fires, which costs a
+  // registration and never a request.
   const shared = useContext(PutDownContext);
   const own = usePutDown(item);
-  const { offered, put, pending, t } = shared ?? own;
+  const { offered, put, pending, t, locale } = shared ?? own;
   if (offered.length === 0) {
     return null;
   }
@@ -297,7 +328,15 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
   // rather than four 44px controls, so the judgements stay reachable by key
   // without the height that put the row over its ceiling.
   if (folded) {
-    return <PutDownMenu offered={offered} put={put} pending={pending} t={t} />;
+    return (
+      <PutDownMenu
+        offered={offered}
+        put={put}
+        pending={pending}
+        t={t}
+        locale={locale}
+      />
+    );
   }
   return (
     <div className="worklist-row-dispositions">

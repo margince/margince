@@ -112,6 +112,7 @@ components:
         - intro_request.closed
         - consent.changed
         - consent.suppressed
+        - consent.suppression_lifted
         - email_signature.changed
         - user_locale.changed
         - linkedin_account.changed
@@ -2498,6 +2499,35 @@ components:
             from the address on the mail path and from the channel
             identity on a messaging one (absent when the counterparty
             resolves only in a follow-up ensure).
+      additionalProperties: false
+
+    PublicEventConsentSuppressionLifted:
+      type: object
+      x-event-type: consent.suppression_lifted
+      x-entity-type: person
+      x-version: 1
+      description: >-
+        Payload for consent.suppression_lifted — somebody with the authority to
+        do so took back a stop, so mail to this person may resume.
+
+        It carries BOTH levels: the one the stop was recorded at and the one
+        that lifted it. A reader auditing this later needs to see that the
+        second outranked the first, and a single "lifted_by" would leave that
+        unanswerable without joining the row that no longer says it.
+
+        It never carries the reason either party gave. Those words belong to the
+        people who wrote them, and an event reaches readers the explanation was
+        not given to.
+      required:
+        - recorded_at_level
+        - lifted_by_level
+      properties:
+        recorded_at_level:
+          type: string
+          description: The authority the stop was recorded at (machine | user | admin | subject).
+        lifted_by_level:
+          type: string
+          description: The authority that lifted it. Always strictly above the level above.
       additionalProperties: false
 
     PublicEventConsentSuppressed:
