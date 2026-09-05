@@ -14,6 +14,7 @@ package compose
 // on it.
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -59,9 +60,13 @@ func TestOnlyAKnownUncoveredCommitteeBecomesAClaim(t *testing.T) {
 
 // derefOrNil renders the tri-state for a failure message without panicking on
 // the absent case the assertion is complaining about.
-func derefOrNil(v *bool) any {
+//
+// A string rather than an any: the value only ever reaches a %v in a failure
+// message, so rendering it here says what the caller does with it and keeps a
+// bare any out of a signature.
+func derefOrNil(v *bool) string {
 	if v == nil {
 		return "nothing"
 	}
-	return *v
+	return strconv.FormatBool(*v)
 }

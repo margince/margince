@@ -38,9 +38,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// followUpDraftPurpose is the lawful basis a drafted reply is sent under.
+// followUpDraftPurpose is the lawful basis a drafted reply is sent under when
+// the engine cannot bear the reply out on the thread's own evidence.
 //
 // Answering somebody who wrote to us individually rests on contract or
 // legitimate interest, not on consent — the consent purpose whose German
@@ -124,6 +126,9 @@ func draftFollowUpReply(
 		Subject:          subject,
 		Body:             body,
 		ConsentPurpose:   followUpDraftPurpose,
+		// The nightly pass only ever drafts INTO an existing thread, which is
+		// the reply the engine can bear out on the anchor's own evidence.
+		CommunicationContext: commsauthz.CategoryReplyToInbound,
 		// Intent is the rep-facing note on the card, never body text.
 		Intent: "no next step was planned after this message",
 	}, true, nil
