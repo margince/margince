@@ -441,28 +441,22 @@ fi
 # a recurring finding becomes a stale one.
 
 if [[ "${MERGE_VERDICT_RESULT:-}" = "failure" ]]; then
-  report "A merge landed on main without a verdict behind it${MERGE_VERDICT_PR:+ (#$MERGE_VERDICT_PR)}" bug \
-"${MERGE_VERDICT_WHY:-a merge landed on \`main\` without a green required check; the run below says which}
+  report "A merge landed on main against a failing verdict${MERGE_VERDICT_PR:+ (#$MERGE_VERDICT_PR)}" bug \
+"${MERGE_VERDICT_WHY:-a merge landed on \`main\` whose required check reported an adverse verdict; the run below says which}
 
 Found by the push-time check on \`main\`: $RUN_URL
 
-**This is not an accusation of bad faith, and not a request to remove bypass.**
-There are real cases for it — an infrastructure outage that reds every pull
-request, a revert that has to land now. What there was no case for is the fact
-being invisible: the pull request closes green-looking in the list,
-\`main-health\` is two-hourly and goes on reporting the last green it saw, and
-the next signal anybody gets is somebody else's pull request going red against a
-base they did not break. That is how #2504's four merges were found — twice,
-independently, each finder spending a rebase and a full local lane to rule their
-own diff out.
+**This is not about the bypass.** Merging past \`ci\` is a standing decision here
+and this alarm says nothing about it — a verdict that was merely ABSENT at merge
+time is not reported at all. What is reported is a verdict that came back and was
+BAD: the tree now on \`main\` does not pass its own required check, or no pull
+request names the commit at all.
 
-**What to do with this issue.** If the tree is fine, say why the bypass was
-right and close it; the record is the point. If it is not, \`main\` is red now
-and this issue names the commit, which is roughly two hours earlier than
-\`main-health\` would have.
-
-Prevention is a branch-protection decision (#2496), not something this alarm
-can or should do."\
+**What to do with this issue.** \`main\` is red now, and this issue names the
+commit that made it so — roughly two hours earlier than \`main-health\` would,
+and without the rebase-and-full-local-lane that ruling out your own diff costs.
+Fix forward or revert. If the verdict was wrong rather than the tree, say why and
+close it; the record is the point."\
     || unreported=1
 fi
 

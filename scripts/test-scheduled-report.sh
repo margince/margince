@@ -290,7 +290,7 @@ expect_merge() {
 	set +e
 	out="$(env OPEN_TITLES="" GH_TOKEN=stub REPO=owner/repo RUN_URL=https://example.test/run/1 \
 		MERGE_VERDICT_RESULT=failure MERGE_VERDICT_PR="$pr" \
-		MERGE_VERDICT_WHY="pull request #2516 merged while its required \`ci\` check was \`failure\`" \
+		MERGE_VERDICT_WHY="pull request #2516 landed, and its required \`ci\` check then reported \`failure\`" \
 		"$root/scripts/scheduled-report.sh" 2>&1)"
 	status=$?
 	set -e
@@ -321,14 +321,14 @@ expect_merge() {
 # which is the dedupe above working exactly as designed against a subject it does
 # not fit.
 expect_merge "a merge over a red check is filed against its pull request" \
-	2516 "A merge landed on main without a verdict behind it (#2516)" \
-	'merged while its required `ci` check was `failure`'
+	2516 "A merge landed on main against a failing verdict (#2516)" \
+	'its required `ci` check then reported `failure`'
 
 # A commit with no pull request has no number to name, and the title must still
 # be a title rather than one ending in an empty parenthesis.
 expect_merge "a merge with no pull request still files under a legible title" \
-	"" "A merge landed on main without a verdict behind it" \
-	"merged while its required"
+	"" "A merge landed on main against a failing verdict" \
+	"its required"
 
 # --- the census -----------------------------------------------------------------
 #
