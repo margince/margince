@@ -70,9 +70,14 @@ type TraceRow struct {
 	// Stage is which step of the pipeline recorded this row. The window reads
 	// leave it as the funnel stage they filtered to; the ladder read uses it to
 	// place each rung on the path.
-	Stage      string
-	Connector  string
-	Outcome    string
+	Stage     string
+	Connector string
+	Outcome   string
+	// OutcomeNow is the bucket this row counts under today: Outcome, unless the
+	// sender's question has since been answered. The counters above the list are
+	// grouped by the same expression, which is what keeps a row and the tile it
+	// belongs to in agreement.
+	OutcomeNow string
 	Reason     string
 	ActivityID *ids.UUID
 	Resolution *TraceResolution
@@ -158,7 +163,10 @@ func (s *TraceStore) readFunnel(ctx context.Context, tx pgx.Tx, scope traceScope
 	addArg := func(v any) int { args = append(args, v); return len(args) }
 	where := traceWhere(scope, addArg)
 	rows, err := tx.Query(ctx, storekit.SQLf(
-		`SELECT outcome, count(*) FROM capture_trace t WHERE %s GROUP BY outcome`, where), args...)
+		`SELECT `+settledOutcome+` AS bucket, count(*)
+		   FROM capture_trace t`+resolutionJoin+`
+		  WHERE %s
+		  GROUP BY bucket`, where), args...)
 	if err != nil {
 		return fmt.Errorf("capture: reading the trace funnel: %w", err)
 	}
@@ -253,9 +261,39 @@ func finishTracePage(items []TraceRow, n int) ([]TraceRow, string, error) {
 // Two spellings would be two answers: the window would say a sender is still
 // waiting while the drawer opened from it said the verdict had landed, and a
 // member comparing the two would be right to trust neither.
-const traceRowColumns = `t.id, t.stage, t.connector, t.outcome, coalesce(t.reason, ''), t.activity_id,
+const traceRowColumns = `t.id, t.stage, t.connector, t.outcome, ` + settledOutcome + `, coalesce(t.reason, ''), t.activity_id,
 		       d.status, coalesce(d.kind, ''), d.resolved_at,
 		       coalesce(t.counterparty, ''), coalesce(t.subject, ''), t.occurred_at`
+
+// settledOutcome is the bucket a message counts under NOW: the outcome the
+// pipeline recorded, unless the sender's question has since been answered.
+//
+// Only a `deferred` row folds, because it is the only one whose outcome was
+// provisional — the ladder's own word for "the sender is a stranger and the
+// question is open". A `real` verdict made a record and a noise, rejected or
+// suppressed one deliberately made none; either way the row is no longer
+// waiting, and a counter that still said so gave a reader the exact opposite of
+// what happened. An open verdict leaves the row where it was.
+//
+// It CANNOT double-count. Resolving a sender writes no second trace row —
+// captureverdict.go creates records directly and the trace is append-only, so a
+// message that deferred never gains a `captured` row of its own to be counted
+// beside this one.
+//
+// Both window queries read this expression — the counters and the rows they
+// head — because two spellings is how the tiles came to say
+// `SENT FOR A VERDICT 49` over forty-nine rows each reading `judged noise`.
+// Held by TestTheCountersAgreeWithTheRowsTheyHead
+// (tracesettled_integration_test.go), which reads a window and compares them.
+//
+// SQL literals for the reason resolutionJoin gives about its own: both queries
+// stay compile-time constants, and TestTheSettledFoldClassifiesEveryLedgerStatus
+// holds the literals against the vocabulary they come from.
+const settledOutcome = `CASE
+		         WHEN t.outcome = 'deferred' AND d.status IN ('noise', 'rejected', 'suppressed') THEN 'suppressed'
+		         WHEN t.outcome = 'deferred' AND d.status = 'real' THEN 'captured'
+		         ELSE t.outcome
+		       END`
 
 // resolutionJoin reaches a message's sender's disposition.
 //
@@ -293,6 +331,18 @@ const traceRowColumns = `t.id, t.stage, t.connector, t.outcome, coalesce(t.reaso
 // the outcome. Mail is unguarded, so a `captured` row carrying noise_prior or
 // decided_prior still reports the settled PRIOR verdict that explains it.
 //
+// A MEMBER'S OWN VERDICT IS THEIRS, and the ledger says which one is: the same
+// `NOT resolved_by_owner OR owner_id = <the reader>` the stranded-contact scan
+// asks (strandedcontacts.go). A machine verdict is a fact about the sender and
+// applies to everybody; one a person reached is a fact about their own
+// correspondence. Without it a workspace row — whose t.user_id is NULL — reports
+// whatever a colleague decided about that address, and this read is exactly
+// where a manager sees it.
+//
+// It also settles which of several historical rows answers: the ledger keeps one
+// per address per owner, so the newest-first LIMIT 1 was picking between people
+// rather than between times.
+//
 // BOTH joins carry the workspace, and that is not belt-and-braces: there is no
 // RLS on these tables since 0217, an address is not unique across tenants, and
 // an unscoped `d.email = a.counterparty_email` would answer with ANOTHER
@@ -320,6 +370,7 @@ const resolutionJoin = `
 		         SELECT status, kind, resolved_at
 		           FROM capture_pending_counterparty
 		          WHERE email = a.counterparty_email
+		            AND (NOT resolved_by_owner OR owner_id = t.user_id)
 		            AND (a.channel_provider IS NULL
 		                 OR (t.user_id IS NOT NULL
 		                     AND t.outcome IN ('deferred', 'suppressed')))
@@ -330,7 +381,7 @@ func scanTraceRow(rows pgx.Rows) (TraceRow, error) {
 	var row TraceRow
 	var status, kind *string
 	var resolvedAt *time.Time
-	if err := rows.Scan(&row.ID, &row.Stage, &row.Connector, &row.Outcome, &row.Reason, &row.ActivityID,
+	if err := rows.Scan(&row.ID, &row.Stage, &row.Connector, &row.Outcome, &row.OutcomeNow, &row.Reason, &row.ActivityID,
 		&status, &kind, &resolvedAt, &row.Counterparty, &row.Subject, &row.OccurredAt); err != nil {
 		return TraceRow{}, fmt.Errorf("capture: reading the trace page: %w", err)
 	}

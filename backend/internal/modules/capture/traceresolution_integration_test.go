@@ -50,7 +50,17 @@ type seededRecord struct {
 	// Verdict is the status that disposition settled at, defaulting to `real`.
 	// A T2 suppression records its own answer rather than a judged one, so the
 	// two ladder outcomes that reach the join do not share a status.
+	//
+	// An OPEN status seeds an unresolved row — no resolved_at — because that is
+	// the shape the ledger writes: a question nobody has answered carries no
+	// answer time, and a seed that gave it one would be a row production cannot
+	// produce.
 	Verdict string
+	// OwnerResolved marks a verdict a PERSON reached rather than the classifier.
+	// The ledger keeps the difference because the two have different reach: a
+	// machine verdict is a fact about the sender and applies to everybody, and
+	// one a colleague reached is a fact about their own correspondence.
+	OwnerResolved bool
 }
 
 // verdict is the disposition status to seed, defaulting to a judged sender.
@@ -110,9 +120,10 @@ func seedRecord(ctx context.Context, t *testing.T, db *database.DB,
 		if rec.Ledger {
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO capture_pending_counterparty
-				       (email, domain, activity_id, owner_id, status, kind, resolved_at)
-				VALUES ($1, 'client.io', $2, $3, $4, 'person', now())`,
-				sender, activityID, owner, rec.verdict()); err != nil {
+				       (email, domain, activity_id, owner_id, status, kind, resolved_by_owner, resolved_at)
+				VALUES ($1, 'client.io', $2, $3, $4, 'person', $5,
+				        CASE WHEN $4 IN ('pending', 'unsure') THEN NULL ELSE now() END)`,
+				sender, activityID, owner, rec.verdict(), rec.OwnerResolved); err != nil {
 				return err
 			}
 		}
@@ -282,4 +293,76 @@ func entriesByConnector(ctx context.Context, t *testing.T, store *capture.TraceS
 		t.Fatalf("connectors = %d over %d rows, want one per row", len(out), want)
 	}
 	return out
+}
+
+// A COLLEAGUE'S OWN VERDICT IS NOT REPORTED TO THE WORKSPACE.
+//
+// The ledger keeps one row per address per owner and marks which verdicts a
+// person reached. A machine verdict is a fact about the sender and applies to
+// everybody; one a colleague reached is a fact about their own correspondence,
+// and the workspace read — the one a manager holds a grant for — is exactly
+// where it would otherwise be read. The same
+// `NOT resolved_by_owner OR owner_id = <the reader>` the stranded-contact scan
+// asks, on the read side.
+func TestOneMembersOwnVerdictStaysOffAColleaguesWindow(t *testing.T) {
+	ctx, ws, db, store := traceReadWorkspace(t)
+	mine, theirs := ids.NewV7(), ids.NewV7()
+	const sender = "shared@client.io"
+
+	// Their message, their verdict, reached by them rather than by the model.
+	seedRecord(memberContext(ctx, ws, theirs), t, db, theirs, seededRecord{
+		SourceID: "own-1", Sender: sender, Outcome: capture.TraceDeferred,
+		Ledger: true, Verdict: capture.PendingStatusNoise, OwnerResolved: true,
+	})
+	// My own message from the same address, with no verdict of my own.
+	seedRecord(memberContext(ctx, ws, mine), t, db, mine, seededRecord{
+		SourceID: "own-2", Sender: sender, Outcome: capture.TraceDeferred,
+	})
+
+	window, err := store.ListMine(memberContext(ctx, ws, mine), nil, nil)
+	if err != nil {
+		t.Fatalf("ListMine: %v", err)
+	}
+	if len(window.Entries) != 1 {
+		t.Fatalf("entries = %d, want my own message alone", len(window.Entries))
+	}
+	if got := window.Entries[0].Resolution; got != nil {
+		t.Errorf("my window reports %q, which a colleague decided about their own mail", got.Status)
+	}
+	// And it still counts as waiting, because for me it is: the fold reads the
+	// same join, so a verdict this reader may not see must not move their
+	// counters either.
+	if window.Funnel["deferred"] != 1 {
+		t.Errorf("funnel = %v, want my message still counted as waiting", window.Funnel)
+	}
+}
+
+// The control: a MACHINE verdict on the same shape reaches everybody, or the
+// guard above would be suppressing the ledger rather than scoping it.
+func TestAMachineVerdictReachesEveryonesWindow(t *testing.T) {
+	ctx, ws, db, store := traceReadWorkspace(t)
+	mine, theirs := ids.NewV7(), ids.NewV7()
+	const sender = "newsletter@client.io"
+
+	seedRecord(memberContext(ctx, ws, theirs), t, db, theirs, seededRecord{
+		SourceID: "machine-1", Sender: sender, Outcome: capture.TraceDeferred,
+		Ledger: true, Verdict: capture.PendingStatusNoise,
+	})
+	seedRecord(memberContext(ctx, ws, mine), t, db, mine, seededRecord{
+		SourceID: "machine-2", Sender: sender, Outcome: capture.TraceDeferred,
+	})
+
+	window, err := store.ListMine(memberContext(ctx, ws, mine), nil, nil)
+	if err != nil {
+		t.Fatalf("ListMine: %v", err)
+	}
+	if len(window.Entries) != 1 {
+		t.Fatalf("entries = %d, want my own message alone", len(window.Entries))
+	}
+	if got := window.Entries[0].Resolution; got == nil || got.Status != capture.PendingStatusNoise {
+		t.Errorf("my window reports %v for a sender the classifier judged noise", got)
+	}
+	if window.Funnel["suppressed"] != 1 {
+		t.Errorf("funnel = %v, want the judged message counted under the answer", window.Funnel)
+	}
 }

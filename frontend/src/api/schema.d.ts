@@ -14336,6 +14336,22 @@ export interface components {
             payload_capture_enabled: boolean;
             /** @description The window these counts cover. Fixed at 24. */
             window_hours: number;
+            /** @description When the SENDER verdict runs — the pass that decides whether a stranger becomes a record, and the only one these counters wait on. The THREAD verdict, which decides whether colleagues may read a conversation, runs on its own clock an hour faster and is reported where a person meets it, on `GET /capture/held-threads`. Absent where the deployment composed no queue to ask. */
+            sender_verdict?: components["schemas"]["CaptureVerdictClock"];
+        };
+        /** @description When one verdict pass runs. Derived from the cadence the job declares and from the queue itself, never from a number written down beside the screen: a second copy of the schedule drifts from the one the worker actually keeps, and the reader would be told a time nothing fires at. */
+        CaptureVerdictClock: {
+            /** @description How often this pass is scheduled. Zero for a deployment where no clock runs it. */
+            every_seconds: number;
+            /** @description A pass is in flight right now. */
+            running: boolean;
+            /** @description A run is DUE and no worker has picked it up. Its own answer rather than a time, because a due run's moment has already passed — and the one that tells a slow installation from a stopped one, which is what somebody watching an unmoving counter is really asking. */
+            queued: boolean;
+            /**
+             * Format: date-time
+             * @description When the next pass runs. Absent when this deployment cannot say — nothing scheduled and no completed run still in the queue's retention — in which case a reader is owed the cadence rather than an invented time. Never a substitute for `every_seconds`: a person reading one time learns nothing about the rhythm they are living with.
+             */
+            next_pass_at?: string | null;
         };
         /** @description One count per outcome over the window. These PARTITION the messages seen — one row per message, under the most specific outcome that applied — so they sum to the total. Absent keys are zero. */
         CaptureActivityFunnel: {
@@ -14345,7 +14361,7 @@ export interface components {
             internal?: number;
             /** @description Landed; the sender is mail infrastructure, so no record was derived. */
             suppressed?: number;
-            /** @description Landed; the sender is a stranger and the question is open. */
+            /** @description Landed; the sender is a stranger and the question is STILL open. A message whose sender has since been judged is counted under what the verdict decided, not under the bucket it was filed in at capture time. */
             deferred?: number;
             /** @description The derivation failed. The message itself is unaffected unless the reason says otherwise. */
             fault?: number;
@@ -14355,8 +14371,16 @@ export interface components {
             id: string;
             /** @description The provider ID that carried the message (`gmail`, `telegram`, `ext:<unit>:<system>`), never a display label. A label is derived from the id or compiled into the running binary, so two deploys would disagree about the same transport with no row having changed; resolve one against the channel-provider registry rather than storing it here. */
             connector: string;
-            /** @enum {string} */
+            /**
+             * @description What the pipeline did with this message AT THE TIME. It never changes; `outcome_now` is what to count and to filter on.
+             * @enum {string}
+             */
             outcome: "captured" | "internal" | "suppressed" | "deferred" | "fault";
+            /**
+             * @description The bucket this message counts under today. Equal to `outcome` unless the message was deferred and the sender has since been judged: a `real` verdict reads as captured and a noise, rejected or suppressed one as suppressed, because the question that made the outcome provisional has been answered. The funnel counts are grouped by this same expression, so a list filtered on it agrees with the counters above it — they disagreed, and the screen said `SENT FOR A VERDICT 49` over forty-nine rows each reading `judged noise`.
+             * @enum {string}
+             */
+            outcome_now: "captured" | "internal" | "suppressed" | "deferred" | "fault";
             /** @description A class this installation chose, never a provider's text and never content. The ones that change what the outcome MEANS: `deferral_capped` (no verdict is coming — a ceiling refused the question), `noise_prior` and `decided_prior` (it landed, but a prior decision means no record will appear), `internal_only`, `no_granting_human`, `invisible_incumbent`, `derivation_failed`. */
             reason?: string | null;
             /**
@@ -15037,6 +15061,8 @@ export interface components {
         };
         HeldThreadListResponse: {
             data: components["schemas"]["HeldThread"][];
+            /** @description When the thread verdict next runs — what a `pending` row above is waiting for. A held thread with no time beside it leaves its owner two readings, broken and slow, and both are wrong. Absent where the deployment composed no queue to ask. */
+            thread_verdict?: components["schemas"]["CaptureVerdictClock"];
         };
         /** @description One thread your mailbox is withholding, and what is known about why. */
         HeldThread: {

@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (85)
+## Parity (86)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -32,6 +32,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `basevaluespelling_test.go` | H2 | One deal's base-currency value is spelled twice, in two packages that cannot import each other, and this is what stops the two from drifting. |
 | `benchrecordswitch_test.go` | H2 | Both bench harnesses ask the SAME variable whether to publish a record, and both answer only to the same value. |
 | `bookinginvite_test.go` | H2 | What booking a meeting CLAIMS and what it DOES, held against each other. |
+| `captureledgerstatuses_test.go` | H2 | The disposition ledger's status vocabulary has ONE definition, and it is the column's own constraint. |
 | `coachingroles_test.go` | H2 | The seats that may coach are seats that exist. |
 | `companyprofilevocabulary_test.go` | H3 | The company-profile vocabulary is spelled in eight places, and this gate is what makes widening seven of them a failure instead of a silent half-job. |
 | `configpresets_test.go` | H3 | Every preset under config/presets/ is a binding the parser accepts. |

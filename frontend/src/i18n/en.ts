@@ -6126,6 +6126,13 @@ export const en = {
   "knowledge.new.submit": "Create set",
   "settings.tab.privacy": "Privacy & audit",
   "settings.tab.capture-activity": "Capture activity",
+  "verdictPass.subject.senders": "Senders",
+  "verdictPass.subject.threads": "Threads",
+  "verdictPass.every_one": "{subject} are judged every minute.",
+  "verdictPass.every_other": "{subject} are judged every {minutes} minutes.",
+  "verdictPass.next": "Next pass {when}.",
+  "verdictPass.queued": "A pass is due and waiting to start.",
+  "verdictPass.running": "A pass is running now.",
   "captureActivity.title": "Capture activity",
   "captureActivity.sub":
     "What the last 24 hours of your mail turned into. The senders you keep out are above.",
@@ -6149,7 +6156,7 @@ export const en = {
   "captureActivity.outcome.captured": "Captured",
   "captureActivity.outcome.internal": "Dropped as internal",
   "captureActivity.outcome.suppressed": "No person created",
-  "captureActivity.outcome.deferred": "Waiting on a verdict",
+  "captureActivity.outcome.deferred": "Waiting on a sender verdict",
   "captureActivity.outcome.fault": "Derivation failed",
   "captureActivity.reason.internal_only": "every party was on your own domains",
   "captureActivity.reason.deferral_capped":
@@ -6238,8 +6245,13 @@ export const en = {
     "the person decision concluded that none was to be made",
   "pipeline.reason.awaiting_verdict":
     "the sender is still waiting on a verdict",
-  "pipeline.reason.verdict_reached":
-    "a verdict has been reached for this sender",
+  "pipeline.reason.judged_real": "this sender was judged a real person",
+  "pipeline.reason.judged_noise":
+    "this sender was judged noise, so no record was made",
+  "pipeline.reason.judged_rejected":
+    "somebody declined this sender, so no record was made",
+  "pipeline.reason.judged_suppressed":
+    "this sender was suppressed, so no record was made",
   "pipeline.reason.no_open_question":
     "there was no open question about this sender",
   "pipeline.reason.transport_not_read":

@@ -2473,6 +2473,33 @@ func (e CaptureTraceEntryOutcome) Valid() bool {
 	}
 }
 
+// Defines values for CaptureTraceEntryOutcomeNow.
+const (
+	CaptureTraceEntryOutcomeNowCaptured   CaptureTraceEntryOutcomeNow = "captured"
+	CaptureTraceEntryOutcomeNowDeferred   CaptureTraceEntryOutcomeNow = "deferred"
+	CaptureTraceEntryOutcomeNowFault      CaptureTraceEntryOutcomeNow = "fault"
+	CaptureTraceEntryOutcomeNowInternal   CaptureTraceEntryOutcomeNow = "internal"
+	CaptureTraceEntryOutcomeNowSuppressed CaptureTraceEntryOutcomeNow = "suppressed"
+)
+
+// Valid indicates whether the value is a known member of the CaptureTraceEntryOutcomeNow enum.
+func (e CaptureTraceEntryOutcomeNow) Valid() bool {
+	switch e {
+	case CaptureTraceEntryOutcomeNowCaptured:
+		return true
+	case CaptureTraceEntryOutcomeNowDeferred:
+		return true
+	case CaptureTraceEntryOutcomeNowFault:
+		return true
+	case CaptureTraceEntryOutcomeNowInternal:
+		return true
+	case CaptureTraceEntryOutcomeNowSuppressed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaptureTraceResolutionStatus.
 const (
 	CaptureTraceResolutionStatusNoise      CaptureTraceResolutionStatus = "noise"
@@ -15561,22 +15588,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	Current    ListOrganizationDocumentsParamsDocState = "current"
-	Draft      ListOrganizationDocumentsParamsDocState = "draft"
-	Final      ListOrganizationDocumentsParamsDocState = "final"
-	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
+	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
+	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
+	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
+	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case Current:
+	case ListOrganizationDocumentsParamsDocStateCurrent:
 		return true
-	case Draft:
+	case ListOrganizationDocumentsParamsDocStateDraft:
 		return true
-	case Final:
+	case ListOrganizationDocumentsParamsDocStateFinal:
 		return true
-	case Superseded:
+	case ListOrganizationDocumentsParamsDocStateSuperseded:
 		return true
 	default:
 		return false
@@ -18891,7 +18918,7 @@ type CaptureActivityFunnel struct {
 	// Captured Landed; the sender was known or became known.
 	Captured *int `json:"captured,omitempty"`
 
-	// Deferred Landed; the sender is a stranger and the question is open.
+	// Deferred Landed; the sender is a stranger and the question is STILL open. A message whose sender has since been judged is counted under what the verdict decided, not under the bucket it was filed in at capture time.
 	Deferred *int `json:"deferred,omitempty"`
 
 	// Fault The derivation failed. The message itself is unaffected unless the reason says otherwise.
@@ -18914,6 +18941,9 @@ type CaptureActivityResponse struct {
 
 	// PayloadCaptureEnabled The deployment's `capture.trace_payloads` posture. False means no entry in this window carries `counterparty` or `subject` because the operator did not turn payload capture on — as against an individual row that simply has none.
 	PayloadCaptureEnabled bool `json:"payload_capture_enabled"`
+
+	// SenderVerdict When one verdict pass runs. Derived from the cadence the job declares and from the queue itself, never from a number written down beside the screen: a second copy of the schedule drifts from the one the worker actually keeps, and the reader would be told a time nothing fires at.
+	SenderVerdict *CaptureVerdictClock `json:"sender_verdict,omitempty"`
 
 	// WindowHours The window these counts cover. Fixed at 24.
 	WindowHours int `json:"window_hours"`
@@ -19338,10 +19368,15 @@ type CaptureTraceEntry struct {
 	Connector string `json:"connector"`
 
 	// Counterparty Only when payload_capture_enabled, and never for an erased subject.
-	Counterparty *string                  `json:"counterparty,omitempty"`
-	Id           openapi_types.UUID       `json:"id"`
-	OccurredAt   time.Time                `json:"occurred_at"`
-	Outcome      CaptureTraceEntryOutcome `json:"outcome"`
+	Counterparty *string            `json:"counterparty,omitempty"`
+	Id           openapi_types.UUID `json:"id"`
+	OccurredAt   time.Time          `json:"occurred_at"`
+
+	// Outcome What the pipeline did with this message AT THE TIME. It never changes; `outcome_now` is what to count and to filter on.
+	Outcome CaptureTraceEntryOutcome `json:"outcome"`
+
+	// OutcomeNow The bucket this message counts under today. Equal to `outcome` unless the message was deferred and the sender has since been judged: a `real` verdict reads as captured and a noise, rejected or suppressed one as suppressed, because the question that made the outcome provisional has been answered. The funnel counts are grouped by this same expression, so a list filtered on it agrees with the counters above it — they disagreed, and the screen said `SENT FOR A VERDICT 49` over forty-nine rows each reading `judged noise`.
+	OutcomeNow CaptureTraceEntryOutcomeNow `json:"outcome_now"`
 
 	// Reason A class this installation chose, never a provider's text and never content. The ones that change what the outcome MEANS: `deferral_capped` (no verdict is coming — a ceiling refused the question), `noise_prior` and `decided_prior` (it landed, but a prior decision means no record will appear), `internal_only`, `no_granting_human`, `invisible_incumbent`, `derivation_failed`.
 	Reason *string `json:"reason,omitempty"`
@@ -19353,8 +19388,11 @@ type CaptureTraceEntry struct {
 	Subject *string `json:"subject,omitempty"`
 }
 
-// CaptureTraceEntryOutcome defines model for CaptureTraceEntry.Outcome.
+// CaptureTraceEntryOutcome What the pipeline did with this message AT THE TIME. It never changes; `outcome_now` is what to count and to filter on.
 type CaptureTraceEntryOutcome string
+
+// CaptureTraceEntryOutcomeNow The bucket this message counts under today. Equal to `outcome` unless the message was deferred and the sender has since been judged: a `real` verdict reads as captured and a noise, rejected or suppressed one as suppressed, because the question that made the outcome provisional has been answered. The funnel counts are grouped by this same expression, so a list filtered on it agrees with the counters above it — they disagreed, and the screen said `SENT FOR A VERDICT 49` over forty-nine rows each reading `judged noise`.
+type CaptureTraceEntryOutcomeNow string
 
 // CaptureTraceResolution What later became of a DEFERRED message's sender, read from the disposition ledger rather than copied into the trace: the ledger is keyed by sender and the trace by message, and one sender's answer covers several messages.
 type CaptureTraceResolution struct {
@@ -19366,6 +19404,21 @@ type CaptureTraceResolution struct {
 
 // CaptureTraceResolutionStatus defines model for CaptureTraceResolution.Status.
 type CaptureTraceResolutionStatus string
+
+// CaptureVerdictClock When one verdict pass runs. Derived from the cadence the job declares and from the queue itself, never from a number written down beside the screen: a second copy of the schedule drifts from the one the worker actually keeps, and the reader would be told a time nothing fires at.
+type CaptureVerdictClock struct {
+	// EverySeconds How often this pass is scheduled. Zero for a deployment where no clock runs it.
+	EverySeconds int `json:"every_seconds"`
+
+	// NextPassAt When the next pass runs. Absent when this deployment cannot say — nothing scheduled and no completed run still in the queue's retention — in which case a reader is owed the cadence rather than an invented time. Never a substitute for `every_seconds`: a person reading one time learns nothing about the rhythm they are living with.
+	NextPassAt *time.Time `json:"next_pass_at,omitempty"`
+
+	// Queued A run is DUE and no worker has picked it up. Its own answer rather than a time, because a due run's moment has already passed — and the one that tells a slow installation from a stopped one, which is what somebody watching an unmoving counter is really asking.
+	Queued bool `json:"queued"`
+
+	// Running A pass is in flight right now.
+	Running bool `json:"running"`
+}
 
 // ChangeContractStatusRequest defines model for ChangeContractStatusRequest.
 type ChangeContractStatusRequest struct {
@@ -23335,6 +23388,9 @@ type HeldThread struct {
 // HeldThreadListResponse defines model for HeldThreadListResponse.
 type HeldThreadListResponse struct {
 	Data []HeldThread `json:"data"`
+
+	// ThreadVerdict When one verdict pass runs. Derived from the cadence the job declares and from the queue itself, never from a number written down beside the screen: a second copy of the schedule drifts from the one the worker actually keeps, and the reader would be told a time nothing fires at.
+	ThreadVerdict *CaptureVerdictClock `json:"thread_verdict,omitempty"`
 }
 
 // HiddenBacklog How much waiting work each hiding rule is keeping off one reader's queue, at one

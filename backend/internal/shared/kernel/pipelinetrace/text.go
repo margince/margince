@@ -68,7 +68,10 @@ var reasonTexts = map[Reason]string{
 	ReasonNotLinkedYet:        "no contact is linked to this message yet",
 	ReasonNoContactIntended:   "the contact decision concluded that none was to be made",
 	ReasonAwaitingVerdict:     "the sender is still waiting on a verdict",
-	ReasonVerdictReached:      "a verdict has been reached for this sender",
+	ReasonJudgedReal:          "this sender was judged a real person",
+	ReasonJudgedNoise:         "this sender was judged noise, so no record was made",
+	ReasonJudgedRejected:      "somebody declined this sender, so no record was made",
+	ReasonJudgedSuppressed:    "this sender was suppressed, so no record was made",
 	ReasonNoOpenQuestion:      "there was no open question about this sender",
 	ReasonRecordNotAvailable: "this step's record is no longer kept, or is not yours to read — " +
 		"once the record is gone the two cannot be told apart",

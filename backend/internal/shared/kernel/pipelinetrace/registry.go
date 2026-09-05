@@ -132,8 +132,8 @@ var registrations = []Registration{{
 	SubjectKind: SubjectSender,
 	Sources:     []Source{SourceDerived},
 	Reasons: []Reason{
-		ReasonAwaitingVerdict, ReasonVerdictReached, ReasonNoOpenQuestion,
-		ReasonRecordNotAvailable,
+		ReasonAwaitingVerdict, ReasonNoOpenQuestion, ReasonRecordNotAvailable,
+		ReasonJudgedReal, ReasonJudgedNoise, ReasonJudgedRejected, ReasonJudgedSuppressed,
 	},
 }, {
 	// Runs, but not reported here yet. Its subject is a DOMAIN and this ladder
