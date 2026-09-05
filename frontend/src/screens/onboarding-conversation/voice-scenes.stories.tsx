@@ -240,12 +240,7 @@ export const SpeakerAskGerman: Story = {
 export const BuildQueued: Story = {
   render: () => (
     <StoryProviders>
-      <VoiceBuildScene
-        stage={null}
-        summary={summary(4220, 2)}
-        sources={2}
-        model="deepseek-chat"
-      />
+      <VoiceBuildScene stage={null} summary={summary(4220, 2)} sources={2} />
     </StoryProviders>
   ),
 };
@@ -255,12 +250,7 @@ export const BuildQueued: Story = {
 export const BuildExtracting: Story = {
   render: () => (
     <StoryProviders>
-      <VoiceBuildScene
-        stage="extract"
-        summary={summary(4220, 2)}
-        sources={2}
-        model="deepseek-chat"
-      />
+      <VoiceBuildScene stage="extract" summary={summary(4220, 2)} sources={2} />
     </StoryProviders>
   ),
 };
@@ -274,7 +264,6 @@ export const BuildActivating: Story = {
         stage="activate"
         summary={summary(4220, 2)}
         sources={2}
-        model="deepseek-chat"
       />
     </StoryProviders>
   ),
@@ -285,12 +274,7 @@ export const BuildActivating: Story = {
 export const BuildExtractingGerman: Story = {
   render: () => (
     <StoryProviders locale="de">
-      <VoiceBuildScene
-        stage="extract"
-        summary={summary(4220, 2)}
-        sources={2}
-        model="deepseek-chat"
-      />
+      <VoiceBuildScene stage="extract" summary={summary(4220, 2)} sources={2} />
     </StoryProviders>
   ),
 };

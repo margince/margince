@@ -1329,24 +1329,25 @@ func (e AttachmentReadStartedStatus) Valid() bool {
 
 // Defines values for AttentionLanesOmitted.
 const (
-	AttentionLanesOmittedAiWorkHealth      AttentionLanesOmitted = "ai_work_health"
-	AttentionLanesOmittedAtRisk            AttentionLanesOmitted = "at_risk"
-	AttentionLanesOmittedAutomationHealth  AttentionLanesOmitted = "automation_health"
-	AttentionLanesOmittedBounces           AttentionLanesOmitted = "bounces"
-	AttentionLanesOmittedCaptureHealth     AttentionLanesOmitted = "capture_health"
-	AttentionLanesOmittedCommitments       AttentionLanesOmitted = "commitments"
-	AttentionLanesOmittedDidNotRun         AttentionLanesOmitted = "did_not_run"
-	AttentionLanesOmittedDoneForYou        AttentionLanesOmitted = "done_for_you"
-	AttentionLanesOmittedDsr               AttentionLanesOmitted = "dsr"
-	AttentionLanesOmittedIntroductions     AttentionLanesOmitted = "introductions"
-	AttentionLanesOmittedMeetings          AttentionLanesOmitted = "meetings"
-	AttentionLanesOmittedNeedsYou          AttentionLanesOmitted = "needs_you"
-	AttentionLanesOmittedNotices           AttentionLanesOmitted = "notices"
-	AttentionLanesOmittedPlanned           AttentionLanesOmitted = "planned"
-	AttentionLanesOmittedRelationshipDecay AttentionLanesOmitted = "relationship_decay"
-	AttentionLanesOmittedSyncHealth        AttentionLanesOmitted = "sync_health"
-	AttentionLanesOmittedThisMorning       AttentionLanesOmitted = "this_morning"
-	AttentionLanesOmittedUndelivered       AttentionLanesOmitted = "undelivered"
+	AttentionLanesOmittedAiWorkHealth       AttentionLanesOmitted = "ai_work_health"
+	AttentionLanesOmittedAtRisk             AttentionLanesOmitted = "at_risk"
+	AttentionLanesOmittedAutomationHealth   AttentionLanesOmitted = "automation_health"
+	AttentionLanesOmittedBounces            AttentionLanesOmitted = "bounces"
+	AttentionLanesOmittedCaptureHealth      AttentionLanesOmitted = "capture_health"
+	AttentionLanesOmittedCommitments        AttentionLanesOmitted = "commitments"
+	AttentionLanesOmittedDidNotRun          AttentionLanesOmitted = "did_not_run"
+	AttentionLanesOmittedDoneForYou         AttentionLanesOmitted = "done_for_you"
+	AttentionLanesOmittedDsr                AttentionLanesOmitted = "dsr"
+	AttentionLanesOmittedIntroductions      AttentionLanesOmitted = "introductions"
+	AttentionLanesOmittedMeetings           AttentionLanesOmitted = "meetings"
+	AttentionLanesOmittedMeetingsUnreported AttentionLanesOmitted = "meetings_unreported"
+	AttentionLanesOmittedNeedsYou           AttentionLanesOmitted = "needs_you"
+	AttentionLanesOmittedNotices            AttentionLanesOmitted = "notices"
+	AttentionLanesOmittedPlanned            AttentionLanesOmitted = "planned"
+	AttentionLanesOmittedRelationshipDecay  AttentionLanesOmitted = "relationship_decay"
+	AttentionLanesOmittedSyncHealth         AttentionLanesOmitted = "sync_health"
+	AttentionLanesOmittedThisMorning        AttentionLanesOmitted = "this_morning"
+	AttentionLanesOmittedUndelivered        AttentionLanesOmitted = "undelivered"
 )
 
 // Valid indicates whether the value is a known member of the AttentionLanesOmitted enum.
@@ -1373,6 +1374,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedIntroductions:
 		return true
 	case AttentionLanesOmittedMeetings:
+		return true
+	case AttentionLanesOmittedMeetingsUnreported:
 		return true
 	case AttentionLanesOmittedNeedsYou:
 		return true
@@ -1470,6 +1473,7 @@ const (
 	AttentionItemSourceIntroductionRequest AttentionItemSource = "introduction_request"
 	AttentionItemSourceLeadResponse        AttentionItemSource = "lead_response"
 	AttentionItemSourceMeeting             AttentionItemSource = "meeting"
+	AttentionItemSourceMeetingOutcome      AttentionItemSource = "meeting_outcome"
 	AttentionItemSourceNotice              AttentionItemSource = "notice"
 	AttentionItemSourceRelationshipDecay   AttentionItemSource = "relationship_decay"
 	AttentionItemSourceSyncHealth          AttentionItemSource = "sync_health"
@@ -1509,6 +1513,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceLeadResponse:
 		return true
 	case AttentionItemSourceMeeting:
+		return true
+	case AttentionItemSourceMeetingOutcome:
 		return true
 	case AttentionItemSourceNotice:
 		return true
@@ -13972,6 +13978,7 @@ const (
 	WorklistItemSourceIntroductionRequest WorklistItemSource = "introduction_request"
 	WorklistItemSourceLeadResponse        WorklistItemSource = "lead_response"
 	WorklistItemSourceMeeting             WorklistItemSource = "meeting"
+	WorklistItemSourceMeetingOutcome      WorklistItemSource = "meeting_outcome"
 	WorklistItemSourceNotice              WorklistItemSource = "notice"
 	WorklistItemSourceRelationshipDecay   WorklistItemSource = "relationship_decay"
 	WorklistItemSourceSyncHealth          WorklistItemSource = "sync_health"
@@ -14013,6 +14020,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceLeadResponse:
 		return true
 	case WorklistItemSourceMeeting:
+		return true
+	case WorklistItemSourceMeetingOutcome:
 		return true
 	case WorklistItemSourceNotice:
 		return true
@@ -14098,6 +14107,7 @@ const (
 	WorklistReachSourceIntroductionRequest WorklistReachSource = "introduction_request"
 	WorklistReachSourceLeadResponse        WorklistReachSource = "lead_response"
 	WorklistReachSourceMeeting             WorklistReachSource = "meeting"
+	WorklistReachSourceMeetingOutcome      WorklistReachSource = "meeting_outcome"
 	WorklistReachSourceNotice              WorklistReachSource = "notice"
 	WorklistReachSourceRelationshipDecay   WorklistReachSource = "relationship_decay"
 	WorklistReachSourceSyncHealth          WorklistReachSource = "sync_health"
@@ -14140,6 +14150,8 @@ func (e WorklistReachSource) Valid() bool {
 		return true
 	case WorklistReachSourceMeeting:
 		return true
+	case WorklistReachSourceMeetingOutcome:
+		return true
 	case WorklistReachSourceNotice:
 		return true
 	case WorklistReachSourceRelationshipDecay:
@@ -14171,6 +14183,7 @@ const (
 	WorklistReasonKindMeetingUnprepared  WorklistReasonKind = "meeting_unprepared"
 	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
 	WorklistReasonKindNoReplyHistory     WorklistReasonKind = "no_reply_history"
+	WorklistReasonKindOutcomeUnrecorded  WorklistReasonKind = "outcome_unrecorded"
 	WorklistReasonKindOverdue            WorklistReasonKind = "overdue"
 	WorklistReasonKindPinned             WorklistReasonKind = "pinned"
 	WorklistReasonKindPromised           WorklistReasonKind = "promised"
@@ -14214,6 +14227,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindNoChampion:
 		return true
 	case WorklistReasonKindNoReplyHistory:
+		return true
+	case WorklistReasonKindOutcomeUnrecorded:
 		return true
 	case WorklistReasonKindOverdue:
 		return true
@@ -17727,6 +17742,21 @@ type Attention struct {
 	// Absent — not empty — on an installation whose feed does not read meetings.
 	Meetings *[]AttentionItem `json:"meetings,omitempty"`
 
+	// MeetingsUnreported Today's meetings that have already started and whose result nobody has
+	// recorded, longest unanswered first. The counterpart of `meetings`: that lane
+	// is what to prepare for, this is what to close off.
+	//
+	// A meeting carrying no status at all is here. A captured calendar event
+	// arrives without one, so treating an absent status as settled would empty this
+	// lane on exactly the installations whose calendars are connected.
+	//
+	// `occurred_at` is when it began, and there is no `due_at`: a meeting that
+	// happened cannot be late, and a deadline would put an overdue mark on a row
+	// whose whole point is that the meeting is over.
+	//
+	// Absent — not empty — on an installation whose feed does not read meetings.
+	MeetingsUnreported *[]AttentionItem `json:"meetings_unreported,omitempty"`
+
 	// NeedsYou Decisions only a person can make, highest-stakes first.
 	NeedsYou []AttentionItem `json:"needs_you"`
 
@@ -17873,7 +17903,10 @@ type AttentionCounts struct {
 
 	// Meetings How many of today's meetings are still ahead — the bounded page, as the other lanes report.
 	Meetings *int `json:"meetings,omitempty"`
-	NeedsYou int  `json:"needs_you"`
+
+	// MeetingsUnreported How many of today's meetings have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear.
+	MeetingsUnreported *int `json:"meetings_unreported,omitempty"`
+	NeedsYou           int  `json:"needs_you"`
 
 	// Notices How many unread notices the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest.
 	Notices *int `json:"notices,omitempty"`

@@ -5180,7 +5180,8 @@ export const en = {
   "ob.conv.voice.footFloor":
     "{min} words minimum. Below that the model just copies phrasing.",
   "ob.conv.voice.buildingTitle": "Learning your voice",
-  "ob.conv.voice.buildingMeta": "{words} words, {sources} sources",
+  "ob.conv.voice.buildingMeta_one": "{words} words, {sources} source",
+  "ob.conv.voice.buildingMeta_other": "{words} words, {sources} sources",
   "ob.conv.voice.resultSub":
     "Read the sample first. If it lands, confirm. If it is off, add more sources and I rebuild.",
   "ob.conv.voice.resultSubNoSample":
@@ -5266,14 +5267,13 @@ export const en = {
   "ob.conv.linkedin.skipped":
     "Skipped LinkedIn. You can add your profile any time in Settings.",
 
-  // The setup rail: six stops, one word each. Long enough to name the step,
-  // short enough that six of them fit a column at 10px.
+  // The setup rail: five stops, one word each. Long enough to name the step,
+  // short enough that five of them fit a column at 10px.
   "ob.rail.read": "Read",
   "ob.rail.confirm": "Confirm",
   "ob.rail.basis": "Basis",
   "ob.rail.voice": "Voice",
   "ob.rail.connect": "Connect",
-  "ob.rail.prefs": "Preferences",
 
   // The invite: asked once the company is confirmed, before the two steps
   // that are only about the person answering. An administrator who sets the
@@ -5304,25 +5304,21 @@ export const en = {
   "ob.conv.team.finish": "Finish setup",
   "ob.conv.team.done":
     "Setup is complete. Anyone you add can train their voice and connect their accounts from Settings.",
-  // The basis act: the installation's reporting basis, asked once the company
-  // is confirmed and before any step about the person answering.
-  "ob.conv.basis.title": "First, how the numbers are reported.",
+  "ob.conv.team.persistFailed":
+    "I couldn't record that setup is complete. Try again, or leave it and finish from Settings later.",
+  // The basis act: the installation's reporting basis and the agent's
+  // autonomy, asked once the company is confirmed and before any step about
+  // the person answering.
+  "ob.conv.basis.title": "First, the basis.",
   "ob.conv.basis.body":
-    "Base currency and reporting timezone are the installation's: every deal, report and brief is priced and dated on them. Both are prefilled and can be changed later in Settings, until a deal has frozen the currency.",
+    "Base currency and reporting timezone are the installation's: every deal, report and brief is priced and dated on them. What it may change without asking is yours to decide. All of it is prefilled and can be changed later in Settings, until a deal has frozen the currency.",
   "ob.conv.basis.reportingTitle": "Reporting basis",
   "ob.conv.basis.timezoneNeeded": "A reporting timezone is needed.",
+  "ob.conv.basis.autonomyTitle": "What it may change on its own",
+  "ob.conv.basis.autonomyBody":
+    "Each kind of change below is proposed to you first. Switch one on and it applies without asking; switch it back any time.",
   "ob.conv.basis.continue": "Continue",
   "ob.conv.basis.done": "Reporting basis settled.",
-
-  "ob.conv.prefs.title": "Last, a few preferences.",
-  "ob.conv.prefs.body":
-    "Everything here is prefilled from what is already recorded, and can be changed later in Settings. Press Done if it all reads right.",
-  "ob.conv.prefs.autonomyTitle": "What it may change on its own",
-  "ob.conv.prefs.autonomyBody":
-    "Each kind of change below is proposed to you first. Switch one on and it applies without asking; switch it back any time.",
-  "ob.conv.prefs.done": "Done",
-  "ob.conv.prefs.persistFailed":
-    "I couldn't record that setup is complete. Try again, or leave it and finish from Settings later.",
 
   // --- the gate: the first screen after sign-in -------------------------
   // One question and nothing else. Nobody should meet the whole tool on their
@@ -8523,6 +8519,7 @@ export const en = {
   "worklist.because.legal_deadline": "a legal deadline is running",
   "worklist.because.meeting_soon": "starting shortly",
   "worklist.because.meeting_unprepared": "nothing prepared",
+  "worklist.because.outcome_unrecorded": "no outcome recorded",
   "worklist.because.response_overdue": "reply overdue",
   "worklist.because.response_due_soon": "reply due soon",
   "worklist.because.response_due_soon.value": "reply due by {value}",
@@ -8580,6 +8577,7 @@ export const en = {
   "worklist.untitled.lead_response": "A lead",
   "worklist.untitled.deal_at_risk": "A deal is drifting",
   "worklist.untitled.meeting": "A meeting",
+  "worklist.untitled.meeting_outcome": "A meeting",
   "worklist.untitled.relationship_decay": "A relationship is going quiet",
   "worklist.untitled.failed_approval": "Something you approved did not run",
   "worklist.untitled.dsr": "An open privacy request",

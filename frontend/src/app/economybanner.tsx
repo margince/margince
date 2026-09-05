@@ -73,7 +73,7 @@ export function EconomyBanner() {
       live="status"
       actions={
         <>
-          <a href="#/settings/admin/ai">{t("aibanner.link")}</a>
+          <a href="#/settings/ai">{t("aibanner.link")}</a>
           <Button
             small
             aria-label={t("aibanner.dismiss")}

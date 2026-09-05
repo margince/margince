@@ -165,7 +165,6 @@ export function presenceFor(
     case "team":
       return { core: "idle" };
     case "connect":
-    case "prefs":
     case "done":
       return { core: "idle" };
   }

@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -427,7 +428,7 @@ func TestALiftOfTheLastStopSaysSo(t *testing.T) {
 	payload := lastLiftPayload(t, e)
 	if payload.RemainingSuppressions == nil || *payload.RemainingSuppressions != 0 ||
 		payload.StillSuppressed == nil || *payload.StillSuppressed {
-		t.Errorf("remaining = %d, still_suppressed = %v; want 0 and false with no stop left",
+		t.Errorf("remaining = %s, still_suppressed = %s; want 0 and false with no stop left",
 			derefInt(payload.RemainingSuppressions), derefBool(payload.StillSuppressed))
 	}
 }
@@ -470,7 +471,7 @@ func TestALiftReportsAnAddressPinnedStopAsStanding(t *testing.T) {
 	payload := lastLiftPayload(t, e)
 	if payload.StillSuppressed == nil || !*payload.StillSuppressed ||
 		payload.RemainingSuppressions == nil || *payload.RemainingSuppressions != 1 {
-		t.Errorf("remaining = %d, still_suppressed = %v; want 1 and true — the bounce on "+
+		t.Errorf("remaining = %s, still_suppressed = %s; want 1 and true — the bounce on "+
 			"%s is still live and the engine will still refuse this mail",
 			derefInt(payload.RemainingSuppressions), derefBool(payload.StillSuppressed), address)
 	}
@@ -479,23 +480,23 @@ func TestALiftReportsAnAddressPinnedStopAsStanding(t *testing.T) {
 // The three fields are optional on the wire so an older consumer keeps
 // validating, but this writer always sets them — so a nil in a failure message
 // is itself the news, and these print it rather than an address.
-func derefInt(v *int) any {
+func derefInt(v *int) string {
 	if v == nil {
 		return "absent"
 	}
-	return *v
+	return strconv.Itoa(*v)
 }
 
-func derefBool(v *bool) any {
+func derefBool(v *bool) string {
 	if v == nil {
 		return "absent"
 	}
-	return *v
+	return strconv.FormatBool(*v)
 }
 
-func derefUUID(v *openapi_types.UUID) any {
+func derefUUID(v *openapi_types.UUID) string {
 	if v == nil {
 		return "absent"
 	}
-	return *v
+	return v.String()
 }

@@ -46,6 +46,8 @@ func BriefSectionOf(item crmcontracts.WorklistItem) crmcontracts.WorklistItemBri
 	switch {
 	case respondsNow(item):
 		return crmcontracts.BriefSectionRespondNow
+	case closesOffAConversation(item):
+		return crmcontracts.BriefSectionReviewAndRepair
 	case preparesAConversation(item):
 		return crmcontracts.BriefSectionPrepareConversations
 	case sectionBuildsPipeline(item):
@@ -117,6 +119,18 @@ func owedAReply(item crmcontracts.WorklistItem) bool {
 		}
 	}
 	return false
+}
+
+// closesOffAConversation: a meeting already happened and owes an answer.
+//
+// BEFORE preparesAConversation, and a rule of its own rather than an arm of it,
+// because it shares the meetings CATEGORY with the rows that lane prepares —
+// the category is what a reader filters by, so both belong under one pill. What
+// differs is the section: nobody walks into a meeting that is over, and filing
+// it under preparing would tell a rep to get ready for something they already
+// did. Recording what happened is repair.
+func closesOffAConversation(item crmcontracts.WorklistItem) bool {
+	return item.Source == crmcontracts.WorklistItemSourceMeetingOutcome
 }
 
 // preparesAConversation: a meeting is coming and somebody has to walk in ready.

@@ -107,6 +107,22 @@ func (s *Service) optionalLanes(
 			into: &out.Meetings, count: &out.Counts.Meetings,
 		},
 		{
+			name: "meetings_unreported", bound: s.meetingsAwaitingOutcome != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				// The window is the day SO FAR — [today's start, now) — where
+				// the lane above reads [now, today's end). The two share a day
+				// and split it at the reader's own moment, so a meeting is on
+				// exactly one of them and never on both.
+				began, err := s.startOfDay(ctx, asOf)
+				if err != nil {
+					return nil, err
+				}
+				over, err := s.meetingsAwaitingOutcome.Since(ctx, began, asOf, plannedCap)
+				return renderEach(over, meetingAwaitingOutcomeItem), err
+			},
+			into: &out.MeetingsUnreported, count: &out.Counts.MeetingsUnreported,
+		},
+		{
 			name: "at_risk", bound: s.atRisk != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				// The lane's own cut flag is not read here: boundedSources
