@@ -32,10 +32,10 @@ package attention
 // already on every row, it needs no standing word to be useful, and a row
 // reaching the reader with no verdict is therefore still fully explained.
 //
-// So `deterministic` never appears on this field. It is in the contract's enum
-// because the CLIENT states it: a card drawing a row's typed reasons where no
-// verdict arrived labels that block as a rule rather than as something Margince
-// believes, which is the same distinction, made where the words are written.
+// So the contract carries TWO source members and both are readings. There is no
+// third for the deterministic case, because that case is not a verdict at all: a
+// row without one carries its typed `because` reasons, the client draws them
+// under their own heading, and they are already labelled as rules there.
 //
 // Held by TestADealWithNeitherAIReadingKeepsItsDeterministicExplanationAndMove.
 
@@ -69,9 +69,8 @@ type DealStanding struct {
 // drawn and never ranked, so reading one for a row the caller will not receive
 // would spend a query on nothing.
 //
-// The brief findings are handed in rather than read here. The brief lane already
-// ran, it already holds a finding per deal it surfaced, and asking the brief a
-// second time would be a second read of a queue this feed has in hand.
+// The brief findings are handed in rather than read here; feed.go's assembleDay
+// states why they travel as a value.
 func (s *Service) nameTheStanding(
 	ctx context.Context, queue []crmcontracts.WorklistItem, findings map[ids.UUID]string,
 ) error {
@@ -145,7 +144,7 @@ func verdictOf(standing DealStanding) *crmcontracts.WorklistDealVerdict {
 		return nil
 	}
 	return &crmcontracts.WorklistDealVerdict{
-		Standing: word,
+		Standing: &word,
 		Line:     standing.DecisiveLine,
 		Source:   crmcontracts.WorklistInsightSourceDealStatus,
 		AsOf:     standing.AsOf,
@@ -155,9 +154,13 @@ func verdictOf(standing DealStanding) *crmcontracts.WorklistDealVerdict {
 // knownStanding answers whether the card's verdict word is one this contract
 // carries.
 //
-// The four are spelled here as constants generated from crm.yaml rather than as
-// string literals, so a value added to the enum is a compile error here until
-// somebody decides what the queue does with it.
+// A word this build does not know falls to `default` and is dropped — NOT a
+// compile error, because a switch over a string-typed enum is never one and the
+// `exhaustive` linter is not enabled in this tree. What fails instead is
+// backend/gates/worklistverdictstandings_test.go, which compares this switch,
+// the card's own description and the queue's enum and refuses any two that
+// disagree. That gate is the mechanism; this function is one of the three
+// spellings it holds together.
 func knownStanding(word string) (crmcontracts.WorklistDealVerdictStanding, bool) {
 	switch crmcontracts.WorklistDealVerdictStanding(word) {
 	case crmcontracts.WorklistStandingLive:
@@ -173,17 +176,13 @@ func knownStanding(word string) (crmcontracts.WorklistDealVerdictStanding, bool)
 	}
 }
 
-// recordBriefFindings keeps this read's brief findings for the standing pass,
-// which runs after the page is cut and no longer has the lane's entries.
+// findingsOf collects the night's finding per deal out of the brief lane's
+// entries.
 //
-// Written onto the SERVICE, which is safe here for the reason money is: every
-// path that reaches the standing pass runs on a per-request copy of the Service
-// (worklist.go narrows one per read), so a finding recorded for one reader's
-// page cannot follow another's.
-func (s *Service) recordBriefFindings(queue []BriefEntry) {
-	if len(queue) == 0 {
-		return
-	}
+// A pure function of the queue handed in, returned to its caller rather than
+// stored: feed.go's assembleDay states why anything per-read on the Service
+// crosses readers.
+func findingsOf(queue []BriefEntry) map[ids.UUID]string {
 	findings := make(map[ids.UUID]string, len(queue))
 	for _, entry := range queue {
 		if entry.Finding == "" {
@@ -191,5 +190,5 @@ func (s *Service) recordBriefFindings(queue []BriefEntry) {
 		}
 		findings[entry.DealID] = entry.Finding
 	}
-	s.briefFindings = findings
+	return findings
 }

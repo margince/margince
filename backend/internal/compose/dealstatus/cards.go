@@ -18,12 +18,26 @@ package dealstatus
 // — figures and moves are gathered after the page is cut, and a caller wanting
 // only the standing should not pay for the audience re-gate a move needs.
 //
-// NO AUDIENCE RE-GATE HERE, deliberately, and the asymmetry is the point. A move
-// names a RECORD the reader may have lost access to, so serving it would say a
-// message exists. A standing is a sentence about the deal, written from records
-// admitted when the card was written, and the reader holds `deal.read` or this
-// row would not have reached them. What the sentence CITES is not carried out —
-// only its text — so there is no id here to serve past a gate.
+// AND THE CITED ACTIVITIES ARE RE-GATED ON EVERY READ, exactly as CachedMoves
+// re-gates the record its move names. The first version of this file argued the
+// opposite — that a standing carries only prose and names no record, so there
+// was nothing to gate — and that argument is wrong in the way that matters. The
+// sentence is MODEL-WRITTEN FROM the timeline and grounding.go requires it to
+// cite the records it rests on, so its text restates content from those
+// records. Auth's rule is about content derived from an activity, not about ids:
+// everything so derived carries the audience predicate wherever it is served.
+//
+// The deal page does not have this problem, which is why it needed no such
+// gate. Service.Get re-gathers the timeline under the caller's CURRENT grants
+// and fingerprints the card against it, so a mail narrowed after the card was
+// written changes the input, misses the fingerprint, and the card is rewritten
+// without it. This read has no fingerprint to miss — that is the whole of what
+// makes it cheap — so it asks the audience question directly instead.
+//
+// A standing whose cited activity this reader may no longer read is dropped
+// WHOLE, the same rule and for the same reason as a move's: the row then falls
+// through to its typed deterministic reasons, which explain it without any
+// model in the path.
 
 import (
 	"context"
@@ -47,6 +61,10 @@ type CachedCard struct {
 	DecisiveLine string
 	// GeneratedAt is when the card behind this reading was written.
 	GeneratedAt time.Time
+	// CitedActivities are the messages that sentence was written from, which the
+	// caller re-gates before serving it. Empty where the sentence cites only
+	// records that are not activities — a deal's own fields carry no audience.
+	CitedActivities []ids.UUID
 }
 
 // CachedCards answers the already-written standing for each of these deals, for
@@ -68,29 +86,27 @@ func (s *Service) CachedCards(
 		return nil, err
 	}
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT deal_id, payload, generated_at FROM deal_status_card
-			WHERE user_id = $1 AND deal_id = ANY($2)`,
-			userID, dealIDs)
+		found, err := readCachedCards(ctx, tx, userID, dealIDs)
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var dealID ids.UUID
-			var payload []byte
-			var generatedAt time.Time
-			if err := rows.Scan(&dealID, &payload, &generatedAt); err != nil {
-				return err
-			}
-			card, ok := cardFromPayload(payload)
-			if !ok {
+		// The audience, asked again NOW rather than trusted from write time.
+		// One query for the whole page, over every activity any of these
+		// sentences cites — the same shape and the same reader CachedMoves uses.
+		readable, err := readableActivities(ctx, tx, citedActivities(found))
+		if err != nil {
+			return err
+		}
+		for dealID, card := range found {
+			if !allReadable(card.CitedActivities, readable) {
+				// The reader has lost a message this sentence was written from.
+				// Dropping the standing WHOLE is the point: its text restates
+				// what that message said.
 				continue
 			}
-			card.GeneratedAt = generatedAt
 			out[dealID] = card
 		}
-		return rows.Err()
+		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("read the cached deal standings: %w", err)
@@ -117,11 +133,32 @@ func cardFromPayload(payload []byte) (CachedCard, bool) {
 	if verdict == nil || verdict.Standing == "" {
 		return CachedCard{}, false
 	}
-	line, ok := firstSentence(verdict.Because)
+	sentence, ok := firstSentence(verdict.Because)
 	if !ok {
 		return CachedCard{}, false
 	}
-	return CachedCard{Standing: verdict.Standing, DecisiveLine: line}, true
+	return CachedCard{
+		Standing:        verdict.Standing,
+		DecisiveLine:    sentence.Text,
+		CitedActivities: activitiesCitedBy(sentence),
+	}, true
+}
+
+// activitiesCitedBy reads the messages one sentence was written from.
+//
+// ACTIVITIES ONLY, because they are the records that carry an audience. A
+// sentence citing a deal or a person rests on rows the reader already reached —
+// the deal grant is what put this row on their queue — and asking the audience
+// question about a record that has none would refuse every standing.
+func activitiesCitedBy(sentence crmcontracts.OrganizationBriefSentence) []ids.UUID {
+	cited := make([]ids.UUID, 0, len(sentence.Evidence))
+	for _, evidence := range sentence.Evidence {
+		if evidence.EntityType != crmcontracts.OrganizationBriefEvidenceEntityTypeActivity {
+			continue
+		}
+		cited = append(cited, ids.UUID(evidence.EntityId))
+	}
+	return cited
 }
 
 // firstSentence takes the one line a row has room for out of a cited section.
@@ -129,11 +166,80 @@ func cardFromPayload(payload []byte) (CachedCard, bool) {
 // The FIRST, not a join of all of them: the card writes its sentences in the
 // order it wants them read, and a queue row draws one line. Concatenating them
 // would compose a sentence nobody wrote, in a length the row cannot draw.
-func firstSentence(section crmcontracts.DealStatusCardSection) (string, bool) {
+func firstSentence(
+	section crmcontracts.DealStatusCardSection,
+) (crmcontracts.OrganizationBriefSentence, bool) {
 	for _, sentence := range section.Sentences {
 		if sentence.Text != "" {
-			return sentence.Text, true
+			return sentence, true
 		}
 	}
-	return "", false
+	return crmcontracts.OrganizationBriefSentence{}, false
+}
+
+// readCachedCards takes the stored cards for these deals, for this reader.
+//
+// Collected whole before anything else runs, for the reason readCachedMoves
+// states: the audience filter is a second query on the same transaction, and
+// pgx will not start one while these rows are still open.
+func readCachedCards(
+	ctx context.Context, tx pgx.Tx, userID ids.UserID, dealIDs []ids.UUID,
+) (map[ids.UUID]CachedCard, error) {
+	found := map[ids.UUID]CachedCard{}
+	rows, err := tx.Query(ctx, `
+		SELECT deal_id, payload, generated_at FROM deal_status_card
+		WHERE user_id = $1 AND deal_id = ANY($2)`,
+		userID, dealIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var dealID ids.UUID
+		var payload []byte
+		var generatedAt time.Time
+		if err := rows.Scan(&dealID, &payload, &generatedAt); err != nil {
+			return nil, err
+		}
+		card, ok := cardFromPayload(payload)
+		if !ok {
+			continue
+		}
+		card.GeneratedAt = generatedAt
+		found[dealID] = card
+	}
+	return found, rows.Err()
+}
+
+// citedActivities collects the messages these standings were written from,
+// deduplicated, so the audience question is asked once per record rather than
+// once per deal.
+func citedActivities(cards map[ids.UUID]CachedCard) []ids.UUID {
+	seen := map[ids.UUID]bool{}
+	wanted := make([]ids.UUID, 0, len(cards))
+	for _, card := range cards {
+		for _, id := range card.CitedActivities {
+			if seen[id] {
+				continue
+			}
+			seen[id] = true
+			wanted = append(wanted, id)
+		}
+	}
+	return wanted
+}
+
+// allReadable answers whether the reader may still read every message this
+// sentence was written from.
+//
+// EVERY one, not any: a sentence rests on all of its citations at once, and
+// serving it because one of three survived would still restate what the other
+// two said.
+func allReadable(cited []ids.UUID, readable map[ids.UUID]bool) bool {
+	for _, id := range cited {
+		if !readable[id] {
+			return false
+		}
+	}
+	return true
 }

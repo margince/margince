@@ -70,7 +70,7 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, b
 		}
 		unanswered = append(unanswered, attention.BriefEntry{
 			ID: item.ID, DealID: item.DealID, Rank: item.Rank,
-			Composite: item.Composite, Finding: item.Finding,
+			Finding: item.Finding,
 		})
 		named = append(named, item.DealID)
 	}

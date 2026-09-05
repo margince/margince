@@ -130,11 +130,6 @@ type Service struct {
 	// to do and not how the deal is standing, which is what every deal row did
 	// before this seam. dealstanding.go states the three-source order.
 	dealStandings DealStandings
-	// briefFindings is one read's answer, written per read onto the request's
-	// own copy the way money is: the brief lane holds a finding per deal it
-	// surfaced, and asking the brief again after the page is cut would be a
-	// second read of a queue this feed already has in hand.
-	briefFindings map[ids.UUID]string
 	// fx is OPTIONAL in the same way, and money is one read's answer from it,
 	// written per read onto the request's own copy the way taskScope is.
 	// basemoney.go states what each means and why the copy matters.
@@ -237,13 +232,35 @@ func (s *Service) countingDecisions() *Service {
 // Any other failure is returned: a lane that is broken rather than withheld
 // must not read as a clear day.
 func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) {
+	day, _, err := s.assembleDay(ctx)
+	return day, err
+}
+
+// assembleDay is Assemble, plus the night's finding per deal.
+//
+// The two are one pass because the brief lane is read ONCE: asking it again
+// after the page is cut would be a second read of a queue this already has in
+// hand. Assemble above discards the findings because /attention draws the brief
+// as its own rows; only the worklist folds a finding onto a deal row.
+//
+// A RETURN VALUE AND NOT A FIELD on the Service, which is the point. Written
+// onto the Service the map would be SHARED — Assemble is reached on the
+// process-wide instance by GetAttention (handlers.go) and by the team
+// exceptions read (teamexceptions.go), so one reader's findings would still be
+// sitting there when the next reader's page was built, and a reader whose own
+// brief ran empty would inherit them because nothing would overwrite what
+// nothing wrote. That is another rep's mail-derived prose on this rep's row,
+// and an unsynchronised map write under concurrent requests besides.
+func (s *Service) assembleDay(
+	ctx context.Context,
+) (crmcontracts.Attention, map[ids.UUID]string, error) {
 	asOf := s.now().UTC()
 	// The day's end, resolved ONCE for the whole assembly: every due-dated lane
 	// is judged against the same instant, and the installation is asked for its
 	// timezone once rather than per lane.
 	until, err := s.endOfDay(ctx, asOf)
 	if err != nil {
-		return crmcontracts.Attention{}, err
+		return crmcontracts.Attention{}, nil, err
 	}
 	// Every lane starts as an empty slice, never nil. The contract declares
 	// them as arrays, and a withheld lane leaves its field unset — which
@@ -258,14 +275,14 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 	}
 	var omitted []crmcontracts.AttentionLanesOmitted
 
-	morning, morningState, err := s.thisMorning(ctx)
+	morning, morningState, findings, err := s.thisMorning(ctx)
 	omitted, err = fill(omitted, "this_morning", err, func() {
 		out.ThisMorning = morning
 		out.Counts.ThisMorning = len(morning)
 		out.ThisMorningState = &morningState
 	})
 	if err != nil {
-		return crmcontracts.Attention{}, err
+		return crmcontracts.Attention{}, nil, err
 	}
 
 	needsYou, count, err := s.decisionsToDepth(ctx, s.decisionsDepth())
@@ -278,7 +295,7 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 		}
 	})
 	if err != nil {
-		return crmcontracts.Attention{}, err
+		return crmcontracts.Attention{}, nil, err
 	}
 
 	planned, plannedTotal, err := s.planned(ctx, asOf, until, s.taskScope)
@@ -287,7 +304,7 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 		out.Counts.Planned = plannedTotal
 	})
 	if err != nil {
-		return crmcontracts.Attention{}, err
+		return crmcontracts.Attention{}, nil, err
 	}
 
 	// The three OPTIONAL lanes, each bound or absent. optionalLane holds the
@@ -295,14 +312,14 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 	for _, lane := range s.optionalLanes(ctx, asOf, until, &out) {
 		omitted, err = lane.collect(omitted)
 		if err != nil {
-			return crmcontracts.Attention{}, err
+			return crmcontracts.Attention{}, nil, err
 		}
 	}
 
 	done, err := s.done(ctx, asOf)
 	omitted, err = fill(omitted, "done_for_you", err, func() { out.DoneForYou = done })
 	if err != nil {
-		return crmcontracts.Attention{}, err
+		return crmcontracts.Attention{}, nil, err
 	}
 
 	if len(omitted) > 0 {
@@ -311,48 +328,15 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 	// Last, over the assembled lanes: every card that names a record gets its
 	// display name under this reader's own grants (labels.go).
 	if err := s.fillSubjectLabels(ctx, &out); err != nil {
-		return crmcontracts.Attention{}, err
+		return crmcontracts.Attention{}, nil, err
 	}
-	return out, nil
+	return out, findings, nil
 }
 
 // laneCount carries the totals behind a lane the reader only sees a slice of.
 type laneCount struct {
 	items      int
 	duplicates int
-}
-
-// thisMorning is the briefing lane: the overnight run's unanswered queue, in
-// its own rank order.
-//
-// No cap here. The brief is already honest-short — its own ranking bounds the
-// queue and refuses to pad — so a second bound would hide items the engine had
-// decided were worth the morning. The seam drops the answered ones, because
-// this lane is a worklist that must be finishable and a row that cannot be
-// removed is the opposite of finishing. Home still shows what was answered,
-// which is where a rep looks to see what she did.
-func (s *Service) thisMorning(ctx context.Context) ([]crmcontracts.AttentionItem, crmcontracts.AttentionThisMorningState, error) {
-	queue, ran, err := s.briefing.Queue(ctx)
-	if err != nil {
-		return nil, "", err
-	}
-	items := make([]crmcontracts.AttentionItem, 0, len(queue))
-	for _, entry := range queue {
-		items = append(items, briefItem(entry))
-	}
-	s.recordBriefFindings(queue)
-	// The state names WHY the lane holds what it holds. A run that ranked
-	// nothing reads all_answered too: "nothing worth your first hour" and
-	// "you answered everything" are the same message to a reader — nothing
-	// to do here — while no_run_today is the one that must not wear a tick.
-	state := crmcontracts.ItemsWaiting
-	switch {
-	case !ran:
-		state = crmcontracts.NoRunToday
-	case len(items) == 0:
-		state = crmcontracts.AllAnswered
-	}
-	return items, state, nil
 }
 
 // decisions is the needs_you lane: staged approvals and open duplicate pairs,

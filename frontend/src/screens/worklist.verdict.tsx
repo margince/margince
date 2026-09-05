@@ -7,18 +7,22 @@
 // the judgement the deal page prints, carried onto the row so the reader does
 // not have to open that page to find it.
 //
-// THE LABEL TURNS ON `source`, AND THAT IS THE WHOLE POINT OF DRAWING IT. The
-// server sends three kinds of line and they are not equally certain:
+// THE LABEL SAYS THIS IS A READING, AND THAT IS THE WHOLE POINT OF DRAWING IT.
+// The server sends two kinds of line and both are readings:
 //
 //   deal_status   — the deal's own card, written from its timeline and cited.
 //   brief_finding — the night's grounded finding about this deal.
 //
-// Both are readings, so both are labelled as readings. A row that arrives with
-// no verdict at all is NOT a gap and gets no label from here: its typed reasons
-// are drawn underneath by RowCaptions, and they are the deterministic
-// explanation — computed from records with no model in the path. Presenting
-// those under "Margince believes" would be the lie this component exists to
-// prevent, which is why the caption block and this one are separate.
+// A row that arrives with NO verdict is not a gap and gets nothing from here.
+// Its typed reasons are drawn underneath by RowCaptions, and those are the
+// deterministic explanation — computed from records with no model in the path.
+// Presenting them under "Margince believes" would be the lie this component
+// exists to prevent, which is why the caption block and this one are separate
+// and why the contract has no third `source` member for that case.
+//
+// `standing` is absent on a brief finding, which is prose about the deal rather
+// than one of the four calls. The badge is drawn only where the server sent a
+// word, never invented from the sentence.
 
 import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";

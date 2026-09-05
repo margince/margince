@@ -13410,9 +13410,8 @@ func (e WorklistCountCategory) Valid() bool {
 
 // Defines values for WorklistDealVerdictSource.
 const (
-	WorklistInsightSourceBriefFinding  WorklistDealVerdictSource = "brief_finding"
-	WorklistInsightSourceDealStatus    WorklistDealVerdictSource = "deal_status"
-	WorklistInsightSourceDeterministic WorklistDealVerdictSource = "deterministic"
+	WorklistInsightSourceBriefFinding WorklistDealVerdictSource = "brief_finding"
+	WorklistInsightSourceDealStatus   WorklistDealVerdictSource = "deal_status"
 )
 
 // Valid indicates whether the value is a known member of the WorklistDealVerdictSource enum.
@@ -13421,8 +13420,6 @@ func (e WorklistDealVerdictSource) Valid() bool {
 	case WorklistInsightSourceBriefFinding:
 		return true
 	case WorklistInsightSourceDealStatus:
-		return true
-	case WorklistInsightSourceDeterministic:
 		return true
 	default:
 		return false
@@ -33796,8 +33793,8 @@ type WorklistDealFacts struct {
 // a deterministic rule stated as a belief is a lie about where the sentence came
 // from.
 type WorklistDealVerdict struct {
-	// AsOf When the reading behind this line was taken. Absent on a `deterministic`
-	// line, which is computed at read time and is never stale.
+	// AsOf When the reading behind this line was taken, so a stale one can be told from
+	// a fresh one.
 	AsOf *time.Time `json:"as_of,omitempty"`
 
 	// Line One sentence saying what the standing rests on, already written and already
@@ -33808,14 +33805,17 @@ type WorklistDealVerdict struct {
 	// did not gather.
 	Line string `json:"line"`
 
-	// Source Where the line came from, so a client never presents a rule as a belief.
+	// Source Where the line came from, so a client never presents one reading as the other.
 	//
 	// `deal_status` — the deal's own cached card, model-written and evidence-cited.
 	// `brief_finding` — the night's brief item for this deal, grounded and
 	// evidence-validated, used when no card is cached.
-	// `deterministic` — the queue's own reason, computed from records with no model
-	// in the path. The floor: it is always available, so a row is never left
-	// without an explanation.
+	//
+	// Both are READINGS, and there is deliberately no third member for the
+	// deterministic case. A row with no reading carries no verdict at all: its
+	// typed `because` reasons are the deterministic explanation, they are already
+	// on every row, and a client draws them under their own heading rather than
+	// under this one.
 	Source WorklistDealVerdictSource `json:"source"`
 
 	// Standing `live` — moving, with a next step both sides expect.
@@ -33827,17 +33827,24 @@ type WorklistDealVerdict struct {
 	// verdict. Held by backend/gates/worklistverdictstandings_test.go, which
 	// derives this set from DealStatusCardVerdict's description rather than
 	// keeping a second list of them.
-	Standing WorklistDealVerdictStanding `json:"standing"`
+	//
+	// ABSENT on a `brief_finding` line, which is prose about the deal and not one
+	// of these four calls. A word invented for it would be the queue deciding a
+	// judgement the deal card owns.
+	Standing *WorklistDealVerdictStanding `json:"standing,omitempty"`
 }
 
-// WorklistDealVerdictSource Where the line came from, so a client never presents a rule as a belief.
+// WorklistDealVerdictSource Where the line came from, so a client never presents one reading as the other.
 //
 // `deal_status` — the deal's own cached card, model-written and evidence-cited.
 // `brief_finding` — the night's brief item for this deal, grounded and
 // evidence-validated, used when no card is cached.
-// `deterministic` — the queue's own reason, computed from records with no model
-// in the path. The floor: it is always available, so a row is never left
-// without an explanation.
+//
+// Both are READINGS, and there is deliberately no third member for the
+// deterministic case. A row with no reading carries no verdict at all: its
+// typed `because` reasons are the deterministic explanation, they are already
+// on every row, and a client draws them under their own heading rather than
+// under this one.
 type WorklistDealVerdictSource string
 
 // WorklistDealVerdictStanding `live` — moving, with a next step both sides expect.
@@ -33849,6 +33856,10 @@ type WorklistDealVerdictSource string
 // verdict. Held by backend/gates/worklistverdictstandings_test.go, which
 // derives this set from DealStatusCardVerdict's description rather than
 // keeping a second list of them.
+//
+// ABSENT on a `brief_finding` line, which is prose about the deal and not one
+// of these four calls. A word invented for it would be the queue deciding a
+// judgement the deal card owns.
 type WorklistDealVerdictStanding string
 
 // WorklistItem One thing to do, with the reason it sits where it sits.

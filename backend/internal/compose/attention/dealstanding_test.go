@@ -59,8 +59,8 @@ func TestADealRowCarriesTheCachedVerdictBesideItsMove(t *testing.T) {
 	if verdict == nil {
 		t.Fatal("the row carries no verdict")
 	}
-	if verdict.Standing != crmcontracts.WorklistStandingBlocked {
-		t.Errorf("standing = %q, want blocked", verdict.Standing)
+	if verdict.Standing == nil || *verdict.Standing != crmcontracts.WorklistStandingBlocked {
+		t.Errorf("standing = %v, want blocked", verdict.Standing)
 	}
 	if verdict.Line != "Legal has not returned the DPA." {
 		t.Errorf("line = %q", verdict.Line)
@@ -101,8 +101,12 @@ func TestAnUncachedDealUsesTheGroundedBriefFinding(t *testing.T) {
 	// A finding is prose about the deal and NOT one of the four standings. A
 	// word invented here would be this pass deciding the judgement dealstatus
 	// owns, which is the second answer the whole ordering exists to prevent.
-	if verdict.Standing != "" {
-		t.Errorf("standing = %q, want none: a finding is not a verdict word", verdict.Standing)
+	//
+	// ABSENT rather than empty: the field is a pointer precisely so this case
+	// can be expressed without sending "" for a value outside the enum, which is
+	// what a client validating against the contract would reject.
+	if verdict.Standing != nil {
+		t.Errorf("standing = %v, want none: a finding is not a verdict word", *verdict.Standing)
 	}
 }
 
@@ -264,5 +268,52 @@ func TestARefusedStandingReadFailsThePage(t *testing.T) {
 
 	if !errors.Is(err, wanted) {
 		t.Errorf("err = %v, want the read's own", err)
+	}
+}
+
+// The finding a read gathers belongs to THAT read and reaches no other.
+//
+// The defect this catches shipped as a field on the Service: assembleDay is
+// reached on the process-wide instance by /attention and by the team exceptions
+// read, so one reader's findings sat there when the next reader's page was
+// built — and a reader whose own brief ran empty inherited them, because
+// nothing overwrote what nothing wrote. Another rep's mail-derived prose, on
+// this rep's row.
+//
+// Written against findingsOf rather than against two HTTP requests because the
+// property is about WHERE the map lives: a pure function of the queue handed in
+// has nowhere to leave a previous caller's answer. Mutation-checked by making
+// it write to a package-level map, which fails the second assertion.
+func TestAReadersFindingsNeverReachAnotherReadersPage(t *testing.T) {
+	dealID := ids.NewV7()
+
+	theirs := findingsOf([]BriefEntry{
+		{ID: ids.NewV7(), DealID: dealID, Finding: "Their CFO froze the budget."},
+	})
+	if theirs[dealID] != "Their CFO froze the budget." {
+		t.Fatalf("the first read did not gather its own finding: %v", theirs)
+	}
+
+	// The second reader's brief ran empty. Their answer must be empty too.
+	mine := findingsOf(nil)
+
+	if len(mine) != 0 {
+		t.Errorf("a reader whose brief ran empty received %d findings: %v", len(mine), mine)
+	}
+	if _, found := mine[dealID]; found {
+		t.Error("one reader's brief finding reached another reader's page")
+	}
+}
+
+// A brief entry with no finding contributes no key, so a deal the night ranked
+// but never annotated falls through to its typed reasons rather than to an
+// empty sentence.
+func TestABriefEntryWithNoFindingContributesNothing(t *testing.T) {
+	dealID := ids.NewV7()
+
+	findings := findingsOf([]BriefEntry{{ID: ids.NewV7(), DealID: dealID}})
+
+	if _, found := findings[dealID]; found {
+		t.Error("an unannotated brief entry produced a finding key")
 	}
 }

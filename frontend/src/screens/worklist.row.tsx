@@ -34,7 +34,6 @@ import {
   whenText,
 } from "./worklist.copy";
 import { DispositionVerbs, PutDownByThumb } from "./worklist.dispositions";
-import { VerdictLine } from "./worklist.verdict";
 import { WaitingEmailLine } from "./worklist.emailtitle";
 import { ReassignControl } from "./worklist.manager";
 import { PairDecision } from "./worklist.pair";
@@ -46,6 +45,7 @@ import {
   worklistKey,
 } from "./worklist.queries";
 import { syncHealthDetail } from "./worklist.synchealth";
+import { VerdictLine } from "./worklist.verdict";
 
 /**
  * A grouped row's named members, each ONCE.
