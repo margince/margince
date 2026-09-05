@@ -76,6 +76,25 @@ func Categories() []Category {
 	return out
 }
 
+// CarriesUnsubscribe reports whether a message of this category must offer the
+// recipient a way to stop hearing from us.
+//
+// MARKETING ALONE, and the narrowness is the point rather than an omission. An
+// unsubscribe surface is an offer to stop a stream the recipient can decline —
+// and every other category is a message they cannot sensibly decline without
+// declining the relationship itself: a reply to their own question, an invoice,
+// a notice about their contract. Offering to unsubscribe from a conversation
+// somebody started reads as not having read it.
+//
+// It replaces a rule keyed on the deprecated purpose key, which asked whether
+// the purpose was the locked `transactional` one. That question had no answer
+// for a send carrying no purpose key — and "not transactional" is not the same
+// as "marketing", so a message with no key at all came out the far side wearing
+// an unsubscribe footer.
+//
+// Held by: TestOnlyMarketingCarriesAnUnsubscribeSurface (backend/internal/modules/activities/unsubscribesurface_test.go)
+func (c Category) CarriesUnsubscribe() bool { return c == CategoryMarketing }
+
 // ServesTheSubject reports whether this category exists to serve the recipient
 // rather than the sender. These five may pass a hard suppression, and only
 // through a registered template: a security warning, a privacy notice, or the

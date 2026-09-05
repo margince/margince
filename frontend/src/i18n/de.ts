@@ -3198,9 +3198,19 @@ export const de = {
   "compose.scheduleTomorrow": "Morgen früh",
   "compose.scheduleMonday": "Montagmorgen",
   "compose.scheduleNow": "Doch sofort senden",
-  "compose.purpose": "Einwilligungszweck",
-  "compose.purposeHint":
-    "Der Versand ist nur erlaubt, wenn jeder Empfänger für diesen Zweck eingewilligt hat.",
+  "compose.why": "Warum schreibst du?",
+  "compose.whyHint":
+    "Was erlaubt ist, entscheidet der Datensatz; das hier sagt, was du tust — damit sich beides abgleichen lässt.",
+  "compose.why.requestedFollowup": "Sie haben mich um Kontakt gebeten",
+  "compose.why.activeDeal": "Zu einem laufenden Deal",
+  "compose.why.quote": "Ein angefragtes Angebot",
+  "compose.why.service": "Support zu etwas Gekauftem",
+  "compose.why.invoice": "Zu einer Rechnung oder Zahlung",
+  "compose.why.contract": "Zu ihrem Vertrag",
+  "compose.why.account": "Zu ihrem Konto",
+  "compose.why.marketing": "Werbung",
+  "compose.derivedReply":
+    "Das ist eine Antwort auf ihre eigene Nachricht — dafür brauchst du keinen Grund anzugeben.",
   "compose.sendLaterLabel": "Später senden (optional)",
   "compose.send": "Senden",
   "compose.sendConfirmTitle": "Diese E-Mail senden?",
@@ -3256,7 +3266,7 @@ export const de = {
   "compose.emptyRecipients": "Fügen Sie mindestens einen Empfänger hinzu.",
   "compose.missingSubject": "Gib dieser E-Mail einen Betreff.",
   "compose.missingBody": "Schreibe die Nachricht, bevor du sie sendest.",
-  "compose.missingPurpose": "Wähle, wozu diese Nachricht dient.",
+  "compose.missingWhy": "Sag, warum du ihnen schreibst.",
   "compose.removeRecipient": "{recipient} entfernen",
   "compose.actionFailed":
     "Die Anfrage ist fehlgeschlagen. Bitte erneut versuchen.",
@@ -6505,6 +6515,8 @@ export const de = {
   "aicalls.title": "KI-Aufrufprotokoll",
   "aicalls.withheld":
     "Nur ein Betreiber liest die Aufrufspur. Sie verzeichnet jeden Modellaufruf dieser Installation und wird deshalb nicht breiter gezeigt.",
+  "aiHealth.withheld":
+    "Nur ein Betreiber sieht, ob die Modellstufen antworten. Das ist die Verkabelung der Installation, keine Aussage über Ihre Arbeit.",
   "aicalls.sub":
     "Jeder Modellaufruf — Routing, Tokens, Wiederholungen und erfasste Nutzdaten.",
   "aicalls.col.detail": "Detail",

@@ -50,8 +50,11 @@ var focusRules = []struct {
 	{"asked for help", Counts{}, 2, FocusHelpRequested},
 	{"a lead went past", Counts{LeadsRouted: 3, LeadsBreached: 1}, 0, FocusLeadsBreached},
 	{"missed commitments", Counts{CommitmentsDue: 3, CommitmentsKept: 1}, 0, FocusCommitmentsMissed},
-	{"meetings with no next step",
-		Counts{MeetingsHeld: 2, MeetingsWithNextStep: 1}, 0, FocusMeetingsWithoutNextStep},
+	{
+		"meetings with no next step",
+		Counts{MeetingsHeld: 2, MeetingsWithNextStep: 1},
+		0, FocusMeetingsWithoutNextStep,
+	},
 	{"won something", Counts{DealsWon: 2}, 0, FocusStrongWeek},
 	{"nothing happened", Counts{}, 0, FocusQuietWeek},
 }

@@ -8,7 +8,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { pickOption } from "../design-system/select-testing";
@@ -418,27 +418,36 @@ describe("RelinkModal", () => {
 // The two purposes as the rep READS them: a pick names what a person would
 // click, while the ConsentPurpose.key each label stands for is the wire value,
 // asserted on the request body wherever a send is under study.
-const PURPOSE_LABEL = {
-  transactional: "Deal messages",
-  marketing: "Marketing email",
+// What a rep answers when the composer asks why they are writing. These are
+// the CATEGORIES the engine reasons about, not consent purposes: the purpose
+// dropdown was replaced because the record already decides what is allowed, and
+// a key a rep picked was never that.
+const WHY_LABEL = {
+  requestedFollowup: "They asked me to get in touch",
+  marketing: "Marketing",
 } as const;
 
 // The composer has exactly one dropdown, so a pick needs nothing but the label.
 // `pickOption` takes a userEvent SESSION, which the bare direct API is not, so
 // it gets a fresh one — the same thing every bare `userEvent.*` call in this
 // file does internally.
-function pickPurpose(label: string) {
+function pickWhy(label: string) {
   return pickOption(userEvent.setup(), screen.getByRole("combobox"), label);
 }
 
-// Fills the four Send preconditions (To, subject, body, purpose) so a test can
-// then exercise the send outcome under study.
+// Fills the Send preconditions so a test can exercise the outcome under study.
+//
+// The "why" answer is filled because these suites compose an UNANCHORED message
+// — no anchor read is stubbed, so the composer has nothing to derive from and
+// asks. A suite whose subject is a reply stubs the anchor instead and the
+// question never appears; asking there is the defect fillReplyForm exists to
+// catch.
 async function fillSendableForm() {
   await userEvent.type(screen.getByLabelText("To"), "a@x.com");
   await userEvent.tab();
   await userEvent.type(screen.getByPlaceholderText("Subject"), "Hi there");
   await userEvent.type(screen.getByPlaceholderText("Body"), "Body content");
-  await pickPurpose(PURPOSE_LABEL.transactional);
+  await pickWhy(WHY_LABEL.requestedFollowup);
 }
 
 describe("ComposeModal", () => {
@@ -753,7 +762,7 @@ describe("ComposeModal", () => {
     expect(
       screen.getByText("Write the message before sending it."),
     ).toBeTruthy();
-    expect(screen.getByText("Choose what this message is for.")).toBeTruthy();
+    expect(screen.getByText("Say why you are writing to them.")).toBeTruthy();
     expect(
       sent.filter((call) => call.key.startsWith("POST /activities")),
     ).toHaveLength(0);
@@ -790,7 +799,7 @@ describe("ComposeModal", () => {
       subject: "Hi there",
       body: "Body content",
       to: ["a@x.com"],
-      consent_purpose: "transactional",
+      communication_context: "requested_followup",
     });
     // ADR-0055: the human click is the approval — neither header rides along.
     expect(req?.headers.get("X-Approval-Token")).toBeNull();
@@ -970,7 +979,7 @@ describe("ComposeModal draft binding", () => {
       screen.getByRole("button", { name: "Draft with AI" }),
     );
     await screen.findByDisplayValue("Draft A body.");
-    await pickPurpose(PURPOSE_LABEL.transactional);
+    await pickWhy(WHY_LABEL.requestedFollowup);
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() =>
@@ -1016,7 +1025,7 @@ describe("ComposeModal draft binding", () => {
       ).toBe(2),
     );
 
-    await pickPurpose(PURPOSE_LABEL.transactional);
+    await pickWhy(WHY_LABEL.requestedFollowup);
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() =>
@@ -1047,7 +1056,7 @@ describe("ComposeModal draft binding", () => {
     const bodyField = await screen.findByDisplayValue("Draft A body.");
     await userEvent.clear(bodyField);
     await userEvent.type(bodyField, "Written from scratch.");
-    await pickPurpose(PURPOSE_LABEL.transactional);
+    await pickWhy(WHY_LABEL.requestedFollowup);
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() =>
@@ -1113,7 +1122,7 @@ describe("ComposeModal draft binding", () => {
       screen.getByRole("button", { name: "Draft with AI" }),
     );
     await screen.findByDisplayValue("Draft A body.");
-    await pickPurpose(PURPOSE_LABEL.transactional);
+    await pickWhy(WHY_LABEL.requestedFollowup);
     // The form is sendable before the judgment starts, so the refusal below is
     // the rejection holding the draft rather than an unmet precondition.
     expect(
@@ -1169,7 +1178,7 @@ describe("ComposeModal draft binding", () => {
     );
     expect(await screen.findByText(/boom/i)).toBeTruthy();
 
-    await pickPurpose(PURPOSE_LABEL.transactional);
+    await pickWhy(WHY_LABEL.requestedFollowup);
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() =>
@@ -1210,7 +1219,7 @@ describe("ComposeModal draft binding", () => {
     ).toBeTruthy();
     expect(screen.getByDisplayValue("Draft A body.")).toBeTruthy();
 
-    await pickPurpose(PURPOSE_LABEL.transactional);
+    await pickWhy(WHY_LABEL.requestedFollowup);
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
     await waitFor(() =>
       expect(
@@ -1552,7 +1561,7 @@ describe("ComposeModal send refusals", () => {
     await userEvent.tab();
 
     expect(screen.queryByText(/more than one addressee/i)).toBeNull();
-    await pickPurpose(PURPOSE_LABEL.marketing);
+    await pickWhy(WHY_LABEL.marketing);
 
     expect(await screen.findByText(/more than one addressee/i)).toBeTruthy();
     // A warning, not a gate — and nothing was sent to earn it.
@@ -1566,7 +1575,7 @@ describe("ComposeModal send refusals", () => {
     renderComposer();
     await screen.findByRole("combobox");
     await fillSendableForm();
-    await pickPurpose(PURPOSE_LABEL.marketing);
+    await pickWhy(WHY_LABEL.marketing);
 
     expect(screen.queryByText(/more than one addressee/i)).toBeNull();
   });
@@ -1606,7 +1615,7 @@ describe("ComposeModal — channel reply", () => {
     );
     await screen.findByRole("combobox");
     await userEvent.type(screen.getByPlaceholderText("Body"), "On my way.");
-    await pickPurpose(PURPOSE_LABEL.transactional);
+    await pickWhy(WHY_LABEL.requestedFollowup);
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
@@ -1617,7 +1626,7 @@ describe("ComposeModal — channel reply", () => {
     // actually accepts (SendMessageRequest carries only these two fields).
     expect(req?.body).toEqual({
       body: "On my way.",
-      consent_purpose: "transactional",
+      communication_context: "requested_followup",
     });
     // ADR-0055: the human's own click is the approval on both send paths.
     expect(req?.headers.get("X-Approval-Token")).toBeNull();
@@ -1721,7 +1730,7 @@ describe("ComposeModal — channel reply", () => {
       screen.getByPlaceholderText("Body"),
       "Call me back please.",
     );
-    await pickPurpose(PURPOSE_LABEL.transactional);
+    await pickWhy(WHY_LABEL.requestedFollowup);
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     expect(await screen.findByText(/has not granted consent/i)).toBeTruthy();
@@ -2163,7 +2172,7 @@ describe("ComposeModal started from an account", () => {
       subject: "Hi there",
       body: "Body content",
       to: ["a@x.com"],
-      consent_purpose: "transactional",
+      communication_context: "requested_followup",
       // Without a link the message belongs to no record and nobody finds it
       // again, which is the gap this origin exists to close.
       links: [{ entity_type: "organization", entity_id: "org-1" }],
@@ -2861,6 +2870,201 @@ describe("what the composer says it is answering", () => {
 
     await screen.findByRole("combobox");
     expect(screen.queryByText(/Replying to|starts a new thread/i)).toBeNull();
+  });
+});
+
+// What the composer claims a message is, and when it claims nothing.
+//
+// The rule: a reply to the subject's own message derives reply_to_inbound from
+// the anchor, so the composer asks nothing and sends no claim. Everything else
+// has to be asked, because there is nothing to derive from.
+describe("what the composer says this message is", () => {
+  const inbound: Activity = {
+    ...activity202,
+    thread_key: "<t-why@mail>",
+    body: "Can you send the revised quote?",
+    direction: "inbound",
+  };
+
+  it("asks nothing on a reply, and says why not", async () => {
+    stubRoutes({ "GET /activities/act-1": () => jsonResponse(inbound) });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // The sentence that replaces the question. A reader who is shown a dropdown
+    // here is being asked to restate what the thread in front of them says.
+    expect(
+      await screen.findByText(
+        "This continues their own message, so it needs no reason from you.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByLabelText("Why are you writing?")).toBeNull();
+  });
+
+  it("sends a reply with no claim at all", async () => {
+    const sent = stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(inbound),
+      "POST /activities/act-1/send-email": () => jsonResponse(activity202, 202),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByText(
+      "This continues their own message, so it needs no reason from you.",
+    );
+    await userEvent.type(screen.getByLabelText("To"), "a@x.com");
+    await userEvent.tab();
+    await userEvent.type(screen.getByPlaceholderText("Subject"), "Re: quote");
+    await userEvent.type(screen.getByPlaceholderText("Body"), "Attached.");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() =>
+      expect(
+        sent.find((r) => r.key === "POST /activities/act-1/send-email"),
+      ).toBeTruthy(),
+    );
+    const body = sent.find((r) => r.key === "POST /activities/act-1/send-email")
+      ?.body as Record<string, unknown>;
+    // NEITHER key. The engine resolves reply_to_inbound from the anchor, and a
+    // claim on top could only agree with it or contradict it — a contradiction
+    // is recorded as a claim the evidence does not carry.
+    expect(body).not.toHaveProperty("communication_context");
+    expect(body).not.toHaveProperty("consent_purpose");
+  });
+
+  it("drops a stale answer when the composer moves onto a reply", async () => {
+    // The gap this closes: on a reply the question never renders, so a
+    // composer that simply passed its own state through would look correct —
+    // the state is empty because nothing set it. It stops looking correct the
+    // moment a reader answers on an unanchored message and THEN opens a reply,
+    // which is one click in the same drawer.
+    //
+    // The thread is the stronger evidence either way, so the stale pick must
+    // not travel: the server would record it as a claim the evidence does not
+    // carry.
+    const sent = stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(inbound),
+      "POST /activities/act-1/send-email": () => jsonResponse(activity202, 202),
+    });
+    // A parent that flips the anchor on demand, so the SAME mounted composer
+    // moves from unanchored to answering — which is what a rep does by clicking
+    // Reply beside a message. Remounting instead would reset the state and
+    // prove nothing about a stale answer surviving.
+    function Harness() {
+      const [anchored, setAnchored] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setAnchored(true)}>
+            anchor it
+          </button>
+          <ComposeModal
+            activityId={anchored ? "act-1" : undefined}
+            entityType="person"
+            entityId="p-1"
+            open
+            onClose={vi.fn()}
+          />
+        </>
+      );
+    }
+    render(<Harness />);
+
+    await screen.findByRole("combobox");
+    await pickWhy(WHY_LABEL.marketing);
+
+    await userEvent.click(screen.getByRole("button", { name: "anchor it" }));
+    await screen.findByText(
+      "This continues their own message, so it needs no reason from you.",
+    );
+
+    await userEvent.type(screen.getByLabelText("To"), "a@x.com");
+    await userEvent.tab();
+    await userEvent.type(screen.getByPlaceholderText("Subject"), "Re: quote");
+    await userEvent.type(screen.getByPlaceholderText("Body"), "Attached.");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() =>
+      expect(
+        sent.find((r) => r.key === "POST /activities/act-1/send-email"),
+      ).toBeTruthy(),
+    );
+    const body = sent.find((r) => r.key === "POST /activities/act-1/send-email")
+      ?.body as Record<string, unknown>;
+    expect(body).not.toHaveProperty("communication_context");
+  });
+
+  it("asks on a first message, and sends what the reader answered", async () => {
+    const sent = stubRoutes({
+      "POST /emails": () => jsonResponse(activity202, 202),
+    });
+    render(
+      <ComposeModal
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByRole("combobox");
+    await userEvent.type(screen.getByLabelText("To"), "a@x.com");
+    await userEvent.tab();
+    await userEvent.type(screen.getByPlaceholderText("Subject"), "Hello");
+    await userEvent.type(screen.getByPlaceholderText("Body"), "First contact.");
+    await pickWhy(WHY_LABEL.requestedFollowup);
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() =>
+      expect(sent.find((r) => r.key === "POST /emails")).toBeTruthy(),
+    );
+    const body = sent.find((r) => r.key === "POST /emails")?.body as Record<
+      string,
+      unknown
+    >;
+    expect(body.communication_context).toBe("requested_followup");
+  });
+
+  it("refuses to send a first message until the reader says why", async () => {
+    let sent = false;
+    stubRoutes({
+      "POST /emails": () => {
+        sent = true;
+        return jsonResponse(activity202, 202);
+      },
+    });
+    render(
+      <ComposeModal
+        entityType="person"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await userEvent.type(await screen.findByLabelText("To"), "a@x.com");
+    await userEvent.tab();
+    await userEvent.type(screen.getByPlaceholderText("Subject"), "Hello");
+    await userEvent.type(screen.getByPlaceholderText("Body"), "First contact.");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    expect(
+      await screen.findByText("Say why you are writing to them."),
+    ).toBeTruthy();
+    expect(sent).toBe(false);
   });
 });
 

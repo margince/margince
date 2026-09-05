@@ -3168,9 +3168,19 @@ export const vi = {
   "compose.scheduleTomorrow": "Sáng mai",
   "compose.scheduleMonday": "Sáng thứ Hai",
   "compose.scheduleNow": "Gửi ngay bây giờ",
-  "compose.purpose": "Mục đích chấp thuận",
-  "compose.purposeHint":
-    "Lượt gửi chỉ được phép nếu mọi người nhận đều đã chấp thuận cho mục đích này.",
+  "compose.why": "Vì sao bạn viết?",
+  "compose.whyHint":
+    "Hồ sơ quyết định điều gì được phép; phần này nói bạn đang làm gì để đối chiếu được.",
+  "compose.why.requestedFollowup": "Họ đã nhờ tôi liên hệ",
+  "compose.why.activeDeal": "Về một thương vụ đang tiến hành",
+  "compose.why.quote": "Báo giá hoặc đề xuất họ đã hỏi",
+  "compose.why.service": "Hỗ trợ cho thứ họ đã mua",
+  "compose.why.invoice": "Về hóa đơn hoặc thanh toán",
+  "compose.why.contract": "Về hợp đồng của họ",
+  "compose.why.account": "Về tài khoản của họ",
+  "compose.why.marketing": "Tiếp thị",
+  "compose.derivedReply":
+    "Đây là trả lời tin nhắn của chính họ, nên bạn không cần nêu lý do.",
   "compose.sendLaterLabel": "Gửi sau (tùy chọn)",
   "compose.send": "Gửi",
   "compose.sendConfirmTitle": "Gửi email này?",
@@ -3224,7 +3234,7 @@ export const vi = {
   "compose.emptyRecipients": "Hãy thêm ít nhất một người nhận.",
   "compose.missingSubject": "Hãy đặt tiêu đề cho email này.",
   "compose.missingBody": "Hãy viết nội dung trước khi gửi.",
-  "compose.missingPurpose": "Hãy chọn mục đích của tin nhắn này.",
+  "compose.missingWhy": "Hãy cho biết vì sao bạn viết cho họ.",
   "compose.removeRecipient": "Gỡ {recipient}",
   "compose.actionFailed": "Yêu cầu thất bại. Hãy thử lại.",
 
@@ -6438,6 +6448,8 @@ export const vi = {
   "aicalls.title": "Dấu vết lượt gọi AI",
   "aicalls.withheld":
     "Chỉ người vận hành mới đọc được dấu vết từng lượt gọi. Nó ghi lại mọi lượt gọi mô hình của bản cài đặt, nên không hiển thị rộng hơn.",
+  "aiHealth.withheld":
+    "Chỉ người vận hành mới xem được các tầng mô hình có đang trả lời hay không. Đó là hệ thống của bản cài đặt, không phải điều gì về công việc của bạn.",
   "aicalls.sub":
     "Mọi lượt gọi mô hình — danh tính định tuyến, token, số lần thử lại, nội dung đã ghi.",
   "aicalls.col.detail": "Chi tiết",
