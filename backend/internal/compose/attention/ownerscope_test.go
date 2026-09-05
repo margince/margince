@@ -73,3 +73,36 @@ func dayWhoseRowsNameAnOwner(holder ids.UUID) crmcontracts.Attention {
 	}
 	return day
 }
+
+// A folded row can name a person the scope filters will never see.
+//
+// ownerOfTheGroup speaks where the members agree, and a synthesized row has no
+// record of its own to take `owner` from — so a group whose members all name
+// one person carries ownerNamed with a zero `owner`. That is the mis-scoping
+// the census above describes, reached directly because no producer that folds
+// can currently produce it: classifyDecision, the only classifier the fold
+// consumes, answers unassigned() for every row and ignores AssigneeId, by a
+// deliberate rule of its own.
+//
+// So this is the shape waiting rather than a defect today, and testing it here
+// rather than through a fixture keeps the claim honest: the census above cannot
+// reach this, and pretending otherwise with a hand-forced pile would assert a
+// path through classifyDecision that does not exist.
+func TestAFoldedRowNamingAPersonWouldNotBeScopedToThem(t *testing.T) {
+	t.Parallel()
+	holder := ids.NewV7()
+	members := []ranked{{ownerRef: ownedBy(holder)}, {ownerRef: ownedBy(holder)}}
+	group := ownerOfTheGroup(members)
+	if group.kind != ownerNamed || group.user != holder {
+		t.Fatalf("a pile agreeing on one owner says %v, so this test no longer reaches "+
+			"the shape it was written for", group)
+	}
+	// The gap itself: the group names a person and carries no `owner` for
+	// answersTo to read. If a foldable producer ever names one, this is the line
+	// that has to change with it.
+	folded := ranked{ownerRef: group}
+	if _, readable := answersTo(folded); readable {
+		t.Error("a folded row now answers the scope filters — fold its owner into the " +
+			"census above rather than leaving this test to describe a gap that closed")
+	}
+}
