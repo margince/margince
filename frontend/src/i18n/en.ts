@@ -4508,6 +4508,12 @@ export const en = {
   "connectors.reconnect": "Reconnect",
   "connectors.disconnect": "Disconnect",
   "connectors.signatureEnrich.label": "Read contact details from this mailbox",
+  "connectors.contextTag.label": "File what this connector brings in under",
+  "connectors.contextTag.none": "No tag",
+  "connectors.contextTag.hint":
+    "An existing tag. Every contact this connector creates from now on is filed under it, so you can ask what came in from this source. Contacts already here keep the tags they have.",
+  "connectors.contextTag.archived":
+    "{name} has been archived, so nothing is being filed under it. Choose another tag, or none.",
   "connectors.signatureEnrich.followingDefault":
     "Following your organization's setting. Change it here and this mailbox keeps its own answer.",
   "connectors.signatureEnrich.ownAnswer":

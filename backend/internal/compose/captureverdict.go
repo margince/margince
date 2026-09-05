@@ -75,7 +75,9 @@ type CounterpartyVerdictEngine struct {
 	// admitted deserves a company. A `real` answer creates the PERSON; whether
 	// they have an employer is a separate question this engine does not answer.
 	triage *domainTriageTrigger
-	log    *slog.Logger
+	// tagFiler files a created contact under the word its connector was set to.
+	tagFiler *connectorTagFiler
+	log      *slog.Logger
 }
 
 // NewCounterpartyVerdictEngine builds the engine over the pool and the verdict
@@ -91,6 +93,7 @@ func NewCounterpartyVerdictEngine(pool *pgxpool.Pool, brain completer, log *slog
 		approvals:  approvals.NewService(InstallationDB(pool)),
 		brain:      brain,
 		triage:     newDomainTriageTrigger(pool, log),
+		tagFiler:   newConnectorTagFiler(pool),
 		log:        log,
 	}
 }

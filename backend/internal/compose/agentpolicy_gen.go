@@ -602,6 +602,7 @@ var agentPolicies = map[string]agentPolicy{
 	"PUT /v1/capture/blocked-domains":                                    {Op: "setBlockedDomain", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/capture/senders/{address}/decision":                         {Op: "setCaptureSenderDecision", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/company":                                                    {Op: "putCompany", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/connectors/{provider}/context-tag":                          {Op: "setConnectorContextTag", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/connectors/{provider}/mail-posture":                         {Op: "setConnectorMailPosture", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/connectors/{provider}/signature-enrichment":                 {Op: "setConnectorSignatureEnrichment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/deal-rooms/{id}/expiry":                                     {Op: "setDealRoomExpiry", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

@@ -18464,9 +18464,19 @@ type CaptureConnection struct {
 	AccountLabel *string `json:"account_label,omitempty"`
 
 	// Backfill Summary of the connection's backfill run; state `none` when never run.
-	Backfill  *BackfillStatus    `json:"backfill,omitempty"`
-	CreatedAt *time.Time         `json:"created_at,omitempty"`
-	Id        openapi_types.UUID `json:"id"`
+	Backfill *BackfillStatus `json:"backfill,omitempty"`
+
+	// ContextTag The one existing word every record this connector creates is filed under, so
+	// "which records came in from this source" has an answer. Absent when the operator
+	// chose none, which is the honest default rather than a guess.
+	//
+	// The connector is the batch, not a sync window: a mailbox polls forever, and a word
+	// per window would mint one nobody chose, growing without bound. The other half of
+	// the question — "in this period" — is answered by the record's own `created_at`
+	// and needs no word at all.
+	ContextTag *ConnectorContextTag `json:"context_tag,omitempty"`
+	CreatedAt  *time.Time           `json:"created_at,omitempty"`
+	Id         openapi_types.UUID   `json:"id"`
 
 	// LastSyncErrorClass rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log.
 	LastSyncErrorClass *string `json:"last_sync_error_class,omitempty"`
@@ -19908,6 +19918,29 @@ type ConnectorAppRedirectUri struct {
 // ConnectorAppRedirectUriPurpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
 // None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
 type ConnectorAppRedirectUriPurpose string
+
+// ConnectorContextTag The one existing word every record this connector creates is filed under, so
+// "which records came in from this source" has an answer. Absent when the operator
+// chose none, which is the honest default rather than a guess.
+//
+// The connector is the batch, not a sync window: a mailbox polls forever, and a word
+// per window would mint one nobody chose, growing without bound. The other half of
+// the question — "in this period" — is answered by the record's own `created_at`
+// and needs no word at all.
+type ConnectorContextTag struct {
+	// Archived The chosen word has since been archived. The connector then files NOTHING —
+	// an archived word is one the workspace retired, and applying it anyway would
+	// keep a retired vocabulary alive from a setting nobody looks at.
+	//
+	// Said here rather than left silent, because the alternative is a connector that
+	// quietly stopped filing and an operator with no way to see why. Choose another
+	// word, or clear it.
+	Archived bool                `json:"archived"`
+	Id       *openapi_types.UUID `json:"id,omitempty"`
+
+	// Name The word as the vocabulary spells it today, so a reader need not resolve the id.
+	Name *string `json:"name,omitempty"`
+}
 
 // ConsentEvent An append-only proof row (Art. 7 demonstrability). Never updated or deleted.
 type ConsentEvent struct {
@@ -31010,6 +31043,17 @@ type SetBlockedDomainRequest struct {
 // SetBlockedDomainRequestAdmission defines model for SetBlockedDomainRequest.Admission.
 type SetBlockedDomainRequestAdmission string
 
+// SetConnectorContextTagRequest The word this connector files what it captures under.
+type SetConnectorContextTagRequest struct {
+	// TagId An EXISTING tag, refused with 422 when it names one the vocabulary does not
+	// carry or one already archived — the same constraint an import's context tag
+	// takes. Null clears the choice, and the connector then files nothing.
+	//
+	// Validated here, at the moment it is set, rather than when a record lands: a
+	// capture must never fail over a word somebody archived afterwards.
+	TagId *openapi_types.UUID `json:"tag_id"`
+}
+
 // SetDealRoomExpiryRequest defines model for SetDealRoomExpiryRequest.
 type SetDealRoomExpiryRequest struct {
 	// ExpiresAt When buyer access lapses. Null removes the bound entirely, which is why
@@ -39142,6 +39186,9 @@ type PreviewConnectorBackfillJSONRequestBody = BackfillPreviewRequest
 
 // ConnectConnectorJSONRequestBody defines body for ConnectConnector for application/json ContentType.
 type ConnectConnectorJSONRequestBody = ConnectConnectorRequest
+
+// SetConnectorContextTagJSONRequestBody defines body for SetConnectorContextTag for application/json ContentType.
+type SetConnectorContextTagJSONRequestBody = SetConnectorContextTagRequest
 
 // SetConnectorMailPostureJSONRequestBody defines body for SetConnectorMailPosture for application/json ContentType.
 type SetConnectorMailPostureJSONRequestBody = SetMailPostureRequest
@@ -47908,6 +47955,9 @@ type ServerInterface interface {
 	// Connect (or re-authorize) the calling user's mail/calendar for capture.
 	// (POST /connectors/{provider}/connect)
 	ConnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	// Set the word this connector files what it captures under.
+	// (PUT /connectors/{provider}/context-tag)
+	SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
 	// Disconnect the calling user's mail/calendar capture.
 	// (POST /connectors/{provider}/disconnect)
 	DisconnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
@@ -50134,6 +50184,12 @@ func (_ Unimplemented) ConnectorOAuthCallback(w http.ResponseWriter, r *http.Req
 // Connect (or re-authorize) the calling user's mail/calendar for capture.
 // (POST /connectors/{provider}/connect)
 func (_ Unimplemented) ConnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set the word this connector files what it captures under.
+// (PUT /connectors/{provider}/context-tag)
+func (_ Unimplemented) SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58225,6 +58281,38 @@ func (siw *ServerInterfaceWrapper) ConnectConnector(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ConnectConnector(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetConnectorContextTag operation middleware
+func (siw *ServerInterfaceWrapper) SetConnectorContextTag(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider CaptureProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetConnectorContextTag(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -78531,6 +78619,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/connectors/{provider}/connect", wrapper.ConnectConnector)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/connectors/{provider}/context-tag", wrapper.SetConnectorContextTag)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/connectors/{provider}/disconnect", wrapper.DisconnectConnector)
