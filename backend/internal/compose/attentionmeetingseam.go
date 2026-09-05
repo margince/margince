@@ -135,3 +135,40 @@ func personOnMeeting(row crmcontracts.Activity) ids.UUID {
 	}
 	return ids.UUID{}
 }
+
+// attentionMeetingsAwaitingOutcome reads the meetings that already started and
+// whose result nobody has recorded, through the same gated list.
+//
+// The STATUS FILTER IS IN SQL here, unlike the forward lane above, and the
+// difference is the direction. That lane's window is the rest of today, so the
+// non-booked rows it drops in Go come out of a set the database already made
+// small. This window is the day so far, where almost every meeting is settled:
+// filtering after the read would spend the page on rows to discard and push the
+// genuinely unreported meeting off the end, so the lane would draw "nothing to
+// report" over real work. `AwaitingOutcome` asks the database instead.
+type attentionMeetingsAwaitingOutcome struct{ store *activities.Store }
+
+func (m attentionMeetingsAwaitingOutcome) Since(
+	ctx context.Context, from, until time.Time, limit int,
+) ([]attention.MeetingAwaitingOutcome, error) {
+	kind := string(crmcontracts.ActivityKindMeeting)
+	rows, _, err := m.store.ListActivities(ctx, activities.ListActivitiesInput{
+		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until,
+		AwaitingOutcome: true, Limit: &limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	over := make([]attention.MeetingAwaitingOutcome, 0, len(rows))
+	for _, row := range rows {
+		over = append(over, attention.MeetingAwaitingOutcome{
+			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartedAt: row.OccurredAt,
+		})
+	}
+	// Longest unanswered first: the store returns activities newest-first, and
+	// the meeting that ended this morning has been waiting longer than the one
+	// that ended ten minutes ago. A reader clearing the top of this lane is
+	// clearing the oldest debt rather than the freshest.
+	sort.SliceStable(over, func(i, j int) bool { return over[i].StartedAt.Before(over[j].StartedAt) })
+	return over, nil
+}
