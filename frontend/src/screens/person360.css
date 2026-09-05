@@ -75,8 +75,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  font-size: var(--fs-body);
-  color: var(--textContent);
 }
 
 .pe-today-evidence svg {
@@ -102,10 +100,8 @@
 }
 
 .pe-today-verb-state {
-  font-size: var(--fs-meta);
   line-height: 1.3;
   text-align: center;
-  color: var(--textMeta);
 }
 
 /* Sources and freshness ride the panel's own footer band, quiet: they qualify
@@ -180,9 +176,7 @@
 /* The prose card (the relationship brief): sentences, not rows. */
 .pe-prose {
   margin: 0 0 var(--space-3);
-  font-size: var(--fs-body);
   line-height: 1.55;
-  color: var(--textContent);
 }
 
 /* The source chips under the brief — where each sentence was read from. */

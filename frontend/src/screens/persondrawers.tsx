@@ -960,14 +960,14 @@ export function PersonResearchDrawer({
         />
 
         {run.isLoading && (
-          <p className="pe-prose">{t("person.research.running")}</p>
+          <p className="pe-prose t-body">{t("person.research.running")}</p>
         )}
 
         {/* The honest empty state. Nothing was asked and nothing was read, so
             the drawer says so rather than showing an empty result that reads
             as "a provider looked and found nothing". */}
         {run.data?.state === "not_connected" && (
-          <p className="pe-prose">{t("person.research.notConnected")}</p>
+          <p className="pe-prose t-body">{t("person.research.notConnected")}</p>
         )}
 
         {run.data?.state === "ready" && (

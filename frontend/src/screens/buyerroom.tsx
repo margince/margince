@@ -242,7 +242,7 @@ function PoweredBy() {
   const t = useT();
   return (
     <span className="buyer-powered">
-      <span className="t-small" aria-hidden>
+      <span className="t-caption" aria-hidden>
         {t("buyer.poweredBy")}
       </span>
       <Wordmark
@@ -318,7 +318,9 @@ function LinkRequest() {
         {t("buyer.requestLink")}
       </Button>
       {request.isError ? (
-        <p className="t-small t-danger">{problemMessageOf(request.error, t)}</p>
+        <p className="t-caption t-danger">
+          {problemMessageOf(request.error, t)}
+        </p>
       ) : null}
     </form>
   );
@@ -501,7 +503,7 @@ function BuyerDocumentVerbs({
         {t("buyer.docs.downloadShort")}
       </Button>
       {download.isError ? (
-        <p className="t-small t-danger">
+        <p className="t-caption t-danger">
           {problemMessageOf(download.error, t)}
         </p>
       ) : null}
@@ -745,7 +747,7 @@ function RoomView({
         <Eyebrow as="span">{t("buyer.eyebrow")}</Eyebrow>
         <h1>{view.room.title}</h1>
         {view.room.welcome_message ? <p>{view.room.welcome_message}</p> : null}
-        <p className="t-small buyer-meta">
+        <p className="t-caption buyer-meta">
           {t("buyer.contact", { steward })}
           {view.access === "closed" ? ` ${t("buyer.closedNote")}` : ""}
         </p>

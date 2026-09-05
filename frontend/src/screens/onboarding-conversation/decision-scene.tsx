@@ -154,7 +154,7 @@ function CandidateCard({
             )}
             {((facts?.mono !== undefined && facts.mono !== "") ||
               (detail !== undefined && detail !== "")) && (
-              <small>{facts?.mono || detail}</small>
+              <small className="t-caption">{facts?.mono || detail}</small>
             )}
           </span>
         </label>
@@ -173,7 +173,7 @@ function CandidateCard({
         {hasEvidence && (
           <button
             type="button"
-            className="ob-decision-toggle"
+            className="ob-decision-toggle t-caption"
             aria-expanded={open}
             aria-controls={panel}
             onClick={() => setOpen((prev) => !prev)}
@@ -184,14 +184,18 @@ function CandidateCard({
       </div>
       {hasEvidence && open && (
         <div className="ob-decision-proof" id={panel}>
-          <p className="ob-decision-proof-head">{t("ob.conv.scene.whyThis")}</p>
+          <p className="ob-decision-proof-head t-eyebrow">
+            {t("ob.conv.scene.whyThis")}
+          </p>
           <blockquote>{facts?.snippet}</blockquote>
           {facts?.source !== undefined && facts.source !== "" && (
             <>
-              <p className="ob-decision-proof-head">
+              <p className="ob-decision-proof-head t-eyebrow">
                 {t("ob.conv.scene.foundOn")}
               </p>
-              <span className="ob-decision-path">{pathOf(facts.source)}</span>
+              <span className="ob-decision-path t-caption">
+                {pathOf(facts.source)}
+              </span>
             </>
           )}
         </div>

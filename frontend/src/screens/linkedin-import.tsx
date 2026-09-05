@@ -284,7 +284,7 @@ export function LinkedInImportCard() {
                     }
                   }}
                 />
-                {fileName && <span className="co-muted">{fileName}</span>}
+                {fileName && <span className="t-sub">{fileName}</span>}
               </div>
             }
           />
@@ -294,7 +294,7 @@ export function LinkedInImportCard() {
             card asks, and this is a report of an act that has already happened —
             it has no setting to line up with and no verb of its own. */}
         {importer.isPending && (
-          <p className="co-muted">{t("linkedinImport.working")}</p>
+          <p className="t-sub">{t("linkedinImport.working")}</p>
         )}
         {importer.isError && (
           <div data-testid="linkedin-import-error">
@@ -341,7 +341,7 @@ function ImportResult({ summary }: Readonly<{ summary: ImportSummary }>) {
           contacts an export matches arrive with mail capture over the hours
           after it. Saying so stops it reading as a broken import. */}
       {summary.confirmed + summary.suggested === 0 && summary.imported > 0 && (
-        <p className="co-muted">{t("linkedinImport.noMatchesYet")}</p>
+        <p className="t-sub">{t("linkedinImport.noMatchesYet")}</p>
       )}
     </>
   );

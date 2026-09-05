@@ -105,7 +105,7 @@ export function ProfileArticle({
           </Eyebrow>
           {factGroups.map((group) => (
             <div key={group.category} className="pdigest-factgroup">
-              <p className="pdigest-subhead">
+              <p className="pdigest-subhead t-caption">
                 {t(factCategoryLabelKey(group.category))}
               </p>
               {group.facts.map((fact) => (
@@ -145,7 +145,7 @@ export function ProfileArticle({
                 <span className="pdigest-source-n">
                   {ordinalNumber(cite.n)}
                 </span>
-                <span className="pdigest-source-path">
+                <span className="pdigest-source-path t-caption">
                   {referenceAddressOf(cite.url)}
                 </span>
                 <span className="pdigest-source-label">
@@ -154,7 +154,9 @@ export function ProfileArticle({
               </li>
             ))}
           </ol>
-          <p className="pdigest-source-note">{t("ob.digest.referenceNote")}</p>
+          <p className="pdigest-source-note t-caption">
+            {t("ob.digest.referenceNote")}
+          </p>
         </section>
       )}
     </div>

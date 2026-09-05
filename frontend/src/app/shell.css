@@ -524,6 +524,8 @@
 .rail .ws-chip-company .avatar {
   width: 100%;
   height: 100%;
+  /* ds:ignore the brand slot is a 40px box no avatar rung sizes, and the
+     monogram that fits it is the body glyph */
   font-size: var(--fs-body);
 }
 /* The head row is a column when collapsed, so flex-basis cannot squeeze this
@@ -671,11 +673,9 @@
     color var(--dur-state) var(--ease-in-out);
   cursor: pointer;
   background: transparent;
-  color: var(--textContent);
   text-decoration: none;
   /* A step above the body size: the rail's labels are the mock's 14px, read
      from further away than a paragraph. */
-  font-size: var(--fs-body);
 }
 /* Collapsed, a row IS its target: a 32x32 square centred in the 56px column,
    with the glyph centred in it. The height is the expanded row's, so nothing
@@ -1100,9 +1100,6 @@
 }
 .sectionpickgroup h3 {
   margin: 0 0 var(--space-1);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-semibold);
-  color: var(--textMeta);
 }
 /* 48px rows: this is a touch surface, and a thumb reaching the middle of a list
    wants the size the platform guidelines ask for rather than WCAG's floor. */
@@ -1113,9 +1110,7 @@
   min-height: 48px;
   padding: 0 var(--space-3);
   border-radius: var(--r-sm);
-  color: var(--textContent);
   text-decoration: none;
-  font-size: var(--fs-body);
 }
 .sectionpickgroup a svg {
   flex: none;
@@ -1186,8 +1181,6 @@
   border-radius: var(--r-sm);
   cursor: pointer;
   font-family: var(--f-body);
-  font-size: var(--fs-body);
-  color: var(--textContent);
   text-align: left;
 }
 .palette-row svg {
@@ -1206,10 +1199,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.palette-row .sub {
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
 }
 .palette-row .type {
   font-size: var(--fs-eyebrow);

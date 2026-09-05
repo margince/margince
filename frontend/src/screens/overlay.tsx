@@ -90,12 +90,12 @@ function ConnectionSummary({
       <Badge tone={STATUS_TONE[connection.status]}>
         {t(STATUS_LABEL[connection.status])}
       </Badge>
-      <span className="t-small">
+      <span className="t-caption">
         {t("overlay.connectedAt", {
           at: formatDateTime(connection.connectedAt, locale, viewerZone()),
         })}
       </span>
-      <span className="t-small">
+      <span className="t-caption">
         {t("overlay.region")}: {connection.region}
       </span>
     </span>
@@ -111,7 +111,7 @@ function ConnectionNotice({
 }: Readonly<{ query: QueryLike<Connection | null> }>) {
   const t = useT();
   if (query.isPending) {
-    return <p className="t-small">{t("overlay.loading")}</p>;
+    return <p className="t-caption">{t("overlay.loading")}</p>;
   }
   if (query.isError) {
     // A deployment with no overlay adapter is a documented configuration, not a
@@ -202,7 +202,7 @@ function ConnectSetupModal({
       error={error}
       onConfirm={() => onConnect(region, token.trim())}
     >
-      <p className="t-small">{t("overlay.connectConfirmBody")}</p>
+      <p className="t-caption">{t("overlay.connectConfirmBody")}</p>
       <Field label={t("overlay.region")}>
         {(control) => (
           <Select
@@ -466,7 +466,7 @@ export function OverlayCard() {
           disconnect.mutate();
         }}
       >
-        <p className="t-small">{t("overlay.disconnectBody")}</p>
+        <p className="t-caption">{t("overlay.disconnectBody")}</p>
       </ConfirmModal>
     </Panel>
   );

@@ -558,12 +558,12 @@ export const Cards: Story = {
   render: () => (
     <div style={stack}>
       <Card>
-        <p className="t-small">
+        <p className="t-caption">
           The standing surface: a card carries a section of a record.
         </p>
       </Card>
       <Card inset>
-        <p className="t-small">
+        <p className="t-caption">
           The inset variant sits inside another surface, so it recedes instead
           of stacking a second raised edge on the first.
         </p>
@@ -573,7 +573,7 @@ export const Cards: Story = {
         sub="Credentials you minted for an agent. Every call re-authenticates, so a revoked passport stops working mid-session."
         actions={<Button small>Mint</Button>}
       >
-        <p className="t-small">
+        <p className="t-caption">
           The header comes from props: title over description across the full
           width, actions beside the pair.
         </p>
@@ -717,7 +717,7 @@ export const Sections: Story = {
         {/* As the card's first child, which is the pairing atoms.css styles.
             Equivalent to passing title/sub to Card — that is what it renders. */}
         <SectionHeader title="Contacts" sub="Three people at this company" />
-        <p className="t-small">Carol Wagner · Bob Schmidt · Alice Müller</p>
+        <p className="t-caption">Carol Wagner · Bob Schmidt · Alice Müller</p>
       </Card>
       {/* level={3} is a section INSIDE a section — a group of fields under the
           page's own h2. The type steps down with the outline: an inner heading
@@ -727,18 +727,18 @@ export const Sections: Story = {
       <Card>
         <SectionHeader title="Delivery" sub="Where webhooks are sent" />
         <SectionHeader title="Endpoints" level={3} />
-        <p className="t-small">Two subscriptions, both healthy.</p>
+        <p className="t-caption">Two subscriptions, both healthy.</p>
         <SectionHeader title="Dead-lettered" level={3} />
-        <p className="t-small">Nothing waiting.</p>
+        <p className="t-caption">Nothing waiting.</p>
       </Card>
       <Disclosure summary="Matching rules">
-        <p className="t-small">
+        <p className="t-caption">
           Closed by default: the reader pays one line for a surface they rarely
           open.
         </p>
       </Disclosure>
       <Disclosure summary="Import log" open>
-        <p className="t-small">
+        <p className="t-caption">
           Forced open for a state the reader must not miss — a run in progress,
           or a result that just arrived.
         </p>
@@ -950,7 +950,7 @@ function ModalDemo() {
         >
           Merge these companies?
         </h2>
-        <p className="t-small">
+        <p className="t-caption">
           Globex GmbH keeps its record; the duplicate's activities, deals and
           people move onto it. This cannot be undone.
         </p>
@@ -1093,7 +1093,7 @@ function DrawerDemo() {
         >
           Write to Anna Brandt
         </h2>
-        <p className="t-small">
+        <p className="t-caption">
           The draft sits beside the record it is about, so a rep can read the
           history while writing rather than remembering it.
         </p>

@@ -9,7 +9,7 @@ import {
   modelCallsInFlight,
 } from "../api/model-inflight";
 import type { components } from "../api/schema";
-import { useAiActivity } from "./ai-activity";
+import { useAiActivity, watchStartedAiRun } from "./ai-activity";
 import { displayedKinds, lineFor } from "./ai-activity-lines";
 
 // What the rail asks the runner, and how often. Three things here can only be
@@ -25,6 +25,11 @@ type AiActivity = components["schemas"]["AiActivity"];
 // cached body for this long, so a mount-time refetch alone cannot explain a
 // read that lands the moment the tab returns.
 const STALE_TIME_MS = 30_000;
+
+// The hook's own two periods, mirrored so a case says which one it is proving
+// rather than repeating a bare number that could mean either.
+const POLL_LIVE_MS = 3_000;
+const START_WATCH_MS = 30_000;
 
 const A_RUN: AiActivityItem = {
   id: "3f1c0a2e-0000-4000-8000-000000000001",
@@ -52,10 +57,17 @@ function jsonResponse(body: unknown, status = 200): Response {
 /** Whether the tab is hidden, read by the hook through `document.hidden`. */
 let hidden = false;
 
+/**
+ * The client the mounted hook reads through, rebuilt per case.
+ *
+ * Module-scoped rather than minted inside `wrapper`, because `watchStartedAiRun`
+ * is given a client by its caller and a case has to hand it the SAME one the
+ * hook is reading through — a start reported against some other client would
+ * refetch nothing and prove nothing.
+ */
+let client: QueryClient;
+
 function wrapper({ children }: { children: ReactNode }) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false, staleTime: STALE_TIME_MS } },
-  });
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
@@ -96,6 +108,9 @@ async function setTabHidden(value: boolean): Promise<void> {
 }
 
 beforeEach(() => {
+  client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: STALE_TIME_MS } },
+  });
   hidden = false;
   Object.defineProperty(document, "hidden", {
     configurable: true,
@@ -145,6 +160,86 @@ describe("the cadence", () => {
 
     await advance(1_000);
     expect(reads).toHaveLength(2);
+  });
+});
+
+// A durable run answers 202 and reaches the feed through the outbox, so it is
+// never in the read fired on that 202. These cases are the difference between
+// looking for it and waiting for it.
+describe("a run this tab started", () => {
+  it("polls fast while the feed does not carry it yet", async () => {
+    const { reads } = mount(() => jsonResponse(activity([])));
+    await advance(0);
+
+    await act(async () => {
+      watchStartedAiRun(client);
+    });
+    // The read on the press itself, which the projection cannot have answered.
+    await advance(0);
+    const onThePress = reads.length;
+
+    await advance(POLL_LIVE_MS);
+    expect(reads.length).toBe(onThePress + 1);
+  });
+
+  it("reports the run inside the watch rather than at the idle poll", async () => {
+    let projected = false;
+    const { result } = mount(() =>
+      jsonResponse(activity(projected ? [A_RUN] : [])),
+    );
+    await advance(0);
+
+    await act(async () => {
+      watchStartedAiRun(client);
+    });
+    // The read on the press, which the outbox cannot have beaten.
+    await advance(0);
+    expect(result.current.working).toBe(false);
+
+    // The relay, the bus and the projection's upsert have all happened by the
+    // time the watch's own reads come round — which is the whole point of it,
+    // and the difference this case measures is against the idle period below.
+    projected = true;
+    await advance(POLL_LIVE_MS * 2);
+    expect(result.current.working).toBe(true);
+  });
+
+  it("gives up on a start the feed never carried", async () => {
+    const { reads } = mount(() => jsonResponse(activity([])));
+    await advance(0);
+    await act(async () => {
+      watchStartedAiRun(client);
+    });
+    await advance(0);
+
+    await advance(START_WATCH_MS);
+    const watched = reads.length;
+
+    // Back to the idle cadence: one live period buys no read at all.
+    await advance(POLL_LIVE_MS);
+    expect(reads).toHaveLength(watched);
+  });
+
+  it("re-arms on a second start rather than expiring on the first's clock", async () => {
+    const { reads } = mount(() => jsonResponse(activity([])));
+    await advance(0);
+    await act(async () => {
+      watchStartedAiRun(client);
+    });
+    await advance(0);
+
+    // Late in the first watch, a second run is started.
+    await advance(START_WATCH_MS - POLL_LIVE_MS);
+    await act(async () => {
+      watchStartedAiRun(client);
+    });
+    await advance(0);
+    // Past where the first watch would have ended.
+    await advance(POLL_LIVE_MS * 2);
+    const watched = reads.length;
+
+    await advance(POLL_LIVE_MS);
+    expect(reads.length).toBeGreaterThan(watched);
   });
 });
 

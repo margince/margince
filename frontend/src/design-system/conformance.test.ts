@@ -628,7 +628,7 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
       "/* and #2456 with it */",
       "export function Swatch() {",
       "  return (",
-      '    <div className="t-small">',
+      '    <div className="t-caption">',
       "      {/* ... see #2463 for the app-wide version. */}",
       '      <span style={{ color: "#ff0000" }} />',
       "    </div>",
@@ -1122,7 +1122,7 @@ describe("the phone nav's clearance", scanBudget, () => {
 // The empty plate's own type. `EmptyState` draws the sentence a surface shows
 // instead of content, and `.empty` sizes it — 13px for the one-liner, 14px in
 // `.empty-body` for the instructional variant's measured paragraph. Thirty-one
-// call sites wrapped that sentence in `<p className="t-small">` and drew it at
+// call sites wrapped that sentence in `<p className="t-caption">` and drew it at
 // 12px instead, which is the same sentence at two sizes depending on which
 // screen a reader is on.
 //

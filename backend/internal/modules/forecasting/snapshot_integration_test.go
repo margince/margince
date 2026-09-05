@@ -41,6 +41,22 @@ type snapshotEnv struct {
 	rep     ids.UUID
 }
 
+// setupSnapshot hands out the package's SHARED pool, and a test that takes it
+// must not call t.Parallel().
+//
+// testdb.AssertPoolsQuiesced is registered below as this test's own cleanup, and
+// it asserts that the shared pool has nothing checked out. For a parallel test
+// that cleanup runs while its siblings are still running and legitimately
+// holding connections from the same pool — so the first one to finish reports
+// the others as a leak, naming whichever test happened to end first. It fails
+// only on a loaded runner, which is what makes it read as infrastructure noise
+// rather than as the misattribution it is.
+//
+// The pure-unit files beside this one keep their parallelism: they touch no
+// database, so the gate has nothing to misread about them.
+//
+// #4496 tracks teaching the gate about parallel siblings, which would let these
+// be parallel again without weakening what it catches.
 func setupSnapshot(t *testing.T) *snapshotEnv {
 	t.Helper()
 	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
@@ -127,7 +143,6 @@ func mixedPopulation(t *testing.T) Readings {
 }
 
 func TestASnapshotWritesEveryContributionShapeTheTableAccepts(t *testing.T) {
-	t.Parallel()
 	e := setupSnapshot(t)
 	ctx := e.as()
 
@@ -193,7 +208,6 @@ func TestASnapshotWritesEveryContributionShapeTheTableAccepts(t *testing.T) {
 // repeatedly so a worker that was down still backfills, and without the
 // constraint that produces two snapshots and no error.
 func TestASecondDailySnapshotForTheSameDayIsRefused(t *testing.T) {
-	t.Parallel()
 	e := setupSnapshot(t)
 	ctx := e.as()
 
@@ -245,7 +259,6 @@ func TestASecondDailySnapshotForTheSameDayIsRefused(t *testing.T) {
 // waterfall is then a number describing no decision anybody made, and the
 // figures are large enough to look real.
 func TestAMovementAcrossTwoDifferentWindowsIsRefused(t *testing.T) {
-	t.Parallel()
 	e := setupSnapshot(t)
 	ctx := e.as()
 

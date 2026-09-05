@@ -257,7 +257,9 @@ export function VoiceCollectScene({
             <p className="ob-voice-drop-title">
               {t("ob.conv.voice.dropTitle")}
             </p>
-            <p className="ob-voice-drop-sub">{t("ob.conv.voice.dropSub")}</p>
+            <p className="ob-voice-drop-sub t-sub">
+              {t("ob.conv.voice.dropSub")}
+            </p>
             <div className="ob-voice-drop-acts">
               <Button small onClick={() => fileRef.current?.click()}>
                 {t("ob.conv.voice.browse")}
@@ -267,7 +269,9 @@ export function VoiceCollectScene({
               </Button>
             </div>
             {!pasteOpen && (
-              <p className="ob-voice-drop-sub">{t("ob.conv.voice.dropHint")}</p>
+              <p className="ob-voice-drop-sub t-sub">
+                {t("ob.conv.voice.dropHint")}
+              </p>
             )}
             {pasteOpen && (
               <div className="ob-voice-paste">
@@ -311,7 +315,7 @@ export function VoiceCollectScene({
 
           {manifest.length > 0 && (
             <section className="ob-voice-sources">
-              <p className="ob-voice-sources-head">
+              <p className="ob-voice-sources-head t-eyebrow">
                 <span>{t("ob.conv.voice.sourcesTitle")}</span>
               </p>
               <ul>
@@ -319,7 +323,7 @@ export function VoiceCollectScene({
                   <li key={entry.ref}>
                     <span className="ob-voice-source-body">
                       <b>{entry.label}</b>
-                      <small>
+                      <small className="t-caption">
                         {entry.transcript
                           ? t("ob.conv.voice.manifestKept", {
                               kept: formatNumber(entry.keptWords, locale),
@@ -425,7 +429,9 @@ export function VoiceSpeakerScene({
                 </span>
                 <span className="ob-voice-speaker-body">
                   <b>{label}</b>
-                  {detail !== undefined && <small>{detail}</small>}
+                  {detail !== undefined && (
+                    <small className="t-caption">{detail}</small>
+                  )}
                 </span>
               </label>
             );
@@ -501,7 +507,7 @@ export function VoiceBuildScene({
           sources: formatNumber(sources, locale),
         })}
       </p>
-      <p className="ob-voice-building-model">
+      <p className="ob-voice-building-model t-caption">
         <i aria-hidden /> {model}
       </p>
       <ol className="ob-conv-stages" aria-label={t("ob.conv.voice.stageTitle")}>
@@ -599,7 +605,7 @@ function VoiceSampleCard({
   return (
     <div className="ob-voice-result-card ob-voice-sample">
       <div className="ob-voice-sample-head">
-        <p className="ob-voice-result-label">
+        <p className="ob-voice-result-label t-eyebrow">
           {t("ob.conv.voice.sampleEyebrow")}
         </p>
         {drafts.length > 1 && (
@@ -613,14 +619,14 @@ function VoiceSampleCard({
         )}
       </div>
       <p className="ob-voice-sample-subject">
-        <span className="ob-voice-sample-field">
+        <span className="ob-voice-sample-field t-eyebrow">
           {t("ob.conv.voice.sampleSubjectLabel")}
         </span>
         <b>{sample.subject}</b>
       </p>
       <p className="ob-voice-sample-body">{sample.body}</p>
-      <p className="ob-voice-sample-why">
-        <span className="ob-voice-sample-why-tag">
+      <p className="ob-voice-sample-why t-sub">
+        <span className="ob-voice-sample-why-tag t-eyebrow">
           {t("ob.conv.voice.sampleWhyTag")}
         </span>
         {why}
@@ -711,11 +717,11 @@ function VoiceDimensionGauge({ dim }: Readonly<{ dim: MeasuredDimension }>) {
           style={{ left: `${dim.fraction * 100}%` }}
         />
       </div>
-      <div className="ob-voice-dim-poles" aria-hidden>
+      <div className="ob-voice-dim-poles t-caption" aria-hidden>
         <span>{dim.poleLow}</span>
         <span>{dim.poleHigh}</span>
       </div>
-      <p className="ob-voice-dim-evidence">{dim.evidence}</p>
+      <p className="ob-voice-dim-evidence t-caption">{dim.evidence}</p>
     </div>
   );
 }
@@ -734,10 +740,10 @@ function VoiceDimensionsCard({
   return (
     <div className="ob-voice-result-card">
       <div className="ob-voice-dims-head">
-        <span className="ob-voice-result-label">
+        <span className="ob-voice-result-label t-eyebrow">
           {t("ob.conv.voice.dimensionsTitle")}
         </span>
-        <span className="ob-voice-dims-count">
+        <span className="ob-voice-dims-count t-eyebrow">
           {t("ob.conv.voice.dimensionsCount", {
             count: formatNumber(dimensions.length, locale),
           })}
@@ -779,7 +785,7 @@ function VoiceThinkingCard({
       )}
       {thinking !== null && (
         <>
-          <p className="ob-voice-result-label">
+          <p className="ob-voice-result-label t-eyebrow">
             <Lightbulb aria-hidden /> {t("voice.insights.thinkingLabel")}
           </p>
           <p>{thinking}</p>
@@ -795,7 +801,9 @@ function VoiceMovesCard({
   const t = useT();
   return (
     <div className="ob-voice-result-card">
-      <p className="ob-voice-result-label">{t("voice.insights.movesLabel")}</p>
+      <p className="ob-voice-result-label t-eyebrow">
+        {t("voice.insights.movesLabel")}
+      </p>
       <ul className="ob-voice-moves">
         {moves.map((move) => (
           <li key={move.move}>
@@ -812,7 +820,9 @@ function VoiceAvoidCard({ avoid }: Readonly<{ avoid: readonly string[] }>) {
   const t = useT();
   return (
     <div className="ob-voice-result-card">
-      <p className="ob-voice-result-label">{t("voice.insights.avoidLabel")}</p>
+      <p className="ob-voice-result-label t-eyebrow">
+        {t("voice.insights.avoidLabel")}
+      </p>
       <ul className="ob-voice-avoid">
         {avoid.map((item) => (
           <li key={item}>{item}</li>

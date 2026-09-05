@@ -47,19 +47,19 @@ export function CompanyFacts({
   return (
     <dl className="co-facts">
       <div className="co-facts-item">
-        <dt>{t("co.facts.pipeline")}</dt>
+        <dt className="t-caption">{t("co.facts.pipeline")}</dt>
         <dd>
           <Pipeline view={view} />
         </dd>
       </div>
       <div className="co-facts-item">
-        <dt>{t("co.facts.inFlight")}</dt>
+        <dt className="t-caption">{t("co.facts.inFlight")}</dt>
         <dd>
           <InFlight view={view} />
         </dd>
       </div>
       <div className="co-facts-item">
-        <dt>{t("co.pulse.owner")}</dt>
+        <dt className="t-caption">{t("co.pulse.owner")}</dt>
         <dd>
           <CompanyOwnerControl org={org} hideLabel />
         </dd>

@@ -122,7 +122,7 @@ export function DealCommitteeMap({
         }
       >
         <CommitteeSvg seats={seats} ourCount={ours.length} ghosts={ghosts} />
-        <ul className="dc-legend">
+        <ul className="dc-legend t-caption">
           <li>
             <span className="dc-swatch dc-swatch-engaged" />
             {t("deal.committee.legendEngaged")}

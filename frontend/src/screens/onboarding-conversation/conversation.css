@@ -205,9 +205,7 @@
 }
 
 .ob-conv-option small {
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
   overflow-wrap: anywhere;
 }
 
@@ -608,10 +606,8 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--textMeta);
   cursor: pointer;
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
   text-decoration: underline;
   text-decoration-color: var(--borderStrong);
   text-underline-offset: 3px;
@@ -708,9 +704,7 @@
 }
 
 .ob-decision-body small {
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
   overflow-wrap: anywhere;
 }
 
@@ -728,12 +722,7 @@
 
 .ob-decision-proof-head {
   margin: 0;
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .ob-decision-proof blockquote {
@@ -750,9 +739,7 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   background: var(--bgElevated);
-  color: var(--textMeta);
   font-family: var(--f-mono);
-  font-size: var(--fs-meta);
 }
 
 /* The escape at the list's foot: present, dashed, never competing. */
@@ -1033,8 +1020,6 @@
 .ob-voice-drop-sub {
   margin: 0;
   max-width: 32rem;
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
   line-height: var(--lh-normal);
 }
 
@@ -1104,12 +1089,7 @@
   justify-content: space-between;
   gap: var(--space-3);
   margin: var(--space-4) 0 var(--space-2);
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .ob-voice-sources ul {
@@ -1147,9 +1127,7 @@
 }
 
 .ob-voice-source-body small {
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
 }
 
 .ob-voice-source-check {
@@ -1261,9 +1239,7 @@
 }
 
 .ob-voice-speaker-body small {
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
 }
 
 /* The result scene: the sample on the left, the reading on the right — two
@@ -1313,12 +1289,7 @@
   align-items: center;
   gap: var(--space-2);
   margin: 0 0 var(--space-3);
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .ob-voice-result-label svg {
@@ -1353,12 +1324,7 @@
 }
 
 .ob-voice-sample-field {
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .ob-voice-sample-body {
@@ -1375,18 +1341,11 @@
   margin: var(--space-4) 0 0;
   padding-top: var(--space-3);
   border-top: 1px solid var(--borderSubtle);
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
 }
 
 .ob-voice-sample-why-tag {
   flex: none;
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 /* The measured dimensions: a readout per axis the build actually scored —
@@ -1401,12 +1360,7 @@
 }
 
 .ob-voice-dims-count {
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .ob-voice-dims-meta {
@@ -1465,14 +1419,10 @@
   display: flex;
   justify-content: space-between;
   margin-top: var(--space-1);
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
 }
 
 .ob-voice-dim-evidence {
   margin: var(--space-2) 0 0;
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
 }
 
 .ob-voice-result-identity {
@@ -1576,9 +1526,7 @@
   align-items: center;
   gap: var(--space-2);
   margin: 0;
-  color: var(--textMeta);
   font-family: var(--f-mono);
-  font-size: var(--fs-meta);
 }
 
 .ob-voice-building-model i {
@@ -1653,8 +1601,6 @@
 
 .ob-connect-section-head p {
   margin: var(--space-1) 0 0;
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
 }
 
 .ob-connect-pill {
@@ -1796,8 +1742,6 @@
 }
 
 .ob-connect-card small {
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
   line-height: var(--lh-normal);
 }
 
@@ -1811,9 +1755,7 @@
 }
 
 .ob-connect-card-auth {
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
 }
 
 .ob-connect-card-cta {
@@ -1998,9 +1940,7 @@
 .ob-conv-activity > button > b {
   flex: none;
   margin-left: auto;
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
   font-weight: var(--fw-medium);
   font-variant-numeric: tabular-nums;
 }
@@ -2027,8 +1967,6 @@
 }
 
 .ob-conv-activity > ul > li {
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
   line-height: var(--lh-normal);
 }
 
@@ -2071,12 +2009,7 @@
   margin: 0;
   padding-top: var(--space-3);
   border-top: 1px solid var(--borderSubtle);
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .ob-triage-readmore {
@@ -2155,10 +2088,6 @@
 
 .ob-company-card-body h3 {
   margin: 0 0 var(--space-2);
-  color: var(--textPrimary);
-  font-family: var(--f-display);
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
   letter-spacing: var(--tracking-display);
 }
 
@@ -2186,12 +2115,7 @@
 }
 
 .ob-company-card-facts dt {
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
 }
 
 .ob-company-card-facts dd {
@@ -2263,20 +2187,9 @@
   display: inline-flex;
   align-items: baseline;
   gap: var(--space-1);
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
 }
-
-/* How many sources back the score — always at most one today, since a
-   proposal field carries a single evidence pair, but said as a count
-   rather than assumed. */
-.ob-triage-source {
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
-}
-
 /* The one action left on the surface, pinned to its foot: a real <progress>
    (not a decorative div — the browser exposes the progressbar role and
    value for free), the plain-words reason continuing is blocked, and the
@@ -2532,9 +2445,7 @@
   display: inline-flex;
   align-items: center;
   flex: none;
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2556,9 +2467,7 @@
    no pill, no background: borrowing the blocking/advisory badge's shape
    would say a find is an obstacle, which it never is. */
 .ob-triage-nav-quantity {
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2594,10 +2503,8 @@
   border: 0;
   border-radius: var(--r-sm);
   background: none;
-  color: var(--textMeta);
   cursor: pointer;
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
   font-weight: var(--fw-regular);
   text-align: start;
   transition:
@@ -2634,9 +2541,7 @@
      up with the fields it is counting rather than with the section above. */
   padding: var(--space-1) var(--space-3) var(--space-1)
     calc(var(--space-3) + var(--space-5));
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
 }
 
 /* The rows keep the short/prose tiers of the in-thread card; a row's own
@@ -2668,9 +2573,7 @@
 }
 
 .ob-triage-group-head span {
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2791,9 +2694,6 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgCard);
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-semibold);
 }
 
 /* The expanded weight: the same card, taller — the value editable in
@@ -2909,12 +2809,7 @@
 
 .ob-triage-solid-divider span {
   flex: none;
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .ob-triage-solid-divider::after {
@@ -2933,8 +2828,6 @@
 /* An expanded row names its state inside the label, quietly. */
 .ob-triage-rows .ob-conv-confirm-missing-row label em {
   margin-left: var(--space-2);
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
   font-style: normal;
 }
 
@@ -2994,9 +2887,7 @@
 }
 
 .ob-triage-person-meta {
-  color: var(--textMeta);
   font-family: var(--f-mono);
-  font-size: var(--fs-meta);
 }
 
 /* The facts section: grouped by type, each group a quiet sub-heading over
@@ -3061,6 +2952,8 @@
   flex: 1;
   min-width: 0;
   color: var(--textPrimary);
+  /* ds:ignore Disclosure renders its summary as a label; this row's summary is
+     the fact type's own name, read at the row's size */
   font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
@@ -3075,8 +2968,6 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgCard);
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
   font-weight: var(--fw-medium);
 }
 

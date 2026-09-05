@@ -1631,8 +1631,9 @@ export const en = {
   "timeline.withheld": "Content for participants only",
   "compose.deadRecipients":
     "Mail to {addresses} is bouncing. The last delivery there was refused, and no delivery since has got through. Send anyway, or use another address.",
-  "compose.threadShare": "Share thread",
-  "compose.threadKeepPrivate": "Keep private",
+  "compose.threadShare": "Share with the organization",
+  "compose.threadMakePrivate": "Make private",
+  "compose.threadScope": "Applies to the whole thread.",
   "compose.threadStillHeld":
     "Still held: {count} other seat(s) on this thread have not shared it.",
   "compose.reason.posture": "Held by your setting",
@@ -1644,7 +1645,7 @@ export const en = {
   "compose.reason.counterparty": "Held, mail with this party",
   "compose.reason.explicitlyConfidential": "Marked confidential",
   "compose.reason.noCounterparty": "Held, nobody to file it under",
-  "compose.audience": "Visibility",
+  "compose.audience": "Change visibility",
   "compose.audienceTitle": "Who may read this message?",
   "compose.audienceLegend": "Visibility of this one message",
   // The canonical email row and its detail. "Team" never means the whole
@@ -1657,16 +1658,20 @@ export const en = {
   "email.received": "Received",
   "email.sentTo": "Sent to {who}",
   "email.sent": "Sent",
-  "email.access.team": "Team",
-  "email.access.participants": "Participants",
-  "email.access.selected": "Selected",
-  "email.access.withheld": "Withheld",
   "email.access.sentence.team": "Everyone in the organization can read this.",
   "email.access.sentence.participants":
     "Only the people on this message can read it.",
   "email.access.sentence.selected":
     "Only the people named below can read this.",
-  "email.access.sentence.withheld": "This message is not shared with you.",
+  // The one mark for who may read a thing, drawn on mail rows, in the drawer,
+  // on a contact and on a limited note. "Team" never means the whole
+  // workspace (see above); "Only you" is a captured contact's owner-only
+  // state, which a message never has.
+  "visibility.team": "Team",
+  "visibility.participants": "Participants",
+  "visibility.selected": "Selected",
+  "visibility.private": "Only you",
+  "visibility.withheld": "Withheld",
   "email.access.unnamedMember": "Someone no longer here",
   "email.move.needsReply": "Needs reply",
   "email.move.waitingForThem": "Waiting for them",

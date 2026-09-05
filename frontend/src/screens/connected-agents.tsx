@@ -152,7 +152,7 @@ function ConnectGuide() {
                   label={guide.name}
                   description={guide.note && t(guide.note)}
                   control={
-                    <code className="t-mono t-small agents-guide-command">
+                    <code className="t-mono t-caption agents-guide-command">
                       {guide.command(connector.url)}
                     </code>
                   }

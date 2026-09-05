@@ -577,7 +577,7 @@ function MemberRow({
             revoked) describes a person rather than an identity that signs in
             nowhere. The agent body's job is to say what does NOT stop: scheduled
             extension jobs keep running, because a tick acts as the job it is. */}
-        <p className="t-small">
+        <p className="t-caption">
           {t(
             member.is_agent
               ? "users.deactivateAgentConfirmBody"

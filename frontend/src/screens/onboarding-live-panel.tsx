@@ -55,7 +55,7 @@ export function DossierCard({
         <CardGlyph done={done === true} />
         <span className="ob-live-card-title">{title}</span>
         {count !== undefined && (
-          <span className="ob-live-card-count">{count}</span>
+          <span className="ob-live-card-count t-caption">{count}</span>
         )}
         <span className="ob-live-card-toggle">
           {t(open ? "ob.live.hide" : "ob.live.review")}
@@ -205,7 +205,9 @@ export function CoverageCard({
                 <span className="ob-live-coverage-name">{row.name}</span>
               )}
               {row.url !== undefined && (
-                <span className="ob-live-coverage-url">{row.url}</span>
+                <span className="ob-live-coverage-url t-caption">
+                  {row.url}
+                </span>
               )}
               <span className="ob-live-coverage-reason">{row.reason}</span>
             </li>

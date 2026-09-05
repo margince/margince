@@ -4,6 +4,7 @@ import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
+import { VisibilityLine } from "../design-system/visibility";
 import { useT } from "../i18n";
 import { throwProblem, useViewerId } from "./common";
 
@@ -59,20 +60,31 @@ export function PersonAccess({ person }: Readonly<{ person: Person }>) {
   return (
     <Panel title={t("personAccess.title")}>
       <PanelBody>
-        <p className="t-small">
+        {/* The same mark a mail row and the drawer draw, with the one verb
+            beside it: a contact private to its owner and a message limited
+            to its participants are the same fact about two things, and a
+            reader who has learned the mark on one should read it on the
+            other. */}
+        <VisibilityLine
+          state={isPrivate ? "private" : "team"}
+          action={
+            isPrivate &&
+            isOwner && (
+              <Button
+                small
+                disabled={publish.isPending}
+                onClick={() => publish.mutate(person.id)}
+              >
+                {t("personAccess.share")}
+              </Button>
+            )
+          }
+        />
+        <p className="t-caption">
           {isPrivate
             ? t("personAccess.privateToYou")
             : t("personAccess.organization")}
         </p>
-        {isPrivate && isOwner && (
-          <Button
-            small
-            disabled={publish.isPending}
-            onClick={() => publish.mutate(person.id)}
-          >
-            {t("personAccess.share")}
-          </Button>
-        )}
       </PanelBody>
     </Panel>
   );

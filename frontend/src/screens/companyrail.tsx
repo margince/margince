@@ -414,7 +414,7 @@ function DealRailRow({ deal }: Readonly<{ deal: Deal }>) {
           locale,
         )}
       </span>
-      <p className="co-row-meta">{note}</p>
+      <p className="co-row-meta t-caption">{note}</p>
     </PanelRow>
   );
 }
@@ -650,7 +650,9 @@ export function SignalsSection({ orgId }: Readonly<{ orgId: string }>) {
               <span className="co-signal-title">
                 {signalKindLabel(signal.kind, t)}
               </span>
-              <span className="co-signal-summary">{signal.summary}</span>
+              <span className="co-signal-summary t-caption">
+                {signal.summary}
+              </span>
               {/* A signal ABOUT one of the account's projects sends the
                   reader to that project: the summary names it, the link
                   opens it. An account- or person-subject signal already
@@ -670,7 +672,7 @@ export function SignalsSection({ orgId }: Readonly<{ orgId: string }>) {
                   citation proves nothing. */}
               <SourcePageLink signal={signal} />
             </span>
-            <span className="co-row-meta">
+            <span className="co-row-meta t-caption">
               {formatDate(signal.detected_at, locale, recordZone)}
             </span>
           </PanelRow>

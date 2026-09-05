@@ -54,8 +54,6 @@
   display: grid;
   gap: var(--space-1);
   justify-items: start;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   text-transform: capitalize;
 }
 .pn-meter-bars {
@@ -94,8 +92,6 @@
 }
 .pn-counts {
   margin: var(--space-1) 0 0;
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
 }
 .pn-receipts {
   margin: var(--space-2) 0 0;
@@ -159,10 +155,6 @@
   color: var(--textSecondary);
   margin-left: var(--space-1);
 }
-.pn-reading > span {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
 /* Who sent what: the target's share in full accent, the colleague's in the
    lighter one, and the counts in words under it. */
 .pn-split {
@@ -187,8 +179,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-3);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
 }
 .pn-split-legend > span {
   min-width: 0;
@@ -358,8 +348,6 @@
 .pn-relay-due {
   margin-left: auto;
   font-family: var(--f-mono);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   white-space: nowrap;
 }
 
@@ -399,8 +387,6 @@
 }
 .pn-moment-when {
   font-family: var(--f-mono);
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
   white-space: nowrap;
 }
 

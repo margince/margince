@@ -148,7 +148,7 @@ export function AdvanceProjectModal({
         }
       }}
     >
-      <p className="t-small">
+      <p className="t-caption">
         {closing ? t("project.advance.closeBody") : t("project.advance.body")}
       </p>
       <Field

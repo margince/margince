@@ -196,7 +196,9 @@ function ImportWizard({
           lead: t("import.object.lead"),
         }}
       />
-      <p className="import__hint">{t(`import.objectHint.${flow.object}`)}</p>
+      <p className="import__hint t-sub">
+        {t(`import.objectHint.${flow.object}`)}
+      </p>
 
       <input
         ref={fileInput}
@@ -371,7 +373,7 @@ function ImportOutcome({
         <Count label={t("import.count.unchanged")} value={d.unchanged} />
         <Count label={t("import.count.skipped")} value={d.skipped} />
       </dl>
-      <p className="import__hint">
+      <p className="import__hint t-sub">
         {t("import.rowsRead", {
           rows: formatNumber(report.rows_read, locale),
           column: report.source_key_used,
@@ -384,7 +386,7 @@ function ImportOutcome({
           <Callout tone="warn" live="status">
             {t("import.issuesLead")}
           </Callout>
-          <ul className="import__issues">
+          <ul className="import__issues t-sub">
             {report.issues.map((issue) => (
               <li key={`${issue.line}-${issue.reason}`}>
                 {t("import.issueLine", { line: ordinalNumber(issue.line) })}{" "}
@@ -539,15 +541,15 @@ function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
       </Callout>
       {undo ? (
         <>
-          <p className="import__hint">
+          <p className="import__hint t-sub">
             {plural("import.undoReversed", undo.reversed_count, {
               rows: formatNumber(undo.reversed_count, locale),
             })}
           </p>
           {undo.kept.length > 0 ? (
             <>
-              <p className="import__hint">{t("import.undoKeptLead")}</p>
-              <ul className="import__issues">
+              <p className="import__hint t-sub">{t("import.undoKeptLead")}</p>
+              <ul className="import__issues t-sub">
                 {undo.kept.map((row) => (
                   <li key={`${row.object}-${row.id}`}>
                     {t(`import.object.${row.object}`)} — {row.id}
@@ -561,7 +563,7 @@ function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
               <Callout tone="warn" live="status">
                 {t("import.undoErroredLead")}
               </Callout>
-              <ul className="import__issues">
+              <ul className="import__issues t-sub">
                 {undo.errored.map((row) => (
                   <li key={`${row.object}-${row.id}`}>
                     {t(`import.object.${row.object}`)} — {row.id}: {row.reason}
@@ -604,7 +606,7 @@ function Count({ label, value }: Readonly<{ label: string; value: number }>) {
   const { locale } = useLocale();
   return (
     <div className="import__count">
-      <dt>{label}</dt>
+      <dt className="t-sub">{label}</dt>
       {/* Grouped, like the row counts in the sentences around it: one card
           spelling the same kind of count two ways is the drift this closes. */}
       <dd>{formatNumber(value, locale)}</dd>
@@ -672,7 +674,7 @@ function ImportMappingStep({
         onChange={onChange}
       />
       {identifiedBy ? (
-        <p className="import__hint">
+        <p className="import__hint t-sub">
           {t("import.identifiedBy", {
             column: identifiedBy,
             field: identifying,
@@ -723,7 +725,7 @@ export function ImportContextTagSummary({
   }
   const word = vocabulary.data?.tags.find((tag) => tag.id === tagID);
   return (
-    <p className="import__hint">
+    <p className="import__hint t-sub">
       {word
         ? t("import.contextTagChosen", { name: word.name })
         : // The vocabulary has not landed, or no longer holds the word. Saying
@@ -801,7 +803,7 @@ function LinkCount({
   const { locale } = useLocale();
   if (!links || links.offered === 0) return null;
   return (
-    <p className="import__hint">
+    <p className="import__hint t-sub">
       {committed
         ? t("import.linksApplied", {
             applied: formatNumber(links.applied, locale),

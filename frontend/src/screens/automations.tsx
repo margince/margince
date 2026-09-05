@@ -272,7 +272,7 @@ function AutomationForm({
       <h2 className="t-h3 modal-title" id={titleId}>
         {initialName}
       </h2>
-      <p className="t-mono t-small">
+      <p className="t-mono t-caption">
         {entry.trigger} {"->"} {entry.action}
       </p>
       <div className="field">
@@ -625,8 +625,8 @@ export function AutomationRow({
           />
         )}
         <strong>{automation.name}</strong>
-        <span className="t-mono t-small">{automation.key}</span>
-        <span className="t-mono t-small">
+        <span className="t-mono t-caption">{automation.key}</span>
+        <span className="t-mono t-caption">
           {Object.entries(automation.params)
             .map(([key, value]) => `${key}=${scalarText(value)}`)
             .join(" ")}

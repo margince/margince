@@ -299,7 +299,7 @@ function DeckCardFace({
         <span className="rdeck-tag t-eyebrow" data-required={card.required}>
           {t(card.required ? "ob.deck.needed" : "ob.deck.optional")}
         </span>
-        <span className="rdeck-count">
+        <span className="rdeck-count t-caption">
           {t("ob.deck.counter", {
             n: formatNumber(index + 1, locale),
             m: formatNumber(total, locale),
@@ -315,7 +315,7 @@ function DeckCardFace({
           a claim the site made, this is what the field is for, and neither
           sentence says the other. */}
         {guidance === undefined ? null : (
-          <p className="rdeck-hint">{t(guidance.hint)}</p>
+          <p className="rdeck-hint t-caption">{t(guidance.hint)}</p>
         )}
         {card.evidence === undefined ? null : (
           <p className="rdeck-evidence">{card.evidence}</p>
@@ -347,7 +347,7 @@ function DeckCardFace({
           </p>
         )}
         {card.source === undefined || card.source === "" ? null : (
-          <span className="rdeck-source">{card.source}</span>
+          <span className="rdeck-source t-caption">{card.source}</span>
         )}
       </div>
       <div className="rdeck-acts">
@@ -388,7 +388,10 @@ function DeckFoot({
           n: formatNumber(left, locale),
           m: formatNumber(total, locale),
         })}
-        <span className="rdeck-settled">
+        {/* The quiet half of the sentence: the reader did not have to do this,
+            and saying so is what makes the short list of cards credible rather
+            than suspicious. */}
+        <span className="rdeck-settled t-caption">
           {t("ob.deck.settled", { count: formatNumber(settled, locale) })}
         </span>
       </p>
