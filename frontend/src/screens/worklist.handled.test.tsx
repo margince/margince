@@ -19,7 +19,7 @@ afterEach(() => {
 // must never do.
 
 describe("what was handled for the reader", () => {
-  it("reports what happened and offers nothing to do about it", async () => {
+  it("AC-WORKLIST-TRUST-01: reports what happened and offers nothing to do about it", async () => {
     stubHandled({
       as_of: "2026-09-05T09:00:00Z",
       truncated: false,

@@ -179,6 +179,67 @@ describe("a reader can put a row at the top of their own day", () => {
     expect(await screen.findByText(en["worklist.verb.pinFailed"])).toBeTruthy();
   });
 
+  // Where the keyboard is after the refusal.
+  //
+  // AC-WORKLIST-SDR-06 asks that an action keep focus across a failure, and
+  // this queue is worked from the keyboard: a reader tabs to a row, presses,
+  // and is told it did not land. If the failure moves focus — to the document,
+  // or to a toast that then leaves — their next Tab starts from the top of the
+  // page and they have to travel back to the row they were on. Nothing else in
+  // this suite asserts focus at all, so a refactor that re-rendered the button
+  // and dropped focus would show up only as a bug report.
+  //
+  // The SAME refused write as the case above, asked a second question, because
+  // "it says so" and "you can act on what it says" are different promises.
+  it("AC-WORKLIST-SDR-06: leaves the keyboard on the control that was refused", async () => {
+    const fetched = vi.fn(async (input: RequestInfo | URL) => {
+      const request = input instanceof Request ? input : undefined;
+      const url = String(request ? request.url : input);
+      if (url.includes("/worklist/pins")) {
+        return new Response(
+          JSON.stringify({ title: "Forbidden", status: 403 }),
+          {
+            status: 403,
+            headers: { "content-type": "application/problem+json" },
+          },
+        );
+      }
+      if (url.includes("/worklist")) {
+        return new Response(
+          JSON.stringify(
+            day({
+              queue: [
+                row({
+                  id: "task-1",
+                  source: "task",
+                  title: "Send the retrofit quote",
+                }),
+              ],
+              summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+            }),
+          ),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response(JSON.stringify({ data: [] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetched);
+    renderUnderAToastRegion();
+
+    const pin = await screen.findByRole("button", {
+      name: en["worklist.verb.pin"],
+    });
+    await userEvent.click(pin);
+
+    expect(await screen.findByText(en["worklist.verb.pinFailed"])).toBeTruthy();
+    // The control the reader pressed still holds the keyboard, so their next
+    // key reaches the row they were working rather than the top of the page.
+    expect(document.activeElement).toBe(pin);
+  });
+
   it("offers no pin on a folded group, whose id the fold mints", async () => {
     stubbing([
       row({
