@@ -57,6 +57,33 @@ const NOW_DATE = new Date(NOW);
 const RAIL_ROUTES: RouteMap = {
   "GET /me": meRoute({}),
   "GET /digest": () => jsonResponse(digest),
+  // The readings strip's pipeline card makes two reads of its own: the scope
+  // the server names for this reader, and the forecast under it. Both are
+  // routed, because installFetchStub's fallback answers a 200 with a list
+  // envelope — a shape that resolves the query SUCCESSFULLY and leaves the card
+  // formatting undefined figures, which is how a catalog ends up drawing
+  // "NaN of NaN priced" while every test stays green.
+  "GET /analytics/context": () =>
+    jsonResponse({
+      default_scope: { kind: "owner", id: "u-1", label: "Lena Fischer" },
+      scopes: [],
+    }),
+  "GET /forecast": () =>
+    jsonResponse({
+      period_start: "2026-07-01",
+      period_end: "2026-09-30",
+      scope_kind: "owner",
+      open_minor: 42_000_000,
+      weighted_minor: 16_800_000,
+      best_case_minor: 24_000_000,
+      evidence_minor: 12_000_000,
+      eligible_count: 12,
+      priced_count: 11,
+      confirmed_date_count: 8,
+      fx_missing_count: 0,
+      as_of: "2026-09-03T06:42:00Z",
+      base_currency: "EUR",
+    }),
   "GET /projects/01a00000-0000-7000-8000-000000000001": () =>
     jsonResponse({
       id: "01a00000-0000-7000-8000-000000000001",
@@ -221,9 +248,10 @@ export const GlanceWeeklyUnread: Story = {
 
 // ── The readings strip ──────────────────────────────────────────────────────
 
-// Five slots, always, and deliberately no money: the pipeline is worth three
-// currencies at once and no honest single figure for it exists. The per-currency
-// figures are the rail's Position panel, below.
+// Five slots, and every one of them answerable — which is the change. Two of
+// them used to draw an em dash forever: promises, because the commitments lane
+// is unwired, and quota pace, because targets were retired from the product. A
+// slot that will never fill is not a pending answer.
 export const Readings: Story = {
   render: part(<HomeReadingsStrip day={readingsDay()} />),
 };
@@ -239,9 +267,9 @@ export const ReadingsCapped: Story = {
   ),
 };
 
-// A quiet morning. The two untracked slots read the same as ever — the strip
-// does not get shorter on a day with less in it, because a reader comparing it
-// with yesterday's would take the missing slot for an answered question.
+// A quiet morning. The strip does not get shorter on a day with less in it,
+// because a reader comparing it with yesterday's would take the missing slot for
+// an answered question — the zeros are the answer.
 export const ReadingsQuiet: Story = {
   render: part(
     <HomeReadingsStrip

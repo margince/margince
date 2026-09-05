@@ -1079,6 +1079,12 @@ export const en = {
   "roompage.text.welcomeLabel": "Welcome message",
   "roompage.viewAsBuyer": "View as buyer",
   "roompage.previewArchived": "An archived room has nothing to preview.",
+  // Deliberately does NOT say "only the owner". The preview also opens for a
+  // manager, an admin and anybody holding a write grant on the deal, so naming
+  // the owner would send a reader who already has the right access to ask the
+  // wrong person for it.
+  "roompage.previewNotYours":
+    "Your access to this deal does not include the buyer preview.",
   "access.title": "Access",
   "access.sub": "Who may enter, and what each person may do.",
   "access.invite": "Invite",
@@ -2575,6 +2581,9 @@ export const en = {
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet": "A quiet week — nothing closed and nothing moved.",
 
+  "brief.changed.lead": "Changed since the brief:",
+  "brief.changed.more": "+{count} more",
+  "brief.changed.open": "Open the worklist",
   "brief.feed.title": "Today",
   "brief.feed.sub": "One order, decided once.",
   "brief.feed.loading": "Reading your morning",
@@ -2756,22 +2765,26 @@ export const en = {
   "home.readings.label": "Your morning, in five readings",
   "home.readings.truncated":
     "A source was read to its limit, so every figure above is a floor.",
+  "home.readings.urgent": "Urgent moves",
+  "home.readings.urgentBasis": "somebody waiting or a promise breaking",
+  "home.readings.decisions": "Decisions waiting",
+  "home.readings.decisionsBasis": "somebody is blocked until you answer",
+  "home.readings.pipeline": "Pipeline outlook",
+  "home.readings.pipelineWorkspace": "Pipeline outlook · whole organization",
+  "home.readings.pipelineBasis":
+    "{weighted} weighted · {priced} of {eligible} priced",
+  "home.readings.pipelineUnread": "the pipeline could not be read",
+  "home.readings.pipelineReading": "reading the pipeline",
   "home.readings.openLane": "Open these",
-  "home.readings.waiting": "Customer waiting",
-  "home.readings.waitingBasis": "waiting on an answer",
   "home.readings.meetings": "Meetings ahead",
   "home.readings.meetingsBasis": "on today's calendar",
   "home.readings.needsPrep_one": "1 needs prep",
   "home.readings.needsPrep_other": "{count} need prep",
   "home.readings.prepUnknown": "not all could be checked",
   "home.readings.prepared": "all prepared",
-  "home.readings.promises": "Promises due",
-  "home.readings.promisesBasis": "promises are not tracked yet",
   "home.readings.leads": "Lead response",
   "home.readings.leadsBasis": "owed a first answer",
   "home.readings.leadsDue": "next due {value}",
-  "home.readings.quota": "Quota pace",
-  "home.readings.quotaBasis": "no target is set",
   "home.rail": "Context",
   "home.pct": "{pct}%",
   "home.deck.later": "Later",
@@ -3370,6 +3383,31 @@ export const en = {
   "analytics.sectionPipeline": "Pipeline",
   "analytics.sectionPerformance": "Performance",
   "analytics.noClosedDeals": "No deals have closed yet.",
+  "analytics.sectionOutcomes": "My outcomes",
+  "analytics.sectionCoverage": "Data coverage",
+  "analytics.coverageSub":
+    "Which sources the nightly check could read, and how far. A quiet source that was read is checked; an unread one says why.",
+  "analytics.covSource": "Source",
+  "analytics.covState": "State",
+  "analytics.covThrough": "Checked through",
+  "analytics.covChecked": "Checked",
+  "analytics.covStale": "Stale — nothing read recently",
+  "analytics.covUnavailable": "Unavailable — the check could not read it",
+  "analytics.covPermissionLimited": "Access needs re-granting",
+  "analytics.covNotConnected":
+    "Not connected — nothing to fix, something to decide",
+  "analytics.coverageInputsElsewhere":
+    "Record-level input problems are listed and resolved in the Forecast input review.",
+  "analytics.myPipeline": "My open pipeline",
+  "analytics.myMeetings": "My meetings",
+  "analytics.meetingsAsTheyStand":
+    "Meetings you host, by where each stands today — a held meeting no longer counts as booked.",
+  "analytics.meetingsBooked": "Booked",
+  "analytics.meetingsHeld": "Held",
+  "analytics.meetingsNoShow": "No-show",
+  "analytics.meetingsCanceled": "Canceled",
+  "analytics.outcomesOwnLensOnly":
+    "This view answers for one seat. Your lens covers more than your own records, so the wider sections carry your numbers.",
   "analytics.openOutcomeDeals": "Open the {outcome} deals",
   "analytics.reportWinLoss": "Won and lost",
   "analytics.reportStageAge": "Time in stage",
@@ -3420,6 +3458,12 @@ export const en = {
   // reader was told "mail, offers" in English — words that name a table, not a
   // thing they would go and fix.
   "review.source.mail": "the mailbox",
+  "review.source.calendar": "the calendar",
+  "review.source.documents": "documents",
+  "review.source.contracts": "contracts",
+  "review.source.incumbent": "the incumbent system",
+  "analytics.coverageNeverRun":
+    "No check has run yet. A fresh installation has not been looked at — different from one that was looked at and found healthy.",
   "review.source.offers": "offers",
   "review.sourcesUnread":
     "Not read: {sources}. Findings below cover only what could be checked.",

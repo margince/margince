@@ -8,6 +8,7 @@ import { useNow } from "../format/now";
 import { useT } from "../i18n";
 import { useDecisionSink } from "./approvalrow";
 import { usePendingApprovals } from "./approvals.queries";
+import { ChangedSinceBrief } from "./brief.changed";
 import { BriefDials } from "./brief.dials";
 import { BriefFeed } from "./brief.feed";
 import { PlanSection } from "./brief.plan";
@@ -284,6 +285,11 @@ export function HomeScreen() {
           the rail it would be a warning about the queue, filed away from the
           queue. */}
       {worklistQuery.data && <BriefCoverage day={worklistQuery.data} />}
+      {/* And what has happened since the night looked, under the coverage line
+          and above the readings: both are facts about the page as a whole
+          rather than about any one row, and a reader takes them before the
+          figures they qualify. */}
+      {worklistQuery.data && <ChangedSinceBrief day={worklistQuery.data} />}
       {/* The strip reads the SAME worklist answer the queue below it reads, so
           the five figures cannot disagree with the rows they summarise. */}
       {worklistQuery.data && <HomeReadingsStrip day={worklistQuery.data} />}

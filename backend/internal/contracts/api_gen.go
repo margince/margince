@@ -21520,7 +21520,10 @@ type DealRoom struct {
 	// ExpiresAt When buyer access lapses on its own. Extending is an explicit human act.
 	ExpiresAt *time.Time         `json:"expires_at,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
-	Source    string             `json:"source"`
+
+	// PreviewAvailable Whether THIS caller may open the buyer preview of THIS room — the same question `POST /deal-rooms/{id}/preview` answers, computed here so a screen can say no before the press rather than after it. Four things must hold, and a plain `writable` would answer only one: the caller holds `update` on deal rooms, is a person rather than an agent (a preview is a seat's own view, and a system caller has no seat to preview from), the underlying deal is writable AND live, and the room is not archived. False is not "this room is broken" — it is the ordinary reading for a colleague who may read the room and not present it.
+	PreviewAvailable *bool  `json:"preview_available,omitempty"`
+	Source           string `json:"source"`
 
 	// State Where the room stands. A room is created `live`, and `live` and `closed` are
 	// the two that serve a buyer. `draft`, `building`, `ready` and `publishing` are
@@ -42510,6 +42513,14 @@ func (a *DealRoom) UnmarshalJSON(b []byte) error {
 		delete(object, "id")
 	}
 
+	if raw, found := object["preview_available"]; found {
+		err = json.Unmarshal(raw, &a.PreviewAvailable)
+		if err != nil {
+			return fmt.Errorf("error reading 'preview_available': %w", err)
+		}
+		delete(object, "preview_available")
+	}
+
 	if raw, found := object["source"]; found {
 		err = json.Unmarshal(raw, &a.Source)
 		if err != nil {
@@ -42624,6 +42635,13 @@ func (a DealRoom) MarshalJSON() ([]byte, error) {
 	object["id"], err = json.Marshal(a.Id)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'id': %w", err)
+	}
+
+	if a.PreviewAvailable != nil {
+		object["preview_available"], err = json.Marshal(a.PreviewAvailable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'preview_available': %w", err)
+		}
 	}
 
 	object["source"], err = json.Marshal(a.Source)
