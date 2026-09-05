@@ -264,6 +264,7 @@ var tableOwners = map[string]string{
 	"capture_sender_override":      "internal/modules/capture",
 	"capture_exclusion":            "internal/modules/capture",
 	"capture_owner_identity":       "internal/modules/capture",
+	"capture_alias_sighting":       "internal/modules/capture",
 	"capture_import":               "internal/modules/capture",
 	"capture_thread_verdict":       "internal/modules/capture",
 	"capture_counterparty_hold":    "internal/modules/capture",

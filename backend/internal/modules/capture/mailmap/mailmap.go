@@ -42,7 +42,12 @@ type Message struct {
 	counterparty     string
 	counterpartyName string // display name from the counterparty's header — untrusted text
 	threadKey        string // conversation identity: References root / In-Reply-To / own Message-ID
-	autoReply        bool   // a reply nobody chose to write: kept off the timeline
+	// deliveredTo is the address the receiving infrastructure recorded this
+	// message as delivered to, from a position a sender could not have
+	// authored, and empty whenever no such claim can be trusted
+	// (deliveredto.go). It is how a forwarding alias becomes discoverable.
+	deliveredTo string
+	autoReply   bool // a reply nobody chose to write: kept off the timeline
 	// machineTouched is the BROADER question — did any machine have a hand in
 	// this? It never drops a message; it only refuses the outbound attestation,
 	// so a responder's reply cannot vouch for an address the owner never chose.
@@ -123,6 +128,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 	// message reads as one address short, which is the accepted loss named in
 	// ADR-0082 §3 and not something this parser can recover.
 	bccList, _ := header.AddressList("Bcc")
+	deliveredTo := TopDeliveredTo(header)
 	from := firstAddress(fromList)
 	to := firstAddress(toList)
 
@@ -170,6 +176,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		counterparty:     counterparty,
 		counterpartyName: counterpartyName,
 		threadKey:        threadKey(header.Get("References"), header.Get("In-Reply-To"), messageID),
+		deliveredTo:      deliveredTo,
 		autoReply:        autoReply,
 		machineTouched:   machineTouched,
 		calendarNotice:   calendarNotice,
@@ -332,6 +339,7 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 		Source:       source,
 		CapturedBy:   "connector:" + connectorName,
 		Raw:          raw,
+		DeliveredTo:  m.deliveredTo,
 		Counterparty: m.recordCounterparty(),
 		ThreadKey:    m.threadKey,
 		Participants: m.participants,

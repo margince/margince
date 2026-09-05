@@ -22002,11 +22002,20 @@ components:
         created_at: { type: string, format: date-time }
     CaptureOwnerIdentitySource:
       type: string
-      enum: [user, provider]
+      enum: [user, provider, delivered_to]
       description: |
         Where the claim came from. `user` is the seat typing it in. `provider` is an address a mail
         provider attests; nothing writes it yet, because reading a provider's send-as list needs a
         scope the connection grant does not request.
+
+        `delivered_to` is a FORWARDING ALIAS the product discovered: an address that delivers into
+        the connected mailbox but is never the From of anything it sends, so nothing on the send
+        side could have found it. It is learned only from the receiving server's own delivery
+        header, read from a position a sender could not have authored, and only once two distinct
+        messages carry the same claim.
+
+        It is its own word rather than `user` because a seat looking at an address they never typed
+        is owed the difference — and, seeing it, may remove it like any other.
     CaptureCounterpartyHold:
       type: object
       description: |

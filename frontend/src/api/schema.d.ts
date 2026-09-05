@@ -14971,9 +14971,18 @@ export interface components {
          * @description Where the claim came from. `user` is the seat typing it in. `provider` is an address a mail
          *     provider attests; nothing writes it yet, because reading a provider's send-as list needs a
          *     scope the connection grant does not request.
+         *
+         *     `delivered_to` is a FORWARDING ALIAS the product discovered: an address that delivers into
+         *     the connected mailbox but is never the From of anything it sends, so nothing on the send
+         *     side could have found it. It is learned only from the receiving server's own delivery
+         *     header, read from a position a sender could not have authored, and only once two distinct
+         *     messages carry the same claim.
+         *
+         *     It is its own word rather than `user` because a seat looking at an address they never typed
+         *     is owed the difference — and, seeing it, may remove it like any other.
          * @enum {string}
          */
-        CaptureOwnerIdentitySource: "user" | "provider";
+        CaptureOwnerIdentitySource: "user" | "provider" | "delivered_to";
         /**
          * @description One seat's decision that their mail with a party is nobody else's. Per user, never
          *     workspace-wide: one seat's lawyer says nothing about another seat's, and a shared list
