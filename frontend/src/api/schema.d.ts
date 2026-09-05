@@ -7366,6 +7366,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/installation/authentication-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which sign-in methods this installation offers.
+         * @description The sign-in half of the installation's settings, read on its own.
+         *
+         *     It is a separate operation rather than a field on `GET /installation/settings`
+         *     because the two have different readers. Every role reads the installation's name,
+         *     timezone and base currency — a rep reading amounts benefits from knowing the
+         *     currency. Who may sign in and how is authentication administration, and showing it
+         *     to every seat that holds `installation_settings.read` would be handing out the shape
+         *     of the login surface to readers with no business in it.
+         *
+         *     The aggregate could not simply carry the narrower grant. Its fields are read through
+         *     one settings catalog whose entries each declare one object, so gating the sign-in
+         *     field there would make the WHOLE aggregate demand this grant and take the ordinary
+         *     installation read down with it. Hence a projection: same values, own gate.
+         *
+         *     `sign_in_providers` reports every provider this DEPLOYMENT mounted, each marked with
+         *     whether the installation has CHOSEN to offer it. Chosen is not the same as working:
+         *     a provider mounted without a stored OAuth app and without environment credentials
+         *     is still listed, and still reads as enabled, because this is the screen an operator
+         *     goes to in order to finish configuring it — the login page withholds it until they
+         *     do. A client rendering this as "what a visitor sees today" would be wrong. The
+         *     effective set is
+         *     the intersection — an admin can only ever narrow what the deployment configured,
+         *     never invent a client id — and a nil stored choice means every configured provider,
+         *     so an installation that upgrades into the setting keeps the login screen it had.
+         *
+         *     PASSWORD IS NOT LISTED and cannot be disabled. It is the method every installation
+         *     always has, and the one an admin must not be able to strand everybody by removing.
+         *
+         *     Governed by `authentication_policy` for this READ. Two things it does not yet
+         *     govern, both tracked and both visible from here rather than discovered later:
+         *     `GET /installation/settings` still returns the same `sign_in_providers` field to
+         *     any holder of `installation_settings.read`, and `PATCH /installation/settings`
+         *     still accepts `enabled_oidc_providers` on `installation_settings.update`. Closing
+         *     either means removing a published field or verb, which is a breaking change and a
+         *     deprecation cycle rather than an edit. Until then this endpoint is the narrower
+         *     surface, not a narrower authority.
+         *
+         *     Human-only: an agent never reads how humans sign in.
+         */
+        get: operations["getAuthenticationPolicy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/installation/settings": {
         parameters: {
             query?: never;
@@ -14209,6 +14266,21 @@ export interface components {
              *     little room rather than compare a file against it exactly.
              */
             max_upload_bytes: number;
+            /**
+             * @description Which remaining-pipeline reading a projected landing is built from. A setting
+             *     rather than a fixed choice, because it is a question about how this installation
+             *     SELLS rather than about the software: a team with a disciplined commit stage means
+             *     something by it, and one that commits everything does not — their weighted number
+             *     is the honest one.
+             *
+             *     `commit_evidence` is the default and the strictest: committed deals whose close
+             *     date somebody confirmed, a provisional date being a guess that stays out.
+             *     `manager_call` takes the authored call as the whole period's landing and is not
+             *     added to what is already won; with no current call the read falls back to
+             *     `commit_evidence` and says so in the landing's `caveat`.
+             * @enum {string}
+             */
+            forecast_forward_measure: "commit_evidence" | "weighted" | "manager_call";
         };
         /** @description A sparse installation-settings patch (admin/ops, human-only). */
         UpdateInstallationSettingsRequest: {
@@ -14248,6 +14320,13 @@ export interface components {
              *     password only.
              */
             enabled_oidc_providers?: string[];
+            /**
+             * @description Which remaining-pipeline reading a projected landing is built from. Never frozen:
+             *     it is applied on READ and stores nothing, so changing it re-computes every landing
+             *     at once and re-means no stored row.
+             * @enum {string}
+             */
+            forecast_forward_measure?: "commit_evidence" | "weighted" | "manager_call";
         };
         CaptureActivityResponse: {
             funnel: components["schemas"]["CaptureActivityFunnel"];
@@ -14538,6 +14617,22 @@ export interface components {
             source: "stored" | "environment" | "none";
             /** @description Every callback URL that must be registered as a redirect URI on the vendor's OAuth client, one per purpose this deployment actually serves. A purpose that is not composed is absent rather than listed, because telling an operator to register a URL nothing answers sends them to debug a mismatch that was never the cause. */
             redirect_uris: components["schemas"]["ConnectorAppRedirectUri"][];
+        };
+        /**
+         * @description Which sign-in methods this installation offers, apart from the rest of its settings.
+         *
+         *     Carries only what `authentication_policy` governs. The installation's name, timezone
+         *     and currency are NOT here — every role reads those, and repeating them in a document
+         *     governed by a narrower grant would make the same fact answer to two authorities.
+         */
+        AuthenticationPolicy: {
+            /**
+             * @description Every provider this deployment mounted, each marked with whether the
+             *     installation has chosen to offer it — which is a stored choice, not a
+             *     guarantee the provider has working credentials. Password is never listed: it
+             *     is the method every installation always has and cannot switch off.
+             */
+            sign_in_providers: components["schemas"]["SignInProvider"][];
         };
         /** @description One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen. */
         SignInProvider: {
@@ -24234,6 +24329,74 @@ export interface components {
             current_call?: components["schemas"]["ForecastCall"];
             /** @description True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much. */
             scope_limited?: boolean;
+            landing?: components["schemas"]["ForecastLanding"];
+            sufficiency?: components["schemas"]["ForecastSufficiency"];
+        };
+        /**
+         * @description Where the period finishes if nothing changes, and what that answer rests on.
+         *     The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
+         */
+        ForecastLanding: {
+            /**
+             * Format: int64
+             * @description The projection itself, in the installation's base currency.
+             */
+            amount_minor: number;
+            /**
+             * @description Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`.
+             * @enum {string}
+             */
+            measure: "commit_evidence" | "weighted" | "manager_call";
+            /**
+             * Format: int64
+             * @description The money already banked, the backward half of the sum.
+             */
+            won_minor: number;
+            /**
+             * Format: int64
+             * @description The forward half. Zero for a manager call, which is a single authored TOTAL rather than a remainder — a call is not added to won_minor, and a reconciliation line drawing this must say the call instead of a split.
+             */
+            remaining_minor: number;
+            /**
+             * @description Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+             * @enum {string}
+             */
+            caveat?: "call_absent" | "call_below_actual";
+        };
+        /**
+         * @description Whether the open pipeline supports the reference landing, and what the reference is.
+         *     NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
+         */
+        ForecastSufficiency: {
+            /**
+             * @description Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
+             * @enum {string}
+             */
+            absent?: "insufficient_basis" | "insufficient_history";
+            /**
+             * @description Where the reference came from. A current authored call outranks history: a manager who wrote a number down has said what this period is for, and the median of the last four completed comparable periods is the fallback for when nobody has.
+             * @enum {string}
+             */
+            basis?: "manager_call" | "historical_median";
+            /** Format: int64 */
+            reference_landing_minor?: number;
+            /**
+             * Format: int64
+             * @description The reference minus what is already won, floored at zero — a period already past its reference needs no more pipeline.
+             */
+            remaining_to_support_minor?: number;
+            /**
+             * Format: int64
+             * @description The open pipeline that remainder implies at the conversion rate.
+             */
+            needed_open_minor?: number;
+            /** Format: int64 */
+            current_open_minor?: number;
+            /**
+             * Format: int64
+             * @description Current over needed in BASIS POINTS, so the server chooses no rounding for the client. Nothing needed is 10000 (full) rather than a division by zero or an unbounded ratio, because "covered" is actionable and "infinity" is not.
+             */
+            coverage_bp?: number;
         };
         /** @description One finding from the nightly input check. */
         InputCheck: {
@@ -43138,6 +43301,28 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getAuthenticationPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The sign-in policy. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthenticationPolicy"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getInstallationSettings: {

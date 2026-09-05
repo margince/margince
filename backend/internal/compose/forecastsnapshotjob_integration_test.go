@@ -27,8 +27,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/riverqueue/river"
-	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
@@ -39,7 +37,7 @@ import (
 // the pass will freeze.
 type snapshotJobEnv struct {
 	*integration.Env
-	worker *forecastSnapshotWorkspaceWorker
+	worker *forecastSnapshotSweepWorker
 	at     time.Time
 }
 
@@ -69,7 +67,7 @@ func setupSnapshotJob(t *testing.T) *snapshotJobEnv {
 	}
 	return &snapshotJobEnv{
 		Env: e,
-		worker: &forecastSnapshotWorkspaceWorker{
+		worker: &forecastSnapshotSweepWorker{
 			pool: e.Pool,
 			now:  func() time.Time { return at },
 			log:  slog.New(slog.DiscardHandler),
@@ -78,13 +76,13 @@ func setupSnapshotJob(t *testing.T) *snapshotJobEnv {
 	}
 }
 
-// run drives the worker exactly as River would.
+// run drives the worker's per-workspace turn, which is what River's row now
+// walks rather than what it carries: the pass takes no workspace in its args
+// (ADR-0103), so Work would enumerate the fleet and lose the one this suite is
+// about. It is the same code Work calls per tenant.
 func (e *snapshotJobEnv) run(t *testing.T) error {
 	t.Helper()
-	return e.worker.Work(context.Background(), &river.Job[ForecastSnapshotWorkspaceArgs]{
-		JobRow: &rivertype.JobRow{},
-		Args:   ForecastSnapshotWorkspaceArgs{Workspace: e.WS},
-	})
+	return e.worker.snapshotWorkspace(context.Background(), e.WS)
 }
 
 // dailySnapshots counts what the pass has frozen, and answers the one id there

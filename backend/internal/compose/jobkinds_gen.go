@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "96a8c061619ec1c669ba4111f95293a2a35b2e37df06ba294adefef02266593f"
+const jobContractHash = "33dfa88be4755d1810da2a5d587de7f6dd352ca7856b924998ecb2b949657a2a"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -33,7 +33,6 @@ type declaredJobArgs interface {
 		ApprovalAutoApplyArgs |
 		ApprovalExpiryArgs |
 		AssuranceSweepArgs |
-		AssuranceWorkspaceArgs |
 		BriefGenerateArgs |
 		CaptureAutoEnrichSweepArgs |
 		CaptureBackfillArgs |
@@ -46,7 +45,6 @@ type declaredJobArgs interface {
 		CaptureTraceSweepArgs |
 		CheckOrganizationVatArgs |
 		CloseDateSweepArgs |
-		CloseDateWorkspaceArgs |
 		AuthzDisagreementArgs |
 		ScheduledSendArgs |
 		ScheduledSendRecoveryArgs |
@@ -56,9 +54,7 @@ type declaredJobArgs interface {
 		EmbedReindexArgs |
 		FinanceSyncSweepArgs |
 		FollowUpReconcileArgs |
-		FollowUpWorkspaceArgs |
 		ForecastSnapshotSweepArgs |
-		ForecastSnapshotWorkspaceArgs |
 		FxRateRefreshArgs |
 		GeocodeBackfillArgs |
 		GeocodeOrganizationArgs |
@@ -66,33 +62,23 @@ type declaredJobArgs interface {
 		GmailWatchArgs |
 		GmailWatchRenewArgs |
 		GraphEdgeReconcileArgs |
-		GraphEdgeWorkspaceArgs |
 		GraphWatchArgs |
 		GraphWatchRenewArgs |
 		IdempotencyRetentionArgs |
-		IdempotencyRetentionWorkspaceArgs |
 		IntroExpiryArgs |
 		KnowledgeIngestArgs |
 		LinkReconcileArgs |
-		LinkReconcileWorkspaceArgs |
 		LinkedInRematchArgs |
-		LinkedInRematchWorkspaceArgs |
 		OrgNamePromotionArgs |
-		OrgNamePromotionWorkspaceArgs |
 		OverlayReconcileArgs |
-		OverlayReconcileWorkspaceArgs |
 		OverlayRefetchArgs |
 		OwedVerdictArgs |
 		ParticipantBackfillArgs |
-		ParticipantBackfillWorkspaceArgs |
 		PrivacyRetentionArgs |
-		ProviderLookupArgs |
 		ProviderLookupSweepArgs |
-		ProviderRunPollArgs |
 		ProviderRunPollSweepArgs |
 		ProviderRunSubmitArgs |
 		SignalScanArgs |
-		SignalScanWorkspaceArgs |
 		SiteDeepReadArgs |
 		TechnicalEnrichBackfillArgs |
 		TechnicalEnrichOrganizationArgs |
@@ -100,7 +86,6 @@ type declaredJobArgs interface {
 		TelegramPollArgs |
 		TelegramPollSweepArgs |
 		TimeScanArgs |
-		TimeScanWorkspaceArgs |
 		TranscriptProposeArgs |
 		VCardIngestArgs |
 		VoiceBuildArgs |
@@ -136,11 +121,23 @@ func addDeclaredWorkerWithTimeout[T declaredJobArgs](reg *jobRegistry, w jobs.Wo
 	reg.markOperatorSupplied(zero.Kind())
 }
 
-// The declared dispatchers: each enumerates the fleet and enqueues, and does
-// no tenant work of its own.
+// The FLEET-WIDE kinds: a row of one carries no tenant. A dispatcher
+// enumerates and enqueues; a collapsed pass walks the workspaces itself
+// (ADR-0103). Both own no workspace, which is what the marker asserts.
 var (
 	_ jobs.FleetWide = AssuranceSweepArgs{}
+	_ jobs.FleetWide = BriefGenerateArgs{}
+	_ jobs.FleetWide = CaptureAutoEnrichSweepArgs{}
+	_ jobs.FleetWide = CaptureClassifyArgs{}
+	_ jobs.FleetWide = ConfidentialityVerdictArgs{}
+	_ jobs.FleetWide = CounterpartyVerdictArgs{}
+	_ jobs.FleetWide = CaptureDigestArgs{}
+	_ jobs.FleetWide = CaptureEnrichArgs{}
+	_ jobs.FleetWide = CaptureTraceSweepArgs{}
 	_ jobs.FleetWide = CloseDateSweepArgs{}
+	_ jobs.FleetWide = EmbedDriftSweepArgs{}
+	_ jobs.FleetWide = EmbedReindexArgs{}
+	_ jobs.FleetWide = FinanceSyncSweepArgs{}
 	_ jobs.FleetWide = FollowUpReconcileArgs{}
 	_ jobs.FleetWide = ForecastSnapshotSweepArgs{}
 	_ jobs.FleetWide = GmailSyncArgs{}
@@ -152,6 +149,7 @@ var (
 	_ jobs.FleetWide = LinkedInRematchArgs{}
 	_ jobs.FleetWide = OrgNamePromotionArgs{}
 	_ jobs.FleetWide = OverlayReconcileArgs{}
+	_ jobs.FleetWide = OwedVerdictArgs{}
 	_ jobs.FleetWide = ParticipantBackfillArgs{}
 	_ jobs.FleetWide = ProviderLookupSweepArgs{}
 	_ jobs.FleetWide = ProviderRunPollSweepArgs{}
@@ -159,44 +157,30 @@ var (
 	_ jobs.FleetWide = TelegramPollSweepArgs{}
 	_ jobs.FleetWide = TimeScanArgs{}
 	_ jobs.FleetWide = VoiceBuildRetryArgs{}
+	_ jobs.FleetWide = WeeklyReviewGenerateArgs{}
 )
 
 // The declared tenant-scoped kinds: each says which workspace it is for
 // in its own args.
 var (
 	_ jobs.WorkspaceScoped = AiModelRateRefreshArgs{}
-	_ jobs.WorkspaceScoped = AssuranceWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
 	_ jobs.WorkspaceScoped = CaptureSyncArgs{}
 	_ jobs.WorkspaceScoped = CheckOrganizationVatArgs{}
-	_ jobs.WorkspaceScoped = CloseDateWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = ScheduledSendArgs{}
 	_ jobs.WorkspaceScoped = SendEmailArgs{}
 	_ jobs.WorkspaceScoped = DocumentExtractArgs{}
-	_ jobs.WorkspaceScoped = FollowUpWorkspaceArgs{}
-	_ jobs.WorkspaceScoped = ForecastSnapshotWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = FxRateRefreshArgs{}
 	_ jobs.WorkspaceScoped = GeocodeOrganizationArgs{}
 	_ jobs.WorkspaceScoped = GmailWatchRenewArgs{}
-	_ jobs.WorkspaceScoped = GraphEdgeWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = GraphWatchRenewArgs{}
-	_ jobs.WorkspaceScoped = IdempotencyRetentionWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = KnowledgeIngestArgs{}
-	_ jobs.WorkspaceScoped = LinkReconcileWorkspaceArgs{}
-	_ jobs.WorkspaceScoped = LinkedInRematchWorkspaceArgs{}
-	_ jobs.WorkspaceScoped = OrgNamePromotionWorkspaceArgs{}
-	_ jobs.WorkspaceScoped = OverlayReconcileWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = OverlayRefetchArgs{}
-	_ jobs.WorkspaceScoped = ParticipantBackfillWorkspaceArgs{}
-	_ jobs.WorkspaceScoped = ProviderLookupArgs{}
-	_ jobs.WorkspaceScoped = ProviderRunPollArgs{}
 	_ jobs.WorkspaceScoped = ProviderRunSubmitArgs{}
-	_ jobs.WorkspaceScoped = SignalScanWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = SiteDeepReadArgs{}
 	_ jobs.WorkspaceScoped = TechnicalEnrichOrganizationArgs{}
 	_ jobs.WorkspaceScoped = TelegramIngestArgs{}
 	_ jobs.WorkspaceScoped = TelegramPollArgs{}
-	_ jobs.WorkspaceScoped = TimeScanWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = TranscriptProposeArgs{}
 	_ jobs.WorkspaceScoped = VCardIngestArgs{}
 	_ jobs.WorkspaceScoped = VoiceBuildArgs{}

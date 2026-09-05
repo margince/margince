@@ -76,45 +76,24 @@ func newLinkedInRematchWorker(pool *pgxpool.Pool, store *people.Store, authority
 // Work re-matches each workspace's unmatched ghosts, one workspace at a time so
 // a failure in one leaves the others swept.
 func (w *linkedInRematchWorker) Work(ctx context.Context, _ *river.Job[LinkedInRematchArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(LinkedInRematchWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return LinkedInRematchWorkspaceArgs{Workspace: ws} }))
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.rematchOneWorkspace))
 }
 
-// LinkedInRematchWorkspaceArgs is one workspace's LinkedIn re-match pass.
-type LinkedInRematchWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (LinkedInRematchWorkspaceArgs) Kind() string { return "linkedin_rematch_workspace" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a LinkedInRematchWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// linkedInRematchWorkspaceWorker runs one workspace's pass. It reuses the dispatcher's
-// wiring rather than a second copy of it.
-type linkedInRematchWorkspaceWorker struct {
-	*linkedInRematchWorker
-}
-
-func (w *linkedInRematchWorkspaceWorker) Work(ctx context.Context, job *river.Job[LinkedInRematchWorkspaceArgs]) error {
-	if _, err := workspaceJobCtx(ctx, job.Args); err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+func (w *linkedInRematchWorker) rematchOneWorkspace(ctx context.Context, workspace ids.UUID) error {
+	ctx = principal.WithWorkspaceID(ctx, workspace)
 	// Re-key BEFORE matching. A stale company key both misses its account and
 	// duplicates on the next import, and matching duplicates would double
 	// every reach count the matches feed.
-	if err := w.renormalizeWorkspace(ctx, job.Args.Workspace); err != nil {
+	if err := w.renormalizeWorkspace(ctx, workspace); err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	matched, err := w.sweepWorkspace(ctx, job.Args.Workspace)
+	matched, err := w.sweepWorkspace(ctx, workspace)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
 	if matched.Confirmed+matched.Suggested > 0 {
 		w.log.InfoContext(ctx, "linkedin re-match: new matches",
-			"workspace", job.Args.Workspace.String(),
+			"workspace", workspace.String(),
 			"confirmed", matched.Confirmed, "suggested", matched.Suggested)
 	}
 	return nil

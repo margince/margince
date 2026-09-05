@@ -6746,6 +6746,38 @@ export const de = {
   "installationSettings.fiscalYearStart": "Geschäftsjahr beginnt",
   "installationSettings.fiscalYearStartHint":
     "Der Monat, in dem Ihr Geschäftsjahr beginnt. Auswertungen gruppieren nach diesem Jahr und Quartal — ein Jahr, das nicht im Januar beginnt, wird mit beiden Kalenderjahren benannt, die es umfasst, etwa FY2026/27. Eine Änderung benennt alle Auswertungen sofort neu, und eine gespeicherte Ansicht mit Periodenfilter fragt danach andere Monate ab.",
+  "installationSettings.forwardMeasure":
+    "Prognostizierter Abschluss beruht auf",
+  "installationSettings.forwardMeasureHint":
+    "Welche verbleibende Pipeline zu den bereits gewonnenen Beträgen addiert wird. Commit-Nachweis ist am strengsten: zugesagte Deals mit bestätigtem Abschlussdatum. Gewichtet zählt jeden offenen Deal mit seiner Phasenwahrscheinlichkeit — die ehrliche Lesart für ein Team, das alles zusagt. Die Einschätzung der Führungskraft ersetzt die Prognose ganz, statt zum Gewonnenen zu addieren; ohne erfasste Einschätzung fällt die Periode auf den Commit-Nachweis zurück und sagt das auch.",
+  "installationSettings.forwardMeasure.commit_evidence":
+    "Commit-Nachweis — nur bestätigte Abschlussdaten",
+  "installationSettings.forwardMeasure.weighted":
+    "Gewichtete Pipeline — jeder offene Deal mit seiner Phasenwahrscheinlichkeit",
+  "installationSettings.forwardMeasure.manager_call":
+    "Einschätzung der Führungskraft — die erfasste Zahl für die Periode",
+  "forecast.landing": "Prognostizierter Abschluss",
+  "forecast.landingFrom":
+    "{won} bereits gewonnen zuzüglich {remaining} noch ausstehend.",
+  "forecast.landingFromCall":
+    "Die Einschätzung für diese Periode. Sie ersetzt die Prognose, statt zu den bereits gewonnenen {won} zu addieren.",
+  "forecast.landing.caveat.call_absent":
+    "Für diese Periode liegt keine Einschätzung vor, daher steht hier der Commit-Nachweis.",
+  "forecast.landing.caveat.call_below_actual":
+    "Die Einschätzung liegt unter dem bereits Gewonnenen. Sie wird wie erfasst gezeigt und nicht korrigiert.",
+  "forecast.pipelineNeeded": "Benötigte Pipeline",
+  "forecast.pipelineNeededDetail":
+    "{current} offen gegenüber {needed} benötigt, um {reference} zu erreichen.",
+  "forecast.pipelineBasis.manager_call":
+    "Gemessen an der Einschätzung für diese Periode.",
+  "forecast.pipelineBasis.historical_median":
+    "Gemessen am Median der letzten vier vergleichbaren Perioden.",
+  "forecast.pipelineAbsentTitle": "Keine Deckungszahl für diese Periode",
+  "forecast.pipelineAbsent.insufficient_basis":
+    "Es fehlt der Vergleichsmaßstab: Für diese Periode wurde keine Einschätzung erfasst, und es sind weniger als vier vergleichbare Perioden abgeschlossen. Eine Deckungszahl, gemessen an einer aus derselben Pipeline abgeleiteten Zahl, sähe immer gut aus.",
+  "forecast.pipelineAbsent.insufficient_history":
+    "Zu wenige abgeschlossene Deals für eine Abschlussquote. Eine Quote aus einer Handvoll Deals schwankt stärker, als die Antwort wert ist.",
+  "forecast.coverage": "{percent}% der dafür nötigen Pipeline",
   "installationSettings.baseCurrency": "Basiswährung",
   "installationSettings.baseCurrencyHint":
     "ISO-4217-Code, in den alle Beträge für Auswertungen umgerechnet werden. Änderbar, bis der erste Betrag dagegen umgerechnet wurde.",

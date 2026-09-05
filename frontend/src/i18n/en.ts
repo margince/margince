@@ -6845,6 +6845,36 @@ export const en = {
   "installationSettings.fiscalYearStart": "Financial year starts",
   "installationSettings.fiscalYearStartHint":
     "The month your business year begins. Reports group by this year and quarter — a year that does not start in January is labelled with both calendar years it spans, like FY2026/27. Changing it re-labels every report at once, and a saved report view filtered on a period will then ask for different months.",
+  "installationSettings.forwardMeasure": "Projected landing built from",
+  "installationSettings.forwardMeasureHint":
+    "Which remaining pipeline a projected landing adds to the money already won. Commit evidence is the strictest: committed deals whose close date somebody confirmed. Weighted counts every open deal at its stage probability, which is the honest reading for a team that commits everything. A manager's call replaces the projection entirely rather than adding to what is won — with no call recorded for a period, that period falls back to commit evidence and says so.",
+  "installationSettings.forwardMeasure.commit_evidence":
+    "Commit evidence — confirmed close dates only",
+  "installationSettings.forwardMeasure.weighted":
+    "Weighted pipeline — every open deal at its stage probability",
+  "installationSettings.forwardMeasure.manager_call":
+    "The manager's call — the authored number for the period",
+  "forecast.landing": "Projected landing",
+  "forecast.landingFrom": "{won} already won plus {remaining} still to come.",
+  "forecast.landingFromCall":
+    "The call for this period, which replaces the projection rather than adding to the {won} already won.",
+  "forecast.landing.caveat.call_absent":
+    "Nobody has called this period, so this is commit evidence instead.",
+  "forecast.landing.caveat.call_below_actual":
+    "The call is below the money already won. It is shown as recorded rather than corrected.",
+  "forecast.pipelineNeeded": "Pipeline needed",
+  "forecast.pipelineNeededDetail":
+    "{current} open against {needed} needed to reach {reference}.",
+  "forecast.pipelineBasis.manager_call":
+    "Measured against the call for this period.",
+  "forecast.pipelineBasis.historical_median":
+    "Measured against the median of the last four comparable periods.",
+  "forecast.pipelineAbsentTitle": "No coverage figure for this period",
+  "forecast.pipelineAbsent.insufficient_basis":
+    "Nothing to measure against: no call has been recorded for this period, and fewer than four comparable periods have finished. A coverage figure measured against a number derived from this same pipeline would always look fine.",
+  "forecast.pipelineAbsent.insufficient_history":
+    "Too few closed deals to read a conversion rate from. A rate drawn from a handful of deals moves further than the answer is worth.",
+  "forecast.coverage": "{percent}% of the pipeline this needs",
   "installationSettings.baseCurrency": "Base currency",
   "installationSettings.baseCurrencyHint":
     "ISO-4217 code every amount converts to for roll-ups. Changeable until the first amount converts against it.",
