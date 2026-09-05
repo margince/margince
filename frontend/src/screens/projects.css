@@ -30,15 +30,6 @@
   color: var(--textMeta);
 }
 
-.project-rail,
-.project-main {
-  display: flex;
-  flex-direction: column;
-  /* The page's own rhythm. 12px was a third answer beside the 16px every other
-     record column takes. */
-  gap: var(--space-4);
-}
-
 .project-row {
   display: flex;
   flex-direction: column;

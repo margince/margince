@@ -15,6 +15,8 @@ package activities
 //
 // waiting.go holds what READS it; this holds what it says.
 
+import "fmt"
+
 // waitingRepliesSQL finds, per thread, the newest inbound with no later
 // outbound in the same thread — where the thread is a SALES conversation the
 // workspace is answerable for, recent enough to still be one.
@@ -280,8 +282,9 @@ const waitingRepliesSQL = `
 	   -- answer a reader wants. A caller replaying a HISTORICAL instant would
 	   -- get today's judgements over that day's messages, and nothing does.
 	   --
-	   -- A snooze lifts on its own moment, so the row comes back when it is due
-	   -- rather than waiting for somebody to remember it.
+	   -- A snooze lifts on whatever it named: its own moment, the counterparty
+	   -- writing back, or a meeting being over. The row comes back when that
+	   -- happens rather than waiting for somebody to remember it.
 	   --
 	   -- not_mine carries no moment and does not lift at all. Ending it when the
 	   -- linked record changes hands would be the kinder rule, and it is not
@@ -295,7 +298,7 @@ const waitingRepliesSQL = `
 	          WHERE mine.activity_id = a.id
 	            AND mine.reader_id = $%[10]d
 	            AND (mine.state = 'not_mine'
-	              OR (mine.state = 'snoozed' AND mine.snoozed_until > $%[1]d)))
+	              OR (mine.state = 'snoozed' AND NOT %[16]s)))
 	 GROUP BY a.id, a.kind, a.subject, a.occurred_at
 	 -- NEWEST first, which is the opposite of how the rows are then shown.
 	 --
@@ -311,3 +314,51 @@ const waitingRepliesSQL = `
 	 -- unchanged. This decides only WHICH waits survive the bound.
 	 ORDER BY a.occurred_at DESC
 	 LIMIT %[4]d`
+
+// messageSnoozeLiftedSQL is whether a reader's snooze on one waiting message is
+// over, as a boolean expression the waiting query embeds.
+//
+// The three conditions and the two columns are the same ones the brief's queue
+// uses, and the answer is deliberately NOT shared with it: what "they replied"
+// means differs. A brief item waits on a DEAL, so any inbound linked to that
+// deal answers it. A waiting message waits on a CONVERSATION, so only a newer
+// inbound on the same thread does — an unrelated mail from the same customer
+// about a different subject is not the reply the rep was waiting for.
+//
+// asOf is the instant to judge against; it is the caller's own placeholder, and
+// every other term here is a fixed column reference.
+// The content gate is taken as a fragment the caller renders for the `back`
+// alias, exactly as it renders one for `a`. Without it a reply the reader may
+// not see would still lift their snooze, and the row reappearing on their day
+// is itself the disclosure that it arrived.
+func messageSnoozeLiftedSQL(asOf, backContent string) string {
+	return fmt.Sprintf(`(CASE mine.reopen_on
+		WHEN 'time' THEN mine.snoozed_until <= %[1]s
+		-- The same thread identity the waiting query matches replies by: key
+		-- alone shares a namespace across kinds and providers, so a crafted
+		-- References header could otherwise lift a snooze on a conversation
+		-- the sender has nothing to do with.
+		WHEN 'reply' THEN EXISTS (
+			SELECT 1 FROM activity back
+			WHERE back.archived_at IS NULL
+			  AND %[3]s
+			  AND back.direction = 'inbound'
+			  AND back.thread_key = a.thread_key
+			  AND back.kind = a.kind
+			  AND back.channel_provider IS NOT DISTINCT FROM a.channel_provider
+			  AND back.occurred_at > mine.set_at
+			  AND back.occurred_at <= %[1]s)
+		-- The same rule the brief's queue applies, and for the same reasons:
+		-- over means ENDED (start plus duration, not start), a meeting that
+		-- will never happen counts as over, and kind = 'meeting' is what makes
+		-- reopen_ref mean a meeting rather than any activity id.
+		WHEN 'meeting' THEN EXISTS (
+			SELECT 1 FROM activity m
+			WHERE m.id = mine.reopen_ref AND m.kind = '%[2]s'
+			  AND (m.archived_at IS NOT NULL
+			       OR m.meeting_status IN ('canceled', 'no_show')
+			       OR m.occurred_at
+			          + make_interval(secs => coalesce(m.duration_seconds, 0)) <= %[1]s))
+		ELSE false
+	END)`, asOf, KindMeeting, backContent)
+}

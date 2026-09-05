@@ -8008,6 +8008,7 @@ export const vi = {
   "worklist.disposition.snoozeFor": "Trong bao lâu",
   "worklist.disposition.snoozeDays_one": "{value} ngày",
   "worklist.disposition.snoozeDays_other": "{value} ngày",
+  "worklist.disposition.snoozeUntil.reply": "Đến khi họ trả lời",
   "worklist.disposition.verb.not_mine": "Không phải của tôi",
   "worklist.disposition.verb.not_sales": "Không phải khách hàng",
   "worklist.disposition.done.snooze": "Ngày mai sẽ trở lại danh sách của bạn.",
@@ -8015,6 +8016,8 @@ export const vi = {
     "Ngày mai sẽ trở lại danh sách của bạn.",
   "worklist.disposition.doneSnooze_other":
     "Sẽ trở lại danh sách của bạn sau {value} ngày.",
+  "worklist.disposition.doneSnoozeUntil.reply":
+    "Sẽ trở lại danh sách của bạn khi họ trả lời.",
   "worklist.disposition.done.not_mine":
     "Đã rời danh sách của bạn. Người phụ trách vẫn thấy nó.",
   "worklist.disposition.done.not_sales": "Đã rời danh sách của mọi người.",
