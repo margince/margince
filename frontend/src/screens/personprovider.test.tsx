@@ -415,6 +415,16 @@ describe("the details that cost credits", () => {
       cost: { mobile: 1, email: 1 },
       requires: "professional_email",
     },
+    // The OTHER pairing, and a different relation: the personal address is a
+    // fallback the vendor issues only when the professional pass comes back
+    // empty. Priced at the trigger's credit plus the fallback's two, which is
+    // what the server reserves for the pair.
+    {
+      category: "personal_email",
+      free: false,
+      cost: { email: 3 },
+      follows: "professional_email",
+    },
   ];
 
   function mountWithCatalog(
@@ -718,6 +728,39 @@ describe("the details that cost credits", () => {
     // Nothing left to look for, so no offer — and in particular not a
     // two-credit button that would buy both again.
     expect(screen.queryByRole("button", { name: /^Buy / })).toBeNull();
+  });
+
+  // A fallback is not a purchase of its own. Surfe issues the personal address
+  // only when the professional pass returns nothing, so a press naming it alone
+  // is refused every time — "personal_email is a fallback for professional_email
+  // and cannot be bought without it" — while the button beside it quoted the
+  // price of both. The catalog says which category triggers it, and the press
+  // names the pair the price is for.
+  it("sends the trigger alongside a fallback the provider only issues after it", async () => {
+    const user = userEvent.setup();
+    const posted = mountWithCatalog(
+      { ...neverRun(), state: "completed" },
+      queuedRun,
+      // The fallback switched on and the mobile off, so the row under test is
+      // the cascade rather than the prerequisite beside it.
+      {
+        linkedin_profile: true,
+        professional_email: true,
+        personal_email: true,
+      },
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /Buy work email and personal email · 3 credits/,
+      }),
+    );
+
+    await expect.poll(() => posted.length).toBe(1);
+    expect(posted[0]).toEqual({
+      provider: "surfe",
+      categories: ["professional_email", "personal_email"],
+    });
   });
 
   it("names the free categories when the plain lookup button is pressed", async () => {
