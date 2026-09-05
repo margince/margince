@@ -30,10 +30,15 @@ type WorkspaceScoped interface {
 	WorkspaceID() ids.UUID
 }
 
-// FleetWide is implemented by DISPATCHER args: a job that enumerates the
-// fleet and enqueues one WorkspaceScoped job per workspace. A dispatcher
-// may read to discover work; it does no tenant WRITE, because the write is
-// the workspace job's to make and to be judged on.
+// FleetWide is implemented by the args of a job that answers for the WHOLE
+// installation rather than for one tenant: it reaches every workspace, either
+// by enqueuing one WorkspaceScoped job per workspace or — since ADR-0103
+// collapsed the workspace dispatchers — by walking them itself.
+//
+// It no longer implies "does no tenant write". A collapsed pass writes for
+// every workspace it walks, which is the point of it; what the marker still
+// says is that the row owns no single tenant, so nothing may read a workspace
+// off its args.
 //
 // The marker method is empty on purpose — it is a declaration, not
 // behaviour, and it is what the G1 gate reads.

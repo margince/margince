@@ -65,28 +65,10 @@ func (WeeklyReviewGenerateArgs) Kind() string { return "weekly_review_generate" 
 // FleetWide marks this as an enumerator that does no tenant work itself.
 func (WeeklyReviewGenerateArgs) FleetWide() {}
 
-type weeklyGenerateWorker struct{ pool *pgxpool.Pool }
-
-func (w *weeklyGenerateWorker) Work(ctx context.Context, _ *river.Job[WeeklyReviewGenerateArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(WeeklyReviewGenerateWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs {
-			return WeeklyReviewGenerateWorkspaceArgs{Workspace: ws}
-		}))
-}
-
-// WeeklyReviewGenerateWorkspaceArgs measures one workspace's reps.
-type WeeklyReviewGenerateWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind names the job in the contract.
-func (WeeklyReviewGenerateWorkspaceArgs) Kind() string { return "weekly_review_generate_workspace" }
-
-// WorkspaceID binds the pass to its tenant.
-func (a WeeklyReviewGenerateWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-type weeklyGenerateWorkspaceWorker struct {
+// weeklyGenerateWorker measures every live workspace's reps.
+//
+// One worker where there were two (ADR-0103).
+type weeklyGenerateWorker struct {
 	engine *weekly.Engine
 	pool   *pgxpool.Pool
 	users  *identity.Service
@@ -102,18 +84,16 @@ type weeklyGenerateWorkspaceWorker struct {
 	mail WeeklyMailConfig
 }
 
-func (w *weeklyGenerateWorkspaceWorker) Work(
-	ctx context.Context, job *river.Job[WeeklyReviewGenerateWorkspaceArgs],
-) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+func (w *weeklyGenerateWorker) Work(ctx context.Context, _ *river.Job[WeeklyReviewGenerateArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.measureOneWorkspace))
+}
+
+func (w *weeklyGenerateWorker) measureOneWorkspace(ctx context.Context, workspace ids.UUID) error {
 	clock := w.now
 	if clock == nil {
 		clock = time.Now
 	}
-	return jobs.FaultContext(ctx, w.measureWorkspace(wsCtx, job.Args.Workspace, clock().UTC()))
+	return w.measureWorkspace(principal.WithWorkspaceID(ctx, workspace), workspace, clock().UTC())
 }
 
 // measureWorkspace writes a review for every rep whose local Monday has
@@ -124,7 +104,7 @@ func (w *weeklyGenerateWorkspaceWorker) Work(
 // stopped at the first would leave a whole team without a retrospective because
 // one seat had a broken row, and River's retry would keep hitting that seat
 // first.
-func (w *weeklyGenerateWorkspaceWorker) measureWorkspace(
+func (w *weeklyGenerateWorker) measureWorkspace(
 	ctx context.Context, wsID ids.UUID, now time.Time,
 ) error {
 	// The enumeration runs as the system: it reads the installation timezone
@@ -196,7 +176,7 @@ func (w *weeklyGenerateWorkspaceWorker) measureWorkspace(
 // could see, so every read inside AssembleFor resolves through her grants, her
 // teams and her seat. EffectiveAuthority reads them as one snapshot — composed
 // from separate reads they can describe an authority she never held.
-func (w *weeklyGenerateWorkspaceWorker) measureFor(
+func (w *weeklyGenerateWorker) measureFor(
 	ctx context.Context, wsID, userID ids.UUID, now time.Time,
 ) (mailableReview, error) {
 	rbac, seat, err := w.users.EffectiveAuthority(ctx, wsID, userID)
@@ -273,7 +253,7 @@ type mailableReview struct {
 // It returns nothing. Every failure here is a week that reads without its
 // remark, which is a complete review — so the failure is loud in the log and
 // silent to the reader, and never the job's.
-func (w *weeklyGenerateWorkspaceWorker) narrate(ctx context.Context, review weekly.Review, now time.Time) {
+func (w *weeklyGenerateWorker) narrate(ctx context.Context, review weekly.Review, now time.Time) {
 	if w.narrator == nil {
 		// No lane in this role. Not an error and not worth a line every
 		// Monday: the deterministic review is the product either way.
@@ -338,7 +318,7 @@ func (w *weeklyGenerateWorkspaceWorker) narrate(ctx context.Context, review week
 // which an overlay workspace keeps in the incumbent, so a pass there would
 // measure a week of zeroes — and "a quiet week" and "this cannot be answered
 // here" read identically while only one is true.
-func (w *weeklyGenerateWorkspaceWorker) repsDueTheirReview(
+func (w *weeklyGenerateWorker) repsDueTheirReview(
 	ctx context.Context, wsID ids.UUID, now time.Time,
 ) ([]ids.UUID, error) {
 	var due []ids.UUID

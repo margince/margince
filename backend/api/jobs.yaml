@@ -368,43 +368,25 @@ kinds:
 
 
   capture_digest:
-    role: dispatcher
+    role: worker
     go_type: CaptureDigestArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: 24h
     registration: {when: [GmailRegistry], absent: registers_nothing}
-    fans_out_to: capture_digest_workspace
-    fan_out_unit: workspace
     reason: >-
       Daily, after the overnight passes it summarizes. The boot pass backfills
       a missed night, so a morning is never silently empty.
 
-  capture_digest_workspace:
-    role: worker
-    go_type: CaptureDigestWorkspaceArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 3
-    opts_owner: fan_out
-    registration: {when: [GmailRegistry], absent: registers_nothing}
-    args:
-      Workspace: id
-    reason: >-
-      A database-only assembly, one digest per connected user — this worker
-      holds no model lane at all, which is also why it fans out onto default
-      rather than ai_capture.
 
   brief_generate:
-    role: dispatcher
+    role: worker
     go_type: BriefGenerateArgs
     queue: default
-    timeout: 2m
+    timeout: 10m
     opts_owner: caller
     cadence: 1h
-    fans_out_to: brief_generate_workspace
-    fan_out_unit: workspace
     reason: >-
       Hourly, not daily, because the morning it aims at is the installation's
       local one — an hourly tick crosses the briefing hour in every zone the
@@ -413,14 +395,12 @@ kinds:
       backfills a night the worker was down for.
 
   weekly_review_generate:
-    role: dispatcher
+    role: worker
     go_type: WeeklyReviewGenerateArgs
     queue: default
-    timeout: 2m
+    timeout: 10m
     opts_owner: caller
     cadence: 6h
-    fans_out_to: weekly_review_generate_workspace
-    fan_out_unit: workspace
     reason: >-
       Every six hours rather than weekly, for the same reason the brief ticks
       hourly: the Monday it aims at is the installation's local one, and a tick
@@ -429,36 +409,7 @@ kinds:
       uniqueness collapses the extra ticks into one review, and the same
       property backfills a Monday the worker was down for.
 
-  weekly_review_generate_workspace:
-    role: worker
-    go_type: WeeklyReviewGenerateWorkspaceArgs
-    queue: default
-    timeout: 10m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      One deterministic measuring pass per full-seat rep whose local Monday has
-      arrived — database-only counting, so it fans out onto default rather than
-      a model lane. Ten minutes covers a large team's serial passes; a rep whose
-      pass failed is retried with the rest, and the week uniqueness makes that
-      safe.
 
-  brief_generate_workspace:
-    role: worker
-    go_type: BriefGenerateWorkspaceArgs
-    queue: default
-    timeout: 10m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      One deterministic ranking pass per full-seat rep whose local morning has
-      arrived — database-only, so it fans out onto default rather than a model
-      lane. Ten minutes covers a large team's serial passes; a rep whose pass
-      failed is retried with the rest, and the day uniqueness makes that safe.
 
   capture_enrich:
     role: worker

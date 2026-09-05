@@ -19,8 +19,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/riverqueue/river"
-
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -32,7 +30,7 @@ import (
 // compose wires it, plus a clock the test moves.
 type briefJobEnv struct {
 	*integration.Env
-	worker *briefGenerateWorkspaceWorker
+	worker *briefGenerateWorker
 	now    time.Time
 }
 
@@ -46,7 +44,7 @@ func setupBriefJob(t *testing.T) *briefJobEnv {
 	// would prove nothing about it. Deal read is what the ranking needs;
 	// installation-settings read is what the base-currency and timezone lookups need.
 	b.grantEveryRepTheBriefsReads(t)
-	b.worker = &briefGenerateWorkspaceWorker{
+	b.worker = &briefGenerateWorker{
 		engine: briefs.NewBriefEngine(e.Pool, people.NewStore(InstallationDB(e.Pool))),
 		pool:   e.Pool,
 		users:  identity.NewService(e.Pool),
@@ -82,12 +80,14 @@ func (b *briefJobEnv) grantEveryRepTheBriefsReads(t *testing.T) {
 	}
 }
 
-// run drives the worker the way River does, through its Work method, so the
-// workspace binding and the clock read are the production ones.
+// run drives the worker's per-workspace turn, which is what River's row now
+// walks rather than what it carries: the pass takes no workspace in its args
+// (ADR-0103), so Work would enumerate the fleet and lose the one this suite is
+// about. The workspace binding and the clock read are the production ones
+// either way — assembleOneWorkspace is what Work calls per tenant.
 func (b *briefJobEnv) run(t *testing.T) error {
 	t.Helper()
-	return b.worker.Work(context.Background(),
-		&river.Job[BriefGenerateWorkspaceArgs]{Args: BriefGenerateWorkspaceArgs{Workspace: b.WS}})
+	return b.worker.assembleOneWorkspace(context.Background(), b.WS)
 }
 
 // runsFor counts the brief runs stored for one rep on one local day.

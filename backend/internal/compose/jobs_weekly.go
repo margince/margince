@@ -25,8 +25,7 @@ import (
 // weekly engine and the identity service, neither of which the group's other
 // members carry.
 func addWeeklyReviewJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, narrator completer, mail WeeklyMailConfig) {
-	addDeclaredWorker[WeeklyReviewGenerateArgs](reg, &weeklyGenerateWorker{pool: pool})
-	addDeclaredWorker[WeeklyReviewGenerateWorkspaceArgs](reg, &weeklyGenerateWorkspaceWorker{
+	addDeclaredWorker[WeeklyReviewGenerateArgs](reg, &weeklyGenerateWorker{
 		// The job re-reads a snapshot it has just written when a later tick
 		// finds one already there, and that read takes the same team gate a
 		// lead's does — it runs under a MEMBER's own authority, not the system

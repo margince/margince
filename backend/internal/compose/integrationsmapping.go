@@ -286,6 +286,9 @@ func catalogWire(catalog []integrations.CategoryCost) *[]crmcontracts.ProviderCa
 		if entry.Requires != "" {
 			wire.Requires = &entry.Requires
 		}
+		if entry.Follows != "" {
+			wire.Follows = &entry.Follows
+		}
 		out = append(out, wire)
 	}
 	return &out

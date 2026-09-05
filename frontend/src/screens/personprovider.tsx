@@ -392,7 +392,7 @@ function BuyPriced({
 }
 
 /** What one press actually asks for: the category, and the one it can only be
- *  looked up alongside.
+ *  bought alongside.
  *
  *  Surfe's mobile lookup is the case. Asked for on its own, the provider hunts
  *  for an email nobody bought, fails, and skips the number — returning a run
@@ -414,7 +414,20 @@ function BuyPriced({
 function boughtWith(
   entry: components["schemas"]["ProviderCategoryCost"],
 ): string[] {
-  return entry.requires ? [entry.requires, entry.category] : [entry.category];
+  // The mirror of `pricedWith` (backend/internal/modules/integrations/store.go):
+  // the category itself, the trigger whose EMPTY answer fires it as a fallback,
+  // and the prerequisite it needs an answer from. Two different relations with
+  // one consequence — the server refuses a request missing either — and `cost`
+  // is already the price of the whole set, so a press naming less would quote a
+  // pair and buy one half of it.
+  //
+  // Both are walked, not the first that answers: nothing refuses a descriptor
+  // declaring a category with each, and the price would then name three
+  // categories while the press named two.
+  const alongside = [entry.follows, entry.requires].filter(
+    (category): category is string => Boolean(category),
+  );
+  return [...new Set([...alongside, entry.category])];
 }
 
 /** The credits one category costs, summed across pools. A category priced in
