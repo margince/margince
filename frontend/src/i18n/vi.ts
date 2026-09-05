@@ -7973,6 +7973,8 @@ export const vi = {
     "Không có việc đã thống nhất nào bị đình trệ.",
   "worklist.bandClear.review": "Không có gì để rà soát.",
   "worklist.disposition.verb.snooze": "Tạm gác",
+  "worklist.disposition.snoozeForDays_one": "Tạm gác {value} ngày",
+  "worklist.disposition.snoozeForDays_other": "Tạm gác {value} ngày",
   "worklist.disposition.snoozeFor": "Trong bao lâu",
   "worklist.disposition.snoozeDays_one": "{value} ngày",
   "worklist.disposition.snoozeDays_other": "{value} ngày",
