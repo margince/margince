@@ -24,13 +24,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -65,9 +65,10 @@ Each of "story", "blocker", "buyer", "verdict.because" and "move_reason" is a li
 "move_reason" — a LIST of exactly one {"text","evidence"} object saying why the recommended move is the right one now, the same shape as "story". The move itself is decided elsewhere and given to you in "recommended_move": explain it, never replace it. It rests on records like every other sentence, so it cites them.
 
 Every sentence lists the ids it rests on in its own "evidence", from the summary's "id" fields. Ids belong in "evidence" only — never in any "text" or in "opening".
+A named stakeholder is not automatically the author of a timeline entry. Attribute a statement to a person only when that entry names them; otherwise say the customer or the team.
 Ground every word in the summary. Never invent a person, a company, a date, a number or an event. If the summary does not say it, do not write it.
 Every timeline entry carries "when": "past" for something that has happened, "scheduled" for something booked and still ahead. A scheduled entry is a plan, never an event — never write that it took place, and never measure silence from it.
-"open_tasks" is work NOBODY HAS DONE YET, whatever its date says. A task there carries "state": "open" or "overdue". Never write that a task's work happened, was sent, was followed up or was delivered — an overdue task is a promise already broken, not a thing that took place, and it is the strongest reason to act rather than evidence that somebody already did. Completed work is on the timeline instead, as the event it became.
+"open_tasks" is work NOBODY HAS DONE YET, whatever its date says. A task there carries "state": "open" or "overdue". Only state "overdue" is late. State "open" is not overdue, regardless of dates, silence or the deal's age. Never write that a task's work happened, was sent, was followed up or was delivered — an overdue task is a promise already broken, not a thing that took place, and it is the strongest reason to act rather than evidence that somebody already did. Completed work is on the timeline instead, as the event it became.
 "health" scores four things from 0 to 1, where low is bad: activity_recency, stage_velocity, engagement (how many people are actually talking to us) and commitments (promises we have kept). They are signals to reason from, never facts to state — never write a score, a factor name or the word "health" in the card. A low score tells you where to look in "timeline"; the timeline's dates are what you write.
 Never write the same fact in two sections. Each one answers a different question.
 `
@@ -303,15 +304,17 @@ func ParseStatus(reply string, in StatusInput) (WrittenStatus, error) {
 	return sections, nil
 }
 
-// excerpt bounds one body's contribution, cutting on a rune so a multi-byte
-// character is never split into an invalid tail.
+// excerpt keeps the opening and sign-off within one bounded contribution.
+// A prefix alone loses the speaker's name at the end of a longer mail, leaving
+// the model to confuse the account's best-known contact with its author.
 func excerpt(body string) string {
-	trimmed := strings.TrimSpace(body)
+	trimmed := textlang.CurrentMessage(body)
 	runes := []rune(trimmed)
 	if len(runes) <= maxExcerptLen {
 		return trimmed
 	}
-	return string(runes[:maxExcerptLen]) + "…"
+	tail := maxExcerptLen / 3
+	return string(runes[:maxExcerptLen-tail-1]) + "…" + string(runes[len(runes)-tail:])
 }
 
 // dealIn projects the deal's own fields.

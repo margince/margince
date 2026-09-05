@@ -73,6 +73,10 @@ var composesItsOwnNarrowing = gatekit.Waive(map[string]string{
 	"referenceScopeClauses": "a DIFFERENT question: the row scope over the records a " +
 		"population POINTS AT, asked per declared reference rather than over the " +
 		"population's own rows. It is called alongside specScopeClauses, never instead",
+	"maskedDerivationSelects": "not a narrowing at all: it decides which COLUMN of a row " +
+		"the drill-through already returns comes back NULL, and adds no predicate. The rows " +
+		"it selects over are derivationWhere's, unchanged — a row whose reference this blanks " +
+		"is still counted by the aggregate beside it, which is the point",
 })
 
 func TestEveryPopulationsNarrowingsAreComposedInOnePlace(t *testing.T) {

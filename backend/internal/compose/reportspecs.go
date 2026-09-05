@@ -195,10 +195,16 @@ var prebuiltReports = map[string]reportSpec{
 			fieldProjectID:    colProjectID,
 		},
 		filterScopes: projectFilterScope,
-		// partner_org_id points at an organization, which a normal deal read
-		// masks per row when the caller cannot open it.
-		referenceScopes: map[string]string{colPartnerOrgID: tableOrganization},
-		defaultBy:       moneyDefaultBy(fieldStageID),
+		// Both organization references, which a normal deal read masks per row
+		// when the caller cannot open them. organization_id is a FILTER here
+		// and not a dimension, and it needs the scope for that alone: a count
+		// filtered to one company answers whether that company exists and has
+		// a deal, which is the disclosure whether or not the id is printed.
+		referenceScopes: map[string]string{
+			colPartnerOrgID:   tableOrganization,
+			colOrganizationID: tableOrganization,
+		},
+		defaultBy: moneyDefaultBy(fieldStageID),
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: aliasDeals},
 			{Fn: aggFnSum, Field: fieldAmountMinor, As: "amount_minor_sum"},

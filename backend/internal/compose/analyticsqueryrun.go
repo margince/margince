@@ -67,7 +67,7 @@ func RunAnalyticsQuery(
 	}
 
 	schema := AnalyticsSchemaFor(ctx)
-	plan, err := analyticsquery.Compile(q, schema, analyticsScope(ctx, tx, spec, requestedFromQuery(q)))
+	plan, err := analyticsquery.Compile(q, schema, analyticsScope(ctx, tx, spec, q))
 	if err != nil {
 		return AnalyticsAnswer{}, err
 	}
@@ -155,11 +155,60 @@ func refuseIfTheFilterHidesTooLittle(
 // is invisible to it. Written inline, swapping the whole composer for its scope
 // half passed the gate — which is the defect the gate exists to catch.
 func analyticsScope(
-	ctx context.Context, tx pgx.Tx, spec reportSpec, requested RequestedScope,
+	ctx context.Context, tx pgx.Tx, spec reportSpec, q analyticsquery.Query,
 ) analyticsquery.ScopeClauses {
+	named := namedByAnalyticsQuery(spec, q)
 	return func(arg func(any) int) ([]string, error) {
-		return specNarrowings(ctx, tx, spec, requested, arg)
+		return specNarrowings(ctx, tx, spec, requestedFromQuery(q), named, arg)
 	}
+}
+
+// namedByAnalyticsQuery is namedByReport for the typed grammar: every field the
+// query groups by, filters on or measures, resolved to the SQL the compiler
+// will render for it.
+//
+// EVERY field goes through one lookup, and that is the correction rather than a
+// tidy-up. The analytics schema a caller's field name is validated against is
+// the spec's dimensions and measures (analyticsqueryseam.go), NOT spec.filters
+// — those are the report engine's own filter vocabulary and a different map.
+// Resolving a filter through spec.filters therefore missed wherever the two
+// disagree, and open-deals-per-company is that spec: organization_id is a
+// dimension there and not a filter, so `filter organization_id eq <id>` bound
+// with no reference scope and answered whether a capture-private company
+// exists and how many deals point at it.
+//
+// One set serves both the answer and its explanation. CompileExplain selects
+// the group-bys and the measure fields — nothing wider — so the drill-through
+// cannot name a reference the headline did not, and the two read one row set
+// (explain.go: the explanation must not out-see the number).
+func namedByAnalyticsQuery(spec reportSpec, q analyticsquery.Query) referencedColumns {
+	named := make(referencedColumns, len(q.GroupBy)+len(q.Filters)+len(q.Measures))
+	// The compiler resolves a field name through the schema, which is built
+	// from these two maps and nothing else.
+	name := func(field string) {
+		if expr, ok := spec.dimensions[field]; ok {
+			named[expr] = true
+		}
+		if expr, ok := spec.measures[field]; ok {
+			named[expr] = true
+		}
+	}
+	for _, field := range q.GroupBy {
+		name(field)
+	}
+	for _, f := range q.Filters {
+		name(f.Field)
+	}
+	for _, m := range q.Measures {
+		// A measure's field may be a DIMENSION: count_distinct is not a
+		// numeric aggregate, so validateMeasures does not require KindMeasure
+		// for it, and count_distinct over a reference puts that reference in
+		// front of the caller through the explain's select list.
+		if m.Field != "" {
+			name(m.Field)
+		}
+	}
+	return named
 }
 
 // requestedFromQuery carries the stored question's scope words across to the

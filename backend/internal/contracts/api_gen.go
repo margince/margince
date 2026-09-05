@@ -13868,6 +13868,7 @@ const (
 	WorklistMoveActionDraftReply       WorklistMoveAction = "draft_reply"
 	WorklistMoveActionNone             WorklistMoveAction = "none"
 	WorklistMoveActionOpenMeetingBrief WorklistMoveAction = "open_meeting_brief"
+	WorklistMoveActionOpenTask         WorklistMoveAction = "open_task"
 	WorklistMoveActionReconnect        WorklistMoveAction = "reconnect"
 )
 
@@ -13883,6 +13884,8 @@ func (e WorklistMoveAction) Valid() bool {
 	case WorklistMoveActionNone:
 		return true
 	case WorklistMoveActionOpenMeetingBrief:
+		return true
+	case WorklistMoveActionOpenTask:
 		return true
 	case WorklistMoveActionReconnect:
 		return true
@@ -21960,14 +21963,13 @@ type DealStatusCard struct {
 }
 
 // DealStatusCardMove The one thing to do next, and what performing it means. `action` is one of
-// `draft_email`, `create_task`, `open_meeting_brief`, `none` — the same verbs
-// the retired next-best-action carried, so a client that already performs them
-// needs no new code. `arguments` is the body or operand the verb takes, ready
+// `draft_email`, `create_task`, `open_task`, `open_meeting_brief`, `none`.
+// `open_task` opens existing work without creating another task. `arguments` is the body or operand the verb takes, ready
 // to send; absent for `none`.
 type DealStatusCardMove struct {
 	Action string `json:"action"`
 
-	// Arguments `draft_email` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body.
+	// Arguments `draft_email`, `open_task` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body.
 	Arguments *map[string]interface{}      `json:"arguments,omitempty"`
 	Evidence  []DealNextBestActionEvidence `json:"evidence"`
 
@@ -34555,7 +34557,7 @@ type WorklistMove struct {
 	// and no thread behind it.
 	//
 	// `draft_email` opens a new message, `create_task` agrees a next step,
-	// `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
+	// `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
 	// sends the reader to reauthorize a source that stopped answering.
 	//
 	// `none` is a producer's answer that there is nothing to do — a closed deal has
@@ -34592,7 +34594,7 @@ type WorklistMove struct {
 // and no thread behind it.
 //
 // `draft_email` opens a new message, `create_task` agrees a next step,
-// `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
+// `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
 // sends the reader to reauthorize a source that stopped answering.
 //
 // `none` is a producer's answer that there is nothing to do — a closed deal has
