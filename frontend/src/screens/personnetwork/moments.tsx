@@ -6,7 +6,7 @@
 
 import type { components } from "../../api/schema";
 import { useRecordZone } from "../../app/recordzone";
-import { Card } from "../../design-system/atoms";
+import { Badge, Card } from "../../design-system/atoms";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
@@ -75,16 +75,24 @@ export function MomentsCard({ view }: Readonly<{ view: RelationshipMoments }>) {
         emptyLabel={t("person.network.noMoments")}
         loadingLabel={t("person.network.title")}
       >
-        <ul className="pn-moments">
-          {changes.map((change) => (
+        <ol className="pn-moments">
+          {changes.map((change, index) => (
             <li key={`${change.kind}-${change.at}`} className="pn-moment">
-              <span>{changeSentence(change, t)}</span>
-              <span className="pn-moment-when">
+              <time className="pn-moment-when" dateTime={change.at}>
                 {formatDate(change.at, locale, recordZone)}
-              </span>
+              </time>
+              <p>
+                {changeSentence(change, t)}
+                {/* The head is what the strip's "why now" slot was read
+                    from, and is flagged here so the two agree on which
+                    change that was. */}
+                {index === 0 ? (
+                  <Badge tone="accent">{t("person.intro.stripWhyNow")}</Badge>
+                ) : null}
+              </p>
             </li>
           ))}
-        </ul>
+        </ol>
       </SurfaceState>
     </Card>
   );

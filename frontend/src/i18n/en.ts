@@ -7271,9 +7271,29 @@ export const en = {
   "person.intro.factDirect": "Direct relationship",
   "person.intro.factIndirect": "Through a colleague",
   "person.intro.factReceipts": "{count} visible receipts",
-  "person.intro.stripPath": "Best path",
+  "person.intro.verdictDirect":
+    "Ask {name} — they already write to each other.",
+  "person.intro.verdictOneSided":
+    "Ask {name} — they have written, with no reply yet.",
+  "person.intro.verdictVia": "Ask {name} — they reach them through {through}.",
+  "person.intro.evidenceEyebrow": "The evidence behind it",
+  "person.intro.evidenceExchanges": "Exchanges",
+  "person.intro.evidenceWindow": "in 90 days",
+  "person.intro.evidenceFrom": "{count} from {name}",
+  "person.intro.evidenceLastContact": "Last contact",
+  "person.intro.lastToday": "Today",
+  "person.intro.lastYesterday": "Yesterday",
+  "person.intro.lastDays": "{days} days ago",
+  "person.intro.lastNever": "None in 90 days",
+  "person.intro.stripWho": "Who reaches them",
+  "person.intro.stripWhoCount_one": "Only {name}",
+  "person.intro.stripWhoCount_other": "{count} colleagues",
+  "person.intro.stripWhoMix": "{direct} direct · {indirect} through a contact",
+  "person.intro.otherRoutesTitle": "Other ways in",
+  "person.intro.otherRoutesSub":
+    "Ranked by how much two-way correspondence backs each one.",
+  "person.intro.relayDue": "due {date}",
   "person.intro.stripDirect": "Direct relationship",
-  "person.intro.stripVia": "Through {through}",
   "person.intro.stripNoPath": "Nobody here reaches them yet",
   "person.intro.stripWhyNow": "Why now",
   "person.intro.stripWhyNowSub": "The most recent change on this relationship",
@@ -7314,7 +7334,6 @@ export const en = {
   "person.intro.routesSub":
     "Best first. Pick the one you can actually use — the second is here because the first is not always available.",
   "person.intro.best": "Best",
-  "person.intro.alternative": "Alternative",
   "person.intro.evidenceTwoWay_one":
     "{total} two-way exchange in 90 days · {when}",
   "person.intro.evidenceTwoWay_other":

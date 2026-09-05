@@ -9,7 +9,7 @@
 // for exactly that reason.
 
 import type { components } from "../api/schema";
-import { Badge, Button, Card } from "../design-system/atoms";
+import { Avatar, Badge, Button, Card } from "../design-system/atoms";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import "./personnetwork.css";
@@ -42,15 +42,22 @@ export function RoutesCard({
   const t = useT();
   const all = graph.routes ?? [];
   const routes = skipLead ? all.slice(1) : all;
-  // `routes` is optional in the contract and `route` is not, so a response from
-  // a server that predates the list still carries the recommendation. Reading
-  // only the list would render that payload as "nobody can reach them" — the
-  // one sentence on this card a reader must never see wrongly.
   const legacy = all.length === 0 ? graph.route : undefined;
   return (
     <Card
-      title={t("person.intro.routesTitle")}
-      sub={t("person.intro.routesSub")}
+      // With the lead drawn above this card, its rows are the OTHER ways in,
+      // and a card titled "ways in" that omitted the best one would read as a
+      // list that had lost its head.
+      title={
+        skipLead
+          ? t("person.intro.otherRoutesTitle")
+          : t("person.intro.routesTitle")
+      }
+      sub={
+        skipLead
+          ? t("person.intro.otherRoutesSub")
+          : t("person.intro.routesSub")
+      }
     >
       {routes.length === 0 && !legacy ? (
         <p className="pn-route">{t("person.graph.noRoute")}</p>
@@ -63,7 +70,15 @@ export function RoutesCard({
           ) : (
             routes.map((route, index) => (
               <li className="pn-route-row" key={route.route_id}>
-                <RouteRow route={route} lead={index === 0} onAsk={onAsk} />
+                <RouteRow
+                  route={route}
+                  // The rank in the SERVER's list, so the first alternative
+                  // under a lead panel reads as the second way in, not the
+                  // first of a different list.
+                  rank={index + (skipLead ? 2 : 1)}
+                  lead={index === 0 && !skipLead}
+                  onAsk={onAsk}
+                />
               </li>
             ))
           )}
@@ -105,10 +120,12 @@ function LegacyRouteRow({
 
 function RouteRow({
   route,
+  rank,
   lead,
   onAsk,
 }: Readonly<{
   route: RouteCandidate;
+  rank: number;
   lead: boolean;
   onAsk?: (route: RouteCandidate) => void;
 }>) {
@@ -117,31 +134,61 @@ function RouteRow({
   const { locale } = useLocale();
   const blocked = availabilityLabel(route.availability, t);
   return (
-    <>
-      <p className="pn-route">
-        <RouteLine route={route} />{" "}
-        <Badge tone={lead ? "accent" : undefined} quiet={!lead}>
-          {lead ? t("person.intro.best") : t("person.intro.alternative")}
-        </Badge>
-        {/* A route that cannot be used says so beside itself. Rendering it
-            identically to an open one would send a rep to ask a colleague who
-            has already declined. */}
-        {blocked ? <Badge quiet>{blocked}</Badge> : null}
-      </p>
-      <p className="pn-counts">
-        {evidenceSentence(route.evidence, t, plural, locale)}
-      </p>
+    <div
+      className={blocked ? "pn-route-line pn-route-blocked" : "pn-route-line"}
+    >
+      <span className="pn-route-rank" aria-hidden="true">
+        {formatNumber(rank, locale)}
+      </span>
+      <Avatar name={route.via_display_name} identity={route.via_user_id} />
+      <div className="pn-route-who">
+        <p className="pn-route">
+          <RouteLine route={route} />{" "}
+          {lead ? <Badge tone="accent">{t("person.intro.best")}</Badge> : null}
+          {/* A route that cannot be used says so beside itself. Rendering it
+              identically to an open one would send a rep to ask a colleague who
+              has already declined. */}
+          {blocked ? <Badge quiet>{blocked}</Badge> : null}
+        </p>
+        <p className="pn-counts">
+          {evidenceSentence(route.evidence, t, plural, locale)}
+        </p>
+      </div>
+      <StrengthMeter bucket={route.strength_bucket} />
       {/* A route that cannot be asked for offers no button. Rendering one that
           answers 409 would be a control that exists to fail. */}
       {onAsk && route.availability === "available" ? (
         <Button
-          variant={lead ? undefined : "ghost"}
+          variant={lead ? "primary" : undefined}
+          small
           onClick={() => onAsk(route)}
         >
-          {t("person.intro.askAction")}
+          {t("person.intro.askFirstName", { name: route.via_display_name })}
         </Button>
       ) : null}
-    </>
+    </div>
+  );
+}
+
+/**
+ * StrengthMeter draws the score's bucket as filled bars, with the bucket's
+ * word beside them: the bars are for a reader scanning the column, the word
+ * is the fact, so colour and height never carry it alone.
+ */
+function StrengthMeter({
+  bucket,
+}: Readonly<{ bucket: RouteCandidate["strength_bucket"] }>) {
+  const t = useT();
+  const band = bucket ?? "none";
+  return (
+    <span className="pn-meter" data-band={band}>
+      <span className="pn-meter-bars" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </span>
+      {t(`person.band.${band}`)}
+    </span>
   );
 }
 
@@ -201,11 +248,39 @@ function lastContactPhrase(
   t: Translate,
   locale: Locale,
 ): string {
+  const last = lastContactBucket(ev);
+  switch (last.kind) {
+    case "never":
+      return t("person.intro.whenNever");
+    case "today":
+      return t("person.intro.whenToday");
+    case "yesterday":
+      return t("person.intro.whenYesterday");
+    case "days":
+      return t("person.intro.whenDays", {
+        days: formatNumber(last.days, locale),
+      });
+  }
+}
+
+export type LastContact =
+  | Readonly<{ kind: "never" | "today" | "yesterday" }>
+  | Readonly<{ kind: "days"; days: number }>;
+
+/**
+ * lastContactBucket reads how long ago a route last carried a message.
+ *
+ * The sentence in a routes row and the reading on the verdict's evidence
+ * plate spell the same fact at two sizes, and this is the ONE place that
+ * decides which of the four cases a day count falls into — so "yesterday"
+ * cannot mean one day on one card and two on the other.
+ */
+export function lastContactBucket(ev: RouteEvidence): LastContact {
   const days = ev.days_since_last;
-  if (days === null || days === undefined) return t("person.intro.whenNever");
-  if (days === 0) return t("person.intro.whenToday");
-  if (days === 1) return t("person.intro.whenYesterday");
-  return t("person.intro.whenDays", { days: formatNumber(days, locale) });
+  if (days === null || days === undefined) return { kind: "never" };
+  if (days === 0) return { kind: "today" };
+  if (days === 1) return { kind: "yesterday" };
+  return { kind: "days", days };
 }
 
 /**

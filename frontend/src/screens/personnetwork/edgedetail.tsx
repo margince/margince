@@ -13,12 +13,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useCanWrite } from "../../app/capability";
-import { useRecordZone } from "../../app/recordzone";
 import { Badge, Button, Card } from "../../design-system/atoms";
-import { EmailReference } from "../../design-system/emailreference";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { problemMessageOf } from "../common";
+import { ReceiptList } from "./receipts";
 
 type Graph = components["schemas"]["PersonGraph"];
 type GraphNode = components["schemas"]["PersonGraphNode"];
@@ -36,7 +35,6 @@ export function EdgeDetail({
 }: Readonly<{ graph: Graph; nodeId: string; anchorId: string }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
   const node = graph.nodes?.find((n) => n.id === nodeId);
   const edges = (graph.edges ?? []).filter(
     (e) => e.from === nodeId || e.to === nodeId,
@@ -79,38 +77,7 @@ export function EdgeDetail({
               })}
             </p>
             {receipts.length > 0 ? (
-              <ul className="pn-receipts">
-                {receipts.map((r) => (
-                  <li key={r.activity_id}>
-                    {/* The canonical citation for a MAIL. A receipt names the
-                        message it is evidence of — it is not a place to read
-                        one, which is why this is EmailReference and not
-                        EmailEntry — and it carries the record's zone, so every
-                        reader names the same day.
-
-                        The graph counts attendees and organizers as well as
-                        correspondents, so a receipt can be a meeting or a
-                        call. Those keep the plain line: an email's icon and an
-                        email's "No subject" on a meeting would tell a reader
-                        it was a mail. */}
-                    {r.kind === "email" ? (
-                      <EmailReference
-                        subject={r.subject}
-                        occurredAt={formatDate(
-                          r.occurred_at,
-                          locale,
-                          recordZone,
-                        )}
-                      />
-                    ) : (
-                      <>
-                        {r.subject ?? t("person.graph.untitledMessage")} ·{" "}
-                        {formatDate(r.occurred_at, locale, recordZone)}
-                      </>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              <ReceiptList receipts={receipts} />
             ) : (
               <p className="pn-counts">{t("person.graph.countsOnly")}</p>
             )}
