@@ -67,6 +67,7 @@ Each of "story", "blocker", "buyer", "verdict.because" and "move_reason" is a li
 Every sentence lists the ids it rests on in its own "evidence", from the summary's "id" fields. Ids belong in "evidence" only — never in any "text" or in "opening".
 Ground every word in the summary. Never invent a person, a company, a date, a number or an event. If the summary does not say it, do not write it.
 Every timeline entry carries "when": "past" for something that has happened, "scheduled" for something booked and still ahead. A scheduled entry is a plan, never an event — never write that it took place, and never measure silence from it.
+"open_tasks" is work NOBODY HAS DONE YET, whatever its date says. A task there carries "state": "open" or "overdue". Never write that a task's work happened, was sent, was followed up or was delivered — an overdue task is a promise already broken, not a thing that took place, and it is the strongest reason to act rather than evidence that somebody already did. Completed work is on the timeline instead, as the event it became.
 "health" scores four things from 0 to 1, where low is bad: activity_recency, stage_velocity, engagement (how many people are actually talking to us) and commitments (promises we have kept). They are signals to reason from, never facts to state — never write a score, a factor name or the word "health" in the card. A low score tells you where to look in "timeline"; the timeline's dates are what you write.
 Never write the same fact in two sections. Each one answers a different question.
 `
@@ -178,7 +179,25 @@ type TaskIn struct {
 	ID      string `json:"id"`
 	Subject string `json:"subject"`
 	Due     string `json:"due,omitempty"`
+	// State is "open" or "overdue" — never "done", because a done task is not
+	// in this list at all.
+	//
+	// Said rather than left to be worked out from `due` against today: the
+	// model has no clock, and "overdue" is the whole difference between a
+	// promise still in hand and one already broken.
+	State string `json:"state"`
 }
+
+// The two states a task in this list can be in. A third would mean a task that
+// is not open, which belongs on the timeline as the event it became.
+//
+// Exported because the certification fixture builds this same input, and a
+// case that spelled the state itself could grade a value production never
+// sends.
+const (
+	TaskStateOpen    = "open"
+	TaskStateOverdue = "overdue"
+)
 
 // RoomIn is the Deal Room's state and what the buyer said in it.
 type RoomIn struct {

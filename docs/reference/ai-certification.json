@@ -1,11 +1,11 @@
 {
   "totals": {
     "sites": 40,
-    "sites_best_current": 33,
+    "sites_best_current": 32,
     "sites_best_partial": 0,
-    "sites_best_stale": 5,
+    "sites_best_stale": 6,
     "sites_absent": 2,
-    "scenarios": 135,
+    "scenarios": 136,
     "records": 59,
     "bindings": 10
   },
@@ -177,9 +177,9 @@
         "env": "eu_hosted"
       },
       "sites": 31,
-      "sites_current": 25,
+      "sites_current": 24,
       "sites_partial": 0,
-      "sites_stale": 6,
+      "sites_stale": 7,
       "runs": 333,
       "passed": 269,
       "reliability": 0.8078078078078078,
@@ -1550,18 +1550,14 @@
       "key": "deal_health/deal_status",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "openai_compatible",
-          "model": "openai/gpt-oss-120b",
-          "env": "eu_hosted"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
+        {
+          "name": "deal_status_an_overdue_task_is_not_done_work",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/deal_health/deal_status_overdue_task_is_not_done_01.yaml"
+        },
         {
           "name": "deal_status_offer_left_hanging",
           "expects": "accepted",
@@ -1580,10 +1576,10 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
-          "scenarios_total": 2,
+          "scenarios_measured": 0,
+          "scenarios_total": 3,
           "runs": 6,
           "passed": 6,
           "reliability": 1,
@@ -1595,7 +1591,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since, or the prompts built from them have: deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is"
         }
       ]
     },
