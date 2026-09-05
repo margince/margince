@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "82477560c70628dec66480ddcd20445a6820cd2839728e5c453357f40be0e2ec"
+const jobContractHash = "33dfa88be4755d1810da2a5d587de7f6dd352ca7856b924998ecb2b949657a2a"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -68,24 +68,17 @@ type declaredJobArgs interface {
 		IntroExpiryArgs |
 		KnowledgeIngestArgs |
 		LinkReconcileArgs |
-		LinkReconcileWorkspaceArgs |
 		LinkedInRematchArgs |
-		LinkedInRematchWorkspaceArgs |
 		OrgNamePromotionArgs |
 		OverlayReconcileArgs |
-		OverlayReconcileWorkspaceArgs |
 		OverlayRefetchArgs |
 		OwedVerdictArgs |
 		ParticipantBackfillArgs |
-		ParticipantBackfillWorkspaceArgs |
 		PrivacyRetentionArgs |
-		ProviderLookupArgs |
 		ProviderLookupSweepArgs |
-		ProviderRunPollArgs |
 		ProviderRunPollSweepArgs |
 		ProviderRunSubmitArgs |
 		SignalScanArgs |
-		SignalScanWorkspaceArgs |
 		SiteDeepReadArgs |
 		TechnicalEnrichBackfillArgs |
 		TechnicalEnrichOrganizationArgs |
@@ -182,15 +175,8 @@ var (
 	_ jobs.WorkspaceScoped = GmailWatchRenewArgs{}
 	_ jobs.WorkspaceScoped = GraphWatchRenewArgs{}
 	_ jobs.WorkspaceScoped = KnowledgeIngestArgs{}
-	_ jobs.WorkspaceScoped = LinkReconcileWorkspaceArgs{}
-	_ jobs.WorkspaceScoped = LinkedInRematchWorkspaceArgs{}
-	_ jobs.WorkspaceScoped = OverlayReconcileWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = OverlayRefetchArgs{}
-	_ jobs.WorkspaceScoped = ParticipantBackfillWorkspaceArgs{}
-	_ jobs.WorkspaceScoped = ProviderLookupArgs{}
-	_ jobs.WorkspaceScoped = ProviderRunPollArgs{}
 	_ jobs.WorkspaceScoped = ProviderRunSubmitArgs{}
-	_ jobs.WorkspaceScoped = SignalScanWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = SiteDeepReadArgs{}
 	_ jobs.WorkspaceScoped = TechnicalEnrichOrganizationArgs{}
 	_ jobs.WorkspaceScoped = TelegramIngestArgs{}

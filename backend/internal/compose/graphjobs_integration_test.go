@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -69,15 +68,11 @@ func TestTheBackfillWorkerRecoversHistoryAndThenStops(t *testing.T) {
 	person := seedGraphPerson(t, e, "Legacy Contact")
 	legacyInteraction(t, e, person, "human:"+e.Rep1.String())
 
-	// The WORKSPACE worker is what backfills; the dispatcher beside it only
-	// enumerates and enqueues, and driving it here would need a River client.
-	worker := &participantBackfillWorkspaceWorker{
-		participantBackfillWorker: newParticipantBackfillWorker(e.Pool, quietLog()),
-	}
-	pass := &river.Job[ParticipantBackfillWorkspaceArgs]{
-		Args: ParticipantBackfillWorkspaceArgs{Workspace: e.WS},
-	}
-	if err := worker.Work(context.Background(), pass); err != nil {
+	// The per-workspace turn, which is what River's row now walks rather than
+	// what it carries (ADR-0103): Work enumerates the fleet, and this suite is
+	// about one tenant. It is the same code Work calls per tenant.
+	worker := newParticipantBackfillWorker(e.Pool, quietLog())
+	if err := worker.backfillOneWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("backfill pass: %v", err)
 	}
 
@@ -96,7 +91,7 @@ func TestTheBackfillWorkerRecoversHistoryAndThenStops(t *testing.T) {
 	// makes it safe to re-run after a crash — and what stops the daily
 	// schedule from re-doing the same work forever.
 	before := participants
-	if err := worker.Work(context.Background(), pass); err != nil {
+	if err := worker.backfillOneWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("second backfill pass: %v", err)
 	}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
