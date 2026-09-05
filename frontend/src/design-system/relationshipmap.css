@@ -7,14 +7,26 @@
  * all of it and carries none of it alone.
  */
 
+/* The wrapper the fold measures. The panel goes beside the picture only when
+ * the picture's OWN column has room for both, and that column is not the
+ * window: with the nav open and the record's details pane open, a 1440px
+ * window leaves this map barely half of it, and a fold that read the window
+ * kept the panel beside a drawing it had squeezed off the right edge. */
 .rmap {
+  container: rmap / inline-size;
+}
+
+.rmap-layout {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-@media (min-width: 900px) {
-  .rmap {
+/* 960px is the width at which the map's track still shows the drawing at
+ * roughly six-sevenths of its natural size once the panel and the gap are paid
+ * for — the smallest the names stay comfortably readable at. */
+@container rmap (min-width: 960px) {
+  .rmap-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 280px;
     grid-template-areas: "map panel" "note panel";
@@ -35,8 +47,10 @@
   }
 }
 
-/* The drawing has an intrinsic width, so a narrow screen scrolls the PICTURE
- * inside its own box rather than making the page scroll sideways. */
+/* The drawing has an intrinsic width. A box narrower than that shrinks the
+ * whole picture to fit — the viewBox keeps every node and edge in proportion —
+ * down to the floor below which a name is no longer readable; past that floor
+ * the box scrolls the PICTURE rather than making the page scroll sideways. */
 .rmap-scroll {
   overflow-x: auto;
   background: var(--pane);
@@ -45,8 +59,15 @@
   padding: var(--space-3);
 }
 
+/* Never larger than drawn: the width attribute is the ceiling, so a wide
+ * column leaves the picture at its natural size rather than blowing it up.
+ * 600px is four-fifths of that natural width, where a 13px name is still
+ * above 10px. */
 .rmap-svg {
   display: block;
+  max-width: 100%;
+  height: auto;
+  min-width: 600px;
 }
 
 /* A lane heading IS an eyebrow, and the eyebrow has ONE spelling — the
