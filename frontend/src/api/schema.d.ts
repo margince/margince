@@ -24262,7 +24262,7 @@ export interface components {
              * @default quarter
              * @enum {string}
              */
-            period: "quarter" | "month";
+            period: "quarter" | "month" | "week";
             /**
              * Format: date
              * @description A day inside the period being called. Omitted means today's period.
@@ -49329,8 +49329,8 @@ export interface operations {
     getForecast: {
         parameters: {
             query?: {
-                /** @description The window length. Quarters follow the installation's financial year. */
-                period?: "quarter" | "month";
+                /** @description The window length. Quarters and months follow the installation's financial year; a week is the working week, Monday to Sunday in the installation's own zone, and moves with no fiscal year. */
+                period?: "quarter" | "month" | "week";
                 /** @description Which period to read, by naming a day inside it. Omitted means today's. A DAY rather than an instant: which period a moment falls in is a question about the installation's calendar, not about the caller's clock. */
                 as_of?: string;
                 scope_kind?: "workspace" | "team" | "owner";
@@ -49502,7 +49502,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description The window length. Quarters follow the installation's financial year. */
-                period?: "quarter" | "month";
+                period?: "quarter" | "month" | "week";
                 /** @description Which period to read, named by a day inside it. Defaults to today, so a caller who names nothing asks about the period they are in. */
                 as_of?: string;
                 scope_kind?: "workspace" | "team" | "owner";

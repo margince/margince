@@ -7109,6 +7109,7 @@ func (e MyAgentGrantState) Valid() bool {
 const (
 	NewForecastCallPeriodMonth   NewForecastCallPeriod = "month"
 	NewForecastCallPeriodQuarter NewForecastCallPeriod = "quarter"
+	NewForecastCallPeriodWeek    NewForecastCallPeriod = "week"
 )
 
 // Valid indicates whether the value is a known member of the NewForecastCallPeriod enum.
@@ -7117,6 +7118,8 @@ func (e NewForecastCallPeriod) Valid() bool {
 	case NewForecastCallPeriodMonth:
 		return true
 	case NewForecastCallPeriodQuarter:
+		return true
+	case NewForecastCallPeriodWeek:
 		return true
 	default:
 		return false
@@ -14987,6 +14990,7 @@ func (e GetFilterVocabularyParamsResource) Valid() bool {
 const (
 	GetForecastParamsPeriodMonth   GetForecastParamsPeriod = "month"
 	GetForecastParamsPeriodQuarter GetForecastParamsPeriod = "quarter"
+	GetForecastParamsPeriodWeek    GetForecastParamsPeriod = "week"
 )
 
 // Valid indicates whether the value is a known member of the GetForecastParamsPeriod enum.
@@ -14995,6 +14999,8 @@ func (e GetForecastParamsPeriod) Valid() bool {
 	case GetForecastParamsPeriodMonth:
 		return true
 	case GetForecastParamsPeriodQuarter:
+		return true
+	case GetForecastParamsPeriodWeek:
 		return true
 	default:
 		return false
@@ -15026,6 +15032,7 @@ func (e GetForecastParamsScopeKind) Valid() bool {
 const (
 	ForecastCallsPeriodMonth   ListForecastCallsParamsPeriod = "month"
 	ForecastCallsPeriodQuarter ListForecastCallsParamsPeriod = "quarter"
+	ForecastCallsPeriodWeek    ListForecastCallsParamsPeriod = "week"
 )
 
 // Valid indicates whether the value is a known member of the ListForecastCallsParamsPeriod enum.
@@ -15034,6 +15041,8 @@ func (e ListForecastCallsParamsPeriod) Valid() bool {
 	case ForecastCallsPeriodMonth:
 		return true
 	case ForecastCallsPeriodQuarter:
+		return true
+	case ForecastCallsPeriodWeek:
 		return true
 	default:
 		return false
@@ -36636,7 +36645,7 @@ type GetFilterVocabularyParamsResource string
 
 // GetForecastParams defines parameters for GetForecast.
 type GetForecastParams struct {
-	// Period The window length. Quarters follow the installation's financial year.
+	// Period The window length. Quarters and months follow the installation's financial year; a week is the working week, Monday to Sunday in the installation's own zone, and moves with no fiscal year.
 	Period *GetForecastParamsPeriod `form:"period,omitempty" json:"period,omitempty"`
 
 	// AsOf Which period to read, by naming a day inside it. Omitted means today's. A DAY rather than an instant: which period a moment falls in is a question about the installation's calendar, not about the caller's clock.
