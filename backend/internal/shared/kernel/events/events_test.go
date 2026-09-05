@@ -154,6 +154,10 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// so a consumer that saw only "changed" would resume mail the subject
 		// asked us to stop. The distinction IS the type.
 		"suppressed": true,
+		// A stop was taken back. The verb carries its object for the reason
+		// password_link_issued does: this stream also carries the recording, and
+		// "lifted" alone would not say which of the two happened.
+		"suppression_lifted": true,
 	}
 
 	for _, typ := range Types() {

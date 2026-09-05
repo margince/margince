@@ -533,6 +533,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/people/{id}/consent/double-opt-in":                         {Op: "issueDoubleOptIn", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people/{id}/consent/qualifying-events":                     {Op: "recordQualifyingEvent", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people/{id}/consent/suppress":                              {Op: "suppressPerson", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/people/{id}/consent/suppress/{suppressionId}/lift":         {Op: "liftSuppression", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people/{id}/draft-email":                                   {Op: "draftPersonEmail", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people/{id}/enrichment-runs":                               {Op: "createPersonEnrichmentRun", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people/{id}/intro-note-draft":                              {Op: "draftIntroNote", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

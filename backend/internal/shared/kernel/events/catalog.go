@@ -181,6 +181,11 @@ var catalog = map[string]struct {
 	// consent: it outranks a grant and a later re-grant does not erase it, so a
 	// consumer folding the two would resume mail the subject asked us to stop.
 	"consent.suppressed": {personStreamEntity, 1},
+	// A stop taken back by somebody who outranked the level that set it. Its own
+	// type because a consumer that saw only the suppression would keep treating
+	// the subject as stopped forever, which is the state this event exists to
+	// end.
+	"consent.suppression_lifted": {personStreamEntity, 1},
 	// What a contact promised, asked or decided, and a human's correction of
 	// it. Both ride the PERSON stream: a subscriber reacting to what somebody
 	// said wants the person, and the claim id rides the payload for the reader
