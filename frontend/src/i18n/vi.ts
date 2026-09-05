@@ -4829,9 +4829,11 @@ export const vi = {
     "Ở đây không cần làm gì — cứ đi tiếp, phần còn lại sẽ tự xong.",
   "ob.conv.voice.composer": "Dán đoạn văn bản bạn viết vào đây",
   "ob.conv.voice.dropHint":
-    "Bạn cũng có thể thả tệp vào bất cứ đâu trong cuộc trò chuyện này.",
+    "Bạn cũng có thể thả tệp vào bất cứ đâu trong cuộc trò chuyện này: .txt, .md, .pdf, .docx, hoặc bản ghi .vtt, .srt hay .json.",
   "ob.conv.voice.fileSkipped":
-    "Tôi không đọc được {name}. Tôi nhận .txt, .md, .vtt, .srt hoặc .json.",
+    "Tôi không đọc được {name}. Tôi nhận .txt, .md, .pdf, .docx, .vtt, .srt hoặc .json.",
+  "ob.conv.voice.fileUnreadable":
+    "Tôi không mở được {name}. Nếu tệp có mật khẩu hoặc bị hỏng, hãy dán văn bản thay vì tải tệp.",
   "ob.conv.voice.fileEmpty":
     "Trong {name} không có chữ nào, nên không tính được gì.",
   "ob.conv.voice.reactionTranscript":
@@ -6255,7 +6257,7 @@ export const vi = {
   "settings.voice.addSource": "Thêm mẫu văn bản",
   "settings.voice.addFirstLabel": "Mẫu văn đầu tiên của bạn",
   "settings.voice.dropHint":
-    "Kéo thả tệp vào đây hoặc chọn tệp. .txt, .md, .vtt, .srt hoặc .json, nhiều tệp cùng lúc cũng được.",
+    "Kéo thả tệp vào đây hoặc chọn tệp. .txt, .md, .pdf, .docx, .vtt, .srt hoặc .json, nhiều tệp cùng lúc cũng được.",
   "settings.voice.dropEmpty":
     "Kéo thả văn bản của bạn vào đây, hoặc nhấp để chọn tệp",
   "settings.voice.whyToggle": "Vì sao điều này quan trọng",
@@ -6263,7 +6265,7 @@ export const vi = {
     "Margince soạn email cho bạn bằng chính lời văn của bạn, nên thư gửi đi nghe giống bạn. Nó học giọng điệu, nhịp và cách diễn đạt từ văn bản của chính bạn, không phải của ai khác. Các mẫu của bạn được giữ riêng tư.",
   "settings.voice.worksTitle": "Loại nào hiệu quả nhất",
   "settings.voice.worksEmails":
-    "Email đã gửi, lưu dưới dạng .txt hoặc .md. Chúng cho thấy bạn viết thế nào khi muốn điều gì đó.",
+    "Email đã gửi, lưu dưới dạng .txt, .md, .pdf hoặc .docx. Chúng cho thấy bạn viết thế nào khi muốn điều gì đó.",
   "settings.voice.worksDocs": "Đề xuất, bài đăng và bất cứ thứ gì bạn tự viết.",
   "settings.voice.worksTranscripts":
     "Bản ghi cuộc gọi hoặc cuộc họp (.vtt, .srt, .json hoặc bản xuất văn bản). Tôi sẽ hỏi bạn là người nói nào và chỉ giữ lại lượt nói của bạn.",
@@ -6284,7 +6286,9 @@ export const vi = {
     "{name}: giữ {kept} trên {total} từ. Chỉ lượt nói của bạn được tính.",
   "settings.voice.noticeAdded": "{name}: đã thêm {words} từ.",
   "settings.voice.noticeSkippedType":
-    "Đã bỏ qua {name} — chỉ đọc được tệp văn bản.",
+    "Đã bỏ qua {name} — tôi đọc được .txt, .md, .pdf, .docx, .vtt, .srt hoặc .json.",
+  "settings.voice.noticeSkippedUnreadable":
+    "Không mở được {name}. Nếu tệp có mật khẩu hoặc bị hỏng, hãy dán văn bản thay vì tải tệp.",
   "settings.voice.noticeSkippedEmpty":
     "Đã bỏ qua {name} — tệp không có nội dung.",
   "settings.voice.noticeDismissed":

@@ -1,4 +1,7 @@
 /** @vitest-environment jsdom */
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -319,6 +322,21 @@ async function uploadFile(name: string, content: string) {
   }
 }
 
+const testdata = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "testdata",
+);
+
+// A drop on the window itself, where the hint promises one lands anywhere.
+function dropOnWindow(files: File[]) {
+  const drop = new Event("drop", { bubbles: true, cancelable: true });
+  Object.defineProperty(drop, "dataTransfer", {
+    value: { types: ["Files"], files },
+  });
+  window.dispatchEvent(drop);
+}
+
 // Path-suffix matching so "/sources" never also counts "/sources/preview".
 function requestsTo(calls: Request[], path: string, method: string) {
   return calls.filter(
@@ -454,6 +472,45 @@ describe("the conversational voice act", () => {
 
     expect(drop.defaultPrevented).toBe(true);
     expect(requestsTo(calls, "/sources", "POST").length).toBe(0);
+  });
+
+  // The board is the only surface left: with no rail thread, a drop that went
+  // nowhere has to be answered where the reader is looking, and the answer
+  // has to say which formats WOULD have worked.
+  it("names a dropped file it cannot read on the board, with the formats it takes, and ingests nothing", async () => {
+    const calls = stubApi({});
+    render(<VoiceHarness initial={collectingState()} />);
+
+    dropOnWindow([new File(["binary"], "photo.png", { type: "image/png" })]);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe(
+      "I cannot read photo.png. I take .txt, .md, .pdf, .docx, .vtt, .srt, or .json.",
+    );
+    expect(requestsTo(calls, "/sources/preview", "POST").length).toBe(0);
+    expect(requestsTo(calls, "/sources", "POST").length).toBe(0);
+  });
+
+  it("takes a dropped PDF in as its text, on the same wire a text file uses", async () => {
+    const calls = stubApi({
+      preview: documentPreview,
+      ingests: [{ stats: documentStats, summary: summaryOf(900) }],
+    });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    dropOnWindow([
+      new File([readFileSync(join(testdata, "proposal.pdf"))], "proposal.pdf", {
+        type: "application/pdf",
+      }),
+    ]);
+
+    expect(await screen.findByText("900 words")).toBeTruthy();
+    const ingest = requestsTo(calls, "/sources", "POST");
+    expect(ingest.length).toBe(1);
+    const body = (await ingest[0].clone().json()) as Record<string, unknown>;
+    expect(body.format).toBe("text");
+    expect(body.source_label).toBe("proposal.pdf");
+    expect(body.content).toContain("Here is the proposal we discussed.");
   });
 
   it("refuses an unattributed transcript honestly and counts nothing", async () => {

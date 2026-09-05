@@ -4884,9 +4884,11 @@ export const de = {
     "Hier ist nichts zu tun — mach weiter, der Rest läuft von selbst.",
   "ob.conv.voice.composer": "Füge hier deinen Text ein",
   "ob.conv.voice.dropHint":
-    "Du kannst Dateien auch überall in dieses Gespräch ziehen.",
+    "Du kannst Dateien auch überall in dieses Gespräch ziehen: .txt, .md, .pdf, .docx oder ein Transkript als .vtt, .srt oder .json.",
   "ob.conv.voice.fileSkipped":
-    "Ich kann {name} nicht lesen. Ich nehme .txt, .md, .vtt, .srt oder .json.",
+    "Ich kann {name} nicht lesen. Ich nehme .txt, .md, .pdf, .docx, .vtt, .srt oder .json.",
+  "ob.conv.voice.fileUnreadable":
+    "Ich konnte {name} nicht öffnen. Wenn die Datei passwortgeschützt oder beschädigt ist, füge den Text stattdessen ein.",
   "ob.conv.voice.fileEmpty":
     "In {name} stehen keine Wörter, also wurde nichts gezählt.",
   "ob.conv.voice.reactionTranscript":
@@ -6321,7 +6323,7 @@ export const de = {
   "settings.voice.addSource": "Schreibproben hinzufügen",
   "settings.voice.addFirstLabel": "Deine erste Schreibprobe",
   "settings.voice.dropHint":
-    "Dateien hier ablegen oder auswählen. .txt, .md, .vtt, .srt oder .json, gern mehrere auf einmal.",
+    "Dateien hier ablegen oder auswählen. .txt, .md, .pdf, .docx, .vtt, .srt oder .json, gern mehrere auf einmal.",
   "settings.voice.dropEmpty":
     "Deine Texte hier ablegen oder klicken, um Dateien auszuwählen",
   "settings.voice.whyToggle": "Warum das wichtig ist",
@@ -6329,7 +6331,7 @@ export const de = {
     "Margince entwirft E-Mails für dich in deinen eigenen Worten, damit klingt, was rausgeht, nach dir. Es lernt Ton, Rhythmus und Formulierungen aus deinen eigenen Texten, und von niemandem sonst. Deine Proben bleiben privat.",
   "settings.voice.worksTitle": "Was am besten funktioniert",
   "settings.voice.worksEmails":
-    "Gesendete E-Mails, als .txt oder .md gespeichert. Sie zeigen, wie du schreibst, wenn du etwas willst.",
+    "Gesendete E-Mails, als .txt, .md, .pdf oder .docx gespeichert. Sie zeigen, wie du schreibst, wenn du etwas willst.",
   "settings.voice.worksDocs":
     "Angebote, Posts und alles andere, was du selbst geschrieben hast.",
   "settings.voice.worksTranscripts":
@@ -6353,7 +6355,9 @@ export const de = {
     "{name}: {kept} von {total} Wörtern behalten. Nur deine Beiträge zählen.",
   "settings.voice.noticeAdded": "{name}: {words} Wörter hinzugefügt.",
   "settings.voice.noticeSkippedType":
-    "{name} wurde übersprungen – lesbar sind nur Textdateien.",
+    "{name} wurde übersprungen – ich lese .txt, .md, .pdf, .docx, .vtt, .srt oder .json.",
+  "settings.voice.noticeSkippedUnreadable":
+    "{name} ließ sich nicht öffnen. Wenn die Datei passwortgeschützt oder beschädigt ist, füge den Text stattdessen ein.",
   "settings.voice.noticeSkippedEmpty":
     "{name} wurde übersprungen – die Datei enthält keinen Text.",
   "settings.voice.noticeDismissed":
