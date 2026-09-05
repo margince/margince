@@ -322,7 +322,8 @@ func TestTheBoundFallsInsideTheKindsTheCallerAskedFor(t *testing.T) {
 	f.drain(t)
 
 	asked := []string{string(ai.TaskSummarize)}
-	_, settled, err := aiactivity.NewStore(f.env.DB()).Mine(f.ctx, f.midnightOf(t), asked)
+	feed, err := aiactivity.NewStore(f.env.DB()).Mine(f.ctx, f.midnightOf(t), asked)
+	settled := feed.Settled
 	if err != nil {
 		t.Fatalf("Mine: %v", err)
 	}
@@ -335,7 +336,8 @@ func TestTheBoundFallsInsideTheKindsTheCallerAskedFor(t *testing.T) {
 
 	// And the unfiltered read is still the COMPLETE record: an omitted filter
 	// must not quietly inherit whatever the last caller asked for.
-	_, everything, err := aiactivity.NewStore(f.env.DB()).Mine(f.ctx, f.midnightOf(t), nil)
+	all, err := aiactivity.NewStore(f.env.DB()).Mine(f.ctx, f.midnightOf(t), nil)
+	everything := all.Settled
 	if err != nil {
 		t.Fatalf("Mine unfiltered: %v", err)
 	}

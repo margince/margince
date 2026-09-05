@@ -25489,6 +25489,12 @@ export interface components {
             running: components["schemas"]["AiActivityItem"][];
             /** @description Occurrences that SETTLED since midnight in the server's own timezone (not the reader's, and not UTC unless the server runs on it), newest-settled first, at most 10. */
             recent: components["schemas"]["AiActivityItem"][];
+            /**
+             * @description What went wrong for this caller today — `failed` and `degraded`, newest-settled first — since the same midnight `recent` is bounded by.
+             *     NOT a subset of `recent`, which is why it is here. `recent` carries the newest ten occurrences of ANY outcome, so ten later successes push a fault out of it; a client holding a fault until somebody acknowledges it would then release one nobody ever saw, which is exactly the overnight run that failed at four in the morning. The two overlap and are both true: a fault that settled a minute ago appears in each.
+             *     A run live past its lease is absent on purpose — it is reported as `stalled` in `running`, and listing it here as well would report one occurrence as two.
+             */
+            faults: components["schemas"]["AiActivityItem"][];
         };
         /**
          * @description A scheduled agent a rep can grant standing authority to. The set matches

@@ -34,6 +34,17 @@ const recentBound = 10
 // cutting a finished one.
 const liveBound = 25
 
+// faultBound caps what went wrong today.
+//
+// Its own number rather than recentBound's, because it answers a different
+// question: recentBound is "how much history does this installation keep on a
+// person", and this is "how many broken runs can a reader be asked to deal with
+// before the list stops helping". Higher than recentBound so that a day whose
+// every settled run failed still delivers every one of them — the arm exists so
+// success cannot evict a fault, and a bound below the settled one would let a
+// fault evict a fault instead.
+const faultBound = 25
+
 // The two free-text columns this read forwards are capped on the way to the
 // wire. Neither is server-authored prose of bounded length: summary can be a
 // model's whole output, and an occurrence a prompt injection reached can
@@ -48,6 +59,29 @@ const (
 	DegradeReasonBound = 500
 	SubjectLabelBound  = 120
 )
+
+// The three arms feedSQL labels its rows with. Named because the statement
+// writes them and the scan reads them, and a literal that agreed in only one of
+// the two places would route every row of that arm to the default branch.
+const (
+	armLive    = "live"
+	armSettled = "settled"
+	armFault   = "fault"
+)
+
+// Feed is one person's view of the AI's work: what is in flight, what settled
+// today, and what went wrong today.
+//
+// Faults are NOT a subset of Settled, which is the whole point of carrying
+// them: Settled is the newest ten occurrences of any outcome, so ten later
+// successes push a fault off it while the reader still has not seen it. They do
+// overlap, and deliberately — a fault that settled a minute ago appears in both,
+// because both statements about it are true.
+type Feed struct {
+	Live    []Item
+	Settled []Item
+	Faults  []Item
+}
 
 // Item is one occurrence, as facts. The reader's locale decides the words, so
 // nothing here is a sentence.
@@ -106,9 +140,19 @@ const StateStalled = "stalled"
 //	         the union because the bound has to fall on the client's own set —
 //	         filtering the result would hand back ten rows the caller draws
 //	         nothing for and call the rail empty.
+//	faults   what WENT WRONG today, and the arm this issue exists for. Bounded
+//	         like settled, but on its own count: `settled` is the newest ten
+//	         occurrences of any outcome, so ten later successes push a fault off
+//	         it — and an unacknowledged fault the reader never saw is exactly
+//	         what the orb is holding. Failed and degraded both count: one is a
+//	         break and the other kept partial state, and the rail draws them red
+//	         and amber rather than dropping either. The stalled shape is NOT
+//	         here, because a run past its lease is still live and the first arm
+//	         already carries it — listing it twice would report one occurrence
+//	         as two.
 const feedSQL = `
 (
-  SELECT true AS live, id, kind,
+  SELECT 'live' AS arm, id, kind,
          CASE WHEN stale_after IS NOT NULL AND stale_after < now() THEN 'stalled' ELSE state END,
          COALESCE(started_at, queued_at), finished_at,
          left(degrade_reason, $4), left(summary, $5), left(subject_label, $8)
@@ -121,7 +165,7 @@ const feedSQL = `
 )
 UNION ALL
 (
-  SELECT false AS live, id, kind, state,
+  SELECT 'settled' AS arm, id, kind, state,
          COALESCE(started_at, queued_at), finished_at,
          left(degrade_reason, $4), left(summary, $5), left(subject_label, $8)
     FROM ai_task_run
@@ -131,6 +175,19 @@ UNION ALL
      AND ($7::text[] IS NULL OR kind = ANY($7))
    ORDER BY finished_at DESC, id DESC
    LIMIT $3
+)
+UNION ALL
+(
+  SELECT 'fault' AS arm, id, kind, state,
+         COALESCE(started_at, queued_at), finished_at,
+         left(degrade_reason, $4), left(summary, $5), left(subject_label, $8)
+    FROM ai_task_run
+   WHERE actor_user_id = $1
+     AND state IN ('degraded','failed')
+     AND finished_at >= $2
+     AND ($7::text[] IS NULL OR kind = ANY($7))
+   ORDER BY finished_at DESC, id DESC
+   LIMIT $9
 )`
 
 // Mine is what the AI is doing for THE CALLER now, and what it finished for
@@ -146,10 +203,10 @@ UNION ALL
 // complete record — and that is deliberately what an omitted filter gives:
 // every AI task reports here, so the server's answer is complete unless a
 // client says which part of it that client draws.
-func (s *Store) Mine(ctx context.Context, startOfToday time.Time, kinds []string) (live, settled []Item, err error) {
+func (s *Store) Mine(ctx context.Context, startOfToday time.Time, kinds []string) (Feed, error) {
 	person, personErr := personalReader(ctx)
 	if personErr != nil {
-		return nil, nil, personErr
+		return Feed{}, personErr
 	}
 	// An EMPTY slice is not an absent one and must not collapse into it: a
 	// caller that asked for no kinds gets no rows, where nil asks for all of
@@ -159,33 +216,42 @@ func (s *Store) Mine(ctx context.Context, startOfToday time.Time, kinds []string
 	if kinds != nil {
 		filter = kinds
 	}
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+	feed := Feed{Live: []Item{}, Settled: []Item{}, Faults: []Item{}}
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, txErr := tx.Query(ctx, feedSQL,
 			person, startOfToday, recentBound, DegradeReasonBound, SummaryBound, liveBound, filter,
-			SubjectLabelBound)
+			SubjectLabelBound, faultBound)
 		if txErr != nil {
 			return txErr
 		}
 		defer rows.Close()
-		live, settled = []Item{}, []Item{}
+		feed = Feed{Live: []Item{}, Settled: []Item{}, Faults: []Item{}}
 		for rows.Next() {
 			var item Item
-			var isLive bool
-			if scanErr := rows.Scan(&isLive, &item.ID, &item.Kind, &item.State,
+			var arm string
+			if scanErr := rows.Scan(&arm, &item.ID, &item.Kind, &item.State,
 				&item.StartedAt, &item.FinishedAt, &item.DegradeReason, &item.Summary,
 				&item.SubjectLabel); scanErr != nil {
 				return scanErr
 			}
-			if isLive {
-				live = append(live, item)
-				continue
+			// An arm the statement cannot produce is a statement this loop has
+			// stopped understanding, and silently dropping the row would report
+			// a quieter day than the one the database answered with.
+			switch arm {
+			case armLive:
+				feed.Live = append(feed.Live, item)
+			case armSettled:
+				feed.Settled = append(feed.Settled, item)
+			case armFault:
+				feed.Faults = append(feed.Faults, item)
+			default:
+				return fmt.Errorf("unknown feed arm %q", arm)
 			}
-			settled = append(settled, item)
 		}
 		return rows.Err()
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("aiactivity: %w", err)
+		return Feed{}, fmt.Errorf("aiactivity: %w", err)
 	}
-	return live, settled, nil
+	return feed, nil
 }

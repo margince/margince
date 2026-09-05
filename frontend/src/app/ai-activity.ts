@@ -100,6 +100,16 @@ export type AiActivity = Readonly<{
   running: readonly AiActivityItem[];
   /** Occurrences that settled since local midnight, newest first. */
   recent: readonly AiActivityItem[];
+  /**
+   * What went wrong today — failed and degraded runs, newest first.
+   *
+   * Beside `recent` rather than filtered out of it, and the difference is the
+   * whole reason it exists: `recent` carries the newest ten occurrences of any
+   * outcome, so ten later successes push a fault out of it. A fault held until
+   * somebody acknowledges it would then be released with nobody having looked,
+   * which is exactly the overnight run that failed while its owner was asleep.
+   */
+  faults: readonly AiActivityItem[];
   /** Whether any AI work is live RIGHT NOW, as reported by a read that answered. */
   working: boolean;
   /**
@@ -232,10 +242,12 @@ export function useAiActivity(): AiActivity {
   const answered = query.data;
   const running = answered?.running ?? NOTHING;
   const recent = answered?.recent ?? NOTHING;
+  const faults = answered?.faults ?? NOTHING;
   const asking = useLingeringAsk(open, recent[0]?.id);
   return {
     running,
     recent,
+    faults,
     // STALLED is not working. The server derives that state for an occurrence
     // whose own source says it should have finished by now, and the chrome that
     // reads `working` pulses to say the AI is busy — so counting a stalled item
