@@ -431,10 +431,18 @@ func (s *Service) deferBudget(ctx context.Context, scanID ids.UUID, next time.Ti
 }
 
 // fail closes a claimed row. It writes under a context that outlives the
-// read's own cancellation: the one failure a cancelled read must still
-// record is that it was cancelled.
+// read's own cancellation, bounded so a dead database cannot hold the worker:
+// the one failure a cancelled read must still record is that it was
+// cancelled, and the row's update and the rail's announcement both ride it.
 func (s *Service) fail(ctx context.Context, scanID ids.UUID, reason string) error {
-	return database.WithWorkspaceTx(context.WithoutCancel(ctx), s.pool, func(tx pgx.Tx) error {
-		return fail(ctx, tx, scanID, reason)
+	recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), failWriteBudget)
+	defer cancel()
+	return database.WithWorkspaceTx(recordCtx, s.pool, func(tx pgx.Tx) error {
+		return fail(recordCtx, tx, scanID, reason)
 	})
 }
+
+// failWriteBudget bounds the write that closes a failed read: long enough
+// for a healthy database, short enough that a dead one does not keep the
+// worker's slot.
+const failWriteBudget = 5 * time.Second
