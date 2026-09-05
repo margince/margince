@@ -3,6 +3,7 @@ import { Building2, CheckCircle2, History, Mail, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useDrawsImportRun } from "../app/import-onscreen";
 import { Badge, Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { CountUp } from "../design-system/countup";
@@ -138,6 +139,11 @@ export function BackfillPanel({
   const qc = useQueryClient();
   const [window, setWindow] = useState<BackfillWindow>("6m");
   const [skipped, setSkipped] = useState(false);
+  // A run that has stopped — cancelled, failed, or finished — is history, not a
+  // reason the mailbox can never be imported again. Pressing "start another"
+  // puts the window picker back in front of the reader; the server decides
+  // whether the pick is allowed (widen-only), exactly as it does the first time.
+  const [restarting, setRestarting] = useState(false);
 
   const status = useQuery({
     queryKey: statusQueryKey(provider),
@@ -189,8 +195,12 @@ export function BackfillPanel({
       }
       return data;
     },
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: statusQueryKey(provider) }),
+    onSuccess: () => {
+      // The new run is what the reader watches now, so the picker they started
+      // it from stands down with it.
+      setRestarting(false);
+      return qc.invalidateQueries({ queryKey: statusQueryKey(provider) });
+    },
   });
 
   const cancel = useMutation({
@@ -213,13 +223,17 @@ export function BackfillPanel({
     start.error,
   );
 
+  // This card draws the run in full, so the shell's capture chip stands down
+  // while it is on screen rather than gauging the same import twice.
+  useDrawsImportRun(isLiveState(status.data?.state));
+
   // Auto-load the scope for the selected window the moment the setup view is
   // live (no run yet, not skipped) — the user sees honest scope immediately.
   // The mutation is single-flight per window; previewedWindow guards against
   // re-firing on unrelated re-renders while still refreshing on a window
   // change. This never spends: the estimate is a read; the import waits for
   // the explicit start.
-  const isSetup = !skipped && status.data?.state === "none";
+  const isSetup = !skipped && (status.data?.state === "none" || restarting);
   const [previewedWindow, setPreviewedWindow] = useState<BackfillWindow | null>(
     null,
   );
@@ -246,7 +260,7 @@ export function BackfillPanel({
   }
 
   const run = status.data;
-  if (run.state === "none") {
+  if (run.state === "none" || restarting) {
     return (
       <BackfillSetup
         window={window}
@@ -274,6 +288,19 @@ export function BackfillPanel({
       cancelling={cancel.isPending}
       cancelError={cancel.isError ? problemMessageOf(cancel.error, t) : null}
       onCancel={() => cancel.mutate()}
+      onRestart={() => {
+        // Open on the window this mailbox already ran, because the server
+        // refuses a narrower one (widen-only) and a picker that opens on a
+        // refusal is a picker that wastes the reader's first press.
+        if (run.window) {
+          setWindow(run.window);
+        }
+        // Re-count the mailbox for the pick rather than re-showing the
+        // estimate that consented to the run which just ended: it was
+        // measured before that run captured anything.
+        setPreviewedWindow(null);
+        setRestarting(true);
+      }}
     />
   );
 }
@@ -473,11 +500,16 @@ function RunView({
   cancelling,
   cancelError,
   onCancel,
+  onRestart,
 }: {
   run: BackfillStatus;
   cancelling: boolean;
   cancelError: string | null;
   onCancel: () => void;
+  // Put the window picker back in front of the reader. Offered on every run
+  // that has stopped, which is every state this view draws that is not live:
+  // stopping an import is a decision about this run, never about the mailbox.
+  onRestart: () => void;
 }) {
   const t = useT();
   const { locale } = useLocale();
@@ -533,13 +565,17 @@ function RunView({
           {run.last_error_class ? ` (${run.last_error_class})` : ""}
         </p>
       )}
-      {live && (
-        <div className="backfill-foot">
+      <div className="backfill-foot">
+        {live ? (
           <Button small disabled={cancelling} onClick={onCancel}>
             {t("backfill.cancel")}
           </Button>
-        </div>
-      )}
+        ) : (
+          <Button small onClick={onRestart}>
+            {t("backfill.restart")}
+          </Button>
+        )}
+      </div>
       {live && cancelError && (
         <p className="t-caption backfill-error">{cancelError}</p>
       )}

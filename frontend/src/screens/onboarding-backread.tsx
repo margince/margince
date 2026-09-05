@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useDrawsImportRun } from "../app/import-onscreen";
 import { Button, Radio, Skeleton } from "../design-system/atoms";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -127,6 +128,11 @@ export function OnboardingBackread({
   const t = useT();
   const qc = useQueryClient();
   const [selected, setSelected] = useState<BackreadWindow>(DEFAULT_WINDOW);
+  // A read that has stopped — cancelled, failed or finished — is history, not a
+  // mailbox that can never be read again. This puts the window pick back in
+  // front of the reader; the server still decides whether the pick is allowed
+  // (widen-only), exactly as it does the first time.
+  const [restarting, setRestarting] = useState(false);
 
   const status = useQuery({
     queryKey: statusQueryKey(provider),
@@ -176,8 +182,12 @@ export function OnboardingBackread({
       }
       return data;
     },
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: statusQueryKey(provider) }),
+    onSuccess: () => {
+      // The new read is what the reader watches now, so the picker they started
+      // it from stands down with it.
+      setRestarting(false);
+      return qc.invalidateQueries({ queryKey: statusQueryKey(provider) });
+    },
   });
 
   const cancel = useMutation({
@@ -195,10 +205,14 @@ export function OnboardingBackread({
       qc.invalidateQueries({ queryKey: statusQueryKey(provider) }),
   });
 
+  // This step draws the run in full, so the shell's capture chip stands down
+  // for as long as it is on screen rather than gauging the same import twice.
+  useDrawsImportRun(isLive(status.data?.state));
+
   // The scope loads itself for whichever window is selected: the first thing a
   // newly-connected user sees is honest scope, not an empty form. A preview is
   // a read and spends nothing; the spend still waits for the explicit start.
-  const isSetup = status.data?.state === "none";
+  const isSetup = status.data?.state === "none" || restarting;
   const [previewedWindow, setPreviewedWindow] = useState<BackreadWindow | null>(
     null,
   );
@@ -268,12 +282,23 @@ export function OnboardingBackread({
     );
   }
 
+  const run = status.data;
   return (
     <BackreadRun
-      run={status.data}
+      run={run}
       cancelling={cancel.isPending}
       cancelProblem={safeDetail(cancel.isError, cancel.error, t)}
       onCancel={() => cancel.mutate()}
+      onRestart={() => {
+        // Opened on the window this mailbox already read, because the server
+        // refuses a narrower one — a picker that opens on a refusal wastes the
+        // reader's first press.
+        setSelected(run.window ?? DEFAULT_WINDOW);
+        // Re-count the mailbox for the pick rather than re-showing the estimate
+        // that consented to the read which just ended.
+        setPreviewedWindow(null);
+        setRestarting(true);
+      }}
       onFinish={onFinish}
     />
   );
@@ -412,12 +437,17 @@ function BackreadRun({
   cancelling,
   cancelProblem,
   onCancel,
+  onRestart,
   onFinish,
 }: Readonly<{
   run: BackfillStatus;
   cancelling: boolean;
   cancelProblem: string | null;
   onCancel: () => void;
+  /** Put the window pick back in front of the reader. Offered on every read
+   *  this view draws that is not live: stopping one is a decision about that
+   *  read, never about the mailbox. */
+  onRestart: () => void;
   onFinish: (skipped: boolean) => void;
 }>) {
   const t = useT();
@@ -439,10 +469,12 @@ function BackreadRun({
         <Button variant="primary" onClick={() => onFinish(false)}>
           {live ? t("ob.backread.explore") : t("ob.s4.enterCrm")}
         </Button>
-        {live && (
+        {live ? (
           <Button disabled={cancelling} onClick={onCancel}>
             {t("ob.backread.cancel")}
           </Button>
+        ) : (
+          <Button onClick={onRestart}>{t("backfill.restart")}</Button>
         )}
       </div>
     </section>

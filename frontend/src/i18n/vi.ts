@@ -4398,6 +4398,7 @@ export const vi = {
     "Hệ thống sẽ tự thử lại; mọi thứ đã thu thập vẫn được giữ.",
   "backfill.cancel": "Dừng lượt nhập",
   "backfill.cancelledNote": "Đã dừng. Mọi thứ đã thu thập vẫn được giữ.",
+  "backfill.restart": "Bắt đầu lượt nhập khác",
   "backfill.unsupportedNote":
     "Loại hộp thư này không nhập lịch sử được — chỉ thư mới được thu thập từ giờ trở đi.",
   "backfill.narrowingNote":
