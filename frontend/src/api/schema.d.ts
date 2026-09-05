@@ -22281,6 +22281,22 @@ export interface components {
              */
             anchor_activity_id?: string | null;
             /**
+             * @description The records an account-started message files itself under, as the send named
+             *     them. Absent on a reply, which inherits its anchor's. Carried so a surface can
+             *     ask the engine the SAME question the fire will ask: the account-send preview
+             *     refuses a message that names no records, and a surface that could not name them
+             *     would fall silent on exactly the cold sends where consent matters most.
+             */
+            links?: components["schemas"]["ActivityLinkInput"][];
+            /**
+             * @description What the sender claimed the message is, frozen with it. Absent when nothing was
+             *     claimed, which is the ordinary case for a reply — the engine derives it from the
+             *     anchor.
+             */
+            communication_context?: components["schemas"]["CommunicationContext"];
+            /** @description For a marketing send, the consent purpose key it claimed, frozen with the message. */
+            marketing_purpose?: string;
+            /**
              * Format: uuid
              * @description The timeline activity this produced, once released.
              */

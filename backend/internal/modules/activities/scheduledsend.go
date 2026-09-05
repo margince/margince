@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // scheduleCeiling bounds how far ahead a message may be scheduled. A year-out
@@ -114,9 +115,18 @@ type ScheduledSend struct {
 	ScheduledBy ids.UUID
 	ActivityID  ids.UUID
 	HeldReason  string
-	Version     int64
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	// Links are the records an account-started message files itself under,
+	// frozen at composition. Empty on a reply, which inherits its anchor's.
+	Links []ActivityLinkInput
+	// Context and MarketingPurpose are what the sender CLAIMED, frozen with the
+	// message so a surface previewing it asks the engine the same question the
+	// fire will. A preview that dropped the claim would answer about a different
+	// message and disagree with the send.
+	Context          commsauthz.Category
+	MarketingPurpose string
+	Version          int64
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 // Scheduled-send states.

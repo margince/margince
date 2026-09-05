@@ -14,6 +14,11 @@ import type { components } from "../api/schema";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { ChannelReplyAction, ComposeModal, RelinkModal } from "./compose";
+import {
+  allowedPreview,
+  isPreviewDoor,
+  previewedAddresses,
+} from "./sendpermission.testkit";
 import { TimelineActions } from "./timelineactions";
 
 type Activity = components["schemas"]["Activity"];
@@ -169,6 +174,9 @@ function stubRoutes(
       if (override) return override();
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
       if (key === "GET /voice-profiles") return jsonResponse(NO_VOICE_PROFILE);
+      if (isPreviewDoor(url.pathname)) {
+        return jsonResponse(allowedPreview(previewedAddresses(body)));
+      }
       return jsonResponse({});
     }),
   );

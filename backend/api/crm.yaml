@@ -30799,6 +30799,24 @@ components:
           type: [string, 'null']
           format: uuid
           description: The conversation this reply will join; null for an account-started message.
+        links:
+          type: array
+          items: { $ref: '#/components/schemas/ActivityLinkInput' }
+          description: |
+            The records an account-started message files itself under, as the send named
+            them. Absent on a reply, which inherits its anchor's. Carried so a surface can
+            ask the engine the SAME question the fire will ask: the account-send preview
+            refuses a message that names no records, and a surface that could not name them
+            would fall silent on exactly the cold sends where consent matters most.
+        communication_context:
+          allOf: [{ $ref: '#/components/schemas/CommunicationContext' }]
+          description: |
+            What the sender claimed the message is, frozen with it. Absent when nothing was
+            claimed, which is the ordinary case for a reply — the engine derives it from the
+            anchor.
+        marketing_purpose:
+          type: string
+          description: For a marketing send, the consent purpose key it claimed, frozen with the message.
         activity_id:
           type: [string, 'null']
           format: uuid

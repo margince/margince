@@ -3198,6 +3198,10 @@ export const vi = {
     "Margince không có ghi nhận nào về lý do bạn được phép viết cho họ.",
   "sendPermission.unprovenHint":
     "Nếu bạn biết lý do — họ đã đề nghị, bạn đã gặp họ, họ là khách hàng — hãy nêu ra và điều đó được ghi lại dưới tên bạn.",
+  "sendPermission.unprovenRefuses":
+    "Việc gửi sẽ bị từ chối cho đến khi Margince có ghi nhận.",
+  "sendPermission.unanswered":
+    "Margince không kiểm tra được tin nhắn này có được phép gửi hay không. Khi gửi sẽ kiểm tra lại.",
   "sendPermission.reason.objected":
     "Họ đã từ chối nhận quảng cáo. Không ai ở đây có thể gỡ bỏ điều đó, kể cả quản trị viên.",
   "sendPermission.reason.withdrawn":

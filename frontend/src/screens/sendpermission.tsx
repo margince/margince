@@ -93,9 +93,17 @@ export function decidingRecipient(preview: Preview | undefined): {
  */
 export function SendPermission({
   preview,
+  unanswered = false,
   onOverride,
 }: Readonly<{
   preview: Preview | undefined;
+  /**
+   * The question did not arrive: the preview failed rather than answered. Said
+   * out loud, because a surface that fell silent here would look exactly like
+   * one that was told yes — and a rep would learn of the refusal by pressing
+   * Send, which is the failure this component exists to end.
+   */
+  unanswered?: boolean;
   /**
    * Offered only in the `unproven` state. Absent means the surface cannot take
    * an override — a read-only approval card, say — and the state renders as a
@@ -105,6 +113,14 @@ export function SendPermission({
 }>) {
   const t = useT();
   const { state, recipient } = decidingRecipient(preview);
+
+  if (unanswered) {
+    return (
+      <p className="t-caption" role="status">
+        {t("sendPermission.unanswered")}
+      </p>
+    );
+  }
 
   if (state === "allowed") return null;
 
@@ -129,7 +145,17 @@ export function SendPermission({
       }
     >
       <p>{t("sendPermission.unproven")}</p>
-      <p className="t-caption">{t("sendPermission.unprovenHint")}</p>
+      {/* The hint says what the rep can DO, so it changes with what is on
+          offer: with the control, how to answer; without it, what happens if
+          the message goes as it stands. Telling a reader to "say so" beside no
+          control would be the dead button in prose. */}
+      <p className="t-caption">
+        {t(
+          onOverride
+            ? "sendPermission.unprovenHint"
+            : "sendPermission.unprovenRefuses",
+        )}
+      </p>
     </Callout>
   );
 }

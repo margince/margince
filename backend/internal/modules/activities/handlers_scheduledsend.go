@@ -125,6 +125,18 @@ func scheduledSendResponse(row ScheduledSend) crmcontracts.ScheduledSend {
 		anchor := openapi_types.UUID(row.Anchor.UUID)
 		out.AnchorActivityId = &anchor
 	}
+	if len(row.Links) > 0 {
+		links := linksOnWire(row.Links)
+		out.Links = &links
+	}
+	if row.Context != "" {
+		claimed := crmcontracts.CommunicationContext(row.Context)
+		out.CommunicationContext = &claimed
+	}
+	if row.MarketingPurpose != "" {
+		purpose := row.MarketingPurpose
+		out.MarketingPurpose = &purpose
+	}
 	if row.ActivityID != (ids.UUID{}) {
 		activityID := openapi_types.UUID(row.ActivityID)
 		out.ActivityId = &activityID
@@ -132,6 +144,19 @@ func scheduledSendResponse(row ScheduledSend) crmcontracts.ScheduledSend {
 	if row.HeldReason != "" {
 		reason := crmcontracts.ScheduledSendHeldReason(row.HeldReason)
 		out.HeldReason = &reason
+	}
+	return out
+}
+
+// linksOnWire is linkInputsOf read backwards: the frozen records a scheduled
+// message names, in the shape a caller supplied them.
+func linksOnWire(links []ActivityLinkInput) []crmcontracts.ActivityLinkInput {
+	out := make([]crmcontracts.ActivityLinkInput, 0, len(links))
+	for _, l := range links {
+		out = append(out, crmcontracts.ActivityLinkInput{
+			EntityType: crmcontracts.ActivityLinkInputEntityType(l.EntityType),
+			EntityId:   openapi_types.UUID(l.EntityID),
+		})
 	}
 	return out
 }

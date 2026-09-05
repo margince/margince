@@ -3228,6 +3228,10 @@ export const de = {
     "Margince hat keinen Nachweis, warum Sie schreiben dürfen.",
   "sendPermission.unprovenHint":
     "Wenn Sie den Grund kennen — man hat Sie darum gebeten, Sie hatten ein Treffen, es ist ein Kunde —, halten Sie ihn fest. Er wird unter Ihrem Namen gespeichert.",
+  "sendPermission.unprovenRefuses":
+    "Der Versand wird abgelehnt, bis Margince einen Nachweis hat.",
+  "sendPermission.unanswered":
+    "Margince konnte nicht prüfen, ob diese Nachricht gesendet werden darf. Beim Senden wird erneut geprüft.",
   "sendPermission.reason.objected":
     "Diese Person hat Werbung widersprochen. Das kann hier niemand aufheben, auch keine Administration.",
   "sendPermission.reason.withdrawn":

@@ -11,6 +11,11 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { ComposeModal } from "./compose";
+import {
+  allowedPreview,
+  isPreviewDoor,
+  previewedAddresses,
+} from "./sendpermission.testkit";
 
 // Drafting to a LEAD.
 //
@@ -81,6 +86,9 @@ function stubRoutes(
       if (override) return override();
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
       if (key === "GET /voice-profiles") return jsonResponse({ data: [] });
+      if (isPreviewDoor(url.pathname)) {
+        return jsonResponse(allowedPreview(previewedAddresses(body)));
+      }
       return jsonResponse({});
     }),
   );

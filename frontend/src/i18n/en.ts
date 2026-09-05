@@ -3292,6 +3292,10 @@ export const en = {
     "Margince has no record of why you may write to them.",
   "sendPermission.unprovenHint":
     "If you know why — they asked you to, you met, they are a customer — say so and it is recorded against your name.",
+  "sendPermission.unprovenRefuses":
+    "Sending it will be refused until Margince has a record.",
+  "sendPermission.unanswered":
+    "Margince could not check whether this message may be sent. Sending it asks again.",
   "sendPermission.reason.objected":
     "They asked not to receive marketing. Nobody here can lift that, including an administrator.",
   "sendPermission.reason.withdrawn":

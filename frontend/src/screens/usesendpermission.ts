@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { throwProblem } from "./common";
 
 // Asking the engine whether a message would be allowed, before anybody presses
 // Send.
@@ -34,6 +35,12 @@ export function useSendPermission(args: {
    */
   links?: readonly components["schemas"]["ActivityLinkInput"][];
   context?: components["schemas"]["CommunicationContext"];
+  /**
+   * Which marketing purpose, when the claim is `marketing`. Part of the
+   * question: a marketing send previewed without it is asked about a
+   * different message than the one that will go.
+   */
+  marketingPurpose?: string;
   /** Off while the rep is still choosing a recipient — nothing to ask about yet. */
   enabled?: boolean;
 }): { preview: Preview | undefined; asking: boolean; unanswered: boolean } {
@@ -59,6 +66,7 @@ export function useSendPermission(args: {
       recipients,
       links,
       args.context ?? "",
+      args.marketingPurpose ?? "",
     ],
     enabled,
     // A refusal is live state — somebody may unsubscribe between the preview
@@ -66,23 +74,31 @@ export function useSendPermission(args: {
     // cached verdict that outlives what it described.
     staleTime: 0,
     queryFn: async () => {
-      const body = { to: [...recipients], communication_context: args.context };
-      if (args.anchorActivityId) {
-        const { data, error } = await api.POST(
-          "/activities/{id}/send-email:preview",
-          {
+      const body = {
+        to: [...recipients],
+        communication_context: args.context,
+        marketing_purpose: args.marketingPurpose,
+      };
+      const answered = args.anchorActivityId
+        ? await api.POST("/activities/{id}/send-email:preview", {
             params: { path: { id: args.anchorActivityId } },
             body,
+          })
+        : await api.POST("/emails:preview", {
+            body: { ...body, links: [...links] },
+          });
+      // Only a real 2xx is an answer. openapi-fetch reports a falsy `error` for
+      // a bodiless non-2xx — an empty 502 from a gateway — and taking that as
+      // success would resolve with no preview, which renders as ALLOWED: a
+      // permission check that failed, drawn as permission granted.
+      if (!answered.response.ok) {
+        throwProblem(
+          answered.error ?? {
+            title: `send permission: the preview answered ${answered.response.status}`,
           },
         );
-        if (error) throw error;
-        return data;
       }
-      const { data, error } = await api.POST("/emails:preview", {
-        body: { ...body, links: [...links] },
-      });
-      if (error) throw error;
-      return data;
+      return answered.data;
     },
   });
 

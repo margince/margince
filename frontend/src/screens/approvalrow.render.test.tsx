@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
 
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -14,6 +15,7 @@ import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
 import type { Approval } from "./approvals.queries";
+import { isPreviewDoor, refusedPreview } from "./sendpermission.testkit";
 
 // What a reader sees after approving, and where the button goes.
 //
@@ -158,5 +160,90 @@ describe("the offer to put an approved change back", () => {
     expect(
       screen.queryByRole("button", { name: "Undo on the record" }),
     ).toBeNull();
+  });
+});
+
+// The card says whether the engine would let the staged mail go, before the
+// approver releases it. An approver decides on somebody else's behalf, and
+// used to learn of a refusal the way the author would have: by pressing Accept
+// and reading the effect's failure.
+describe("whether the staged mail may go", () => {
+  function heldDraft(over: Partial<Approval> = {}): Approval {
+    return {
+      id: "ap2",
+      kind: "held_draft",
+      status: "pending",
+      summary: "Reply to Anna about the quote",
+      proposed_by: "system:automation",
+      proposed_change: {
+        anchor_activity_id: "act-1",
+        to: "anna@example.test",
+        subject: "Re: the quote",
+        body: "Attached, as promised.",
+      },
+      created_at: "2026-08-20T09:00:00Z",
+      target_entity_type: "activity",
+      target_entity_id: "act-1",
+      ...over,
+    };
+  }
+
+  // Routes the preview door and nothing else: the card's other reads answer
+  // empty, so what appears can only have come from the engine's answer.
+  function stubEngine(answer: () => Response) {
+    const fetched = vi.fn(async (input: RequestInfo | URL) => {
+      const path =
+        input instanceof Request
+          ? new URL(input.url).pathname
+          : new URL(String(input), "https://test").pathname;
+      return isPreviewDoor(path) ? answer() : jsonResponse({ data: [] });
+    });
+    vi.stubGlobal("fetch", fetched);
+    return fetched;
+  }
+
+  it("names who decided against the message, and that nobody may lift it", async () => {
+    const fetched = stubEngine(() =>
+      jsonResponse(
+        refusedPreview("anna@example.test", {
+          reason_code: "marketing_objection",
+          decided_by: "subject",
+        }),
+      ),
+    );
+    render(<ApprovalRow approval={heldDraft()} />);
+
+    expect(
+      await screen.findByText(/asked not to receive marketing/i),
+    ).toBeInTheDocument();
+    // Asked the way the release will ask: against the thread the draft answers.
+    const asked = fetched.mock.calls.find(([input]) =>
+      isPreviewDoor(
+        input instanceof Request ? new URL(input.url).pathname : String(input),
+      ),
+    );
+    expect(
+      asked && asked[0] instanceof Request
+        ? new URL(asked[0].url).pathname
+        : "",
+    ).toBe("/v1/activities/act-1/send-email:preview");
+  });
+
+  // A decided row has nothing left to release, so there is nothing to ask.
+  it("asks nothing about a proposal already decided", async () => {
+    const fetched = stubEngine(() => jsonResponse({}));
+    render(
+      <ApprovalRow approval={heldDraft({ status: "approved" })} decided />,
+    );
+    await screen.findByText("Reply to Anna about the quote");
+    expect(
+      fetched.mock.calls.some(([input]) =>
+        isPreviewDoor(
+          input instanceof Request
+            ? new URL(input.url).pathname
+            : String(input),
+        ),
+      ),
+    ).toBe(false);
   });
 });
