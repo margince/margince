@@ -409,20 +409,18 @@ export function PersonPageV2({
         subtitle={<PersonSubtitle view={view.data} />}
         pulse={<PersonIdentityLine view={view.data} />}
         actions={
-          <>
-            <PersonActions
-              view={view.data}
-              consentAllows={emailAllowed}
-              consentKnown={guard.data !== undefined}
-              personId={id}
-              overlay={overlay}
-              onWrite={() => openComposer("")}
-              onWriteMail={() => setDrawer("mail")}
-              onResearch={() => setDrawer("research")}
-              onLogActivity={() => setDrawer("activity_log")}
-              onAddTask={() => setDrawer("activity_task")}
-            />
-          </>
+          <PersonActions
+            view={view.data}
+            consentAllows={emailAllowed}
+            consentKnown={guard.data !== undefined}
+            personId={id}
+            overlay={overlay}
+            onWrite={() => openComposer("")}
+            onWriteMail={() => setDrawer("mail")}
+            onResearch={() => setDrawer("research")}
+            onLogActivity={() => setDrawer("activity_log")}
+            onAddTask={() => setDrawer("activity_task")}
+          />
         }
         actionsInline
         zone={recordZone}
