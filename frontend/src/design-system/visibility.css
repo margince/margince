@@ -1,0 +1,81 @@
+/* Who may read a thing, as one mark.
+ *
+ * Bigger than a Badge on purpose: 26px and an icon, where the Badge is 20px of
+ * text. A limit on a message is a fact a reader wants before they read, and the
+ * quiet dot-and-word it used to be was the thing on the drawer nobody saw. The
+ * icon is what makes it tellable across a room — open, sealed, named, not
+ * yours — and the word is what makes it exact. */
+
+.visibility {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-block-size: 26px;
+  padding: 0 10px 0 8px;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgElevated);
+  color: var(--textPrimary);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.visibility > svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--textMeta);
+}
+
+/* Open: outlined and in the secondary ink, so a column of shared rows reads as
+   a column and not as a stripe of pills. */
+.visibility-open {
+  color: var(--textSecondary);
+}
+
+/* Limited: filled and in the primary ink. A sealed thing is the exception in
+   any list, and the exception is what a reader is scanning for. */
+.visibility-limited {
+  background: var(--bgCard);
+  border-color: var(--borderStrong);
+}
+
+.visibility-limited > svg {
+  color: var(--textPrimary);
+}
+
+/* Withheld: the one state about the reader, drawn as the caution it is. The
+   tint composites over its own --bgElevated so its contrast does not depend on
+   which surface a caller put it on — the same reason .badge-warn does. */
+.visibility-withheld {
+  background: linear-gradient(var(--warnBg), var(--warnBg)), var(--bgElevated);
+  border-color: transparent;
+  color: var(--warn);
+}
+
+.visibility-withheld > svg {
+  color: currentColor;
+}
+
+/* The mark and its verb on one line. The verb keeps to the far end and the
+   whole thing wraps rather than clipping, because the line lives in a drawer
+   that is a full-width sheet on a phone. */
+.visibility-line {
+  display: flex;
+  /* Top-aligned, not centred: the action can be a button with a caption
+     under it, and a mark centred against two lines floats between them. */
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.visibility-line__action {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-left: auto;
+}
