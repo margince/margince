@@ -362,7 +362,13 @@ function PartnerForm({
           {problemMessageOf(mutation.error, t)}
         </p>
       )}
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "var(--gapActions)",
+          justifyContent: "flex-end",
+        }}
+      >
         {onCancel && (
           <Button small type="button" onClick={onCancel}>
             {t("create.cancel")}

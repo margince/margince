@@ -9,11 +9,7 @@
    further from the label naming it. The readings row beside it is on
    --space-4, and these read as the same kind of card. */
 .record-aside .panel-body {
-  padding: var(--space-4);
-}
-
-.co-card {
-  padding: var(--space-3);
+  padding: var(--padCard);
 }
 
 /* The left rail: the account's context beside the work (mockup State A).
@@ -85,7 +81,7 @@
 .co-reading-call > .panel-head {
   background: none;
   border-bottom: 0;
-  padding-top: var(--space-5);
+  padding-top: var(--padPanel);
   padding-bottom: 0;
 }
 
@@ -435,7 +431,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--gapActions);
   margin-left: auto;
 }
 
@@ -969,7 +965,7 @@
 .co-evidence-steps {
   display: flex;
   justify-content: space-between;
-  gap: var(--space-2);
+  gap: var(--gapActions);
   margin-top: var(--space-4);
 }
 
@@ -1098,7 +1094,7 @@
    component drew it. */
 .co-card {
   border-radius: var(--r-sm);
-  padding: var(--space-5);
+  padding: var(--padPanel);
 }
 
 /* Figures read in the body face with tabular figures. The mono face was doing
@@ -1153,7 +1149,7 @@
 }
 .co-rail .co-sect .disclosure-body {
   margin-top: 0;
-  padding: 0 var(--space-5) var(--space-5);
+  padding: 0 var(--padPanel) var(--padPanel);
 }
 
 /* The summary's own row: the section name, then whatever it carries (a count,
@@ -1466,6 +1462,7 @@
    this is, then how it stands — so the row needs room to start rather than
    sitting directly under the name it describes. */
 .record-head:has(.identity-meta) {
+  /* ds:ignore a head carrying an identity row pays for that row */
   margin-bottom: var(--space-5);
 }
 

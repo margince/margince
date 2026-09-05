@@ -30,7 +30,7 @@
 .co-glance-cols .panel > .panel-head {
   min-height: 0;
   align-items: baseline;
-  padding-top: var(--space-5);
+  padding-top: var(--padPanel);
   padding-bottom: 0;
   border-bottom: 0;
 }

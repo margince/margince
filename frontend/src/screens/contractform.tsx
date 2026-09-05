@@ -179,7 +179,7 @@ export function ContractForm({
         </p>
       )}
 
-      <div className="modal-actions">
+      <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
         {/* The refusal travels WITH the control: a disabled button whose
             reason lives in a paragraph somewhere above it is announced to

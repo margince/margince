@@ -563,7 +563,13 @@ function AddRelationshipAction({
               {problemMessageOf(mutation.error, t)}
             </p>
           )}
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "var(--gapActions)",
+              justifyContent: "flex-end",
+            }}
+          >
             <Button small onClick={close} disabled={mutation.isPending}>
               {t("create.cancel")}
             </Button>
@@ -766,7 +772,13 @@ export function RelationshipsTab({
             {problemMessageOf(remove.error, t)}
           </p>
         )}
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "var(--gapActions)",
+            justifyContent: "flex-end",
+          }}
+        >
           <Button
             small
             onClick={() => setRemoving(null)}
