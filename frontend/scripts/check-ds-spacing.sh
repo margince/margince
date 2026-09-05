@@ -40,84 +40,40 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR" && git rev-parse --show-toplevel 2>/dev/null || true)"
+# The baseline, the changed-file list and the per-file diff are shared with
+# check-ds-spacing-roles.sh: two gates that disagreed about what "new code"
+# means would hold one diff to two different rules.
+# shellcheck source=frontend/scripts/lib/diff-scope.sh
+. "$SCRIPT_DIR/lib/diff-scope.sh"
 
+REPO_ROOT="$(diff_scope_root "$SCRIPT_DIR")"
 if [[ -z "$REPO_ROOT" ]]; then
   echo "==> DS spacing check: not a git checkout — skipped"
   exit 0
 fi
 
-# The comparison point: the merge-base with origin/main (what this branch adds).
-# Fall back to origin/main directly, then to a no-op if neither resolves (e.g.
-# a shallow CI clone without the remote ref) — fail-open so the gate never
-# blocks on missing history, only on real new violations it can see.
-BASE=""
-if git -C "$REPO_ROOT" rev-parse --verify --quiet origin/main >/dev/null; then
-  BASE="$(git -C "$REPO_ROOT" merge-base origin/main HEAD 2>/dev/null || echo origin/main)"
-fi
+BASE="$(diff_scope_base "$REPO_ROOT")"
 if [[ -z "$BASE" ]]; then
   echo "==> DS spacing check: no origin/main baseline — skipped"
   exit 0
 fi
 
-# A brand-new file is the strictest case there is — all of it is new code — yet
-# `git diff` cannot see one until it is tracked, so an untracked file would slip
-# the gate entirely. Listing it here and diffing it against /dev/null below
-# renders it as a full-file addition, which the same awk pass then reads without
-# a special case.
-untracked() {
-  git -C "$REPO_ROOT" ls-files --others --exclude-standard -- "$@" 2>/dev/null || true
-}
-
-# The unit trees join the pathspecs: a unit's screen is shipped UI in the same
-# bundle, and a spacing gate that stopped at frontend/src would hold the core to
-# a scale the extension tier escapes.
-#
-# ONE pattern per tree, and it is the plain one. A git pathspec is not :(glob)
-# magic, so its `*` spans directory separators: 'frontend/src/*.tsx' already
-# matches every depth under frontend/src. It is `**/` that carries the
-# requirement — an intermediate directory — so '<tree>/**/*.tsx' silently misses
-# a file sitting DIRECTLY in <tree>. That is what the extension entry was, on
-# its own, while every unit screen sits at extensions/<unit>/frontend/screen.tsx.
-# Do not add a `**/` sibling back: it can only ever match a subset.
-#
-# Spelled ONCE and shared by the tracked and untracked collectors below — two
-# copies is how these two trees came to disagree in the first place.
-# check-ds-spacing.test.sh holds the census these have to keep collecting.
-TSX_PATHSPEC=('frontend/src/*.tsx' 'extensions/*/frontend/*.tsx')
-CSS_PATHSPEC=('frontend/src/*.css' 'extensions/*/frontend/*.css')
+# The two gated trees come from lib/diff-scope.sh, which is also what the
+# roles gate reads: one answer to "which trees are UI".
 
 # Read-loop rather than mapfile — the CI/dev host ships bash 3.2 (no mapfile),
 # same portability constraint as check-ds-purity.sh.
 CHANGED_TSX=()
 while IFS= read -r f; do
   [[ -n "$f" ]] && CHANGED_TSX+=("$f")
-done < <(
-  git -C "$REPO_ROOT" diff --name-only --diff-filter=d "$BASE" -- "${TSX_PATHSPEC[@]}" 2>/dev/null || true
-  untracked "${TSX_PATHSPEC[@]}"
-)
+done < <(diff_scope_changed "$REPO_ROOT" "$BASE" "${DIFF_SCOPE_TSX[@]}")
 
 CHANGED_CSS=()
 while IFS= read -r f; do
   [[ -z "$f" ]] && continue
   [[ "$f" == frontend/src/design-system/* ]] && continue
   CHANGED_CSS+=("$f")
-done < <(
-  git -C "$REPO_ROOT" diff --name-only --diff-filter=d "$BASE" -- "${CSS_PATHSPEC[@]}" 2>/dev/null || true
-  untracked "${CSS_PATHSPEC[@]}"
-)
-
-# The added-lines diff for one file, tracked or not. `--no-index` exits non-zero
-# when the two sides differ, which is the normal case here, so the status is
-# deliberately discarded.
-added_diff() {
-  local f="$1"
-  if git -C "$REPO_ROOT" ls-files --error-unmatch "$f" >/dev/null 2>&1; then
-    git -C "$REPO_ROOT" diff --unified=0 "$BASE" -- "$f" 2>/dev/null || true
-  else
-    git -C "$REPO_ROOT" diff --no-index --unified=0 -- /dev/null "$f" 2>/dev/null || true
-  fi
-}
+done < <(diff_scope_changed "$REPO_ROOT" "$BASE" "${DIFF_SCOPE_CSS[@]}")
 
 if [[ "${#CHANGED_TSX[@]}" -eq 0 && "${#CHANGED_CSS[@]}" -eq 0 ]]; then
   echo "==> DS spacing check: no changed frontend *.tsx or *.css — nothing to gate"
@@ -136,7 +92,7 @@ CSS_HEADER_DONE=0
 # it does not exist in the new file.
 for f in ${CHANGED_TSX[@]+"${CHANGED_TSX[@]}"}; do
   hits=$(
-    added_diff "$f" \
+    diff_scope_added_diff "$REPO_ROOT" "$BASE" "$f" \
       | awk '
           /^@@/ {
             match($0, /\+[0-9]+/); ln = substr($0, RSTART + 1, RLENGTH - 1) + 0; next
@@ -169,7 +125,7 @@ for f in ${CHANGED_CSS[@]+"${CHANGED_CSS[@]}"}; do
   # instead of guessed at from one diff line in isolation. Skipped when the
   # diff carries no hunks (a mode-only change), which also keeps awk's
   # first-file test from mistaking the stylesheet for the diff.
-  diff_out=$(added_diff "$f")
+  diff_out=$(diff_scope_added_diff "$REPO_ROOT" "$BASE" "$f")
   [[ -n "$diff_out" ]] || continue
 
   hits=$(

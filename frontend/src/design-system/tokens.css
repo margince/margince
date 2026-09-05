@@ -323,6 +323,26 @@
   --space-12: 48px;
   --space-16: 64px;
 
+  /* Spacing ROLES — what a gap or a padding is FOR. The rungs above are
+   * geometry and cannot answer "is 12 or 16 right between two cards"; a role
+   * can, and it answers once for the whole tree rather than at each call site.
+   * Each aliases the rung the house already used, so a name here SAYS what was
+   * already true instead of changing how anything looks:
+   *   --gapCards    between sibling card surfaces (.card-stack, .page-zones)
+   *   --padCard     inside a bare card (.card)
+   *   --padPanel    inside a panel — its header band, rows, footer and the
+   *                 hairlines between them all sit on this one inset, a rung
+   *                 above the bare card because the band makes it the wider
+   *                 surface of the two
+   *   --gapActions  between two buttons that sit side by side
+   * A screen is held to these in the contexts that HAVE one
+   * (check-ds-spacing-roles.sh); everywhere else the raw rung is still the
+   * answer, because a role nobody can name is not a role. */
+  --gapCards: var(--space-4);
+  --padCard: var(--space-4);
+  --padPanel: var(--space-5);
+  --gapActions: var(--space-2);
+
   /* How far the agent's cell rises above the top edge of the phone bar. The bar
    * is a row of destinations and the agent is not one, so it breaks the bar's
    * plane rather than sitting in it — and what it overhangs is the content

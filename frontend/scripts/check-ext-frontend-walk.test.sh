@@ -61,7 +61,16 @@ CASES=(
 #                           tree-scoped, so a fixture outside the checkout is
 #                           invisible to it by design. Its own census lives in
 #                           check-ds-spacing.test.sh.
-#   check-ds-spacing.test.sh — that census; a test, not a gate.
+#   check-ds-spacing.test.sh — that census, for both diff-scoped spacing gates;
+#                           a test, not a gate. It holds the pathspec property
+#                           this file cannot: that the shared collector reaches
+#                           every depth of both trees, tracked and untracked.
+#   check-ds-spacing-roles.sh — diff-scoped on the same terms as its sibling,
+#                           and exempt here for the same reason. It is the one
+#                           gate in the lane whose VERDICT is tested directly:
+#                           check-ds-spacing-roles.test.sh runs it against
+#                           fixture checkouts through MARGINCE_DS_ROOT.
+#   check-ds-spacing-roles.test.sh — that verdict suite; a test, not a gate.
 #   check-contract-fetch.test.sh — the contract-fetch gate's own census, which
 #                           holds the two properties this file cannot see: that
 #                           the refused mount is DERIVED from crm.yaml, and that
@@ -71,6 +80,8 @@ CASES=(
 EXCUSED=(
   check-ds-spacing.sh
   check-ds-spacing.test.sh
+  check-ds-spacing-roles.sh
+  check-ds-spacing-roles.test.sh
   check-contract-fetch.test.sh
   check-ext-frontend-walk.test.sh
 )
