@@ -4490,6 +4490,9 @@ export const en = {
     "The import status can't be read right now — capture itself keeps running.",
   "backfill.queuedTitle": "Import queued",
   "backfill.runningTitle": "Importing your mail history",
+  // The pill beside a live title: the indigo on the card is a claim that a
+  // machine is doing the reading, and this is the same claim in words.
+  "backfill.readingBadge": "Margince is reading",
   "backfill.doneTitle": "History import complete",
   "backfill.errorTitle": "The import hit a problem",
   "backfill.cancelledTitle": "Import cancelled",

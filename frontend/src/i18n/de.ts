@@ -4418,6 +4418,7 @@ export const de = {
     "Der Import-Status ist gerade nicht lesbar — die Erfassung selbst läuft weiter.",
   "backfill.queuedTitle": "Import eingereiht",
   "backfill.runningTitle": "E-Mail-Verlauf wird importiert",
+  "backfill.readingBadge": "Margince liest",
   "backfill.doneTitle": "Verlaufs-Import abgeschlossen",
   "backfill.errorTitle": "Der Import hat ein Problem",
   "backfill.cancelledTitle": "Import abgebrochen",
