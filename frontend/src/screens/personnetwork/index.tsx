@@ -3,10 +3,11 @@
 
 // The contact's network, ordered as the decision a rep is making.
 //
-// Answer first, evidence under it: the three readings, then the one move this
-// page recommends, then the alternatives, then where the handoff stands, then
-// the picture, then what moved lately. A reader who trusts the first two
-// sections never scrolls; one who does not can check every claim.
+// Answer first, evidence under it: the one move this page recommends with
+// the counts behind it, then the three readings, then the alternatives, then
+// where the handoff stands, then the picture, then what moved lately. A
+// reader who trusts the first section never scrolls; one who does not can
+// check every claim.
 //
 // The ego ring this replaced drew structure without showing the handoff, and
 // its labels sat outside the drawing. The shared RelationshipMap draws the same
@@ -110,56 +111,61 @@ export function PersonNetworkTab({
 
   return (
     <div className="pn-stack">
+      {/* The lead, or nothing. With no way in the strip below says so as
+          this page's first reading — its whole job is to answer first — and
+          a panel here repeating the same sentence made the page say it twice
+          in two different weights, which reads as two findings rather than
+          one. */}
+      {read.lead ? (
+        <LeadPanel
+          route={read.lead}
+          targetName={read.targetName}
+          blocked={availabilityLabel(read.lead.availability, t)}
+          onAsk={setAsking}
+        />
+      ) : null}
+
       <DecisionStrip
-        lead={read.lead}
+        routes={read.routes}
         legacyVia={read.legacy?.via_display_name}
         whyNow={momentWhyNow(view, t)}
         open={read.open}
       />
 
-      <div className="pn-work-grid">
-        <div className="pn-main-column">
-          {/* The lead, or nothing. With no way in the strip above has already
-              said so as this page's Best Path — its whole job is to answer
-              first — and a paragraph here repeating the same sentence made the
-              page say it twice in two different weights, which reads as two
-              findings rather than one. */}
-          {read.lead ? (
-            <LeadPanel
-              route={read.lead}
-              targetName={read.targetName}
-              blocked={availabilityLabel(read.lead.availability, t)}
-              onAsk={setAsking}
-            />
-          ) : null}
-
-          {/* The alternatives, and only those: the lead is drawn above, so
+      {/* With nothing to draw on the left — one route, nothing withheld —
+          the side cards take the row, because a column of two cards beside
+          an empty one reads as a page that failed to load its left half. */}
+      <div className={read.hasMain ? "pn-work-grid" : "pn-side-only"}>
+        {read.hasMain ? (
+          <div className="pn-main-column">
+            {/* The alternatives, and only those: the lead is drawn above, so
               listing it again would ask the reader which of the two identical
               lines is the recommendation. One route means no alternatives, and
               a card headed "other ways in" with nothing under it is worse than
               no card. */}
-          {read.alternatives ? (
-            <RoutesCard
-              graph={data}
-              onAsk={setAsking}
-              skipLead={read.skipLead}
-            />
-          ) : null}
+            {read.alternatives ? (
+              <RoutesCard
+                graph={data}
+                onAsk={setAsking}
+                skipLead={read.skipLead}
+              />
+            ) : null}
 
-          {/* A group withheld for lack of a grant says so in the product's
+            {/* A group withheld for lack of a grant says so in the product's
               ONE spelling of that fact, rather than reading as a company
               nobody here knows. The map's completeness line repeats it for a
               reader who scrolled past this. */}
-          {read.withheld ? (
-            <SurfaceState
-              loadingLabel={t("tab.network")}
-              state="withheld"
-              emptyLabel={t("person.graph.noDirect")}
-            >
-              {null}
-            </SurfaceState>
-          ) : null}
-        </div>
+            {read.withheld ? (
+              <SurfaceState
+                loadingLabel={t("tab.network")}
+                state="withheld"
+                emptyLabel={t("person.graph.noDirect")}
+              >
+                {null}
+              </SurfaceState>
+            ) : null}
+          </div>
+        ) : null}
 
         <aside
           className="pn-side-column"
@@ -230,6 +236,9 @@ function readGraph(
 ) {
   const nodes = data.nodes ?? [];
   const routes = data.routes ?? [];
+  const alternatives =
+    routes.length > 1 || (routes.length === 0 && !!data.route);
+  const withheld = (data.groups_omitted ?? []).length > 0;
   return {
     anchor: nodes.find((n) => n.group === "anchor"),
     targetName: nodes.find((n) => n.group === "anchor")?.label ?? "",
@@ -249,10 +258,12 @@ function readGraph(
     // that had already said nobody reaches them, so the page said it twice and
     // offered a choice of none. The legacy payload is the one that has a
     // singular `route` to draw.
-    alternatives: routes.length > 1 || (routes.length === 0 && !!data.route),
+    alternatives,
     skipLead: routes.length > 1,
     legacy: routes.length === 0 ? data.route : undefined,
-    withheld: (data.groups_omitted ?? []).length > 0,
+    withheld,
+    // Whether the working grid has a left column at all.
+    hasMain: alternatives || withheld,
     // A selection only means something against the graph ON SCREEN. This tab
     // stays mounted as a reader moves between contacts, so a raw id would open
     // the detail on a node this graph does not have — describing a record the

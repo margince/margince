@@ -160,7 +160,7 @@ func extractStackMarkers(rawHTML string, base *url.URL) (scriptSrcs []string, ge
 			continue
 		}
 		switch string(name) {
-		case "script":
+		case tagScript:
 			if src, ok := absoluteAttr(tagAttrs(tokenizer)["src"], base); ok && !seen[src] {
 				seen[src] = true
 				scriptSrcs = append(scriptSrcs, src)

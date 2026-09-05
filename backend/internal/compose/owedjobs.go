@@ -31,42 +31,24 @@ func (OwedVerdictArgs) Kind() string { return "owed_verdict" }
 // tenant work of its own (jobs.FleetWide).
 func (OwedVerdictArgs) FleetWide() {}
 
-// owedVerdictWorker is the dispatcher for the verdict pass.
-type owedVerdictWorker struct {
-	pool *pgxpool.Pool
-}
-
-func (w *owedVerdictWorker) Work(ctx context.Context, _ *river.Job[OwedVerdictArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(OwedVerdictWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return OwedVerdictWorkspaceArgs{Workspace: ws} }))
-}
-
-// OwedVerdictWorkspaceArgs is one workspace's catch-up verdict pass.
-type OwedVerdictWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (OwedVerdictWorkspaceArgs) Kind() string { return "owed_verdict_workspace" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a OwedVerdictWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// owedVerdictWorkspaceWorker drives the verdict engine for one workspace.
+// owedVerdictWorker drives the verdict engine for every live workspace.
 //
 // The engine commits per model call, so a mid-pass crash or a budget stop loses
 // nothing: what was judged stays judged, and the next tick reads a backlog that
 // has shrunk by exactly that much.
-type owedVerdictWorkspaceWorker struct {
+//
+// One worker where there were two (ADR-0103).
+type owedVerdictWorker struct {
+	pool       *pgxpool.Pool
 	classifier *OwedClassifier
 }
 
-func (w *owedVerdictWorkspaceWorker) Work(ctx context.Context, job *river.Job[OwedVerdictWorkspaceArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+func (w *owedVerdictWorker) Work(ctx context.Context, _ *river.Job[OwedVerdictArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.judgeWorkspace))
+}
+
+func (w *owedVerdictWorker) judgeWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	// The workspace binding alone is not enough here, and the difference is the
 	// whole reason this is spelled out: the backlog read and the verdict write
 	// are both RBAC-gated, so an unbound context fails them with "no actor bound
@@ -83,5 +65,5 @@ func (w *owedVerdictWorkspaceWorker) Work(ctx context.Context, job *river.Job[Ow
 		Type: principal.PrincipalSystem, ID: "system:owed_verdict",
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})
-	return jobs.FaultContext(ctx, w.classifier.RunWorkspace(wsCtx, 0))
+	return w.classifier.RunWorkspace(wsCtx, 0)
 }

@@ -45,11 +45,21 @@ must_mention:
 # Both halves are needed, because either alone passes a bad answer.
 #
 # must_mention — the answer says the record and the note disagree, and names
-# WHAT disagrees. A lone word does not qualify: "conflict" counts only within
-# a clause of a date, record, note or email, or "a conflict of interest
-# between the two managers" would green an answer that never compared the
-# dates. Under-recognition is the one direction a scenario must not fail in,
-# because it reports PASS and leaves no failing assertion to notice.
+# WHAT disagrees. Judged on the FINDING and not on the vocabulary that carries
+# it: "the post-mortem contradicts the timeline" and "the post-mortem is
+# recalling the date loosely ... that escalation is not in this system" are the
+# same answer, and a pattern that greens the first and reds the second is
+# measuring word choice, which check.py's own contract says it does not judge.
+# Every alternative here is therefore a synonym of the finding rather than a
+# phrasing of it, and a real answer trips several rather than one.
+#
+# ANCHORED, each of them, to what the comparison is about — October, the
+# escalation, the post-mortem, the complaint, a date, a record. That is not
+# decoration: "nobody recorded the response" is a true and unrelated sentence
+# about the missing reply, and an unanchored "nobody recorded" greens an answer
+# that never compared the two dates at all. Under-recognition is the one
+# direction a scenario must not fail in, because it reports PASS and leaves no
+# failing assertion to notice.
 #
 # must_not_mention — the answer does not then use October as the date of the
 # complaint in its own voice. check.py matches one flat regex over the whole
@@ -57,19 +67,42 @@ must_mention:
 # an answer that quotes the German note and translates it — "The customer
 # raised it clearly in October" is a rendering of the record, not a claim.
 # Every alternative therefore needs something the note's own sentence does not
-# say: a noun phrase ("the October complaint"), a verb of complaining, a date
-# range, or an explicit "was raised in October". Both languages, because the
-# note is German and an answer may adopt its month in German.
+# say: a noun phrase ("the October complaint"), a verb of complaining or of
+# recurrence, a date range, or an explicit "was raised in October". Both
+# languages, because the note is German and an answer may adopt its month in
+# German.
 #
-# Reproduce either half against a transcript with
+# "repeated" earns its place among those verbs the hard way. An answer that
+# wrote "Reply raised it in September, repeated it in October" had invented the
+# second event out of the note's faulty prose — the exact defect this half
+# exists to catch — and every alternative here missed it, leaving the whole
+# verdict resting on must_mention.
+#
+#
+# EVERY alternative is anchored to the comparison's own subject, including the
+# bare verbs. `re.search` looks anywhere in the answer, so an unanchored
+# "contradict" or "disagree" is satisfied by "I disagree with rotating managers
+# so often" — a sentence about the practice, in an answer that never compared
+# the two dates. The anchor is a word the comparison cannot be made without:
+# a month, the note, the post-mortem, the record, a date.
+#
+# The forbidden half is scoped to a sentence that does NOT attribute. "The
+# post-mortem says it was raised in October, but the record is dated 18
+# September" states the finding and was being rejected for it — the answer is
+# quoting the note, which is what a reader needs, and only an unattributed
+# October is the assistant adopting it. So each claim form is reached through a
+# run of non-sentence-ending characters that contains no attributing word, which
+# is as close to "outside a quotation" as one flat regex over a whole answer can
+# come. The limitation is real and stated rather than papered over: an
+# attribution that lands after the claim in the same sentence still slips it.
+# Both halves are held by scripts/test-e2e-llm-check.sh against the three
+# answers in testdata/case6/, so neither can drift into over- or
+# under-recognition unnoticed. Reproduce one by hand with
 #   python3 check.py --check scenarios/case6-ask-the-company.yaml <run.jsonl>
-# The three runs in records/ are answers that adopted October: two are caught
-# by must_not_mention, and the third, which only ever quotes the German, by
-# must_mention.
-  - "disagree|do(es)? not match|contradict|misremember|(dates?|records?|note|email|two)[^.]{0,40}conflict|conflict[^.]{0,40}(date|record|note|email)|not in the CRM|isn't in the CRM|is not in the CRM|never (written down|logged|recorded)|only logged inbound|no October|by the CRM's own dates"
+  - "(?:October|Oktober|September|Sept|post-?mortem|note|record|e-?mail|date|CRM)[^.]{0,60}(?:disagree|do(?:es)? not match|contradict|misremember)|(?:disagree|do(?:es)? not match|contradict|misremember)[^.]{0,60}(?:October|Oktober|September|Sept|post-?mortem|note|record|e-?mail|date|CRM)|(dates?|records?|note|email|two)[^.]{0,40}conflict|conflict[^.]{0,40}(date|record|note|email)|(?:October|Oktober|escalation|post-?mortem|complaint)[^.]{0,60}n[o']t in (?:the CRM|th(?:e|is) system|our records?)|(?:October|Oktober|escalation|post-?mortem|complaint)[^.]{0,50}(?:never|nobody|no ?one)[^.]{0,25}(?:logged|recorded|captured|written down|wrote it down)|(?:October|Oktober|September|Sept|post-?mortem|note|record|e-?mail|date|CRM)[^.]{0,40}(?:recall|remember)\w*[^.]{0,25}(?:loosely|wrong|incorrectly|imprecisely)|only logged inbound|no October|by the CRM's own dates|(?:October|Oktober)[^.]{0,80}\bbut\b[^.]{0,80}(?:September|Sept)|(?:September|Sept)[^.]{0,80}\bbut\b[^.]{0,80}(?:October|Oktober)"
 
 must_not_mention:
-  - "the (?:October|Oktober)\s+(?:complaint|escalation)|(?:complained|escalated)[^.]{0,30}(?:October|Oktober)|(?:beschwert|eskaliert)[^.]{0,30}(?:October|Oktober)|(?:October|Oktober)[^.]{0,30}(?:beschwert|eskaliert)|complaint\s+(?:came|landed|arrived|sat)[^.]{0,25}(?:October|Oktober)|from\s+(?:October|Oktober)\s+to|seit\s+(?:October|Oktober)|(?:was|were|is)\s+raised\s+in\s+(?:October|Oktober)"
+  - "(?:^|[.!?\n])(?:(?!(?:post-?mortem|\bnote\b|\bsays?\b|\bsaid\b|according|\bclaims?\b|\breads?\b|\bquote))[^.\n])*?(?:the (?:October|Oktober)\s+(?:complaint|escalation)|(?:complained|escalated|repeated)[^.\n]{0,30}(?:October|Oktober)|(?:beschwert|eskaliert)[^.\n]{0,30}(?:October|Oktober)|(?:October|Oktober)[^.\n]{0,30}(?:beschwert|eskaliert)|complaint\s+(?:came|landed|arrived|sat)[^.\n]{0,25}(?:October|Oktober)|from\s+(?:October|Oktober)\s+to|seit\s+(?:October|Oktober)|(?:was|were|is)\s+raised\s+in\s+(?:October|Oktober))"
 
 runs: 3
 pass_at: 2

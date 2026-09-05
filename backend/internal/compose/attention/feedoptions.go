@@ -115,6 +115,16 @@ func (s *Service) WithOverdueLoad(o OverdueLoad) *Service {
 	return s
 }
 
+// WithPromiseLoad binds the board's counting reader for commitments due.
+//
+// Unbound, the board draws no promises column — and here the zero would be
+// worse than elsewhere: an installation that extracts no claims would report a
+// team that promised nothing, when the truth is that nobody was listening.
+func (s *Service) WithPromiseLoad(p PromiseLoad) *Service {
+	s.promiseLoad = p
+	return s
+}
+
 // WithPins binds the reader's own pinned rows — an option for the reason
 // WithWaiting is one.
 //

@@ -75,11 +75,16 @@ func (h Handlers) GetForecast(
 	}
 	at := h.now()
 	if params.AsOf != nil {
-		at = params.AsOf.Time
+		at = DayNamed(params.AsOf.Time)
 	}
-	kind := PeriodQuarter
-	if params.Period != nil && *params.Period == crmcontracts.GetForecastParamsPeriodMonth {
-		kind = PeriodMonth
+	asked := ""
+	if params.Period != nil {
+		asked = string(*params.Period)
+	}
+	kind, known := PeriodKindOf(asked)
+	if !known {
+		httperr.Write(w, r, unknownPeriod())
+		return
 	}
 
 	var out crmcontracts.ForecastReadings
@@ -144,11 +149,16 @@ func (h Handlers) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
 	}
 	at := h.now()
 	if body.AsOf != nil {
-		at = body.AsOf.Time
+		at = DayNamed(body.AsOf.Time)
 	}
-	kind := PeriodQuarter
-	if body.Period != nil && *body.Period == crmcontracts.NewForecastCallPeriodMonth {
-		kind = PeriodMonth
+	askedPeriod := ""
+	if body.Period != nil {
+		askedPeriod = string(*body.Period)
+	}
+	kind, known := PeriodKindOf(askedPeriod)
+	if !known {
+		httperr.Write(w, r, unknownPeriod())
+		return
 	}
 
 	var out Call

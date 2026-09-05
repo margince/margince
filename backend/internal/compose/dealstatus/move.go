@@ -14,14 +14,12 @@ package dealstatus
 // meeting outranks an unanswered mail because the meeting has a date; an
 // unanswered mail outranks a bare next step because somebody is waiting.
 //
-// An open task no longer ENDS the reasoning. It used to: the card read the
-// task's title back to the reader and said it had nothing to add, which is a
-// card telling you what you already know and then declining to help. An open
-// task is now evidence like any other, and the deal still gets a move.
 
 import (
 	"fmt"
 	"time"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
@@ -33,6 +31,7 @@ import (
 const (
 	ActionDraftEmail       = "draft_email"
 	ActionCreateTask       = "create_task"
+	ActionOpenTask         = "open_task"
 	ActionOpenMeetingBrief = "open_meeting_brief"
 	ActionNone             = "none"
 )
@@ -66,6 +65,14 @@ func decideMove(f facts) crmcontracts.DealStatusCardMove {
 	}
 	if opening, ok := firstOutreach(f); ok {
 		return opening
+	}
+	// Existing work is the next step until somebody completes it. Creating
+	// another generic follow-up here duplicates the task the card just read.
+	if len(f.openTasks) > 0 {
+		task := f.openTasks[0]
+		activityID := openapi_types.UUID(task.ID)
+		return move(ActionOpenTask, "Complete the existing task: "+task.Subject, map[string]any{"activity_id": activityID},
+			crmcontracts.DealNextBestActionEvidence{ActivityId: &activityID, Text: task.Subject})
 	}
 	return move(ActionCreateTask, nextStepReason(f),
 		map[string]any{
@@ -171,6 +178,9 @@ func move(action, reason string, args map[string]any, evidence ...crmcontracts.D
 		args = map[string]any{}
 	}
 	out := crmcontracts.DealStatusCardMove{Action: action, Reason: reason, Arguments: &args}
+	if action == ActionNone {
+		out.Arguments = nil
+	}
 	out.Evidence = append([]crmcontracts.DealNextBestActionEvidence{}, evidence...)
 	return out
 }

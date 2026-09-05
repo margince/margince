@@ -595,6 +595,7 @@ function LeadScorePanel({
               />
             )}
           </Field>
+          {/* ds:ignore a lead line is a labelled row; this one happens to hold only verbs */}
           <div className="lead-line">
             <Button
               variant="primary"
@@ -1817,13 +1818,11 @@ function LeadRecord({
       // fold and memory of it as every other record page.
       aside={
         details.open ? (
-          <>
-            <LeadRail
-              lead={lead}
-              writer={writer}
-              terminalReasonId={terminalReasonId}
-            />
-          </>
+          <LeadRail
+            lead={lead}
+            writer={writer}
+            terminalReasonId={terminalReasonId}
+          />
         ) : undefined
       }
       name={leadIdentityName(lead) || t("lead.unnamed")}
@@ -1846,17 +1845,15 @@ function LeadRecord({
         ) : null
       }
       actions={
-        <>
-          <LeadActions
-            lead={lead}
-            id={id}
-            cf={cf}
-            overlay={overlay}
-            terminalReasonId={terminalReasonId}
-            onQualify={() => setDialog("qualify")}
-            onDisqualify={() => setDialog("disqualify")}
-          />
-        </>
+        <LeadActions
+          lead={lead}
+          id={id}
+          cf={cf}
+          overlay={overlay}
+          terminalReasonId={terminalReasonId}
+          onQualify={() => setDialog("qualify")}
+          onDisqualify={() => setDialog("disqualify")}
+        />
       }
       actionsInline
       // The shell stamps timeline rows in this zone. The viewer's own is the

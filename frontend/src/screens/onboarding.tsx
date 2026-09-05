@@ -430,15 +430,6 @@ export function wizardStateBody(input: {
   };
 }
 
-// The corpus intake rules now live with the intake itself, shared by the two
-// surfaces that collect writing samples (this act and the Settings card).
-export {
-  ACCEPTED_CORPUS_ATTR,
-  ACCEPTED_CORPUS_FILE,
-  TRANSCRIPT_EXT,
-  VOICE_MIN_WORDS,
-} from "./voice-intake-core";
-
 // pickBuiltVersion names the version the build just produced: the highest
 // numbered active-or-candidate row — active when it auto-activated,
 // candidate when it awaits review.

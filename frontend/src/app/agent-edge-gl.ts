@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { EDGE_FRAG, EDGE_VERT } from "./agent-edge-shader";
+import type { AgentEdgeRegister } from "./agent-edge-signal";
 
 /**
  * The edge's renderer: one program, one quad, one draw call per frame.
@@ -23,11 +24,22 @@ export type EdgeFrame = Readonly<{
   /** 0 while dark, 1 while fully lit: the fade lives here, not in CSS opacity. */
   level: number;
   /**
-   * How much of the travelling head to draw: 1 normally, 0 under reduced motion.
+   * The rim's resting thickness this frame, in CSS pixels: a register's own, or
+   * a point between two while the loop eases from one to the other.
+   */
+  thick: number;
+  /**
+   * How much the rim breathes: how far the crests swell it and how far the
+   * halo reaches with them. 1 is the amplitude the shader was tuned at.
+   */
+  wave: number;
+  /**
+   * How much of the travelling head to draw: the register's share normally, 0
+   * under reduced motion.
    *
    * Per frame rather than fixed at construction because it is the loop that knows
-   * about motion preference, and because a test can then read what the loop
-   * asked for without a GPU.
+   * about motion preference and which register is wanted, and because a test can
+   * then read what the loop asked for without a GPU.
    */
   beam: number;
 }>;
@@ -39,15 +51,39 @@ export type EdgeRenderer = Readonly<{
   dispose: () => void;
 }>;
 
+/** What the rim draws at in one register: the three dials the loop turns. */
+export type EdgeDress = Readonly<{
+  /** Resting thickness in CSS pixels, before the wave swells it. */
+  thick: number;
+  /** How much of the travelling head to draw, 0..1. */
+  beam: number;
+  /** How much the rim breathes, 1 being the amplitude the shader was tuned at. */
+  wave: number;
+}>;
+
 /**
- * The rim's resting thickness in CSS pixels, before the wave swells it.
+ * The two registers, side by side so the difference between them can be read as
+ * a difference: the numbers only mean anything relative to each other.
  *
- * It is a floor rather than the whole width: the wave adds better than half of
- * this again at a crest, so the visible rim breathes either side of it. Anything
- * under about one and a half is mostly its own anti-aliasing, since the shader's
- * `smoothstep` spends most of a pixel on each side of the boundary.
+ * The thickness is a floor rather than the whole width: the wave adds better
+ * than half of it again at a crest, so the visible rim breathes either side of
+ * it. Anything under about one and a half is mostly its own anti-aliasing, since
+ * the shader's `smoothstep` spends most of a pixel on each side of the boundary,
+ * which is what puts the import's thickness where it is: as thin as a rim can be
+ * and still be a rim. The agent's is a little over what one register used to
+ * draw at, and a little livelier, because two registers only read as two if the
+ * louder one is unmistakably the louder one.
+ *
+ * The import keeps a faint head and half the swell rather than none of either.
+ * A rim that does not move at all is the fallback a host without WebGL2 wears,
+ * and it says the work is happening without being able to say it is happening
+ * NOW; the import is a run that can stall, so it keeps the part of the picture
+ * that only a live loop can draw.
  */
-const THICKNESS = 2.6;
+export const EDGE_REGISTERS: Readonly<Record<AgentEdgeRegister, EdgeDress>> = {
+  agent: { thick: 3, beam: 1, wave: 1.15 },
+  capture: { thick: 1.6, beam: 0.35, wave: 0.45 },
+};
 
 /**
  * Above 1.5 this costs fill for nothing a reader can see. The rim is a soft
@@ -148,7 +184,7 @@ export function createEdgeRenderer(
   const uTime = gl.getUniformLocation(program, "uTime");
   const uLevel = gl.getUniformLocation(program, "uLevel");
   const uThick = gl.getUniformLocation(program, "uThick");
-  gl.uniform1f(uThick, THICKNESS);
+  const uWave = gl.getUniformLocation(program, "uWave");
   const uBeam = gl.getUniformLocation(program, "uBeam");
   // Through a Float32Array rather than casting the tuples: `uniform3fv` wants a
   // mutable float list, and an assertion to get one would be a claim about a
@@ -191,9 +227,11 @@ export function createEdgeRenderer(
       gl.uniform2f(uRes, width, height);
       gl.uniform1f(uDpr, ratio);
     },
-    draw({ time, level, beam }) {
+    draw({ time, level, thick, wave, beam }) {
       gl.uniform1f(uTime, time);
       gl.uniform1f(uLevel, level);
+      gl.uniform1f(uThick, thick);
+      gl.uniform1f(uWave, wave);
       gl.uniform1f(uBeam, beam);
       // No clear: every fragment is written, and the blend is over transparent
       // black, so clearing would be a full-screen write for nothing.

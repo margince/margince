@@ -92,11 +92,6 @@ func (g *CaptureEnrichTrigger) HandleEvent(ctx context.Context, env events.Envel
 	if time.Since(env.OccurredAt) > captureEnrichFreshWindow {
 		return nil
 	}
-	// The envelope carries no tenant (ADR-0091 §6); the store's handle names it.
-	ws, err := InstallationDB(g.pool).Workspace(ctx)
-	if err != nil {
-		return err
-	}
 	// The uniqueness is the flood bound: a mailbox sync lands hundreds of
 	// messages in seconds, and without it each one would put its own row on
 	// the ai_capture queue. ByArgs over the active states collapses the burst
@@ -107,10 +102,17 @@ func (g *CaptureEnrichTrigger) HandleEvent(ctx context.Context, env events.Envel
 	// mid-pass can dedupe against a pass that already listed its candidates,
 	// and then waits for the nightly run. The alternative — no uniqueness —
 	// trades that bounded promptness miss for an unbounded queue, which is
-	// worse. Same args and states as the fleet dispatcher's insert, so the two
-	// doors dedupe against each other rather than stacking.
-	child := CaptureEnrichWorkspaceArgs{Workspace: ws.UUID}
-	opts := oneOffChildOpts(child.Kind())
+	// worse. Same states as the scheduled tick's own insert, so the two doors
+	// dedupe against each other rather than stacking.
+	//
+	// The PASS, not a per-workspace child: the child kind went with the
+	// fan-out (ADR-0103). Its args carried the workspace, so ByArgs collapsed a
+	// burst onto the pass queued for THAT workspace; the pass carries none, so
+	// the same dedupe now collapses onto the one pending pass — which is what a
+	// flood bound wanted, and what it already meant on an installation with a
+	// single workspace.
+	child := CaptureEnrichArgs{}
+	opts := oneOffPassOpts(child.Kind())
 	opts.UniqueOpts = river.UniqueOpts{ByArgs: true, ByState: activeSweepStates}
 	return g.enqueue.Enqueue(ctx, child, opts)
 }

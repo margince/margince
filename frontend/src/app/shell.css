@@ -180,6 +180,17 @@
   /* The agent dock stands at the foot of THIS column rather than of the
      viewport, so the column is what it is positioned against. */
   position: relative;
+  /* The column's layering is the column's own business. Screens stack plenty
+     inside it — the list table alone declares 1 for a sticky header, 2 for the
+     frozen identity column, 3 for its shade and 20 for a menu — and with no
+     stacking context here every one of those numbers competed in the ROOT
+     context against the sidebar's, where the column, being later in the tree,
+     won each tie. What that looked like: a collapsed rail's tooltip cut off at
+     the table's left edge, behind the frozen column, on every list screen.
+     `isolation`, not a z-index of its own: it makes the context WITHOUT making
+     this element a containing block, so the fixed-position descendants the note
+     below is about are still laid out against the viewport. */
+  isolation: isolate;
   /* No `contain: layout` here, tempting as it is for the collapse animation's
      relayout cost: containment makes this element the containing block for every
      fixed-position descendant. The overlays are portalled to the body and so are
@@ -281,9 +292,18 @@
    `.surfacestate-part` stands in that stack: a labelled part is where a screen's
    own blocks go when the surface has a name, so the stack passes through it. Any
    wrapper that comes to stand there belongs in this list — it is the page's
-   rhythm, and a wrapper is not a reason to lose it. */
-:is(.wrap, .surfacestate-part) > :is(.card, .panel) + :is(.card, .panel) {
-  margin-top: var(--space-4);
+   rhythm, and a wrapper is not a reason to lose it.
+
+   `.page-zones-main` is the record's work column, where a tab's body goes. It
+   is the same stack under a different name, and the same thing happens without
+   this: a tab that draws two panels draws them edge to edge. A record's own
+   step is the wider one its bodies take from `.record-stack` (composed.css) —
+   this is the floor under a body that has not, not a second answer to how a
+   record reads. */
+:is(.wrap, .surfacestate-part, .page-zones-main)
+  > :is(.card, .panel)
+  + :is(.card, .panel) {
+  margin-top: var(--gapCards);
 }
 
 /* List header row: the section title grows, the create action sits beside it.
@@ -346,8 +366,12 @@
 .rail.collapsed {
   overflow: visible;
   /* Above the work column it is a sibling of: the tooltips below hang past the
-     rail's right edge, and the column, painted later with its own stacking
-     context, covered them. A tooltip behind the page is one nobody reads. */
+     rail's right edge, and the column is later in the tree, so it covers
+     whatever it ties with. A tooltip behind the page is one nobody reads.
+     Two is only above the column's own box; what puts it above everything the
+     column CONTAINS is `.main`'s `isolation: isolate`, which keeps a screen's
+     sticky layers from ever reaching this context. The pair is one invariant
+     and is held from both ends by app/chrome-layering.test.ts. */
   position: relative;
   z-index: 2;
 }
@@ -1204,6 +1228,7 @@
   margin: var(--space-1);
 }
 .palette-list .pending {
+  /* ds:ignore the palette draws its rows on the list's own inset */
   padding: var(--space-2);
 }
 

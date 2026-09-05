@@ -2,12 +2,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { ScheduledSendsScreen } from "./scheduledsends";
+import {
+  allowedPreview,
+  isPreviewDoor,
+  previewedAddresses,
+  refusedPreview,
+} from "./sendpermission.testkit";
 
 type Send = {
   id: string;
@@ -20,6 +27,7 @@ type Send = {
   created_at: string;
   updated_at: string;
   held_reason?: string;
+  anchor_activity_id?: string;
 };
 
 // The reader's own zone, whatever machine this runs on. Every zone assertion
@@ -57,6 +65,11 @@ const SENT: Send = {
   subject: "Last week's summary",
 };
 
+/** How the engine answers a row's preview, given the addressees it named. */
+type PreviewFor = (
+  addresses: readonly string[],
+) => ReturnType<typeof allowedPreview>;
+
 /** Every request the screen made, so a test can assert on the write itself. */
 type Call = {
   method: string;
@@ -65,7 +78,7 @@ type Call = {
   ifMatch: string | null;
 };
 
-function mount(rows: Send[]) {
+function mount(rows: Send[], preview: PreviewFor = allowedPreview) {
   const calls: Call[] = [];
   vi.stubGlobal(
     "fetch",
@@ -85,14 +98,20 @@ function mount(rows: Send[]) {
         : request
           ? await request.clone().text()
           : "";
+      const body: unknown = raw === "" ? null : JSON.parse(raw);
       calls.push({
         method,
         path: url.pathname,
-        body: raw === "" ? null : JSON.parse(raw),
+        body,
         ifMatch: headers.get("If-Match"),
       });
       if (method === "PATCH" || url.pathname.endsWith("/cancel")) {
         return new Response(null, { status: 204 });
+      }
+      if (isPreviewDoor(url.pathname)) {
+        return new Response(JSON.stringify(preview(previewedAddresses(body))), {
+          headers: { "Content-Type": "application/json" },
+        });
       }
       return new Response(JSON.stringify(rows), {
         headers: { "Content-Type": "application/json" },
@@ -140,6 +159,11 @@ function mountRefusing(rows: Send[], refuse: "PATCH" | "POST") {
       }
       if (url.pathname.endsWith("/scheduled-sends")) {
         return new Response(JSON.stringify(rows), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (isPreviewDoor(url.pathname)) {
+        return new Response(JSON.stringify(allowedPreview([])), {
           headers: { "Content-Type": "application/json" },
         });
       }
@@ -305,4 +329,44 @@ it("says nothing is scheduled with one sentence, not three", async () => {
     await screen.findByText("You have not scheduled a message yet."),
   ).toBeTruthy();
   expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
+});
+
+// The queue says WHOSE decision stopped a message, in the composer's words.
+//
+// The held reason names a gate; this names the person. A rep reading "consent
+// withdrawn" has to decide whether to move the message or give up on it, and
+// only "she asked us to stop, and nobody here can lift that" answers that.
+it("names who decided against a held message, and that nobody may lift it", async () => {
+  const anchored = {
+    ...HELD,
+    to: ["anna@acme.test"],
+    anchor_activity_id: "019f7e65-fbf7-7114-b114-40af4af63af0",
+  };
+  const { calls } = mount([anchored], (addresses) =>
+    refusedPreview(addresses[0] ?? "", {
+      reason_code: "marketing_objection",
+      decided_by: "subject",
+    }),
+  );
+
+  expect(
+    await screen.findByText(/asked not to receive marketing/i),
+  ).toBeInTheDocument();
+  // Asked against the thread the message will join, about the addressee it
+  // names: the same question the fire will ask.
+  const asked = calls.find((call) => call.path.endsWith(":preview"));
+  expect(asked?.path).toBe(
+    "/v1/activities/019f7e65-fbf7-7114-b114-40af4af63af0/send-email:preview",
+  );
+  expect(previewedAddresses(asked?.body)).toEqual(["anna@acme.test"]);
+});
+
+// A message that already went, or was withdrawn, is not asked about: nothing
+// about it will change on its own, and a verdict on it is noise.
+it("asks nothing about a message that is no longer going to send", async () => {
+  const { calls } = mount([
+    { ...SENT, anchor_activity_id: "019f7e65-fbf7-7114-b114-40af4af63af0" },
+  ]);
+  await screen.findByText("Last week's summary");
+  expect(calls.some((call) => call.path.endsWith(":preview"))).toBe(false);
 });

@@ -78,6 +78,8 @@ import {
   withSubjectTag,
 } from "./projectrecord";
 import { SCHEDULED_SCREEN } from "./scheduledsends";
+import { SendPermission } from "./sendpermission";
+import { useSendPermission } from "./usesendpermission";
 import { useVoiceProfile } from "./voice-profile";
 import "./compose.css";
 
@@ -2822,6 +2824,28 @@ export function ComposeModal({
     context,
     asksContext: asksWhy(anchorActivity),
   });
+  // What the send will file under, spelled ONCE for the send and for the
+  // question asked ahead of it. Two spellings here would let the preview be
+  // asked about records the send then does not name, and the engine reads the
+  // records — so the answer on screen would be about a different message.
+  const chosenGrounding = groundable
+    ? { ...account.grounding, projectId: projectFiling.projectId }
+    : null;
+  // The engine's answer about the message as it stands, asked where the rep is
+  // writing it rather than learned from the Send button's error. Mail only: a
+  // channel reply names no addressee for anybody to ask about, and the preview
+  // doors are the two mail doors.
+  const permission = useSendPermission({
+    recipients: [...to, ...cc],
+    anchorActivityId: answering,
+    links: composedLinks(
+      { entityType, entityId },
+      chosenGrounding,
+      projectFiling.projectId,
+    ),
+    context: claimedContext,
+    enabled: open && !isChannelReply,
+  });
   // Whether the reader has ASKED to send yet. The fields say nothing until
   // then: a form that reports what is missing before anybody has tried is a
   // form scolding a reader for not having finished typing.
@@ -2974,11 +2998,7 @@ export function ComposeModal({
             globalThis.requestAnimationFrame(focusFirstMissing);
             return;
           }
-          send.mutate(
-            groundable
-              ? { ...account.grounding, projectId: projectFiling.projectId }
-              : null,
-          );
+          send.mutate(chosenGrounding);
         }}
         pending={send.isPending}
         error={sendError}
@@ -3143,7 +3163,18 @@ export function ComposeModal({
             )}
 
             {!isChannelReply && (
-              <MailSendNotices to={to} cc={cc} context={claimedContext} />
+              <>
+                <MailSendNotices to={to} cc={cc} context={claimedContext} />
+                {/* No override offered yet: the engine records what a sender
+                    types about their own send and grants nothing on it, so a
+                    button here would promise a lift the staging gate refuses.
+                    The component explains the state instead, and takes the
+                    control as a prop the day the override exists. */}
+                <SendPermission
+                  preview={permission.preview}
+                  unanswered={permission.unanswered}
+                />
+              </>
             )}
             {sendUnavailable && (
               <p className="t-caption">{t("compose.sendUnavailable")}</p>

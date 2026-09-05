@@ -172,7 +172,7 @@ export function IntroDrawer({
       {/* Nothing here reaches the contact. The verb says so, because a button
           reading "Send" beside a note addressed to Dana would tell the reader
           the product just wrote to her. */}
-      <div className="pn-actions">
+      <div className="form-actions">
         <Button onClick={onClose} variant="ghost">
           {t("person.intro.cancel")}
         </Button>

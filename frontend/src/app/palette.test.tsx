@@ -424,6 +424,64 @@ describe("useBuiltinCommands", () => {
     return render(<Probe />);
   }
 
+  // The company page rides a deployment flag as well as a grant, and the
+  // palette used to answer that half of the question differently from the rail:
+  // it passed `probeCompanyFlag: false` to avoid a network read, so the flag
+  // resolved to false here and to its real value there. One installation, two
+  // answers, and no test could see it because each surface was asserted alone.
+  //
+  // These three hold the claim that they now agree. The knob is the same
+  // `meFixture` field `settings-nav.test.tsx` drives, so a predicate that
+  // stopped reading it fails on both sides at once.
+  function renderProbeWithCompany(opts: { companyContext: boolean | null }) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse(
+          meFixture({
+            roles: [],
+            allow: { organization: ["read"] },
+            settingsAvailability:
+              opts.companyContext === null
+                ? null
+                : { company_context: opts.companyContext },
+          }),
+        ),
+      ),
+    );
+    return render(<Probe />);
+  }
+
+  it("offers the company shortcut when the installation has that surface", async () => {
+    const user = userEvent.setup();
+    renderProbeWithCompany({ companyContext: true });
+    await user.type(screen.getByRole("searchbox"), "general");
+    await waitFor(() => {
+      expect(screen.getAllByRole("button")[0].textContent).toContain("General");
+    });
+  });
+
+  it("withholds it when the installation does not, matching the rail", async () => {
+    const user = userEvent.setup();
+    renderProbeWithCompany({ companyContext: false });
+    // The grant is held and the flag is not, which is exactly the state the old
+    // palette got wrong: it never read the flag, so it fell back to the grants
+    // beside it and offered a page this installation may not have.
+    await user.type(screen.getByRole("searchbox"), "general");
+    await waitFor(() => {
+      expect(screen.queryByText("General")).toBeNull();
+    });
+  });
+
+  it("withholds it when /me carries no availability at all", async () => {
+    const user = userEvent.setup();
+    renderProbeWithCompany({ companyContext: null });
+    await user.type(screen.getByRole("searchbox"), "general");
+    await waitFor(() => {
+      expect(screen.queryByText("General")).toBeNull();
+    });
+  });
+
   it("reaches the filter builder by the name the screen prints", async () => {
     const user = userEvent.setup();
     renderProbe();

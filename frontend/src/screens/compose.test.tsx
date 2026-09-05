@@ -14,6 +14,11 @@ import type { components } from "../api/schema";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { ChannelReplyAction, ComposeModal, RelinkModal } from "./compose";
+import {
+  allowedPreview,
+  isPreviewDoor,
+  previewedAddresses,
+} from "./sendpermission.testkit";
 import { TimelineActions } from "./timelineactions";
 
 type Activity = components["schemas"]["Activity"];
@@ -169,6 +174,9 @@ function stubRoutes(
       if (override) return override();
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
       if (key === "GET /voice-profiles") return jsonResponse(NO_VOICE_PROFILE);
+      if (isPreviewDoor(url.pathname)) {
+        return jsonResponse(allowedPreview(previewedAddresses(body)));
+      }
       return jsonResponse({});
     }),
   );
@@ -1675,7 +1683,7 @@ describe("ComposeModal — channel reply", () => {
     // Confirming an irreversible send under the name of a channel this
     // message will never travel on is a lie the rep cannot check.
     expect(screen.getByText("Send this message?")).toBeTruthy();
-    expect(screen.queryByText("Send this email?")).toBeNull();
+    expect(screen.queryByText("Draft email")).toBeNull();
     // The heading is the only place the channel is named, so it cannot also
     // be the only place the irreversibility is: the modal chrome around it
     // is a tier dot and two buttons.
@@ -1779,7 +1787,7 @@ describe("TimelineActions", () => {
     stubRoutes();
     render(<TimelineActions activity={note} entityType="deal" entityId="d1" />);
     await userEvent.click(screen.getByRole("button", { name: "Reply" }));
-    expect(await screen.findByText("Send this email?")).toBeTruthy();
+    expect(await screen.findByText("Draft email")).toBeTruthy();
   });
 
   it("opens the composer when Reply is clicked", async () => {
@@ -1788,8 +1796,8 @@ describe("TimelineActions", () => {
       <TimelineActions activity={email} entityType="deal" entityId="d1" />,
     );
     await userEvent.click(screen.getByRole("button", { name: "Reply" }));
-    // The ConfirmModal titled "Send this email?" mounts only once Reply opens it.
-    expect(await screen.findByText("Send this email?")).toBeTruthy();
+    // The ConfirmModal titled "Draft email" mounts only once Reply opens it.
+    expect(await screen.findByText("Draft email")).toBeTruthy();
   });
 
   it("offers no reply when the person is unreachable", async () => {
@@ -1910,7 +1918,9 @@ describe("TimelineActions", () => {
       <TimelineActions activity={captured} entityType="deal" entityId="d1" />,
     );
     expect(screen.queryByRole("button", { name: "Share thread" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Change visibility" }),
+    ).toBeNull();
     // Relink still draws, so the two absences above are the gate rather than a
     // component that never mounted at all.
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
@@ -1925,7 +1935,9 @@ describe("TimelineActions", () => {
     render(
       <TimelineActions activity={handTyped} entityType="deal" entityId="d1" />,
     );
-    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Change visibility" }),
+    ).toBeNull();
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });
 
@@ -1951,8 +1963,38 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
-    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Change visibility" }),
+    ).toBeNull();
     // The row is still actionable — this withholds one control, not the row.
+    expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
+  });
+
+  // A successfully-linked connector message is born `workspace` with no
+  // `audience_reason` at all — decideBirthTx only stamps one when something
+  // holds the row, and limitLinkLessAudience only for a link-less one — yet
+  // the server's own `activityWasImported` test still refuses a direct write
+  // on it, because an import row exists regardless of what it derived. Gating
+  // only on `audience_reason` missed exactly this row: Visibility opened,
+  // took an answer, and the write came back refused with no working control on
+  // the page (margince#4152).
+  it("offers no audience control on a captured message with no audience_reason at all", () => {
+    stubRoutes();
+    render(
+      <TimelineActions
+        activity={{
+          ...activity202,
+          id: "a10",
+          kind: "message",
+          captured_by: "connector:ext:openchannel:1",
+          thread_key: "openchannel:abc",
+          audience_reason: null,
+        }}
+        entityType="deal"
+        entityId="d1"
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });
 
@@ -1973,7 +2015,9 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
-    expect(screen.getByRole("button", { name: "Visibility" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Change visibility" }),
+    ).toBeTruthy();
   });
 
   // A note, a call or a meeting derives no audience, so the row keeps the
@@ -1987,7 +2031,9 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
-    expect(screen.getByRole("button", { name: "Visibility" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Change visibility" }),
+    ).toBeTruthy();
   });
 
   // `selected` is the API's third audience and the dialog offered two, because
@@ -2039,7 +2085,9 @@ describe("TimelineActions", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Visibility" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Change visibility" }),
+    );
     await userEvent.click(screen.getByLabelText(/Named people/));
 
     // An agent seat is not on offer.
@@ -2110,7 +2158,9 @@ describe("TimelineActions", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Visibility" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Change visibility" }),
+    );
     await userEvent.click(screen.getByLabelText(/Named people/));
     await screen.findByLabelText(/Lena Fischer/);
 
@@ -2138,7 +2188,9 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
-    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Change visibility" }),
+    ).toBeNull();
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });
 });
@@ -2376,9 +2428,7 @@ describe("ComposeModal started from an account", () => {
       />,
     );
 
-    expect(
-      await screen.findByText(/No contact on this account yet/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/Nobody on this account yet/)).toBeTruthy();
     // The dead end is about the DRAFT, not about which body of work the
     // message is for.
     expect(

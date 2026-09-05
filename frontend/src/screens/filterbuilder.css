@@ -49,7 +49,7 @@
 
 .filter-group-actions {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--gapActions);
 }
 
 /* One clause on one line where the width allows, wrapping to its own rows on a

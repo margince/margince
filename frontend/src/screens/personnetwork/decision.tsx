@@ -10,25 +10,31 @@
 import type { components } from "../../api/schema";
 import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
-import { useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 import type { IntroRequest } from "../introrequests";
+import { ownerOf } from "./relay";
 
 type RouteCandidate = components["schemas"]["PersonGraphRouteCandidate"];
 
 /**
- * DecisionStrip states the best path, the reason to act, and the handoff.
+ * DecisionStrip states who reaches them, the reason to act, and the handoff.
+ *
+ * The first slot counts the ways in rather than naming the best one: the
+ * verdict panel above it already names the lead, and a strip repeating the
+ * same name in a smaller type read as two findings rather than one.
  *
  * "Why now" comes from the person's own moment ladder rather than from a
  * relationship change: a relationship getting warmer is not by itself a reason
  * to spend a colleague's goodwill today.
  */
 export function DecisionStrip({
-  lead,
+  routes,
   legacyVia,
   whyNow,
   open,
 }: Readonly<{
-  lead: RouteCandidate | undefined;
+  routes: readonly RouteCandidate[];
   // The colleague named by a server that predates the candidate list. Without
   // it this strip would read "nobody reaches them" beside a card naming the
   // person who does — the page contradicting itself on its own headline.
@@ -39,14 +45,28 @@ export function DecisionStrip({
   open: IntroRequest | undefined;
 }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const lead = routes[0];
+  const indirect = routes.filter((r) => r.through_display_name).length;
   return (
     <StatStrip>
       <StatCard
-        label={t("person.intro.stripPath")}
-        value={lead?.via_display_name ?? legacyVia ?? t("person.graph.noRoute")}
+        label={t("person.intro.stripWho")}
+        value={
+          lead
+            ? plural("person.intro.stripWhoCount", routes.length, {
+                count: formatNumber(routes.length, locale),
+                name: lead.via_display_name,
+              })
+            : (legacyVia ?? t("person.graph.noRoute"))
+        }
         detail={
           lead
-            ? routeDetail(lead, t)
+            ? t("person.intro.stripWhoMix", {
+                direct: formatNumber(routes.length - indirect, locale),
+                indirect: formatNumber(indirect, locale),
+              })
             : legacyVia
               ? t("person.intro.stripDirect")
               : t("person.intro.stripNoPath")
@@ -76,29 +96,6 @@ export function DecisionStrip({
       />
     </StatStrip>
   );
-}
-
-function routeDetail(
-  route: RouteCandidate,
-  t: ReturnType<typeof useT>,
-): string {
-  return route.through_display_name
-    ? t("person.intro.stripVia", { through: route.through_display_name })
-    : t("person.intro.stripDirect");
-}
-
-// Who owes the next move. A status that nobody owes says so rather than naming
-// a person who has already done their part.
-function ownerOf(ask: IntroRequest, t: ReturnType<typeof useT>): string {
-  switch (ask.status) {
-    case "requested":
-      return ask.introducer_display_name ?? t("person.intro.ownerColleague");
-    case "accepted":
-    case "name_drop_approved":
-      return ask.requester_display_name ?? t("person.intro.ownerYou");
-    default:
-      return t("person.intro.ownerNobody");
-  }
 }
 
 // Every status the contract admits reads as words. A state the server can send

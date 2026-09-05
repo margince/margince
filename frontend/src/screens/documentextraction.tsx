@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { watchStartedAiRun } from "../app/ai-activity";
 import { Button, TextInput } from "../design-system/atoms";
 import { EvidenceMark } from "../design-system/evidencemark";
 import type { ConfidenceLevel } from "../design-system/trust";
@@ -168,6 +169,12 @@ export function DocumentExtractionPanel({
       // one: it would pre-fill the new field, differ from the new value, and be
       // sent as a deliberate human edit of a reading nobody typed it against.
       setEdits({});
+      // The reading is queued, not held open: this route answers at once and
+      // the occurrence reaches the rail's feed through the outbox afterwards.
+      // Without this the reading is the agent's own work with nothing on the
+      // chrome saying so until an idle poll happens to catch it — and a short
+      // one settles inside that window and is never announced at all.
+      watchStartedAiRun(queryClient);
       await queryClient.invalidateQueries({
         queryKey: ["attachment-extraction", attachmentId],
       });

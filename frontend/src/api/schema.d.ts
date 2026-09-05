@@ -6911,6 +6911,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/magic": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the machinery did, what it needs, what it could not finish, and what it is watching.
+         * @description The receipt for everything that ran without being asked.
+         *
+         *     Automation writes constantly — the lead ladder, close-date hygiene, capture
+         *     linking, enrichment, follow-up proposals — and a rep saw almost none of it. The
+         *     work landed in `audit_log` and in the records themselves, so the product looked
+         *     either idle or spooky: changes appeared with no author a reader could name.
+         *
+         *     FOUR LANES, and the split is what each one ASKS OF THE READER:
+         *
+         *     * `done` — machine actions that already happened. Nothing to decide; the reader
+         *       may disagree, and every line says whether it can be undone and why not when it
+         *       cannot.
+         *     * `needs_you` — a decision waiting. The same staged approvals `/attention` serves,
+         *       in one place with the rest of the machinery's output.
+         *     * `could_not_complete` — work that was approved or scheduled and did not land.
+         *       NOT part of `done`: a failure reported as an achievement is the one thing this
+         *       surface must never do.
+         *     * `watching` — sources and automations whose health an administrator must restore.
+         *
+         *     A RECEIPT, NOT A SECOND INBOX. Nothing here is answered from this endpoint: a
+         *     pending approval is decided where approvals are decided, an undo calls the
+         *     record's own restore route. The lanes report; the surfaces that own each verb
+         *     keep it.
+         *
+         *     `not_shown` is what the read deliberately left out, by kind and count. A machine
+         *     write with no customer-facing meaning — a maintenance sweep, a projection
+         *     refresh — is not Magic, and folding it in would turn internal churn into apparent
+         *     value. Counting it instead means the preview can never imply completeness it does
+         *     not have.
+         *
+         *     Bounded by `limit`, over a deterministic `occurred_at, id` order, and bounded
+         *     again by how far back it will look: a receipt answers "since you last looked",
+         *     never "since installation".
+         *
+         *     Not cursor-paginated yet. The window and the bound are what keep the read
+         *     honest today; a cursor arrives with the lane that needs one, rather than being
+         *     declared and ignored.
+         */
+        get: operations["getMagic"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/worklist": {
         parameters: {
             query?: never;
@@ -7421,6 +7477,45 @@ export interface paths {
          *     passport.
          */
         get: operations["getLicenseEntitlement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/installation/seat-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How many full seats this installation is using (capacity, not entitlement).
+         * @description The seat COUNT on its own, without what the license grants or what it cost.
+         *
+         *     This exists because those are two questions with two readers. How many seats are in
+         *     use is capacity, which whoever plans headcount needs; what the installation is
+         *     entitled to and what it paid is its commercial standing. `GET /installation/license`
+         *     answers both together and is governed by the `license` object, so a role could not be
+         *     shown the first without also being handed the second. This one is governed by
+         *     `seat_usage`, which management holds and license does not accompany.
+         *
+         *     It is the SAME meter, not a second one: this and the entitlement surface run one
+         *     statement, which is also the ceiling that refuses the next full seat at `POST /users`.
+         *     A count that could disagree with the ceiling it measures would be a meter nobody is
+         *     held to.
+         *
+         *     `seats_used` counts every full seat the installation has not withdrawn — neither
+         *     deactivated nor suspended. Read seats are unlimited and never metered (A62/ADR-0047),
+         *     and agent seats count, because a first-party runner acts on the estate as a human does.
+         *
+         *     No seat cap is reported here. A cap is entitlement, which is what the other surface is
+         *     for and what `seat_usage` deliberately does not carry.
+         */
+        get: operations["getSeatUsage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -9030,6 +9125,44 @@ export interface paths {
          *     bounce is a fact about a mailbox only the mail path observes.
          */
         post: operations["suppressPerson"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/people/{id}/consent/suppress/{suppressionId}/lift": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /**
+                 * @description The stop to take back. The row and not the person: a subject may carry more than
+                 *     one, and lifting "the suppression" would take back whichever came first.
+                 */
+                suppressionId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back a stop, if you outrank the level that set it.
+         * @description Revokes one suppression. **You may lift a decision made below your level, never at or
+         *     above it** — a rep's stop is liftable by an admin and not by another rep, and an
+         *     admin's is liftable by an admin other than by the one who set it only through this
+         *     same rule.
+         *
+         *     **Nothing lifts the subject's own act.** An Art. 21 objection and a withdrawal are
+         *     theirs, not the installation's, so no seat reaches them here whatever their role.
+         *
+         *     A row already revoked, belonging to another subject, or never in existence all answer
+         *     `404` alike: a caller learns nothing about rows they would not have been allowed to
+         *     touch either way.
+         */
+        post: operations["liftSuppression"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14095,6 +14228,22 @@ export interface components {
             /** Format: date-time */
             resolved_at?: string | null;
         } | null;
+        /**
+         * @description How many full seats the installation is using, without what it is entitled to.
+         *
+         *     Deliberately NOT a subset of LicenseEntitlement: it carries no cap and no posture,
+         *     because those are the commercial facts `seat_usage` exists to leave out. A client
+         *     needing both reads the entitlement surface, which requires the `license` grant.
+         */
+        SeatUsage: {
+            /**
+             * @description Full seats in use: every one the installation has not withdrawn — neither
+             *     deactivated nor suspended — agent seats included. Read seats are unlimited and
+             *     never counted (A62/ADR-0047). This is the same number the entitlement surface
+             *     reports and the same one a seat creation is refused against; there is one meter.
+             */
+            seats_used: number;
+        };
         /**
          * @description What the license grants and how much of it is used, as this process last resolved it.
          *     Read by admin/ops only.
@@ -19613,16 +19762,15 @@ export interface components {
         };
         /**
          * @description The one thing to do next, and what performing it means. `action` is one of
-         *     `draft_email`, `create_task`, `open_meeting_brief`, `none` — the same verbs
-         *     the retired next-best-action carried, so a client that already performs them
-         *     needs no new code. `arguments` is the body or operand the verb takes, ready
+         *     `draft_email`, `create_task`, `open_task`, `open_meeting_brief`, `none`.
+         *     `open_task` opens existing work without creating another task. `arguments` is the body or operand the verb takes, ready
          *     to send; absent for `none`.
          */
         DealStatusCardMove: {
             action: string;
             /** @description One sentence saying why this move and not another. */
             reason: string;
-            /** @description `draft_email` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body. */
+            /** @description `draft_email`, `open_task` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body. */
             arguments?: {
                 [key: string]: unknown;
             };
@@ -21523,16 +21671,23 @@ export interface components {
              * @enum {string}
              */
             disposition: "snooze" | "not_mine" | "not_sales";
+            reopen_on?: components["schemas"]["ReopenCondition"];
             /**
              * Format: date-time
-             * @description When a snooze lifts. REQUIRED for `snooze` and refused for the other two — a snooze
-             *     with no moment would never lift, and a moment on `not_mine` would make a hand-off
-             *     expire on a Thursday.
+             * @description When a snooze lifts. REQUIRED for `snooze` with `reopen_on: time`, and refused
+             *     everywhere else — a snooze waiting on a reply lifts when the reply arrives, and a
+             *     moment on `not_mine` would make a hand-off expire on a Thursday.
              *
              *     A moment already past is refused rather than stored: it would write a row that hides
              *     nothing, and read to the rep as a snooze that did not take.
              */
             snoozed_until?: string;
+            /**
+             * Format: uuid
+             * @description The meeting to wait for. REQUIRED for `snooze` with `reopen_on: meeting` and
+             *     refused otherwise.
+             */
+            reopen_ref?: string;
         };
         /**
          * @description One user or team admitted to a message besides its participants. The same shape the
@@ -22125,6 +22280,36 @@ export interface components {
              * @description The conversation this reply will join; null for an account-started message.
              */
             anchor_activity_id?: string | null;
+            /**
+             * @description The records an account-started message files itself under, as the send named
+             *     them. Absent on a reply: a reply's records come from its anchor, and the ones it
+             *     was told to file under beyond those (`also_links` on the send) are not carried
+             *     here, because the reply preview resolves from the anchor alone. Carried so a
+             *     surface can ask the engine the SAME question the fire will ask: the account-send
+             *     preview refuses a message that names no records, and a surface that could not
+             *     name them would fall silent on exactly the cold sends where consent matters most.
+             */
+            links?: components["schemas"]["ActivityLinkInput"][];
+            /**
+             * @description What the sender claimed the message is, frozen with it. Absent when nothing was
+             *     claimed, which is the ordinary case for a reply — the engine derives it from the
+             *     anchor.
+             */
+            communication_context?: components["schemas"]["CommunicationContext"];
+            /** @description For a marketing send, the consent purpose key it claimed, frozen with the message. */
+            marketing_purpose?: string;
+            /**
+             * @description The deprecated purpose key the sender still supplied, frozen with the message. The
+             *     fire consults it where the record supports no category, so a preview that could
+             *     not pass it would answer a different question than the send.
+             */
+            consent_purpose?: string;
+            /**
+             * @description The records the sender named in support of the message, frozen with it. Absent
+             *     when none were named. Evidence is what makes a claimed category supported, so a
+             *     preview asked without it would answer "unproven" about a message the fire allows.
+             */
+            evidence?: components["schemas"]["CommunicationEvidence"];
             /**
              * Format: uuid
              * @description The timeline activity this produced, once released.
@@ -24107,7 +24292,7 @@ export interface components {
              * @default quarter
              * @enum {string}
              */
-            period: "quarter" | "month";
+            period: "quarter" | "month" | "week";
             /**
              * Format: date
              * @description A day inside the period being called. Omitted means today's period.
@@ -25280,9 +25465,11 @@ export interface components {
          *     What a reader is SHOWN is a separate decision and belongs to the client: a complete
          *     record is the server's obligation, an edited one is the interface's.
          *
-         *     Three names come from a durable carrier that owns its own occurrence and can say
-         *     queued and running: the two scheduled kinds match a name in runner.Catalog(), and
-         *     `document_extract` is a reading of an attached document a human asked for. Every other
+         *     Four names come from a durable carrier that owns its own occurrence and can say
+         *     queued and running: the two scheduled kinds match a name in runner.Catalog(),
+         *     `document_extract` is a reading of an attached document a human asked for, and
+         *     `site_read` is a deep read of a company's website — one occurrence for the whole crawl,
+         *     where the site tasks below are the individual model calls it makes. Every other
          *     name is an api/ai-tasks.yaml task announced by the router on the task's own behalf —
          *     settled when it appears, because the router learns of a call once the call is over.
          *
@@ -25291,7 +25478,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "propose_roles" | "owed_verdict";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "propose_roles" | "owed_verdict";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -28479,9 +28666,19 @@ export interface components {
             state_at?: string | null;
             /**
              * Format: date-time
-             * @description When a snoozed item re-surfaces (A77/AC-home-6); set exactly while state=snoozed, null otherwise.
+             * @description When a snoozed item re-surfaces; set exactly while reopen_on=time, null otherwise — the other conditions lift on an event rather than a date.
              */
             snoozed_until?: string | null;
+            /**
+             * @description What the item is waiting for; set exactly while state=snoozed, null otherwise.
+             * @enum {string|null}
+             */
+            reopen_on?: "time" | "reply" | "meeting" | null;
+            /**
+             * Format: uuid
+             * @description The meeting being waited for; set exactly while reopen_on=meeting.
+             */
+            reopen_ref?: string | null;
             lineage?: components["schemas"]["MorningBriefItemLineage"];
             /**
              * @description What the overnight agent found about this deal — why it is on the list, what changed,
@@ -28842,14 +29039,36 @@ export interface components {
              */
             cited_evidence: string[];
         };
-        /** @description Snooze a brief item until a future instant (A77/AC-home-6); it re-surfaces once the instant passes. */
+        /**
+         * @description Set a brief item aside until something happens. The something is `reopen_on`: a moment
+         *     on the clock, the customer writing back, or a named meeting being over.
+         */
         BriefSnoozeRequest: {
+            reopen_on?: components["schemas"]["ReopenCondition"];
             /**
              * Format: date-time
-             * @description When the item re-surfaces; must be in the future.
+             * @description When the item re-surfaces. REQUIRED for `time` and refused for the other two — a
+             *     snooze waiting on a reply lifts when the reply arrives, not on a date. Must be in
+             *     the future.
              */
-            snoozed_until: string;
+            snoozed_until?: string;
+            /**
+             * Format: uuid
+             * @description The meeting to wait for. REQUIRED for `meeting` and refused otherwise, because
+             *     "after the meeting" names nothing without saying which meeting.
+             */
+            reopen_ref?: string;
         };
+        /**
+         * @description What lifts a snooze. `time` is the original behaviour and the default, so a client
+         *     written before the other two keeps working unchanged. `reply` waits for the
+         *     counterparty to write back on a conversation linked to the record. `meeting` waits for
+         *     a named meeting to be over — an archived meeting counts as over, so a cancelled one
+         *     returns the work rather than holding it forever.
+         * @default time
+         * @enum {string}
+         */
+        ReopenCondition: "time" | "reply" | "meeting";
         /** @description The §10.1 factor decomposition, each normalized 0..1 — the composite reconciles to it. */
         MorningBriefFeatureVector: {
             /** @description stage win probability / 100. */
@@ -29390,10 +29609,14 @@ export interface components {
             owner_id?: string | null;
             /**
              * @description `true` when the account has a buying committee and nobody engaged on it holds
-             *     the champion seat. Null is not `false`: it is sent only when the answer is both
-             *     known and negative, and stays absent for a committee the caller may not read in
-             *     full, for a deal carrying no seats at all, and for a server that does not assess
-             *     coverage. See `WorklistDealFacts.no_champion`, which carries the same fact out.
+             *     the champion seat. There is no other value: `false` is NEVER sent, and absent
+             *     is the answer in every case that is not that finding — a committee whose
+             *     champion seat IS held, a committee the caller may not read in full, a deal
+             *     carrying no seats at all, and a server that does not assess coverage.
+             *
+             *     So absence does not mean "covered". It means this endpoint is making no claim,
+             *     and a client MUST NOT read it as one. See `WorklistDealFacts.no_champion`,
+             *     which carries the same fact out under the same rule.
              */
             no_champion?: boolean | null;
         };
@@ -29760,8 +29983,8 @@ export interface components {
             counts: components["schemas"]["TeamBoardCounts"];
         };
         /**
-         * @description Three counts of work somebody owes, all read under the CALLER's visibility rather
-         *     than the teammate's — so this is how much of their load the reader can see.
+         * @description Counts of work somebody owes, all read under the CALLER's visibility rather than the
+         *     teammate's — so this is how much of their load the reader can see.
          */
         TeamBoardCounts: {
             /**
@@ -29774,6 +29997,15 @@ export interface components {
             at_risk: number;
             /** @description Open tasks whose due moment has already passed. */
             overdue: number;
+            /**
+             * @description Commitments due by the instant the board was read, from the same extracted claims
+             *     the rep's own day counts — not from open tasks, which are a different question
+             *     wearing the same heading.
+             *
+             *     A zero here means they owe nothing, not that nobody asked: claims have a writer on
+             *     every installation, so this count is always read.
+             */
+            promises_due: number;
         };
         /**
          * @description One outcome band and how much of it this page is showing — the headings a client draws,
@@ -30458,6 +30690,164 @@ export interface components {
             changed_since_brief?: boolean;
         };
         /**
+         * @description What the machinery did since a reader last looked, in four lanes.
+         *
+         *     The lanes are separate arrays rather than one list with a kind, because they ask
+         *     different things of the reader and a client draws them differently: `done` is a
+         *     receipt, `needs_you` is a queue, `could_not_complete` is a fault to chase,
+         *     `watching` is a source to restore. One list would let a failure sort in beside a
+         *     success.
+         */
+        MagicReceipt: {
+            /**
+             * Format: date-time
+             * @description The instant this read was taken.
+             */
+            as_of: string;
+            /**
+             * Format: date-time
+             * @description The start of the window reported, resolved by the server. A client shows it, because "nothing happened" over an hour and over a day are different claims.
+             */
+            since: string;
+            done: components["schemas"]["MagicLine"][];
+            needs_you: components["schemas"]["MagicLine"][];
+            could_not_complete: components["schemas"]["MagicLine"][];
+            watching: components["schemas"]["MagicLine"][];
+            totals: components["schemas"]["MagicTotals"];
+            /**
+             * @description What this read left out, by kind and count.
+             *
+             *     A machine write with no customer-facing meaning is not Magic, and folding it
+             *     in would turn internal churn into apparent value. Reporting the count instead
+             *     means a preview showing five lines can never imply it is showing everything.
+             */
+            not_shown: components["schemas"]["MagicNotShown"][];
+            /** @description Lanes that could not be read. "All clear" is forbidden while one is here: a lane the reader may not see and a lane with nothing in it are different answers. */
+            sources_unavailable: components["schemas"]["WorklistSourceUnavailable"][];
+        };
+        /**
+         * @description How many each lane holds ON THIS PAGE.
+         *
+         *     Not a window total, and the difference matters to a client: a preview drawing
+         *     five of these lines may say "5 of 8" from `done`, and may NOT say "5 of 8 things
+         *     happened today". The window's own size arrives with the cursor, which is the
+         *     thing that makes it worth counting; a figure asserted before then would be
+         *     neither the page nor the window.
+         */
+        MagicTotals: {
+            done: number;
+            needs_you: number;
+            could_not_complete: number;
+            watching: number;
+        };
+        /** @description One kind of thing this read left out, and how many of it there were. */
+        MagicNotShown: {
+            /**
+             * @description `unadmitted_action` — a machine write whose action carries no customer-facing
+             *     meaning: a maintenance sweep, a projection refresh.
+             *     `unknown_entity_type` — an entity kind this build cannot scope, and therefore
+             *     cannot safely show. Counted rather than served: showing a row this read cannot
+             *     place is showing a row it cannot prove the reader may see.
+             *     `out_of_scope` — a row about a record outside the reader's own scope. Counted
+             *     so the total is honest, and never named.
+             * @enum {string}
+             */
+            reason: "unadmitted_action" | "unknown_entity_type" | "out_of_scope";
+            count: number;
+        };
+        /**
+         * @description One thing the machinery did, needs, could not finish, or is watching.
+         *
+         *     EVERY LINE IS ATTRIBUTABLE. `actor` names who acted and on whose behalf; a change
+         *     with no author a reader can name is the spookiness this surface exists to remove.
+         */
+        MagicLine: {
+            /**
+             * Format: uuid
+             * @description The underlying row's id — an audit entry, an approval.
+             */
+            id: string;
+            /** Format: date-time */
+            occurred_at: string;
+            /**
+             * @description Which lane this line belongs to. Carried on the line as well as by the array it sits in, so a client that flattens the four for a preview does not lose which one a line came from.
+             * @enum {string}
+             */
+            lane: "done" | "needs_you" | "could_not_complete" | "watching";
+            summary: components["schemas"]["MagicSentence"];
+            entity?: components["schemas"]["MagicEntityRef"];
+            /** @description The fields this change moved, as they were. MASKED to what the reader may see, through the same field mask the record's own history uses — a receipt is not a way around the boundary the record keeps. */
+            before?: {
+                [key: string]: unknown;
+            };
+            /** @description The same fields, as they are now, under the same mask. */
+            after?: {
+                [key: string]: unknown;
+            };
+            /** @description What this means for the reader, where the action has one to state. A key, not a sentence: the product ships three languages. */
+            consequence?: string;
+            undo?: components["schemas"]["MagicUndo"];
+            actor: components["schemas"]["MagicActor"];
+        };
+        /**
+         * @description What happened, as a key and the values to fill it with.
+         *
+         *     Typed rather than composed on the server for the reason every other sentence in
+         *     this contract is: the product ships three languages, and a sentence assembled here
+         *     reaches a German reader in English.
+         */
+        MagicSentence: {
+            key: string;
+            values?: {
+                [key: string]: string;
+            };
+        };
+        /** @description The record this line is about, where it names one. */
+        MagicEntityRef: {
+            type: string;
+            /** Format: uuid */
+            id: string;
+            /** @description The record's own name, where the reader may see it. Absent rather than invented: a line naming a record it cannot label still says what happened. */
+            label?: string;
+        };
+        /**
+         * @description Who acted, and on whose behalf.
+         *
+         *     `on_behalf_of` is the whole reason this is a shape rather than a string. The
+         *     auto-apply sweep binds a rep's own authority to do what that rep had already
+         *     agreed to, and a receipt saying only "agent" would hide which rep's standing
+         *     decision it was acting on.
+         */
+        MagicActor: {
+            /**
+             * @description Human actors never appear here. This surface reports what ran WITHOUT being asked; a person's own change is their own, and reporting it back to them as machinery would be a lie about who did it.
+             * @enum {string}
+             */
+            type: "agent" | "system" | "connector";
+            id: string;
+            /**
+             * Format: uuid
+             * @description The seat whose authority the action was taken under, where it bound one.
+             */
+            on_behalf_of?: string;
+        };
+        /**
+         * @description Whether this change can be taken back, and why not when it cannot.
+         *
+         *     A greyed control with no reason is the shape this replaces. The reasons are
+         *     compose/undoability's own vocabulary rather than a second set written here.
+         */
+        MagicUndo: {
+            undoable: boolean;
+            /** @description Why not, when it is not. Absent when it is. */
+            reason?: string;
+            /**
+             * Format: uuid
+             * @description The entry a restore would name. Present exactly when `undoable` is true — a client that had one without the other would draw a control with nothing to send.
+             */
+            audit_id?: string;
+        };
+        /**
          * @description How the deal behind a row is STANDING, beside the move that acts on it.
          *
          *     The move says what to do; this says what the reader is walking into. A row
@@ -30621,7 +31011,7 @@ export interface components {
              *     and no thread behind it.
              *
              *     `draft_email` opens a new message, `create_task` agrees a next step,
-             *     `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
+             *     `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
              *     sends the reader to reauthorize a source that stopped answering.
              *
              *     `none` is a producer's answer that there is nothing to do — a closed deal has
@@ -30631,7 +31021,7 @@ export interface components {
              *     client that meets one anyway draws nothing, which is the same outcome.
              * @enum {string}
              */
-            action: "draft_reply" | "draft_email" | "create_task" | "open_meeting_brief" | "reconnect" | "none";
+            action: "draft_reply" | "draft_email" | "create_task" | "open_task" | "open_meeting_brief" | "reconnect" | "none";
             /**
              * Format: uuid
              * @description The record the verb acts on, where the verb acts on one: the message for
@@ -30747,12 +31137,15 @@ export interface components {
              *     the champion seat — a deal drifting because nobody INSIDE is arguing for it,
              *     which needs a different move from the rep than a deal nobody outside has touched.
              *
-             *     Null is not `false`. It is sent only when the answer is both known and negative,
-             *     and stays absent in the three cases that would otherwise be rounded down to a
-             *     finding: a committee the caller may not read in full (a champion they cannot see
-             *     is still a champion), a deal carrying no seats at all (no committee, so no gap),
-             *     and a server that does not assess coverage. A client MUST NOT render an absent
-             *     value as "nobody is carrying this".
+             *     `false` is NEVER sent. The field carries a finding or it carries nothing, and
+             *     absent is the answer in all FOUR cases that are not the finding: a committee
+             *     whose champion seat IS held, a committee the caller may not read in full (a
+             *     champion they cannot see is still a champion), a deal carrying no seats at all
+             *     (no committee, so no gap), and a server that does not assess coverage.
+             *
+             *     Absence therefore says nothing either way. A client MUST NOT render it as
+             *     "nobody is carrying this", and MUST NOT render it as "somebody is": the four
+             *     cases are indistinguishable on the wire by design.
              */
             no_champion?: boolean | null;
         };
@@ -42146,6 +42539,32 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    getMagic: {
+        parameters: {
+            query?: {
+                /** @description The instant to report from. Absent means the acting rep's last brief cutoff, and 24 hours where there is no brief — a window the reader has not already seen, rather than a fixed one that repeats what they read this morning. */
+                since?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The machinery's receipt. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MagicReceipt"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     getWorklist: {
         parameters: {
             query?: {
@@ -42709,6 +43128,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LicenseEntitlement"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getSeatUsage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The seats in use. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeatUsage"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -44949,6 +45390,47 @@ export interface operations {
         };
         responses: {
             /** @description Recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    liftSuppression: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /**
+                 * @description The stop to take back. The row and not the person: a subject may carry more than
+                 *     one, and lifting "the suppression" would take back whichever came first.
+                 */
+                suppressionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Why the stop is being taken back. Required, unlike the reason for setting
+                     *     one: a record saying somebody asked us not to write, now overruled, is the
+                     *     change most worth being able to explain later.
+                     */
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Lifted. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -48877,8 +49359,8 @@ export interface operations {
     getForecast: {
         parameters: {
             query?: {
-                /** @description The window length. Quarters follow the installation's financial year. */
-                period?: "quarter" | "month";
+                /** @description The window length. Quarters and months follow the installation's financial year; a week is the working week, Monday to Sunday in the installation's own zone, and moves with no fiscal year. */
+                period?: "quarter" | "month" | "week";
                 /** @description Which period to read, by naming a day inside it. Omitted means today's. A DAY rather than an instant: which period a moment falls in is a question about the installation's calendar, not about the caller's clock. */
                 as_of?: string;
                 scope_kind?: "workspace" | "team" | "owner";
@@ -49050,7 +49532,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description The window length. Quarters follow the installation's financial year. */
-                period?: "quarter" | "month";
+                period?: "quarter" | "month" | "week";
                 /** @description Which period to read, named by a day inside it. Defaults to today, so a caller who names nothing asks about the period they are in. */
                 as_of?: string;
                 scope_kind?: "workspace" | "team" | "owner";

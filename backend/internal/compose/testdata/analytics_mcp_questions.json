@@ -1,5 +1,5 @@
 {
-  "comment": "The canonical persona questions the analytics MCP surface answers deterministically. The exact question string here is THE question — no test may refer to an older draft. Every entry has an executable case in analyticsmcpquestions_integration_test.go, held in both directions by TestEveryCanonicalQuestionHasExecutableProof.",
+  "comment": "The canonical persona questions the analytics MCP surface answers deterministically. The exact question string here is THE question \u2014 no test may refer to an older draft. Every entry has an executable case in analyticsmcpquestions_integration_test.go, held in both directions by TestEveryCanonicalQuestionHasExecutableProof.",
   "questions": [
     {
       "id": "G01",
@@ -13,7 +13,7 @@
       "persona": "rep",
       "question": "Show me the whole company's pipeline by owner.",
       "tool": "run_analytics_query",
-      "expects": "Refused outright — never quietly narrowed to a population the answer does not name."
+      "expects": "Refused outright \u2014 never quietly narrowed to a population the answer does not name."
     },
     {
       "id": "G03",
@@ -27,7 +27,7 @@
       "persona": "team manager",
       "question": "How much open pipeline does my team have in each stage right now?",
       "tool": "run_analytics_query",
-      "expects": "One row per stage, open deals only, the caller's own population — a colleague's deals and closed deals both stay out."
+      "expects": "One row per stage, open deals only, the caller's own population \u2014 a colleague's deals and closed deals both stay out."
     },
     {
       "id": "M06",
@@ -35,6 +35,34 @@
       "question": "Which stages are taking longer than normal for my team?",
       "tool": "run_analytics_query",
       "expects": "Asked under the caller's own lens; a median below the five-value sample floor is null beside an honest count, never one deal's value wearing a statistic's name."
+    },
+    {
+      "id": "M05",
+      "persona": "team manager",
+      "question": "Is our pipeline too concentrated in a few large deals?",
+      "tool": "run_analytics_query",
+      "expects": "Count and value together, plus the largest deal \u2014 concentration is the gap between them, and a count alone cannot show it."
+    },
+    {
+      "id": "M07",
+      "persona": "team manager",
+      "question": "Which open deals are stuck and have no agreed next step?",
+      "tool": "run_report",
+      "expects": "The shared stalled rule over the report path. `stalled` is a report FILTER and the analytics schema publishes dimensions and measures only, so an agent asking this through run_analytics_query is told the field does not exist."
+    },
+    {
+      "id": "M08",
+      "persona": "team manager",
+      "question": "What is my team's win rate by deal count and by value this quarter?",
+      "tool": "run_analytics_query",
+      "expects": "Count and value are separate readings: six wins at 10k beside five losses at 60k is a majority of deals won and a majority of the money lost, and one number cannot say both."
+    },
+    {
+      "id": "M12",
+      "persona": "team manager",
+      "question": "Which lead sources created the most won revenue?",
+      "tool": "run_analytics_query",
+      "expects": "Won revenue by the source the deal carries, in base currency. The lost cohort is the discriminator: win-loss already excludes open deals, so an engine ignoring the status filter would count losses as revenue."
     }
   ]
 }

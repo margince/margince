@@ -8,7 +8,8 @@ import { problemMessageOf } from "./common";
 import { useFileDrop } from "./use-file-drop";
 import type { IntakeNotice, SpeakerAsk } from "./use-voice-intake";
 import { useVoiceIntake } from "./use-voice-intake";
-import { ACCEPTED_CORPUS_ATTR, VOICE_MIN_WORDS } from "./voice-intake-core";
+import { ACCEPTED_CORPUS_ATTR } from "./voice-corpus-file";
+import { VOICE_MIN_WORDS } from "./voice-intake-core";
 
 // The Settings intake: hand over files, and answer who is speaking when one
 // turns out to be a conversation. It owns the intake hook so the build control
@@ -216,6 +217,10 @@ function noticeText(
       return t("settings.voice.noticeSkippedType", { name: notice.label });
     case "skippedEmpty":
       return t("settings.voice.noticeSkippedEmpty", { name: notice.label });
+    case "skippedUnreadable":
+      return t("settings.voice.noticeSkippedUnreadable", {
+        name: notice.label,
+      });
     case "dismissed":
       return t("settings.voice.noticeDismissed", { name: notice.label });
     case "askQueueFull":

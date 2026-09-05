@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
@@ -270,6 +271,10 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// through, so a card here and a row there are one queue rather than two
 	// readings of it.
 	srv.attentionHandlers = newAttentionHandlers(pool, approvalsServiceWithEffects(pool), srv.overlayMeter)
+	// The machinery's receipt: what ran without being asked, in the window since
+	// the reader last looked. It reads the same clock the rest of the surface
+	// does, so "since your brief" means the same instant everywhere.
+	srv.magicHandlers = magic.NewHandlers(newMagicService(pool, time.Now))
 	srv.wireCaptureSettingsSurface(pool)
 	srv.wireExportSurface(pool, log)
 	srv.wireOnboardingSurface(pool)

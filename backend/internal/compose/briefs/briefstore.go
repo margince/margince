@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // Brief item states (data-model §12.5). A snooze (A77/AC-home-6) hides
@@ -73,6 +74,10 @@ type BriefRunItem struct {
 	State        string
 	StateAt      *time.Time
 	SnoozedUntil *time.Time
+	// ReopenOn is what the rep is waiting for, set only while snoozed. ReopenRef
+	// names the meeting when they are waiting for one.
+	ReopenOn  values.ReopenCondition
+	ReopenRef *ids.UUID
 	// Finding is what the overnight agent found about this deal, empty when no
 	// pass has annotated the run it belongs to.
 	Finding string
@@ -366,17 +371,24 @@ func readRunItems(ctx context.Context, tx pgx.Tx, runID ids.UUID) ([]BriefRunIte
 	return items, rows.Err()
 }
 
-// resurfaceExpiredSnoozes flips a run's expired snoozes back to
-// actionable — the A77 re-surface half of the snooze contract. Each flip
-// is a state change on per-rep queue data, so it is audited like the
-// rep's own marks (brief rows are audit-only; no brief.* event exists in
-// the events.md catalog).
+// resurfaceExpiredSnoozes flips a run's finished snoozes back to actionable —
+// the re-surface half of the snooze contract. Each flip is a state change on
+// per-rep queue data, so it is audited like the rep's own marks (brief rows are
+// audit-only; no brief.* event exists in the events.md catalog).
+//
+// "Finished" is whatever the item was waiting for: a moment that has passed, a
+// reply that arrived, a meeting that is over. The last two come from
+// briefSnoozeLiftedSQL, the same predicate the candidate filter and the mark
+// guard ask — three readers of one question, and a fourth spelling here would
+// be the one that disagrees.
 func resurfaceExpiredSnoozes(ctx context.Context, tx pgx.Tx, runID ids.UUID, now time.Time) error {
-	resurfaced, err := collectIDList(tx.Query(ctx, `
-		UPDATE brief_item
-		SET state = 'new', state_at = NULL, snoozed_until = NULL
-		WHERE brief_run_id = $1 AND state = 'snoozed' AND snoozed_until <= $2
-		RETURNING id`, runID, now.UTC()))
+	lifted := briefSnoozeLiftedSQL("bi.deal_id", "bi.reopen_on", "bi.reopen_ref", "bi.state_at", "$2")
+	resurfaced, err := collectIDList(tx.Query(ctx, fmt.Sprintf(`
+		UPDATE brief_item bi
+		SET state = 'new', state_at = NULL, snoozed_until = NULL, reopen_on = NULL, reopen_ref = NULL
+		WHERE bi.brief_run_id = $1 AND bi.state = 'snoozed'
+		  AND CASE WHEN bi.reopen_on = 'time' THEN bi.snoozed_until <= $2 ELSE %s END
+		RETURNING bi.id`, lifted), runID, now.UTC()))
 	if err != nil {
 		return err
 	}
@@ -384,7 +396,7 @@ func resurfaceExpiredSnoozes(ctx context.Context, tx pgx.Tx, runID ids.UUID, now
 		before := map[string]any{auditFieldState: briefStateSnoozed}
 		after := map[string]any{
 			auditFieldState: briefStateNew, auditFieldStateAt: nil,
-			auditFieldSnoozedUntil: nil,
+			auditFieldSnoozedUntil: nil, auditFieldReopenOn: nil, auditFieldReopenRef: nil,
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "brief_item", itemID, before, after); err != nil {
 			return err

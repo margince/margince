@@ -12,6 +12,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // WithScheduleTimer returns handlers that can defer a send. Compose calls this;
@@ -125,6 +126,35 @@ func scheduledSendResponse(row ScheduledSend) crmcontracts.ScheduledSend {
 		anchor := openapi_types.UUID(row.Anchor.UUID)
 		out.AnchorActivityId = &anchor
 	}
+	// The caller's own frozen input, echoed to its author and nobody else: the
+	// read is scoped to scheduled_by, and every door that ACTS on these links —
+	// the preview, the fire — re-probes each one through the caller's row scope
+	// before the engine sees it. A record the scheduler can no longer read is
+	// refused there, not hidden here, because a list that silently dropped one
+	// would have the preview ask a narrower question than the fire.
+	if len(row.Links) > 0 {
+		links := linksOnWire(row.Links)
+		out.Links = &links
+	}
+	// Only a category the wire's enum publishes. The store type also names the
+	// five controller-only categories, which the door refuses and the fire
+	// refuses again; a row that carried one anyway must not reach a client as
+	// a value outside its own contract.
+	if row.Context.Valid() && !row.Context.ServesTheSubject() {
+		claimed := crmcontracts.CommunicationContext(row.Context)
+		out.CommunicationContext = &claimed
+	}
+	if row.MarketingPurpose != "" {
+		purpose := row.MarketingPurpose
+		out.MarketingPurpose = &purpose
+	}
+	if row.ConsentPurpose != "" {
+		purpose := row.ConsentPurpose
+		out.ConsentPurpose = &purpose
+	}
+	if evidence, named := evidenceOnWire(row.Evidence); named {
+		out.Evidence = &evidence
+	}
 	if row.ActivityID != (ids.UUID{}) {
 		activityID := openapi_types.UUID(row.ActivityID)
 		out.ActivityId = &activityID
@@ -134,6 +164,42 @@ func scheduledSendResponse(row ScheduledSend) crmcontracts.ScheduledSend {
 		out.HeldReason = &reason
 	}
 	return out
+}
+
+// linksOnWire is linkInputsOf read backwards: the frozen records a scheduled
+// message names, in the shape a caller supplied them.
+func linksOnWire(links []ActivityLinkInput) []crmcontracts.ActivityLinkInput {
+	out := make([]crmcontracts.ActivityLinkInput, 0, len(links))
+	for _, l := range links {
+		out = append(out, crmcontracts.ActivityLinkInput{
+			EntityType: crmcontracts.ActivityLinkInputEntityType(l.EntityType),
+			EntityId:   openapi_types.UUID(l.EntityID),
+		})
+	}
+	return out
+}
+
+// evidenceOnWire is evidenceFrom read backwards. The second value says whether
+// anything was named, so a message with no evidence omits the block rather than
+// sending six nulls a client would have to read as "none".
+func evidenceOnWire(e commsauthz.Evidence) (crmcontracts.CommunicationEvidence, bool) {
+	var out crmcontracts.CommunicationEvidence
+	named := false
+	name := func(into **openapi_types.UUID, id ids.UUID) {
+		if id == (ids.UUID{}) {
+			return
+		}
+		wire := openapi_types.UUID(id)
+		*into = &wire
+		named = true
+	}
+	name(&out.ActivityId, e.ActivityID)
+	name(&out.DealId, e.DealID)
+	name(&out.InvoiceId, e.InvoiceID)
+	name(&out.ContractId, e.ContractID)
+	name(&out.ConsentEventId, e.ConsentEventID)
+	name(&out.BasisId, e.BasisID)
+	return out, named
 }
 
 // emailList renders stored addresses onto the wire's email type.

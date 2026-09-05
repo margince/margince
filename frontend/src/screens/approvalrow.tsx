@@ -39,6 +39,7 @@ import {
   stagedDayFormatter,
 } from "./approvalkind";
 import type { Approval } from "./approvals.queries";
+import { stagedSendOf } from "./approvalsend";
 import {
   isAlreadyDecided,
   isVersionSkew,
@@ -47,6 +48,8 @@ import {
   throwProblem,
   useViewerId,
 } from "./common";
+import { SendPermission } from "./sendpermission";
+import { useSendPermission } from "./usesendpermission";
 import "./approvalrow.css";
 
 // One staged proposal as a decidable row, and the screen-level sink that
@@ -201,6 +204,20 @@ export function ApprovalRow({
   // Decided lists (interval 0 ⇒ useNow does not tick).
   const needsCountdown = !decided && approval.expires_at != null;
   const now = useNow(needsCountdown ? 1000 : 0);
+  // Whether the engine would let the staged mail go, asked before the approver
+  // releases it. An approver is deciding on somebody else's behalf, and until
+  // now learned of a refusal the way the author would have: by pressing Accept
+  // and reading the effect's failure. Only a live row asks — a decided one has
+  // nothing left to release — and only a kind whose payload describes a mail.
+  const staged = stagedSendOf(approval);
+  const permission = useSendPermission({
+    recipients: staged?.recipients ?? [],
+    anchorActivityId: staged?.anchorActivityId,
+    links: staged?.links,
+    context: staged?.context,
+    marketingPurpose: staged?.marketingPurpose,
+    enabled: !decided && staged !== undefined,
+  });
 
   // Where an approved change can be put back, and where it cannot.
   //
@@ -385,12 +402,23 @@ export function ApprovalRow({
       // extra. The contract's reason field stays for callers that have one.
       onReject={() => decide.mutate({ verdict: "reject" })}
       notice={
-        <DecideOutcome
-          decide={decide}
-          skew={skew}
-          alreadyDecided={alreadyDecided}
-          onReRead={reRead}
-        />
+        <>
+          {/* Read-only: the approver may release or refuse the message, and an
+              override of the engine belongs to whoever is writing to the
+              person, recorded against their own name. */}
+          {!decided && staged !== undefined && (
+            <SendPermission
+              preview={permission.preview}
+              unanswered={permission.unanswered}
+            />
+          )}
+          <DecideOutcome
+            decide={decide}
+            skew={skew}
+            alreadyDecided={alreadyDecided}
+            onReRead={reRead}
+          />
+        </>
       }
     >
       <ApprovalDetailModal

@@ -261,16 +261,17 @@ export const RecordDrawer: StoryObj = {
 };
 
 /**
- * The drawer for a message something HELD, which is the state the access
- * markers exist for.
+ * The drawer for a message something HELD, which is the state the access line
+ * exists for.
  *
- * Two badges beside the subject: what the limit is, and what decided it. The
- * pair is the picture worth having, because a header carrying only "Participants"
- * tells a reader they cannot widen the message and not why — and a reader who
- * cannot see the verdict cannot tell a correct one from a wrong one.
+ * One line under the subject: the mark, the reason that decided it, and the
+ * verb at the far end. The reason is the picture worth having, because a line
+ * carrying only "Participants" tells a reader they cannot widen the message
+ * and not why — and a reader who cannot see the verdict cannot tell a correct
+ * one from a wrong one.
  *
- * `can_change` is true here, so the sentence and the control under the body are
- * drawn too: this is the whole arrangement, header and footer, in one shot.
+ * `can_change` is true here and the write reaches the thread, so the verb and
+ * its scope caption are drawn too: this is the whole arrangement in one shot.
  */
 export const RecordDrawerHeld: StoryObj = {
   render: () => {
@@ -282,6 +283,10 @@ export const RecordDrawerHeld: StoryObj = {
             lifecycle: "delivered",
             occurred_at: BASE.occurred_at,
             summary: { ...BASE, display_status: "participants" },
+            // The thread the verb writes against: without one the server
+            // would not have offered `thread_contribution`, and the control
+            // draws nothing rather than a button that would 404.
+            thread_key: "brandt-angebot-q4",
             body: "Können wir Dienstag kurz sprechen?\n\nViele Grüße\nAna",
             from: [
               { address: "ana@brandt.example", display_name: "Ana Sommer" },
@@ -299,6 +304,7 @@ export const RecordDrawerHeld: StoryObj = {
               explanation: "explicitly_confidential",
               can_change: true,
               change_mode: "thread_contribution",
+              change_scope: "thread",
             },
             can_reply: true,
             can_relink: false,

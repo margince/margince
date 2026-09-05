@@ -264,6 +264,12 @@ describe("the kinds the rail asks for", () => {
       "morning_brief",
       "offer_draft",
       "overnight_at_risk_sweep",
+      // A company's website read end to end. It reaches one person's feed:
+      // the dossier is announced under the requester as on_behalf_of, so a
+      // read a rep started from a company page is scoped to that rep, while
+      // the sweeps' reads name no human and never reach anyone. And it fits:
+      // a rep reads a handful of companies in a day, not ten.
+      "site_read",
       "summarize",
       // The weekly retrospective's sentence. It reaches one person's feed —
       // the pass runs under that rep's own principal over their own week, so

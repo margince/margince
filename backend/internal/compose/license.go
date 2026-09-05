@@ -20,7 +20,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -157,15 +156,20 @@ func WithLicensePosture(posture func() licensecheck.Posture) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.licensePosture = posture
 		// The entitlement surface is built HERE rather than in the assembly, and
-		// both halves together: the assembly runs BEFORE the options, so a handler
-		// wired there would have captured a nil posture and answered 501 for the
-		// life of the process. One wiring point also means one answer to "does this
-		// role report entitlement at all" — a role that never applies this option
-		// serves no /metrics section and no surface, declared or absent in both.
-		s.licenseHandlers = licenseHandlers{
-			seats:   identity.NewSeatUsage(InstallationDB(pool)),
-			posture: posture,
-		}
+		// the posture half: the assembly runs BEFORE the options, so a handler wired
+		// there would have captured a nil posture and answered 501 for the life of
+		// the process. One wiring point also means one answer to "does this role
+		// report entitlement at all" — a role that never applies this option serves
+		// no /metrics section and no entitlement surface, declared or absent in both.
+		//
+		// The seat COUNT is not rebuilt here. It came from the assembly, because it
+		// is a fact about app_user rows that holds whether or not a license was ever
+		// configured, and adding the posture is the only thing this option has to
+		// say about it. Spelling the store a second time would put one invariant in
+		// two places, and dropping it from that second literal — reasonably, on the
+		// grounds that the assembly already wired it — would take the entitlement
+		// surface down with it.
+		s.licenseHandlers = s.withPosture(posture)
 		// The same posture reaches identity's seat writer as a ceiling, from the
 		// same call: a role that reports what a license grants must not be able to
 		// show an admin a number it does not hold them to. The posture is read at

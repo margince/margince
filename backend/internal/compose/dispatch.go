@@ -245,6 +245,13 @@ func runPerWorkspace(ctx context.Context, pool *pgxpool.Pool, run func(context.C
 	if err != nil {
 		return err
 	}
+	return runEach(ctx, workspaces, run)
+}
+
+// runEach is the walk both enumerations share: every workspace attempted, the
+// failures joined. One spelling, so the live and the archived-inclusive passes
+// cannot come to differ about what a tenant's failure does to the rest.
+func runEach(ctx context.Context, workspaces []ids.UUID, run func(context.Context, ids.UUID) error) error {
 	var failures []error
 	for _, ws := range workspaces {
 		if err := run(ctx, ws); err != nil {
@@ -252,6 +259,22 @@ func runPerWorkspace(ctx context.Context, pool *pgxpool.Pool, run func(context.C
 		}
 	}
 	return errors.Join(failures...)
+}
+
+// runPerEveryWorkspace is runPerWorkspace over the enumeration that includes
+// ARCHIVED workspaces, for the passes that owe something to data rather than to
+// a live tenant.
+//
+// Archiving a workspace does not un-store the data inside it, and storage
+// limitation does not pause because a tenant stopped logging in — so a
+// retention pass that walked only live workspaces would hold personal data past
+// its floor in exactly the workspaces nobody looks at any more.
+func runPerEveryWorkspace(ctx context.Context, pool *pgxpool.Pool, run func(context.Context, ids.UUID) error) error {
+	workspaces, err := enumerateEveryWorkspace(ctx, pool)
+	if err != nil {
+		return err
+	}
+	return runEach(ctx, workspaces, run)
 }
 
 // clientInsertMany binds the fan-out to the River client already in context —

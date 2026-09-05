@@ -1,4 +1,4 @@
-import { File, FileText } from "lucide-react";
+import { File, FileText, Image } from "lucide-react";
 import "./filechip.css";
 
 // A stored file, drawn as the small card a reader clicks to get it.
@@ -10,7 +10,11 @@ import "./filechip.css";
 // one row have to be tellable apart before the click, not after it.
 //
 // The glyph and the kind tag both name the kind and nothing more: they are
-// decorative, and the filename between them is the accessible name.
+// decorative, and the filename between them is the accessible name. Two kinds
+// get a glyph of their own — PDF, which is what agreement paper arrives as,
+// and an image, which is what a photo, a scan or a mail signature's logo
+// arrives as — because those are the two a reader most wants to tell apart
+// from each other and from everything else before the click.
 export function FileChip({
   href,
   filename,
@@ -26,7 +30,7 @@ export function FileChip({
   size?: string;
 }>) {
   const kind = fileKind(filename);
-  const Glyph = kind === "PDF" ? FileText : File;
+  const Glyph = glyphFor(kind);
   return (
     <a className="file-chip" href={href} download={filename}>
       <Glyph size={14} aria-hidden="true" />
@@ -40,6 +44,35 @@ export function FileChip({
     </a>
   );
 }
+
+// The mark for a kind tag, decided from the same upper-cased extension the
+// tag shows: three glyphs, never a guess at anything finer, so a reader learns
+// paper / picture / other at a glance and reads the tag for the rest.
+function glyphFor(kind: string) {
+  if (kind === "PDF") {
+    return FileText;
+  }
+  if (IMAGE_KINDS.has(kind)) {
+    return Image;
+  }
+  return File;
+}
+
+// The raster and vector formats a mail client or a phone camera writes. Read
+// from the extension like the kind tag is, so the glyph never disagrees with
+// the stamp beside it.
+const IMAGE_KINDS: ReadonlySet<string> = new Set([
+  "JPG",
+  "JPEG",
+  "PNG",
+  "GIF",
+  "WEBP",
+  "HEIC",
+  "SVG",
+  "BMP",
+  "TIFF",
+  "TIF",
+]);
 
 // The extension, upper-cased, or "" for a filename that carries none. Read
 // from the name rather than guessed from the bytes: this is what the reader

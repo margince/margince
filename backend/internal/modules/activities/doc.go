@@ -8,8 +8,15 @@
 // datasource provider, flat per ADR-0054 §3.
 //
 // Tables owned: activity, activity_link, activity_audience_member,
-// activity_retention_evidence, transcript_read, attachment_extraction,
-// deal_document_hide, activity_sales_state, activity_reader_state, worklist_pin.
+// activity_meeting_history, activity_retention_evidence, transcript_read,
+// attachment_extraction, deal_document_hide, activity_sales_state,
+// activity_reader_state, worklist_pin.
+//
+// activity_meeting_history is what activity.meeting_status cannot be: the
+// column says what a meeting IS, and a question about a period — how many did
+// we book last week — is about when it BECAME that. A meeting booked on Monday
+// and held on Friday reads as `held` today, so counting the column reports no
+// bookings for the week it was booked in.
 //
 // activity_sales_state and activity_reader_state hold what somebody decided
 // ABOUT a waiting message, and they are two tables because the decisions bind

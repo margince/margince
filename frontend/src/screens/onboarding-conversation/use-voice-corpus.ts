@@ -5,12 +5,12 @@ import { formatNumber } from "../../format/format";
 import { useLocale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemMessage } from "../common";
+import { isAcceptedCorpusFile } from "../voice-corpus-file";
 import type { IntakeOutcome, RefusalReason } from "../voice-intake-core";
 import {
+  intakeFile,
   intakePaste,
   intakeTranscript,
-  intakeUpload,
-  isAcceptedCorpusFile,
   sourceRef,
 } from "../voice-intake-core";
 import type {
@@ -76,6 +76,17 @@ const refusalKeys: Record<RefusalReason, MessageKey> = {
   unattributed: "ob.conv.voice.refusalUnattributed",
   speaker: "ob.conv.voice.refusalSpeaker",
   unsupported: "ob.conv.voice.refusalUnsupported",
+};
+
+// Why a file went nowhere, in the room's own words. `type` is decided by name
+// before anything is read; the other two are what reading it found.
+const skipKeys: Record<
+  Extract<IntakeOutcome, { kind: "skipped" }>["reason"],
+  MessageKey
+> = {
+  type: "ob.conv.voice.fileSkipped",
+  empty: "ob.conv.voice.fileEmpty",
+  unreadable: "ob.conv.voice.fileUnreadable",
 };
 
 // The refusal category the core read off the 422 picks the honest line; a
@@ -155,6 +166,18 @@ export function useVoiceCorpus({
     [say],
   );
 
+  // A file that went nowhere is said on the board, the same notice a refusal
+  // uses: with no rail thread left, the narration alone would reach nobody,
+  // and a reader whose drop did nothing has to be told which file and why.
+  const skip = useCallback(
+    (name: string, reason: keyof typeof skipKeys) => {
+      const id = `skip:${name}`;
+      say(id, skipKeys[reason], { name });
+      setFailure({ id, i18nKey: skipKeys[reason], params: { name } });
+    },
+    [say],
+  );
+
   // Concurrent ingests can settle out of order; each request is stamped at
   // issue time and only the newest-by-request-order summary may drive the
   // meter and the word-growth narration. Every response's summary is
@@ -202,9 +225,7 @@ export function useVoiceCorpus({
         return;
       }
       if (outcome.kind === "skipped") {
-        say(`skip:${outcome.label}`, "ob.conv.voice.fileEmpty", {
-          name: outcome.label,
-        });
+        skip(outcome.label, outcome.reason);
         return;
       }
       if (outcome.kind === "refused") {
@@ -250,7 +271,7 @@ export function useVoiceCorpus({
         reactionKey,
       );
     },
-    [dispatch, recordIngest, say],
+    [dispatch, recordIngest, skip],
   );
 
   // Each intake is stamped when its INGEST is issued, and only the
@@ -291,15 +312,13 @@ export function useVoiceCorpus({
   );
 
   // One intake for all three entry paths: the attach button, a drop onto the
-  // thread, and (via addPaste) the composer. V1 corpus is text only;
-  // anything else is refused by name.
+  // thread, and (via addPaste) the composer. A file of a type the corpus has
+  // no reader for is refused by name, before anything is read.
   const addFiles = useCallback(
     (files: readonly File[]) => {
       for (const file of files) {
         if (!isAcceptedCorpusFile(file.name)) {
-          say(`skip:${file.name}`, "ob.conv.voice.fileSkipped", {
-            name: file.name,
-          });
+          skip(file.name, "type");
           continue;
         }
         // The thread shows the file the moment it is handed over, before its
@@ -316,21 +335,13 @@ export function useVoiceCorpus({
         // reader in onboarding is building a first corpus anyway, which by
         // definition has no older rows to collide with.
         runIntake(
-          async (stamp) => {
-            const text = await file.text();
-            return intakeUpload(
-              sourceRef("upload", file.name, text),
-              file.name,
-              text,
-              stamp,
-            );
-          },
+          (stamp) => intakeFile(file, undefined, stamp),
           "ob.conv.voice.reactionDocument",
           `refuse:onboarding:upload:${file.name}`,
         );
       }
     },
-    [dispatch, runIntake, say],
+    [dispatch, runIntake, skip],
   );
 
   const addPaste = useCallback(

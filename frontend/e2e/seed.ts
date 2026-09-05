@@ -326,6 +326,135 @@ export const automationCatalog = [
 
 // Pre-seeded instance — the wire carries no origin, so this stands in for
 // the agent-authored case and must render like any other row.
+// The report answers the Analytics sections read, keyed by the report the
+// screen asks for.
+//
+// Each carries the ALIASES its card reads, because a card looking for
+// `median_days` on a row that carries `raw_minor` renders its empty state and a
+// sweep over that tab then measures this file rather than the screen.
+//
+// The values are chosen so an honest ABSENCE is on screen beside a real number:
+// stage-age's second row has too few deals for a median, and projects-gone-quiet
+// answers nothing at all. A fixture where every cell holds a figure cannot show
+// that the screen says "Too few to say" rather than "0".
+//
+// And every OTHER card carries its figures, which matters as much: win-loss
+// draws the same DaysCell, so a fixture omitting its medians puts "Too few to
+// say" on screen for a reason the test is not about — and an assertion looking
+// for those words then passes whatever stage-age does.
+export const reportFixtures: Record<string, unknown> = {
+  // Stage ids are the SHARED pipeline's, not invented ones: StageAgeTable joins
+  // them to `stages` for the name, and an id matching nothing renders every row
+  // as "unknown stage" — a table that looks populated and names no stage.
+  "stage-age": {
+    report: "stage-age",
+    plan: { group_by: ["stage_id"] },
+    columns: ["stage_id", "deal_count", "median_days", "p75_days"],
+    rows: [
+      {
+        stage_id: "s1",
+        deal_count: 6,
+        median_days: 12,
+        p75_days: 21,
+      },
+      // Under the sample floor: the server answers null and the card must say
+      // so in words rather than drawing a zero.
+      {
+        stage_id: "s2",
+        deal_count: 2,
+        median_days: null,
+        p75_days: null,
+      },
+    ],
+    total_rows: 2,
+    as_of: "2026-03-04T09:00:00Z",
+    timezone: "Europe/Berlin",
+    base_currency: "EUR",
+  },
+  "win-loss": {
+    report: "win-loss",
+    plan: { group_by: ["status"] },
+    columns: ["status", "deal_count", "raw_minor", "median_days", "p75_days"],
+    rows: [
+      {
+        status: "won",
+        deal_count: 7,
+        raw_minor: 4_200_000,
+        median_days: 34,
+        p75_days: 61,
+      },
+      {
+        status: "lost",
+        deal_count: 4,
+        raw_minor: 9_100_000,
+        median_days: 22,
+        p75_days: 40,
+      },
+    ],
+    total_rows: 2,
+    as_of: "2026-03-04T09:00:00Z",
+    timezone: "Europe/Berlin",
+    base_currency: "EUR",
+  },
+  "projects-by-phase": {
+    report: "projects-by-phase",
+    plan: { group_by: ["phase"] },
+    columns: ["phase", "projects", "open_deal_value_minor", "won_deal_value_minor"],
+    rows: [
+      {
+        phase: "delivering",
+        projects: 3,
+        open_deal_value_minor: 1_500_000,
+        won_deal_value_minor: 8_000_000,
+      },
+    ],
+    total_rows: 1,
+    as_of: "2026-03-04T09:00:00Z",
+    timezone: "Europe/Berlin",
+    base_currency: "EUR",
+  },
+  "project-commitments": {
+    report: "project-commitments",
+    plan: { group_by: ["project_id"] },
+    // name and phase travel with the id, because the card draws the project as
+    // a LINK with its phase beside it: a row carrying the id alone renders an
+    // empty link and a blank phase, which reads as a broken row rather than as
+    // the fixture being short.
+    columns: [
+      "project_id",
+      "name",
+      "phase",
+      "open_commitments",
+      "overdue_commitments",
+    ],
+    rows: [
+      {
+        project_id: "p1",
+        name: "Rollout",
+        phase: "delivering",
+        open_commitments: 4,
+        overdue_commitments: 1,
+      },
+    ],
+    total_rows: 1,
+    as_of: "2026-03-04T09:00:00Z",
+    timezone: "Europe/Berlin",
+    base_currency: "EUR",
+  },
+  // Deliberately empty: "nothing has gone quiet" is a real answer and the
+  // screen owes words for it rather than an empty table.
+  "projects-gone-quiet": {
+    report: "projects-gone-quiet",
+    plan: { group_by: ["project_id"] },
+    columns: ["project_id", "quiet_since"],
+    rows: [],
+    total_rows: 0,
+    as_of: "2026-03-04T09:00:00Z",
+    timezone: "Europe/Berlin",
+    base_currency: "EUR",
+  },
+};
+
 export const seededAutomation = {
   id: "au-1",
   key: "task_on_stage_entry",
@@ -2253,7 +2382,45 @@ export async function mockApi(
         base_currency: "EUR",
       });
     }
-    if (path.startsWith("/reports/")) {
+    // Home's own reading of the same pipeline (home.readings.tsx) and
+    // Analytics' forecast tab (analytics.forecast.tsx) share this one query.
+    // Without it the catch-all's list envelope reaches
+    // formatMoneyCompact(data.open_minor, data.base_currency, locale)
+    // unguarded — unlike the weighted figure beside it, which is wrapped in
+    // formatMoneyOrAbsent — so an undefined currency took the whole #/home
+    // shell down with it.
+    if (path === "/forecast") {
+      return json({
+        period_start: "2026-04-01",
+        period_end: "2026-06-30",
+        scope_kind: "workspace",
+        won_minor: 4_000_000,
+        evidence_minor: 12_000_000,
+        best_case_minor: 18_000_000,
+        open_minor: 25_000_000,
+        weighted_minor: 13_000_000,
+        eligible_count: 12,
+        priced_count: 12,
+        confirmed_date_count: 10,
+        fx_missing_count: 0,
+        as_of: "2026-07-13T00:00:00Z",
+        timezone: "Europe/Berlin",
+        base_currency: "EUR",
+      });
+    }
+    // The report a caller ASKED for, not one shape for all of them.
+    //
+    // Every report answered `deals-by-stage`'s columns before this, so the
+    // Performance and Delivery sections received rows whose fields they do not
+    // read: a stage-age card looking for `median_days` on a row carrying
+    // `raw_minor` renders its empty state, and a sweep over those tabs proves
+    // the fixture rather than the screen.
+    if (path.startsWith("/reports/") && !path.includes("/derivation")) {
+      const key = path.slice("/reports/".length);
+      const shaped = reportFixtures[key];
+      if (shaped) {
+        return json(shaped);
+      }
       return json({
         report: "deals-by-stage",
         // The plan echoes what the CLIENT asked for, and the client groups money
@@ -2331,25 +2498,6 @@ export async function mockApi(
         aggregated_account_count: 1,
         restricted_excluded: [],
         computed_at: "2026-07-13T00:00:00Z",
-      });
-    }
-    // Analytics' frame, BEFORE the record-context match below: that one tests
-    // a substring, so it answered this route with a 360's envelope — a body
-    // with no `default_scope`, which took every analytics screen to the error
-    // boundary and the rail with it. Named in full here because the two share
-    // a word and nothing else.
-    if (path === "/analytics/context") {
-      const workspace = { kind: "workspace", label: "Whole workspace" };
-      return json({
-        default_scope: workspace,
-        allowed_scopes: [workspace],
-        capabilities: {
-          view_manager_forecast: true,
-          submit_manager_forecast: true,
-        },
-        as_of: "2026-07-13T00:00:00Z",
-        timezone: "Europe/Berlin",
-        base_currency: "EUR",
       });
     }
     // RS-3's context panel and the IT-1 tool console both read fixed-shape
