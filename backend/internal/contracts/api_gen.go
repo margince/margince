@@ -31031,6 +31031,19 @@ type SearchResultTrustTier string
 // SearchResultType defines model for SearchResult.Type.
 type SearchResultType string
 
+// SeatUsage How many full seats the installation is using, without what it is entitled to.
+//
+// Deliberately NOT a subset of LicenseEntitlement: it carries no cap and no posture,
+// because those are the commercial facts `seat_usage` exists to leave out. A client
+// needing both reads the entitlement surface, which requires the `license` grant.
+type SeatUsage struct {
+	// SeatsUsed Full seats in use: every one the installation has not withdrawn — neither
+	// deactivated nor suspended — agent seats included. Read seats are unlimited and
+	// never counted (A62/ADR-0047). This is the same number the entitlement surface
+	// reports and the same one a seat creation is refused against; there is one meter.
+	SeatsUsed int `json:"seats_used"`
+}
+
 // SendAccountEmailRequest One account-started send. It is SendEmailRequest plus the `links` an anchor would
 // otherwise have supplied — the records this new conversation belongs to.
 type SendAccountEmailRequest struct {
@@ -49039,6 +49052,9 @@ type ServerInterface interface {
 	// Store one vendor's OAuth app for this installation (admin/ops).
 	// (PUT /installation/oauth-apps/{provider})
 	SetOauthApp(w http.ResponseWriter, r *http.Request, provider string)
+	// How many full seats this installation is using (capacity, not entitlement).
+	// (GET /installation/seat-usage)
+	GetSeatUsage(w http.ResponseWriter, r *http.Request)
 	// The installation's own settings.
 	// (GET /installation/settings)
 	GetInstallationSettings(w http.ResponseWriter, r *http.Request)
@@ -51574,6 +51590,12 @@ func (_ Unimplemented) GetOauthApp(w http.ResponseWriter, r *http.Request, provi
 // Store one vendor's OAuth app for this installation (admin/ops).
 // (PUT /installation/oauth-apps/{provider})
 func (_ Unimplemented) SetOauthApp(w http.ResponseWriter, r *http.Request, provider string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How many full seats this installation is using (capacity, not entitlement).
+// (GET /installation/seat-usage)
+func (_ Unimplemented) GetSeatUsage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63699,6 +63721,26 @@ func (siw *ServerInterfaceWrapper) SetOauthApp(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetOauthApp(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSeatUsage operation middleware
+func (siw *ServerInterfaceWrapper) GetSeatUsage(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSeatUsage(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -79857,6 +79899,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/installation/oauth-apps/{provider}", wrapper.SetOauthApp)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/seat-usage", wrapper.GetSeatUsage)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/settings", wrapper.GetInstallationSettings)

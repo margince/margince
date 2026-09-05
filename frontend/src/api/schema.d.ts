@@ -7485,6 +7485,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/installation/seat-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How many full seats this installation is using (capacity, not entitlement).
+         * @description The seat COUNT on its own, without what the license grants or what it cost.
+         *
+         *     This exists because those are two questions with two readers. How many seats are in
+         *     use is capacity, which whoever plans headcount needs; what the installation is
+         *     entitled to and what it paid is its commercial standing. `GET /installation/license`
+         *     answers both together and is governed by the `license` object, so a role could not be
+         *     shown the first without also being handed the second. This one is governed by
+         *     `seat_usage`, which management holds and license does not accompany.
+         *
+         *     It is the SAME meter, not a second one: this and the entitlement surface run one
+         *     statement, which is also the ceiling that refuses the next full seat at `POST /users`.
+         *     A count that could disagree with the ceiling it measures would be a meter nobody is
+         *     held to.
+         *
+         *     `seats_used` counts every full seat the installation has not withdrawn — neither
+         *     deactivated nor suspended. Read seats are unlimited and never metered (A62/ADR-0047),
+         *     and agent seats count, because a first-party runner acts on the estate as a human does.
+         *
+         *     No seat cap is reported here. A cap is entitlement, which is what the other surface is
+         *     for and what `seat_usage` deliberately does not carry.
+         */
+        get: operations["getSeatUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/agent-grants": {
         parameters: {
             query?: never;
@@ -14189,6 +14228,22 @@ export interface components {
             /** Format: date-time */
             resolved_at?: string | null;
         } | null;
+        /**
+         * @description How many full seats the installation is using, without what it is entitled to.
+         *
+         *     Deliberately NOT a subset of LicenseEntitlement: it carries no cap and no posture,
+         *     because those are the commercial facts `seat_usage` exists to leave out. A client
+         *     needing both reads the entitlement surface, which requires the `license` grant.
+         */
+        SeatUsage: {
+            /**
+             * @description Full seats in use: every one the installation has not withdrawn — neither
+             *     deactivated nor suspended — agent seats included. Read seats are unlimited and
+             *     never counted (A62/ADR-0047). This is the same number the entitlement surface
+             *     reports and the same one a seat creation is refused against; there is one meter.
+             */
+            seats_used: number;
+        };
         /**
          * @description What the license grants and how much of it is used, as this process last resolved it.
          *     Read by admin/ops only.
@@ -43027,6 +43082,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LicenseEntitlement"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getSeatUsage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The seats in use. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeatUsage"];
                 };
             };
             401: components["responses"]["Unauthorized"];

@@ -1027,6 +1027,10 @@ func (stubs) SetOauthApp(w nethttp.ResponseWriter, r *nethttp.Request, provider 
 	httperr.NotImplemented(w, r, "SetOauthApp")
 }
 
+func (stubs) GetSeatUsage(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetSeatUsage")
+}
+
 func (stubs) GetInstallationSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetInstallationSettings")
 }
