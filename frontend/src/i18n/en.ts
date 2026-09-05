@@ -6633,17 +6633,33 @@ export const en = {
     "Confirmed knowledge only — website text never becomes instructions.",
   "settings.companyConfirmed": "confirmed statements",
   "settings.companyMark": "Company logo",
-  "settings.companyMarkPresent":
-    "Shown here and as the main brand at the top of the sidebar.",
-  "settings.companyMarkNone":
+  "settings.companyMarkIntro":
+    "Two marks, because the sidebar shows your company at two widths. Fill the wide one and the collapsed sidebar will use it too, until you add a square icon.",
+  "settings.companyMarkWide": "Wide logo",
+  "settings.companyMarkWidePresent":
+    "Shown here and as the main brand at the top of the open sidebar.",
+  "settings.companyMarkWideNone":
     "No logo yet, so the initials stand in. A website read can fill this in, or add one here.",
-  "settings.companyMarkAdd": "Add a logo",
+  "settings.companyMarkIcon": "Square icon",
+  "settings.companyMarkIconPresent":
+    "Shown in the collapsed sidebar, where the wide logo would be too small to read.",
+  "settings.companyMarkIconNone":
+    "No icon yet, so the collapsed sidebar falls back to the wide logo.",
+  "settings.companyMarkAdd": "Add",
   "settings.companyMarkReplace": "Replace",
   "settings.companyMarkRemove": "Remove",
-  "settings.companyMarkPick": "Company logo",
-  "settings.companyMarkHint":
+  "settings.companyMarkAddWide": "Add a wide logo",
+  "settings.companyMarkReplaceWide": "Replace the wide logo",
+  "settings.companyMarkRemoveWide": "Remove the wide logo",
+  "settings.companyMarkAddIcon": "Add a square icon",
+  "settings.companyMarkReplaceIcon": "Replace the square icon",
+  "settings.companyMarkRemoveIcon": "Remove the square icon",
+  "settings.companyMarkWideHint":
     "Best results: SVG or a transparent PNG around 800 × 240 px (up to 4:1), under 5 MB. JPEG, GIF, WebP and ICO also work. Your logo keeps its proportions.",
+  "settings.companyMarkIconHint":
+    "Best results: SVG or a transparent PNG around 256 × 256 px, square, under 5 MB. A wide file is not cropped — it keeps its proportions and simply sits small in the square.",
   "settings.companyMarkEmpty": "Drop your logo here, or choose a file",
+  "settings.companyMarkIconEmpty": "Drop your icon here, or choose a file",
   "settings.companyWebsite": "Public company website",
   "settings.companyWebsiteHint":
     "The public site every website read starts from.",

@@ -19670,6 +19670,14 @@ type CompanyProfile struct {
 	// LegalName The registered legal entity, when it differs from display_name.
 	LegalName *string `json:"legal_name,omitempty"`
 
+	// LogoIconUrl Where to fetch the installation's own SQUARE logo icon — the `getOrganizationLogoIcon`
+	// path, cookie-authenticated and same-origin, carrying a revision query on the same terms
+	// as `logo_url`. This is the badge a collapsed sidebar draws, where the wide mark above
+	// would be unreadable; the two are chosen separately and only `uploadCompanyLogoIcon`
+	// ever fills this one. ABSENT entirely (not null) when the company has no icon, which is
+	// never an error: a client falls back to `logo_url`, then to the deterministic monogram.
+	LogoIconUrl *string `json:"logo_icon_url,omitempty"`
+
 	// LogoUrl Where to fetch the installation's own company logo — the same `getOrganizationLogo`
 	// path `Organization.logo_url` carries for that record, cookie-authenticated and
 	// same-origin. A revision query changes whenever the stored image changes so a browser
@@ -35925,6 +35933,11 @@ type UploadCompanyLogoMultipartBody struct {
 	File openapi_types.File `json:"file"`
 }
 
+// UploadCompanyLogoIconMultipartBody defines parameters for UploadCompanyLogoIcon.
+type UploadCompanyLogoIconMultipartBody struct {
+	File openapi_types.File `json:"file"`
+}
+
 // StartCompanySiteReadParams defines parameters for StartCompanySiteRead.
 type StartCompanySiteReadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -40011,6 +40024,9 @@ type PutCompanyJSONRequestBody = CompanyProfileInput
 
 // UploadCompanyLogoMultipartRequestBody defines body for UploadCompanyLogo for multipart/form-data ContentType.
 type UploadCompanyLogoMultipartRequestBody UploadCompanyLogoMultipartBody
+
+// UploadCompanyLogoIconMultipartRequestBody defines body for UploadCompanyLogoIcon for multipart/form-data ContentType.
+type UploadCompanyLogoIconMultipartRequestBody UploadCompanyLogoIconMultipartBody
 
 // StartCompanySiteReadJSONRequestBody defines body for StartCompanySiteRead for application/json ContentType.
 type StartCompanySiteReadJSONRequestBody = StartCompanySiteReadRequest
@@ -48783,6 +48799,12 @@ type ServerInterface interface {
 	// Replace the installation's own company logo with an uploaded image.
 	// (POST /company/logo)
 	UploadCompanyLogo(w http.ResponseWriter, r *http.Request)
+	// Take the installation's own square logo icon off the record.
+	// (DELETE /company/logo/icon)
+	DeleteCompanyLogoIcon(w http.ResponseWriter, r *http.Request)
+	// Replace the installation's own square logo icon with an uploaded image.
+	// (POST /company/logo/icon)
+	UploadCompanyLogoIcon(w http.ResponseWriter, r *http.Request)
 	// Start an optional progressive website read before the anchor company exists.
 	// (POST /company/site-reads)
 	StartCompanySiteRead(w http.ResponseWriter, r *http.Request, params StartCompanySiteReadParams)
@@ -49449,6 +49471,9 @@ type ServerInterface interface {
 	// Stream an organization's logo image.
 	// (GET /organizations/{id}/logo)
 	GetOrganizationLogo(w http.ResponseWriter, r *http.Request, id Id)
+	// Stream an organization's square logo icon.
+	// (GET /organizations/{id}/logo/icon)
+	GetOrganizationLogoIcon(w http.ResponseWriter, r *http.Request, id Id)
 	// Merge this organization into a target (non-lossy).
 	// (POST /organizations/{id}/merge)
 	MergeOrganization(w http.ResponseWriter, r *http.Request, id Id, params MergeOrganizationParams)
@@ -50991,6 +51016,18 @@ func (_ Unimplemented) UploadCompanyLogo(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Take the installation's own square logo icon off the record.
+// (DELETE /company/logo/icon)
+func (_ Unimplemented) DeleteCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace the installation's own square logo icon with an uploaded image.
+// (POST /company/logo/icon)
+func (_ Unimplemented) UploadCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Start an optional progressive website read before the anchor company exists.
 // (POST /company/site-reads)
 func (_ Unimplemented) StartCompanySiteRead(w http.ResponseWriter, r *http.Request, params StartCompanySiteReadParams) {
@@ -52320,6 +52357,12 @@ func (_ Unimplemented) DraftIntroRequest(w http.ResponseWriter, r *http.Request,
 // Stream an organization's logo image.
 // (GET /organizations/{id}/logo)
 func (_ Unimplemented) GetOrganizationLogo(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Stream an organization's square logo icon.
+// (GET /organizations/{id}/logo/icon)
+func (_ Unimplemented) GetOrganizationLogoIcon(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58734,6 +58777,46 @@ func (siw *ServerInterfaceWrapper) UploadCompanyLogo(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UploadCompanyLogo(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCompanyLogoIcon operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCompanyLogoIcon(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadCompanyLogoIcon operation middleware
+func (siw *ServerInterfaceWrapper) UploadCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadCompanyLogoIcon(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -68797,6 +68880,38 @@ func (siw *ServerInterfaceWrapper) GetOrganizationLogo(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetOrganizationLogo(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetOrganizationLogoIcon operation middleware
+func (siw *ServerInterfaceWrapper) GetOrganizationLogoIcon(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetOrganizationLogoIcon(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -79632,6 +79747,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/company/logo", wrapper.UploadCompanyLogo)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/company/logo/icon", wrapper.DeleteCompanyLogoIcon)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/company/logo/icon", wrapper.UploadCompanyLogoIcon)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/company/site-reads", wrapper.StartCompanySiteRead)
 	})
 	r.Group(func(r chi.Router) {
@@ -80296,6 +80417,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/organizations/{id}/logo", wrapper.GetOrganizationLogo)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/organizations/{id}/logo/icon", wrapper.GetOrganizationLogoIcon)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/organizations/{id}/merge", wrapper.MergeOrganization)

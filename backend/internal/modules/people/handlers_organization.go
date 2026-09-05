@@ -4,19 +4,14 @@
 package people
 
 import (
-	"bytes"
 	"errors"
-	"io"
-	"log/slog"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/imagenorm"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -101,64 +96,6 @@ func (h Handlers) GetOrganization(w http.ResponseWriter, r *http.Request, id crm
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, org)
-}
-
-// GetOrganizationLogo streams the organization's resolved logo. A record with
-// no logo, one this caller cannot see, and one that does not exist all answer
-// 404: the client's response to all three is the same monogram, and telling
-// them apart would leak which organizations exist.
-func (h Handlers) GetOrganizationLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	key, err := h.store.OrganizationLogoKey(r.Context(), pathID[ids.OrganizationKind](id))
-	if err != nil {
-		writeStoreErr(w, r, err)
-		return
-	}
-	if h.blob == nil {
-		httperr.NotImplemented(w, r, "GetOrganizationLogo")
-		return
-	}
-	rc, _, err := h.blob.Get(r.Context(), key)
-	if err != nil {
-		if errors.Is(err, blobstore.ErrNotFound) {
-			// The row points at bytes the store does not have. To the client
-			// that is a company without a logo, same as any other.
-			writeStoreErr(w, r, apperrors.ErrNotFound)
-			return
-		}
-		httperr.Write(w, r, err)
-		return
-	}
-	source, readErr := io.ReadAll(rc)
-	closeErr := rc.Close()
-	if closeErr != nil {
-		slog.WarnContext(r.Context(), "closing organization logo reader", "err", closeErr)
-	}
-	if readErr != nil {
-		httperr.Write(w, r, readErr)
-		return
-	}
-	logo, err := imagenorm.TrimTransparentPNG(source)
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	// These bytes were normalized from a third-party website's asset, and three
-	// things keep that from mattering at the response. The media type is fixed
-	// rather than read back from the object's metadata — the contract declares
-	// this endpoint image/png and every stored object is this server's own PNG
-	// re-encode, so nothing a site influenced decides how its bytes are
-	// interpreted. Then the type cannot be sniffed into something active, and
-	// the document that renders can reach nothing.
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
-	// The URL carries a revision token derived from the stored object key, so a
-	// replacement takes a fresh cache entry. A company list asks for one image
-	// per row, and this short private cache saves the repeated reads of each.
-	w.Header().Set("Cache-Control", "private, max-age=300")
-	httperr.StreamObject(w, r, httperr.StreamedObject{
-		Download: httperr.Download{ContentType: imagenorm.ContentType, Inline: true, Size: int64(len(logo))},
-		Body:     io.NopCloser(bytes.NewReader(logo)),
-	}, "organization logo "+id.String())
 }
 
 func (h Handlers) UpdateOrganization(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.UpdateOrganizationParams) {

@@ -334,15 +334,17 @@ func TestEveryMultipartParseNamesItsRoute(t *testing.T) {
 	}
 	for file, count := range sites {
 		if got := len(markers[file]); got != count {
-			t.Errorf("%s parses a multipart body %d time(s) but names a route %d "+
-				"time(s) — an unnamed parse rides the JSON bound, so whatever cap "+
+			t.Errorf("%s parses a multipart body %d time(s) but carries %d route "+
+				"marker(s) — an unnamed parse rides the JSON bound, so whatever cap "+
 				"it declares is dead code", file, count, got)
 		}
 	}
 	named := map[string]bool{}
-	for _, routes := range markers {
-		for _, route := range routes {
-			named[route] = true
+	for _, fileMarkers := range markers {
+		for _, marker := range fileMarkers {
+			for _, route := range strings.Split(marker, ", ") {
+				named[route] = true
+			}
 		}
 	}
 	declared := uploadCeilings(testLimits)
@@ -360,11 +362,16 @@ func TestEveryMultipartParseNamesItsRoute(t *testing.T) {
 	}
 }
 
-// uploadRouteMarker is the comment a parse site carries to name its route.
-var uploadRouteMarker = regexp.MustCompile(`// upload:route (\S+)`)
+// uploadRouteMarker is the comment a parse site carries to name its routes —
+// one marker per parse, listing every route that parse serves, comma-separated.
+// A parse shared by two routes (the company's two logo slots decode through one
+// function) names both in its one marker rather than carrying two, so the
+// arithmetic below stays exact: one parse, one marker, and an unnamed parse is
+// still a parse this census counts and does not find.
+var uploadRouteMarker = regexp.MustCompile(`// upload:route ([^\s,]+(?:, [^\s,]+)*)`)
 
 // parseSitesAndMarkers walks the hand-written tree and returns, per file, how
-// many multipart parses it performs and which routes it names.
+// many multipart parses it performs and which routes those parses name.
 func parseSitesAndMarkers(t *testing.T) (map[string]int, map[string][]string) {
 	t.Helper()
 	sites := map[string]int{}

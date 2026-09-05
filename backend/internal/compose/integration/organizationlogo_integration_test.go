@@ -106,13 +106,39 @@ func TestOrganizationLogoStreamsTheStoredMarkUnderNonExecutableHeaders(t *testin
 	if err != nil {
 		t.Fatalf("read the organization: %v", err)
 	}
-	key, err := e.People.OrganizationLogoKey(ctx, orgID)
+	key, err := e.People.OrganizationLogoKey(ctx, orgID, people.LogoWide)
 	if err != nil {
 		t.Fatalf("read the stored logo key: %v", err)
 	}
-	wantURL := *people.LogoURL(orgID.UUID, &key)
+	wantURL := *people.LogoURL(orgID.UUID, &key, people.LogoWide)
 	if read.LogoUrl == nil || *read.LogoUrl != wantURL {
 		t.Fatalf("logo_url = %v, want %q", read.LogoUrl, wantURL)
+	}
+}
+
+// The icon endpoint is the wide one's twin: same body, same slot argument, and
+// the slot is the whole difference. What that leaves worth asserting is the
+// wiring — that the icon route reads the icon column — because a route that
+// read the wide one would stream a real, correct-looking PNG of the wrong
+// picture, which no header or status check can see.
+func TestTheLogoIconEndpointStreamsTheIconSlotAndNotTheWideOne(t *testing.T) {
+	e := Setup(t)
+	blob := blobstore.NewMemory()
+	handlers := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	ctx := e.Admin()
+	wide := logoPNG(t)
+	orgID := seedLoggedOrg(ctx, t, e, blob, wide)
+
+	// An organization wearing only the wide mark answers 404 here, which is the
+	// state every record but the installation's own anchor is in — and the
+	// signal a client falls back to the wide mark on.
+	empty := httptest.NewRecorder()
+	handlers.GetOrganizationLogoIcon(empty,
+		httptest.NewRequest(http.MethodGet, "/v1/organizations/"+orgID.String()+"/logo/icon", nil).WithContext(ctx),
+		crmcontracts.Id(orgID.UUID))
+	if empty.Code != http.StatusNotFound {
+		t.Fatalf("GET icon on a record wearing only a wide mark = %d, want 404: %s",
+			empty.Code, empty.Body.String())
 	}
 }
 
