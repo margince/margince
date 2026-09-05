@@ -239,6 +239,38 @@ describe("the my-outcomes section", () => {
       host_user_id: "u-rep-1",
     });
     expect(meetings?.body.group_by).toEqual(["meeting_status"]);
+
+    // The pipeline card is pinned to the seat too — the heading says "my",
+    // and the request must say it rather than trusting a server default.
+    const pipeline = bodies.find(
+      (sent) => sent.key === "pipeline-current" && sent.body.filters != null,
+    );
+    expect(pipeline?.body.filters).toEqual({ owner_id: "u-rep-1" });
+    expect(await screen.findByText("4")).toBeTruthy();
+  });
+
+  it("explains itself instead of fetching under a wider lens", async () => {
+    const bodies: { key: string; body: Record<string, unknown> }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({ onRun: (key, body) => bodies.push({ key, body }) }),
+    );
+    window.location.hash = "#/analytics/outcomes";
+    try {
+      render(<AnalyticsScreen />);
+      expect(
+        await screen.findByText(
+          "This view answers for one seat. Your lens covers more than your own records, so the wider sections carry your numbers.",
+        ),
+      ).toBeTruthy();
+      // And it fetched nothing: numbers under this heading would have
+      // measured the default population, not the person.
+      expect(bodies.some((sent) => sent.key === "activities-by-kind")).toBe(
+        false,
+      );
+    } finally {
+      window.location.hash = "";
+    }
   });
 
   it("hides the tab when the lens covers more than one seat", async () => {

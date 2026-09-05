@@ -1036,9 +1036,9 @@ function StageAgeTable({
 type AnalyticsScopeWire = components["schemas"]["AnalyticsScope"];
 
 // The current standing a meeting can hold, in the order a week reads: what is
-// ahead, what happened, what did not, what was called off. The server's CHECK
-// owns the vocabulary; a status outside it renders nothing rather than a
-// mislabeled tile.
+// ahead, what happened, what did not, what was called off. A hand-kept mirror
+// of the server's CHECK vocabulary — a status the server grows is absent here
+// until this list learns it, rather than mislabeled.
 const MEETING_STATUSES = [
   { key: "booked", labelKey: "analytics.meetingsBooked" },
   { key: "held", labelKey: "analytics.meetingsHeld" },
@@ -1061,12 +1061,17 @@ function MyOutcomesView({
   const self = defaultScope.kind === "owner" ? (defaultScope.id ?? null) : null;
 
   const pipelineQuery = useQuery({
-    queryKey: ["report", "pipeline-current", "outcomes"],
+    queryKey: ["report", "pipeline-current", "outcomes", self],
     enabled: self != null,
     queryFn: async () => {
       const { data, error } = await api.POST("/reports/{report}", {
         params: { path: { report: "pipeline-current" } },
         body: {
+          // The seat pinned EXPLICITLY, not left to the server's default
+          // population: the default is also the caller's own today, so the
+          // two agree, but this card's heading says "my" and a heading must
+          // not be true by a coincidence this file cannot see.
+          filters: { owner_id: self },
           aggregates: [
             { fn: "count", as: "deal_count" },
             { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
