@@ -711,29 +711,13 @@ kinds:
       writes nothing rather than a duplicate.
 
   follow_up_reconcile:
-    role: dispatcher
+    role: worker
     go_type: FollowUpReconcileArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: {operator: ReconcileInterval}
-    fans_out_to: follow_up_workspace
-    fan_out_unit: workspace
 
-  follow_up_workspace:
-    role: worker
-    go_type: FollowUpWorkspaceArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 5
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      A database-only overnight pass over one tenant's open follow-ups, staging
-      what it proposes rather than acting. Five attempts for the reason
-      close_date_workspace takes five: both deals passes tick DAILY, so three
-      would cost a workspace a full day over a transient blip.
 
   fx_rate_refresh:
     role: worker
@@ -1612,29 +1596,13 @@ kinds:
       Telegram.
 
   time_scan:
-    role: dispatcher
+    role: worker
     go_type: TimeScanArgs
     queue: default
-    timeout: 2m
+    timeout: 10m
     opts_owner: caller
     cadence: {operator: TimeScanInterval}
-    fans_out_to: time_scan_workspace
-    fan_out_unit: workspace
 
-  time_scan_workspace:
-    role: worker
-    go_type: TimeScanWorkspaceArgs
-    queue: default
-    timeout: 10m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      A coarse activity pre-filter, then one automation dispatch per matched
-      clock-triggered instance. Database-only — the actions in the closed
-      catalog write rows and stage approvals, they do not transmit — but the
-      matched set is a tenant's standing automations rather than a batch bound.
 
   voice_build:
     role: worker

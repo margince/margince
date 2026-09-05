@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "569aec9506ef694ca57b45d169809e60e130bcc1355c28f450d796a6bc69bf13"
+const jobContractHash = "7c3099f32286f91dbc06fc1965860f757f1623cab6b516512b417ccabfe9ca9a"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -54,7 +54,6 @@ type declaredJobArgs interface {
 		EmbedReindexArgs |
 		FinanceSyncSweepArgs |
 		FollowUpReconcileArgs |
-		FollowUpWorkspaceArgs |
 		ForecastSnapshotSweepArgs |
 		ForecastSnapshotWorkspaceArgs |
 		FxRateRefreshArgs |
@@ -97,7 +96,6 @@ type declaredJobArgs interface {
 		TelegramPollArgs |
 		TelegramPollSweepArgs |
 		TimeScanArgs |
-		TimeScanWorkspaceArgs |
 		TranscriptProposeArgs |
 		VCardIngestArgs |
 		VoiceBuildArgs |
@@ -136,7 +134,6 @@ func addDeclaredWorkerWithTimeout[T declaredJobArgs](reg *jobRegistry, w jobs.Wo
 // The declared dispatchers: each enumerates the fleet and enqueues, and does
 // no tenant work of its own.
 var (
-	_ jobs.FleetWide = FollowUpReconcileArgs{}
 	_ jobs.FleetWide = ForecastSnapshotSweepArgs{}
 	_ jobs.FleetWide = GmailSyncArgs{}
 	_ jobs.FleetWide = GmailWatchArgs{}
@@ -151,7 +148,6 @@ var (
 	_ jobs.FleetWide = ProviderRunPollSweepArgs{}
 	_ jobs.FleetWide = SignalScanArgs{}
 	_ jobs.FleetWide = TelegramPollSweepArgs{}
-	_ jobs.FleetWide = TimeScanArgs{}
 	_ jobs.FleetWide = VoiceBuildRetryArgs{}
 )
 
@@ -165,7 +161,6 @@ var (
 	_ jobs.WorkspaceScoped = ScheduledSendArgs{}
 	_ jobs.WorkspaceScoped = SendEmailArgs{}
 	_ jobs.WorkspaceScoped = DocumentExtractArgs{}
-	_ jobs.WorkspaceScoped = FollowUpWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = ForecastSnapshotWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = FxRateRefreshArgs{}
 	_ jobs.WorkspaceScoped = GeocodeOrganizationArgs{}
@@ -187,7 +182,6 @@ var (
 	_ jobs.WorkspaceScoped = TechnicalEnrichOrganizationArgs{}
 	_ jobs.WorkspaceScoped = TelegramIngestArgs{}
 	_ jobs.WorkspaceScoped = TelegramPollArgs{}
-	_ jobs.WorkspaceScoped = TimeScanWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = TranscriptProposeArgs{}
 	_ jobs.WorkspaceScoped = VCardIngestArgs{}
 	_ jobs.WorkspaceScoped = VoiceBuildArgs{}

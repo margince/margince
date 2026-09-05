@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "569aec9506ef694ca57b45d169809e60e130bcc1355c28f450d796a6bc69bf13"
+const JobContractHash = "7c3099f32286f91dbc06fc1965860f757f1623cab6b516512b417ccabfe9ca9a"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -295,25 +295,13 @@ var specs = map[string]Spec{
 		Cadence:   Cadence{Fixed: 6 * time.Hour},
 	},
 	"follow_up_reconcile": {
-		Kind:       "follow_up_reconcile",
-		GoType:     "FollowUpReconcileArgs",
-		Role:       Dispatcher,
-		Queue:      "default",
-		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
-		FanOutUnit: FanOutWorkspace,
-		FanOutTo:   "follow_up_workspace",
-		OptsOwner:  OptsCaller,
-		Cadence:    Cadence{OperatorField: "ReconcileInterval"},
-	},
-	"follow_up_workspace": {
-		Kind:        "follow_up_workspace",
-		GoType:      "FollowUpWorkspaceArgs",
-		Role:        Worker,
-		Queue:       "default",
-		Timeout:     TimeoutPolicy{Fixed: 5 * time.Minute},
-		MaxAttempts: 5,
-		OptsOwner:   OptsFanOut,
-		Args:        []ArgField{{Name: "Workspace"}},
+		Kind:      "follow_up_reconcile",
+		GoType:    "FollowUpReconcileArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{OperatorField: "ReconcileInterval"},
 	},
 	"forecast_snapshot_sweep": {
 		Kind:       "forecast_snapshot_sweep",
@@ -754,25 +742,13 @@ var specs = map[string]Spec{
 		Registration: Registration{When: []string{"ChannelVault"}},
 	},
 	"time_scan": {
-		Kind:       "time_scan",
-		GoType:     "TimeScanArgs",
-		Role:       Dispatcher,
-		Queue:      "default",
-		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
-		FanOutUnit: FanOutWorkspace,
-		FanOutTo:   "time_scan_workspace",
-		OptsOwner:  OptsCaller,
-		Cadence:    Cadence{OperatorField: "TimeScanInterval"},
-	},
-	"time_scan_workspace": {
-		Kind:        "time_scan_workspace",
-		GoType:      "TimeScanWorkspaceArgs",
-		Role:        Worker,
-		Queue:       "default",
-		Timeout:     TimeoutPolicy{Fixed: 10 * time.Minute},
-		MaxAttempts: 3,
-		OptsOwner:   OptsFanOut,
-		Args:        []ArgField{{Name: "Workspace"}},
+		Kind:      "time_scan",
+		GoType:    "TimeScanArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{OperatorField: "TimeScanInterval"},
 	},
 	"transcript_propose": {
 		Kind:         "transcript_propose",

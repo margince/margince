@@ -47,17 +47,6 @@ func (FollowUpReconcileArgs) Kind() string { return "follow_up_reconcile" }
 // and does no tenant work of its own (jobs.FleetWide).
 func (FollowUpReconcileArgs) FleetWide() {}
 
-// FollowUpWorkspaceArgs is one workspace's follow-up reconciliation pass.
-type FollowUpWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (FollowUpWorkspaceArgs) Kind() string { return "follow_up_workspace" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a FollowUpWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
 // closeDateSweepWorker is the dispatcher: it enumerates and enqueues, and
 // touches no tenant data itself.
 // closeDateSweepWorker corrects close dates for every live workspace.
@@ -90,25 +79,16 @@ func (w *closeDateSweepWorker) correctWorkspace(ctx context.Context, workspace i
 
 // followUpReconcileWorker is the dispatcher for the overnight pass.
 type followUpReconcileWorker struct {
-	pool *pgxpool.Pool
-}
-
-func (w *followUpReconcileWorker) Work(ctx context.Context, _ *river.Job[FollowUpReconcileArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(FollowUpWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return FollowUpWorkspaceArgs{Workspace: ws} }))
-}
-
-// followUpWorkspaceWorker runs one workspace's overnight pass.
-type followUpWorkspaceWorker struct {
+	pool       *pgxpool.Pool
 	reconciler *deals.FollowUpReconciler
 }
 
-func (w *followUpWorkspaceWorker) Work(ctx context.Context, job *river.Job[FollowUpWorkspaceArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+func (w *followUpReconcileWorker) Work(ctx context.Context, _ *river.Job[FollowUpReconcileArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.reconcileWorkspace))
+}
+
+func (w *followUpReconcileWorker) reconcileWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	// The overnight agent is the acting principal — its writes and stagings
 	// carry agent:overnight provenance (features/07 §8a), and every read the
 	// reconciler makes is scoped by its own query predicate against the

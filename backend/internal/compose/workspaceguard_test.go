@@ -83,7 +83,7 @@ func TestEveryWorkspaceWorkerRefusesArgsNamingNoWorkspace(t *testing.T) {
 func TestTheWorkspaceGuardBindsTheWorkspaceTheArgsDeclare(t *testing.T) {
 	want := ids.NewV7()
 
-	ctx, err := workspaceJobCtx(context.Background(), TimeScanWorkspaceArgs{Workspace: want})
+	ctx, err := workspaceJobCtx(context.Background(), SignalScanWorkspaceArgs{Workspace: want})
 	if err != nil {
 		t.Fatalf("the guard refused a workspace it was given: %v", err)
 	}
@@ -147,11 +147,8 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		ForecastSnapshotWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&forecastSnapshotWorkspaceWorker{}).Work(ctx, &river.Job[ForecastSnapshotWorkspaceArgs]{})
 		},
-		FollowUpWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&followUpWorkspaceWorker{}).Work(ctx, &river.Job[FollowUpWorkspaceArgs]{})
-		},
-		TimeScanWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&timeScanWorkspaceWorker{}).Work(ctx, &river.Job[TimeScanWorkspaceArgs]{})
+		SignalScanWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
+			return (&signalScanWorkspaceWorker{}).Work(ctx, &river.Job[SignalScanWorkspaceArgs]{})
 		},
 		IdempotencyRetentionWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&idempotencyRetentionWorkspaceWorker{}).Work(ctx, &river.Job[IdempotencyRetentionWorkspaceArgs]{})
