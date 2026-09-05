@@ -109,6 +109,33 @@ const AI_CALL: AiCallSummary = {
 
 const OPERATOR: GrantSpec = { automation: ["update"], license: ["read"] };
 
+/** A month with one priced line and one the server could not price. */
+const PRICED_USAGE = {
+  days: [
+    {
+      date: "2026-08-01",
+      tasks: [
+        {
+          task: "enrich",
+          tier: "cheap_cloud",
+          calls: 2,
+          tokens_in: 100,
+          tokens_out: 40,
+          cost_est_minor: 120,
+        },
+        {
+          task: "summarize",
+          tier: "cheap_cloud",
+          calls: 1,
+          tokens_in: 30,
+          tokens_out: 10,
+        },
+      ],
+    },
+  ],
+  budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" },
+};
+
 const PROFILE = (state: AssistantProfile["state"]): AssistantProfile => ({
   name: "Margince",
   kind: "ai",
@@ -818,38 +845,45 @@ describe("AgentRail", () => {
   });
 
   it("sums the priced lines into the month's spend", async () => {
-    stubAgentRailApi({
-      aiUsage: () =>
-        jsonResponse({
-          days: [
-            {
-              date: "2026-08-01",
-              tasks: [
-                {
-                  task: "enrich",
-                  tier: "cheap_cloud",
-                  calls: 2,
-                  tokens_in: 100,
-                  tokens_out: 40,
-                  cost_est_minor: 120,
-                },
-                {
-                  task: "summarize",
-                  tier: "cheap_cloud",
-                  calls: 1,
-                  tokens_in: 30,
-                  tokens_out: 10,
-                },
-              ],
-            },
-          ],
-          budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" },
-        }),
-    });
+    stubAgentRailApi({ aiUsage: () => jsonResponse(PRICED_USAGE) });
     const { container } = render(ROUTE);
     await waitFor(() =>
       expect(container.querySelector(".arspend")?.textContent).toBeTruthy(),
     );
+  });
+
+  // The server serves the figure on `automation:update`, which the ops seat
+  // holds and an edited role may hold; the cost is the administrator's figure
+  // regardless, so a seat with the grant and without the role gets the runtime
+  // row and no money — on the rail, in the panel head and in the meta row.
+  it("shows the spend to no seat but an admin, grant or not", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubAgentRailApi({
+      me: () => jsonResponse(meFixture({ roles: ["ops"], allow: OPERATOR })),
+      aiUsage: () => jsonResponse(PRICED_USAGE),
+    });
+    const { container } = render(ROUTE);
+    await openPanel(user, container);
+    await waitFor(() =>
+      expect(panel().querySelector(".armeta")?.textContent).toContain(
+        LABELS.noCallsYet,
+      ),
+    );
+    expect(container.querySelector(".arspend")).toBeNull();
+    expect(panel().querySelector(".arpmoney")).toBeNull();
+    expect(panel().querySelector(".armeta")?.textContent).not.toContain(
+      LABELS.spend,
+    );
+    expect(
+      container.querySelector(".arhit")?.getAttribute("aria-label"),
+    ).not.toContain(LABELS.spend);
+    // Withheld at the source, not only at the paint: a figure the seat may not
+    // see is a figure the client never asks for.
+    expect(
+      fetchMock.mock.calls.some(([request]) =>
+        new URL(request.url).pathname.endsWith("/ai/usage"),
+      ),
+    ).toBe(false);
   });
 
   // The wire carries the invocation-site token (`capture_classify`); the
