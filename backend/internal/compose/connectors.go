@@ -428,6 +428,9 @@ func (h connectorHandlers) SetConnectorMailPosture(w http.ResponseWriter, r *htt
 		httperr.NotImplemented(w, r, "SetConnectorMailPosture")
 		return
 	}
+	if !mailboxOnly(w, r, provider, noMailToPosture) {
+		return
+	}
 	var req crmcontracts.SetMailPostureRequest
 	if !httperr.Decode(w, r, &req) {
 		return

@@ -173,8 +173,16 @@ func (h backfillHandlers) backfillWired(w http.ResponseWriter, r *http.Request, 
 	return true
 }
 
+// servable is the preflight the four PROVIDER-scoped ops share: is the surface
+// wired, and is this connection a mailbox? Neither answer needs the request
+// body, so both belong ahead of the decode — and together, because a caller
+// asking a calendar for its mail history has one thing to be told, not two.
+func (h backfillHandlers) servable(w http.ResponseWriter, r *http.Request, op string, provider crmcontracts.CaptureProvider) bool {
+	return h.backfillWired(w, r, op) && mailboxOnly(w, r, provider, noMailHistory)
+}
+
 func (h backfillHandlers) PreviewConnectorBackfill(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
-	if !h.backfillWired(w, r, "PreviewConnectorBackfill") {
+	if !h.servable(w, r, "PreviewConnectorBackfill", provider) {
 		return
 	}
 	userID, ok := h.caller(w, r)
@@ -250,7 +258,7 @@ func (h backfillHandlers) PreviewConnectorBackfill(w http.ResponseWriter, r *htt
 }
 
 func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
-	if !h.backfillWired(w, r, "StartConnectorBackfill") {
+	if !h.servable(w, r, "StartConnectorBackfill", provider) {
 		return
 	}
 	userID, ok := h.caller(w, r)
@@ -335,7 +343,7 @@ func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.
 }
 
 func (h backfillHandlers) GetConnectorBackfillStatus(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
-	if !h.backfillWired(w, r, "GetConnectorBackfillStatus") {
+	if !h.servable(w, r, "GetConnectorBackfillStatus", provider) {
 		return
 	}
 	userID, ok := h.caller(w, r)
@@ -351,7 +359,7 @@ func (h backfillHandlers) GetConnectorBackfillStatus(w http.ResponseWriter, r *h
 }
 
 func (h backfillHandlers) CancelConnectorBackfill(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
-	if !h.backfillWired(w, r, "CancelConnectorBackfill") {
+	if !h.servable(w, r, "CancelConnectorBackfill", provider) {
 		return
 	}
 	userID, ok := h.caller(w, r)
@@ -364,44 +372,6 @@ func (h backfillHandlers) CancelConnectorBackfill(w http.ResponseWriter, r *http
 		return
 	}
 	writeBackfillJSON(w, http.StatusAccepted, h.statusPayload(run))
-}
-
-// GetMorningDigest serves the caller's stored digest (CAP-WIRE-6): one
-// indexed row, pre-assembled by the nightly build — no digest yet is the
-// honest 404, never a fabricated empty payload.
-func (h backfillHandlers) GetMorningDigest(w http.ResponseWriter, r *http.Request, params crmcontracts.GetMorningDigestParams) {
-	if !h.backfillWired(w, r, "GetMorningDigest") {
-		return
-	}
-	userID, ok := h.caller(w, r)
-	if !ok {
-		return
-	}
-	var day *time.Time
-	if params.Date != nil {
-		day = &params.Date.Time
-	}
-	payload, err := h.registry.ReadDigest(r.Context(), userID.UUID, day)
-	if err != nil {
-		// ReadDigest only touches Postgres and JSON — its failures are
-		// storage faults, never the connector outage writeBackfillError's
-		// default (502 provider_unreachable) would claim.
-		h.log.ErrorContext(r.Context(), "digest read", "err", err)
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusInternalServerError, Code: "digest_read_failed",
-			Detail: "The digest could not be read. Try again shortly.",
-		})
-		return
-	}
-	if payload == nil {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusNotFound,
-			Code:   "no_digest_yet",
-			Detail: "No digest has been built yet — the first nightly run creates it.",
-		})
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, payload)
 }
 
 // statusPayload maps a run (or its absence — state "none") onto the wire.

@@ -4415,7 +4415,7 @@ export const vi = {
   "extUnits.workspace.sub":
     "Những tiện ích bản cài đặt này chạy bằng một thông tin đăng nhập dùng chung. Thiết lập ở đây áp dụng cho mọi người.",
 
-  "connectors.title": "Hộp thư đã kết nối",
+  "connectors.title": "Hộp thư và lịch đã kết nối",
   // Quyền thường trực cho công việc ban đêm — một câu hỏi, được hỏi khi kết
   // nối hộp thư trong onboarding và một lần nữa trong phần cài đặt.
   "overnightGrant.title": "Chuẩn bị qua đêm",
@@ -4523,10 +4523,10 @@ export const vi = {
   "connectors.originUnreachable": "Kh\u00f4ng ph\u1ea3n h\u1ed3i",
   "connectors.originUnchecked": "Ch\u01b0a ki\u1ec3m tra",
   "connectors.sub":
-    "Các hộp thư đang thu thập vào CRM của bạn. Cần thì ngắt kết nối hộp nào cũng được — bản ghi đã thu thập vẫn giữ nguyên.",
+    "Các hộp thư và lịch đang thu thập vào CRM của bạn. Cần thì ngắt kết nối cái nào cũng được — bản ghi đã thu thập vẫn giữ nguyên.",
   "connectors.loading": "Đang tải các kết nối…",
   "connectors.loadFailed": "Không tải được các kết nối.",
-  "connectors.empty": "Chưa có hộp thư nào được kết nối.",
+  "connectors.empty": "Chưa có hộp thư hay lịch nào được kết nối.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
   "connectors.provGraph": "Outlook",
@@ -4647,7 +4647,7 @@ export const vi = {
   "connectors.addOpen": "Kết nối một tài khoản",
   "connectors.connect": "Kết nối",
   "connectors.connectProvider": "Kết nối {provider}",
-  "connectors.rosterLabel": "Hộp thư đang thu thập",
+  "connectors.rosterLabel": "Đang thu thập vào CRM",
   "connectors.addGmailBrings":
     "Thư bạn gửi và nhận, từ Google. Margince cũng có thể gửi thư qua kết nối này.",
   "connectors.addGcalBrings":
