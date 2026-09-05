@@ -36,7 +36,6 @@ func addGraphJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log
 	addDeclaredWorker[ParticipantBackfillWorkspaceArgs](reg, &participantBackfillWorkspaceWorker{participantBackfillWorker: participants})
 	graphEdges := newGraphEdgeReconcileWorker(pool, log)
 	addDeclaredWorker[GraphEdgeReconcileArgs](reg, graphEdges)
-	addDeclaredWorker[GraphEdgeWorkspaceArgs](reg, &graphEdgeWorkspaceWorker{graphEdgeReconcileWorker: graphEdges})
 	// The link-reconcile sweep runs the same cohort repair the capture paths
 	// do, so it carries the same audience derivation: a meeting it files is a
 	// meeting whose no-record hold has stopped being true.

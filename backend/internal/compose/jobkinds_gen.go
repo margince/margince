@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "7c3099f32286f91dbc06fc1965860f757f1623cab6b516512b417ccabfe9ca9a"
+const jobContractHash = "82477560c70628dec66480ddcd20445a6820cd2839728e5c453357f40be0e2ec"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -55,7 +55,6 @@ type declaredJobArgs interface {
 		FinanceSyncSweepArgs |
 		FollowUpReconcileArgs |
 		ForecastSnapshotSweepArgs |
-		ForecastSnapshotWorkspaceArgs |
 		FxRateRefreshArgs |
 		GeocodeBackfillArgs |
 		GeocodeOrganizationArgs |
@@ -63,11 +62,9 @@ type declaredJobArgs interface {
 		GmailWatchArgs |
 		GmailWatchRenewArgs |
 		GraphEdgeReconcileArgs |
-		GraphEdgeWorkspaceArgs |
 		GraphWatchArgs |
 		GraphWatchRenewArgs |
 		IdempotencyRetentionArgs |
-		IdempotencyRetentionWorkspaceArgs |
 		IntroExpiryArgs |
 		KnowledgeIngestArgs |
 		LinkReconcileArgs |
@@ -131,9 +128,24 @@ func addDeclaredWorkerWithTimeout[T declaredJobArgs](reg *jobRegistry, w jobs.Wo
 	reg.markOperatorSupplied(zero.Kind())
 }
 
-// The declared dispatchers: each enumerates the fleet and enqueues, and does
-// no tenant work of its own.
+// The FLEET-WIDE kinds: a row of one carries no tenant. A dispatcher
+// enumerates and enqueues; a collapsed pass walks the workspaces itself
+// (ADR-0103). Both own no workspace, which is what the marker asserts.
 var (
+	_ jobs.FleetWide = AssuranceSweepArgs{}
+	_ jobs.FleetWide = BriefGenerateArgs{}
+	_ jobs.FleetWide = CaptureAutoEnrichSweepArgs{}
+	_ jobs.FleetWide = CaptureClassifyArgs{}
+	_ jobs.FleetWide = ConfidentialityVerdictArgs{}
+	_ jobs.FleetWide = CounterpartyVerdictArgs{}
+	_ jobs.FleetWide = CaptureDigestArgs{}
+	_ jobs.FleetWide = CaptureEnrichArgs{}
+	_ jobs.FleetWide = CaptureTraceSweepArgs{}
+	_ jobs.FleetWide = CloseDateSweepArgs{}
+	_ jobs.FleetWide = EmbedDriftSweepArgs{}
+	_ jobs.FleetWide = EmbedReindexArgs{}
+	_ jobs.FleetWide = FinanceSyncSweepArgs{}
+	_ jobs.FleetWide = FollowUpReconcileArgs{}
 	_ jobs.FleetWide = ForecastSnapshotSweepArgs{}
 	_ jobs.FleetWide = GmailSyncArgs{}
 	_ jobs.FleetWide = GmailWatchArgs{}
@@ -142,13 +154,17 @@ var (
 	_ jobs.FleetWide = IdempotencyRetentionArgs{}
 	_ jobs.FleetWide = LinkReconcileArgs{}
 	_ jobs.FleetWide = LinkedInRematchArgs{}
+	_ jobs.FleetWide = OrgNamePromotionArgs{}
 	_ jobs.FleetWide = OverlayReconcileArgs{}
+	_ jobs.FleetWide = OwedVerdictArgs{}
 	_ jobs.FleetWide = ParticipantBackfillArgs{}
 	_ jobs.FleetWide = ProviderLookupSweepArgs{}
 	_ jobs.FleetWide = ProviderRunPollSweepArgs{}
 	_ jobs.FleetWide = SignalScanArgs{}
 	_ jobs.FleetWide = TelegramPollSweepArgs{}
+	_ jobs.FleetWide = TimeScanArgs{}
 	_ jobs.FleetWide = VoiceBuildRetryArgs{}
+	_ jobs.FleetWide = WeeklyReviewGenerateArgs{}
 )
 
 // The declared tenant-scoped kinds: each says which workspace it is for
@@ -161,13 +177,10 @@ var (
 	_ jobs.WorkspaceScoped = ScheduledSendArgs{}
 	_ jobs.WorkspaceScoped = SendEmailArgs{}
 	_ jobs.WorkspaceScoped = DocumentExtractArgs{}
-	_ jobs.WorkspaceScoped = ForecastSnapshotWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = FxRateRefreshArgs{}
 	_ jobs.WorkspaceScoped = GeocodeOrganizationArgs{}
 	_ jobs.WorkspaceScoped = GmailWatchRenewArgs{}
-	_ jobs.WorkspaceScoped = GraphEdgeWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = GraphWatchRenewArgs{}
-	_ jobs.WorkspaceScoped = IdempotencyRetentionWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = KnowledgeIngestArgs{}
 	_ jobs.WorkspaceScoped = LinkReconcileWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = LinkedInRematchWorkspaceArgs{}

@@ -132,13 +132,11 @@ func TestTheReconcileWorkerRebuildsTheProjection(t *testing.T) {
 		t.Fatalf("seeding participants: %v", err)
 	}
 
-	// The WORKSPACE worker rebuilds; the dispatcher beside it only enqueues.
-	worker := &graphEdgeWorkspaceWorker{
-		graphEdgeReconcileWorker: newGraphEdgeReconcileWorker(e.Pool, quietLog()),
-	}
-	if err := worker.Work(context.Background(), &river.Job[GraphEdgeWorkspaceArgs]{
-		Args: GraphEdgeWorkspaceArgs{Workspace: e.WS},
-	}); err != nil {
+	// The per-workspace turn, which is what River's row now walks rather than
+	// what it carries (ADR-0103): Work enumerates the fleet, and this suite is
+	// about one tenant. It is the same code Work calls per tenant.
+	worker := newGraphEdgeReconcileWorker(e.Pool, quietLog())
+	if err := worker.reconcileWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("reconcile pass: %v", err)
 	}
 

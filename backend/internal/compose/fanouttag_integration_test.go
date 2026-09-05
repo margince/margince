@@ -51,7 +51,7 @@ type fanOutProbeWorker struct {
 
 func (w *fanOutProbeWorker) Work(ctx context.Context, _ *river.Job[fanOutProbeArgs]) error {
 	err := dispatchWith(ctx, w.fleet, clientInsertMany(ctx),
-		workspaceSweepOpts(SignalScanWorkspaceArgs{}.Kind()), signalScanWorkspaceArgsFor)
+		workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor)
 	if err == nil {
 		err = dispatchOne(ctx, w.child, nil)
 	}
@@ -86,7 +86,7 @@ func TestARealFanOutInsertCarriesTheSweepTagIntoRiversTagsColumn(t *testing.T) {
 
 	workers := river.NewWorkers()
 	river.AddWorker(workers, probe)
-	river.AddWorker(workers, &inertWorker[SignalScanWorkspaceArgs]{})
+	river.AddWorker(workers, &inertWorker[GmailWatchRenewArgs]{})
 	river.AddWorker(workers, &inertWorker[CaptureSyncArgs]{})
 
 	runner, err := jobs.New(e.Pool, jobs.Config{
@@ -121,7 +121,7 @@ func TestARealFanOutInsertCarriesTheSweepTagIntoRiversTagsColumn(t *testing.T) {
 		t.Fatal("the probe dispatcher never ran; nothing was fanned out")
 	}
 
-	assertRowIsTagged(ctx, t, e.Pool, SignalScanWorkspaceArgs{}.Kind(), fleetChild,
+	assertRowIsTagged(ctx, t, e.Pool, GmailWatchRenewArgs{}.Kind(), fleetChild,
 		"dispatchWith's fleet insert")
 	assertRowIsTagged(ctx, t, e.Pool, loopChild.Kind(), loopChild.Workspace,
 		"dispatchOne's single insert")

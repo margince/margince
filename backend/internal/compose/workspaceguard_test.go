@@ -144,17 +144,8 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		VCardIngestArgs{}.Kind(): func(ctx context.Context) error {
 			return (&vcardIngestWorker{}).Work(ctx, &river.Job[VCardIngestArgs]{})
 		},
-		ForecastSnapshotWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&forecastSnapshotWorkspaceWorker{}).Work(ctx, &river.Job[ForecastSnapshotWorkspaceArgs]{})
-		},
 		SignalScanWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&signalScanWorkspaceWorker{}).Work(ctx, &river.Job[SignalScanWorkspaceArgs]{})
-		},
-		IdempotencyRetentionWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&idempotencyRetentionWorkspaceWorker{}).Work(ctx, &river.Job[IdempotencyRetentionWorkspaceArgs]{})
-		},
-		GraphEdgeWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&graphEdgeWorkspaceWorker{}).Work(ctx, &river.Job[GraphEdgeWorkspaceArgs]{})
 		},
 		ParticipantBackfillWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&participantBackfillWorkspaceWorker{}).Work(ctx, &river.Job[ParticipantBackfillWorkspaceArgs]{})
