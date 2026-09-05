@@ -37243,6 +37243,20 @@ components:
         closed_at: { type: [string, 'null'], format: date-time }
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: Server-stamped from the authenticated principal; never client-supplied. }
+        preview_available:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may open the buyer preview of THIS room — the same
+            question `POST /deal-rooms/{id}/preview` answers, computed here so a
+            screen can say no before the press rather than after it. Four things
+            must hold, and a plain `writable` would answer only one: the caller
+            holds `update` on deal rooms, is a person rather than an agent (a
+            preview is a seat's own view, and a system caller has no seat to
+            preview from), the underlying deal is writable AND live, and the room
+            is not archived. False is not "this room is broken" — it is the
+            ordinary reading for a colleague who may read the room and not
+            present it.
         version: { $ref: '#/components/schemas/RowVersion' }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
