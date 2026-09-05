@@ -185,45 +185,6 @@
   overflow: hidden;
   align-content: start;
 }
-/* What the TOOL is fetching, under the agent's line and plainly subordinate to
-   it. The two are different subjects and both can be true at once, so the
-   difference has to be carried by weight rather than by taking turns in one
-   slot: meta colour, a size down, one line only. A reader who wants to know
-   what the agent is doing reads the line above and is never interrupted by
-   this one.
-
-   One line and clipped, not two: the room for a second line is held open above
-   whether or not it is used, and a tool line that could also grow to two would
-   move the figure under it every time a record has a long name. */
-.artool {
-  max-width: 100%;
-  font-size: var(--fs-eyebrow);
-  line-height: 1.3;
-  color: var(--textMeta);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  /* A named event arriving. It fades up rather than cutting, because the line
-     changes several times a second while a page settles and a hard cut at that
-     rate reads as a flicker. */
-  animation: artool 0.22s ease-out;
-}
-@keyframes artool {
-  from {
-    opacity: 0;
-    transform: translateY(2px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .artool {
-    animation: none;
-  }
-}
-
 /* One face on this rail, and it is the body face.
    The rail shipped in mono throughout — the figures, the state word, the chip
    labels and the meta strip — which is the typewriter voice used as decoration

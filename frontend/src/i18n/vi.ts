@@ -3604,18 +3604,26 @@ export const vi = {
     "Tôi đã dừng trước khi đọc hết trang web của {name}.",
   "agent.activity.siteReadNamed.failed":
     "Tôi không đọc được trang web của {name}.",
-  "agent.activity.summarize.queued":
-    "Việc tổng hợp thông tin về công ty này đang chờ xử lý.",
-  "agent.activity.summarize.running":
-    "Tôi đang tổng hợp những gì tôi biết về công ty này.",
-  "agent.activity.summarize.done":
-    "Những gì tôi biết về công ty này đã sẵn sàng.",
+  "agent.activity.summarize.queued": "Một bản tổng hợp đang chờ xử lý.",
+  "agent.activity.summarize.running": "Tôi đang tổng hợp lại.",
+  "agent.activity.summarize.done": "Bản tổng hợp của bạn đã sẵn sàng.",
   "agent.activity.summarize.degraded":
-    "Tôi mới tổng hợp được một phần thông tin về công ty này rồi dừng.",
-  "agent.activity.summarize.failed":
-    "Tôi không hoàn thành được việc tổng hợp về công ty này.",
+    "Tôi mới tổng hợp được một phần rồi dừng.",
+  "agent.activity.summarize.failed": "Tôi không hoàn thành được bản tổng hợp.",
   "agent.activity.summarize.stalled":
-    "Việc tổng hợp về công ty này kéo dài bất thường. Có thể nó đã dừng.",
+    "Việc tổng hợp kéo dài bất thường. Có thể nó đã dừng.",
+  "agent.activity.summarizeNamed.queued":
+    "Việc tổng hợp thông tin về {name} đang chờ xử lý.",
+  "agent.activity.summarizeNamed.running":
+    "Tôi đang tổng hợp những gì tôi biết về {name}.",
+  "agent.activity.summarizeNamed.done":
+    "Những gì tôi biết về {name} đã sẵn sàng.",
+  "agent.activity.summarizeNamed.degraded":
+    "Tôi mới tổng hợp được một phần thông tin về {name} rồi dừng.",
+  "agent.activity.summarizeNamed.failed":
+    "Tôi không hoàn thành được việc tổng hợp về {name}.",
+  "agent.activity.summarizeNamed.stalled":
+    "Việc tổng hợp về {name} kéo dài bất thường. Có thể nó đã dừng.",
   "agent.activity.draftReply.queued": "Thư trả lời của bạn đang chờ được soạn.",
   "agent.activity.draftReply.running": "Tôi đang soạn thư trả lời của bạn.",
   "agent.activity.draftReply.done": "Bản nháp thư trả lời của bạn đã sẵn sàng.",

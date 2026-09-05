@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/person360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -153,7 +154,10 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 	// to "what language is AI writing in" — the admin's setting — and a brief
 	// that asked the browser instead would be the single surface disagreeing
 	// with every other one.
-	written := s.write(ctx, in)
+	// The meeting is NAMED to the rail here, so both writers below — the
+	// sections and the plan share one occurrence under this request — say
+	// which meeting they are preparing.
+	written := s.write(ai.WithSubject(ctx, ids.From[ids.ActivityKind](activityID).Ref(), in.RailLabel()), in)
 	plan := wirePlan(written.plan, in)
 	plan.GeneratedBy = written.planBy
 	// Coaching is attached OVER the finished plan, never generated beside it.

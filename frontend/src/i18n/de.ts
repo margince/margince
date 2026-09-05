@@ -3645,17 +3645,27 @@ export const de = {
   "agent.activity.siteReadNamed.failed":
     "Ich konnte die Website von {name} nicht lesen.",
   "agent.activity.summarize.queued":
-    "Das Zusammentragen zu diesem Unternehmen steht in der Warteschlange.",
+    "Eine Zusammenfassung steht in der Warteschlange.",
   "agent.activity.summarize.running":
-    "Ich trage zusammen, was ich über dieses Unternehmen weiß.",
-  "agent.activity.summarize.done":
-    "Was ich über dieses Unternehmen weiß, ist fertig.",
+    "Ich stelle eine Zusammenfassung zusammen.",
+  "agent.activity.summarize.done": "Deine Zusammenfassung ist fertig.",
   "agent.activity.summarize.degraded":
-    "Ich habe über dieses Unternehmen nur teilweise Informationen zusammengetragen und dann aufgehört.",
+    "Ich habe nur einen Teil der Zusammenfassung geschafft und dann aufgehört.",
   "agent.activity.summarize.failed":
-    "Ich konnte das Zusammentragen zu diesem Unternehmen nicht abschließen.",
+    "Ich konnte die Zusammenfassung nicht abschließen.",
   "agent.activity.summarize.stalled":
-    "Das Zusammentragen zu diesem Unternehmen dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+    "Die Zusammenfassung dauert ungewöhnlich lange. Möglicherweise wurde sie abgebrochen.",
+  "agent.activity.summarizeNamed.queued":
+    "Das Zusammentragen zu {name} steht in der Warteschlange.",
+  "agent.activity.summarizeNamed.running":
+    "Ich trage zusammen, was ich über {name} weiß.",
+  "agent.activity.summarizeNamed.done": "Was ich über {name} weiß, ist fertig.",
+  "agent.activity.summarizeNamed.degraded":
+    "Ich habe zu {name} nur teilweise Informationen zusammengetragen und dann aufgehört.",
+  "agent.activity.summarizeNamed.failed":
+    "Ich konnte das Zusammentragen zu {name} nicht abschließen.",
+  "agent.activity.summarizeNamed.stalled":
+    "Das Zusammentragen zu {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
   "agent.activity.draftReply.queued":
     "Deine Antwort steht zum Entwerfen in der Warteschlange.",
   "agent.activity.draftReply.running": "Ich entwerfe deine Antwort.",
