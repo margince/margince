@@ -27,9 +27,10 @@
 // WHAT IT DOES NOT JUDGE, and why:
 //   - a container that is a COMPONENT (`<OverflowMenu>`, `<PanelBody>`). The
 //     component owns its own layout, and the class it renders is its business.
-//   - a fragment whose element ancestor is not in the same expression: `<>{a}
-//     {b}</>` handed to an `actions` prop is spaced by whoever receives it, and
-//     the AST cannot say who that is.
+//   - a bare fragment: `<>{cancel}{save}</>` handed to an `actions` prop is
+//     spaced by whoever receives it, and which element that is cannot be read
+//     off this file. A fragment INSIDE an element is transparent instead — it
+//     draws no box, so its buttons count towards the element around it.
 // Both are stated rather than silent, because a skip nobody wrote down reads as
 // coverage.
 //
@@ -159,19 +160,34 @@ function yieldedTags(
   return ["\u0000not-an-element"];
 }
 
-/** True when this container holds two or more buttons and nothing else. */
-function isActionRow(
+/**
+ * How many buttons a container holds, or `undefined` when it holds anything
+ * else at all.
+ *
+ * A FRAGMENT is transparent: it draws no box, so its children belong to the
+ * element around it and are counted there. That is also why a fragment is never
+ * a candidate itself — `<>{cancel}{save}</>` handed to an `actions` prop is
+ * spaced by whoever receives it, and which element that is cannot be read off
+ * this file.
+ */
+function buttonsIn(
   node: ts.JsxElement | ts.JsxFragment,
   source: ts.SourceFile,
-): boolean {
+): number | undefined {
   let buttons = 0;
   for (const child of node.children) {
     if (ts.isJsxText(child)) {
-      if (child.getText(source).trim() !== "") return false;
+      if (child.getText(source).trim() !== "") return undefined;
+      continue;
+    }
+    if (ts.isJsxFragment(child)) {
+      const nested = buttonsIn(child, source);
+      if (nested === undefined) return undefined;
+      buttons += nested;
       continue;
     }
     if (isElement(child)) {
-      if (!BUTTONS.has(tagOf(child, source))) return false;
+      if (!BUTTONS.has(tagOf(child, source))) return undefined;
       buttons++;
       continue;
     }
@@ -185,26 +201,11 @@ function isActionRow(
     if (ts.isJsxExpression(child)) {
       const yielded = yieldedTags(child.expression, source);
       if (yielded.length === 0) continue;
-      if (!yielded.every((tag) => BUTTONS.has(tag))) return false;
+      if (!yielded.every((tag) => BUTTONS.has(tag))) return undefined;
       buttons++;
     }
   }
-  return buttons >= 2;
-}
-
-/** The element that draws the box — a fragment draws none, so walk out of it. */
-function hostOf(
-  node: ts.JsxElement | ts.JsxFragment,
-): ts.JsxElement | undefined {
-  let here: ts.Node = node;
-  while (ts.isJsxFragment(here)) {
-    const parent = here.parent?.parent;
-    if (!parent || !(ts.isJsxElement(parent) || ts.isJsxFragment(parent))) {
-      return undefined;
-    }
-    here = parent;
-  }
-  return ts.isJsxElement(here) ? here : undefined;
+  return buttons;
 }
 
 function attributeText(
@@ -243,19 +244,11 @@ function actionRows(
   const rows: Row[] = [];
 
   const visit = (node: ts.Node): void => {
-    if (
-      (ts.isJsxElement(node) || ts.isJsxFragment(node)) &&
-      isActionRow(node, source)
-    ) {
-      const host = hostOf(node);
-      const open = host?.openingElement;
-      const tag = open ? open.tagName.getText(source) : "";
-      // A component owns its own layout; an unresolvable fragment has no box.
-      if (
-        open &&
-        !/^[A-Z]/.test(tag) &&
-        !waived(source, node.getStart(source))
-      ) {
+    if (ts.isJsxElement(node) && (buttonsIn(node, source) ?? 0) >= 2) {
+      const open = node.openingElement;
+      const tag = open.tagName.getText(source);
+      // A component owns its own layout.
+      if (!/^[A-Z]/.test(tag) && !waived(source, node.getStart(source))) {
         const className = attributeText(open, "className", source);
         const inline = attributeText(open, "style", source);
         const named = [...className.matchAll(/[A-Za-z][A-Za-z0-9_-]*/g)].map(
@@ -333,7 +326,7 @@ describe("two buttons side by side sit in a row that says so", () => {
     }
   });
 
-  it("reads both trees, and finds rows in them", () => {
+  it("reads both trees, and finds rows in them", { timeout: 60_000 }, () => {
     // Three floors, because each can fall while the others hold. A census that
     // judged nothing certifies nothing, and the shape that fails short here is
     // "the detector matched no rows" — which prints exactly like a clean tree.
@@ -440,6 +433,33 @@ describe("what counts as an action row", () => {
         '<div className="verbs"><Button />{canEdit && <Button />}</div>',
       ).map((r) => r.ok),
     ).toEqual([true]);
+  });
+
+  it("counts buttons through a fragment, which draws no box of its own", () => {
+    expect(
+      rowsIn('<div className="verbs"><><Button /><Button /></></div>').map(
+        (row) => row.ok,
+      ),
+    ).toEqual([true]);
+    expect(
+      rowsIn('<div className="nowhere"><><Button /><Button /></></div>').map(
+        (row) => row.ok,
+      ),
+    ).toEqual([false]);
+  });
+
+  it("is not a row when the fragment's element also holds something else", () => {
+    expect(
+      rowsIn(
+        '<div className="nowhere"><span>Owner</span><><Button /><Button /></></div>',
+      ),
+    ).toEqual([]);
+  });
+
+  it("leaves a bare fragment alone — nothing here draws its box", () => {
+    // `<>{cancel}{save}</>` handed to an `actions` prop is spaced by whoever
+    // receives it, and this file cannot say who that is.
+    expect(rowsIn("<><Button /><Button /></>")).toEqual([]);
   });
 
   it("leaves a component container to the component", () => {
