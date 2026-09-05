@@ -17498,9 +17498,16 @@ type AttentionCounts struct {
 // client already holds the pipelines vocabulary and writes the label in the
 // reader's own language; a label composed server-side would not be.
 type AttentionDealFacts struct {
-	AmountMinor *int64              `json:"amount_minor,omitempty"`
-	Currency    *string             `json:"currency,omitempty"`
-	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
+	AmountMinor *int64  `json:"amount_minor,omitempty"`
+	Currency    *string `json:"currency,omitempty"`
+
+	// NoChampion `true` when the account has a buying committee and nobody engaged on it holds
+	// the champion seat. Null is not `false`: it is sent only when the answer is both
+	// known and negative, and stays absent for a committee the caller may not read in
+	// full, for a deal carrying no seats at all, and for a server that does not assess
+	// coverage. See `WorklistDealFacts.no_champion`, which carries the same fact out.
+	NoChampion *bool               `json:"no_champion,omitempty"`
+	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// StageId The deal's current stage; null for an overlay-mirror deal, whose stage lives with the incumbent.
 	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
@@ -33496,11 +33503,23 @@ type WorklistDealFacts struct {
 	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
 
 	// ExpectedMinorBase The deal amount converted to the base currency, NOT weighted by win_probability. Null when the amount or the conversion rate is unknown.
-	ExpectedMinorBase *int64              `json:"expected_minor_base,omitempty"`
-	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
-	QuietDays         *int                `json:"quiet_days,omitempty"`
-	StageId           *openapi_types.UUID `json:"stage_id,omitempty"`
-	WinProbability    *int                `json:"win_probability,omitempty"`
+	ExpectedMinorBase *int64 `json:"expected_minor_base,omitempty"`
+
+	// NoChampion `true` when the account has a buying committee and nobody engaged on it holds
+	// the champion seat — a deal drifting because nobody INSIDE is arguing for it,
+	// which needs a different move from the rep than a deal nobody outside has touched.
+	//
+	// Null is not `false`. It is sent only when the answer is both known and negative,
+	// and stays absent in the three cases that would otherwise be rounded down to a
+	// finding: a committee the caller may not read in full (a champion they cannot see
+	// is still a champion), a deal carrying no seats at all (no committee, so no gap),
+	// and a server that does not assess coverage. A client MUST NOT render an absent
+	// value as "nobody is carrying this".
+	NoChampion     *bool               `json:"no_champion,omitempty"`
+	OwnerId        *openapi_types.UUID `json:"owner_id,omitempty"`
+	QuietDays      *int                `json:"quiet_days,omitempty"`
+	StageId        *openapi_types.UUID `json:"stage_id,omitempty"`
+	WinProbability *int                `json:"win_probability,omitempty"`
 }
 
 // WorklistItem One thing to do, with the reason it sits where it sits.

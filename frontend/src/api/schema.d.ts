@@ -29163,6 +29163,14 @@ export interface components {
             currency?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
+            /**
+             * @description `true` when the account has a buying committee and nobody engaged on it holds
+             *     the champion seat. Null is not `false`: it is sent only when the answer is both
+             *     known and negative, and stays absent for a committee the caller may not read in
+             *     full, for a deal carrying no seats at all, and for a server that does not assess
+             *     coverage. See `WorklistDealFacts.no_champion`, which carries the same fact out.
+             */
+            no_champion?: boolean | null;
         };
         /**
          * @description What the lapsed relationship behind a `relationship_decay` item was WORTH before
@@ -30370,6 +30378,19 @@ export interface components {
             /** Format: date */
             expected_close_date?: string | null;
             quiet_days?: number | null;
+            /**
+             * @description `true` when the account has a buying committee and nobody engaged on it holds
+             *     the champion seat — a deal drifting because nobody INSIDE is arguing for it,
+             *     which needs a different move from the rep than a deal nobody outside has touched.
+             *
+             *     Null is not `false`. It is sent only when the answer is both known and negative,
+             *     and stays absent in the three cases that would otherwise be rounded down to a
+             *     finding: a committee the caller may not read in full (a champion they cannot see
+             *     is still a champion), a deal carrying no seats at all (no committee, so no gap),
+             *     and a server that does not assess coverage. A client MUST NOT render an absent
+             *     value as "nobody is carrying this".
+             */
+            no_champion?: boolean | null;
         };
         /**
          * @description A source that did not contribute, and why. `withheld` means the caller may not
