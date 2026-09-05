@@ -398,7 +398,7 @@ export const en = {
   "edit.versionSkew":
     "This record changed since you opened it — reload and try again.",
 
-  "merge.person": "Merge contact",
+  "merge.person": "Merge person",
   "merge.org": "Merge company",
   "merge.searchPlaceholder": "Search…",
   "merge.pickTarget": "Select the surviving record",
@@ -826,10 +826,10 @@ export const en = {
   "consent.grant": "Grant",
   "consent.withdraw": "Withdraw",
   "consent.doiBySubject":
-    "This purpose is confirmed by the contact themselves, through a link mailed to their own address. Use \u201cAsk them to confirm their details\u201d below.",
+    "This purpose is confirmed by the person themselves, through a link mailed to their own address. Use \u201cAsk them to confirm their details\u201d below.",
   "consent.askToConfirm": "Ask them to confirm their details",
   "consent.askToConfirmWhat":
-    "Mails this contact a private link to see what you hold about them, correct it, and say whether they want to hear from you. It goes to their own recorded address; you cannot send it anywhere else.",
+    "Mails this person a private link to see what you hold about them, correct it, and say whether they want to hear from you. It goes to their own recorded address; you cannot send it anywhere else.",
   "consent.askQueued": "On its way to {address}.",
   "consent.askNotDelivered":
     "The link was created for {address} but this installation sends no mail, so nobody was sent it.",
@@ -1143,12 +1143,12 @@ export const en = {
     "Their session ends now and their link stops working. Their comments stay visible and attributed. Access cannot be restored by them asking for a link.",
   "access.changeCapabilityTitle": "What may {name} do?",
   "persondealrooms.title": "Deal Rooms",
-  "persondealrooms.sub": "Rooms this contact can still enter.",
+  "persondealrooms.sub": "Rooms this person can still enter.",
   "persondealrooms.open": "Open",
   "persondealrooms.seatGone":
     "This address no longer holds a seat in that room.",
   "persondealrooms.cut":
-    "Only the first rooms are shown; this contact sits in more.",
+    "Only the first rooms are shown; this person sits in more.",
   "persondealrooms.revokeTitle": "Revoke access to {room}?",
   "room.state.draft": "Draft",
   "room.state.building": "Building",
@@ -1166,8 +1166,8 @@ export const en = {
   "co.pulse.owner": "Owner",
   "co.pulse.sizeBand": "{band} employees",
   "co.pulse.strongestLead": "Way in",
-  "co.pulse.strengthTail_one": "\u2014 the only contact here",
-  "co.pulse.strengthTail_other": "\u2014 of {count} contacts here",
+  "co.pulse.strengthTail_one": "\u2014 the only person here",
+  "co.pulse.strengthTail_other": "\u2014 of {count} people here",
   "co.pulse.unowned": "Unassigned",
   "co.since.first": "You are opening this account for the first time.",
   "co.partial":
@@ -1258,7 +1258,12 @@ export const en = {
   "contracts.renew.title": "Renew this agreement",
   "contracts.renew.hint":
     "Creates a new agreement and marks this one superseded. Its own terms — nothing carries over but the counterparty.",
+  "contracts.renew.deal": "Deal",
+  "contracts.renew.dealHint":
+    "The opportunity that won this term, if there was one — never the predecessor's own.",
+  "contracts.renew.dealNone": "No deal",
   "contracts.renew.submit": "Renew",
+  "contracts.deal": "Deal",
   "contracts.statusChange.title": "Change status",
   "contracts.statusChange.label": "New status",
   "contracts.statusChange.submit": "Change status",
@@ -1404,7 +1409,7 @@ export const en = {
   "co.evidence.kind.rule": "Derived",
   "co.brief.cite.deal": "deal",
   "co.brief.cite.activity": "activity",
-  "co.brief.cite.person": "contact",
+  "co.brief.cite.person": "person",
   "co.brief.cite.organization": "account",
   "co.brief.cite.fact": "fact",
   "co.brief.cite.profile_field": "profile field",
@@ -1412,7 +1417,7 @@ export const en = {
   // counted chip, rather than a run of identical labels.
   "co.brief.cite.deal.many": "{count} deals",
   "co.brief.cite.activity.many": "{count} activities",
-  "co.brief.cite.person.many": "{count} contacts",
+  "co.brief.cite.person.many": "{count} people",
   "co.brief.cite.organization.many": "{count} accounts",
   "co.brief.cite.fact.many": "{count} facts",
   "co.brief.cite.profile_field.many": "{count} profile fields",
@@ -1436,7 +1441,7 @@ export const en = {
   "approval.kind.site_lead": "Add a person found on the site",
   "approval.kind.capture_counterparty": "Add someone from your mail",
   "approval.kind.org_name_promotion": "Rename an account",
-  "approval.kind.vcard_create": "Create a contact from a card",
+  "approval.kind.vcard_create": "Create a person from a card",
   "approval.kind.lifecycle_change": "Account stage",
   "approval.kind.transcript_proposal": "Add a next step from a transcript",
   "approval.kind.fx_rate_proposal": "Refresh exchange rates",
@@ -1481,7 +1486,7 @@ export const en = {
   "approval.field.published_email": "Email on the page",
   "approval.field.connection_name": "On LinkedIn",
   "approval.field.connection_company": "Works at",
-  "approval.field.person_name": "Contact here",
+  "approval.field.person_name": "Person here",
   "approval.field.owner": "Owner",
   "approval.field.to": "To",
   "approval.field.currency": "Currency",
@@ -1539,8 +1544,8 @@ export const en = {
   "co.rail.deals.attentionOverdue": "Overdue",
   "co.rail.deals.attentionCommitment": "They owe us",
   "co.rail.people.title": "Their key people",
-  "co.rail.people.empty": "No contacts yet. Nobody to write to.",
-  "co.rail.people.add": "Add a contact",
+  "co.rail.people.empty": "No people yet. Nobody to write to.",
+  "co.rail.people.add": "Add a person",
   "co.rail.people.inTouch": "Already in touch with them",
   "co.rail.details.all": "All fields",
   "co.commercial.title": "Commercial",
@@ -1562,14 +1567,14 @@ export const en = {
   "linkedinImport.notConnectedNote":
     "Recording your profile URL attributes any connections you import to you by name.",
   "linkedinImport.whichFile":
-    "LinkedIn gives you Connections.csv under Settings \u2192 Data privacy \u2192 Get a copy of your data; the archive holds a dozen others, and this is the one. What you upload never becomes contacts: the connections stay out of search, lists and contact pages, and nobody can write to or email them.",
+    "LinkedIn gives you Connections.csv under Settings \u2192 Data privacy \u2192 Get a copy of your data; the archive holds a dozen others, and this is the one. What you upload never becomes people here: the connections stay out of search, lists and person pages, and nobody can write to or email them.",
   "linkedinImport.choose": "Choose Connections.csv",
   "linkedinImport.importLabel": "Connections export",
   "linkedinImport.noMatchesYet":
-    "No matches yet, which is normal in a new organization: your connections are matched against contacts the CRM knows, and those arrive as your mail is read. This runs again every hour, so matches appear as the CRM fills up.",
+    "No matches yet, which is normal in a new organization: your connections are matched against people the CRM knows, and those arrive as your mail is read. This runs again every hour, so matches appear as the CRM fills up.",
   "linkedinImport.working": "Reading your export…",
   "linkedinImport.imported": "Connections imported",
-  "linkedinImport.confirmed": "Matched to a contact",
+  "linkedinImport.confirmed": "Matched to a person",
   "linkedinImport.suggested": "Awaiting your confirmation",
 
   // The review queue and the reach table (ADR-0078 §2.1b).
@@ -1583,7 +1588,7 @@ export const en = {
   "linkedinReach.accountsLabel": "Accounts you reach",
   "linkedinReach.account": "Account",
   "linkedinReach.connections": "You know",
-  "linkedinReach.onFile": "Already contacts",
+  "linkedinReach.onFile": "Already on file",
   "linkedinReach.onFileOf": "{onFile} of {total}",
   "linkedinReach.footnote":
     "Showing {shown} of {total} accounts. {unresolved} connections work somewhere that is not an account on file yet.",
@@ -1680,7 +1685,7 @@ export const en = {
     "Some recipients were blind-copied and are not shown to you",
   "compose.audienceWorkspace": "Everyone in the organization",
   "compose.audienceWorkspaceHint":
-    "Anyone who may see the contact reads this message too.",
+    "Anyone who may see the person reads this message too.",
   "compose.audienceParticipants": "Participants only",
   "compose.audienceParticipantsHint":
     "Only the people on this message read its subject and body. Others see that a message was exchanged that day, nothing more.",
@@ -1691,7 +1696,7 @@ export const en = {
   "compose.audienceMembersLoading": "Reading the list of people…",
   "compose.audienceConfirm": "Save visibility",
   "compose.audienceNote":
-    "Applies to this message only \u2014 not to the thread and not to the contact.",
+    "Applies to this message only \u2014 not to the thread and not to the person.",
   "timeline.textMore": "Read it",
   "timeline.textLess": "Show less",
   "timeline.tailMore": "Show signature and quoted text",
@@ -2011,7 +2016,7 @@ export const en = {
   "tagResult.viewAll": "View all {count} {kind}",
   "tagResult.resultsTitle": "Records with this tag",
   "tagResult.nothingCarries":
-    "Nothing carries this tag yet. Apply it from any contact, company or deal.",
+    "Nothing carries this tag yet. Apply it from any person, company or deal.",
   "tagResult.loadingRows": "Loading {kind}…",
   "tagResult.noneLeft": "Nothing carries it any more",
   "tagResult.unnamed": "Unnamed",
@@ -2148,28 +2153,28 @@ export const en = {
   "lead.boardTerminalOnly":
     "None of these leads are still open \u2014 they are counted under Qualified and Disqualified.",
   "person.fromLead": "From lead",
-  "lead.promotedTitle": "Promoted to a contact",
+  "lead.promotedTitle": "Promoted to a person",
   "lead.promotedMerged":
-    "This lead merged into a contact we already knew — no duplicate was created.",
-  "lead.promotedCreated": "This lead became a new contact.",
+    "This lead merged into a person we already knew — no duplicate was created.",
+  "lead.promotedCreated": "This lead became a new person.",
   "lead.promotedAt": "Promoted",
   "lead.promotedTrigger": "Trigger:",
   "lead.promotedEvidence": "Evidence:",
   "lead.previewPending": "Checking whether we already know this person…",
-  "lead.previewCreate": "Promoting will create a new contact.",
-  "lead.previewMerge": "Promoting will merge into the existing contact",
+  "lead.previewCreate": "Promoting will create a new person.",
+  "lead.previewMerge": "Promoting will merge into the existing person",
   "lead.previewMergeWithheld":
-    "Promoting will merge into an existing contact you cannot see.",
+    "Promoting will merge into an existing person you cannot see.",
   "lead.demote": "Reverse promotion",
   "lead.demoteDialog": "Reverse this promotion?",
   "lead.demoteExplain":
-    "The lead returns to the queue as “Working”. A contact the promotion created is archived; a contact it merged into stays as it is. A contact on a live deal cannot be reversed.",
+    "The lead returns to the queue as “Working”. A person the promotion created is archived; a person it merged into stays as they are. A person on a live deal cannot be reversed.",
   "lead.demoteReason": "Reason (recorded in the audit trail)",
   "lead.demoteReasonRequired": "Say why first.",
   "lead.demoteConfirm": "Reverse",
   "lead.promotedOutcomePending": "Reading what this promotion did…",
   "lead.promotedOutcomeUnavailable":
-    "We cannot show whether this merged or created a contact.",
+    "We cannot show whether this merged or created a person.",
   "lead.terminalPromoted": "Promoted — this lead is now read-only.",
   "lead.statusNew": "New",
   "lead.statusContacted": "Contacted",
@@ -2275,7 +2280,7 @@ export const en = {
   "lead.trigger.humanQualify": "Human qualified",
   "lead.evidenceNote": "Evidence note (optional)",
   "lead.segregation":
-    "Leads are kept apart from Contacts. A lead becomes a contact only when you qualify it.",
+    "Leads are kept apart from People. A lead becomes a person only when you qualify it.",
   "lead.segregationDismiss": "Got it",
   "list.emptyMine": "You own no {unit}.",
   "list.showAll": "Show all",
@@ -2293,12 +2298,12 @@ export const en = {
   "lead.ladder.theyReplied": "they replied",
   "lead.ladder.meetingBooked": "a meeting was booked",
   "lead.ladder.meetingHeld": "a meeting was held",
-  "lead.ladder.qualified": "Qualified — this lead is a contact now.",
-  "lead.ladder.qualifiedOn": "Qualified on {at} — this lead is a contact now.",
+  "lead.ladder.qualified": "Qualified — this lead is a person now.",
+  "lead.ladder.qualifiedOn": "Qualified on {at} — this lead is a person now.",
   "lead.ladder.disqualified": "Disqualified.",
   "lead.ladder.disqualifiedWithReason": "Disqualified: {reason}",
   "lead.qualify.title": "Qualify {name}",
-  "lead.qualify.contact": "Contact",
+  "lead.qualify.contact": "Person",
   "lead.qualify.alsoDeal": "Also open a deal",
   "lead.qualify.pipeline": "Pipeline",
   "lead.qualify.stage": "Stage",
@@ -2316,7 +2321,7 @@ export const en = {
   "lead.qualify.reasonHuman": "Reason: qualified by you.",
   "lead.qualify.confirm": "Qualify",
   "lead.qualify.confirmWithDeal": "Qualify and open deal",
-  "lead.qualify.done": "{name} is now a contact:",
+  "lead.qualify.done": "{name} is now a person:",
   "lead.disqualify.title": "Disqualify {name}",
   "lead.disqualify.reason": "Reason",
   "lead.disqualify.pickReason": "Pick a reason",
@@ -2898,7 +2903,7 @@ export const en = {
   "create.multiselect.required": "Required — select at least one.",
   "create.save": "Create",
   "create.saving": "Creating…",
-  "create.contact": "New contact",
+  "create.contact": "New person",
   // The fast path beside it: reading a profile in another window and typing
   // what it says. The label names the ACT, not the source, because the same
   // form takes a conference badge and a business card.
@@ -3005,7 +3010,7 @@ export const en = {
   "co.spine.days_other": "{count} days",
   "co.spine.quietSince": "Silence since then",
   "co.spine.neverReplied": "They have never written back",
-  "co.spine.singleThreaded": "One contact, and no reply from them",
+  "co.spine.singleThreaded": "One person, and no reply from them",
   "co.spine.overdue": "Past its date",
   "co.spine.expectedClose": "Expected close",
   "co.360.subject": "{name} · 360",
@@ -3024,7 +3029,7 @@ export const en = {
   "today.source.nextMeeting": "the calendar",
   "today.source.deals": "deals",
   "today.meeting.prepare": "Prepare meeting",
-  "today.source.people": "the contacts",
+  "today.source.people": "the people",
   "today.source.standing": "whose move it is and the signals",
   "today.source.activities": "what was said",
   "today.silence.days": "no answer in {count} days",
@@ -3042,10 +3047,10 @@ export const en = {
   "evidence.humanSet": "Set by a person",
   "acctCoverage.open": "Compare coverage",
   "acctCoverage.title": "Who covers this account",
-  "acctCoverage.contact": "Contact",
-  "acctCoverage.findContact": "Find a contact",
+  "acctCoverage.contact": "Person",
+  "acctCoverage.findContact": "Find a person",
   "acctCoverage.untried": "Untried",
-  "acctCoverage.noMatch": "No contact matches that.",
+  "acctCoverage.noMatch": "Nobody matches that.",
   "acctCoverage.columnCap":
     "Showing {cap} colleagues — deselect one to add another.",
   "acctCoverage.partial":
@@ -3200,13 +3205,13 @@ export const en = {
   "log.save": "Log",
   "log.saving": "Logging…",
 
-  "personAccess.title": "Who can see this contact",
+  "personAccess.title": "Who can see this person",
   "personAccess.privateToYou":
-    "Private to you. Your mailbox created this contact, and nobody else in the organization can see it — not your team, and not an admin.",
+    "Private to you. Your mailbox created this person, and nobody else in the organization can see them — not your team, and not an admin.",
   "personAccess.organization":
-    "Everyone in the organization can see this contact.",
+    "Everyone in the organization can see this person.",
   "personAccess.share": "Share with the organization",
-  "personAccess.published": "The organization can see this contact now.",
+  "personAccess.published": "The organization can see this person now.",
   "compose.reply": "Reply",
   "compose.writeEmail": "Write email",
   "compose.relink": "Relink",
@@ -3234,9 +3239,9 @@ export const en = {
   "compose.cc": "Cc",
   "compose.subject": "Subject",
   "compose.noGroundableRecipient":
-    "No contact on this account yet — write the message yourself, or add a contact first",
+    "Nobody on this account yet — write the message yourself, or add a person first",
   "compose.draftTo": "Draft to",
-  "compose.draftToUnset": "Choose a contact",
+  "compose.draftToUnset": "Choose a person",
   "compose.relatedTo": "Related to",
   "compose.relatedToNone": "The account in general",
   "compose.project": "Project",
@@ -3544,6 +3549,10 @@ export const en = {
   "forecast.saveCall": "Save call",
   "analytics.scopeLabel": "Which records these numbers cover",
   "analytics.scopeFixed": "These numbers cover {scope}.",
+  "forecast.period": "Window",
+  "forecast.period.quarter": "Quarter",
+  "forecast.period.month": "Month",
+  "forecast.period.week": "Week",
   "forecast.receipt": "Data and evidence checked",
   "forecast.eligible": "Eligible deals",
   "forecast.priced": "Priced",
@@ -3798,7 +3807,7 @@ export const en = {
   "settings.autonomySub": "what runs instantly vs. what waits in the inbox",
   "settings.tierRead": "Read, summarize, draft — runs instantly, fully logged.",
   "settings.tierSend":
-    "Send email, book meetings, update a contact or a deal — runs instantly too, if you gave the agent that scope. Your grant is the approval, given once.",
+    "Send email, book meetings, update a person or a deal — runs instantly too, if you gave the agent that scope. Your grant is the approval, given once.",
   "settings.tierWait":
     "Enrichment, custom fields, webhooks, merging tags — these wait in your inbox.",
   "settings.tierAdvance":
@@ -3825,7 +3834,7 @@ export const en = {
   "import.object.organization": "Companies",
   "import.object.person": "People",
   "import.objectHint.lead":
-    "An unworked list lands as leads for a human to qualify before anyone treats them as contacts.",
+    "An unworked list lands as leads for a human to qualify before anyone treats them as people.",
   "import.objectHint.organization":
     "Companies are matched by the name you map, so a re-upload corrects rather than duplicates.",
   "import.objectHint.person":
@@ -4491,6 +4500,9 @@ export const en = {
     "The import status can't be read right now — capture itself keeps running.",
   "backfill.queuedTitle": "Import queued",
   "backfill.runningTitle": "Importing your mail history",
+  // The pill beside a live title: the indigo on the card is a claim that a
+  // machine is doing the reading, and this is the same claim in words.
+  "backfill.readingBadge": "Margince is reading",
   "backfill.doneTitle": "History import complete",
   "backfill.errorTitle": "The import hit a problem",
   "backfill.cancelledTitle": "Import cancelled",
@@ -4591,7 +4603,7 @@ export const en = {
     "Once your mailbox has brought in mail, every sender it saw is listed here with what became of them.",
   "senders.colSender": "Sender",
   "senders.colDecision": "Decided",
-  "senders.colRecord": "Contact",
+  "senders.colRecord": "Person",
   "senders.colActions": "What you can do",
   "senders.recordYes": "Yes",
   "senders.recordNo": "No",
@@ -4602,7 +4614,7 @@ export const en = {
   "senders.withdraw": "Undo",
   "senders.keepOutTitle": "Keep this sender out for good?",
   "senders.keepOutBody":
-    "No contact is created, and the mail this sender already brought into your mailbox is destroyed. Mail a colleague also imported stays theirs.",
+    "No person is created, and the mail this sender already brought into your mailbox is destroyed. Mail a colleague also imported stays theirs.",
   "senders.keepOutConfirm": "Keep out and destroy",
   "senders.kind.person": "A person",
   "senders.kind.roleMailbox": "A role mailbox",
@@ -4617,7 +4629,7 @@ export const en = {
   "senders.kind.undecided": "Not yet decided",
   "mailSharing.title": "Email sharing",
   "mailSharing.sub":
-    "Captured mail is readable by every colleague who can see the contact. On by default — it is what makes the pipeline shared.",
+    "Captured mail is readable by every colleague who can see the person. On by default — it is what makes the pipeline shared.",
   "mailSharing.label": "Share captured mail with the team",
   "mailSharing.help":
     "Individual messages can be limited afterwards, and addresses or domains excluded up front.",
@@ -4664,7 +4676,7 @@ export const en = {
   "connectors.contextTag.label": "File what this connector brings in under",
   "connectors.contextTag.none": "No tag",
   "connectors.contextTag.hint":
-    "An existing tag. Every contact this connector creates from now on is filed under it, so you can ask what came in from this source. Contacts already here keep the tags they have.",
+    "An existing tag. Every person this connector creates from now on is filed under it, so you can ask what came in from this source. People already here keep the tags they have.",
   "connectors.contextTag.archived":
     "{name} has been archived, so nothing is being filed under it. Choose another tag, or none.",
   "connectors.signatureEnrich.followingDefault":
@@ -4672,7 +4684,7 @@ export const en = {
   "connectors.signatureEnrich.ownAnswer":
     "This mailbox's own answer, kept whatever your organization's setting becomes.",
   "hold.sectionTitle": "Private correspondence",
-  "hold.notHeld": "Mail with this contact follows your mailbox setting.",
+  "hold.notHeld": "Mail with this person follows your mailbox setting.",
   "hold.heldByAddress": "You keep mail with this address to the people on it.",
   "hold.heldByDomain": "You keep mail with {domain} to the people on it.",
   "hold.holdAddress": "Keep private",
@@ -4689,7 +4701,7 @@ export const en = {
   "hold.confirmHistoryNote":
     "This covers mail from here on. Mail already captured keeps the visibility it has.",
   "captureNotice.whatHappens":
-    "Margince reads this mailbox and files what it finds: the messages, who was on them, and the contacts and companies behind the addresses. Attachments are stored with their message.",
+    "Margince reads this mailbox and files what it finds: the messages, who was on them, and the people and companies behind the addresses. Attachments are stored with their message.",
   "captureNotice.whoReads":
     "A new mailbox is held by default. A message stays with the people who were on it until a classifier judges the thread to be ordinary business — only then can colleagues read it. You can set the mailbox to hold everything instead, at any time.",
   "captureNotice.yourControl":
@@ -4901,7 +4913,7 @@ export const en = {
   "ob.s4.accessToggle": "What access this gives",
   "ob.s4.scope1Lead": "We read — we don't clutter.",
   "ob.s4.scope1Rest":
-    "Your mail becomes contacts, companies and activities, captured automatically.",
+    "Your mail becomes people, companies and activities, captured automatically.",
   "ob.s4.scope2Lead": "Sending is part of this permission.",
   "ob.s4.scope2Rest":
     "Margince can send from this mailbox — when you send, and when you give an agent a passport that allows sending. That grant is your approval, given once. You can withdraw it at any time.",
@@ -5081,10 +5093,10 @@ export const en = {
   "ob.conv.scene.continue": "Continue",
   "ob.conv.connect.sceneTitle": "Connect your accounts.",
   "ob.conv.connect.sceneSub":
-    "I build your contacts, companies and history from what is already in your inbox.",
+    "I build your people, companies and history from what is already in your inbox.",
   "ob.conv.connect.mailboxTitle": "Your mailbox",
   "ob.conv.connect.mailboxHint":
-    "Pick one. This is where your contacts, companies and history come from.",
+    "Pick one. This is where your people, companies and history come from.",
   "ob.conv.connect.networkTitle": "Your network",
   "ob.conv.connect.networkHint":
     "Optional but worth it. Turns who you know into accounts and watches them for triggers.",
@@ -5117,7 +5129,7 @@ export const en = {
   "ob.conv.connect.unsupportedCard": "This installation does not serve {name}.",
   "ob.conv.connect.appSetupLink": "Set it up in Settings",
   "ob.conv.connect.dialogIntro":
-    "{brings}. I read it once to build your contacts and history, then keep it in sync.",
+    "{brings}. I read it once to build your people and history, then keep it in sync.",
   "ob.conv.connect.dialogClose": "Close",
   "ob.conv.connect.linkedinName": "LinkedIn",
   "ob.conv.connect.linkedinConnected": "Connected",
@@ -5217,7 +5229,7 @@ export const en = {
   "ob.conv.connect.mailboxNeeded":
     "A mailbox is still needed: mail is what gets read and drafted. Connect one above, or continue without one for now.",
   "ob.conv.linkedin.cardBody":
-    "Turns your network into accounts and contacts, and flags it when a connection changes jobs.",
+    "Turns your network into accounts and people, and flags it when a connection changes jobs.",
   "ob.conv.linkedin.limitsToggle": "What Margince can and cannot see",
   "ob.conv.linkedin.scope1Lead": "Your connection list \u2014",
   "ob.conv.linkedin.scope1Rest":
@@ -5232,7 +5244,7 @@ export const en = {
   "ob.conv.linkedin.scope4Rest":
     "Connecting sends no invitations and no messages, ever.",
   "ob.conv.linkedin.neverContacts":
-    "Your connections never become contacts. They answer one question: who here already knows them?",
+    "Your connections never become people here. They answer one question: who here already knows them?",
   "ob.conv.linkedin.profileLabel": "Your LinkedIn profile URL",
   "ob.conv.linkedin.profilePlaceholder": "https://www.linkedin.com/in/…",
   "ob.conv.linkedin.profileWhy":
@@ -5637,7 +5649,7 @@ export const en = {
   "client.open360": "Open the 360",
   "client.unknown": "Not in your organization yet.",
   "client.unknownDetail":
-    "This sender matches no contact you can see. Nothing was fetched from anywhere else.",
+    "This sender matches no person you can see. Nothing was fetched from anywhere else.",
   "client.createLead": "Capture as lead",
   "client.isolation": "talks only to YOUR organization",
   "client.attribution": "Every capture is attributed and auditable.",
@@ -5944,7 +5956,7 @@ export const en = {
   "network.bucket.strong": "Strong",
   "coverage.engaged": "Engaged",
   "coverage.quiet": "No two-way contact",
-  "coverage.seatWithheld": "A contact you cannot read",
+  "coverage.seatWithheld": "A person you cannot read",
   "coverage.daysSinceTouch": "{days} days",
   "coverage.risk.single_threaded_theirs": "Single-threaded",
   "coverage.risk.single_threaded_ours": "Carried by one colleague",
@@ -5960,7 +5972,7 @@ export const en = {
   "cf.object": "Object",
   "cf.obj.deal": "Deal",
   "cf.obj.organization": "Company",
-  "cf.obj.person": "Contact",
+  "cf.obj.person": "Person",
   "cf.obj.lead": "Lead",
   "cf.listLabel": "Fields on {object}",
   "cf.col.field": "Field",
@@ -5973,9 +5985,9 @@ export const en = {
   "cf.empty.organization":
     "No custom fields on Company yet. Add one if you track something we didn't ship.",
   "cf.empty.person":
-    "No custom fields on Contact yet. Core fields cover the contact record; add one if you track more.",
+    "No custom fields on Person yet. Core fields cover the person record; add one if you track more.",
   "cf.empty.lead":
-    "No custom fields on Lead yet. A field you add here also appears once a lead is promoted to a contact.",
+    "No custom fields on Lead yet. A field you add here also appears once a lead is promoted to a person.",
   "cf.type.text": "Text",
   "cf.type.number": "Number",
   "cf.type.date": "Date",
@@ -6125,7 +6137,7 @@ export const en = {
   "captureActivity.contentNone": "no sender recorded",
   "captureActivity.outcome.captured": "Captured",
   "captureActivity.outcome.internal": "Dropped as internal",
-  "captureActivity.outcome.suppressed": "No contact created",
+  "captureActivity.outcome.suppressed": "No person created",
   "captureActivity.outcome.deferred": "Waiting on a verdict",
   "captureActivity.outcome.fault": "Derivation failed",
   "captureActivity.reason.internal_only": "every party was on your own domains",
@@ -6134,18 +6146,18 @@ export const en = {
   "captureActivity.reason.noise_prior":
     "a previous verdict judged this sender noise, so it will be archived",
   "captureActivity.reason.decided_prior":
-    "this sender was already decided, so no contact will be created",
+    "this sender was already decided, so no person will be created",
   "captureActivity.reason.no_granting_human":
     "the connection named no member to act for",
   "captureActivity.reason.invisible_incumbent":
     "it matched a record outside what you can see",
   "captureActivity.reason.derivation_failed":
-    "the contact step failed; the message itself is unaffected",
+    "the person step failed; the message itself is unaffected",
   "captureActivity.reason.no_counterparty": "no sender this CRM could record",
   "captureActivity.reason.role_mailbox":
-    "a shared mailbox, not a person — kept, but no contact created",
+    "a shared mailbox, not a person — kept, but no person created",
   "captureActivity.reason.private_thread":
-    "a private conversation — kept for you, but no contact created",
+    "a private conversation — kept for you, but no person created",
   "captureActivity.reason.transactional_infra":
     "the sender is mail infrastructure, not a company you work with",
   "captureActivity.reason.transactional_prefix":
@@ -6154,7 +6166,7 @@ export const en = {
   "captureActivity.outcome.deferred_sent": "Sent for a verdict",
   "captureActivity.resolution.pending": "still waiting",
   "captureActivity.resolution.unsure": "sent to the review queue",
-  "captureActivity.resolution.real": "judged a real contact",
+  "captureActivity.resolution.real": "judged a real person",
   "captureActivity.resolution.noise": "judged noise",
   "captureActivity.resolution.rejected": "declined by a human",
   "captureActivity.resolution.suppressed": "suppressed",
@@ -6183,8 +6195,8 @@ export const en = {
   "pipeline.stage.erasure_check": "Erasure check",
   "pipeline.stage.internal_drop": "Internal-only check",
   "pipeline.stage.activity_write": "Saved to the timeline",
-  "pipeline.stage.tier_ladder": "Contact decision",
-  "pipeline.stage.person_create": "Contact created",
+  "pipeline.stage.tier_ladder": "Person decision",
+  "pipeline.stage.person_create": "Person created",
   "pipeline.stage.verdict": "Sender verdict",
   "pipeline.stage.company_triage": "Company check",
   "pipeline.stage.attention_label": "Attention label",
@@ -6203,16 +6215,16 @@ export const en = {
   "pipeline.reason.decided_prior": "this sender was already decided",
   "pipeline.reason.no_counterparty": "no sender this CRM could record",
   "pipeline.reason.role_mailbox":
-    "a shared mailbox, not a person — kept, but no contact created",
+    "a shared mailbox, not a person — kept, but no person created",
   "pipeline.reason.private_thread":
-    "a private conversation — kept for you, but no contact created",
+    "a private conversation — kept for you, but no person created",
   "pipeline.reason.no_granting_human":
     "the connection named no member to act for",
   "pipeline.reason.derivation_failed":
-    "the contact step failed; the message itself is unaffected",
-  "pipeline.reason.not_linked_yet": "no contact is linked to this message yet",
+    "the person step failed; the message itself is unaffected",
+  "pipeline.reason.not_linked_yet": "no person is linked to this message yet",
   "pipeline.reason.no_contact_intended":
-    "the contact decision concluded that none was to be made",
+    "the person decision concluded that none was to be made",
   "pipeline.reason.awaiting_verdict":
     "the sender is still waiting on a verdict",
   "pipeline.reason.verdict_reached":
@@ -7015,13 +7027,13 @@ export const en = {
     "A company moves stage on what has happened with it. This one can also change who sees the account and which automations run.",
   "captureSettings.title": "Enrichment",
   "captureSettings.sub":
-    "How captured companies and contacts are enriched after they are created.",
+    "How captured companies and people are enriched after they are created.",
   "captureSettings.autoEnrich.label": "Auto-enrich captured companies",
   "captureSettings.autoEnrich.help":
     "When on, each new company created from captured mail gets an automatic web dossier — its site is read and its profile filled in. Runs under a daily limit.",
   "captureSettings.signatureEnrich.label": "Read contact details from mail",
   "captureSettings.signatureEnrich.help":
-    "When on, Margince reads what a contact states under their own name in mail they sent you — in a signature, and on a business card attached to it. A title, a phone number, an address, a company. It happens within minutes of the mail arriving. Nothing is inferred: a detail the mail does not state is not written. This is the organization's default; a mailbox that set its own switch keeps it.",
+    "When on, Margince reads what a person states under their own name in mail they sent you — in a signature, and on a business card attached to it. A title, a phone number, an address, a company. It happens within minutes of the mail arriving. Nothing is inferred: a detail the mail does not state is not written. This is the organization's default; a mailbox that set its own switch keeps it.",
   "captureSettings.adminOnly": "Only an admin or ops can change this.",
 
   "ownDomains.companyTitle": "Company domains",
@@ -7034,14 +7046,14 @@ export const en = {
   "captureExclusions.empty": "No exclusions.",
   "ownerIdentities.title": "Your other addresses",
   "ownerIdentities.sub":
-    "Addresses that are also you: a send-as alias, a private domain you read, an address you forward from. Mail between your own addresses is not correspondence with anybody, so it is not captured and never becomes a contact.",
+    "Addresses that are also you: a send-as alias, a private domain you read, an address you forward from. Mail between your own addresses is not correspondence with anybody, so it is not captured and never becomes a person.",
   "ownerIdentities.add": "Add address",
   "ownerIdentities.addLabel": "Declare another address as your own",
   "ownerIdentities.addDescription":
     "Yours alone. A colleague never sees what you list here.",
   "ownerIdentities.current": "Declared",
   "ownerIdentities.notRetroactive":
-    "Applies from the next message on. Mail already captured stays, and a contact already made from an alias stays until you merge or remove it.",
+    "Applies from the next message on. Mail already captured stays, and a person already made from an alias stays until you merge or remove it.",
   "ownerIdentities.empty": "You have declared no other addresses.",
   "ownerIdentities.remove": "Withdraw this address",
   "ownerIdentities.added": "Address added.",
@@ -7238,7 +7250,7 @@ export const en = {
   "person.enriched.confirm": "That is right",
   "person.enriched.save": "Save the correction",
   "person.enriched.cancel": "Cancel",
-  "person.graph.loading": "Reading the network around this contact…",
+  "person.graph.loading": "Reading the network around this person…",
   "person.graph.routeDirect": "{name} already corresponds with them.",
   "person.graph.routeVia":
     "{name} corresponds with {through} at the same company.",
@@ -7251,7 +7263,7 @@ export const en = {
   "person.graph.recordWorksWith": "Record: works with {name}",
   "person.graph.noEdge": "No recorded correspondence with {name}.",
   "person.graph.withColleague": "with {name}",
-  "person.graph.withContact": "with this contact",
+  "person.graph.withContact": "with this person",
   "person.graph.counts":
     "{total} interactions in 90 days · {inbound} in, {outbound} out",
   "person.graph.untitledMessage": "Untitled",
@@ -7260,8 +7272,7 @@ export const en = {
   "person.intro.routesTitle": "Ways in",
   "person.graph.droppedNote": "{count} more not shown.",
   "person.graph.withheldDirect": "Some colleagues are not shown.",
-  "person.graph.withheldAccount":
-    "Some contacts at this company are not shown.",
+  "person.graph.withheldAccount": "Some people at this company are not shown.",
   "person.intro.askFirstName": "Ask {name} for an intro",
   "person.intro.leadEyebrow": "Recommended route",
   "person.intro.leadRouteBadge": "Strong route",
@@ -7329,7 +7340,7 @@ export const en = {
   "person.intro.lanePeers": "Who they talk to",
   "person.intro.laneTarget": "Target",
   "person.intro.useThisRoute": "Use this route",
-  "person.intro.mapRegion": "Who can reach this contact, and through whom",
+  "person.intro.mapRegion": "Who can reach this person, and through whom",
   "person.intro.edgeDirect": "{name} corresponds with them directly",
   "person.intro.edgeAccount": "works with {name}",
   "person.intro.routesSub":
@@ -7353,13 +7364,13 @@ export const en = {
   "person.intro.askFailed": "The ask could not be recorded.",
   "person.intro.reasonLabel": "Why you are asking",
   "person.intro.reasonHint":
-    "Your colleague reads this, not the contact. Say what makes the introduction worth making.",
+    "Your colleague reads this, not the person. Say what makes the introduction worth making.",
   "person.intro.valueLabel": "What is in it for them",
   "person.intro.valueHint":
-    "The reason the contact would want this conversation.",
+    "The reason the person would want this conversation.",
   "person.intro.noteLabel": "Note your colleague can forward",
   "person.intro.noteHint":
-    "The only part the contact reads. Write it so it can be pasted as it stands.",
+    "The only part the person reads. Write it so it can be pasted as it stands.",
   "person.intro.nameDropAsk": "Ask permission to mention their name",
   "person.intro.fallbackLegend": "If they say no",
   "person.intro.fallbackNone": "Nothing further",
@@ -7456,7 +7467,7 @@ export const en = {
   // absence of correspondence, "None" under a meeting is an absence of a
   // booking, and German renders them differently.
   "person.page.loading": "Loading…",
-  "person.page.notOpened": "This contact could not be opened.",
+  "person.page.notOpened": "This person could not be opened.",
   "person.page.buyingRole": "Buying role",
   "person.page.owner": "Owner",
   "person.page.ownerUnassigned": "Unassigned",
@@ -7465,11 +7476,11 @@ export const en = {
   // correct AND a place to go, and the verb names the second so neither reads
   // as the other.
   "person.page.openProfile": "Open profile",
-  // The rail's own details grid: the contact's own fields, at a glance above
+  // The rail's own details grid: the person's own fields, at a glance above
   // the six relationship sections below it.
   "person.rail.detailsTitle": "Details",
   "person.rail.archivedReadOnly":
-    "This contact is archived. Restore them to change anything here.",
+    "This person is archived. Restore them to change anything here.",
   // Fired when an employment row's version could not be read back before a
   // write — the row is not saved unpinned, so the reader is told to reload
   // rather than left to think the edit landed.
@@ -7498,7 +7509,7 @@ export const en = {
   "person.meetings.noneLogged": "No meeting with them has been logged.",
   "person.meetings.untitled": "Untitled meeting",
   "person.meetings.participants": "In the room",
-  "person.documents.empty": "No file has been filed against this contact.",
+  "person.documents.empty": "No file has been filed against this person.",
   "person.research.empty": "Nothing has been researched about them yet.",
   "person.research.fields": "Enrichment evidence",
   "person.research.fieldsEmpty": "No enriched field carries evidence yet.",
@@ -7677,7 +7688,7 @@ export const en = {
   "person.composer.blockedRewrite":
     "A message sent under another purpose has to BE that kind of message — relabelling this one does not make it so.",
   "person.composer.blockedRecordConsent":
-    "If you have a basis for writing, record the consent decision on their contact record.",
+    "If you have a basis for writing, record the consent decision on their record.",
   "person.composer.consentPickPurpose":
     "Choose what this message is for — consent is decided per purpose.",
   "person.composer.intent": "What should it be about?",
@@ -7784,7 +7795,7 @@ export const en = {
     "Paste a new key to replace the stored one",
   "provider.connectConfirm.title": "Connect this data provider?",
   "provider.connectConfirm.body":
-    "The key is checked against the provider before anything is saved. Once connected, enriching a contact spends your credits.",
+    "The key is checked against the provider before anything is saved. Once connected, enriching a person spends your credits.",
   "provider.disconnect": "Disconnect",
   "provider.disconnectConfirm.title": "Disconnect the provider?",
   "provider.disconnectConfirm.body":
@@ -7793,25 +7804,25 @@ export const en = {
   "provider.deleteDataConfirm.title":
     "Delete everything bought from this provider?",
   "provider.deleteDataConfirm.body":
-    "Every value this provider supplied is removed from every contact. What you spent stays in your records; the data does not. This cannot be undone.",
+    "Every value this provider supplied is removed from every person. What you spent stays in your records; the data does not. This cannot be undone.",
   "provider.deleteDataConfirm.typed": "Type the provider's name to confirm",
-  "provider.automaticLookup": "Look up contacts automatically",
+  "provider.automaticLookup": "Look up people automatically",
   "provider.automaticLookupHint":
-    "Every contact is looked up once for whatever the connection selects that the provider charges nothing for — typically the professional profile link, the current role and employer, and the work history. Email addresses and mobile numbers are never bought this way: those cost credits and stay a decision you make per contact.",
+    "Every person is looked up once for whatever the connection selects that the provider charges nothing for — typically the professional profile link, the current role and employer, and the work history. Email addresses and mobile numbers are never bought this way: those cost credits and stay a decision you make per person.",
   "provider.automaticLookupJurisdiction":
-    "Switch this off if your contacts fall under a law that forbids trading personal data, Vietnam's among them. The button on each contact still works, which keeps the decision with the person making it.",
+    "Switch this off if the people in your CRM fall under a law that forbids trading personal data, Vietnam's among them. The button on each person still works, which keeps the decision with the person making it.",
   "provider.buyable": "Allow buying {category}",
   "provider.buyableHint_one":
-    "Switching this on buys nothing. It puts a button on each contact, priced at {credits} credit, so somebody can buy this detail for one person at a time.",
+    "Switching this on buys nothing. It puts a button on each person, priced at {credits} credit, so somebody can buy this detail for one person at a time.",
   "provider.buyableHint_other":
-    "Switching this on buys nothing. It puts a button on each contact, priced at {credits} credits, so somebody can buy this detail for one person at a time.",
+    "Switching this on buys nothing. It puts a button on each person, priced at {credits} credits, so somebody can buy this detail for one person at a time.",
   "provider.buyableNeeds":
     "The provider looks for this only alongside the {prerequisite}, so it cannot be bought on its own. Allow that one first.",
   "provider.backlog": "Still to look up",
-  "provider.backlogRemaining_one": "{count} contact",
-  "provider.backlogRemaining_other": "{count} contacts",
+  "provider.backlogRemaining_one": "{count} person",
+  "provider.backlogRemaining_other": "{count} people",
   "provider.backlogWorking":
-    "Contacts that were already here when the provider was connected are being looked up a few at a time.",
+    "People who were already here when the provider was connected are being looked up a few at a time.",
   "provider.backlogPaused":
     "Nothing is being looked up right now: automatic lookups are off, the day's limit is spent, or the provider is not usable.",
   "provider.credits": "Credits left with the provider",
@@ -7840,16 +7851,16 @@ export const en = {
   "provider.profile.notConnected":
     "No data provider is connected, so nothing has been bought.",
   "provider.profile.notEligible":
-    "This contact is not eligible — they have objected, or the record is archived.",
+    "This person is not eligible — they have objected, or the record is archived.",
   "provider.profile.nothingToLookUp":
-    "There is nothing to look this contact up by. Add their LinkedIn URL, or the company they work for, and the lookup can run.",
-  "provider.profile.neverRun": "Nobody has looked this contact up yet.",
+    "There is nothing to look this person up by. Add their LinkedIn URL, or the company they work for, and the lookup can run.",
+  "provider.profile.neverRun": "Nobody has looked this person up yet.",
   "provider.profile.queued": "Queued",
   "provider.profile.inProgress": "Looking them up…",
   "provider.profile.working": "Asking {provider}. This takes up to a minute.",
   "provider.profile.landing": "Answer received. Putting it on the record.",
   "provider.profile.completed": "Found",
-  "provider.profile.noMatch": "The provider had nothing for this contact.",
+  "provider.profile.noMatch": "The provider had nothing for this person.",
   "provider.profile.stale":
     "Bought earlier. The provider is no longer connected, so this cannot be refreshed.",
   "provider.profile.invalidCredentials":
@@ -7864,12 +7875,12 @@ export const en = {
     "We never learned how this lookup ended. It may have been charged for.",
   "provider.profile.claimsUnwritten":
     "Paid for, but the details never reached this record. Nobody has to hunt for them — this is the gap.",
-  "provider.profile.enrichNow": "Look this contact up · free",
+  "provider.profile.enrichNow": "Look this person up · free",
   "provider.profile.recheck": "Check again · free",
   "provider.profile.lookingUp": "Asking the provider. This takes a moment.",
-  "provider.profile.emptyTitle": "Nothing bought for this contact yet",
+  "provider.profile.emptyTitle": "Nothing bought for this person yet",
   "provider.profile.emptyBody":
-    "A lookup asks {provider} about this contact, for whichever details this connection is set to buy. It spends {provider} credits, and what comes back sits here beside the record rather than overwriting anything a colleague typed.",
+    "A lookup asks {provider} about this person, for whichever details this connection is set to buy. It spends {provider} credits, and what comes back sits here beside the record rather than overwriting anything a colleague typed.",
   "provider.profile.emails": "Email addresses",
   "provider.profile.emailType.provider": "{type}, as the provider labelled it",
   "provider.profile.emailType.requested":
@@ -7892,9 +7903,9 @@ export const en = {
   "provider.profile.buyRebuys":
     "The price includes the {categories} again: the provider will not look for this without it, and it charges for whatever it sends back.",
   "provider.freeTier.hint":
-    "LinkedIn profile, current role and work history cost no credits. Leave this on: every new contact gets them without anybody deciding.",
+    "LinkedIn profile, current role and work history cost no credits. Leave this on: every new person gets them without anybody deciding.",
   "provider.pricedTier.hint":
-    "Never bought automatically. Somebody presses a button on one contact, and the price is on the button.",
+    "Never bought automatically. Somebody presses a button on one person, and the price is on the button.",
   "provider.profile.receiptAt": "Looked up {at}.",
   "provider.profile.receipt":
     "Looked up {at} · asked for {asked} details, got {answered} back.",
@@ -7948,7 +7959,7 @@ export const en = {
   "filters.op.atMost": "is at most",
 
   // The Filters & views screen's own chrome. The match line is keyed per object
-  // because "3 contacts match" and "3 companies match" are different sentences in
+  // because "3 people match" and "3 companies match" are different sentences in
   // every language, and a shared "{count} match" would make the object a
   // placeholder that some grammars cannot place.
   "filters.title": "Filters & views",
@@ -7960,7 +7971,7 @@ export const en = {
   "filters.tab.deals": "Deals",
   "filters.builderTitle": "Filter",
   "filters.dynamic": "Dynamic \u2014 recomputes on every event",
-  "filters.matchContacts": "{count} contacts match",
+  "filters.matchContacts": "{count} people match",
   "filters.matchCompanies": "{count} companies match",
   "filters.matchDeals": "{count} deals match",
   "filters.noFilterYet": "Add a clause to see what it selects",
@@ -8060,7 +8071,7 @@ export const en = {
   "projectCompanies.searchLabel": "Search companies by name",
   "personProjects.title": "Projects",
   "personProjects.empty":
-    "This contact appears here once they are on a delivery — as a sponsor, a contact, or whoever else is working it.",
+    "This person appears here once they are on a delivery — as a sponsor, a contact, or whoever else is working it.",
   "projectRole.customer": "Customer",
   "projectRole.partner": "Partner",
   "projectRole.subcontractor": "Subcontractor",
@@ -8486,7 +8497,7 @@ export const en = {
   "worklist.untitled.failed_approval": "Something you approved did not run",
   "worklist.untitled.dsr": "An open privacy request",
   "worklist.untitled.sync_health": "The CRM sync needs attention",
-  "worklist.sync.class.contacts": "contacts",
+  "worklist.sync.class.contacts": "people",
   "worklist.sync.class.companies": "companies",
   "worklist.sync.class.deals": "deals",
   "worklist.sync.class.leads": "prospects",
@@ -8541,8 +8552,8 @@ export const en = {
   "worklist.verb.dismiss": "Not now",
   "worklist.verb.dismissed": "Set aside for a month.",
   "worklist.verb.dismissUndo": "Undo",
-  "worklist.verb.dismissFailed": "That contact could not be set aside.",
-  "worklist.verb.dismissUndoFailed": "That contact could not be put back.",
+  "worklist.verb.dismissFailed": "That person could not be set aside.",
+  "worklist.verb.dismissUndoFailed": "That person could not be put back.",
   "worklist.verb.completeUndo": "Undo",
   "worklist.verb.completeUndoFailed": "That task could not be reopened.",
   // The frame states the fact and the source follows it, rather than the
@@ -8726,7 +8737,7 @@ export const en = {
   "firstRun.ignite.carryOn": "Carry on",
   "firstRun.ai.foot":
     "Nothing is sent to your vendor until you press Continue.",
-  "person.readings.title": "Where this contact stands",
+  "person.readings.title": "Where this person stands",
   "person.readings.move": "Whose move",
   "person.readings.yourMove": "Yours",
   "person.readings.theirMove": "Theirs",
@@ -8744,8 +8755,8 @@ export const en = {
   "deal.strip.openHistory": "See the ledger",
   "deal.strip.lastTouch": "Last touch",
   "lead.standing.qualified": "Qualified",
-  "lead.standing.qualifiedOn": "Qualified on {at}. This lead is a contact now.",
-  "lead.standing.qualifiedUndated": "This lead is a contact now.",
+  "lead.standing.qualifiedOn": "Qualified on {at}. This lead is a person now.",
+  "lead.standing.qualifiedUndated": "This lead is a person now.",
   "lead.standing.closed": "Closed",
   "lead.standing.closedFor": "Closed: {reason}. The record stays as the trail.",
   "lead.standing.closedUnreasoned": "Closed. The record stays as the trail.",
@@ -8756,7 +8767,7 @@ export const en = {
   "lead.standing.inMotion": "In motion",
   "lead.standing.engagedBecause":
     "They answered, or a meeting is on the calendar.",
-  "lead.standing.rests.promoted": "Promoted to a contact.",
+  "lead.standing.rests.promoted": "Promoted to a person.",
   "lead.standing.rests.closed": "Disqualified, no reason recorded.",
   "lead.standing.rests.ladder": "Lead ladder",
   "lead.standing.rests.record": "Lead record",

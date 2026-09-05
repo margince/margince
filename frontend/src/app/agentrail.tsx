@@ -30,7 +30,11 @@ import type { MessageKey } from "../i18n/en";
 import { usePendingApprovals } from "../screens/approvals.queries";
 import { useConnectors } from "../screens/connectors";
 import { useLicenseEntitlement } from "../screens/license";
-import { clearAgentEdge, publishAgentEdge } from "./agent-edge-signal";
+import {
+  type AgentEdgeRegister,
+  clearAgentEdge,
+  publishAgentEdge,
+} from "./agent-edge-signal";
 import { type AgentFault, useAgentFault } from "./agent-fault";
 import {
   IDLE_ORDER,
@@ -890,6 +894,12 @@ type Reading = Readonly<{
   state: MarginceCoreState;
   /** The occurrence the state is ABOUT, or null when no occurrence caused it. */
   cause: AiActivityItem | null;
+  /**
+   * Which register the margins light in. The import's only when the import is
+   * the ONLY work in flight: a named run or a call this tab holds open is the
+   * agent's own work whatever the orb is showing, and the margin says so.
+   */
+  register: AgentEdgeRegister;
 }>;
 
 function derive(
@@ -898,13 +908,13 @@ function derive(
   fault: AgentFault | null,
 ): Reading {
   if (signals.ai === "unconfigured" || signals.offline.length > 0) {
-    return { state: "error", cause: null };
+    return { state: "error", cause: null, register: "agent" };
   }
   // A run that broke, and that this reader has not been shown yet. It outranks
   // the licence because it is a thing that HAPPENED rather than a standing
   // condition, and it clears by being read rather than by being repaired.
   if (fault !== null) {
-    return { state: fault.severity, cause: fault.item };
+    return { state: fault.severity, cause: fault.item, register: "agent" };
   }
   // A live run past the lease its own source declared. The server derives it, so
   // a worker that died without saying so cannot go on being displayed as busy,
@@ -912,7 +922,7 @@ function derive(
   // the reader to do but know.
   const stalled = server.running.find((item) => item.state === "stalled");
   if (stalled) {
-    return { state: "warning", cause: stalled };
+    return { state: "warning", cause: stalled, register: "agent" };
   }
   // REFUSED only, and it stays amber rather than escalating, because escalating
   // would make the chrome a sales surface.
@@ -930,7 +940,7 @@ function derive(
   // names both absences and says what each one costs — instead of spending the
   // chrome's only ambient warning channel on something that is permanently true.
   if (signals.license === "refused") {
-    return { state: "warning", cause: null };
+    return { state: "warning", cause: null, register: "agent" };
   }
   // The agent's own live work, and which half of the lifecycle it is in comes
   // from the KIND of work rather than from how far along it is: evidence
@@ -941,13 +951,22 @@ function derive(
   // already has for every state.
   const live = server.running.find((item) => item.state !== "stalled");
   if (live) {
-    return { state: laneFor(live), cause: live };
+    return { state: laneFor(live), cause: live, register: "agent" };
   }
   // Mail being imported. No cause travels with it because it is not an
   // occurrence the feed can name; the line under the orb is the import's own,
   // from the signals (`barLine`), with its share where a preview gave it one.
+  // The margins take the import's register unless this tab has a call open
+  // underneath it: the orb keeps the import (the ask below cannot say which
+  // half of the lifecycle it is in, and this can), but a model call in flight
+  // is the agent's own work, and the margin lights for THAT in the register it
+  // always has.
   if (signals.capture !== null) {
-    return { state: "ingest", cause: null };
+    return {
+      state: "ingest",
+      cause: null,
+      register: server.asking ? "agent" : "capture",
+    };
   }
   // This tab's own ask, which the feed has not caught up with yet. `working`
   // rather than a lane read from the kind, because the kind is exactly what is
@@ -959,14 +978,14 @@ function derive(
   // run, and the moment the feed carries the occurrence the branch above wins
   // and names it.
   if (server.asking) {
-    return { state: "working", cause: null };
+    return { state: "working", cause: null, register: "agent" };
   }
   // A request that failed a moment ago does NOT colour the orb. One dropped
   // request on a flaky connection would otherwise flash the corner of every
   // screen red and green and red again, and a light that does that is a light
   // nobody reads. What the orb reports is standing state; the screen that made
   // the request reports the request.
-  return { state: "idle", cause: null };
+  return { state: "idle", cause: null, register: "agent" };
 }
 
 /**
@@ -1181,7 +1200,7 @@ export function AgentRail({
   const spend = useAiSpend();
   const { locale } = useLocale();
   const { fault, acknowledge } = useAgentFault(server.faults);
-  const { state, cause } = derive(signals, server, fault);
+  const { state, cause, register } = derive(signals, server, fault);
 
   // What the screen's margins draw, published rather than re-derived: the reads
   // above are all local to this component, so a second consumer calling the same
@@ -1191,8 +1210,8 @@ export function AgentRail({
   // that stands for as long as the queue does.
   const reading = RUNNING.has(state);
   useEffect(() => {
-    publishAgentEdge({ reading });
-  }, [reading]);
+    publishAgentEdge({ reading, register });
+  }, [reading, register]);
   // The last word belongs to the unmount: a reading left behind would outlive the
   // session that made it, and the signed-out screen would inherit a lit margin.
   useEffect(() => clearAgentEdge, []);

@@ -53,30 +53,47 @@ function show(ui: ReactNode) {
   );
 }
 
+// A predecessor's own organization has exactly one deal on record for these
+// tests — enough to prove the picker lists it and sends its id, without a
+// second candidate to disambiguate against.
+const ORG_DEAL = { id: "d-1", name: "Renewal — 2025 term" };
+
+function stubRenewalFetch(onRenewal: (request: Request) => Promise<Response>) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request =
+        input instanceof Request ? input : new Request(input, init);
+      const url = new URL(request.url);
+      if (request.method === "GET" && url.pathname === "/v1/deals") {
+        return new Response(
+          JSON.stringify({ data: [ORG_DEAL], page: { has_more: false } }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (request.method === "POST" && url.pathname.endsWith("/renewal")) {
+        return onRenewal(request);
+      }
+      return new Response("not found", { status: 404 });
+    }),
+  );
+}
+
 describe("ContractRenewModal", () => {
-  it("posts the successor's own title, basis and the predecessor's version as If-Match", async () => {
+  it("posts the successor's own title, basis and the predecessor's version as If-Match, with no deal picked", async () => {
     let posted: { body: unknown; ifMatch: string | null; path: string } | null =
       null;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const request =
-          input instanceof Request ? input : new Request(input, init);
-        const url = new URL(request.url);
-        if (request.method === "POST" && url.pathname.endsWith("/renewal")) {
-          posted = {
-            body: await request.json(),
-            ifMatch: request.headers.get("if-match"),
-            path: url.pathname,
-          };
-          return new Response(
-            JSON.stringify({ ...PREDECESSOR, id: "c-2", version: 1 }),
-            { status: 201, headers: { "Content-Type": "application/json" } },
-          );
-        }
-        return new Response("not found", { status: 404 });
-      }),
-    );
+    stubRenewalFetch(async (request) => {
+      posted = {
+        body: await request.json(),
+        ifMatch: request.headers.get("if-match"),
+        path: new URL(request.url).pathname,
+      };
+      return new Response(
+        JSON.stringify({ ...PREDECESSOR, id: "c-2", version: 1 }),
+        { status: 201, headers: { "Content-Type": "application/json" } },
+      );
+    });
     const user = userEvent.setup();
     const onClose = vi.fn();
     show(<ContractRenewModal contract={PREDECESSOR} open onClose={onClose} />);
@@ -98,7 +115,7 @@ describe("ContractRenewModal", () => {
     // The FULL body, not two fields of it: RenewContractRequest inherits
     // nothing from the predecessor but the counterparty (which the server
     // derives from the path, not the body) — a regression that leaked
-    // value_minor or currency from the predecessor would pass a check that
+    // value_minor, currency, or an unpicked deal_id would pass a check that
     // only asserted title and value_basis.
     expect(sent.body).toEqual({
       title: "Framework agreement 2024",
@@ -108,19 +125,50 @@ describe("ContractRenewModal", () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
+  // margince#3286 (re-measured): a renewal made through the API could always
+  // name the deal that won it; the screen path could not, so a renewal
+  // recorded here left deal_id null even where the API allowed it.
+  it("sends the picked deal's id", async () => {
+    let posted: { body: Record<string, unknown> } | null = null;
+    stubRenewalFetch(async (request) => {
+      posted = { body: await request.json() };
+      return new Response(
+        JSON.stringify({ ...PREDECESSOR, id: "c-2", version: 1 }),
+        { status: 201, headers: { "Content-Type": "application/json" } },
+      );
+    });
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    show(<ContractRenewModal contract={PREDECESSOR} open onClose={onClose} />);
+
+    await user.click(await screen.findByRole("combobox", { name: "Deal" }));
+    await user.click(
+      await screen.findByRole("option", { name: ORG_DEAL.name }),
+    );
+    await user.click(screen.getByRole("button", { name: "Renew" }));
+
+    await waitFor(() => expect(posted).not.toBeNull());
+    expect(
+      (posted as unknown as { body: Record<string, unknown> }).body,
+    ).toEqual({
+      title: "Framework agreement 2024",
+      value_basis: "annualized_12m",
+      auto_renew: false,
+      deal_id: ORG_DEAL.id,
+    });
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
   it("shows the server's refusal inline rather than closing silently", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(
-            JSON.stringify({
-              code: "validation_error",
-              detail: "a term cannot end before it starts",
-            }),
-            { status: 422, headers: { "Content-Type": "application/json" } },
-          ),
-      ),
+    stubRenewalFetch(
+      async () =>
+        new Response(
+          JSON.stringify({
+            code: "validation_error",
+            detail: "a term cannot end before it starts",
+          }),
+          { status: 422, headers: { "Content-Type": "application/json" } },
+        ),
     );
     const user = userEvent.setup();
     const onClose = vi.fn();

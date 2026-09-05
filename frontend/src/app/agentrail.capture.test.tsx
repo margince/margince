@@ -8,7 +8,7 @@ import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { currentAgentEdge } from "./agent-edge-signal";
+import { AGENT_EDGE_STILL, currentAgentEdge } from "./agent-edge-signal";
 import { AgentRail } from "./agentrail";
 import { LABELS } from "./agentrail-copy";
 import { meFixture } from "./mefixture";
@@ -16,9 +16,10 @@ import { meFixture } from "./mefixture";
 // A mailbox import is the one long run the AI-activity feed cannot carry, so
 // the rail reads it off the connections list instead (capture-progress.ts).
 // These cases prove that reading reaches every surface the rail owns: the
-// orb's state, the ring around it, the line under it, and the lit edge. They
-// live apart from agentrail.test.tsx because that file is past the size a test
-// file may grow to.
+// orb's state, the ring around it, the line under it, and the lit edge — in
+// the import's own register, which is the thin one, unless the agent's own work
+// is under way at the same time. They live apart from agentrail.test.tsx
+// because that file is past the size a test file may grow to.
 
 type Connector = components["schemas"]["CaptureConnection"];
 type BackfillStatus = components["schemas"]["BackfillStatus"];
@@ -130,13 +131,15 @@ afterEach(() => {
 });
 
 describe("a mailbox import", () => {
-  it("puts the orb in ingest, draws its share as the ring, and lights the edge", async () => {
+  it("puts the orb in ingest, draws its share as the ring, and lights the edge in the import's register", async () => {
     const { container } = mount({ connectors: [mailbox(IMPORTING)] });
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("ingest"),
     );
     expect(ringShare(container)).toBe("42 100");
-    expect(currentAgentEdge().reading).toBe(true);
+    // Thin and calm: an import runs for hours, and the agent's own rim over
+    // that span is a lamp left on.
+    expect(currentAgentEdge()).toEqual({ reading: true, register: "capture" });
   });
 
   it("says so under the orb, with the share", async () => {
@@ -186,10 +189,10 @@ describe("a mailbox import", () => {
     );
     expect(block(container).getAttribute("data-core-state")).toBe("idle");
     expect(container.querySelector(".core-progress")).toBeNull();
-    expect(currentAgentEdge().reading).toBe(false);
+    expect(currentAgentEdge()).toEqual(AGENT_EDGE_STILL);
   });
 
-  it("keeps its ring under a run the feed names, because the import did not stop", async () => {
+  it("keeps its ring under a run the feed names, and the edge takes the agent's register", async () => {
     const { container } = mount({
       connectors: [mailbox(IMPORTING)],
       running: [
@@ -205,8 +208,11 @@ describe("a mailbox import", () => {
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("working"),
     );
-    // ...and the ring is still the import's.
+    // ...and the ring is still the import's...
     expect(ringShare(container)).toBe("42 100");
+    // ...while the margin lights for the run: a named run is the agent's own
+    // work whatever the orb is showing, and it gets the thicker, livelier rim.
+    expect(currentAgentEdge()).toEqual({ reading: true, register: "agent" });
   });
 
   it("drops the ring under a fault: a red orb cannot also be going well", async () => {

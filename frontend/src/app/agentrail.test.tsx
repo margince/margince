@@ -26,7 +26,11 @@ import {
 } from "../api/model-inflight";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { clearAgentEdge, currentAgentEdge } from "./agent-edge-signal";
+import {
+  AGENT_EDGE_STILL,
+  clearAgentEdge,
+  currentAgentEdge,
+} from "./agent-edge-signal";
 import { AgentRail } from "./agentrail";
 import { LABELS, TASK_SAID, VOCABULARY } from "./agentrail-copy";
 import { type GrantSpec, meFixture } from "./mefixture";
@@ -964,12 +968,12 @@ describe("AgentRail", () => {
     // long as the queue does is a ring around the window on any installation
     // with work in it.
     await settlesOnLine(view.container, `1 ${LABELS.waiting}`);
-    expect(currentAgentEdge()).toEqual({ reading: false });
+    expect(currentAgentEdge()).toEqual(AGENT_EDGE_STILL);
 
     // Sign out mid-read and the login screen would otherwise inherit a lit
     // margin belonging to a session that has ended.
     view.unmount();
-    expect(currentAgentEdge()).toEqual({ reading: false });
+    expect(currentAgentEdge()).toEqual(AGENT_EDGE_STILL);
   });
 
   // The Core's own tone rule is the only place a state's colour is declared

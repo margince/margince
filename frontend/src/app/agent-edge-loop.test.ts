@@ -4,7 +4,12 @@
 /** @vitest-environment jsdom */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { EdgeFrame, EdgeHues, EdgeRenderer } from "./agent-edge-gl";
+import {
+  EDGE_REGISTERS,
+  type EdgeFrame,
+  type EdgeHues,
+  type EdgeRenderer,
+} from "./agent-edge-gl";
 import { FADE, FRAME_MS, runEdgeLoop } from "./agent-edge-loop";
 
 // The loop's contract with the GPU, which is a contract about WHEN and not about
@@ -284,6 +289,85 @@ describe("the edge's draw loop", () => {
     paint.run(1000, 1000 / 60);
 
     expect(renderer.frames.at(-1)?.beam).toBe(1);
+  });
+
+  it("opens in the agent's register, which is the one every reading used to be", () => {
+    const paint = clock();
+    const renderer = recorder();
+    start(renderer);
+    paint.run(FADE * 1000 * 2, 1000 / 60);
+
+    expect(renderer.frames.at(-1)).toMatchObject(EDGE_REGISTERS.agent);
+  });
+
+  it("takes the import's register at once while still dark", () => {
+    // The first frame a reader sees should already be in the right register.
+    // A fresh loop is dark, and a dark edge has nothing to ease from, so the
+    // register is taken rather than approached: every frame of the fade-in is
+    // already thin.
+    const paint = clock();
+    const renderer = recorder();
+    const { loop } = start(renderer);
+    loop?.setRegister("capture");
+    paint.run(FADE * 1000 * 2, 1000 / 60);
+
+    expect(renderer.frames.length).toBeGreaterThan(5);
+    for (const frame of renderer.frames) {
+      expect(frame).toMatchObject(EDGE_REGISTERS.capture);
+    }
+  });
+
+  it("is thinner, calmer and dimmer of head in the import's register, not merely different", () => {
+    // The whole point of the second register, stated as the ORDER between the
+    // two rather than as either's numbers: an import that drew a thicker or
+    // livelier rim than a run would have the two registers the wrong way round.
+    const { agent, capture } = EDGE_REGISTERS;
+
+    expect(capture.thick).toBeLessThan(agent.thick);
+    expect(capture.wave).toBeLessThan(agent.wave);
+    expect(capture.beam).toBeLessThan(agent.beam);
+    // And still lit, still moving: a rim with no head and no breath is the
+    // fallback a host without WebGL2 wears, and it cannot say NOW.
+    expect(capture.beam).toBeGreaterThan(0);
+    expect(capture.wave).toBeGreaterThan(0);
+  });
+
+  it("eases between registers while lit, at the light's own pace", () => {
+    // A run starting mid-import thickens the rim rather than swapping it, and
+    // a swap is exactly the cut the fade exists to avoid.
+    const paint = clock();
+    const renderer = recorder();
+    const { loop } = start(renderer);
+    loop?.setRegister("capture");
+    paint.run(FADE * 1000 * 2, 1000 / 60);
+    expect(renderer.frames.at(-1)?.thick).toBe(EDGE_REGISTERS.capture.thick);
+
+    loop?.setRegister("agent");
+    const mid = renderer.frames.length;
+    paint.run(FADE * 1000 * 4, 1000 / 60);
+    const after = renderer.frames.slice(mid);
+
+    expect(after.at(0)?.thick ?? 0).toBeLessThan(EDGE_REGISTERS.agent.thick);
+    expect(after.at(-1)).toMatchObject(EDGE_REGISTERS.agent);
+    for (const [i, frame] of after.slice(1).entries()) {
+      expect(frame.thick).toBeGreaterThanOrEqual(after[i]?.thick ?? 0);
+    }
+  });
+
+  it("keeps the head off in the import's register for a reader who asked for less movement", () => {
+    // The register's faint head is still a head, and parked in a corner it is
+    // still a hotspot. Reduced motion wins over the register.
+    const paint = clock();
+    const renderer = recorder();
+    const { loop } = start(renderer, { reduced: true });
+    loop?.setRegister("capture");
+    paint.run(1000, 1000 / 60);
+
+    expect(renderer.frames.length).toBeGreaterThan(5);
+    for (const frame of renderer.frames) {
+      expect(frame.beam).toBe(0);
+      expect(frame.thick).toBe(EDGE_REGISTERS.capture.thick);
+    }
   });
 
   it("opens dark when the caller is already leaving", () => {

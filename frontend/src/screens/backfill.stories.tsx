@@ -23,7 +23,14 @@ function panelStory(
   routes: Record<string, (body: unknown) => Response> = {},
 ) {
   return () => {
-    installFetchStub(routes);
+    // The poll a live run starts must answer with the same row it was seeded
+    // from: left to the stub's fallback it came back as an empty page, and a
+    // couple of seconds into the story every live variant collapsed into a
+    // finished run with no counts.
+    installFetchStub({
+      [`GET /connectors/${provider}/backfill`]: () => jsonResponse(initial),
+      ...routes,
+    });
     return (
       <StoryProviders>
         <BackfillPanel provider={provider} initial={initial} />
@@ -84,11 +91,11 @@ export const Running: Story = { render: panelStory("gmail", RUNNING) };
 
 export const Done: Story = { render: panelStory("gmail", DONE) };
 
-// The live run in dark. The bar is a bare `<progress>` element with nothing but
-// a width in the sheet, so its track and fill are whatever the browser paints —
-// the one control on these screens that does not get its colour from a token and
-// therefore cannot be reasoned about from the CSS. The stat values are `--accent`
-// on the panel ground beside it.
+// The live run in dark. The card is in the AI family here — an `--aiLight` wash
+// under the head, an `--aiMed` edge, `--aiText` glyphs and a bar filled in
+// `--ai` — and the dark theme lifts `--aiText` while the tint stays at the same
+// alpha, so this is where the title over the wash and the percentage beside the
+// bar have to be checked for contrast rather than assumed from the light run.
 export const RunningDark: Story = {
   globals: { theme: "dark" },
   render: panelStory("gmail", RUNNING),
@@ -103,9 +110,10 @@ export const DoneDark: Story = {
   render: panelStory("gmail", DONE),
 };
 
-// The live run at 390px. The counts sit in a two-column grid with an 84px floor
-// per stat and wrap outside it, and the progress bar takes the full width — this
-// is where a four-stat grid either becomes two rows or overflows the card.
+// The live run at 390px. The three stat plates auto-fit at a 150px floor, so at
+// this width they stack to one column and the head's badge wraps under the title
+// — this is where a plate either holds its figure and caption on one line or
+// overflows the card.
 export const RunningPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],

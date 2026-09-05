@@ -2,9 +2,14 @@
    grid, and the picture. Every colour is a token, so the tab follows the
    theme the rest of the page follows. */
 
+/* The tab is a size container: the details rail and the sidebar change how
+   wide this column is without changing the viewport, so every fold below is
+   a container query on the tab itself, never a media query. */
 .pn-stack {
   display: grid;
   gap: var(--space-4);
+  container-type: inline-size;
+  container-name: network;
 }
 .pn-route {
   margin: 0;
@@ -96,6 +101,7 @@
   margin: var(--space-2) 0 0;
   padding-left: var(--space-4);
   font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
 }
 /* A read that failed. Danger, because the reader is being told the answer on
    screen is not the answer — not merely that there is none. */
@@ -104,10 +110,15 @@
   color: var(--danger);
 }
 
-/* The verdict's two halves: the move, and the figures it rests on. */
+/* The verdict's two halves: the move, and the figures it rests on. Both
+   halves may shrink: a half that could not would overflow the panel and be
+   clipped at its edge, which is how the readings lost their last letters. */
 .pn-verdict {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+  grid-template-columns: minmax(0, 1.4fr) minmax(17.5rem, 1fr);
+}
+.pn-verdict > * {
+  min-width: 0;
 }
 .pn-verdict-main {
   padding: var(--space-4) var(--space-5);
@@ -125,13 +136,14 @@
 }
 .pn-readings {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
   gap: var(--space-3) var(--space-5);
 }
 .pn-reading {
   display: grid;
   gap: var(--space-1);
   align-content: start;
+  min-width: 0;
 }
 .pn-reading b {
   font-family: var(--f-display);
@@ -177,6 +189,9 @@
   gap: var(--space-1) var(--space-3);
   font-size: var(--fs-meta);
   color: var(--textMeta);
+}
+.pn-split-legend > span {
+  min-width: 0;
 }
 .pn-split-key-in::before,
 .pn-split-key-out::before {
@@ -389,12 +404,18 @@
   white-space: nowrap;
 }
 
-@media (max-width: 1050px) {
+/* Folds. 56rem is where the side column would drop under the 285px its
+   cards need; 46rem is where the verdict's plate would, and where a route row
+   can no longer hold its five columns on one line. */
+@container network (max-width: 56rem) {
   .pn-work-grid {
     grid-template-columns: 1fr;
   }
+  .pn-side-only .pn-side-column {
+    grid-template-columns: 1fr;
+  }
 }
-@media (max-width: 900px) {
+@container network (max-width: 46rem) {
   .pn-verdict {
     grid-template-columns: 1fr;
   }

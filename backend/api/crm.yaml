@@ -16627,8 +16627,11 @@ paths:
       parameters:
         - name: period
           in: query
-          schema: { type: string, enum: [quarter, month], default: quarter }
-          description: The window length. Quarters follow the installation's financial year.
+          schema: { type: string, enum: [quarter, month, week], default: quarter }
+          description: >-
+            The window length. Quarters and months follow the installation's financial year;
+            a week is the working week, Monday to Sunday in the installation's own zone, and
+            moves with no fiscal year.
         - name: as_of
           in: query
           schema: { type: string, format: date }
@@ -16903,9 +16906,9 @@ paths:
           # swapping meaning.
           schema:
             type: string
-            enum: [quarter, month]
+            enum: [quarter, month, week]
             default: quarter
-            x-enum-varnames: [ForecastCallsPeriodQuarter, ForecastCallsPeriodMonth]
+            x-enum-varnames: [ForecastCallsPeriodQuarter, ForecastCallsPeriodMonth, ForecastCallsPeriodWeek]
           description: The window length. Quarters follow the installation's financial year.
         - name: as_of
           in: query
@@ -33065,7 +33068,11 @@ components:
       type: object
       required: [amount_minor, currency]
       properties:
-        period: { type: string, enum: [quarter, month], default: quarter }
+        # A call names the window it is a call FOR, so this enum has to carry
+        # every window a forecast is read over. Without `week` a weekly call is
+        # unexpressible: the reading exists and there is no way to author the
+        # number it should be compared against.
+        period: { type: string, enum: [quarter, month, week], default: quarter }
         as_of:
           type: string
           format: date

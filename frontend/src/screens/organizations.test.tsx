@@ -1396,7 +1396,7 @@ describe("CompanyScreen — the account pulse line (P-4)", () => {
     // The way in. WHEN contact last happened is the readings row's (Last
     // touch), not the header's: one fact, one home.
     await waitFor(() => expect(screen.getByText(/Way in/)).toBeTruthy());
-    expect(screen.getByText(/of 3 contacts here/)).toBeTruthy();
+    expect(screen.getByText(/of 3 people here/)).toBeTruthy();
     expect(screen.queryByText(/Last contact/)).toBeNull();
     // The composite is gone: it was PO-F-3's MAX over contacts, so one
     // talkative contact spoke for the account and "41/100" read as a verdict.

@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 73 |
 | Resources | 12 |
-| Tool catalog | 203.4 KB |
+| Tool catalog | 203.5 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 53218 |
+| Approx. wire tokens | 53230 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 96.5 KB | 47% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 49.6 KB | 24% | Yes, every step |
-| Input schemas | 41.9 KB | 20% | Yes, every step |
+| Input schemas | 42.0 KB | 20% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.4 KB | 7% | Partly |
-| **Description + input schema** | **91.5 KB** | **44%** | **the recurring cost** |
+| **Description + input schema** | **91.6 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -92,7 +92,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`enrich`](#enrich) | Enrich an organization from its website |  |  | 2.6 KB |
 | [`forecast_input_checks`](#forecast_input_checks) | What the forecast's inputs were checked against | yes |  | 2.4 KB |
 | [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.0 KB |
-| [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 3.1 KB |
+| [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 3.2 KB |
 | [`get_record_tags`](#get_record_tags) | Get a record's tags | yes |  | 1.9 KB |
 | [`get_tag`](#get_tag) | Get a tag | yes |  | 1.6 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
@@ -5101,10 +5101,11 @@ What a period is expected to close, in four readings. `won` counts deals by the 
       "type": "string"
     },
     "period": {
-      "description": "The window length. Quarters follow the installation's own financial year, which may not start in January.",
+      "description": "The window length. Quarters and months follow the installation's own financial year, which may not start in January; a week runs Monday to Sunday.",
       "enum": [
         "quarter",
-        "month"
+        "month",
+        "week"
       ],
       "type": "string"
     },
