@@ -252,11 +252,38 @@ func rowMaps(ctx context.Context, tx pgx.Tx, query string, args ...any) ([]map[s
 		}
 		row := make(map[string]any, len(values))
 		for i, field := range rows.FieldDescriptions() {
-			row[field.Name] = values[i]
+			row[field.Name] = readableValue(values[i])
 		}
 		out = append(out, row)
 	}
 	return out, rows.Err()
+}
+
+// readableValue renders one column value as the document's reader needs it.
+//
+// A uuid column arrives from pgx as [16]byte, and encoding/json has one
+// rendering for a byte ARRAY: sixteen numbers. Nothing is lost — the bytes are
+// the id — but the document this builds is what a data subject receives under
+// Art. 15, and `[1,160,94,189,…]` is not something a person can read, act on,
+// or quote back when they dispute it.
+//
+// Fixed HERE rather than at the two columns that showed it, because those two
+// are not a property of those columns: every map-shaped section is built by
+// this loop, so the next uuid column added to any of the twenty-six arrives
+// with the same defect. TestTheSubjectAccessPackageIsReadable holds it.
+//
+// Anything else is passed through untouched. This is a rendering decision about
+// one Go type that JSON has no good answer for, not a place to reinterpret what
+// the database returned — a uuid[] column would arrive as [][16]byte and want
+// the same treatment, and gets it in the change that adds one rather than as an
+// arm nothing exercises.
+//
+//craft:ignore naked-any a column value IS any by construction — pgx's rows.Values() returns []any, and this rewrites one of those in place. A concrete parameter would mean deciding the column's type before reading it, which is the thing the caller cannot do.
+func readableValue(value any) any {
+	if raw, isUUID := value.([16]byte); isUUID {
+		return ids.UUID(raw).String()
+	}
+	return value
 }
 
 // subjectReach reads the two things beyond a person id that identify the
