@@ -3244,11 +3244,7 @@ function DealPeoplePanels({
   if (overlay) {
     return null;
   }
-  return (
-    <div style={{ marginTop: "var(--space-4)" }}>
-      <RelationshipsTab scope={{ deal_id: dealId }} />
-    </div>
-  );
+  return <RelationshipsTab scope={{ deal_id: dealId }} />;
 }
 
 // This deal's VERBS — split out of DealScreen's render so the record-view
@@ -4287,67 +4283,73 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 // record rather than as a way to see more of it.
                 trailing={<PageAsideToggle />}
               />
+              {/* One stack for the whole overview: the work column draws its
+                  children with no interval of its own, so the reading and the
+                  people under it take the record's rhythm from here rather
+                  than from a margin one of them carries. */}
               {tab === "overview" && (
-                <DealOverviewPane
-                  deal={deal}
-                  stages={stages}
-                  dealApprovals={dealApprovals}
-                  onDecide={(input) => decide.mutate(input)}
-                  offers={offersQuery.data?.data}
-                  creatingOffer={createOffer.isPending}
-                  locale={locale}
-                  baseCurrency={baseCurrency}
-                  onCreateOffer={(currency) => createOffer.mutate(currency)}
-                  overlay={overlay}
-                  advancing={advance.isPending}
-                  pulse={dealPulse({
-                    card: statusQuery.data,
-                    timeline: timelineQuery.activities,
-                    overlay,
-                  })}
-                  spine={
-                    <TimelineThread
-                      thread={threadQuery}
-                      commercial={{ next_close_on: deal.expected_close_date }}
-                      onOpenEmail={setOpenEmail}
-                    />
-                  }
-                  coverage={coverageRead}
-                  onOpenHistory={() => setTab("history")}
-                  // An archived deal is not moved through the pipeline, and
-                  // the mirror answers an advance with unsupported_by_sor —
-                  // a control that can only fail is worse than none.
-                  //
-                  // A CLOSED deal is refused here too, but for a different
-                  // reason: reopening is its own deliberate action, with a
-                  // dialog that says the close date and the frozen rate are
-                  // being cleared. A stepper button that reopened silently
-                  // would be a second, quieter door to the same write.
-                  advanceRefused={
-                    deal.archived_at != null ||
-                    overlay ||
-                    deal.status !== "open"
-                  }
-                  onAdvance={(toStage) => {
-                    // The version this record was drawn from, exactly as the
-                    // board pins the version its card was drawn from: the
-                    // write names the deal as the reader saw it, so a change
-                    // made elsewhere meanwhile fails loud.
-                    const input = {
-                      dealId: deal.id,
-                      version: deal.version,
-                      toStage,
-                    };
-                    if (toStage.semantic === "open") {
-                      advance.mutate(input);
-                    } else {
-                      setPending(input);
+                <div className="record-stack">
+                  <DealOverviewPane
+                    deal={deal}
+                    stages={stages}
+                    dealApprovals={dealApprovals}
+                    onDecide={(input) => decide.mutate(input)}
+                    offers={offersQuery.data?.data}
+                    creatingOffer={createOffer.isPending}
+                    locale={locale}
+                    baseCurrency={baseCurrency}
+                    onCreateOffer={(currency) => createOffer.mutate(currency)}
+                    overlay={overlay}
+                    advancing={advance.isPending}
+                    pulse={dealPulse({
+                      card: statusQuery.data,
+                      timeline: timelineQuery.activities,
+                      overlay,
+                    })}
+                    spine={
+                      <TimelineThread
+                        thread={threadQuery}
+                        commercial={{
+                          next_close_on: deal.expected_close_date,
+                        }}
+                        onOpenEmail={setOpenEmail}
+                      />
                     }
-                  }}
-                />
-              )}
-              {tab === "overview" && (
-                <DealPeoplePanels dealId={deal.id} overlay={overlay} />
+                    coverage={coverageRead}
+                    onOpenHistory={() => setTab("history")}
+                    // An archived deal is not moved through the pipeline, and
+                    // the mirror answers an advance with unsupported_by_sor —
+                    // a control that can only fail is worse than none.
+                    //
+                    // A CLOSED deal is refused here too, but for a different
+                    // reason: reopening is its own deliberate action, with a
+                    // dialog that says the close date and the frozen rate are
+                    // being cleared. A stepper button that reopened silently
+                    // would be a second, quieter door to the same write.
+                    advanceRefused={
+                      deal.archived_at != null ||
+                      overlay ||
+                      deal.status !== "open"
+                    }
+                    onAdvance={(toStage) => {
+                      // The version this record was drawn from, exactly as the
+                      // board pins the version its card was drawn from: the
+                      // write names the deal as the reader saw it, so a change
+                      // made elsewhere meanwhile fails loud.
+                      const input = {
+                        dealId: deal.id,
+                        version: deal.version,
+                        toStage,
+                      };
+                      if (toStage.semantic === "open") {
+                        advance.mutate(input);
+                      } else {
+                        setPending(input);
+                      }
+                    }}
+                  />
+                  <DealPeoplePanels dealId={deal.id} overlay={overlay} />
+                </div>
               )}
               {tab === "files" && !overlay && <DealFiles dealId={deal.id} />}
               {tab === "files" && overlay && <OverlayUnavailable />}

@@ -974,7 +974,14 @@ export function RecordView({
           <>
             {children}
             {timeline && (
-              <section aria-label={t("record.timeline")}>
+              /* The record's story, under whatever the open tab drew. It owns
+                 the break above it because the work column owns no interval —
+                 the deal's and the project's bodies met the chronology's
+                 heading at the border. */
+              <section
+                className="record-timeline"
+                aria-label={t("record.timeline")}
+              >
                 <h2 className="t-sub">{t("record.timeline")}</h2>
                 {/* The dials above the list are one block with one rhythm: the
                     cuts through the chronology, then the narrowing of whichever

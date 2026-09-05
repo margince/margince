@@ -25,9 +25,9 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | | |
 |---|---:|
 | Shipped invocation sites | 40 |
-| … best state `current` | 31 |
+| … best state `current` | 30 |
 | … best state `partial` | 0 |
-| … best state `stale` | 7 |
+| … best state `stale` | 8 |
 | … `absent` on every binding | 2 |
 | Scenarios in the corpus | 136 |
 | Committed records | 59 |
@@ -90,7 +90,7 @@ Which model to run each site on, and what that choice rests on.
 | [`cold_start/company_message`](#cold_startcompany_message) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 1 | 3 |
 | [`cold_start/field_extract`](#cold_startfield_extract) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 1 | 3 |
 | [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `supported_degraded` | 0.83 | `current` | 2 | 3 |
-| [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 3 | 2 |
+| [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | - | - | - | `stale` | 3 | 2 |
 | [`deal_health/deal_status`](#deal_healthdeal_status) | - | - | - | `stale` | 3 | 1 |
 | [`document_extract/fields`](#document_extractfields) | `gemini · gemini-3.5-flash · eu_hosted` | `certified` | 1.00 | `current` | 4 | 1 |
 | [`draft_reply/account`](#draft_replyaccount) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
@@ -141,14 +141,14 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 20 | 15 | 1 | 4 | 236 | 215 | 0.91 | 3370ms | 13 | 1 | 6 |
+| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 20 | 14 | 1 | 5 | 236 | 215 | 0.91 | 3370ms | 13 | 1 | 6 |
 | `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 3 | 0 | 0 | 3 | 18 | 18 | 1.00 | 44515ms | 2 | 0 | 1 |
 | `gemini` | `gemini-3.5-flash` | `eu_hosted` | 9 | 6 | 0 | 3 | 63 | 59 | 0.94 | 20319ms | 7 | 0 | 2 |
 | `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 1 | 0 | 0 | 15 | 9 | 0.60 | 3731ms | 0 | 0 | 1 |
 | `openai_compatible` | `mistralai/ministral-14b-2512` | `cloud_frontier` | 11 | 0 | 0 | 11 | 160 | 113 | 0.71 | 20620ms | 8 | 0 | 3 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
-| `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 6 | 0 | 0 | 42 | 39 | 0.93 | 4477ms | 5 | 0 | 1 |
+| `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 5 | 0 | 1 | 42 | 39 | 0.93 | 4477ms | 5 | 0 | 1 |
 | `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 31 | 23 | 0 | 8 | 333 | 269 | 0.81 | 68516ms | 12 | 7 | 12 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 
@@ -179,6 +179,8 @@ model, real network).
 | `cold_start/company_message` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `cold_start/field_extract` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `cold_start/sitereadmessage` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
+| `corpus_ask/corpus_ask` | `gemini · gemini-3.1-flash-lite · eu_hosted` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
+| `corpus_ask/corpus_ask` | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | 3 scenarios it scored have changed since, or the prompts built from them have: corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer |
 | `deal_health/deal_status` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since, or the prompts built from them have: deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
 | `draft_reply/account` | `gemini · gemini-3.1-pro-preview · eu_hosted` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `draft_reply/account` | `gemini · gemini-3.5-flash · eu_hosted` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
@@ -479,8 +481,8 @@ Records (2):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | - | `certified` | 9 | 9 | 1.00 | 895ms | 1457ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1366ms | 4299ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | - | `certified` | 9 | 9 | 1.00 | 895ms | 1457ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1366ms | 4299ms | 9 | 0 | 0 | 0 |
 
 ### `deal_health`
 

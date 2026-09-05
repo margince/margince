@@ -155,9 +155,9 @@ Every step here is one you take yourself.
    routes the text through the normaliser that numbers the lines, and those line
    numbers are what the evidence below points at.
 4. **Log**.
-5. Open **History**, find the meeting, and click **Read transcript**. Margince
-   does not read it on upload — you ask for the read, and this is the step that
-   asks.
+5. Open **History** and find the meeting. Margince queues a reading when you
+   log a transcript. If no reading is underway or complete, click **Read
+   transcript** to request one.
 6. Wait for **Done**. It reports what it found: "{count} next steps waiting for
    your review", or "Read in full. This conversation states no next steps."
 7. Go to the **Worklist**, then **Decisions**. A busy queue can bury a new
@@ -168,9 +168,9 @@ Every step here is one you take yourself.
 9. **Approve** to create the task, or **Reject** with a reason. An approved
    proposal becomes an ordinary task on the contact and on their company.
 
-What this does **not** do: it does not send anything, and it does not act
-without the read in step 5 and the answer in step 9. A transcript sitting in an
-activity has proposed nothing until you ask it to.
+What this does **not** do: it does not send anything or create tasks without
+your approval. Reading the transcript proposes next steps; accepting a proposal
+is what creates its task.
 
 ## Where you see them
 

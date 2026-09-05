@@ -87,14 +87,14 @@ func (m message) record() connector.NormalizedRecord {
 		addresses = append(addresses, m.CCAddr)
 	}
 
-	// Links are explicit. The org always; the deal when the thread is about
-	// one. NOT the person: the sink's counterparty ladder resolves and links
+	// Meetings reach companies through their attendees, as live calendar capture
+	// does. Mail links the company directly; both may link a deal. Not the person: the sink's counterparty ladder resolves and links
 	// them, and a second link here would be a duplicate row.
 	// An id that will not parse costs its link rather than the message: the
 	// directory produced it from the database, so a bad one is a bug worth
 	// seeing as a missing link rather than a lost thread.
 	var links []datasource.EntityRef
-	if orgID, err := ids.Parse(m.OrgID); err == nil {
+	if orgID, err := ids.Parse(m.OrgID); err == nil && m.Kind != "meeting" {
 		links = append(links, datasource.EntityRef{Type: datasource.EntityOrganization, ID: orgID})
 	}
 	if m.DealID != "" {
@@ -136,7 +136,12 @@ func (m message) record() connector.NormalizedRecord {
 	// The cost is that a generated outbound reads as correspondence without
 	// T1 evidence, which is honest — nobody filed these in a Sent folder,
 	// because nobody sent them.
-	if m.Kind != "meeting" {
+	if m.Kind == "meeting" {
+		rec.Participants = []connector.MessageParticipant{
+			{Email: m.FromAddr, DisplayName: m.FromName, Role: connector.ParticipantRoleOrganizer},
+			{Email: m.ToAddr, DisplayName: m.ToName, Role: connector.ParticipantRoleAttendee},
+		}
+	} else {
 		rec.Counterparty = connector.Counterparty{
 			Email:       strings.ToLower(counterparty),
 			DisplayName: counterpartyName,
