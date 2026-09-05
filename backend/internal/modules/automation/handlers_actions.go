@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -80,6 +81,17 @@ type draftEmailArgs struct {
 	// one refuses at compose time, where the operator can see and fix it,
 	// rather than staging a draft that can never be released.
 	ConsentPurpose string `json:"consent_purpose"`
+	// CommunicationContext is what the message IS — a reply into a thread the
+	// subject started, a follow-up they asked for — rather than a lawful basis
+	// chosen on the operator's behalf.
+	//
+	// The distinction is why this one MAY be defaulted where ConsentPurpose may
+	// not. A purpose names the ground a send is licensed on, so picking one in
+	// code decides the licence. A context names the message, and the engine
+	// still judges it against the record's own evidence: a claimed
+	// reply_to_inbound with no inbound anchor is recorded as claimed and
+	// resolves to nothing, so a wrong context cannot authorize a send.
+	CommunicationContext commsauthz.Category `json:"communication_context,omitempty"`
 }
 
 // MissingConsentPurposeError refuses to compose a draft for an automation that
@@ -157,6 +169,10 @@ type HeldDraftProposal struct {
 	Subject          string   `json:"subject"`
 	Body             string   `json:"body"`
 	ConsentPurpose   string   `json:"consent_purpose"`
+	// CommunicationContext travels with the draft so the release sends the
+	// message the approver read. Staging resolved it; carrying it means the
+	// engine is asked the same question at release that it answered at compose.
+	CommunicationContext commsauthz.Category `json:"communication_context,omitempty"`
 	// Intent is the automation's own instruction, carried so the approver can
 	// see what the draft was ASKED to do and judge whether it did it.
 	Intent string `json:"intent,omitempty"`
@@ -224,12 +240,13 @@ func applyDraftEmail(ctx context.Context, comms Comms, action workflow.Action) (
 	}
 	action.Args = recorded
 	return action, HeldDraftProposal{
-		AnchorActivityID: action.Target.ID,
-		To:               to,
-		Subject:          subject,
-		Body:             body,
-		ConsentPurpose:   in.ConsentPurpose,
-		Intent:           in.Intent,
+		AnchorActivityID:     action.Target.ID,
+		To:                   to,
+		Subject:              subject,
+		Body:                 body,
+		ConsentPurpose:       in.ConsentPurpose,
+		CommunicationContext: in.CommunicationContext,
+		Intent:               in.Intent,
 	}, nil
 }
 
