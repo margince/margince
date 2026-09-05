@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -111,11 +110,15 @@ func verdictOf(t *testing.T, e *integration.Env, id ids.UUID) *string {
 // runOwedWorker drives the job River drives, with the context River gives it.
 func runOwedWorker(t *testing.T, e *integration.Env, brain completer) {
 	t.Helper()
-	worker := &owedVerdictWorkspaceWorker{
+	worker := &owedVerdictWorker{
+		pool:       e.Pool,
 		classifier: NewOwedClassifier(e.Pool, brain, nil, slog.New(slog.DiscardHandler)),
 	}
-	job := &river.Job[OwedVerdictWorkspaceArgs]{Args: OwedVerdictWorkspaceArgs{Workspace: e.WS}}
-	if err := worker.Work(context.Background(), job); err != nil {
+	// The per-workspace turn, which is what River's row now walks rather than
+	// what it carries: the pass takes no workspace in its args (ADR-0103), so
+	// driving Work here would enumerate the fleet and lose the one this test is
+	// about. judgeWorkspace is the same code either way.
+	if err := worker.judgeWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the worker failed: %v", err)
 	}
 }

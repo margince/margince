@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -85,6 +85,7 @@ function renewDraftOf(predecessor: Contract): ContractDraft {
 
 function renewalBody(
   draft: ContractDraft,
+  dealId: string,
 ): components["schemas"]["RenewContractRequest"] {
   return {
     title: draft.title.trim(),
@@ -94,6 +95,13 @@ function renewalBody(
     // itself is a fact about the paper, and a field this form quietly omitted
     // would be a guess the record could not distinguish from an answer.
     auto_renew: false,
+    // Omitted rather than sent empty, same rule as every field in
+    // contractTermsBody: no deal picked is "not recorded", not a value the
+    // server has to reject. Never the PREDECESSOR's own deal_id — the server
+    // does not inherit it either (contract_write.go), because a renewal is
+    // usually won by its own opportunity and attributing it to the one that
+    // won the old term would name the wrong sale.
+    ...(dealId !== "" ? { deal_id: dealId } : {}),
     ...contractTermsBody(draft),
   };
 }
@@ -106,18 +114,38 @@ function renewalBody(
 async function renewContract(
   predecessor: Contract,
   draft: ContractDraft,
+  dealId: string,
 ): Promise<string> {
   const { data, error } = await api.POST("/contracts/{id}/renewal", {
     params: {
       path: { id: predecessor.id },
       ...ifMatch(requireVersion(predecessor.version)),
     },
-    body: renewalBody(draft),
+    body: renewalBody(draft, dealId),
   });
   if (error) {
     throwProblem(error);
   }
   return data?.id ?? "";
+}
+
+// The organization's own deals, for the picker below — every status, not only
+// `open`: a renewal is usually recorded after the opportunity that won it has
+// already closed, so filtering to `open` would hide the one deal a renewal is
+// most often actually tied to.
+function dealsForOrg(organizationId: string) {
+  return {
+    queryKey: ["orgDeals", organizationId],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/deals", {
+        params: { query: { organization_id: organizationId, limit: 100 } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data?.data ?? [];
+    },
+  };
 }
 
 export function ContractRenewModal({
@@ -133,8 +161,15 @@ export function ContractRenewModal({
   const titleId = useId();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<ContractDraft>(renewDraftOf(contract));
+  // Never seeded from the predecessor — see renewalBody's comment: the
+  // successor's deal is a fresh answer, not a carried-over one.
+  const [dealId, setDealId] = useState("");
   const baseCurrency = useInstallationSettings().data?.base_currency;
   const contractCurrency = draft.currency || baseCurrency || "";
+  const deals = useQuery({
+    ...dealsForOrg(contract.organization_id),
+    enabled: open,
+  });
 
   // Re-seed on open, and when a different row's renewal is what just opened:
   // otherwise the form keeps the previous agreement's title and basis.
@@ -147,6 +182,7 @@ export function ContractRenewModal({
   useEffect(() => {
     if (open) {
       setDraft(renewDraftOf(contract));
+      setDealId("");
     }
   }, [open, contract.id]);
 
@@ -154,7 +190,9 @@ export function ContractRenewModal({
     mutationFn: async (submitted: {
       predecessor: Contract;
       draft: ContractDraft;
-    }) => renewContract(submitted.predecessor, submitted.draft),
+      dealId: string;
+    }) =>
+      renewContract(submitted.predecessor, submitted.draft, submitted.dealId),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["orgContracts", contract.organization_id],
@@ -179,6 +217,30 @@ export function ContractRenewModal({
         currency={contractCurrency}
       />
 
+      {/* Never required: the API path this mirrors has always accepted a
+          renewal with no deal, and a picker that refused to submit without
+          one would refuse an agreement the server has always allowed. */}
+      <Field
+        label={t("contracts.renew.deal")}
+        hint={t("contracts.renew.dealHint")}
+      >
+        {(props) => (
+          <Select
+            {...props}
+            value={dealId}
+            onChange={setDealId}
+            disabled={deals.isPending}
+            options={[
+              { value: "", label: t("contracts.renew.dealNone") },
+              ...(deals.data ?? []).map((deal) => ({
+                value: deal.id,
+                label: deal.name,
+              })),
+            ]}
+          />
+        )}
+      </Field>
+
       {renew.error && (
         <p className="t-caption" role="alert">
           {problemMessageOf(renew.error, t)}
@@ -195,6 +257,7 @@ export function ContractRenewModal({
             renew.mutate({
               predecessor: contract,
               draft: pricedIn(draft, baseCurrency),
+              dealId,
             })
           }
         >

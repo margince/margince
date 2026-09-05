@@ -17,6 +17,7 @@ import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { ComposeModal } from "./compose";
+import { allowedPreview, isPreviewDoor } from "./sendpermission.testkit";
 
 // The door out of a scheduled send.
 //
@@ -70,6 +71,7 @@ function stubSend(status: number) {
       if (method === "POST" && url.pathname.endsWith("/send-email")) {
         return jsonResponse(ACTIVITY, status);
       }
+      if (isPreviewDoor(url.pathname)) return jsonResponse(allowedPreview([]));
       return jsonResponse({ data: [], page: { next_cursor: null } });
     }),
   );

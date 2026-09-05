@@ -215,7 +215,10 @@ test("AC-voice-1: the card says what to hand over and why it matters", async ({
 
   // The zone is a real file control, not a decorated div.
   const zone = page.locator('input[type="file"]');
-  await expect(zone).toHaveAttribute("accept", ".txt,.md,.vtt,.srt,.json");
+  await expect(zone).toHaveAttribute(
+    "accept",
+    ".txt,.md,.vtt,.srt,.json,.pdf,.docx",
+  );
   // And the card answers "what should I upload?" where the uploading happens.
   await expect(page.getByText("Was am besten funktioniert")).toBeVisible();
   await expect(page.getByText("Warum das wichtig ist")).toBeVisible();

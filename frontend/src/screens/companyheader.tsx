@@ -168,6 +168,13 @@ export function CompanyPrimaryActions({
 // the consent gate and the refusal vocabulary; this owns only whether the
 // surface is offered and the open/close state, so the account-started and
 // reply surfaces stay one component.
+//
+// It is NOT hidden in overlay mode, unlike the two log verbs beside it, and the
+// difference is real rather than an oversight: writing to the account is a side
+// service, not a record write, so the server's overlay write guard never
+// reaches it — only the record-write tool verbs are refused for a mirrored
+// type, and sending mail is not one of them. Hiding it would take a working
+// capability away from a mirrored workspace.
 function WriteEmailAction({
   org,
   open,

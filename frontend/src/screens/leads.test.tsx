@@ -284,7 +284,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // The page stays (ADR-0119): the outcome is said here, with the contact.
     expect(window.location.hash).toBe("#/leads/l-1");
     expect(
-      await screen.findByText(/Jonas Petersen is now a contact:/),
+      await screen.findByText(/Jonas Petersen is now a person:/),
     ).toBeTruthy();
   });
 
@@ -580,23 +580,19 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     render(<LeadScreen id="l-1" />);
 
     // It stays on the lead's own page.
-    expect(await screen.findByText("Promoted to a contact")).toBeTruthy();
+    expect(await screen.findByText(en["lead.promotedTitle"])).toBeTruthy();
     expect(window.location.hash).not.toBe("#/contacts/p-42");
     // And it names WHICH outcome, which is the whole reason a rep opens it.
     // Awaited: the outcome comes from the audit read, a second request that
     // lands after the lead itself.
-    expect(
-      await screen.findByText(
-        "This lead merged into a contact we already knew — no duplicate was created.",
-      ),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["lead.promotedMerged"])).toBeTruthy();
     expect(screen.getByText(/Inbound reply/)).toBeTruthy();
     expect(screen.getByText(/Replied asking for a quote\./)).toBeTruthy();
   });
 
   it("the promote dialog says what promotion will do before the rep commits", async () => {
     // ADR-0119/A170: merge-into-existing vs create is the difference between
-    // "my prospect is now a contact" and "my prospect was already someone we
+    // "my prospect is now a person" and "my prospect was already someone we
     // knew". The preview runs the same ladder the promotion runs.
     stubFetch(async (url) => {
       if (url.includes("/promote-preview")) {
@@ -610,7 +606,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     render(<LeadScreen id="l-1" />);
     await userEvent.click(await screen.findByTestId("lead-qualify"));
     expect(
-      await screen.findByText(/Promoting will merge into the existing contact/),
+      await screen.findByText(/Promoting will merge into the existing person/),
     ).toBeTruthy();
   });
 
@@ -629,13 +625,9 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     render(<LeadScreen id="l-1" />);
     await userEvent.click(await screen.findByTestId("lead-qualify"));
     expect(
-      await screen.findByText(
-        "Promoting will merge into an existing contact you cannot see.",
-      ),
+      await screen.findByText(en["lead.previewMergeWithheld"]),
     ).toBeTruthy();
-    expect(
-      screen.queryByText("Promoting will create a new contact."),
-    ).toBeNull();
+    expect(screen.queryByText(en["lead.previewCreate"])).toBeNull();
   });
 
   it("a promoted lead can be demoted from its own page, with a recorded reason", async () => {
@@ -749,11 +741,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    expect(
-      await screen.findByText(
-        "This lead merged into a contact we already knew — no duplicate was created.",
-      ),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["lead.promotedMerged"])).toBeTruthy();
     expect(historyURLs).toHaveLength(1);
     expect(historyURLs[0]).toContain("action=promote");
   });
@@ -782,11 +770,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       await screen.findByText("Promoted — this lead is now read-only."),
     ).toBeTruthy();
     // The outcome line never claims a result it could not read.
-    expect(
-      screen.queryByText(
-        "This lead merged into a contact we already knew — no duplicate was created.",
-      ),
-    ).toBeNull();
+    expect(screen.queryByText(en["lead.promotedMerged"])).toBeNull();
   });
 
   it("re-reads the history after promoting, so the new audit row is not missed", async () => {
@@ -880,11 +864,9 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     render(<LeadScreen id="l-1" />);
 
     expect(
-      await screen.findByText(
-        "We cannot show whether this merged or created a contact.",
-      ),
+      await screen.findByText(en["lead.promotedOutcomeUnavailable"]),
     ).toBeTruthy();
-    expect(screen.queryByText("This lead became a new contact.")).toBeNull();
+    expect(screen.queryByText(en["lead.promotedCreated"])).toBeNull();
   });
 
   it("promote is disabled for an ineligible lead, and the button says why", async () => {

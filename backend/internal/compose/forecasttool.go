@@ -58,9 +58,9 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 			return nil, err
 		}
 		scope := forecastToolScope(req)
-		kind := forecasting.PeriodQuarter
-		if req.Period == string(forecasting.PeriodMonth) {
-			kind = forecasting.PeriodMonth
+		kind, err := forecastPeriodKind(req.Period)
+		if err != nil {
+			return nil, err
 		}
 
 		var out agents.ForecastReadingsResult
@@ -362,5 +362,31 @@ func coverageToolReader(pool *pgxpool.Pool) agents.SourceCoverageReader {
 			out.Sources = append(out.Sources, source)
 		}
 		return json.Marshal(out)
+	}
+}
+
+// forecastPeriodKind reads the window length a caller asked for.
+//
+// A closed switch rather than a chain of ifs falling through to quarter: an
+// unrecognised word used to answer as a QUARTER, so a caller asking for a week
+// would get three months labelled with the word they sent — and the reading
+// would be wrong in the one way nothing on the page could show them.
+func forecastPeriodKind(asked string) (forecasting.PeriodKind, error) {
+	switch asked {
+	case "":
+		// The documented default. An absent period is a caller who did not
+		// choose, which is a different thing from one who chose badly.
+		return forecasting.PeriodQuarter, nil
+	case string(forecasting.PeriodQuarter):
+		return forecasting.PeriodQuarter, nil
+	case string(forecasting.PeriodMonth):
+		return forecasting.PeriodMonth, nil
+	case string(forecasting.PeriodWeek):
+		return forecasting.PeriodWeek, nil
+	default:
+		return "", &values.ParseError{
+			Field: "period", Code: "unknown_period",
+			Message: "a forecast is read over a quarter, a month or a week",
+		}
 	}
 }

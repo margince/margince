@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { VOICE_MIN_WORDS } from "../onboarding";
+import { VOICE_MIN_WORDS } from "../voice-intake-core";
 import {
   VoiceBuildScene,
   VoiceCollectScene,

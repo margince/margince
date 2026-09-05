@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { FileChip } from "./filechip";
 
@@ -14,22 +14,31 @@ describe("FileChip", () => {
     expect(link.getAttribute("download")).toBe("GR-2026-0092.pdf");
   });
 
-  it("gives a file that is not a PDF the neutral mark rather than a guessed one", () => {
-    const { container } = render(
-      <FileChip href="/v1/attachments/a-2" filename="terms-redline.docx" />,
-    );
-    const pdf = render(
-      <FileChip href="/v1/attachments/a-1" filename="signed.PDF" />,
-    );
-
+  it("draws a PDF, an image and anything else with three different marks", () => {
     // The glyph is decorative, so it is compared as markup rather than looked
-    // up by name: what matters is that the two kinds do not draw the same one,
-    // and that the extension is read case-insensitively — a scanner writes
-    // .PDF as readily as .pdf.
-    const other = container.querySelector("svg")?.innerHTML;
-    const asPdf = pdf.container.querySelector("svg")?.innerHTML;
+    // up by name: what matters is that the three kinds do not draw the same
+    // one, and that the extension is read case-insensitively — a scanner
+    // writes .PDF as readily as .pdf, a phone camera .JPG as readily as .jpg.
+    const glyph = (filename: string) =>
+      render(
+        <FileChip href="/v1/attachments/a" filename={filename} />,
+      ).container.querySelector("svg")?.innerHTML;
+    const other = glyph("terms-redline.docx");
+    const asPdf = glyph("signed.PDF");
+    const asImage = glyph("~WRD0005.JPG");
     expect(other).toBeTruthy();
     expect(asPdf).toBeTruthy();
-    expect(other).not.toBe(asPdf);
+    expect(asImage).toBeTruthy();
+    expect(new Set([other, asPdf, asImage]).size).toBe(3);
+    expect(glyph("photo.png")).toBe(asImage);
+  });
+
+  it("stamps the kind on the card without adding it to the name", () => {
+    const { container } = render(
+      <FileChip href="/v1/attachments/a-1" filename="scan.jpg" />,
+    );
+    const card = within(container);
+    expect(card.getByRole("link", { name: "scan.jpg" })).toBeTruthy();
+    expect(card.getByText("JPG").getAttribute("aria-hidden")).toBe("true");
   });
 });

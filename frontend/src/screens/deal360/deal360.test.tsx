@@ -8,6 +8,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { DealIdentityLine } from "../deals";
 import { DealPulse } from "./dealpulse";
 import { DealSeats } from "./dealseats";
@@ -322,7 +323,7 @@ describe("the rail says who is on the deal", () => {
         }}
       />,
     );
-    expect(screen.getByText("A contact you cannot read")).toBeInTheDocument();
+    expect(screen.getByText(en["coverage.seatWithheld"])).toBeInTheDocument();
     expect(screen.getByText("No two-way contact")).toBeInTheDocument();
   });
 });

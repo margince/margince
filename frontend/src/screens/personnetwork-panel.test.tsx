@@ -62,9 +62,7 @@ describe("PersonNetworkTab", () => {
     // the crash happens on the render that receives the data, and asserting
     // before then would pass on the loading frame alone.
     await waitFor(() =>
-      expect(
-        screen.queryByText("Reading the network around this contact…"),
-      ).toBeNull(),
+      expect(screen.queryByText(en["person.graph.loading"])).toBeNull(),
     );
     // The sibling is the assertion. Reading `.find` off undefined unmounted
     // the whole tree, and the relationship list on the same tab vanished with
@@ -316,7 +314,7 @@ describe("PersonNetworkTab", () => {
     expect(screen.queryByText("with Bo")).toBeNull();
     // The anchor's own sentence belongs to an edge that reaches the anchor.
     // This one does not touch them at all.
-    expect(screen.queryByText("with this contact")).toBeNull();
+    expect(screen.queryByText(en["person.graph.withContact"])).toBeNull();
   });
 
   it("names the anchor as the page's subject when the edge reaches them", async () => {
@@ -344,7 +342,9 @@ describe("PersonNetworkTab", () => {
     // equal to it.
     await user.click(await screen.findByRole("button", { name: /Dana/ }));
 
-    expect(await screen.findByText("with this contact")).toBeTruthy();
+    expect(
+      await screen.findByText(en["person.graph.withContact"]),
+    ).toBeTruthy();
   });
 
   // The panel outlives the contact: moving between records on the Relationships
@@ -401,14 +401,16 @@ describe("PersonNetworkTab", () => {
     const { showContact } = renderPanel();
 
     await user.click(await screen.findByRole("button", { name: /Dana/ }));
-    expect(await screen.findByText("with this contact")).toBeTruthy();
+    expect(
+      await screen.findByText(en["person.graph.withContact"]),
+    ).toBeTruthy();
 
     showContact("p-2");
 
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /Elif/ })).toBeTruthy(),
     );
-    expect(screen.queryByText("with this contact")).toBeNull();
+    expect(screen.queryByText(en["person.graph.withContact"])).toBeNull();
     expect(screen.queryByText("No recorded correspondence with .")).toBeNull();
   });
 

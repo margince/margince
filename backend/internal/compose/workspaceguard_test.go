@@ -177,15 +177,6 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		OrgNamePromotionWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&orgNamePromotionWorkspaceWorker{}).Work(ctx, &river.Job[OrgNamePromotionWorkspaceArgs]{})
 		},
-		CaptureClassifyWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&captureClassifyWorkspaceWorker{}).Work(ctx, &river.Job[CaptureClassifyWorkspaceArgs]{})
-		},
-		OwedVerdictWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&owedVerdictWorkspaceWorker{}).Work(ctx, &river.Job[OwedVerdictWorkspaceArgs]{})
-		},
-		CaptureEnrichWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&captureEnrichWorkspaceWorker{}).Work(ctx, &river.Job[CaptureEnrichWorkspaceArgs]{})
-		},
 		CaptureDigestWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&captureDigestWorkspaceWorker{}).Work(ctx, &river.Job[CaptureDigestWorkspaceArgs]{})
 		},
@@ -194,15 +185,6 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		},
 		WeeklyReviewGenerateWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&weeklyGenerateWorkspaceWorker{}).Work(ctx, &river.Job[WeeklyReviewGenerateWorkspaceArgs]{})
-		},
-		CaptureTraceSweepWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&captureTraceSweepWorkspaceWorker{}).Work(ctx, &river.Job[CaptureTraceSweepWorkspaceArgs]{})
-		},
-		ConfidentialityVerdictWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&confidentialityVerdictWorkspaceWorker{}).Work(ctx, &river.Job[ConfidentialityVerdictWorkspaceArgs]{})
-		},
-		CounterpartyVerdictWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&counterpartyVerdictWorkspaceWorker{}).Work(ctx, &river.Job[CounterpartyVerdictWorkspaceArgs]{})
 		},
 		OverlayReconcileWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&overlayReconcileWorkspaceWorker{}).Work(ctx, &river.Job[OverlayReconcileWorkspaceArgs]{})

@@ -2,7 +2,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, Card, StatCard } from "../design-system/atoms";
+import {
+  Button,
+  Card,
+  SegmentedControl,
+  StatCard,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { EvidenceReceipt } from "../design-system/evidencereceipt";
 import { MoneyInput } from "../design-system/moneyinput";
@@ -12,7 +17,11 @@ import { type Locale, useLocale, useT } from "../i18n";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
 import { ForecastReview } from "./analytics.forecast.review";
 import { QueryGate, throwProblem } from "./common";
-import { useForecastReadings } from "./forecast.queries";
+import {
+  FORECAST_PERIODS,
+  type ForecastPeriod,
+  useForecastReadings,
+} from "./forecast.queries";
 
 type Readings = components["schemas"]["ForecastReadings"];
 
@@ -29,51 +38,72 @@ export function ForecastView({
 }: Readonly<{ selection: AnalyticsSelection; canSubmit: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
+  const [period, setPeriod] = useState<ForecastPeriod>("quarter");
 
   // The same read the morning's pipeline counter makes, through the same key:
   // two surfaces asking what the pipeline is worth must not get two answers.
-  const readings = useForecastReadings(selection.scope);
+  const readings = useForecastReadings(selection.scope, period);
 
   return (
-    <QueryGate query={readings} pendingLabel={t("forecast.updateCall")}>
-      {(data) => (
-        <>
-          <ForecastAnswer readings={data} locale={locale} />
-          {canSubmit && writableScope(selection.scope) ? (
-            <ForecastCallEditor readings={data} selection={selection} />
-          ) : null}
-          {/* What to check comes BEFORE the receipt: a manager with ten
+    <>
+      {/* Which window the figures below are over. Above the readings rather
+          than beside them, because every number on this page changes when it
+          moves — a control nested among them would read as filtering one. */}
+      <SegmentedControl
+        label={t("forecast.period")}
+        options={FORECAST_PERIODS}
+        value={period}
+        onChange={setPeriod}
+        labels={{
+          quarter: t("forecast.period.quarter"),
+          month: t("forecast.period.month"),
+          week: t("forecast.period.week"),
+        }}
+      />
+      <QueryGate query={readings} pendingLabel={t("forecast.updateCall")}>
+        {(data) => (
+          <>
+            <ForecastAnswer readings={data} locale={locale} />
+            {canSubmit && writableScope(selection.scope) ? (
+              <ForecastCallEditor
+                readings={data}
+                selection={selection}
+                period={period}
+              />
+            ) : null}
+            {/* What to check comes BEFORE the receipt: a manager with ten
               minutes reads what needs doing first, and the receipt is what
               they consult when a number looks wrong. */}
-          <ForecastReview />
-          <EvidenceReceipt
-            title={t("forecast.receipt")}
-            counts={[
-              {
-                key: "eligible",
-                term: t("forecast.eligible"),
-                value: formatNumber(data.eligible_count, locale),
-              },
-              {
-                key: "priced",
-                term: t("forecast.priced"),
-                value: formatNumber(data.priced_count, locale),
-              },
-              {
-                key: "confirmed",
-                term: t("forecast.confirmed"),
-                value: formatNumber(data.confirmed_date_count, locale),
-              },
-              {
-                key: "fx",
-                term: t("forecast.fxMissing"),
-                value: formatNumber(data.fx_missing_count, locale),
-              },
-            ]}
-          />
-        </>
-      )}
-    </QueryGate>
+            <ForecastReview />
+            <EvidenceReceipt
+              title={t("forecast.receipt")}
+              counts={[
+                {
+                  key: "eligible",
+                  term: t("forecast.eligible"),
+                  value: formatNumber(data.eligible_count, locale),
+                },
+                {
+                  key: "priced",
+                  term: t("forecast.priced"),
+                  value: formatNumber(data.priced_count, locale),
+                },
+                {
+                  key: "confirmed",
+                  term: t("forecast.confirmed"),
+                  value: formatNumber(data.confirmed_date_count, locale),
+                },
+                {
+                  key: "fx",
+                  term: t("forecast.fxMissing"),
+                  value: formatNumber(data.fx_missing_count, locale),
+                },
+              ]}
+            />
+          </>
+        )}
+      </QueryGate>
+    </>
   );
 }
 
@@ -144,7 +174,12 @@ function ForecastAnswer({
 function ForecastCallEditor({
   readings,
   selection,
-}: Readonly<{ readings: Readings; selection: AnalyticsSelection }>) {
+  period,
+}: Readonly<{
+  readings: Readings;
+  selection: AnalyticsSelection;
+  period: ForecastPeriod;
+}>) {
   const t = useT();
   const client = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -167,11 +202,13 @@ function ForecastCallEditor({
       }
       const { data, error } = await api.POST("/forecast/calls", {
         body: {
-          // The forecast is published for the population the reader is
-          // LOOKING at. Hard-coded to the workspace, this recorded a
+          // The forecast is published for the population AND the window the
+          // reader is LOOKING at. Hard-coded to the workspace, this recorded a
           // company-wide belief while a manager read their own team's numbers
-          // — the assertion and the figure it was formed from disagreeing.
-          period: "quarter",
+          // — the assertion and the figure it was formed from disagreeing. A
+          // hard-coded quarter is the same defect one axis over: a call made
+          // while reading the week would be filed against three months.
+          period,
           ...named,
           amount_minor: call.amountMinor,
           currency: readings.base_currency,

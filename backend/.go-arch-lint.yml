@@ -301,6 +301,11 @@ deps:
     # to the frontend's KIND_LABEL map: the same "only gates may hold both
     # halves" shape again, across the wire this time — approvals must not gain
     # a dependency on a TypeScript file to know its kinds have words.
+    # forecastperiodparity_test.go reads forecasting.PeriodKindOf and holds it to
+    # the period enums in api/crm.yaml: the same "only gates may hold both
+    # halves" shape — forecasting must not gain a YAML dependency to check that
+    # every window a client may ask for is one it can resolve. Without it an
+    # unrecognised period answers as a QUARTER under the caller's own word.
     # dedupeevidencefields_test.go reads people.DedupeEvidenceFields and holds it
     # to the contract's AttentionPairEvidence enum: once more the "only gates may
     # hold both halves" shape. The dedupe evidence snapshot is stored as free
@@ -308,7 +313,7 @@ deps:
     # reader as a database column — people must not gain a dependency on the
     # contract document to know its own field names are sayable.
     # gates carries test files only, so this grants no production edge.
-    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, people]
+    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, people, forecasting]
     canUse: [yaml, jsonschema]
   cmd:
     mayDependOn: [compose, identity, people, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, overlay, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, platform, migrations, projects]

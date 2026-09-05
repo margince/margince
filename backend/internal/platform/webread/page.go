@@ -46,9 +46,16 @@ type Page struct {
 	// leaving the page's own registrable domain. A caller follows it only
 	// after finding nothing else to read — see MetaRefreshOnly.
 	Refresh string
-	// HeadText is what the <head> says this page is ABOUT, in document order:
-	// the meta description and the Open Graph title and description, each at
-	// most headTextRunes long.
+	// HeadText is what this page SAYS it is about, in document order: the meta
+	// description and the Open Graph title and description, then the names and
+	// descriptions its JSON-LD declares. Each is at most headTextRunes long.
+	//
+	// The JSON-LD half is here rather than in a field of its own because it
+	// answers the same question and every reader of this one already asks it:
+	// a schema.org block naming the organization is the page's claim about
+	// itself exactly as a meta description is, and a separate field would have
+	// to be threaded through the crawl's dedupe, its prose and its emptiness
+	// test one call site at a time.
 	//
 	// Kept apart from Text, and that separation is the point. Text is
 	// StripTags' output and evidence snippets are matched against it, so
@@ -153,7 +160,7 @@ func (f *Fetcher) FetchPage(ctx context.Context, rawURL string) (Page, error) {
 		OGImage:         head.ogImage,
 		Icons:           head.icons,
 		Refresh:         head.refresh,
-		HeadText:        head.text,
+		HeadText:        append(head.text, linkedDataClaims(body)...),
 		ExternalScripts: external,
 		ModuleScripts:   modules,
 		Fingerprint:     fingerprintOf(got.header, body, base),

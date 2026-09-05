@@ -96,13 +96,18 @@ const fleetWideDispatcherFloor = 20
 // above for why the set is closed and why a direct River insert is not in it.
 // fanOutHelpers are the sanctioned ways a FleetWide job reaches the fleet.
 //
-// The first three ENQUEUE one child per unit; runPerWorkspace RUNS the pass for
+// The first three ENQUEUE one child per unit; the runPer* pair RUNS the pass for
 // each workspace in this process, which is what ADR-0103 collapsed the
-// workspace dispatchers into. All four are listed together because the arm
-// below is about the same thing for all of them: a FleetWide job must reach the
+// workspace dispatchers into — over the live workspaces, or over every one
+// including the archived, which is what a retention pass owes. All five are
+// listed together because the arm below is about the same thing for all of
+// them: a FleetWide job must reach the
 // fleet through a helper that knows what a unit is, and not through a loop it
 // wrote itself.
-var fanOutHelpers = []string{"dispatchPerWorkspace", "dispatchWith", "dispatchOne", "runPerWorkspace"}
+var fanOutHelpers = []string{
+	"dispatchPerWorkspace", "dispatchWith", "dispatchOne",
+	"runPerWorkspace", "runPerEveryWorkspace",
+}
 
 // fleetWideDispatcher is one resolved args→worker→Work association and what
 // the gate found in it.
@@ -383,7 +388,7 @@ func checkFleetWideDispatchers(t *testing.T, dir string) {
 			continue
 		}
 		if !d.fansOut {
-			t.Errorf("%s:%d: %s works FleetWide args %s but never reaches the fleet. It must do so through dispatchPerWorkspace, dispatchWith or dispatchOne — which build the child's insert options, so a direct River insert around them loses the sweep tag and the declared attempt cap — or through runPerWorkspace, which walks the live workspaces in this process (ADR-0103). A loop of its own is the shape all four exist to replace.",
+			t.Errorf("%s:%d: %s works FleetWide args %s but never reaches the fleet. It must do so through dispatchPerWorkspace, dispatchWith or dispatchOne — which build the child's insert options, so a direct River insert around them loses the sweep tag and the declared attempt cap — or through runPerWorkspace / runPerEveryWorkspace, which walk the workspaces in this process (ADR-0103). A loop of its own is the shape all four exist to replace.",
 				d.pos.Filename, d.pos.Line, d.worker, d.args)
 		}
 		for _, verb := range d.writes {
