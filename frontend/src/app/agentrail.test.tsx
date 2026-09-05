@@ -844,11 +844,16 @@ describe("AgentRail", () => {
     expect(container.querySelector(".arspend")).toBeNull();
   });
 
+  // The exact figure, not merely a figure: 120 minor units of the budget's
+  // currency is $1.20, and the line the server could not price adds nothing
+  // to it rather than turning the total into an unknown.
   it("sums the priced lines into the month's spend", async () => {
     stubAgentRailApi({ aiUsage: () => jsonResponse(PRICED_USAGE) });
     const { container } = render(ROUTE);
     await waitFor(() =>
-      expect(container.querySelector(".arspend")?.textContent).toBeTruthy(),
+      expect(container.querySelector(".arspend")?.textContent).toContain(
+        "$1.20",
+      ),
     );
   });
 
