@@ -31,6 +31,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -82,6 +83,7 @@ func (a *assembly) readMoment() error {
 		return err
 	}
 	moment := accountMoment(a.now, tasks, filed, claims)
+	momentaction.Withhold(a.ctx, &moment)
 	a.out.Moment = &moment
 	return nil
 }

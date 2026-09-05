@@ -87,11 +87,16 @@ func (h Handlers) GetPersonProfileFields(w http.ResponseWriter, r *http.Request,
 
 // nativeOnly refuses the read in overlay mode. A mirror holds none of these
 // relationships, so answering from it would describe a record this
-// installation does not own.
+// installation does not own. It is also what keeps the moment card's verbs
+// honest in overlay: the ladder mints "log an interaction" as available with
+// no idea of the mode, and POST /activities is refused for every mirrored
+// workspace — the page never reaches a reader there to offer it.
+//
+// A nil resolver is not tolerated. It used to read as native, which turned
+// dropped wiring into a person page served happily off an empty native table;
+// composition passes the one Dispatcher every other overlay-aware read uses,
+// so the resolver is never absent in a built server.
 func (h Handlers) nativeOnly(w http.ResponseWriter, r *http.Request) bool {
-	if h.overlay == nil {
-		return true
-	}
 	overlay, err := h.overlay(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)
