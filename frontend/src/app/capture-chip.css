@@ -1,0 +1,105 @@
+/*
+ * The capture chip: the import's gauge, top-centre of the content column.
+ *
+ * Positioned against `.main` (which is `position: relative` for exactly this
+ * kind of thing) rather than the viewport, so it stands over the page a reader
+ * is working in and not over the sidebar. Under the top bar, because the bar's
+ * centre is the search affordance and a chip on top of it would be two centred
+ * things fighting for one line. Above the page (z-index 50 is the bar's own
+ * layer in shell.css) and below the lit edge (90) and the toast (60): the chip
+ * reports and the toast confirms, and a confirmation must not be hidden by a
+ * gauge.
+ *
+ * Dressed like the toast — the rail's dark ground, the pop shadow — because it
+ * is the same kind of thing: something passing through, not part of the page.
+ * The Core on it therefore takes `surface="dark"` in both themes, exactly as
+ * the rail's does.
+ */
+.capturechip {
+  position: absolute;
+  top: calc(var(--topbarH) + var(--space-2));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 55;
+  /* The wrapper takes no space and no pointer of its own; the link is the
+     target. A fixed box with an empty wrapper around it would otherwise catch
+     clicks on the page beside the chip. */
+  pointer-events: none;
+  max-width: calc(100% - 2 * var(--pageGutter));
+  animation: capturechip-in 0.32s var(--ease-out);
+}
+
+.capturechip-link {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: 100%;
+  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgRail);
+  color: var(--textOnAccent);
+  box-shadow: var(--shadow-pop);
+  text-decoration: none;
+  font-size: var(--fs-sm);
+  line-height: 1.25;
+}
+.capturechip-link:hover .capturechip-line {
+  text-decoration: underline;
+}
+.capturechip-link:focus-visible {
+  outline: 2px solid var(--ai);
+  outline-offset: 2px;
+}
+
+/* The Core at chip size. The ring the Core draws sits 6px outside the glass,
+   so the ball is sized to leave that room inside the chip's own height. */
+.capturechip-core {
+  --coreSize: 30px; /* ds:ignore the ball's diameter inside the chip */
+  --coreGlass: 22px; /* ds:ignore the glass inside that ball */
+  --coreCap: 100%;
+  /* Halo off: at this size the ring IS the signal, and a bloom would wash the
+     words beside it. */
+  --coreHalo: 0;
+  flex: none;
+}
+
+.capturechip-words {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.capturechip-line {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.capturechip-detail {
+  font-size: var(--fs-meta);
+  opacity: 0.78;
+  /* Tabular figures, so the share and the count do not shuffle the words
+     beside them on every poll. */
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes capturechip-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capturechip {
+    animation: none;
+  }
+}

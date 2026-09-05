@@ -202,6 +202,10 @@ export const en = {
   "shell.more": "More",
   "shell.unknownPage": "Not found",
   "shell.closeMenu": "Close",
+  "shell.capture.importing": "Importing mail history",
+  "shell.capture.share": "{percent} · {scanned} of {total} messages",
+  "shell.capture.count": "{scanned} messages so far",
+  "shell.capture.open": "Open the import",
   // The sidebar's second level. The control READS one word at every depth; its
   // accessible name says where it leads, and the level of destinations needs a
   // name of its own to be led back to.
