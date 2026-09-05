@@ -18,12 +18,10 @@ package compose
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/techprofile"
@@ -47,7 +45,7 @@ const (
 // together or not at all.
 func technicalChangeRecorder() people.TechnicalChangeRecorder {
 	return func(ctx context.Context, tx pgx.Tx, change people.TechnicalChange, at time.Time) error {
-		summary, ok := technicalChangeSummary(technicalSummaryLanguage(ctx, tx), change)
+		summary, ok := technicalChangeSummary(baseLanguageForSummary(ctx, tx), change)
 		if !ok {
 			// A change in a field nobody would act on. The record still holds
 			// it; it just does not earn a line on the account's signal list.
@@ -85,26 +83,6 @@ func technicalChangeRecorder() people.TechnicalChangeRecorder {
 		}
 		return nil
 	}
-}
-
-// technicalSummaryLanguage resolves the installation's base language inside the
-// transaction the recorder already holds — the summary is shared-record text,
-// and shared-record text follows the base language, not the language of
-// whatever produced the change.
-//
-// It never fails the caller, for the reason identity.BaseLanguageForPrompt
-// documents: refusing to file a real change on the record because a settings
-// read failed trades a fact for a formatting preference. The failure is logged
-// because this returns a string and nothing else, so the caller cannot notice
-// a degraded resolve and say so itself.
-func technicalSummaryLanguage(ctx context.Context, tx pgx.Tx) textlang.Lang {
-	lang, err := identity.BaseLanguageOf(ctx, tx)
-	if err != nil {
-		slog.WarnContext(ctx, "the installation's base language could not be read; this technical-change summary is English",
-			"reason", err)
-		return textlang.English
-	}
-	return textlang.Lang(lang)
 }
 
 // technicalSummaryCopy is one language's set of summary sentences. Every field
