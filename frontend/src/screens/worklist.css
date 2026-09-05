@@ -103,7 +103,6 @@
   color: var(--textSecondary);
   display: block;
   margin: var(--space-5) 0 var(--space-2);
-  padding-inline: var(--padPanel);
 }
 
 .worklist-queue-band:first-child .worklist-band {
@@ -115,18 +114,6 @@
 .worklist-band-clear {
   color: var(--textSecondary);
   margin: 0;
-  padding-inline: var(--padPanel);
-}
-
-/* The way to the rest of the backlog, on the cards' own left edge. It had no
-   rule of any kind, so it sat flush against the panel while every line above it
-   was inset. */
-.worklist-more {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--gapActions);
-  padding: 0 var(--padPanel) var(--space-3);
 }
 
 /* Three columns a reader runs down as three lists: the rank, the KIND of work,
@@ -152,23 +139,6 @@
 .worklist-row > :nth-child(n + 5) {
   grid-column: 3 / -1;
 }
-/* The card's own ground, edge and padding — the pane every card in this
-   product is drawn on, so a task reads as the same kind of object as a deal in
-   the rail beside it.
-   Written against BOTH classes because two of these properties are the panel
-   ROW's: its padding, and the rule it draws between siblings. A single class
-   would leave which one wins to the order the sheets happen to load in, and the
-   rule between two cards is the boundary drawn twice. */
-.panel-row.worklist-row {
-  background: var(--pane);
-  border: 1px solid var(--paneEdge);
-  border-radius: var(--r-md);
-  padding: var(--padCard);
-}
-.panel-row.worklist-row::before {
-  content: none;
-}
-
 .worklist-row-acts {
   display: flex;
   flex-wrap: wrap;
@@ -184,8 +154,12 @@
    The column is CAPPED: a row can carry seven verbs, and uncapped they took
    the width and squeezed the subject and its reasons into a strip that wrapped
    every line — which is what put them under the work in the first place. At
-   the cap they wrap among themselves instead, and the work keeps the rest. */
-@container (min-width: 44rem) {
+   the cap they wrap among themselves instead, and the work keeps the rest.
+   60rem is measured rather than picked: the Brief's work column is narrower
+   than that, and there the verbs stay under the work so the subject and its
+   reasons keep the whole width. Only a queue on a page of its own is wide
+   enough to spend on both. */
+@container (min-width: 60rem) {
   .worklist-row {
     grid-template-columns:
       auto
@@ -337,27 +311,17 @@
   margin-block-start: var(--space-1);
 }
 
-/* EACH TASK IS A CARD, and the queue is a stack of them.
-   As rows in one panel the tasks ran together: a row carries a subject, a
-   snippet, a kind, three reason lines and its verbs, and with only a hairline
-   between them a reader could not see where one piece of work ended and the
-   next began — the page read as one long feed rather than as a day's worth of
-   separate things to do.
-   Still an ordered list for assistive technology; the rank number is already
-   drawn in the row. The cards are inset to the panel's own margin, which is
-   where every other line in this panel sits. */
+/* The queue is an ordered list for assistive technology and a plain stack on
+   screen: the rank number is already drawn in the row.
+   It is also the CONTAINER the row measures itself against — see the row's own
+   wide shape below. A media query would read the window, and this same queue is
+   drawn in the Brief's work column and on a page of its own, which are two
+   widths on one screen. */
 .worklist-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gapCards);
+  container-type: inline-size;
   list-style: none;
   margin: 0;
-  padding: 0 var(--padPanel) var(--space-3);
-  /* THE ROW MEASURES ITSELF AGAINST THIS LIST, not against the window. The same
-     queue is drawn in the Brief's work column and on a page of its own, and
-     those are different widths on one screen — a media query would give both
-     the shape the window deserves rather than the shape the column has. */
-  container-type: inline-size;
+  padding: 0;
 }
 
 .worklist-row-verbs,

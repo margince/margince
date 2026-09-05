@@ -1,21 +1,11 @@
 /* The morning's one feed. The rows carry their own layout from worklist.css;
    this is the list they sit in and the run-length section label above them. */
-/* THE SAME STACK OF CARDS THE QUEUE DRAWS, because it is the same row: this
-   list and the worklist's are two callers of one component, and they had drifted
-   into two shapes — the queue's rows became cards while this one kept them
-   packed edge to edge with no interval, which is the long feed the Brief was
-   reading as.
-   The interval, the inset to the panel's own margin and the container the row
-   measures itself against are all stated here for the same reason they are
-   stated there: a card needs room, a margin and a width to answer. */
 .brief-feed-list {
   display: flex;
   flex-direction: column;
-  gap: var(--gapCards);
   list-style: none;
   margin: 0;
-  padding: 0 var(--padPanel) var(--space-3);
-  container-type: inline-size;
+  padding: 0;
 }
 
 /* The label sits ABOVE its first row rather than beside it, so a reader
@@ -23,15 +13,6 @@
    with the rank numbers for the same column. */
 .brief-feed-section {
   margin: var(--space-3) 0 var(--space-1);
-}
-
-/* The label a section carries sits inside the list now, so it takes the
-   interval as one of the stack's items rather than as a margin between two
-   cards. */
-.brief-feed-list > li {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
 }
 
 .brief-feed-list > li:first-child .brief-feed-section {

@@ -2710,7 +2710,6 @@ export const de = {
   "home.panel.position": "Bestand",
   "home.panel.schedule": "Heutiger Kalender",
   "home.schedule.clear": "Heute steht nichts an.",
-  "home.spine.now": "Jetzt",
   "home.panel.promises": "Zusagen & Aufgaben",
   "home.promises.clear": "Nichts ist offen.",
   "home.promises.untracked":

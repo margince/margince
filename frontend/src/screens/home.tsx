@@ -298,17 +298,6 @@ export function HomeScreen() {
       {/* The strip reads the SAME worklist answer the queue below it reads, so
           the five figures cannot disagree with the rows they summarise. */}
       {worklistQuery.data && <HomeReadingsStrip day={worklistQuery.data} />}
-      {/* The day as an axis, under the figures and across the whole page: the
-          one thing on the Brief that is a SHAPE rather than a count or a row,
-          and the reason it is not in the rail — a time axis needs the width.
-          The morning's only; the weekly is about a week that closed. */}
-      {address.view === "morning" && (
-        <SchedulePanel
-          day={worklistQuery.data}
-          state={readState(worklistQuery)}
-          now={new Date(nowMs)}
-        />
-      )}
       {/* Screen-level so it survives the deck re-rendering under it. */}
       {decidedNote}
       <PageZones
@@ -362,6 +351,14 @@ export function HomeScreen() {
                   then what is owed. Both are cuts of the SAME worklist answer
                   the work column is drawn from, so the rail cannot name a
                   meeting the queue has already dropped. */}
+              {/* The day's own shape leads the rail: what it is booked with,
+                  then what is owed. Both are cuts of the SAME worklist answer
+                  the work column is drawn from, so the rail cannot name a
+                  meeting the queue has already dropped. */}
+              <SchedulePanel
+                day={worklistQuery.data}
+                state={readState(worklistQuery)}
+              />
               <PromisesPanel
                 day={worklistQuery.data}
                 state={readState(worklistQuery)}

@@ -464,7 +464,6 @@ export const Schedule: Story = {
     <SchedulePanel
       day={readingsDay({}, [meetingRow("m1", false), meetingRow("m2", true)])}
       state="ready"
-      now={NOW_DATE}
     />,
   ),
 };
@@ -477,7 +476,6 @@ export const ScheduleUndated: Story = {
     <SchedulePanel
       day={readingsDay({}, [{ ...meetingRow("m1", true), due_at: undefined }])}
       state="ready"
-      now={NOW_DATE}
     />,
   ),
 };
@@ -485,9 +483,7 @@ export const ScheduleUndated: Story = {
 // A day with nothing booked, which is a fact worth saying rather than an empty
 // panel that reads as a read that never landed.
 export const ScheduleClear: Story = {
-  render: part(
-    <SchedulePanel day={readingsDay({}, [])} state="ready" now={NOW_DATE} />,
-  ),
+  render: part(<SchedulePanel day={readingsDay({}, [])} state="ready" />),
 };
 
 // The tasks this rep owes, under a heading that names two things. The line

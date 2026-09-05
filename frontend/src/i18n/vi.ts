@@ -2685,7 +2685,6 @@ export const vi = {
   "home.panel.position": "Vị thế",
   "home.panel.schedule": "Lịch hôm nay",
   "home.schedule.clear": "Hôm nay không có lịch nào.",
-  "home.spine.now": "Bây giờ",
   "home.panel.promises": "Cam kết & công việc",
   "home.promises.clear": "Không còn việc nào đang mở.",
   "home.promises.untracked":
