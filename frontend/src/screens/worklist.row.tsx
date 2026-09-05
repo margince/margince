@@ -118,8 +118,11 @@ export function WorklistRow({
       ? syncHealthDetail(item.kind, item.detail, t)
       : item.detail;
   // The badged reasons are drawn as badges above and left out here, so one
-  // meeting does not report the same finding twice in two registers.
-  const reasons = phrasedReasons(item)
+  // meeting does not report the same finding twice in two registers. The when
+  // line takes `due_today` the same way when it is drawn: the moment names the
+  // hour a rep is racing, and "due today" underneath it is that clock said
+  // again in a coarser register.
+  const reasons = phrasedReasons(item, when !== null)
     .map((reason) => reasonText(reason, t, locale, zone))
     .filter((phrase): phrase is string => phrase !== null);
   const above = comparisonText(item.above_next, t, locale, zone);
@@ -437,9 +440,20 @@ function RowCaptions({
       {/* When it starts, or when it is due. Above the reasons because it is the
           fact those reasons are ABOUT: "starting shortly" explains a rank, and
           this says what time. */}
-      {when && <p className="t-caption worklist-row-when">{when}</p>}
-      {facts && <p className="t-caption worklist-row-facts">{facts}</p>}
-      <RowReasons reasons={reasons} />
+      {/* WHEN, WHAT IT IS WORTH and WHY, on one wrapping line rather than
+          three stacked ones. Each is a fragment — "due 15:00", "€40k", "due
+          today · nobody owns it" — and three fragments of a dozen characters
+          each took three full lines of a 390px row, which is 38px of a 176px
+          ceiling spent on whitespace beside three short phrases. They stay
+          separate elements, so a reader still meets them in the same order and
+          a screen reader still reads three facts; only the line breaks between
+          them go. Above that width they stack as before, because a wide row has
+          the height and stacked lines are easier to scan. */}
+      <div className="worklist-row-facts-line">
+        {when && <p className="t-caption worklist-row-when">{when}</p>}
+        {facts && <p className="t-caption worklist-row-facts">{facts}</p>}
+        <RowReasons reasons={reasons} />
+      </div>
       {/* What it costs to do nothing. The question a queue exists to answer,
           and the one the lane feed had no field for. */}
       {consequence && (

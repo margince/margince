@@ -260,9 +260,49 @@ export function isUnprepared(item: WorklistItem): boolean {
   return item.because.some((reason) => reason.kind === BADGED);
 }
 
-/** The reasons a row says in its phrase line — everything the badges do not. */
-export function phrasedReasons(item: WorklistItem): WorklistReason[] {
-  return item.because.filter((reason) => reason.kind !== BADGED);
+/**
+ * The reason kinds the WHEN line already says.
+ *
+ * Each is the moment in a coarser register: a task row printed "due 06.07.2026,
+ * 15:00" and then "due today" underneath it, an overdue one said "overdue" a
+ * third time beside the badge that already says so, and a meeting said "starts
+ * 14:12" over "starting shortly". One clock, twice, reading as two findings.
+ * The moment wins because it names the hour a rep is racing rather than the day.
+ *
+ * A SET rather than one kind, because the duplication is structural. `overdue`
+ * and `due_today` are the two arms of a single `if` in the task lane, both
+ * guarded by the same `due_at` the moment is drawn from, so a rule naming one
+ * of them names half a condition. `meeting_soon` fires only where the meeting
+ * has a `due_at`, which is exactly when its own when line is drawn, so it has
+ * no non-duplicating case at all.
+ *
+ * The other deadline reasons stay OUT of this set and that is the non-obvious
+ * half: `closing_soon`, `response_overdue` and `response_due_soon` ride on
+ * sources — `deal_at_risk`, `brief_item`, `lead_response` — for which
+ * `whenKeyFor` answers null. Nothing draws their moment, so their phrase is the
+ * only place the fact is said.
+ *
+ * DROPPED ONLY WHERE THE MOMENT IS DRAWN. A row whose `due_at` the when line
+ * refuses — an approval's lapse instant, which is a fact about the staged work
+ * and not a deadline the rep owes — still says its phrase, or the row would
+ * lose the fact entirely rather than say it once.
+ */
+const SAID_BY_THE_WHEN_LINE = new Set<string>([
+  "due_today",
+  "overdue",
+  "meeting_soon",
+]);
+
+/** The reasons a row says in its phrase line — everything said elsewhere. */
+export function phrasedReasons(
+  item: WorklistItem,
+  whenDrawn: boolean,
+): WorklistReason[] {
+  return item.because.filter(
+    (reason) =>
+      reason.kind !== BADGED &&
+      !(whenDrawn && SAID_BY_THE_WHEN_LINE.has(reason.kind)),
+  );
 }
 
 export function reasonText(
