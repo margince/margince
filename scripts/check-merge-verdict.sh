@@ -80,12 +80,29 @@ if [[ -z "$pr_number" ]]; then
 	exit 1
 fi
 
-# The oldest matching run, not the newest. A re-run after the merge answers
-# about a tree that had already landed, and taking the latest verdict would let
-# one clear the record of the merge it was not present for.
-verdict="$(jq -r --arg name "$required" '
-	[.check_runs // [] | .[] | select(.name == $name)]
-	| sort_by(.completed_at // "9999") | .[0] // {}' <<<"$checks")"
+# THE LAST WORD BEFORE THE MERGE — not the newest run, and not the oldest.
+#
+# A re-run AFTER the merge answers about a tree that had already landed, so it
+# must not clear the record of the merge it was absent for. That is why this was
+# the oldest run, and that half is still true.
+#
+# But "oldest" only stands in for "before the merge" while there is one run
+# before it. A red lane cleared by a re-run and then merged by a human has TWO,
+# and the oldest is the run the merger looked at and correctly disregarded — so
+# the alarm accused a merge whose required check was green at the moment it was
+# made. Re-running is how a flaky lane is legitimately cleared, which made this
+# fire on the ordinary repair rather than on anything.
+#
+# So: the latest verdict that had completed by merge time. Falling back to the
+# oldest overall when none had, which is the fan-in's usual shape — `ci` posts
+# minutes after the merge, and reading that run is the whole point of the alarm.
+merged_at="$(jq -r 'if type == "array" and length > 0 then (min_by(.number).merged_at // "") else "" end' <<<"$pulls")"
+verdict="$(jq -r --arg name "$required" --arg merged "$merged_at" '
+	[.check_runs // [] | .[] | select(.name == $name)] as $named
+	| ([$named[] | select($merged != "" and (.completed_at // "9999") <= $merged)]
+	   | sort_by(.completed_at) | last)
+	// ($named | sort_by(.completed_at // "9999") | .[0])
+	// {}' <<<"$checks")"
 
 if [[ "$(jq -r 'length' <<<"$verdict")" -eq 0 ]]; then
 	echo "ok: $sha has no \`$required\` verdict to read (pull request #$pr_number) — an absent verdict is the shape of a decision that was taken, not a finding"
