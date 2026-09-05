@@ -369,6 +369,19 @@ function BoardLayout<Record extends BoardRecord>({
             }
             data-stage={column.stage}
             aria-label={column.label}
+            // listtable.css gives every column `overflow-y: auto` so a stage
+            // with many deals scrolls its own cards instead of stretching the
+            // rest to match it. A column with too few cards to overflow, or
+            // none at all, is still declared scrollable — and a card's own
+            // link makes a full column keyboard-reachable but says nothing
+            // about an EMPTY one, which axe's scrollable-region-focusable
+            // rule catches. The section is the scroller, so it takes the
+            // fallback stop itself rather than depending on what is inside it —
+            // the WCAG-sanctioned fix for a non-interactive scrollable region,
+            // which is exactly why the a11y linter's default posture forbids
+            // tabIndex on a section at all.
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: the scrollable region itself needs the keyboard stop; see the comment above.
+            tabIndex={0}
             {...columnDropHandlers?.(column)}
           >
             {/* THE STAGE AND HOW MUCH IS IN IT, on one line and stuck to the
