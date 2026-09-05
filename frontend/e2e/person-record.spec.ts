@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { signIn } from "./waits";
 
 /**
@@ -45,12 +45,11 @@ live("the contact page on live data", () => {
     // Asserting the boundary is ABSENT is the whole test: it is what the
     // reader saw instead of the page.
     await expect(
-      page.getByText(/stopped working|nicht mehr|ngừng hoạt động/i),
+      page.getByText(
+        /stopped working|nicht mehr|ngừng hoạt động/i,
+      ),
     ).toHaveCount(0);
-    expect(
-      crashes,
-      `uncaught error on the contact page:\n${crashes[0]}`,
-    ).toEqual([]);
+    expect(crashes, `uncaught error on the contact page:\n${crashes[0]}`).toEqual([]);
 
     // And something of the contact is actually drawn, so the assertion above
     // cannot pass over a blank page that merely failed quietly.
@@ -108,9 +107,7 @@ live("the contact page on live data", () => {
     // them takes it down.
     await expect(page.locator(".emaildetail__parties")).toBeVisible();
     await expect(
-      page.getByText(
-        /stopped working|funktioniert nicht mehr|ngừng hoạt động/i,
-      ),
+      page.getByText(/stopped working|funktioniert nicht mehr|ngừng hoạt động/i),
     ).toHaveCount(0);
 
     // A drawer OVER the record, not a page instead of it: the address does not

@@ -365,17 +365,7 @@ function PipelineOutlook() {
       />
     );
   }
-  // The currency is what makes the money sayable, so its absence is read as an
-  // unanswered question rather than as a figure.
-  //
-  // `base_currency` IS required of this response, and that is exactly why the
-  // check is here: a 200 whose shape is not the one the contract promises is
-  // another absent read, and reaching into it for the currency threw — taking
-  // the whole of `#/home` down to the app's error boundary, where a reader sees
-  // no strip, no feed and no rail rather than one em dash. A server too old to
-  // send it, a projection that lost it, or a proxy answering the route with
-  // something else all arrive this way.
-  if (readings.isError || !readings.data?.base_currency) {
+  if (readings.isError || !readings.data) {
     // A read that did not land is not a pipeline of nothing. The em dash says
     // the question went unanswered, which is what the retired slots said and
     // the one case where that spelling is still true.
