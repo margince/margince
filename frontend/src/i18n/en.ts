@@ -7258,6 +7258,13 @@ export const en = {
   "person.graph.routeDirect": "{name} already corresponds with them.",
   "person.graph.routeVia":
     "{name} corresponds with {through} at the same company.",
+  // The same two sentences when the colleague is the reader. A route to the
+  // person reading it is the strongest one this page can find, and printing
+  // their own name back at them read as a third party they would have to go
+  // and ask.
+  "person.graph.routeDirectYou": "You already correspond with them.",
+  "person.graph.routeViaYou":
+    "You correspond with {through} at the same company.",
   "person.graph.noRoute":
     "Nobody here corresponds with them or with anyone at their company yet.",
   "person.graph.noDirect": "Nobody here has corresponded with them.",
@@ -7282,6 +7289,9 @@ export const en = {
   "person.intro.leadRouteBadge": "Strong route",
   "person.intro.heroDirect": "knows them directly",
   "person.intro.heroIndirect": "reaches them through {through}",
+  "person.intro.heroYou": "You",
+  "person.intro.heroDirectYou": "know them directly",
+  "person.intro.heroIndirectYou": "reach them through {through}",
   "person.intro.factReciprocal": "Reciprocal",
   "person.intro.factOneSided": "One-sided",
   "person.intro.factDirect": "Direct relationship",
@@ -7292,10 +7302,19 @@ export const en = {
   "person.intro.verdictOneSided":
     "Ask {name} — they have written, with no reply yet.",
   "person.intro.verdictVia": "Ask {name} — they reach them through {through}.",
+  "person.intro.verdictDirectYou": "You already write to each other.",
+  "person.intro.verdictOneSidedYou":
+    "You have written to them, with no reply yet.",
+  "person.intro.verdictViaYou": "You reach them through {through}.",
+  // What stands where the ask would be on the reader's own route. The panel
+  // is the page's one recommendation, so it says what to do rather than
+  // leaving the strongest way in with no move under it.
+  "person.intro.ownRouteNoAsk": "Nobody to ask — write to them yourself.",
   "person.intro.evidenceEyebrow": "The evidence behind it",
   "person.intro.evidenceExchanges": "Exchanges",
   "person.intro.evidenceWindow": "in 90 days",
   "person.intro.evidenceFrom": "{count} from {name}",
+  "person.intro.evidenceFromYou": "{count} from you",
   "person.intro.evidenceLastContact": "Last contact",
   "person.intro.lastToday": "Today",
   "person.intro.lastYesterday": "Yesterday",
@@ -7305,6 +7324,9 @@ export const en = {
   "person.intro.stripWhoCount_one": "Only {name}",
   "person.intro.stripWhoCount_other": "{count} colleagues",
   "person.intro.stripWhoMix": "{direct} direct · {indirect} through a contact",
+  "person.intro.stripWhoOnlyYou": "Only you",
+  "person.intro.stripWhoWithYou_one": "You and {count} colleague",
+  "person.intro.stripWhoWithYou_other": "You and {count} colleagues",
   "person.intro.otherRoutesTitle": "Other ways in",
   "person.intro.otherRoutesSub":
     "Ranked by how much two-way correspondence backs each one.",

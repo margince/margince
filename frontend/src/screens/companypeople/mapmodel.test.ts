@@ -375,3 +375,101 @@ test("refuses a node that is not a person", () => {
     expect(introTargetFor(model, id)).toBeNull();
   }
 });
+
+// THE READER IS ONE OF THE ROUTES.
+//
+// Coverage ranks everyone on our side who corresponds with a seat, and the
+// person reading is among them — so the warmest way in can be their own
+// relationship. Offering the verb then drafted a letter asking its own sender
+// for a favour, at the workspace's model budget, and the endpoint now refuses
+// an introduction whose introducer is the caller.
+const READER = "u-me";
+
+function reachedBy(
+  ...top: NonNullable<
+    NonNullable<Coverage["committee"]>["seats"][number]["routes"]
+  >["top"]
+): Coverage {
+  return coverage({
+    committee: {
+      seats: [
+        {
+          person_id: "p-1",
+          full_name: "Philipp Königs",
+          role: "economic_buyer",
+          engagement: "untried",
+          routes: { top, remainder: 0, untried: false },
+        },
+      ],
+      gaps: [],
+      unlisted_seats: 0,
+    },
+  } as Partial<Coverage>);
+}
+
+const mine = {
+  user_id: READER,
+  display_name: "Demo Admin",
+  strength_bucket: "strong",
+  last_interaction_at: "2026-08-29T09:00:00Z",
+} as NonNullable<
+  NonNullable<Coverage["committee"]>["seats"][number]["routes"]
+>["top"][number];
+
+const sofia = {
+  user_id: "u-1",
+  display_name: "Sofia Meier",
+  strength_bucket: "developing",
+  last_interaction_at: "2026-08-20T09:00:00Z",
+} as typeof mine;
+
+test("offers no intro verb on a seat only the reader reaches", () => {
+  const model = mapModelFromCoverage(
+    reachedBy(mine),
+    "Brandt GmbH",
+    COPY,
+    READER,
+  );
+  expect(
+    model.nodes.find((node) => node.id === "p:p-1")?.actions,
+  ).toBeUndefined();
+  expect(introTargetFor(model, "p:p-1", READER)).toBeNull();
+});
+
+// The reader's route is the STRONGEST here, so a filter applied after the
+// ranking would find their own edge and give up — leaving a colleague who can
+// be asked unasked, with the verb still on the node.
+test("asks the next colleague when the reader holds the warmest route", () => {
+  const model = mapModelFromCoverage(
+    reachedBy(mine, sofia),
+    "Brandt GmbH",
+    COPY,
+    READER,
+  );
+  expect(
+    model.nodes.find((node) => node.id === "p:p-1")?.actions?.[0]?.id,
+  ).toBe("ask_intro");
+  expect(introTargetFor(model, "p:p-1", READER)).toEqual({
+    personId: "p-1",
+    personName: "Philipp Königs",
+    viaUserId: "u-1",
+    viaName: "Sofia Meier",
+  });
+});
+
+// And the reader is still DRAWN: their relationship is the most useful fact on
+// the picture even where there is no favour to ask for.
+test("draws the reader's own route whether or not it can be asked for", () => {
+  const model = mapModelFromCoverage(
+    reachedBy(mine),
+    "Brandt GmbH",
+    COPY,
+    READER,
+  );
+  expect(model.nodes.some((node) => node.id === `u:${READER}`)).toBe(true);
+  expect(
+    model.edges.some(
+      (edge) => edge.from === `u:${READER}` && edge.to === "p:p-1",
+    ),
+  ).toBe(true);
+});

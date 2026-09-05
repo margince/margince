@@ -7176,6 +7176,9 @@ export const de = {
   "person.graph.routeDirect": "{name} steht bereits im Austausch mit ihnen.",
   "person.graph.routeVia":
     "{name} steht im Austausch mit {through} im selben Unternehmen.",
+  "person.graph.routeDirectYou": "Sie stehen bereits im Austausch mit ihnen.",
+  "person.graph.routeViaYou":
+    "Sie stehen im Austausch mit {through} im selben Unternehmen.",
   "person.graph.noRoute":
     "Bisher steht hier niemand im Austausch mit ihnen oder mit jemandem in ihrem Unternehmen.",
   "person.graph.noDirect": "Hier hat niemand mit ihnen korrespondiert.",
@@ -7200,6 +7203,9 @@ export const de = {
   "person.intro.leadRouteBadge": "Starker Weg",
   "person.intro.heroDirect": "kennt die Person direkt",
   "person.intro.heroIndirect": "erreicht sie über {through}",
+  "person.intro.heroYou": "Sie",
+  "person.intro.heroDirectYou": "kennen die Person direkt",
+  "person.intro.heroIndirectYou": "erreichen sie über {through}",
   "person.intro.factReciprocal": "Wechselseitig",
   "person.intro.factOneSided": "Einseitig",
   "person.intro.factDirect": "Direkte Beziehung",
@@ -7211,10 +7217,16 @@ export const de = {
     "{name} fragen — hat geschrieben, bisher ohne Antwort.",
   "person.intro.verdictVia":
     "{name} fragen — erreicht die Person über {through}.",
+  "person.intro.verdictDirectYou": "Sie schreiben sich bereits.",
+  "person.intro.verdictOneSidedYou":
+    "Sie haben geschrieben, bisher ohne Antwort.",
+  "person.intro.verdictViaYou": "Sie erreichen die Person über {through}.",
+  "person.intro.ownRouteNoAsk": "Niemanden zu fragen — schreiben Sie selbst.",
   "person.intro.evidenceEyebrow": "Die Belege dahinter",
   "person.intro.evidenceExchanges": "Austausche",
   "person.intro.evidenceWindow": "in 90 Tagen",
   "person.intro.evidenceFrom": "{count} von {name}",
+  "person.intro.evidenceFromYou": "{count} von Ihnen",
   "person.intro.evidenceLastContact": "Letzter Kontakt",
   "person.intro.lastToday": "Heute",
   "person.intro.lastYesterday": "Gestern",
@@ -7224,6 +7236,10 @@ export const de = {
   "person.intro.stripWhoCount_one": "Nur {name}",
   "person.intro.stripWhoCount_other": "{count} Kolleginnen und Kollegen",
   "person.intro.stripWhoMix": "{direct} direkt · {indirect} über einen Kontakt",
+  "person.intro.stripWhoOnlyYou": "Nur Sie",
+  "person.intro.stripWhoWithYou_one": "Sie und {count} Kollegin oder Kollege",
+  "person.intro.stripWhoWithYou_other":
+    "Sie und {count} Kolleginnen und Kollegen",
   "person.intro.otherRoutesTitle": "Weitere Wege hinein",
   "person.intro.otherRoutesSub":
     "Sortiert danach, wie viel beidseitiger Austausch dahintersteht.",

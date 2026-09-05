@@ -104,6 +104,17 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 			"introductions: asking for an introduction needs an authenticated person: %w",
 			apperrors.ErrPermissionDenied)
 	}
+	if req.IntroducerUser == actor.UserID {
+		// An introduction has two people on our side, and the requester is
+		// already one of them. The graph ranks every colleague who corresponds
+		// with the contact and the reader is among them, so this is the shape a
+		// client sends when it has offered its own reader as the way in — the
+		// row it would write puts a favour in the asker's own queue and records
+		// a handoff that never happened.
+		return ids.UUID{}, fmt.Errorf(
+			"introductions: an introduction is asked of somebody else: %w",
+			apperrors.ErrInvalidArgument)
+	}
 	if req.InternalReason == "" {
 		return ids.UUID{}, errors.New("introductions: an ask says why it is worth making")
 	}

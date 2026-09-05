@@ -8,10 +8,13 @@
 // English whatever locale the app is in — the counts cross the wire as facts
 // for exactly that reason.
 
+import { useCallback } from "react";
+
 import type { components } from "../api/schema";
 import { Avatar, Badge, Button, Card } from "../design-system/atoms";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
+import { useViewerId } from "./common";
 import "./personnetwork.css";
 
 type Graph = components["schemas"]["PersonGraph"];
@@ -19,6 +22,29 @@ type RouteCandidate = components["schemas"]["PersonGraphRouteCandidate"];
 type RouteEvidence = components["schemas"]["PersonGraphRouteEvidence"];
 type Translate = ReturnType<typeof useT>;
 type Pluralize = ReturnType<typeof usePlural>;
+
+/**
+ * useOwnRoute reports whether a route IS the reader.
+ *
+ * The server ranks every colleague who corresponds with the contact and the
+ * reader is one of them, so the warmest way in is often the reader's own
+ * relationship — and every sentence on this tab is written about a colleague
+ * to ask. One predicate, exported, because the lead panel, the routes rows and
+ * the decision strip each rewrite their copy on this fact: three comparisons
+ * would be three chances to answer it differently on one screen.
+ *
+ * `false` while /me is in flight, which reads the route as somebody else's —
+ * the honest answer until the session is known, and the same one the page
+ * showed before the reader was ever consulted.
+ */
+export function useOwnRoute(): (route: RouteCandidate) => boolean {
+  const viewerId = useViewerId();
+  return useCallback(
+    (route: RouteCandidate) =>
+      viewerId !== undefined && route.via_user_id === viewerId,
+    [viewerId],
+  );
+}
 
 /**
  * RoutesCard lists the ways in, the recommendation first.
@@ -132,6 +158,7 @@ function RouteRow({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  const mine = useOwnRoute()(route);
   const blocked = availabilityLabel(route.availability, t);
   return (
     <div
@@ -156,8 +183,10 @@ function RouteRow({
       </div>
       <StrengthMeter bucket={route.strength_bucket} />
       {/* A route that cannot be asked for offers no button. Rendering one that
-          answers 409 would be a control that exists to fail. */}
-      {onAsk && route.availability === "available" ? (
+          answers 409 would be a control that exists to fail — and the reader's
+          own route is the same kind of button: the server refuses an ask whose
+          introducer is the person making it. */}
+      {onAsk && !mine && route.availability === "available" ? (
         <Button
           variant={lead ? "primary" : undefined}
           small
@@ -193,25 +222,37 @@ function StrengthMeter({
 }
 
 /**
- * RouteLine names the colleague and how they reach the contact.
+ * RouteLine names who reaches the contact, and how.
  *
  * One sentence, exported, because the routes list and the ask drawer both say
  * it. A second wording for one fact is how two surfaces start disagreeing about
  * what a route is — and the drawer is where the reader confirms the route they
  * picked on the list, so the two must read alike.
+ *
+ * The reader's own route is written in the second person. Naming a colleague
+ * is a sentence about somebody to go and ask, and printing the reader's own
+ * name into it is the page failing to notice who is logged in.
  */
 export function RouteLine({ route }: Readonly<{ route: RouteCandidate }>) {
   const t = useT();
-  return (
-    <>
-      {route.through_display_name
-        ? t("person.graph.routeVia", {
-            name: route.via_display_name,
-            through: route.through_display_name,
-          })
-        : t("person.graph.routeDirect", { name: route.via_display_name })}
-    </>
-  );
+  const mine = useOwnRoute()(route);
+  return <>{routeSentence(route, mine, t)}</>;
+}
+
+function routeSentence(
+  route: RouteCandidate,
+  mine: boolean,
+  t: Translate,
+): string {
+  const through = route.through_display_name;
+  if (through) {
+    return mine
+      ? t("person.graph.routeViaYou", { through })
+      : t("person.graph.routeVia", { name: route.via_display_name, through });
+  }
+  return mine
+    ? t("person.graph.routeDirectYou")
+    : t("person.graph.routeDirect", { name: route.via_display_name });
 }
 
 /**
