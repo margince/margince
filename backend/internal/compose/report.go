@@ -18,6 +18,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -411,41 +412,14 @@ func aggregateSelect(spec reportSpec, agg reportAggregate) (name, sel string, er
 		if !ok {
 			return "", "", &FieldNotAllowedError{Field: agg.Field, Slot: slotAggregates, Allowed: allowedReportNames(spec.measures)}
 		}
-		// NULL below the sample floor rather than a number.
-		//
-		// A median over three deals is not a median: it is one deal's value
-		// wearing a statistic's name, and a manager comparing "typical stage
-		// age" across teams would read the smallest team's outlier as its
-		// norm. Postgres will happily compute it, which is exactly why the
-		// refusal has to be written here.
-		//
-		// NULL rather than an error, because the ROW is still a real answer —
-		// the count beside it says how many deals there were, and a reader
-		// seeing a blank with n=3 has learned something true. Failing the whole
-		// report would take away the counts as well.
-		return name, fmt.Sprintf(
-			"(CASE WHEN count(%s) >= %d THEN percentile_cont(%s) WITHIN GROUP (ORDER BY %s) END) AS %s",
-			expr, percentileSampleFloor, percentileFor(agg.Fn), expr, quoteIdent(name)), nil
+		// One renderer for both engines: the fraction, the CASE shape and the
+		// sample floor live in analyticsquery.PercentileExpr, so the screen
+		// and the typed query cannot drift apart about what a median is.
+		return name, analyticsquery.PercentileExpr(expr, analyticsquery.AggFn(agg.Fn)) +
+			" AS " + quoteIdent(name), nil
 	default:
 		return "", "", &FieldNotAllowedError{Field: "fn=" + agg.Fn}
 	}
-}
-
-// percentileSampleFloor is how many values a percentile needs before it means
-// anything.
-//
-// Five, and the number is a judgement rather than a derivation: below it a
-// "typical" value is one or two deals, and the whole use of a median here is
-// comparing groups whose sizes differ. A floor of one would make every group
-// comparable and every small group wrong.
-const percentileSampleFloor = 5
-
-// percentileFor is the fraction each named aggregate asks for.
-func percentileFor(fn string) string {
-	if fn == aggFnP75 {
-		return "0.75"
-	}
-	return "0.5"
 }
 
 var errUnknownEntity = errors.New("compose: entity outside the schema descriptors")

@@ -24280,10 +24280,10 @@ export interface components {
         };
         AnalyticsMeasure: {
             /**
-             * @description The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.
+             * @description The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population. `median` and `p75` answer null below a five-value sample floor: a percentile over three deals is one deal's value wearing a statistic's name, and the count beside the blank still says how many there were.
              * @enum {string}
              */
-            fn: "count" | "count_distinct" | "sum" | "avg" | "min" | "max";
+            fn: "count" | "count_distinct" | "sum" | "avg" | "min" | "max" | "median" | "p75";
             /** @description What to aggregate. Required for every fn but `count`. */
             field?: string;
             /** @description The caller's name for the result column. It never reaches the statement — results map by position — so it cannot carry anything into SQL. */
