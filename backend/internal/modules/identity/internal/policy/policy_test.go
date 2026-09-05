@@ -5,14 +5,16 @@ package policy
 
 import (
 	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestEverySystemRoleHasAValidDefaultDocument(t *testing.T) {
-	for _, key := range []string{"admin", "manager", "rep", "read_only", "ops"} {
+	for key := range defaults {
 		doc, err := Parse(MustDefaultJSON(key))
 		if err != nil {
 			t.Errorf("seeded default for %q does not pass its own validator: %v", key, err)
@@ -222,6 +224,15 @@ func TestNoSeededRoleGrantsAWriteWithoutRead(t *testing.T) {
 			if g.Read || !writes {
 				continue
 			}
+			// system_reset is the one object whose only surface destroys.
+			// POST /admin/reset-data is its single operation, and whether the
+			// reset is armed is /me's data_reset_available — a deployment-file
+			// fact served to every seat and gated by no object. A read here
+			// would name a surface that does not exist, which is the worse of
+			// the two defects this rule is weighing.
+			if object == objSystemReset && g.Delete && !g.Create && !g.Update {
+				continue
+			}
 			t.Errorf("role %q grants %q create=%v update=%v delete=%v with read=false — a write it can never "+
 				"see the result of, and a staged change to it that no inbox may disclose",
 				roleKey, object, g.Create, g.Update, g.Delete)
@@ -306,17 +317,47 @@ func TestGridAppliesAnOverrideAndLeavesTheRestAtBase(t *testing.T) {
 // against that call's base expression, which is the same comparison a reader
 // makes and the only one that can fail.
 func TestNoOverrideRestatesItsOwnBase(t *testing.T) {
-	source, err := os.ReadFile("defaults.go")
+	// Every non-test source file in the package, not defaults.go by name: the
+	// role documents and the grid they are built from have lived in one file
+	// and in two, and a corpus naming one file reads a shorter tree without
+	// failing when the next split moves a call out of it.
+	sources, err := filepath.Glob("*.go")
 	if err != nil {
-		t.Fatalf("reading the seed: %v", err)
+		t.Fatalf("listing the package: %v", err)
 	}
-	calls := regexp.MustCompile(`grid\((\w+), map\[string\]grant\{([^}]*)\}`).FindAllStringSubmatch(string(source), -1)
-	if len(calls) == 0 {
-		t.Fatal("no grid(base, overrides) call found — this test is reading the wrong shape")
+	var calls [][]string
+	call := regexp.MustCompile(`grid\((\w+), map\[string\]grant\{([^}]*)\}`)
+	for _, name := range sources {
+		if strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		source, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatalf("reading %s: %v", name, err)
+		}
+		calls = append(calls, call.FindAllStringSubmatch(string(source), -1)...)
+	}
+	// Five: admin, ops, rep, read_only and the shared managerObjects. The two
+	// missing roles are the point of the number — `manager` reuses
+	// managerObjects and `management` derives managementObjects from it, so
+	// neither spells a grid call of its own. Pinning the count is what makes
+	// this test fail LOUDLY when the corpus stops seeing part of the seed;
+	// without it a file rename would quietly leave a role unchecked.
+	const wantCalls = 5
+	if len(calls) != wantCalls {
+		t.Fatalf("found %d grid(base, overrides) calls across the package, want %d "+
+			"(admin, ops, rep, read_only, managerObjects) — either the corpus is not reading "+
+			"the whole seed, or a role gained its own grid and this count needs revisiting",
+			len(calls), wantCalls)
 	}
 	for _, call := range calls {
 		base := call[1]
-		for _, line := range regexp.MustCompile(`(\w+):\s*(\w+),`).FindAllStringSubmatch(call[2], -1) {
+		// Both spellings of a key. A map here mixes bare `objXxx` constants with
+		// quoted string literals, and a `\w+` key group silently skips every
+		// quoted one — which was two thirds of rep's overrides and left the
+		// commonest lines in the file unchecked.
+		override := regexp.MustCompile(`(obj\w+|"[a-z_]+"):\s*(\w+),`)
+		for _, line := range override.FindAllStringSubmatch(call[2], -1) {
 			if line[2] == base {
 				t.Errorf("an override sets %s to %s, which is already the base of that grid — "+
 					"the line changes nothing and reads as a decision", line[1], base)

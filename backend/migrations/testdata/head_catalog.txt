@@ -1512,11 +1512,13 @@ public.communication_decision_pkey CREATE UNIQUE INDEX communication_decision_pk
 public.communication_suppression acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_suppression.address text gen=- def=-
 public.communication_suppression.captured_by text NOT NULL gen=- def=-
+public.communication_suppression.communication_suppression_decided_by_level CHECK ((decided_by_level = ANY (ARRAY['machine'::text, 'user'::text, 'admin'::text, 'subject'::text])))
 public.communication_suppression.communication_suppression_kind CHECK ((kind = ANY (ARRAY['marketing_objection'::text, 'processing_restriction'::text, 'hard_bounce'::text, 'subject_request'::text])))
 public.communication_suppression.communication_suppression_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
 public.communication_suppression.communication_suppression_names_a_target CHECK (((person_id IS NOT NULL) OR (lead_id IS NOT NULL) OR (address IS NOT NULL)))
 public.communication_suppression.communication_suppression_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.communication_suppression.communication_suppression_pkey PRIMARY KEY (id)
+public.communication_suppression.decided_by_level text NOT NULL gen=- def=-
 public.communication_suppression.id uuid NOT NULL gen=- def=uuidv7()
 public.communication_suppression.kind text NOT NULL gen=- def=-
 public.communication_suppression.lead_id uuid gen=- def=-

@@ -1358,6 +1358,10 @@ function TimelineGroupRow({
             summary={newest.emailSummary}
             timestamp={formatTimeOfDay(newest.atIso, locale, zone)}
             onOpen={newest.onOpenEmail}
+            // Absent on the reply composer, whose rows are the thread being
+            // answered rather than a place to act from. Every other surface
+            // that draws this timeline mounts a drawer and passes an opener.
+            whyNotOpenable="noReader"
           />
         ) : (
           <>
@@ -1490,6 +1494,8 @@ export function TimelineRow({
             summary={entry.emailSummary}
             timestamp={formatTimeOfDay(entry.atIso, locale, zone)}
             onOpen={entry.onOpenEmail}
+            // As above: absent on the reply composer and nowhere else.
+            whyNotOpenable="noReader"
           />
           {flag}
         </div>

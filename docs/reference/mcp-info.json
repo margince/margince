@@ -10,16 +10,16 @@
   "totals": {
     "tools": 72,
     "resources": 11,
-    "tool_catalog_bytes": 204796,
+    "tool_catalog_bytes": 204944,
     "resource_catalog_bytes": 4251,
-    "approx_wire_tokens_total": 52261,
+    "approx_wire_tokens_total": 52298,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 49898,
-      "input_schema_bytes": 41692,
+      "input_schema_bytes": 41840,
       "output_schema_bytes": 97659,
-      "description_plus_input_schema_bytes": 91590
+      "description_plus_input_schema_bytes": 91738
     }
   },
   "tools": {
@@ -11426,12 +11426,15 @@
                     "type": "string"
                   },
                   "fn": {
+                    "description": "How to aggregate the field. count takes no field; every other function names one from this report's aggregates list.",
                     "enum": [
-                      "count",
-                      "sum",
                       "avg",
+                      "count",
+                      "max",
+                      "median",
                       "min",
-                      "max"
+                      "p75",
+                      "sum"
                     ],
                     "type": "string"
                   }

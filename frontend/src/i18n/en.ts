@@ -1888,7 +1888,6 @@ export const en = {
   "co.recent.emptyDetail":
     "Once you send an email, log a call or hold a meeting, the exchange appears here, with who did what on each side.",
   "co.recent.empty": "Nothing logged with them yet.",
-  "co.recent.viewHistory": "View history",
   "co.recent.kind.email": "Email",
   "co.recent.kind.call": "Call",
   "co.recent.kind.meeting": "Meeting",

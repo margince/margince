@@ -7,7 +7,6 @@ import {
   CommercialPanel,
   DealsCard,
   NextSteps,
-  RecentActivityPanel,
   StateStrip,
 } from "./company360";
 import { CompanyContractState } from "./companycommercial";
@@ -357,7 +356,6 @@ function Cards({ view }: Readonly<{ view: View }>) {
           view={view}
           extra={<CompanyContractState view={view} />}
         />
-        <RecentActivityPanel view={view} />
         <DealsCard view={view} />
         <NextSteps view={view} />
       </div>

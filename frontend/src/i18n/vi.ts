@@ -1824,7 +1824,6 @@ export const vi = {
   "co.recent.emptyDetail":
     "Khi bạn gửi email, ghi lại cuộc gọi hoặc họp, trao đổi đó sẽ xuất hiện ở đây, kèm việc mỗi bên đã làm gì.",
   "co.recent.empty": "Chưa ghi nhận trao đổi nào.",
-  "co.recent.viewHistory": "Xem lịch sử",
   "co.recent.kind.email": "Email",
   "co.recent.kind.call": "Cuộc gọi",
   "co.recent.kind.meeting": "Cuộc họp",

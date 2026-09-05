@@ -97,7 +97,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 
-## Census (106)
+## Census (109)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -109,6 +109,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `aitaskrailcensus_test.go` | H2 | Every AI task this build can run reports into the AI-activity projection. |
 | `aitaskwiring_test.go` | H2 | The census says a site EXISTS; this says a process role runs it. |
 | `analyticsscope_test.go` | H2 | Every path that renders a report spec's population applies that spec's row narrowings. |
+| `approvalselfonlyreaders_test.go` | H2 | Every approvals reader that filters rows by the decision grants also applies the self-only narrowing. |
 | `assurancerules_test.go` | H3 | Every assurance rule proves both halves of its judgement. |
 | `audiencereaders_test.go` | H2 | A message's AUDIENCE says who may read its content. |
 | `audienceretractioncallers_test.go` | H3 | activities.RetractDerivedForActivityTx documents that it is not atomic with the narrowing it follows, and the sentence is only true while every caller is an async consumer reacting to a COMMITTED audience change. |
@@ -142,6 +143,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `extensioncapabilitycensus_test.go` | H2 | Every capability the extension tier publishes must have a live unit declaring it. |
 | `extensionsignored_test.go` | H3 | The enabled set must be a set git actually has. |
 | `fliponehandle_test.go` | H2 | The overlay flip runs on ONE workspace binding, and this is what keeps it so. |
+| `forecastscopeauthority_test.go` | H2 | Every forecasting store entry point that RECORDS against a scope asks whether its caller answers for that scope. |
 | `gatecensus_test.go` | H2 | The census over this repo's own gate machinery: a gate's exceptions are held to the standard the gate holds its subjects to. |
 | `gateinventory_test.go` | H3 | The gate inventory: every gate in this package declares its own shape, and the reference page listing them is rendered from those declarations. |
 | `insertattemptcaps_test.go` | H2 | An insert that names no MaxAttempts does not run without a retry ladder — it runs on River's default of 25, on attempt-to-the-fourth backoff, which reaches days. |
@@ -199,6 +201,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `settingscatalog_test.go` | H3 | The settings-catalog fitness gates (ADR-0090/A135 §7). |
 | `stagingdecision_test.go` | H3 | Every path that stages a delivery records why it was allowed to. |
 | `statutoryfloorsingle_test.go` | H2 | The statutory retention floor is spelled once, and every destructive activity path applies that one spelling. |
+| `suppressionauthority_test.go` | H2 | Every kind of suppression says who decided it. |
 | `tableownershipdiscovery_test.go` | H2 | WHICH packages the ownership gate walks, derived rather than remembered. |
 | `uiautonomyclaims_test.go` | H2 | No shipped UI string promises that nothing sends without a human's approval while the generated policy table says the send verbs auto-execute. |
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
