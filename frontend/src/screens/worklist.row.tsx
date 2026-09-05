@@ -90,9 +90,12 @@ export function WorklistRow({
   // Where a grouped row is reviewed. Also a filter change the Brief cannot
   // make: it shows a fixed cut and has no filter to move.
   onReview?: () => void;
-  // Opens a waiting email. Absent on a surface with no drawer — the Brief
-  // draws the message and does not offer to open it, rather than drawing a
-  // control that answers nothing.
+  // Opens a waiting email. Unlike the pane above, this one is carried by every
+  // surface that draws a waiting row, the Brief included: a drawer needs no
+  // second column, only a dialog, and the row draws the whole message —
+  // sender, subject, preview, access badge. A row that shows a reader the
+  // message and refuses to open it teaches them the product does not work.
+  // Optional only for a caller that draws no waiting row at all.
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
@@ -120,7 +123,11 @@ export function WorklistRow({
     .filter((phrase): phrase is string => phrase !== null);
   const above = comparisonText(item.above_next, t, locale, zone);
   const consequence = consequenceText(item, t);
-  const emailRow = item.email_summary != null;
+  // Whether this row NAMES ITSELF with the canonical email row. It needs both
+  // the summary and somewhere to open it: the line is only drawn when it can
+  // be opened, so a caller with no drawer must fall back to the title line
+  // below rather than losing the row's name along with its opener.
+  const emailRow = item.email_summary != null && onOpenEmail !== undefined;
   return (
     <PanelRow
       className={
@@ -139,7 +146,9 @@ export function WorklistRow({
             sentence about it. Everything else keeps the title line it had, and
             the badges below stay on both: they say where the row sits in the
             day, which the email row does not answer. */}
-        <WaitingEmailLine item={item} onOpen={onOpenEmail} />
+        {emailRow && onOpenEmail && (
+          <WaitingEmailLine item={item} onOpen={onOpenEmail} />
+        )}
         <p className="t-body worklist-row-title">
           {emailRow ? null : href ? (
             <a className="entity-link" href={href}>

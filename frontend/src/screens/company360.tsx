@@ -6,7 +6,6 @@ import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge, Button, Skeleton, StatCard } from "../design-system/atoms";
-import { type TimelineEntry, TimelineRow } from "../design-system/composed";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import {
@@ -40,12 +39,10 @@ import {
   problemMessageOf,
   throwProblem,
   useFinanceSummary,
-  useViewerId,
 } from "./common";
 import type { CompanyTab } from "./companytab";
 import { dealsFilteredBy } from "./dealsaddress";
 import "./company360.css";
-import { activityTimeline } from "../design-system/activitytimeline";
 import { FactList } from "../design-system/factlist";
 import { HEALTH_DIMENSION_LABEL, HEALTH_RATING_LABEL } from "./companylookups";
 import { EntityRef } from "./entityref";
@@ -493,129 +490,6 @@ function CommercialFigure({
           missing rather than a shorter row that reads as complete. */}
       <span className="co-figure-value">{value}</span>
     </div>
-  );
-}
-
-// How many entries the overview's chronology carries. The full history is the
-// History tab; this is "what happened lately" without leaving Overview.
-const RECENT_ACTIVITY_LIMIT = 5;
-
-// One run of the timeline under the day it happened. Consecutive rather than
-// grouped-by-key, because `entries` arrives newest-first from the server and a
-// day is never revisited later in the same page.
-type ActivityDay = { key: string; entries: TimelineEntry[] };
-
-function groupByDay(
-  entries: readonly TimelineEntry[],
-  locale: Locale,
-  recordZone: string,
-) {
-  const days: ActivityDay[] = [];
-  for (const entry of entries) {
-    const key = formatDate(entry.atIso, locale, recordZone);
-    const last = days.at(-1);
-    if (last?.key === key) {
-      last.entries.push(entry);
-    } else {
-      days.push({ key, entries: [entry] });
-    }
-  }
-  return days;
-}
-
-/**
- * RecentActivityPanel is the overview's chronology: the same activities
- * section the rail used to carry, grouped under the day they happened rather
- * than as a flat list — a day is one thing that happened, several messages
- * are how it happened.
- *
- * Reads the SAME activities section the account's Suggestions and health
- * cards read, so the story here cannot disagree with what they cite.
- */
-export function RecentActivityPanel({
-  view,
-  onOpenHistory,
-  loading = false,
-  bare = false,
-}: Readonly<{
-  view?: Organization360;
-  // Where the header's link leads. Absent for a caller with no History tab
-  // of its own (the stories file).
-  onOpenHistory?: () => void;
-  // The composite read's own pending flag — see sectionState's own doc.
-  loading?: boolean;
-  // Render the BODY without this card's own header band, for a caller that
-  // holds the Panel itself and labels the section. One implementation, two
-  // mounts: the Deals tab still draws the whole card, and the Company 360
-  // card draws this section inside its own chrome — a second copy of the
-  // timeline is how two surfaces come to disagree about what happened.
-  bare?: boolean;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const viewerId = useViewerId();
-  const recordZone = useRecordZone();
-  // Every logged activity, not only the ones with a subject: a call or a note
-  // often has none, and filtering them out here would under-report the
-  // chronology and — because the count feeds sectionState — draw "nothing
-  // logged with them yet" on an account that has been called five times.
-  const logged = view?.activities?.data ?? [];
-  const state = sectionState(
-    view,
-    "activities",
-    Boolean(view?.activities),
-    logged.length,
-    loading,
-  );
-  const days = groupByDay(
-    activityTimeline(logged.slice(0, RECENT_ACTIVITY_LIMIT), viewerId),
-    locale,
-    recordZone,
-  );
-  const body =
-    state === "ready" ? (
-      days.map((day) => (
-        <div key={day.key} className="co-timeline-day">
-          {/* One level under whatever names this timeline: the card's own
-              title when it stands alone, the section subhead when it is a
-              section of the Company 360 card. */}
-          <Eyebrow as={bare ? "h4" : "h3"} className="co-timeline-day-heading">
-            {day.key}
-          </Eyebrow>
-          <ul className="timeline">
-            {day.entries.map((entry) => (
-              <TimelineRow key={entry.id} entry={entry} zone={recordZone} />
-            ))}
-          </ul>
-        </div>
-      ))
-    ) : (
-      <PanelBody>
-        <SurfaceState
-          state={state}
-          emptyLabel={t("co.recent.empty")}
-          loadingLabel={t("co.recent.title")}
-        >
-          {null}
-        </SurfaceState>
-      </PanelBody>
-    );
-  if (bare) {
-    return <>{body}</>;
-  }
-  return (
-    <Panel
-      title={t("co.recent.title")}
-      titleAction={
-        onOpenHistory && (
-          <Button small variant="ghost" onClick={onOpenHistory}>
-            {t("co.recent.viewHistory")}
-          </Button>
-        )
-      }
-    >
-      {body}
-    </Panel>
   );
 }
 

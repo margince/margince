@@ -1358,6 +1358,10 @@ function TimelineGroupRow({
             summary={newest.emailSummary}
             timestamp={formatTimeOfDay(newest.atIso, locale, zone)}
             onOpen={newest.onOpenEmail}
+            // The entry carries an opener on every surface that mounts a
+            // drawer. Where it does not, the surface itself has no reader to
+            // open into — the Brief is the one such page.
+            whyNotOpenable="noReader"
           />
         ) : (
           <>
@@ -1490,6 +1494,8 @@ export function TimelineRow({
             summary={entry.emailSummary}
             timestamp={formatTimeOfDay(entry.atIso, locale, zone)}
             onOpen={entry.onOpenEmail}
+            // As above: absent only where the surface mounts no drawer.
+            whyNotOpenable="noReader"
           />
           {flag}
         </div>

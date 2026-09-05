@@ -112,22 +112,44 @@ function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
   };
 }
 
+/**
+ * Why a row does not open, for the two cases where that is the honest answer.
+ *
+ * `noDetail` — the row has no message to open: a thread projection standing
+ * for several messages, or an entry the server gave no activity id.
+ * `noReader` — the surface itself mounts no drawer, so there is nowhere to
+ * open INTO. The Brief is the one such surface.
+ *
+ * Naming the reason is the point. An optional opener could not tell these
+ * apart from a surface that simply forgot to pass one, and a forgotten opener
+ * renders a full-fidelity preview that does nothing — the defect this union
+ * exists to make unwritable.
+ */
+type NoOpenReason = "noDetail" | "noReader";
+
 export function EmailEntry({
   summary,
   timestamp,
-  onOpen,
+  ...opener
 }: Readonly<{
   /** The server's own row model. Nothing here is derived in the browser. */
   summary: EmailSummary;
   /** Formatted by the caller, which owns the reader's timezone. */
   timestamp: string;
-  /**
-   * Opens the canonical detail. Omitted only where there is no detail to open;
-   * a row that looks openable and is not teaches a reader the product does not
-   * work.
-   */
-  onOpen?: () => void;
-}>) {
+}> &
+  Readonly<
+    /**
+     * Openable, or explicitly not — never silently neither.
+     *
+     * A caller threading a callback it cannot guarantee (an optional prop, a
+     * row that may carry no activity id) takes the first branch and states the
+     * fallback reason too: `onOpen` undefined then means what the caller says
+     * it means, rather than meaning nobody thought about it.
+     */
+    | { onOpen: () => void }
+    | { onOpen: undefined; whyNotOpenable: NoOpenReason }
+    | { whyNotOpenable: NoOpenReason }
+  >) {
   const t = useT();
   const { locale } = useLocale();
   const row = rowFields(summary, t);
@@ -166,6 +188,7 @@ export function EmailEntry({
     </>
   );
 
+  const onOpen = "onOpen" in opener ? opener.onOpen : undefined;
   if (!onOpen) {
     return <div className="emailentry">{content}</div>;
   }
