@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { components } from "../api/schema";
 import { splitEmailBody } from "../format/emailtext";
 import {
   formatDate,
@@ -20,10 +21,8 @@ import {
 } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { EmailEntry } from "./emailentry";
-
-import type { components } from "../api/schema";
 import { Avatar, Badge, Button } from "./atoms";
+import { EmailEntry } from "./emailentry";
 import { PageZones, type PageZonesShape } from "./pagezones";
 import { FieldGuard } from "./rbac";
 import { useTruncationTooltip } from "./tooltip";
