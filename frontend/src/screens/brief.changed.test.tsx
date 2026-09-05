@@ -63,7 +63,7 @@ describe("what changed since the brief", () => {
       item({ id: "b", title: "Fleet retrofit moved" }),
     ]);
 
-    expect(container.textContent).toBe("");
+    expect(container.firstChild).toBeNull();
   });
 
   it("draws nothing on a morning the night already saw whole", () => {
@@ -72,7 +72,7 @@ describe("what changed since the brief", () => {
       item({ id: "b", changed_since_brief: false }),
     ]);
 
-    expect(container.textContent).toBe("");
+    expect(container.firstChild).toBeNull();
   });
 
   // Three names and then a count. A strip that listed eleven titles would be a
@@ -108,6 +108,55 @@ describe("what changed since the brief", () => {
     expect(screen.queryByText(/more/)).toBeNull();
   });
 
+  // The decisions deck above answers approvals, and this strip must not name
+  // one as well: the reader would see the same decision twice, once as a card
+  // they can answer and once as a line pointing at a worklist where it is not
+  // the row they came for. brief.sentence.ts holds the ONE spelling of what
+  // this page is answerable for, and reading the raw queue here was that rule
+  // reappearing one element higher.
+  it("leaves the decisions the deck above already answers to the deck", () => {
+    const { container } = draw([
+      item({
+        id: "a",
+        source: "approval",
+        title: "Approve the discount",
+        changed_since_brief: true,
+      }),
+      item({ id: "b", title: "Aster replied", changed_since_brief: true }),
+    ]);
+
+    expect(container.textContent).not.toContain("Approve the discount");
+    expect(screen.getByText(/Aster replied/)).toBeTruthy();
+  });
+
+  // THE mixed state, and the case that earns the `=== true` filter beyond the
+  // all-absent one. A run happened, so some rows carry the flag — but a row with
+  // no material timestamp of its own carries none even then
+  // (attention/briefdedupe.go skips it), and reading that absence as "changed"
+  // would name a row the night saw perfectly well.
+  it("names only the flagged rows when a run left some rows unflagged", () => {
+    draw([
+      item({ id: "a", title: "Aster replied", changed_since_brief: true }),
+      item({ id: "b", title: "Undateable row" }),
+      item({ id: "c", title: "Seen last night", changed_since_brief: false }),
+    ]);
+
+    expect(screen.getByText(/Aster replied/)).toBeTruthy();
+    expect(screen.queryByText(/Undateable row/)).toBeNull();
+    expect(screen.queryByText(/Seen last night/)).toBeNull();
+  });
+
+  // The only way out of the strip. Without it a reader is told three things
+  // moved and given nowhere to go and see them.
+  it("offers the way to the rows it named", () => {
+    draw([
+      item({ id: "a", title: "Aster replied", changed_since_brief: true }),
+    ]);
+
+    const link = screen.getByText(en["brief.changed.open"]);
+    expect(link.getAttribute("href")).toBe("#/worklist");
+  });
+
   // A payload with no queue at all draws nothing rather than throwing: a page
   // that throws is a worse answer than one that draws nothing.
   it("draws nothing rather than throwing on an answer with no queue", () => {
@@ -117,6 +166,6 @@ describe("what changed since the brief", () => {
       </LocaleProvider>,
     );
 
-    expect(container.textContent).toBe("");
+    expect(container.firstChild).toBeNull();
   });
 });

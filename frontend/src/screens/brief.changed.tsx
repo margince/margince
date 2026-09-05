@@ -4,6 +4,7 @@
 import { Callout } from "../design-system/callout";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { waitingRows } from "./brief.sentence";
 import { itemTitle } from "./worklist.copy";
 import type { Worklist } from "./worklist.queries";
 
@@ -41,7 +42,14 @@ const NAMED = 3;
 export function ChangedSinceBrief({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
   const { locale } = useLocale();
-  const changed = (day.queue ?? []).filter(
+  // waitingRows, not the raw queue: it drops the approvals the Decisions deck
+  // above already answers, and it is the ONE spelling of "what this page is
+  // answerable for" that brief.sentence.ts's own comment insists on. Reading
+  // day.queue here named a decision in the strip that the deck was drawing as a
+  // card at the same moment — the duplication that rule exists to stop,
+  // reappearing one element higher. It also answers [] for a payload with no
+  // queue, so it is the null guard too.
+  const changed = waitingRows(day).filter(
     (item) => item.changed_since_brief === true,
   );
   if (changed.length === 0) {
