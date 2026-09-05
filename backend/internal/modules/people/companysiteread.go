@@ -170,7 +170,7 @@ func validateSiteReadConfirmation(read SiteRead, in ConfirmCompanySiteReadInput)
 	if read.ConfirmedAt != nil {
 		return ErrSiteReadAlreadyConfirmed
 	}
-	if read.Status != "done" && read.Status != "partial" {
+	if read.Status != siteReadStatusDone && read.Status != siteReadStatusPartial {
 		return fmt.Errorf("its status is %s: %w", read.Status, ErrSiteReadNotConfirmable)
 	}
 	if read.DraftVersion != in.DraftVersion || read.ProposalHash != in.ProposalHash {

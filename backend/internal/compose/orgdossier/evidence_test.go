@@ -17,6 +17,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -258,6 +259,12 @@ func (s stubFacts) ListOrganizationFacts(
 	context.Context, ids.OrganizationID,
 ) ([]crmcontracts.OrganizationFact, error) {
 	return s.in.Facts, nil
+}
+
+func (s stubFacts) GetOrganization(
+	context.Context, ids.OrganizationID, storekit.ArchivedFilter,
+) (crmcontracts.Organization, error) {
+	return crmcontracts.Organization{DisplayName: s.in.Name}, nil
 }
 
 // A receipt must not both NAME a field as missing and render it blank. The

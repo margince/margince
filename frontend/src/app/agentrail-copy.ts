@@ -39,6 +39,7 @@ export const TASK_SAID: Readonly<Record<string, string>> = {
   deal_health: "Read the health of a deal",
   document_extract: "Pulled fields out of a document",
   draft_reply: "Drafted a reply",
+  embeddings: "Indexed records for search",
   enrich: "Filled in contact details",
   growth_fit: "Scored how well a company fits",
   nl_search: "Answered a search",

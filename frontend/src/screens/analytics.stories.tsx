@@ -142,6 +142,18 @@ const derivation = {
 
 const routes: RouteMap = {
   "GET /me": meRoute({}),
+  "GET /analytics/context": () =>
+    jsonResponse({
+      default_scope: { kind: "workspace", label: "Whole workspace" },
+      allowed_scopes: [{ kind: "workspace", label: "Whole workspace" }],
+      capabilities: {
+        view_manager_forecast: true,
+        submit_manager_forecast: true,
+      },
+      as_of: "2026-09-04T00:00:00Z",
+      timezone: "Europe/Berlin",
+      base_currency: "EUR",
+    }),
   "GET /pipelines": () => jsonResponse(pipelines),
   "POST /reports/pipeline-current": () => run("pipeline-current", stageRows),
   "POST /reports/forecast": () => run("forecast", forecastRows),
@@ -236,9 +248,7 @@ export const Performance: Story = {
   play: clickButton("Performance"),
 };
 
-// The seat's own outcomes: pipeline and meetings under an owner lens. Its own
-// route map, because serving /analytics/context to every story above would
-// grow a scope picker into renders that exist to show something else.
+// The seat's own outcomes: pipeline and meetings under an owner lens.
 const ownLensRoutes: RouteMap = {
   ...routes,
   "GET /analytics/context": () =>
@@ -286,9 +296,48 @@ const coverageRoutes: RouteMap = {
     }),
 };
 
+const deliveryRoutes: RouteMap = {
+  ...routes,
+  "POST /reports/projects-by-phase": () =>
+    run("projects-by-phase", [
+      {
+        phase: "delivering",
+        projects: 3,
+        open_deal_value_minor: 400000,
+        won_deal_value_minor: 900000,
+      },
+    ]),
+  "POST /reports/project-commitments": () =>
+    run("project-commitments", [
+      {
+        project_id: "p1",
+        name: "Rollout Nord",
+        phase: "delivering",
+        open_commitments: 5,
+        overdue_commitments: 2,
+      },
+    ]),
+  "POST /reports/projects-gone-quiet": () => run("projects-gone-quiet", []),
+};
+
+export const Delivery: Story = {
+  render: () => {
+    installFetchStub(deliveryRoutes);
+    return (
+      <StoryProviders>
+        <AnalyticsScreen />
+      </StoryProviders>
+    );
+  },
+  play: clickButton("Delivery"),
+};
+
 export const DataCoverage: Story = {
   render: () => {
-    installFetchStub(coverageRoutes);
+    installFetchStub({
+      ...coverageRoutes,
+      "GET /me": meRoute({ data_coverage: ["read"] }),
+    });
     return (
       <StoryProviders>
         <AnalyticsScreen />

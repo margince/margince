@@ -94,7 +94,7 @@ func (s *Store) SetThreadNotSales(ctx context.Context, id ids.ActivityID) error 
 			thread.key, thread.kind, thread.provider, capturedBy); err != nil {
 			return fmt.Errorf("activities: recording the thread as not sales: %w", err)
 		}
-		return s.recordDisposition(ctx, tx, id, stateNotSales, nil)
+		return s.recordDisposition(ctx, tx, id, stateNotSales, nil, "")
 	})
 }
 
@@ -120,7 +120,7 @@ func (s *Store) ClearThreadNotSales(ctx context.Context, id ids.ActivityID) erro
 			// decision that was never made.
 			return nil
 		}
-		return s.recordDisposition(ctx, tx, id, stateSalesAgain, nil)
+		return s.recordDisposition(ctx, tx, id, stateSalesAgain, nil, "")
 	})
 }
 
@@ -192,21 +192,48 @@ const (
 	directionInbound = "inbound"
 )
 
-// SnoozeMessage puts one message down for this reader until a moment.
+// SnoozeMessage puts one message down for this reader until its reopen
+// condition is met.
 //
-// The moment is the caller's, and one already past is refused rather than
+// A `time` snooze names a moment, and one already past is refused rather than
 // stored: it would write a row that hides nothing and read to the rep as a
 // snooze that did not take. Judged against the STORE's clock, which the
 // scheduling suites inject — a test driving a snooze past its moment must not
 // need the wall clock to reach it.
-func (s *Store) SnoozeMessage(ctx context.Context, id ids.ActivityID, until time.Time) error {
-	if !until.After(s.now()) {
+//
+// `reply` and `meeting` name no moment at all. They wait on rows the waiting
+// query already reads, so the condition is stored and evaluated there rather
+// than turned into a guessed date here.
+func (s *Store) SnoozeMessage(
+	ctx context.Context, id ids.ActivityID, on values.ReopenCondition,
+	until *time.Time, ref *ids.UUID,
+) error {
+	if on.WantsInstant() {
+		if until == nil {
+			return &values.ParseError{
+				Field: fieldSnoozedUntil, Code: "snooze_needs_a_moment",
+				Message: "a snooze that waits on the clock names the moment it lifts",
+			}
+		}
+		if !until.After(s.now()) {
+			return &values.ParseError{
+				Field: fieldSnoozedUntil, Code: "snooze_in_the_past",
+				Message: "a snooze names a moment still ahead",
+			}
+		}
+	} else if until != nil {
 		return &values.ParseError{
-			Field: "snoozed_until", Code: "snooze_in_the_past",
-			Message: "a snooze names a moment still ahead",
+			Field: fieldSnoozedUntil, Code: "snooze_has_no_moment",
+			Message: "a snooze waiting on a reply or a meeting lifts when that happens, not on a date",
 		}
 	}
-	return s.setReaderState(ctx, id, stateSnoozed, &until)
+	if on.NeedsReference() != (ref != nil) {
+		return &values.ParseError{
+			Field: "reopen_ref", Code: "reopen_ref_shape",
+			Message: "only a snooze waiting on a meeting names the meeting it waits for",
+		}
+	}
+	return s.setReaderState(ctx, id, stateSnoozed, until, on, ref)
 }
 
 // SetMessageNotMine records that this reader is not the person to answer.
@@ -215,7 +242,7 @@ func (s *Store) SnoozeMessage(ctx context.Context, id ids.ActivityID, until time
 // Thursday — what makes it stop applying is the record changing hands, which
 // the reader of these rows judges against the owner of the day.
 func (s *Store) SetMessageNotMine(ctx context.Context, id ids.ActivityID) error {
-	return s.setReaderState(ctx, id, stateNotMine, nil)
+	return s.setReaderState(ctx, id, stateNotMine, nil, "", nil)
 }
 
 // ClearMessageDisposition picks a message back up — the undo behind every
@@ -237,12 +264,15 @@ func (s *Store) ClearMessageDisposition(ctx context.Context, id ids.ActivityID) 
 			// sibling above states, and silent for the same one.
 			return nil
 		}
-		return s.recordDisposition(ctx, tx, id, statePickedUp, nil)
+		return s.recordDisposition(ctx, tx, id, statePickedUp, nil, "")
 	})
 }
 
 // setReaderState writes one reader's own judgement about one message.
-func (s *Store) setReaderState(ctx context.Context, id ids.ActivityID, state string, until *time.Time) error {
+func (s *Store) setReaderState(
+	ctx context.Context, id ids.ActivityID, state string, until *time.Time,
+	on values.ReopenCondition, ref *ids.UUID,
+) error {
 	return s.judgeMessage(ctx, id, func(ctx context.Context, tx pgx.Tx, capturedBy string) error {
 		reader := readerOrNobody(ctx)
 		if reader.IsZero() {
@@ -251,18 +281,43 @@ func (s *Store) setReaderState(ctx context.Context, id ids.ActivityID, state str
 			// the acting human's id would set aside work on their behalf.
 			return apperrors.ErrPermissionDenied
 		}
+		// The meeting a snooze names must exist, be a meeting, and be one this
+		// reader may read. Checked inside the transaction so it cannot be
+		// archived between the check and the row that waits on it.
+		if ref != nil {
+			if err := EnsureMeetingReference(ctx, tx, *ref); err != nil {
+				return err
+			}
+		}
+		// NULL rather than the empty string when the judgement is not a
+		// snooze: the column's CHECK pairs its presence with the snoozed
+		// state, and an empty string is present.
+		var storedOn *string
+		if on != "" {
+			raw := string(on)
+			storedOn = &raw
+		}
+		// set_at comes from the STORE's clock, not from now() in SQL.
+		//
+		// A reply snooze lifts on mail that arrived after the rep put the
+		// message down, so set_at is no longer just a record of when — it is
+		// one side of that comparison. A wall-clock stamp against injected
+		// instants makes every seeded reply look older than the snooze, which
+		// is a snooze that never lifts.
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO activity_reader_state (activity_id, reader_id, state, snoozed_until, set_by)
-			VALUES ($1, $2, $3, $4, $5)
+			INSERT INTO activity_reader_state (activity_id, reader_id, state, snoozed_until, reopen_on, reopen_ref, set_by, set_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 			ON CONFLICT (activity_id, reader_id) DO UPDATE
 			   SET state = EXCLUDED.state,
 			       snoozed_until = EXCLUDED.snoozed_until,
+			       reopen_on = EXCLUDED.reopen_on,
+			       reopen_ref = EXCLUDED.reopen_ref,
 			       set_by = EXCLUDED.set_by,
-			       set_at = now()`,
-			id, reader, state, until, capturedBy); err != nil {
+			       set_at = EXCLUDED.set_at`,
+			id, reader, state, until, storedOn, ref, capturedBy, s.now().UTC()); err != nil {
 			return fmt.Errorf("activities: setting the message aside: %w", err)
 		}
-		return s.recordDisposition(ctx, tx, id, state, until)
+		return s.recordDisposition(ctx, tx, id, state, until, on)
 	})
 }
 
@@ -304,10 +359,14 @@ func (s *Store) judgeMessage(
 // announcement, in the same transaction as the judgement itself.
 func (s *Store) recordDisposition(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, state string, until *time.Time,
+	on values.ReopenCondition,
 ) error {
 	after := map[string]any{"disposition": state}
 	if until != nil {
 		after["snoozed_until"] = until.UTC()
+	}
+	if on != "" {
+		after["reopen_on"] = string(on)
 	}
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", "activity", id.UUID, after)
 	if err != nil {

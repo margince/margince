@@ -14,9 +14,10 @@ import { CompanyLogo } from "../design-system/companylogo";
 import { Logomark } from "../design-system/logomark";
 import { useLocale, useT } from "../i18n";
 import { useCompany } from "../screens/onboarding";
-import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settings";
+import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settingsnav";
 import { AgentEdge } from "./agent-edge";
 import { AgentRail } from "./agentrail";
+import { CaptureChip } from "./capture-chip";
 import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
 import { SCREEN_ENTITY } from "./entity";
@@ -901,6 +902,11 @@ export function Shell({
             railless; these advisories belong only here. */}
           <EconomyBanner />
           <EmbedReindexBanner />
+          {/* The import's gauge, floating top-centre of this column for as
+            long as mail is arriving. Inside `.main` rather than beside the
+            edge below, because it is positioned against the content column
+            and not the window. */}
+          <CaptureChip route={route} />
           {/* Focusable only as the skip link's destination — never a tab stop of
             its own, which is what tabIndex -1 buys. A reader who takes the skip
             lands here, PAST the strip, and the next Tab continues into the page's

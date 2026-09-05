@@ -160,6 +160,15 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool) {
 	// domain control, and the only way an operator corrects a shipped
 	// baseline that is wrong about one of their customers.
 	s.consumerMailDomainHandlers = consumerMailDomainHandlers{store: capture.NewFreemailDomains(InstallationDB(pool))}
+	// The seat COUNT, wired here rather than with the entitlement, because how
+	// many seats an installation is USING is a fact about app_user rows and holds
+	// whether or not a license was ever configured. A deployment that wires no
+	// posture still answers the capacity surface.
+	//
+	// The entitlement is the half that needs the option: WithLicensePosture adds
+	// the posture to this handler through withPosture rather than rebuilding it,
+	// so the store is spelled once and neither half can drop the other.
+	s.licenseHandlers = licenseHandlers{seats: identity.NewSeatUsage(InstallationDB(pool))}
 }
 
 // wireExportSurface binds the two export transports.

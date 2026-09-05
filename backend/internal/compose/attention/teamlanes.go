@@ -62,3 +62,22 @@ type TeamMember struct {
 type OverdueLoad interface {
 	OverduePerAssignee(ctx context.Context, asOf time.Time) (map[ids.UUID]int, error)
 }
+
+// PromiseLoad counts each person's commitments due by an instant.
+//
+// Read from extracted claims, like the rep's own commitments lane, so the board
+// and the rep's day count the same thing. A count taken from open tasks instead
+// would be a different question wearing the same column heading: a task carries
+// a date and no provenance, and a promise is a thing somebody SAID.
+//
+// Optional, and for a sharper reason than the others: an installation that
+// extracts no claims binds nothing here, and a zero column would tell a lead
+// their team promised nothing — when in truth nobody was listening.
+// It takes the OWNERS to count rather than answering for everyone, because the
+// promise store answers one owner at a time — the claim's owner is the owner of
+// the PERSON it was made to, and that ladder lives in the store's own query. A
+// board asking for a roster it already has is cheaper than a second aggregate
+// restating who owns a promise.
+type PromiseLoad interface {
+	DuePerOwner(ctx context.Context, owners []ids.UUID, by time.Time) (map[ids.UUID]int, error)
+}

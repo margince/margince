@@ -225,6 +225,21 @@ export function formatNumber(value: number, locale: Locale): string {
 }
 
 /**
+ * A share of a whole as a whole-number percentage: "42%", or "42 %" for a
+ * German reader, whose typography puts a space before the sign.
+ *
+ * Whole numbers only, because what this labels is progress — a ring, a chip —
+ * where "41.7%" claims a precision a count of scanned messages does not have.
+ * A rate that carries a real fraction is `formatRate`'s job.
+ */
+export function formatPercent(fraction: number, locale: Locale): string {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    style: "percent",
+    maximumFractionDigits: 0,
+  }).format(fraction);
+}
+
+/**
  * A CHANGE rather than a quantity: "+3", "-2", "±0".
  *
  * The sign is the whole point, so it is always shown — a bare "3" beside last

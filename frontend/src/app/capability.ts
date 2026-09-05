@@ -174,6 +174,11 @@ export function useCanUpsert(object: RbacObject): boolean {
  * who revoked their own grant on it could never restore it — so the role is
  * their honest predicate rather than a stand-in for one.
  *
+ * One more surface holds it for the opposite reason: the agent's cost figure
+ * on the rail. The server serves it on `automation:update`, a grant wider than
+ * the administrator — ops holds it, and an edited role may — so there the role
+ * narrows a grant that exists rather than standing in for one that does not.
+ *
  * It is one function so the predicate cannot drift. Before this, four call
  * sites in three files asked the question in two spellings, and the wider one
  * (`admin || ops`) rendered surfaces the server then refused.

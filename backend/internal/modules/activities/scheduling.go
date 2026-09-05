@@ -297,13 +297,19 @@ func (s *Store) BookMeeting(ctx context.Context, in BookMeetingInput) (crmcontra
 		source = sourceManual
 	}
 	occurred := in.Start
+	// Booking a meeting is what `booked` MEANS, and this is the door most
+	// meetings arrive through. Leaving the status NULL here left it saying
+	// nothing about what had just happened, so "how many did we book this
+	// week" answered zero while the calendar filled up.
+	booked := string(crmcontracts.ActivityMeetingStatusBooked)
 	activity, _, err := s.LogActivity(ctx, LogActivityInput{
-		Kind:       "meeting",
-		Subject:    &subject,
-		OccurredAt: &occurred,
-		HostUserID: &in.Host,
-		Links:      in.Links,
-		Source:     source,
+		Kind:          "meeting",
+		Subject:       &subject,
+		OccurredAt:    &occurred,
+		HostUserID:    &in.Host,
+		MeetingStatus: &booked,
+		Links:         in.Links,
+		Source:        source,
 	})
 	if _, excluded := storekit.ExclusionViolation(err); excluded {
 		return crmcontracts.Activity{}, &SlotTakenError{Start: in.Start}

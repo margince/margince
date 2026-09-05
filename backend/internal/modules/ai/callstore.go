@@ -60,8 +60,12 @@ type Call struct {
 	AttemptReason string
 	// Kind distinguishes a chat-ladder attempt from an embed-lane call —
 	// callKindCompletion or callKindEmbedding.
-	Kind                  string
-	CorrelationID         *ids.UUID
+	Kind          string
+	CorrelationID *ids.UUID
+	// Subject is the record the call was about, when the site that made it
+	// said so. It travels to the rail's occurrence and never to ai_call: the
+	// trace is about the call, the occurrence is about the reader's work.
+	Subject               Subject
 	Task                  Task
 	Tier                  Tier
 	Provider              string

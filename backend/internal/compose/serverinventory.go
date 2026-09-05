@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
+	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/network"
 	"github.com/margince/margince/backend/internal/compose/org360"
@@ -77,6 +78,7 @@ type Server struct {
 	// unqualified name, and two embedded `Handlers` is a compile error rather
 	// than a decision anybody made.
 	attentionHandlers attention.Handlers
+	magicHandlers     magic.Handlers
 	// The relationship-graph reads (ADR-0078): who knows this contact, and
 	// how a deal is covered.
 	network.Reads
@@ -456,6 +458,11 @@ var _ crmcontracts.ServerInterface = Server{}
 // because the field is named rather than embedded, so no method is promoted.
 func (s Server) GetAttention(w http.ResponseWriter, r *http.Request) {
 	s.attentionHandlers.GetAttention(w, r)
+}
+
+// GetMagic forwards the machinery's receipt to its own surface.
+func (s Server) GetMagic(w http.ResponseWriter, r *http.Request, params crmcontracts.GetMagicParams) {
+	s.magicHandlers.GetMagic(w, r, params)
 }
 
 // GetWorklist forwards the ranked read to the same assembled surface.

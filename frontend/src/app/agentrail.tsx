@@ -19,7 +19,12 @@ import {
   MarginceCoreScene,
   type MarginceCoreState,
 } from "../design-system/margince-core";
-import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
+import {
+  formatMoney,
+  formatNumber,
+  formatPercent,
+  INTL_LOCALE,
+} from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { usePendingApprovals } from "../screens/approvals.queries";
@@ -39,7 +44,8 @@ import { type AiActivity, useAiActivity } from "./ai-activity";
 import { lineFor, PANEL_HEADING } from "./ai-activity-lines";
 import { laneFor } from "./ai-activity-orb";
 import { useAgentTierMap } from "./autonomy";
-import { useCan } from "./capability";
+import { useCan, useHoldsAdminRole } from "./capability";
+import { type CaptureProgress, liveCapture } from "./capture-progress";
 import { usePopoverDismiss } from "./popover";
 import type { Route } from "./router";
 import { usePhoneViewport } from "./viewport";
@@ -91,6 +97,13 @@ type Signals = Readonly<{
   license: LicensePosture | undefined;
   /** The licence posture in the reader's words, for the line and the panel. */
   licenseLine: string;
+  /**
+   * Mail being imported this moment, with the sentence that says so; null
+   * while no mailbox is importing. Read off the same connections list as
+   * `offline`, so the orb never reports a mailbox as both unreachable and
+   * mid-import from two answers.
+   */
+  capture: Readonly<{ progress: CaptureProgress; line: string }> | null;
 }>;
 
 /**
@@ -145,14 +158,17 @@ function useAiPosture(): AiPosture {
 
 function useSignals(): Signals {
   const t = useT();
+  const { locale } = useLocale();
   const approvals = usePendingApprovals();
   const connectors = useConnectors();
   const ai = useAiPosture();
   const license = useLicensePosture();
 
-  const offline = (connectors.data?.data ?? [])
+  const connections = connectors.data?.data ?? [];
+  const offline = connections
     .filter((connection) => connection.status !== "connected")
     .map((connection) => connection.account_label ?? connection.provider);
+  const capture = liveCapture(connections);
 
   return {
     // Absent `data` means the read has not answered, or was refused. A 0 here
@@ -165,7 +181,27 @@ function useSignals(): Signals {
       license === "refused"
         ? t("shell.license.refused")
         : t("shell.license.none"),
+    capture:
+      capture === null
+        ? null
+        : { progress: capture, line: captureLine(capture, t, locale) },
   };
+}
+
+/**
+ * The one line an import puts under the orb: what is happening, and how far
+ * along where a preview gave it a denominator. Without one the sentence stops
+ * at the verb rather than inventing a share.
+ */
+function captureLine(
+  capture: CaptureProgress,
+  t: (key: MessageKey) => string,
+  locale: Locale,
+): string {
+  const said = t("shell.capture.importing");
+  return capture.fraction === null
+    ? said
+    : `${said} · ${formatPercent(capture.fraction, locale)}`;
 }
 
 /**
@@ -254,9 +290,12 @@ function useRecentCalls(): Readonly<{
  * a confident zero: the difference between "this cost nothing" and "nobody knows
  * what this cost" is the whole point of the row.
  *
- * Operator-only, on the same grant the spend card uses: the server treats the
- * runtime's cost as operator information, so a sales seat gets nothing and the
- * panel says so rather than printing a number that seat could not verify.
+ * Admin-only. The grant alone is not the predicate: `automation:update` is what
+ * the server serves the figure on, and the ops seat holds it by default while an
+ * operator-edited role may hold it too. What the agent costs is the
+ * administrator's figure, not every seat's that may configure automation, so
+ * the role narrows the grant here — and the grant still stands beside it,
+ * because an admin whose role lost it would only be asking for a 403.
  */
 function useAiSpend(): Readonly<{
   allowed: boolean;
@@ -265,7 +304,9 @@ function useAiSpend(): Readonly<{
   /** One number per day of the month so far, oldest first. */
   daily: readonly number[];
 }> {
-  const allowed = useCan("automation", "update");
+  const admin = useHoldsAdminRole();
+  const granted = useCan("automation", "update");
+  const allowed = admin && granted;
   const usage = useQuery({
     queryKey: ["ai-usage", "agentrail-month"],
     enabled: allowed,
@@ -822,6 +863,17 @@ function usePanelFrame(
  * moment before the feed arrives and settles into its own lane after. A guess
  * the owner of the fact overrules is the right shape for a bridge.
  *
+ * A mailbox import is the third observer, and the one the feed cannot replace:
+ * the feed carries capture as per-message classifications the router announces
+ * once each call is over, so an import that runs for an hour reaches it as a
+ * trickle of settled lines and never as work in flight. The run's own status
+ * row (capture-progress.ts) is the server's projection of that work, read from
+ * the connections list this section already holds, and it is `ingest` by
+ * definition: mail arriving that the agent did not hold a moment ago. It ranks
+ * below a named occurrence for the same reason `asking` does — the feed names
+ * a run and this names a lane — and above `asking`, because it knows which
+ * half of the lifecycle it is in.
+ *
  * The order is severity, and it starts with the faults that stop the agent
  * running AT ALL, because an agent with no model bound is not a broken run, it
  * is no runs. Under those, a run that actually broke. Under that, the licence.
@@ -890,6 +942,12 @@ function derive(
   const live = server.running.find((item) => item.state !== "stalled");
   if (live) {
     return { state: laneFor(live), cause: live };
+  }
+  // Mail being imported. No cause travels with it because it is not an
+  // occurrence the feed can name; the line under the orb is the import's own,
+  // from the signals (`barLine`), with its share where a preview gave it one.
+  if (signals.capture !== null) {
+    return { state: "ingest", cause: null };
   }
   // This tab's own ask, which the feed has not caught up with yet. `working`
   // rather than a lane read from the kind, because the kind is exactly what is
@@ -1038,7 +1096,7 @@ function barLine(
     return agentLine ?? LABELS.working;
   }
   if (state === "ingest") {
-    return agentLine ?? LABELS.reading;
+    return agentLine ?? signals.capture?.line ?? LABELS.reading;
   }
   if (signals.waiting !== undefined && signals.waiting > 0) {
     return `${signals.waiting} ${LABELS.waiting}`;
@@ -1052,6 +1110,27 @@ function barLine(
     return devLine;
   }
   return LABELS.idle;
+}
+
+/**
+ * How far the import has got, drawn as the ring around the orb.
+ *
+ * The ring is the IMPORT's and not the state's: it is drawn whenever mail is
+ * being taken in and the orb is live, whichever occurrence the feed named for
+ * the colour, because a morning brief starting mid-import does not stop the
+ * import. It goes with a fault, though — a red or amber orb wearing a
+ * progress ring would say the work is going well and badly at once — and it is
+ * absent without a denominator, since a ring at a guessed share is a ring drawn
+ * wrong. `undefined` is what the Core reads as "no ring".
+ */
+function importRing(
+  state: MarginceCoreState,
+  capture: Signals["capture"],
+): number | undefined {
+  if (capture === null || !RUNNING.has(state)) {
+    return undefined;
+  }
+  return capture.progress.fraction ?? undefined;
 }
 
 /**
@@ -1167,6 +1246,18 @@ export function AgentRail({
     state === "idle"
       ? resting
       : barLine(state, signals, t("auth.coreDevelopment"), agentLine);
+  // ONE line under the orb, whoever is talking. While this tab is fetching
+  // something it can name, that sentence is the orb's line — "Reading Acme" is
+  // the status a reader is waiting on at that moment — and the agent's own line
+  // has the slot back the instant the read settles. Two stacked lines read as
+  // two statuses, and a reader asked which one was the status.
+  //
+  // A fault keeps the slot regardless: the colour and the caption are always
+  // about the same thing, and an amber orb captioned "Reading the pipeline"
+  // tells a reader the pipeline is the fault.
+  const holdsFault = state === "warning" || state === "error";
+  const shown = ticker.length > 0 && !holdsFault ? ticker[0].said : line;
+  const ring = importRing(state, signals.capture);
   return (
     <section
       className="arblock"
@@ -1229,30 +1320,17 @@ export function AgentRail({
         <MarginceCoreScene
           state={state}
           feed={false}
+          progress={ring}
           size="md"
           className="arorb"
         />
         {/* Hidden by the stylesheet on the collapsed rail, where the orb and the
             count are the whole report and the button's name carries the rest. */}
         <span className="arwords">
-          {/* The agent's line, and it is the agent's alone. It used to be shared
-              with the tool's own narration below, which meant the one sentence
-              about the agent vanished for as long as anything was loading: the
-              two subjects took turns in one slot, and a reader could not tell
-              which of them was talking. */}
-          <span className="arline">{line}</span>
-          {/* What the TOOL is fetching for this reader, one named thing at a
-              time, in its own quieter register underneath. It is true at the
-              same moment as the line above and about something else, so it sits
-              beside it rather than replacing it. Keyed on the event id so a
-              repeated phrase still arrives as a new line rather than sitting
-              there looking stuck: what a reader is counting is EVENTS, and two
-              identical sentences in a row are two of them. */}
-          {ticker.length > 0 && (
-            <span className="artool" key={ticker[0].id}>
-              {ticker[0].said}
-            </span>
-          )}
+          {/* The one line: the tool's named read while one is in flight, the
+              agent's own sentence otherwise. The panel keeps the agent's line
+              regardless, because it is the agent's report. */}
+          <span className="arline">{shown}</span>
           {/* The spend sits in the bar and not only in the panel: it is the one
               figure somebody is accountable for, and a number nobody opens a
               panel to see is a number nobody sees. Absent when this seat may not
