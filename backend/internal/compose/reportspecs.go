@@ -237,8 +237,16 @@ var prebuiltReports = map[string]reportSpec{
 			"and this is the one lead key that still counts them",
 	},
 	"activities-by-kind": {
-		entity:       datasource.EntityActivity,
-		table:        tableActivity,
+		entity: datasource.EntityActivity,
+		table:  tableActivity,
+		// `activity` has no owner_id column at all, so the population
+		// default's hardcoded `owner_id = caller` clause does not narrow this
+		// report for a non-workspace-scope caller — it renders invalid SQL,
+		// a 500 rather than a wrong answer. Row scope alone (activityWalk
+		// below, through ActivityContentClause) already narrows this
+		// correctly, since an activity's discoverability is real per-row
+		// scope and not the identity-table TRUE a deal's is.
+		population:   measureEveryReadableRow,
 		baseWhere:    whereArchivedNull,
 		basePlain:    "live (unarchived) activities",
 		activityWalk: true,
