@@ -231,7 +231,15 @@ export function OnboardingBackread({
           {t("backfill.statusUnavailable")}
         </p>
         <div className="ob-backread-acts">
-          <Button variant="primary" onClick={() => onDone()}>
+          {/* Every exit from this surface waits on `disabled`: a decision
+              about the mailbox still being written (the posture) needs this
+              dialog mounted to show its refusal, and closing it mid-write
+              would leave that refusal with nowhere to land. */}
+          <Button
+            variant="primary"
+            disabled={disabled}
+            onClick={() => onDone()}
+          >
             {t("ob.conv.connect.dialogDone")}
           </Button>
         </div>
@@ -274,6 +282,7 @@ export function OnboardingBackread({
       run={status.data}
       cancelling={cancel.isPending}
       cancelProblem={safeDetail(cancel.isError, cancel.error, t)}
+      held={disabled}
       onCancel={() => cancel.mutate()}
       onDone={onDone}
     />
@@ -341,7 +350,9 @@ function BackreadSetup({
         >
           {t("ob.backread.start")}
         </Button>
-        <Button onClick={() => onDone()}>{t("ob.backread.skip")}</Button>
+        <Button disabled={held} onClick={() => onDone()}>
+          {t("ob.backread.skip")}
+        </Button>
       </div>
       {startProblem !== null && (
         <p className="ob-backread-problem" role="alert">
@@ -412,12 +423,16 @@ function BackreadRun({
   run,
   cancelling,
   cancelProblem,
+  held,
   onCancel,
   onDone,
 }: Readonly<{
   run: BackfillStatus;
   cancelling: boolean;
   cancelProblem: string | null;
+  /** A decision about this mailbox is still being written; the exit waits
+   *  for it, for the reason the setup's does. */
+  held?: boolean;
   onCancel: () => void;
   onDone: () => void;
 }>) {
@@ -437,7 +452,7 @@ function BackreadRun({
         </p>
       )}
       <div className="ob-backread-acts">
-        <Button variant="primary" onClick={() => onDone()}>
+        <Button variant="primary" disabled={held} onClick={() => onDone()}>
           {live ? t("ob.backread.explore") : t("ob.conv.connect.dialogDone")}
         </Button>
         {live && (

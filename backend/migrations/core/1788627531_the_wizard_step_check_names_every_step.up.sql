@@ -7,4 +7,9 @@ ALTER TABLE onboarding_wizard_state
     DROP CONSTRAINT onboarding_wizard_state_step_check;
 ALTER TABLE onboarding_wizard_state
     ADD CONSTRAINT onboarding_wizard_state_step_check CHECK (
-        step IN ('read', 'confirm', 'basis', 'invite', 'team', 'voice', 'results', 'connect', 'complete'));
+        step IN ('read', 'confirm', 'basis', 'invite', 'team', 'voice', 'results', 'connect', 'complete'))
+    NOT VALID;
+-- Validated apart from the add, so the scan of existing rows holds no lock
+-- that blocks a write; every row already passes, the vocabulary only grew.
+ALTER TABLE onboarding_wizard_state
+    VALIDATE CONSTRAINT onboarding_wizard_state_step_check;

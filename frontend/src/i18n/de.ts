@@ -5033,6 +5033,7 @@ export const de = {
   "ob.conv.connect.scopeImap": "E-Mail-Adresse und Passwort",
   "ob.conv.connect.connectCta": "verbinden →",
   "ob.conv.connect.connectedCta": "verbunden",
+  "ob.conv.connect.savedCta": "gespeichert",
   "ob.conv.connect.blockedCard":
     "Du hast schon ein Postfach gewählt. Trenne es in den Einstellungen, um zu wechseln.",
   "ob.conv.connect.guaranteesToggle": "Was Verbinden tatsächlich bedeutet",
@@ -5162,8 +5163,8 @@ export const de = {
   "ob.conv.connect.mailboxNeeded":
     "Ein Postfach fehlt noch: Mail ist, was gelesen und entworfen wird. Verbinde oben eines, oder gehe vorerst ohne weiter.",
 
-  // Die Setup-Leiste: fünf Stationen, je ein Wort. Lang genug, den Schritt zu
-  // benennen, kurz genug, dass fünf davon bei 10px in eine Spalte passen.
+  // Die Setup-Leiste: sechs Stationen, je ein Wort. Lang genug, den Schritt zu
+  // benennen, kurz genug, dass sechs davon bei 10px in eine Spalte passen.
   "ob.rail.read": "Lesen",
   "ob.rail.confirm": "Bestätigen",
   "ob.rail.basis": "Basis",

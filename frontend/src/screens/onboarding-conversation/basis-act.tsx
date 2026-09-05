@@ -179,6 +179,12 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
           label={t("ob.conv.basis.continue")}
           pending={leaving}
           blockers={blockers}
+          // A reader who MAY change the basis does not leave until it has been
+          // read: with nothing stored yet there is nothing to show, nothing to
+          // patch, and a Continue that pressed would record the basis as
+          // settled on values nobody saw. The gate above carries the read's
+          // own pending and retry states meanwhile.
+          held={canManage && !settings.isSuccess}
           stillNeeded={(why) => why.join(" ")}
           note={
             update.isError && refused.size === 0 ? (

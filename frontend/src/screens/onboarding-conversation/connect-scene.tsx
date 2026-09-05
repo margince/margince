@@ -567,6 +567,7 @@ function ConnectorCard({
   onOpen,
   settingsLink = false,
   idleCta,
+  settledCta,
 }: Readonly<{
   markKey: string;
   name: string;
@@ -583,6 +584,9 @@ function ConnectorCard({
    *  verb is something else names it, so the surface never invites a reader
    *  to "connect" a thing that is only being written down. */
   idleCta?: string;
+  /** What the settled tile's affordance says, for the same reason: a saved
+   *  address is not a connected integration and must not read as one. */
+  settledCta?: string;
 }>) {
   const t = useT();
   const face = (
@@ -613,7 +617,7 @@ function ConnectorCard({
           : state !== "blocked" && (
               <span className="ob-connect-card-cta">
                 {state === "connected"
-                  ? t("ob.conv.connect.connectedCta")
+                  ? (settledCta ?? t("ob.conv.connect.connectedCta"))
                   : (idleCta ?? t("ob.conv.connect.connectCta"))}
               </span>
             )}
@@ -678,6 +682,7 @@ function LinkedinCard({
         }
         auth={t("ob.conv.connect.linkedinAuth")}
         idleCta={t("ob.conv.connect.saveCta")}
+        settledCta={t("ob.conv.connect.savedCta")}
         state={
           status === "saved"
             ? "connected"

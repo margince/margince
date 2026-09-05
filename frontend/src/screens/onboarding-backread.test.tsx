@@ -519,6 +519,34 @@ describe("leaving", () => {
     expect(cancels).toEqual([]);
   });
 
+  it("keeps every exit shut while a decision about the mailbox is still being written", async () => {
+    installFetchStub({
+      [STATUS_ROUTE]: () =>
+        jsonResponse({ state: "running", counts: { messages_scanned: 5 } }),
+    });
+    const onDone = vi.fn();
+    rtlRender(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <LocaleProvider initial="en">
+          <OnboardingBackread provider="gmail" disabled onDone={onDone} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+
+    // The posture write needs this surface mounted to show a refusal; an
+    // exit that pressed mid-write would leave it nowhere to land.
+    const exit = await screen.findByRole("button", {
+      name: "Continue while it reads",
+    });
+    expect(exit).toBeDisabled();
+    await userEvent.click(exit);
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
   it("declines the history read without starting one", async () => {
     const starts: unknown[] = [];
     installFetchStub({

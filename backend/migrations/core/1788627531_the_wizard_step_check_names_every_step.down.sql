@@ -7,4 +7,7 @@ ALTER TABLE onboarding_wizard_state
     DROP CONSTRAINT onboarding_wizard_state_step_check;
 ALTER TABLE onboarding_wizard_state
     ADD CONSTRAINT onboarding_wizard_state_step_check CHECK (
-        step IN ('read', 'confirm', 'voice', 'results', 'connect', 'complete'));
+        step IN ('read', 'confirm', 'voice', 'results', 'connect', 'complete'))
+    NOT VALID;
+ALTER TABLE onboarding_wizard_state
+    VALIDATE CONSTRAINT onboarding_wizard_state_step_check;

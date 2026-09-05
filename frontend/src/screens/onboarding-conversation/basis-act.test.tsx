@@ -114,6 +114,53 @@ describe("BasisAct", () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
+  it("holds Continue until the reporting basis has been read", async () => {
+    const deferred: { resolve: ((r: Response) => void) | null } = {
+      resolve: null,
+    };
+    installFetchStub({
+      "GET /me": meRoute({ installation_settings: ["update"] }),
+      "GET /installation/settings": () =>
+        new Promise((resolve) => {
+          deferred.resolve = resolve;
+        }),
+    });
+    const state: ConversationState = {
+      ...initialConversationState,
+      act: "basis",
+      phase: "bs.ask",
+    };
+    const dispatch = vi.fn();
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <LocaleProvider initial="en">
+          <BasisAct state={state} dispatch={dispatch} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+
+    // Nothing stored yet: a Continue that pressed would settle the basis on
+    // values nobody has seen, so it does not press. (The grant itself arrives
+    // with the session probe, which the shell has long settled by the time
+    // this act mounts; here it is fetched, hence the wait.)
+    const onward = await screen.findByRole("button", { name: "Continue" });
+    await waitFor(() => expect(onward).toBeDisabled());
+    await user.click(onward);
+    expect(dispatch).not.toHaveBeenCalled();
+
+    deferred.resolve?.(jsonResponse(settings));
+    await waitFor(() => expect(onward).not.toBeDisabled());
+    await user.click(onward);
+    await waitFor(() =>
+      expect(dispatch).toHaveBeenCalledWith({ type: "BASIS_DONE" }),
+    );
+  });
+
   it("asks nothing of a reader who may not change the basis, and still continues", async () => {
     const { dispatch } = renderBasis(false);
     const user = userEvent.setup();

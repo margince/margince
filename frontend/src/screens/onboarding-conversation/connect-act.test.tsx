@@ -560,6 +560,10 @@ describe("the LinkedIn card", () => {
   it("shows the resolved state and offers no further action once connected", () => {
     renderConnectAct(undefined, "saved");
     expect(screen.getByText("Profile saved")).toBeTruthy();
+    // A saved address is not a connected integration, and the tile's own
+    // affordance must not call it one.
+    expect(screen.getByText("saved")).toBeTruthy();
+    expect(screen.queryByText("connected")).toBeNull();
     expect(screen.getByRole("button", { name: /LinkedIn/ })).toBeDisabled();
   });
 

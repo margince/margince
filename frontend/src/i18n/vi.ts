@@ -4978,6 +4978,7 @@ export const vi = {
   "ob.conv.connect.scopeImap": "Địa chỉ email và mật khẩu",
   "ob.conv.connect.connectCta": "kết nối →",
   "ob.conv.connect.connectedCta": "đã kết nối",
+  "ob.conv.connect.savedCta": "đã lưu",
   "ob.conv.connect.blockedCard":
     "Bạn đã chọn một hộp thư rồi. Hãy ngắt kết nối trong Cài đặt nếu muốn đổi.",
   "ob.conv.connect.guaranteesToggle": "Kết nối thì thực sự làm gì",
@@ -5104,8 +5105,8 @@ export const vi = {
   "ob.conv.linkedin.skipped":
     "Đã bỏ qua LinkedIn. Bạn thêm hồ sơ lúc nào cũng được trong Cài đặt.",
 
-  // The setup rail: five stops, one word each. Long enough to name the step,
-  // short enough that five of them fit a column at 10px.
+  // The setup rail: six stops, one word each. Long enough to name the step,
+  // short enough that six of them fit a column at 10px.
   "ob.rail.read": "Đọc",
   "ob.rail.confirm": "Xác nhận",
   "ob.rail.basis": "Cơ sở",

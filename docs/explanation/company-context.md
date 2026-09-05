@@ -13,8 +13,8 @@ prompt prose. This page explains the whole lane; the model runtime it feeds is
 ```text
  FIRST RUN (the wizard)                 THE PROFILE (people module)       AI TASKS (compose + ai)
  ─────────────────────                 ───────────────────────────      ───────────────────────
- Read → Confirm → Voice                 organization        (identity)   CompanyContextProvider
-      → Results → Connect               organization_profile_field         task → scopes | none
+ Read → Confirm → Basis → Voice         organization        (identity)   CompanyContextProvider
+      → Connect → Preferences           organization_profile_field         task → scopes | none
    │                                    organization_fact   (evidence)        │  (closed policy,
    ├─ "Read my website"                 site_read           (dossier)         │   fitness-gated)
    │    progressive, evidence-or-omit        ▲                                ▼
@@ -51,7 +51,7 @@ capabilities, administrative), and a deterministic fingerprint. Consumers get
 bounded views of this model; nothing assembles its own company prompt from
 tables.
 
-## The cold start — five scenes, one narrating rail
+## The cold start — six stops, one narrating rail
 
 First login lands in a full-viewport work surface: one scene owns the board at a
 time and a derived step rail narrates beside it

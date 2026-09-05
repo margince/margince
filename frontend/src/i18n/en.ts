@@ -5129,6 +5129,7 @@ export const en = {
   "ob.conv.connect.scopeImap": "Mail address and password",
   "ob.conv.connect.connectCta": "connect →",
   "ob.conv.connect.connectedCta": "connected",
+  "ob.conv.connect.savedCta": "saved",
   "ob.conv.connect.blockedCard":
     "You already picked a mailbox. Disconnect it in Settings to switch.",
   "ob.conv.connect.guaranteesToggle": "What connecting actually does",
@@ -5256,8 +5257,8 @@ export const en = {
   "ob.conv.linkedin.skipped":
     "Skipped LinkedIn. You can add your profile any time in Settings.",
 
-  // The setup rail: five stops, one word each. Long enough to name the step,
-  // short enough that five of them fit a column at 10px.
+  // The setup rail: six stops, one word each. Long enough to name the step,
+  // short enough that six of them fit a column at 10px.
   "ob.rail.read": "Read",
   "ob.rail.confirm": "Confirm",
   "ob.rail.basis": "Basis",
