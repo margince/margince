@@ -119,6 +119,57 @@ export const AMeetingWithItsStartTime: Story = {
       due_at: "2026-09-02T13:00:00Z",
       because: [{ kind: "meeting_soon" }, { kind: "meeting_unprepared" }],
       actions: [],
+      // The way into the brief, in the shape the server actually sends it.
+      //
+      // The subject stays the ACTIVITY — the row is about the appointment —
+      // and the person rides separately, because the brief is not a page of
+      // its own: it opens as `?prep=<activity>` on somebody's record. Writing
+      // this fixture with a person SUBJECT instead would draw no control at
+      // all, since moveHref reads `with_person` and returns nothing without
+      // it, and the story would look identical to its sibling below while
+      // claiming to show the opposite.
+      subject: { type: "activity", id: "m1" },
+      with_person: "0199f5c0-0000-7000-8000-0000000009a1",
+      move: {
+        action: "open_meeting_brief",
+        activity_id: "m1",
+        arguments: { person_id: "0199f5c0-0000-7000-8000-0000000009a1" },
+      },
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// The same meeting with nobody recorded on it — a calendar event with only
+// colleagues, or one whose attendee links this reader may not see.
+//
+// It sits beside its sibling because the two must LOOK different. The brief
+// opens on a person's page, so a meeting naming none has nowhere to send the
+// reader, and the honest row is the clock with no control under it. A story
+// that showed only the happy row would let a wrong destination ship looking
+// exactly like a right one — and the two states are one absent field apart.
+//
+// The lane cannot tell an internal meeting from one whose attendees are all
+// withheld, and deliberately does not try: both mean there is no page to read
+// this brief on, so both arrive here as the same absence.
+export const AMeetingWithNobodyToBriefAgainst: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "m2",
+      source: "meeting",
+      category: "meetings",
+      level: 1,
+      consequence: "meeting_unprepared",
+      title: "Team stand-up",
+      kind: "unprepared",
+      due_at: "2026-09-02T13:00:00Z",
+      because: [{ kind: "meeting_soon" }],
+      actions: [],
+      subject: { type: "activity", id: "m2" },
     },
   },
   render: (args) => {
