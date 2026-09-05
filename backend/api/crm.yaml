@@ -16949,16 +16949,16 @@ paths:
         `version` changes when the vocabulary does, including when one seat's grants change.
         A query planned against an older version is refused rather than run, because a plan
         naming a field that has since moved would render SQL against a column that is gone.
-      # NOT an agent tool, and the reason is measured rather than a preference.
-      # The served catalog already renders ~87% of the certification lane's
-      # prompt window; a second analytics tool pushes it over, and what that
-      # gate protects is every corpus scenario silently reasoning over a prompt
-      # larger than this build claims to send.
+      # NOT an agent tool, and the reason is measured rather than a preference:
+      # the served catalog sits within a few hundred tokens of the certification
+      # lane's floor, and a vocabulary tool would recite per-caller derived
+      # content the margince://schema/analytics resource already serves.
       #
-      # An agent gets this vocabulary through run_analytics_query's own
-      # refusals instead: naming a field that is absent is answered with the
-      # fields that exist, which is the same information at the moment it is
-      # needed. The route stays for the app, which pays no token budget.
+      # An agent gets this vocabulary from that resource, or from
+      # run_analytics_query's own refusals: naming a field that is absent is
+      # answered with the fields that exist, which is the same information at
+      # the moment it is needed. The route stays for the app, which pays no
+      # token budget.
       x-agent-access: human-only
       responses:
         '200':
@@ -16989,17 +16989,12 @@ paths:
 
         Refusals are typed and each carries the smallest thing that would have worked:
         the fields that exist, the measure that applies, the grouping that clears the floor.
-      # NOT an agent tool yet, and the reason is a measured constraint. The
-      # served catalog already renders ~87% of the certification lane's prompt
-      # window; this tool's description, trimmed to just its safety rules,
-      # still puts it over. Cutting further would drop the instructions that
-      # make an agent-reachable analytics surface safe — that the database
-      # computes the numbers, and that a withheld group is never speculated
-      # about — which is the wrong thing to spend for room.
-      #
-      # The HTTP route ships and the app uses it. Making room in the catalog is
-      # a decision about the whole tool surface rather than about this feature.
-      x-agent-access: human-only
+      # The room the earlier note said this could not afford was bought the way
+      # run_report bought it: the vocabulary lives in the per-caller
+      # margince://schema/analytics resource rather than in the tool schema,
+      # and the safety rules — the database computes the numbers, a withheld
+      # group is never speculated about — are the description's whole spend.
+      x-mcp-tool: { verb: run_analytics_query, tier: auto_execute, scope: read }
       requestBody:
         required: true
         content:

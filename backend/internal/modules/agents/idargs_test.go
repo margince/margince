@@ -244,6 +244,9 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterAnalyticsReportTool(r, func(context.Context, json.RawMessage) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
+	RegisterAnalyticsQueryTool(r, func(context.Context, json.RawMessage) (json.RawMessage, error) {
+		return nil, errSeamReached
+	})
 	RegisterReportBlocksTool(r, NewReportBlocksResource(BlockGrammar{}))
 	RegisterForecastTool(r, func(context.Context, ForecastRequest) (json.RawMessage, error) {
 		return nil, errSeamReached
