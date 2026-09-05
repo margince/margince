@@ -263,7 +263,7 @@ export function HomeScreen() {
   // six while the deck drew four and its tray sent "4 decisions".
 
   return (
-    <div className="wrap">
+    <div className="wrap home-wrap">
       {/* The greeting and the dials share the page's first line: the dials
           are how the reader changes what the greeting is about, and on a line
           of their own above it they read as a toolbar over an empty page. */}

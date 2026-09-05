@@ -134,3 +134,16 @@
   font-size: var(--fs-display-fluid);
   line-height: 1.05;
 }
+/* A hero tile answers the pointer: the ground brightens to the elevated
+   surface and the edge firms, at the state duration. It is the one strip whose
+   tiles are the page's own reading, and a reading that answers a hover reads
+   as one a reader can open — which, through its door, it is. */
+.stat-strip-hero > .stat-card {
+  transition:
+    background-color var(--dur-state) var(--ease-out),
+    border-color var(--dur-state) var(--ease-out);
+}
+.stat-strip-hero > .stat-card:hover {
+  background: var(--bgElevated);
+  border-color: var(--borderStrong);
+}

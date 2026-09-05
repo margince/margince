@@ -16,6 +16,92 @@
  * around it would make it one more panel to read rather than the sentence the
  * page opens with. */
 
+/* ── Atmosphere ────────────────────────────────────────────────────────────
+ * The Brief carries a light of its own over the shell's two corner glows: an
+ * indigo pool behind the top of the page, where the readings sit, so the glass
+ * panes there have something to be glass OVER. Painted on the page rather than
+ * on a pane, never animated, and faint enough that the eye does not find it —
+ * the same rule the shell's own lights keep (app/shell.css). It sits under the
+ * content, so nothing is stacked, scrolled or measured for it. */
+.home-wrap {
+  position: relative;
+  isolation: isolate;
+}
+.home-wrap::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset-inline-end: -10%;
+  inset-block-start: -8%;
+  inline-size: 46%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  corner-shape: round;
+  background: radial-gradient(closest-side, var(--glowB), transparent);
+  pointer-events: none;
+}
+
+/* ── Arrival ───────────────────────────────────────────────────────────────
+ * The page composes itself in reading order: greeting, then the figures one
+ * after another, then the day, then the work. One movement, from a step below
+ * and translucent, at the entering duration — and each block a beat after the
+ * one before it, so the eye is led down the page the way the sentences are.
+ * The resting state is the end state; a reader who asked for less motion gets
+ * the page at rest, at once. */
+@keyframes brief-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-2));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.arrive,
+.home-readings .stat-card,
+.home-schedule,
+.home-main > *,
+.home-rail > * {
+  animation: brief-arrive var(--dur-enter) var(--ease-out) both;
+}
+.home-readings .stat-card:nth-child(2) {
+  animation-delay: calc(var(--dur-tap) * 0.5);
+}
+.home-readings .stat-card:nth-child(3) {
+  animation-delay: var(--dur-tap);
+}
+.home-readings .stat-card:nth-child(4) {
+  animation-delay: calc(var(--dur-tap) * 1.5);
+}
+.home-readings .stat-card:nth-child(5) {
+  animation-delay: calc(var(--dur-tap) * 2);
+}
+.home-schedule {
+  animation-delay: var(--dur-state);
+}
+.home-main > * {
+  animation-delay: var(--dur-move);
+}
+.home-rail > :nth-child(1) {
+  animation-delay: var(--dur-move);
+}
+.home-rail > :nth-child(2) {
+  animation-delay: calc(var(--dur-move) + var(--dur-tap));
+}
+.home-rail > :nth-child(n + 3) {
+  animation-delay: calc(var(--dur-move) + var(--dur-state));
+}
+@media (prefers-reduced-motion: reduce) {
+  .arrive,
+  .home-readings .stat-card,
+  .home-schedule,
+  .home-main > *,
+  .home-rail > * {
+    animation: none;
+  }
+}
+
 /* The first line of the page: the greeting takes the room, the dials sit at
    the far edge on the greeting's own top line, and on a phone they drop under
    it. */
