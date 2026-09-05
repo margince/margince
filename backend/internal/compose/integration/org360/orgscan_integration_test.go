@@ -38,8 +38,8 @@ func seedInboundAsk(t *testing.T, e *integration.Env, org ids.UUID, audience str
 	t.Helper()
 	owner := integration.OwnerConn(t)
 	sent := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, direction, subject, body, occurred_at, created_at, source, captured_by, audience)
-		VALUES ($1, 'email', 'inbound', 'Telematics — next steps', '`+theirAsk+`',
-		        '2026-05-20T10:00:00Z', '2026-05-20T10:00:00Z', 'manual', 'human:x', '`+audience+`')`)
+		VALUES ($1, 'email', 'inbound', 'Telematics — next steps', $2,
+		        '2026-05-20T10:00:00Z', '2026-05-20T10:00:00Z', 'manual', 'human:x', $3)`, theirAsk, audience)
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, organization_id)
 		VALUES ($1, 'organization', $2)`, sent, org)
 	return sent
