@@ -299,7 +299,9 @@ describe("what the ranked queue tells a reader", () => {
     const request = await screen.findByRole("link", {
       name: "An open privacy request",
     });
-    expect(request.getAttribute("href")).toBe("#/settings/admin/privacy");
+    // Flat, since the addresses lost their group segment: a page's address no
+    // longer depends on which group it sits in.
+    expect(request.getAttribute("href")).toBe("#/settings/privacy");
   });
 
   it("says what happens if the reader does nothing", async () => {

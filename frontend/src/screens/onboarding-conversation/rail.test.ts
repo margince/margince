@@ -20,19 +20,17 @@ function at(
 }
 
 describe("the setup rail's stops", () => {
-  it("gives a creator six stops and a member the three personal ones", () => {
+  it("gives a creator five stops and a member the two personal ones", () => {
     expect(railStops(false).map((stop) => stop.key)).toEqual([
       "read",
       "confirm",
       "basis",
       "voice",
       "connect",
-      "prefs",
     ]);
     expect(railStops(true).map((stop) => stop.key)).toEqual([
       "voice",
       "connect",
-      "prefs",
     ]);
   });
 
@@ -67,8 +65,8 @@ describe("which stop the conversation is standing on", () => {
     expect(currentStop(at("team", "tm.ask"))).toBeNull();
     expect(currentStop(at("voice", "vo.collecting"))).toBe("voice");
     expect(currentStop(at("connect", "cn.consent"))).toBe("connect");
-    expect(currentStop(at("prefs", "pf.ask"))).toBe("prefs");
-    expect(currentStop(at("done", "pf.done"))).toBe("prefs");
+    // The journey closes from connect, so a finished flow still stands there.
+    expect(currentStop(at("done", "done"))).toBe("connect");
   });
 
   it("stands on no stop before the flow starts", () => {
@@ -103,17 +101,15 @@ describe("how each stop reads", () => {
   });
 
   it("holds the last stop at now while the user is still choosing, and only reads done when the flow finished", () => {
+    expect(stopState("voice", at("connect", "cn.consent"))).toBe("done");
     expect(stopState("connect", at("connect", "cn.consent"))).toBe("now");
-    expect(stopState("connect", at("prefs", "pf.ask"))).toBe("done");
-    expect(stopState("prefs", at("prefs", "pf.ask"))).toBe("now");
-    expect(stopState("prefs", at("done", "pf.done"))).toBe("done");
+    expect(stopState("connect", at("done", "done"))).toBe("done");
   });
 
   it("reads a member's stops by their own positions", () => {
-    const member = at("connect", "cn.consent", { memberPath: true });
-    expect(stopState("voice", member)).toBe("done");
-    expect(stopState("connect", member)).toBe("now");
-    expect(stopState("prefs", member)).toBe("todo");
+    const member = at("voice", "vo.collecting", { memberPath: true });
+    expect(stopState("voice", member)).toBe("now");
+    expect(stopState("connect", member)).toBe("todo");
   });
 
   it("reads the installation's stops as done while the creator invites the team", () => {
