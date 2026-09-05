@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
@@ -25,16 +26,24 @@ import { HomeReadingsStrip } from "./home.readings";
 // would let yesterday's five be compared against today's four.
 
 function draw(...args: Parameters<typeof readingsDay>) {
+  // A QueryClient, because the pipeline reading is a read of its own: it is the
+  // one figure on this plate that does not come from the worklist answer, and
+  // it asks the same key Analytics asks.
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return render(
-    <LocaleProvider initial="en">
-      <HomeReadingsStrip day={readingsDay(...args)} />
-    </LocaleProvider>,
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <HomeReadingsStrip day={readingsDay(...args)} />
+      </LocaleProvider>
+    </QueryClientProvider>,
   );
 }
 
-// Five READINGS, not five DOM children: a strip that wrapped its slots in a
+// Four READINGS, not four DOM children: a strip that wrapped its slots in a
 // container would satisfy a child count while drawing one card, and a strip of
-// five empty boxes would satisfy it while drawing none.
+// four empty boxes would satisfy it while drawing none.
 function labels(): string[] {
   return [...screen.getByTestId("home-readings").querySelectorAll(".stat-card")]
     .map((card) => card.querySelector(".stat-card-label")?.textContent ?? "")
@@ -51,18 +60,32 @@ function meetingsCard(): HTMLElement {
   return card;
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("the brief readings strip", () => {
-  it("draws five slots on a full morning", () => {
+  it("draws five answerable slots on a full morning", () => {
     draw();
 
     expect(labels()).toHaveLength(5);
-    expect(screen.getByText(en["home.readings.waiting"])).toBeTruthy();
+    expect(screen.getByText(en["home.readings.urgent"])).toBeTruthy();
     expect(screen.getByText(en["home.readings.meetings"])).toBeTruthy();
-    expect(screen.getByText(en["home.readings.promises"])).toBeTruthy();
     expect(screen.getByText(en["home.readings.leads"])).toBeTruthy();
-    expect(screen.getByText(en["home.readings.quota"])).toBeTruthy();
+    expect(screen.getByText(en["home.readings.pipeline"])).toBeTruthy();
+    expect(screen.getByText(en["home.readings.decisions"])).toBeTruthy();
+  });
+
+  // The two slots that are gone were permanent apologies: promises, because the
+  // commitments lane is unwired, and quota pace, because targets were retired
+  // from the product. A slot that will never fill is not a pending answer, and
+  // drawing it forever teaches a reader to skip the row.
+  it("draws no slot for a question the product decided not to ask", () => {
+    draw();
+
+    expect(screen.queryByText(/Promises due/)).toBeNull();
+    expect(screen.queryByText(/Quota pace/)).toBeNull();
   });
 
   // The whole reason the slots are fixed. A row that shrank on a quiet day
@@ -74,7 +97,7 @@ describe("the brief readings strip", () => {
     // A zero already reads as "none". What the line under it adds is the basis
     // — what the figure was taken over — which is the same on a quiet day as on
     // a busy one, so the row keeps its shape as well as its slot count.
-    expect(screen.getByText(en["home.readings.waitingBasis"])).toBeTruthy();
+    expect(screen.getByText(en["home.readings.urgentBasis"])).toBeTruthy();
     expect(screen.getByText(en["home.readings.leadsBasis"])).toBeTruthy();
     expect(screen.getByText(en["home.readings.meetingsBasis"])).toBeTruthy();
   });
@@ -134,12 +157,78 @@ describe("the brief readings strip", () => {
 
   // Two questions with no source. Drawing a zero would be a false answer, and
   // dropping the slot would be the page losing a question without saying so.
-  it("names what it cannot measure instead of drawing a nought", () => {
+  // A read that did not land is not a pipeline of nothing. The em dash says the
+  // question went unanswered, which is the one case that spelling is still true.
+  //
+  // The read is REFUSED here rather than left unstubbed: an unstubbed query
+  // stays pending forever, and a test asserting the failure copy over a pending
+  // card would pass on a card that never resolves either way.
+  it("says the pipeline went unread rather than drawing a nought", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ title: "Server Error" }), {
+            status: 500,
+            headers: { "content-type": "application/problem+json" },
+          }),
+      ),
+    );
     draw();
 
-    expect(screen.getByText(en["home.readings.promisesBasis"])).toBeTruthy();
-    expect(screen.getByText(en["home.readings.quotaBasis"])).toBeTruthy();
-    expect(screen.getAllByText("—").length).toBe(2);
+    expect(
+      await screen.findByText(en["home.readings.pipelineUnread"]),
+    ).toBeTruthy();
+    // ONE em dash, not two. The other belonged to a retired placeholder, and a
+    // count that still expected it would pass over a plate that had quietly
+    // grown a second unanswered slot.
+    expect(screen.getAllByText("—")).toHaveLength(1);
+  });
+
+  // BOTH figures, and neither of them a target. `open` is the face value of
+  // every open deal and `weighted` applies each deal's own probability; one
+  // without the other invites a reader to treat a face value as a forecast.
+  //
+  // The slot this replaced said "Quota pace — no target is set". There is no
+  // authoritative target in this product to compare against, so the card must
+  // never say on track, attainment or gap — it would be inventing the thing
+  // that was removed.
+  it("draws the open pipeline with its weighted figure beside it", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              period_start: "2026-07-01",
+              period_end: "2026-09-30",
+              scope_kind: "owner",
+              open_minor: 42_000_000,
+              weighted_minor: 16_800_000,
+              best_case_minor: 0,
+              evidence_minor: 0,
+              eligible_count: 12,
+              priced_count: 11,
+              confirmed_date_count: 8,
+              fx_missing_count: 0,
+              as_of: "2026-09-03T06:42:00Z",
+              base_currency: "EUR",
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          ),
+      ),
+    );
+    draw();
+
+    expect(await screen.findByText(/420,000/)).toBeTruthy();
+    // The weighted figure and the priced-of-eligible completeness ride the same
+    // line: a weighted number over a partly priced population is a floor, and a
+    // reader who cannot see the second cannot judge the first.
+    expect(screen.getByText(/168,000/)).toBeTruthy();
+    expect(screen.getByText(/11 of 12 priced/)).toBeTruthy();
+    // Never a target word. The quota table was dropped by founder decision.
+    const strip = screen.getByTestId("home-readings");
+    expect(strip.textContent).not.toMatch(/on track|target|attainment|gap/i);
   });
 
   // The caveat belongs under the whole strip, the way the Worklist's strip
