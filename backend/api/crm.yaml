@@ -11019,6 +11019,43 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /installation/seat-usage:
+    get:
+      tags: [Identity]
+      operationId: getSeatUsage
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: How many full seats this installation is using (capacity, not entitlement).
+      description: |
+        The seat COUNT on its own, without what the license grants or what it cost.
+
+        This exists because those are two questions with two readers. How many seats are in
+        use is capacity, which whoever plans headcount needs; what the installation is
+        entitled to and what it paid is its commercial standing. `GET /installation/license`
+        answers both together and is governed by the `license` object, so a role could not be
+        shown the first without also being handed the second. This one is governed by
+        `seat_usage`, which management holds and license does not accompany.
+
+        It is the SAME meter, not a second one: this and the entitlement surface run one
+        statement, which is also the ceiling that refuses the next full seat at `POST /users`.
+        A count that could disagree with the ceiling it measures would be a meter nobody is
+        held to.
+
+        `seats_used` counts every full seat the installation has not withdrawn — neither
+        deactivated nor suspended. Read seats are unlimited and never metered (A62/ADR-0047),
+        and agent seats count, because a first-party runner acts on the estate as a human does.
+
+        No seat cap is reported here. A cap is entitlement, which is what the other surface is
+        for and what `seat_usage` deliberately does not carry.
+      responses:
+        '200':
+          description: The seats in use.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SeatUsage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
   # -------- /me/agent-grants (the rep's own standing overnight authority) --------
   # A rep says once whether an agent may work as them overnight. The answer is
   # THEIRS: the path is /me/..., the acting principal names the rep, and there is
@@ -20961,6 +20998,24 @@ components:
           description: 'Who wrote, when the verdict said: person | role_mailbox | organization_sender | newsletter | transactional | spam | personal | advisor. The last two belong to the mailbox owner rather than to the business: personal is a private correspondent, advisor a professional they engage personally.'
         resolved_at: { type: [string, 'null'], format: date-time }
 
+    SeatUsage:
+      type: object
+      description: |
+        How many full seats the installation is using, without what it is entitled to.
+
+        Deliberately NOT a subset of LicenseEntitlement: it carries no cap and no posture,
+        because those are the commercial facts `seat_usage` exists to leave out. A client
+        needing both reads the entitlement surface, which requires the `license` grant.
+      required: [seats_used]
+      properties:
+        seats_used:
+          type: integer
+          minimum: 0
+          description: |
+            Full seats in use: every one the installation has not withdrawn — neither
+            deactivated nor suspended — agent seats included. Read seats are unlimited and
+            never counted (A62/ADR-0047). This is the same number the entitlement surface
+            reports and the same one a seat creation is refused against; there is one meter.
     LicenseEntitlement:
       type: object
       description: |
