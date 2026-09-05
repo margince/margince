@@ -15427,6 +15427,21 @@ func (e ListPeopleParamsTagMode) Valid() bool {
 	}
 }
 
+// Defines values for SuppressPersonJSONBodyKind.
+const (
+	SubjectRequest SuppressPersonJSONBodyKind = "subject_request"
+)
+
+// Valid indicates whether the value is a known member of the SuppressPersonJSONBodyKind enum.
+func (e SuppressPersonJSONBodyKind) Valid() bool {
+	switch e {
+	case SubjectRequest:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListProjectsParamsPhase.
 const (
 	Closed     ListProjectsParamsPhase = "closed"
@@ -37827,6 +37842,19 @@ type IssueDoubleOptInJSONBody struct {
 	PurposeId openapi_types.UUID `json:"purpose_id"`
 }
 
+// SuppressPersonJSONBody defines parameters for SuppressPerson.
+type SuppressPersonJSONBody struct {
+	// Kind Which stop this is. Only the subject's own request is recordable by hand.
+	Kind SuppressPersonJSONBodyKind `json:"kind"`
+
+	// Reason What the person was told, in their words. Stored because a suppression somebody
+	// later asks to lift is only reviewable if the record says why it was made.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// SuppressPersonJSONBodyKind defines parameters for SuppressPerson.
+type SuppressPersonJSONBodyKind string
+
 // DraftPersonEmailJSONBody defines parameters for DraftPersonEmail.
 type DraftPersonEmailJSONBody struct {
 	// Intent Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence.
@@ -39876,6 +39904,9 @@ type IssueDoubleOptInJSONRequestBody IssueDoubleOptInJSONBody
 
 // RecordQualifyingEventJSONRequestBody defines body for RecordQualifyingEvent for application/json ContentType.
 type RecordQualifyingEventJSONRequestBody = RecordQualifyingEventRequest
+
+// SuppressPersonJSONRequestBody defines body for SuppressPerson for application/json ContentType.
+type SuppressPersonJSONRequestBody SuppressPersonJSONBody
 
 // DraftPersonEmailJSONRequestBody defines body for DraftPersonEmail for application/json ContentType.
 type DraftPersonEmailJSONRequestBody DraftPersonEmailJSONBody
@@ -49113,6 +49144,9 @@ type ServerInterface interface {
 	// Record the exchange that makes business correspondence lawful.
 	// (POST /people/{id}/consent/qualifying-events)
 	RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id)
+	// Record that this person asked us to stop writing to them.
+	// (POST /people/{id}/consent/suppress)
+	SuppressPerson(w http.ResponseWriter, r *http.Request, id Id)
 	// Draft an email to this person, grounded in their record.
 	// (POST /people/{id}/draft-email)
 	DraftPersonEmail(w http.ResponseWriter, r *http.Request, id Id)
@@ -52113,6 +52147,12 @@ func (_ Unimplemented) GetPersonConsentGuard(w http.ResponseWriter, r *http.Requ
 // Record the exchange that makes business correspondence lawful.
 // (POST /people/{id}/consent/qualifying-events)
 func (_ Unimplemented) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record that this person asked us to stop writing to them.
+// (POST /people/{id}/consent/suppress)
+func (_ Unimplemented) SuppressPerson(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -70305,6 +70345,38 @@ func (siw *ServerInterfaceWrapper) RecordQualifyingEvent(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// SuppressPerson operation middleware
+func (siw *ServerInterfaceWrapper) SuppressPerson(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SuppressPerson(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DraftPersonEmail operation middleware
 func (siw *ServerInterfaceWrapper) DraftPersonEmail(w http.ResponseWriter, r *http.Request) {
 
@@ -79777,6 +79849,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/consent/qualifying-events", wrapper.RecordQualifyingEvent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/people/{id}/consent/suppress", wrapper.SuppressPerson)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/draft-email", wrapper.DraftPersonEmail)

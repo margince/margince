@@ -9002,6 +9002,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/{id}/consent/suppress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record that this person asked us to stop writing to them.
+         * @description Writes a suppression, which is NOT the absence of consent. It outranks a grant, it does
+         *     not expire on its own, and a later re-grant does not erase it — so a subject who asked us
+         *     to stop stays stopped until somebody with the authority to lift it says otherwise.
+         *
+         *     **Who may lift it is part of the record.** The row carries the authority of whoever wrote
+         *     it, taken from the session and never from this body. A rep's row is liftable by an admin
+         *     and not by another rep; nothing an installation can do lifts the subject's own Art. 21
+         *     objection, which is a different kind this door cannot write.
+         *
+         *     The only kind recordable here is `subject_request`. An objection and a processing
+         *     restriction carry legal consequences a relayed phone call does not establish, and a hard
+         *     bounce is a fact about a mailbox only the mail path observes.
+         */
+        post: operations["suppressPerson"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{id}/consent/double-opt-in": {
         parameters: {
             query?: never;
@@ -44881,6 +44915,46 @@ export interface operations {
                     "application/json": components["schemas"]["PersonConsentState"];
                 };
             };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    suppressPerson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Which stop this is. Only the subject's own request is recordable by hand.
+                     * @enum {string}
+                     */
+                    kind: "subject_request";
+                    /**
+                     * @description What the person was told, in their words. Stored because a suppression somebody
+                     *     later asks to lift is only reviewable if the record says why it was made.
+                     */
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };

@@ -1659,6 +1659,10 @@ func (stubs) RecordQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "RecordQualifyingEvent")
 }
 
+func (stubs) SuppressPerson(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "SuppressPerson")
+}
+
 func (stubs) DraftPersonEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DraftPersonEmail")
 }

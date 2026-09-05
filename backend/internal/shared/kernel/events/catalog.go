@@ -176,6 +176,11 @@ var catalog = map[string]struct {
 	"person.merged":   {personStreamEntity, 1},
 	"person.restored": {personStreamEntity, 1},
 	"consent.changed": {personStreamEntity, 1},
+	// Somebody recorded that we may not write to a subject. Its own type rather
+	// than a consent.changed, because a suppression is not the absence of
+	// consent: it outranks a grant and a later re-grant does not erase it, so a
+	// consumer folding the two would resume mail the subject asked us to stop.
+	"consent.suppressed": {personStreamEntity, 1},
 	// What a contact promised, asked or decided, and a human's correction of
 	// it. Both ride the PERSON stream: a subscriber reacting to what somebody
 	// said wants the person, and the claim id rides the payload for the reader
