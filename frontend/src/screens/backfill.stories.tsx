@@ -135,6 +135,36 @@ export const Cancelled: Story = {
   }),
 };
 
+// The stopped run, and the way back out of it: pressing "Start another import"
+// puts the window picker in front of the reader again, opened on the window
+// that ran. Without it, stopping once left the mailbox with no path to a
+// second import at all.
+export const RestartAfterCancel: Story = {
+  render: panelStory(
+    "gmail",
+    {
+      state: "cancelled",
+      window: "12m",
+      counts: { captured: 20, messages_scanned: 40 },
+    },
+    {
+      "POST /connectors/gmail/backfill/preview": () =>
+        jsonResponse({
+          window: "12m",
+          estimated_messages: 890,
+          computed_at: "2026-07-23T10:00:00Z",
+        }),
+    },
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /Start another import/ }),
+    );
+    await canvas.findByText(/~890/);
+  },
+};
+
 // A running run whose updated_at hasn't moved in 20 minutes: the progress
 // bar stops claiming motion and the panel says when it last actually moved.
 export const Stale: Story = {

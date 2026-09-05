@@ -16837,6 +16837,8 @@ export interface components {
             };
             /** @description Another category this one is only looked up alongside, because the provider skips it entirely when that one comes back empty. Surfe's mobile lookup is the case: asked for on its own it makes the vendor hunt for an email nobody bought, fail, and skip the number — returning a run that COMPLETED with nothing in it. A buy button asks for both or neither; the server refuses the lone request. */
             requires?: string | null;
+            /** @description The category whose EMPTY answer triggers this one, for a category that is a fallback rather than a purchase of its own. Surfe's personal email is the case: the cascade fires only when the professional address comes back with nothing, so a request naming the fallback alone never issues it and the server refuses it. Sent beside `requires` because the two are different relations with the same consequence for a button — ask for both or neither — and `cost` already prices the pair. */
+            follows?: string | null;
         };
         /** @description How much of the installation is still waiting to be looked up once, and whether the sweep is moving. A count without the paused flag reads as progress that has stalled; the two together say whether waiting is the right thing to do. */
         ProviderLookupBacklog: {

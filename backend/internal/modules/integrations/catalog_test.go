@@ -11,6 +11,8 @@ package integrations
 
 import (
 	"maps"
+	"slices"
+	"sort"
 	"testing"
 	"time"
 
@@ -102,6 +104,54 @@ func TestAFallbackIsPricedWithTheCategoryThatTriggersIt(t *testing.T) {
 	if fallback.Cost["email"] != 3 {
 		t.Errorf("personal_email costs %v, want the trigger's 1 plus the fallback's 2", fallback.Cost)
 	}
+}
+
+// The catalog PRICES a category together with everything the provider will
+// issue alongside it, and it has to NAME that same set — the price is on a
+// button whose press sends what the names say. The two came apart once: the
+// wire carried the prerequisite and said nothing about a cascade trigger, so
+// the personal-email button quoted three credits and posted one category,
+// which the server refused every time.
+//
+// Derived from pricedWith rather than listed, so a third relation added there
+// fails here instead of shipping as another silent short request.
+func TestTheCatalogNamesEveryCategoryItPricesWith(t *testing.T) {
+	for _, adapter := range []provider.Adapter{NewOfflineProvider(0, time.Now)} {
+		desc := adapter.Descriptor()
+		t.Run(desc.Name, func(t *testing.T) {
+			named := map[string][]string{}
+			for _, entry := range catalogOf(desc) {
+				named[entry.Category] = namedWith(entry)
+			}
+			for _, category := range desc.Categories {
+				priced := make([]string, 0, 3)
+				for _, c := range pricedWith(desc, category) {
+					priced = append(priced, string(c))
+				}
+				sort.Strings(priced)
+				got := named[string(category)]
+				sort.Strings(got)
+				if !slices.Equal(got, priced) {
+					t.Errorf("catalog names %v for %q, and the price is the worst case of %v: "+
+						"a button quoting one set and sending the other spends what nobody agreed to",
+						got, category, priced)
+				}
+			}
+		})
+	}
+}
+
+// namedWith is what a buy button reads off one catalog entry — the same set
+// frontend/src/screens/personprovider.tsx builds from the wire.
+func namedWith(entry CategoryCost) []string {
+	out := []string{entry.Category}
+	if entry.Requires != "" {
+		out = append(out, entry.Requires)
+	}
+	if entry.Follows != "" {
+		out = append(out, entry.Follows)
+	}
+	return out
 }
 
 func TestAProviderThatGivesNothingAwayStillConnects(t *testing.T) {

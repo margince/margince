@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   CheckCircle2,
@@ -14,6 +14,7 @@ import type { MessageKey } from "../i18n/en";
 import { CaptureNotice } from "./capture-notice";
 import { problemMessageOf, throwProblem } from "./common";
 import { ConnectPostureStep } from "./connect-posture";
+import { useConnectors } from "./connectors";
 import { imapErrorMessage } from "./imap-connect-form";
 import { OnboardingBackread } from "./onboarding-backread";
 
@@ -258,17 +259,11 @@ export function OAuthReturnPanel({
   onComplete: (skipped: boolean) => Promise<void>;
 }>) {
   const t = useT();
-  const connections = useQuery({
-    queryKey: ["connectors"],
-    enabled: outcome === "ok",
-    queryFn: async () => {
-      const { data, error } = await api.GET("/connectors");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  // The shared read, held until the return actually says "ok": one cache entry
+  // for every reader of this path (screens/connectors.tsx), so the roster this
+  // panel confirms a mailbox from is the same one the connect scene draws its
+  // cards from and the shell's chip gauges the import from.
+  const connections = useConnectors({ enabled: outcome === "ok" });
   const returning = asOAuthProvider(provider);
   // Raised while the posture write is in flight. The backread is what reads a
   // year of mail, so starting one before the answer commits imports under

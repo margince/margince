@@ -32,7 +32,7 @@ import (
 // One snapshot per team, assembled under the authority of a member who leads
 // it: the read is of frozen rows the team's own people wrote, and the tier gate
 // on TeamReview is what stops an own-scoped seat asking for one.
-func (w *weeklyGenerateWorkspaceWorker) snapshotTeams(
+func (w *weeklyGenerateWorker) snapshotTeams(
 	ctx context.Context, wsID ids.UUID, now time.Time,
 ) []error {
 	teams, err := w.liveTeams(ctx)
@@ -64,7 +64,7 @@ type liveTeam struct {
 // A team with no live members is skipped rather than snapshotted empty: an
 // empty week for a team that has nobody on it is a row saying the team did
 // nothing, which is not what happened.
-func (w *weeklyGenerateWorkspaceWorker) liveTeams(ctx context.Context) ([]liveTeam, error) {
+func (w *weeklyGenerateWorker) liveTeams(ctx context.Context) ([]liveTeam, error) {
 	var teams []liveTeam
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
@@ -102,7 +102,7 @@ func (w *weeklyGenerateWorkspaceWorker) liveTeams(ctx context.Context) ([]liveTe
 }
 
 // snapshotTeam freezes one team's week under a member's own authority.
-func (w *weeklyGenerateWorkspaceWorker) snapshotTeam(
+func (w *weeklyGenerateWorker) snapshotTeam(
 	ctx context.Context, wsID ids.UUID, team liveTeam, now time.Time,
 ) error {
 	rbac, seat, err := w.users.EffectiveAuthority(ctx, wsID, team.lead)
@@ -145,7 +145,7 @@ func (w *weeklyGenerateWorkspaceWorker) snapshotTeam(
 // answers "who shares a team with the caller" — the union across every team
 // they are on. A snapshot is about ONE team, and a lead on two would otherwise
 // freeze both teams' people into each.
-func (w *weeklyGenerateWorkspaceWorker) teamMembers(
+func (w *weeklyGenerateWorker) teamMembers(
 	ctx context.Context, teamID ids.UUID,
 ) ([]weekly.TeamMember, error) {
 	var members []weekly.TeamMember

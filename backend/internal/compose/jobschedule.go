@@ -12,6 +12,7 @@ package compose
 // declaration's.
 
 import (
+	"slices"
 	"time"
 
 	"github.com/riverqueue/river"
@@ -62,6 +63,21 @@ func periodicInsertOpts(args river.JobArgs) *river.InsertOpts {
 	opts := sweepInsertOpts()
 	if _, owned := args.(river.JobArgsWithInsertOpts); !owned {
 		opts.MaxAttempts = periodicPassMaxAttempts
+	}
+	// A FLEET-WIDE tick carries the sweep tag, because since ADR-0103 this row
+	// IS the fleet pass. The tag used to go on the CHILDREN a dispatcher
+	// enqueued — one workspace's share each — and the sweep gauges count tagged
+	// rows; collapsing the pair left the gauges with nothing tagged to count,
+	// and left a one-off enqueue of the same kind indistinguishable from a
+	// scheduled pass. Tagging here restores both: what the gauges read is a
+	// pass that ran, and an untagged row of a fleet-wide kind is somebody's
+	// one-off, which is exactly what it meant before.
+	//
+	// Only FLEET-WIDE. A periodic kind that owns a tenant, or answers for the
+	// installation without walking it, is not a fleet pass and tagging it would
+	// put a row in the gauges that covers no workspaces.
+	if _, fleet := args.(jobs.FleetWide); fleet {
+		opts.Tags = append(slices.Clone(opts.Tags), jobs.SweepTag)
 	}
 	return opts
 }

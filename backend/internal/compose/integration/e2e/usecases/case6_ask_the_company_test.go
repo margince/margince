@@ -203,8 +203,13 @@ func TestCase6BothTheRecordAndTheProseReachTheCaller(t *testing.T) {
 		t.Fatalf("case 6 criterion 2: the complaint email carries no occurred_at; a model holding " +
 			"an undated record and a note that says 'im Oktober' will say October")
 	}
+	// Both sides read in ONE zone. daysAgo answers UTC and pgx hands the column
+	// back in the machine's, so east of UTC the two disagree for the hours that
+	// straddle a month end — 340 days before 2026-09-06 is 30 September in UTC
+	// and 1 October in UTC+7, and the fixture's whole point is which month the
+	// record says. CI runs UTC and never sees it; a contributor's laptop does.
 	wantMonth := daysAgo(complaintDaysAgo).Month()
-	if got := record.OccurredAt.Month(); got != wantMonth {
+	if got := record.OccurredAt.UTC().Month(); got != wantMonth {
 		t.Fatalf("case 6 criterion 2: the complaint is dated %s and the record says %s",
 			wantMonth, got)
 	}

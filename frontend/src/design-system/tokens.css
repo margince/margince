@@ -45,6 +45,11 @@
    * only, which is invisible once the page stops being white. */
   --bgCard: #eaedeb;
   --bgHover: #edf0ee;
+  /* A RECESS in an elevated surface — the well a board's stage is drawn as.
+   * One hair under --bgElevated (1.03:1), which is what lets the panes inside
+   * it be the lifted thing: --bgCard is a card's own ground, and five of them
+   * side by side read as five cards with cards inside them. */
+  --bgWell: #f6f8f7;
   /* The sidebar's own ground, DARKER than the page rather than lighter: the
    * application's left edge is visible without a second border, and chrome that
    * recedes is chrome that stops competing with what it frames. A token rather
@@ -572,6 +577,9 @@
   --bgElevated: #161d1a;
   --bgCard: #1a211e;
   --bgHover: #1f2623;
+  /* Under --bgElevated, the way the light well sits under its surface: a
+     recess goes away from the lifted ground in both themes. */
+  --bgWell: #111815;
   /* The same RELATION the light theme states, mirrored rather than copied: the
      sidebar is one step off the page in the direction away from the elevated
      surface, so the chrome recedes in both themes. Dark is where that means
@@ -720,6 +728,9 @@
     --bgElevated: #161d1a;
     --bgCard: #1a211e;
     --bgHover: #1f2623;
+    /* Under --bgElevated, the way the light well sits under its surface: a
+       recess goes away from the lifted ground in both themes. */
+    --bgWell: #111815;
     --bgSidebar: #030504;
     --bgSidebarHover: #0a100e;
     --bgTopbar: rgba(14, 27, 22, 0.9);

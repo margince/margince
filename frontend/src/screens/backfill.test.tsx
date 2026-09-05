@@ -284,6 +284,48 @@ describe("the connect-time backfill payoff", () => {
     expect(await screen.findByText(/Stopped\./)).toBeTruthy();
   });
 
+  // Stopping an import is a decision about the run, not about the mailbox: the
+  // panel used to draw the stopped run forever, so a reader who pressed stop
+  // could never import again — disconnecting and reconnecting did not help,
+  // because the run rows belong to the connection that survives both.
+  it("offers another import once a run has stopped, opening on the window that ran", async () => {
+    const calls = stubApi({
+      statuses: [
+        {
+          state: "cancelled",
+          backfill_id: "018f3a1b-0000-7000-8000-0000000000b1",
+          window: "12m",
+          estimated_messages: 400,
+          counts: { captured: 20, messages_scanned: 40 },
+        },
+      ],
+      preview: previewOf(1234),
+    });
+    render(<BackfillPanel provider="gmail" />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Start another import/ }),
+    );
+    // Opened on the window this mailbox already ran, because the server only
+    // ever widens — a picker that opens on a refusal wastes the first press.
+    expect(
+      (
+        (await screen.findByRole("radio", {
+          name: "12 months",
+        })) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Start the import/ }),
+    );
+    await waitFor(async () => {
+      const starts = requestsTo(calls, "/backfill", "POST");
+      expect(starts.length).toBe(1);
+      expect(await starts[0]?.clone().json()).toMatchObject({ window: "12m" });
+    });
+  });
+
   it("surfaces an honest error class without hiding the counts captured so far", async () => {
     stubApi({
       statuses: [countsStatus("error", { captured: 40, people_created: 9 })],

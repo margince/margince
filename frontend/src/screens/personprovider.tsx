@@ -19,6 +19,7 @@ import {
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
+import { usePerson360 } from "./person360";
 import { categoryNames, categoryNamesTogether } from "./provider-categories";
 import {
   canEnrichNow,
@@ -35,6 +36,7 @@ import {
 // alike invites a rep to treat a purchase as a confirmation.
 
 type Profile = components["schemas"]["PersonProviderProfile"];
+type Person = components["schemas"]["Person"];
 type Provider = components["schemas"]["Provider"];
 type ProviderConnection = components["schemas"]["ProviderConnection"];
 
@@ -293,6 +295,16 @@ function BuyPriced({
   const connection = connections.data?.connections.find(
     (c) => c.provider === profile.provider,
   );
+  // What the RECORD holds, which is not the same as what this provider
+  // returned: an address typed in by hand or captured from a mailbox is billed
+  // for again exactly as one Surfe sold us, and reading `profile.emails` alone
+  // is what left that second charge unsaid.
+  //
+  // Read here rather than handed down from the mount sites: there are two of
+  // them today and a third would have to remember. This is the query the page
+  // around it already made, under the same key, so it costs a cache read.
+  const record = usePerson360(personId);
+  const held = heldCategories(profile, record.data?.person);
   // Only what this connection actually carries, asked of EVERY category the
   // press would send — not just the one on the button.
   //
@@ -313,18 +325,24 @@ function BuyPriced({
     (entry) =>
       !entry.free &&
       boughtWith(entry).every(enabled) &&
-      !alreadyHeld(profile, entry.category),
+      !held.has(entry.category),
   );
-  if (buyable.length === 0 || !canEnrichNow(profile.state, running)) {
+  // Without the record there is nothing to check a re-buy against, and a
+  // spending button that cannot say what it pays for twice is the defect this
+  // row exists to prevent. Absent is a moment rather than a state — the page
+  // that mounts this has already asked — so nothing here waits on it for long.
+  if (
+    !record.data ||
+    buyable.length === 0 ||
+    !canEnrichNow(profile.state, running)
+  ) {
     return null;
   }
   return (
     <div className="pe-buy-row">
       {buyable.map((entry) => {
         const asks = boughtWith(entry);
-        const rebought = asks.filter((category) =>
-          alreadyHeld(profile, category),
-        );
+        const rebought = asks.filter((category) => held.has(category));
         return (
           <div className="pe-buy-offer" key={entry.category}>
             <Button
@@ -345,7 +363,7 @@ function BuyPriced({
                 // Naming a detail already on the record would read as an
                 // offer to buy what the reader can see they have.
                 category: categoryNamesTogether(
-                  asks.filter((category) => !alreadyHeld(profile, category)),
+                  asks.filter((category) => !held.has(category)),
                   t,
                   locale,
                 ),
@@ -374,7 +392,7 @@ function BuyPriced({
 }
 
 /** What one press actually asks for: the category, and the one it can only be
- *  looked up alongside.
+ *  bought alongside.
  *
  *  Surfe's mobile lookup is the case. Asked for on its own, the provider hunts
  *  for an email nobody bought, fails, and skips the number — returning a run
@@ -396,7 +414,20 @@ function BuyPriced({
 function boughtWith(
   entry: components["schemas"]["ProviderCategoryCost"],
 ): string[] {
-  return entry.requires ? [entry.requires, entry.category] : [entry.category];
+  // The mirror of `pricedWith` (backend/internal/modules/integrations/store.go):
+  // the category itself, the trigger whose EMPTY answer fires it as a fallback,
+  // and the prerequisite it needs an answer from. Two different relations with
+  // one consequence — the server refuses a request missing either — and `cost`
+  // is already the price of the whole set, so a press naming less would quote a
+  // pair and buy one half of it.
+  //
+  // Both are walked, not the first that answers: nothing refuses a descriptor
+  // declaring a category with each, and the price would then name three
+  // categories while the press named two.
+  const alongside = [entry.follows, entry.requires].filter(
+    (category): category is string => Boolean(category),
+  );
+  return [...new Set([...alongside, entry.category])];
 }
 
 /** The credits one category costs, summed across pools. A category priced in
@@ -408,40 +439,64 @@ function creditsOf(
   return Object.values(entry.cost).reduce((total, n) => total + n, 0);
 }
 
-/** Whether the section already shows what this category buys.
+/** The purchase categories this record already shows, whatever put them there.
  *
- *  Asked TWICE about one press, for two different questions. Whether to offer
- *  the button reads the category being sought — a mobile is worth offering
- *  when the work email it needs is already held. What the button says reads
- *  every category the press sends, because the provider bills for whatever it
- *  returns and cannot be told to skip an address we hold, so that press pays
- *  for the email a second time.
+ *  Consulted TWICE about one press, for two different questions. Whether to
+ *  offer the button reads the category being sought — a mobile is worth
+ *  offering when the work email it needs is already held. What the button says
+ *  reads every category the press sends, because the provider bills for
+ *  whatever it returns and cannot be told to skip an address we hold, so that
+ *  press pays for the email a second time.
  *
  *  Answering only the first question is what let the second charge go
- *  unmentioned. */
-function alreadyHeld(profile: Profile, category: string): boolean {
-  switch (category) {
-    // By TYPE, not by "any address at all". The two are separate purchases
-    // from separate pools, and collapsing them hid each behind the other: a
-    // contact whose personal address came back was never offered a work
-    // email, and the reverse.
-    //
-    // An address the provider could not classify counts for neither. It is
-    // one of the two, and guessing which would either hide an offer the
-    // reader can still use or claim a re-buy that does not happen — both
-    // worse than offering a purchase they may decline.
-    case "professional_email":
-      return profile.emails.some(
-        (email) => email.email_type === "professional",
-      );
-    case "personal_email":
-      return profile.emails.some((email) => email.email_type === "personal");
-    case "mobile":
-      return profile.mobile_phones.length > 0;
-    default:
-      return false;
+ *  unmentioned; asking only the provider's own answer is what let it go
+ *  unmentioned for an address the provider never returned.
+ */
+function heldCategories(
+  profile: Profile,
+  person: Person | undefined,
+): ReadonlySet<string> {
+  const held = new Set<string>();
+  for (const email of profile.emails) {
+    const bought = PROVIDER_EMAIL_CATEGORY[email.email_type ?? ""];
+    if (bought) {
+      held.add(bought);
+    }
   }
+  for (const email of person?.emails ?? []) {
+    const filed = RECORD_EMAIL_CATEGORY[email.email_type];
+    if (filed) {
+      held.add(filed);
+    }
+  }
+  if (
+    profile.mobile_phones.length > 0 ||
+    (person?.phones ?? []).some((phone) => phone.phone_type === "mobile")
+  ) {
+    held.add("mobile");
+  }
+  return held;
 }
+
+// By TYPE, not by "any address at all". The two are separate purchases from
+// separate pools, and collapsing them hid each behind the other: a contact
+// whose personal address came back was never offered a work email, and the
+// reverse.
+//
+// Both vocabularies stop short of the whole enum on purpose. An address the
+// provider could not classify counts for neither, and neither does one the
+// record files as `other`: it is one of the two, and guessing which would
+// either hide an offer the reader can still use or claim a re-buy that does
+// not happen — both worse than offering a purchase they may decline.
+const PROVIDER_EMAIL_CATEGORY: Readonly<Record<string, string>> = {
+  professional: "professional_email",
+  personal: "personal_email",
+};
+
+const RECORD_EMAIL_CATEGORY: Readonly<Record<string, string>> = {
+  work: "professional_email",
+  personal: "personal_email",
+};
 
 // A component rather than a hook call in the section, so the watch mounts
 // only where a profile exists — the section returns early without one, and a

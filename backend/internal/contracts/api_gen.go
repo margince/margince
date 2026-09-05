@@ -29822,6 +29822,9 @@ type ProviderCategoryCost struct {
 	// Cost Credits charged per pool, worst case, the fallback included. Empty when free.
 	Cost map[string]int `json:"cost"`
 
+	// Follows The category whose EMPTY answer triggers this one, for a category that is a fallback rather than a purchase of its own. Surfe's personal email is the case: the cascade fires only when the professional address comes back with nothing, so a request naming the fallback alone never issues it and the server refuses it. Sent beside `requires` because the two are different relations with the same consequence for a button — ask for both or neither — and `cost` already prices the pair.
+	Follows *string `json:"follows,omitempty"`
+
 	// Free Automatic enrichment buys exactly these; everything else waits for a human to press a button.
 	Free bool `json:"free"`
 

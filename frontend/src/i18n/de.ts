@@ -288,6 +288,10 @@ export const de = {
   "deal.archived": "archiviert",
   "deal.singleThreaded": "nur eine Person",
   "deal.staged": "vorgemerkt",
+  "deal.closes": "Abschluss {date}",
+  "deal.undated": "kein Abschlusstermin",
+  "deal.closesProvisional":
+    "vorläufiger Abschlusstermin, von niemandem bestätigt",
   "record.notShown": "Nicht angezeigt",
   "record.timelineLoading": "Verlauf dieses Datensatzes wird geladen…",
   "record.chronologyLoading": "Änderungsverlauf wird gelesen…",
@@ -4474,6 +4478,7 @@ export const de = {
     "Er versucht es selbstständig erneut; alles bisher Erfasste bleibt erhalten.",
   "backfill.cancel": "Import stoppen",
   "backfill.cancelledNote": "Gestoppt. Alles bisher Erfasste bleibt erhalten.",
+  "backfill.restart": "Weiteren Import starten",
   "backfill.unsupportedNote":
     "Dieser Postfachtyp kann nicht rückwirkend importiert werden — ab jetzt werden nur neue E-Mails erfasst.",
   "backfill.narrowingNote":
