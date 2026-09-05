@@ -41,6 +41,11 @@ import (
 // here the constraint refuses fails loudly on the write rather than silently
 // storing a state no read looks for.
 const (
+	// dispositionField names what a judgement IS, in the audit after-image and
+	// in the effect a system re-arm plans. One spelling, because the two are
+	// read together when somebody asks what put a message back.
+	dispositionField = "disposition"
+
 	stateSnoozed = "snoozed"
 	stateNotMine = "not_mine"
 )
@@ -361,7 +366,7 @@ func (s *Store) recordDisposition(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, state string, until *time.Time,
 	on values.ReopenCondition,
 ) error {
-	after := map[string]any{"disposition": state}
+	after := map[string]any{dispositionField: state}
 	if until != nil {
 		after["snoozed_until"] = until.UTC()
 	}

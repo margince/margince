@@ -3369,11 +3369,12 @@ export interface paths {
          *     set them: a rep putting a reply down until Thursday must not take it off the colleague who
          *     owns the deal, and saying "not mine" is precisely saying somebody else must still see it.
          *
-         *     A snooze names a moment still ahead and lifts on its own. `not_mine` names none and does
-         *     NOT lift by itself: it stands until the reader picks the message back up. Nothing watches
-         *     for the record changing hands, so a rep who hands work on and later inherits it again has
-         *     to undo their own judgement — which is the honest behaviour to publish, rather than a
-         *     re-arm no consumer performs.
+         *     A snooze names a moment still ahead and lifts on its own. `not_mine` names no moment: it
+         *     stands until the reader picks the message back up, or until the record it is filed under
+         *     CHANGES HANDS. A hand-off clears it for every reader who is not the incoming owner —
+         *     "somebody else must still see it" was a judgement about the arrangement that just ended —
+         *     and leaves the incoming owner's own alone, because being handed a record does not withdraw
+         *     a statement they made about it themselves.
          *
          *     Reading the message is the licence to judge it: an id the caller cannot read answers 404,
          *     the same as one that does not exist.
@@ -30454,8 +30455,9 @@ export interface components {
             /**
              * @description Work this reader has snoozed or marked `not_mine`. THEIR OWN CHOICE, and the
              *     least alarming of the four: a snooze lifts on its own moment, so this includes
-             *     work that will come back without anybody remembering it. `not_mine` does not
-             *     lift at all.
+             *     work that will come back without anybody remembering it. `not_mine` names no
+             *     moment, and lifts only when the reader picks the message back up or the record
+             *     it is filed under changes hands.
              */
             set_aside: number;
             /**

@@ -23155,8 +23155,9 @@ type HiddenBacklog struct {
 
 	// SetAside Work this reader has snoozed or marked `not_mine`. THEIR OWN CHOICE, and the
 	// least alarming of the four: a snooze lifts on its own moment, so this includes
-	// work that will come back without anybody remembering it. `not_mine` does not
-	// lift at all.
+	// work that will come back without anybody remembering it. `not_mine` names no
+	// moment, and lifts only when the reader picks the message back up or the record
+	// it is filed under changes hands.
 	SetAside int `json:"set_aside"`
 
 	// Shown What the eligibility query FOUND under the rules as they stand. Here so the
