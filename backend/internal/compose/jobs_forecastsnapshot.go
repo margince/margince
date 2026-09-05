@@ -53,27 +53,16 @@ func (ForecastSnapshotSweepArgs) Kind() string { return "forecast_snapshot_sweep
 // and does no tenant work of its own (jobs.FleetWide).
 func (ForecastSnapshotSweepArgs) FleetWide() {}
 
-// ForecastSnapshotWorkspaceArgs is one workspace's daily freeze.
-type ForecastSnapshotWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (ForecastSnapshotWorkspaceArgs) Kind() string { return "forecast_snapshot_workspace" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a ForecastSnapshotWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
 // forecastSnapshotSweepWorker is the dispatcher: it enumerates and enqueues, and
 // touches no tenant data itself.
 type forecastSnapshotSweepWorker struct {
 	pool *pgxpool.Pool
+	now  func() time.Time
+	log  *slog.Logger
 }
 
 func (w *forecastSnapshotSweepWorker) Work(ctx context.Context, _ *river.Job[ForecastSnapshotSweepArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(ForecastSnapshotWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return ForecastSnapshotWorkspaceArgs{Workspace: ws} }))
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.snapshotWorkspace))
 }
 
 // forecastSnapshotActor is the principal the daily freeze runs as, and therefore
@@ -83,25 +72,13 @@ func (w *forecastSnapshotSweepWorker) Work(ctx context.Context, _ *river.Job[For
 // only until one of them moved.
 const forecastSnapshotActor = "system:forecast-snapshot"
 
-// forecastSnapshotWorkspaceWorker freezes one tenant's readings.
-type forecastSnapshotWorkspaceWorker struct {
-	pool *pgxpool.Pool
-	now  func() time.Time
-	log  *slog.Logger
-}
-
-func (w *forecastSnapshotWorkspaceWorker) Work(
-	ctx context.Context, job *river.Job[ForecastSnapshotWorkspaceArgs],
-) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+func (w *forecastSnapshotSweepWorker) snapshotWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	wsCtx = principal.WithActor(wsCtx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: forecastSnapshotActor,
 	})
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
-	return jobs.FaultContext(ctx, w.freeze(wsCtx, job.Args.Workspace))
+	return jobs.FaultContext(ctx, w.freeze(wsCtx, workspace))
 }
 
 // freeze takes the workspace's daily snapshot for the current quarter.
@@ -114,7 +91,7 @@ func (w *forecastSnapshotWorkspaceWorker) Work(
 // One transaction, for the reason the HTTP read gives for its own: the period
 // resolution, the deal read and the freeze have to see one settings state, or a
 // change mid-pass labels one period's total with another period's frame.
-func (w *forecastSnapshotWorkspaceWorker) freeze(ctx context.Context, ws ids.UUID) error {
+func (w *forecastSnapshotSweepWorker) freeze(ctx context.Context, ws ids.UUID) error {
 	store := forecasting.NewStore(InstallationDB(w.pool))
 	at := w.now()
 	var frozenDay time.Time

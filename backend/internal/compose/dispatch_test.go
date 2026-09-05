@@ -36,7 +36,7 @@ func TestDispatchWithEnqueuesTheWholeFleetInOneInsert(t *testing.T) {
 		return nil
 	}
 
-	if err := dispatchWith(context.Background(), fleet, insert, workspaceSweepOpts(SignalScanWorkspaceArgs{}.Kind()), signalScanWorkspaceArgsFor); err != nil {
+	if err := dispatchWith(context.Background(), fleet, insert, workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor); err != nil {
 		t.Fatalf("dispatching a healthy fleet: %v", err)
 	}
 	if calls != 1 {
@@ -60,7 +60,7 @@ func TestDispatchWithFailsTheDispatcherWhenTheInsertIsRefused(t *testing.T) {
 	refused := errors.New("insert refused")
 	insert := func(context.Context, []river.InsertManyParams) error { return refused }
 
-	err := dispatchWith(context.Background(), fleet, insert, workspaceSweepOpts(SignalScanWorkspaceArgs{}.Kind()), signalScanWorkspaceArgsFor)
+	err := dispatchWith(context.Background(), fleet, insert, workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor)
 	if err == nil {
 		t.Fatal("a refused fan-out must surface, so the dispatcher row fails and the tick retries")
 	}
@@ -77,7 +77,7 @@ func TestDispatchWithEnqueuesNothingForAnEmptyFleet(t *testing.T) {
 		called = true
 		return nil
 	}
-	if err := dispatchWith(context.Background(), nil, insert, workspaceSweepOpts(SignalScanWorkspaceArgs{}.Kind()), signalScanWorkspaceArgsFor); err != nil {
+	if err := dispatchWith(context.Background(), nil, insert, workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor); err != nil {
 		t.Fatalf("an empty fleet is not a failure: %v", err)
 	}
 	if called {
@@ -89,7 +89,7 @@ func TestDispatchWithEnqueuesNothingForAnEmptyFleet(t *testing.T) {
 // number typed at the call site can drift from the one api/jobs.yaml
 // publishes, and nothing would notice.
 func TestWorkspaceSweepOptsReadsTheDeclaredQueueAndAttempts(t *testing.T) {
-	opts := workspaceSweepOpts(IdempotencyRetentionWorkspaceArgs{}.Kind())
+	opts := workspaceSweepOpts(GmailWatchRenewArgs{}.Kind())
 
 	if opts.Queue != "default" {
 		t.Errorf("Queue = %q, want the declared default", opts.Queue)
@@ -101,7 +101,7 @@ func TestWorkspaceSweepOptsReadsTheDeclaredQueueAndAttempts(t *testing.T) {
 }
 
 func TestWorkspaceSweepOptsTagsEveryFanOutChild(t *testing.T) {
-	opts := workspaceSweepOpts(IdempotencyRetentionWorkspaceArgs{}.Kind())
+	opts := workspaceSweepOpts(GmailWatchRenewArgs{}.Kind())
 
 	if !slices.Contains(opts.Tags, jobs.SweepTag) {
 		t.Errorf("Tags = %v, want jobs.SweepTag — an untagged child is invisible to both sweep gauges", opts.Tags)
@@ -267,8 +267,8 @@ func TestOneOffChildOptsRefusesAKindWhoseOptsItDoesNotOwn(t *testing.T) {
 	oneOffChildOpts(TelegramPollArgs{}.Kind()) // opts_owner: args
 }
 
-func signalScanWorkspaceArgsFor(ws ids.UUID) river.JobArgs {
-	return SignalScanWorkspaceArgs{Workspace: ws}
+func gmailWatchRenewArgsFor(ws ids.UUID) river.JobArgs {
+	return GmailWatchRenewArgs{Workspace: ws}
 }
 
 // TestDispatchWithMarksEveryChildAsOneWorkspacesShareOfAFleetPass — the
@@ -288,7 +288,7 @@ func TestDispatchWithMarksEveryChildAsOneWorkspacesShareOfAFleetPass(t *testing.
 	fleet := []ids.UUID{ids.NewV7(), ids.NewV7()}
 
 	if err := dispatchWith(context.Background(), fleet, insert,
-		workspaceSweepOpts(SignalScanWorkspaceArgs{}.Kind()), signalScanWorkspaceArgsFor); err != nil {
+		workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor); err != nil {
 		t.Fatalf("dispatchWith: %v", err)
 	}
 
@@ -311,7 +311,7 @@ func TestDispatchWithMarksEveryChildAsOneWorkspacesShareOfAFleetPass(t *testing.
 // it in place would accumulate one tag per workspace on a struct the caller
 // still owns.
 func TestTheFanOutTagDoesNotMutateTheCallersInsertOpts(t *testing.T) {
-	opts := workspaceSweepOpts(SignalScanWorkspaceArgs{}.Kind())
+	opts := workspaceSweepOpts(GmailWatchRenewArgs{}.Kind())
 	// Spare CAPACITY is the case a length check cannot see: append would
 	// write into the caller's own backing array and leave len unchanged, so
 	// the aliasing this test exists to catch would go unnoticed.
@@ -322,7 +322,7 @@ func TestTheFanOutTagDoesNotMutateTheCallersInsertOpts(t *testing.T) {
 
 	for range 3 {
 		if err := dispatchWith(context.Background(), []ids.UUID{ids.NewV7()}, insert, opts,
-			signalScanWorkspaceArgsFor); err != nil {
+			gmailWatchRenewArgsFor); err != nil {
 			t.Fatalf("dispatchWith: %v", err)
 		}
 	}

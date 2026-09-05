@@ -224,6 +224,7 @@ kinds:
 
   capture_auto_enrich_sweep:
     role: worker
+    fleet: true
     go_type: CaptureAutoEnrichSweepArgs
     queue: default
     timeout: 5m
@@ -247,6 +248,7 @@ kinds:
 
   finance_sync_sweep:
     role: worker
+    fleet: true
     go_type: FinanceSyncSweepArgs
     queue: default
     timeout: 5m
@@ -295,6 +297,7 @@ kinds:
 
   capture_classify:
     role: worker
+    fleet: true
     go_type: CaptureClassifyArgs
     queue: default
     timeout: 15m
@@ -309,6 +312,7 @@ kinds:
 
   owed_verdict:
     role: worker
+    fleet: true
     go_type: OwedVerdictArgs
     queue: default
     timeout: 15m
@@ -323,6 +327,7 @@ kinds:
 
   capture_counterparty_verdict:
     role: worker
+    fleet: true
     go_type: CounterpartyVerdictArgs
     queue: default
     timeout: 20m
@@ -339,6 +344,7 @@ kinds:
 
   capture_confidentiality_verdict:
     role: worker
+    fleet: true
     go_type: ConfidentialityVerdictArgs
     queue: default
     timeout: 20m
@@ -355,6 +361,7 @@ kinds:
 
   capture_trace_sweep:
     role: worker
+    fleet: true
     go_type: CaptureTraceSweepArgs
     queue: default
     timeout: 5m
@@ -369,6 +376,7 @@ kinds:
 
   capture_digest:
     role: worker
+    fleet: true
     go_type: CaptureDigestArgs
     queue: default
     timeout: 5m
@@ -382,6 +390,7 @@ kinds:
 
   brief_generate:
     role: worker
+    fleet: true
     go_type: BriefGenerateArgs
     queue: default
     timeout: 10m
@@ -396,6 +405,7 @@ kinds:
 
   weekly_review_generate:
     role: worker
+    fleet: true
     go_type: WeeklyReviewGenerateArgs
     queue: default
     timeout: 10m
@@ -413,6 +423,7 @@ kinds:
 
   capture_enrich:
     role: worker
+    fleet: true
     go_type: CaptureEnrichArgs
     queue: default
     timeout: 20m
@@ -460,6 +471,7 @@ kinds:
 
   assurance_sweep:
     role: worker
+    fleet: true
     go_type: AssuranceSweepArgs
     queue: default
     timeout: 5m
@@ -477,6 +489,7 @@ kinds:
 
   close_date_sweep:
     role: worker
+    fleet: true
     go_type: CloseDateSweepArgs
     queue: default
     timeout: 5m
@@ -571,6 +584,7 @@ kinds:
 
   embed_drift_sweep:
     role: worker
+    fleet: true
     go_type: EmbedDriftSweepArgs
     queue: default
     timeout:
@@ -638,6 +652,7 @@ kinds:
 
   embed_reindex:
     role: worker
+    fleet: true
     go_type: EmbedReindexArgs
     queue: ai_capture
     timeout:
@@ -678,14 +693,13 @@ kinds:
       three would quietly cost the installation its pass.
 
   forecast_snapshot_sweep:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: ForecastSnapshotSweepArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: 24h
-    fans_out_to: forecast_snapshot_workspace
-    fan_out_unit: workspace
     reason: >-
       Daily, because a snapshot is the frozen state the movement waterfall
       differences and the shares point at, and a forecast that is never frozen
@@ -694,24 +708,10 @@ kinds:
       day after — with nothing to difference, movement is empty either way, and
       the sooner the first one exists the sooner the second is worth taking.
 
-  forecast_snapshot_workspace:
-    role: worker
-    go_type: ForecastSnapshotWorkspaceArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      One tenant's daily snapshot: resolve the period, read the deals in it and
-      freeze the readings with the rows they were summed from. Three attempts,
-      the house number — the pass ticks daily and the store arbitrates `daily`
-      to one row per local day, so a retry that lands after a successful one
-      writes nothing rather than a duplicate.
 
   follow_up_reconcile:
     role: worker
+    fleet: true
     go_type: FollowUpReconcileArgs
     queue: default
     timeout: 5m
@@ -808,34 +808,19 @@ kinds:
       connection, and the write that advances watch_expires_at behind it.
 
   graph_edge_reconcile:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: GraphEdgeReconcileArgs
     queue: default
-    timeout: 2m
+    timeout: 15m
     opts_owner: caller
     cadence: 24h
-    fans_out_to: graph_edge_workspace
-    fan_out_unit: workspace
     reason: >-
       Daily, because the 90-day window counts go stale through the passage of
       time and nothing emits an event for that. This pass is what bounds the
       staleness the migration states, and doubles as the corruption remedy, so
       loosening the cadence without amending the migration makes it a lie.
 
-  graph_edge_workspace:
-    role: worker
-    go_type: GraphEdgeWorkspaceArgs
-    queue: default
-    timeout: 15m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      The whole interaction projection cleared and refilled in ONE transaction,
-      so a reader never sees an empty graph — which also means a pass cut short
-      loses all of it and starts over. The cap has to clear the refold of the
-      longest-history tenant, and the daily cadence leaves the room to do it.
 
   # One job, not a dispatcher and a child (ADR-0103 §1): one indexed scan over
   # an installation-wide table, so there is nothing to fan out over.
@@ -975,32 +960,18 @@ kinds:
       changing history nobody kept.
 
   idempotency_retention:
-    role: dispatcher
+    role: worker
+    fleet: true
     go_type: IdempotencyRetentionArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: 1h
-    fans_out_to: idempotency_retention_workspace
-    fan_out_unit: workspace
     reason: >-
       Hourly rather than daily: the rows hold verbatim record snapshots and the
       replay window they serve is only 24h, so a daily pass would leave a day of
       expired personal data sitting past its purpose.
 
-  idempotency_retention_workspace:
-    role: worker
-    go_type: IdempotencyRetentionWorkspaceArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      An indexed delete of one tenant's claims past the 24h replay window —
-      database-only, and hourly, so a pass never faces more than an hour's
-      arrivals once an installation has caught up.
 
   linkedin_rematch:
     role: dispatcher
@@ -1034,6 +1005,7 @@ kinds:
 
   org_name_promotion:
     role: worker
+    fleet: true
     go_type: OrgNamePromotionArgs
     queue: default
     timeout: 5m
@@ -1597,6 +1569,7 @@ kinds:
 
   time_scan:
     role: worker
+    fleet: true
     go_type: TimeScanArgs
     queue: default
     timeout: 10m
