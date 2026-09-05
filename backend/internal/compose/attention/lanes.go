@@ -350,6 +350,20 @@ type Meeting struct {
 	Subject  string
 	StartsAt time.Time
 
+	// PersonID is whose page the brief is read on, and it is zero whenever the
+	// meeting names nobody this reader may see.
+	//
+	// The brief is not a page of its own: it opens as `?prep=<activity>` on a
+	// PERSON's record, so the activity id the row already carries names the
+	// meeting and says nothing about where to read it. Without this the lane
+	// could describe a meeting and offer no way to prepare for it, which is
+	// the one thing a rep opens the row to do.
+	//
+	// An internal meeting legitimately has none, and so does one whose only
+	// attendees are people the reader cannot read. Both stay zero and the row
+	// offers no verb rather than a link to somebody's page picked at random.
+	PersonID ids.UUID
+
 	// NeedsPrep is true when nothing has been written down for a meeting that
 	// is about to happen: no agenda or notes body, and nobody outside this
 	// organization recorded on it.
