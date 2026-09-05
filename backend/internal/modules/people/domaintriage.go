@@ -288,7 +288,10 @@ func (s *Store) ExhaustedDomains(ctx context.Context, limit int) ([]DueDomain, e
 //
 // It is deliberately narrow: only this domain's own triage read, only one past
 // the staleness bound, and only from a live status to `failed`. A read that is
-// merely slow is not touched.
+// merely slow is not touched. A deferred read's retry time goes with it:
+// BeginSiteRead reclaims a failed read whose retry is due, and a retired read
+// that kept one would be taken up again by the very job it was retired from
+// under — the domain's disposition carries the retry, never the dossier.
 func (s *Store) RetireStaleTriageRead(ctx context.Context, domain string) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// RETURNING rather than a bare Exec because a retired read is a settled
@@ -296,7 +299,7 @@ func (s *Store) RetireStaleTriageRead(ctx context.Context, domain string) error 
 		// reporting the retired attempt as live until its lease lapses.
 		rows, err := tx.Query(ctx, `
 			UPDATE site_read
-			   SET status = 'failed', finished_at = now(), updated_at = now(),
+			   SET status = 'failed', next_attempt_at = NULL, finished_at = now(), updated_at = now(),
 			       status_code = 'stale_reclaim',
 			       status_detail = 'the read stopped reporting; the sweep retired it so the domain could be asked again'
 			 WHERE target_kind = $1 AND seed_url = $2

@@ -3691,7 +3691,7 @@ export const en = {
     "Reading the company website has taken unusually long. It may have stopped.",
   "agent.activity.siteRead.done": "I've read the company website.",
   "agent.activity.siteRead.degraded":
-    "I got partway through the company website and stopped.",
+    "I stopped before finishing the company website.",
   "agent.activity.siteRead.failed": "I couldn't read the company website.",
   "agent.activity.siteReadNamed.queued":
     "The {name} website is queued to be read.",
@@ -3700,7 +3700,7 @@ export const en = {
     "Reading the {name} website has taken unusually long. It may have stopped.",
   "agent.activity.siteReadNamed.done": "I've read the {name} website.",
   "agent.activity.siteReadNamed.degraded":
-    "I got partway through the {name} website and stopped.",
+    "I stopped before finishing the {name} website.",
   "agent.activity.siteReadNamed.failed": "I couldn't read the {name} website.",
   // The AI work a person ASKS for and then waits on. Same rules as the
   // scheduled lines above — first person, result first, and never a word that

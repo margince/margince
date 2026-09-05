@@ -361,10 +361,12 @@ func (s *Store) BeginSiteRead(ctx context.Context, readID ids.UUID, reclaimAfter
 		// one from any other status — a deferral, a retryable failure, a dead
 		// holder — begins a new one. The CASE reads the row's OLD status, so
 		// both are one statement, and the projection can tell a second claim
-		// from a redelivery of the first.
+		// from a redelivery of the first. A retryable failure's finished_at
+		// is cleared with its diagnosis: a running row carrying a terminal
+		// stamp reads as settled to anything that asks when it ended.
 		claimed, err := scanSiteRead(tx.QueryRow(ctx, `
 			UPDATE site_read SET status = 'running', status_code = NULL, status_detail = NULL,
-				next_attempt_at = NULL, started_at = now(), updated_at = now(),
+				next_attempt_at = NULL, started_at = now(), finished_at = NULL, updated_at = now(),
 				attempt    = attempt + CASE WHEN status = 'queued' THEN 0 ELSE 1 END,
 				attempt_at = CASE WHEN status = 'queued' THEN attempt_at ELSE now() END
 			WHERE id = $1 AND (status = 'queued' OR

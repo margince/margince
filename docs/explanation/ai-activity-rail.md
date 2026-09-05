@@ -166,13 +166,15 @@ orphan guard in `i18n.test.ts` counts a key as rendered when it starts with a
 template stem, so an interpolated key would vouch for the whole namespace forever
 and a retired kind's copy would sit in three catalogs with nothing to flag it.
 
-**Six kinds are narrated**, in en/de/vi, total over all six states:
+**Eight kinds are narrated**, in en/de/vi, total over all six states:
 
 | Kind | Reported by | The line a rep sees |
 |---|---|---|
 | `morning_brief` | carrier (`agent_runner`) | the scheduled brief |
 | `overnight_at_risk_sweep` | carrier (`agent_runner`) | the scheduled sweep |
 | `document_extract` | carrier (`attachment_extraction`) | reading a document you attached |
+| `site_read` | carrier (`site_read`) | reading a company's website, named for the company |
+| `weekly_review` | router | the weekly retrospective, under the rep's own principal |
 | `summarize` | router | "I'm writing your summary." |
 | `draft_reply` | router | "I'm drafting your reply." |
 | `offer_draft` | router | "I'm drafting your offer." |
@@ -182,13 +184,13 @@ router announces a call it is ABOUT to serve, never one waiting, and no carrier
 owns these tasks. The key exists because the state axis is total and the compiler
 requires it — not because a producer is missing.
 
-**Seventeen are not narrated**, and each reason is a different kind of fact:
+**Twenty-one are not narrated**, and each reason is a different kind of fact:
 
 | Reason | Kinds | Why |
 |---|---|---|
-| Watched by the asker | `growth_fit`, `cold_start` | The work lands on the surface that asked and changes it on arrival. `growth_fit` renders the band it returns on the panel that asked. `cold_start` runs behind TWO product surfaces and both need naming (it declares four invocation *sites* in `aitaskregistry.go`, which is a different count and not the one that matters here): onboarding, whose screen is deliberately RAILLESS (`onboarding` is a member of `RAIL_LESS_SCREENS` in `nav.ts`, which `shell.tsx` reads to drop the chrome), and the organization page's Enrich card — `cmd/api/modelwiring.go` wires `WithScrape` with the cold-start brain — where a rail does exist and the card itself renders the proposal. |
-| System sweep | `brief_ranking`, `capture_classify`, `capture_counterparty_verdict`, `rate_extract`, `signal_extract`, `transcript_propose`, `voice_build` | Background workspace work that belongs to nobody in particular, so it has no personal line to draw. |
-| Watched where it runs | `site_extract`, `site_fact_extract`, `site_triage` | Attribution here is a fact about the READ, not the task: a human-requested read carries that person as `on_behalf_of` and IS personal to them; a domain-triage or auto-enrich read names no human and is workspace-scoped. Neither wants a line. The human's read is already drawn live where it was started (the organization page polls the read's own status), and the system's read belongs to nobody. A grain problem seals it: the occurrence key is correlation+task and a read's correlation is its `site_read` row id, so one read files one occurrence per lane it runs — and only a domain-triage read reaches all three (`site_triage` fires solely for `isDomainTriageRequest`). |
+| Watched by the asker | `growth_fit`, `cold_start`, `corpus_ask` | The work lands on the surface that asked and changes it on arrival. `growth_fit` renders the band it returns on the panel that asked. `cold_start` runs behind TWO product surfaces and both need naming (it declares four invocation *sites* in `aitaskregistry.go`, which is a different count and not the one that matters here): onboarding, whose screen is deliberately RAILLESS (`onboarding` is a member of `RAIL_LESS_SCREENS` in `nav.ts`, which `shell.tsx` reads to drop the chrome), and the organization page's Enrich card — `cmd/api/modelwiring.go` wires `WithScrape` with the cold-start brain — where a rail does exist and the card itself renders the proposal. |
+| System sweep | `brief_ranking`, `capture_classify`, `capture_confidentiality_verdict`, `capture_counterparty_verdict`, `owed_verdict`, `propose_roles`, `rate_extract`, `signal_extract`, `transcript_propose`, `voice_build` | Background workspace work that belongs to nobody in particular, so it has no personal line to draw. |
+| The read narrates itself | `site_extract`, `site_fact_extract`, `site_triage` | These are the individual model calls a website read makes, and `site_read` above is the read: one occurrence for the whole crawl, announced by the dossier from queued to settled, so a line per call would tell one reading several times over. A grain problem seals it: the occurrence key is correlation+task and a read's correlation is its `site_read` row id, so one read files one occurrence per lane it runs — and only a domain-triage read reaches all three (`site_triage` fires solely for `isDomainTriageRequest`). Attribution is a fact about the READ: a human-requested read carries that person as `on_behalf_of` and IS personal to them; a domain-triage or auto-enrich read names no human and is workspace-scoped. |
 | Reaches nobody, and would not be worth showing | `enrich` | Both halves matter. **Reachability:** its one production site is the signature-enrichment pass, which runs under a system principal with no `on_behalf_of` — so every occurrence is workspace-scoped with a NULL `actor_user_id`, and the personal feed selects on `actor_user_id`. **Worth:** it could not be per-person even if it were reachable. The pass mints ONE correlation id for the whole run (`capture_enrich`, up to 100 candidates in series) and the occurrence key is correlation+task, so every candidate collapses into one row — a per-person subject would make that row flap rather than narrate anybody. What a reader wants from it is what it FOUND, which is durable and already drawn as evidence-or-omit provenance on the person record. |
 | An operator's measurement | `cert_judge` | The certification lane grading this build's own answers — not a rep's work. |
 | Declared, not built | `deal_health`, `nl_search`, `transcript` | Named in `api/ai-tasks.yaml`; no site runs them, so nothing reports them yet. |

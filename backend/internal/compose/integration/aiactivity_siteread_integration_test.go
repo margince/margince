@@ -297,3 +297,44 @@ func TestADeferredWebsiteReadSettlesAndReopensOnTheNextClaim(t *testing.T) {
 		t.Fatalf("the reopened occurrence kept the deferral's finished_at %v / reason %v", got.FinishedAt, got.DegradeReason)
 	}
 }
+
+// A failure the classifier judged transient names its own next attempt, and
+// the claim that takes it up again is a NEW attempt at a live read: the
+// occurrence reopens as running under attempt 2 and carries nothing of the
+// failure it recovered from — no finish time, no reason — because a running row
+// that still says when it ended reads as settled to anything that asks.
+func TestARetryableFailureReclaimedIsALiveSecondAttempt(t *testing.T) {
+	f := newWebsiteReadFixture(t)
+	claim, err := f.env.People.BeginSiteRead(f.worker, f.readID, siteReadLease)
+	if err != nil {
+		t.Fatalf("BeginSiteRead: %v", err)
+	}
+	due := time.Now().Add(-time.Second)
+	if err := f.env.People.FinishSiteRead(f.worker, f.readID, people.FinishSiteReadInput{
+		Status: "failed", ClaimedAt: &claim.ClaimedAt,
+		StatusCode:    people.SiteReadFailureServerError,
+		StatusDetail:  "The site answered 503. Another attempt is scheduled.",
+		NextAttemptAt: &due,
+	}); err != nil {
+		t.Fatalf("FinishSiteRead: %v", err)
+	}
+	f.drain(t)
+	got := f.projection(t)
+	if got.State != "failed" || got.Attempt != 1 || got.FinishedAt == nil || got.DegradeReason == nil {
+		t.Fatalf("after the failure, state/attempt/finished_at/reason = %s/%d/%v/%v, want failed/1/set/set",
+			got.State, got.Attempt, got.FinishedAt, got.DegradeReason)
+	}
+
+	if _, err := f.env.People.BeginSiteRead(f.worker, f.readID, siteReadLease); err != nil {
+		t.Fatalf("BeginSiteRead after the retryable failure: %v", err)
+	}
+	f.drain(t)
+	got = f.projection(t)
+	if got.State != "running" || got.Attempt != 2 {
+		t.Fatalf("after the retry's claim, state/attempt = %s/%d, want running/2", got.State, got.Attempt)
+	}
+	if got.FinishedAt != nil || got.DegradeReason != nil || got.StaleAfter == nil {
+		t.Fatalf("the retry carried the failure with it: finished_at %v, reason %v, stale_after %v — want none, none, a lease",
+			got.FinishedAt, got.DegradeReason, got.StaleAfter)
+	}
+}
