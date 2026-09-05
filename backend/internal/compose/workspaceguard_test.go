@@ -189,15 +189,6 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		WeeklyReviewGenerateWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&weeklyGenerateWorkspaceWorker{}).Work(ctx, &river.Job[WeeklyReviewGenerateWorkspaceArgs]{})
 		},
-		CaptureTraceSweepWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&captureTraceSweepWorkspaceWorker{}).Work(ctx, &river.Job[CaptureTraceSweepWorkspaceArgs]{})
-		},
-		ConfidentialityVerdictWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&confidentialityVerdictWorkspaceWorker{}).Work(ctx, &river.Job[ConfidentialityVerdictWorkspaceArgs]{})
-		},
-		CounterpartyVerdictWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&counterpartyVerdictWorkspaceWorker{}).Work(ctx, &river.Job[CounterpartyVerdictWorkspaceArgs]{})
-		},
 		OverlayReconcileWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&overlayReconcileWorkspaceWorker{}).Work(ctx, &river.Job[OverlayReconcileWorkspaceArgs]{})
 		},

@@ -204,13 +204,13 @@ function RecentRow({
                   false. */}
               <Badge>{kind}</Badge>
               {direction && (
-                <span className="co-recent-dir">{t(direction)}</span>
+                <span className="co-recent-dir t-caption">{t(direction)}</span>
               )}
             </span>
             <span className="co-recent-title">{title}</span>
           </>
         )}
-        <span className="co-recent-meta">
+        <span className="co-recent-meta t-caption">
           {duration && <span>{duration}</span>}
           {deal &&
             (onOpenRecord ? (
@@ -226,7 +226,7 @@ function RecentRow({
             ))}
         </span>
       </span>
-      <span className="co-recent-when t-mono">{when}</span>
+      <span className="co-recent-when t-mono t-caption">{when}</span>
     </li>
   );
 }

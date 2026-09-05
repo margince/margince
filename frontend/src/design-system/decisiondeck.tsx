@@ -649,7 +649,7 @@ export function DecisionDeck({
                 does, because it is a quieter SECOND line rather than the
                 sentence itself. */}
             <p>{labels.cleared(tally.count)}</p>
-            <p className="t-small ddeck-cleared-time">
+            <p className="t-caption ddeck-cleared-time">
               {labels.clearedTime(tally.at)}
             </p>
           </EmptyState>
@@ -893,10 +893,10 @@ function DeckStack({
           </div>
         </fieldset>
       </div>
-      <p className="t-small ddeck-behind">
+      <p className="t-caption ddeck-behind">
         {labels.behind(Math.max(behind, 0))}
       </p>
-      <p className="t-small ddeck-keys">{labels.keys}</p>
+      <p className="t-caption ddeck-keys">{labels.keys}</p>
     </div>
   );
 }
@@ -955,7 +955,7 @@ function ItemCard({
                 have to reach a reader who is hearing this page. */}
             <ul className="ddeck-bundle-members">
               {members.map((member) => (
-                <li key={member.id} className="t-small">
+                <li key={member.id} className="t-caption">
                   {member.summary ?? member.kind}
                 </li>
               ))}

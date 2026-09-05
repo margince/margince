@@ -1199,7 +1199,7 @@ export function PendingBody({
           never both: this is a live region, and the same sentence twice inside
           it is announced twice. */}
       {visible ? (
-        <p className="t-small pending-note">{label}</p>
+        <p className="t-caption pending-note">{label}</p>
       ) : (
         <span className="sr-only">{label}</span>
       )}

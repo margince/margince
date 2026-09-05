@@ -168,7 +168,7 @@ function DigestCompanion({
         <ProfileMark rows={rows} identity={identity} />
         <div className="pdigest-head-text">
           <Eyebrow className="pdigest-eyebrow">{t("ob.digest.where")}</Eyebrow>
-          <p className="pdigest-count">
+          <p className="pdigest-count t-caption">
             {t("ob.digest.written", {
               n: formatNumber(written, locale),
               m: formatNumber(rows.length, locale),
@@ -176,7 +176,11 @@ function DigestCompanion({
           </p>
         </div>
         {onReadWhole === undefined ? null : (
-          <button type="button" className="pdigest-whole" onClick={onReadWhole}>
+          <button
+            type="button"
+            className="pdigest-whole t-caption"
+            onClick={onReadWhole}
+          >
             {t("ob.deck.readWhole")}
           </button>
         )}
@@ -254,7 +258,7 @@ function DigestDocument({
             />
             <div>
               <p className="pdigest-hero-name">{companyName}</p>
-              <p className="pdigest-hero-sub">
+              <p className="pdigest-hero-sub t-sub">
                 {t("ob.digest.companyLine", {
                   n: formatNumber(read.pages.length, locale),
                   host,

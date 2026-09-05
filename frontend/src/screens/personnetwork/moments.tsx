@@ -78,7 +78,7 @@ export function MomentsCard({ view }: Readonly<{ view: RelationshipMoments }>) {
         <ol className="pn-moments">
           {changes.map((change, index) => (
             <li key={`${change.kind}-${change.at}`} className="pn-moment">
-              <time className="pn-moment-when" dateTime={change.at}>
+              <time className="pn-moment-when t-caption" dateTime={change.at}>
                 {formatDate(change.at, locale, recordZone)}
               </time>
               <p>

@@ -269,7 +269,7 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
                   // row. Per-row it read as a property of that message — as
                   // though this one arrived without a sender — when it is the
                   // deployment having stored no address for any of them.
-                  <p className="capture-activity__note">
+                  <p className="capture-activity__note t-sub">
                     {t("captureActivity.payloadsOff")}
                   </p>
                 )}
@@ -277,7 +277,9 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
                   // Both numbers, always. The funnel counts the WINDOW and
                   // this filters what is loaded, so a bare "12" under a
                   // counter reading 26 would look like the counter was wrong.
-                  <p className="capture-activity__count">
+                  // Both numbers, so a filtered view can never be read as the
+                  // whole window.
+                  <p className="capture-activity__count t-sub">
                     {t("captureActivity.filtered", {
                       shown: formatNumber(shown.length, locale),
                       total: formatNumber(first.funnel[filter] ?? 0, locale),
@@ -438,13 +440,13 @@ function CaptureEntryRow({
         onClick={onOpen}
         aria-label={t("captureActivity.openTrace")}
       >
-        <span className="capture-activity__when">
+        <span className="capture-activity__when t-sub">
           {formatDateTime(entry.occurred_at, locale, zone)}
         </span>
         {/* The provider ID resolved to a name. The contract is explicit that a
             label is never stored — two deploys would disagree about the same
             transport — so it is resolved here, against the registry. */}
-        <span className="capture-activity__connector">
+        <span className="capture-activity__connector t-sub">
           {providerLabel(entry.connector)}
         </span>
         <CaptureEntryOutcome entry={entry} />
@@ -477,8 +479,11 @@ function CaptureEntryOutcome({ entry }: Readonly<{ entry: TraceEntry }>) {
   return (
     <span className="capture-activity__outcome">
       {t(`captureActivity.outcome.${outcome}`)}
+      {/* The reason is the half that changes what the outcome MEANS — a capped
+          deferral is not waiting for anything — so it is quieter than the
+          outcome but never hidden behind an interaction. */}
       {reason ? (
-        <span className="capture-activity__reason">
+        <span className="capture-activity__reason t-sub">
           {t(`captureActivity.reason.${reason}`)}
         </span>
       ) : null}
@@ -551,7 +556,7 @@ function CaptureEntryResolution({ entry }: Readonly<{ entry: TraceEntry }>) {
     return null;
   }
   return (
-    <span className="capture-activity__resolution">
+    <span className="capture-activity__resolution t-sub">
       {t(`captureActivity.resolution.${status}`)}
     </span>
   );

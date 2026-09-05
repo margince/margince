@@ -194,7 +194,7 @@ function TagVocabularyRow({
   return (
     <li className="tagadmin-row">
       <TagPill name={tag.name} tone={tag.color} archived={archived} />
-      <span className="tagadmin-usage t-small">
+      <span className="tagadmin-usage t-caption">
         {carried !== undefined ? (
           t("tagAdmin.usage", { count: formatNumber(carried, locale) })
         ) : detail.isError ? (

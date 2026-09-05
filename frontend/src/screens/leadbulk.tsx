@@ -270,7 +270,7 @@ export function LeadBulkBar({
         onConfirm={disqualify}
         pending={run.isPending}
       >
-        <p className="t-small">
+        <p className="t-caption">
           {t("lead.bulkDisqualifyBody", { reason: reasonLabel })}
         </p>
       </ConfirmModal>

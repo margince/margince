@@ -344,14 +344,12 @@ kinds:
 
 
   capture_counterparty_verdict:
-    role: dispatcher
+    role: worker
     go_type: CounterpartyVerdictArgs
     queue: default
-    timeout: 2m
+    timeout: 20m
     opts_owner: caller
     cadence: 1h
-    fans_out_to: capture_counterparty_verdict_workspace
-    fan_out_unit: workspace
     reason: >-
       Hourly, like capture_classify and for the same reason: the ledger's
       due-index makes an empty pass one cheap probe, and a deferred sender
@@ -360,40 +358,14 @@ kinds:
       staging then offers, and redaction only ever acts on windows that closed
       before the tick.
 
-  capture_counterparty_verdict_workspace:
-    role: worker
-    go_type: CounterpartyVerdictWorkspaceArgs
-    queue: ai_capture
-    timeout: 20m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      Up to verdictCatchUpCap (200) senders judged one model call each, then
-      five database-only stages that must all run in dependency order. The
-      judging stage leases and commits in claims of eight, so a cut-off pass
-      keeps every verdict it paid for.
-
-      One call each is what these twenty minutes are sized against, and the
-      asymmetric confidence floor made a SECOND call ordinary: a creating
-      answer between the two floors is re-asked, which is the common case on a
-      mailbox of first-time senders. reAskBudget bounds those at
-      verdictCatchUpCap / verdictReAskShare, so the worst case is cap + budget
-      calls rather than twice the cap — the arithmetic above holds by
-      construction, at any model speed and whatever fraction of answers land in
-      the band. Lowering the cap or raising this wall would both need a
-      measured pass on real hardware; the bound does not.
 
   capture_confidentiality_verdict:
-    role: dispatcher
+    role: worker
     go_type: ConfidentialityVerdictArgs
     queue: default
-    timeout: 2m
+    timeout: 20m
     opts_owner: caller
     cadence: 10m
-    fans_out_to: capture_confidentiality_verdict_workspace
-    fan_out_unit: workspace
     reason: >-
       Ten minutes, faster than the sender verdict's hour, because this decides
       whether mail a colleague is waiting on is readable at all. Under the
@@ -402,51 +374,20 @@ kinds:
       that reads as the product being broken. An empty pass is one cheap probe
       against the ledger's due-index.
 
-  capture_confidentiality_verdict_workspace:
-    role: worker
-    go_type: ConfidentialityVerdictWorkspaceArgs
-    queue: ai_capture
-    timeout: 20m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      Up to confidentialityCatchUpCap (40) threads judged one model call each,
-      leased and committed in claims of eight, so a cut-off pass keeps every
-      verdict it paid for. Then one database-only stage that retires the
-      threads which spent every attempt, which must run after judging so a
-      thread exhausted this tick is retired in the same pass.
 
   capture_trace_sweep:
-    role: dispatcher
+    role: worker
     go_type: CaptureTraceSweepArgs
     queue: default
-    timeout: 2m
+    timeout: 5m
     opts_owner: caller
     cadence: 1h
-    fans_out_to: capture_trace_sweep_workspace
-    fan_out_unit: workspace
     reason: >-
       Hourly, because the window is 24h and an hour of overshoot costs nothing a
       tighter cadence would buy back — while a slower one would leave message
       content, under the trace_payloads posture, alive materially past the
       retention this feature promises. An empty pass is one indexed probe.
 
-  capture_trace_sweep_workspace:
-    role: worker
-    go_type: CaptureTraceSweepWorkspaceArgs
-    queue: default
-    timeout: 5m
-    max_attempts: 3
-    opts_owner: fan_out
-    args:
-      Workspace: id
-    reason: >-
-      One workspace's tail, deleted in bounded batches (traceSweepBatch). The
-      table's whole lifecycle is insert-then-delete, so an unbounded statement
-      is a write burst and a vacuum debt at once; what a tick does not reach,
-      the next hour does.
 
   capture_digest:
     role: dispatcher

@@ -521,10 +521,11 @@ function SectionPickGroup({
   const { locale } = useLocale();
   return (
     <div className="sectionpickgroup">
-      {group.headingKey && <h3>{t(group.headingKey)}</h3>}
+      {group.headingKey && <h3 className="t-label">{t(group.headingKey)}</h3>}
       {group.items.map((entry) => (
         <a
           key={entry.id}
+          className="t-body"
           href={navEntryHref([section.screen], entry)}
           aria-current={entry.id === activeId ? "page" : undefined}
           // The sheet covers the page it just navigated to, so a row that acts

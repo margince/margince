@@ -116,7 +116,7 @@ export function VCardImport() {
               screen saying what happened to it. Taking the control away is
               honest; leaving it live and dropping the pick would not be. */}
           {importer.isPending ? (
-            <p className="co-muted">{t("vcardImport.working")}</p>
+            <p className="t-sub">{t("vcardImport.working")}</p>
           ) : (
             <FileDropzone
               label={t("vcardImport.fileLabel")}
@@ -163,7 +163,7 @@ function ImportReport({ report }: Readonly<{ report: VCardReport }>) {
   const t = useT();
   const cards = report.results ?? [];
   if (cards.length === 0) {
-    return <p className="co-muted">{t("vcardImport.noCards")}</p>;
+    return <p className="t-sub">{t("vcardImport.noCards")}</p>;
   }
   return (
     <ul className="vcard-import-report" data-testid="vcard-import-report">
@@ -174,14 +174,14 @@ function ImportReport({ report }: Readonly<{ report: VCardReport }>) {
             <span className="vcard-import-name">{card.full_name}</span>
             <span
               className={
-                outcome?.tone === "warn" ? "vcard-import-warn" : "co-muted"
+                outcome?.tone === "warn" ? "vcard-import-warn" : "t-sub"
               }
             >
               {/* An outcome this build has no name for is a server newer than
                   this tab. The word it sent is still worth showing. */}
               {outcome ? t(outcome.label) : card.outcome}
             </span>
-            {card.reason && <span className="co-muted">{card.reason}</span>}
+            {card.reason && <span className="t-sub">{card.reason}</span>}
           </li>
         );
       })}

@@ -710,7 +710,7 @@ function DsrRow({
         <Badge tone={STATUS_TONE[dsr.status]}>
           {humanizeToken(dsr.status)}
         </Badge>
-        <span className="t-small dsr-due">
+        <span className="t-caption dsr-due">
           {t("settings.due", { date: formatDate(dsr.due_at, locale, tz) })}
         </span>
         {overdue && <Badge tone="danger">{t("privacy.overdue")}</Badge>}

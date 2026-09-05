@@ -66,7 +66,7 @@ export function TodayPanel({
           fact about the list's head, and as a footer band under the rows it
           floated alone at the bottom of the pane. */}
       <div className="co-360-headtext">
-        <h3 className="co-360-title-text">{t("today.title")}</h3>
+        <h3 className="co-360-title-text t-h3">{t("today.title")}</h3>
         {footer}
       </div>
       {onOpenTasks && (
@@ -132,7 +132,7 @@ export function WithheldNotice({
     return null;
   }
   return (
-    <p className="today-withheld">
+    <p className="today-withheld t-caption">
       {t("today.withheld", { sections: sections.join(", ") })}
     </p>
   );
@@ -194,7 +194,7 @@ export function FoundMove({
           </span>
         )}
         <span className="co-move-ask">{title}</span>
-        {why && <span className="co-move-reason">{why}</span>}
+        {why && <span className="co-move-reason t-sub">{why}</span>}
         {basis && (
           <span className="co-move-basis">
             <span className="co-move-basis-head t-eyebrow">
@@ -260,11 +260,15 @@ export function TodoRow({
       {who && <Avatar name={who} size="xs" />}
       <span className="co-todo-body">
         <span className="co-todo-title">{title}</span>
-        {meta && <span className="co-todo-meta">{meta}</span>}
+        {meta && <span className="co-todo-meta t-caption">{meta}</span>}
       </span>
       {due && (
         <span
-          className={["co-todo-due", due.tone ? `co-todo-due-${due.tone}` : ""]
+          className={[
+            "co-todo-due",
+            "t-caption",
+            due.tone ? `co-todo-due-${due.tone}` : "",
+          ]
             .filter(Boolean)
             .join(" ")}
         >

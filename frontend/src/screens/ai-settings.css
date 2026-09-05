@@ -77,8 +77,6 @@
  * the id rather than competing with it — a reader who already knows the ladder
  * reads straight past it. */
 .ai-lane-gloss {
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
   line-height: 1.35;
 }
 
@@ -86,8 +84,6 @@
  * figure is why the ladder is ordered the way it is, not a fact about the
  * binding's identity. */
 .ai-lane-price {
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
   white-space: nowrap;
 }
 

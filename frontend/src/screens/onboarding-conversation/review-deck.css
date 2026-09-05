@@ -101,15 +101,6 @@
   background: var(--dangerBg);
   color: var(--danger);
 }
-
-/* "1 of 4" is a counted position in the deck, not an identifier a reader
-   compares character by character, so it reads in the deck's own prose
-   family rather than mono. */
-.rdeck-count {
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
-}
-
 .rdeck-question {
   color: var(--textPrimary);
   font-family: var(--f-display);
@@ -122,8 +113,6 @@
    background a reader only needs once they wonder what to type. */
 .rdeck-hint {
   margin: 0;
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
   line-height: var(--lh-normal);
 }
 
@@ -180,9 +169,7 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgElevated);
-  color: var(--textMeta);
   font-family: var(--f-mono);
-  font-size: var(--fs-meta);
 }
 
 /* The way onward is a foot, not a button loose under the prose: it is the one
@@ -215,14 +202,6 @@
   color: var(--textPrimary);
   font-size: var(--fs-sm);
 }
-/* The quiet half of the sentence: the reader did not have to do this, and
-   saying so is what makes the short list of cards credible rather than
-   suspicious. */
-.rdeck-settled {
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
-}
-
 .rdeck-clear {
   margin: 0;
   color: var(--textSecondary);

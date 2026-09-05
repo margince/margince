@@ -332,7 +332,7 @@ export function QualifyDialog({
 
         <section className="lead-qualify-block">
           <h3 className="t-label">{t("lead.qualify.why")}</h3>
-          <p className="t-small">{reasonSentence(lead, t, locale, zone)}</p>
+          <p className="t-caption">{reasonSentence(lead, t, locale, zone)}</p>
           <Field label={t("lead.evidenceNote")}>
             {(control) => (
               <Textarea
@@ -356,7 +356,7 @@ function PreviewSentence({
   t: ReturnType<typeof useT>;
 }>) {
   if (preview.isPending) {
-    return <p className="t-small">{t("lead.previewPending")}</p>;
+    return <p className="t-caption">{t("lead.previewPending")}</p>;
   }
   // A failed preview does not block the qualification; the confirm still
   // runs the same ladder. It just cannot be described in advance.
@@ -364,13 +364,13 @@ function PreviewSentence({
     return null;
   }
   if (preview.data.outcome === "create") {
-    return <p className="t-small">{t("lead.previewCreate")}</p>;
+    return <p className="t-caption">{t("lead.previewCreate")}</p>;
   }
   if (!preview.data.person) {
-    return <p className="t-small">{t("lead.previewMergeWithheld")}</p>;
+    return <p className="t-caption">{t("lead.previewMergeWithheld")}</p>;
   }
   return (
-    <p className="t-small">
+    <p className="t-caption">
       {t("lead.previewMerge")}{" "}
       <EntityRef kind="person" id={preview.data.person.id} />
     </p>

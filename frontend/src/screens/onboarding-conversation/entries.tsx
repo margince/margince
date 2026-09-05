@@ -217,7 +217,7 @@ export function ActivityGroup({
       >
         <i aria-hidden />
         <span>{textOf(latest)}</span>
-        <b>
+        <b className="t-caption">
           {plural("ob.conv.activity.steps", entries.length, {
             count: formatNumber(entries.length, locale),
           })}
@@ -228,7 +228,7 @@ export function ActivityGroup({
         <ul>
           {entries.map((entry) =>
             entry.findingIds !== undefined && entry.findingIds.length > 0 ? (
-              <li key={entry.id}>
+              <li key={entry.id} className="t-caption">
                 <button
                   type="button"
                   onClick={() => jumpToFindings(entry.findingIds ?? [])}
@@ -237,7 +237,9 @@ export function ActivityGroup({
                 </button>
               </li>
             ) : (
-              <li key={entry.id}>{textOf(entry)}</li>
+              <li key={entry.id} className="t-caption">
+                {textOf(entry)}
+              </li>
             ),
           )}
         </ul>
@@ -407,7 +409,9 @@ export function QuestionCard({
             >
               <span>{label}</span>
               {option.detailKey && (
-                <small>{t(option.detailKey, option.params)}</small>
+                <small className="t-caption">
+                  {t(option.detailKey, option.params)}
+                </small>
               )}
             </Button>
           );

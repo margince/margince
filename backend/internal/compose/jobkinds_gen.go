@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "0777913b8924cb60dce0393d04839a542c5ab69fcab0d6a9418234a11dd5286e"
+const jobContractHash = "95adbfaf26fb3f3e80620c78f6c98f13f3052ca93f49070a1cb53e17a92dcb5f"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -41,15 +41,12 @@ type declaredJobArgs interface {
 		CaptureBackfillArgs |
 		CaptureClassifyArgs |
 		ConfidentialityVerdictArgs |
-		ConfidentialityVerdictWorkspaceArgs |
 		CounterpartyVerdictArgs |
-		CounterpartyVerdictWorkspaceArgs |
 		CaptureDigestArgs |
 		CaptureDigestWorkspaceArgs |
 		CaptureEnrichArgs |
 		CaptureSyncArgs |
 		CaptureTraceSweepArgs |
-		CaptureTraceSweepWorkspaceArgs |
 		CheckOrganizationVatArgs |
 		CloseDateSweepArgs |
 		CloseDateWorkspaceArgs |
@@ -148,10 +145,7 @@ func addDeclaredWorkerWithTimeout[T declaredJobArgs](reg *jobRegistry, w jobs.Wo
 var (
 	_ jobs.FleetWide = AssuranceSweepArgs{}
 	_ jobs.FleetWide = BriefGenerateArgs{}
-	_ jobs.FleetWide = ConfidentialityVerdictArgs{}
-	_ jobs.FleetWide = CounterpartyVerdictArgs{}
 	_ jobs.FleetWide = CaptureDigestArgs{}
-	_ jobs.FleetWide = CaptureTraceSweepArgs{}
 	_ jobs.FleetWide = CloseDateSweepArgs{}
 	_ jobs.FleetWide = FollowUpReconcileArgs{}
 	_ jobs.FleetWide = ForecastSnapshotSweepArgs{}
@@ -182,11 +176,8 @@ var (
 	_ jobs.WorkspaceScoped = AssuranceWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = BriefGenerateWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
-	_ jobs.WorkspaceScoped = ConfidentialityVerdictWorkspaceArgs{}
-	_ jobs.WorkspaceScoped = CounterpartyVerdictWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureDigestWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CaptureSyncArgs{}
-	_ jobs.WorkspaceScoped = CaptureTraceSweepWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = CheckOrganizationVatArgs{}
 	_ jobs.WorkspaceScoped = CloseDateWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = ScheduledSendArgs{}

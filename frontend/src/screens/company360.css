@@ -148,8 +148,6 @@
   align-items: center;
   gap: var(--space-1);
   flex-wrap: wrap;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
 }
 
 /* A row's name is a link, so it reads as one: no button chrome, and the
@@ -379,10 +377,8 @@
 /* The reason: the part a rep judges, in a quieter voice than the ask. */
 .co-move-reason {
   display: inline;
-  font-size: var(--fs-sm);
   line-height: 1.55;
   max-width: 78ch;
-  color: var(--textMeta);
   text-wrap: pretty;
 }
 
@@ -491,9 +487,7 @@
 }
 .co-ask-asked {
   margin: var(--space-2) 0 0;
-  font-size: var(--fs-meta);
   font-weight: 600;
-  color: var(--textMeta);
 }
 
 /* The proposals count is a way into the queue it counts, so it is a button —
@@ -1016,11 +1010,6 @@
 .co-commercial-title {
   font-weight: var(--fw-semibold);
 }
-.co-commercial-sub {
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
-}
-
 /* The overview's chronology: a day heading above the run of entries that
    happened on it, so several messages read as how one day went rather than
    as an undifferentiated list. */
@@ -1184,57 +1173,6 @@
   width: 100%;
 }
 
-/* Health's per-dimension reading: the name the meter is measuring, the bar
-   itself, then the sentence it was read from underneath (the band taken
-   apart into one row per dimension, same rhythm as .co-growth-fit-scores). */
-.co-health-meter {
-  display: grid;
-  gap: var(--space-2);
-  padding: var(--space-2) 0;
-}
-.co-health-meter:first-child {
-  padding-top: 0;
-}
-/* Label and its reading share one line; the meter reads as the label's
-   own bar rather than a separate block, so the whole dimension is two
-   lines tall instead of three. */
-.co-health-meter-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-  /* The row is a grid item, so its floor is its own min-content width — the
-     reason's longest line, which is set nowrap below. Without this the row
-     sizes the rail's whole column and the card overflows; the reason's own
-     min-width: 0 then only decides whether the ellipsis is reachable. */
-  min-width: 0;
-}
-/* min-width: 0 is what makes the ellipsis reachable: a flex item's floor is
-   its min-content width, so without this the longest reason sets the row's
-   width and spills past the rail instead of truncating. The full sentence
-   stays available on the element's title. */
-.co-health-meter-reason {
-  min-width: 0;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-  text-align: right;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-/* The bar's own geometry is `Meter`'s `dense`, set at the call site in
-   companyrail.tsx — not reached into from here. */
-
-/* The four counting facts read as one tight paragraph, set apart from the
-   meters above by real space so the block reads as a separate answer
-   rather than a fifth meter row. */
-.co-health-lines {
-  margin-top: var(--space-1);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
 .co-person-routes-list {
   list-style: none;
   margin: var(--space-1) 0 0;
@@ -1283,8 +1221,6 @@
 }
 .co-signal-summary {
   display: block;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
 }
 .co-signal-link {
   display: inline-block;
@@ -1349,10 +1285,8 @@
   margin-block-start: var(--space-2);
   font-family: var(--f-body);
   font-weight: var(--fw-regular);
-  font-size: var(--fs-sm);
   line-height: 1.45;
   letter-spacing: var(--tracking-normal);
-  color: var(--textMeta);
 }
 /* What the day's work could NOT be read from, under whatever rows there are.
    Inset to the panel's own padding and set at meta size: it qualifies the
@@ -1360,9 +1294,7 @@
 .today-withheld {
   margin: 0;
   padding: var(--space-3) var(--space-5);
-  font-size: var(--fs-meta);
   line-height: 1.45;
-  color: var(--textMeta);
 }
 /* A move is the row's own paragraph: the ask, its reason under it, and the
    verbs at the row's end. Ask and reason ran inline as one wrapping line,
@@ -1505,8 +1437,6 @@
   align-items: baseline;
   flex-wrap: wrap;
   gap: var(--space-2);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   overflow-wrap: anywhere;
 }
 .rec-meta > * + *::before {
@@ -1607,11 +1537,7 @@
 }
 .co-reading-today .co-360-title-text {
   margin: 0;
-  font-family: var(--f-display);
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
   letter-spacing: var(--tracking-display);
-  color: var(--textPrimary);
 }
 /* The three rated dimensions under the verdict: a dot in the dimension's
    tone, the dimension, its rating. Inline, because they qualify the word
@@ -1803,8 +1729,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }
 
 /* The stage under way is the one a reader is watching, so it is the one drawn
@@ -1835,8 +1759,6 @@
 /* The state in words beside the mark, because three tinted circles are three
    tinted circles to a reader who cannot tell the tints apart. */
 .deepread-step-state {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   font-weight: var(--fw-regular);
 }
 
@@ -1863,19 +1785,11 @@
   font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
-
-.co-todo-meta {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
-
 /* When the to-do is owed, at the row's far end. Quiet unless it is late: a
    list where every date is coloured has no colour left for the one that
    matters, and the one that matters is the promise nobody kept. */
 .co-todo-due {
   flex: none;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   white-space: nowrap;
 }
 .co-todo-due-warn {
@@ -1944,14 +1858,6 @@
   gap: var(--space-2);
   flex-wrap: wrap;
 }
-
-/* Which way it went, beside the kind rather than under it: the two are one
-   claim about the exchange, and stacked they read as two facts. */
-.co-recent-dir {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
-
 .co-recent-title {
   font-size: var(--fs-sm);
   font-weight: var(--fw-medium);
@@ -1964,16 +1870,12 @@
   align-items: baseline;
   flex-wrap: wrap;
   gap: var(--space-2);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
 }
 
 /* The date at the row's far end, in the mono face where digits share a width —
    a column of dates lines up instead of shifting row to row. */
 .co-recent-when {
   flex: none;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }

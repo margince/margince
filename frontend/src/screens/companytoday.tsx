@@ -492,7 +492,7 @@ function leadSentence(lead: TodayLead): ReactNode {
   return (
     <>
       <span className="today-lead-state">{lead.headline}</span>
-      {lead.note && <span className="today-lead-note">{lead.note}</span>}
+      {lead.note && <span className="today-lead-note t-sub">{lead.note}</span>}
     </>
   );
 }
@@ -672,7 +672,7 @@ function MomentRow({
           </span>
         </span>
         <span className="co-move-ask co-move-headline">{moment.headline}</span>
-        <span className="co-move-reason">{moment.why_now}</span>
+        <span className="co-move-reason t-sub">{moment.why_now}</span>
         <Proof
           label={t("record.restsOn")}
           items={momentGrounding(moment.evidence, t, locale, recordZone)}

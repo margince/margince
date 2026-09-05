@@ -128,7 +128,7 @@ function AttributionGallery({
         {STATES.map(({ caption, entry }) => (
           <div key={entry.id}>
             <p
-              className="t-small"
+              className="t-caption"
               style={{ marginBottom: "var(--space-1)", opacity: 0.7 }}
             >
               {caption}

@@ -43,7 +43,7 @@ export function ImportMappingTable({
 
   return (
     <div className="import__mapping">
-      <p className="import__hint">
+      <p className="import__hint t-sub">
         {t("import.profiled", {
           rows: formatNumber(profile.rows_profiled, locale),
         })}

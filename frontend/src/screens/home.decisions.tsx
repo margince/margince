@@ -396,7 +396,7 @@ export function DecisionsSection({
               {shared.kind !== undefined && (
                 <>
                   <AutonomyDot tier={approvalDotTier(shared.kind, tierMap)} />
-                  <span className="t-small">
+                  <span className="t-caption">
                     {approvalKindLabel(shared.kind, t)}
                   </span>
                   <DecisionToolChip

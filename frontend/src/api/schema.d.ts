@@ -22454,6 +22454,36 @@ export interface components {
              */
             anchor_activity_id?: string | null;
             /**
+             * @description The records an account-started message files itself under, as the send named
+             *     them. Absent on a reply: a reply's records come from its anchor, and the ones it
+             *     was told to file under beyond those (`also_links` on the send) are not carried
+             *     here, because the reply preview resolves from the anchor alone. Carried so a
+             *     surface can ask the engine the SAME question the fire will ask: the account-send
+             *     preview refuses a message that names no records, and a surface that could not
+             *     name them would fall silent on exactly the cold sends where consent matters most.
+             */
+            links?: components["schemas"]["ActivityLinkInput"][];
+            /**
+             * @description What the sender claimed the message is, frozen with it. Absent when nothing was
+             *     claimed, which is the ordinary case for a reply — the engine derives it from the
+             *     anchor.
+             */
+            communication_context?: components["schemas"]["CommunicationContext"];
+            /** @description For a marketing send, the consent purpose key it claimed, frozen with the message. */
+            marketing_purpose?: string;
+            /**
+             * @description The deprecated purpose key the sender still supplied, frozen with the message. The
+             *     fire consults it where the record supports no category, so a preview that could
+             *     not pass it would answer a different question than the send.
+             */
+            consent_purpose?: string;
+            /**
+             * @description The records the sender named in support of the message, frozen with it. Absent
+             *     when none were named. Evidence is what makes a claimed category supported, so a
+             *     preview asked without it would answer "unproven" about a message the fire allows.
+             */
+            evidence?: components["schemas"]["CommunicationEvidence"];
+            /**
              * Format: uuid
              * @description The timeline activity this produced, once released.
              */

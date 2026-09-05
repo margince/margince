@@ -114,7 +114,7 @@ export function DossierPanel({
            reader with nothing rather than with something dated. */
         <Badge tone="warn">{t("co.dossier.stale")}</Badge>
       )}
-      <span className="t-small">
+      <span className="t-caption">
         {t("co.brief.generatedAt", {
           when: formatDateTime(readable.generated_at, locale, recordZone),
         })}

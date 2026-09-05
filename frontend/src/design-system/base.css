@@ -501,43 +501,12 @@ a:not([class]):focus-visible {
   cursor: not-allowed;
 }
 
-.t-small {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
-
-/* The failure said in the surrounding type's size. Eleven sites across both
-   sides of the Deal Room write `t-small t-danger` for a refusal or a request
-   that failed, and no sheet declared it — so every one of them rendered in
-   meta grey, which reads as an aside rather than a problem. It sets colour
-   only: it is always worn over a size class, and a second font-size here
-   would fight whichever one that is.
-
-   `.co-error` below says nearly the same thing and is the older spelling: it
-   sets a size as well, and one screen uses it against this one's thirteen.
-   Two names for "this failed" is one too many — folding that single caller
-   into this class is the resolution, and it is not done here because it
-   belongs in its own change rather than riding along with a Deal Room fix. */
+/* The failure said in the surrounding type's size. Colour only: it is always
+   worn over a size class — `t-caption t-danger`, `t-sub t-danger` — and a
+   second font-size here would fight whichever one that is. */
 .t-danger {
   color: var(--danger);
   font-weight: var(--fw-medium);
-}
-
-/* The quiet aside and the spoken failure. Five screens ask for these two —
-   the LinkedIn dialogs, the reach panel, the import screen — and no stylesheet
-   answered, so every "this is only background" line rendered at full body
-   weight and every `role="alert"` rendered as if nothing were wrong. Declared
-   once, here, because they are vocabulary rather than one screen's layout. */
-.co-muted {
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
-}
-.co-error {
-  color: var(--danger);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
-  line-height: var(--lh-normal);
 }
 
 /* Conservative type-scale realizing the hierarchy already implied by usage
@@ -571,6 +540,13 @@ a:not([class]):focus-visible {
   font-weight: var(--fw-semibold);
   color: var(--textMeta);
 }
+/* Quiet grey at the two dense sizes. `.t-caption` is the line under the thing
+   it qualifies — provenance, a count, a timestamp; `.t-sub` the aside beside a
+   control at the control's own size. Each is the ONE spelling of its pair:
+   components asked for `t-small`, `t-meta` and `t-muted` and every one meant
+   `.t-caption`, so typeclass-coverage.test.ts fails a name the scale does not
+   carry and type-one-spelling.test.ts fails a rule that spells the pair itself
+   instead of carrying the class. */
 .t-caption {
   font-size: var(--fs-meta);
   color: var(--textMeta);
@@ -593,11 +569,11 @@ a:not([class]):focus-visible {
    this: uppercase this small sets cramped at the default spacing.
    `Eyebrow` (eyebrow.tsx) renders it with the element the caller means.
 
-   Held by: eyebrow-one-spelling.test.ts, which is a RATCHET rather than a
-   clean sweep: no sheet may newly restate this, and the sheets that still do
-   are counted and can only shrink. The prose above recounted a consolidation
-   and two more copies then appeared inside the design system itself, because
-   nothing failed when they did. */
+   Held by: type-one-spelling.test.ts. A rule spelling this whole class fails;
+   a rule drawing uppercase micro-type with its own colour or weight is counted
+   per sheet, and the count can only shrink. The prose above recounted a
+   consolidation and two more copies then appeared inside the design system
+   itself, because nothing failed when they did. */
 .t-eyebrow {
   font-size: var(--fs-eyebrow);
   font-weight: var(--fw-semibold);

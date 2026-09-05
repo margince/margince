@@ -31125,19 +31125,46 @@ type ScheduledSend struct {
 
 	// Bcc Visible to the SENDER, who is the only person this record is readable by. A scheduled
 	// message's blind-copy list is not workspace-readable the way a sent activity is.
-	Bcc       *[]openapi_types.Email `json:"bcc,omitempty"`
-	Body      *string                `json:"body,omitempty"`
-	Cc        *[]openapi_types.Email `json:"cc,omitempty"`
-	CreatedAt time.Time              `json:"created_at"`
+	Bcc  *[]openapi_types.Email `json:"bcc,omitempty"`
+	Body *string                `json:"body,omitempty"`
+	Cc   *[]openapi_types.Email `json:"cc,omitempty"`
+
+	// CommunicationContext What the sender claimed the message is, frozen with it. Absent when nothing was
+	// claimed, which is the ordinary case for a reply — the engine derives it from the
+	// anchor.
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
+
+	// ConsentPurpose The deprecated purpose key the sender still supplied, frozen with the message. The
+	// fire consults it where the record supports no category, so a preview that could
+	// not pass it would answer a different question than the send.
+	ConsentPurpose *string   `json:"consent_purpose,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+
+	// Evidence The records the sender named in support of the message, frozen with it. Absent
+	// when none were named. Evidence is what makes a claimed category supported, so a
+	// preview asked without it would answer "unproven" about a message the fire allows.
+	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
 
 	// HeldReason Why a human has to look at it. `consent_withdrawn` — a recipient withdrew consent
 	// after it was scheduled. `sender_inactive` — the scheduler lost their seat or mailbox.
 	// `missed_window` — it came due while nothing was running and is now too late to be the
 	// message that was written. `timer_exhausted` — the job that wakes it ran out of
 	// attempts. `send_refused` — a gate refused for another reason at fire.
-	HeldReason  *ScheduledSendHeldReason `json:"held_reason,omitempty"`
-	Id          openapi_types.UUID       `json:"id"`
-	ScheduledAt time.Time                `json:"scheduled_at"`
+	HeldReason *ScheduledSendHeldReason `json:"held_reason,omitempty"`
+	Id         openapi_types.UUID       `json:"id"`
+
+	// Links The records an account-started message files itself under, as the send named
+	// them. Absent on a reply: a reply's records come from its anchor, and the ones it
+	// was told to file under beyond those (`also_links` on the send) are not carried
+	// here, because the reply preview resolves from the anchor alone. Carried so a
+	// surface can ask the engine the SAME question the fire will ask: the account-send
+	// preview refuses a message that names no records, and a surface that could not
+	// name them would fall silent on exactly the cold sends where consent matters most.
+	Links *[]ActivityLinkInput `json:"links,omitempty"`
+
+	// MarketingPurpose For a marketing send, the consent purpose key it claimed, frozen with the message.
+	MarketingPurpose *string   `json:"marketing_purpose,omitempty"`
+	ScheduledAt      time.Time `json:"scheduled_at"`
 
 	// ScheduledTz The IANA zone the human picked the moment in, kept so it re-renders as meant.
 	ScheduledTz string `json:"scheduled_tz"`

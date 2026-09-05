@@ -180,7 +180,7 @@ export function UnsavedGuard<Address extends string>({
         onClose={() => onKeep(shown)}
         onConfirm={() => setShown(address)}
       >
-        <p className="t-small">{t("unsaved.body")}</p>
+        <p className="t-caption">{t("unsaved.body")}</p>
       </ConfirmModal>
     </UnsavedContext.Provider>
   );

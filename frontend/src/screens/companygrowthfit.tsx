@@ -136,7 +136,7 @@ export function GrowthFitPanel({
       // what it says.
       titleAction={
         readable && (
-          <span className="t-small">
+          <span className="t-caption">
             {t("co.brief.generatedAt", {
               when: formatDateTime(readable.generated_at, locale, recordZone),
             })}
@@ -262,7 +262,7 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
                 />
                 {/* The reason travels WITH the bar. A number and no sentence is
                     the unexplainable score this model replaced. */}
-                <span className="co-row-meta co-growth-fit-score-reason">
+                <span className="co-row-meta co-growth-fit-score-reason t-caption">
                   {sub.reason}
                 </span>
               </li>

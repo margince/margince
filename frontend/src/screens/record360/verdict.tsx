@@ -179,7 +179,7 @@ export function Proof({
           {items.map((item) => (
             <div className="r360-rests-item" key={item.key}>
               <p className="r360-rests-quote">{item.quote}</p>
-              <p className="r360-rests-from">{item.from}</p>
+              <p className="r360-rests-from t-caption">{item.from}</p>
             </div>
           ))}
         </div>
