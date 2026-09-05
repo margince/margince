@@ -123,11 +123,11 @@ export function WorklistRow({
     .filter((phrase): phrase is string => phrase !== null);
   const above = comparisonText(item.above_next, t, locale, zone);
   const consequence = consequenceText(item, t);
-  // Whether this row NAMES ITSELF with the canonical email row. It needs both
-  // the summary and somewhere to open it: the line is only drawn when it can
-  // be opened, so a caller with no drawer must fall back to the title line
-  // below rather than losing the row's name along with its opener.
-  const emailRow = item.email_summary != null && onOpenEmail !== undefined;
+  // How this row NAMES ITSELF: the canonical email row when there is a message
+  // AND somewhere to open it, the title line otherwise. Held as the opener
+  // rather than as a flag, so the row cannot be drawn without one — a caller
+  // with no drawer keeps the title instead of losing the row's name with it.
+  const emailOpener = item.email_summary != null ? onOpenEmail : undefined;
   return (
     <PanelRow
       className={
@@ -146,11 +146,9 @@ export function WorklistRow({
             sentence about it. Everything else keeps the title line it had, and
             the badges below stay on both: they say where the row sits in the
             day, which the email row does not answer. */}
-        {emailRow && onOpenEmail && (
-          <WaitingEmailLine item={item} onOpen={onOpenEmail} />
-        )}
+        {emailOpener && <WaitingEmailLine item={item} onOpen={emailOpener} />}
         <p className="t-body worklist-row-title">
-          {emailRow ? null : href ? (
+          {emailOpener ? null : href ? (
             <a className="entity-link" href={href}>
               {title}
             </a>

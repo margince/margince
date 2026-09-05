@@ -1358,9 +1358,9 @@ function TimelineGroupRow({
             summary={newest.emailSummary}
             timestamp={formatTimeOfDay(newest.atIso, locale, zone)}
             onOpen={newest.onOpenEmail}
-            // The entry carries an opener on every surface that mounts a
-            // drawer. Where it does not, the surface itself has no reader to
-            // open into — the Brief is the one such page.
+            // Absent on the reply composer, whose rows are the thread being
+            // answered rather than a place to act from. Every other surface
+            // that draws this timeline mounts a drawer and passes an opener.
             whyNotOpenable="noReader"
           />
         ) : (
@@ -1494,7 +1494,7 @@ export function TimelineRow({
             summary={entry.emailSummary}
             timestamp={formatTimeOfDay(entry.atIso, locale, zone)}
             onOpen={entry.onOpenEmail}
-            // As above: absent only where the surface mounts no drawer.
+            // As above: absent on the reply composer and nowhere else.
             whyNotOpenable="noReader"
           />
           {flag}
