@@ -128,6 +128,10 @@ func base(
 		CauseLabel: item.CauseLabel,
 		Subject:    item.Subject,
 		Deal:       dealFactsOf(item),
+		// Whose page a meeting's brief opens on. Forwarded rather than derived
+		// here: the lane already decided whether the reader may see anybody on
+		// the meeting, and an absent value is that decision rather than a gap.
+		WithPerson: item.WithPerson,
 		// Forwarded, never re-derived here. The lane already applied the
 		// both-sides-visible rule and set `merge` only where it held, so
 		// carrying the payload keeps the verb and the records it acts on

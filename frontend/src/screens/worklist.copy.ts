@@ -10,7 +10,7 @@ import {
 } from "../format/format";
 import type { Locale, useT } from "../i18n";
 import { translatePlural } from "../i18n";
-import { COMPOSE_PARAM } from "./personpage.address";
+import { BRIEF_PARAM, COMPOSE_PARAM } from "./personpage.address";
 import { settingsAddress } from "./settings";
 import type {
   Worklist,
@@ -480,13 +480,26 @@ function sameDayInZone(utcIso: string, now: Date, zone: string): boolean {
 // but not to the address, because the composer picks its own transport and
 // threading from the person.
 //
-// The other verbs are absent, each for its own reason. `create_task` and
-// `open_meeting_brief` are PERFORMED rather than navigated: one posts a task
-// body, the other opens a drawer, and neither is a thing a link can do. `none`
-// names no step. `reconnect` leaves for a provider's consent screen, which is a
-// handoff rather than a destination. A row keeps its own verbs in every case,
-// so none of these leaves the reader with nothing.
-const NAVIGABLE_MOVES = new Set(["draft_reply", "draft_email"]);
+// `open_meeting_brief` is the third, and it lands somewhere else entirely: the
+// brief is read as `?prep=<activity>` on the PERSON's record, so the address
+// needs an id the subject does not carry. The server sends it as `with_person`,
+// and only where the meeting names somebody this reader may see.
+//
+// It used to be described here as PERFORMED rather than navigated — "opens a
+// drawer, and neither is a thing a link can do" — which was true of the drawer
+// and false of the way in. The row could describe a meeting and offer no way to
+// prepare for it, which is the one thing a rep opens that row to do.
+//
+// The remaining verbs are absent, each for its own reason. `create_task` posts
+// a task body, which is a write rather than a destination. `none` names no
+// step. `reconnect` leaves for a provider's consent screen, which is a handoff.
+// A row keeps its own verbs in every case, so none of these leaves the reader
+// with nothing.
+const NAVIGABLE_MOVES = new Set([
+  "draft_reply",
+  "draft_email",
+  "open_meeting_brief",
+]);
 
 /**
  * Whether a move has what its own verb needs.
@@ -503,10 +516,30 @@ function moveIsComplete(move: NonNullable<WorklistItem["move"]>): boolean {
   return move.action !== "draft_reply" || move.activity_id !== undefined;
 }
 
+/**
+ * The brief's address: which meeting, on whose page.
+ *
+ * BOTH ids, because neither names it. The activity says which meeting to brief
+ * and the person says whose record it opens on — the brief is not a page of its
+ * own. A row missing either names nothing openable and draws no control, which
+ * is the same promise every other verb here makes about its own operand.
+ */
+function briefHref(item: WorklistItem): string | undefined {
+  const meeting = item.move?.activity_id;
+  if (!meeting || !item.with_person) {
+    return undefined;
+  }
+  const person = routeHash(ENTITY.person.route(item.with_person));
+  return `${person}?${BRIEF_PARAM}=${meeting}`;
+}
+
 export function moveHref(item: WorklistItem): string | undefined {
   const move = item.move;
   if (!move || !NAVIGABLE_MOVES.has(move.action) || !moveIsComplete(move)) {
     return undefined;
+  }
+  if (move.action === "open_meeting_brief") {
+    return briefHref(item);
   }
   const record = subjectHref(item);
   if (!record || item.subject?.type !== "person") {
