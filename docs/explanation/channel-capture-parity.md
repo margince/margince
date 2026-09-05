@@ -74,9 +74,18 @@ through.
 Workspace-readable, unless it is filed under no record at all. There is no seat
 posture that holds it and no verdict that judges it, and the thread share/hold
 endpoint cannot see it in either direction — it selects through the import row
-that is never written. The one write that would still be accepted, a direct
-message-audience set, is hidden by the browser (next section), so in practice
-nothing on any screen holds a channel message.
+that is never written.
+
+What is left is the manual per-message audience control, and it is available in
+exactly the wrong half of the cases. `refuseCapturedAudienceWrite` refuses a
+direct audience write only for a message some mailbox imported, so the server
+accepts one on any channel message; the timeline row offers it for every kind
+but `email`, withholding it where `audience_reason` says the audience was
+derived (`frontend/src/screens/timelineactions.tsx`). So a channel message filed
+under a record — audience `workspace`, no reason — can be narrowed by hand, and
+a link-less one, which `limitLinkLessAudience` already held to its participants,
+offers no control at all. The hold a channel message can actually get is the one
+nobody can lift.
 
 The same conversation arriving by email is gated by the workspace floor, then by
 that mailbox's posture, and is shareable or re-holdable by its owner at any time.
@@ -111,12 +120,9 @@ about **whose privacy a channel conversation is** before any code moves:
 - a deliberate "channel traffic is workspace business", written down and held by
   a test rather than left as an omission.
 
-Two things are true meanwhile and worth knowing before either is chosen. A
-direct message-audience write is currently *accepted* on a channel message —
-`refuseCapturedAudienceWrite` refuses only what `activityWasImported` reports,
-and no channel message is imported — while the browser hides the control on a
-`captured_by` prefix proxy. And `ThreadAudienceSetter.Decide` cannot reach one in
-either direction, because it selects through the import row that is never there.
+One thing is worth settling whichever answer wins: the manual audience write
+above is a per-message answer on a conversation, and a chat is a conversation.
+Deciding it message by message is how one thread ends up half shared.
 
 Whatever is decided, decide it in one place. Two spellings of "may the workspace
 read this" — one for mail, one for channels — is the shape that drifts until the
