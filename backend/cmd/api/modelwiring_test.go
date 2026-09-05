@@ -14,6 +14,7 @@ package main
 // internal/compose/integration/ai_fake_modelpath_integration_test.go.
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"log/slog"
@@ -271,17 +272,120 @@ func TestVatCheckEnqueueOptionsRespectsConfiguredBaseURL(t *testing.T) {
 // insert-only River client without touching the database until Enqueue is
 // called.
 func TestJobEnqueueOptionsGatesVatCheckOnConfiguredBaseURL(t *testing.T) {
-	unconfigured, err := jobEnqueueOptions(nil, discardLogger(), nil, "")
+	unconfigured, err := jobEnqueueOptions(nil, discardLogger(), nil, queueGates{})
 	if err != nil {
 		t.Fatalf("jobEnqueueOptions(unconfigured): %v", err)
 	}
-	configured, err := jobEnqueueOptions(nil, discardLogger(), nil, "https://ec.europa.eu/taxation_customs/vies")
+	configured, err := jobEnqueueOptions(nil, discardLogger(), nil,
+		queueGates{vatCheck: "https://ec.europa.eu/taxation_customs/vies"})
 	if err != nil {
 		t.Fatalf("jobEnqueueOptions(configured): %v", err)
 	}
 	if len(configured) != len(unconfigured)+1 {
 		t.Fatalf("configured yielded %d options, unconfigured %d — want exactly one more (the VAT-check enqueue)",
 			len(configured), len(unconfigured))
+	}
+}
+
+// The geocode half of the same rule, and the case that would have caught this:
+// the api used to wire the coordinate-lookup enqueue unconditionally, so an
+// installation that set MARGINCE_GEOCODE_BASE_URL on the worker alone queued a
+// lookup for every address write and the worker answered each with
+// people.GeocodeFailed — a confident wrong answer about why geocoding does not
+// work.
+func TestGeocodeEnqueueOptionsRespectsConfiguredBaseURL(t *testing.T) {
+	if got := geocodeEnqueueOptions(nil, ""); got != nil {
+		t.Fatalf("geocodeEnqueueOptions(unconfigured) = %d options, want 0", len(got))
+	}
+	if got := geocodeEnqueueOptions(nil, "public"); len(got) != 1 {
+		t.Fatalf("geocodeEnqueueOptions(configured) = %d options, want 1 (geocode enqueue)", len(got))
+	}
+}
+
+// The call site, for the reason the VAT one above gives: a regression that
+// stops passing the base URL through would leave that helper's own test green.
+func TestJobEnqueueOptionsGatesGeocodingOnConfiguredBaseURL(t *testing.T) {
+	unconfigured, err := jobEnqueueOptions(nil, discardLogger(), nil, queueGates{})
+	if err != nil {
+		t.Fatalf("jobEnqueueOptions(unconfigured): %v", err)
+	}
+	configured, err := jobEnqueueOptions(nil, discardLogger(), nil, queueGates{geocode: "public"})
+	if err != nil {
+		t.Fatalf("jobEnqueueOptions(configured): %v", err)
+	}
+	if len(configured) != len(unconfigured)+1 {
+		t.Fatalf("configured yielded %d options, unconfigured %d — want exactly one more (the geocode enqueue)",
+			len(configured), len(unconfigured))
+	}
+}
+
+// A gate that goes quiet has to SAY so at boot.
+//
+// The failure this warns about is an installation that set the variable on the
+// worker alone, following what the docs said before these roles both read it.
+// Without a line naming the variable, the only symptom is a rep asking weeks
+// later why a number is never verified or why a company has no coordinates —
+// in a different surface, with nothing to search for.
+func TestAnUnconfiguredGateAnnouncesItselfAtBoot(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		gates queueGates
+		wants []string
+		quiet []string
+	}{
+		{
+			name:  "neither register configured",
+			gates: queueGates{},
+			wants: []string{"MARGINCE_VAT_CHECK_BASE_URL", "MARGINCE_GEOCODE_BASE_URL"},
+		},
+		{
+			name:  "geocoding configured, VAT not",
+			gates: queueGates{geocode: "public"},
+			wants: []string{"MARGINCE_VAT_CHECK_BASE_URL"},
+			quiet: []string{"MARGINCE_GEOCODE_BASE_URL"},
+		},
+		{
+			name:  "both configured",
+			gates: queueGates{vatCheck: "public", geocode: "public"},
+			quiet: []string{"MARGINCE_VAT_CHECK_BASE_URL", "MARGINCE_GEOCODE_BASE_URL"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var said bytes.Buffer
+			logger := slog.New(slog.NewTextHandler(&said, nil))
+			if _, err := jobEnqueueOptions(nil, logger, nil, tc.gates); err != nil {
+				t.Fatalf("jobEnqueueOptions: %v", err)
+			}
+			for _, want := range tc.wants {
+				if !strings.Contains(said.String(), want) {
+					t.Errorf("boot said nothing about %s going quiet:\n%s", want, said.String())
+				}
+			}
+			for _, quiet := range tc.quiet {
+				if strings.Contains(said.String(), quiet) {
+					t.Errorf("boot warned about %s while it was configured:\n%s", quiet, said.String())
+				}
+			}
+		})
+	}
+}
+
+// The two gates are independent, which is what keeps queueGates from being one
+// switch wearing two names: an installation that consults a VAT register and
+// geocodes nothing must get the consultation enqueue and not the lookup one.
+func TestTheTwoQueueGatesAnswerSeparately(t *testing.T) {
+	neither, err := jobEnqueueOptions(nil, discardLogger(), nil, queueGates{})
+	if err != nil {
+		t.Fatalf("jobEnqueueOptions(neither): %v", err)
+	}
+	both, err := jobEnqueueOptions(nil, discardLogger(), nil,
+		queueGates{vatCheck: "https://ec.europa.eu/taxation_customs/vies", geocode: "public"})
+	if err != nil {
+		t.Fatalf("jobEnqueueOptions(both): %v", err)
+	}
+	if len(both) != len(neither)+2 {
+		t.Fatalf("both configured yielded %d options, neither %d — want exactly two more, one per gate",
+			len(both), len(neither))
 	}
 }
 
