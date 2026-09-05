@@ -147,15 +147,32 @@ func bounceItem(send BouncedSend) crmcontracts.AttentionItem {
 		subject := send.Subject
 		item.Title = &subject
 	}
-	if send.Reason != "" {
-		reason := send.Reason
-		item.Detail = &reason
+	// The address AND the refusal, because neither answers the reader alone.
+	// The reason says why it failed; the address says which mailbox to fix, and
+	// a contact carrying three of them leaves a rep guessing without it.
+	if detail := bounceDetail(send); detail != "" {
+		item.Detail = &detail
 	}
 	if !send.PersonID.IsZero() {
 		item.Subject = subjectOf("person", send.PersonID)
 		item.Actions = append(item.Actions, actionOpen)
 	}
 	return item
+}
+
+// bounceDetail is the supporting line: the address that refused, the receiving
+// side's own words, or both. The address leads because it is what the reader
+// acts on. Empty when the send carries neither, so the card draws no line
+// rather than an empty one.
+func bounceDetail(send BouncedSend) string {
+	switch {
+	case send.Recipient != "" && send.Reason != "":
+		return send.Recipient + " — " + send.Reason
+	case send.Recipient != "":
+		return send.Recipient
+	default:
+		return send.Reason
+	}
 }
 
 // parkedItem draws one send that was given up on. The subject line is the
