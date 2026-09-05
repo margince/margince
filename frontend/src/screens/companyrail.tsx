@@ -124,7 +124,7 @@ export function CompanyRail({
           <PanelBody>
             <DetailsGrid organization={view?.organization ?? org} />
           </PanelBody>
-          <div className="co-card-actions">
+          <div className="card-actions">
             {/* "All fields", not "Profile": the Profile TAB carries that name a
                 few pixels away, and two controls with one accessible name in
                 one view is a dead end for anyone moving by name rather than by
@@ -287,7 +287,7 @@ function DealsSection({
         </PanelBody>
       )}
       {state === "ready" && (
-        <div className="co-card-actions">
+        <div className="card-actions">
           <Button small variant="ghost" onClick={() => onTab("deals")}>
             {count != null
               ? t("co.rail.all", { count: formatNumber(count, locale) })
@@ -320,7 +320,7 @@ function DealsEmptyVerb({
   const readOnlyReason = useCompanyReadOnlyReason(organization);
   if (betweenCycles || readOnlyReason) {
     return (
-      <div className="co-card-actions">
+      <div className="card-actions">
         <Button small variant="ghost" onClick={() => onTab("deals")}>
           {t("co.rail.add")}
         </Button>
@@ -457,7 +457,7 @@ function PeopleSection({
       {state === "ready" ? (
         // The top of the byReach order: the rail glances at who matters most
         // on the account, and the People tab is the full roster.
-        <ul className="record-card-list co-person-cards">
+        <ul className="record-card-list">
           {contacts.slice(0, RAIL_ROW_LIMIT).map((contact) => (
             <li key={contact.person_id}>
               <PersonCard contact={contact} />
@@ -486,7 +486,7 @@ function PeopleSection({
         </PanelBody>
       )}
       {state === "ready" && (
-        <div className="co-card-actions">
+        <div className="card-actions">
           <Button small variant="ghost" onClick={() => onTab("people")}>
             {count != null
               ? t("co.rail.all", { count: formatNumber(count, locale) })

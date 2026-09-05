@@ -64,21 +64,32 @@ a.record-card-open:focus-visible {
   min-width: 0;
 }
 
+/* The title WRAPS where the name and the address do not. The name shares its
+   line with the aside and is the identity, so it holds one line; an address is
+   a machine string a reader scans rather than reads. A title is neither — it
+   is the sentence the card is here to carry, and half of one says less than
+   two lines of it costs. */
 .record-card-position {
   margin: 0;
   color: var(--textMeta);
   font-size: var(--fs-sm);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .record-card-handles {
   margin: 0;
   font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+/* The address carries its OWN ellipsis. `link-button` is a flex line, so it is
+   one atomic inline box to the paragraph around it and a `text-overflow` out
+   there cannot cut INSIDE it — a long address was sliced mid-word at the
+   card's edge with nothing to say that anything was missing. Blocked, which it
+   can be here: a handle on a card carries an address and never an icon. */
+.record-card-handles > .link-button {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* Its own track on the first row, beside the name rather than under it. */
