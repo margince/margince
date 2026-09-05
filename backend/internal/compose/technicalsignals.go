@@ -93,24 +93,24 @@ func technicalChangeSummary(change people.TechnicalChange) (string, bool) {
 	switch change.Field {
 	case people.FactMailProvider:
 		if change.Kind == people.TechnicalMoved {
-			return fmt.Sprintf("Mail läuft jetzt über %s (vorher %s)", change.Value, change.Previous), true
+			return fmt.Sprintf("Mail now runs on %s (was %s)", change.Value, change.Previous), true
 		}
-		return fmt.Sprintf("Mail läuft über %s", change.Value), true
+		return fmt.Sprintf("Mail runs on %s", change.Value), true
 	case people.FactOperatedService:
 		if change.Kind == people.TechnicalGone {
-			return fmt.Sprintf("%s ist offline gegangen", change.Value), true
+			return fmt.Sprintf("%s went offline", change.Value), true
 		}
-		return fmt.Sprintf("%s ist neu online", change.Value), true
+		return fmt.Sprintf("%s is newly online", change.Value), true
 	case people.FactHostingProvider:
 		if change.Kind == people.TechnicalMoved {
-			return fmt.Sprintf("Hosting jetzt bei %s (vorher %s)", change.Value, change.Previous), true
+			return fmt.Sprintf("Hosting moved to %s (was %s)", change.Value, change.Previous), true
 		}
-		return fmt.Sprintf("Hosting bei %s", change.Value), true
+		return fmt.Sprintf("Hosted at %s", change.Value), true
 	case people.FactTechnology:
 		if change.Kind == people.TechnicalGone {
-			return fmt.Sprintf("%s wird nicht mehr eingesetzt", change.Value), true
+			return fmt.Sprintf("No longer uses %s", change.Value), true
 		}
-		return fmt.Sprintf("Setzt jetzt %s ein", change.Value), true
+		return fmt.Sprintf("Now uses %s", change.Value), true
 	default:
 		// email_security lands here on purpose. A DMARC policy tightening is a
 		// real fact about the company and belongs on the record, but it is not
