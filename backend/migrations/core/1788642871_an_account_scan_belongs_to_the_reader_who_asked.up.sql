@@ -35,6 +35,9 @@ CREATE TABLE org_scan (
     CONSTRAINT org_scan_user_id_organization_id_key UNIQUE (user_id, organization_id),
     CONSTRAINT org_scan_status_check CHECK (status IN ('queued', 'running', 'done', 'degraded', 'failed')),
     CONSTRAINT org_scan_generated_by_check CHECK (generated_by IS NULL OR generated_by IN ('model', 'deterministic')),
+    CONSTRAINT org_scan_attempt_check CHECK (attempt >= 1),
+    CONSTRAINT org_scan_read_exchanges_check CHECK (read_exchanges IS NULL OR read_exchanges >= 0),
+    CONSTRAINT org_scan_read_deals_check CHECK (read_deals IS NULL OR read_deals >= 0),
     CONSTRAINT org_scan_org_fkey FOREIGN KEY (organization_id) REFERENCES organization(id) ON DELETE CASCADE,
     CONSTRAINT org_scan_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 );

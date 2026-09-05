@@ -3488,9 +3488,12 @@ public.org_scan.generated_at timestamp with time zone gen=- def=-
 public.org_scan.generated_by text gen=- def=-
 public.org_scan.id uuid NOT NULL gen=- def=uuidv7()
 public.org_scan.next_attempt_at timestamp with time zone gen=- def=-
+public.org_scan.org_scan_attempt_check CHECK ((attempt >= 1))
 public.org_scan.org_scan_generated_by_check CHECK (((generated_by IS NULL) OR (generated_by = ANY (ARRAY['model'::text, 'deterministic'::text]))))
 public.org_scan.org_scan_org_fkey FOREIGN KEY (organization_id) REFERENCES organization(id) ON DELETE CASCADE
 public.org_scan.org_scan_pkey PRIMARY KEY (id)
+public.org_scan.org_scan_read_deals_check CHECK (((read_deals IS NULL) OR (read_deals >= 0)))
+public.org_scan.org_scan_read_exchanges_check CHECK (((read_exchanges IS NULL) OR (read_exchanges >= 0)))
 public.org_scan.org_scan_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'degraded'::text, 'failed'::text])))
 public.org_scan.org_scan_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.org_scan.org_scan_user_id_organization_id_key UNIQUE (user_id, organization_id)
