@@ -279,3 +279,34 @@ const (
 	// on objLicense, so Management can plan headcount without reading them.
 	objSeatUsage = "seat_usage"
 )
+
+// AdministrationObjects are the grants that reach back and change who may do
+// what in the installation, as opposed to the record work every seat does.
+//
+// Exported because the escalation ceiling needs exactly this set: handing out
+// authority is what escalates, and handing out record work is not. A caller who
+// cannot work deals gains nothing by creating somebody who can — the new account
+// is not theirs to act as — while a role carrying role_admin or system_reset
+// rewrites who may do what.
+//
+// Derived from the constants beside their own declarations rather than restated,
+// so the list cannot name an object the vocabulary does not have. Returns a copy:
+// the ceiling reads it per call, and a shared slice a caller could append to
+// would be a ceiling any caller could raise.
+func AdministrationObjects() []string {
+	return []string{
+		objUserAdmin,
+		objRoleAdmin,
+		objTeamAdmin,
+		objPrivacyRequest,
+		objAuditLog,
+		objJobHealth,
+		objExtensionAccess,
+		objSystemReset,
+		objAiDiagnostics,
+		objConsentConfig,
+		objAuthenticationPolicy,
+		objOauthApplication,
+		objSeatUsage,
+	}
+}
