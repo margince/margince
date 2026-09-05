@@ -83,7 +83,7 @@ func TestEveryWorkspaceWorkerRefusesArgsNamingNoWorkspace(t *testing.T) {
 func TestTheWorkspaceGuardBindsTheWorkspaceTheArgsDeclare(t *testing.T) {
 	want := ids.NewV7()
 
-	ctx, err := workspaceJobCtx(context.Background(), CloseDateWorkspaceArgs{Workspace: want})
+	ctx, err := workspaceJobCtx(context.Background(), TimeScanWorkspaceArgs{Workspace: want})
 	if err != nil {
 		t.Fatalf("the guard refused a workspace it was given: %v", err)
 	}
@@ -144,12 +144,6 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		VCardIngestArgs{}.Kind(): func(ctx context.Context) error {
 			return (&vcardIngestWorker{}).Work(ctx, &river.Job[VCardIngestArgs]{})
 		},
-		AssuranceWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&assuranceWorkspaceWorker{}).Work(ctx, &river.Job[AssuranceWorkspaceArgs]{})
-		},
-		CloseDateWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&closeDateWorkspaceWorker{}).Work(ctx, &river.Job[CloseDateWorkspaceArgs]{})
-		},
 		ForecastSnapshotWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&forecastSnapshotWorkspaceWorker{}).Work(ctx, &river.Job[ForecastSnapshotWorkspaceArgs]{})
 		},
@@ -173,9 +167,6 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		},
 		LinkReconcileWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&linkReconcileWorkspaceWorker{}).Work(ctx, &river.Job[LinkReconcileWorkspaceArgs]{})
-		},
-		OrgNamePromotionWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
-			return (&orgNamePromotionWorkspaceWorker{}).Work(ctx, &river.Job[OrgNamePromotionWorkspaceArgs]{})
 		},
 		OverlayReconcileWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&overlayReconcileWorkspaceWorker{}).Work(ctx, &river.Job[OverlayReconcileWorkspaceArgs]{})

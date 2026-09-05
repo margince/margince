@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "96a8c061619ec1c669ba4111f95293a2a35b2e37df06ba294adefef02266593f"
+const JobContractHash = "569aec9506ef694ca57b45d169809e60e130bcc1355c28f450d796a6bc69bf13"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -89,25 +89,13 @@ var specs = map[string]Spec{
 		Cadence:     Cadence{Fixed: 5 * time.Minute},
 	},
 	"assurance_sweep": {
-		Kind:       "assurance_sweep",
-		GoType:     "AssuranceSweepArgs",
-		Role:       Dispatcher,
-		Queue:      "default",
-		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
-		FanOutUnit: FanOutWorkspace,
-		FanOutTo:   "assurance_workspace",
-		OptsOwner:  OptsCaller,
-		Cadence:    Cadence{Fixed: 24 * time.Hour},
-	},
-	"assurance_workspace": {
-		Kind:        "assurance_workspace",
-		GoType:      "AssuranceWorkspaceArgs",
-		Role:        Worker,
-		Queue:       "default",
-		Timeout:     TimeoutPolicy{Fixed: 5 * time.Minute},
-		MaxAttempts: 3,
-		OptsOwner:   OptsFanOut,
-		Args:        []ArgField{{Name: "Workspace"}},
+		Kind:      "assurance_sweep",
+		GoType:    "AssuranceSweepArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 24 * time.Hour},
 	},
 	"brief_generate": {
 		Kind:      "brief_generate",
@@ -218,25 +206,13 @@ var specs = map[string]Spec{
 		Args:         []ArgField{{Name: "OrganizationID"}, {Name: "Requested", Scalar: true, Reason: "whether a person asked for this consultation, rather than a write having earned it. It decides whether the worker asks about a number the register has already answered, so it cannot be resolved from the organization the job names — the row says what the number is, never who wanted it re-checked. A bare true/false carrying no subject data: it names no person, and erasing the contact who pressed the button leaves nothing here to erase."}, {Name: "Workspace"}},
 	},
 	"close_date_sweep": {
-		Kind:       "close_date_sweep",
-		GoType:     "CloseDateSweepArgs",
-		Role:       Dispatcher,
-		Queue:      "default",
-		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
-		FanOutUnit: FanOutWorkspace,
-		FanOutTo:   "close_date_workspace",
-		OptsOwner:  OptsCaller,
-		Cadence:    Cadence{OperatorField: "CloseDateInterval"},
-	},
-	"close_date_workspace": {
-		Kind:        "close_date_workspace",
-		GoType:      "CloseDateWorkspaceArgs",
-		Role:        Worker,
-		Queue:       "default",
-		Timeout:     TimeoutPolicy{Fixed: 5 * time.Minute},
-		MaxAttempts: 5,
-		OptsOwner:   OptsFanOut,
-		Args:        []ArgField{{Name: "Workspace"}},
+		Kind:      "close_date_sweep",
+		GoType:    "CloseDateSweepArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{OperatorField: "CloseDateInterval"},
 	},
 	"comms_authz_disagreement": {
 		Kind:      "comms_authz_disagreement",
@@ -553,25 +529,13 @@ var specs = map[string]Spec{
 		Args:        []ArgField{{Name: "Workspace"}},
 	},
 	"org_name_promotion": {
-		Kind:       "org_name_promotion",
-		GoType:     "OrgNamePromotionArgs",
-		Role:       Dispatcher,
-		Queue:      "default",
-		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
-		FanOutUnit: FanOutWorkspace,
-		FanOutTo:   "org_name_promotion_workspace",
-		OptsOwner:  OptsCaller,
-		Cadence:    Cadence{Fixed: 24 * time.Hour},
-	},
-	"org_name_promotion_workspace": {
-		Kind:        "org_name_promotion_workspace",
-		GoType:      "OrgNamePromotionWorkspaceArgs",
-		Role:        Worker,
-		Queue:       "default",
-		Timeout:     TimeoutPolicy{Fixed: 5 * time.Minute},
-		MaxAttempts: 3,
-		OptsOwner:   OptsFanOut,
-		Args:        []ArgField{{Name: "Workspace"}},
+		Kind:      "org_name_promotion",
+		GoType:    "OrgNamePromotionArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 24 * time.Hour},
 	},
 	"overlay_reconcile": {
 		Kind:         "overlay_reconcile",

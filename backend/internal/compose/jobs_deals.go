@@ -36,17 +36,6 @@ func (CloseDateSweepArgs) Kind() string { return "close_date_sweep" }
 // and does no tenant work of its own (jobs.FleetWide).
 func (CloseDateSweepArgs) FleetWide() {}
 
-// CloseDateWorkspaceArgs is one workspace's close-date hygiene pass.
-type CloseDateWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (CloseDateWorkspaceArgs) Kind() string { return "close_date_workspace" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a CloseDateWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
 // FollowUpReconcileArgs schedules one overnight follow-up reconciliation
 // pass (features/07 §8a).
 type FollowUpReconcileArgs struct{}
@@ -71,21 +60,19 @@ func (a FollowUpWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // closeDateSweepWorker is the dispatcher: it enumerates and enqueues, and
 // touches no tenant data itself.
+// closeDateSweepWorker corrects close dates for every live workspace.
+//
+// One worker where there were two (ADR-0103).
 type closeDateSweepWorker struct {
-	pool *pgxpool.Pool
-}
-
-func (w *closeDateSweepWorker) Work(ctx context.Context, _ *river.Job[CloseDateSweepArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(CloseDateWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return CloseDateWorkspaceArgs{Workspace: ws} }))
-}
-
-// closeDateWorkspaceWorker runs one workspace's pass.
-type closeDateWorkspaceWorker struct {
+	pool      *pgxpool.Pool
 	corrector *deals.CloseDateCorrector
 }
 
+func (w *closeDateSweepWorker) Work(ctx context.Context, _ *river.Job[CloseDateSweepArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.correctWorkspace))
+}
+
+// closeDateWorkspaceWorker runs one workspace's pass.
 // closeDateSweepActor is the principal the nightly close-date sweep runs as, and
 // therefore the one every row it writes is attributed to — the corrector's
 // audit entries and the deal_forecast_history rows its re-dates record. Declared
@@ -94,11 +81,8 @@ type closeDateWorkspaceWorker struct {
 // copies of it would agree only until one of them moved.
 const closeDateSweepActor = "system:close-date"
 
-func (w *closeDateWorkspaceWorker) Work(ctx context.Context, job *river.Job[CloseDateWorkspaceArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+func (w *closeDateSweepWorker) correctWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	wsCtx = principal.WithActor(wsCtx, principal.Principal{Type: principal.PrincipalSystem, ID: closeDateSweepActor})
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
 	return jobs.FaultContext(ctx, w.corrector.SweepWorkspace(wsCtx))

@@ -80,9 +80,9 @@ func TestDeepReadTimeoutHoldsItsFloor(t *testing.T) {
 func TestAddGovernedWorkerRecordsTheKindItRegistered(t *testing.T) {
 	reg := newJobRegistry()
 	addGovernedWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{}, 0)
-	addGovernedWorker[CloseDateWorkspaceArgs](reg, &closeDateWorkspaceWorker{}, 0)
+	addGovernedWorker[TimeScanWorkspaceArgs](reg, &timeScanWorkspaceWorker{}, 0)
 
-	want := []string{"close_date_sweep", "close_date_workspace"}
+	want := []string{"close_date_sweep", "time_scan_workspace"}
 	if len(reg.kinds) != len(want) {
 		t.Fatalf("recorded %v, want %v", reg.kinds, want)
 	}
