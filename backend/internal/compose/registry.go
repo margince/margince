@@ -199,8 +199,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// vocabulary is published at margince://schema/analytics rather than
 	// recited in the tool schema, the same move run_report made.
 	agents.RegisterAnalyticsQueryTool(registry,
-		nativeOnlyAnalyticsRunner(sorMode,
-			analyticsQueryToolRunner(InstallationDB(pool), analyticsquery.DefaultFloor)))
+		nativeOnlyAnalyticsRunner(sorMode, analyticsQueryToolRunner(InstallationDB(pool))))
 	// The grammar that document is written in, as a TOOL and not only as the
 	// margince://schema/report-blocks resource — same reason
 	// describe_report_vocabulary exists beside run_report: the Surface-B runner

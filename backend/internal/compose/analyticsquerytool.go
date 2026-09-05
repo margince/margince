@@ -32,7 +32,10 @@ import (
 
 // analyticsQueryToolRunner adapts the typed query engine to the tool seam:
 // strict-decode the wire shape, run, save when asked, re-encode.
-func analyticsQueryToolRunner(db *database.DB, floor analyticsquery.Floor) agents.AnalyticsQueryRunner {
+// The floor is DefaultFloor on both transports: a figure a person may not see
+// is one a model asking on their behalf may not see either.
+func analyticsQueryToolRunner(db *database.DB) agents.AnalyticsQueryRunner {
+	floor := analyticsquery.DefaultFloor
 	return func(ctx context.Context, raw json.RawMessage) (json.RawMessage, error) {
 		var body crmcontracts.AnalyticsQuery
 		// STRICT for the reason the report runner's decode is: a key this

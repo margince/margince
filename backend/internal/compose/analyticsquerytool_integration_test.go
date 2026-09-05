@@ -42,7 +42,7 @@ func TestTheAnalyticsToolAndTheHTTPEngineServeOneAnswer(t *testing.T) {
 	e := integration.Setup(t)
 	seedToolDeals(t, e)
 	ctx := e.Admin()
-	run := analyticsQueryToolRunner(e.DB(), analyticsquery.DefaultFloor)
+	run := analyticsQueryToolRunner(e.DB())
 
 	raw, err := run(ctx, json.RawMessage(
 		`{"entity":"deals-by-stage","measures":[{"fn":"count"}],"save":true}`))
@@ -88,7 +88,7 @@ func TestTheAnalyticsToolAndTheHTTPEngineServeOneAnswer(t *testing.T) {
 func TestTheAnalyticsToolRefusesAnUnservedArgument(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
-	run := analyticsQueryToolRunner(e.DB(), analyticsquery.DefaultFloor)
+	run := analyticsQueryToolRunner(e.DB())
 	if _, err := run(ctx, json.RawMessage(
 		`{"entity":"deals-by-stage","measures":[{"fn":"count"}],"as_of":"2024-01-01"}`)); err == nil {
 		t.Fatal("an argument this engine does not serve was silently dropped — the caller " +
@@ -100,7 +100,7 @@ func TestTheAnalyticsToolRefusesAnUnservedArgument(t *testing.T) {
 // something this never read.
 func TestTheAnalyticsToolRefusesTrailingContent(t *testing.T) {
 	e := integration.Setup(t)
-	run := analyticsQueryToolRunner(e.DB(), analyticsquery.DefaultFloor)
+	run := analyticsQueryToolRunner(e.DB())
 	if _, err := run(e.Admin(), json.RawMessage(
 		`{"entity":"deals-by-stage","measures":[{"fn":"count"}]} {"save":true}`)); err == nil {
 		t.Fatal("trailing content after the arguments was silently ignored")
