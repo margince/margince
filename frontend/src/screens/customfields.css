@@ -60,7 +60,7 @@
    inter-word space. */
 .cf-rowactions {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--gapActions);
 }
 
 /* This screen's hint line, in both its spellings: a standalone paragraph, and

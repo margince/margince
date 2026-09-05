@@ -31,6 +31,7 @@ Read before touching a stylesheet. Each gate is exact, not fuzzy.
 | `check-ds-spacing.sh` | No new raw px in padding/margin/gap under `screens/` and `app/` | Screen sheets use `--space-*`; design-system sheets may keep optical px |
 | `check-ds-spacing-roles.sh` | No screen rule re-spaces a design-system primitive, and the three named contexts take their role token: `*-actions` gap → `--gapActions`, `*-cards` gap → `--gapCards`, `*-card`/`*-panel` padding → `--padCard`/`--padPanel`. Whole-tree | Retune a role in `tokens.css`, where every screen moves with it; a screen that needs its own interval spaces its OWN element, varies the primitive with a role token, or waives in line with a reason |
 | `check-space-tokens.sh` | Every `var(--x)` is declared somewhere | Rename a token only with all its consumers |
+| `actionrow.test.ts` | Two or more sibling buttons sit in a container that gets `gap: var(--gapActions)` | Give a verb row its own class with that gap, or reach for `.form-actions` / `.actions` / `.card-actions`; a class no stylesheet defines is the failure this one exists for |
 | `onecard.test.ts` | No second rule declares `.card`'s full chrome | When `Panel` becomes the pane, `.card` must not end up identical to it |
 | `eyebrow-one-spelling.test.ts` | Frozen per-sheet count of uppercase micro-type restatements | Use `.t-eyebrow`; lower the baseline when a restyle removes copies |
 | `catalog.test.ts` | Every exported primitive named in the README table with a story | A new or renamed primitive ships with its row and story |

@@ -1041,7 +1041,7 @@
 .ob-voice-drop-acts {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--gapActions);
   margin-top: var(--space-2);
 }
 

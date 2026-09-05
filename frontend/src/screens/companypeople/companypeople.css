@@ -41,7 +41,7 @@
 /* The two verbs on an unconfirmed seat. */
 .cp-seat-verbs {
   display: flex;
-  gap: var(--space-1);
+  gap: var(--gapActions);
   margin-top: var(--space-1);
 }
 
