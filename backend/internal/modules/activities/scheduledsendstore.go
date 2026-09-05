@@ -277,7 +277,8 @@ func scanScheduledSend(rows pgx.Rows) (ScheduledSend, error) {
 		activityID *ids.UUID
 		heldReason *string
 		// SQL NULL on a reply row, which the origin-shape CHECK requires: a
-		// reply inherits its anchor's records and freezes none of its own.
+		// reply's records come from its anchor, and the ones it adds beyond
+		// those travel in also_links, which the fire reads and this does not.
 		originLinks []byte
 	)
 	if err := rows.Scan(
@@ -287,15 +288,24 @@ func scanScheduledSend(rows pgx.Rows) (ScheduledSend, error) {
 	); err != nil {
 		return ScheduledSend{}, fmt.Errorf("scheduled send: reading a row: %w", err)
 	}
+	// payload_version is not checked on this read, and the fire's refusal of a
+	// payload this build did not write is what makes that safe: a stale row can
+	// never send, so the worst this read can do is describe a message that will
+	// be held — and a rep has to be able to see it to withdraw it.
 	var payload scheduledPayload
 	if err := json.Unmarshal(payloadRaw, &payload); err != nil {
 		return ScheduledSend{}, fmt.Errorf("scheduled send: reading the frozen message: %w", err)
 	}
-	if len(originLinks) > 0 {
-		if err := json.Unmarshal(originLinks, &row.Links); err != nil {
-			return ScheduledSend{}, fmt.Errorf("scheduled send: reading the frozen record links: %w", err)
-		}
+	links, err := thawOriginLinks(originLinks)
+	if err != nil {
+		return ScheduledSend{}, err
 	}
+	row.Links = links
+	evidence, err := payload.Evidence.thaw()
+	if err != nil {
+		return ScheduledSend{}, err
+	}
+	row.Evidence = evidence
 	if anchor != nil {
 		row.Anchor = ids.ActivityID{UUID: *anchor}
 	}
@@ -312,5 +322,6 @@ func scanScheduledSend(rows pgx.Rows) (ScheduledSend, error) {
 	row.Body = payload.Body
 	row.Context = commsauthz.Category(payload.Context)
 	row.MarketingPurpose = payload.MarketingPurpose
+	row.ConsentPurpose = payload.ConsentPurpose
 	return row, nil
 }

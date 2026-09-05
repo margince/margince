@@ -30968,7 +30968,17 @@ type ScheduledSend struct {
 	// claimed, which is the ordinary case for a reply — the engine derives it from the
 	// anchor.
 	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
-	CreatedAt            time.Time             `json:"created_at"`
+
+	// ConsentPurpose The deprecated purpose key the sender still supplied, frozen with the message. The
+	// fire consults it where the record supports no category, so a preview that could
+	// not pass it would answer a different question than the send.
+	ConsentPurpose *string   `json:"consent_purpose,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+
+	// Evidence The records the sender named in support of the message, frozen with it. Absent
+	// when none were named. Evidence is what makes a claimed category supported, so a
+	// preview asked without it would answer "unproven" about a message the fire allows.
+	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
 
 	// HeldReason Why a human has to look at it. `consent_withdrawn` — a recipient withdrew consent
 	// after it was scheduled. `sender_inactive` — the scheduler lost their seat or mailbox.
@@ -30979,10 +30989,12 @@ type ScheduledSend struct {
 	Id         openapi_types.UUID       `json:"id"`
 
 	// Links The records an account-started message files itself under, as the send named
-	// them. Absent on a reply, which inherits its anchor's. Carried so a surface can
-	// ask the engine the SAME question the fire will ask: the account-send preview
-	// refuses a message that names no records, and a surface that could not name them
-	// would fall silent on exactly the cold sends where consent matters most.
+	// them. Absent on a reply: a reply's records come from its anchor, and the ones it
+	// was told to file under beyond those (`also_links` on the send) are not carried
+	// here, because the reply preview resolves from the anchor alone. Carried so a
+	// surface can ask the engine the SAME question the fire will ask: the account-send
+	// preview refuses a message that names no records, and a surface that could not
+	// name them would fall silent on exactly the cold sends where consent matters most.
 	Links *[]ActivityLinkInput `json:"links,omitempty"`
 
 	// MarketingPurpose For a marketing send, the consent purpose key it claimed, frozen with the message.

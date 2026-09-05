@@ -87,7 +87,9 @@ export const UnprovenWithOverride: Story = {
  * to the message as it stands, rather than drawing a button that does nothing.
  */
 export const UnprovenReadOnly: Story = {
-  render: () => <SendPermission preview={refused({ can_be_overruled: true })} />,
+  render: () => (
+    <SendPermission preview={refused({ can_be_overruled: true })} />
+  ),
 };
 
 /** The question did not arrive. Said out loud, because silence reads as yes. */

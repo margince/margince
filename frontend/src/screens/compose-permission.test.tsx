@@ -43,10 +43,10 @@ const inbound: Activity = {
   kind: "email",
   direction: "inbound",
   occurred_at: "2026-08-01T09:00:00Z",
+  is_done: false,
   source: "capture",
   captured_by: "system:capture",
   subject: "The quote",
-  from_address: "anna@example.test",
   created_at: "2026-08-01T09:00:00Z",
   updated_at: "2026-08-01T09:00:00Z",
 };
@@ -184,6 +184,20 @@ describe("the composer asks before anybody presses Send", () => {
     expect(
       screen.queryByRole("button", { name: /say why you may write/i }),
     ).toBeNull();
+  });
+
+  // A 200 that is not a preview — a proxy's page, a server of another version
+  // — is not an answer either, and must not take the composer down with it:
+  // the message is still the rep's to send, and the door still refuses it if
+  // it must.
+  it("says the check did not happen on an answer it cannot read", async () => {
+    stubEngine((addresses) =>
+      addresses.length === 0 ? allowedPreview([]) : jsonResponse({}),
+    );
+    await openReplyAndAddress("anna@example.test");
+
+    expect(await screen.findByText(/could not check/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("To")).toBeInTheDocument();
   });
 
   // A failed check is not permission. An empty 502 from a gateway carries no

@@ -41,6 +41,18 @@ export function useSendPermission(args: {
    * different message than the one that will go.
    */
   marketingPurpose?: string;
+  /**
+   * The deprecated purpose key, where the surface still holds one. The send
+   * consults it where the record supports no category, so a preview asked
+   * without it answers a different question than the send.
+   */
+  consentPurpose?: string;
+  /**
+   * The records named in support of the message. Evidence is what makes a
+   * claimed category supported: asked without it, the engine answers
+   * "unproven" about a message the send allows.
+   */
+  evidence?: components["schemas"]["CommunicationEvidence"];
   /** Off while the rep is still choosing a recipient — nothing to ask about yet. */
   enabled?: boolean;
 }): { preview: Preview | undefined; asking: boolean; unanswered: boolean } {
@@ -67,6 +79,8 @@ export function useSendPermission(args: {
       links,
       args.context ?? "",
       args.marketingPurpose ?? "",
+      args.consentPurpose ?? "",
+      args.evidence ?? {},
     ],
     enabled,
     // A refusal is live state — somebody may unsubscribe between the preview
@@ -78,6 +92,8 @@ export function useSendPermission(args: {
         to: [...recipients],
         communication_context: args.context,
         marketing_purpose: args.marketingPurpose,
+        consent_purpose: args.consentPurpose,
+        evidence: args.evidence,
       };
       const answered = args.anchorActivityId
         ? await api.POST("/activities/{id}/send-email:preview", {
@@ -98,7 +114,18 @@ export function useSendPermission(args: {
           },
         );
       }
-      return answered.data;
+      // An answer this build cannot read is not an answer. A 200 with no
+      // recipients — a proxy's page, a server of another version — must read
+      // as "could not check" on this one notice, never take down the composer
+      // around it: the message is still the rep's to send, and the server
+      // still refuses it at the door if it must.
+      const preview = answered.data;
+      if (!preview || !Array.isArray(preview.recipients)) {
+        throwProblem({
+          title: "send permission: the preview answered without recipients",
+        });
+      }
+      return preview;
     },
   });
 

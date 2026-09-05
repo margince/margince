@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -37,6 +38,19 @@ import (
 // compiled under `go test` and failed to compile under the linter, in a file
 // that never mentioned the tag.
 const repoRoot = ".."
+
+// describesRatherThanRenders is a frontend file, named relative to
+// frontend/src, that talks ABOUT what renders rather than rendering: a test, a
+// story, a test kit, or the generated contract. Shared by every gate that
+// sweeps the frontend for a second rendering of something, so two gates cannot
+// disagree about what counts as production source.
+func describesRatherThanRenders(rel string) bool {
+	return strings.HasPrefix(rel, "api/") ||
+		strings.Contains(rel, ".test.") ||
+		strings.Contains(rel, ".stories.") ||
+		strings.Contains(rel, ".testkit.") ||
+		strings.HasSuffix(rel, ".d.ts")
+}
 
 func TestMain(m *testing.M) {
 	if err := os.Chdir(".."); err != nil {

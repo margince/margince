@@ -307,6 +307,8 @@ function SendRow({
     links: send.links,
     context: send.communication_context,
     marketingPurpose: send.marketing_purpose,
+    consentPurpose: send.consent_purpose,
+    evidence: send.evidence,
     enabled: actionable,
   });
   return (

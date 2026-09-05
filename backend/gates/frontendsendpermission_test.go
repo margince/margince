@@ -21,9 +21,10 @@ package gates
 //
 // The doors are DERIVED from the contract rather than listed: a send door is an
 // operation whose request body carries `operator_reason`, the field through
-// which a sender's own word about a send reaches the engine. A list here would
-// be a second copy of the contract, and the copy that stopped matching would
-// let a fourth door ship with no question asked.
+// which a sender's own word about a send reaches the engine — recorded beside
+// the decision, and granting nothing. A list here would be a second copy of the
+// contract, and the copy that stopped matching would let a fourth door ship
+// with no question asked.
 //
 // NOT asserted: a surface that stages a send without posting to a door — the
 // scheduled-send queue lists messages already staged, and the approval card
@@ -32,7 +33,6 @@ package gates
 // third such surface arriving without one.
 
 import (
-	"bufio"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -65,31 +65,33 @@ var contractPathLine = regexp.MustCompile(`^  (/[^\s:]+):\s*$`)
 // contractSchemaLine matches a schema entry under `components: schemas:`.
 var contractSchemaLine = regexp.MustCompile(`^    ([A-Za-z][A-Za-z0-9]*):\s*$`)
 
-// contractSchemaRef matches a request-body reference to a named schema.
+// contractSchemaRef matches a reference to a named schema anywhere under a
+// path: request body, response or parameter alike. Over-recognition is the safe
+// direction for a census — a response that carried the sender's reason would
+// surface as a door and be looked at, where a narrower match that missed a
+// request body would report PASS over an unasked send.
 var contractSchemaRef = regexp.MustCompile(`\$ref: '#/components/schemas/([A-Za-z][A-Za-z0-9]*)'`)
 
-// overrideProperty is the field that marks a schema as a send request body.
-var overrideProperty = regexp.MustCompile(`^        operator_reason:\s*$`)
+// senderReasonProperty is the field that marks a schema as a send request body:
+// the sender's own word about why they are writing, recorded and granting
+// nothing.
+var senderReasonProperty = regexp.MustCompile(`^        operator_reason:\s*$`)
 
-// sendDoors reads the contract for every path whose request body schema carries
-// operator_reason: the doors through which a sender's own word about a send
-// reaches the engine.
+// sendDoors reads the contract for every path whose schemas carry the sender's
+// reason: the doors through which a sender's own word about a send reaches the
+// engine.
 func sendDoors(t *testing.T) []string {
 	t.Helper()
-	file, err := os.Open(sendPermissionContract)
+	contract, err := os.ReadFile(sendPermissionContract)
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
-	defer file.Close()
 
 	refsByPath := map[string][]string{}
-	carriesOverride := map[string]bool{}
+	carriesSenderReason := map[string]bool{}
 	var path, schema string
 	inSchemas := false
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
+	for _, line := range strings.Split(string(contract), "\n") {
 		switch {
 		case line == "components:":
 			inSchemas = true
@@ -102,18 +104,15 @@ func sendDoors(t *testing.T) []string {
 			}
 		case inSchemas && contractSchemaLine.MatchString(line):
 			schema = contractSchemaLine.FindStringSubmatch(line)[1]
-		case inSchemas && schema != "" && overrideProperty.MatchString(line):
-			carriesOverride[schema] = true
+		case inSchemas && schema != "" && senderReasonProperty.MatchString(line):
+			carriesSenderReason[schema] = true
 		}
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scanning the contract: %v", err)
 	}
 
 	var doors []string
 	for p, refs := range refsByPath {
 		for _, ref := range refs {
-			if carriesOverride[ref] {
+			if carriesSenderReason[ref] {
 				doors = append(doors, p)
 				break
 			}
@@ -123,10 +122,17 @@ func sendDoors(t *testing.T) []string {
 	return doors
 }
 
-// namesADoor reports whether source posts to any of the doors.
+// namesADoor reports whether source names any of the doors as a whole string
+// literal, whichever quote the file uses.
+//
+// The closing delimiter is what keeps `/emails` from matching the preview door
+// `/emails:preview` that the hook itself names. The opening one is any of the
+// three JavaScript quotes rather than the double quote the formatter enforces,
+// because under-recognition is the one way a census must not fail: a surface
+// written with backticks would otherwise be invisible and report PASS.
 func namesADoor(source string, doors []string) bool {
 	for _, door := range doors {
-		if strings.Contains(source, `"`+door+`"`) {
+		if regexp.MustCompile("[\"'`]" + regexp.QuoteMeta(door) + "[\"'`]").MatchString(source) {
 			return true
 		}
 	}
@@ -138,23 +144,24 @@ func namesADoor(source string, doors []string) bool {
 // the second spelling this gate exists to refuse.
 var rendersSendPermission = regexp.MustCompile(`<SendPermission[\s/>]`)
 
+// importsSendPermission matches the component's module wherever the surface
+// sits: a screen beside it imports `./sendpermission`, a surface elsewhere
+// reaches it through a longer path, and both are the one component.
+var importsSendPermission = regexp.MustCompile(`from "[^"]*/sendpermission"`)
+
 // asksTheEngine reports whether source renders the shared component.
 func asksTheEngine(source string) bool {
-	return strings.Contains(source, `from "./sendpermission"`) &&
+	return importsSendPermission.MatchString(source) &&
 		rendersSendPermission.MatchString(source)
 }
 
 // isSendSurfaceSource is the frontend production source the census sweeps:
-// TypeScript, minus tests, stories and the generated contract.
-func isSendSurfaceSource(path string) bool {
-	if !strings.HasSuffix(path, ".ts") && !strings.HasSuffix(path, ".tsx") {
+// TypeScript that renders, rather than a file that describes what renders.
+func isSendSurfaceSource(rel string) bool {
+	if !strings.HasSuffix(rel, ".ts") && !strings.HasSuffix(rel, ".tsx") {
 		return false
 	}
-	base := filepath.Base(path)
-	return !strings.Contains(base, ".test.") &&
-		!strings.Contains(base, ".stories.") &&
-		!strings.Contains(base, ".testkit.") &&
-		!strings.HasSuffix(base, ".d.ts")
+	return !describesRatherThanRenders(rel)
 }
 
 func TestEverySurfaceThatSendsAsksTheEngineFirst(t *testing.T) {
@@ -168,6 +175,10 @@ func TestEverySurfaceThatSendsAsksTheEngineFirst(t *testing.T) {
 		t.Fatalf("derived %d send door(s) from the contract, want at least the three that carry "+
 			"operator_reason: the census has stopped seeing its subject (%v)", len(doors), doors)
 	}
+
+	// Deferred here, once the subject is fixed, so a fatal on the walk cannot
+	// skip the stale-waiver report.
+	defer silentSendSurfaces.AssertAllMatched(t)
 
 	component, err := os.ReadFile(sendPermissionComponent)
 	if err != nil {
@@ -183,7 +194,15 @@ func TestEverySurfaceThatSendsAsksTheEngineFirst(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if entry.IsDir() || !isSendSurfaceSource(path) {
+		if entry.IsDir() {
+			return nil
+		}
+		rel, relErr := filepath.Rel(sendPermissionFrontend, path)
+		if relErr != nil {
+			return relErr
+		}
+		rel = filepath.ToSlash(rel)
+		if !isSendSurfaceSource(rel) {
 			return nil
 		}
 		raw, readErr := os.ReadFile(path)
@@ -195,11 +214,6 @@ func TestEverySurfaceThatSendsAsksTheEngineFirst(t *testing.T) {
 			return nil
 		}
 		surfaces++
-		rel, relErr := filepath.Rel(sendPermissionFrontend, path)
-		if relErr != nil {
-			return relErr
-		}
-		rel = filepath.ToSlash(rel)
 		if asksTheEngine(source) || silentSendSurfaces.Waived(t, rel) {
 			return nil
 		}
@@ -217,5 +231,4 @@ func TestEverySurfaceThatSendsAsksTheEngineFirst(t *testing.T) {
 		t.Fatalf("found %d frontend file(s) posting to a send door, want at least the two composers: "+
 			"the census has stopped seeing its subject", surfaces)
 	}
-	silentSendSurfaces.AssertAllMatched(t)
 }
