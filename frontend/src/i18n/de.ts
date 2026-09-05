@@ -1015,6 +1015,8 @@ export const de = {
   "roompage.text.welcomeLabel": "Begrüßungstext",
   "roompage.viewAsBuyer": "Als Käufer ansehen",
   "roompage.previewArchived": "Ein archivierter Raum hat keine Vorschau.",
+  "roompage.previewNotYours":
+    "Ihr Zugriff auf diesen Deal umfasst die Käufer-Vorschau nicht.",
   "access.title": "Zugang",
   "access.sub": "Wer eintreten darf und was jede Person tun kann.",
   "access.invite": "Einladen",
@@ -2512,6 +2514,9 @@ export const de = {
   "brief.week.quiet":
     "Eine ruhige Woche — nichts abgeschlossen, nichts bewegt.",
 
+  "brief.changed.lead": "Seit dem Briefing geändert:",
+  "brief.changed.more": "+{count} weitere",
+  "brief.changed.open": "Arbeitsliste öffnen",
   "brief.feed.title": "Heute",
   "brief.feed.sub": "Eine Reihenfolge, einmal entschieden.",
   "brief.feed.loading": "Dein Morgen wird gelesen",
@@ -2693,22 +2698,27 @@ export const de = {
   "home.readings.label": "Dein Morgen in fünf Kennzahlen",
   "home.readings.truncated":
     "Eine Quelle wurde bis zur Grenze gelesen, jede Zahl oben ist also ein Mindestwert.",
+  "home.readings.urgent": "Dringende Schritte",
+  "home.readings.urgentBasis": "jemand wartet oder eine Zusage bricht",
+  "home.readings.decisions": "Offene Entscheidungen",
+  "home.readings.decisionsBasis":
+    "jemand kommt erst weiter, wenn du antwortest",
+  "home.readings.pipeline": "Pipeline",
+  "home.readings.pipelineWorkspace": "Pipeline · gesamte Organisation",
+  "home.readings.pipelineBasis":
+    "{weighted} gewichtet · {priced} von {eligible} bewertet",
+  "home.readings.pipelineUnread": "die Pipeline war nicht lesbar",
+  "home.readings.pipelineReading": "Pipeline wird gelesen",
   "home.readings.openLane": "Diese öffnen",
-  "home.readings.waiting": "Kunden warten",
-  "home.readings.waitingBasis": "warten auf eine Antwort",
   "home.readings.meetings": "Termine heute",
   "home.readings.meetingsBasis": "im heutigen Kalender",
   "home.readings.needsPrep_one": "1 unvorbereitet",
   "home.readings.needsPrep_other": "{count} unvorbereitet",
   "home.readings.prepUnknown": "nicht alle prüfbar",
   "home.readings.prepared": "alle vorbereitet",
-  "home.readings.promises": "Zusagen fällig",
-  "home.readings.promisesBasis": "Zusagen werden noch nicht erfasst",
   "home.readings.leads": "Erstkontakt",
   "home.readings.leadsBasis": "warten auf die erste Antwort",
   "home.readings.leadsDue": "nächste fällig {value}",
-  "home.readings.quota": "Ziel-Tempo",
-  "home.readings.quotaBasis": "kein Ziel hinterlegt",
   "home.rail": "Kontext",
   "home.pct": "{pct} %",
   "home.deck.later": "Später",
@@ -3306,6 +3316,32 @@ export const de = {
   "analytics.sectionPipeline": "Pipeline",
   "analytics.sectionPerformance": "Ergebnisse",
   "analytics.noClosedDeals": "Es wurden noch keine Deals abgeschlossen.",
+  "analytics.sectionOutcomes": "Meine Ergebnisse",
+  "analytics.sectionCoverage": "Datenabdeckung",
+  "analytics.coverageSub":
+    "Welche Quellen die nächtliche Prüfung lesen konnte, und wie weit. Eine stille, aber gelesene Quelle gilt als geprüft; eine ungelesene sagt warum.",
+  "analytics.covSource": "Quelle",
+  "analytics.covState": "Zustand",
+  "analytics.covThrough": "Geprüft bis",
+  "analytics.covChecked": "Geprüft",
+  "analytics.covStale": "Veraltet — zuletzt nichts gelesen",
+  "analytics.covUnavailable":
+    "Nicht verfügbar — die Prüfung konnte nicht lesen",
+  "analytics.covPermissionLimited": "Zugriff muss neu erteilt werden",
+  "analytics.covNotConnected":
+    "Nicht verbunden — nichts zu reparieren, etwas zu entscheiden",
+  "analytics.coverageInputsElsewhere":
+    "Probleme auf Datensatzebene werden in der Forecast-Eingangsprüfung gelistet und gelöst.",
+  "analytics.myPipeline": "Meine offene Pipeline",
+  "analytics.myMeetings": "Meine Termine",
+  "analytics.meetingsAsTheyStand":
+    "Von Ihnen gehaltene Termine, nach heutigem Stand — ein stattgefundener Termin zählt nicht mehr als gebucht.",
+  "analytics.meetingsBooked": "Gebucht",
+  "analytics.meetingsHeld": "Stattgefunden",
+  "analytics.meetingsNoShow": "Nicht erschienen",
+  "analytics.meetingsCanceled": "Abgesagt",
+  "analytics.outcomesOwnLensOnly":
+    "Diese Ansicht antwortet für einen einzelnen Platz. Ihre Sicht umfasst mehr als Ihre eigenen Datensätze; Ihre Zahlen stehen in den breiteren Bereichen.",
   "analytics.openOutcomeDeals": "Die {outcome}-Deals öffnen",
   "analytics.reportWinLoss": "Gewonnen und verloren",
   "analytics.reportStageAge": "Verweildauer je Phase",
@@ -3352,6 +3388,12 @@ export const de = {
   "review.checksIncomplete": "Prüfung unvollständig",
   "review.allSourcesRead": "Alle Quellen wurden gelesen.",
   "review.source.mail": "das Postfach",
+  "review.source.calendar": "der Kalender",
+  "review.source.documents": "Dokumente",
+  "review.source.contracts": "Verträge",
+  "review.source.incumbent": "das Altsystem",
+  "analytics.coverageNeverRun":
+    "Noch keine Prüfung gelaufen. Eine frische Installation wurde noch nicht angesehen — etwas anderes als eine, die geprüft und für gesund befunden wurde.",
   "review.source.offers": "Angebote",
   "review.sourcesUnread":
     "Nicht gelesen: {sources}. Die Befunde unten decken nur ab, was geprüft werden konnte.",
