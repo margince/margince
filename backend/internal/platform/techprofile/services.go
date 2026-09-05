@@ -99,6 +99,18 @@ func ServiceLabel(key string) (string, bool) {
 	return label, known
 }
 
+// ServiceKeys lists the classifiable service keys, sorted, derived from the
+// same map ServiceLabel reads. Exported so a surface that renders its own
+// label per service can walk the owner's set rather than keep a copy of it.
+func ServiceKeys() []string {
+	keys := make([]string, 0, len(serviceLabels))
+	for key := range serviceLabels {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 // OperatedServices reads the services a domain's certificate hostnames reveal.
 //
 // Only the first label is consulted, and only against the allowlist above.
