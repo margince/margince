@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 72 |
 | Resources | 11 |
-| Tool catalog | 200.0 KB |
+| Tool catalog | 200.1 KB |
 | Resource catalog | 4.2 KB |
-| Approx. wire tokens | 52261 |
+| Approx. wire tokens | 52298 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 95.4 KB | 47% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 48.7 KB | 24% | Yes, every step |
-| Input schemas | 40.7 KB | 20% | Yes, every step |
+| Input schemas | 40.9 KB | 20% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.2 KB | 7% | Partly |
-| **Description + input schema** | **89.4 KB** | **44%** | **the recurring cost** |
+| **Description + input schema** | **89.6 KB** | **44%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -124,7 +124,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve people and companies | yes |  | 3.6 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes | [`ui://margince/commitments.html`](#commitments_view) | 3.4 KB |
-| [`run_report`](#run_report) | Run a report | yes |  | 4.8 KB |
+| [`run_report`](#run_report) | Run a report | yes |  | 5.0 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
 | [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
 | [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 3.9 KB |
@@ -12321,12 +12321,15 @@ Answer a question about totals, counts or breakdowns — pipeline by stage, deal
             "type": "string"
           },
           "fn": {
+            "description": "How to aggregate the field. count takes no field; every other function names one from this report's aggregates list.",
             "enum": [
-              "count",
-              "sum",
               "avg",
+              "count",
+              "max",
+              "median",
               "min",
-              "max"
+              "p75",
+              "sum"
             ],
             "type": "string"
           }

@@ -6,7 +6,11 @@ package compose
 import (
 	"encoding/json"
 	"errors"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -339,4 +343,103 @@ func TestAFilterRefusalNamesTheThresholdsToo(t *testing.T) {
 	if thresholded == 0 {
 		t.Fatal("no prebuilt report declares a threshold, so this test proved nothing")
 	}
+}
+
+// The published aggregate functions are the ones aggregateSelect switches on.
+//
+// This is the gap that made the change: the tool listed five by hand, the
+// engine grew median and p75, and nothing noticed — so stage-age and win-loss
+// came to DEFAULT to a percentile no agent could ask for, while the HTTP path
+// accepted it happily.
+//
+// The engine's side is read from aggregateSelect's own source rather than from
+// a list beside it. A list would be a third spelling of the same closed set,
+// free to drift from the switch exactly as the tool's enum did — and this test
+// would then compare two copies of the mistake.
+func TestThePublishedAggregateFunctionsAreTheOnesTheEngineSwitchesOn(t *testing.T) {
+	t.Parallel()
+	engine := aggregateFunctionsInSource(t)
+	if len(engine) == 0 {
+		t.Fatal("read no aggregate functions out of aggregateSelect — the scan is " +
+			"looking in the wrong place, and would report agreement between two empty sets")
+	}
+	published := reportPlanVocabulary().Functions
+
+	for _, fn := range engine {
+		if !slices.Contains(published, fn) {
+			t.Errorf("the engine accepts fn=%q and run_report does not publish it. "+
+				"An agent cannot ask for a function it is never told about, however "+
+				"willingly the engine would answer.", fn)
+		}
+	}
+	for _, fn := range published {
+		if !slices.Contains(engine, fn) {
+			t.Errorf("run_report publishes fn=%q and the engine refuses it. A caller "+
+				"reading the schema would spend a call to learn that.", fn)
+		}
+	}
+}
+
+// aggregateFunctionsInSource reads the case values of aggregateSelect's switch
+// — the closed set the engine actually implements.
+func aggregateFunctionsInSource(t *testing.T) []string {
+	t.Helper()
+	file, err := parser.ParseFile(token.NewFileSet(), "report.go", nil, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatalf("parsing report.go: %v", err)
+	}
+	constants := aggregateFunctionConstants(t)
+	var out []string
+	ast.Inspect(file, func(n ast.Node) bool {
+		fn, ok := n.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != "aggregateSelect" {
+			return true
+		}
+		ast.Inspect(fn.Body, func(inner ast.Node) bool {
+			clause, ok := inner.(*ast.CaseClause)
+			if !ok {
+				return true
+			}
+			for _, expr := range clause.List {
+				if name, ok := expr.(*ast.Ident); ok {
+					if value, isAggregate := constants[name.Name]; isAggregate {
+						out = append(out, value)
+					}
+				}
+			}
+			return true
+		})
+		return false
+	})
+	slices.Sort(out)
+	return out
+}
+
+// aggregateFunctionConstants maps each aggFn* identifier to the wire word it
+// holds, so the switch's case names resolve to what a caller writes.
+func aggregateFunctionConstants(t *testing.T) map[string]string {
+	t.Helper()
+	file, err := parser.ParseFile(token.NewFileSet(), "report.go", nil, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatalf("parsing report.go: %v", err)
+	}
+	out := map[string]string{}
+	ast.Inspect(file, func(n ast.Node) bool {
+		spec, ok := n.(*ast.ValueSpec)
+		if !ok || len(spec.Names) != 1 || len(spec.Values) != 1 {
+			return true
+		}
+		if !strings.HasPrefix(spec.Names[0].Name, "aggFn") {
+			return true
+		}
+		if lit, ok := spec.Values[0].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+			value, err := strconv.Unquote(lit.Value)
+			if err != nil {
+				t.Fatalf("unquoting %s: %v", spec.Names[0].Name, err)
+			}
+			out[spec.Names[0].Name] = value
+		}
+		return true
+	})
+	return out
 }
