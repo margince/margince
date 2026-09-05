@@ -30372,6 +30372,72 @@ export interface components {
              * @enum {string}
              */
             primary_action?: "decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge";
+            verdict?: components["schemas"]["WorklistDealVerdict"];
+        };
+        /**
+         * @description How the deal behind a row is STANDING, beside the move that acts on it.
+         *
+         *     The move says what to do; this says what the reader is walking into. A row
+         *     that names a step without saying whether the deal is alive asks the reader to
+         *     open the deal page to find out, which is the hand-off the queue exists to
+         *     remove.
+         *
+         *     NOTHING IS DECIDED HERE. compose/dealstatus already wrote a standing per deal
+         *     and cached it per reader; this carries that answer onto the row. A deal with
+         *     no cached card carries no verdict, and its row says what it said before.
+         *
+         *     `source` is what the reader is being shown, and a client's copy turns on it:
+         *     a deterministic rule stated as a belief is a lie about where the sentence came
+         *     from.
+         */
+        WorklistDealVerdict: {
+            /**
+             * @description `live` — moving, with a next step both sides expect.
+             *     `drifting` — nothing wrong, nothing happening; it dies of neglect.
+             *     `blocked` — something specific is in the way.
+             *     `cold` — long silence after real engagement.
+             *
+             *     The same four the deal page's own verdict carries, because they ARE that
+             *     verdict. Held by backend/gates/worklistverdictstandings_test.go, which
+             *     derives this set from DealStatusCardVerdict's description rather than
+             *     keeping a second list of them.
+             *
+             *     ABSENT on a `brief_finding` line, which is prose about the deal and not one
+             *     of these four calls. A word invented for it would be the queue deciding a
+             *     judgement the deal card owns.
+             * @enum {string}
+             */
+            standing?: "live" | "drifting" | "blocked" | "cold";
+            /**
+             * @description One sentence saying what the standing rests on, already written and already
+             *     cited when it was written.
+             *
+             *     Never composed here from parts. A line assembled on this side would be a
+             *     second author of the same judgement, in one language, over facts this pass
+             *     did not gather.
+             */
+            line: string;
+            /**
+             * @description Where the line came from, so a client never presents one reading as the other.
+             *
+             *     `deal_status` — the deal's own cached card, model-written and evidence-cited.
+             *     `brief_finding` — the night's brief item for this deal, grounded and
+             *     evidence-validated, used when no card is cached.
+             *
+             *     Both are READINGS, and there is deliberately no third member for the
+             *     deterministic case. A row with no reading carries no verdict at all: its
+             *     typed `because` reasons are the deterministic explanation, they are already
+             *     on every row, and a client draws them under their own heading rather than
+             *     under this one.
+             * @enum {string}
+             */
+            source: "deal_status" | "brief_finding";
+            /**
+             * Format: date-time
+             * @description When the reading behind this line was taken, so a stale one can be told from
+             *     a fresh one.
+             */
+            as_of?: string;
         };
         /**
          * @description One fact behind an item's rank, as a typed pair rather than a sentence: the

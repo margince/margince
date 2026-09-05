@@ -45,6 +45,7 @@ import {
   worklistKey,
 } from "./worklist.queries";
 import { syncHealthDetail } from "./worklist.synchealth";
+import { VerdictLine } from "./worklist.verdict";
 
 /**
  * A grouped row's named members, each ONCE.
@@ -198,6 +199,11 @@ export function WorklistRow({
               {sample.join(" · ")}
             </p>
           )}
+          {/* How the deal is standing, above the captions rather than among
+              them. It is a READING and they are facts, and a reader who cannot
+              tell those apart cannot tell what to trust — worklist.verdict.tsx
+              states why the label says which. */}
+          <VerdictLine verdict={item.verdict} zone={zone} />
           <RowCaptions
             when={when}
             facts={facts}

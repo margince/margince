@@ -129,6 +129,7 @@
 }
 
 .worklist-row-detail,
+.worklist-row-verdict,
 .worklist-row-when,
 .worklist-row-facts,
 .worklist-row-sample,
@@ -137,6 +138,28 @@
 .worklist-row-above {
   color: var(--textSecondary);
   margin: 0;
+}
+
+/* The standing line: a badge, who is speaking, and the sentence.
+
+   Laid out as a row rather than as prose so the badge reads as a label on the
+   sentence beside it, and wrapping so a long line falls under the badge rather
+   than pushing the row wide. The "Margince believes" half is dimmed against the
+   sentence itself: it is attribution, and the reader is here for the claim. */
+.worklist-row-verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+.worklist-row-verdict-source,
+.worklist-row-verdict-when {
+  color: var(--textTertiary, var(--textSecondary));
+}
+
+.worklist-row-verdict-line {
+  color: var(--textPrimary);
 }
 
 /* The reasons past the first few, a tap away rather than gone.

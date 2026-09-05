@@ -110,7 +110,11 @@ func (s *Service) Worklist(
 	case resolved == scopeUnassigned:
 		reader = reader.forUnowned()
 	}
-	day, err := reader.Assemble(ctx)
+	// The day AND the night's finding per deal, from one read of the brief
+	// lane. The findings travel as a value rather than on the service: feed.go's
+	// assembleDay states why a field there would carry one reader's findings
+	// onto the next reader's page.
+	day, findings, err := reader.assembleDay(ctx)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -170,6 +174,14 @@ func (s *Service) Worklist(
 	// this caller will not receive spends a query on nothing. dealmoves.go
 	// states why this reads a cache and never assembles.
 	if err := reader.nameTheStep(ctx, out.Queue); err != nil {
+		return crmcontracts.Worklist{}, err
+	}
+	// And how each deal row's deal is STANDING, over the same cut page and for
+	// the same reason. Read after the step because the two are independent: a
+	// row can carry a move and no verdict, or a verdict and no move, and neither
+	// absence is a reason to withhold the other. dealstanding.go states the
+	// three-source order and why its floor is no verdict at all.
+	if err := reader.nameTheStanding(ctx, out.Queue, findings); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
 	// And the name beside each owner id, over the same cut page and for the same

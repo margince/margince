@@ -8195,6 +8195,13 @@ export const de = {
     "Über dem Nächsten wegen der engeren Beziehung.",
   "worklist.above.crowded":
     "Über dem Nächsten, weil davon viele gleichzeitig anstehen.",
+  "worklist.verdict.live": "Läuft",
+  "worklist.verdict.drifting": "Schläft ein",
+  "worklist.verdict.blocked": "Blockiert",
+  "worklist.verdict.cold": "Kalt",
+  "worklist.verdict.believes": "Margince liest das so",
+  "worklist.verdict.rule": "Warum das hier steht",
+  "worklist.verdict.asOf": "Gelesen {when}",
   "worklist.consequence.buyer_waits": "Wenn du nichts tust, warten sie weiter.",
   "worklist.consequence.promise_breaks":
     "Wenn du nichts tust, brichst du eine Zusage.",

@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -253,6 +254,10 @@ func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service, meter *ove
 // without a test that reads them end to end.
 func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *overlaybudget.Meter, now attention.Clock) *attention.Service {
 	db := InstallationDB(pool)
+	// ONE deal-status service for both seams below: the move and the standing
+	// are two reads of the same cached card, and a second service value would
+	// be a second set of stores over the same pool for no reason.
+	cards := newDealStatusService(pool)
 	return attention.NewService(
 		attentionApprovals{svc: svc},
 		attentionDuplicates{store: people.NewStore(db)},
@@ -355,7 +360,13 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// Reads the card's cache and never assembles one — a page holds thirty
 		// rows and assembling costs a timeline, seats and possibly a model call
 		// each. A deal nobody has opened simply carries no step.
-		WithDealMoves(newDealStatusService(pool)).
+		WithDealMoves(cards).
+		// And the standing above that step, from the SAME card, the same cache
+		// and the same service value. Two seams because they are read at
+		// different moments and a caller wanting one should not pay for the
+		// other's work; ONE service because a second would be a second set of
+		// stores over the same pool for no reason.
+		WithDealStandings(attentionDealStandings{cards: cards}).
 		// The base-currency conversion the ranked queue's money comparisons
 		// run in — the same engine every other money surface prices with.
 		WithBaseMoney(AttentionBaseMoney{Pool: pool}).
@@ -390,4 +401,35 @@ func attentionZone(pool *pgxpool.Pool) attention.Zone {
 	return func(ctx context.Context) (*time.Location, error) {
 		return installationZone(ctx, pool)
 	}
+}
+
+// attentionDealStandings carries the deal card's written verdict to the queue.
+//
+// An adapter rather than a direct binding, because the two sides name the same
+// thing with different types: dealstatus answers its own CachedCard, and the
+// queue's seam is declared over a type it owns. A shared type would be a
+// sibling-module import in one direction or the other, which is the edge every
+// seam in this file exists to avoid.
+type attentionDealStandings struct {
+	cards *dealstatus.Service
+}
+
+// CachedStandings answers the already-written standing for each of these deals.
+func (a attentionDealStandings) CachedStandings(
+	ctx context.Context, dealIDs []ids.UUID,
+) (map[ids.UUID]attention.DealStanding, error) {
+	cards, err := a.cards.CachedCards(ctx, dealIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[ids.UUID]attention.DealStanding, len(cards))
+	for id, card := range cards {
+		takenAt := card.GeneratedAt
+		out[id] = attention.DealStanding{
+			Standing:     card.Standing,
+			DecisiveLine: card.DecisiveLine,
+			AsOf:         &takenAt,
+		}
+	}
+	return out, nil
 }

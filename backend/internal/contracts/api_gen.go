@@ -13408,6 +13408,48 @@ func (e WorklistCountCategory) Valid() bool {
 	}
 }
 
+// Defines values for WorklistDealVerdictSource.
+const (
+	WorklistInsightSourceBriefFinding WorklistDealVerdictSource = "brief_finding"
+	WorklistInsightSourceDealStatus   WorklistDealVerdictSource = "deal_status"
+)
+
+// Valid indicates whether the value is a known member of the WorklistDealVerdictSource enum.
+func (e WorklistDealVerdictSource) Valid() bool {
+	switch e {
+	case WorklistInsightSourceBriefFinding:
+		return true
+	case WorklistInsightSourceDealStatus:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistDealVerdictStanding.
+const (
+	WorklistStandingBlocked  WorklistDealVerdictStanding = "blocked"
+	WorklistStandingCold     WorklistDealVerdictStanding = "cold"
+	WorklistStandingDrifting WorklistDealVerdictStanding = "drifting"
+	WorklistStandingLive     WorklistDealVerdictStanding = "live"
+)
+
+// Valid indicates whether the value is a known member of the WorklistDealVerdictStanding enum.
+func (e WorklistDealVerdictStanding) Valid() bool {
+	switch e {
+	case WorklistStandingBlocked:
+		return true
+	case WorklistStandingCold:
+		return true
+	case WorklistStandingDrifting:
+		return true
+	case WorklistStandingLive:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistItemActions.
 const (
 	WorklistItemActionsAcknowledge WorklistItemActions = "acknowledge"
@@ -33736,6 +33778,90 @@ type WorklistDealFacts struct {
 	WinProbability *int                `json:"win_probability,omitempty"`
 }
 
+// WorklistDealVerdict How the deal behind a row is STANDING, beside the move that acts on it.
+//
+// The move says what to do; this says what the reader is walking into. A row
+// that names a step without saying whether the deal is alive asks the reader to
+// open the deal page to find out, which is the hand-off the queue exists to
+// remove.
+//
+// NOTHING IS DECIDED HERE. compose/dealstatus already wrote a standing per deal
+// and cached it per reader; this carries that answer onto the row. A deal with
+// no cached card carries no verdict, and its row says what it said before.
+//
+// `source` is what the reader is being shown, and a client's copy turns on it:
+// a deterministic rule stated as a belief is a lie about where the sentence came
+// from.
+type WorklistDealVerdict struct {
+	// AsOf When the reading behind this line was taken, so a stale one can be told from
+	// a fresh one.
+	AsOf *time.Time `json:"as_of,omitempty"`
+
+	// Line One sentence saying what the standing rests on, already written and already
+	// cited when it was written.
+	//
+	// Never composed here from parts. A line assembled on this side would be a
+	// second author of the same judgement, in one language, over facts this pass
+	// did not gather.
+	Line string `json:"line"`
+
+	// Source Where the line came from, so a client never presents one reading as the other.
+	//
+	// `deal_status` — the deal's own cached card, model-written and evidence-cited.
+	// `brief_finding` — the night's brief item for this deal, grounded and
+	// evidence-validated, used when no card is cached.
+	//
+	// Both are READINGS, and there is deliberately no third member for the
+	// deterministic case. A row with no reading carries no verdict at all: its
+	// typed `because` reasons are the deterministic explanation, they are already
+	// on every row, and a client draws them under their own heading rather than
+	// under this one.
+	Source WorklistDealVerdictSource `json:"source"`
+
+	// Standing `live` — moving, with a next step both sides expect.
+	// `drifting` — nothing wrong, nothing happening; it dies of neglect.
+	// `blocked` — something specific is in the way.
+	// `cold` — long silence after real engagement.
+	//
+	// The same four the deal page's own verdict carries, because they ARE that
+	// verdict. Held by backend/gates/worklistverdictstandings_test.go, which
+	// derives this set from DealStatusCardVerdict's description rather than
+	// keeping a second list of them.
+	//
+	// ABSENT on a `brief_finding` line, which is prose about the deal and not one
+	// of these four calls. A word invented for it would be the queue deciding a
+	// judgement the deal card owns.
+	Standing *WorklistDealVerdictStanding `json:"standing,omitempty"`
+}
+
+// WorklistDealVerdictSource Where the line came from, so a client never presents one reading as the other.
+//
+// `deal_status` — the deal's own cached card, model-written and evidence-cited.
+// `brief_finding` — the night's brief item for this deal, grounded and
+// evidence-validated, used when no card is cached.
+//
+// Both are READINGS, and there is deliberately no third member for the
+// deterministic case. A row with no reading carries no verdict at all: its
+// typed `because` reasons are the deterministic explanation, they are already
+// on every row, and a client draws them under their own heading rather than
+// under this one.
+type WorklistDealVerdictSource string
+
+// WorklistDealVerdictStanding `live` — moving, with a next step both sides expect.
+// `drifting` — nothing wrong, nothing happening; it dies of neglect.
+// `blocked` — something specific is in the way.
+// `cold` — long silence after real engagement.
+//
+// The same four the deal page's own verdict carries, because they ARE that
+// verdict. Held by backend/gates/worklistverdictstandings_test.go, which
+// derives this set from DealStatusCardVerdict's description rather than
+// keeping a second list of them.
+//
+// ABSENT on a `brief_finding` line, which is prose about the deal and not one
+// of these four calls. A word invented for it would be the queue deciding a
+// judgement the deal card owns.
+type WorklistDealVerdictStanding string
+
 // WorklistItem One thing to do, with the reason it sits where it sits.
 //
 // `level` is the hard product rule and `score` orders inside it; a client renders
@@ -33948,6 +34074,22 @@ type WorklistItem struct {
 
 	// Title The server's own sentence for this item, where it has one.
 	Title *string `json:"title,omitempty"`
+
+	// Verdict How the deal behind a row is STANDING, beside the move that acts on it.
+	//
+	// The move says what to do; this says what the reader is walking into. A row
+	// that names a step without saying whether the deal is alive asks the reader to
+	// open the deal page to find out, which is the hand-off the queue exists to
+	// remove.
+	//
+	// NOTHING IS DECIDED HERE. compose/dealstatus already wrote a standing per deal
+	// and cached it per reader; this carries that answer onto the row. A deal with
+	// no cached card carries no verdict, and its row says what it said before.
+	//
+	// `source` is what the reader is being shown, and a client's copy turns on it:
+	// a deterministic rule stated as a belief is a lie about where the sentence came
+	// from.
+	Verdict *WorklistDealVerdict `json:"verdict,omitempty"`
 
 	// WithPerson Whose record a `meeting` row's brief is read on, carried out from
 	// `AttentionItem.with_person`.
