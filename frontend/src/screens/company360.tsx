@@ -937,7 +937,7 @@ export function StateStrip({
         view={view}
         locale={locale}
         recordZone={recordZone}
-        onOpen={door("tasks")}
+        onOpen={door("timeline")}
         t={t}
       />
     </StatStrip>
@@ -1017,18 +1017,21 @@ function NextStat({
   onOpen?: () => void;
   t: ReturnType<typeof useT>;
 }>) {
-  // This card reads next_meeting and nothing else, so it says so. It used to
-  // say "Next" over a meeting date, which let a company with a due task and no
-  // meeting booked read as a contradiction: "Next: nothing scheduled" beside a
-  // task list that plainly had something next in it.
+  // This card reads next_meeting and nothing else, so it says so and its door
+  // goes where a company's meetings are. It used to say "Next" over a meeting
+  // date and open the TASK list — three nouns in one card, which let a company
+  // with a due task and no meeting booked read as a contradiction with itself.
   //
-  // The DOOR still opens tasks, and that is deliberate rather than left over.
-  // A reader who looks here and finds nothing scheduled is asking what to do
-  // about this account, and the task list is the answer; the strip's other
-  // three cards open deals, finance and history, so tasks has no other route
-  // off it. The label names where the door goes, so the two no longer disagree
-  // about what the card is for.
-  const door = { openLabel: t("co.strip.open.tasks"), onOpen };
+  // History rather than a meetings tab because a company has none
+  // (companytab.ts); the contact record, which does, sends the same card to
+  // meetings (personreadings.tsx). Two records answering one question two ways
+  // is what that would otherwise be.
+  //
+  // This leaves tasks with no door on the strip. That is the honest trade: a
+  // card that reads meetings cannot be the route to the task list without
+  // saying one thing and doing another, and the tab strip reaches tasks
+  // directly.
+  const door = { openLabel: t("co.strip.open.history"), onOpen };
   if (!view || omitted(view, "next_meeting")) {
     return (
       <StatCard

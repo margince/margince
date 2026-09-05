@@ -870,7 +870,6 @@ export const de = {
   "co.strip.nextMeeting": "Nächster Termin",
   "co.strip.next.none": "Nichts geplant",
   "co.strip.open.history": "Verlauf öffnen",
-  "co.strip.open.tasks": "Aufgaben öffnen",
   "co.360.thread": "Was passiert ist",
   "co.360.threadCount": "Was passiert ist · {count}",
   "co.360.fullHistory": "Gesamter Verlauf",
