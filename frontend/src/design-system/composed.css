@@ -254,6 +254,22 @@
   font-size: var(--fs-sm);
   color: var(--textContent);
 }
+/* The company and, at the far edge of its line, who carries the deal: a mark
+   only, because a rep on a team board scans for their own initials and the
+   name is one hover or one screen reader away. It never gives way — the
+   company's name elides before the mark does, so the mark stays in the same
+   place on every card in the column. */
+.deal-card .deal-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.deal-card .deal-owner {
+  margin-left: auto;
+  flex: none;
+  display: flex;
+}
 
 .record-head {
   display: flex;

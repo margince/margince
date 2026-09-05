@@ -124,7 +124,9 @@ import { DealStatusCardPanel, useDealStatusCard } from "./dealstatus";
 import { EditAction } from "./edit";
 import {
   EntityRef,
+  type OwnerNaming,
   rosterOwnerName,
+  rosterOwnerNaming,
   useEntityName,
   useRoster,
   useRosterPartial,
@@ -591,7 +593,11 @@ function dealCompany(
   return { org: mark?.name ?? "", orgLogoUrl: mark?.logoUrl };
 }
 
-export function toBoardDeal(deal: Deal, naming: CompanyNaming): BoardDeal {
+export function toBoardDeal(
+  deal: Deal,
+  naming: CompanyNaming,
+  owners?: OwnerNaming,
+): BoardDeal {
   const since = idleSince(deal);
   return {
     id: deal.id,
@@ -607,6 +613,7 @@ export function toBoardDeal(deal: Deal, naming: CompanyNaming): BoardDeal {
     archived: deal.archived_at != null,
     closeDate: deal.expected_close_date ?? null,
     closeDateProvisional: deal.close_date_provisional ?? false,
+    owner: owners?.(deal.owner_id) ?? null,
   };
 }
 
@@ -1349,6 +1356,7 @@ export function buildColumns(
   // asked at all — see measuresTheSamePopulation. Undefined when totals are in
   // play, which is the ordinary case.
   totalsWithheld?: string,
+  owners?: OwnerNaming,
 ): BoardMoneyColumn[] {
   return [...stages]
     .sort((a, b) => a.position - b.position)
@@ -1365,7 +1373,7 @@ export function buildColumns(
         rawMinor: stageTotals?.rawMinor ?? null,
         weightedMinor: stageTotals?.weightedMinor ?? null,
         currency: stageTotals?.currency ?? null,
-        deals: stageDeals.map((deal) => toBoardDeal(deal, naming)),
+        deals: stageDeals.map((deal) => toBoardDeal(deal, naming, owners)),
         // The true count, not the loaded page's — falls back to the page
         // count while totals are still loading, so the column shows SOME
         // number rather than a misleading 0.
@@ -1912,6 +1920,12 @@ function DealBoardBody({
 }>) {
   const t = useT();
   const recordZone = useRecordZone();
+  // Only walked when a card has an owner to name: a board of unowned deals
+  // needs no roster read to say so.
+  const roster = useRoster(
+    "user",
+    loadedDeals.some((deal) => Boolean(deal.owner_id)),
+  );
   // Every company the CARDS name. The picker's capped page answers most of them
   // for free; the rest are resolved by id (useOrgMarks), so no card is left
   // standing over a company the board simply failed to look up.
@@ -1946,6 +1960,7 @@ function DealBoardBody({
                   stageTotalsQuery.data ?? new Map(),
                   orgMarks,
                   totalsWithheld ? t(totalsWithheld) : undefined,
+                  rosterOwnerNaming(roster),
                 )}
                 onOpen={openDeal}
                 cardDragHandlers={cardDragHandlers}

@@ -19,7 +19,7 @@ import type { MessageKey } from "../i18n/en";
 import { QueryGate } from "./common";
 import { errorClassKey, isUnhealthy } from "./connector-status";
 import { toBoardDeal, useOrgMarks } from "./deals";
-import { EntityRef } from "./entityref";
+import { EntityRef, rosterOwnerNaming, useRoster } from "./entityref";
 import {
   type Deal,
   type MorningDigest,
@@ -376,6 +376,10 @@ export function WatchPanel({
   // No page of organizations to draw on here — this is a short list, and every
   // company it names is resolved by id and cached.
   const naming = useOrgMarks([...deals], [], true);
+  const roster = useRoster(
+    "user",
+    deals.some((deal) => Boolean(deal.owner_id)),
+  );
   if (state === "loading") {
     return null;
   }
@@ -405,7 +409,7 @@ export function WatchPanel({
           {deals.map((deal) => (
             <DealCard
               key={deal.id}
-              deal={toBoardDeal(deal, naming)}
+              deal={toBoardDeal(deal, naming, rosterOwnerNaming(roster))}
               // A link, so no press handler: nothing here drags, and the
               // address is the whole behaviour.
               href={routeHash({ screen: "deals", id: deal.id })}

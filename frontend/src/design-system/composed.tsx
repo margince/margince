@@ -27,7 +27,7 @@ import { Avatar, Badge, Button } from "./atoms";
 import { EmailEntry } from "./emailentry";
 import { PageZones, type PageZonesShape } from "./pagezones";
 import { FieldGuard } from "./rbac";
-import { useTruncationTooltip } from "./tooltip";
+import { useTooltip, useTruncationTooltip } from "./tooltip";
 import { type Provenance, ProvenanceTag } from "./trust";
 import "./composed.css";
 
@@ -99,6 +99,13 @@ export type BoardDeal = BoardRecord & {
    */
   closeDate?: string | null;
   closeDateProvisional?: boolean;
+  /**
+   * Who carries the deal, as a display name. Null for a deal nobody owns and
+   * for one whose owner the caller could not name — the card draws nothing for
+   * either, small as it is; the table's owner column is where the two are
+   * told apart.
+   */
+  owner?: string | null;
   stalled?: boolean;
   singleThreaded?: boolean;
   staged?: boolean;
@@ -209,6 +216,31 @@ function DealCardCompany({ deal }: Readonly<{ deal: BoardDeal }>) {
           has nothing for the ellipsis to apply to, and wraps under its own
           mark instead. */}
       <span className="deal-org-name">{deal.org}</span>
+    </span>
+  );
+}
+
+/**
+ * Who carries the deal, as a mark at the edge of the company line.
+ *
+ * A monogram is not an answer on its own — a teammate has to decode it — so the
+ * mark carries the full name as its label, which a screen reader gets as part
+ * of the card's own name and a pointer gets as a tip. The tip grants no tab
+ * stop of its own: the card is a link and already has one, and a second stop
+ * inside it would be a control that does nothing.
+ */
+function DealOwner({ name }: Readonly<{ name: string }>) {
+  const tip = useTooltip<HTMLSpanElement>(name);
+  return (
+    <span
+      className="deal-owner"
+      role="img"
+      aria-label={name}
+      ref={tip.ref}
+      {...tip.trigger}
+    >
+      <Avatar name={name} size="xs" />
+      {tip.tip}
     </span>
   );
 }
@@ -345,7 +377,10 @@ export function DealCard({
           {deal.archived && <Badge quiet>{t("deal.archived")}</Badge>}
         </span>
       )}
-      <DealCardCompany deal={deal} />
+      <span className="deal-head">
+        <DealCardCompany deal={deal} />
+        {deal.owner && <DealOwner name={deal.owner} />}
+      </span>
       <span className="deal-figure">
         <span className="deal-value">
           {formatMoneyOrAbsent(deal.valueMinor, deal.currency, locale)}

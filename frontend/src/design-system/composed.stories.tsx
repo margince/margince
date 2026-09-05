@@ -184,6 +184,7 @@ const boardColumns: BoardMoneyColumn[] = [
       boardDeal("d1", "Contoso renewal", 12_000, 3, {
         singleThreaded: true,
         closeDate: "2026-10-14",
+        owner: "Ada Lindqvist",
       }),
       // A close date the nightly run set and nobody confirmed: marked, not hidden.
       boardDeal("d2", "Fabrikam expansion", 33_000, 9, {
@@ -200,7 +201,9 @@ const boardColumns: BoardMoneyColumn[] = [
     rawMinor: 28_000,
     weightedMinor: 8_400,
     currency: "EUR",
-    deals: [boardDeal("d3", "Globex onboarding", 28_000, 14)],
+    deals: [
+      boardDeal("d3", "Globex onboarding", 28_000, 14, { owner: "Tim Rasche" }),
+    ],
   },
   {
     stage: "proposal",

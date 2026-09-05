@@ -71,6 +71,29 @@ describe("DealCard + PipelineBoard", () => {
     expect(container.querySelector(".avatar")).toBeNull();
   });
 
+  // The owner is a mark at the head line's edge, and the mark carries the NAME:
+  // a monogram a teammate has to decode is not an answer, so the full name is
+  // its label. A deal nobody owns — or whose owner the caller could not name —
+  // draws no slot rather than a blank one.
+  it("marks the owner it was given, labelled by name, and no slot for a deal without one", () => {
+    const { container, rerender } = render(
+      <DealCard
+        deal={{ ...deal, owner: "Ada Lindqvist" }}
+        href="#/deals/d1"
+        zone="Europe/Berlin"
+      />,
+    );
+    expect(screen.getByLabelText("Ada Lindqvist")).toBeTruthy();
+    rerender(
+      <DealCard
+        deal={{ ...deal, owner: null }}
+        href="#/deals/d1"
+        zone="Europe/Berlin"
+      />,
+    );
+    expect(container.querySelector(".deal-owner")).toBeNull();
+  });
+
   it("draws no company slot at all for a deal that names none", () => {
     const { container } = render(
       <DealCard
