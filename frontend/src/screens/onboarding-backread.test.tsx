@@ -253,6 +253,36 @@ describe("starting the read", () => {
     ).toBeInTheDocument();
   });
 
+  // A read that stopped is history, not a mailbox that can never be read: the
+  // step used to end on the stopped run with only the exit, so a reader who
+  // pressed stop had no way back to the pick.
+  it("offers a stopped read again, on the window it already ran", async () => {
+    const starts: unknown[] = [];
+    installFetchStub({
+      [PREVIEW_ROUTE]: () =>
+        previewOf({ window: "12m", estimated_messages: 90 }),
+      [START_ROUTE]: (body) => {
+        starts.push(body);
+        return jsonResponse({ state: "queued" }, 202);
+      },
+    });
+    render({ state: "cancelled", window: "12m", counts: { captured: 4 } });
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Start another import" }),
+    );
+    expect(
+      (screen.getByRole("radio", { name: /12 months/ }) as HTMLInputElement)
+        .checked,
+    ).toBe(true);
+
+    await screen.findByText("About 90 messages in that window.");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Connect and read" }),
+    );
+    await waitFor(() => expect(starts).toEqual([{ window: "12m" }]));
+  });
+
   it("says a start failed and never claims a running read", async () => {
     installFetchStub({
       [PREVIEW_ROUTE]: () => previewOf({}),

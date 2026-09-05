@@ -165,6 +165,29 @@ export const Cancelled: Story = {
   }),
 };
 
+// The way back out of a stopped read: the pick returns, opened on the window
+// that already ran. Without it the step ended on the stopped run with only the
+// exit, and a reader who pressed stop had no second chance at their history.
+export const RestartAfterCancel: Story = {
+  render: backreadStory(
+    {
+      state: "cancelled",
+      window: "12m",
+      counts: { messages_scanned: 300, captured: 96 },
+    },
+    {
+      "POST /connectors/gmail/backfill/preview": preview({ window: "12m" }),
+    },
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /Start another import/ }),
+    );
+    await canvas.findByText(/About 4,820 messages/);
+  },
+};
+
 // Stopping a live read: the status row answers cancelled and the outcome says
 // plainly that nothing was written.
 export const Stopping: Story = {

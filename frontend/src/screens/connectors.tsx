@@ -133,6 +133,11 @@ export type ConnectorsResult = {
   // webhooks_not_configured treatment).
   notConfigured: boolean;
   data: CaptureConnection[];
+  // Which providers this installation could connect at all, and why not where
+  // it could not. The connect surfaces draw their blockers from it; a body that
+  // carried none reads as an empty roster, which is what a deployment with no
+  // capture wired actually has.
+  providers: ProviderReadiness[];
   // The address this installation puts in outgoing links, and whether it
   // answered when last asked. Absent when none is configured — which is
   // itself the answer, not a failure.
@@ -141,6 +146,10 @@ export type ConnectorsResult = {
 
 type PublicOriginStatus =
   components["schemas"]["CaptureConnectionListResponse"]["public_origin"];
+
+type ProviderReadiness = NonNullable<
+  components["schemas"]["CaptureConnectionListResponse"]["providers"]
+>[number];
 
 // The OAuth return outcome (Task 2): the callback lands back on
 // #/settings/connections/{outcome} — id2 on that route only, never parsed
@@ -938,17 +947,28 @@ function useSetSignatureEnrichment(provider: CaptureConnection["provider"]) {
 /**
  * The installation's capture connections, in one spelling.
  *
- * Exported because the card is no longer the only reader: chrome that reports
- * whether the agent can reach its sources needs the same list, and two queries
- * against one path are two answers that can disagree on screen.
+ * Exported because the card is no longer the only reader: the chrome that
+ * reports whether the agent can reach its sources needs the same list, and so
+ * do onboarding's connect surfaces. Two queries against one path are two
+ * answers that can disagree on screen — and two SHAPES under the one
+ * `["connectors"]` cache entry are worse than that, because react-query keeps
+ * one entry per key and whichever reader fetched last decides what the others
+ * read. So every reader comes through here.
  */
-export function useConnectors() {
+export function useConnectors(
+  options?: Readonly<{
+    /** False holds the request without leaving the key: a reader that only
+     *  wants the answer when it already exists still shares the one entry. */
+    enabled?: boolean;
+  }>,
+) {
   return useQuery({
     queryKey: ["connectors"],
+    enabled: options?.enabled ?? true,
     queryFn: async (): Promise<ConnectorsResult> => {
       const { data, error, response } = await api.GET("/connectors");
       if (response.status === 501 && problemCode(error) === "not_implemented") {
-        return { notConfigured: true, data: [] };
+        return { notConfigured: true, data: [], providers: [] };
       }
       if (error) {
         throwProblem(error);
@@ -956,6 +976,7 @@ export function useConnectors() {
       return {
         notConfigured: false,
         data: data.data,
+        providers: data.providers ?? [],
         publicOrigin: data.public_origin,
       };
     },

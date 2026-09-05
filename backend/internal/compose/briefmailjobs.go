@@ -53,7 +53,7 @@ type BriefMailConfig struct {
 // job that assembled a team's morning. What it must not do is send twice, and
 // that is the claim's job rather than this function's.
 func (w *briefGenerateWorkspaceWorker) mailMorning(
-	ctx context.Context, run briefs.BriefRun, now time.Time,
+	ctx context.Context, run briefs.BriefRun, now time.Time, localHour int,
 ) {
 	if w.mail.Mailer == nil {
 		// No relay configured. Not an error and not worth a line every morning.
@@ -65,7 +65,7 @@ func (w *briefGenerateWorkspaceWorker) mailMorning(
 	// it would burn that attempt on a rep who asked for no mail — so if they
 	// later turned it back on, the day they changed their mind in could never be
 	// sent, and nothing would say why.
-	if !w.wantsMorningMail(ctx, run) {
+	if !w.wantsMorningMail(ctx, run, localHour) {
 		return
 	}
 	// THE CLAIM FIRST, always. Everything after this point is allowed to fail
@@ -140,6 +140,10 @@ const briefMailBudget = 45 * time.Second
 // off — the second is an annoyance they can fix from the same page, the first is
 // silence they have no way to notice.
 //
+// Whether they want it YET is `delivery_hour_local`, a floor rather than an
+// appointment — see the check itself for why answering false there is a skip
+// and not a refusal.
+//
 // Whether they want it on a QUIET morning is `quiet_day_notice`, and that one
 // fails CLOSED, because the two defaults answer different questions. "Send me my
 // brief" is the installation's default and a rep who never chose gets it. "Tell
@@ -148,7 +152,7 @@ const briefMailBudget = 45 * time.Second
 // you" every quiet morning, and that message teaches its own readers to filter
 // the ones that matter.
 func (w *briefGenerateWorkspaceWorker) wantsMorningMail(
-	ctx context.Context, run briefs.BriefRun,
+	ctx context.Context, run briefs.BriefRun, localHour int,
 ) bool {
 	settings, err := w.users.MyDelivery(ctx)
 	switch {
@@ -167,6 +171,23 @@ func (w *briefGenerateWorkspaceWorker) wantsMorningMail(
 		return true
 	}
 	if settings.MorningBrief != nil && *settings.MorningBrief == identity.DeliveryNone {
+		return false
+	}
+	// AND NOT BEFORE THE HOUR THEY CHOSE. `delivery_hour_local` is a FLOOR in
+	// the installation's reporting zone, not an appointment: the pass ticks
+	// hourly, so the message goes out on the first tick at or after the hour,
+	// and a rep who asked for nine does not get their morning at six.
+	//
+	// Answering false here is a SKIP and not a refusal, which is the whole
+	// reason it sits above the claim with the other two: the run keeps its
+	// unspent attempt, RunsAwaitingMail finds it again, and a later tick sends
+	// it. Below the claim this would burn the day's one attempt at six o'clock
+	// and the nine o'clock tick would have nothing left to send.
+	//
+	// A rep who never chose has no floor and is mailed by the pass that
+	// assembled them, which is the behaviour every rep had before the setting
+	// was honoured at all.
+	if settings.HourLocal != nil && localHour < *settings.HourLocal {
 		return false
 	}
 	// briefs.WaitingCount, not a count of its own: the body asks the same

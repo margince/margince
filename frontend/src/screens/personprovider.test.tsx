@@ -26,6 +26,7 @@ import {
 // verb they cannot find is a capability they do not have.
 
 type Profile = components["schemas"]["PersonProviderProfile"];
+type Person = components["schemas"]["Person"];
 
 afterEach(() => {
   cleanup();
@@ -417,6 +418,24 @@ describe("the details that cost credits", () => {
     },
   ];
 
+  /** The record the panel reads its own held addresses from. Stubbed in every
+   *  case rather than left to the fetch fallback: the fallback answers an
+   *  empty PAGE, which has no `person` at all, so a case that leaned on it
+   *  would be asserting against a payload this endpoint cannot return. */
+  function recordWith(person: Partial<Person> = {}): Response {
+    return jsonResponse({
+      as_of: "2026-08-20T09:00:00Z",
+      person: {
+        id: "p-1",
+        full_name: "Dana Ruiz",
+        emails: [],
+        phones: [],
+        ...person,
+      },
+      sections_omitted: [],
+    });
+  }
+
   function mountWithCatalog(
     profile: Profile,
     run: () => Response,
@@ -428,6 +447,11 @@ describe("the details that cost credits", () => {
       professional_email: true,
       mobile: true,
     },
+    // What the CRM record holds, which the provider's own answer does not say:
+    // an address somebody typed in or a mailbox captured is on the record and
+    // was never bought here. Empty is the default because most cases are about
+    // the provider's half.
+    record: Partial<Person> = {},
   ) {
     const posted: unknown[] = [];
     installFetchStub({
@@ -448,6 +472,7 @@ describe("the details that cost credits", () => {
             },
           ],
         }),
+      "GET /people/p-1/360": () => recordWith(record),
       "POST /people/p-1/enrichment-runs": (body) => {
         posted.push(body);
         return run();
@@ -694,6 +719,185 @@ describe("the details that cost credits", () => {
       name: /Buy work email and mobile number · 2 credits/,
     });
     expect(screen.queryByText(/includes the work email again/)).toBeNull();
+  });
+
+  // The loading window, which on this row is a money question rather than a
+  // cosmetic one: a button pressed before the record answers cannot say which
+  // half of its price buys something already on file. So it waits.
+  //
+  // A route that never settles IS that window. Omitting it instead would fall
+  // through to the stub's empty page, the query would settle, and this case
+  // would pass while testing nothing.
+  it("offers no purchase until the record says what it already holds", async () => {
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read", "update"] }),
+      "GET /provider-connections": () =>
+        jsonResponse({
+          data: [
+            {
+              provider: "surfe",
+              status: "connected",
+              credential_present: true,
+              catalog,
+              configuration: {
+                categories: { professional_email: true, mobile: true },
+              },
+              credits: { pools: {} },
+              version: 1,
+              created_at: "2026-08-20T09:00:00Z",
+              updated_at: "2026-08-20T09:00:00Z",
+            },
+          ],
+        }),
+      "GET /people/p-1/360": () =>
+        new Response(new ReadableStream({ start() {} }), {
+          headers: { "Content-Type": "application/json" },
+        }),
+    });
+    render(
+      <StoryProviders>
+        <PersonProviderSection
+          personId="p-1"
+          profiles={[{ ...neverRun(), state: "completed" }]}
+        />
+      </StoryProviders>,
+    );
+
+    // The free lookup is unaffected — it spends nothing, so it has nothing to
+    // disclose and no reason to wait. Its ENABLED state is also the proof that
+    // the catalog has landed: it stays disabled until the catalog says what
+    // free means, so every priced button that is ever going to be drawn has
+    // been drawn by the time it goes live. Asserting the absence any earlier
+    // would pass on a row that had not been rendered yet.
+    const free = await screen.findByRole("button", { name: /Check again/ });
+    await expect.poll(() => free).toHaveProperty("disabled", false);
+    expect(screen.queryByRole("button", { name: /^Buy / })).toBeNull();
+  });
+
+  // The address the provider never sold us. A rep typed the work email in from
+  // a business card, or a mailbox connector captured it off a signature — it is
+  // on the record, the provider's answer says nothing about it, and Surfe bills
+  // for the email pool all the same when the mobile press makes it look again.
+  it("names the re-buy for a work address that came from the record", async () => {
+    mountWithCatalog(
+      { ...neverRun(), state: "completed" },
+      queuedRun,
+      undefined,
+      {
+        emails: [
+          {
+            id: "e-1",
+            email: "dana@acme.example",
+            email_type: "work",
+            is_primary: true,
+            position: 0,
+            source: "manual",
+            captured_by: "u-1",
+          },
+        ],
+      },
+    );
+
+    // The press still costs two credits and still returns a number, so it is
+    // still offered — with the second charge named.
+    expect(
+      await screen.findByRole("button", {
+        name: /Buy mobile number · 2 credits/,
+      }),
+    ).toBeDefined();
+    expect(
+      await screen.findByText(/includes the work email again/),
+    ).toBeDefined();
+
+    // And nothing offers to buy an address the reader can already see on the
+    // record, whoever put it there.
+    expect(screen.queryByRole("button", { name: /Buy work email/ })).toBeNull();
+  });
+
+  it("still offers the work email when the record holds only a personal one", async () => {
+    mountWithCatalog(
+      { ...neverRun(), state: "completed" },
+      queuedRun,
+      undefined,
+      {
+        emails: [
+          {
+            id: "e-2",
+            email: "dana@privatemail.example",
+            email_type: "personal",
+            is_primary: true,
+            position: 0,
+            source: "manual",
+            captured_by: "u-1",
+          },
+        ],
+      },
+    );
+
+    // The record keeps the same type distinction the provider's answer does,
+    // and for the same reason: the two are separate purchases from separate
+    // pools, so a private address is no reason to withhold a work one.
+    expect(
+      await screen.findByRole("button", { name: /Buy work email · 1 credit/ }),
+    ).toBeDefined();
+    expect(screen.queryByText(/includes the work email again/)).toBeNull();
+  });
+
+  // `other` is the record's third filing, and it is not a third purchase. It is
+  // one of the two and nobody said which, so it buys no offer and claims no
+  // re-buy — the same answer the provider's unclassified address gets.
+  it("treats an address the record files as other as neither purchase", async () => {
+    mountWithCatalog(
+      { ...neverRun(), state: "completed" },
+      queuedRun,
+      undefined,
+      {
+        emails: [
+          {
+            id: "e-3",
+            email: "dana@unknown.example",
+            email_type: "other",
+            is_primary: false,
+            position: 0,
+            source: "import",
+            captured_by: "u-1",
+          },
+        ],
+      },
+    );
+
+    expect(
+      await screen.findByRole("button", { name: /Buy work email · 1 credit/ }),
+    ).toBeDefined();
+    expect(screen.queryByText(/includes the work email again/)).toBeNull();
+  });
+
+  // The other half of the same press, and the same defect: a number already on
+  // the record is one the mobile press pays for again.
+  it("offers no mobile purchase for a number the record already holds", async () => {
+    mountWithCatalog(
+      { ...neverRun(), state: "completed" },
+      queuedRun,
+      undefined,
+      {
+        phones: [
+          {
+            id: "ph-1",
+            phone: "+491701234567",
+            phone_type: "mobile",
+            is_primary: true,
+            position: 0,
+            source: "manual",
+            captured_by: "u-1",
+          },
+        ],
+      },
+    );
+
+    expect(
+      await screen.findByRole("button", { name: /Buy work email · 1 credit/ }),
+    ).toBeDefined();
+    expect(screen.queryByRole("button", { name: /mobile number/ })).toBeNull();
   });
 
   it("offers nothing once both halves of a press are held", async () => {

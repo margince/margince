@@ -49,6 +49,13 @@
   font-size: var(--fs-sm);
   line-height: 1.25;
 }
+/* The rail-less variant is a status and not a target. It keeps the wrapper's
+   own pointer transparency, so onboarding's composer and buttons under it keep
+   every click that lands on them. */
+.capturechip-static {
+  pointer-events: none;
+}
+
 .capturechip-link:hover .capturechip-line {
   text-decoration: underline;
 }

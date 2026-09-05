@@ -309,6 +309,9 @@ export const en = {
   "deal.singleThreaded": "single-threaded",
   "deal.staged": "staged",
   "deal.archived": "archived",
+  "deal.closes": "closes {date}",
+  "deal.undated": "no close date",
+  "deal.closesProvisional": "provisional close date, not confirmed by a human",
   "record.notShown": "Not shown",
   "record.timelineLoading": "Loading this record’s history…",
   "record.chronologyLoading": "Reading the change history…",
@@ -4529,6 +4532,9 @@ export const en = {
     "It will retry on its own; everything captured so far is kept.",
   "backfill.cancel": "Stop the import",
   "backfill.cancelledNote": "Stopped. Everything captured so far is kept.",
+  // On a run that has stopped — cancelled, failed or finished. The window it
+  // opens on is the one that ran, because the server only ever widens.
+  "backfill.restart": "Start another import",
   "backfill.unsupportedNote":
     "This mailbox type can't be backfilled — only new mail is captured from now on.",
   "backfill.narrowingNote":

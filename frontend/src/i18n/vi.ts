@@ -294,6 +294,9 @@ export const vi = {
   "deal.singleThreaded": "chỉ một đầu mối",
   "deal.staged": "chờ duyệt",
   "deal.archived": "đã lưu trữ",
+  "deal.closes": "chốt {date}",
+  "deal.undated": "chưa có ngày chốt",
+  "deal.closesProvisional": "ngày chốt tạm tính, chưa được ai xác nhận",
   "record.notShown": "Không hiển thị",
   "record.timelineLoading": "Đang tải lịch sử của bản ghi này…",
   "record.chronologyLoading": "Đang đọc lịch sử thay đổi…",
@@ -4395,6 +4398,7 @@ export const vi = {
     "Hệ thống sẽ tự thử lại; mọi thứ đã thu thập vẫn được giữ.",
   "backfill.cancel": "Dừng lượt nhập",
   "backfill.cancelledNote": "Đã dừng. Mọi thứ đã thu thập vẫn được giữ.",
+  "backfill.restart": "Bắt đầu lượt nhập khác",
   "backfill.unsupportedNote":
     "Loại hộp thư này không nhập lịch sử được — chỉ thư mới được thu thập từ giờ trở đi.",
   "backfill.narrowingNote":

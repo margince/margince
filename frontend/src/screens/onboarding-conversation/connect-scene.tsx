@@ -1,14 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
 import { Check, Circle } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, Disclosure } from "../../design-system/atoms";
 import { ProviderMark } from "../../design-system/provider-mark";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { throwProblem } from "../common";
+import { useConnectors } from "../connectors";
 import { OvernightGrantChoice } from "../overnight-grant";
 import { ConnectDialog } from "./connect-dialog";
 import { WayOnward } from "./way-onward";
@@ -151,16 +149,7 @@ const BLOCKER_COPY: Readonly<
  * request, so this costs nothing extra on the common path.
  */
 function useConnectedMailProviders(): ConnectedMailRoster {
-  const roster = useQuery({
-    queryKey: ["connectors"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/connectors");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  const roster = useConnectors();
   const connected = roster.data?.data.filter((c) => c.status === "connected");
   const blockers = new Map<string, ConnectBlocker>();
   for (const entry of roster.data?.providers ?? []) {
@@ -168,11 +157,16 @@ function useConnectedMailProviders(): ConnectedMailRoster {
       blockers.set(entry.provider, entry.reason);
     }
   }
+  // A deployment that never wired mail capture answers 501, which the shared
+  // read reports as `notConfigured` rather than as a failure. There is no
+  // roster to draw a card from either way, so this scene says the same thing
+  // for both: it could not read what this installation can connect.
+  const unreadable = roster.isError || roster.data?.notConfigured === true;
   return {
     providers: new Set((connected ?? []).map((c) => c.provider)),
     blockers,
-    verified: roster.isSuccess && !roster.isFetching,
-    failed: roster.isError,
+    verified: roster.isSuccess && !roster.isFetching && !unreadable,
+    failed: unreadable,
     retry: () => void roster.refetch(),
   };
 }

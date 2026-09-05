@@ -10,9 +10,12 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { components } from "../api/schema";
+import { calendarDay, middayInstant } from "../format/calendarday";
 import { splitEmailBody } from "../format/emailtext";
 import {
   formatDate,
+  formatDayMonth,
   formatDuration,
   formatMoneyOrAbsent,
   formatNumber,
@@ -20,16 +23,11 @@ import {
 } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { EmailEntry } from "./emailentry";
-
-type RowTag = components["schemas"]["RowTag"];
-
-import type { components } from "../api/schema";
 import { Avatar, Badge, Button } from "./atoms";
+import { EmailEntry } from "./emailentry";
 import { PageZones, type PageZonesShape } from "./pagezones";
 import { FieldGuard } from "./rbac";
-import { RowTags } from "./rowtags";
-import { useTruncationTooltip } from "./tooltip";
+import { useTooltip, useTruncationTooltip } from "./tooltip";
 import { type Provenance, ProvenanceTag } from "./trust";
 import { VisibilityBadge } from "./visibility";
 import "./composed.css";
@@ -92,9 +90,23 @@ export type BoardDeal = BoardRecord & {
   valueMinor: number | null;
   currency: string | null;
   ageMs: number;
-  /** How this deal is filed. The board draws the same chip strip a list row
-   *  does, so a reader moving between the two reads one thing one way. */
-  tags?: readonly RowTag[];
+  /**
+   * When the deal is expected to close, as the calendar day the record holds.
+   * Null on a deal nobody has dated, and the card then states no date rather
+   * than a guess. `closeDateProvisional` says the day is the nightly run's
+   * replacement for one that aged into the past and no human has confirmed —
+   * a date that reads as agreed with the buyer when it was not is the quiet
+   * kind of wrong, so the card marks it.
+   */
+  closeDate?: string | null;
+  closeDateProvisional?: boolean;
+  /**
+   * Who carries the deal, as a display name. Null for a deal nobody owns and
+   * for one whose owner the caller could not name — the card draws nothing for
+   * either, small as it is; the table's owner column is where the two are
+   * told apart.
+   */
+  owner?: string | null;
   stalled?: boolean;
   singleThreaded?: boolean;
   staged?: boolean;
@@ -209,13 +221,88 @@ function DealCardCompany({ deal }: Readonly<{ deal: BoardDeal }>) {
   );
 }
 
+/**
+ * Who carries the deal, as a mark at the edge of the company line.
+ *
+ * A monogram is not an answer on its own — a teammate has to decode it — so the
+ * mark carries the full name as its label, which a screen reader gets as part
+ * of the card's own name and a pointer gets as a tip. The tip grants no tab
+ * stop of its own: the card is a link and already has one, and a second stop
+ * inside it would be a control that does nothing.
+ */
+function DealOwner({ name }: Readonly<{ name: string }>) {
+  const tip = useTooltip<HTMLSpanElement>(name);
+  return (
+    <span
+      className="deal-owner"
+      role="img"
+      aria-label={name}
+      ref={tip.ref}
+      {...tip.trigger}
+    >
+      <Avatar name={name} size="xs" />
+      {tip.tip}
+    </span>
+  );
+}
+
+/**
+ * When the deal closes, on the card's figure line.
+ *
+ * Read as a calendar day in the record's zone, never as the instant midnight
+ * UTC — that instant is the previous date for half the world. The tone marks
+ * the DATE when it is one nobody confirmed or one already behind us, and says
+ * so in words for a reader who does not get the colour; the deal strip states
+ * the same fact the same two ways.
+ */
+function DealCloses({
+  day,
+  provisional,
+  zone,
+}: Readonly<{ day: string; provisional: boolean; zone: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const overdue = day < calendarDay(new Date(), zone);
+  const classes =
+    provisional || overdue ? "deal-closes deal-closes-warn" : "deal-closes";
+  return (
+    <span className={classes}>
+      {t("deal.closes", {
+        date: formatDayMonth(middayInstant(day, zone), locale, zone),
+      })}
+      {provisional && (
+        <span className="sr-only"> · {t("deal.closesProvisional")}</span>
+      )}
+    </span>
+  );
+}
+
+/**
+ * One deal, as a card on the board.
+ *
+ * NO TAG STRIP. How a deal is filed is a fact about the record, not about the
+ * work in front of the reader, and a board is scanned: three coloured chips per
+ * card turned five columns into a field of colour with the deal names competing
+ * against it. The words are a column in the deals table and a panel on the
+ * record, which are the two places a reader goes to ask how something is filed.
+ * What stays here is what a reader triages by — who it is with, what it is,
+ * what it is worth, how long it has sat, and what is wrong with it.
+ */
 export function DealCard({
   deal,
   href,
+  zone,
   onOpen,
   dragHandlers,
 }: Readonly<{
   deal: BoardDeal;
+  /**
+   * The IANA zone the close date is read in. A close date is a calendar day,
+   * and a day formatted as if it were an instant lands on the previous date
+   * for every reader west of Greenwich — so the card takes the zone the record
+   * lives in, the same way the timeline does, rather than the browser's.
+   */
+  zone: string;
   /**
    * The deal's own address.
    *
@@ -262,21 +349,54 @@ export function DealCard({
       onClick={(event) => onOpen?.(deal, event)}
       {...dragHandlers}
     >
-      <span className="deal-name">{deal.name}</span>
-      <DealCardCompany deal={deal} />
-      <RowTags tags={deal.tags} />
-      <span className="deal-meta">
+      {/* Read in the order a rep asks (composed.css says why): what needs
+          them, on this card, if anything; whose deal it is; what it is worth
+          and when it closes; and what it is called. */}
+      {(deal.staged ||
+        deal.stalled ||
+        deal.singleThreaded ||
+        deal.archived) && (
+        <span className="deal-flags">
+          {deal.staged && <Badge tone="ai">{t("deal.staged")}</Badge>}
+          {deal.singleThreaded && (
+            <Badge quiet tone="danger">
+              {t("deal.singleThreaded")}
+            </Badge>
+          )}
+          {deal.stalled && (
+            <Badge quiet tone="warn">
+              {t("deal.stalled")}
+            </Badge>
+          )}
+          {/* How long it has sat is the size of the stall, and only then: on a
+              healthy card the number is a fact nobody acts on. */}
+          {deal.stalled && (
+            <span className="deal-age">
+              {formatDuration(deal.ageMs, locale)}
+            </span>
+          )}
+          {deal.archived && <Badge quiet>{t("deal.archived")}</Badge>}
+        </span>
+      )}
+      <span className="deal-head">
+        <DealCardCompany deal={deal} />
+        {deal.owner && <DealOwner name={deal.owner} />}
+      </span>
+      <span className="deal-figure">
         <span className="deal-value">
           {formatMoneyOrAbsent(deal.valueMinor, deal.currency, locale)}
         </span>
-        <span>{formatDuration(deal.ageMs, locale)}</span>
-        {deal.archived && <Badge>{t("deal.archived")}</Badge>}
-        {deal.stalled && <Badge tone="warn">{t("deal.stalled")}</Badge>}
-        {deal.singleThreaded && (
-          <Badge tone="danger">{t("deal.singleThreaded")}</Badge>
+        {deal.closeDate ? (
+          <DealCloses
+            day={deal.closeDate}
+            provisional={deal.closeDateProvisional ?? false}
+            zone={zone}
+          />
+        ) : (
+          <span className="deal-closes">{t("deal.undated")}</span>
         )}
-        {deal.staged && <Badge tone="ai">{t("deal.staged")}</Badge>}
       </span>
+      <span className="deal-name">{deal.name}</span>
     </a>
   );
 }
@@ -321,6 +441,8 @@ type DealBoardProps = BoardHandlers<BoardDeal> & {
    */
   cardHref: (deal: BoardDeal) => string;
   onOpen?: (deal: BoardDeal, event: React.MouseEvent) => void;
+  /** The zone a close date is read in — see `DealCard`'s `zone`. */
+  zone: string;
 };
 
 type BoardLayoutProps<Record extends BoardRecord> = BoardHandlers<Record> & {
@@ -506,6 +628,7 @@ export function PipelineBoard<Record extends BoardRecord>(
         <DealCard
           deal={deal}
           href={props.cardHref(deal)}
+          zone={props.zone}
           onOpen={props.onOpen}
           dragHandlers={props.cardDragHandlers?.(deal, column)}
         />

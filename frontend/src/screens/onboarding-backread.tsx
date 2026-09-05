@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
-import { api } from "../api/client";
+import { useId } from "react";
 import type { components } from "../api/schema";
+import { useDrawsImportRun } from "../app/import-onscreen";
 import { Button, Radio, Skeleton } from "../design-system/atoms";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import { type ImportWindow, isLiveRun, useBackfillRun } from "./backfill-run";
+import { problemMessageOf } from "./common";
 import { errorClassKey } from "./connector-status";
 import "./onboarding-backread.css";
 
@@ -39,12 +39,11 @@ type BackfillPreview = components["schemas"]["BackfillPreview"];
 type BackfillCounts = NonNullable<BackfillStatus["counts"]>;
 type Provider = components["schemas"]["CaptureConnection"]["provider"];
 
-/** The startable windows. `none` is expressed by never starting a run at all —
- *  which is what the leave-without-reading control does. */
-export type BackreadWindow =
-  components["schemas"]["StartBackfillRequest"]["window"];
-
-const WINDOWS: readonly { value: BackreadWindow; label: MessageKey }[] = [
+// The startable windows, in reach order. `none` is expressed by never starting
+// a run at all — which is what the leave-without-reading control does, and
+// which windows are startable is `ImportWindow`, beside the operations this
+// step and the Settings card share.
+const WINDOWS: readonly { value: ImportWindow; label: MessageKey }[] = [
   { value: "3m", label: "ob.backread.window3m" },
   { value: "6m", label: "ob.backread.window6m" },
   { value: "12m", label: "ob.backread.window12m" },
@@ -52,17 +51,10 @@ const WINDOWS: readonly { value: BackreadWindow; label: MessageKey }[] = [
   { value: "60m", label: "ob.backread.window60m" },
 ];
 
-const DEFAULT_WINDOW: BackreadWindow = "6m";
-
 // The contract pins v1 estimates to USD minor units and leaves `currency`
 // optional, so USD is the documented fallback rather than a guess. The symbol
 // itself is never spelled here — Intl derives it from the code and the locale.
 const FALLBACK_CURRENCY = "USD";
-
-// The status read is a single indexed row, so polling it is indistinguishable
-// from a push — the same 2.5s cadence the Settings panel (screens/backfill.tsx)
-// already runs, kept identical so one mailbox is never watched at two rates.
-const POLL_MS = 2500;
 
 // Declaration order is render order. Every entry names a persisted count on the
 // wire and the copy for it; `dedupe_candidates` is deliberately absent — it is
@@ -74,16 +66,6 @@ const TALLIES: readonly { key: keyof BackfillCounts; label: MessageKey }[] = [
   { key: "people_created", label: "ob.backread.tallyPeople" },
   { key: "organizations_created", label: "ob.backread.tallyCompanies" },
 ];
-
-// A run is live while the job can still move; every other state is terminal and
-// polling stops there — a poll that outlives the run only costs battery.
-function isLive(state: BackfillStatus["state"] | undefined): boolean {
-  return state === "queued" || state === "running";
-}
-
-// The one spelling of the run-row cache key, shared with the Settings panel so
-// a read started here lands there too rather than on a second cache entry.
-const statusQueryKey = (provider: Provider) => ["backfill-status", provider];
 
 // The template-ready `{detail}` value for a mutation that may or may not
 // have failed — `null` while it hasn't, the failure's reader-safe text once it
@@ -126,90 +108,13 @@ export function OnboardingBackread({
   onDone,
 }: OnboardingBackreadProps) {
   const t = useT();
-  const qc = useQueryClient();
-  const [selected, setSelected] = useState<BackreadWindow>(DEFAULT_WINDOW);
+  const importRun = useBackfillRun({ provider, initial });
+  const { status, preview, start, cancel } = importRun;
+  const selected = importRun.window;
 
-  const status = useQuery({
-    queryKey: statusQueryKey(provider),
-    queryFn: async () => {
-      const { data, error } = await api.GET("/connectors/{provider}/backfill", {
-        params: { path: { provider } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    initialData: initial,
-    // The roster row already answered this read once; skip the mount-time
-    // revalidation react-query would otherwise run and rely on the live poll
-    // below (or an explicit invalidate) for a fresher row. Without a seed,
-    // fetch on mount as usual.
-    staleTime: initial !== undefined ? Number.POSITIVE_INFINITY : 0,
-    refetchInterval: (query) =>
-      isLive(query.state.data?.state) ? POLL_MS : false,
-  });
-
-  const preview = useMutation({
-    mutationFn: async (pick: BackreadWindow) => {
-      const { data, error } = await api.POST(
-        "/connectors/{provider}/backfill/preview",
-        { params: { path: { provider } }, body: { window: pick } },
-      );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-
-  const start = useMutation({
-    mutationFn: async (pick: BackreadWindow) => {
-      const { data, error } = await api.POST(
-        "/connectors/{provider}/backfill",
-        {
-          params: { path: { provider } },
-          body: { window: pick },
-        },
-      );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: statusQueryKey(provider) }),
-  });
-
-  const cancel = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await api.DELETE(
-        "/connectors/{provider}/backfill",
-        { params: { path: { provider } } },
-      );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: statusQueryKey(provider) }),
-  });
-
-  // The scope loads itself for whichever window is selected: the first thing a
-  // newly-connected user sees is honest scope, not an empty form. A preview is
-  // a read and spends nothing; the spend still waits for the explicit start.
-  const isSetup = status.data?.state === "none";
-  const [previewedWindow, setPreviewedWindow] = useState<BackreadWindow | null>(
-    null,
-  );
-  useEffect(() => {
-    if (!isSetup || previewedWindow === selected || preview.isPending) {
-      return;
-    }
-    setPreviewedWindow(selected);
-    preview.mutate(selected);
-  }, [isSetup, selected, previewedWindow, preview]);
+  // This step draws the run in full, so the shell's capture chip stands down
+  // for as long as it is on screen rather than gauging the same import twice.
+  useDrawsImportRun(isLiveRun(status.data?.state));
 
   // `preview.data`/`preview.error` are the mutation's LAST result, which
   // survives past the render where `selected` changes to a window nobody has
@@ -252,11 +157,11 @@ export function OnboardingBackread({
     );
   }
 
-  if (isSetup) {
+  if (importRun.isSetup) {
     return (
       <BackreadSetup
         selected={selected}
-        onSelect={setSelected}
+        onSelect={importRun.setWindow}
         // Gated on settled, not just on-selection: react-query already clears
         // `data` while a mutation is pending, but this does not depend on
         // that — the old window's estimate stays withheld on our own terms
@@ -277,13 +182,15 @@ export function OnboardingBackread({
     );
   }
 
+  const run = status.data;
   return (
     <BackreadRun
-      run={status.data}
+      run={run}
       cancelling={cancel.isPending}
       cancelProblem={safeDetail(cancel.isError, cancel.error, t)}
       held={disabled}
       onCancel={() => cancel.mutate()}
+      onRestart={() => importRun.restart(run)}
       onDone={onDone}
     />
   );
@@ -304,8 +211,8 @@ function BackreadSetup({
   onStart,
   onDone,
 }: Readonly<{
-  selected: BackreadWindow;
-  onSelect: (pick: BackreadWindow) => void;
+  selected: ImportWindow;
+  onSelect: (pick: ImportWindow) => void;
   preview: BackfillPreview | undefined;
   previewProblem: string | null;
   /** A decision about this mailbox is still being written; the read must not
@@ -415,7 +322,7 @@ function BackreadScope({
 // failed or cancelled read leads with its sentence — "The backread stopped" is
 // prose, and setting it as a heading would shout the failure.
 function headingKey(state: BackfillStatus["state"]): MessageKey | null {
-  if (isLive(state)) return "ob.backread.running";
+  if (isLiveRun(state)) return "ob.backread.running";
   return state === "done" ? "ob.backread.doneHeading" : null;
 }
 
@@ -425,6 +332,7 @@ function BackreadRun({
   cancelProblem,
   held,
   onCancel,
+  onRestart,
   onDone,
 }: Readonly<{
   run: BackfillStatus;
@@ -434,11 +342,15 @@ function BackreadRun({
    *  for it, for the reason the setup's does. */
   held?: boolean;
   onCancel: () => void;
+  /** Put the window pick back in front of the reader. Offered on every read
+   *  this view draws that is not live: stopping one is a decision about that
+   *  read, never about the mailbox. */
+  onRestart: () => void;
   onDone: () => void;
 }>) {
   const t = useT();
   const heading = headingKey(run.state);
-  const live = isLive(run.state);
+  const live = isLiveRun(run.state);
 
   return (
     <section className="ob-backread">
@@ -455,10 +367,12 @@ function BackreadRun({
         <Button variant="primary" disabled={held} onClick={() => onDone()}>
           {live ? t("ob.backread.explore") : t("ob.conv.connect.dialogDone")}
         </Button>
-        {live && (
+        {live ? (
           <Button disabled={cancelling} onClick={onCancel}>
             {t("ob.backread.cancel")}
           </Button>
+        ) : (
+          <Button onClick={onRestart}>{t("backfill.restart")}</Button>
         )}
       </div>
     </section>
