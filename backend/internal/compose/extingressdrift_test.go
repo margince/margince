@@ -244,7 +244,7 @@ func fieldsOf(t reflect.Type) map[string]bool {
 // both doors actually call it — which is the half that regresses, since a door
 // can be added or rewritten without anyone noticing the gate went missing.
 func TestAUnitMayNameOnlyItsOwnTransportThroughEitherDoor(t *testing.T) {
-	declaresTransport(t, "mine", extension.Channel{Provider: "mine_chat"})
+	declaresTransport(t, "mine", extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember})
 
 	if err := refuseUndeclaredTransport("mine", activities.KindMessage, "mine_chat"); err != nil {
 		t.Errorf("a unit filing a message on the transport it declared was refused (%v); the declaration is what the permission is bounded by, so this is the case that must pass", err)
@@ -301,7 +301,7 @@ func TestAUnitMayNameOnlyItsOwnTransportThroughEitherDoor(t *testing.T) {
 // account under a core connector's provider could attach an account it controls
 // to somebody else's person record and inherit the replies meant for them.
 func TestAUnitMayBindAnAccountOnlyOnItsOwnTransport(t *testing.T) {
-	declaresTransport(t, "mine", extension.Channel{Provider: "mine_chat"})
+	declaresTransport(t, "mine", extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember})
 
 	if err := refuseUnitIdentity("mine", "mine_chat"); err != nil {
 		t.Errorf("binding an account on the unit's own transport was refused (%v)", err)

@@ -176,7 +176,7 @@ blast radius before enabling it:
 | `secrets` | `Secrets` | Which keys the unit expects, and at which scope |
 | `subscriptions` | `Subscriptions` | Which of the installation's facts it consumes |
 | `ingress` | `Ingress` | Which providers it lands records from, which kinds, and which identity keys the source **vouches for** (`merges`) |
-| `channels` | `Channels` | Which providers it supplies, and whether it supplies a **transport** (`supplies_transport`) or captures only |
+| `channels` | `Channels` | Which providers it supplies, whose credential each one spends (`credential_model` — required, no default), and whether it supplies a **transport** (`supplies_transport`) or captures only |
 
 The returned `extension.Extension` literal and every field the manifest derives must be literal
 values; an unrecognized field fails generation with its position rather than producing a manifest

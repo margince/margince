@@ -67,7 +67,7 @@ func TestThePreflightHoldsChannelDeclarationsToTheComposedSet(t *testing.T) {
 	sender := &capturedSend{}
 	mine := extension.Extension{
 		Name: "mine", Version: "1.0.0",
-		Channels: []extension.Channel{{Provider: "mine_chat", Send: sender.send, Live: answersLive(true, nil)}},
+		Channels: []extension.Channel{{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: sender.send, Live: answersLive(true, nil)}},
 	}
 
 	claimed := map[string]extension.Name{}
@@ -82,7 +82,7 @@ func TestThePreflightHoldsChannelDeclarationsToTheComposedSet(t *testing.T) {
 	// that arrived outside the generator path is held to the same rule the
 	// manifest generator applies.
 	ungrammatical := mine
-	ungrammatical.Channels = []extension.Channel{{Provider: "mine-chat"}}
+	ungrammatical.Channels = []extension.Channel{{Provider: "mine-chat", CredentialModel: extension.CredentialPerMember}}
 	if err := preflightChannels(ungrammatical, map[string]extension.Name{}); err == nil {
 		t.Error("a provider the registry grammar refuses was accepted; it would fail on the column instead, under a constraint name")
 	}
@@ -98,7 +98,7 @@ func TestThePreflightHoldsChannelDeclarationsToTheComposedSet(t *testing.T) {
 	// message travelled on.
 	theirs := extension.Extension{
 		Name: "theirs", Version: "1.0.0",
-		Channels: []extension.Channel{{Provider: "mine_chat"}},
+		Channels: []extension.Channel{{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember}},
 	}
 	err := preflightChannels(theirs, claimed)
 	if err == nil {
@@ -118,7 +118,7 @@ func TestThePreflightHoldsChannelDeclarationsToTheComposedSet(t *testing.T) {
 func TestResolveChannelPrefersTheUnitThatSuppliesTheTransport(t *testing.T) {
 	sender := &capturedSend{}
 	declaresTransport(t, "mine", extension.Channel{
-		Provider: "mine_chat", Send: sender.send, Live: answersLive(true, nil),
+		Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: sender.send, Live: answersLive(true, nil),
 	})
 	r := commsResolver{channels: stubChannelSenders{err: errors.New("the capture registry was asked and should not have been")}}
 
@@ -150,20 +150,20 @@ func TestResolveUnitChannelTranslatesOnlyTheDeploymentFacts(t *testing.T) {
 	}{
 		{
 			name:    "a capture-only transport parks",
-			channel: extension.Channel{Provider: "mine_chat"},
+			channel: extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember},
 			want:    comms.ErrCannotSend,
 		},
 		{
 			name: "a member who disconnected parks",
 			channel: extension.Channel{
-				Provider: "mine_chat", Send: (&capturedSend{}).send, Live: answersLive(false, nil),
+				Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(false, nil),
 			},
 			want: comms.ErrNoMailbox,
 		},
 		{
 			name: "a provider that could not answer is retried",
 			channel: extension.Channel{
-				Provider: "mine_chat", Send: (&capturedSend{}).send, Live: answersLive(false, provider),
+				Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(false, provider),
 			},
 			want: provider,
 		},
@@ -191,7 +191,7 @@ func TestTheUnitSenderHandsOverTheDeliveryTheDispatcherBuilt(t *testing.T) {
 	sender := &capturedSend{receipt: extension.Receipt{ProviderMessageID: "provider-42"}}
 	member := ids.New[ids.UserKind]()
 	declaresTransport(t, "mine", extension.Channel{
-		Provider: "mine_chat", Send: sender.send, Live: answersLive(true, nil),
+		Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: sender.send, Live: answersLive(true, nil),
 	})
 	r := commsResolver{}
 	resolved, _, err := r.ResolveChannel(context.Background(), member, "mine_chat")
@@ -262,7 +262,7 @@ func TestOnlyAnUnknownOutcomeStopsTheDeliveryRatherThanRetryingIt(t *testing.T) 
 		t.Run(name, func(t *testing.T) {
 			sender := &capturedSend{err: tc.from}
 			declaresTransport(t, "mine", extension.Channel{
-				Provider: "mine_chat", Send: sender.send, Live: answersLive(true, nil),
+				Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: sender.send, Live: answersLive(true, nil),
 			})
 			r := commsResolver{}
 			resolved, _, err := r.ResolveChannel(context.Background(), ids.New[ids.UserKind](), "mine_chat")
@@ -292,7 +292,7 @@ func TestOnlyAnUnknownOutcomeStopsTheDeliveryRatherThanRetryingIt(t *testing.T) 
 // declared any channel.
 func TestResolveChannelStillReachesTheCoreRegistryForACoreTransport(t *testing.T) {
 	declaresTransport(t, "mine", extension.Channel{
-		Provider: "mine_chat", Send: (&capturedSend{}).send, Live: answersLive(true, nil),
+		Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
 	r := commsResolver{channels: stubChannelSenders{sender: stubChannelSender{}}}
 
@@ -315,7 +315,7 @@ func TestResolveChannelStillReachesTheCoreRegistryForACoreTransport(t *testing.T
 func TestAUnitIsRefusedAMessageCarryingFilesItCannotPutAnywhere(t *testing.T) {
 	sender := &capturedSend{receipt: extension.Receipt{ProviderMessageID: "provider-42"}}
 	declaresTransport(t, "mine", extension.Channel{
-		Provider: "mine_chat", Send: sender.send, Live: answersLive(true, nil),
+		Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: sender.send, Live: answersLive(true, nil),
 	})
 	resolved, _, err := commsResolver{}.ResolveChannel(context.Background(), ids.New[ids.UserKind](), "mine_chat")
 	if err != nil {

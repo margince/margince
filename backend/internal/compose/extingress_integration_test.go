@@ -67,7 +67,7 @@ func setupIngress(t *testing.T) *ingressEnv {
 		// is the shape a channel unit actually has — and what a unit may name on a
 		// message is bounded by this declaration, so a set without it would leave
 		// the message tests refused for a reason the test never chose.
-		[]extension.Channel{{Provider: ingressProbeProvider}},
+		[]extension.Channel{{Provider: ingressProbeProvider, CredentialModel: extension.CredentialPerMember}},
 		extension.IngressSource{
 			System: ingressProbeSystem, Lands: []extension.RecordKind{extension.KindActivity},
 		})

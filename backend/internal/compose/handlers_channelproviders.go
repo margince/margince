@@ -104,22 +104,35 @@ func publishedCaptureSources(exts []extension.Extension) *[]crmcontracts.Capture
 // handler so the shaping is testable without a request, and sorted so the page
 // is stable — a directory that reorders between calls makes a diff of two
 // deployments unreadable.
-func publishedChannelProviders(registered []string, sending map[string]connector.Carriage) []crmcontracts.ChannelProviderEntry {
-	facts := channelProviderFactsFor(registered, sending)
-	out := make([]crmcontracts.ChannelProviderEntry, 0, len(facts))
-	for _, f := range facts {
+// Two sources, and the split is the point.
+//
+// WHAT A TRANSPORT IS comes from the registry row, carried through the boot
+// snapshot: its label, and whose credential it spends. Those are facts about the
+// registration and the same on every role.
+//
+// WHETHER A REPLY CAN LEAVE comes from the COMPOSED set, and never from the row.
+// `supplies_transport` answers "can this installation send on it", which is a
+// question about what this binary compiled in — a role that composed no sender
+// must publish false however the registry is stamped, or a rep is offered a
+// reply box that parks every message it takes. Carriage rides along for the same
+// reason: what a transport can carry alongside a message is a property of the
+// sender, not of the registration.
+func publishedChannelProviders(registered []channelProviderFacts, sending map[string]connector.Carriage) []crmcontracts.ChannelProviderEntry {
+	out := make([]crmcontracts.ChannelProviderEntry, 0, len(registered))
+	for _, f := range registered {
+		carriage, sends := sending[f.provider]
 		entry := crmcontracts.ChannelProviderEntry{
 			Provider:          f.provider,
 			Label:             f.label,
 			CredentialModel:   crmcontracts.ChannelProviderEntryCredentialModel(f.credentialModel),
-			SuppliesTransport: f.suppliesTransport,
+			SuppliesTransport: sends,
 		}
 		// Field by field rather than a shared struct: the contract's entry
 		// declares the object inline, so there is no named type to convert to.
-		entry.Attachments.Carries = f.carriage.Carries
-		entry.Attachments.MaxFiles = f.carriage.MaxFiles
-		entry.Attachments.MaxBytesPerFile = f.carriage.MaxBytesPerFile
-		entry.Attachments.MaxBodyWithFiles = f.carriage.MaxBodyWithFiles
+		entry.Attachments.Carries = carriage.Carries
+		entry.Attachments.MaxFiles = carriage.MaxFiles
+		entry.Attachments.MaxBytesPerFile = carriage.MaxBytesPerFile
+		entry.Attachments.MaxBodyWithFiles = carriage.MaxBodyWithFiles
 		out = append(out, entry)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Provider < out[j].Provider })

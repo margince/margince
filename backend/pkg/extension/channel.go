@@ -31,6 +31,53 @@ var providerGrammar = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 
 const maxProviderLength = 32
 
+// CredentialModel says WHOSE credential a transport spends: one the whole
+// installation shares, or one each member deposits over their own account.
+//
+// It is not a detail of the connection. It is the axis that decides whether a
+// captured message is the company's correspondence or one human's — a workspace
+// bot serves everybody, so its traffic is workspace business; a per-member
+// credential is one person's own account, so their chats are theirs, which is
+// the mailbox model with the same floor, holds and postures.
+//
+// IT DECIDES NOTHING YET, and saying otherwise here would be the false comment
+// that stops the next author looking. decideBirthTx returns early for every kind
+// that is not `email`, so a channel message is born `audience = 'workspace'`
+// whichever model its transport declared. What the declaration does today is
+// reach `channel_provider.credential_model` and the discovery endpoint, so an
+// operator can read whose credential a transport spends. The floor and the holds
+// key on it when they reach channel traffic; the value has to be right BEFORE
+// that, because at that point a wrong one is wrong silently.
+//
+// DECLARED, NEVER DERIVED, and the difference is the reason this type exists.
+// It used to be inferred from whether the transport was a unit or a core
+// connector, which is a proxy that answers wrongly the moment a unit ships a
+// company-wide account: an Official Account is a shared business channel that
+// happens to be packaged as a unit, and inferring `per_member` for it would put
+// a company's customer correspondence on the mailbox path with whichever admin
+// pasted the token as its "owner". No invariant catches that — the row has
+// exactly one reader and every gate reads green — so the declaration has to
+// carry it.
+type CredentialModel string
+
+const (
+	// CredentialWorkspaceBot is ONE credential for the whole installation: a
+	// bot, an Official Account, anything an administrator binds once on behalf
+	// of everybody.
+	CredentialWorkspaceBot CredentialModel = "workspace_bot" //nolint:gosec // G101 false positive: the SHAPE a credential takes, published in the contract's enum — not a credential
+	// CredentialPerMember is one sealed credential per member, deposited by
+	// that member over their own account.
+	CredentialPerMember CredentialModel = "per_member"
+)
+
+// Valid reports whether this is one of the two shapes a credential takes.
+// The zero value is not one: a unit that has not said gets refused rather than
+// defaulted, because either default is wrong for half the transports and wrong
+// silently.
+func (m CredentialModel) Valid() bool {
+	return m == CredentialWorkspaceBot || m == CredentialPerMember
+}
+
 // Channel is one messaging provider a unit supplies transport for.
 //
 // Inert declaration plus function fields, matching Job and Subscription: the
@@ -47,6 +94,11 @@ type Channel struct {
 	// column rather than a sibling declaration that happens to look similar —
 	// `deal-room` is a legal ingress system and an illegal provider.
 	Provider string
+
+	// CredentialModel says whose credential this transport spends. REQUIRED:
+	// there is no default, because both defaults are wrong for half the
+	// transports and wrong without saying so. See CredentialModel.
+	CredentialModel CredentialModel
 
 	// Send transmits one message.
 	//
@@ -140,6 +192,16 @@ func (c Channel) Validate() error {
 	if len([]rune(c.Provider)) > maxProviderLength {
 		return fmt.Errorf("%w: channel provider %q is longer than %d characters",
 			ErrInvalid, c.Provider, maxProviderLength)
+	}
+	// REFUSED rather than defaulted. Whose credential a transport spends is
+	// what decides whether its messages are the company's correspondence or one
+	// human's, and both defaults are wrong for half the transports — silently,
+	// because the wrong answer still produces a readable row. A unit that has
+	// not answered has not been asked yet, and costing them one line at boot is
+	// cheaper than either default costs the installation that gets it.
+	if !c.CredentialModel.Valid() {
+		return fmt.Errorf("%w: channel %q must declare CredentialModel — %s for one credential the whole installation shares (a bot, an official account), %s for one sealed credential per member. There is no default: it decides whether this transport's messages are the company's correspondence or one person's",
+			ErrInvalid, c.Provider, CredentialWorkspaceBot, CredentialPerMember)
 	}
 	// The pairing, refused HERE rather than at the send: a transport that can
 	// transmit and cannot report its own liveness would force the core to
