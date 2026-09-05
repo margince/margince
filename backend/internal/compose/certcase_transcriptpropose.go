@@ -144,6 +144,11 @@ type transcriptProposeCase struct {
 // Run issues the one request this site sends, bare: production wraps the same
 // request in the shape-retry when the brain supports one, and a case that did
 // too would certify the answer a model gives after being told to try again.
+// certTranscriptMeetingDay is the day every graded transcript is read as having
+// happened on. A Wednesday, so a case saying "by Friday" resolves two days out
+// rather than into the following week.
+const certTranscriptMeetingDay = "2026-03-04"
+
 func (c *transcriptProposeCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
 	// English, pinned, rather than the installation's base language: a
 	// certification record grades a fixed corpus, and a score that moved with a
@@ -151,7 +156,11 @@ func (c *transcriptProposeCase) Run(ctx context.Context, completer aitasks.Compl
 	// one that changed its mind. The rule is PRESENT in the graded request for
 	// the same reason — production sends one, so a case that left it out would
 	// grade a prompt the product does not send.
-	req := transcriptRequest(c.lines, string(textlang.English))
+	// The meeting day is PINNED for the same reason the language is: a case
+	// whose prompt carried today's date would grade a different request every
+	// morning, and any deadline a corpus case states relative to the meeting
+	// would resolve to a different day each run.
+	req := transcriptRequest(c.lines, certTranscriptMeetingDay, string(textlang.English))
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
 	if err != nil {

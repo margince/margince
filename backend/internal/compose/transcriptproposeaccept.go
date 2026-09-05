@@ -16,11 +16,13 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -71,7 +73,7 @@ func transcriptProposalEffect(svc *approvals.Service, store *activities.Store) a
 		sourceSystem := transcriptProposalSourceSystem
 		sourceID := approvalID.String()
 		return svc.RedeemAndApply(ctx, approvalID, TranscriptProposalKind, diffHash, func(tx pgx.Tx) error {
-			_, _, err := store.LogActivityTx(execCtx, tx, activities.LogActivityInput{
+			in := activities.LogActivityInput{
 				Kind:         "task",
 				Subject:      &subject,
 				Body:         &body,
@@ -79,10 +81,60 @@ func transcriptProposalEffect(svc *approvals.Service, store *activities.Store) a
 				SourceID:     &sourceID,
 				Source:       transcriptProposalSourceSystem,
 				Links:        proposal.Links,
-			})
+			}
+			if err := stampTranscriptDue(ctx, tx, &in, proposal.DueDate); err != nil {
+				return err
+			}
+			_, _, err := store.LogActivityTx(execCtx, tx, in)
 			return err
 		})
 	}
+}
+
+// stampTranscriptDue puts the day a transcript stated onto the task, as the
+// moment that day ENDS in the installation's own zone.
+//
+// End of day rather than its start, because a deadline is the last moment the
+// thing is still on time: a task due "8 September" filed at that day's midnight
+// is overdue for the whole of the 8th, which is not what anybody in the meeting
+// agreed to. It is the same rule the composer's own date box applies when a rep
+// types a due date by hand.
+//
+// The INSTALLATION's zone, not the decider's: a task's due day is a fact about
+// the record, read back by colleagues in other places, and a deadline that fell
+// on a different day depending on who opened it would be two deadlines.
+//
+// A day that will not parse is an ERROR rather than a silent skip: it means a
+// reviewer edited the payload into something acceptance cannot read, and
+// quietly creating an undated task would hide that from them.
+func stampTranscriptDue(ctx context.Context, tx pgx.Tx, in *activities.LogActivityInput, day string) error {
+	// An undated next step leaves DueAt unset, which is what "nobody said when"
+	// looks like on the task. Expressed by not setting the field rather than by
+	// answering a nil instant, so there is one reading of "no deadline" here
+	// instead of two.
+	if day == "" {
+		return nil
+	}
+	zone, err := identity.TimezoneOf(ctx, tx)
+	if err != nil {
+		return err
+	}
+	loc, err := time.LoadLocation(zone)
+	if err != nil {
+		return fmt.Errorf("compose: installation timezone %q: %w", zone, err)
+	}
+	parsed, err := time.ParseInLocation(time.DateOnly, day, loc)
+	if err != nil {
+		return fmt.Errorf(
+			"compose: transcript proposal due date %q is not a date — write it as YYYY-MM-DD: %w",
+			day, err)
+	}
+	// The last second of the named day, matching format/calendarday.dueInstant
+	// on the web side so a deadline typed by hand and one read from a
+	// transcript mean the same moment.
+	due := parsed.Add(24*time.Hour - time.Second).UTC()
+	in.DueAt = &due
+	return nil
 }
 
 // transcriptTaskBody says where the task came from, in the terms the rep can

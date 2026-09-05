@@ -518,3 +518,68 @@ func TestARepWhoMayNotAddToTheTimelineCannotStartAReading(t *testing.T) {
 		t.Fatal("a caller who could not accept any outcome of the reading has nothing to gain from starting it")
 	}
 }
+
+// datedReply is groundedReply with the deadline the transcript stated.
+func datedReply(t *testing.T, line int, due string) string {
+	t.Helper()
+	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
+		"summary": "Send the revised pricing", "owner": "Priya",
+		"due_date": due, "source_lines": []int{line}, "confidence": 0.9,
+	}}})
+	if err != nil {
+		t.Fatalf("building the model reply: %v", err)
+	}
+	return string(raw)
+}
+
+// A deadline stated in the meeting becomes the task's own date.
+//
+// It did not. The proposal carried the day in its title and nothing else, so
+// the accepted task read "No date" on the contact and on the company while its
+// own subject named the eighth — a task nobody would be reminded about, whose
+// text said when it was due.
+//
+// The instant is the END of the named day in the installation's zone: a task
+// due "the 8th" filed at that day's midnight is overdue for the whole of the
+// 8th, which is not what anybody in the meeting agreed to.
+func TestAStatedDeadlineBecomesTheTasksDueDate(t *testing.T) {
+	e := setupTranscript(t)
+	read := e.read(t, cannedBrain{reply: datedReply(t, 3, "2026-09-08")})
+	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
+	if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
+		t.Fatalf("approving the proposal: %v", err)
+	}
+
+	due := e.wsString(t, `SELECT coalesce(to_char(due_at AT TIME ZONE
+		(SELECT value #>> '{}' FROM setting WHERE key = 'installation.timezone'),
+		'YYYY-MM-DD HH24:MI:SS'), '') FROM activity
+		WHERE kind = 'task' ORDER BY created_at DESC LIMIT 1`)
+	if due == "" {
+		t.Fatal("the task carries no due date, so the deadline lives only in its " +
+			"title — which is the state a reader sees as \"No date\"")
+	}
+	if due != "2026-09-08 23:59:59" {
+		t.Errorf("the task is due %q, want the end of 8 September in the "+
+			"installation's own zone", due)
+	}
+}
+
+// A next step nobody dated carries no date, rather than today's.
+//
+// The common case, and the one an invented deadline would corrupt: a task due
+// the day it was created is overdue tomorrow, and nobody in the meeting agreed
+// to that either.
+func TestAnUndatedNextStepCarriesNoDeadline(t *testing.T) {
+	e := setupTranscript(t)
+	read := e.read(t, cannedBrain{reply: datedReply(t, 3, "")})
+	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
+	if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
+		t.Fatalf("approving the proposal: %v", err)
+	}
+
+	dated := e.WsCount(t, `SELECT count(*) FROM activity
+		WHERE kind = 'task' AND due_at IS NOT NULL`)
+	if dated != 0 {
+		t.Errorf("%d task(s) carry a due date the transcript never stated", dated)
+	}
+}
