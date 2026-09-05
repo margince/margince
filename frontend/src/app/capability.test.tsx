@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useMe } from "../screens/common";
 import {
+  grants,
   type RbacAction,
   type RbacObject,
   useCan,
@@ -87,6 +88,57 @@ async function mutate(): Promise<boolean> {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("grants — the pure predicate the hook and the catalog share", () => {
+  // The hook is now a one-line wrapper over `grants`, and these cases are here
+  // because the settings catalog calls the same function OUTSIDE React. If the
+  // two ever diverge, the rail, the palette and search stop agreeing about which
+  // settings pages exist — which they demonstrably did when the company-page
+  // check was spelled twice.
+  //
+  // Every case drives the pure function directly. A hook test cannot prove the
+  // non-React caller sees the same answer, because it never exercises that path.
+
+  it("grants what the snapshot grants", () => {
+    const me = meFixture({ allow: { person: ["read"] } });
+    expect(grants(me, "person", "read")).toBe(true);
+  });
+
+  it("denies an action the snapshot does not carry", () => {
+    const me = meFixture({ allow: { person: ["read"] } });
+    expect(grants(me, "person", "update")).toBe(false);
+  });
+
+  it("denies an object absent from the snapshot", () => {
+    // The index signature types a miss as PRESENT, so this is the case that
+    // proves the optional chain rather than the type system is doing the work.
+    const me = meFixture({ allow: { person: ["read"] } });
+    expect(grants(me, "deal", "read")).toBe(false);
+  });
+
+  it("denies while /me has not resolved", () => {
+    // The state every surface is in on first paint. Answering true here would
+    // flash a settings entry and then withdraw it.
+    expect(grants(undefined, "person", "read")).toBe(false);
+  });
+
+  it("gives the hook and the pure call the same answer", async () => {
+    // The claim the split exists to keep true, asserted rather than assumed:
+    // the hook goes through React and /me, the pure call does not, and both
+    // must land on the same boolean for the same snapshot.
+    const me = meFixture({ allow: { pipeline: ["read"], deal: ["update"] } });
+    stubMe(me);
+
+    for (const [object, action] of [
+      ["pipeline", "read"],
+      ["pipeline", "update"],
+      ["deal", "update"],
+      ["deal", "read"],
+    ] as const) {
+      expect(await can(object, action)).toBe(grants(me, object, action));
+    }
+  });
 });
 
 describe("useCan", () => {
