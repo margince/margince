@@ -500,6 +500,19 @@
   justify-content: flex-end;
 }
 
+/* A GROUP HOLDING PROSE IS BOUNDED BY THE HEADER, not by the prose.
+   `flex-basis: 100%` gives the caption its own line INSIDE the group, and the
+   group's own width is what 100% resolves against — which the sentence set,
+   because an action row does not shrink. So a long caption widened the group
+   past the page and the record scrolled sideways by the difference.
+   `flex-shrink: 0` still holds for a row of plain verbs, which is what it was
+   written for: buttons that shrink read as a broken control. A sentence wraps
+   instead, which is what a sentence is for. */
+.record-actions-inline:has(> .t-caption) {
+  flex-shrink: 1;
+  min-inline-size: 0;
+}
+
 /* On a phone the record's verbs stick to the bottom of the viewport (plan
  * §10.3). A rep scrolling an account's story is several screens from the
  * header by the time they decide to write; an action row that scrolled away
