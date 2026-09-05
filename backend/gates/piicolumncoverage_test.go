@@ -91,6 +91,14 @@ var erasureColumnBaseline = map[string][]string{
 		// subject wrote nor anything written about them — it is a reading OF the
 		// text, and the text itself is cleared on its own terms.
 		"owed_verdict",
+		// The same shape one question over: whether an inbound reply was a
+		// positive, negative or neutral answer, and which classifier said so.
+		// Neither is anything the subject wrote nor anything written about them
+		// — the verdict is one of three words this repository defines, a reading
+		// OF the text, and the judge names a model. The text itself is cleared
+		// on its own terms.
+		"reply_verdict",
+		"reply_verdict_by",
 		"captured_by",
 		"channel_provider",
 		"direction",

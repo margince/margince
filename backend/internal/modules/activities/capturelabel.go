@@ -24,6 +24,11 @@ type UnlabeledEmail struct {
 	ID      ids.UUID
 	Subject string
 	Body    string // pre-truncated to bodyLimit
+	// Inbound says whether the counterparty wrote this message or we did. The
+	// label itself does not care — attention routes on mail in both directions —
+	// but the same call also judges whether a REPLY was positive, and that
+	// question is only meaningful about a message somebody sent us.
+	Inbound bool
 }
 
 // UnlabeledCaptureEmails reads the oldest connector-captured emails not
@@ -39,7 +44,8 @@ func (s *Store) UnlabeledCaptureEmails(ctx context.Context, limit, bodyLimit int
 	var out []UnlabeledEmail
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT id, coalesce(subject, ''), coalesce(left(body, $1), '')
+			SELECT id, coalesce(subject, ''), coalesce(left(body, $1), ''),
+			       direction = 'inbound'
 			FROM activity
 			WHERE `+ClassifyBacklogPredicate+`
 			ORDER BY occurred_at
@@ -50,7 +56,7 @@ func (s *Store) UnlabeledCaptureEmails(ctx context.Context, limit, bodyLimit int
 		defer rows.Close()
 		for rows.Next() {
 			var m UnlabeledEmail
-			if err := rows.Scan(&m.ID, &m.Subject, &m.Body); err != nil {
+			if err := rows.Scan(&m.ID, &m.Subject, &m.Body, &m.Inbound); err != nil {
 				return err
 			}
 			out = append(out, m)
