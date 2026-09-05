@@ -84,9 +84,11 @@ changing. These are `user_record_view` (the per-user visit baseline) and
 `suggestion_dismissal` in `compose/org360`, `person_moment_dismissal` in
 `compose/person360`, `org_brief` in `compose/orgbrief`, `org_dossier` and
 `org_growth_fit` in `compose/orgdossier`, `person_brief` in
-`compose/personbrief`, and `deal_status_card` in `compose/dealstatus` — the
+`compose/personbrief`, `deal_status_card` in `compose/dealstatus` — the
 deal page's one written card, cached per reader on a fingerprint of the facts
-it was written from.
+it was written from — and `org_scan` in `compose/orgscan`, the account scan:
+the model's reading of one account for one reader, which is also the carrier
+of the read in flight and announces every transition on the AI activity rail.
 
 The live list is the map in `backend/gates/tableownership_test.go`, which gates it;
 this paragraph is prose over that map and the map wins. Compose-level

@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/org360"
 	"github.com/margince/margince/backend/internal/compose/orgbrief"
 	"github.com/margince/margince/backend/internal/compose/orgdossier"
+	"github.com/margince/margince/backend/internal/compose/orgscan"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -274,6 +275,12 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	s.orgDossierHandlers = orgdossier.NewHandlers(
 		s.orgDossierSvc, s.orgGrowthFitSvc, s.sorDispatch.isOverlay,
 	)
+	// The account scan over the same composite read and the same dismissals.
+	// No lane and no job runner here: an ensure on this role settles the
+	// rules' floor in-request, and WithAccountScan binds the api role's.
+	s.orgScanSvc = orgscan.NewService(pool, s.org360Svc, s.org360Svc, nil, nil, nil, time.Now, s.log)
+	s.orgScanHandlers = orgscan.NewHandlers(s.orgScanSvc, s.sorDispatch.isOverlay)
+	s.org360Svc.RecogniseScanFindings(s.orgScanSvc)
 	// AFTER the dossier service exists: the drafter takes it as a dependency,
 	// and a nil *Service handed through the interface is not the nil INTERFACE
 	// the drafter guards against — it would pass the guard and panic on the

@@ -198,7 +198,6 @@ internal/compose/org360/pipelineread.go#type pipeline.Stalled
 internal/compose/org360/sections.go#func edgeScope
 internal/compose/org360/suggestionreads.go#func newestMessage
 internal/compose/org360/suggestions.go#func candidateSuggestions
-internal/compose/org360/suggestions.go#func ptrString
 internal/compose/orgbrief/ask.go#const askSystem
 internal/compose/orgbrief/ask.go#var askInstruction
 internal/compose/orgbrief/ask_test.go#func declaredQuestions

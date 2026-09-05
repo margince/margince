@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/org360"
 	"github.com/margince/margince/backend/internal/compose/orgbrief"
 	"github.com/margince/margince/backend/internal/compose/orgdossier"
+	"github.com/margince/margince/backend/internal/compose/orgscan"
 	"github.com/margince/margince/backend/internal/compose/person360"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -146,6 +147,7 @@ type Server struct {
 	leadDraftHandlers
 	orgBriefHandlers
 	orgDossierHandlers
+	orgScanHandlers
 	accountDraftHandlers
 	financeHandlers
 	integrationsHandlers
@@ -428,6 +430,11 @@ type Server struct {
 	// fresh handler set from a half-remembered pair would do.
 	orgDossierSvc   *orgdossier.Service
 	orgGrowthFitSvc *orgdossier.GrowthFitService
+	// orgScanSvc is the account scan, held so WithAccountScan can rebind its
+	// lane and its job runner over the SAME composite read and dismissals the
+	// 360 serves, and so the 360's dismissal endpoint can recognise a finding
+	// the scan raised.
+	orgScanSvc *orgscan.Service
 
 	// resetRuntime is the non-Postgres purge set POST /admin/reset-data runs —
 	// the job queue, the event bus, the cache-flush announcement — injected by
@@ -453,46 +460,3 @@ type Server struct {
 }
 
 var _ crmcontracts.ServerInterface = Server{}
-
-// GetAttention forwards the day's read to the assembled surface. Explicit
-// because the field is named rather than embedded, so no method is promoted.
-func (s Server) GetAttention(w http.ResponseWriter, r *http.Request) {
-	s.attentionHandlers.GetAttention(w, r)
-}
-
-// GetMagic forwards the machinery's receipt to its own surface.
-func (s Server) GetMagic(w http.ResponseWriter, r *http.Request, params crmcontracts.GetMagicParams) {
-	s.magicHandlers.GetMagic(w, r, params)
-}
-
-// GetWorklist forwards the ranked read to the same assembled surface.
-func (s Server) GetWorklist(w http.ResponseWriter, r *http.Request, params crmcontracts.GetWorklistParams) {
-	s.attentionHandlers.GetWorklist(w, r, params)
-}
-
-// GetResponseMetrics forwards the reading of how fast the workspace replies.
-func (s Server) GetResponseMetrics(
-	w http.ResponseWriter, r *http.Request, params crmcontracts.GetResponseMetricsParams,
-) {
-	s.attentionHandlers.GetResponseMetrics(w, r, params)
-}
-
-// GetHiddenBacklog forwards the guardrail over the queue's own hiding rules.
-func (s Server) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
-	s.attentionHandlers.GetHiddenBacklog(w, r)
-}
-
-// GetHandledForYou forwards the reader's own receipt of what was done.
-func (s Server) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
-	s.attentionHandlers.GetHandledForYou(w, r)
-}
-
-// GetTeamExceptions forwards the lead's read of what is going wrong.
-func (s Server) GetTeamExceptions(w http.ResponseWriter, r *http.Request) {
-	s.attentionHandlers.GetTeamExceptions(w, r)
-}
-
-// GetTeamBoard forwards the manager's read of the same work.
-func (s Server) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
-	s.attentionHandlers.GetTeamBoard(w, r)
-}

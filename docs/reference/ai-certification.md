@@ -24,12 +24,12 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 
 | | |
 |---|---:|
-| Shipped invocation sites | 40 |
+| Shipped invocation sites | 41 |
 | … best state `current` | 30 |
 | … best state `partial` | 0 |
 | … best state `stale` | 8 |
-| … `absent` on every binding | 2 |
-| Scenarios in the corpus | 136 |
+| … `absent` on every binding | 3 |
+| Scenarios in the corpus | 138 |
 | Committed records | 59 |
 | Bindings measured | 10 |
 
@@ -74,12 +74,13 @@ today. It says nothing about how well the model did — that is the band.
 
 ## Index
 
-### Sites (40)
+### Sites (41)
 
 Which model to run each site on, and what that choice rests on.
 
 | Site | Best model tested | Band | Reliability | State | Scenarios | Records |
 |---|---|---|---:|---|---:|---:|
+| [`account_scan/org_scan`](#account_scanorg_scan) | - | - | - | `absent` | 2 | 0 |
 | [`agent_loop/loop`](#agent_looploop) | - | - | - | `stale` | 23 | 3 |
 | [`brief_ranking/rank`](#brief_rankingrank) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
 | [`capture_classify/classify`](#capture_classifyclassify) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 5 | 3 |
@@ -211,6 +212,21 @@ model, real network).
 One section per task, one subsection per site it ships. The scenario table
 says what a site is scored against; the record table says how each binding
 did. What the columns mean is in [How to read this page](#how-to-read-this-page).
+
+### `account_scan`
+
+#### `account_scan/org_scan`
+
+Scope a run of it can claim: `full_invocation`.
+
+Scenarios (2):
+
+| Scenario | Expects | Case |
+|---|---|---|
+| `scan_finds_the_promise_we_did_not_keep` | `accepted` | [promise_we_left_open_01.yaml](../../backend/internal/compose/aicert/corpus/account_scan/promise_we_left_open_01.yaml) |
+| `scan_finds_the_question_nobody_answered` | `accepted` | [question_left_unanswered_01.yaml](../../backend/internal/compose/aicert/corpus/account_scan/question_left_unanswered_01.yaml) |
+
+No record: this site has never been certified on any binding.
 
 ### `agent_loop`
 

@@ -80,6 +80,7 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	// and a waiver here would be a claim about it that is no longer true.
 	"internal/compose/person360":    "person_moment_dismissal, the same per-reader shape",
 	"internal/compose/orgbrief":     "org_brief is an assembly generated for one reader and never served to another",
+	"internal/compose/orgscan":      "org_scan, the same per-reader shape — the model's reading of one account for one reader, regenerable from the records at any time and never served to another; the read's own history is the AI activity rail, which every transition announces",
 	"internal/compose/personbrief":  "person_brief, the same",
 	"internal/compose/dealstatus":   "deal_status_card, the same per-reader shape — a card written from the facts one person may see, never served to another",
 	"internal/compose/worklistsnap": "worklist_snapshot, the same per-reader shape — one person's position in one walk, keyed on reader_id, holding identity and order and no record content at all",

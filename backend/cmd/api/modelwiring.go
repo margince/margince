@@ -223,11 +223,16 @@ func jobEnqueueOptions(
 		return nil, err
 	}
 	deepRead := compose.WithDeepRead(inserter, nil)
+	// The account scan queues on this role and reads on the worker; the api's
+	// own lane serves only the in-request floor, and the fingerprint carries
+	// the binding both roles read live.
+	accountScan := compose.WithAccountScan(inserter, nil, nil)
 	if modelPath != nil {
 		deepRead = compose.WithDeepRead(inserter, modelPath.ColdStart)
+		accountScan = compose.WithAccountScan(inserter, modelPath.AccountScan, modelPath.RoutingVersion)
 	}
 	opts := []compose.Option{
-		deepRead, compose.WithVoiceBuildEnqueue(inserter), compose.WithRateRefresh(inserter),
+		deepRead, accountScan, compose.WithVoiceBuildEnqueue(inserter), compose.WithRateRefresh(inserter),
 		compose.WithTechnicalEnrich(inserter),
 		compose.WithTranscriptRead(inserter),
 		compose.WithDocumentRead(inserter),

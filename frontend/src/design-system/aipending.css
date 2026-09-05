@@ -1,0 +1,79 @@
+/* The wait for a machine's answer: the indigo tile breathing, the answer's
+   ragged lines, and a light passing over both. Every animated property is
+   opacity or transform, and the reduced-motion answer is at the end of the
+   file so document order cannot undo it. */
+.aipending {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  overflow: hidden;
+  border-radius: var(--r-md);
+}
+.aipending-tile {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  background: var(--aiLight);
+  color: var(--ai);
+  animation: aipending-breathe 2.4s var(--ease-in-out) infinite;
+}
+.aipending-tile svg {
+  width: 16px;
+  height: 16px;
+}
+.aipending-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* The sentence is the agent's, so it takes the agent's ink — over the page
+   ground, not the tint, where --aiText reads without failing contrast. */
+.aipending-body .pending-note {
+  color: var(--aiText);
+}
+/* One pass of light across the block, left to right, on a loop. A gradient
+   in flight rather than at rest: it stops the moment the answer lands. */
+.aipending-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--aiLight) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: aipending-sheen 2.4s var(--ease-in-out) infinite;
+}
+@keyframes aipending-breathe {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(0.94);
+  }
+}
+@keyframes aipending-sheen {
+  to {
+    transform: translateX(100%);
+  }
+}
+/* Reduced motion: the tile rests at full ink and the sheen is not drawn at
+   all. The lines under them keep the placeholder's own resting answer, which
+   atoms.css owns. */
+@media (prefers-reduced-motion: reduce) {
+  .aipending-tile {
+    animation: none;
+  }
+  .aipending-sheen {
+    animation: none;
+    opacity: 0;
+  }
+}

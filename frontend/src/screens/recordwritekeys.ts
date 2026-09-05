@@ -33,6 +33,7 @@ const RECORD_WRITE_KEYS: Record<EntityKind, (id: string) => QueryKey[]> = {
   organization: (id) => [
     ["organization", id],
     ["organization360", id],
+    ["account-scan", id],
   ],
   deal: (id) => dealRecordKeys(id),
   // The lead's set is already declared beside the lead's own reads, including

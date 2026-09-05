@@ -558,6 +558,7 @@ func (e AiActivityItemState) Valid() bool {
 
 // Defines values for AiActivityKind.
 const (
+	AiActivityKindAccountScan                   AiActivityKind = "account_scan"
 	AiActivityKindBriefRanking                  AiActivityKind = "brief_ranking"
 	AiActivityKindCaptureClassify               AiActivityKind = "capture_classify"
 	AiActivityKindCaptureConfidentialityVerdict AiActivityKind = "capture_confidentiality_verdict"
@@ -592,6 +593,8 @@ const (
 // Valid indicates whether the value is a known member of the AiActivityKind enum.
 func (e AiActivityKind) Valid() bool {
 	switch e {
+	case AiActivityKindAccountScan:
+		return true
 	case AiActivityKindBriefRanking:
 		return true
 	case AiActivityKindCaptureClassify:
@@ -8004,20 +8007,32 @@ func (e Organization360SuggestionActionKind) Valid() bool {
 
 // Defines values for Organization360SuggestionKind.
 const (
-	Organization360SuggestionKindLifecycleConflict Organization360SuggestionKind = "lifecycle_conflict"
-	Organization360SuggestionKindNoNextStep        Organization360SuggestionKind = "no_next_step"
-	Organization360SuggestionKindNoReply           Organization360SuggestionKind = "no_reply"
-	Organization360SuggestionKindStalledDeal       Organization360SuggestionKind = "stalled_deal"
+	Organization360SuggestionKindCommitmentUnmet    Organization360SuggestionKind = "commitment_unmet"
+	Organization360SuggestionKindLifecycleConflict  Organization360SuggestionKind = "lifecycle_conflict"
+	Organization360SuggestionKindNeedRaised         Organization360SuggestionKind = "need_raised"
+	Organization360SuggestionKindNoNextStep         Organization360SuggestionKind = "no_next_step"
+	Organization360SuggestionKindNoReply            Organization360SuggestionKind = "no_reply"
+	Organization360SuggestionKindQuestionUnanswered Organization360SuggestionKind = "question_unanswered"
+	Organization360SuggestionKindRiskRaised         Organization360SuggestionKind = "risk_raised"
+	Organization360SuggestionKindStalledDeal        Organization360SuggestionKind = "stalled_deal"
 )
 
 // Valid indicates whether the value is a known member of the Organization360SuggestionKind enum.
 func (e Organization360SuggestionKind) Valid() bool {
 	switch e {
+	case Organization360SuggestionKindCommitmentUnmet:
+		return true
 	case Organization360SuggestionKindLifecycleConflict:
+		return true
+	case Organization360SuggestionKindNeedRaised:
 		return true
 	case Organization360SuggestionKindNoNextStep:
 		return true
 	case Organization360SuggestionKindNoReply:
+		return true
+	case Organization360SuggestionKindQuestionUnanswered:
+		return true
+	case Organization360SuggestionKindRiskRaised:
 		return true
 	case Organization360SuggestionKindStalledDeal:
 		return true
@@ -8497,6 +8512,36 @@ func (e OrganizationQuestion) Valid() bool {
 	case OrganizationQuestionWhatsChanged:
 		return true
 	case OrganizationQuestionWhatsOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OrganizationScanState.
+const (
+	OrganizationScanStateDegraded OrganizationScanState = "degraded"
+	OrganizationScanStateDone     OrganizationScanState = "done"
+	OrganizationScanStateFailed   OrganizationScanState = "failed"
+	OrganizationScanStateNever    OrganizationScanState = "never"
+	OrganizationScanStateQueued   OrganizationScanState = "queued"
+	OrganizationScanStateRunning  OrganizationScanState = "running"
+)
+
+// Valid indicates whether the value is a known member of the OrganizationScanState enum.
+func (e OrganizationScanState) Valid() bool {
+	switch e {
+	case OrganizationScanStateDegraded:
+		return true
+	case OrganizationScanStateDone:
+		return true
+	case OrganizationScanStateFailed:
+		return true
+	case OrganizationScanStateNever:
+		return true
+	case OrganizationScanStateQueued:
+		return true
+	case OrganizationScanStateRunning:
 		return true
 	default:
 		return false
@@ -26965,13 +27010,26 @@ type Organization360Suggestion struct {
 	// suggestions to recognize it, so a value it cannot match stores nothing.
 	Fingerprint string `json:"fingerprint"`
 
-	// Kind `no_reply` — an outbound message on a thread nobody answered.
+	// Kind The four RULE kinds, computed from the account's records with no model:
+	//
+	// `no_reply` — an outbound message on a thread nobody answered.
 	// `stalled_deal` — an open deal idle past the 60-day stall window.
 	// `no_next_step` — an active account with no open task on it.
 	// `lifecycle_conflict` — the account's own correspondence contradicts the stage it is
 	// filed under: a `contract_ended` signal stands while the record still reads as a live
 	// customer or an open opportunity. The page states the conflict rather than resolving
 	// it, because which of the two is wrong is a judgment only the reader can make.
+	//
+	// The four READ kinds, which only the account scan raises — each from words the
+	// model read in the account's own exchanges, quoted on the citation so the reader
+	// checks the claim against them:
+	//
+	// `commitment_unmet` — we said we would do something in an exchange and nothing on
+	// the record says it happened.
+	// `question_unanswered` — they asked something and no later exchange of ours answers it.
+	// `risk_raised` — they wrote something that puts the relationship or a deal at risk:
+	// a budget cut, a competitor, a decision-maker leaving.
+	// `need_raised` — they wrote about a need or a plan nothing on the record has picked up.
 	Kind Organization360SuggestionKind `json:"kind"`
 
 	// Reason The rule that fired, in the words the rep reads. Never a score.
@@ -26988,6 +27046,12 @@ type Organization360Suggestion struct {
 	// It is NOT part of the fingerprint (PO-AC-N-14). Folding it in would resurrect every
 	// suggestion every reader has ever dismissed the moment the wording changed.
 	Title *string `json:"title,omitempty"`
+
+	// WrittenBy Which writer raised this row. Absent on the 360's own rows — every one of those
+	// is a rule — and `model` on a finding the account scan read from the account's
+	// words. Never silently interchangeable: a reader weighing advice needs to know
+	// whether a comparison or a reading stands behind it.
+	WrittenBy *WrittenBy `json:"written_by,omitempty"`
 }
 
 // Organization360SuggestionActionKind `draft_reply` — open the composer on the message that went unanswered.
@@ -26995,13 +27059,26 @@ type Organization360Suggestion struct {
 // `add_task` — write the step named in `task`, through `POST /tasks`.
 type Organization360SuggestionActionKind string
 
-// Organization360SuggestionKind `no_reply` — an outbound message on a thread nobody answered.
+// Organization360SuggestionKind The four RULE kinds, computed from the account's records with no model:
+//
+// `no_reply` — an outbound message on a thread nobody answered.
 // `stalled_deal` — an open deal idle past the 60-day stall window.
 // `no_next_step` — an active account with no open task on it.
 // `lifecycle_conflict` — the account's own correspondence contradicts the stage it is
 // filed under: a `contract_ended` signal stands while the record still reads as a live
 // customer or an open opportunity. The page states the conflict rather than resolving
 // it, because which of the two is wrong is a judgment only the reader can make.
+//
+// The four READ kinds, which only the account scan raises — each from words the
+// model read in the account's own exchanges, quoted on the citation so the reader
+// checks the claim against them:
+//
+// `commitment_unmet` — we said we would do something in an exchange and nothing on
+// the record says it happened.
+// `question_unanswered` — they asked something and no later exchange of ours answers it.
+// `risk_raised` — they wrote something that puts the relationship or a deal at risk:
+// a budget cut, a competitor, a decision-maker leaving.
+// `need_raised` — they wrote about a need or a plan nothing on the record has picked up.
 type Organization360SuggestionKind string
 
 // Organization360SuggestionSubjectType defines model for Organization360Suggestion.SubjectType.
@@ -27112,6 +27189,11 @@ type OrganizationBrief struct {
 
 // OrganizationBriefEvidence One record a brief sentence was written from.
 type OrganizationBriefEvidence struct {
+	// At The instant the evidence is dated — when the message was sent, when
+	// the deal was last worked, when the signal was read. The client
+	// prints it in the reader's own calendar. Absent for a record with no
+	// date of its own.
+	At         *time.Time                          `json:"at,omitempty"`
 	EntityId   openapi_types.UUID                  `json:"entity_id"`
 	EntityType OrganizationBriefEvidenceEntityType `json:"entity_type"`
 
@@ -27122,6 +27204,20 @@ type OrganizationBriefEvidence struct {
 	// leaves this out. Descriptive only — grounding checks type and id,
 	// never the name.
 	Name *string `json:"name,omitempty"`
+
+	// Origin Where the words came from, in the writer's own language and the
+	// reader's terms — "Email you sent", "Open deal, last worked",
+	// "Read from their mail". One short phrase, never a record kind the
+	// client already labels the chip with. Descriptive only, like `name`.
+	Origin *string `json:"origin,omitempty"`
+
+	// Quote The record's own words, verbatim — a message's subject line, a
+	// signal's sentence. Never a paraphrase and never a summary: it is
+	// what a reader checks the claim against without opening the record,
+	// so a writer that has no verbatim words leaves it out. Absent when
+	// the reader may not read the record's content, even where they may
+	// know it exists.
+	Quote *string `json:"quote,omitempty"`
 }
 
 // OrganizationBriefEvidenceEntityType defines model for OrganizationBriefEvidence.EntityType.
@@ -27906,6 +28002,75 @@ type OrganizationProfileFieldListResponse struct {
 // `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.
 // `whats_changed` — what has moved on this account recently.
 type OrganizationQuestion string
+
+// OrganizationScan One reader's scan of one account: the state of the read, and what the account looks
+// like it needs — the model's stored findings and the 360's live rules as ONE list,
+// deduplicated by fingerprint, this reader's dismissals applied, capped and the cap
+// reported. Every finding cites the records it rests on and, where the model read
+// words, quotes them verbatim; a finding that could not be grounded is dropped whole,
+// never shown with its citation stripped.
+type OrganizationScan struct {
+	// DegradeReason Why the read finished below the model — server-authored, in the reader's terms,
+	// never a provider's message. Null when the model wrote the findings.
+	DegradeReason *string `json:"degrade_reason,omitempty"`
+
+	// Findings The merged advice, in priority order: the rules' own rows first in their own
+	// order, then the model's findings by the order it gave them. Dismissed rows are
+	// gone; the cap is applied here and reported in `findings_dropped`.
+	Findings []Organization360Suggestion `json:"findings"`
+
+	// FindingsDropped How many of this reader's undismissed findings the cap left out.
+	FindingsDropped int `json:"findings_dropped"`
+
+	// GeneratedAt When the stored findings were written. Null until a read has settled.
+	GeneratedAt *time.Time `json:"generated_at,omitempty"`
+
+	// GeneratedBy Which writer produced the stored findings. Absent until a read has settled.
+	GeneratedBy    *WrittenBy         `json:"generated_by,omitempty"`
+	OrganizationId openapi_types.UUID `json:"organization_id"`
+
+	// Read What the last settled read took in, so the page can say "read 14 exchanges and
+	// 3 deals" rather than "done". Null until a read has settled.
+	Read *struct {
+		Deals     int `json:"deals"`
+		Exchanges int `json:"exchanges"`
+	} `json:"read,omitempty"`
+
+	// ResumesAt When a read the AI budget deferred will try again. Null unless the scan is in
+	// flight and waiting on budget.
+	ResumesAt *time.Time `json:"resumes_at,omitempty"`
+
+	// Stale The account has changed since the stored findings were written and they have not
+	// been re-read, because the reader's last scan is younger than the rescan floor.
+	// The findings still answer; the flag is said beside them rather than instead of them.
+	Stale *bool `json:"stale,omitempty"`
+
+	// State Where this reader's scan of the account stands. `never` — this reader has not asked
+	// for one. `queued` / `running` — a read is in flight, on the rail. `done` — the
+	// model read the account and its findings are stored. `degraded` — the read finished
+	// on the deterministic floor (no model lane, the AI budget deferred past the job's
+	// patience, or a reply the grounding filter refused whole); the rules' own advice is
+	// what stands. `failed` — the read could not run at all; the rules' advice still
+	// answers, and `degrade_reason` says what stopped it.
+	State OrganizationScanState `json:"state"`
+}
+
+// OrganizationScanRequest What an ensure may ask beyond "make it current".
+type OrganizationScanRequest struct {
+	// Force Read the account again even though the stored findings' fingerprint matches or
+	// the rescan floor has not passed. A scan already in flight is still returned as
+	// it stands rather than started twice.
+	Force *bool `json:"force,omitempty"`
+}
+
+// OrganizationScanState Where this reader's scan of the account stands. `never` — this reader has not asked
+// for one. `queued` / `running` — a read is in flight, on the rail. `done` — the
+// model read the account and its findings are stored. `degraded` — the read finished
+// on the deterministic floor (no model lane, the AI budget deferred past the job's
+// patience, or a reply the grounding filter refused whole); the rules' own advice is
+// what stands. `failed` — the read could not run at all; the rules' advice still
+// answers, and `degrade_reason` says what stopped it.
+type OrganizationScanState string
 
 // OrganizationStrength defines model for OrganizationStrength.
 type OrganizationStrength struct {
@@ -40583,6 +40748,9 @@ type UpsertPartnerJSONRequestBody = UpsertPartnerRequest
 // UpdateOrganizationProfileFieldJSONRequestBody defines body for UpdateOrganizationProfileField for application/json ContentType.
 type UpdateOrganizationProfileFieldJSONRequestBody = UpdateOrganizationProfileFieldRequest
 
+// EnsureOrganizationScanJSONRequestBody defines body for EnsureOrganizationScan for application/json ContentType.
+type EnsureOrganizationScanJSONRequestBody = OrganizationScanRequest
+
 // DismissOrganizationSuggestionJSONRequestBody defines body for DismissOrganizationSuggestion for application/json ContentType.
 type DismissOrganizationSuggestionJSONRequestBody DismissOrganizationSuggestionJSONBody
 
@@ -49768,6 +49936,12 @@ type ServerInterface interface {
 	// Confirm a profile field without changing its value.
 	// (POST /organizations/{id}/profile-fields/{field}/confirm)
 	ConfirmOrganizationProfileField(w http.ResponseWriter, r *http.Request, id Id, field ProfileFieldKey, params ConfirmOrganizationProfileFieldParams)
+	// What this account needs, as the model last read it for this reader.
+	// (GET /organizations/{id}/scan)
+	GetOrganizationScan(w http.ResponseWriter, r *http.Request, id Id)
+	// Make sure this reader's scan of the account is current, reading it again only when the account changed.
+	// (POST /organizations/{id}/scan)
+	EnsureOrganizationScan(w http.ResponseWriter, r *http.Request, id Id)
 	// The newest deep read on this account, so a crawl that failed after the rep navigated away is still visible.
 	// (GET /organizations/{id}/site-reads/latest)
 	GetLatestSiteRead(w http.ResponseWriter, r *http.Request, id Id)
@@ -52681,6 +52855,18 @@ func (_ Unimplemented) UpdateOrganizationProfileField(w http.ResponseWriter, r *
 // Confirm a profile field without changing its value.
 // (POST /organizations/{id}/profile-fields/{field}/confirm)
 func (_ Unimplemented) ConfirmOrganizationProfileField(w http.ResponseWriter, r *http.Request, id Id, field ProfileFieldKey, params ConfirmOrganizationProfileFieldParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What this account needs, as the model last read it for this reader.
+// (GET /organizations/{id}/scan)
+func (_ Unimplemented) GetOrganizationScan(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Make sure this reader's scan of the account is current, reading it again only when the account changed.
+// (POST /organizations/{id}/scan)
+func (_ Unimplemented) EnsureOrganizationScan(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -69653,6 +69839,70 @@ func (siw *ServerInterfaceWrapper) ConfirmOrganizationProfileField(w http.Respon
 	handler.ServeHTTP(w, r)
 }
 
+// GetOrganizationScan operation middleware
+func (siw *ServerInterfaceWrapper) GetOrganizationScan(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetOrganizationScan(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// EnsureOrganizationScan operation middleware
+func (siw *ServerInterfaceWrapper) EnsureOrganizationScan(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EnsureOrganizationScan(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetLatestSiteRead operation middleware
 func (siw *ServerInterfaceWrapper) GetLatestSiteRead(w http.ResponseWriter, r *http.Request) {
 
@@ -80743,6 +80993,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/organizations/{id}/profile-fields/{field}/confirm", wrapper.ConfirmOrganizationProfileField)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/organizations/{id}/scan", wrapper.GetOrganizationScan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/organizations/{id}/scan", wrapper.EnsureOrganizationScan)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/organizations/{id}/site-reads/latest", wrapper.GetLatestSiteRead)

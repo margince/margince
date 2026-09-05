@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/org360"
 	"github.com/margince/margince/backend/internal/compose/orgbrief"
 	"github.com/margince/margince/backend/internal/compose/orgdossier"
+	"github.com/margince/margince/backend/internal/compose/orgscan"
 	"github.com/margince/margince/backend/internal/compose/person360"
 	"github.com/margince/margince/backend/internal/compose/personbrief"
 	"github.com/margince/margince/backend/internal/compose/persondraft"
@@ -86,6 +87,7 @@ type (
 	dealStatusHandlers     = dealstatus.Handlers
 	orgBriefHandlers       = orgbrief.Handlers
 	orgDossierHandlers     = orgdossier.Handlers
+	orgScanHandlers        = orgscan.Handlers
 	accountDraftHandlers   = accountdraft.Handlers
 	personDraftHandlers    = persondraft.Handlers
 	leadDraftHandlers      = leaddraft.Handlers

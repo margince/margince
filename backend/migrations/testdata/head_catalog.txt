@@ -3479,6 +3479,35 @@ public.org_growth_fit.payload jsonb NOT NULL gen=- def=-
 public.org_growth_fit.user_id uuid NOT NULL gen=- def=-
 public.org_growth_fit_organization_ix CREATE INDEX org_growth_fit_organization_ix ON public.org_growth_fit USING btree (organization_id)
 public.org_growth_fit_pkey CREATE UNIQUE INDEX org_growth_fit_pkey ON public.org_growth_fit USING btree (user_id, organization_id)
+public.org_scan acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.org_scan.attempt integer NOT NULL gen=- def=1
+public.org_scan.degrade_reason text gen=- def=-
+public.org_scan.findings jsonb NOT NULL gen=- def='[]'::jsonb
+public.org_scan.fingerprint text gen=- def=-
+public.org_scan.finished_at timestamp with time zone gen=- def=-
+public.org_scan.generated_at timestamp with time zone gen=- def=-
+public.org_scan.generated_by text gen=- def=-
+public.org_scan.id uuid NOT NULL gen=- def=uuidv7()
+public.org_scan.next_attempt_at timestamp with time zone gen=- def=-
+public.org_scan.org_scan_attempt_check CHECK ((attempt >= 1))
+public.org_scan.org_scan_generated_by_check CHECK (((generated_by IS NULL) OR (generated_by = ANY (ARRAY['model'::text, 'deterministic'::text]))))
+public.org_scan.org_scan_org_fkey FOREIGN KEY (organization_id) REFERENCES organization(id) ON DELETE CASCADE
+public.org_scan.org_scan_pkey PRIMARY KEY (id)
+public.org_scan.org_scan_read_deals_check CHECK (((read_deals IS NULL) OR (read_deals >= 0)))
+public.org_scan.org_scan_read_exchanges_check CHECK (((read_exchanges IS NULL) OR (read_exchanges >= 0)))
+public.org_scan.org_scan_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'degraded'::text, 'failed'::text])))
+public.org_scan.org_scan_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.org_scan.org_scan_user_id_organization_id_key UNIQUE (user_id, organization_id)
+public.org_scan.organization_id uuid NOT NULL gen=- def=-
+public.org_scan.read_deals integer gen=- def=-
+public.org_scan.read_exchanges integer gen=- def=-
+public.org_scan.requested_at timestamp with time zone NOT NULL gen=- def=now()
+public.org_scan.started_at timestamp with time zone gen=- def=-
+public.org_scan.status text NOT NULL gen=- def=-
+public.org_scan.user_id uuid NOT NULL gen=- def=-
+public.org_scan_organization_ix CREATE INDEX org_scan_organization_ix ON public.org_scan USING btree (organization_id)
+public.org_scan_pkey CREATE UNIQUE INDEX org_scan_pkey ON public.org_scan USING btree (id)
+public.org_scan_user_id_organization_id_key CREATE UNIQUE INDEX org_scan_user_id_organization_id_key ON public.org_scan USING btree (user_id, organization_id)
 public.organization acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.organization.address_city text gen=- def=-
 public.organization.address_country text gen=- def=-

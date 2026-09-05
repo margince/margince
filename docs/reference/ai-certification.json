@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 40,
+    "sites": 41,
     "sites_best_current": 30,
     "sites_best_partial": 0,
     "sites_best_stale": 8,
-    "sites_absent": 2,
-    "scenarios": 136,
+    "sites_absent": 3,
+    "scenarios": 138,
     "records": 59,
     "bindings": 10
   },
@@ -212,6 +212,28 @@
     }
   ],
   "sites": [
+    {
+      "task": "account_scan",
+      "site": "org_scan",
+      "key": "account_scan/org_scan",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "scan_finds_the_promise_we_did_not_keep",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/account_scan/promise_we_left_open_01.yaml"
+        },
+        {
+          "name": "scan_finds_the_question_nobody_answered",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/account_scan/question_left_unanswered_01.yaml"
+        }
+      ],
+      "records": []
+    },
     {
       "task": "agent_loop",
       "site": "loop",

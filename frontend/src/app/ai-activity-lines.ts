@@ -123,6 +123,19 @@ export const ACTIVITY_LINE: Readonly<
     degraded: "agent.activity.summarize.degraded",
     failed: "agent.activity.summarize.failed",
   },
+  // Narrated although the account page draws the read live too, for the
+  // reason the site read is NOT: the page's pending row is where a reader
+  // who stayed sees it, and the rail is where the reader who opened three
+  // accounts and moved on finds out which one is ready. The scan is that
+  // reader's own work item — filed under them, named for the account.
+  account_scan: {
+    queued: "agent.activity.accountScan.queued",
+    running: "agent.activity.accountScan.running",
+    stalled: "agent.activity.accountScan.stalled",
+    done: "agent.activity.accountScan.done",
+    degraded: "agent.activity.accountScan.degraded",
+    failed: "agent.activity.accountScan.failed",
+  },
   draft_reply: {
     queued: "agent.activity.draftReply.queued",
     running: "agent.activity.draftReply.running",
@@ -216,6 +229,14 @@ export const PANEL_HEADING: Readonly<Record<"running", MessageKey>> = {
  * true.
  */
 export const NAMED_LINE: Readonly<Partial<Record<ActivityKind, LineSet>>> = {
+  account_scan: {
+    queued: "agent.activity.accountScanNamed.queued",
+    running: "agent.activity.accountScanNamed.running",
+    stalled: "agent.activity.accountScanNamed.stalled",
+    done: "agent.activity.accountScanNamed.done",
+    degraded: "agent.activity.accountScanNamed.degraded",
+    failed: "agent.activity.accountScanNamed.failed",
+  },
   document_extract: {
     queued: "agent.activity.documentExtractNamed.queued",
     running: "agent.activity.documentExtractNamed.running",

@@ -57,7 +57,10 @@ type ModelPath struct {
 	// is created from it. Its own task, not the profile lane's: it asks one
 	// cheap question of one page to stop a crawl early, so it must not bill the
 	// profile lane's premium-only ladder for it.
-	SiteTriage   completer
+	SiteTriage completer
+	// AccountScan reads one account for one reader and says what needs a
+	// person, quoting the exchanges it read (orgscan).
+	AccountScan  completer
 	RateExtract  completer // the model-cost refresh pricing-page extraction lane
 	BriefRanking completer // the Morning-Brief L2 re-order (B-E05.2)
 	// Summarize serves both of the company view's grounded-prose sites: the
@@ -166,6 +169,16 @@ func (p *ModelPath) SetCompanyContextEnabled(enabled bool) {
 // (MCP-SESS-COST) that every served model call is charged against, and answers
 // the same path for chaining. A ModelPath without one meters the workspace and
 // nothing else, which is correct for every role that serves no inbound agent.
+// RoutingVersion identifies the binding the lanes currently ride, read live
+// from the router so a role that rebinds at runtime reports the new one.
+// Empty for a path with no router — the offline fake, or no model at all.
+func (m ModelPath) RoutingVersion() string {
+	if m.router == nil {
+		return ""
+	}
+	return m.router.RoutingVersion()
+}
+
 func (m ModelPath) WithAgentTokenSpend(spend ai.AgentTokenSpender) ModelPath {
 	if m.router != nil {
 		m.router.WithAgentTokenSpend(spend)
@@ -282,6 +295,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		BriefRanking:                  brain(ai.TaskBriefRanking),
 		Summarize:                     brain(ai.TaskSummarize),
 		DealHealth:                    brain(ai.TaskDealHealth),
+		AccountScan:                   brain(ai.TaskAccountScan),
 		ProposeRoles:                  brain(ai.TaskProposeRoles),
 		CorpusAsk:                     brain(ai.TaskCorpusAsk),
 		GrowthFit:                     brain(ai.TaskGrowthFit),

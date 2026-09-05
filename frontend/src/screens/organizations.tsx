@@ -154,6 +154,7 @@ import { groupChronology } from "./timelinegroups";
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { useAccountScan } from "./accountscan";
 import { invalidateRecord } from "./recordwritekeys";
 
 // Companies list + company 360 (B-EP09.10a/b). Firmographics render
@@ -1774,6 +1775,13 @@ type ComposeAnchor =
   | { kind: "reply"; id: string }
   | { kind: "account"; id: string };
 
+// A suggestion action kind the page has no handler for. Reached only if the
+// contract grows a kind before this page does, which TypeScript refuses at the
+// switch that calls it — the runtime throw is for a payload the build never saw.
+function unreachableAction(kind: never): never {
+  throw new Error(`no surface performs the suggestion action ${String(kind)}`);
+}
+
 // The composer, opened on whichever anchor the page holds. Extracted so the
 // page does not carry a branch per anchor kind in its own JSX.
 function AccountComposer({
@@ -1995,16 +2003,30 @@ function CompanyPage({
         composing={composing}
         onCompose={setComposing}
         onPerform={(action) => {
-          if (action.kind === "draft_reply" && action.activity_id) {
-            setComposing({ kind: "reply", id: action.activity_id });
-          } else if (action.kind === "open_deal" && action.deal_id) {
-            navigate({ screen: "deals", id: action.deal_id });
+          // Total over the kinds the server can name: a kind this page
+          // cannot perform is a compile error here, never a button that
+          // swallows the click.
+          switch (action.kind) {
+            case "draft_reply":
+              if (action.activity_id) {
+                setComposing({ kind: "reply", id: action.activity_id });
+              }
+              return;
+            case "open_deal":
+              if (action.deal_id) {
+                navigate({ screen: "deals", id: action.deal_id });
+              }
+              return;
+            case "add_task":
+              // Never reached: the advice section writes the step itself,
+              // through the same POST /tasks the task form uses, because the
+              // server prepared the body and this page would only be relaying
+              // it. Routing it through a surface here would put a second
+              // author on a sentence a rule already wrote.
+              return;
+            default:
+              unreachableAction(action.kind);
           }
-          // `add_task` never reaches here: the advice section writes the step
-          // itself, through the same POST /tasks the task form uses, because
-          // the server prepared the body and this page would only be relaying
-          // it. Routing it through a surface here would put a second author on
-          // a sentence a rule already wrote.
         }}
         decisionsOpen={decisionsOpen}
         onDecisionsOpen={setDecisionsOpen}
@@ -2387,6 +2409,10 @@ function CompanyOverviewStack({
     entityType === "user"
       ? colleagues.get(entityId)
       : records(entityType, entityId);
+  // The reader's scan of this account, asked for on open. Only once the 360
+  // has answered natively: the scan is read from the same records, and an
+  // overlay workspace has none of them here.
+  const scan = useAccountScan(org.id, !overlay && view !== undefined);
   // ONE reading of the account, drawn in two panes: the 360's call at the
   // full measure, and the needs list in the left column under it. Computed
   // here, once, so the verdict and the queue cannot disagree.
@@ -2399,6 +2425,7 @@ function CompanyOverviewStack({
     onDraftTo,
     onOpenRecord,
     onPerform,
+    scan,
   });
   return (
     <div className="co-overview-stack">

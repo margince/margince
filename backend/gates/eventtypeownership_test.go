@@ -306,6 +306,7 @@ var sharedEventTypes = gatekit.Waive(map[string]string{
 	"ai_task.state_changed <- internal/modules/agents":     "a scheduled run announces the same way; source=agent_runner keys its occurrences, and one trigger occurrence is one row because the key carries the spec and the trigger ref",
 	"ai_task.state_changed <- internal/modules/ai":         "the router announces the settled outcome of every task ai.RailOwner leaves to it; source=ai_router keys its occurrences, and one request or job pass is one row because the key carries the correlation id and the task",
 	"ai_task.state_changed <- internal/modules/people":     "a website read announces its own transitions from the dossier row; source=site_read keys its occurrences, one per crawl, beside the router's lines for the model calls the crawl makes",
+	"ai_task.state_changed <- internal/compose/orgscan":    "an account scan announces its own transitions from the row that carries the read; source=account_scan keys its occurrences on the row id, so one reader's read of one account is one line that moves from queued to settled",
 
 	// Structure 1 — the overlay write-back announces the NATIVE module's event.
 	// overlay/writeaudit.go switches on datasource.EntityRef and emits the

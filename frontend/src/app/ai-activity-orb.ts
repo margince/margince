@@ -48,6 +48,9 @@ export const ACTIVITY_LANE: Readonly<Record<ActivityKind, AgentLane>> = {
   site_triage: "ingest",
   transcript: "ingest",
   voice_build: "ingest",
+  // The account scan takes the account's exchanges in and reads them; what
+  // it produces is a reading of what arrived, not a draft.
+  account_scan: "ingest",
 
   // Reasoning over what is already held, and producing something from it: a
   // ranking, a verdict, a draft, a summary, a review.

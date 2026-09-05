@@ -461,7 +461,7 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 // moved and whether the tree moved with it.
 var shapeCensus = map[string]int{
 	"cannot-drift":   165,
-	"once":           177,
+	"once":           176,
 	"one-of-a-kind":  175,
 	"is-every-named": 91,
 	"only-noun":      12,

@@ -154,18 +154,93 @@ function rollupResponse(rollup: unknown): Response {
  * one of them passes its own body through `options` — or, for the roll-up, a
  * whole `Response` when what it asserts is a refusal.
  */
+// A reader who has never asked for this account's scan: the state the page
+// meets on a first open, before its own ensure answers. The server merges
+// the rules' live advice into every scan it wires, a never-read one included,
+// so a never-scanned account still carries the 360's own rows.
+export const neverScanned: {
+  organization_id: string;
+  state: string;
+  findings: unknown[];
+  findings_dropped: number;
+} = {
+  organization_id: "o-1",
+  state: "never",
+  findings: [],
+  findings_dropped: 0,
+};
+
+// The rows a scan echoes from a 360 body: the server merges the rules' advice
+// into the scan, so the fixture's default scan reads them from the 360 the
+// same suite handed in rather than answering an empty list the server never
+// would.
+function neverScannedEchoing(view: unknown): typeof neverScanned {
+  if (typeof view !== "object" || view === null) {
+    return neverScanned;
+  }
+  const findings =
+    "suggestions" in view && Array.isArray(view.suggestions)
+      ? view.suggestions
+      : [];
+  const dropped =
+    "suggestions_dropped" in view &&
+    typeof view.suggestions_dropped === "number"
+      ? view.suggestions_dropped
+      : 0;
+  return { ...neverScanned, findings, findings_dropped: dropped };
+}
+
+// The reads every company-page test meets and few of them are about,
+// answered from the fixtures unless a suite hands in its own. Named routes
+// rather than a chain in the mock, so a suite reads what the backstop
+// answers as a table.
+type BackstopOptions = Readonly<{
+  strength?: unknown;
+  org360?: unknown;
+  scan?: unknown;
+  rollup?: unknown;
+  brief?: unknown;
+}>;
+
+function backstopAnswer(
+  pathname: string,
+  options?: BackstopOptions,
+): Response | undefined {
+  if (pathname.endsWith("/strength")) {
+    return jsonResponse(options?.strength ?? dormantStrength);
+  }
+  if (pathname.endsWith("/context")) {
+    return jsonResponse({
+      anchor: { type: "organization", id: "o-1" },
+      sections: [],
+    });
+  }
+  if (pathname.endsWith("/360")) {
+    return jsonResponse(options?.org360 ?? org360);
+  }
+  if (pathname.endsWith("/hierarchy-rollup")) {
+    return rollupResponse(options?.rollup);
+  }
+  if (pathname.endsWith("/brief")) {
+    return jsonResponse(options?.brief ?? emptyBrief);
+  }
+  // The account scan the page asks for on open: `never`, echoing the 360's
+  // rows, unless a suite hands in one, so a page test is not also a scan test.
+  if (pathname.endsWith("/scan")) {
+    return jsonResponse(
+      options?.scan ?? neverScannedEchoing(options?.org360 ?? org360),
+    );
+  }
+  return undefined;
+}
+
 export function stubFetch(
   responder: (
     url: string,
     method: string,
     request: Request,
   ) => Promise<Response>,
-  options?: Readonly<{
-    strength?: unknown;
-    org360?: unknown;
-    rollup?: unknown;
-    brief?: unknown;
-  }>,
+  options?: BackstopOptions,
 ): {
   fetchMock: Mock<(request: Request) => Promise<Response>>;
   urls: string[];
@@ -173,26 +248,10 @@ export function stubFetch(
   const urls: string[] = [];
   const fetchMock = vi.fn(async (request: Request) => {
     urls.push(request.url);
-    const pathname = new URL(request.url).pathname;
-    if (pathname.endsWith("/strength")) {
-      return jsonResponse(options?.strength ?? dormantStrength);
-    }
-    if (pathname.endsWith("/context")) {
-      return jsonResponse({
-        anchor: { type: "organization", id: "o-1" },
-        sections: [],
-      });
-    }
-    if (pathname.endsWith("/360")) {
-      return jsonResponse(options?.org360 ?? org360);
-    }
-    if (pathname.endsWith("/hierarchy-rollup")) {
-      return rollupResponse(options?.rollup);
-    }
-    if (pathname.endsWith("/brief")) {
-      return jsonResponse(options?.brief ?? emptyBrief);
-    }
-    return responder(request.url, request.method, request);
+    return (
+      backstopAnswer(new URL(request.url).pathname, options) ??
+      responder(request.url, request.method, request)
+    );
   });
   vi.stubGlobal("fetch", fetchMock);
   return { fetchMock, urls };

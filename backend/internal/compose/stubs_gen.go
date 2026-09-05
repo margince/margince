@@ -1511,6 +1511,14 @@ func (stubs) ConfirmOrganizationProfileField(w nethttp.ResponseWriter, r *nethtt
 	httperr.NotImplemented(w, r, "ConfirmOrganizationProfileField")
 }
 
+func (stubs) GetOrganizationScan(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetOrganizationScan")
+}
+
+func (stubs) EnsureOrganizationScan(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "EnsureOrganizationScan")
+}
+
 func (stubs) GetLatestSiteRead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetLatestSiteRead")
 }

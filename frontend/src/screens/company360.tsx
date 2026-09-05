@@ -1727,6 +1727,7 @@ export function useSuggestionsBody({
   view,
   onOpenRecord,
   onPerform,
+  advice,
   keep,
 }: Readonly<{
   orgId: string;
@@ -1736,6 +1737,11 @@ export function useSuggestionsBody({
   // the deal page both live above it. Writing the prepared step is this
   // section's own verb and needs no caller — see `performable`.
   onPerform?: (action: SuggestionAction) => void;
+  // The merged advice — the rules' rows and the scan's findings as one list
+  // — when the page holds a scan. It replaces the 360's own rows rather than
+  // joining them: the server merged, deduplicated and capped once, and a
+  // second list here would be a second answer to "what needs a person".
+  advice?: { findings: Suggestion[]; dropped: number };
   // Which advice this caller draws. Absent, all of it — the advice card. The
   // Tasks tab passes a predicate because it shows the steps and not the moves,
   // and a tab called Tasks listing a stalled deal would be the advice card
@@ -1774,7 +1780,12 @@ export function useSuggestionsBody({
     // row goes when the re-read says it does. Hiding it locally on click would
     // hide it even when the dismissal never reached the server.
     onSuccess: () =>
-      client.invalidateQueries({ queryKey: ["organization360", orgId] }),
+      Promise.all([
+        client.invalidateQueries({ queryKey: ["organization360", orgId] }),
+        // The scan serves the merged list, so it re-reads too — else a
+        // dismissed model finding would stand until the next open.
+        client.invalidateQueries({ queryKey: ["account-scan", orgId] }),
+      ]),
   });
   const write = useMutation({
     // The body is the SERVER's, passed as a variable: the click posts the step
@@ -1806,13 +1817,13 @@ export function useSuggestionsBody({
     }
   };
 
-  const all: Suggestion[] = view?.suggestions ?? [];
+  const all: Suggestion[] = advice?.findings ?? view?.suggestions ?? [];
   const nameOf = recordNamesIn(view);
-  const dropped = view?.suggestions_dropped;
+  const dropped = advice ? advice.dropped : view?.suggestions_dropped;
   const state = sectionState(
     view,
     "suggestions",
-    Boolean(view?.suggestions),
+    Boolean(advice ?? view?.suggestions),
     all.length,
   );
   // The state is read off the WHOLE section, because that is what the grant and

@@ -1449,8 +1449,13 @@ export const vi = {
   "co.suggest.kind.stalled_deal": "Deal đình trệ",
   "co.suggest.kind.no_next_step": "Chưa có gì lên lịch",
   "co.suggest.kind.lifecycle_conflict": "Bản ghi mâu thuẫn",
+  "co.suggest.kind.commitment_unmet": "Lời hứa còn mở",
+  "co.suggest.kind.question_unanswered": "Câu hỏi chưa trả lời",
+  "co.suggest.kind.risk_raised": "Rủi ro được nêu",
+  "co.suggest.kind.need_raised": "Nhu cầu được nêu",
   "co.suggest.more": "Còn {count} mục không hiện ở đây.",
   "co.suggest.basedOn": "Dựa trên những gì",
+  "co.cite.open": "Mở bản ghi",
   "co.suggest.dismiss": "Để sau",
   "co.suggest.byline": "Margince đề xuất",
   "co.suggest.dismissFailed":
@@ -3605,6 +3610,26 @@ export const vi = {
   "agent.activity.documentExtractNamed.degraded":
     "Tôi mới đọc được một phần {name} rồi dừng.",
   "agent.activity.documentExtractNamed.failed": "Tôi không đọc được {name}.",
+  "agent.activity.accountScan.queued": "Việc đọc một tài khoản đang chờ xử lý.",
+  "agent.activity.accountScan.running":
+    "Tôi đang đọc các trao đổi và giao dịch của một tài khoản.",
+  "agent.activity.accountScan.stalled":
+    "Việc đọc một tài khoản kéo dài bất thường. Có thể nó đã dừng.",
+  "agent.activity.accountScan.done": "Những gì một tài khoản cần đã sẵn sàng.",
+  "agent.activity.accountScan.degraded":
+    "Tôi đã đọc một tài khoản đến mức các bản ghi cho phép rồi dừng.",
+  "agent.activity.accountScan.failed":
+    "Tôi không hoàn thành được việc đọc một tài khoản.",
+  "agent.activity.accountScanNamed.queued": "Việc đọc {name} đang chờ xử lý.",
+  "agent.activity.accountScanNamed.running":
+    "Tôi đang đọc các trao đổi và giao dịch của {name}.",
+  "agent.activity.accountScanNamed.stalled":
+    "Việc đọc {name} kéo dài bất thường. Có thể nó đã dừng.",
+  "agent.activity.accountScanNamed.done": "Những gì {name} cần đã sẵn sàng.",
+  "agent.activity.accountScanNamed.degraded":
+    "Tôi đã đọc {name} đến mức các bản ghi cho phép rồi dừng.",
+  "agent.activity.accountScanNamed.failed":
+    "Tôi không hoàn thành được việc đọc {name}.",
   "agent.activity.siteRead.queued": "Trang web của công ty đang chờ được đọc.",
   "agent.activity.siteRead.running": "Tôi đang đọc trang web của công ty.",
   "agent.activity.siteRead.stalled":
@@ -7649,6 +7674,17 @@ export const vi = {
   // Nhà cung cấp dữ liệu liên hệ (ADR-0101). Hai màn hình dùng chung bộ từ
   // vựng này — thẻ Cài đặt và trang cá nhân — để một trạng thái luôn đọc
   // giống nhau ở mọi nơi.
+  "today.scan.queued": "Margince sẽ đọc tài khoản này trong giây lát.",
+  "today.scan.reading":
+    "Margince đang đọc các trao đổi và giao dịch của tài khoản này.",
+  "today.scan.read": "Đã đọc {exchanges} và {deals}",
+  "today.scan.readExchanges_one": "{count} trao đổi",
+  "today.scan.readExchanges_other": "{count} trao đổi",
+  "today.scan.readDeals_one": "{count} giao dịch",
+  "today.scan.readDeals_other": "{count} giao dịch",
+  "today.scan.stale":
+    "Tài khoản đã thay đổi kể từ đó. Nó sẽ được đọc lại trong vòng một giờ.",
+  "today.scan.resumes": "Việc đọc sẽ tiếp tục {when}; ngân sách AI đã hoãn nó.",
   "provider.readOnly":
     "Chế độ chỉ đọc — kết nối nhà cung cấp tiêu tốn tiền, nên đây là hành động của quản trị viên hoặc ops.",
   "provider.title": "Dữ liệu liên hệ",

@@ -91,7 +91,7 @@ func recommendedNextStep(orgID ids.OrganizationID, in suggestionInputs) nextStep
 	if len(open.Open) == 1 && open.OpenCount == 1 {
 		deal := open.Open[0]
 		return nextStep{
-			body:   taskBody("Agree the next step on "+strconv.Quote(deal.Name), "deal", deal.ID),
+			body:   TaskBody("Agree the next step on "+strconv.Quote(deal.Name), "deal", deal.ID),
 			dealID: &deal.ID,
 		}
 	}
@@ -99,16 +99,18 @@ func recommendedNextStep(orgID ids.OrganizationID, in suggestionInputs) nextStep
 	if in.orgName != "" {
 		subject = "Agree the next step with " + in.orgName
 	}
-	return nextStep{body: taskBody(subject, "organization", orgID.UUID)}
+	return nextStep{body: TaskBody(subject, "organization", orgID.UUID)}
 }
 
-// taskBody is the step as POST /tasks takes it. `source` is the UI because that
+// TaskBody is a step as POST /tasks takes it. `source` is the UI because that
 // is where the click happens: a rep pressing the button on this card is the
 // author of the task, and recording anything else would put an actor in the
-// audit trail who did not decide it.
+// audit trail who did not decide it. Exported because the account scan's
+// findings ask for a step the same way, and the page writes both from the
+// body they carry.
 //
 //nolint:staticcheck // ST1003: the field names mirror the oapi-codegen type this must assign to
-func taskBody(
+func TaskBody(
 	subject string, entityType crmcontracts.CreateTaskRequestLinksEntityType, entityID ids.UUID,
 ) crmcontracts.CreateTaskRequest {
 	links := []struct {
@@ -179,6 +181,8 @@ func openDealEvidence(
 		out = append(out, crmcontracts.OrganizationBriefEvidence{
 			EntityType: crmcontracts.OrganizationBriefEvidenceEntityTypeDeal,
 			EntityId:   openapi_types.UUID(deal.ID),
+			Name:       ptrString(deal.Name),
+			Origin:     ptrString(originOpenDeal),
 		})
 	}
 	return out
