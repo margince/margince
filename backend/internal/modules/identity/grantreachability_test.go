@@ -75,7 +75,13 @@ var grantedToNobody = gatekit.Waive(map[string]string{
 // not a regression and should not fail. It moves DOWN freely and up only with
 // a reason: each of these is a door no static check covers, so growing the
 // number is growing the blind spot this gate exists to bound.
-const dynamicObjectCeiling = 106
+//
+// 107 since the record-less replay path: ensureReplayVisible re-checks the
+// object a TOOL declares in its ReplayGrant, so the object is the tool's own
+// and cannot be a literal here. The declarations it reads are held instead —
+// agents/recordlessreplay_test.go pins each vocabulary tool to the grant its
+// handler checks, which is the same claim this scan makes for a literal.
+const dynamicObjectCeiling = 107
 
 // dynamicActionCeiling is the same bound for the OTHER unresolved argument: a
 // call site naming a known object and an action computed at runtime, as
