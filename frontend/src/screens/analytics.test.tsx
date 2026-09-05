@@ -67,6 +67,9 @@ type ReportsStubOpts = {
   winLossRows?: Record<string, unknown>[];
   stageAgeRows?: Record<string, unknown>[];
   meetingRows?: Record<string, unknown>[];
+  phaseRows?: Record<string, unknown>[];
+  commitmentRows?: Record<string, unknown>[];
+  quietRows?: Record<string, unknown>[];
   // The coverage read: a payload, a status (403 for a seat without the ops
   // grant, 404 for a fresh installation), or omitted for the default 403.
   coverage?: { status: number; body?: unknown };
@@ -145,20 +148,26 @@ function reportsStub(opts: ReportsStubOpts = {}) {
           ? (opts.forecastRows ?? [])
           : key === "activities-by-kind"
             ? (opts.meetingRows ?? [])
-            : key === "win-loss"
-              ? (opts.winLossRows ?? [])
-              : key === "stage-age"
-                ? (opts.stageAgeRows ?? [])
-                : key === "open-deals-per-company"
-                  ? (opts.companyRows ?? [])
-                  : (opts.stageRows ?? [
-                      {
-                        stage_id: "pl-s1",
-                        raw_minor: 100000,
-                        deal_count: 2,
-                        currency: "EUR",
-                      },
-                    ]);
+            : key === "projects-by-phase"
+              ? (opts.phaseRows ?? [])
+              : key === "project-commitments"
+                ? (opts.commitmentRows ?? [])
+                : key === "projects-gone-quiet"
+                  ? (opts.quietRows ?? [])
+                  : key === "win-loss"
+                    ? (opts.winLossRows ?? [])
+                    : key === "stage-age"
+                      ? (opts.stageAgeRows ?? [])
+                      : key === "open-deals-per-company"
+                        ? (opts.companyRows ?? [])
+                        : (opts.stageRows ?? [
+                            {
+                              stage_id: "pl-s1",
+                              raw_minor: 100000,
+                              deal_count: 2,
+                              currency: "EUR",
+                            },
+                          ]);
       return jsonResponse({
         report: key,
         plan: {},
@@ -196,6 +205,87 @@ async function openPerformance() {
     .setup()
     .click(await screen.findByRole("button", { name: "Performance" }));
 }
+
+describe("the delivery section", () => {
+  it("draws the three project reports with converted money and real links", async () => {
+    const bodies: { key: string; body: Record<string, unknown> }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        onRun: (key, body) => bodies.push({ key, body }),
+        phaseRows: [
+          {
+            phase: "delivering",
+            projects: 3,
+            open_deal_value_minor: 400000,
+            won_deal_value_minor: 900000,
+          },
+        ],
+        commitmentRows: [
+          {
+            project_id: "p1",
+            name: "Rollout Nord",
+            phase: "delivering",
+            open_commitments: 5,
+            overdue_commitments: 2,
+          },
+        ],
+        quietRows: [],
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Delivery" }));
+
+    // Server-converted money, only formatted here.
+    expect(
+      await screen.findByText(formatMoney(400000, "EUR", "en")),
+    ).toBeTruthy();
+    // The project name is the way into the project, not a dead label.
+    const link = await screen.findByRole("link", { name: "Rollout Nord" });
+    expect(link.getAttribute("href")).toBe("#/projects/p1");
+    // Nothing quiet is the good answer, said in words.
+    expect(
+      screen.getByText("No delivering project has gone quiet."),
+    ).toBeTruthy();
+    // An empty plan takes the report's own declared defaults server-side.
+    const phase = bodies.find((sent) => sent.key === "projects-by-phase");
+    expect(phase?.body.group_by).toEqual([]);
+    expect(phase?.body.aggregates).toEqual([]);
+  });
+
+  it("names a quiet project with the instant it fell silent", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        phaseRows: [],
+        commitmentRows: [],
+        quietRows: [
+          {
+            project_id: "p9",
+            name: "Rollout Süd",
+            phase: "delivering",
+            quiet_since: "2026-08-20T09:00:00Z",
+          },
+        ],
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Delivery" }));
+    const link = await screen.findByRole("link", { name: "Rollout Süd" });
+    expect(link.getAttribute("href")).toBe("#/projects/p9");
+    // The instant is formatted in the frame's own zone, not left as ISO.
+    expect(screen.queryByText("2026-08-20T09:00:00Z")).toBeNull();
+    // A young install's other two cards say so in words.
+    expect(
+      (await screen.findAllByText("No projects yet — a won deal opens one."))
+        .length,
+    ).toBe(2);
+  });
+});
 
 describe("the data coverage section", () => {
   it("names each source's state in words, with the instant a read one reached", async () => {

@@ -1,0 +1,60 @@
+name: deal_status_an_overdue_task_is_not_done_work
+task: deal_health
+site: deal_status
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+fixture:
+  deal:
+    name: "Ostsee Handel — Suchqualität"
+    status: open
+    amount: "4500000 EUR (minor units)"
+    expected_close: "2026-10-15"
+  move: "create_task: The follow-up on the offer is three days overdue — do it or agree a new date."
+  timeline:
+    # The offer WAS sent. That is a real event and the card may say so.
+    - label: offer_sent
+      kind: email
+      direction: outbound
+      subject: "Angebot — Suchqualitäts-Audit"
+      at: "2026-09-01"
+      when: past
+      excerpt: "Attached is the audit proposal we discussed. Happy to walk through it whenever suits."
+    - label: scoping_call
+      kind: call
+      direction: outbound
+      subject: "Call — audit scope"
+      at: "2026-08-26"
+      when: past
+      excerpt: "They want the relevance audit before committing to the wider rollout."
+  # The follow-up was NEVER made. It is a task, it is overdue, and it is the
+  # exact shape that produced a card claiming "I followed up on the proposal"
+  # while the task sat open in the worklist — the model read an overdue task's
+  # own date as the date the work happened.
+  open_tasks:
+    - label: chase_the_offer
+      subject: "Angebot Suchqualitäts-Audit nachfassen"
+      due: "2026-09-05"
+      state: overdue
+expect:
+  outcome: accepted
+  # The card rests on the sent offer, which is what actually happened. The
+  # overdue task may be cited as WORK STILL OWED — never as a thing done.
+  answer: [offer_sent]
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the briefing tells the truth about what has and has not
+    happened. The offer WAS sent on 1 September and the card may say so. The
+    follow-up was NOT: it is an open task, three days overdue, and any sentence
+    stating or implying that it was made — "I followed up", "we chased it",
+    "the proposal was followed up on" — fails the scenario outright, whatever
+    else the card gets right. This is the whole point of the case. "blocker"
+    should name the overdue follow-up as work still owed, which is the honest
+    reading and the one a rep can act on. "verdict" should be drifting or
+    blocked; live scores low, because a promise three days past its date is not
+    a deal running to plan. "buyer" must read what Ostsee Handel want from their
+    own words — the relevance audit before a wider rollout — and score low if it
+    invents a motive. "move_reason" must explain the given move rather than
+    proposing another. Any invented person, meeting, discount or figure fails.

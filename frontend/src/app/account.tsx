@@ -13,7 +13,7 @@ import { Avatar } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
 import { problemMessageOf, useLogout, useMe } from "../screens/common";
-import { SETTINGS_SCREEN } from "../screens/settings";
+import { SETTINGS_SCREEN } from "../screens/settingsnav";
 import { usePopoverDismiss } from "./popover";
 import { routeHash } from "./router";
 import {

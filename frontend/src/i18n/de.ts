@@ -3318,6 +3318,20 @@ export const de = {
   "analytics.noClosedDeals": "Es wurden noch keine Deals abgeschlossen.",
   "analytics.sectionOutcomes": "Meine Ergebnisse",
   "analytics.sectionCoverage": "Datenabdeckung",
+  "analytics.sectionDelivery": "Lieferung",
+  "analytics.reportProjectsByPhase": "Projekte nach Phase",
+  "analytics.reportProjectCommitments": "Projektzusagen",
+  "analytics.reportProjectsGoneQuiet": "Verstummte Projekte",
+  "analytics.projects": "Projekte",
+  "analytics.project": "Projekt",
+  "analytics.openDealValue": "Offener Deal-Wert ({currency})",
+  "analytics.wonDealValue": "Gewonnener Deal-Wert ({currency})",
+  "analytics.openCommitments": "Offen",
+  "analytics.overdueCommitments": "Überfällig",
+  "analytics.quietSince": "Still seit",
+  "analytics.nothingQuiet": "Kein Projekt in Lieferung ist verstummt.",
+  "analytics.noProjectsYet":
+    "Noch keine Projekte — ein gewonnener Deal eröffnet eines.",
   "analytics.coverageSub":
     "Welche Quellen die nächtliche Prüfung lesen konnte, und wie weit. Eine stille, aber gelesene Quelle gilt als geprüft; eine ungelesene sagt warum.",
   "analytics.covSource": "Quelle",
@@ -3599,6 +3613,26 @@ export const de = {
     "Ich bin bei {name} nur teilweise durchgekommen und habe gestoppt.",
   "agent.activity.documentExtractNamed.failed":
     "Ich konnte {name} nicht lesen.",
+  "agent.activity.siteRead.queued":
+    "Die Firmenwebsite steht zum Lesen in der Warteschlange.",
+  "agent.activity.siteRead.running": "Ich lese die Firmenwebsite.",
+  "agent.activity.siteRead.stalled":
+    "Das Lesen der Firmenwebsite dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.siteRead.done": "Ich habe die Firmenwebsite gelesen.",
+  "agent.activity.siteRead.degraded":
+    "Ich habe die Firmenwebsite nicht zu Ende gelesen.",
+  "agent.activity.siteRead.failed": "Ich konnte die Firmenwebsite nicht lesen.",
+  "agent.activity.siteReadNamed.queued":
+    "Die Website von {name} steht zum Lesen in der Warteschlange.",
+  "agent.activity.siteReadNamed.running": "Ich lese die Website von {name}.",
+  "agent.activity.siteReadNamed.stalled":
+    "Das Lesen der Website von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.siteReadNamed.done":
+    "Ich habe die Website von {name} gelesen.",
+  "agent.activity.siteReadNamed.degraded":
+    "Ich habe die Website von {name} nicht zu Ende gelesen.",
+  "agent.activity.siteReadNamed.failed":
+    "Ich konnte die Website von {name} nicht lesen.",
   "agent.activity.summarize.queued":
     "Das Zusammentragen zu diesem Unternehmen steht in der Warteschlange.",
   "agent.activity.summarize.running":
@@ -8070,6 +8104,8 @@ export const de = {
   "worklist.bandClear.keep_momentum": "Nichts Vereinbartes bleibt liegen.",
   "worklist.bandClear.review": "Nichts zu prüfen.",
   "worklist.disposition.verb.snooze": "Schlummern",
+  "worklist.disposition.snoozeForDays_one": "{value} Tag schlummern",
+  "worklist.disposition.snoozeForDays_other": "{value} Tage schlummern",
   "worklist.disposition.snoozeFor": "Für wie lange",
   "worklist.disposition.snoozeDays_one": "{value} Tag",
   "worklist.disposition.snoozeDays_other": "{value} Tage",
