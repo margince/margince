@@ -6,6 +6,7 @@ import { readHue } from "../design-system/margince-core-gl";
 import { usePrefersReducedMotion } from "../design-system/motion";
 import type { EdgeHues } from "./agent-edge-gl";
 import { type EdgeLoop, runEdgeLoop } from "./agent-edge-loop";
+import { useEdgeLightShown } from "./agent-edge-preference";
 import { type AgentEdgeRegister, useAgentEdge } from "./agent-edge-signal";
 import "./agent-edge.css";
 
@@ -33,7 +34,11 @@ import "./agent-edge.css";
  * page all afternoon. Which register is the rail's call, published with the
  * reading (agent-edge-signal.ts).
  *
- * At rest it draws nothing at all.
+ * At rest it draws nothing at all, and a reader who wants the frame still can
+ * have it draw nothing ever: the switch in the agent panel turns this surface
+ * off for their browser (`agent-edge-preference.ts`). Nothing is lost by it —
+ * every reading the margin carries is written in words in the rail, which is
+ * what lets this be decoration in the first place.
  *
  * A STAGED DECISION IS NOT DRAWN HERE. It used to close the margin into a
  * complete, still contour, and on any installation with an unanswered queue that
@@ -48,6 +53,7 @@ import "./agent-edge.css";
  */
 export function AgentEdge() {
   const { reading, register } = useAgentEdge();
+  const wanted = useEdgeLightShown();
   // The edge outlives the reading that lit it, by exactly as long as it takes to
   // go out. Unmounting on `reading` alone cut the light dead the instant the work
   // finished, and a light that vanishes reads as something breaking; the shader
@@ -59,6 +65,20 @@ export function AgentEdge() {
       setLingering(true);
     }
   }, [reading]);
+  // Switching the light off is not the work finishing: there is nothing left on
+  // screen to fade, and nothing mounted to report going dark. A linger held
+  // across the switch would mount a canvas over an idle window the moment the
+  // reader turned it back on.
+  useEffect(() => {
+    if (!wanted) {
+      setLingering(false);
+    }
+  }, [wanted]);
+  // Below the hooks, which a render this component draws nothing in still has
+  // to make in the same order.
+  if (!wanted) {
+    return null;
+  }
   return (
     <div className="agentedge" aria-hidden="true">
       {(reading || lingering) && (
