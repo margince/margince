@@ -173,79 +173,81 @@ export function RelationshipMap({
   };
 
   return (
-    <div className="rmap" data-motion={still ? "none" : "in"}>
-      <div className="rmap-scroll">
-        {/* biome-ignore lint/a11y/useSemanticElements: the rule suggests
+    <div className="rmap-frame">
+      <div className="rmap" data-motion={still ? "none" : "in"}>
+        <div className="rmap-scroll">
+          {/* biome-ignore lint/a11y/useSemanticElements: the rule suggests
             <fieldset>, which cannot live inside an SVG. role="group" with a
             label is how an SVG names itself to a reader who cannot see it. */}
-        <svg
-          ref={svgRef}
-          className="rmap-svg"
-          viewBox={`0 0 ${placement.width} ${placement.height}`}
-          width={placement.width}
-          height={placement.height}
-          role="group"
-          aria-label={labels.region}
-          onKeyDown={onKeyDown}
-        >
-          <title>{labels.region}</title>
-          {/* One hidden layer rather than a hidden attribute per line: a <g>
+          <svg
+            ref={svgRef}
+            className="rmap-svg"
+            viewBox={`0 0 ${placement.width} ${placement.height}`}
+            width={placement.width}
+            height={placement.height}
+            role="group"
+            aria-label={labels.region}
+            onKeyDown={onKeyDown}
+          >
+            <title>{labels.region}</title>
+            {/* One hidden layer rather than a hidden attribute per line: a <g>
               is not focusable in any engine, so the intent is unambiguous, and
               the edges' facts reach a reader through the node names and the
               panel instead. */}
-          {/* biome-ignore lint/a11y/noAriaHiddenOnFocusable: a <g> is not a
+            {/* biome-ignore lint/a11y/noAriaHiddenOnFocusable: a <g> is not a
               focusable element; the rule flags any aria-hidden inside an SVG.
               Hiding the edge layer is correct rather than lossy — what a line
               says in thickness and dash reaches a reader through the node
               accessible names and the panel. */}
-          <g aria-hidden="true">
-            {model.edges.map((edge) => (
-              <Edge
-                key={edge.id}
-                edge={edge}
-                placement={placement}
-                lit={litEdges.has(edge.id)}
-                faded={dimming && !litEdges.has(edge.id)}
+            <g aria-hidden="true">
+              {model.edges.map((edge) => (
+                <Edge
+                  key={edge.id}
+                  edge={edge}
+                  placement={placement}
+                  lit={litEdges.has(edge.id)}
+                  faded={dimming && !litEdges.has(edge.id)}
+                />
+              ))}
+            </g>
+            {placement.heads.map((head) => (
+              <text
+                key={head.id}
+                className="rmap-lane t-eyebrow"
+                x={head.x}
+                y={head.y + 12}
+              >
+                {head.label}
+              </text>
+            ))}
+            {placement.placed.map((node) => (
+              <Node
+                key={node.id}
+                placed={node}
+                node={byId.get(node.id)}
+                labels={labels}
+                lane={placement.heads.find((head) => head.id === node.laneId)}
+                focused={focusId === node.id}
+                related={related.has(node.id)}
+                faded={dimming && !related.has(node.id)}
+                tabbable={node.id === focused}
+                onPress={press}
               />
             ))}
-          </g>
-          {placement.heads.map((head) => (
-            <text
-              key={head.id}
-              className="rmap-lane t-eyebrow"
-              x={head.x}
-              y={head.y + 12}
-            >
-              {head.label}
-            </text>
-          ))}
-          {placement.placed.map((node) => (
-            <Node
-              key={node.id}
-              placed={node}
-              node={byId.get(node.id)}
-              labels={labels}
-              lane={placement.heads.find((head) => head.id === node.laneId)}
-              focused={focusId === node.id}
-              related={related.has(node.id)}
-              faded={dimming && !related.has(node.id)}
-              tabbable={node.id === focused}
-              onPress={press}
-            />
-          ))}
-        </svg>
-      </div>
-      <p className="rmap-completeness">{completenessText}</p>
-      <div className="rmap-panel">
-        {panelSlot}
-        <Panel
-          model={model}
-          focusId={focusId}
-          node={focusId ? byId.get(focusId) : undefined}
-          route={route}
-          labels={labels}
-          onAction={onAction}
-        />
+          </svg>
+        </div>
+        <p className="rmap-completeness">{completenessText}</p>
+        <div className="rmap-panel">
+          {panelSlot}
+          <Panel
+            model={model}
+            focusId={focusId}
+            node={focusId ? byId.get(focusId) : undefined}
+            route={route}
+            labels={labels}
+            onAction={onAction}
+          />
+        </div>
       </div>
     </div>
   );
