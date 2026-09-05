@@ -3347,6 +3347,8 @@ export const de = {
   "review.needsReview": "Prüfung nötig",
   "review.checksIncomplete": "Prüfung unvollständig",
   "review.allSourcesRead": "Alle Quellen wurden gelesen.",
+  "review.source.mail": "das Postfach",
+  "review.source.offers": "Angebote",
   "review.sourcesUnread":
     "Nicht gelesen: {sources}. Die Befunde unten decken nur ab, was geprüft werden konnte.",
   "review.notCheckedYet":

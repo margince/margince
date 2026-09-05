@@ -3408,6 +3408,12 @@ export const en = {
   "review.needsReview": "Needs review",
   "review.checksIncomplete": "Checks incomplete",
   "review.allSourcesRead": "Every source was read.",
+  // The sources a run reads, named for the reader rather than by the server's
+  // own vocabulary. The unread line printed the wire keys verbatim, so a German
+  // reader was told "mail, offers" in English — words that name a table, not a
+  // thing they would go and fix.
+  "review.source.mail": "the mailbox",
+  "review.source.offers": "offers",
   "review.sourcesUnread":
     "Not read: {sources}. Findings below cover only what could be checked.",
   "review.notCheckedYet":
