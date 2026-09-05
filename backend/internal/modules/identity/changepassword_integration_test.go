@@ -59,7 +59,7 @@ func TestChangePasswordRotatesTheCredential(t *testing.T) {
 	e := setupRevocationEnv(t, "changepw-ok")
 	ctx := memberCtx(t, e)
 
-	if err := e.svc.ChangePassword(ctx, memberPassword, newMemberPassword); err != nil {
+	if _, err := e.svc.ChangePassword(ctx, memberPassword, newMemberPassword); err != nil {
 		t.Fatalf("change: %v", err)
 	}
 	// The new one works and the old one does not — a rotation that leaves the
@@ -76,7 +76,7 @@ func TestChangePasswordNeedsTheCurrentPasswordNotJustASession(t *testing.T) {
 	e := setupRevocationEnv(t, "changepw-wrong")
 	ctx := memberCtx(t, e)
 
-	err := e.svc.ChangePassword(ctx, "not-the-current-password", newMemberPassword)
+	_, err := e.svc.ChangePassword(ctx, "not-the-current-password", newMemberPassword)
 	if !errors.Is(err, ErrCurrentPasswordWrong) {
 		t.Fatalf("change with a wrong current password = %v, want ErrCurrentPasswordWrong", err)
 	}
@@ -91,7 +91,7 @@ func TestChangePasswordRefusesTheSamePassword(t *testing.T) {
 	e := setupRevocationEnv(t, "changepw-same")
 	ctx := memberCtx(t, e)
 
-	if err := e.svc.ChangePassword(ctx, memberPassword, memberPassword); !errors.Is(err, ErrPasswordUnchanged) {
+	if _, err := e.svc.ChangePassword(ctx, memberPassword, memberPassword); !errors.Is(err, ErrPasswordUnchanged) {
 		t.Fatalf("re-setting the same password = %v, want ErrPasswordUnchanged", err)
 	}
 }
@@ -103,7 +103,7 @@ func TestChangePasswordHoldsTheLengthFloor(t *testing.T) {
 	// Rune-counted, so a handful of multi-byte characters cannot clear a
 	// byte-length floor while being far shorter than it intends.
 	var parseErr *values.ParseError
-	err := e.svc.ChangePassword(ctx, memberPassword, "🔑🔑🔑🔑")
+	_, err := e.svc.ChangePassword(ctx, memberPassword, "🔑🔑🔑🔑")
 	if !errors.As(err, &parseErr) || parseErr.Field != "new_password" || parseErr.Code != "length" {
 		t.Fatalf("a four-rune password gave %v, want a new_password/length refusal — sixteen bytes must not clear a twelve-CHARACTER floor", err)
 	}
@@ -112,7 +112,7 @@ func TestChangePasswordHoldsTheLengthFloor(t *testing.T) {
 	}
 }
 
-func TestChangePasswordEndsEverySessionIncludingItsOwn(t *testing.T) {
+func TestChangePasswordEndsEveryPriorSessionAndIssuesAFreshOne(t *testing.T) {
 	e := setupRevocationEnv(t, "changepw-revoke")
 	wsCtx := e.wsOnlyCtx()
 
@@ -134,7 +134,8 @@ func TestChangePasswordEndsEverySessionIncludingItsOwn(t *testing.T) {
 		}
 	}
 
-	if err := e.svc.ChangePassword(withIdentity(wsCtx, id), memberPassword, newMemberPassword); err != nil {
+	freshToken, err := e.svc.ChangePassword(withIdentity(wsCtx, id), memberPassword, newMemberPassword)
+	if err != nil {
 		t.Fatalf("change: %v", err)
 	}
 	// Both, not just the other one. A carve-out for "this browser" is a
@@ -144,13 +145,23 @@ func TestChangePasswordEndsEverySessionIncludingItsOwn(t *testing.T) {
 			t.Errorf("the %s session survived the password change (err = %v)", name, err)
 		}
 	}
+	// What the caller continues on is a session the change itself minted —
+	// the person who just proved the current password is not sent to type it a
+	// third time — and it names the same account, not a fresh one.
+	continued, err := e.svc.Authenticate(wsCtx, freshToken)
+	if err != nil {
+		t.Fatalf("the session issued by the change does not authenticate: %v", err)
+	}
+	if continued.UserID != id.UserID {
+		t.Errorf("the issued session authenticates as %s, want the caller %s", continued.UserID, id.UserID)
+	}
 }
 
 func TestChangePasswordIsAudited(t *testing.T) {
 	e := setupRevocationEnv(t, "changepw-audit")
 	ctx := memberCtx(t, e)
 
-	if err := e.svc.ChangePassword(ctx, memberPassword, newMemberPassword); err != nil {
+	if _, err := e.svc.ChangePassword(ctx, memberPassword, newMemberPassword); err != nil {
 		t.Fatal(err)
 	}
 	var n int
@@ -171,7 +182,7 @@ func TestChangePasswordRefusesACallerWithNoUserBehindIt(t *testing.T) {
 	e := setupRevocationEnv(t, "changepw-noidentity")
 	// A workspace-bound context with no authenticated identity: an agent seat
 	// or a system principal has no own password to change.
-	err := e.svc.ChangePassword(e.wsOnlyCtx(), memberPassword, newMemberPassword)
+	_, err := e.svc.ChangePassword(e.wsOnlyCtx(), memberPassword, newMemberPassword)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("change with no bound identity = %v, want ErrPermissionDenied", err)
 	}
@@ -186,13 +197,13 @@ func TestAWrongCurrentPasswordCountsTowardTheLockout(t *testing.T) {
 	ctx := memberCtx(t, e)
 
 	for range 5 {
-		if err := e.svc.ChangePassword(ctx, "wrong", newMemberPassword); !errors.Is(err, ErrCurrentPasswordWrong) {
+		if _, err := e.svc.ChangePassword(ctx, "wrong", newMemberPassword); !errors.Is(err, ErrCurrentPasswordWrong) {
 			t.Fatalf("guess = %v, want ErrCurrentPasswordWrong", err)
 		}
 	}
 	// The §27 lock now binds HERE, not only on the login route: the same secret
 	// behind a different door must not stay open.
-	if err := e.svc.ChangePassword(ctx, memberPassword, newMemberPassword); !errors.Is(err, errAccountLocked) {
+	if _, err := e.svc.ChangePassword(ctx, memberPassword, newMemberPassword); !errors.Is(err, errAccountLocked) {
 		t.Fatalf("change while locked = %v, want errAccountLocked — the correct password got through a lockout", err)
 	}
 }
@@ -201,7 +212,7 @@ func TestAFailedChangeLeavesEvidence(t *testing.T) {
 	e := setupRevocationEnv(t, "changepw-evidence")
 	ctx := memberCtx(t, e)
 
-	if err := e.svc.ChangePassword(ctx, "wrong", newMemberPassword); !errors.Is(err, ErrCurrentPasswordWrong) {
+	if _, err := e.svc.ChangePassword(ctx, "wrong", newMemberPassword); !errors.Is(err, ErrCurrentPasswordWrong) {
 		t.Fatal(err)
 	}
 	var n int
@@ -231,7 +242,7 @@ func TestChangePasswordRetiresAnOutstandingResetToken(t *testing.T) {
 		t.Fatalf("issuing the set-password link: %v", err)
 	}
 
-	if err := e.svc.ChangePassword(ctx, memberPassword, newMemberPassword); err != nil {
+	if _, err := e.svc.ChangePassword(ctx, memberPassword, newMemberPassword); err != nil {
 		t.Fatal(err)
 	}
 
@@ -262,7 +273,7 @@ func changeOverHTTP(ctx context.Context, t *testing.T, e *revocationEnv, body st
 	return rec
 }
 
-func TestChangePasswordOverHTTPClearsTheSessionCookie(t *testing.T) {
+func TestChangePasswordOverHTTPHandsBackTheFreshSession(t *testing.T) {
 	e := setupRevocationEnv(t, "changepw-http-ok")
 	ctx := memberCtx(t, e)
 
@@ -271,17 +282,27 @@ func TestChangePasswordOverHTTPClearsTheSessionCookie(t *testing.T) {
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want 204: %s", rec.Code, rec.Body)
 	}
-	// The session it was made with is gone, so leaving the cookie would hand
-	// the browser a token that authenticates nothing — a broken session rather
-	// than a completed rotation.
-	var cleared bool
+	// The session it was made with is gone, so the cookie must carry the one
+	// the change minted: left alone, the browser would hold a token that
+	// authenticates nothing; cleared, the person who just typed the current
+	// password would be asked for it again at a login screen.
+	var issued *http.Cookie
 	for _, c := range rec.Result().Cookies() {
-		if c.Name == SessionCookieName && c.MaxAge < 0 {
-			cleared = true
+		if c.Name == SessionCookieName {
+			issued = c
 		}
 	}
-	if !cleared {
-		t.Error("the session cookie was not cleared after a successful change")
+	if issued == nil {
+		t.Fatal("no session cookie on a successful change")
+	}
+	if issued.Value == "" || issued.MaxAge < 0 {
+		t.Fatalf("the session cookie was cleared (value %q, max-age %d), want the fresh session", issued.Value, issued.MaxAge)
+	}
+	if !issued.Expires.IsZero() && !issued.Expires.After(e.svc.now()) {
+		t.Fatalf("the session cookie expires at %v, in the past", issued.Expires)
+	}
+	if _, err := e.svc.Authenticate(e.wsOnlyCtx(), issued.Value); err != nil {
+		t.Errorf("the cookie the change set does not authenticate: %v", err)
 	}
 }
 
@@ -403,7 +424,7 @@ func TestChangingThePasswordClearsTheForcedFlag(t *testing.T) {
 	if !mustChangeFor(t, e.svc, e.admin.UserID) {
 		t.Fatal("a configured bootstrap left its admin unflagged, so this proves nothing")
 	}
-	if err := e.svc.ChangePassword(adminCtx(t, e), bootstrapPassword, newAdminPassword); err != nil {
+	if _, err := e.svc.ChangePassword(adminCtx(t, e), bootstrapPassword, newAdminPassword); err != nil {
 		t.Fatalf("change: %v", err)
 	}
 	// Otherwise the requirement can never be satisfied and the account is

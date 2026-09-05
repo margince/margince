@@ -83,7 +83,7 @@ it("OAuthReturnPanel shows the live OAuth mailbox after consent", async () => {
         ],
       }),
   });
-  render(<OAuthReturnPanel outcome="ok" onComplete={vi.fn()} />);
+  render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
   expect(await screen.findByText("Live and capturing")).toBeTruthy();
 });
 
@@ -111,9 +111,7 @@ it("OAuthReturnPanel offers the import for the mailbox the consent returned for"
       return jsonResponse({ state: "idle" });
     },
   });
-  render(
-    <OAuthReturnPanel outcome="ok" provider="graph" onComplete={vi.fn()} />,
-  );
+  render(<OAuthReturnPanel outcome="ok" provider="graph" onDone={vi.fn()} />);
   await screen.findByText("Live and capturing");
   await waitFor(() => expect(statusReads).toEqual(["graph"]));
 });
@@ -130,9 +128,7 @@ it("OAuthReturnPanel reports a confirm-failure when the returning provider is no
         ],
       }),
   });
-  render(
-    <OAuthReturnPanel outcome="ok" provider="graph" onComplete={vi.fn()} />,
-  );
+  render(<OAuthReturnPanel outcome="ok" provider="graph" onDone={vi.fn()} />);
   expect(
     await screen.findByText("We couldn't confirm the connection."),
   ).toBeTruthy();
@@ -156,9 +152,7 @@ it("OAuthReturnPanel refuses to offer an import for an unrecognized provider seg
       return jsonResponse({ state: "idle" });
     },
   });
-  render(
-    <OAuthReturnPanel outcome="ok" provider="bogus" onComplete={vi.fn()} />,
-  );
+  render(<OAuthReturnPanel outcome="ok" provider="bogus" onDone={vi.fn()} />);
   expect(
     await screen.findByText("We couldn't confirm the connection."),
   ).toBeTruthy();
@@ -170,7 +164,7 @@ it("OAuthReturnPanel refuses to offer an import for an unrecognized provider seg
 
 it("OAuthReturnPanel reports a confirm-failure when no connection came back", async () => {
   installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
-  render(<OAuthReturnPanel outcome="ok" onComplete={vi.fn()} />);
+  render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
   expect(
     await screen.findByText("We couldn't confirm the connection."),
   ).toBeTruthy();
@@ -182,7 +176,7 @@ it("OAuthReturnPanel reports a confirm-failure when no connection came back", as
 // "try connecting again" — which is the one thing that cannot work here.
 it("OAuthReturnPanel names the remedy when the provider's API is not enabled", async () => {
   installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
-  render(<OAuthReturnPanel outcome="misconfigured" onComplete={vi.fn()} />);
+  render(<OAuthReturnPanel outcome="misconfigured" onDone={vi.fn()} />);
   expect(
     await screen.findByText(/administrator needs to enable it/i),
   ).toBeTruthy();
@@ -191,7 +185,7 @@ it("OAuthReturnPanel names the remedy when the provider's API is not enabled", a
 
 it("OAuthReturnPanel tells the reader what to accept when the provider declined", async () => {
   installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
-  render(<OAuthReturnPanel outcome="rejected" onComplete={vi.fn()} />);
+  render(<OAuthReturnPanel outcome="rejected" onDone={vi.fn()} />);
   expect(await screen.findByText(/accept every permission/i)).toBeTruthy();
   // Retrying IS the right advice once the permissions are accepted, so this copy
   // may say so — what it must not do is fall back to the generic panel text that
@@ -203,7 +197,7 @@ it("OAuthReturnPanel tells the reader what to accept when the provider declined"
 // failure rather than rendering nothing.
 it("OAuthReturnPanel keeps the generic failure for an unrecognized outcome", async () => {
   installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
-  render(<OAuthReturnPanel outcome="something-new" onComplete={vi.fn()} />);
+  render(<OAuthReturnPanel outcome="something-new" onDone={vi.fn()} />);
   expect(
     await screen.findByText(/couldn't confirm the connection/i),
   ).toBeTruthy();
@@ -229,9 +223,7 @@ describe("the posture step on a fresh connection", () => {
       "GET /capture/settings": () =>
         jsonResponse({ shared_posture_allowed: false }),
     });
-    render(
-      <OAuthReturnPanel outcome="ok" provider="gmail" onComplete={vi.fn()} />,
-    );
+    render(<OAuthReturnPanel outcome="ok" provider="gmail" onDone={vi.fn()} />);
 
     expect(
       await screen.findByText(en["connectors.mailPosture.label"]),
@@ -265,9 +257,7 @@ describe("the posture step on a fresh connection", () => {
         return jsonResponse({});
       },
     });
-    render(
-      <OAuthReturnPanel outcome="ok" provider="gmail" onComplete={vi.fn()} />,
-    );
+    render(<OAuthReturnPanel outcome="ok" provider="gmail" onDone={vi.fn()} />);
 
     await screen.findByText(en["connectors.mailPosture.label"]);
     // Driven the way the design-system suite drives this control: the popup is
@@ -294,9 +284,7 @@ describe("the posture step on a fresh connection", () => {
       "GET /capture/settings": () =>
         jsonResponse({ shared_posture_allowed: true }),
     });
-    render(
-      <OAuthReturnPanel outcome="ok" provider="gmail" onComplete={vi.fn()} />,
-    );
+    render(<OAuthReturnPanel outcome="ok" provider="gmail" onDone={vi.fn()} />);
 
     expect(
       await screen.findByText(
@@ -337,9 +325,7 @@ describe("the posture step and the mail already captured", () => {
         return jsonResponse({});
       },
     });
-    render(
-      <OAuthReturnPanel outcome="ok" provider="gmail" onComplete={vi.fn()} />,
-    );
+    render(<OAuthReturnPanel outcome="ok" provider="gmail" onDone={vi.fn()} />);
 
     await screen.findByText(en["connectors.mailPosture.label"]);
     const user = userEvent.setup();
@@ -367,7 +353,7 @@ describe("the posture step and the mail already captured", () => {
       "GET /capture/settings": () =>
         jsonResponse({ shared_posture_allowed: false }),
     });
-    render(<OAuthReturnPanel outcome="ok" onComplete={vi.fn()} />);
+    render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
 
     // The panel itself still resolves — this is about the posture control only.
     expect(await screen.findByText("Live and capturing")).toBeTruthy();

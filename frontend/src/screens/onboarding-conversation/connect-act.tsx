@@ -1,5 +1,6 @@
 import type { Dispatch } from "react";
 import { useEffect, useState } from "react";
+import { navigateReplacing } from "../../app/router";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import { problemMessageOf } from "../common";
@@ -33,6 +34,9 @@ import { ConversationWorkbench } from "./workbench";
 // The connect act: per-purpose consent as a conversation turn, provider
 // cards that open their OWN dialog on the artifact surface (never an inline
 // panel growing under the card, never a chip in the rail), and the way on.
+// The way on is the surface's alone: a dialog that has connected a mailbox
+// closes back onto the cards, so the reader is never carried out of the step
+// by the first thing they connected, with LinkedIn still waiting beside it.
 // Leaving is a server fact before it is a UI fact: how the step was left
 // (a mailbox connected, or none) must land before the act moves on; a
 // failed write is said out loud and retryable.
@@ -114,6 +118,9 @@ export function ConnectAct({
   // Escape, or backdrop would leave a mailbox connected against a "no" the
   // panel already promised, so `closeDialog` below refuses to act while true.
   const [dialogBusy, setDialogBusy] = useState(false);
+  // The consent return's result has been closed: it renders nowhere after
+  // that, dialog or inline, whatever the address still says.
+  const [resultSettled, setResultSettled] = useState(false);
   const linkedin = useSaveLinkedInAccount();
 
   // Spends the mark once this mount has read it, so reloading the same
@@ -136,18 +143,33 @@ export function ConnectAct({
     setProvider(null);
     setResultFor(null);
   };
+  // A dialog whose mailbox question is answered — a consent returned, an IMAP
+  // host connected — closes onto the surface, whose roster now shows the card
+  // as connected. The outcome in the address goes with it: left there, the
+  // settled result would render again inline the moment the dialog closed,
+  // and a reload would reopen a trip this tab already finished.
+  const settleDialog = () => {
+    setProvider(null);
+    setResultFor(null);
+    setResultSettled(true);
+    if (outcome !== undefined) {
+      navigateReplacing({ screen: "onboarding", id: "company" });
+    }
+  };
 
-  // The act advances LinkedIn only once the answer is STORED. Dispatching
-  // first and saving in the background would let a member finish onboarding
-  // believing they had connected, with nothing recorded and nothing to
-  // correct. Unlike mail, resolving LinkedIn never touches `finish` — it is
-  // a card on the same screen, not a gate on it.
-  const connectLinkedin = (profileUrl: string) => {
+  // The act records LinkedIn only once the answer is STORED. Dispatching first
+  // and saving in the background would let a member finish onboarding
+  // believing their profile was on file, with nothing recorded and nothing to
+  // correct. Saving a profile is not authorizing anything: `connected` stays
+  // false, and the store keeps whatever authorization already exists. Unlike
+  // mail, resolving LinkedIn never touches `finish` — it is a card on the same
+  // screen, not a gate on it.
+  const saveLinkedin = (profileUrl: string) => {
     linkedin.mutate(
-      { profileUrl, connected: true },
+      { profileUrl, connected: false },
       {
         onSuccess: () =>
-          dispatch({ type: "LINKEDIN_CONNECTED", profile: profileUrl }),
+          dispatch({ type: "LINKEDIN_SAVED", profile: profileUrl }),
       },
     );
   };
@@ -258,7 +280,7 @@ export function ConnectAct({
           onWantsOvernightChange={chooseOvernight}
           overnightFailed={overnightFailed}
           linkedinStatus={state.linkedinStatus}
-          onLinkedinConnect={connectLinkedin}
+          onLinkedinSave={saveLinkedin}
           onLinkedinSkip={() => dispatch({ type: "LINKEDIN_SKIPPED" })}
           linkedinPending={linkedin.isPending}
           linkedinError={
@@ -287,7 +309,7 @@ export function ConnectAct({
               )}
               {provider === "imap" && (
                 <ImapConnectPanel
-                  onComplete={finish}
+                  onDone={settleDialog}
                   onDismiss={closeDialog}
                   onPendingChange={setDialogBusy}
                 />
@@ -301,7 +323,7 @@ export function ConnectAct({
           // the surface otherwise (a stale or bookmarked return link, which
           // is real information but not a return this tab can vouch for).
           returnPanel={
-            outcome !== undefined ? (
+            outcome !== undefined && !resultSettled ? (
               // How far back the first import reaches is `OnboardingBackread`'s
               // own question, rendered inside this panel once a mailbox is
               // confirmed live — the one history-read decision on this
@@ -309,7 +331,7 @@ export function ConnectAct({
               <OAuthReturnPanel
                 outcome={outcome}
                 provider={returningProvider}
-                onComplete={finish}
+                onDone={settleDialog}
               />
             ) : null
           }

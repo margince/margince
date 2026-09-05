@@ -11,9 +11,9 @@ import {
 } from "../../design-system/onboarding-stage";
 import { useLocale, useT } from "../../i18n";
 import { throwProblem } from "../common";
+import { loadWizardState } from "../onboarding";
 import { configuredModelLabel } from "../onboarding-read";
 import type { ConversationState } from "./conversation-types";
-import { loadWizardState } from "./index";
 import { isDetour, railStops, stopState } from "./rail";
 
 // The one room every conversation act is played in: the band, the Core, the
