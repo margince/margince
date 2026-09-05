@@ -380,50 +380,40 @@ func TestThePublishedAggregateFunctionsAreTheOnesTheEngineSwitchesOn(t *testing.
 	}
 }
 
+// Every function the engine switches on renders a derivation phrase.
+//
+// aggregatePhrase is the second hand-written spelling of this closed set the
+// tree grew: it too listed five of seven, so the product minted derivation
+// links for stage-age and win-loss whose default percentile aggregates its own
+// resolver then refused with a 422.
+func TestEveryEngineAggregateRendersAPhrase(t *testing.T) {
+	t.Parallel()
+	engine := aggregateFunctionsInSource(t)
+	if len(engine) == 0 {
+		t.Fatal("read no aggregate functions out of aggregateSelect — the scan is " +
+			"looking in the wrong place, and would prove nothing over an empty set")
+	}
+	for _, fn := range engine {
+		if _, err := aggregatePhrase(reportAggregate{Fn: fn, Field: "days_in_stage"}); err != nil {
+			t.Errorf("the engine answers fn=%q and aggregatePhrase refuses it: %v. "+
+				"Every report row's derivation link renders through that phrase, so "+
+				"a report defaulting to this function mints links it cannot follow.", fn, err)
+		}
+	}
+}
+
 // aggregateFunctionsInSource reads the case values of aggregateSelect's switch
-// — the closed set the engine actually implements.
+// — the closed set the engine actually implements. One parse serves both the
+// aggFn* constant table and the switch walk. A case spelled as a bare string
+// literal FAILS the census rather than shrinking it: a scan that silently read
+// a smaller switch would report agreement between two smaller sets.
 func aggregateFunctionsInSource(t *testing.T) []string {
 	t.Helper()
 	file, err := parser.ParseFile(token.NewFileSet(), "report.go", nil, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing report.go: %v", err)
 	}
-	constants := aggregateFunctionConstants(t)
-	var out []string
-	ast.Inspect(file, func(n ast.Node) bool {
-		fn, ok := n.(*ast.FuncDecl)
-		if !ok || fn.Name.Name != "aggregateSelect" {
-			return true
-		}
-		ast.Inspect(fn.Body, func(inner ast.Node) bool {
-			clause, ok := inner.(*ast.CaseClause)
-			if !ok {
-				return true
-			}
-			for _, expr := range clause.List {
-				if name, ok := expr.(*ast.Ident); ok {
-					if value, isAggregate := constants[name.Name]; isAggregate {
-						out = append(out, value)
-					}
-				}
-			}
-			return true
-		})
-		return false
-	})
-	slices.Sort(out)
-	return out
-}
-
-// aggregateFunctionConstants maps each aggFn* identifier to the wire word it
-// holds, so the switch's case names resolve to what a caller writes.
-func aggregateFunctionConstants(t *testing.T) map[string]string {
-	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), "report.go", nil, parser.SkipObjectResolution)
-	if err != nil {
-		t.Fatalf("parsing report.go: %v", err)
-	}
-	out := map[string]string{}
+	constants := map[string]string{}
 	ast.Inspect(file, func(n ast.Node) bool {
 		spec, ok := n.(*ast.ValueSpec)
 		if !ok || len(spec.Names) != 1 || len(spec.Values) != 1 {
@@ -437,9 +427,38 @@ func aggregateFunctionConstants(t *testing.T) map[string]string {
 			if err != nil {
 				t.Fatalf("unquoting %s: %v", spec.Names[0].Name, err)
 			}
-			out[spec.Names[0].Name] = value
+			constants[spec.Names[0].Name] = value
 		}
 		return true
 	})
+	var out []string
+	ast.Inspect(file, func(n ast.Node) bool {
+		fn, ok := n.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != "aggregateSelect" {
+			return true
+		}
+		ast.Inspect(fn.Body, func(inner ast.Node) bool {
+			clause, ok := inner.(*ast.CaseClause)
+			if !ok {
+				return true
+			}
+			for _, expr := range clause.List {
+				switch e := expr.(type) {
+				case *ast.Ident:
+					if value, isAggregate := constants[e.Name]; isAggregate {
+						out = append(out, value)
+					}
+				case *ast.BasicLit:
+					if e.Kind == token.STRING {
+						t.Errorf("aggregateSelect cases %s as a bare literal; use an "+
+							"aggFn* constant so the published vocabulary derives from it", e.Value)
+					}
+				}
+			}
+			return true
+		})
+		return false
+	})
+	slices.Sort(out)
 	return out
 }
