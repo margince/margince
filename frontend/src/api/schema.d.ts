@@ -30373,6 +30373,53 @@ export interface components {
              */
             primary_action?: "decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge";
             verdict?: components["schemas"]["WorklistDealVerdict"];
+            /**
+             * Format: uuid
+             * @description The overnight brief entry this row also stands for, where the night
+             *     surfaced the same deal the day's own lanes did.
+             *
+             *     One deal is ONE row. The brief ranks deals and the at-risk lane raises
+             *     them, so a deal the night picked and the day also found arrived twice —
+             *     the same name, the same figures, two places to answer it. The rows are
+             *     folded into one, and this carries the brief entry's id so the verbs that
+             *     belong to the brief (`/brief/items/{id}/act`, and its set-aside and
+             *     dismiss) still reach it. Absent on a row the night did not raise.
+             */
+            brief_item_id?: string;
+            /**
+             * @description Which part of the morning this row belongs to, as a LABEL and never as an
+             *     order.
+             *
+             *     The server has already ranked the page, and this says nothing about where a
+             *     row sits. A client may draw the label, and may group runs of consecutive
+             *     rows that share it — but partitioning the page by this field and
+             *     concatenating the parts would be a second ranking, and the two would
+             *     disagree the first time a `respond_now` row ranked below a `move_revenue`
+             *     one, which is ordinary and correct.
+             *
+             *     Derived on the server from the row's own category, source and band, so
+             *     every surface reads one answer. Exhaustive over the categories:
+             *     `backend/internal/compose/attention/briefsections.go` names every one, and
+             *     a gate derives that census from the generated contract.
+             * @enum {string}
+             */
+            brief_section?: "respond_now" | "prepare_conversations" | "move_revenue" | "build_pipeline" | "review_and_repair";
+            /**
+             * @description Whether the thing this row reports happened AFTER the overnight run's data
+             *     cutoff — the run's `as_of`, not its `generated_at`, which is only when the
+             *     row was written.
+             *
+             *     The distinction is the whole of this field's value: a run generated at 06:42
+             *     over data read at 06:00 has a 42-minute window in which a buyer can reply,
+             *     and comparing against the wrong instant either hides that reply or reports
+             *     every row as new. Stamped from the material timestamp each producer already
+             *     owns rather than from one generic `occurred_at`, so the browser never guesses
+             *     freshness.
+             *
+             *     Absent when there is no run today to compare against, which is different from
+             *     false: false says the night saw this, absent says there was no night.
+             */
+            changed_since_brief?: boolean;
         };
         /**
          * @description How the deal behind a row is STANDING, beside the move that acts on it.
@@ -30471,7 +30518,7 @@ export interface components {
              *     when the two rows share a level.
              * @enum {string}
              */
-            comparator: "pin" | "crowded" | "level" | "deadline" | "expected_revenue" | "waiting_days" | "relationship" | "order";
+            comparator: "pin" | "crowded" | "level" | "deadline" | "expected_revenue" | "opportunity" | "waiting_days" | "relationship" | "order";
             mine?: components["schemas"]["WorklistValue"];
             theirs?: components["schemas"]["WorklistValue"];
         };
@@ -30482,7 +30529,7 @@ export interface components {
          */
         WorklistValue: {
             /** @enum {string} */
-            kind: "date" | "money" | "days" | "level" | "none";
+            kind: "date" | "money" | "days" | "level" | "score" | "none";
             /** Format: date-time */
             date?: string;
             /**
@@ -30493,6 +30540,16 @@ export interface components {
             currency?: string;
             days?: number;
             level?: number;
+            /**
+             * @description A ranking judgement between 0 and 1 — today, the overnight brief's composite
+             *     for a deal.
+             *
+             *     Drawn as a BAND rather than as a number. The value orders the queue, and a
+             *     client printing "0.72 against 0.68" would be offering a precision the score
+             *     does not carry and a reader cannot check; the same two rows read honestly as
+             *     "the night rated this one higher".
+             */
+            score?: number;
         };
         /**
          * @description The next step this row suggests, and what it would act on.

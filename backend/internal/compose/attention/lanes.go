@@ -247,7 +247,16 @@ type Briefing interface {
 	// with no entries means every item is answered. The two render as the
 	// same empty lane, and only the second has earned a tick — so the seam
 	// states which rather than leaving the feed to infer it from emptiness.
-	Queue(ctx context.Context) (entries []BriefEntry, ran bool, err error)
+	// Queue answers the unanswered entries, whether a run exists at all, and the
+	// run's DATA CUTOFF — its as_of, which is the instant the night read the
+	// records, not the later instant at which it finished writing them down.
+	//
+	// The cutoff is what "changed since the brief" means. A run generated at
+	// 06:42 over data read at 06:00 has a 42-minute window in which a buyer can
+	// reply, and judging freshness by generated_at would hide exactly the replies
+	// a rep most wants to see. Zero when no run exists, which is why `ran` is a
+	// separate answer: absent is not the same as false.
+	Queue(ctx context.Context) (entries []BriefEntry, ran bool, asOf time.Time, err error)
 }
 
 // BriefEntry is one UNANSWERED queue entry: what it is about, and where it
@@ -265,6 +274,9 @@ type BriefEntry struct {
 	ID     ids.UUID
 	DealID ids.UUID
 	Rank   int
+	// Composite is the night's own score for this deal, between 0 and 1, and
+	// what ranksteps.go's `opportunity` step breaks a tie by.
+	Composite float64
 	// Finding is what the overnight pass wrote about this deal, empty when no
 	// pass annotated the run. Grounded and citation-checked when it was written
 	// (briefs.AnnotateCurrentRun refuses one that cites outside the run), which

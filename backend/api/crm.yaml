@@ -40149,6 +40149,59 @@ components:
             rather than a gap: a dedupe pair genuinely asks the reader to choose.
         verdict:
           $ref: '#/components/schemas/WorklistDealVerdict'
+        brief_item_id:
+          type: string
+          format: uuid
+          description: |
+            The overnight brief entry this row also stands for, where the night
+            surfaced the same deal the day's own lanes did.
+
+            One deal is ONE row. The brief ranks deals and the at-risk lane raises
+            them, so a deal the night picked and the day also found arrived twice —
+            the same name, the same figures, two places to answer it. The rows are
+            folded into one, and this carries the brief entry's id so the verbs that
+            belong to the brief (`/brief/items/{id}/act`, and its set-aside and
+            dismiss) still reach it. Absent on a row the night did not raise.
+        brief_section:
+          type: string
+          enum: [respond_now, prepare_conversations, move_revenue, build_pipeline, review_and_repair]
+          x-enum-varnames:
+            - BriefSectionRespondNow
+            - BriefSectionPrepareConversations
+            - BriefSectionMoveRevenue
+            - BriefSectionBuildPipeline
+            - BriefSectionReviewAndRepair
+          description: |
+            Which part of the morning this row belongs to, as a LABEL and never as an
+            order.
+
+            The server has already ranked the page, and this says nothing about where a
+            row sits. A client may draw the label, and may group runs of consecutive
+            rows that share it — but partitioning the page by this field and
+            concatenating the parts would be a second ranking, and the two would
+            disagree the first time a `respond_now` row ranked below a `move_revenue`
+            one, which is ordinary and correct.
+
+            Derived on the server from the row's own category, source and band, so
+            every surface reads one answer. Exhaustive over the categories:
+            `backend/internal/compose/attention/briefsections.go` names every one, and
+            a gate derives that census from the generated contract.
+        changed_since_brief:
+          type: boolean
+          description: |
+            Whether the thing this row reports happened AFTER the overnight run's data
+            cutoff — the run's `as_of`, not its `generated_at`, which is only when the
+            row was written.
+
+            The distinction is the whole of this field's value: a run generated at 06:42
+            over data read at 06:00 has a 42-minute window in which a buyer can reply,
+            and comparing against the wrong instant either hides that reply or reports
+            every row as new. Stamped from the material timestamp each producer already
+            owns rather than from one generic `occurred_at`, so the browser never guesses
+            freshness.
+
+            Absent when there is no run today to compare against, which is different from
+            false: false says the night saw this, absent says there was no night.
 
     WorklistDealVerdict:
       type: object
@@ -40251,7 +40304,7 @@ components:
       properties:
         comparator:
           type: string
-          enum: [pin, crowded, level, deadline, expected_revenue, waiting_days, relationship, order]
+          enum: [pin, crowded, level, deadline, expected_revenue, opportunity, waiting_days, relationship, order]
           description: |
             What decided it. `order` means every comparator tied and the ids broke it, which the
             client renders as no reason at all.
@@ -40272,12 +40325,24 @@ components:
         client's to apply.
       required: [kind]
       properties:
-        kind: { type: string, enum: [date, money, days, level, none] }
+        kind: { type: string, enum: [date, money, days, level, score, none] }
         date: { type: string, format: date-time }
         minor: { type: integer, format: int64, description: 'Money in minor units of `currency`.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         days: { type: integer }
         level: { type: integer, minimum: 0, maximum: 6 }
+        score:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: |
+            A ranking judgement between 0 and 1 — today, the overnight brief's composite
+            for a deal.
+
+            Drawn as a BAND rather than as a number. The value orders the queue, and a
+            client printing "0.72 against 0.68" would be offering a precision the score
+            does not carry and a reader cannot check; the same two rows read honestly as
+            "the night rated this one higher".
 
     WorklistMove:
       type: object
