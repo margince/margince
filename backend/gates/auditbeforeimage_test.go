@@ -129,7 +129,7 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/overlay/flipstate.go:auditFreeze":             "a first seal freezes a mirror that was not frozen, so no field held a value to record; a reseal or a release passes the state it moved and takes the image door",
 	"internal/modules/people/domainadmission.go:SetDomainAdmission": "a first decision replaces no admission, no reason and nobody answerable for one; every later decision moved all three and records what they were",
 
-	"internal/modules/people/linkedinmatchapply.go:auditLinkedInMatch": "the confirmed handle lands in person_social and no column of the person moves, so what the contact gained is the whole of what this write has to record",
+	"internal/modules/people/linkedinmatchapply.go:auditLinkedInHandleGained": "a gained LinkedIn handle lands in person_social and no column of the person moves, so what the contact gained is the whole of what this write has to record. Both writers of the slot land here — the confirmed match and the empty-slot fill — so the waiver covers one function rather than following each caller",
 
 	"internal/modules/capture/senderoverride.go:Set":     "the settings row has no column for a sender decision; the write records one seat's answer about one address, and the image names the decision and the kind it overruled — the prior state a reader wants is what the MACHINE had said, which the image carries",
 	"internal/modules/capture/senderoverride.go:Remove":  "the same decision withdrawn: what it had been is in the row this deletes, and the image names that it was withdrawn",
