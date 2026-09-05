@@ -51,13 +51,22 @@ describe("a meeting with nothing prepared", () => {
   });
 
   // Dropping the badged reason must not take the row's OTHER reasons with it.
+  //
+  // The other reason here is `quiet_days` rather than `meeting_soon`, and the
+  // swap is the point rather than a detail: this fixture carries a `due_at`, so
+  // the row draws "starts 09:30" and `meeting_soon` is that same clock in words
+  // — dropped by the when-line rule, not by the badge one. A reason the row has
+  // a second reason to omit cannot show that the BADGE rule left it alone.
   it("keeps the reasons that are not badges", () => {
     const item = meetingRow("m1", false);
     render(
       <WorklistRow
         item={{
           ...item,
-          because: [...item.because, { kind: "meeting_soon" }],
+          because: [
+            ...item.because,
+            { kind: "quiet_days", value: { kind: "days", days: 12 } },
+          ],
         }}
         position={1}
         owner=""
@@ -65,8 +74,6 @@ describe("a meeting with nothing prepared", () => {
     );
 
     expect(screen.getByText(en["worklist.needsPrep"])).toBeTruthy();
-    expect(
-      screen.getByText(new RegExp(en["worklist.because.meeting_soon"])),
-    ).toBeTruthy();
+    expect(screen.getByText(/12/)).toBeTruthy();
   });
 });
