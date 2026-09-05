@@ -22,8 +22,6 @@
    because `SettingList` owns the gaps BETWEEN rows and nothing above or below
    itself. */
 .cf-posture {
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
   margin: var(--space-4) 0 0;
 }
 
@@ -63,19 +61,11 @@
   gap: var(--gapActions);
 }
 
-/* This screen's hint line, in both its spellings: a standalone paragraph, and
-   the caption a Field renders for its own control (`.cf-field` marks a field
-   whose hint is one of these). One rule, so the two cannot drift apart.
-
-   --textMeta, not --textTertiary: this is 11.5px prose a reader is meant to READ,
-   and tertiary is the de-emphasis ink that clears 3:1 for incidental text rather
-   than the 4.5:1 body text owes. tokens.css names textMeta the canonical AA
-   small-text role, and axe measured this pair failing on both spellings once the
-   Data model page joined the AA sweep. */
-.cf-hint,
-.cf-field > .t-caption {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
+/* This screen's hint line. It wears `.t-caption` for its type — meta, not
+   tertiary: this is prose a reader is meant to READ, and tertiary is the
+   de-emphasis ink that clears 3:1 for incidental text rather than the 4.5:1
+   body text owes — and owns only the interval a hint keeps to its field. */
+.cf-hint {
   line-height: 1.45;
   /* ds:ignore a field's hint sits tighter than a caption standing alone */
   margin: var(--space-1) 0;

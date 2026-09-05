@@ -236,7 +236,7 @@ export function PasswordSettingRow({
                 every session including this one, so the next thing that happens
                 is a sign-in screen. A person who is not told that reads it as
                 being kicked out. */}
-            <p className="t-small">{t("password.signsYouOut")}</p>
+            <p className="t-caption">{t("password.signsYouOut")}</p>
             <div className="form-actions">
               <Button small variant="ghost" onClick={close}>
                 {t("password.cancel")}

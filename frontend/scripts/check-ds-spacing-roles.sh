@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Spacing ROLE gate: a screen may not re-space a design-system primitive, and in
-# a context the design language has a name for it spells the role rather than
-# the rung.
+# Spacing ROLE gate: a screen may not re-shape a design-system primitive — its
+# interval or its type — and in a context the design language has a name for it
+# spells the role rather than the rung.
 #
 # check-ds-spacing.sh beside this one holds the VOCABULARY — spacing is written
 # as `var(--space-N)`, never as a raw px. This one holds the GRAMMAR, which is
@@ -11,14 +11,19 @@
 #
 # Two arms, and each answers a question a reader of one diff cannot:
 #
-#   primitive — the rule's subject is a class the design system both spaces and
-#               declares on its own (`.panel-head`, `.card-actions`, `.btn`).
-#               The primitive owns its interval; a screen that re-spaces one has
-#               made a second opinion about a shape shared with every other
-#               screen, and the two then drift. A variant spelled in the house's
-#               own vocabulary is not a second opinion and passes:
-#               `padding: var(--padCard)` on a rail's panel body says which
-#               surface it means, and moves when that surface is retuned.
+#   primitive — the rule's subject is a class the design system both shapes and
+#               declares on its own (`.panel-head`, `.card-actions`, `.btn`,
+#               `.t-label`), and the rule re-shapes it in the kind the tier owns:
+#               an interval (padding, margin, gap) on a class the tier spaces, or
+#               a type (font-size, line-height, letter-spacing) on a class the
+#               tier sizes. A screen that does either has made a second opinion
+#               about a shape shared with every other screen, and the two then
+#               drift. A spacing variant spelled in the house's own vocabulary is
+#               not a second opinion and passes: `padding: var(--padCard)` on a
+#               rail's panel body says which surface it means, and moves when
+#               that surface is retuned. A type variant has no such vocabulary —
+#               every size is a rung — so any re-size is a finding, and a genuine
+#               one is waived with its reason.
 #
 #   role      — the subject names a context the design language has an answer
 #               for, and the declaration does not use it:
@@ -97,12 +102,14 @@ for role in "$ROLE_ACTIONS" "$ROLE_CARDS" "$PAD_CARD" "$PAD_PANEL"; do
   fi
 done
 
-# The corpus: every class the design system both SPACES and declares on its own.
-# Derived on each run from the tier that owns them — a list here would be a
-# second copy of the design system, correct on the day it was written and wrong
-# by the next primitive.
+# The corpus: every class the design system both SHAPES and declares on its own,
+# kept by kind — the classes it spaces and the classes it sizes — because a class
+# it only sizes has no interval a screen could contradict. Derived on each run
+# from the tier that owns them — a list here would be a second copy of the
+# design system, correct on the day it was written and wrong by the next
+# primitive.
 #
-# The intersection, rather than the spaced set alone, because this tier also
+# The intersection, rather than the shaped set alone, because this tier also
 # spaces classes it does not own: `.mw-conversation .ob-conv-thread` places a
 # SCREEN's thread inside the workbench, and reading that as ownership would turn
 # the screen's own base rule into a finding. A class declared with nothing above
@@ -116,13 +123,17 @@ find "$DESIGN_SYSTEM" -type f -name '*.css' -print0 \
   | xargs -0 awk -f "$SCANNER" -v mode=owned 2>/dev/null \
   | sort -u >"$CLAIMS" || true
 
-comm -12 \
-  <(awk '$1 == "spaced" { print $2 }' "$CLAIMS" | sort -u) \
-  <(awk '$1 == "own" { print $2 }' "$CLAIMS" | sort -u) >"$OWNED"
+for kind in spaced sized; do
+  comm -12 \
+    <(awk -v kind="$kind" '$1 == kind { print $2 }' "$CLAIMS" | sort -u) \
+    <(awk '$1 == "own" { print $2 }' "$CLAIMS" | sort -u) \
+    | sed "s/^/$kind /" >>"$OWNED"
+done
 
-OWNED_COUNT="$(grep -c . "$OWNED" || true)"
-if [[ "$OWNED_COUNT" -eq 0 ]]; then
-  echo "FAIL: no design-system class is both spaced and declared on its own —" >&2
+SPACED_COUNT="$(grep -c '^spaced ' "$OWNED" || true)"
+SIZED_COUNT="$(grep -c '^sized ' "$OWNED" || true)"
+if [[ "$SPACED_COUNT" -eq 0 || "$SIZED_COUNT" -eq 0 ]]; then
+  echo "FAIL: no design-system class is both shaped and declared on its own —" >&2
   echo "      the corpus is empty, so the primitive arm would pass everything." >&2
   echo "      $DESIGN_SYSTEM is either not the design system, or the scanner no" >&2
   echo "      longer reads it." >&2
@@ -146,7 +157,7 @@ if [[ "${#SHEETS[@]}" -eq 0 ]]; then
   exit 1
 fi
 
-echo "==> DS spacing roles (${#SHEETS[@]} stylesheets, ${OWNED_COUNT} owned classes)"
+echo "==> DS spacing roles (${#SHEETS[@]} stylesheets, ${SPACED_COUNT} spaced + ${SIZED_COUNT} sized primitives)"
 
 # A stylesheet that does not load the design system's CLASS layer is its own
 # document, and a class in it collides with nothing. `mcp-apps/` is that case:
@@ -184,15 +195,16 @@ report_arm() {
   EXIT=1
 }
 
-report_arm primitive "a screen re-spaces a design-system primitive"
+report_arm primitive "a screen re-shapes a design-system primitive"
 report_arm role "a rung is spelled where the design language has a role"
 
 if [[ "$EXIT" == "0" ]]; then
   echo "PASS — every gated interval is spelled as the role it plays"
 else
   echo ""
-  echo "A primitive carries its own interval: space your own element inside it,"
-  echo "or change the primitive so every screen moves together. In a context that"
+  echo "A primitive carries its own interval and its own type: space or size your"
+  echo "own element inside it, or change the primitive so every screen moves"
+  echo "together. In a context that"
   echo "has a role, use the role rather than the rung it happens to equal today:"
   printf '  %-34s between two buttons side by side\n' "var($ROLE_ACTIONS)"
   printf '  %-34s between sibling card surfaces\n' "var($ROLE_CARDS)"

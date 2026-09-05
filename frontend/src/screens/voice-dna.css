@@ -170,7 +170,7 @@
 }
 
 .vdna-provenance {
-  /* No opacity dimming: 12px text must keep the full .t-small contrast. */
+  /* No opacity dimming: 12px text must keep the full .t-caption contrast. */
   font-weight: 500;
 }
 

@@ -40,8 +40,8 @@ fail() {
 }
 
 # The smallest tree that is still a design system: a token layer carrying the
-# four roles, one primitive that carries spacing, and one class this tier spaces
-# WITHOUT owning it.
+# four roles, one primitive that carries spacing, one that carries only type,
+# and one class this tier spaces WITHOUT owning it.
 build_fixture() {
   local core="$1"
   mkdir -p "$core/design-system" "$core/screens"
@@ -64,6 +64,9 @@ CSS
 }
 .novel-primitive {
   gap: var(--gapActions);
+}
+.novel-type {
+  font-size: var(--fs-sm);
 }
 .host-surface .x-guest {
   margin-top: var(--gapCards);
@@ -137,6 +140,20 @@ expect_finding primitive-respaced \
 }' \
   'design-system primitive'
 
+# A primitive's type is its shape as much as its interval: re-sizing one is the
+# same second opinion as re-spacing it, and a rung is not a role that excuses it.
+expect_finding primitive-resized \
+  '.x-rail .novel-type {
+  font-size: var(--fs-meta);
+}' \
+  'its type is set where it is declared'
+
+expect_finding primitive-retracked \
+  '.x-rail .novel-type {
+  line-height: 1.4;
+}' \
+  'design-system primitive'
+
 # A declaration ending at the closing brace rather than at a semicolon is the
 # same declaration. It is spelled that way in enough of the tree that a parser
 # which lost it would report a clean sweep over real violations.
@@ -175,6 +192,24 @@ expect_clean zero-reset \
 expect_clean own-element-inside-a-primitive \
   '.panel-body .x-note {
   margin-top: var(--space-3);
+}'
+
+# A screen sizing its OWN element inside a primitive is the right spelling.
+expect_clean own-type-inside-a-primitive \
+  '.panel-body .x-note {
+  font-size: var(--fs-meta);
+}'
+
+# Ownership is by kind: a class the tier only sizes has no interval a screen
+# could contradict, and a class it only spaces has no type.
+expect_clean spacing-a-class-the-tier-only-sizes \
+  '.x-rail .novel-type {
+  margin-top: var(--space-2);
+}'
+
+expect_clean sizing-a-class-the-tier-only-spaces \
+  '.x-memory .panel-head {
+  font-size: var(--fs-meta);
 }'
 
 expect_clean element-inside-a-named-surface \

@@ -144,12 +144,12 @@ function SyncStatusPanel({
                 <Badge tone={o.state ? SYNC_STATE_TONE[o.state] : undefined}>
                   {o.state ? labelOrRaw(t, SYNC_STATE_LABEL, o.state) : "—"}
                 </Badge>
-                <span className="t-small">
+                <span className="t-caption">
                   {o.backfillComplete
                     ? t("overlay.backfillDone")
                     : t("overlay.backfillPending")}
                 </span>
-                <span className="t-small">
+                <span className="t-caption">
                   {o.lastSyncedAt
                     ? t("overlay.lastSynced", {
                         at: formatDateTime(
@@ -177,7 +177,7 @@ function BudgetSourcesLine({
 }: Readonly<{ sources: NonNullable<Budget["sources"]>; locale: Locale }>) {
   const t = useT();
   return (
-    <p className="t-small overlay-budget-detail">
+    <p className="t-caption overlay-budget-detail">
       {t("overlay.budgetSources", {
         forceFresh: formatNumber(sources.force_fresh ?? 0, locale),
         poller: formatNumber(sources.poller ?? 0, locale),
@@ -196,7 +196,7 @@ function BudgetSearchRow({
   const t = useT();
   return (
     <div className="overlay-facts overlay-budget-detail">
-      <span className="t-small">
+      <span className="t-caption">
         {t("overlay.budgetSearch", {
           consumed: formatNumber(search.consumed ?? 0, locale),
           limit:
@@ -231,7 +231,7 @@ function BudgetReading({
             {labelOrRaw(t, BAND_LABEL, budget.band)}
           </Badge>
         )}
-        <span className="t-mono t-small">
+        <span className="t-mono t-caption">
           {formatNumber(consumed, locale)} /{" "}
           {limit === undefined ? "—" : formatNumber(limit, locale)}
         </span>
@@ -239,7 +239,7 @@ function BudgetReading({
             `~unknown` sentinel — printed verbatim either way, never
             recomputed from consumed/limit (which would fabricate a number
             the server explicitly declined to attribute). */}
-        <span className="t-small">
+        <span className="t-caption">
           {t("overlay.budgetHeadroom", { headroom: budget.headroom ?? "—" })}
         </span>
       </div>
@@ -382,10 +382,12 @@ export function OverlayLiveActions({
           silently makes that read as a mirror nobody can steer; the sentence
           makes it read as a mirror that is not theirs to steer. */}
       {rolesKnown && !canReconcile && !canDisconnect && (
-        <p className="t-small overlay-action-note">{t("overlay.adminOnly")}</p>
+        <p className="t-caption overlay-action-note">
+          {t("overlay.adminOnly")}
+        </p>
       )}
       {reconcileQueued && (
-        <p className="t-small overlay-action-note">
+        <p className="t-caption overlay-action-note">
           {t("overlay.reconcileQueued")}
         </p>
       )}

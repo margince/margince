@@ -234,7 +234,7 @@ export function AuthScreen({
       {view.kind === "login" && (
         <>
           {effectiveNotice && (
-            <p className="auth-notice" role="status">
+            <p className="auth-notice t-sub" role="status">
               {t(
                 effectiveNotice === "signed-out"
                   ? "auth.noticeSignedOut"
@@ -1075,7 +1075,7 @@ function ErrorNote({ message }: Readonly<{ message: string | null }>) {
   return (
     <div className="auth-error" role="alert">
       <p className="ae-t">{t("auth.failed")}</p>
-      {message && <p className="ae-m">{message}</p>}
+      {message && <p className="ae-m t-sub">{message}</p>}
     </div>
   );
 }

@@ -92,7 +92,9 @@ export function AccountArc({
       {plan.account_arc.map((moment) => (
         <PanelRow key={`${moment.from}-${moment.title}`}>
           <div className="mb-arc-row">
-            <time dateTime={moment.from}>{formatDay(moment.from)}</time>
+            <time className="t-caption" dateTime={moment.from}>
+              {formatDay(moment.from)}
+            </time>
             <div>
               {moment.title && <strong>{moment.title}</strong>}
               <Claim sentence={moment.summary} onOpenRecord={onOpenRecord} />

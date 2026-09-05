@@ -205,7 +205,7 @@ export function RecordSpine({
               key={stop.key}
               className={`co-spine-stop co-spine-${stop.tone}`}
             >
-              <span className="co-spine-when">{stop.when}</span>
+              <span className="co-spine-when t-caption">{stop.when}</span>
               {/* The rule is this stop's own stretch of the axis, so a stop
                   restyles its segment without the seams a border between
                   siblings would leave. The dot rides on it. */}
@@ -219,7 +219,7 @@ export function RecordSpine({
                 <span className="co-spine-title">{stop.title}</span>
               ) : null}
               {stop.detail && (
-                <span className="co-spine-detail">{stop.detail}</span>
+                <span className="co-spine-detail t-caption">{stop.detail}</span>
               )}
             </li>
           ))}

@@ -183,7 +183,7 @@ export function BuildScene({
             rather than a second one appearing next to it. */}
         <Wordmark alt={word} className="ob-build-wordmark" />
       </div>
-      <p className="ob-build-sub">{label}</p>
+      <p className="ob-build-sub t-eyebrow">{label}</p>
     </div>
   );
 }

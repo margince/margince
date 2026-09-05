@@ -249,7 +249,10 @@ function MomentMove({
       basis={
         <ul className="pe-today-evidence">
           {moment.evidence.map((item) => (
-            <li key={`${item.type}-${item.id ?? item.label}`}>
+            <li
+              key={`${item.type}-${item.id ?? item.label}`}
+              className="t-body"
+            >
               {evidenceIcon(item.type)}
               <span>{item.label}</span>
             </li>
@@ -406,7 +409,7 @@ function ActionVerb({
         {action.label}
       </Button>
       {!blocked && state && (
-        <span className="pe-today-verb-state">{state}</span>
+        <span className="pe-today-verb-state t-caption">{state}</span>
       )}
     </span>
   );

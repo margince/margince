@@ -72,8 +72,6 @@
   min-width: 0;
   font-family: var(--f-body);
   font-variant-numeric: tabular-nums;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -166,8 +164,6 @@
 
 .ob-live-coverage-url {
   font-family: var(--f-mono);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   overflow-wrap: anywhere;
 }
 

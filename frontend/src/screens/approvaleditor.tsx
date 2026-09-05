@@ -190,7 +190,7 @@ function ApprovalDetailBody({
   return (
     <div className="approval-detail">
       {approval.summary && (
-        <p className="approval-detail-lead">{approval.summary}</p>
+        <p className="approval-detail-lead t-body">{approval.summary}</p>
       )}
       {named.length > 0
         ? named.map((entry) => (
@@ -279,7 +279,9 @@ function FieldLine({
   return (
     <div className="field">
       <span className="t-label">{name}</span>
-      <p className={mono ? "t-mono" : "approval-detail-value"}>{value}</p>
+      <p className={mono ? "t-mono" : "approval-detail-value t-body"}>
+        {value}
+      </p>
     </div>
   );
 }

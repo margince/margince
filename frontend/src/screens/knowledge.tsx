@@ -336,7 +336,7 @@ function DocumentSetRow({
             ) : undefined
           }
         />
-        <p className="t-small">
+        <p className="t-caption">
           {t("knowledge.coverage", {
             embedded: formatNumber(set.coverage.chunks_embedded, locale),
             total: formatNumber(set.coverage.chunks_total, locale),
@@ -366,7 +366,7 @@ function DocumentSetRow({
           setConfirming(false);
         }}
       >
-        <p className="t-small">{t("knowledge.archiveConfirm.body")}</p>
+        <p className="t-caption">{t("knowledge.archiveConfirm.body")}</p>
       </ConfirmModal>
     </PanelRow>
   );
@@ -453,7 +453,7 @@ function DocumentRow({
           setConfirming(false);
         }}
       >
-        <p className="t-small">{t("knowledge.deleteConfirm.body")}</p>
+        <p className="t-caption">{t("knowledge.deleteConfirm.body")}</p>
       </ConfirmModal>
     </div>
   );

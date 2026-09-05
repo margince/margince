@@ -268,7 +268,7 @@ function failureFacts(
               the two together, but a screen that inferred one from the other
               would draw an empty action line the day that coupling changes. */}
           {failure.remedy !== null && failure.remedy !== undefined && (
-            <span className="t-small jobhealth-remedy">
+            <span className="t-caption jobhealth-remedy">
               {t("jobs.remedy", { remedy: failure.remedy })}
             </span>
           )}
