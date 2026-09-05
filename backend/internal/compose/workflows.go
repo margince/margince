@@ -92,6 +92,9 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 	for _, handler := range activities.OwnershipWorkflows(activityStore) {
 		engine.RegisterSystemWorkflow(handler)
 	}
+	for _, handler := range activities.NotMineRearmWorkflows(activityStore) {
+		engine.RegisterSystemWorkflow(handler)
+	}
 	return engine
 }
 
