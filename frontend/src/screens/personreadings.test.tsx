@@ -26,6 +26,27 @@ function view(extra: Partial<Person360> = {}): Person360 {
   } as unknown as Person360;
 }
 
+type Activity = components["schemas"]["Activity"];
+
+/** An open next-step task as the server files it: a task activity carrying
+ *  the record fields the wire requires, with only what a case is about
+ *  spelled out. The counter reads `is_done` and the page; the rest is what
+ *  makes the row a real Activity rather than a shape the compiler refuses. */
+function task(
+  over: Partial<Activity> & Pick<Activity, "id" | "subject">,
+): Activity {
+  return {
+    kind: "task",
+    source: "manual",
+    captured_by: "human:u1",
+    is_done: false,
+    occurred_at: AS_OF,
+    created_at: AS_OF,
+    updated_at: AS_OF,
+    ...over,
+  };
+}
+
 function show(page: Person360) {
   render(
     <LocaleProvider initial="en">
@@ -204,13 +225,11 @@ describe("what we owe them", () => {
         claims: [],
         next_steps: {
           data: [
-            {
+            task({
               id: "t1",
               subject: "Prepare the translation checklist",
               due_at: "2026-08-05T09:00:00Z",
-              is_done: false,
-              occurred_at: AS_OF,
-            },
+            }),
           ],
           page: { next_cursor: null, has_more: false },
         },
@@ -237,14 +256,7 @@ describe("what we owe them", () => {
           },
         ],
         next_steps: {
-          data: [
-            {
-              id: "t1",
-              subject: "Already sent",
-              is_done: true,
-              occurred_at: AS_OF,
-            },
-          ],
+          data: [task({ id: "t1", subject: "Already sent", is_done: true })],
           page: { next_cursor: null, has_more: false },
         },
       }),
@@ -262,14 +274,7 @@ describe("what we owe them", () => {
       view({
         claims: [],
         next_steps: {
-          data: [
-            {
-              id: "t1",
-              subject: "Prepare the checklist",
-              is_done: false,
-              occurred_at: AS_OF,
-            },
-          ],
+          data: [task({ id: "t1", subject: "Prepare the checklist" })],
           page: { next_cursor: "next", has_more: true },
         },
       }),
