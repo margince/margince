@@ -76,7 +76,9 @@ CSS
 # leaving the output in $TMP/out. Each case gets its own tree, so one case's
 # rules cannot be read as another's.
 run_case() {
-  local name="$1" rules="$2" core="$TMP/$name"
+  local name="$1"
+  local rules="$2"
+  local core="$TMP/$name"
   build_fixture "$core"
   printf '%s\n' "$rules" >>"$core/screens/x.css"
   MARGINCE_CORE_DIR="$core" MARGINCE_EXT_DIR="$TMP/no-units" \

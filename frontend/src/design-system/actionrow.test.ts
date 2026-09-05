@@ -123,53 +123,52 @@ function tagOf(node: ts.Node, source: ts.SourceFile): string {
 }
 
 /**
- * The tags an embedded expression can render, unwrapping the three shapes a
- * conditional child takes. An expression that resolves to anything else — a
- * call, a map, a variable — yields nothing here, and the caller reads that as
- * content rather than as a button.
+ * How many buttons an embedded expression renders, or `undefined` when it can
+ * render anything else — a call, a map, a variable, a box. The caller reads
+ * `undefined` as content rather than as a button.
+ *
+ * The shapes differ in how they count. A fragment's children all render
+ * together, so they SUM; a conditional's branches are alternatives, so the row
+ * is judged by the widest one. A guard renders its right side or nothing, and a
+ * gap the row needs when the guard is true is a gap the row needs.
  */
-function yieldedTags(
+function yieldedButtons(
   expression: ts.Expression | undefined,
   source: ts.SourceFile,
-): readonly string[] {
-  if (!expression) return [];
+): number | undefined {
+  if (!expression) return 0;
   if (ts.isParenthesizedExpression(expression)) {
-    return yieldedTags(expression.expression, source);
+    return yieldedButtons(expression.expression, source);
   }
   if (
     ts.isBinaryExpression(expression) &&
     (expression.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ||
       expression.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken)
   ) {
-    return yieldedTags(expression.right, source);
+    return yieldedButtons(expression.right, source);
   }
   if (ts.isConditionalExpression(expression)) {
-    return [
-      ...yieldedTags(expression.whenTrue, source),
-      ...yieldedTags(expression.whenFalse, source),
-    ];
+    const whenTrue = yieldedButtons(expression.whenTrue, source);
+    const whenFalse = yieldedButtons(expression.whenFalse, source);
+    if (whenTrue === undefined || whenFalse === undefined) return undefined;
+    return Math.max(whenTrue, whenFalse);
   }
-  if (isElement(expression)) return [tagOf(expression, source)];
+  // A fragment draws no box, so `{canEdit && <><Save/><Cancel/></>}` is two
+  // buttons of the row around it and not one opaque child.
+  if (ts.isJsxFragment(expression)) return buttonsIn(expression, source);
+  if (isElement(expression)) {
+    return BUTTONS.has(tagOf(expression, source)) ? 1 : undefined;
+  }
   // `{null}` and `{undefined}` render nothing, so they claim nothing.
   if (
     expression.kind === ts.SyntaxKind.NullKeyword ||
     (ts.isIdentifier(expression) && expression.text === "undefined")
   ) {
-    return [];
+    return 0;
   }
-  return ["\u0000not-an-element"];
+  return undefined;
 }
 
-/**
- * How many buttons a container holds, or `undefined` when it holds anything
- * else at all.
- *
- * A FRAGMENT is transparent: it draws no box, so its children belong to the
- * element around it and are counted there. That is also why a fragment is never
- * a candidate itself — `<>{cancel}{save}</>` handed to an `actions` prop is
- * spaced by whoever receives it, and which element that is cannot be read off
- * this file.
- */
 function buttonsIn(
   node: ts.JsxElement | ts.JsxFragment,
   source: ts.SourceFile,
@@ -199,10 +198,9 @@ function buttonsIn(
     // deep inside it, and reading the text called a disclosure row a row of two
     // buttons.
     if (ts.isJsxExpression(child)) {
-      const yielded = yieldedTags(child.expression, source);
-      if (yielded.length === 0) continue;
-      if (!yielded.every((tag) => BUTTONS.has(tag))) return undefined;
-      buttons++;
+      const yielded = yieldedButtons(child.expression, source);
+      if (yielded === undefined) return undefined;
+      buttons += yielded;
     }
   }
   return buttons;
@@ -446,6 +444,28 @@ describe("what counts as an action row", () => {
         (row) => row.ok,
       ),
     ).toEqual([false]);
+  });
+
+  it("counts a conditional fragment's buttons, all of which render together", () => {
+    // `{canEdit && <><Save/><Cancel/></>}` draws two buttons when it draws
+    // anything, so the row around it needs the gap the two of them want.
+    expect(
+      rowsIn(
+        '<div className="nowhere"><>{canEdit && <><Button /><Button /></>}</></div>',
+      ).map((row) => row.ok),
+    ).toEqual([false]);
+    // Branches are alternatives, not children: one button renders either way.
+    expect(
+      rowsIn(
+        '<div className="nowhere"><Button />{canEdit ? <Button /> : <IconAction />}</div>',
+      ).map((row) => row.ok),
+    ).toEqual([false]);
+    // A conditional fragment holding content is still content.
+    expect(
+      rowsIn(
+        '<div className="nowhere"><Button />{canEdit && <><Button /><span>or</span></>}</div>',
+      ),
+    ).toEqual([]);
   });
 
   it("is not a row when the fragment's element also holds something else", () => {
