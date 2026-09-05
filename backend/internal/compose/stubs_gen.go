@@ -1191,6 +1191,10 @@ func (stubs) ExplainLeadScore(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "ExplainLeadScore")
 }
 
+func (stubs) GetMagic(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetMagicParams) {
+	httperr.NotImplemented(w, r, "GetMagic")
+}
+
 func (stubs) GetCurrentPrincipal(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCurrentPrincipal")
 }

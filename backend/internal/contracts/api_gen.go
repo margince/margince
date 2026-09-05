@@ -6727,6 +6727,72 @@ func (e LicenseEntitlementState) Valid() bool {
 	}
 }
 
+// Defines values for MagicActorType.
+const (
+	MagicActorAgent     MagicActorType = "agent"
+	MagicActorConnector MagicActorType = "connector"
+	MagicActorSystem    MagicActorType = "system"
+)
+
+// Valid indicates whether the value is a known member of the MagicActorType enum.
+func (e MagicActorType) Valid() bool {
+	switch e {
+	case MagicActorAgent:
+		return true
+	case MagicActorConnector:
+		return true
+	case MagicActorSystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MagicLineLane.
+const (
+	MagicLaneCouldNotComplete MagicLineLane = "could_not_complete"
+	MagicLaneDone             MagicLineLane = "done"
+	MagicLaneNeedsYou         MagicLineLane = "needs_you"
+	MagicLaneWatching         MagicLineLane = "watching"
+)
+
+// Valid indicates whether the value is a known member of the MagicLineLane enum.
+func (e MagicLineLane) Valid() bool {
+	switch e {
+	case MagicLaneCouldNotComplete:
+		return true
+	case MagicLaneDone:
+		return true
+	case MagicLaneNeedsYou:
+		return true
+	case MagicLaneWatching:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MagicNotShownReason.
+const (
+	MagicNotShownOutOfScope        MagicNotShownReason = "out_of_scope"
+	MagicNotShownUnadmittedAction  MagicNotShownReason = "unadmitted_action"
+	MagicNotShownUnknownEntityType MagicNotShownReason = "unknown_entity_type"
+)
+
+// Valid indicates whether the value is a known member of the MagicNotShownReason enum.
+func (e MagicNotShownReason) Valid() bool {
+	switch e {
+	case MagicNotShownOutOfScope:
+		return true
+	case MagicNotShownUnadmittedAction:
+		return true
+	case MagicNotShownUnknownEntityType:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeResponsePassportScopes.
 const (
 	MeResponsePassportScopesActWithApproval    MeResponsePassportScopes = "act_with_approval"
@@ -24582,6 +24648,181 @@ type LoginRequest struct {
 	Password string              `json:"password"`
 }
 
+// MagicActor Who acted, and on whose behalf.
+//
+// `on_behalf_of` is the whole reason this is a shape rather than a string. The
+// auto-apply sweep binds a rep's own authority to do what that rep had already
+// agreed to, and a receipt saying only "agent" would hide which rep's standing
+// decision it was acting on.
+type MagicActor struct {
+	Id string `json:"id"`
+
+	// OnBehalfOf The seat whose authority the action was taken under, where it bound one.
+	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
+
+	// Type Human actors never appear here. This surface reports what ran WITHOUT being asked; a person's own change is their own, and reporting it back to them as machinery would be a lie about who did it.
+	Type MagicActorType `json:"type"`
+}
+
+// MagicActorType Human actors never appear here. This surface reports what ran WITHOUT being asked; a person's own change is their own, and reporting it back to them as machinery would be a lie about who did it.
+type MagicActorType string
+
+// MagicEntityRef The record this line is about, where it names one.
+type MagicEntityRef struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Label The record's own name, where the reader may see it. Absent rather than invented: a line naming a record it cannot label still says what happened.
+	Label *string `json:"label,omitempty"`
+	Type  string  `json:"type"`
+}
+
+// MagicLine One thing the machinery did, needs, could not finish, or is watching.
+//
+// EVERY LINE IS ATTRIBUTABLE. `actor` names who acted and on whose behalf; a change
+// with no author a reader can name is the spookiness this surface exists to remove.
+type MagicLine struct {
+	// Actor Who acted, and on whose behalf.
+	//
+	// `on_behalf_of` is the whole reason this is a shape rather than a string. The
+	// auto-apply sweep binds a rep's own authority to do what that rep had already
+	// agreed to, and a receipt saying only "agent" would hide which rep's standing
+	// decision it was acting on.
+	Actor MagicActor `json:"actor"`
+
+	// After The same fields, as they are now, under the same mask.
+	After *map[string]interface{} `json:"after,omitempty"`
+
+	// Before The fields this change moved, as they were. MASKED to what the reader may see, through the same field mask the record's own history uses — a receipt is not a way around the boundary the record keeps.
+	Before *map[string]interface{} `json:"before,omitempty"`
+
+	// Consequence What this means for the reader, where the action has one to state. A key, not a sentence: the product ships three languages.
+	Consequence *string `json:"consequence,omitempty"`
+
+	// Entity The record this line is about, where it names one.
+	Entity *MagicEntityRef `json:"entity,omitempty"`
+
+	// Id The underlying row's id — an audit entry, an approval.
+	Id openapi_types.UUID `json:"id"`
+
+	// Lane Which lane this line belongs to. Carried on the line as well as by the array it sits in, so a client that flattens the four for a preview does not lose which one a line came from.
+	Lane       MagicLineLane `json:"lane"`
+	OccurredAt time.Time     `json:"occurred_at"`
+
+	// Summary What happened, as a key and the values to fill it with.
+	//
+	// Typed rather than composed on the server for the reason every other sentence in
+	// this contract is: the product ships three languages, and a sentence assembled here
+	// reaches a German reader in English.
+	Summary MagicSentence `json:"summary"`
+
+	// Undo Whether this change can be taken back, and why not when it cannot.
+	//
+	// A greyed control with no reason is the shape this replaces. The reasons are
+	// compose/undoability's own vocabulary rather than a second set written here.
+	Undo *MagicUndo `json:"undo,omitempty"`
+}
+
+// MagicLineLane Which lane this line belongs to. Carried on the line as well as by the array it sits in, so a client that flattens the four for a preview does not lose which one a line came from.
+type MagicLineLane string
+
+// MagicNotShown One kind of thing this read left out, and how many of it there were.
+type MagicNotShown struct {
+	Count int `json:"count"`
+
+	// Reason `unadmitted_action` — a machine write whose action carries no customer-facing
+	// meaning: a maintenance sweep, a projection refresh.
+	// `unknown_entity_type` — an entity kind this build cannot scope, and therefore
+	// cannot safely show. Counted rather than served: showing a row this read cannot
+	// place is showing a row it cannot prove the reader may see.
+	// `out_of_scope` — a row about a record outside the reader's own scope. Counted
+	// so the total is honest, and never named.
+	Reason MagicNotShownReason `json:"reason"`
+}
+
+// MagicNotShownReason `unadmitted_action` — a machine write whose action carries no customer-facing
+// meaning: a maintenance sweep, a projection refresh.
+// `unknown_entity_type` — an entity kind this build cannot scope, and therefore
+// cannot safely show. Counted rather than served: showing a row this read cannot
+// place is showing a row it cannot prove the reader may see.
+// `out_of_scope` — a row about a record outside the reader's own scope. Counted
+// so the total is honest, and never named.
+type MagicNotShownReason string
+
+// MagicReceipt What the machinery did since a reader last looked, in four lanes.
+//
+// The lanes are separate arrays rather than one list with a kind, because they ask
+// different things of the reader and a client draws them differently: `done` is a
+// receipt, `needs_you` is a queue, `could_not_complete` is a fault to chase,
+// `watching` is a source to restore. One list would let a failure sort in beside a
+// success.
+type MagicReceipt struct {
+	// AsOf The instant this read was taken.
+	AsOf             time.Time   `json:"as_of"`
+	CouldNotComplete []MagicLine `json:"could_not_complete"`
+	Done             []MagicLine `json:"done"`
+	NeedsYou         []MagicLine `json:"needs_you"`
+
+	// NotShown What this read left out, by kind and count.
+	//
+	// A machine write with no customer-facing meaning is not Magic, and folding it
+	// in would turn internal churn into apparent value. Reporting the count instead
+	// means a preview showing five lines can never imply it is showing everything.
+	NotShown []MagicNotShown `json:"not_shown"`
+
+	// Since The start of the window reported, resolved by the server. A client shows it, because "nothing happened" over an hour and over a day are different claims.
+	Since time.Time `json:"since"`
+
+	// SourcesUnavailable Lanes that could not be read. "All clear" is forbidden while one is here: a lane the reader may not see and a lane with nothing in it are different answers.
+	SourcesUnavailable []WorklistSourceUnavailable `json:"sources_unavailable"`
+
+	// Totals How many each lane holds ON THIS PAGE.
+	//
+	// Not a window total, and the difference matters to a client: a preview drawing
+	// five of these lines may say "5 of 8" from `done`, and may NOT say "5 of 8 things
+	// happened today". The window's own size arrives with the cursor, which is the
+	// thing that makes it worth counting; a figure asserted before then would be
+	// neither the page nor the window.
+	Totals   MagicTotals `json:"totals"`
+	Watching []MagicLine `json:"watching"`
+}
+
+// MagicSentence What happened, as a key and the values to fill it with.
+//
+// Typed rather than composed on the server for the reason every other sentence in
+// this contract is: the product ships three languages, and a sentence assembled here
+// reaches a German reader in English.
+type MagicSentence struct {
+	Key    string             `json:"key"`
+	Values *map[string]string `json:"values,omitempty"`
+}
+
+// MagicTotals How many each lane holds ON THIS PAGE.
+//
+// Not a window total, and the difference matters to a client: a preview drawing
+// five of these lines may say "5 of 8" from `done`, and may NOT say "5 of 8 things
+// happened today". The window's own size arrives with the cursor, which is the
+// thing that makes it worth counting; a figure asserted before then would be
+// neither the page nor the window.
+type MagicTotals struct {
+	CouldNotComplete int `json:"could_not_complete"`
+	Done             int `json:"done"`
+	NeedsYou         int `json:"needs_you"`
+	Watching         int `json:"watching"`
+}
+
+// MagicUndo Whether this change can be taken back, and why not when it cannot.
+//
+// A greyed control with no reason is the shape this replaces. The reasons are
+// compose/undoability's own vocabulary rather than a second set written here.
+type MagicUndo struct {
+	// AuditId The entry a restore would name. Present exactly when `undoable` is true — a client that had one without the other would draw a control with nothing to send.
+	AuditId *openapi_types.UUID `json:"audit_id,omitempty"`
+
+	// Reason Why not, when it is not. Absent when it is.
+	Reason   *string `json:"reason,omitempty"`
+	Undoable bool    `json:"undoable"`
+}
+
 // MeResponse defines model for MeResponse.
 type MeResponse struct {
 	// AdminPasswordLink Whether THIS CALLER may issue member set-password links (`issueUserPasswordLink`) — true only when the caller holds `admin` AND the installation has no outbound-email channel AND a public base URL is configured. Deliberately a caller capability rather than a deployment-posture flag: `/me` answers every authenticated member, and a bare posture boolean would tell every rep whether the installation has email configured. Clients render the action on this, so an admin never sees a control that can only fail (ADR-0061 Amendment 1).
@@ -36700,6 +36941,13 @@ type ExplainLeadScoreParams struct {
 
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetMagicParams defines parameters for GetMagic.
+type GetMagicParams struct {
+	// Since The instant to report from. Absent means the acting rep's last brief cutoff, and 24 hours where there is no brief — a window the reader has not already seen, rather than a fixed one that repeats what they read this morning.
+	Since *time.Time `form:"since,omitempty" json:"since,omitempty"`
+	Limit *int       `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // GetMyAiActivityParams defines parameters for GetMyAiActivity.
@@ -48822,6 +49070,9 @@ type ServerInterface interface {
 	// Explain This Score — the weighted-factor decomposition behind a lead's score.
 	// (GET /leads/{id}/score)
 	ExplainLeadScore(w http.ResponseWriter, r *http.Request, id Id, params ExplainLeadScoreParams)
+	// What the machinery did, what it needs, what it could not finish, and what it is watching.
+	// (GET /magic)
+	GetMagic(w http.ResponseWriter, r *http.Request, params GetMagicParams)
 	// Get the current authenticated principal (user or agent).
 	// (GET /me)
 	GetCurrentPrincipal(w http.ResponseWriter, r *http.Request)
@@ -51477,6 +51728,12 @@ func (_ Unimplemented) PreviewLeadPromotion(w http.ResponseWriter, r *http.Reque
 // Explain This Score — the weighted-factor decomposition behind a lead's score.
 // (GET /leads/{id}/score)
 func (_ Unimplemented) ExplainLeadScore(w http.ResponseWriter, r *http.Request, id Id, params ExplainLeadScoreParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What the machinery did, what it needs, what it could not finish, and what it is watching.
+// (GET /magic)
+func (_ Unimplemented) GetMagic(w http.ResponseWriter, r *http.Request, params GetMagicParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -64992,6 +65249,60 @@ func (siw *ServerInterfaceWrapper) ExplainLeadScore(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ExplainLeadScore(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMagic operation middleware
+func (siw *ServerInterfaceWrapper) GetMagic(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMagicParams
+
+	// ------------- Optional query parameter "since" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "since", r.URL.Query(), &params.Since, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "since"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "since", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMagic(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -79577,6 +79888,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/{id}/score", wrapper.ExplainLeadScore)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/magic", wrapper.GetMagic)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me", wrapper.GetCurrentPrincipal)
