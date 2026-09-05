@@ -45,9 +45,14 @@ import (
 func suppressPerson(t *testing.T, e *apptest.AppEnv, personID string) {
 	t.Helper()
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
+		// decided_by_level is stated rather than defaulted, because the column
+		// deliberately has no default: a writer names who decided or the INSERT
+		// fails where the author can see it. `subject` is what this row IS — a
+		// marketing objection is Art. 21 by definition, which is the same
+		// classification the migration gave the rows that predate the column.
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO communication_suppression (person_id, kind, source, captured_by)
-			VALUES ($1, 'marketing_objection', 'test', $2)`, personID, "test")
+			INSERT INTO communication_suppression (person_id, kind, source, captured_by, decided_by_level)
+			VALUES ($1, 'marketing_objection', 'test', $2, 'subject')`, personID, "test")
 		return err
 	}); err != nil {
 		t.Fatalf("recording the objection: %v", err)
