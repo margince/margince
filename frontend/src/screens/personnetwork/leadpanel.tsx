@@ -94,7 +94,7 @@ export function LeadPanel({
             </div>
           </div>
 
-          <p className="pn-counts">
+          <p className="pn-counts t-sub">
             {evidenceSentence(route.evidence, t, plural, locale)}
           </p>
 
@@ -203,7 +203,9 @@ function EvidencePlate({
             {formatNumber(ev.interactions_90d, locale)}
             <small>{t("person.intro.evidenceWindow")}</small>
           </b>
-          <span>{t("person.intro.evidenceExchanges")}</span>
+          <span className="t-caption">
+            {t("person.intro.evidenceExchanges")}
+          </span>
           <ExchangeSplit
             evidence={ev}
             viaName={route.via_display_name}
@@ -213,7 +215,9 @@ function EvidencePlate({
         </div>
         <div className="pn-reading">
           <b>{lastContactReading(ev, t, locale)}</b>
-          <span>{t("person.intro.evidenceLastContact")}</span>
+          <span className="t-caption">
+            {t("person.intro.evidenceLastContact")}
+          </span>
         </div>
       </div>
       {receipts.length > 0 ? (
@@ -226,7 +230,7 @@ function EvidencePlate({
           <ReceiptList receipts={receipts} />
         </div>
       ) : (
-        <p className="pn-counts">{t("person.graph.countsOnly")}</p>
+        <p className="pn-counts t-sub">{t("person.graph.countsOnly")}</p>
       )}
     </div>
   );
@@ -264,7 +268,7 @@ function ExchangeSplit({
         <i className="pn-split-in" style={{ width: pct(inbound, total) }} />
         <i className="pn-split-out" style={{ width: pct(outbound, total) }} />
       </span>
-      <span className="pn-split-legend">
+      <span className="pn-split-legend t-caption">
         <span className="pn-split-key-in">
           {t("person.intro.evidenceFrom", {
             count: formatNumber(inbound, locale),

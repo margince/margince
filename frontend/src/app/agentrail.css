@@ -682,17 +682,12 @@
    h2 rather than a new panel title: the head already restates what the panel is
    about in `.arptitle`, and promoting a sentence that changes with the agent's
    state to a heading would name the region differently every time it opened.
-   The size below is unchanged, so nothing moves on screen. */
+   It wears `.t-eyebrow`, so nothing moves on screen. */
 .arsect h2 {
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
   margin-bottom: var(--space-2);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--textMeta);
 }
 /* The link a heading can carry, pushed to the far end of it. */
 .arplain {
@@ -732,8 +727,6 @@
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
   line-height: 1.15;
   text-decoration: none;
   transition:
@@ -759,8 +752,6 @@
   padding: var(--space-3);
   border: 1px dashed var(--borderSubtle);
   border-radius: var(--r-md);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }
 
 /* ===== The small print =====

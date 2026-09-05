@@ -83,7 +83,7 @@ export function RowTags({ tags }: Readonly<{ tags?: readonly RowTag[] }>) {
         <button
           type="button"
           ref={tip.ref}
-          className="rowtags-rest t-small"
+          className="rowtags-rest t-caption"
           onClick={(event) => event.stopPropagation()}
           {...tip.trigger}
         >

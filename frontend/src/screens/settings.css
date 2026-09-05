@@ -58,19 +58,17 @@
    line moves into the body — where it is the first thing read, above the form
    or the rows it describes, and it pays for its own interval to them.
 
-   It owns its own TYPE SCALE as well as its interval, and that is the point of
-   the element-plus-class selector: `base.css` carries three near-identical meta
-   scales — `.t-small` 12px, `.t-caption` 12.5px, `.t-sub` 13px — and a card
-   description picked one of them per file, so a page of cards read at three
-   sizes. Being one specificity step above a bare utility class, this wins
-   wherever it lands in the bundle rather than depending on sheet order.
-
-   13px is `SettingRow`'s description size, deliberately: a card's own
+   Its type is `SettingRow`'s description size, deliberately: a card's own
    description says what the whole card is for, so it is never smaller than the
-   description of one row inside it. */
+   description of one row inside it. Seventy panels across twenty screens carry
+   this line, which makes it a primitive stranded in a screen sheet rather than a
+   screen's caption — the design system is where it belongs, as Panel's own
+   intro line, and until it moves there this rule is the one place its type is
+   set. */
 p.settings-panel-sub {
   margin-bottom: var(--space-4);
   color: var(--textMeta);
+  /* ds:ignore a panel's intro line is a role of its own, until Panel owns it */
   font-size: var(--fs-sm);
   line-height: 1.45;
 }

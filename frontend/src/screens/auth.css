@@ -387,8 +387,6 @@
   color: var(--danger);
 }
 .auth-error .ae-m {
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
   margin-top: var(--space-1);
   line-height: 1.45;
 }
@@ -400,8 +398,6 @@
    dressed as one — the user has nothing to correct. */
 .auth-notice {
   text-align: left;
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
   background: var(--bgCard);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);

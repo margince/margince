@@ -774,7 +774,7 @@ function DecisionHead({
         </p>
       )}
       {named && approval.summary && (
-        <p className="t-small approval-why">{approval.summary}</p>
+        <p className="t-caption approval-why">{approval.summary}</p>
       )}
     </>
   );

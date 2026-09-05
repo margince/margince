@@ -253,7 +253,7 @@ export function ConnectScene({
             {t("ob.conv.connect.required")}
           </span>
         </h3>
-        <p>{t("ob.conv.connect.mailboxHint")}</p>
+        <p className="t-sub">{t("ob.conv.connect.mailboxHint")}</p>
       </div>
 
       {/* A mailbox is the required gate on this whole step, so a roster read
@@ -312,7 +312,7 @@ export function ConnectScene({
             {t("ob.conv.connect.recommended")}
           </span>
         </h3>
-        <p>{t("ob.conv.connect.networkHint")}</p>
+        <p className="t-sub">{t("ob.conv.connect.networkHint")}</p>
       </div>
 
       <LinkedinCard
@@ -590,9 +590,9 @@ function ConnectorCard({
         )}
       </span>
       <b>{name}</b>
-      <small>{brings}</small>
+      <small className="t-sub">{brings}</small>
       <span className="ob-connect-card-foot">
-        <span className="ob-connect-card-auth">{auth}</span>
+        <span className="ob-connect-card-auth t-caption">{auth}</span>
         {state === "unavailable"
           ? settingsLink && (
               <a
@@ -765,7 +765,7 @@ function LinkedinPanel({
               </span>
             </p>
           ))}
-          <p className="co-muted">{t("ob.conv.linkedin.neverContacts")}</p>
+          <p className="t-sub">{t("ob.conv.linkedin.neverContacts")}</p>
         </div>
       </Disclosure>
       <label className="ob-conv-field" htmlFor="linkedin-profile">
@@ -779,7 +779,7 @@ function LinkedinPanel({
           onChange={(event) => setProfile(event.target.value)}
         />
       </label>
-      <p className="co-muted">{t("ob.conv.linkedin.profileWhy")}</p>
+      <p className="t-sub">{t("ob.conv.linkedin.profileWhy")}</p>
       <div className="ob-connect-dialog-actions">
         <Button
           variant="primary"
@@ -803,11 +803,11 @@ function LinkedinPanel({
         </button>
       </div>
       {error !== null && (
-        <p role="alert" className="co-error">
+        <p role="alert" className="t-sub t-danger">
           {error}
         </p>
       )}
-      <p className="co-muted">{t("ob.conv.linkedin.appPending")}</p>
+      <p className="t-sub">{t("ob.conv.linkedin.appPending")}</p>
     </div>
   );
 }

@@ -331,7 +331,7 @@ function DocumentRow({
               where it came from, and when it arrived. The filename is absent
               when the two names are the same string, because a row that says
               one thing twice says it once. */}
-          <span className="rec-meta">
+          <span className="rec-meta t-caption">
             {doc.title && doc.title !== doc.filename && (
               <span>{doc.filename}</span>
             )}

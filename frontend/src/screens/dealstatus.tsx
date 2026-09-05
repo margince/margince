@@ -160,7 +160,7 @@ export function DealStatusCardPanel({
             // the shape the contract promises. Saying so beats an empty panel,
             // which reads as a deal nobody has touched.
             <PanelBody>
-              <p className="t-small">{t("deal360.unreadable")}</p>
+              <p className="t-caption">{t("deal360.unreadable")}</p>
             </PanelBody>
           ) : null}
         </QueryStates>
@@ -376,7 +376,7 @@ function Move({
       title={move.reason}
       basis={
         move.evidence.length > 0 ? (
-          <ul className="deal360-evidence t-small">
+          <ul className="deal360-evidence t-caption">
             {move.evidence.map((row) => (
               <li key={`${row.activity_id ?? ""}-${row.text}`}>{row.text}</li>
             ))}
@@ -463,7 +463,7 @@ function MoveButton({
             {t("deal360.createTask")}
           </Button>
           {createTask.isError ? (
-            <p className="t-small t-danger">
+            <p className="t-caption t-danger">
               {problemMessageOf(createTask.error, t)}
             </p>
           ) : null}

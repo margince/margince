@@ -67,7 +67,7 @@ function SettledFace({
       <ul className="entry-fields">
         {entryFieldChanges(row.reversal).map((change) => (
           <li key={change.field} className="entry-field">
-            <span className="entry-field-name">
+            <span className="entry-field-name t-caption">
               {historyFieldLabel(change.field, t)}
             </span>
             <span>
@@ -77,7 +77,9 @@ function SettledFace({
           </li>
         ))}
       </ul>
-      <span className="reversal-net">{t("history.reversal.net")}</span>
+      <span className="reversal-net t-caption">
+        {t("history.reversal.net")}
+      </span>
     </>
   );
 }
@@ -97,11 +99,13 @@ function ResidualFace({
   const values = { currency, locale, zone };
   return (
     <>
-      <span className="reversal-net">{t("history.reversal.stillChanged")}</span>
+      <span className="reversal-net t-caption">
+        {t("history.reversal.stillChanged")}
+      </span>
       <ul className="entry-fields">
         {netChanges(row).map((change) => (
           <li key={change.field} className="entry-field">
-            <span className="entry-field-name">
+            <span className="entry-field-name t-caption">
               {historyFieldLabel(change.field, t)}
             </span>
             <HistoryFieldDiff

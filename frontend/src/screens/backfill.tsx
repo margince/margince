@@ -233,16 +233,16 @@ export function BackfillPanel({
 
   if (skipped) {
     return (
-      <p className="t-small backfill-skipped">{t("backfill.skippedNote")}</p>
+      <p className="t-caption backfill-skipped">{t("backfill.skippedNote")}</p>
     );
   }
   if (status.isPending) {
-    return <p className="t-small">{t("backfill.loading")}</p>;
+    return <p className="t-caption">{t("backfill.loading")}</p>;
   }
   if (status.isError) {
     // The status read failing must not block the wizard — the nightly sweep
     // still runs; the user just loses the live view here.
-    return <p className="t-small">{t("backfill.statusUnavailable")}</p>;
+    return <p className="t-caption">{t("backfill.statusUnavailable")}</p>;
   }
 
   const run = status.data;
@@ -319,7 +319,7 @@ function BackfillSetup({
         <h3 className="backfill-h">
           <History aria-hidden /> {t("backfill.title")}
         </h3>
-        <p className="t-small backfill-unsupported">
+        <p className="t-caption backfill-unsupported">
           {t("backfill.unsupportedNote")}
         </p>
       </div>
@@ -331,7 +331,7 @@ function BackfillSetup({
       <h3 className="backfill-h">
         <History aria-hidden /> {t("backfill.title")}
       </h3>
-      <p className="t-small">{t("backfill.intro")}</p>
+      <p className="t-caption">{t("backfill.intro")}</p>
       {/* The design system's radio GROUP, not a div wearing `role="radiogroup"`:
           the ARIA pair is the weaker spelling of what a `fieldset` and a
           `legend` say natively, and it was this screen's own wrapper to keep
@@ -347,10 +347,10 @@ function BackfillSetup({
         onChange={onWindowChange}
       />
       {previewPending && !previewData && (
-        <p className="t-small">{t("backfill.previewLoading")}</p>
+        <p className="t-caption">{t("backfill.previewLoading")}</p>
       )}
       {previewErrorMessage && (
-        <p className="t-small backfill-error">{previewErrorMessage}</p>
+        <p className="t-caption backfill-error">{previewErrorMessage}</p>
       )}
       {previewData && (
         <EstimateCard
@@ -360,7 +360,7 @@ function BackfillSetup({
         />
       )}
       {startErrorMessage && (
-        <p className="t-small backfill-error">
+        <p className="t-caption backfill-error">
           {narrowing ? t("backfill.narrowingNote") : startErrorMessage}
         </p>
       )}
@@ -396,7 +396,7 @@ function EstimateCard({
         <strong>~{formatNumber(preview.estimated_messages, locale)}</strong>
       </p>
       {costMinor > 0 && (
-        <p className="t-small">
+        <p className="t-caption">
           {t("backfill.estimateCost")} ~
           {formatMoney(
             costMinor,
@@ -405,7 +405,7 @@ function EstimateCard({
           )}
         </p>
       )}
-      <p className="t-small">{t("backfill.estimateNote")}</p>
+      <p className="t-caption">{t("backfill.estimateNote")}</p>
       <Button
         variant="primary"
         pending={starting}
@@ -456,7 +456,7 @@ function CaptureStat({
       <span className="capture-stat-glyph" aria-hidden>
         <Icon />
       </span>
-      <b className="capture-stat-value">
+      <b className="capture-stat-value t-display">
         {counting ? (
           <CountUp value={value} locale={locale} />
         ) : (
@@ -528,7 +528,7 @@ function RunView({
         staleForMs={stale ? agoMs : null}
       />
       {run.state === "error" && (
-        <p className="t-small backfill-error">
+        <p className="t-caption backfill-error">
           {t("backfill.errorNote")}
           {run.last_error_class ? ` (${run.last_error_class})` : ""}
         </p>
@@ -541,10 +541,10 @@ function RunView({
         </div>
       )}
       {live && cancelError && (
-        <p className="t-small backfill-error">{cancelError}</p>
+        <p className="t-caption backfill-error">{cancelError}</p>
       )}
       {run.state === "cancelled" && (
-        <p className="t-small">{t("backfill.cancelledNote")}</p>
+        <p className="t-caption">{t("backfill.cancelledNote")}</p>
       )}
     </div>
   );
@@ -600,14 +600,14 @@ function RunProgress({
   return (
     <>
       {staleForMs !== null && (
-        <p className="t-small backfill-stale">
+        <p className="t-caption backfill-stale">
           {t("backfill.staleUpdated", {
             duration: formatDuration(staleForMs, locale),
           })}
         </p>
       )}
       {fraction !== null && <RunBar fraction={fraction} />}
-      <p className="t-small capture-scanned" aria-live="polite">
+      <p className="t-caption capture-scanned" aria-live="polite">
         <span>
           {t("backfill.countScanned")} {formatNumber(scanned, locale)}
         </span>

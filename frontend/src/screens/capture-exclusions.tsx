@@ -171,7 +171,7 @@ export function CaptureExclusionsCard() {
           />
         </SettingList>
         {refusesARow && (
-          <p className="t-small" id={denialId}>
+          <p className="t-caption" id={denialId}>
             {t("captureSettings.adminOnly")}
           </p>
         )}
@@ -321,7 +321,7 @@ function ExcludeDialog({
           onChange={(event) => setDraft(event.target.value)}
         />
         {refused && (
-          <p className="t-small" id={denialId}>
+          <p className="t-caption" id={denialId}>
             {t("captureSettings.adminOnly")}
           </p>
         )}

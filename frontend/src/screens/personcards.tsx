@@ -76,12 +76,14 @@ export function PersonBriefCard({
       }
     >
       <PanelBody>
-        {loading && <p className="pe-prose">{t("person.brief.reading")}</p>}
+        {loading && (
+          <p className="pe-prose t-body">{t("person.brief.reading")}</p>
+        )}
         {!loading && !written && (
           // Honest rather than blank: a brief with nothing to say has nothing to
           // say, and inventing prose to fill the card is the one thing the
           // grounding rule forbids.
-          <p className="pe-prose">{t("person.brief.empty")}</p>
+          <p className="pe-prose t-body">{t("person.brief.empty")}</p>
         )}
         {written && (
           <>
@@ -343,7 +345,7 @@ export function PersonCommercialCard({ view }: Readonly<{ view: Person360 }>) {
     return (
       <Panel title={t("person.commercial.title")}>
         <PanelBody>
-          <p className="pe-prose">{t("person.commercial.withheld")}</p>
+          <p className="pe-prose t-body">{t("person.commercial.withheld")}</p>
         </PanelBody>
       </Panel>
     );
@@ -356,7 +358,9 @@ export function PersonCommercialCard({ view }: Readonly<{ view: Person360 }>) {
             committee — a person can carry a buying role and sit on a
             committee with nothing currently for sale, and both facts belong
             on the card whether or not there is a deal to hang them off. */}
-        {!deal && <p className="pe-prose">{t("person.commercial.noDeal")}</p>}
+        {!deal && (
+          <p className="pe-prose t-body">{t("person.commercial.noDeal")}</p>
+        )}
         {!deal && commercial.role && (
           <Badge tone="success">{readableRole(commercial.role)}</Badge>
         )}
@@ -575,7 +579,7 @@ export function PersonCommitmentsCard({
         // An empty commitments card on a record whose mail contains no
         // promises is CORRECT behaviour, not a gap (ADR-0097 consequences).
         <PanelBody>
-          <p className="pe-prose">{t("person.loops.empty")}</p>
+          <p className="pe-prose t-body">{t("person.loops.empty")}</p>
         </PanelBody>
       )}
       {rows.map((loop) => (

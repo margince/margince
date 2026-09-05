@@ -23,8 +23,6 @@
 
 .pdigest-count {
   margin: 0;
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
 }
 
 .pdigest-body {
@@ -92,8 +90,6 @@
    sourced" is only true if the exceptions say so. */
 .pdigest-yours {
   margin-inline-start: var(--space-2);
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
 }
 
 /* ---- the document's unanswered row ---- */
@@ -171,8 +167,6 @@
 
 .pdigest-hero-sub {
   margin: 0;
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
 }
 
 .pdigest-hero-stats {
@@ -253,8 +247,6 @@
 
 .pdigest-subhead {
   margin: 0;
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
   font-weight: var(--fw-medium);
 }
 
@@ -286,9 +278,7 @@
 }
 .pdigest-source-path {
   overflow-wrap: anywhere;
-  color: var(--textMeta);
   font-family: var(--f-mono);
-  font-size: var(--fs-meta);
 }
 .pdigest-source-label {
   color: var(--textTertiary);
@@ -296,8 +286,6 @@
 }
 .pdigest-source-note {
   margin: 0;
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
 }
 
 /* ---- the sidebar ---- */
@@ -357,10 +345,8 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--textMeta);
   cursor: pointer;
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
   text-decoration: underline;
   text-decoration-color: var(--borderStrong);
 }

@@ -53,27 +53,11 @@
 .capture-activity__row + .capture-activity__row {
   border-top: 1px solid var(--borderSubtle);
 }
-
-.capture-activity__when,
-.capture-activity__connector {
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
-}
-
 .capture-activity__outcome {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
-
-/* The reason is the half that changes what the outcome MEANS — a capped
- * deferral is not waiting for anything — so it is quieter than the outcome but
- * never hidden behind an interaction. */
-.capture-activity__reason {
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
-}
-
 .capture-activity__content {
   display: flex;
   flex-direction: column;
@@ -98,12 +82,6 @@
   color: var(--textTertiary);
   font-style: italic;
 }
-
-.capture-activity__resolution {
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
-}
-
 /* The funnel slots are filters. A pressed button rather than a Switch: a
  * Switch IS the action it names, and narrowing a list is not an action on the
  * data — it changes what this reader is looking at and nothing else.
@@ -121,18 +99,9 @@
  * a deployment that stores no addresses is the DEFAULT posture, and colouring
  * it as a problem would tell every reader their installation is misconfigured. */
 .capture-activity__note {
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
   margin: 0;
   max-width: 60ch;
 }
-
-/* Both numbers, so a filtered view can never be read as the whole window. */
-.capture-activity__count {
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
-}
-
 /* The row is one button carrying the grid, so the whole row is the target and
  * the keyboard reaches it. `all: unset` first, because a button's own chrome
  * would otherwise fight the row's rhythm on every theme. */
@@ -169,8 +138,6 @@
 
 .capture-activity__drawer-sub,
 .capture-activity__drawer-transport {
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
   margin: 0 0 var(--space-3);
 }
 

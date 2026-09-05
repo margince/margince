@@ -85,7 +85,7 @@ export function PersonMemory({
     >
       {shown.length === 0 && (
         <PanelBody>
-          <p className="pe-prose">{t("person.memory.empty")}</p>
+          <p className="pe-prose t-body">{t("person.memory.empty")}</p>
         </PanelBody>
       )}
       {shown.map((row) => (

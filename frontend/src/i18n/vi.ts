@@ -1561,8 +1561,9 @@ export const vi = {
   "timeline.withheld": "Nội dung chỉ dành cho người tham gia",
   "compose.deadRecipients":
     "Thư gửi đến {addresses} đang bị trả lại. Lần gửi gần nhất đến đó bị từ chối, và từ đó chưa có lần gửi nào thành công. Vẫn gửi, hoặc dùng địa chỉ khác.",
-  "compose.threadShare": "Chia sẻ chuỗi",
-  "compose.threadKeepPrivate": "Giữ riêng tư",
+  "compose.threadShare": "Chia sẻ với tổ chức",
+  "compose.threadMakePrivate": "Đặt riêng tư",
+  "compose.threadScope": "Áp dụng cho toàn bộ chuỗi thư.",
   "compose.threadStillHeld":
     "Vẫn được giữ lại: {count} người khác trong chuỗi thư này chưa chia sẻ.",
   "compose.reason.posture": "Giữ lại theo thiết lập của bạn",
@@ -1574,7 +1575,7 @@ export const vi = {
   "compose.reason.counterparty": "Được giữ, thư với bên này",
   "compose.reason.explicitlyConfidential": "Được đánh dấu bảo mật",
   "compose.reason.noCounterparty": "Được giữ, không có hồ sơ để lưu",
-  "compose.audience": "Hiển thị",
+  "compose.audience": "Đổi phạm vi hiển thị",
   "compose.audienceTitle": "Ai được đọc tin nhắn này?",
   "compose.audienceLegend": "Hiển thị của riêng tin nhắn này",
   "email.aMessage": "Một thư",
@@ -1584,16 +1585,16 @@ export const vi = {
   "email.received": "Đã nhận",
   "email.sentTo": "Đã gửi tới {who}",
   "email.sent": "Đã gửi",
-  "email.access.team": "Nhóm",
-  "email.access.participants": "Người tham gia",
-  "email.access.selected": "Được chọn",
-  "email.access.withheld": "Bị giữ lại",
   "email.access.sentence.team": "Mọi người trong tổ chức đều đọc được thư này.",
   "email.access.sentence.participants":
     "Chỉ những người có trong thư này mới đọc được.",
   "email.access.sentence.selected":
     "Chỉ những người được nêu bên dưới mới đọc được thư này.",
-  "email.access.sentence.withheld": "Thư này không được chia sẻ với bạn.",
+  "visibility.team": "Nhóm",
+  "visibility.participants": "Người tham gia",
+  "visibility.selected": "Được chọn",
+  "visibility.private": "Chỉ bạn",
+  "visibility.withheld": "Bị giữ lại",
   "email.access.unnamedMember": "Một người không còn ở đây",
   "email.move.needsReply": "Cần trả lời",
   "email.move.waitingForThem": "Đang chờ họ",
@@ -3203,6 +3204,10 @@ export const vi = {
     "Margince không có ghi nhận nào về lý do bạn được phép viết cho họ.",
   "sendPermission.unprovenHint":
     "Nếu bạn biết lý do — họ đã đề nghị, bạn đã gặp họ, họ là khách hàng — hãy nêu ra và điều đó được ghi lại dưới tên bạn.",
+  "sendPermission.unprovenRefuses":
+    "Việc gửi sẽ bị từ chối cho đến khi Margince có ghi nhận.",
+  "sendPermission.unanswered":
+    "Margince không kiểm tra được tin nhắn này có được phép gửi hay không. Khi gửi sẽ kiểm tra lại.",
   "sendPermission.reason.objected":
     "Họ đã từ chối nhận quảng cáo. Không ai ở đây có thể gỡ bỏ điều đó, kể cả quản trị viên.",
   "sendPermission.reason.withdrawn":

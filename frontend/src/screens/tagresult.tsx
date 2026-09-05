@@ -79,7 +79,9 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
           )}
           {tag.data.name}
           {tag.data.archived_at && (
-            <span className="tagresult-retired">{t("tags.archived")}</span>
+            <span className="tagresult-retired t-sub">
+              {t("tags.archived")}
+            </span>
           )}
         </h1>
         {/* Not drawn for a RETIRED word. The usage total counts assignments
@@ -87,7 +89,7 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
             live — so on a retired tag the sentence is the one line on the page
             still promising rows the groups below it correctly do not show. */}
         {!tag.data.archived_at && (
-          <span className="t-small">
+          <span className="t-caption">
             {t("tagResult.totalVisible", {
               count: formatNumber(total, locale),
             })}

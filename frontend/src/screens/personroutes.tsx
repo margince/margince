@@ -139,7 +139,7 @@ function LegacyRouteRow({
               name: route.via_display_name,
             })}
       </p>
-      <p className="pn-counts">{route.why}</p>
+      <p className="pn-counts t-sub">{route.why}</p>
     </>
   );
 }
@@ -177,7 +177,7 @@ function RouteRow({
               has already declined. */}
           {blocked ? <Badge quiet>{blocked}</Badge> : null}
         </p>
-        <p className="pn-counts">
+        <p className="pn-counts t-sub">
           {evidenceSentence(route.evidence, t, plural, locale)}
         </p>
       </div>
@@ -210,7 +210,7 @@ function StrengthMeter({
   const t = useT();
   const band = bucket ?? "none";
   return (
-    <span className="pn-meter" data-band={band}>
+    <span className="pn-meter t-caption" data-band={band}>
       <span className="pn-meter-bars" aria-hidden="true">
         <i />
         <i />

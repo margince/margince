@@ -260,14 +260,6 @@ func camelCase(field string) string {
 	return strings.Join(parts, "")
 }
 
-// describesRatherThanRenders is a file that talks ABOUT the components: a test,
-// a story, or the generated schema itself. None of them is a second rendering.
-func describesRatherThanRenders(path string) bool {
-	return strings.HasPrefix(path, "api/") ||
-		strings.Contains(path, ".test.") ||
-		strings.Contains(path, ".stories.")
-}
-
 // An `entry` schema reaches the canonical components and nothing else.
 func TestAnEmailIsDrawnOnlyByTheCanonicalComponents(t *testing.T) {
 	t.Parallel()

@@ -99,14 +99,14 @@ function RoomCard({ room }: Readonly<{ room: DealRoom }>) {
     >
       <PanelBody>
         <p>{room.title}</p>
-        <p className="t-small">
+        <p className="t-caption">
           {t("room.card.people", {
             invited: formatNumber(invited, locale),
             active: formatNumber(active, locale),
           })}
         </p>
         {lastSeen ? (
-          <p className="t-small">
+          <p className="t-caption">
             {t("room.card.lastSeen", { when: lastSeen.slice(0, 10) })}
           </p>
         ) : null}

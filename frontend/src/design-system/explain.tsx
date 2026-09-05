@@ -55,7 +55,7 @@ export function ExplainNumber({
                     locale,
                   )}
                 </span>
-                <span className="t-small">
+                <span className="t-caption">
                   {t("explain.rate", {
                     rate: formatRate(row.rate, locale),
                     date: formatDate(row.rateDate, locale, workspaceZone),

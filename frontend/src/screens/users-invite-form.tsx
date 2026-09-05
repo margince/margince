@@ -162,7 +162,7 @@ export function InviteUserForm({
           <h2 className="t-h3 modal-title" id={titleId}>
             {t("users.inviteTitle")}
           </h2>
-          <p className="t-small">{t("users.inviteSub")}</p>
+          <p className="t-caption">{t("users.inviteSub")}</p>
         </>
       )}
       <Field label={t("users.emailLabel")} required>
@@ -229,7 +229,7 @@ export function InviteUserForm({
             an admin invite people into no team at all on the strength of
             pages nothing read. */}
         {teams.data?.length === 0 && !teamsPartial && (
-          <p className="t-small">{t("users.noTeamsYet")}</p>
+          <p className="t-caption">{t("users.noTeamsYet")}</p>
         )}
         <RosterPartialNote partial={teamsPartial} />
       </fieldset>

@@ -303,7 +303,7 @@ function ContractRow({
         {/* Everything that QUALIFIES the agreement on one quiet line under its
             name: which paper it is, how long it runs, what is about to happen
             to it. Read after the name, not beside it. */}
-        <span className="rec-meta">
+        <span className="rec-meta t-caption">
           {contract.contract_number && (
             <span className="t-mono">{contract.contract_number}</span>
           )}

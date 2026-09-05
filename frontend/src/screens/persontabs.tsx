@@ -420,7 +420,7 @@ export function PersonMeetingsTab({
           >
             {next && (
               <>
-                <p className="pe-prose">
+                <p className="pe-prose t-body">
                   {next.subject ?? t("person.meetings.untitled")}
                 </p>
                 <p className="pe-brief-line">

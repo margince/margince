@@ -469,7 +469,9 @@ export function LeadSourcesCard() {
             refused write belongs to the card the row it failed on sits in. */}
         {(!canEdit || failure) && (
           <div className="lead-vocab-notices">
-            {!canEdit && <p className="t-small">{t("leadSources.readOnly")}</p>}
+            {!canEdit && (
+              <p className="t-caption">{t("leadSources.readOnly")}</p>
+            )}
             {failure && (
               <Callout tone="danger" live="alert">
                 {problemMessageOf(failure.error, t)}
@@ -509,7 +511,7 @@ export function LeadSourcesCard() {
             }
           }}
         >
-          <p className="t-small">
+          <p className="t-caption">
             {t("leadSources.removeBody", { label: removing?.label ?? "" })}
           </p>
         </ConfirmModal>
@@ -715,7 +717,9 @@ export function LeadDisqualifyReasonsCard() {
         </SettingList>
         {(!canEdit || failure) && (
           <div className="lead-vocab-notices">
-            {!canEdit && <p className="t-small">{t("leadSources.readOnly")}</p>}
+            {!canEdit && (
+              <p className="t-caption">{t("leadSources.readOnly")}</p>
+            )}
             {failure && (
               <Callout tone="danger" live="alert">
                 {problemMessageOf(failure.error, t)}
@@ -742,7 +746,7 @@ export function LeadDisqualifyReasonsCard() {
             }
           }}
         >
-          <p className="t-small">
+          <p className="t-caption">
             {t("leadReasons.removeBody", { label: removing?.label ?? "" })}
           </p>
         </ConfirmModal>

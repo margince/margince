@@ -19,7 +19,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { EmailAccessEditor, EmailAccessMarkers } from "./emailaccesseditor";
+import { EmailAccessEditor } from "./emailaccesseditor";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
 type EmailAccess = components["schemas"]["EmailAccess"];
@@ -129,16 +129,16 @@ describe("what the drawer says about who reads a message", () => {
     );
 
     // Who reads a message is a fact about it, like its date. A reader without
-    // standing to widen it is still told what it is.
-    //
-    // The one-word badge is NOT here: it is a marker and lives in the header,
-    // beside the subject, so a reader meets it before the message rather than
-    // under it. This half is the sentence that explains it.
+    // standing to widen it is still told what it is: the mark in a word, and
+    // the sentence that says what the word means for them.
+    expect(screen.getByText("Participants")).toBeTruthy();
     expect(
       screen.getByText("Only the people on this message can read it."),
     ).toBeTruthy();
     // And offered nothing to press, because the server said so.
-    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Change visibility" }),
+    ).toBeNull();
   });
 
   it("offers no control to a reader the server refused, whatever mode it named", () => {
@@ -158,7 +158,9 @@ describe("what the drawer says about who reads a message", () => {
       />,
     );
 
-    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Change visibility" }),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: /Share/ })).toBeNull();
   });
 
@@ -222,7 +224,7 @@ describe("what the drawer says about who reads a message", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Visibility" }));
+    await user.click(screen.getByRole("button", { name: "Change visibility" }));
 
     // THE point of this editor. The timeline row's dialog opens blank, so a
     // reader could only replace a set, never edit one. Here Ana is already
@@ -247,7 +249,7 @@ describe("what the drawer says about who reads a message", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Visibility" }));
+    await user.click(screen.getByRole("button", { name: "Change visibility" }));
     const confirm = await screen.findByRole("button", {
       name: "Save visibility",
     });
@@ -276,7 +278,7 @@ describe("what the drawer says about who reads a message", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Visibility" }));
+    await user.click(screen.getByRole("button", { name: "Change visibility" }));
     const confirm = await screen.findByRole("button", {
       name: "Save visibility",
     });
@@ -303,62 +305,98 @@ describe("what the drawer says about who reads a message", () => {
     // from `captured_by`, which is the inference this editor replaces: a
     // captured message's audience is derived from every importing mailbox, so
     // what this reader changes is their own contribution to the thread.
-    expect(screen.getByRole("button", { name: /Share/ })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Share with the organization" }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Change visibility" }),
+    ).toBeNull();
   });
-});
 
-// The header's own half: what a reader meets BEFORE the message.
-describe("the access markers beside the subject", () => {
-  it("names the audience and the reason that decided it", () => {
+  it("names where the thread GOES, not where it is", () => {
     draw(
-      <EmailAccessMarkers
-        access={
-          presentation({
-            display_status: "participants",
-            audience: "participants",
-            explanation: "explicitly_confidential",
-          }).access
-        }
+      <EmailAccessEditor
+        presentation={presentation({
+          display_status: "team",
+          audience: "workspace",
+          can_change: true,
+          change_mode: "thread_contribution",
+        })}
       />,
     );
 
-    // Two facts, two badges: what the limit IS, and what decided it. The
-    // reason arrives as a token and is translated — a header reading
+    // A shared thread offers the verb that seals it, never a verb naming the
+    // state it is already in — that reads as the opposite of what the press
+    // does.
+    expect(screen.getByRole("button", { name: "Make private" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Share/ })).toBeNull();
+  });
+
+  it("says the thread verb reaches the whole thread, from the server's word", () => {
+    draw(
+      <EmailAccessEditor
+        presentation={presentation({
+          display_status: "team",
+          audience: "workspace",
+          can_change: true,
+          change_mode: "thread_contribution",
+          change_scope: "thread",
+        })}
+      />,
+    );
+
+    // The button sits beside ONE message. Without this the press reads as a
+    // change to that message alone, and it is not.
+    expect(screen.getByText("Applies to the whole thread.")).toBeTruthy();
+  });
+});
+
+// The mark and the reason on the line under the subject: what a reader meets
+// BEFORE the message.
+describe("the mark under the subject", () => {
+  it("names the audience and the reason that decided it", () => {
+    draw(
+      <EmailAccessEditor
+        presentation={presentation({
+          display_status: "participants",
+          audience: "participants",
+          explanation: "explicitly_confidential",
+        })}
+      />,
+    );
+
+    // Two facts, two marks: what the limit IS, and what decided it. The
+    // reason arrives as a token and is translated — a line reading
     // `explicitly_confidential` would be worse than one reading nothing.
     expect(screen.getByText("Participants")).toBeTruthy();
     expect(screen.getByText("Marked confidential")).toBeTruthy();
     expect(screen.queryByText("explicitly_confidential")).toBeNull();
   });
 
-  it("draws no reason badge when the server gave none", () => {
+  it("draws no reason when the server gave none", () => {
     draw(
-      <EmailAccessMarkers
-        access={
-          presentation({
-            display_status: "team",
-            audience: "workspace",
-          }).access
-        }
+      <EmailAccessEditor
+        presentation={presentation({
+          display_status: "team",
+          audience: "workspace",
+        })}
       />,
     );
 
-    // A message nothing held has nothing to explain, and an empty second badge
+    // A message nothing held has nothing to explain, and an empty second mark
     // beside the first would read as a fact the response failed to fill in.
     expect(screen.getByText("Team")).toBeTruthy();
     expect(screen.queryByText("Marked confidential")).toBeNull();
   });
 
-  it("draws no reason badge for a token it cannot name", () => {
+  it("draws no reason for a token it cannot name", () => {
     draw(
-      <EmailAccessMarkers
-        access={
-          presentation({
-            display_status: "participants",
-            audience: "participants",
-            explanation: "a_reason_shipped_after_this_build",
-          }).access
-        }
+      <EmailAccessEditor
+        presentation={presentation({
+          display_status: "participants",
+          audience: "participants",
+          explanation: "a_reason_shipped_after_this_build",
+        })}
       />,
     );
 
@@ -369,23 +407,23 @@ describe("the access markers beside the subject", () => {
     expect(screen.queryByText("a_reason_shipped_after_this_build")).toBeNull();
   });
 
-  it("draws the withheld state as a caution, not as a quiet marker", () => {
+  it("draws the withheld state as a caution, and says nothing twice", () => {
     const { container } = draw(
-      <EmailAccessMarkers
-        access={
-          presentation({
-            display_status: "withheld",
-            content_state: "withheld",
-          }).access
-        }
+      <EmailAccessEditor
+        presentation={presentation({
+          display_status: "withheld",
+          content_state: "withheld",
+        })}
       />,
     );
 
     // `withheld` is the one state about the READER rather than the message,
     // and it is why the body below it is empty. Every other state is a message
-    // working as intended and takes the quiet form.
-    const badge = container.querySelector(".badge");
-    expect(badge?.className).toContain("badge-warn");
-    expect(badge?.className).not.toContain("badge-quiet");
+    // working as intended and takes the plain form.
+    const mark = container.querySelector(".visibility");
+    expect(mark?.className).toContain("visibility-withheld");
+    // No sentence under it: the body of a withheld message already says it is
+    // not shared with this reader, and the drawer must not say so twice.
+    expect(container.querySelector(".emailaccess__sentence")).toBeNull();
   });
 });
