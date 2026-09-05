@@ -902,7 +902,7 @@ export function Shell({
             railless; these advisories belong only here. */}
           <EconomyBanner />
           <EmbedReindexBanner />
-          {/* The import's gauge, floating top-centre of this column for as
+          {/* The import's gauge, floating bottom-centre of this column for as
             long as mail is arriving. Inside `.main` rather than beside the
             edge below, because it is positioned against the content column
             and not the window. */}
