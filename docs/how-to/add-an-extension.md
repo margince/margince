@@ -563,8 +563,32 @@ A `Channel` declares a messaging provider your unit can carry messages on, so a 
 conversation you captured leaves through your unit rather than a surface of your own:
 
 ```go
-Channels: []extension.Channel{{Provider: "relay", Send: send, Live: live}},
+Channels: []extension.Channel{{
+	Provider: "relay", CredentialModel: extension.CredentialPerMember,
+	Send: send, Live: live,
+}},
 ```
+
+`CredentialModel` is **required and has no default**. Say `extension.CredentialPerMember` when each
+member deposits their own credential over their own account; say `extension.CredentialWorkspaceBot`
+when one credential serves the whole installation — a bot, an official account, anything an
+administrator binds once for everybody. Omit it and generation refuses the unit, naming both
+choices.
+
+**It is recorded and published, and it does not yet decide anything.** Declaring
+`CredentialPerMember` today does NOT make a captured message private to that member: `decideBirthTx`
+returns early for every kind that is not `email`, so a message on your transport is born
+`audience = 'workspace'` — readable by every colleague — whichever model you declare. What the
+declaration currently does is land the right value in `channel_provider.credential_model` and
+publish it on `GET /v1/channel-providers`, so an operator can see whose credential a transport
+spends.
+
+Declare it correctly anyway, and declare it now. It is the axis the workspace mail-sharing floor and
+the per-seat holds will key on when they reach channel traffic, and a wrong value becomes wrong
+silently at that point: a per-member account read as the company's publishes one person's private
+chats to their colleagues, and a company account read as per-member hands a shared inbox to whoever
+connected it. Neither shows up as an error, because both produce a row that reads perfectly well to
+whoever it wrongly belongs to.
 
 ```go
 func send(ctx context.Context, rt extension.Runtime, msg extension.OutboundMessage) (extension.Receipt, error)

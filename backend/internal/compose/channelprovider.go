@@ -251,8 +251,16 @@ func upsertChannelProvider(ctx context.Context, tx pgx.Tx, facts channelProvider
 // door this package does not need to open for a value fixed at boot.
 var composedChannelProviders struct {
 	mu sync.RWMutex
-	// registered is every transport in the registry — what a message MAY name.
-	registered []string
+	// registered is every transport in the registry — what a message MAY name —
+	// carrying the row's OWN display facts rather than only its id.
+	//
+	// It used to be names alone, and the shaping then re-derived the rest from
+	// "this is a core connector", which published credential_model=workspace_bot
+	// for every unit transport however the unit had declared itself. The column
+	// exists to say whose credential a transport spends; an endpoint that
+	// answers it from a constant is telling an operator a member's own account
+	// is one the whole installation shares.
+	registered []channelProviderFacts
 	// sending maps the subset this binary composed a sender for — what a reply
 	// CAN leave on — to what that sender can carry alongside the message. Held
 	// separately from registered because the two differ (whatsapp is registered
@@ -298,20 +306,22 @@ var composedChannelProviders struct {
 // capability are separate axes, which is the same separation this whole arc is
 // about.
 func LoadChannelProviderDirectory(ctx context.Context, pool *pgxpool.Pool) error {
-	var registered []string
+	var registered []channelProviderFacts
 	err := database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT provider FROM channel_provider ORDER BY provider`)
+			`SELECT provider, transport, label, credential_model, supplies_transport
+			   FROM channel_provider ORDER BY provider`)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var p string
-			if err := rows.Scan(&p); err != nil {
+			var f channelProviderFacts
+			if err := rows.Scan(&f.provider, &f.transport, &f.label,
+				&f.credentialModel, &f.suppliesTransport); err != nil {
 				return err
 			}
-			registered = append(registered, p)
+			registered = append(registered, f)
 		}
 		return rows.Err()
 	})
@@ -322,7 +332,7 @@ func LoadChannelProviderDirectory(ctx context.Context, pool *pgxpool.Pool) error
 	return nil
 }
 
-func setComposedChannelProviders(registered []string, sending map[string]connector.Carriage) {
+func setComposedChannelProviders(registered []channelProviderFacts, sending map[string]connector.Carriage) {
 	composedChannelProviders.mu.Lock()
 	defer composedChannelProviders.mu.Unlock()
 	composedChannelProviders.registered = slices.Clone(registered)
@@ -331,7 +341,7 @@ func setComposedChannelProviders(registered []string, sending map[string]connect
 
 // ComposedChannelProviders returns this boot's registered transports and, for
 // the subset that can carry an outbound message, what each one can carry.
-func ComposedChannelProviders() (registered []string, sending map[string]connector.Carriage) {
+func ComposedChannelProviders() (registered []channelProviderFacts, sending map[string]connector.Carriage) {
 	composedChannelProviders.mu.RLock()
 	defer composedChannelProviders.mu.RUnlock()
 	return slices.Clone(composedChannelProviders.registered), maps.Clone(composedChannelProviders.sending)

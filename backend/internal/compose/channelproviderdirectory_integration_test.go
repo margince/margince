@@ -17,6 +17,10 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func TestTheDirectoryAndTheRegistryDescribeTheSameTransports(t *testing.T) {
@@ -24,17 +28,24 @@ func TestTheDirectoryAndTheRegistryDescribeTheSameTransports(t *testing.T) {
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
 
-	rows, err := owner.Query(ctx, `SELECT provider FROM channel_provider ORDER BY provider`)
+	rows, err := owner.Query(ctx, `SELECT provider, credential_model FROM channel_provider ORDER BY provider`)
 	if err != nil {
 		t.Fatalf("reading the registry: %v", err)
 	}
 	inRegistry := map[string]bool{}
+	// The registry's OWN answer per provider, not just which providers exist.
+	// Checking only that the published value is inside the enum passes while
+	// the endpoint publishes a constant — which it did, for every unit
+	// transport, because the directory carried provider names alone and the
+	// shaping re-derived the rest from "this is a core connector".
+	modelInRegistry := map[string]string{}
 	for rows.Next() {
-		var p string
-		if err := rows.Scan(&p); err != nil {
+		var p, model string
+		if err := rows.Scan(&p, &model); err != nil {
 			t.Fatalf("scanning a provider: %v", err)
 		}
 		inRegistry[p] = true
+		modelInRegistry[p] = model
 	}
 	rows.Close()
 	if len(inRegistry) == 0 {
@@ -67,6 +78,14 @@ func TestTheDirectoryAndTheRegistryDescribeTheSameTransports(t *testing.T) {
 		}
 		if !entry.CredentialModel.Valid() {
 			t.Errorf("%q publishes credential_model %q, which is outside the contract's enum", entry.Provider, entry.CredentialModel)
+		}
+		// Whose credential a transport spends is what every privacy rule about
+		// a channel message keys on, and this endpoint is where an operator
+		// reads it. Publishing a value the registry does not hold tells them
+		// one member's personal account is a company one, or the reverse.
+		if got, want := string(entry.CredentialModel), modelInRegistry[entry.Provider]; got != want {
+			t.Errorf("%q publishes credential_model %q; the registry holds %q — the directory is answering from somewhere other than the row it describes",
+				entry.Provider, got, want)
 		}
 	}
 	for p := range inRegistry {
@@ -155,5 +174,57 @@ func TestTheDirectoryLoadsFromTheRegistryAndNotFromTheCaptureBoot(t *testing.T) 
 	registered, _ := ComposedChannelProviders()
 	if len(registered) == 0 {
 		t.Fatal("the directory is empty after loading from the registry; a vault-less install would publish no labels at all and report 200 while doing it")
+	}
+}
+
+// The directory publishes the credential model a UNIT declared, not the one a
+// core connector would have.
+//
+// The sibling test above cannot see this on its own: the harness registers core
+// transports only, so every row it compares is workspace_bot either way and it
+// agrees with a directory that publishes that constant unconditionally. Which is
+// what the directory did — LoadChannelProviderDirectory carried provider NAMES
+// out of the registry and the shaping re-derived everything else as core. The
+// case has to be planted, because it is the shape the census cannot reach.
+//
+// It matters where an operator reads it: credential_model is what says whether a
+// transport's messages are the company's correspondence or one person's, and a
+// per-member account published as a workspace bot invites exactly the wrong
+// answer to that question.
+func TestTheDirectoryPublishesAUnitsOwnCredentialModel(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	ctx := context.Background()
+	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
+	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
+	declaresTransport(t, "mine", extension.Channel{
+		Provider: "mine_chat", CredentialModel: extension.CredentialPerMember,
+		Send: (&capturedSend{}).send, Live: answersLive(true, nil),
+	})
+	t.Cleanup(func() {
+		if _, err := owner.Exec(context.Background(), `DELETE FROM channel_provider WHERE provider = 'mine_chat'`); err != nil {
+			t.Errorf("cleaning up channel_provider: %v", err)
+		}
+	})
+	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}); err != nil {
+		t.Fatalf("reconcileChannelProviders: %v", err)
+	}
+	if err := LoadChannelProviderDirectory(ctx, e.Pool); err != nil {
+		t.Fatalf("loading the directory: %v", err)
+	}
+
+	registered, sending := ComposedChannelProviders()
+	var found bool
+	for _, entry := range publishedChannelProviders(registered, sending) {
+		if entry.Provider != "mine_chat" {
+			continue
+		}
+		found = true
+		if got := string(entry.CredentialModel); got != "per_member" {
+			t.Errorf("the directory publishes credential_model %q for a unit that declared per_member — an operator reading this endpoint is told a member's own account is one the installation shares", got)
+		}
+	}
+	if !found {
+		t.Fatal("the directory does not publish the unit transport at all, so the assertion above never ran")
 	}
 }
