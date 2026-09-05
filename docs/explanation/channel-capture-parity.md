@@ -59,7 +59,7 @@ through.
 | Owner shares or re-holds a thread (`ThreadAudienceSetter.Decide`) | yes | **no** — answers 404 | it selects `activity JOIN capture_import`, which finds nothing |
 | `held_by_others` count reported back to the sharer | yes | n/a | derived from the same import rows |
 | Audience recompute across every importing seat | yes | **no** | reached only from inside `recordThisImport` |
-| Held-to-participants when filed under no record | yes | yes | `limitLinkLessAudience` reads the kind and the counterparty shape, not the transport |
+| Held-to-participants when filed under no record | yes | **no** | `limitLinkLessAudience` returns early on `decision.create`, and the channel seam always creates (`sinkchannel.go`), so the hold never fires for a channel record |
 | Auto-create the counterparty | tiered ladder T0–T4, disposition ledger | own seam, always creates, ownerless | a human messaging the workspace's own bot *is* the affirmative intent the ladder hunts for; the ledger is address-keyed |
 | Pending-counterparty question and the verdict engine | yes | **no** | same address-keyed ledger |
 | Attachments | yes | **no** | the connector fetches no media; `recordParts` is transport-agnostic and simply gets nothing |
@@ -71,21 +71,24 @@ through.
 
 ## What a channel message is therefore born as
 
-Workspace-readable, unless it is filed under no record at all. There is no seat
-posture that holds it and no verdict that judges it, and the thread share/hold
-endpoint cannot see it in either direction — it selects through the import row
-that is never written.
+Workspace-readable, always, with a NULL `audience_reason`. Not even the
+link-less hold applies: `limitLinkLessAudience` returns as soon as the
+counterparty decision says a record will be created, and the channel seam
+(`decideChannelCounterparty`) always says so wherever an ensurer is wired, which
+production does. So no rung of the ladder and no limiter ever narrows a channel
+message.
 
-What is left is the manual per-message audience control, and it is available in
-exactly the wrong half of the cases. `refuseCapturedAudienceWrite` refuses a
-direct audience write only for a message some mailbox imported, so the server
-accepts one on any channel message; the timeline row offers it for every kind
-but `email`, withholding it where `audience_reason` says the audience was
-derived (`frontend/src/screens/timelineactions.tsx`). So a channel message filed
-under a record — audience `workspace`, no reason — can be narrowed by hand, and
-a link-less one, which `limitLinkLessAudience` already held to its participants,
-offers no control at all. The hold a channel message can actually get is the one
-nobody can lift.
+What is left is the manual per-message audience write, and it works. The server
+refuses a direct audience set only on a message some mailbox imported
+(`refuseCapturedAudienceWrite`), and no channel message is; the timeline row
+offers the control for every kind but `email`, withholding it only where
+`audience_reason` says the audience was derived — which for a channel row it
+never is. Two things follow, and the second is the sharper one. It is a
+per-message answer on a conversation, so pressing it on one message of a chat
+leaves the rest of the thread where it was. And `EnsureActivityWritableIn`
+admits any content-visible caller holding `activity.update` on a row with no
+links at all, so an unfiled channel message's audience is loosest exactly where
+the least is known about it.
 
 The same conversation arriving by email is gated by the workspace floor, then by
 that mailbox's posture, and is shareable or re-holdable by its owner at any time.
