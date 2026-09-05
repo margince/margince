@@ -730,21 +730,17 @@ describe("mapDealCreate", () => {
 });
 
 describe("DealsScreen", () => {
-  // The board card draws the same chip strip a list row does, so a reader
-  // moving between the two reads one thing one way. The card takes a view
-  // model rather than the wire row, so the tags have to be copied across in
-  // toBoardDeal — a field left out there is silently absent on every card.
-  it("draws a deal's tags on its board card", async () => {
+  // The card takes a view model rather than the wire row, so every fact it
+  // states has to be copied across in toBoardDeal — a field left out there is
+  // silently absent on every card. The close date is the one a rep sorts a
+  // quarter by, and the one a card without it would most quietly miss.
+  it("draws a deal's close date on its board card", async () => {
     vi.stubGlobal(
       "fetch",
-      stubBackend([
-        deal({
-          tags: [{ tag_id: "t-1", name: "Renewal", color: "teal" }],
-        }),
-      ]),
+      stubBackend([deal({ expected_close_date: "2099-10-14" })]),
     );
     render(<DealsScreen />);
-    expect(await screen.findByText("Renewal")).toBeTruthy();
+    expect(await screen.findByText("closes 14 Oct")).toBeTruthy();
   });
 
   it("board↔table swaps views over the same fetched set without a reload", async () => {

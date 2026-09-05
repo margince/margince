@@ -181,17 +181,17 @@ const boardColumns: BoardMoneyColumn[] = [
     weightedMinor: 4_500,
     currency: "EUR",
     deals: [
-      // How a deal is FILED, on the card: the same chip strip a list row draws,
-      // so a reader moving between the board and the table reads one thing one
-      // way rather than learning two.
       boardDeal("d1", "Contoso renewal", 12_000, 3, {
-        tags: [
-          { tag_id: "t-1", name: "Key Account", color: "amber" },
-          { tag_id: "t-2", name: "Churn Risk", color: "rose" },
-          { tag_id: "t-3", name: "DACH", color: "teal" },
-        ],
+        singleThreaded: true,
+        closeDate: "2026-10-14",
+        owner: "Ada Lindqvist",
       }),
-      boardDeal("d2", "Fabrikam expansion", 33_000, 9, { stalled: true }),
+      // A close date the nightly run set and nobody confirmed: marked, not hidden.
+      boardDeal("d2", "Fabrikam expansion", 33_000, 9, {
+        stalled: true,
+        closeDate: "2026-09-30",
+        closeDateProvisional: true,
+      }),
     ],
   },
   {
@@ -201,7 +201,9 @@ const boardColumns: BoardMoneyColumn[] = [
     rawMinor: 28_000,
     weightedMinor: 8_400,
     currency: "EUR",
-    deals: [boardDeal("d3", "Globex onboarding", 28_000, 14)],
+    deals: [
+      boardDeal("d3", "Globex onboarding", 28_000, 14, { owner: "Tim Rasche" }),
+    ],
   },
   {
     stage: "proposal",
@@ -287,6 +289,7 @@ export const BoardInSurface: StoryObj = {
       <PipelineBoard
         columns={boardColumns}
         cardHref={(d) => `#/deals/${d.id}`}
+        zone="Europe/Berlin"
       />
     </ListSurface>
   ),
@@ -372,6 +375,7 @@ export const BoardWithAbsentMoney: StoryObj = {
     <PipelineBoard
       columns={absentMoneyColumns}
       cardHref={(d) => `#/deals/${d.id}`}
+      zone="Europe/Berlin"
     />
   ),
 };
@@ -406,6 +410,7 @@ export const BoardWithWithheldCompany: StoryObj = {
     <PipelineBoard
       columns={withheldCompanyColumns}
       cardHref={(d) => `#/deals/${d.id}`}
+      zone="Europe/Berlin"
     />
   ),
 };
@@ -446,6 +451,7 @@ export const BoardWithALongStageName: StoryObj = {
     <PipelineBoard
       columns={longStageColumns}
       cardHref={(d) => `#/deals/${d.id}`}
+      zone="Europe/Berlin"
     />
   ),
 };

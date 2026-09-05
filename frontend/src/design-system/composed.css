@@ -9,10 +9,10 @@
  * the track gave them. */
 .board {
   display: flex;
-  gap: 12px;
+  gap: var(--space-4);
   align-items: flex-start;
   overflow-x: auto;
-  padding-bottom: 8px;
+  padding-bottom: var(--space-2);
 }
 .board-col {
   /* The containing block for anything absolutely positioned inside a column.
@@ -25,12 +25,16 @@
   position: relative;
   flex: 1 1 220px;
   min-width: 220px;
-  background: var(--bgCard);
+  /* A RECESS in the surface, not a card on it. --bgCard is a card's ground and
+     read as one — five of them in a row made the board a grid of grey slabs
+     with the deals inside them, and the cards had to fight their own
+     containers to look like the subject. */
+  background: var(--bgWell);
   border-radius: var(--r-md);
-  padding: 10px;
+  padding: var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   min-height: 120px;
 }
 .board-col.droptarget {
@@ -76,7 +80,9 @@
   align-items: baseline;
   gap: 6px;
   padding: 2px 4px 4px;
-  background: var(--bgCard);
+  /* The column's own ground, or the cards slide visibly behind a transparent
+     strip. */
+  background: var(--bgWell);
 }
 .board-col-head .stage {
   font-size: var(--fs-sm);
@@ -137,21 +143,38 @@
   /* An anchor now rather than a button (composed.tsx says why), so it takes the
      two things the platform gives a link and this card must not have: the UA's
      own ink and an underline. `a:not([class])` in base.css does not reach a
-     classed anchor, so they are stated here. */
+     classed anchor, so they are stated here — and neither does its focus ring,
+     which is why this card states its own below. */
   color: inherit;
   text-decoration: none;
-  background: var(--bgElevated);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
-  padding: 10px 12px;
+  /* The pane over the column's ground, not the elevated surface: a card lifts
+     off the stage it sits in by being translucent white over it, which is the
+     same separation every other pane in the product is drawn with. No
+     --shadow-card on top — that token is a hairline ring, and a ring behind a
+     1px border is the same edge drawn twice. */
+  background: var(--pane);
+  border: 1px solid var(--paneEdge);
+  border-radius: var(--r-control);
+  padding: var(--space-3) var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--space-1);
   cursor: pointer;
   text-align: left;
   width: 100%;
   font-family: var(--f-body);
+}
+/* The edge firms up under the pointer. A background step would fight the
+   staged card's own tint, and this card's whole job is to keep those two
+   readings apart. It is stated ABOVE the staged and archived rules on purpose:
+   both restate the whole border, so a card whose edge carries provenance keeps
+   that edge under the pointer rather than trading it for a hover colour. */
+.deal-card:hover {
+  border-color: var(--borderStrong);
+}
+.deal-card:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
 }
 .deal-card.staged {
   background: var(--aiLight);
@@ -161,18 +184,35 @@
   opacity: 0.6;
   border-style: dashed;
 }
-.deal-card .deal-name {
-  font-size: var(--fs-body);
-  font-weight: 600;
-  color: var(--textPrimary);
+/* The card answers a rep's questions in the order they ask them, from across
+   the board: does this one need me — a line that exists only when it does;
+   whose deal is it — the company, the line with the weight, because an account
+   is what a rep recognises in a column of forty; what is it worth and when does
+   it close — the figure at lead size, the one thing compared card to card; and
+   last, what it is called, the line that disambiguates two deals on one
+   account and is needed for nothing else. */
+.deal-card .deal-flags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  margin-bottom: var(--space-1);
+}
+/* The size of the stall, in the stall's own tone: it sits beside the word, and
+   only ever beside it. */
+.deal-card .deal-age {
+  font-size: var(--fs-sm);
+  color: var(--warn);
+  font-variant-numeric: tabular-nums;
 }
 .deal-card .deal-org {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   min-width: 0;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  color: var(--textPrimary);
 }
 /* The card is one line of company in a narrow column, so a long name elides
  * rather than wrapping under its own mark. */
@@ -185,23 +225,50 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-/* A stage column is narrow, so the meta line wraps as whole items: a value or a
- * badge broken across two lines is harder to read than one that moved down. */
-.deal-card .deal-meta {
+.deal-card .deal-figure {
   display: flex;
-  align-items: center;
+  align-items: baseline;
+  justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--space-1) 7px;
+  gap: var(--space-1) var(--space-2);
+}
+/* Tabular so a column of figures lines up digit for digit. */
+.deal-card .deal-value {
+  font-size: var(--fs-lead);
+  font-weight: var(--fw-semibold);
+  color: var(--textPrimary);
+  font-variant-numeric: tabular-nums;
+}
+.deal-card .deal-closes {
   font-size: var(--fs-meta);
   color: var(--textMeta);
-}
-.deal-card .deal-meta > * {
   white-space: nowrap;
 }
-.deal-card .deal-value {
-  font-family: var(--f-mono);
+/* A warning about the DATE, not about the deal: one nobody has confirmed, or
+   one already behind us. The tone marks the figure and leaves the card alone,
+   which is the deal strip's rule for the same fact. */
+.deal-card .deal-closes-warn {
+  color: var(--warn);
+}
+.deal-card .deal-name {
   font-size: var(--fs-sm);
-  color: var(--textPrimary);
+  color: var(--textContent);
+}
+/* The company and, at the far edge of its line, who carries the deal: a mark
+   only, because a rep on a team board scans for their own initials and the
+   name is one hover or one screen reader away. It never gives way — the
+   company's name elides before the mark does, so the mark stays in the same
+   place on every card in the column. */
+.deal-card .deal-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.deal-card .deal-owner {
+  margin-left: auto;
+  flex: none;
+  display: flex;
 }
 
 .record-head {

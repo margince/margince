@@ -568,6 +568,30 @@ export function rosterOwnerName(
 }
 
 /**
+ * How a caller that maps records onto cards names their owners.
+ *
+ * A function rather than the roster itself, for the same reason the company
+ * mapping takes `CompanyNaming`: the mapper is pure and the roster is a query,
+ * and a mapper that reads a query's `.data` is one that every story and test
+ * of it has to assemble a query for. Null is BOTH "unowned" and "the roster
+ * cannot name this id" — on a card the two draw the same nothing, and the
+ * table's owner column is where they are told apart.
+ */
+export type OwnerNaming = (ownerId: string | null | undefined) => string | null;
+
+export function rosterOwnerNaming(
+  roster: ReturnType<typeof useRoster>,
+): OwnerNaming {
+  return (ownerId) => {
+    if (!ownerId) {
+      return null;
+    }
+    const found = (roster.data ?? []).find((entry) => entry.id === ownerId);
+    return found && "display_name" in found ? found.display_name : null;
+  };
+}
+
+/**
  * The owner of a record, by name, for a list column.
  *
  * Reads the shared roster cache (the same walked entry EntityRef and the Share
