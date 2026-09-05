@@ -50,7 +50,7 @@ through.
 | Capability | Mail (`kind = 'email'`) | Channel (`kind = 'message'`) | Why they differ |
 | --- | --- | --- | --- |
 | Activity row, links, audit image, `activity.captured` event | yes | yes | one sink, one write shape; the event names `channel_provider` |
-| Per-seat import row (`capture_import`) | yes | **no** | `mailboxWasARecipientTx` matches an address; a channel record carries none |
+| Per-seat import row (`capture_import`) | yes | **no** | `mailboxWasARecipientTx` matches an address, and a bot has no seat behind it to name anyway |
 | Workspace mail-sharing floor | yes | **no** | `decideBirthTx` returns before reading the setting |
 | Mailbox posture (`shared` / `classified` / `held`) | yes | **no** | posture lives on `capture_connection` and is read per mail connection |
 | Counterparty hold (this seat holds their mail) | yes | **no** | `capture_counterparty_hold` is keyed on address and domain |
@@ -72,29 +72,51 @@ through.
 ## What a channel message is therefore born as
 
 Workspace-readable, unless it is filed under no record at all. There is no seat
-posture that holds it, no verdict that judges it, and no control anywhere that
-lets the receiving human hold it afterwards — the share endpoint cannot see a
-message the seat has no import row for, in either direction.
+posture that holds it and no verdict that judges it, and the thread share/hold
+endpoint cannot see it in either direction — it selects through the import row
+that is never written. The one write that would still be accepted, a direct
+message-audience set, is hidden by the browser (next section), so in practice
+nothing on any screen holds a channel message.
 
 The same conversation arriving by email is gated by the workspace floor, then by
 that mailbox's posture, and is shareable or re-holdable by its owner at any time.
 
-## If the gap is to be closed
+## Why closing it is a product decision, not a refactor
 
-`capture_import` is the seam. Key the row on *how the message named its human*
-rather than on an address:
+The obvious fix — "write a `capture_import` row for a channel message too" — does
+not typecheck against the model. `capture_import` is keyed `(activity_id,
+user_id)`, and a channel message has no seat to name:
 
-- `counterparty_shape` already answers that question totally
-  (`capture/sinkchannel.go`), and `shapeChannel` is the arm that needs the
-  delivery evidence a channel can actually give — the bot's own membership of
-  the chat, which the poll already knows.
-- Once a channel message has an import row, the audience recompute, the thread
-  decision and `held_by_others` follow with no further change: each of them
-  reads import rows and asks nothing about a transport.
-- The posture question is separate and genuinely open: a mail posture is a
-  property of a mailbox, and a workspace bot is not one seat's mailbox. That is
-  a product decision, not a refactor — say whose bot's traffic is whose before
-  writing a posture column for it.
+- a channel connection is one **workspace-wide bot binding**, not a seat's
+  mailbox. It lives in its own table (`channel_connection`, unique per provider
+  while live) precisely because `capture_connection` models "one human's own
+  mailbox" and a bot is not that. `capture/channelconn.go` says so in its opening
+  comment.
+- `connected_by` on that row is **audit-only, never an owner**, restated in
+  `capture/channelconn.go`, `capture/sinkchannel.go` and
+  `compose/telegramingest.go`.
+- the connector principal the poll builds sets neither `UserID` nor
+  `OnBehalfOf` (`compose/telegramingest.go`), deliberately: reusing the
+  connecting admin would make every captured message look like that admin's own
+  row-scoped activity.
+- there is no chat→seat mapping anywhere. `person_channel_identity` maps a chat
+  identity to a **person** — the outside human — and carries no owner column.
+
+So the mail question — *which of our seats received this, and what does each of
+them ask of it?* — has no answer for a bot. Parity therefore needs a decision
+about **whose privacy a channel conversation is** before any code moves:
+
+- a workspace-level posture on the bot binding (one answer for all of it), or
+- a per-chat owner, which the product does not model today, or
+- a deliberate "channel traffic is workspace business", written down and held by
+  a test rather than left as an omission.
+
+Two things are true meanwhile and worth knowing before either is chosen. A
+direct message-audience write is currently *accepted* on a channel message —
+`refuseCapturedAudienceWrite` refuses only what `activityWasImported` reports,
+and no channel message is imported — while the browser hides the control on a
+`captured_by` prefix proxy. And `ThreadAudienceSetter.Decide` cannot reach one in
+either direction, because it selects through the import row that is never there.
 
 Whatever is decided, decide it in one place. Two spellings of "may the workspace
 read this" — one for mail, one for channels — is the shape that drifts until the
