@@ -481,6 +481,46 @@ describe("log activity from a 360", () => {
       expect(links).toEqual([{ entity_type: "person", entity_id: "p1" }]);
     });
 
+    it("files a note on the company after a meeting's attendee was picked", async () => {
+      const user = userEvent.setup();
+      const captured: Captured[] = [];
+      stubApi(
+        {
+          "POST /activities": createdActivity,
+          "GET /people": () => jsonResponse(contacts),
+        },
+        captured,
+      );
+      render(<LogActivity entityType="organization" entityId="o1" />);
+      await pickOption(user, screen.getByLabelText("Type"), "Meeting");
+      await user.type(screen.getByLabelText("Who was there"), "Fré");
+      await user.click(
+        await screen.findByRole("button", { name: "Frédéric de Gombert" }),
+      );
+
+      // Switching kind hides the picker but does not forget the person: the
+      // reader answered a question the form stopped asking.
+      await pickOption(user, screen.getByLabelText("Type"), "Note");
+      expect(screen.queryByLabelText("Who was there")).toBeNull();
+      await user.type(screen.getByLabelText("Subject *"), "Pricing thoughts");
+      await user.click(screen.getByRole("button", { name: "Log" }));
+
+      await waitFor(() =>
+        expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+          true,
+        ),
+      );
+      const post = captured.find((entry) => entry.key === "POST /activities");
+      if (!post) throw new Error("expected a POST /activities to be captured");
+      const links = (
+        post.body as { links: { entity_type: string; entity_id: string }[] }
+      ).links;
+      // The company, not the contact. A note carries no person rule, so a
+      // stale attendee would file it against the contact and take it off the
+      // company screen the reader wrote it on.
+      expect(links).toEqual([{ entity_type: "organization", entity_id: "o1" }]);
+    });
+
     it("asks nobody for a note, which a company can hold on its own", async () => {
       stubApi({ "POST /activities": createdActivity });
       render(<LogActivity entityType="organization" entityId="o1" />);
