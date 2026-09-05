@@ -353,7 +353,9 @@ export function ApprovalRow({
             <AutonomyDot tier={approvalDotTier(approval.kind, tierMap)} />
           )}
           {/* kind is meta, not the headline — the human reads the summary first */}
-          <span className="t-small">{approvalKindLabel(approval.kind, t)}</span>
+          <span className="t-caption">
+            {approvalKindLabel(approval.kind, t)}
+          </span>
           <DecisionToolChip
             verb={KIND_TO_VERB[approval.kind]}
             label={(verb) => t("decision.viaTool", { verb })}

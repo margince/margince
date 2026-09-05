@@ -197,7 +197,7 @@ function GroupNode({
           ),
         )}
         {group.children.length === 0 && (
-          <p className="filter-group-empty">{t("filters.emptyGroup")}</p>
+          <p className="filter-group-empty t-sub">{t("filters.emptyGroup")}</p>
         )}
       </div>
 

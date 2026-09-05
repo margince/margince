@@ -132,7 +132,7 @@ export function FieldBuilder({
   return (
     <div className="cf-builder">
       <div className="cf-builder-head">
-        <p className="cf-hint">{t("cf.builder.intro")}</p>
+        <p className="cf-hint t-caption">{t("cf.builder.intro")}</p>
         <Badge>{t("cf.builder.noCode")}</Badge>
       </div>
 
@@ -847,7 +847,7 @@ export function CustomFieldsAdmin() {
             />
             {/* True for every reader: the recording happens whether or not this
                 one may read it back. */}
-            <p className="t-caption">{t("cf.audit.footer")}</p>
+            <p className="cf-hint t-caption">{t("cf.audit.footer")}</p>
           </Disclosure>
         </SettingList>
         {/* The posture speaks for BOTH grants, so it is bound to both. The
@@ -857,7 +857,7 @@ export function CustomFieldsAdmin() {
             whose Edit and Archive buttons worked. A sentence about a boundary
             has to be true of the boundary it names. */}
         {!canCreate && !canEdit && (
-          <p className="cf-posture">{t("cf.noPermission")}</p>
+          <p className="cf-posture t-sub">{t("cf.noPermission")}</p>
         )}
       </PanelBody>
 

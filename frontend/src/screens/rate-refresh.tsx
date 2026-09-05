@@ -59,7 +59,7 @@ export function RefreshFromSources({ path }: Readonly<{ path: RefreshPath }>) {
         {t("settings.rates.refresh")}
       </Button>
       {refresh.isSuccess ? (
-        <span className="t-small" role="status">
+        <span className="t-caption" role="status">
           {t("settings.rates.refreshEnqueued")}
         </span>
       ) : null}

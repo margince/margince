@@ -194,13 +194,8 @@
 /* The display face, because these three are the card's headline; tabular, so a
    figure climbing under CountUp changes its digits without moving its caption. */
 .capture-stat-value {
-  font-family: var(--f-display);
-  font-size: var(--fs-h1);
   line-height: var(--lh-tight);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
   font-variant-numeric: tabular-nums;
-  color: var(--textPrimary);
 }
 .capture-stat-label {
   grid-column: 2;

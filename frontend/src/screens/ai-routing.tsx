@@ -593,7 +593,7 @@ function LaneRow<
           <span className="ai-lane-name">
             <span className="ai-lane-id t-mono">{name}</span>
             {laneGloss(name, t) && (
-              <span className="ai-lane-gloss">{laneGloss(name, t)}</span>
+              <span className="ai-lane-gloss t-sub">{laneGloss(name, t)}</span>
             )}
           </span>
           {/* The binding itself, as ONE flex item. Grouped rather than laid
@@ -629,7 +629,7 @@ function LaneRow<
               // the reason the ladder is ordered the way it is, and reading it
               // used to mean leaving for the price table and finding this model
               // in a list of two hundred.
-              <span className="ai-lane-price">
+              <span className="ai-lane-price t-sub">
                 {priceLabel(
                   catalogue,
                   binding.provider,

@@ -161,9 +161,7 @@
 }
 
 .mb-arc-row time {
-  color: var(--textMeta);
   font-family: var(--f-mono);
-  font-size: var(--fs-meta);
 }
 
 .mb-arc-row strong {

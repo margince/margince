@@ -67,7 +67,7 @@ export function TodayPanel({
           fact about the list's head, and as a footer band under the rows it
           floated alone at the bottom of the pane. */}
       <div className="co-360-headtext">
-        <h3 className="co-360-title-text">{t("today.title")}</h3>
+        <h3 className="co-360-title-text t-h3">{t("today.title")}</h3>
         {footer}
       </div>
       {onOpenTasks && (
@@ -133,7 +133,7 @@ export function WithheldNotice({
     return null;
   }
   return (
-    <p className="today-withheld">
+    <p className="today-withheld t-caption">
       {t("today.withheld", { sections: sections.join(", ") })}
     </p>
   );
@@ -195,15 +195,15 @@ export function FoundMove({
         )}
         <span className="co-move-ask">{title}</span>
         {why && basis && (
-          <Popover className="co-move-why" onHover label={why}>
+          <Popover className="co-move-why t-sub" onHover label={why}>
             <span className="co-move-basis-head t-eyebrow">
               {t("co.suggest.basedOn")}
             </span>
             {basis}
           </Popover>
         )}
-        {why && !basis && <span className="co-move-reason">{why}</span>}
-        {!why && basis && <span className="co-move-reason">{basis}</span>}
+        {why && !basis && <span className="co-move-reason t-sub">{why}</span>}
+        {!why && basis && <span className="co-move-reason t-sub">{basis}</span>}
         {(action || defer) && (
           <span className="co-move-do">
             <span className="co-move-actions">
@@ -261,11 +261,15 @@ export function TodoRow({
       {who && <Avatar name={who} size="xs" />}
       <span className="co-todo-body">
         <span className="co-todo-title">{title}</span>
-        {meta && <span className="co-todo-meta">{meta}</span>}
+        {meta && <span className="co-todo-meta t-caption">{meta}</span>}
       </span>
       {due && (
         <span
-          className={["co-todo-due", due.tone ? `co-todo-due-${due.tone}` : ""]
+          className={[
+            "co-todo-due",
+            "t-caption",
+            due.tone ? `co-todo-due-${due.tone}` : "",
+          ]
             .filter(Boolean)
             .join(" ")}
         >

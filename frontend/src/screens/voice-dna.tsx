@@ -135,7 +135,7 @@ export function VoiceDnaCard() {
                   />
                 </SettingList>
               ) : (
-                <p className="t-small">{t("settings.voice.readOnly")}</p>
+                <p className="t-caption">{t("settings.voice.readOnly")}</p>
               )}
             </PanelBody>
           </Panel>
@@ -197,18 +197,18 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
               the split design-system/README.md draws between a withheld surface
               and a withheld write. */}
           {!canEdit && (
-            <p className="t-small vdna-readonly">
+            <p className="t-caption vdna-readonly">
               {t("settings.voice.readOnly")}
             </p>
           )}
           <div className="vdna-status">
             <Badge>{t(`settings.voice.status.${profile.status}`)}</Badge>
             {profile.quality_band && (
-              <span className="t-small">
+              <span className="t-caption">
                 {bandLabel(t, profile.quality_band)}
               </span>
             )}
-            <span className="t-small vdna-version">
+            <span className="t-caption vdna-version">
               {t("settings.voice.version", {
                 n: identifierNumber(profile.profile_version ?? 0),
               })}
@@ -326,7 +326,7 @@ function DerivedVoice({ profile }: Readonly<{ profile: VoiceProfile }>) {
   return profile.voice_profile_md ? (
     <p className="vdna-derived">{profile.voice_profile_md}</p>
   ) : (
-    <p className="t-small">{t("settings.voice.derivedEmpty")}</p>
+    <p className="t-caption">{t("settings.voice.derivedEmpty")}</p>
   );
 }
 
@@ -404,7 +404,7 @@ function PersonalityEditor({
             {t("settings.voice.savePreferences")}
           </Button>
           {error && (
-            <span className="t-small" role="alert">
+            <span className="t-caption" role="alert">
               {error}
             </span>
           )}
@@ -454,7 +454,7 @@ function CorpusManifest({
       <QueryGate query={sources} pendingLabel={t("settings.voice.title")}>
         {(manifest) => (
           <div>
-            <p className="t-small">
+            <p className="t-caption">
               {t("settings.voice.meter", {
                 count: formatNumber(manifest.summary.total_words, locale),
                 target: formatNumber(manifest.summary.target_words, locale),
@@ -468,7 +468,7 @@ function CorpusManifest({
             )}
             <RegisterMix summary={manifest.summary} />
             {manifest.sources.length === 0 ? (
-              <p className="t-small">{t("settings.voice.corpusEmpty")}</p>
+              <p className="t-caption">{t("settings.voice.corpusEmpty")}</p>
             ) : (
               <ul className="vdna-list">
                 {manifest.sources.map((s) => (
@@ -487,7 +487,7 @@ function CorpusManifest({
         )}
       </QueryGate>
       {error && (
-        <p className="t-small" role="alert">
+        <p className="t-caption" role="alert">
           {error}
         </p>
       )}
@@ -502,7 +502,7 @@ function FloorMeter({ words }: Readonly<{ words: number }>) {
   const t = useT();
   const { locale } = useLocale();
   return (
-    <p className="t-small vdna-floor">
+    <p className="t-caption vdna-floor">
       <progress
         value={Math.min(words, VOICE_MIN_WORDS)}
         max={VOICE_MIN_WORDS}
@@ -550,7 +550,7 @@ function RegisterMix({ summary }: Readonly<{ summary: VoiceCorpusSummary }>) {
     return null;
   }
   return (
-    <p className="t-small vdna-regmix">
+    <p className="t-caption vdna-regmix">
       {entries
         .map(
           ([register, words]) =>
@@ -600,7 +600,7 @@ function SourceRow({
         {!source.included && ` · ${t("settings.voice.excluded")}`}
       </span>
       {armed && drops && (
-        <span className="t-small vdna-banddrop" role="alert">
+        <span className="t-caption vdna-banddrop" role="alert">
           {t("settings.voice.bandDrop", {
             from: bandLabel(t, summary.quality_band),
             to: bandLabel(t, bandAfter),
@@ -811,11 +811,11 @@ function BuildControls({
                 saying why invites the press again. It also says the wait can
                 be left, because a build outlives this page and a reader who
                 does not know that sits and watches it. */}
-            <p className="t-small" role="status">
+            <p className="t-caption" role="status">
               {buildStatusLine(t, build.isPending, outcome)}
             </p>
             {error && (
-              <p className="t-small" role="alert">
+              <p className="t-caption" role="alert">
                 {error}
               </p>
             )}

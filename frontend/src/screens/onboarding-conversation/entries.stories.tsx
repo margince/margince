@@ -171,7 +171,7 @@ export const OrbChoreography: Story = {
               state={presence.core}
               progress={presence.progress}
             />
-            <figcaption className="t-small">{moment.label}</figcaption>
+            <figcaption className="t-caption">{moment.label}</figcaption>
           </figure>
         );
       })}

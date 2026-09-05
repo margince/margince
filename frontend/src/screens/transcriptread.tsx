@@ -67,7 +67,7 @@ function TranscriptReadOutcome({
       }}
     >
       <AutonomyDot tier="confirm" />
-      <span className="t-small">
+      <span className="t-caption">
         {plural("transcriptread.proposals", report.proposal_ids.length, {
           count: formatNumber(report.proposal_ids.length, locale),
         })}
@@ -136,7 +136,7 @@ function TranscriptReadPanel({
           {t(READ_STATUS_LABELS[report.status])}
         </Badge>
         {terminal && (
-          <span className="t-small">
+          <span className="t-caption">
             {plural("transcriptread.lineCount", report.line_count, {
               count: formatNumber(report.line_count, locale),
             })}

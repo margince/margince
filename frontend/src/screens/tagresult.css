@@ -92,6 +92,4 @@
    so the heading says so rather than looking like any other tag. */
 .tagresult-retired {
   font-family: var(--f-body);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }

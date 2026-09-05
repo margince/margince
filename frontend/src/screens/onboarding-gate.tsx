@@ -242,7 +242,7 @@ export function OnboardingGate({
       {/* Withheld while a start is in flight, so choosing the manual path cannot
           race a read that is already beginning. */}
       {running ? null : (
-        <p className="ob-gate-alt">
+        <p className="ob-gate-alt t-sub">
           {t("ob.gate.altPrompt")}
           <button type="button" className="ob-gate-link" onClick={onManual}>
             {t("ob.gate.altAction")}
@@ -255,12 +255,12 @@ export function OnboardingGate({
           almost nobody needs it before typing a domain, and carrying it in the
           opening paragraph is what made that paragraph four lines long. */}
       <Disclosure summary={t("ob.gate.trustToggle")}>
-        <p className="ob-gate-trust">{t("ob.gate.trustBody")}</p>
+        <p className="ob-gate-trust t-sub">{t("ob.gate.trustBody")}</p>
       </Disclosure>
 
       {/* Named BEFORE the reader hands over their website, not after: which
           model is about to read it is part of the decision to let it. */}
-      <p className="ob-gate-ai">
+      <p className="ob-gate-ai t-caption">
         <span>{t("ob.scan.transparency")}</span>
         <b>{configuredModel}</b>
       </p>
@@ -660,13 +660,13 @@ function TheatreTail({
             invented would be the one number here nobody could trust. */}
         <dl className="ob-scan-tally">
           <div>
-            <dt>{t("ob.scan.tallyPages")}</dt>
+            <dt className="t-caption">{t("ob.scan.tallyPages")}</dt>
             <dd>
               <CountUp value={pagesRead} locale={locale} />
             </dd>
           </div>
           <div>
-            <dt>{t("ob.scan.tallyFacts")}</dt>
+            <dt className="t-caption">{t("ob.scan.tallyFacts")}</dt>
             <dd>
               <CountUp value={read.facts.length} locale={locale} />
             </dd>
@@ -678,7 +678,7 @@ function TheatreTail({
               at that point. */}
           {uncertainCount !== undefined && (
             <div>
-              <dt>{t("ob.scan.tallyUncertain")}</dt>
+              <dt className="t-caption">{t("ob.scan.tallyUncertain")}</dt>
               <dd>
                 <CountUp value={uncertainCount} locale={locale} />
               </dd>
@@ -686,7 +686,7 @@ function TheatreTail({
           )}
         </dl>
 
-        <p className="ob-scan-counts">
+        <p className="ob-scan-counts t-caption">
           <span>
             {t("ob.scan.pagesSkipped", {
               count: formatNumber(skipped, locale),
@@ -704,7 +704,7 @@ function TheatreTail({
       <div className="ob-scan-cost">
         <div className="ob-scan-cost-head">
           <p className="ob-scan-cost-label">{t("ob.scan.transparency")}</p>
-          <p className="ob-scan-cost-line">
+          <p className="ob-scan-cost-line t-caption">
             {runtime === undefined ? (
               t("ob.scan.costPending")
             ) : (
@@ -722,7 +722,7 @@ function TheatreTail({
             )}
           </p>
         </div>
-        <p className="ob-scan-cost-model">{configuredModel}</p>
+        <p className="ob-scan-cost-model t-caption">{configuredModel}</p>
       </div>
     </>
   );
@@ -798,7 +798,7 @@ function ScanTickerEntry({
       {note !== null && (
         <button
           type="button"
-          className="ob-scan-ticker-kind"
+          className="ob-scan-ticker-kind t-caption"
           aria-expanded={expanded}
           aria-label={note}
           onClick={() => setExpanded((current) => !current)}

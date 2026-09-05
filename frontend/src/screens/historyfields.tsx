@@ -99,7 +99,7 @@ export function useFieldHistory(
 function ChangeWho({ change }: Readonly<{ change: FieldHistoryEntry }>) {
   const viewerId = useViewerId();
   return (
-    <span className="who">
+    <span className="who t-caption">
       <ProvenanceTag provenance={provenanceOfEntry(change, viewerId)} />
       <ChangeGrounding change={change} />
     </span>
@@ -132,7 +132,9 @@ function FieldGroupSection({
   const valueCtx: HistoryValueCtx = { currency, locale, zone: recordZone };
   return (
     <div className="fgroup">
-      <div className="fgroup-head">{historyFieldLabel(group.field, t)}</div>
+      <div className="fgroup-head t-caption">
+        {historyFieldLabel(group.field, t)}
+      </div>
       <ul>
         {group.changes.map((change) => (
           <li key={change.id} className="change">

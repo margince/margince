@@ -203,7 +203,7 @@ export function DealsCard({
       titleAction={present ? actions : undefined}
       footer={
         deals && (
-          <p className="co-row-meta">
+          <p className="co-row-meta t-caption">
             <span>
               {t("co.deals.wonLifetime")}{" "}
               {formatMoneyOrAbsent(won?.amount_minor, won?.currency, locale)}
@@ -266,7 +266,7 @@ function DealRow({ deal }: Readonly<{ deal: Deal360 }>) {
       >
         {deal.name}
       </button>
-      <span className="co-row-meta">
+      <span className="co-row-meta t-caption">
         <span>{deal.stage_name ?? t("co.deals.noStage")}</span>
         {deal.amount?.amount_minor != null && (
           <span className="t-mono">
@@ -407,7 +407,9 @@ export function CommercialPanel({
         present && (onAllDeals || truncated) ? (
           <>
             {truncated && (
-              <p className="co-row-meta">{t("co.commercial.truncated")}</p>
+              <p className="co-row-meta t-caption">
+                {t("co.commercial.truncated")}
+              </p>
             )}
             {onAllDeals && (
               <Button small variant="ghost" onClick={onAllDeals}>
@@ -434,7 +436,7 @@ export function CommercialPanel({
               >
                 <span className="co-commercial-title">{deal.name}</span>
                 {deal.expected_close_date && (
-                  <span className="co-commercial-sub">
+                  <span className="co-commercial-sub t-sub">
                     {t("commercial.closes", {
                       when: formatDate(
                         deal.expected_close_date,
@@ -445,7 +447,7 @@ export function CommercialPanel({
                   </span>
                 )}
               </button>
-              <span className="co-row-meta">
+              <span className="co-row-meta t-caption">
                 {deal.stage_name && <Badge>{deal.stage_name}</Badge>}
                 {deal.amount?.amount_minor != null && (
                   <span className="t-mono">
@@ -577,7 +579,7 @@ export function NextSteps({
               ) : (
                 <span>{step.subject}</span>
               )}
-              <span className="co-row-meta">
+              <span className="co-row-meta t-caption">
                 {step.overdue && (
                   <Badge tone="danger">{t("co.next.overdue")}</Badge>
                 )}
@@ -739,7 +741,9 @@ export function AskSection({
           {/* The question is repeated above its answer: three buttons and one
               answer block leaves the reader guessing which they pressed once
               they have scrolled, and the wrong pairing is worse than none. */}
-          <p className="co-ask-asked">{t(`co.ask.q.${readable.question}`)}</p>
+          <p className="co-ask-asked t-caption">
+            {t(`co.ask.q.${readable.question}`)}
+          </p>
           {readable.sentences.length === 0 ? (
             // An empty answer is a real outcome, not a failure: the question's
             // records are not ones this reader can see, so there is nothing to
@@ -752,7 +756,7 @@ export function AskSection({
               onOpenRecord={onOpenRecord}
             />
           )}
-          <p className="co-row-meta">
+          <p className="co-row-meta t-caption">
             <WrittenBy by={readable.generated_by} />
             <span>
               {t("co.brief.generatedAt", {
@@ -1830,7 +1834,7 @@ export function useSuggestionsBody({
             Absent means the section was never computed, which this card
             does not render at all. */}
         {notShown > 0 && (
-          <p className="co-row-meta">
+          <p className="co-row-meta t-caption">
             {t("co.suggest.more", { count: formatNumber(notShown, locale) })}
           </p>
         )}

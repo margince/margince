@@ -167,7 +167,7 @@ function PolicyRow({
         // whether the posture is letting it happen.
         value={
           <span className="retention-answer">
-            <span className="t-small">
+            <span className="t-caption">
               {t("retention.windowDays", {
                 days: formatNumber(policy.retain_days, locale),
               })}

@@ -88,7 +88,7 @@ function AccessSummary({ access }: Readonly<{ access: AccessPreview }>) {
   };
   const teams = (access.teams ?? []).map((team) => team.name).join(", ");
   return (
-    <ul className="t-small users-access-list">
+    <ul className="t-caption users-access-list">
       <li>{t("users.access.identity")}</li>
       <li>
         {access.row_scope === "all"
@@ -387,7 +387,7 @@ function TeamMembers({
   });
 
   if (!canAdminister) {
-    return <p className="t-small">{t("users.teamMembersAdminOnly")}</p>;
+    return <p className="t-caption">{t("users.teamMembersAdminOnly")}</p>;
   }
 
   return (

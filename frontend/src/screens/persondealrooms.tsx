@@ -87,7 +87,7 @@ export function PersonDealRooms({
           <RoomRow key={room.id} room={room} email={email} emails={emails} />
         ))}
         {rooms.data?.cut ? (
-          <p className="t-small">{t("persondealrooms.cut")}</p>
+          <p className="t-caption">{t("persondealrooms.cut")}</p>
         ) : null}
       </QueryStates>
     </Panel>
@@ -106,7 +106,7 @@ function RoomRow({
     <PanelRow className="person-room-row">
       <div>
         <p>{room.title}</p>
-        <p className="t-small">{t(STATE_LABELS[room.state])}</p>
+        <p className="t-caption">{t(STATE_LABELS[room.state])}</p>
       </div>
       <div className="card-actions">
         <Button
@@ -197,7 +197,7 @@ function RevokeSeat({
       <p>
         {email} <Badge>{t(STATE_LABELS[room.state])}</Badge>
       </p>
-      <p className="t-small">{t("access.revokeBody")}</p>
+      <p className="t-caption">{t("access.revokeBody")}</p>
     </ConfirmModal>
   );
 }

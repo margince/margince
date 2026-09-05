@@ -224,7 +224,7 @@ export function BlockedDomainsCard() {
                           hunting a company that never appeared has to be able
                           to tell "not refused" from "past the end of this
                           page". */}
-                      <p className="t-small">
+                      <p className="t-caption">
                         <CountLine
                           unit={t("blockedDomains.unit")}
                           first={1}
@@ -240,7 +240,7 @@ export function BlockedDomainsCard() {
           />
         </SettingList>
         {!canManage && (
-          <p className="t-small" id={denialId}>
+          <p className="t-caption" id={denialId}>
             {t("blockedDomains.adminOnly")}
           </p>
         )}
