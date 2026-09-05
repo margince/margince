@@ -277,6 +277,8 @@ func rowMaps(ctx context.Context, tx pgx.Tx, query string, args ...any) ([]map[s
 // the database returned — a uuid[] column would arrive as [][16]byte and want
 // the same treatment, and gets it in the change that adds one rather than as an
 // arm nothing exercises.
+//
+//craft:ignore naked-any a column value IS any by construction — pgx's rows.Values() returns []any, and this rewrites one of those in place. A concrete parameter would mean deciding the column's type before reading it, which is the thing the caller cannot do.
 func readableValue(value any) any {
 	if raw, isUUID := value.([16]byte); isUUID {
 		return ids.UUID(raw).String()
