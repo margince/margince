@@ -85,8 +85,14 @@ func (a ProviderRunSubmitArgs) WorkspaceID() ids.UUID { return a.Workspace }
 // jobs for one run could each pass the queued check and buy the same answer
 // twice. The state window excludes completed (activeSweepStates) so the
 // stranded-submit recovery can re-enqueue after a worked job died.
+//
+// The attempt cap is the one api/jobs.yaml publishes, held equal to the
+// declaration by TestArgsOwnedAttemptCapsMatchTheirDeclaration.
 func (ProviderRunSubmitArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates}}
+	return river.InsertOpts{
+		MaxAttempts: sweptJobMaxAttempts,
+		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
+	}
 }
 
 // providerRunSubmitWorker executes one submission.

@@ -27,12 +27,18 @@ func TestOnlyTheModelRoutesTakeTheLongerDeadline(t *testing.T) {
 	// without a real server sees. The route DECISION is what is asserted here,
 	// and it is the half that decides which endpoints are exposed.
 	for path, wantsModelTime := range map[string]bool{
-		"/v1/activities/01a0-4cd3/draft-email":   true,
-		"/v1/organizations/01a0-4cd2/dossier":    true,
-		"/v1/organizations/01a0-4cd2/growth-fit": true,
-		"/v1/people":                             false,
-		"/v1/me":                                 false,
-		"/v1/organizations/01a0-4cd2":            false,
+		"/v1/activities/01a0-4cd3/draft-email":            true,
+		"/v1/organizations/01a0-4cd2/dossier":             true,
+		"/v1/organizations/01a0-4cd2/growth-fit":          true,
+		"/v1/activities/01a0-4cd3/meeting-brief":          true,
+		"/v1/organizations/01a0-4cd2/ask":                 true,
+		"/v1/knowledge/corpora/01a0-4cd2/ask":             true,
+		"/v1/people/01a0-4cd2/intro-note-draft":           true,
+		"/v1/organizations/01a0-4cd2/intro-request-draft": true,
+		"/v1/deals/01a0-4cd2/role-proposals":              true,
+		"/v1/people":                                      false,
+		"/v1/me":                                          false,
+		"/v1/organizations/01a0-4cd2":                     false,
 		// A path that merely CONTAINS a slow route's name is not one: the
 		// suffix is the whole match, or a list endpoint beside it inherits a
 		// deadline it has no work for.

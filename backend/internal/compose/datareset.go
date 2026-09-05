@@ -421,7 +421,10 @@ func (h dataResetHandlers) ResetData(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	if err := auth.RequireAdmin(ctx); err != nil {
+	// The order is deliberate and unchanged: the armed-flag 404 first, so an
+	// installation that never armed the reset discloses nothing; then the human
+	// gate; then this; then the typed confirmation.
+	if err := auth.Require(ctx, "system_reset", principal.ActionDelete); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

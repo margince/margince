@@ -97,7 +97,7 @@ behaviour.
 
 - **[docs/handbook/README.md](docs/handbook/README.md)** — how to *use*
   the product. No code, no API. Just the app.
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** — the gates, DCO sign-off, and
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — the gates, licensing, and
   the AI-disclosure rules.
 - **[docs/explanation/backend-onboarding.md](docs/explanation/backend-onboarding.md)** —
   the backend contributor hub: the map of the codebase, a reading order,

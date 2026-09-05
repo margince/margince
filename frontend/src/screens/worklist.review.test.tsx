@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 describe("the day is drawn apart from what it is not", () => {
-  it("keeps a judgement out of the queue and still shows it", async () => {
+  it("AC-WORKLIST-REVIEW-01: keeps a judgement out of the queue and still shows it", async () => {
     stub(
       day({
         queue: [

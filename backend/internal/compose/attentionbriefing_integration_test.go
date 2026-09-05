@@ -66,7 +66,7 @@ func TestAMorningWithNoRunReadsAsAnEmptyLaneNotARefusal(t *testing.T) {
 	// The rep has never had a brief. The engine answers not-found, and this
 	// lane must turn that into "nothing this morning" — reporting it as a
 	// refusal would tell her something was hidden when nothing was.
-	entries, ran, err := b.reader.Queue(b.repCtx)
+	entries, ran, _, err := b.reader.Queue(b.repCtx)
 	if err != nil {
 		t.Fatalf("a rep with no run got an error rather than an empty morning: %v", err)
 	}
@@ -75,6 +75,48 @@ func TestAMorningWithNoRunReadsAsAnEmptyLaneNotARefusal(t *testing.T) {
 	}
 	if ran {
 		t.Fatal("ran = true for a rep with no run — the feed would tick a morning that never happened")
+	}
+}
+
+// The run's DATA CUTOFF reaches the feed, and it is the run's as_of.
+//
+// WHAT THIS DOES AND DOES NOT PROVE, stated plainly because the difference
+// matters to the next person who edits it. It proves the lane carries as_of. It
+// does NOT prove as_of was preferred over generated_at, and no test here can:
+// briefrank.go:242 and briefstore.go:133 both take the same `now`, so today the
+// two columns always hold the same instant and a fixture cannot tell them apart.
+//
+// The field is still read from as_of deliberately. The two are separate columns
+// because they answer different questions — when the night READ the records, and
+// when it finished writing them down — and the day a pass reads at 06:00 and
+// writes at 06:42, generated_at would call every reply in that window old. This
+// test pins the wiring so the value cannot silently become something else; the
+// day the two instants diverge, it starts telling them apart on its own.
+func TestTheLaneCarriesTheRunsDataCutoff(t *testing.T) {
+	b := setupBriefingLane(t)
+	seedBriefingLaneDeals(t, b)
+	// Seeded through the real writer, which is what puts both instants on the
+	// row: a hand-inserted run could carry any as_of this test liked and would
+	// prove nothing about what the night actually writes.
+	run, err := b.engine.SnapshotRun(b.repCtx, b.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, ran, cutoff, err := b.reader.Queue(b.repCtx)
+	if err != nil {
+		t.Fatalf("reading the lane: %v", err)
+	}
+	if !ran {
+		t.Fatal("the seeded run did not read as a run")
+	}
+	if cutoff.IsZero() {
+		t.Fatal("the lane answers no cutoff for a run that has one — every row's " +
+			"changed_since_brief would be absent and the strip would never draw")
+	}
+
+	if !cutoff.Equal(run.AsOf) {
+		t.Errorf("cutoff = %v, want the run's as_of %v", cutoff, run.AsOf)
 	}
 }
 
@@ -90,7 +132,7 @@ func TestAnAnsweredBriefingItemLeavesTheLane(t *testing.T) {
 		t.Fatalf("the fixture queued %d items, and this test needs 2 to tell removal from emptiness", len(run.Items))
 	}
 
-	before, ran, err := b.reader.Queue(b.repCtx)
+	before, ran, _, err := b.reader.Queue(b.repCtx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +148,7 @@ func TestAnAnsweredBriefingItemLeavesTheLane(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	after, _, err := b.reader.Queue(b.repCtx)
+	after, _, _, err := b.reader.Queue(b.repCtx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +179,7 @@ func TestASetAsideBriefingItemComesBackWhenItsWindowPasses(t *testing.T) {
 
 	// While the window runs, the item is out of the lane.
 	b.now = b.now.Add(time.Hour)
-	during, _, err := b.reader.Queue(b.repCtx)
+	during, _, _, err := b.reader.Queue(b.repCtx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +193,7 @@ func TestASetAsideBriefingItemComesBackWhenItsWindowPasses(t *testing.T) {
 	// The engine's own read resurfaces it, which is why the lane asks the
 	// engine rather than deciding what a state means for itself.
 	b.now = until.Add(time.Minute)
-	after, _, err := b.reader.Queue(b.repCtx)
+	after, _, _, err := b.reader.Queue(b.repCtx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +226,7 @@ func TestADeletedDealTakesItsBriefingRowWithIt(t *testing.T) {
 		t.Fatalf("the fixture queued %d items, and this test needs 2 to tell removal from emptiness", len(run.Items))
 	}
 
-	before, ran, err := b.reader.Queue(b.repCtx)
+	before, ran, _, err := b.reader.Queue(b.repCtx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,7 +242,7 @@ func TestADeletedDealTakesItsBriefingRowWithIt(t *testing.T) {
 		t.Fatalf("deleting the deal: %v", err)
 	}
 
-	after, ran, err := b.reader.Queue(b.repCtx)
+	after, ran, _, err := b.reader.Queue(b.repCtx)
 	if err != nil {
 		t.Fatal(err)
 	}

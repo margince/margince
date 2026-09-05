@@ -127,6 +127,24 @@ export function CompanyRecentList({
   );
 }
 
+/**
+ * The headline a row shows for an exchange: its subject, or the kind's own
+ * word when it was logged without one. A call with no subject is still an
+ * event, and a blank line where the headline goes reads as a row that failed
+ * to load.
+ *
+ * Exported because the FOLDED thread teases its newest exchange with the same
+ * words the row will use once it opens. Two spellings of "what this exchange
+ * is called" is how a teaser comes to promise a row the reader then cannot
+ * find under it.
+ */
+export function activityHeadline(
+  activity: Activity,
+  t: ReturnType<typeof useT>,
+): string {
+  return activity.subject?.trim() || t(KIND_LABELS[activity.kind]);
+}
+
 function RecentRow({
   activity,
   when,
@@ -144,10 +162,7 @@ function RecentRow({
 }>) {
   const t = useT();
   const kind = t(KIND_LABELS[activity.kind]);
-  // The subject when there is one, the kind's own word when there is not. A
-  // call logged with no subject is still an event, and a blank line where the
-  // headline goes reads as a row that failed to load.
-  const title = activity.subject?.trim() || kind;
+  const title = activityHeadline(activity, t);
   const email = activity.email_summary;
   const deal = activity.links?.find((link) => link.entity_type === "deal");
   const dealName = deal && nameOf?.("deal", deal.entity_id);
@@ -175,6 +190,9 @@ function RecentRow({
                 ? () => onOpenRecord("activity", activity.id)
                 : undefined
             }
+            // Absent only for a host that mounts no drawer. Every account
+            // surface that draws this list routes `activity` to the reader.
+            whyNotOpenable="noReader"
           />
         ) : (
           <>

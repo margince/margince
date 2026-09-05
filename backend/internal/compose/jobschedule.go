@@ -41,11 +41,29 @@ func periodicFor[A declaredJobArgs](cfg JobRunnerConfig, args A) []*river.Period
 	if !scheduled {
 		return nil
 	}
+	opts := periodicInsertOpts(args)
 	return []*river.PeriodicJob{river.NewPeriodicJob(
 		river.PeriodicInterval(interval),
-		func() (river.JobArgs, *river.InsertOpts) { return args, sweepInsertOpts() },
+		func() (river.JobArgs, *river.InsertOpts) { return args, opts },
 		&river.PeriodicJobOpts{RunOnStart: true},
 	)}
+}
+
+// periodicInsertOpts is sweepInsertOpts plus an attempt cap for the passes
+// nothing else caps.
+//
+// A kind whose args carry their own InsertOpts is left alone: that number is
+// what api/jobs.yaml declares for an opts_owner: args kind, held equal to the
+// declaration by TestArgsOwnedAttemptCapsMatchTheirDeclaration, and River reads
+// the EXPLICIT opts before the args type's — so supplying one here would
+// silently outrank the published cap. Every other scheduled kind is
+// opts_owner: caller, and this periodic insert is that caller.
+func periodicInsertOpts(args river.JobArgs) *river.InsertOpts {
+	opts := sweepInsertOpts()
+	if _, owned := args.(river.JobArgsWithInsertOpts); !owned {
+		opts.MaxAttempts = periodicPassMaxAttempts
+	}
+	return opts
 }
 
 // registers answers whether a kind is wired at all under this boot's

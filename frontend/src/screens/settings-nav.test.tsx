@@ -407,28 +407,21 @@ describe("SettingsScreen Admin settings group", () => {
     await waitFor(() => expect(navTabs()).toEqual(OPERATOR_TABS));
   });
 
-  // The seat, on its own, from the other side. This principal holds every read
-  // the admin group's entries ask for — the ops matrix entire — and reaches NONE
-  // of them, because the group is not theirs to open. The heading is what makes
-  // it a claim about the group rather than about nine predicates: an empty
-  // "Admin settings" panel would say the installation has settings this reader
-  // may not touch, where the truth is that configuring it is not their job.
+  // The grant, not the role name. This principal holds every read the admin
+  // group's entries ask for and is neither admin nor ops — and it reaches every
+  // entry those reads open, because what the server answers 200 is what the
+  // product offers. The seat check that used to stand here returned false for
+  // the whole group whatever these predicates decided, so a manager holding the
+  // ops matrix was shown an empty rail while the API served them.
   it.each(["manager", "rep"] as const)(
-    "offers a seeded %s no admin group at all, holding every read it asks for",
+    "offers a seeded %s every entry the reads it holds open",
     async (role) => {
       vi.stubGlobal(
         "fetch",
         adminNavBackend({ roles: [role], allow: SEEDED_OPS_READS }),
       );
-      const { client } = renderNav();
-      // The ANSWER has to be in the cache before an absence claim means
-      // anything. Every other case here waits on an entry appearing, which is
-      // its own proof that /me settled; this one expects no entry to appear, and
-      // a nav read taken mid-flight looks exactly like the result it wants.
-      await waitFor(() =>
-        expect(client.getQueryState(["me"])?.status).toBe("success"),
-      );
-      expect(navTabs()).toEqual(PERSONAL_TABS);
+      renderNav();
+      await waitFor(() => expect(navTabs()).toEqual(OPERATOR_TABS));
       const nav = screen.getByRole("navigation", {
         name: /primary navigation/i,
       });
@@ -436,9 +429,24 @@ describe("SettingsScreen Admin settings group", () => {
         within(nav)
           .getAllByRole("heading", { level: 3 })
           .map((heading) => heading.textContent),
-      ).toEqual(["You"]);
+      ).toEqual(["You", "Admin settings"]);
     },
   );
+
+  // The floor, and the reason removing the seat gate is not "everyone gets
+  // everything". A principal holding NO admin-group grant reaches exactly the
+  // one entry that asks for none: the member roster, which `GET /users` serves
+  // to anyone signed in and which the same handler narrows by role — a rep's
+  // page carries no role keys and no inactive members. Every other entry is
+  // absent because its predicate says so, which is the same sentence for this
+  // seat as for an admin.
+  it("offers a principal holding no admin grant only the entry that asks for none", async () => {
+    vi.stubGlobal("fetch", adminNavBackend({ roles: ["rep"], allow: {} }));
+    renderNav();
+    await waitFor(() =>
+      expect(navTabs()).toEqual([...PERSONAL_TABS, "Users & teams"]),
+    );
+  });
 
   // A write is still not what opens a page, inside the group as it was outside
   // it: this operator may AUTHOR custom fields and holds no read anywhere, and

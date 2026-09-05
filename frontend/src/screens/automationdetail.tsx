@@ -256,7 +256,9 @@ export function AutomationRuns({
           );
         })}
       </div>
-      <QueryStates query={query}>{body}</QueryStates>
+      <QueryStates query={query} pendingLabel={t("auto.runs.title")}>
+        {body}
+      </QueryStates>
     </Card>
   );
 }
@@ -343,7 +345,7 @@ export function AutomationPreview({
       {/* Polite live region: announce when the estimate resolves or the window
           result changes, without stealing focus from the control. */}
       <div aria-live="polite">
-        <QueryStates query={query}>
+        <QueryStates query={query} pendingLabel={t("auto.preview.title")}>
           {result && (
             <div
               style={{

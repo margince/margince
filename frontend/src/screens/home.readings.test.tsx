@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
@@ -16,19 +17,28 @@ import {
 import { HomeReadingsStrip } from "./home.readings";
 
 // The Brief's readings strip, and the one claim it makes that the Worklist's
-// own strip does not: the row is FIVE slots on every morning, including the two
-// whose questions the product cannot answer yet.
+// own strip does not: the row is FIVE slots on every morning, quiet or busy, so
+// yesterday's five is never compared against today's four.
 //
-// The interesting cases are all about what the strip refuses to say. A zero
-// under "Promises due" would tell a reader they owe nobody anything, which
-// nothing in the estate has standing to claim; a four-slot row on a quiet day
-// would let yesterday's five be compared against today's four.
+// Every one of the five now answers something. Two of them used to draw an em
+// dash forever — promises, because the commitments lane is unwired, and quota
+// pace, because targets were retired from the product — and the interesting
+// cases are what replaced them: a pipeline figure that must never read as a
+// target, and must say whose pipeline it measured.
 
 function draw(...args: Parameters<typeof readingsDay>) {
+  // A QueryClient, because the pipeline reading is a read of its own: it is the
+  // one figure on this plate that does not come from the worklist answer, and
+  // it asks the same key Analytics asks.
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return render(
-    <LocaleProvider initial="en">
-      <HomeReadingsStrip day={readingsDay(...args)} />
-    </LocaleProvider>,
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <HomeReadingsStrip day={readingsDay(...args)} />
+      </LocaleProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -51,22 +61,82 @@ function meetingsCard(): HTMLElement {
   return card;
 }
 
-afterEach(cleanup);
+/**
+ * The two reads the pipeline card makes: the scope the server names for this
+ * reader, and the forecast under it.
+ *
+ * Both, because the card holds its read until the scope arrives — a stub that
+ * answered only the forecast would leave the query disabled and the test would
+ * assert against a pending card forever.
+ */
+function stubPipeline(forecast: () => Response) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes("/analytics/context")) {
+        return new Response(
+          JSON.stringify({
+            default_scope: { kind: "owner", id: "u-1", label: "Lena" },
+            scopes: [],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return forecast();
+    }),
+  );
+}
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("the brief readings strip", () => {
-  it("draws five slots on a full morning", () => {
+  it("draws five answerable slots on a full morning", () => {
     draw();
 
     expect(labels()).toHaveLength(5);
-    expect(screen.getByText(en["home.readings.waiting"])).toBeTruthy();
+    expect(screen.getByText(en["home.readings.urgent"])).toBeTruthy();
     expect(screen.getByText(en["home.readings.meetings"])).toBeTruthy();
-    expect(screen.getByText(en["home.readings.promises"])).toBeTruthy();
     expect(screen.getByText(en["home.readings.leads"])).toBeTruthy();
-    expect(screen.getByText(en["home.readings.quota"])).toBeTruthy();
+    expect(screen.getByText(en["home.readings.pipeline"])).toBeTruthy();
+    expect(screen.getByText(en["home.readings.decisions"])).toBeTruthy();
   });
 
-  // The whole reason the slots are fixed. A row that shrank on a quiet day
-  // would be compared against a fuller one and read as fewer questions asked.
+  // The property that can actually regress: on a fully answered morning, no slot
+  // draws an em dash. The strings of the retired slots are gone from all three
+  // catalogs, so asserting THOSE are absent is an assertion nothing in the tree
+  // can fail — a test that cannot go red is not a guard.
+  it("draws no unanswered slot on a morning every read landed on", async () => {
+    stubPipeline(
+      () =>
+        new Response(
+          JSON.stringify({
+            period_start: "2026-07-01",
+            period_end: "2026-09-30",
+            scope_kind: "owner",
+            open_minor: 42_000_000,
+            weighted_minor: 16_800_000,
+            best_case_minor: 0,
+            evidence_minor: 0,
+            eligible_count: 12,
+            priced_count: 12,
+            confirmed_date_count: 8,
+            fx_missing_count: 0,
+            as_of: "2026-09-03T06:42:00Z",
+            base_currency: "EUR",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+    );
+    draw();
+
+    await screen.findByText(/420k|420,000/);
+    expect(screen.queryAllByText("—")).toHaveLength(0);
+  });
+
   it("still draws five slots when nothing is waiting", () => {
     draw({ buyer_replies: 0, prospecting: 0 }, []);
 
@@ -74,7 +144,7 @@ describe("the brief readings strip", () => {
     // A zero already reads as "none". What the line under it adds is the basis
     // — what the figure was taken over — which is the same on a quiet day as on
     // a busy one, so the row keeps its shape as well as its slot count.
-    expect(screen.getByText(en["home.readings.waitingBasis"])).toBeTruthy();
+    expect(screen.getByText(en["home.readings.urgentBasis"])).toBeTruthy();
     expect(screen.getByText(en["home.readings.leadsBasis"])).toBeTruthy();
     expect(screen.getByText(en["home.readings.meetingsBasis"])).toBeTruthy();
   });
@@ -134,12 +204,136 @@ describe("the brief readings strip", () => {
 
   // Two questions with no source. Drawing a zero would be a false answer, and
   // dropping the slot would be the page losing a question without saying so.
-  it("names what it cannot measure instead of drawing a nought", () => {
+  // A read that did not land is not a pipeline of nothing. The em dash says the
+  // question went unanswered, which is the one case that spelling is still true.
+  //
+  // The read is REFUSED here rather than left unstubbed: an unstubbed query
+  // stays pending forever, and a test asserting the failure copy over a pending
+  // card would pass on a card that never resolves either way.
+  it("says the pipeline went unread rather than drawing a nought", async () => {
+    stubPipeline(
+      () =>
+        new Response(JSON.stringify({ title: "Server Error" }), {
+          status: 500,
+          headers: { "content-type": "application/problem+json" },
+        }),
+    );
     draw();
 
-    expect(screen.getByText(en["home.readings.promisesBasis"])).toBeTruthy();
-    expect(screen.getByText(en["home.readings.quotaBasis"])).toBeTruthy();
-    expect(screen.getAllByText("—").length).toBe(2);
+    expect(
+      await screen.findByText(en["home.readings.pipelineUnread"]),
+    ).toBeTruthy();
+    // ONE em dash, not two. The other belonged to a retired placeholder, and a
+    // count that still expected it would pass over a plate that had quietly
+    // grown a second unanswered slot.
+    expect(screen.getAllByText("—")).toHaveLength(1);
+  });
+
+  // BOTH figures, and neither of them a target. `open` is the face value of
+  // every open deal and `weighted` applies each deal's own probability; one
+  // without the other invites a reader to treat a face value as a forecast.
+  //
+  // The slot this replaced said "Quota pace — no target is set". There is no
+  // authoritative target in this product to compare against, so the card must
+  // never say on track, attainment or gap — it would be inventing the thing
+  // that was removed.
+  it("draws the open pipeline with its weighted figure beside it", async () => {
+    stubPipeline(
+      () =>
+        new Response(
+          JSON.stringify({
+            period_start: "2026-07-01",
+            period_end: "2026-09-30",
+            scope_kind: "owner",
+            open_minor: 42_000_000,
+            weighted_minor: 16_800_000,
+            best_case_minor: 0,
+            evidence_minor: 0,
+            eligible_count: 12,
+            priced_count: 11,
+            confirmed_date_count: 8,
+            fx_missing_count: 0,
+            as_of: "2026-09-03T06:42:00Z",
+            base_currency: "EUR",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+    );
+    draw();
+
+    // COMPACT for the headline figure — the slot is ~110px and a full euro
+    // amount wraps mid-number. The weighted figure keeps its exact form on the
+    // detail line, where there is room for it.
+    expect(await screen.findByText(/420k/)).toBeTruthy();
+    // The weighted figure and the priced-of-eligible completeness ride the same
+    // line: a weighted number over a partly priced population is a floor, and a
+    // reader who cannot see the second cannot judge the first.
+    expect(screen.getByText(/168,000/)).toBeTruthy();
+    expect(screen.getByText(/11 of 12 priced/)).toBeTruthy();
+    // Never a target word. The quota table was dropped by founder decision.
+    const strip = screen.getByTestId("home-readings");
+    expect(strip.textContent).not.toMatch(/on track|target|attainment|gap/i);
+  });
+
+  // THE one way this card can be wrong without looking wrong. The scope is left
+  // unnamed so the server resolves it against the caller's lens — a rep gets
+  // their own pipeline. If that resolution ever lands on the workspace instead,
+  // the figure is the whole installation's under a heading that says "your
+  // morning", and nothing about the number itself would give it away.
+  //
+  // So the card reads the answer's own `scope_kind` back and says so.
+  it("says when the pipeline it drew is the whole workspace, not the reader's", async () => {
+    stubPipeline(
+      () =>
+        new Response(
+          JSON.stringify({
+            period_start: "2026-07-01",
+            period_end: "2026-09-30",
+            scope_kind: "workspace",
+            open_minor: 42_000_000,
+            weighted_minor: 16_800_000,
+            best_case_minor: 0,
+            evidence_minor: 0,
+            eligible_count: 12,
+            priced_count: 12,
+            confirmed_date_count: 8,
+            fx_missing_count: 0,
+            as_of: "2026-09-03T06:42:00Z",
+            base_currency: "EUR",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+    );
+    draw();
+
+    expect(
+      await screen.findByText(en["home.readings.pipelineWorkspace"]),
+    ).toBeTruthy();
+  });
+
+  // The first card a rep reads, at a REAL figure.
+  //
+  // It moved from one lane's count (`readings.buyer_replies`) to the summary's
+  // own `urgent`, which is every row at the top two levels — somebody waiting or
+  // a promise breaking. Every other test on this plate runs against a fixture
+  // pinning `urgent: 0`, so the change was only ever exercised at zero and any
+  // other zero-valued field would have satisfied them.
+  it("counts every urgent row, not one lane's share of them", () => {
+    // Four urgent, while the lane counts beside them say something else: a card
+    // still reading buyer_replies would draw 3.
+    draw({ buyer_replies: 3 }, undefined, undefined, { urgent: 4 });
+
+    const card = screen
+      .getByText(en["home.readings.urgent"])
+      .closest(".stat-card");
+    if (!(card instanceof HTMLElement)) {
+      throw new Error("the urgent reading is not on the page");
+    }
+    expect(card.textContent).toContain("4");
+    // And it WARNS, because somebody is waiting. A figure drawn plain would say
+    // the morning is calm while four rows say it is not. The tone lands on the
+    // value rather than the card, which is where StatCard puts it.
+    expect(card.querySelector(".stat-card-warn")).toBeTruthy();
   });
 
   // The caveat belongs under the whole strip, the way the Worklist's strip

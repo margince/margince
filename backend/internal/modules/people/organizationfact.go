@@ -124,15 +124,59 @@ func multiValueFactFields() map[string]bool {
 // factValueSeparator splits a multi-value fact's value into its name and
 // short description ("Name — short description") — the spelling the
 // extraction prompts demand.
-const factValueSeparator = " — "
+const factValueSeparator = " " + factValueDash + " "
+
+// factValueDash is the separator's own character, named because the two
+// malformed shapes are recognised by it alone: a value that begins on it has no
+// name, and one that ends on it has no description.
+const factValueDash = "—"
 
 // NormalizeFactValueKey reduces a multi-value fact's value to its dedupe
 // identity: the name before the separator, lowercased with whitespace
 // collapsed, so re-reads of the same offering under a reworded
 // description converge on one row.
+//
+// It TRIMS first, and strips a separator the value ends on. Both are about the
+// same failure: the separator is " — " with a space on each side, so a value
+// ending in it loses the trailing space the moment anybody trims — and the cut
+// then finds nothing, leaving the dash inside the key.
+//
+// That cost a whole deep read. The producer keyed the untrimmed value and
+// stored the trimmed one, so the two disagreed on `"Capital One — "`, the write
+// refused the fact, and one malformed value discarded twelve crawled pages and
+// sixty facts. Normalizing here rather than at each caller is what makes the
+// two agree by construction: a caller that trims before or after gets the same
+// key either way.
+//
+// Stripping the trailing separator is also the better dedupe. A value ending in
+// it names an offering with an empty description, and that is the SAME offering
+// a well-formed re-read describes — so both converge on one row instead of
+// standing as two.
 func NormalizeFactValueKey(value string) string {
-	name, _, _ := strings.Cut(value, factValueSeparator)
-	return strings.Join(strings.Fields(strings.ToLower(name)), " ")
+	// Collapsed FIRST, so the separator is in its canonical spelling before
+	// anything looks for it. "Capital One  —  " and "Capital One — " are the
+	// same value said untidily, and only after collapsing do they agree.
+	collapsed := strings.Join(strings.Fields(value), " ")
+	// A value that STARTS on the separator is a description with no name, and
+	// its key is empty — which is what lets the producer drop it rather than
+	// stage a fact nothing can dedupe. Checked before the cut, because
+	// collapsing has taken the separator's leading space away.
+	//
+	// On the DASH, with no space required. A model that writes "—description"
+	// has said the same thing as " — description", and asking for the space
+	// would read the whole line as a name.
+	if strings.HasPrefix(collapsed, factValueDash) {
+		return ""
+	}
+	name, _, _ := strings.Cut(collapsed, factValueSeparator)
+	// And a value that ENDS on it is a name with no description. The cut finds
+	// nothing there for the same reason — collapsing took the trailing space —
+	// so the dash is still on the name and comes off here, again without
+	// requiring the space: "Capital One—" names the same customer as
+	// "Capital One — ", and keying them apart is the dedupe miss this whole
+	// function exists to avoid.
+	name = strings.TrimSuffix(name, factValueDash)
+	return strings.ToLower(strings.TrimSpace(name))
 }
 
 // DeepReadField is one staged profile field on the deepread proposal —
@@ -181,6 +225,7 @@ func UnmarshalDeepRead(raw json.RawMessage) (DeepReadProposal, error) {
 // validDeepReadFact vets one staged fact against the closed vocabulary
 // and the row's own CHECKs, so a malformed payload fails with a named
 // reason before any write.
+
 func validDeepReadFact(f DeepReadFact) error {
 	fields, ok := OrganizationFactFields[f.Category]
 	if !ok {

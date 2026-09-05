@@ -148,6 +148,12 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// question a scan of every event rather than a join of two.
 		"share_issued":  true,
 		"share_revoked": true,
+		// Somebody recorded that we may not write to a subject. It sits beside
+		// "changed" on the same person stream and must not fold into it: a
+		// suppression outranks a grant and a later re-grant does not erase it,
+		// so a consumer that saw only "changed" would resume mail the subject
+		// asked us to stop. The distinction IS the type.
+		"suppressed": true,
 	}
 
 	for _, typ := range Types() {

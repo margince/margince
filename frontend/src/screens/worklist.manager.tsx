@@ -20,8 +20,11 @@ import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useRoster } from "./entityref";
 import {
+  subjectAcceptsAnOwner,
+  type TeamException,
   useCoachTeammate,
   useReassignTask,
+  useTakeOwnership,
   type WorklistItem,
 } from "./worklist.queries";
 
@@ -217,6 +220,107 @@ export function CoachControl({ owner }: Readonly<{ owner: string }>) {
           {t("worklist.manager.cancel")}
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Take one exception's record for yourself.
+ *
+ * CONFIRMED, because it moves a record out of somebody's day and into the
+ * reader's — the rep who held it loses it from their queue without having
+ * pressed anything, so a lead doing it by a misplaced click costs two people
+ * their sense of what they are carrying.
+ *
+ * ABSENT rather than disabled where the subject has no owner write. A control
+ * that is drawn and then refuses teaches a reader to distrust every control
+ * beside it; one that is not drawn says the honest thing, and the row still
+ * reaches the record through its own link.
+ *
+ * It writes through the module that owns the record — the deal's own update
+ * for a deal, the activity's for a task — rather than through a worklist
+ * writer that would be a second author of a field five modules already audit.
+ */
+export function TakeOwnershipControl({
+  subject,
+  viewerId,
+  insideAClickableRow = false,
+}: Readonly<{
+  subject: TeamException["subject"];
+  viewerId: string;
+  /**
+   * Set where the control sits inside a row that navigates on click.
+   *
+   * The press otherwise fires BOTH: the handover runs and the page walks away
+   * from its own confirmation. Stopped on the buttons rather than under a
+   * wrapper element, because a handler on a static element is invisible to a
+   * keyboard and the a11y lint rejects it.
+   */
+  insideAClickableRow?: boolean;
+}>) {
+  const t = useT();
+  const toast = useToast();
+  const [confirming, setConfirming] = useState(false);
+  const take = useTakeOwnership();
+  const contain = (event: { stopPropagation: () => void }) => {
+    if (insideAClickableRow) {
+      event.stopPropagation();
+    }
+  };
+
+  if (!subjectAcceptsAnOwner(subject)) {
+    return null;
+  }
+  if (!confirming) {
+    return (
+      <Button
+        variant="ghost"
+        onClick={(event) => {
+          contain(event);
+          setConfirming(true);
+        }}
+      >
+        {t("worklist.manager.takeOwnership")}
+      </Button>
+    );
+  }
+  return (
+    <div className="worklist-manager-control">
+      <span className="t-label">{t("worklist.manager.takeOwnershipAsk")}</span>
+      <Button
+        variant="primary"
+        disabled={take.isPending}
+        onClick={(event) => {
+          contain(event);
+          take.mutate(
+            { subject, userId: viewerId },
+            {
+              onSuccess: () => {
+                setConfirming(false);
+                toast.show(t("worklist.manager.tookOwnership"));
+              },
+              // The refusal stays on screen and the control stays open: a
+              // handover that failed leaves the record where it was, and a
+              // reader who is not told that believes they now hold it.
+              onError: () =>
+                toast.show(t("worklist.manager.takeOwnershipFailed"), {
+                  mark: false,
+                }),
+            },
+          );
+        }}
+      >
+        {t("worklist.manager.takeOwnershipConfirm")}
+      </Button>
+      <Button
+        variant="ghost"
+        onClick={(event) => {
+          contain(event);
+          setConfirming(false);
+        }}
+      >
+        {t("worklist.manager.cancel")}
+      </Button>
     </div>
   );
 }

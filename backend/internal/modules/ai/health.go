@@ -85,7 +85,7 @@ func (r RungHealth) Healthy() bool { return r.Calls > 0 && !r.LastOutcomeFailed 
 // no AI-runtime entry, and this is operational configuration rather than
 // anybody's own data.
 func (m *Meter) RungHealthReport(ctx context.Context) ([]RungHealth, error) {
-	if err := auth.Require(ctx, "automation", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	since := m.now().Add(-HealthWindow)

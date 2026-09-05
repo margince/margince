@@ -24,7 +24,7 @@ import { navigate, type Route } from "./router";
 import {
   SEARCH_HIT_KIND_KEY,
   type SearchHitType,
-  searchHitRoute,
+  searchHitDestination,
 } from "./searchkinds";
 
 // ⌘K command palette (B-EP09.5, AC-shell-3..7). The command set carries a
@@ -239,11 +239,14 @@ function useSearchCommands(query: string): SearchArm {
   // has no page, drops out by answering null rather than by being named in a
   // second list that has to be kept in step.
   //
-  // An EMAIL hit is findable and openable on the search SCREEN, which owns a
-  // drawer. The palette owns no page and every Command must carry a route, so
-  // it cannot open one; issue #3850 holds what that would take.
+  // An EMAIL hit goes to the search SCREEN with that message open. The palette
+  // owns no page and every Command carries a route, so it cannot open a drawer
+  // itself — it sends the reader to the one page that already owns this one.
   const hits = (result.data ?? []).flatMap((hit) => {
-    const route = searchHitRoute(hit.type as SearchHitType, hit.id);
+    const route = searchHitDestination(
+      { ...hit, type: hit.type as SearchHitType },
+      deferred,
+    );
     return route ? [{ hit, route }] : [];
   });
   const projectLines = useProjectHitLines(

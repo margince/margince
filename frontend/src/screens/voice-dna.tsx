@@ -100,7 +100,7 @@ export function VoiceDnaCard() {
   const qc = useQueryClient();
   const profile = useVoiceProfile();
   return (
-    <QueryGate query={profile}>
+    <QueryGate query={profile} pendingLabel={t("settings.voice.title")}>
       {(data) =>
         data ? (
           <VoiceDnaBody profile={data} />
@@ -451,7 +451,7 @@ function CorpusManifest({
 
   return (
     <div className="vdna-manifest settingrow-measure">
-      <QueryGate query={sources}>
+      <QueryGate query={sources} pendingLabel={t("settings.voice.title")}>
         {(manifest) => (
           <div>
             <p className="t-small">

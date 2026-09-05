@@ -25,8 +25,10 @@ import (
 // consulted at all.
 
 type fakeStore struct {
-	delivery Delivery
-	loadErr  error
+	payloadsCleared int
+	payloadClearErr error
+	delivery        Delivery
+	loadErr         error
 
 	sent   string
 	parked string
@@ -110,6 +112,17 @@ func (f *fakeStore) MarkInFlight(_ context.Context, _ ids.UUID) error {
 	f.marked++
 	at := testNow
 	f.delivery.InFlightAt = &at
+	return nil
+}
+
+// ClearPayloadRef records that the one-time link material was retired, so a
+// test can assert the dispatcher retires it on exactly the terminal outcomes.
+func (f *fakeStore) ClearPayloadRef(_ context.Context, _ ids.UUID) error {
+	if f.payloadClearErr != nil {
+		return f.payloadClearErr
+	}
+	f.payloadsCleared++
+	f.delivery.PayloadRef = ""
 	return nil
 }
 

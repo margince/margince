@@ -275,13 +275,21 @@ func TestAgentReleaseSpendsTheCapsTheReleaseSpends(t *testing.T) {
 func TestACredentialDoesNotReleaseTheProposalItMade(t *testing.T) {
 	mine := ids.NewV7()
 	theirs := ids.NewV7()
+	lender := ids.NewV7()
+	someoneElse := ids.NewV7()
 	proposer := principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:test", OnBehalfOf: ids.NewV7(),
+		Type: principal.PrincipalAgent, ID: "agent:test", UserID: lender, OnBehalfOf: lender,
 		PassportID: mine, Scopes: principal.NewScopeSet(principal.ScopeWrite),
 	}
-	stagedBy := func(id ids.UUID) row {
-		passport := ids.From[ids.PassportKind](id)
-		return row{Kind: "advance_deal", PassportID: &passport}
+	// A staging carries BOTH halves, because an agent one always does:
+	// attributableStager refuses a passport-less agent staging, and
+	// insertProposalInTx writes on_behalf_of from the same principal. A fixture
+	// omitting the human is a shape production cannot produce, and it is the
+	// shape under which a rule about that human passes without being asked.
+	stagedBy := func(passportID, human ids.UUID) row {
+		passport := ids.From[ids.PassportKind](passportID)
+		on := ids.From[ids.UserKind](human)
+		return row{Kind: "advance_deal", PassportID: &passport, OnBehalfOf: &on}
 	}
 
 	cases := []struct {
@@ -290,12 +298,22 @@ func TestACredentialDoesNotReleaseTheProposalItMade(t *testing.T) {
 		approve bool
 		want    bool // admitted
 	}{
-		{"the proposer cannot approve its own row", stagedBy(mine), true, false},
+		{"the proposer cannot approve its own row", stagedBy(mine, lender), true, false},
 		// Deliberately allowed: an agent that changes its mind takes its own
 		// request off somebody's desk rather than leaving it there.
-		{"but it may still reject its own row", stagedBy(mine), false, true},
-		{"another credential's row it may approve", stagedBy(theirs), true, true},
-		// serverProposed: a row nobody's passport staged is not self-approval.
+		{"but it may still reject its own row", stagedBy(mine, lender), false, true},
+		// Another CREDENTIAL of the same person: the lender could have answered
+		// this in the CRM themselves, so answering it on a second credential they
+		// minted is the same person answering.
+		{"another credential of the same person it may approve", stagedBy(theirs, lender), true, true},
+		// Another PERSON's, which is the loop the tier exists to stop: two
+		// passports lent by two people push a confirm-first action through end to
+		// end and no human ever looks.
+		{"another person's row it does not approve", stagedBy(theirs, someoneElse), true, false},
+		{"but it may still reject another person's row", stagedBy(theirs, someoneElse), false, true},
+		// serverProposed: a row nobody's passport staged is not self-approval,
+		// and one staged on nobody's behalf is the unattended policy apply,
+		// bounded by the owner's own authority rather than by a staging.
 		{"a server-proposed row is nobody's own", row{Kind: "advance_deal"}, true, true},
 	}
 	for _, tc := range cases {
@@ -632,13 +650,10 @@ func TestASelfOnlyKindIsUndecidableByAnyoneButItsSubject(t *testing.T) {
 		t.Fatal("linkedin_match is not self-only — a colleague's imported network is readable from the inbox")
 	}
 
-	// The predicate itself, exercised the way decidable applies it.
-	selfOnly := func(p principal.Principal, a row) bool {
-		if !selfOnlyKinds[a.Kind] {
-			return true
-		}
-		return a.OnBehalfOf != nil && p.UserID != ids.Nil && a.OnBehalfOf.UUID == p.UserID
-	}
+	// The production predicate itself, not a copy of it: a re-spelled rule in a
+	// test proves the test, and this one went on passing while the two
+	// target-filtered readers had no self-only narrowing at all.
+	selfOnly := func(p principal.Principal, a row) bool { return !withheldFromOtherSeats(p, a) }
 	if selfOnly(admin, staged) {
 		t.Error("an all-scope admin can decide a LinkedIn match staged for somebody else")
 	}
@@ -648,6 +663,72 @@ func TestASelfOnlyKindIsUndecidableByAnyoneButItsSubject(t *testing.T) {
 	// A proposal with no recorded subject is nobody's to read, not everybody's.
 	if selfOnly(owner, row{Kind: "linkedin_match"}) {
 		t.Error("a self-only proposal with no subject was treated as decidable")
+	}
+}
+
+// withheldFromOtherSeats is the half of decidable the two target-filtered reads
+// (inbox.listForTarget, Service.PendingForTarget) have to spell for themselves,
+// because they settle target visibility once for the record instead of per row.
+// Both once spelled only the grant half, so a colleague's linkedin_match,
+// vcard_create and held_draft were readable from any record page they were
+// staged against.
+//
+// The walk is DERIVED over selfOnlyKinds and over the probe classification
+// stagedForStagerOnly reads, so a kind or a personal table enrolled tomorrow is
+// covered without anybody remembering this test exists. Each shape is asserted
+// three ways — withheld from a colleague, served to its own seat, withheld from
+// everyone when no seat is recorded — because a predicate that answers "withheld"
+// unconditionally also passes a test that only checks the refusal.
+func TestEverySelfOnlyShapeIsWithheldFromEverySeatButTheOneItWasStagedFor(t *testing.T) {
+	mine, theirs := ids.NewV7(), ids.NewV7()
+	subject := ids.From[ids.UserKind](mine)
+	stager := principal.Principal{UserID: mine, Permissions: principal.Permissions{RowScope: principal.RowScopeAll}}
+	colleague := principal.Principal{UserID: theirs, Permissions: principal.Permissions{RowScope: principal.RowScopeAll}}
+
+	shapes := map[string]row{}
+	for kind := range selfOnlyKinds {
+		shapes["kind "+kind] = row{Kind: kind}
+	}
+	// The other route to the same predicate: a create staged against a table
+	// whose rows belong to one human each, where no row exists yet for an
+	// ownership probe to ask. Read off the probe table rather than named, so an
+	// enrolment there lands here too.
+	for targetType, probe := range targetProbes {
+		if probe != probeOwnerOnly {
+			continue
+		}
+		shapes["id-less create against "+targetType] = row{Kind: "create_record", TargetType: &targetType}
+	}
+	if len(shapes) == 0 {
+		t.Fatal("no self-only shape found at all — this walk covers nothing")
+	}
+
+	for name, staged := range shapes {
+		t.Run(name, func(t *testing.T) {
+			forMe := staged
+			forMe.OnBehalfOf = &subject
+			if !withheldFromOtherSeats(colleague, forMe) {
+				t.Error("a colleague may read a staging filed for somebody else — the inbox is a side channel over one member's private business")
+			}
+			if withheldFromOtherSeats(stager, forMe) {
+				t.Error("the member it was staged for cannot read their own staging, so the narrowing withholds it from everybody")
+			}
+			// Fail-closed: a proposal nobody is recorded for is one nobody may
+			// read, not one everybody may.
+			if !withheldFromOtherSeats(stager, staged) {
+				t.Error("a staging with no recorded seat was served")
+			}
+		})
+	}
+
+	// The positive control. Without it this test also passes when the predicate
+	// withholds every row of every kind and the inbox serves nothing at all.
+	shared := row{Kind: "merge_records", OnBehalfOf: &subject}
+	if selfOnlyKinds[shared.Kind] {
+		t.Fatal("the control kind is itself self-only, so it proves nothing about a shared one")
+	}
+	if withheldFromOtherSeats(colleague, shared) {
+		t.Error("a SHARED kind was withheld from a colleague — the inbox is a shared surface and triage is the point")
 	}
 }
 

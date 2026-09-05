@@ -145,8 +145,11 @@ func TestTheArcReadsInDateOrder(t *testing.T) {
 	}
 }
 
-// A conversation this caller may not read still dates the arc and says
-// nothing. Its subject must not reach the reader by any path.
+// A conversation this caller may not read says nothing and must not date the
+// arc either. The arc's own `omitted` line tells the reader "the account arc
+// is built from the rest"; a withheld conversation's own instant reaching
+// plan.account_arc[].to (or its count) makes that sentence false, and handed
+// the reader the withheld message's date by subtraction.
 func TestAWithheldConversationNamesNothing(t *testing.T) {
 	in := fullInput()
 	withheld := mail(dealID, 5, "", "inbound")
@@ -155,10 +158,20 @@ func TestAWithheldConversationNamesNothing(t *testing.T) {
 		mail(activityID, 3, "Readable subject", "inbound"),
 		withheld,
 	}
-	for _, moment := range accountArc(in) {
+	arc := accountArc(in)
+	for _, moment := range arc {
 		if strings.Contains(moment.Title, "withheld") {
 			t.Errorf("a withheld conversation named itself in the arc title %q", moment.Title)
 		}
+	}
+	if len(arc) != 1 {
+		t.Fatalf("moments = %d, want 1 — the withheld-only thread has its own moment, dropped", len(arc))
+	}
+	if got, want := arc[0].To, at(3); !got.Equal(want) {
+		t.Errorf("moment.To = %s, want %s — the withheld message's own date must not extend it", got, want)
+	}
+	if got := conversationCount(arc[0]); got != 1 {
+		t.Errorf("conversation count = %d, want 1 — the withheld conversation is not this reader's to count", got)
 	}
 	if got := withheldCount(in.History); got != 1 {
 		t.Errorf("withheld count = %d, want 1 — the omission is built from it", got)
@@ -185,10 +198,114 @@ func TestAWithheldRowIsNotCitedEvenInsideAReadableThread(t *testing.T) {
 			t.Error("a withheld row is citable through the thread it shares with a readable one")
 		}
 	}
-	// It still COUNTS: the thread holds two conversations, and the arc's dates
-	// are right because of it.
+	// It still COUNTS in Rows — a withheld row still happened — but must not
+	// move First/Last: the hidden reply landed on day 4, a day later than the
+	// readable message it replies to, and the thread's dates must stay at the
+	// readable message's own day, not stretch to the hidden reply's.
 	if threads[0].Rows != 2 {
 		t.Errorf("rows = %d, want 2 — a withheld row still happened", threads[0].Rows)
+	}
+	if got, want := threads[0].Last, at(3); !got.Equal(want) {
+		t.Errorf("last = %s, want %s — a withheld reply must not date the thread", got, want)
+	}
+}
+
+// The history reader hands threadsOf rows newest first (history.go's
+// ORDER BY occurred_at DESC), the opposite order the test above uses. The fix
+// must hold either way: the guard is "was this row readable", not "was it the
+// first one seen for this key".
+func TestAWithheldRowIsNotCitedRegardlessOfScanOrder(t *testing.T) {
+	readable := mail(activityID, 3, "Requirements", "inbound")
+	readable.ThreadKey = "abc"
+	hidden := mail(dealID, 4, "", "outbound")
+	hidden.ThreadKey = "abc"
+	hidden.Withheld = true
+
+	threads := threadsOf([]HistoryIn{hidden, readable})
+	if len(threads) != 1 {
+		t.Fatalf("threads = %d, want 1 — one thread key is one thread", len(threads))
+	}
+	for _, id := range threads[0].IDs {
+		if id == dealID {
+			t.Error("a withheld row is citable through the thread it shares with a readable one")
+		}
+	}
+	if got, want := threads[0].Last, at(3); !got.Equal(want) {
+		t.Errorf("last = %s, want %s — a withheld reply scanned FIRST must still not date the thread", got, want)
+	}
+}
+
+// A withheld row's own nature — that it was a meeting, was on the deal, got
+// a reply — must not bias which readable moment ranks highest or which
+// readable subject becomes a moment's title. Either would let hidden content
+// steer what the reader is shown through a channel the audience narrowing
+// cannot see.
+func TestAWithheldRowsNatureDoesNotBiasRankingOrTitle(t *testing.T) {
+	plain := mail(activityID, 3, "Ordinary note", "outbound")
+	plain.ThreadKey = "abc"
+	loudButHidden := HistoryIn{
+		ID: dealID, Kind: "meeting", Subject: "Should never be the title",
+		Direction: "inbound", At: at(4), OnDeal: true, Withheld: true,
+	}
+	loudButHidden.ThreadKey = "abc"
+
+	threads := threadsOf([]HistoryIn{plain, loudButHidden})
+	if len(threads) != 1 {
+		t.Fatalf("threads = %d, want 1", len(threads))
+	}
+	got := threads[0]
+	if got.HasMeeting {
+		t.Error("a withheld meeting made the thread read as a meeting")
+	}
+	if got.OnDeal {
+		t.Error("a withheld on-deal row made the thread read as on-deal")
+	}
+	if got.Inbound != 0 {
+		t.Errorf("inbound = %d, want 0 — the only inbound row is withheld", got.Inbound)
+	}
+	if got.Subject != "Ordinary note" {
+		t.Errorf("subject = %q, want the readable row's own subject, not the withheld row's louder one", got.Subject)
+	}
+}
+
+// An all-withheld moment must never outrank, and so never displace, a moment
+// built from anything this caller may read — not even when the withheld
+// content looks maximally important (a meeting, on the deal, replied to).
+// Six moments compete for the five-slot cap; the sixth, weakest readable one
+// must still beat the loud-but-hidden moment, proving the floor holds under
+// real competition rather than only in an uncapped fixture.
+func TestALoudWithheldMomentNeverDisplacesAWeakReadableOne(t *testing.T) {
+	in := fullInput()
+	var history []HistoryIn
+	loud := HistoryIn{
+		ID: dealID, Kind: "meeting", Subject: "Loud but hidden",
+		Direction: "inbound", At: at(1), OnDeal: true, Withheld: true,
+	}
+	history = append(history, loud)
+	// Six ordinary, weak, single-message moments — no deal, no meeting, no
+	// reply, nothing to score beyond recency — each a silence-closing gap
+	// apart so they never merge into one.
+	for i := range arcCap + 1 {
+		history = append(history, mail(
+			fmt.Sprintf("0198f000-0000-7000-8000-0000000%05d", i+400),
+			40+i*30, fmt.Sprintf("Weak %d", i), "outbound"))
+	}
+	in.History = history
+	in.Now = at(40 + arcCap*30)
+
+	arc := accountArc(in)
+	if len(arc) != arcCap {
+		t.Fatalf("moments = %d, want %d — the cap, filled entirely from readable moments", len(arc), arcCap)
+	}
+	for _, moment := range arc {
+		if strings.Contains(moment.Title, "Loud but hidden") {
+			t.Fatal("the withheld moment's title reached the reader")
+		}
+		for _, current := range moment.Threads {
+			if current.HasMeeting && len(current.IDs) == 0 {
+				t.Fatal("the withheld moment occupied a slot in the capped arc")
+			}
+		}
 	}
 }
 

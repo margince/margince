@@ -1403,7 +1403,7 @@ export function CompanyScreen({ id }: Readonly<{ id: string }>) {
 
   return (
     <div className="wrap">
-      <QueryGate query={orgQuery}>
+      <QueryGate query={orgQuery} pendingLabel={t("nav.companies")}>
         {(org) => (
           <CompanyRecord org={org} view={view} tab={tab} onTab={setTab} t={t} />
         )}
@@ -2431,14 +2431,15 @@ function CompanyOverviewStack({
           />
           {/* Keyed on the account, so its fold is the account's own. The page
               stays mounted while the route swaps organizations, and without
-              this a thread a reader folded on one company arrives folded on
-              the next — which contradicts the promise that the thread the
-              call was read from is open when the reader gets there. */}
+              this a thread a reader OPENED on one company arrives open on the
+              next — carrying one account's reading into another's, and
+              spending the glance the fold is closed to protect. */}
           <ThreadFold
             key={org.id}
             view={view}
             loading={loading}
             onOpenHistory={onOpenHistory}
+            onOpenRecord={onOpenRecord}
           />
         </Company360Call>
       )}

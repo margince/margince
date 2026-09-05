@@ -88,3 +88,34 @@ func (composeReportResolver) Subject(_ context.Context, cmd ComposeReportCommand
 func (composeReportResolver) Guards(_ context.Context, _ ComposeReportCommand) error {
 	return nil
 }
+
+// AnalyticsQueryCommand is one typed analytics run, whichever door asked for
+// it. The ENTITY is the whole of it: the plan narrows what is counted, and the
+// engine — not this seam — owns what a population admits.
+type AnalyticsQueryCommand struct {
+	Entity string
+}
+
+// NewAnalyticsQueryCall binds one analytics run to the resolver that answers
+// for it. It holds no dependency: an aggregate names no record at all.
+//
+//nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
+func NewAnalyticsQueryCall(cmd AnalyticsQueryCommand) GovernedCall {
+	return bind[AnalyticsQueryCommand](analyticsQueryResolver{}, cmd)
+}
+
+type analyticsQueryResolver struct{}
+
+// Subject names NO record, for runReportResolver's reason: an aggregate over
+// rows the caller's own scope bounds has no row an approval could bind to.
+// The population name is the one fact that says what is being released.
+func (analyticsQueryResolver) Subject(_ context.Context, cmd AnalyticsQueryCommand) (StageInfo, error) {
+	return StageInfo{Summary: fmt.Sprintf("Run an analytics query over %s", cmd.Entity)}, nil
+}
+
+// Guards stands down, for runReportResolver's reason: the vocabulary is the
+// engine's derived schema, and a name outside it is refused at execution with
+// the allowed set in hand.
+func (analyticsQueryResolver) Guards(_ context.Context, _ AnalyticsQueryCommand) error {
+	return nil
+}

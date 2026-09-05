@@ -265,7 +265,11 @@ export function ConsentPurposesCard() {
             }
             layout="stack"
             control={
-              <QueryGate query={query} empty={(page) => page.data.length === 0}>
+              <QueryGate
+                query={query}
+                empty={(page) => page.data.length === 0}
+                pendingLabel={t("privacy.purposesRegistry")}
+              >
                 {(page) => (
                   <div className="purpose-badges">
                     {page.data.map((purpose) => (
@@ -1066,7 +1070,7 @@ export function PrivacyInboxCard() {
     // Behind the probe, so this states a settled denial and not the absence of
     // an answer — while /me is in flight nobody holds any role yet.
     body = (
-      <QueryGate query={me}>
+      <QueryGate query={me} pendingLabel={t("privacy.inboxAdminOnly")}>
         {() => <EmptyState>{t("privacy.inboxAdminOnly")}</EmptyState>}
       </QueryGate>
     );
@@ -1077,7 +1081,7 @@ export function PrivacyInboxCard() {
     // beside the retry. The hand-rolled pair said neither out loud, and it
     // measured its own gaps in inline style objects.
     body = (
-      <QueryStates query={query}>
+      <QueryStates query={query} pendingLabel={t("privacy.facetAll")}>
         {rows.length === 0 ? (
           <EmptyState>{t("common.empty")}</EmptyState>
         ) : (

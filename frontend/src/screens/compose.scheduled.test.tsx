@@ -31,9 +31,9 @@ import { ComposeModal } from "./compose";
 
 type Activity = components["schemas"]["Activity"];
 
-// The one purpose with no unsubscribe requirement, so the form is sendable with
+// A reason that carries no unsubscribe surface, so the form is sendable with
 // nothing else filled in.
-const PURPOSE_LABEL = "Deal messages";
+const WHY_LABEL = "About a deal we are working on";
 
 const ACTIVITY: Activity = {
   id: "act-1",
@@ -69,22 +69,6 @@ function stubSend(status: number) {
       const method = request?.method ?? init?.method ?? "GET";
       if (method === "POST" && url.pathname.endsWith("/send-email")) {
         return jsonResponse(ACTIVITY, status);
-      }
-      // The one purpose the form needs to be sendable. Transactional because it
-      // is the unsubscribe-free lane, so nothing else has to be filled in.
-      if (url.pathname.endsWith("/consent-purposes")) {
-        return jsonResponse({
-          data: [
-            {
-              id: "p1",
-              key: "transactional",
-              label: PURPOSE_LABEL,
-              requires_double_opt_in: false,
-              is_active: true,
-            },
-          ],
-          page: { next_cursor: null },
-        });
       }
       return jsonResponse({ data: [], page: { next_cursor: null } });
     }),
@@ -123,11 +107,7 @@ async function composeAndSend() {
   await userEvent.tab();
   await userEvent.type(screen.getByPlaceholderText("Subject"), "Hi there");
   await userEvent.type(screen.getByPlaceholderText("Body"), "Body content");
-  await pickOption(
-    userEvent.setup(),
-    screen.getByRole("combobox"),
-    PURPOSE_LABEL,
-  );
+  await pickOption(userEvent.setup(), screen.getByRole("combobox"), WHY_LABEL);
   await userEvent.click(screen.getByRole("button", { name: "Send" }));
   return onClose;
 }

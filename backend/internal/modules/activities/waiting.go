@@ -247,9 +247,16 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		if err != nil {
 			return err
 		}
+		// The horizon this installation's own answering implies, measured in
+		// the same transaction as the scan it bounds — so the cutoff and the
+		// rows it judges come from one snapshot.
+		horizon, err := s.waitingHorizonFor(ctx, tx, asOf)
+		if err != nil {
+			return err
+		}
 		rows, err := tx.Query(ctx,
 			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
-				waitingHorizonDays,
+				horizon,
 				liveRecord(openDealPredicate, "d"),
 				liveRecord(workingLeadPredicate, "ld"),
 				liveRecord(openDealPredicate, "openDeal"),

@@ -197,6 +197,7 @@ func TestARoleWithNoViewProviderComposesTheRestAndServesIt(t *testing.T) {
 		agents.CapabilitiesURI,
 		agents.ReportVocabularyURI,
 		agents.ReportBlocksURI,
+		AnalyticsSchemaURI,
 	}
 	if len(published) != len(want) {
 		t.Fatalf("the composed surface published %v, want exactly %v", published, want)

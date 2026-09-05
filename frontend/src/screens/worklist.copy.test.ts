@@ -189,17 +189,17 @@ describe("the verbs the row can and cannot take a reader to", () => {
     expect(moveLabel(onADeal, t)).toBe("Open to write");
   });
 
-  // These are PERFORMED, not navigated: one posts a task body, one opens a
-  // drawer, and one leaves for a provider's consent screen. A link drawn for
-  // any of them would be pressable with nothing behind it — the exact defect
-  // the move slot's own comment warned about.
+  // These are PERFORMED, not navigated: one posts a task body, one leaves for a
+  // provider's consent screen, and one names no step at all. A link drawn for
+  // any of them would be pressable with nothing behind it.
+  //
+  // `open_meeting_brief` was on this list and no longer is. It reads as a
+  // drawer, so it looked unaddressable — but the way IN is an address: the
+  // brief opens as `?prep=<activity>` on a person's record. It is covered by
+  // its own describe block below, including the case where the row names
+  // nobody and correctly draws nothing.
   it("draws no link for a verb no address can perform", () => {
-    for (const action of [
-      "create_task",
-      "open_meeting_brief",
-      "reconnect",
-      "none",
-    ]) {
+    for (const action of ["create_task", "reconnect", "none"]) {
       const item = movingRow(action);
       expect(moveHref(item)).toBeUndefined();
       expect(moveOpensComposer(item)).toBe(false);
@@ -408,3 +408,44 @@ describe("an unavailable source", () => {
     }
   });
 });
+
+// The brief is not a page of its own: it opens as `?prep=<activity>` on a
+// PERSON's record, so the address needs both ids and the row's subject — the
+// meeting — carries only one.
+describe("moveHref — the open_meeting_brief move", () => {
+  it("opens the brief on the person the meeting names", () => {
+    const href = moveHref(briefRow("p-9"));
+    expect(href).toContain("#/contacts/p-9");
+    expect(href).toContain("prep=a-7");
+  });
+
+  // A meeting naming nobody has no page to read the brief on. An internal
+  // meeting and one whose attendees are all withheld arrive identically, and
+  // both must draw NO way in rather than one that opens nothing.
+  it("offers nothing where the meeting names nobody", () => {
+    expect(moveHref(briefRow(undefined))).toBeUndefined();
+  });
+
+  // It is not the composer, and must not be described as one: the label reads
+  // off the same predicate, so a brief announced as a draft would be a button
+  // whose words and destination disagree.
+  it("is not a draft", () => {
+    expect(moveOpensComposer(briefRow("p-9"))).toBe(false);
+  });
+});
+
+function briefRow(withPerson: string | undefined) {
+  return {
+    id: "m1",
+    source: "meeting",
+    category: "meetings",
+    title: "Fleet retrofit review",
+    because: [],
+    actions: [],
+    dispositions: [],
+    overdue: false,
+    subject: { type: "activity", id: "a-7" },
+    with_person: withPerson,
+    move: { action: "open_meeting_brief", activity_id: "a-7" },
+  } as unknown as WorklistItem;
+}

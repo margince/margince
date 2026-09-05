@@ -446,12 +446,16 @@ export function ScheduledSendsScreen() {
         </Callout>
       )}
       {writeError && <Callout tone="danger">{writeError}</Callout>}
-      <QueryStates query={query}>
+      <QueryStates query={query} pendingLabel={t("nav.scheduled")}>
         {query.data && query.data.length === 0 ? (
           // One sentence for the whole page, not one per group: a rep who has
           // never scheduled anything is not reading three findings, and three
           // empty blocks make a page that is simply clear look broken.
-          <SurfaceState state="empty" emptyLabel={t("sched.empty")}>
+          <SurfaceState
+            state="empty"
+            emptyLabel={t("sched.empty")}
+            loadingLabel={t("nav.scheduled")}
+          >
             {null}
           </SurfaceState>
         ) : (
@@ -466,6 +470,7 @@ export function ScheduledSendsScreen() {
                   <section key={group} aria-label={title}>
                     <SectionHeader title={title} />
                     <SurfaceState
+                      loadingLabel={title}
                       label={title}
                       state={rows.length === 0 ? "empty" : "ready"}
                       emptyLabel={t(GROUP_EMPTY[group])}

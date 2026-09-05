@@ -41,7 +41,13 @@ func (t createTag) Spec() mcp.ToolSpec {
 		Name: "create_tag", Title: "Create a tag", Version: toolVersionV1,
 		Description:   createTagCopy.render(),
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "createTag",
+		// A tag is a WORD, not a row with a scope, so this answer names no
+		// record and the replay has nothing to re-read. The grant is what the
+		// handler checked; it is what the replay checks. Without it a retry
+		// after a timeout was told the call never happened, and an agent could
+		// coin a second word or re-issue an edit it had already made.
+		ReplayGrant: &mcp.ReplayGrant{Object: tagRecordType, Action: principal.ActionCreate},
+		OpenAPIOp:   "createTag",
 		// No `description`, though CreateTagRequest declares one and update_tag
 		// takes one. The REST handler decodes it and never passes it to the
 		// store (collections/handlers.go CreateTag), so the field is dropped in
@@ -81,7 +87,13 @@ func (t updateTag) Spec() mcp.ToolSpec {
 		Name: "update_tag", Title: "Rename or recolour a tag", Version: toolVersionV1,
 		Description:   updateTagCopy.render(),
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "updateTag",
+		// A tag is a WORD, not a row with a scope, so this answer names no
+		// record and the replay has nothing to re-read. The grant is what the
+		// handler checked; it is what the replay checks. Without it a retry
+		// after a timeout was told the call never happened, and an agent could
+		// coin a second word or re-issue an edit it had already made.
+		ReplayGrant: &mcp.ReplayGrant{Object: tagRecordType, Action: principal.ActionUpdate},
+		OpenAPIOp:   "updateTag",
 		// The REST body's own vocabulary, mirrored: an omitted field is left
 		// alone and `color: "none"` clears the colour. Spelling clearing as a
 		// VALUE is the contract's decision, and for the reason it gives — a

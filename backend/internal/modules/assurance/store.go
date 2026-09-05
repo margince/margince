@@ -49,12 +49,24 @@ const (
 	ReadinessChecksIncomplete    = "checks_incomplete"
 )
 
+// ExceptionConditionCleared is a finding the SCAN closed: the condition it
+// reported is no longer present in the record. Distinct from resolved on
+// purpose — nobody answered this one, the record changed — because a reason
+// that cannot be told apart later cannot be audited later. The status column
+// here and the outcome column on a resolution row carry the same word for the
+// same event, which is why this is an alias rather than a second literal.
+const ExceptionConditionCleared = OutcomeConditionCleared
+
 // Source coverage states.
 const (
 	CoverageChecked           = "checked"
 	CoverageStale             = "stale"
 	CoverageUnavailable       = "unavailable"
 	CoveragePermissionLimited = "permission_limited"
+	// CoverageNotConnected is a source the workspace never configured. Distinct
+	// from unavailable: there is nothing to fix, only something to decide, and
+	// the two route to different people.
+	CoverageNotConnected = "not_connected"
 )
 
 // SourceCoverage is one source and how far the run reached into it.
@@ -170,12 +182,18 @@ func (s *Store) UpsertException(ctx context.Context, tx pgx.Tx, f Finding, owner
 		ON CONFLICT (logical_key) DO UPDATE
 		SET last_seen_at = now(),
 		    updated_at = now(),
+		    -- A cleared row REOPENS on re-detection: the scan closed it because
+		    -- the condition left the record, so the condition being back is a
+		    -- new fact for a person. A resolved row does not — somebody
+		    -- answered that one, and re-detection must not un-ask them.
+		    status = CASE WHEN assurance_exception.status = 'condition_cleared'
+		                  THEN 'open' ELSE assurance_exception.status END,
 		    -- Only while it is still somebody's problem. A resolved row keeps
 		    -- the value it was resolved against, which is what lets a later
 		    -- scan tell "still true" from "changed since you answered".
-		    observed = CASE WHEN assurance_exception.status = 'open'
+		    observed = CASE WHEN assurance_exception.status IN ('open', 'condition_cleared')
 		                    THEN EXCLUDED.observed ELSE assurance_exception.observed END,
-		    severity = CASE WHEN assurance_exception.status = 'open'
+		    severity = CASE WHEN assurance_exception.status IN ('open', 'condition_cleared')
 		                    THEN EXCLUDED.severity ELSE assurance_exception.severity END`,
 		LogicalKey(f), f.Type, subjectID, claim, observed,
 		f.Severity, f.AffectedMinor, nullIfEmpty(f.Currency),
@@ -185,10 +203,61 @@ func (s *Store) UpsertException(ctx context.Context, tx pgx.Tx, f Finding, owner
 	return nil
 }
 
+// CloseCleared closes every open finding of the named types, on the named
+// subjects, that this pass no longer observes. Both bounds carry meaning: the
+// types are the rules whose required sources were actually read tonight — for
+// the others "not observed" means "not looked" — and the subjects are the
+// deals this pass actually evaluated, because absence is only a fact about
+// what was walked. A deal that left the eligible set is deliberately NOT
+// cleared here; its findings are a different question with a different answer.
+//
+// A finding under a LIVE deferral is left alone: "remind me next week" is an
+// answer about when, and a condition that dips out for one night — a push
+// count rolling off its window does this on its own — must not eat the
+// reminder. If the condition is truly gone next week, the reminder fires over
+// a clean record and clears then.
+//
+// No per-finding resolution row is written: assurance_resolution attributes an
+// answer to a person (actor_id is NOT NULL because an answer is BY somebody),
+// and the scan is not one. The night's clearing is recorded once, on the run's
+// own audit row, where FinishRun carries the cleared count.
+func (s *Store) CloseCleared(ctx context.Context, tx pgx.Tx, types []string, subjects, seen []string) (int64, error) {
+	if err := auth.Require(ctx, "forecast", principal.ActionUpdate); err != nil {
+		return 0, err
+	}
+	if len(types) == 0 || len(subjects) == 0 {
+		return 0, nil
+	}
+	if seen == nil {
+		// A pass that found NOTHING has an empty seen set, not an absent one.
+		// pgx encodes a nil slice as SQL NULL, and `NOT (x = ANY(NULL))` is
+		// NULL — which silently filters every row and clears nothing, on
+		// exactly the night everything should clear.
+		seen = []string{}
+	}
+	tag, err := tx.Exec(ctx, `
+		UPDATE assurance_exception
+		SET status = $1, updated_at = now()
+		WHERE status = 'open'
+		  AND subject_kind = 'deal'
+		  AND subject_id = ANY($2::uuid[])
+		  AND type = ANY($3)
+		  AND NOT (logical_key = ANY($4))
+		  AND NOT EXISTS (SELECT 1 FROM assurance_resolution r
+		                   WHERE r.exception_id = assurance_exception.id
+		                     AND r.outcome = 'deferred'
+		                     AND r.remind_at > now())`,
+		ExceptionConditionCleared, subjects, types, seen)
+	if err != nil {
+		return 0, fmt.Errorf("assurance: closing cleared findings: %w", err)
+	}
+	return tag.RowsAffected(), nil
+}
+
 // FinishRun closes a pass with what it found and what it could reach.
 func (s *Store) FinishRun(
 	ctx context.Context, tx pgx.Tx, runID ids.UUID,
-	eligibleDeals, eligibleSignals int, status, readiness string,
+	eligibleDeals, eligibleSignals int, cleared int64, status, readiness string,
 ) error {
 	if err := auth.Require(ctx, "forecast", principal.ActionCreate); err != nil {
 		return err
@@ -222,6 +291,10 @@ func (s *Store) FinishRun(
 			"readiness":        readiness,
 			"eligible_deals":   eligibleDeals,
 			"eligible_signals": eligibleSignals,
+			// How many findings this pass closed in absence. A night that
+			// silently retired four hundred findings must not read like one
+			// that retired none.
+			"cleared": cleared,
 		})
 	if err != nil {
 		return err

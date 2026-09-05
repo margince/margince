@@ -36,39 +36,6 @@ stated practice, A39); external contributors disclose so a human
 reviewer knows what they are accountable for. Either way, the same
 gates apply (below).
 
-## Developer Certificate of Origin (DCO)
-
-Every commit must be signed off under the [Developer Certificate of
-Origin](https://developercertificate.org/):
-
-```
-git commit -s
-```
-
-This appends a `Signed-off-by: Your Name <you@example.com>` trailer
-certifying you have the right to submit the change under the project's
-license. The DCO check is required — a pull-request commit without the
-trailer blocks the merge. Amend with `git commit --amend -s` if you
-forget.
-
-Squash-merging keeps those trailers only while the squash message keeps
-the branch commits in its body. Replacing that body drops every one of
-them, and the commit that lands on `main` is then unsigned.
-
-A commit already on `main` cannot be amended, so its **author** attests
-to it afterward, in the message of any later signed-off commit of
-theirs — one line, the full 40-character sha:
-
-```text
-DCO-Remediation-Commit: I, Your Name <you@example.com>, hereby add my Signed-off-by to commit: <sha>
-```
-
-Nobody else can give that attestation, and the gate holds you to it
-rather than taking your word: the attesting commit must be signed off,
-authored by the same person as the commit it names, under the address
-its own sentence claims, and it must come after that commit. An unsigned
-commit is otherwise permanent.
-
 ## A working tree in four commands
 
 You need **Go ≥ 1.26**, **Docker**, `golangci-lint`, and Node with pnpm
@@ -101,7 +68,6 @@ Full target list: [docs/reference/make-targets.md](docs/reference/make-targets.m
   `fix(overlay): a mirrored deal reports the incumbent's last-modified`.
   Write the subject as the behaviour after the change, not as the task
   you performed.
-- **Sign off every commit** — `git commit -s`; see DCO above.
 - **Squash-merge** is the house style, and only over green checks.
 
 ### Contributing from a fork
@@ -145,7 +111,7 @@ loop your PR will run:
    (`cli/craft/`) is part of this repo — don't edit it to silence a
    finding on your own PR; fix the gate in its own reviewed change.
 3. **CI must be all green before merge**: the same deterministic gates
-   plus DCO, automated review, and static analysis. Address findings
+   plus automated review and static analysis. Address findings
    rather than dismissing them; squash-merge is the house style.
 
 Write it right the first time: match the surrounding file, comments say

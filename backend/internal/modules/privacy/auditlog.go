@@ -255,7 +255,11 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 	if !ok || actor.Type != principal.PrincipalHuman {
 		return AuditPage{}, fmt.Errorf("human-only compliance read: %w", apperrors.ErrPermissionDenied)
 	}
-	if err := auth.RequireAdmin(ctx); err != nil {
+	// A grant rather than the literal admin role, so an installation can hand
+	// the trail to whoever answers for it. Admin alone by default, and ops
+	// deliberately not: an operator administers the installation's wiring, not
+	// the record of who did what to whom.
+	if err := auth.Require(ctx, "audit_log", principal.ActionRead); err != nil {
 		return AuditPage{}, err
 	}
 

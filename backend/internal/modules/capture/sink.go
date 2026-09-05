@@ -135,22 +135,8 @@ var _ connector.Sink = (*Sink)(nil)
 // key. Replays return the existing row and write NOTHING new — an
 // at-least-once sync loop costs no duplicate audit entries.
 func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (datasource.EntityRef, error) {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalConnector {
-		return datasource.EntityRef{}, errors.New("capture: sink requires a connector principal — the registry builds it, nothing else may")
-	}
-	if rec.NaturalKey.SourceSystem == "" || rec.NaturalKey.SourceID == "" {
-		return datasource.EntityRef{}, errors.New("capture: a natural key is required — unkeyed capture cannot be idempotent")
-	}
-	if rec.CapturedBy != actor.ID {
-		// Provenance comes from the authenticated principal; a connector
-		// cannot claim to be another one.
-		return datasource.EntityRef{}, fmt.Errorf("capture: captured_by %q does not match the acting connector %q", rec.CapturedBy, actor.ID)
-	}
-	if err := admitCounterpartyShape(counterpartyShapeOf(rec.Counterparty)); err != nil {
-		return datasource.EntityRef{}, err
-	}
-	if err := admitCounterpartyKeys(rec.Counterparty); err != nil {
+	actor, err := admitRecord(ctx, rec)
+	if err != nil {
 		return datasource.EntityRef{}, err
 	}
 
@@ -168,7 +154,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 	// it is the skip's sentence to the connector, so it names the rule, never
 	// an address.
 	var dropped string
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// A channel record's account id IS personal data, and THIS transaction is
 		// the one that makes it durable — so the erasure is excluded here, under
 		// the account's own lock, and not only at the ingress edge that admitted
@@ -196,6 +182,12 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 
 		switch fields := rec.Fields.(type) {
 		case ActivityFields:
+			// BEFORE the activity is captured, so a message that completes the
+			// corroboration is judged under the claim it just proved rather
+			// than being the last one read as mail from a stranger.
+			if err := noteAliasSightingTx(ctx, tx, actor.UserID, rec.DeliveredTo, rec.Source); err != nil {
+				return err
+			}
 			var err error
 			ref, activityCreated, decision, err = s.captureActivity(ctx, tx, rec, fields)
 			return err
@@ -247,6 +239,36 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		}
 	}
 	return ref, nil
+}
+
+// admitRecord is what a record must be before ANY of it is written, and it
+// answers with the acting connector so the caller does not resolve it twice.
+//
+// All four refusals are about the record's own shape rather than its content:
+// who is presenting it, whether it can be written idempotently at all, whether
+// it claims a provenance other than the presenter's, and whether the
+// counterparty it names is one the resolver can act on. None needs a
+// transaction, so none should hold one.
+func admitRecord(ctx context.Context, rec connector.NormalizedRecord) (principal.Principal, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalConnector {
+		return principal.Principal{}, errors.New("capture: sink requires a connector principal — the registry builds it, nothing else may")
+	}
+	if rec.NaturalKey.SourceSystem == "" || rec.NaturalKey.SourceID == "" {
+		return principal.Principal{}, errors.New("capture: a natural key is required — unkeyed capture cannot be idempotent")
+	}
+	if rec.CapturedBy != actor.ID {
+		// Provenance comes from the authenticated principal; a connector
+		// cannot claim to be another one.
+		return principal.Principal{}, fmt.Errorf("capture: captured_by %q does not match the acting connector %q", rec.CapturedBy, actor.ID)
+	}
+	if err := admitCounterpartyShape(counterpartyShapeOf(rec.Counterparty)); err != nil {
+		return principal.Principal{}, err
+	}
+	if err := admitCounterpartyKeys(rec.Counterparty); err != nil {
+		return principal.Principal{}, err
+	}
+	return actor, nil
 }
 
 // skipInvisibleIncumbent refuses a record whose incumbent row — the lead an

@@ -127,6 +127,7 @@ function rowLabels(t: Translator): DecisionCardLabels {
     draftSubject: t("decision.draftSubject"),
     draftBody: t("decision.draftBody"),
     noContent: t("common.empty"),
+    loading: t("decision.detailLoading"),
   };
 }
 

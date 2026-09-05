@@ -35,7 +35,7 @@ import (
 // a SAR built from it) that reports `real` for someone with no record would be
 // describing a person who does not exist.
 func (e *CounterpartyVerdictEngine) createCounterparty(ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty) (string, error) {
-	created, err := createCounterpartyRecords(ctx, tx, e.people, counterpartyCreation{
+	created, err := createCounterpartyRecords(ctx, tx, e.people, e.tagFiler, counterpartyCreation{
 		Email:       row.Email,
 		DisplayName: row.DisplayName,
 		Domain:      row.Domain,
@@ -66,7 +66,7 @@ func (e *CounterpartyVerdictEngine) createCounterparty(ctx context.Context, tx p
 // assembler is how the linking, the triage hand-off and the erasure check would
 // drift apart between them.
 func (e *CounterpartyVerdictEngine) createOwnerScopedCounterparty(ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty) (string, error) {
-	created, err := createCounterpartyRecords(ctx, tx, e.people, counterpartyCreation{
+	created, err := createCounterpartyRecords(ctx, tx, e.people, e.tagFiler, counterpartyCreation{
 		Email:       row.Email,
 		DisplayName: row.DisplayName,
 		Domain:      row.Domain,
@@ -131,7 +131,7 @@ type counterpartyCreated struct {
 // (backend/internal/compose/captureverdictkinds_test.go), which fails when a
 // second verdict-side file calls EnsureCounterpartyTx.
 func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *people.Store,
-	in counterpartyCreation,
+	filer *connectorTagFiler, in counterpartyCreation,
 ) (counterpartyCreated, error) {
 	res, err := store.EnsureCounterpartyTx(ctx, tx, people.EnsureCounterpartyInput{
 		Email:       in.Email,
@@ -160,6 +160,14 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *people.Sto
 	// left to do.
 	if _, err := store.PromotePersonCohortTx(ctx, tx, res.PersonID); err != nil {
 		return counterpartyCreated{}, err
+	}
+	// Only a person this ensure MADE. An address that already had a record is
+	// not something this connector captured — filing it now would claim the
+	// batch brought in a contact that was already here.
+	if res.PersonCreated {
+		if err := filer.fileUnderConnectorTag(ctx, tx, in, res.PersonID); err != nil {
+			return counterpartyCreated{}, err
+		}
 	}
 	out := counterpartyCreated{}
 	if res.TriagePending {

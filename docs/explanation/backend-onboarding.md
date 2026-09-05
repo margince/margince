@@ -214,7 +214,7 @@ exist tells you what will fail your PR and why:
 | `rlsclaims_test.go` | a comment credits row-level security with a guarantee no schema in this tree carries |
 
 They run in `make check` — unit ones uncached, walking the module tree; integration ones against
-`make test-integration`'s real Postgres. The full merge loop (gates, DCO sign-off, craft pre-push hook) is in
+`make test-integration`'s real Postgres. The full merge loop (gates, craft pre-push hook) is in
 [CONTRIBUTING.md](../../CONTRIBUTING.md); every target is in
 [make-targets.md](../reference/make-targets.md).
 

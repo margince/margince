@@ -78,8 +78,18 @@ const (
 	voiceRowRunning  = "running"
 )
 
+// voiceBuildInsertOpts is what one profile's build is queued with.
+//
+// ONE attempt, because api/jobs.yaml's fault block for voice_build says River
+// is not this kind's retry mechanism: every model failure lands on the build
+// row as deferred or failed, and voice_build_retry re-enqueues what is due. A
+// second River attempt would re-spend the builder and judge calls for a build
+// the worker already concluded.
 func voiceBuildInsertOpts() *river.InsertOpts {
-	return &river.InsertOpts{UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates}}
+	return &river.InsertOpts{
+		MaxAttempts: rowOwnedMaxAttempts,
+		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
+	}
 }
 
 // WithVoiceBuildEnqueue makes createVoiceBuild queue the job through the

@@ -56,13 +56,14 @@ type ReportCatalogEntry struct {
 // vocabularies were documented as "the report's vocabulary" — a phrase naming
 // something no tool on this surface yielded. A caller had to guess a key, then
 // guess the words that key accepts, and read a refusal for each miss.
-func RegisterReportTool(r *Registry, run ReportRunner, catalog []ReportCatalogEntry) {
-	r.Register(runReport{run: run, catalog: catalog})
+func RegisterReportTool(r *Registry, run ReportRunner, catalog []ReportCatalogEntry, plan ReportPlanVocabulary) {
+	r.Register(runReport{run: run, catalog: catalog, plan: plan})
 }
 
 type runReport struct {
 	run     ReportRunner
 	catalog []ReportCatalogEntry
+	plan    ReportPlanVocabulary
 }
 
 func (t runReport) Spec() mcp.ToolSpec {
@@ -76,13 +77,47 @@ func (t runReport) Spec() mcp.ToolSpec {
 			"filters":{"type":"object","description":"Equality predicates keyed by this report's filter names — {\"owner_id\":\"<uuid>\"}. A key outside the report's list is refused."},
 			"group_by":{"type":"array","items":{"type":"string"},"description":"Dimension names from this report's list. Omit for the report's own default grouping."},
 			"aggregates":{"type":"array","items":{"type":"object","required":["fn"],"properties":{
-				"fn":{"type":"string","enum":["count","sum","avg","min","max"]},
+				"fn":` + aggregateFunctionProperty(t.plan.Functions) + `,
 				"field":{"type":"string","description":"A measure name from this report's list. Omit only with fn=count."},
 				"as":{"type":"string","description":"Output column name for this aggregate"}},"additionalProperties":false},
 				"description":"Omit for the report's own default aggregates."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[RunReportResult](),
 	}
+}
+
+// ReportPlanVocabulary is what the engine accepts from a plan BEYOND the
+// per-report names: the aggregate functions, which are the same for every
+// report because the engine applies them rather than a spec declaring them.
+//
+// Handed over rather than restated here, for the reason the catalog is. The
+// list was written out in this file once, and the engine grew median and p75
+// without it — so two reports came to DEFAULT to a percentile no agent could
+// ask for, because the only document naming the functions listed five of seven.
+type ReportPlanVocabulary struct {
+	// Functions are the aggregate names, sorted by the producer so the
+	// rendered schema is byte-stable across processes — a schema that
+	// reshuffles per boot reads as a changed tool to a client that caches it.
+	Functions []string
+}
+
+// aggregateFunctionProperty renders the `fn` argument, closed to the functions
+// the ENGINE implements.
+//
+// An empty set omits the enum for the reason reportProperty does: `"enum":[]`
+// is a schema no value can satisfy, so it would advertise an argument nothing
+// can fill.
+func aggregateFunctionProperty(functions []string) string {
+	const described = `"type":"string","description":"How to aggregate the field. ` +
+		`count takes no field; every other function names one from this report's aggregates list."`
+	if len(functions) == 0 {
+		return "{" + described + "}"
+	}
+	quoted := make([]string, 0, len(functions))
+	for _, fn := range functions {
+		quoted = append(quoted, jsonString(fn))
+	}
+	return `{"enum":[` + strings.Join(quoted, ",") + `],` + described + `}`
 }
 
 // reportProperty renders the `report` argument, closing it to the catalog's own

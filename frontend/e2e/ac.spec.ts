@@ -565,13 +565,20 @@ test("AC-inbox: the staged decision is on the day's queue", async ({
   // and a queue that has to rank things across producers names each one by
   // what it actually is. Answering it stays the approvals surface's own job,
   // so the verbs are asserted where they live rather than here.
-  // The sentence appears twice on purpose: once as the row, and once on the
-  // card the row opens to answer it. That the decision is ANSWERABLE here is
-  // the claim worth making, so this asserts the verb rather than the text.
+  // That the decision is ANSWERABLE here is the claim worth making, so this
+  // asserts the verb rather than the text.
+  //
+  // The verb is "Entscheiden" and not a verdict: a decision is answered in a
+  // drawer now, so the queue draws the way IN to the answer rather than the
+  // answers themselves (AC-WORKLIST-SDR-03, which walks the drawer and asserts
+  // the verdicts inside it). Asserting "Übernehmen" here would be asserting the
+  // shape the row deliberately stopped having.
   await expect(
     page.getByText(/Send the follow-up to Anna Weber/).first(),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Übernehmen" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Entscheiden" }).first(),
+  ).toBeVisible();
 });
 
 test("AC-book: the booking page renders rail-less with live slots", async ({
@@ -766,9 +773,7 @@ test("AC-book-public-409: a taken slot degrades honestly — no fabricated confi
     ),
   ).toBeVisible();
   await expect(page.getByText("slot no longer available")).toBeVisible();
-  await expect(
-    page.getByText("Gebucht."),
-  ).toHaveCount(0);
+  await expect(page.getByText("Gebucht.")).toHaveCount(0);
 });
 
 test("AC-onboarding-1: onboarding is the rail-less conversational shell", async ({
@@ -1219,20 +1224,18 @@ test.describe("§3.8: 390px mobile", () => {
   // Measured against the VIEWPORT rather than a fixed pixel budget, because the
   // number that matters is whether a thumb can reach it without scrolling. The
   // page is not scrolled first: this asserts the arriving screen.
-  // FAILS TODAY, and is left failing on purpose.
+  // PASSES since the decision moved into a drawer.
   //
-  // The queue's first seeded row is an approval that draws its whole decision
-  // inline — evidence, draft and three answers — so its primary verb ends at
-  // 864px on an 844px screen. Nothing above the queue is the cause any more:
-  // the readings moved below it and the header is down to 174px. The remaining
-  // 20px is the row's own height.
+  // It failed for as long as the first seeded row was an approval drawing its
+  // whole decision inline — evidence, draft and three answers — 440px of card
+  // inside a row whose ceiling is 208. "Übernehmen" ended at 920px on an 844px
+  // screen and a rep had to scroll past one decision to reach their work.
   //
-  // The fix is to take long decisions out of the row and into the shared
-  // drawer, which is the Review work rather than this screen's. Marked `fixme`
-  // rather than relaxed to 900px: a ceiling tuned to today's failure is a test
-  // that agrees with the defect, and this one has to go GREEN when the drawer
-  // lands rather than have to be tightened by somebody who remembers to.
-  test.fixme("AC-WORKLIST-SDR-01: the first primary action is above the fold at 390x844", async ({
+  // The row now offers the verb and the drawer holds the card, so the row is
+  // 205px and the first action is inside the fold. It was left failing rather
+  // than relaxed to 950px through several sessions, which is why it could go
+  // green on the fix instead of being quietly tightened to agree with it.
+  test("AC-WORKLIST-SDR-01: the first primary action is above the fold at 390x844", async ({
     page,
   }) => {
     await page.goto("/#/worklist");
@@ -1292,6 +1295,33 @@ test.describe("§3.8: 390px mobile", () => {
     ).toBeLessThanOrEqual(seen.fold);
   });
 
+  // The drawer itself, on the screen size it was built for.
+  //
+  // SDR-01 above proves the row got shorter, and a row that lost its card and
+  // gained a button that opens nothing would pass it. This asserts the other
+  // half: the decision is still answerable, and only once the reader asks.
+  test("AC-WORKLIST-SDR-03: a decision is answered in a drawer, not in the row", async ({
+    page,
+  }) => {
+    await page.goto("/#/worklist");
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator(".worklist-list li").first()).toBeVisible();
+
+    // Nothing to answer until it is opened: the queue draws no verdict button.
+    await expect(page.getByRole("button", { name: "Übernehmen" })).toHaveCount(
+      0,
+    );
+
+    await page.getByRole("button", { name: "Entscheiden" }).first().click();
+
+    const decision = page.getByRole("dialog");
+    await expect(decision).toBeVisible();
+    // The same card the record page draws, with its verdicts on it.
+    await expect(
+      decision.getByRole("button", { name: "Übernehmen" }),
+    ).toBeVisible();
+  });
+
   // The height a row is allowed to take before it has to fold.
   //
   // The fold test above measures the FIRST row's reach; this one measures every
@@ -1302,8 +1332,33 @@ test.describe("§3.8: 390px mobile", () => {
   //
   // 208px for a row carrying an inline decision, 176px for one that does not:
   // the two ceilings the product's own row anatomy sets.
-  // FAILS TODAY for the same one cause, and left failing for the same reason.
-  // An approval row draws 601px against a 208px ceiling.
+  //
+  // FAILS TODAY on TWO rows, and they have different causes — which is why
+  // this note no longer says "the same one cause" as it once did.
+  //
+  // The approval is FIXED: its decision moved into a drawer, and the row went
+  // from 657px to 205px, inside its 208px ceiling.
+  //
+  // The second is an ORDINARY TASK, and no drawer touches it. It measures
+  // 205px against a 176px ceiling. Its parts: title 49 (the category badge
+  // wraps to a second line at 390px), the three facts on ONE line 19,
+  // consequence 19, the primary verbs 44, rank 19, and the rest gap and
+  // padding.
+  //
+  // Two rounds have now taken what can be taken. The set-aside verbs left the
+  // row for a swipe (284 -> 227), and the deadline stopped being printed twice
+  // — `when` gives the hour and `due_today` gave the day underneath it, so the
+  // phrase gives way and the remaining facts share one line (227 -> 205).
+  //
+  // What is left is not padding. The 44px band is the row's PRIMARY actions,
+  // which is how a rep does the work; 44px is the touch target rather than a
+  // style. The 49px title is 49 because the category badge wraps, and the badge
+  // says what kind of work the row is. Closing the last 29px means dropping a
+  // fact rather than a duplicate — or raising a ceiling that was never measured
+  // and which the decision rows already set at 208.
+  //
+  // Left failing rather than relaxed, so the decision is made by someone rather
+  // than by a number quietly rising to agree with the defect.
   test.fixme("AC-WORKLIST-SDR-07: no row outgrows its ceiling at 390x844", async ({
     page,
   }) => {

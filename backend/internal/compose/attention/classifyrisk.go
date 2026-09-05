@@ -48,6 +48,14 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 	} else if known {
 		row.Because = append(row.Because, reason("below_material", money.value(expected, item.Deal)))
 	}
+	// Nobody inside the account is carrying it, which is a different problem
+	// from silence and needs a different move: a quiet deal wants a touch, an
+	// unchampioned one wants somebody found. Stated whenever the lane knew the
+	// answer, at any level — a small deal nobody is arguing for is still a deal
+	// nobody is arguing for, and the reason is what the rep acts on.
+	if item.Deal != nil && item.Deal.NoChampion != nil && *item.Deal.NoChampion {
+		row.Because = append(row.Because, reason("no_champion", nil))
+	}
 	quiet := quietDaysOf(item)
 	if quiet > 0 {
 		row.Because = append(row.Because, reason("quiet_days", daysValue(quiet)))

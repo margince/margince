@@ -25,6 +25,11 @@ var modelRouteSuffixes = []string{
 	"/draft-email",
 	"/dossier",
 	"/growth-fit",
+	"/meeting-brief",
+	"/ask",
+	"/intro-note-draft",
+	"/intro-request-draft",
+	"/role-proposals",
 }
 
 // extendDeadlineForModelRoutes gives a handler that calls a model long enough

@@ -1,9 +1,0 @@
-/* The head of the ranked queue on Home. The rows carry their own layout from
-   worklist.css; this is only the list they sit in. */
-.brief-donext-list {
-  display: flex;
-  flex-direction: column;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}

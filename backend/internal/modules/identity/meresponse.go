@@ -64,6 +64,10 @@ func (h Handlers) meResponse(
 		Authorization: &crmcontracts.Authorization{
 			SeatType: contractSeatType(id.SeatType),
 			Objects:  contractObjectGrants(id.Permissions.Objects),
+			RowScope: contractRowScope(id.Permissions.RowScope),
+		},
+		SettingsAvailability: &crmcontracts.SettingsAvailability{
+			CompanyContext: h.companyContextAvailable,
 		},
 	}
 }
@@ -92,6 +96,46 @@ func contractSeatType(seat string) crmcontracts.AuthorizationSeatType {
 		return crmcontracts.AuthorizationSeatTypeFull
 	}
 	return crmcontracts.AuthorizationSeatTypeRead
+}
+
+// contractRowScope maps the merged row scope onto the contract enum, failing
+// closed on anything it does not recognize.
+//
+// The zero value is the reason this is a function. principal.RowScope is a
+// string, and a principal whose scope never got resolved carries "" — which a
+// cast would put on the wire as an empty enum value the client reads as absent.
+// Absent is the client's cue to assume `own`, so the two agree in the end; but
+// they agree by accident, through a value the contract does not declare, and the
+// next reader has no way to tell an unresolved scope from a deliberate one. Any
+// unrecognized value therefore becomes `own` HERE, so what the server sends is
+// always a value the enum names.
+func contractRowScope(scope principal.RowScope) crmcontracts.AuthorizationRowScope {
+	switch scope {
+	case principal.RowScopeAll:
+		return crmcontracts.AuthorizationRowScopeAll
+	case principal.RowScopeTeam:
+		return crmcontracts.AuthorizationRowScopeTeam
+	default:
+		return crmcontracts.AuthorizationRowScopeOwn
+	}
+}
+
+// accessPreviewRowScope is contractRowScope for the access-preview enum, which
+// oapi-codegen renders as a separate Go type over the same three values.
+//
+// The two spellings are the reason this is a second function rather than a
+// second cast: the preview used to cast, so a principal whose scope never
+// resolved previewed as an empty enum value the contract does not declare. One
+// column, one mapping, and both readers narrow the same way.
+func accessPreviewRowScope(scope principal.RowScope) crmcontracts.AccessPreviewRowScope {
+	switch contractRowScope(scope) {
+	case crmcontracts.AuthorizationRowScopeAll:
+		return crmcontracts.AccessPreviewRowScopeAll
+	case crmcontracts.AuthorizationRowScopeTeam:
+		return crmcontracts.AccessPreviewRowScopeTeam
+	default:
+		return crmcontracts.AccessPreviewRowScopeOwn
+	}
 }
 
 // contractObjectGrants maps the merged permissions onto the wire shape.

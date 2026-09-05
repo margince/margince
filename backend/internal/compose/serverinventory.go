@@ -31,12 +31,14 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/platform/overlaybudget"
@@ -254,6 +256,15 @@ type Server struct {
 	// it feeds a /readyz probe and backs the capture connector-credential
 	// path; nil means a role that resolves no stored connector credentials.
 	vault keyvault.Vault
+
+	// The three parts of the lane the installation's own mail rides, each
+	// supplied by a different option (WithOperatorMail, WithPublicBaseURL,
+	// WithControllerMail) and joined by rewireConfirmationLane. Held rather
+	// than assembled on arrival because options compose in any order, so no one
+	// of them can assume the others have run.
+	controllerRelay comms.ControllerRelay
+	confirmLinkBase string
+	confirmRunner   *jobs.Runner
 
 	// captureConfig is the deployment's capture suppression-list config
 	// (CAP-PARAM-5/6, ADR-0072), injected by WithCaptureConfig. The options

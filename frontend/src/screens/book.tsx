@@ -180,6 +180,7 @@ function SessionBookingScreen() {
         </Card>
       ) : (
         <QueryGate
+          pendingLabel={t("book.title")}
           query={availability}
           empty={(data) => data.slots.length === 0}
         >
@@ -340,6 +341,7 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
         </Card>
       ) : (
         <QueryGate
+          pendingLabel={t("book.title")}
           query={availability}
           empty={(data) => data.slots.length === 0}
         >

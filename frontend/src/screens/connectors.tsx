@@ -30,6 +30,7 @@ import {
   statusLabel,
   statusTone,
 } from "./connector-status";
+import { ConnectorContextTagRow } from "./connectors.contexttag";
 import { ImapConnectForm } from "./imap-connect-form";
 import { TelegramConnectForm } from "./telegram-connect-form";
 import "./connectors.css";
@@ -701,6 +702,7 @@ function ConnectorRow({
       />
       {conn.status === "connected" && <MailPostureRow conn={conn} />}
       {conn.status === "connected" && <SignatureEnrichmentRow conn={conn} />}
+      {conn.status === "connected" && <ConnectorContextTagRow conn={conn} />}
       {conn.status === "connected" && (
         <div className="connector-backfill">
           <BackfillPanel provider={conn.provider} initial={conn.backfill} />

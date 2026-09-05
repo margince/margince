@@ -142,6 +142,7 @@ export function CompanyFinanceCard({
       <Panel title={title}>
         <PanelBody>
           <SurfaceState
+            loadingLabel={title}
             state={withheld ? "withheld" : "failed"}
             emptyLabel={t("finance.none")}
             detail={withheld ? {} : { onRetry: () => void query.refetch() }}
@@ -166,6 +167,7 @@ export function CompanyFinanceCard({
     <Panel title={title} {...chromeOf(summary, present, t)}>
       <PanelBody>
         <SurfaceState
+          loadingLabel={title}
           state={cardState}
           emptyLabel={t(EMPTY_LABEL[summary.state] ?? "finance.none")}
           detail={{

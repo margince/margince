@@ -50,7 +50,11 @@ export function RollupsStrip({ view }: Readonly<{ view: Project360 }>) {
   const state = stateOf(view, "rollups", Boolean(rollups), rollups ? 1 : 0);
   if (state !== "ready" || !rollups) {
     return (
-      <SurfaceState state={state} emptyLabel={t("project.rollups.empty")}>
+      <SurfaceState
+        state={state}
+        emptyLabel={t("project.rollups.empty")}
+        loadingLabel={t("project.rollups.openValue")}
+      >
         {null}
       </SurfaceState>
     );

@@ -120,6 +120,14 @@
   min-width: 0;
 }
 
+/* When, what it is worth, and why — three short fragments that read as one
+   line. It inherits the text column's own arrangement above the fold, so the
+   three keep the stacked shape a wide row has room for; the phone block below
+   is what turns it into a wrapping row. */
+.worklist-row-facts-line {
+  display: contents;
+}
+
 .worklist-row-title {
   align-items: center;
   display: flex;
@@ -129,6 +137,7 @@
 }
 
 .worklist-row-detail,
+.worklist-row-verdict,
 .worklist-row-when,
 .worklist-row-facts,
 .worklist-row-sample,
@@ -139,6 +148,68 @@
   margin: 0;
 }
 
+/* The standing line: a badge, who is speaking, and the sentence.
+
+   Laid out as a row rather than as prose so the badge reads as a label on the
+   sentence beside it, and wrapping so a long line falls under the badge rather
+   than pushing the row wide. The "Margince believes" half is dimmed against the
+   sentence itself: it is attribution, and the reader is here for the claim. */
+.worklist-row-verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+.worklist-row-verdict-source,
+.worklist-row-verdict-when {
+  color: var(--textTertiary, var(--textSecondary));
+}
+
+.worklist-row-verdict-line {
+  color: var(--textPrimary);
+}
+
+/* The reasons past the first few, a tap away rather than gone.
+
+   A native <details>, so the toggle is the summary itself and keyboard and
+   screen-reader behaviour come for free. It carries no chevron and no box: a
+   row is not a section, and furniture around one caption line would cost more
+   height than the fold saves.
+
+   The marker is removed on both spellings — ::marker is the standard one and
+   ::-webkit-details-marker is what Safari still uses — because the "+N more"
+   text IS the affordance, and a triangle beside it says the same thing twice.
+   `display: inline` on the summary is what makes the reasons and the "+N more"
+   read as one sentence rather than a line with a control under it. */
+.worklist-row-because-fold > summary {
+  cursor: pointer;
+  display: inline;
+  list-style: none;
+}
+
+.worklist-row-because-fold > summary::marker,
+.worklist-row-because-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* The count reads as the control, so it takes the accent the rest of the line
+   does not. Underlined on hover rather than always: a caption line that is
+   permanently underlined mid-sentence reads as a broken link. */
+.worklist-row-because-more {
+  color: var(--accentText);
+}
+
+.worklist-row-because-fold > summary:hover .worklist-row-because-more {
+  text-decoration: underline;
+}
+
+/* The opened remainder sits under the line it belongs to, not indented: it is
+   more of the same sentence rather than a nested thing. */
+.worklist-row-because-fold[open] > .worklist-row-because {
+  margin-block-start: var(--space-1);
+}
+
 /* The queue is an ordered list for assistive technology and a plain stack on
    screen: the rank number is already drawn in the row. */
 .worklist-list {
@@ -147,7 +218,12 @@
   padding: 0;
 }
 
-.worklist-row-verbs {
+.worklist-row-verbs,
+/* The dispositions are laid out like the verbs beside them because they ARE a
+   group of controls beside the verbs. Left as a bare block it filled its line
+   whatever it held, so on a phone it could never share a row with the verbs and
+   the two spent 88px on four small buttons. */
+.worklist-row-dispositions {
   display: flex;
   flex: 0 0 auto;
   gap: var(--space-2);
@@ -309,13 +385,42 @@
     min-width: 0;
   }
 
-  /* Every group of verbs below the text, at full width and free to wrap. They
-     are separate elements — the row's own, the ways to put it down, the
-     hand-off — and each has to yield, or the one that does not squeezes the
-     others back onto a sliver. */
+  /* THE THREE SHORT FACTS SHARE A LINE at phone width.
+     Each is a fragment of a dozen characters — "due 15:00", "€40k", "due today
+     · nobody owns it" — and stacked they took three 19px lines of a row whose
+     whole ceiling is 176px. That is 38px spent on the space beside three short
+     phrases, on the one screen with none to spare.
+     They wrap when they do not fit, so a long reason still gets its own line
+     rather than being cut, and the separator makes the join readable as three
+     facts rather than one run-on sentence. */
+  .worklist-row-facts-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-2);
+    min-width: 0;
+  }
+
+  .worklist-row-facts-line > * + *::before {
+    color: var(--textMeta);
+    content: "·";
+    margin-inline-end: var(--space-2);
+  }
+
+  /* Every group of verbs below the text, and free to wrap. They are separate
+     elements — the row's own, the ways to put it down, the hand-off — and each
+     has to yield, or the one that does not squeezes the others back onto a
+     sliver.
+
+     They SHARE a line where they fit, and take one each only when they do not.
+     `1 1 100%` gave every group a full-width band of its own, so a row with
+     verbs AND dispositions spent two 44px lines on four small buttons and stood
+     284px tall against a 176px ceiling — measured at 390x844, with no decision
+     card on it. `auto` asks for the width the buttons actually need and the
+     wrap does the rest, which is the same behaviour for a group too wide to
+     share and a shorter row for every group that is not. */
   .worklist-row-verbs,
   .worklist-row-dispositions {
-    flex: 1 1 100%;
+    flex: 1 1 auto;
     flex-wrap: wrap;
   }
 

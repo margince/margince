@@ -51,7 +51,11 @@ export function DealRoomPage({ dealId }: Readonly<{ dealId: string }>) {
   // element is on screen for all three.
   return (
     <div className="wrap">
-      <QueryStates query={roomQuery} pendingLines={6}>
+      <QueryStates
+        query={roomQuery}
+        pendingLines={6}
+        pendingLabel={t("roompage.text.title")}
+      >
         {room ? (
           <RoomPage room={room} dealId={dealId} />
         ) : roomQuery.isSuccess ? (
@@ -127,8 +131,30 @@ function ViewAsBuyerButton({ room }: Readonly<{ room: DealRoom }>) {
       }
     },
   });
-  const reason =
-    room.state === "archived" ? t("roompage.previewArchived") : undefined;
+  // Why the preview is not on offer, or undefined when it is.
+  //
+  // Archived is named first because it is the specific thing a reader can act
+  // on: unarchive the room. The general refusal covers the other three
+  // conditions the server checks — the caller's grant, being a person rather
+  // than an agent, and the deal being writable and live — which a screen cannot
+  // tell apart and should not guess between.
+  //
+  // The button used to gate on archived ALONE, so a colleague who could read
+  // the room was offered a preview that failed after the click, with a
+  // permission message where the buyer's view should have been.
+  //
+  // An ABSENT preview_available is an older server that does not answer the
+  // question, and offering the button is the honest reading of "unknown": the
+  // press still asks, and its refusal is the one this exists to pre-empt.
+  const reason = (() => {
+    if (room.state === "archived") {
+      return t("roompage.previewArchived");
+    }
+    if (room.preview_available === false) {
+      return t("roompage.previewNotYours");
+    }
+    return undefined;
+  })();
   return (
     <>
       <Button

@@ -116,6 +116,16 @@ type ListActivitiesInput struct {
 	// in, never by a caller: it is one read's snapshot, not a request parameter,
 	// and a caller supplying it could widen or narrow who counts as a colleague.
 	ownDomains []string
+	// horizonDays is how far back a wait reaches and still counts, derived from
+	// this installation's own response spread (waitinghorizon.go). Unexported
+	// and set beside the transaction it was measured in, for ownDomains' exact
+	// reason: it is one read's snapshot rather than a request parameter, and a
+	// caller supplying it could widen or narrow what the queue calls work.
+	//
+	// Zero means unmeasured, which the clause reads as the compiled default —
+	// so a caller with no seam to measure through gets today's behaviour rather
+	// than a horizon of nothing.
+	horizonDays int
 	// OpenAndDueBy narrows to tasks still open and already due at an instant:
 	// the day's work, asked as one question.
 	//
@@ -173,6 +183,14 @@ func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]c
 		// no sender, which is the same open default WithOwnDomains documents.
 		if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
 			return err
+		}
+		// Measured only when the waiting filter is actually asked for. Every
+		// activity list runs through here, and the spread is a percentile over
+		// a year — a scan no read that never mentions waiting should pay for.
+		if in.WaitingReplyAsOf != nil {
+			if in.horizonDays, err = s.waitingHorizonFor(ctx, tx, *in.WaitingReplyAsOf); err != nil {
+				return err
+			}
 		}
 		activities, page, err = ListActivitiesTx(ctx, tx, in)
 		return err

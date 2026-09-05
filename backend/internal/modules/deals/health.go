@@ -379,7 +379,7 @@ func healthActivityEvidence(ctx context.Context, tx pgx.Tx, now time.Time, in *d
 		SELECT a.id FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
 		WHERE a.archived_at IS NULL
-		  AND a.origin <> 'system_remediation'`+auth.AudienceWorkspaceOnly("a")+`
+		  `+auth.OriginIsEngagement("a")+auth.AudienceWorkspaceOnly("a")+`
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT 1`, in.dealID).Scan(&recent)
 	switch {

@@ -35,12 +35,7 @@ import {
 import { api, FIRST_PAGE } from "../api/client";
 import type { components, operations } from "../api/schema";
 import { dotTier } from "../app/autonomy";
-import {
-  useCan,
-  useCanWrite,
-  useHoldsAdminRole,
-  useHoldsOperatorSeat,
-} from "../app/capability";
+import { useCan, useCanWrite, useHoldsAdminRole } from "../app/capability";
 import { isEntityKind } from "../app/entity";
 import { unitsForSecretScope } from "../app/extensions";
 import type { NavLevelEntry, NavLevelGroup, NavSection } from "../app/nav";
@@ -187,24 +182,23 @@ import "./settings.css";
 // fourteen — a number in prose beside a list is a second source of truth that
 // nothing updates and no test can check. The list below is the count.
 //
-// Two groups: "you" (per-user, every member) and "admin" (installation posture,
-// operator seats only — `useHoldsOperatorSeat`, which is admin or ops). The
-// whole admin group is ABSENT for a rep or a manager: it is the only place the
-// product offers installation configuration, so a seat that configures none of
-// it is offered none of it rather than a page of withheld cards.
+// Two groups: "you" (per-user, every member) and "admin" (installation
+// posture). The group NAMES the subject, not an audience — every entry in it
+// carries its own predicate, which is the grant the cards on it actually ask
+// for, and the heading renders when at least one member survives.
 //
-// Every admin entry ALSO carries its own predicate — the grant the cards on it
-// actually ask for — and the group heading renders when at least one member
-// survives. The two gates answer different questions and both are needed: the
-// seat says whether this reader administers the installation at all, the grant
-// says whether this particular page has anything in it for them. An ops
-// principal whose role was edited to drop `license:read` loses that row and
-// keeps the rest, which no role check alone could express.
-// One predicate for the whole group could only ever be a guess about a
+// There is no second gate above those predicates. One used to sit here — a
+// seat check for admin-or-ops — and it answered false for the whole group
+// whatever the entry underneath had decided. That is a guess about a
 // heterogeneous set: it spans surfaces with clean object grants (data model,
-// organization) and surfaces with no RBAC object at all (users, privacy),
-// which the server gates on the role itself. The server stays the RBAC
-// authority on every card within.
+// organization, knowledge) and surfaces the server gates on the role itself
+// (users, extensions). Every seeded role holds `pipeline`, `custom_field`,
+// `knowledge_corpus`, `automation`, `product`, `offer_template` and `tag`
+// reads, so the server answered those seats 200 while the product showed them
+// nothing — and showed it by ABSENCE, so nobody could see the disagreement.
+// A role edited to drop `license:read` loses that row and keeps the rest,
+// which is the same rule applied to everyone rather than to two role names.
+// The server stays the RBAC authority on every card within.
 //
 // The personal group is where a credential or a connection the PERSON holds
 // lives: `agents` carries the caller's own passports, so gating it would regress
@@ -611,21 +605,22 @@ export function useSettingsEntryVisibility(
   // consent/store.go's ListPurposes calls auth.Require(ctx, "person", read).
   const person = useCan("person", "read");
   const overlay = useCan("overlay_connection", "read");
-  // Whether this reader administers the installation at all. It gates the WHOLE
-  // group below rather than any one entry: every predicate in the returned map
-  // is ANDed with it, so a rep holding `automation:read` — which every seeded
-  // role holds — does not reach the AI page through a grant the section is not
-  // theirs to open. Read unconditionally, like every hook here.
-  const operator = useHoldsOperatorSeat();
   // The one predicate below that is a ROLE rather than a grant. `GET /admin/reset-data`
   // and the job-health read are gated on the literal admin role server-side and no
   // RBAC object describes them — a `role` object would encode a constant, and an
   // admin who revoked their own grant on it could never restore it (capability.ts).
   // Everything else above is a `read`, because opening a page is reading it.
   const isAdmin = useHoldsAdminRole();
-  // Each entry's own read predicate, before the seat gate. Kept as its own
-  // object so the two gates stay legible as two rules: what this page asks for,
-  // and then whether this reader is in the half of settings that holds it.
+  // Each entry's own read predicate, and the whole answer. There is no second
+  // gate above these: a reader reaches an entry when they hold what it asks
+  // for, which is the same question the SERVER answers on every route behind
+  // it. The seat check that used to sit here returned false for every one of
+  // these entries unless the reader held `admin` or `ops`, so a seat holding
+  // `pipeline:read` — which every seeded role holds — was shown nothing while
+  // the API answered it 200. That is the client disagreeing with the authority,
+  // and the disagreement was invisible: the page was absent rather than
+  // refused. What an entry offers once opened is still each card's own
+  // question, and the cards ask their own writes.
   const granted = {
     // The organization, its profile and its currency table are one entry now, so
     // the predicate is the union of what they each asked for. Each is gated on
@@ -643,30 +638,24 @@ export function useSettingsEntryVisibility(
       installation ||
       (organization && (capabilities.data?.read_enabled ?? false)) ||
       fxRate,
-    // The member roster, the roles on it, and what a role may reach. This is the
-    // one entry with no grant to ask for: no RBAC object describes identity
-    // administration and none can — a `role` object would encode a constant, and
-    // an admin who revoked their own grant on it could never restore it
-    // (capability.ts) — so the server gates it on the role directly.
+    // The member roster, the roles on it, and what a role may reach. No RBAC
+    // object describes identity administration and none can — a `role` object
+    // would encode a constant, and an admin who revoked their own grant on it
+    // could never restore it (capability.ts) — so the server gates the VERBS on
+    // the role directly and serves the roster itself to anyone signed in.
     //
-    // `true` here means "this page asks for no grant of its own" and nothing
-    // more: the seat gate above it is what decides who reaches it, and under
-    // that gate the reader is an operator by the time this is read.
+    // `true` matches that: `GET /users` answers 200 to any authenticated
+    // principal, and "who is on my team" is not an admin's private question.
+    // The same handler decides what the answer CONTAINS — role keys and the
+    // inactive view are an admin's, everyone else gets the active roster the
+    // share and assignee pickers already show them (handlers_roster.go).
     //
-    // The roster used to be open to every member, because the server is: `GET
-    // /users` answers 200 to any authenticated principal, and "who is on my team
-    // and what may they do" is not an admin's private question. That read is
-    // what this change costs a rep — a deliberate cost, not an oversight. The
-    // server still serves them; nothing in the product offers it any more. If
-    // the team directory turns out to be a read a rep needs, it belongs on a
-    // directory screen of its own rather than back inside admin configuration.
-    //
-    // The invite form and every role control below still withhold themselves on
-    // their own authority, so an operator who is not an admin sees the roster
-    // and none of the controls.
+    // The invite form and every role control below withhold themselves on their
+    // own authority, so a reader without them sees the roster and none of the
+    // controls.
     users: true,
     // `GET /extensions` is admin-only server-side, so the entry follows the
-    // role rather than a grant: an operator who is not an admin would open a
+    // role rather than a grant: any reader who is not an admin would open a
     // page whose only read answers 403.
     extensions: isAdmin,
     capture: captureSettings,
@@ -735,33 +724,6 @@ export function useSettingsEntryVisibility(
     license: licenseRead,
     maintenance: isAdmin || embeddingReindex,
   } satisfies Readonly<Record<AdminTabId, boolean>>;
-  // The seat, applied to the whole group at once. It gates the SECTION rather
-  // than any one entry, so the honest shape is one answer for all of them: a
-  // reader who does not administer the installation is offered none of it,
-  // whatever their grants say.
-  //
-  // Written out rather than mapped over the object, because `Object.entries`
-  // widens the keys to `string` and coming back to `AdminTabId` from there takes
-  // an assertion — and an assertion is exactly what must not stand between a
-  // permission map and the nav that reads it. The return type demands all nine
-  // keys, so an entry added above and forgotten here fails to compile rather
-  // than shipping ungated. Every hook above has already run, so returning here
-  // costs no hook: the count is fixed before the seat is consulted.
-  if (!operator) {
-    return {
-      general: false,
-      users: false,
-      extensions: false,
-      capture: false,
-      integrations: false,
-      "data-model": false,
-      ai: false,
-      privacy: false,
-      knowledge: false,
-      license: false,
-      maintenance: false,
-    };
-  }
   return granted;
 }
 
@@ -1007,7 +969,7 @@ function AccountCard() {
       }
     >
       <PanelBody className="form-stack">
-        <QueryGate query={query}>
+        <QueryGate query={query} pendingLabel={t("settings.accountCard")}>
           {(me) => (
             <div className="settings-identity">
               {/* Both halves are required on the wire, so the `?? ""` is not a
@@ -1466,6 +1428,7 @@ function PassportCard() {
               rather than wrapped in a list of their own: the hairline between
               two credentials belongs to the card that holds both. */}
           <QueryGate
+            pendingLabel={t("settings.passports")}
             query={list}
             empty={(page) =>
               page.data.every((passport) => passport.connection != null)
@@ -1833,7 +1796,11 @@ function AgentToolsCard() {
               One row per governed tool, handed to the list inside as its own
               children so the hairline between two tools comes from the list
               that holds both. */}
-          <QueryGate query={tools} empty={(data) => data.data.length === 0}>
+          <QueryGate
+            query={tools}
+            empty={(data) => data.data.length === 0}
+            pendingLabel={t("tools.title")}
+          >
             {(data) => (
               <Disclosure
                 summary={t("tools.inventory", {
@@ -2534,6 +2501,7 @@ export function PipelinesCard() {
         )}
         <SettingList>
           <QueryGate
+            pendingLabel={t("settings.pipelines")}
             query={query}
             empty={(pipelines) => pipelines.length === 0}
           >

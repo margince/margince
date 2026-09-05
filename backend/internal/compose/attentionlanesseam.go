@@ -87,6 +87,7 @@ func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int
 // rows it returns.
 type attentionAtRisk struct {
 	lister func(context.Context) ([]agents.SlippingDeal, bool, error)
+	pool   *pgxpool.Pool
 }
 
 func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool, error) {
@@ -95,6 +96,10 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool
 		return nil, false, err
 	}
 	now := clockNow()
+	cover, err := a.championCover(ctx, candidates, now)
+	if err != nil {
+		return nil, false, err
+	}
 	risky := make([]attention.RiskyDeal, 0, len(candidates))
 	for _, deal := range candidates {
 		risky = append(risky, attention.RiskyDeal{
@@ -107,6 +112,7 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool
 			QuietDays:         idleDaysOf(deal, now),
 			CloseOverdue:      deal.CloseOverdue,
 			ExpectedCloseDate: deal.ExpectedCloseDate,
+			NoChampion:        noChampionOf(cover, deal.DealID),
 		})
 	}
 	return risky, cut, nil

@@ -25,6 +25,27 @@ import (
 
 const engineBackfillMigration = "core/1788527759_the_engine_inherits_the_record_it_was_given.up.sql"
 
+// asTheSchemaWasWhenTheBackfillShipped removes the columns added to
+// communication_suppression AFTER this backfill, so replaying it here exercises
+// the migration as it actually ran.
+//
+// These tests apply a shipped migration on top of a HEAD schema, which is a
+// situation production never sees: in production the backfill ran first and the
+// later columns were added to the rows it had already written. Without this the
+// replay fails on a NOT NULL column that did not exist when the file was
+// authored, and the failure says nothing about the backfill.
+//
+// Reversing rather than teaching the test each new column: a column added later
+// is by definition one this migration cannot name, so the list below only ever
+// grows in one direction and a missing entry fails loudly at the INSERT.
+func asTheSchemaWasWhenTheBackfillShipped(t *testing.T, conn *pgx.Conn) {
+	t.Helper()
+	if _, err := conn.Exec(context.Background(),
+		`ALTER TABLE communication_suppression DROP COLUMN IF EXISTS decided_by_level`); err != nil {
+		t.Fatalf("restoring the schema the backfill was written against: %v", err)
+	}
+}
+
 // backfillFixture is one person and the pre-engine rows recorded about them.
 type backfillFixture struct {
 	person      string
@@ -80,6 +101,7 @@ func TestTheEngineInheritsAQualifyingEvent(t *testing.T) {
 		t.Fatalf("seeding the qualifying event: %v", err)
 	}
 
+	asTheSchemaWasWhenTheBackfillShipped(t, conn)
 	applyMigrationFile(t, conn, engineBackfillMigration)
 
 	var kind, note string
@@ -126,6 +148,7 @@ func TestACarriedGroundWithNoRecordBehindItIsNotCarried(t *testing.T) {
 		t.Fatalf("seeding the orphaned qualifying event: %v", err)
 	}
 
+	asTheSchemaWasWhenTheBackfillShipped(t, conn)
 	applyMigrationFile(t, conn, engineBackfillMigration)
 
 	var n int
@@ -148,6 +171,7 @@ func TestAMarketingWithdrawalBecomesAnObjection(t *testing.T) {
 
 	withdrawn(t, conn, f.person, f.marketing)
 
+	asTheSchemaWasWhenTheBackfillShipped(t, conn)
 	applyMigrationFile(t, conn, engineBackfillMigration)
 
 	var kind, source string
@@ -188,6 +212,7 @@ func TestANonMarketingWithdrawalIsNotAnObjection(t *testing.T) {
 
 	withdrawn(t, conn, f.person, f.operational)
 
+	asTheSchemaWasWhenTheBackfillShipped(t, conn)
 	applyMigrationFile(t, conn, engineBackfillMigration)
 
 	var n int
@@ -226,7 +251,9 @@ func TestTheCarryIsIdempotent(t *testing.T) {
 	}
 	withdrawn(t, conn, f.person, f.marketing)
 
+	asTheSchemaWasWhenTheBackfillShipped(t, conn)
 	applyMigrationFile(t, conn, engineBackfillMigration)
+	asTheSchemaWasWhenTheBackfillShipped(t, conn)
 	applyMigrationFile(t, conn, engineBackfillMigration)
 
 	for _, c := range []struct {

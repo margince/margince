@@ -10,7 +10,7 @@ import {
 } from "../format/format";
 import type { Locale, useT } from "../i18n";
 import { translatePlural } from "../i18n";
-import { COMPOSE_PARAM } from "./personpage.address";
+import { BRIEF_PARAM, COMPOSE_PARAM } from "./personpage.address";
 import { settingsAddress } from "./settings";
 import type {
   Worklist,
@@ -62,6 +62,28 @@ export function subjectHref(item: WorklistItem): string | undefined {
 // that decision would keep pointing at the old address the day it moves.
 const SOURCE_QUEUE: Partial<Record<WorklistItem["source"], string>> = {
   dsr: routeHash(settingsAddress("privacy")),
+  // A rule that failed, and the page that lists the rules.
+  //
+  // The row named a broken automation and offered no address at all — not the
+  // run, not the rule, not the screen either lives on — so a reader was told
+  // something was wrong and left to go and find it. The queue still performs
+  // nothing here: fixing a rule is the automations page's job, and this is the
+  // difference between saying where a room is and claiming to have opened the
+  // door.
+  //
+  // NOT a retry. A re-run would have to replay the event that fired the rule,
+  // and `workflow_run` does not keep it — the row holds a pointer to a bus
+  // event the bus drops after about three days, so a retry would silently do
+  // nothing on day four. Offering one would be the promise this table exists
+  // to avoid making.
+  //
+  // The `ai` tab is where the automations list lives, and its read is the one
+  // every seeded role holds — so this address answers for a rep as well as for
+  // an operator rather than routing most readers into a refusal.
+  automation_run: routeHash(settingsAddress("ai")),
+  // The same page answers for the AI work that a rule set off, for the same
+  // reason and with the same limit.
+  ai_work_health: routeHash(settingsAddress("ai")),
 };
 
 // The address a row's headline links to: its record where it has one, the
@@ -238,9 +260,49 @@ export function isUnprepared(item: WorklistItem): boolean {
   return item.because.some((reason) => reason.kind === BADGED);
 }
 
-/** The reasons a row says in its phrase line — everything the badges do not. */
-export function phrasedReasons(item: WorklistItem): WorklistReason[] {
-  return item.because.filter((reason) => reason.kind !== BADGED);
+/**
+ * The reason kinds the WHEN line already says.
+ *
+ * Each is the moment in a coarser register: a task row printed "due 06.07.2026,
+ * 15:00" and then "due today" underneath it, an overdue one said "overdue" a
+ * third time beside the badge that already says so, and a meeting said "starts
+ * 14:12" over "starting shortly". One clock, twice, reading as two findings.
+ * The moment wins because it names the hour a rep is racing rather than the day.
+ *
+ * A SET rather than one kind, because the duplication is structural. `overdue`
+ * and `due_today` are the two arms of a single `if` in the task lane, both
+ * guarded by the same `due_at` the moment is drawn from, so a rule naming one
+ * of them names half a condition. `meeting_soon` fires only where the meeting
+ * has a `due_at`, which is exactly when its own when line is drawn, so it has
+ * no non-duplicating case at all.
+ *
+ * The other deadline reasons stay OUT of this set and that is the non-obvious
+ * half: `closing_soon`, `response_overdue` and `response_due_soon` ride on
+ * sources — `deal_at_risk`, `brief_item`, `lead_response` — for which
+ * `whenKeyFor` answers null. Nothing draws their moment, so their phrase is the
+ * only place the fact is said.
+ *
+ * DROPPED ONLY WHERE THE MOMENT IS DRAWN. A row whose `due_at` the when line
+ * refuses — an approval's lapse instant, which is a fact about the staged work
+ * and not a deadline the rep owes — still says its phrase, or the row would
+ * lose the fact entirely rather than say it once.
+ */
+const SAID_BY_THE_WHEN_LINE = new Set<string>([
+  "due_today",
+  "overdue",
+  "meeting_soon",
+]);
+
+/** The reasons a row says in its phrase line — everything said elsewhere. */
+export function phrasedReasons(
+  item: WorklistItem,
+  whenDrawn: boolean,
+): WorklistReason[] {
+  return item.because.filter(
+    (reason) =>
+      reason.kind !== BADGED &&
+      !(whenDrawn && SAID_BY_THE_WHEN_LINE.has(reason.kind)),
+  );
 }
 
 export function reasonText(
@@ -458,13 +520,26 @@ function sameDayInZone(utcIso: string, now: Date, zone: string): boolean {
 // but not to the address, because the composer picks its own transport and
 // threading from the person.
 //
-// The other verbs are absent, each for its own reason. `create_task` and
-// `open_meeting_brief` are PERFORMED rather than navigated: one posts a task
-// body, the other opens a drawer, and neither is a thing a link can do. `none`
-// names no step. `reconnect` leaves for a provider's consent screen, which is a
-// handoff rather than a destination. A row keeps its own verbs in every case,
-// so none of these leaves the reader with nothing.
-const NAVIGABLE_MOVES = new Set(["draft_reply", "draft_email"]);
+// `open_meeting_brief` is the third, and it lands somewhere else entirely: the
+// brief is read as `?prep=<activity>` on the PERSON's record, so the address
+// needs an id the subject does not carry. The server sends it as `with_person`,
+// and only where the meeting names somebody this reader may see.
+//
+// It used to be described here as PERFORMED rather than navigated — "opens a
+// drawer, and neither is a thing a link can do" — which was true of the drawer
+// and false of the way in. The row could describe a meeting and offer no way to
+// prepare for it, which is the one thing a rep opens that row to do.
+//
+// The remaining verbs are absent, each for its own reason. `create_task` posts
+// a task body, which is a write rather than a destination. `none` names no
+// step. `reconnect` leaves for a provider's consent screen, which is a handoff.
+// A row keeps its own verbs in every case, so none of these leaves the reader
+// with nothing.
+const NAVIGABLE_MOVES = new Set([
+  "draft_reply",
+  "draft_email",
+  "open_meeting_brief",
+]);
 
 /**
  * Whether a move has what its own verb needs.
@@ -481,10 +556,30 @@ function moveIsComplete(move: NonNullable<WorklistItem["move"]>): boolean {
   return move.action !== "draft_reply" || move.activity_id !== undefined;
 }
 
+/**
+ * The brief's address: which meeting, on whose page.
+ *
+ * BOTH ids, because neither names it. The activity says which meeting to brief
+ * and the person says whose record it opens on — the brief is not a page of its
+ * own. A row missing either names nothing openable and draws no control, which
+ * is the same promise every other verb here makes about its own operand.
+ */
+function briefHref(item: WorklistItem): string | undefined {
+  const meeting = item.move?.activity_id;
+  if (!meeting || !item.with_person) {
+    return undefined;
+  }
+  const person = routeHash(ENTITY.person.route(item.with_person));
+  return `${person}?${BRIEF_PARAM}=${meeting}`;
+}
+
 export function moveHref(item: WorklistItem): string | undefined {
   const move = item.move;
   if (!move || !NAVIGABLE_MOVES.has(move.action) || !moveIsComplete(move)) {
     return undefined;
+  }
+  if (move.action === "open_meeting_brief") {
+    return briefHref(item);
   }
   const record = subjectHref(item);
   if (!record || item.subject?.type !== "person") {

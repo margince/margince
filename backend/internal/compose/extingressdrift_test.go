@@ -61,6 +61,8 @@ var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 	"PartDrops": "the breadcrumb for refused attachments, held with Parts for the same reason " +
 		"and landing in the same PR — a drop cannot exist while what it accounts for does not",
 	"Fields": "the envelope's `any`. The published surface is typed instead — Record.Activity — so a unit cannot hand the sink a shape it does not switch on",
+	"DeliveredTo": "the receiving server's own delivery header, and it is a CORE judgement rather than a field to publish: the value is trusted only from a header position a sender could not have authored, which mailmap.TopDeliveredTo decides once. " +
+		"A unit supplying it would be supplying the conclusion instead of the evidence — and the conclusion adds an address to a seat's own self-set, which is the one thing a unit must not be able to assert. Empty from a unit means what it means everywhere: no trustworthy claim, so no alias is learned",
 })
 
 // TestThePublishedRecordMirrorsTheCaptureEnvelope walks the core envelope and

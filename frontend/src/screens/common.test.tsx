@@ -586,7 +586,10 @@ describe("QueryStates", () => {
 
   it("prints the server's detail for a failed query", () => {
     render(
-      <QueryStates query={failing(new ProblemError({ detail: "no seat" }))}>
+      <QueryStates
+        query={failing(new ProblemError({ detail: "no seat" }))}
+        pendingLabel="Loading the section"
+      >
         {null}
       </QueryStates>,
     );
@@ -595,7 +598,10 @@ describe("QueryStates", () => {
 
   it("prints the shared line, not the message, when the failure is not a problem", () => {
     render(
-      <QueryStates query={failing(new TypeError("Failed to fetch"))}>
+      <QueryStates
+        query={failing(new TypeError("Failed to fetch"))}
+        pendingLabel="Loading the section"
+      >
         {null}
       </QueryStates>,
     );
@@ -608,7 +614,10 @@ describe("QueryStates", () => {
   // most of the product at once.
   it("announces a failed load, headline and cause in one region", () => {
     render(
-      <QueryStates query={failing(new ProblemError({ detail: "no seat" }))}>
+      <QueryStates
+        query={failing(new ProblemError({ detail: "no seat" }))}
+        pendingLabel="Loading the section"
+      >
         {null}
       </QueryStates>,
     );
@@ -629,6 +638,7 @@ describe("QueryStates", () => {
   it("reports a load in progress as busy, since the shimmer bars say nothing", () => {
     render(
       <QueryStates
+        pendingLabel="Loading the section"
         query={{
           isPending: true,
           isError: false,

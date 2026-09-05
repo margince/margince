@@ -843,7 +843,11 @@ function ShareScreenBody({
       </Card>
 
       <Card as="div" title={t("share.whoHasAccess")}>
-        <QueryGate query={grantsQuery} empty={(rows) => rows.length === 0}>
+        <QueryGate
+          query={grantsQuery}
+          empty={(rows) => rows.length === 0}
+          pendingLabel={t("share.whoHasAccess")}
+        >
           {(rows) => (
             <ul className="share-acl-list" data-testid="share-acl-list">
               {rows.map((g) => (

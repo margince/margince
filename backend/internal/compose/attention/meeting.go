@@ -11,6 +11,8 @@ package attention
 import (
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
@@ -22,13 +24,31 @@ import (
 // meeting that has not started cannot be late, and the lane only carries the
 // ones still ahead.
 //
-// It offers NO verb. The pre-meeting brief is its own surface with its own eight
-// cited sections, and a queue that tried to summarise it here would be a second
-// answer to "prepare me for this". `open` is withheld for a narrower reason than
-// it once was: this card's subject is the ACTIVITY, which is a timeline entry
-// rather than a record with a page of its own, so the verb would advertise a
-// destination that does not exist. The two cards whose subject IS a record —
-// the quiet deal and the promise — now send it.
+// It offers no `open`, and for a reason that still holds: this card's subject is
+// the ACTIVITY, which is a timeline entry rather than a record with a page of
+// its own, so the verb would advertise a destination that does not exist. The
+// two cards whose subject IS a record — the quiet deal and the promise — send it.
+//
+// It DOES offer the brief, where the meeting names somebody. The brief is not a
+// page either, which is why this read as unreachable for so long: it opens as
+// `?prep=<activity>` on a PERSON's record, so the move needs both ids and the
+// row already carried only one. The person rides in the move's arguments rather
+// than as the row's subject, because the subject names what the row is ABOUT
+// and this row is about the meeting.
+//
+// The brief itself is still its own surface with its own cited sections. This
+// names the way in; a queue that tried to summarise it here would be a second
+// answer to "prepare me for this".
+//
+// It offers no OUTCOME either, and that is the same fact rather than a second
+// gap. Recording what a meeting came to is a write on the activity —
+// `meeting_status` on PATCH /activities/{id} takes booked, held, no_show and
+// canceled, and the log-activity screen already sends `held` — so the write
+// exists and it is the row that has nowhere to put it: the card's subject is a
+// timeline entry with no page, which is why it carries no `open`. Giving the
+// outcome a verb here means either a control that answers inline, the way the
+// approval card does, or a destination for an activity that has none. Both are
+// larger than wiring, and neither is decided.
 func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 	subject := meeting.Subject
 	starts := meeting.StartsAt
@@ -39,6 +59,13 @@ func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 		Subject: subjectOf("activity", meeting.ID),
 		DueAt:   &starts,
 		Actions: []crmcontracts.AttentionItemActions{},
+	}
+	// Only where a person is named. A meeting with no attendee this reader may
+	// see has no page to read the brief on, so the field stays absent and the
+	// classifier below offers no way in — rather than one that opens nothing.
+	if !meeting.PersonID.IsZero() {
+		with := openapi_types.UUID(meeting.PersonID)
+		item.WithPerson = &with
 	}
 	// `kind` is the producer's own sub-type, for the icon and the label and
 	// never for authority — which is exactly what "nobody has written anything
@@ -82,6 +109,20 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		reasons = append(reasons, reason("meeting_unprepared", nil))
 	}
 	row := base(item, level, "meetings", "meeting_unprepared")
+	// The way into the brief, where the row named a person to read it on. Both
+	// ids travel because neither names it alone: the activity says WHICH
+	// meeting, the person says WHOSE page it opens on.
+	// The meeting id comes off the SUBJECT rather than being parsed back out of
+	// item.Id: the subject already holds it as a uuid, and re-parsing the
+	// string form would introduce a failure case where there is none.
+	if item.WithPerson != nil && item.Subject != nil {
+		meetingID := item.Subject.Id
+		row.Move = &crmcontracts.WorklistMove{
+			Action:     crmcontracts.WorklistMoveActionOpenMeetingBrief,
+			ActivityId: &meetingID,
+			Arguments:  &map[string]any{"person_id": item.WithPerson.String()},
+		}
+	}
 	// A meeting's start time IS a deadline the reader is racing, so it counts
 	// as work due — unlike a proposal's expiry, which merely lapses.
 	stampDeadline(&row, item.DueAt, asOf)

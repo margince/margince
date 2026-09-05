@@ -309,7 +309,14 @@ func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.
 		func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) error {
 			enqueueErr = h.inserter.EnqueueTx(ctx, tx, CaptureBackfillArgs{
 				Workspace: ws, BackfillID: backfillID.String(),
-			}, &river.InsertOpts{UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates}})
+			}, &river.InsertOpts{
+				// ONE attempt: api/jobs.yaml's fault block for capture_backfill
+				// says the backfill ROW owns the outcome, ending the run and
+				// recording the fault class against its own give-up cap. A
+				// River retry would re-page a run the engine already ended.
+				MaxAttempts: rowOwnedMaxAttempts,
+				UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
+			})
 			return enqueueErr
 		})
 	if enqueueErr != nil {

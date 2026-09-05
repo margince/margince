@@ -486,6 +486,7 @@ export function AuditRail({
 
   return (
     <SurfaceState
+      loadingLabel={t("cf.audit.title")}
       state={state}
       emptyLabel={t("cf.audit.empty")}
       detail={{ onRetry }}
@@ -809,7 +810,10 @@ export function CustomFieldsAdmin() {
             layout="stack"
             control={
               <div className="arrive-stack">
-                <QueryGate query={list}>
+                <QueryGate
+                  query={list}
+                  pendingLabel={t("cf.listLabel", { object: objectName })}
+                >
                   {(page) => (
                     <FieldTable
                       object={object}

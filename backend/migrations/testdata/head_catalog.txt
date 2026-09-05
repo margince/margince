@@ -15,7 +15,7 @@ public.activity.activity_meeting_no_overlap EXCLUDE USING gist (host_user_id WIT
 public.activity.activity_meeting_status_check CHECK (((meeting_status IS NULL) OR (meeting_status = ANY (ARRAY['booked'::text, 'held'::text, 'no_show'::text, 'canceled'::text]))))
 public.activity.activity_message_has_provider CHECK (((kind = 'message'::text) = (channel_provider IS NOT NULL)))
 public.activity.activity_no_company_meeting_on_rekind CREATE TRIGGER activity_no_company_meeting_on_rekind BEFORE UPDATE OF kind ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()
-public.activity.activity_origin_check CHECK ((origin = ANY (ARRAY['human'::text, 'agent'::text, 'system_remediation'::text])))
+public.activity.activity_origin_check CHECK ((origin = ANY (ARRAY['human'::text, 'agent'::text, 'system_remediation'::text, 'system_notice'::text])))
 public.activity.activity_owed_verdict_check CHECK (((owed_verdict IS NULL) OR (owed_verdict = ANY (ARRAY['asks_us'::text, 'informs_us'::text]))))
 public.activity.activity_owed_verdict_stamped CHECK (((owed_verdict IS NULL) = (owed_verdict_at IS NULL)))
 public.activity.activity_pkey PRIMARY KEY (id)
@@ -665,6 +665,7 @@ public.app_user.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.app_user.weekly_delivery text gen=- def=-
 public.app_user_pkey CREATE UNIQUE INDEX app_user_pkey ON public.app_user USING btree (id)
 public.approval acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.approval.approval_co_target_whole CHECK ((((co_target_entity_type IS NULL) AND (co_target_entity_id IS NULL) AND (co_target_version IS NULL)) OR ((co_target_entity_type IS NOT NULL) AND (co_target_entity_id IS NOT NULL) AND (co_target_version IS NOT NULL))))
 public.approval.approval_decided CHECK ((((status = 'pending'::text) AND (decided_at IS NULL)) OR (status = 'expired'::text) OR ((status = ANY (ARRAY['approved'::text, 'rejected'::text])) AND (decided_at IS NOT NULL))))
 public.approval.approval_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES app_user(id) ON DELETE SET NULL (decided_by)
 public.approval.approval_effect_failure_is_stated CHECK (((effect_failed_at IS NULL) = (effect_failure IS NULL))) NOT VALID
@@ -673,6 +674,9 @@ public.approval.approval_passport_id_fkey FOREIGN KEY (passport_id) REFERENCES p
 public.approval.approval_pkey PRIMARY KEY (id)
 public.approval.approval_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'expired'::text])))
 public.approval.bundle_id uuid gen=- def=-
+public.approval.co_target_entity_id uuid gen=- def=-
+public.approval.co_target_entity_type text gen=- def=-
+public.approval.co_target_version bigint gen=- def=-
 public.approval.consumed_at timestamp with time zone gen=- def=-
 public.approval.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.approval.decided_at timestamp with time zone gen=- def=-
@@ -748,7 +752,7 @@ public.assurance_exception.assurance_exception_amount_currency_pair CHECK (((aff
 public.assurance_exception.assurance_exception_pkey PRIMARY KEY (id)
 public.assurance_exception.assurance_exception_seen_ordered CHECK ((last_seen_at >= first_seen_at))
 public.assurance_exception.assurance_exception_severity_check CHECK ((severity = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text])))
-public.assurance_exception.assurance_exception_status_check CHECK ((status = ANY (ARRAY['open'::text, 'resolved'::text, 'expired'::text])))
+public.assurance_exception.assurance_exception_status_check CHECK ((status = ANY (ARRAY['open'::text, 'resolved'::text, 'expired'::text, 'condition_cleared'::text])))
 public.assurance_exception.assurance_exception_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'offer'::text, 'contract'::text])))
 public.assurance_exception.captured_by text NOT NULL gen=- def=-
 public.assurance_exception.claim jsonb NOT NULL gen=- def='{}'::jsonb
@@ -816,7 +820,7 @@ public.assurance_source_coverage.assurance_source_coverage_date_matches_state CH
 public.assurance_source_coverage.assurance_source_coverage_pkey PRIMARY KEY (id)
 public.assurance_source_coverage.assurance_source_coverage_run_fkey FOREIGN KEY (run_id) REFERENCES assurance_run(id) ON DELETE CASCADE
 public.assurance_source_coverage.assurance_source_coverage_source_check CHECK ((source = ANY (ARRAY['mail'::text, 'calendar'::text, 'documents'::text, 'contracts'::text, 'offers'::text, 'incumbent'::text])))
-public.assurance_source_coverage.assurance_source_coverage_state_check CHECK ((state = ANY (ARRAY['checked'::text, 'stale'::text, 'unavailable'::text, 'permission_limited'::text])))
+public.assurance_source_coverage.assurance_source_coverage_state_check CHECK ((state = ANY (ARRAY['checked'::text, 'stale'::text, 'unavailable'::text, 'permission_limited'::text, 'not_connected'::text])))
 public.assurance_source_coverage.captured_by text NOT NULL gen=- def=-
 public.assurance_source_coverage.checked_through timestamp with time zone gen=- def=-
 public.assurance_source_coverage.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1019,6 +1023,18 @@ public.brief_run.revenue_norm_minor bigint NOT NULL gen=- def=-
 public.brief_run.uq_brief_run_user_day UNIQUE (user_id, local_day)
 public.brief_run.user_id uuid NOT NULL gen=- def=-
 public.brief_run_pkey CREATE UNIQUE INDEX brief_run_pkey ON public.brief_run USING btree (id)
+public.capture_alias_sighting acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_alias_sighting.capture_alias_sighting_once_per_message UNIQUE (user_id, value, source)
+public.capture_alias_sighting.capture_alias_sighting_pkey PRIMARY KEY (id)
+public.capture_alias_sighting.capture_alias_sighting_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.capture_alias_sighting.capture_alias_sighting_value_check CHECK (((value = lower(value)) AND (value <> ''::text)))
+public.capture_alias_sighting.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_alias_sighting.id uuid NOT NULL gen=- def=uuidv7()
+public.capture_alias_sighting.source text NOT NULL gen=- def=-
+public.capture_alias_sighting.user_id uuid NOT NULL gen=- def=-
+public.capture_alias_sighting.value text NOT NULL gen=- def=-
+public.capture_alias_sighting_once_per_message CREATE UNIQUE INDEX capture_alias_sighting_once_per_message ON public.capture_alias_sighting USING btree (user_id, value, source)
+public.capture_alias_sighting_pkey CREATE UNIQUE INDEX capture_alias_sighting_pkey ON public.capture_alias_sighting USING btree (id)
 public.capture_auto_enrich_budget acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_auto_enrich_budget.budget_date date NOT NULL gen=- def=-
 public.capture_auto_enrich_budget.capture_auto_enrich_budget_pkey PRIMARY KEY (budget_date)
@@ -1079,12 +1095,14 @@ public.capture_connection.account_bound_at timestamp with time zone gen=- def=-
 public.capture_connection.account_label text gen=- def=-
 public.capture_connection.archived_at timestamp with time zone gen=- def=-
 public.capture_connection.auth bytea gen=- def=-
+public.capture_connection.capture_connection_context_tag_id_fkey FOREIGN KEY (context_tag_id) REFERENCES tag(id) ON DELETE SET NULL
 public.capture_connection.capture_connection_mail_posture_check CHECK ((mail_posture = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text])))
 public.capture_connection.capture_connection_provider_check CHECK ((provider = ANY (ARRAY['gmail'::text, 'gcal'::text, 'imap'::text, 'graph'::text, 'graphcal'::text, 'whatsapp'::text, 'telegram'::text, 'offline_demo'::text])))
 public.capture_connection.capture_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text])))
 public.capture_connection.capture_connection_unique UNIQUE (user_id, provider)
 public.capture_connection.capture_connection_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.capture_connection.connector_connection_pkey PRIMARY KEY (id)
+public.capture_connection.context_tag_id uuid gen=- def=-
 public.capture_connection.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_connection.credential_ref text gen=- def=-
 public.capture_connection.generation integer NOT NULL gen=- def=0
@@ -1175,7 +1193,7 @@ public.capture_import_user_idx CREATE INDEX capture_import_user_idx ON public.ca
 public.capture_owner_identity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_owner_identity.capture_owner_identity_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text])))
 public.capture_owner_identity.capture_owner_identity_pkey PRIMARY KEY (id)
-public.capture_owner_identity.capture_owner_identity_source_check CHECK ((source = ANY (ARRAY['user'::text, 'provider'::text])))
+public.capture_owner_identity.capture_owner_identity_source_check CHECK ((source = ANY (ARRAY['user'::text, 'provider'::text, 'delivered_to'::text])))
 public.capture_owner_identity.capture_owner_identity_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.capture_owner_identity.capture_owner_identity_user_value_key UNIQUE (user_id, kind, value)
 public.capture_owner_identity.capture_owner_identity_value_check CHECK (((value = lower(value)) AND (value <> ''::text)))
@@ -1496,11 +1514,13 @@ public.communication_decision_pkey CREATE UNIQUE INDEX communication_decision_pk
 public.communication_suppression acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_suppression.address text gen=- def=-
 public.communication_suppression.captured_by text NOT NULL gen=- def=-
+public.communication_suppression.communication_suppression_decided_by_level CHECK ((decided_by_level = ANY (ARRAY['machine'::text, 'user'::text, 'admin'::text, 'subject'::text])))
 public.communication_suppression.communication_suppression_kind CHECK ((kind = ANY (ARRAY['marketing_objection'::text, 'processing_restriction'::text, 'hard_bounce'::text, 'subject_request'::text])))
 public.communication_suppression.communication_suppression_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
 public.communication_suppression.communication_suppression_names_a_target CHECK (((person_id IS NOT NULL) OR (lead_id IS NOT NULL) OR (address IS NOT NULL)))
 public.communication_suppression.communication_suppression_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.communication_suppression.communication_suppression_pkey PRIMARY KEY (id)
+public.communication_suppression.decided_by_level text NOT NULL gen=- def=-
 public.communication_suppression.id uuid NOT NULL gen=- def=uuidv7()
 public.communication_suppression.kind text NOT NULL gen=- def=-
 public.communication_suppression.lead_id uuid gen=- def=-
@@ -1743,7 +1763,7 @@ public.data_subject_request.updated_at timestamp with time zone NOT NULL gen=- d
 public.data_subject_request_pkey CREATE UNIQUE INDEX data_subject_request_pkey ON public.data_subject_request USING btree (id)
 public.deal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal.amount_minor bigint gen=- def=-
-public.deal.amount_minor_base bigint gen=s def=(round(((amount_minor)::numeric * fx_rate_to_base)))::bigint
+public.deal.amount_minor_base bigint gen=- def=-
 public.deal.archived_at timestamp with time zone gen=- def=-
 public.deal.captured_by text NOT NULL gen=- def=-
 public.deal.close_date_provisional boolean NOT NULL gen=- def=false
@@ -2875,7 +2895,7 @@ public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=-
     FROM activity_link l
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
-     AND a.origin <> 'system_remediation'
+     AND a.origin NOT IN ('system_remediation', 'system_notice')
    WHERE l.deal_id = did
 
 public.last_activity_of_organization(oid uuid) secdef=false cfg=- acl=- 
@@ -2885,7 +2905,7 @@ public.last_activity_of_organization(oid uuid) secdef=false cfg=- acl=-
       FROM activity_link l
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
-       AND a.origin <> 'system_remediation'
+       AND a.origin NOT IN ('system_remediation', 'system_notice')
      WHERE l.organization_id = oid
     UNION ALL
     -- Filed against one of its deals.
@@ -2894,7 +2914,7 @@ public.last_activity_of_organization(oid uuid) secdef=false cfg=- acl=-
       JOIN activity_link l ON l.deal_id = d.id
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
-       AND a.origin <> 'system_remediation'
+       AND a.origin NOT IN ('system_remediation', 'system_notice')
      WHERE d.organization_id = oid
     UNION ALL
     -- Filed against a contact it currently employs.
@@ -2903,7 +2923,7 @@ public.last_activity_of_organization(oid uuid) secdef=false cfg=- acl=-
       JOIN activity_link l ON l.person_id = r.person_id
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
-       AND a.origin <> 'system_remediation'
+       AND a.origin NOT IN ('system_remediation', 'system_notice')
      WHERE r.organization_id = oid AND r.kind = 'employment'
        AND r.ended_at IS NULL AND r.archived_at IS NULL
   ) arms
@@ -2913,7 +2933,7 @@ public.last_activity_of_person(pid uuid) secdef=false cfg=- acl=-
     FROM activity_link l
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
-     AND a.origin <> 'system_remediation'
+     AND a.origin NOT IN ('system_remediation', 'system_notice')
    WHERE l.person_id = pid
 
 public.last_activity_of_project(pid uuid) secdef=false cfg=- acl=- 
@@ -2921,7 +2941,7 @@ public.last_activity_of_project(pid uuid) secdef=false cfg=- acl=-
     FROM activity_link l
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
-     AND a.origin <> 'system_remediation'
+     AND a.origin NOT IN ('system_remediation', 'system_notice')
    WHERE l.project_id = pid
 
 public.lead acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
