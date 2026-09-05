@@ -47,6 +47,10 @@ export function RecordPicker({
   const t = useT();
   const [term, setTerm] = useState("");
   const [candidates, setCandidates] = useState<RecordPickerCandidate[]>([]);
+  // Whether the CURRENT term has an answer behind it. An empty candidate list
+  // means two different things without it — nothing matched, or nothing has
+  // been asked yet — and only one of them is worth telling the reader.
+  const [answered, setAnswered] = useState(false);
   // The FAILURE is held, not the sentence it becomes. A search runs inside a
   // debounced effect, and `useT` hands back a fresh closure on every render, so
   // a translator captured in that effect would either put it in the dependency
@@ -89,6 +93,7 @@ export function RecordPicker({
     setSearchSpace(() => searchTargets);
     setCandidates([]);
     setSearchFailure(null);
+    setAnswered(false);
   }
 
   useEffect(() => {
@@ -96,8 +101,12 @@ export function RecordPicker({
     if (!query) {
       setCandidates([]);
       setSearchFailure(null);
+      setAnswered(false);
       return;
     }
+    // The previous answer stops standing the moment the term moves: a list
+    // left on screen under a newly typed query describes the old one.
+    setAnswered(false);
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
@@ -105,11 +114,19 @@ export function RecordPicker({
         if (!cancelled) {
           setCandidates(results);
           setSearchFailure(null);
+          // A search that ANSWERED, so an empty answer can be told from a
+          // search that never ran. Both drew the same nothing before, and the
+          // reader looking at a company whose contacts are all archived could
+          // not tell "nobody here" from a field that had not responded yet.
+          setAnswered(true);
         }
       } catch (error) {
         if (!cancelled) {
           setCandidates([]);
           setSearchFailure({ cause: error });
+          // A refusal is not an empty answer: the failure line below says what
+          // went wrong, and "nothing matched" underneath it would contradict it.
+          setAnswered(false);
         }
       }
     }, SEARCH_DEBOUNCE_MS);
@@ -146,6 +163,11 @@ export function RecordPicker({
         <p className="recordpicker-selected" aria-live="polite">
           <Check className="recordpicker-selected-check" aria-hidden />
           {selected.name}
+        </p>
+      )}
+      {answered && candidates.length === 0 && (
+        <p className="t-caption" aria-live="polite">
+          {t("picker.noMatch")}
         </p>
       )}
       {candidates.length > 0 && (

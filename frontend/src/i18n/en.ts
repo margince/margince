@@ -558,6 +558,11 @@ export const en = {
   "ref.nameLoadFailed": "Name didn't load",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
 
+  // A record search that ANSWERED and found nothing. Distinct from a search
+  // that has not run: both drew the same empty space before, and a reader
+  // could not tell "nobody here" from a field still thinking.
+  "picker.noMatch": "No match",
+
   // The app-level boundary's fallback. It says what happened and what to do
   // next, and nothing about the error itself: a render throw carries our own
   // internals, which the reader can neither read nor act on. Two sentences,
@@ -3157,6 +3162,7 @@ export const en = {
   "log.kindTask": "Task",
   "log.kindMeeting": "Meeting",
   "log.kindCall": "Call",
+  "log.attendee": "Who was there",
   "log.subject": "Subject",
   "log.body": "Details",
   "log.transcriptLabel": "Transcript",
