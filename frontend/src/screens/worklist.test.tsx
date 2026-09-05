@@ -569,15 +569,24 @@ describe("what the ranked queue tells a reader", () => {
     );
     const { container } = renderWorklist();
 
-    // The row arrives first; the decision it carries is a second read, so the
-    // card appears after it.
     await screen.findByText(/Send the follow-up/);
     // A queue that can rank a decision and not answer it sends the reader to a
     // second screen to do what the row already described. The card is the same
     // one the record page draws, posting to the same endpoint.
+    //
+    // ANSWERED IN A DRAWER, not in the row. The card is 440px of evidence,
+    // draft and three answers; inline it made the row 657px against a 208px
+    // ceiling and pushed the page's first action off a phone screen. So the row
+    // offers the verb and the drawer holds the card, and this asserts both
+    // halves — a row that opened nothing would pass on the button alone.
     await waitFor(() => {
       expect(container.querySelector(".worklist-row-decision")).toBeTruthy();
     });
+    // Not answerable until the reader asks: the queue draws no Accept.
+    expect(screen.queryByRole("button", { name: "Accept" })).toBeNull();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Decide" }),
+    );
     expect(await screen.findByRole("button", { name: "Accept" })).toBeTruthy();
   });
 

@@ -8137,6 +8137,11 @@ export const vi = {
   "worklist.untitled.introduction_request":
     "Một đồng nghiệp nhờ bạn giới thiệu",
   "worklist.verb.decide": "Quyết định",
+  // Ngăn kéo nơi đưa ra quyết định.
+  "worklist.decision.title": "Quyết định của bạn",
+  "worklist.decision.loading": "Đang tải đề xuất…",
+  "worklist.decision.unavailable":
+    "Không đọc được đề xuất này. Hãy trả lời trong danh sách phê duyệt.",
   "worklist.verb.merge": "Gộp",
   "worklist.verb.open": "Mở",
   "worklist.verb.complete": "Mở",
