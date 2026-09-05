@@ -49,7 +49,7 @@ case_is "green before the merge" "$pr" "$(check success 2026-08-24T02:29:56Z)" 0
 # "was it green?" can see the difference.
 case_is "the required check never reported" "$pr" '{"check_runs":[]}' 1 "before its required \`ci\` check reported at all"
 case_is "some other check reported, ci did not" "$pr" \
-	'{"check_runs":[{"name":"dco","status":"completed","conclusion":"success","completed_at":"2026-08-24T02:16:58Z"}]}' \
+	'{"check_runs":[{"name":"deterministic-gates","status":"completed","conclusion":"success","completed_at":"2026-08-24T02:16:58Z"}]}' \
 	1 "before its required \`ci\` check reported at all"
 
 case_is "merged over a red ci" "$pr" "$(check failure 2026-08-24T02:29:56Z)" 1 'was `failure`'

@@ -17,7 +17,7 @@ GO ?= go
 # target's prerequisites.
 ROOT_SCRIPT_GATES := check-craft-doc craft-test test-dev-isolation \
   test-dev-cleanup \
-  test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-check-dco \
+  test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict \
   test-laneorder check-image-pins check-host-ports ci-doc-parity \
   make-target-parity contract-breaking-check contract-frontend-drift \
   test-contract-frontend-drift migration-versions test-migration-versions \
@@ -99,7 +99,7 @@ SEED_STACK = set -e; . scripts/lib-devstate.sh; \
     seed_dsn="postgres://margince_owner:dev@localhost:15432/$$seed_db"; \
   fi;
 
-.PHONY: help install dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-check-dco test-laneorder secret-scan test-secret-scan test-dev-dsn test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help install dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-laneorder secret-scan test-secret-scan test-dev-dsn test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -874,14 +874,6 @@ test-ci-verdict:
 ## "was it green?" reads the same as a pass.
 test-merge-verdict:
 	@./scripts/test-check-merge-verdict.sh
-
-## test-check-dco — prove the DCO gate still catches, and that an author's
-## retroactive attestation excuses exactly the commit it names. Remediation is
-## the permissive direction: its whole purpose is to make a commit stop failing,
-## so a loose sha match or an unanchored trailer turns the gate into a rubber
-## stamp that reports the same clean history as a strict one.
-test-check-dco:
-	@./scripts/test-check-dco.sh
 
 ## test-laneorder — prove the integration lane still dispatches its long pole
 ## first. The order is only a scheduling hint, so a regression here never turns

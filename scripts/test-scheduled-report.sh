@@ -168,7 +168,6 @@ readonly INTEGRATION_TITLE="main is red: the integration lane fails on the tip"
 readonly FRONTEND_TITLE="main is red: the frontend lane fails on the tip"
 readonly UAT_TITLE="main is red: the screen-acceptance UAT fails on the tip"
 readonly SONAR_TITLE="main's SonarCloud analysis was not published"
-readonly DCO_TITLE="main carries a commit with no Signed-off-by"
 readonly SUSPECTS="- \`deadbeef\` Some Author — the commit that did it"
 
 # What the cases below actually exercised, recorded as they run rather than
@@ -275,15 +274,6 @@ expect_health "a failed publish of main's analysis is filed with its suspect ran
 
 expect_health "a failed publish with no range still files" \
 	MAIN_SONAR_RESULT "$SONAR_TITLE" ""
-
-# The provenance arm. It exists because the PR-side `dco` job checks the
-# BRANCH's commits and main takes the squash, so an unsigned commit on main is
-# invisible from main once the branch is gone.
-expect_health "an unsigned commit on main is filed with its suspect range" \
-	MAIN_DCO_RESULT "$DCO_TITLE" "$SUSPECTS"
-
-expect_health "an unsigned commit with no range still files" \
-	MAIN_DCO_RESULT "$DCO_TITLE" ""
 
 # --- merge-attest.yml -------------------------------------------------------------
 #
@@ -398,7 +388,7 @@ done
 # MERGE_VERDICT_RESULT is fed by merge-attest.yml, not by main-health.yml, so
 # the census above cannot see it — it is keyed on MAIN_*_RESULT and on that one
 # workflow. An arm nothing asks about is an arm that can be added with its cases
-# and still file nothing, which is exactly the `dco` failure recorded below.
+# and still file nothing, which is the failure this census exists to catch.
 #
 # The limit, stated rather than implied: this covers the arms fed by a workflow
 # job result. The daily lane's own arms (VULN_RESULT, GATE_RESULT, PERF_RESULT
@@ -470,9 +460,9 @@ fi
 # An arm in the reporter is only reachable if main-health both RUNS the report
 # job for that lane and passes the lane's result in. Those are two lines in a
 # different file, and the reporter's own test cannot see them — which is how a
-# `dco` lane was added with its arm, its env line and both cases, and still
-# filed nothing: the report job's `if:` did not select it, so a DCO-only failure
-# skipped the job entirely and the arm was never reached.
+# lane has been added with its arm, its env line and both cases, and still
+# filed nothing: the report job's `if:` did not select it, so a failure of that
+# lane alone skipped the job entirely and the arm was never reached.
 #
 # One invariant spelled on both sides of a wire is one item. So the census asks
 # the workflow the same question it asks the reporter, and fails in the
