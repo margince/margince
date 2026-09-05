@@ -357,6 +357,26 @@ function BoardLayout<Record extends BoardRecord>({
       },
     };
   }
+  // Whether a column has to carry its own tab stop.
+  //
+  // A column that holds nothing is still a SCROLL REGION — every one declares
+  // `overflow-y: auto` — and a scroll region a keyboard cannot reach is a WCAG
+  // 2.2 AA failure (axe: scrollable-region-focusable). A column with cards is
+  // reachable through them and a collapsible one through its own head; an empty,
+  // uncollapsible stage has neither.
+  //
+  // Only where it is needed. A stop on every column would put five extra presses
+  // in front of a full board whose cards are already the way in. On the empty
+  // ones it earns its place twice over: the column is a drop target, and a reader
+  // moving a deal by keyboard needs somewhere to land.
+  function ownTabStop<Record extends BoardRecord>(
+    column: BoardColumn<Record>,
+  ): 0 | undefined {
+    return column.deals.length === 0 && column.collapsed === undefined
+      ? 0
+      : undefined;
+  }
+
   return (
     <div className="board">
       {columns.map((column) => {
@@ -369,6 +389,7 @@ function BoardLayout<Record extends BoardRecord>({
             }
             data-stage={column.stage}
             aria-label={column.label}
+            tabIndex={ownTabStop(column)}
             {...columnDropHandlers?.(column)}
           >
             {/* THE STAGE AND HOW MUCH IS IN IT, on one line and stuck to the

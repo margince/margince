@@ -131,23 +131,21 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       // it as every other record page.
       aside={
         details.open ? (
-          <>
-            <div className="project-rail">
-              <ProjectCompanies
-                projectId={project.id}
-                companies={project.organizations}
-                readOnly={readOnly}
-              />
-              <StakeholdersCard
-                view={view}
-                projectId={project.id}
-                readOnly={readOnly}
-              />
-              <ProjectContractsCard view={view} />
-              <ProjectDocumentsCard view={view} />
-              <PhaseHistoryCard view={view} />
-            </div>
-          </>
+          <div className="project-rail">
+            <ProjectCompanies
+              projectId={project.id}
+              companies={project.organizations}
+              readOnly={readOnly}
+            />
+            <StakeholdersCard
+              view={view}
+              projectId={project.id}
+              readOnly={readOnly}
+            />
+            <ProjectContractsCard view={view} />
+            <ProjectDocumentsCard view={view} />
+            <PhaseHistoryCard view={view} />
+          </div>
         ) : undefined
       }
       name={project.name}
