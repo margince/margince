@@ -176,7 +176,7 @@ export function writeRoutes(calls: readonly Call[]): string[] {
 
 /** Home's two work sections, in the order the document holds them. */
 export function workOrder(): string[] {
-  return [...document.querySelectorAll("#home-decisions, #home-focus")].map(
+  return [...document.querySelectorAll("#home-decisions, #brief-feed")].map(
     (section) => section.id,
   );
 }

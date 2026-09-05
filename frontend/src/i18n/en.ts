@@ -2532,20 +2532,9 @@ export const en = {
   "home.pipelinePartial":
     "{count} deals are not in these figures — your access does not cover them.",
   "home.pipelineUnavailable": "This figure could not be loaded.",
-  "home.asOf": "as of {at}",
-  "home.generating": "Assembling…",
-  "home.generate": "Get today's brief now",
-  "home.noneBody":
-    "Your morning brief ranks the deals worth your first hour — winnability, revenue, timing, momentum, and warmth, each factor with its evidence. It is assembled overnight, so it is waiting for you tomorrow morning once you have open deals.",
-  "home.honestShort":
-    "Only {count} deals cleared the bar — the queue is never padded.",
-  "home.overflow":
-    "Showing the {shown} highest-ranked of {count} qualifying deals.",
   // The morning brief's own narrative. The "no pass" line is the honest degrade:
   // a run nobody annotated and a night with nothing in it read identically as
   // silence, so the screen says which one this is.
-  "home.narrativeNoPass":
-    "No overnight summary today — Margince did not run a pass on this brief. The ranking below is still today's.",
   // The week just gone. No nav entry of its own: Today is the single door to
   // the work that waits on a person, and this is a view of that same work.
   "home.panel.weekly": "Last week",
@@ -2555,7 +2544,6 @@ export const en = {
   "plan.title": "Plan next week",
   // The head of the ranked queue, on the page a rep opens first. The same rows
   // the Worklist draws, in the order the server decided.
-  "brief.donext.title": "Do next",
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
   "brief.eyebrow": "Your morning",
@@ -2585,10 +2573,16 @@ export const en = {
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet": "A quiet week — nothing closed and nothing moved.",
 
-  "brief.donext.sub": "One order, from your worklist.",
-  "brief.donext.loading": "Reading what waits on you",
-  "brief.donext.clear": "Nothing is waiting on you right now.",
-  "brief.donext.rest": "{count} more on the worklist",
+  "brief.feed.title": "Today",
+  "brief.feed.sub": "One order, decided once.",
+  "brief.feed.loading": "Reading your morning",
+  "brief.feed.clear": "Nothing is waiting on you right now.",
+  "brief.feed.rest": "{count} more on the worklist",
+  "brief.feed.section.respond_now": "Respond now",
+  "brief.feed.section.prepare_conversations": "Prepare conversations",
+  "brief.feed.section.move_revenue": "Move revenue",
+  "brief.feed.section.build_pipeline": "Build pipeline",
+  "brief.feed.section.review_and_repair": "Review and repair",
 
   // A team's week, frozen when it closed. Two weeks compare because neither
   // moves under the comparison.
@@ -2708,10 +2702,6 @@ export const en = {
   "home.weekly.outcome.moved": "moved",
   "home.weekly.outcome.won": "won",
   "home.weekly.outcome.lost": "lost",
-  "home.focus.allAbove":
-    "Everything the night suggested is already above, in what waits on you.",
-  "home.quietRun":
-    "Nothing cleared the bar this morning. No invented urgency — enjoy the quiet.",
   "home.act": "Done",
   "home.dismiss": "Dismiss",
   "home.actedState": "acted",
@@ -2750,7 +2740,6 @@ export const en = {
   "home.glance.introWeekly": "This is the week you just closed.",
   "home.glance.intro": "Here is your day.",
   "home.panel.decisions": "Waiting on you",
-  "home.panel.focus": "Focus when time opens",
   "home.panel.overnight": "Overnight",
   "home.panel.position": "Position",
   "home.panel.schedule": "Today's schedule",

@@ -2477,17 +2477,6 @@ export const de = {
   "home.pipelinePartial":
     "{count} Deals fehlen in diesen Zahlen – Ihre Berechtigung deckt sie nicht ab.",
   "home.pipelineUnavailable": "Diese Zahl konnte nicht geladen werden.",
-  "home.asOf": "Stand {at}",
-  "home.generating": "Stelle zusammen…",
-  "home.generate": "Briefing jetzt holen",
-  "home.noneBody":
-    "Dein Morgenbriefing sortiert die Deals, die deine erste Stunde verdienen — Gewinnchance, Umsatz, Timing, Momentum und Nähe, jeder Faktor mit Beleg. Es entsteht über Nacht und liegt morgen früh bereit, sobald offene Deals da sind.",
-  "home.honestShort":
-    "Nur {count} Deals haben die Schwelle geschafft — die Liste wird nie aufgefüllt.",
-  "home.overflow":
-    "Es werden die {shown} höchstplatzierten von {count} qualifizierten Deals gezeigt.",
-  "home.narrativeNoPass":
-    "Heute keine Nacht-Zusammenfassung — Margince hat für diese Lage keinen Durchgang gemacht. Die Reihenfolge unten ist trotzdem die von heute.",
   "home.panel.weekly": "Letzte Woche",
   "home.weekly.weekOf": "Woche ab {day}",
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
@@ -2495,7 +2484,6 @@ export const de = {
   "plan.title": "Nächste Woche planen",
   // Der Kopf der sortierten Liste, auf der Seite, die zuerst geöffnet wird —
   // dieselben Zeilen wie in der Arbeitsliste, in der Reihenfolge des Servers.
-  "brief.donext.title": "Als Nächstes",
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
   // Seite zeigt — nie von einem Modell geschrieben.
   "brief.eyebrow": "Dein Morgen",
@@ -2525,10 +2513,16 @@ export const de = {
   "brief.week.quiet":
     "Eine ruhige Woche — nichts abgeschlossen, nichts bewegt.",
 
-  "brief.donext.sub": "Eine Reihenfolge, aus deiner Arbeitsliste.",
-  "brief.donext.loading": "Was auf dich wartet, wird gelesen",
-  "brief.donext.clear": "Gerade wartet nichts auf dich.",
-  "brief.donext.rest": "{count} weitere in der Arbeitsliste",
+  "brief.feed.title": "Heute",
+  "brief.feed.sub": "Eine Reihenfolge, einmal entschieden.",
+  "brief.feed.loading": "Dein Morgen wird gelesen",
+  "brief.feed.clear": "Gerade wartet nichts auf dich.",
+  "brief.feed.rest": "{count} weitere in der Arbeitsliste",
+  "brief.feed.section.respond_now": "Jetzt antworten",
+  "brief.feed.section.prepare_conversations": "Gespräche vorbereiten",
+  "brief.feed.section.move_revenue": "Umsatz bewegen",
+  "brief.feed.section.build_pipeline": "Pipeline aufbauen",
+  "brief.feed.section.review_and_repair": "Prüfen und reparieren",
 
   // Die Woche eines Teams, eingefroren beim Abschluss. Zwei Wochen sind
   // vergleichbar, weil keine sich unter dem Vergleich bewegt.
@@ -2648,10 +2642,6 @@ export const de = {
   "home.weekly.outcome.moved": "bewegt",
   "home.weekly.outcome.won": "gewonnen",
   "home.weekly.outcome.lost": "verloren",
-  "home.focus.allAbove":
-    "Alles aus der Nacht steht schon oben, bei dem, was auf dich wartet.",
-  "home.quietRun":
-    "Heute Morgen hat nichts die Schwelle geschafft. Keine erfundene Dringlichkeit — genieß die Ruhe.",
   "home.act": "Erledigt",
   "home.dismiss": "Ausblenden",
   "home.actedState": "erledigt",
@@ -2690,7 +2680,6 @@ export const de = {
   "home.glance.introWeekly": "Das ist deine abgeschlossene Woche.",
   "home.glance.intro": "Das ist dein Tag.",
   "home.panel.decisions": "Wartet auf dich",
-  "home.panel.focus": "Wenn Zeit bleibt",
   "home.panel.overnight": "Über Nacht",
   "home.panel.position": "Bestand",
   "home.panel.schedule": "Heutiger Kalender",

@@ -2454,17 +2454,6 @@ export const vi = {
   "home.pipelinePartial":
     "{count} deal không nằm trong các số này — quyền của bạn không bao gồm chúng.",
   "home.pipelineUnavailable": "Không tải được số liệu này.",
-  "home.asOf": "tính đến {at}",
-  "home.generating": "Đang tổng hợp…",
-  "home.generate": "Lấy tóm tắt hôm nay",
-  "home.noneBody":
-    "Tóm tắt buổi sáng xếp hạng những deal đáng dành giờ đầu tiên — khả năng thắng, doanh thu, thời điểm, đà tiến và độ thân thiết, mỗi yếu tố kèm bằng chứng của nó. Bản tóm tắt được dựng qua đêm nên sẽ sẵn sàng vào sáng mai, khi bạn đã có deal đang mở.",
-  "home.honestShort":
-    "Chỉ {count} deal vượt ngưỡng — danh sách không bao giờ được độn thêm.",
-  "home.overflow":
-    "Đang hiển thị {shown} deal được xếp hạng cao nhất trong {count} deal đạt ngưỡng.",
-  "home.narrativeNoPass":
-    "Hôm nay không có tóm tắt ban đêm — Margince chưa chạy lượt nào cho bản tin này. Thứ tự bên dưới vẫn là của hôm nay.",
   "home.panel.weekly": "Tuần trước",
   "home.weekly.weekOf": "Tuần từ {day}",
   // Tuần tới. Bản tổng kết đã đóng băng nói điều đã xảy ra; đây là phần duy nhất
@@ -2472,7 +2461,6 @@ export const vi = {
   "plan.title": "Lập kế hoạch tuần tới",
   // Phần đầu của danh sách đã xếp hạng, trên trang mở đầu tiên — cùng những
   // dòng mà Danh sách công việc hiển thị, theo thứ tự máy chủ đã quyết định.
-  "brief.donext.title": "Làm tiếp theo",
   // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
   // không do mô hình viết.
   "brief.eyebrow": "Buổi sáng của bạn",
@@ -2502,10 +2490,16 @@ export const vi = {
   "brief.week.quiet":
     "Một tuần yên ắng — không chốt được gì và không có gì chuyển động.",
 
-  "brief.donext.sub": "Một thứ tự, từ danh sách công việc của bạn.",
-  "brief.donext.loading": "Đang đọc những gì đang chờ bạn",
-  "brief.donext.clear": "Hiện không có gì đang chờ bạn.",
-  "brief.donext.rest": "{count} mục khác trong danh sách công việc",
+  "brief.feed.title": "Hôm nay",
+  "brief.feed.sub": "Một thứ tự, quyết định một lần.",
+  "brief.feed.loading": "Đang đọc buổi sáng của bạn",
+  "brief.feed.clear": "Hiện không có gì đang chờ bạn.",
+  "brief.feed.rest": "{count} mục khác trong danh sách công việc",
+  "brief.feed.section.respond_now": "Trả lời ngay",
+  "brief.feed.section.prepare_conversations": "Chuẩn bị cho các cuộc trao đổi",
+  "brief.feed.section.move_revenue": "Thúc đẩy doanh thu",
+  "brief.feed.section.build_pipeline": "Xây dựng pipeline",
+  "brief.feed.section.review_and_repair": "Xem xét và khắc phục",
 
   // Tuần của một nhóm, đóng băng khi tuần khép lại. Hai tuần so sánh được vì
   // không tuần nào dịch chuyển dưới phép so sánh.
@@ -2624,10 +2618,6 @@ export const vi = {
   "home.weekly.outcome.moved": "đã chuyển",
   "home.weekly.outcome.won": "thắng",
   "home.weekly.outcome.lost": "thua",
-  "home.focus.allAbove":
-    "Mọi gợi ý từ đêm qua đã nằm ở trên, trong phần đang chờ bạn.",
-  "home.quietRun":
-    "Sáng nay không có gì vượt ngưỡng. Không bịa ra việc gấp — hãy tận hưởng sự yên tĩnh.",
   "home.act": "Đánh dấu xong",
   "home.dismiss": "Bỏ qua",
   "home.actedState": "đã xử lý",
@@ -2666,7 +2656,6 @@ export const vi = {
   "home.glance.introWeekly": "Đây là tuần bạn vừa khép lại.",
   "home.glance.intro": "Đây là ngày của bạn.",
   "home.panel.decisions": "Đang chờ bạn",
-  "home.panel.focus": "Khi có thời gian",
   "home.panel.overnight": "Qua đêm",
   "home.panel.position": "Vị thế",
   "home.panel.schedule": "Lịch hôm nay",

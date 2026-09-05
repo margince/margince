@@ -114,32 +114,6 @@ export function leadRows(day: Worklist | undefined): readonly WorklistItem[] {
 }
 
 /**
- * Which overnight suggestions "Do next" has ALREADY drawn.
- *
- * The Brief reads the same brief run through two endpoints. `GET /worklist`
- * ranks each suggestion into the one order as a `brief_item` row, and
- * `GET /brief` serves the same records with the factors behind them — same ids,
- * because `briefItem` sends the entry's own id (`attention/render.go`). So a
- * suggestion that ranks into the lead is on the page twice unless the section
- * below leaves out what the section above took: once as a worklist row, once as
- * a card, each offering its own controls over one record.
- *
- * The split lives HERE rather than in either section because both must read the
- * same answer. Kept in one of them, the other would drift the first time `LEAD`
- * moved, and the duplicate would come back silently.
- */
-export function ledAlready(day: Worklist | undefined): ReadonlySet<string> {
-  return new Set(
-    leadRows(day)
-      .filter((item) => item.source === OVERNIGHT)
-      .map((item) => item.id),
-  );
-}
-
-/** The source a row carries when it came from the overnight run. */
-const OVERNIGHT = "brief_item";
-
-/**
  * The row the page opens with.
  *
  * Exported so a test can prove the sentence names the SAME lead the section
