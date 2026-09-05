@@ -30,10 +30,14 @@ import (
 // siteReadOrg types a harness-seeded untyped org id for the store calls.
 func siteReadOrg(u ids.UUID) ids.OrganizationID { return ids.From[ids.OrganizationKind](u) }
 
-// siteReadWorkerCtx is the worker's context shape: the job binds the
-// workspace (RLS), no human principal — exactly what Begin/Finish run under.
+// siteReadWorkerCtx is the worker's context shape before a claim: the job binds
+// the workspace, and the worker principal names no human — exactly what
+// Begin/Finish run under. Built through the worker's own binding rather than
+// restated, because every transition announces itself to the AI-activity
+// projection and the announcement needs the actor and correlation that binding
+// stamps.
 func siteReadWorkerCtx(e *integration.Env) context.Context {
-	return principal.WithWorkspaceID(context.Background(), e.WS)
+	return withClaimedRequester(principal.WithWorkspaceID(context.Background(), e.WS), "", ids.Nil)
 }
 
 func TestSiteReadStartCreatesAQueuedDossierAndAReClickJoinsIt(t *testing.T) {

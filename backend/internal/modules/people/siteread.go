@@ -71,7 +71,16 @@ type SiteRead struct {
 	// LogoObjectKey addresses the mark the read resolved from the company's
 	// own site, parked on the dossier until a confirmation binds it to the
 	// record (RecordSiteReadLogo). Nil while none was resolved.
-	LogoObjectKey   *string
+	LogoObjectKey *string
+	// Attempt is which claim of this read is current, and AttemptAt is when it
+	// became current. Attempt rises whenever a claim supersedes something other
+	// than a fresh queue — a deferral taken up again, a retryable failure tried
+	// again, a dead holder's claim reclaimed — because each of those is a NEW
+	// attempt at the same read, and the AI-activity projection cannot order two
+	// events for one read on status alone. AttemptAt is what a live occurrence
+	// ages from; created_at is that instant for the first attempt only.
+	Attempt         int
+	AttemptAt       time.Time
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	StartedAt       *time.Time
@@ -122,7 +131,8 @@ type SiteReadPerson struct {
 // scanSiteRead pairs with it positionally.
 const siteReadColumns = `id, organization_id, target_kind, seed_url, status, status_code, status_detail, next_attempt_at, pages, skipped,
 	stopped_reason, fact_count, proposal_ids, requested_by, profile_fields, facts, people, legal_entities, warnings,
-	draft_version, proposal_hash, phase, pages_read, logo_object_key, created_at, updated_at, started_at, first_grounded_at, finished_at, confirmed_at`
+	draft_version, proposal_hash, phase, pages_read, logo_object_key, attempt, attempt_at,
+	created_at, updated_at, started_at, first_grounded_at, finished_at, confirmed_at`
 
 // siteReadOrgKey names the audit payload's org reference once (the goconst
 // pin): the same string in relationship.go is that file's column vocabulary —
@@ -137,7 +147,7 @@ const siteReadBudgetDetail = "AI budget reached its current limit. This website 
 // operator withdrew the standing setting that queued it. Kept distinct from
 // failed because a failure is something to investigate and this is not.
 var finishedSiteReadStatuses = map[string]bool{
-	"done": true, "partial": true, "failed": true, "cancelled": true,
+	siteReadStatusDone: true, siteReadStatusPartial: true, siteReadStatusFailed: true, siteReadStatusCancelled: true,
 }
 
 // The three things a dossier can be ABOUT (site_read.target_kind). An
@@ -152,7 +162,9 @@ const (
 
 // siteReadStopReasons mirrors the row's stopped_reason CHECK so a bad
 // worker value reads as an actionable error, not a constraint 500.
-var siteReadStopReasons = map[string]bool{"budget": true, "page_cap": true, "byte_cap": true, "deadline": true}
+var siteReadStopReasons = map[string]bool{
+	siteReadStopBudget: true, siteReadStopPageCap: true, siteReadStopByteCap: true, siteReadStopDeadline: true,
+}
 
 // SiteReadEnqueue inserts the worker job through the dossier transaction.
 // Compose supplies the River-backed implementation; keeping it as a callback
@@ -239,15 +251,18 @@ func (s *Store) createOrJoinSiteRead(ctx context.Context, orgID *ids.Organizatio
 					return err
 				}
 			}
-			// Audit-only: the closed catalog (events.md §5) defines no
-			// site_read.* type; the facts the crawl produces are staged as
-			// proposals, each emitting its own event when accepted.
-			if _, err := storekit.Audit(ctx, tx, "create", "site_read", readID, nil, map[string]any{
+			// The closed catalog (events.md §5) defines no site_read.* type;
+			// the facts the crawl produces are staged as proposals, each
+			// emitting its own event when accepted. What the row DOES announce
+			// is itself, to the AI-activity projection: a queued read is work
+			// in flight to the person who asked for it.
+			auditID, err := storekit.Audit(ctx, tx, "create", "site_read", readID, nil, map[string]any{
 				siteReadOrgKey: orgID, "target_kind": targetKind, "seed_url": seedURL, "requested_by": requestedBy,
-			}); err != nil {
+			})
+			if err != nil {
 				return fmt.Errorf("audit site read start: %w", err)
 			}
-			return nil
+			return emitSiteReadActivity(ctx, tx, auditID, out, siteReadQueuedLease)
 		}
 		if !errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("start site read: %w", err)
@@ -341,9 +356,19 @@ func (s *Store) BeginSiteRead(ctx context.Context, readID ids.UUID, reclaimAfter
 		// comes back with it as the lease THIS claim stamped — a write that
 		// only the current holder may make presents it again to prove it is
 		// still the current holder.
-		err := tx.QueryRow(ctx, `
+		//
+		// Taking a QUEUED read is the attempt that was already queued; taking
+		// one from any other status — a deferral, a retryable failure, a dead
+		// holder — begins a new one. The CASE reads the row's OLD status, so
+		// both are one statement, and the projection can tell a second claim
+		// from a redelivery of the first. A retryable failure's finished_at
+		// is cleared with its diagnosis: a running row carrying a terminal
+		// stamp reads as settled to anything that asks when it ended.
+		claimed, err := scanSiteRead(tx.QueryRow(ctx, `
 			UPDATE site_read SET status = 'running', status_code = NULL, status_detail = NULL,
-				next_attempt_at = NULL, started_at = now(), updated_at = now()
+				next_attempt_at = NULL, started_at = now(), finished_at = NULL, updated_at = now(),
+				attempt    = attempt + CASE WHEN status = 'queued' THEN 0 ELSE 1 END,
+				attempt_at = CASE WHEN status = 'queued' THEN attempt_at ELSE now() END
 			WHERE id = $1 AND (status = 'queued' OR
 			  (status = 'deferred' AND next_attempt_at <= now()) OR
 			  -- A failure the classifier judged transient — bot protection, a
@@ -354,15 +379,17 @@ func (s *Store) BeginSiteRead(ctx context.Context, readID ids.UUID, reclaimAfter
 			  -- refusal) are terminal and never re-claimed.
 			  (status = 'failed' AND next_attempt_at IS NOT NULL AND next_attempt_at <= now()) OR
 			  (status = 'running' AND started_at < now() - ($2 * interval '1 microsecond')))
-			RETURNING organization_id, target_kind, seed_url, requested_by, started_at`, readID, reclaimAfter.Microseconds()).
-			Scan(&claim.OrganizationID, &claim.TargetKind, &claim.SeedURL, &claim.RequestedBy, &claim.ClaimedAt)
+			RETURNING `+siteReadColumns, readID, reclaimAfter.Microseconds()))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
 		if err != nil {
 			return fmt.Errorf("begin site read: %w", err)
 		}
-		return nil
+		claim = claimed.claim()
+		// The reclaim window IS this attempt's lease: past it, a replacement
+		// may take the read, so past it the projection stops believing it.
+		return logSiteReadActivity(ctx, tx, claimed, reclaimAfter)
 	})
 	if err != nil {
 		return SiteReadClaim{}, err
@@ -378,17 +405,18 @@ func (s *Store) DeferSiteRead(ctx context.Context, readID ids.UUID, nextAttemptA
 		return errors.New("people: site-read deferral requires a retry time")
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `UPDATE site_read
+		deferred, err := scanSiteRead(tx.QueryRow(ctx, `UPDATE site_read
 			SET status = 'deferred', status_code = 'budget_deferred', status_detail = $2,
 				next_attempt_at = $3, phase = NULL, updated_at = now()
-			WHERE id = $1 AND status = 'running'`, readID, siteReadBudgetDetail, nextAttemptAt.UTC())
+			WHERE id = $1 AND status = 'running'
+			RETURNING `+siteReadColumns, readID, siteReadBudgetDetail, nextAttemptAt.UTC()))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
 		if err != nil {
 			return fmt.Errorf("defer site read: %w", err)
 		}
-		if tag.RowsAffected() == 0 {
-			return apperrors.ErrNotFound
-		}
-		return nil
+		return logSiteReadActivity(ctx, tx, deferred, 0)
 	})
 }
 
@@ -409,7 +437,8 @@ func scanSiteRead(row pgx.Row) (SiteRead, error) {
 		&sr.StatusCode, &sr.StatusDetail, &sr.NextAttemptAt, &pagesRaw, &skippedRaw,
 		&sr.StoppedReason, &sr.FactCount, &sr.ProposalIDs, &sr.RequestedBy,
 		&profileRaw, &factsRaw, &peopleRaw, &entitiesRaw, &warningsRaw, &sr.DraftVersion, &sr.ProposalHash,
-		&sr.Phase, &sr.PagesRead, &sr.LogoObjectKey, &sr.CreatedAt, &sr.UpdatedAt, &sr.StartedAt, &sr.FirstGroundedAt, &sr.FinishedAt, &sr.ConfirmedAt); err != nil {
+		&sr.Phase, &sr.PagesRead, &sr.LogoObjectKey, &sr.Attempt, &sr.AttemptAt,
+		&sr.CreatedAt, &sr.UpdatedAt, &sr.StartedAt, &sr.FirstGroundedAt, &sr.FinishedAt, &sr.ConfirmedAt); err != nil {
 		return SiteRead{}, err
 	}
 	if err := json.Unmarshal(pagesRaw, &sr.Pages); err != nil {
