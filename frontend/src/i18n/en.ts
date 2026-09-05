@@ -922,10 +922,12 @@ export const en = {
   "co.strip.lastTouch.theirs": "They wrote last",
   "co.strip.lastTouch.ours": "You wrote last",
   "co.strip.lastTouch.never": "No exchange yet",
-  "co.strip.next": "Next",
+  // Named for what the card READS. "Next" over a meeting date, on a card whose
+  // door opened the task list, let a company with a due task and no meeting
+  // booked read as a contradiction with itself.
+  "co.strip.nextMeeting": "Next meeting",
   "co.strip.next.none": "Nothing scheduled",
   "co.strip.open.history": "Open history",
-  "co.strip.open.tasks": "Open tasks",
   "co.360.thread": "What happened",
   "co.360.threadCount": "What happened · {count}",
   "co.360.fullHistory": "Full history",

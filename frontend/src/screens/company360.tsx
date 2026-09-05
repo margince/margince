@@ -937,7 +937,7 @@ export function StateStrip({
         view={view}
         locale={locale}
         recordZone={recordZone}
-        onOpen={door("tasks")}
+        onOpen={door("timeline")}
         t={t}
       />
     </StatStrip>
@@ -1017,12 +1017,26 @@ function NextStat({
   onOpen?: () => void;
   t: ReturnType<typeof useT>;
 }>) {
-  const door = { openLabel: t("co.strip.open.tasks"), onOpen };
+  // This card reads next_meeting and nothing else, so it says so and its door
+  // goes where a company's meetings are. It used to say "Next" over a meeting
+  // date and open the TASK list — three nouns in one card, which let a company
+  // with a due task and no meeting booked read as a contradiction with itself.
+  //
+  // History rather than a meetings tab because a company has none
+  // (companytab.ts); the contact record, which does, sends the same card to
+  // meetings (personreadings.tsx). Two records answering one question two ways
+  // is what that would otherwise be.
+  //
+  // This leaves tasks with no door on the strip. That is the honest trade: a
+  // card that reads meetings cannot be the route to the task list without
+  // saying one thing and doing another, and the tab strip reaches tasks
+  // directly.
+  const door = { openLabel: t("co.strip.open.history"), onOpen };
   if (!view || omitted(view, "next_meeting")) {
     return (
       <StatCard
         {...door}
-        label={t("co.strip.next")}
+        label={t("co.strip.nextMeeting")}
         value={t(WITHHELD_READING)}
       />
     );
@@ -1032,7 +1046,7 @@ function NextStat({
     return (
       <StatCard
         {...door}
-        label={t("co.strip.next")}
+        label={t("co.strip.nextMeeting")}
         value={t("co.strip.next.none")}
       />
     );
@@ -1040,7 +1054,7 @@ function NextStat({
   return (
     <StatCard
       {...door}
-      label={t("co.strip.next")}
+      label={t("co.strip.nextMeeting")}
       value={formatDateAbbrev(meeting.starts_at, locale, recordZone)}
       detail={join(
         meeting.subject,
