@@ -6950,9 +6950,13 @@ export interface paths {
          *     value. Counting it instead means the preview can never imply completeness it does
          *     not have.
          *
-         *     Cursor-paginated with a bounded `limit`, over a deterministic
-         *     `occurred_at, id` order, so the five-line preview on the morning page is a page
-         *     rather than a sample.
+         *     Bounded by `limit`, over a deterministic `occurred_at, id` order, and the
+         *     totals are counted over the WINDOW rather than over the page — so a preview
+         *     drawing five lines can say "5 of 23" without implying it holds everything.
+         *
+         *     Not cursor-paginated yet. The window and the bound are what keep the read
+         *     honest today; a cursor arrives with the lane that needs one, rather than being
+         *     declared and ignored.
          */
         get: operations["getMagic"];
         put?: never;
@@ -30572,7 +30576,6 @@ export interface components {
             could_not_complete: components["schemas"]["MagicLine"][];
             watching: components["schemas"]["MagicLine"][];
             totals: components["schemas"]["MagicTotals"];
-            page?: components["schemas"]["PageInfo"];
             /**
              * @description What this read left out, by kind and count.
              *
@@ -42399,8 +42402,6 @@ export interface operations {
                 /** @description The instant to report from. Absent means the acting rep's last brief cutoff, and 24 hours where there is no brief — a window the reader has not already seen, rather than a fixed one that repeats what they read this morning. */
                 since?: string;
                 limit?: number;
-                /** @description The `next_cursor` of a previous page. */
-                cursor?: string;
             };
             header?: never;
             path?: never;

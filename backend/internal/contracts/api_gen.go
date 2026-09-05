@@ -24768,7 +24768,6 @@ type MagicReceipt struct {
 	// in would turn internal churn into apparent value. Reporting the count instead
 	// means a preview showing five lines can never imply it is showing everything.
 	NotShown []MagicNotShown `json:"not_shown"`
-	Page     *PageInfo       `json:"page,omitempty"`
 
 	// Since The start of the window reported, resolved by the server. A client shows it, because "nothing happened" over an hour and over a day are different claims.
 	Since time.Time `json:"since"`
@@ -36945,9 +36944,6 @@ type GetMagicParams struct {
 	// Since The instant to report from. Absent means the acting rep's last brief cutoff, and 24 hours where there is no brief — a window the reader has not already seen, rather than a fixed one that repeats what they read this morning.
 	Since *time.Time `form:"since,omitempty" json:"since,omitempty"`
 	Limit *int       `form:"limit,omitempty" json:"limit,omitempty"`
-
-	// Cursor The `next_cursor` of a previous page.
-	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // GetMyAiActivityParams defines parameters for GetMyAiActivity.
@@ -65297,19 +65293,6 @@ func (siw *ServerInterfaceWrapper) GetMagic(w http.ResponseWriter, r *http.Reque
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
 		}
 		return
 	}

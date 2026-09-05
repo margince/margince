@@ -158,10 +158,17 @@ func doneForActivities(
 	ctx context.Context, tx pgx.Tx, since time.Time, limit int,
 ) ([]entry, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		// A seat that may not read messages sees no message receipts, and the
-		// rest of its page is untouched. The refusal narrows this arm and stops
-		// there.
-		return nil, nil
+		// A DENIAL narrows this arm to nothing and leaves the rest of the page
+		// alone: a seat that may not read messages sees no message receipts, and
+		// its deals and people are still its own.
+		//
+		// Any OTHER error is real and reaches the caller. Swallowing it would
+		// report an honest-looking receipt over a read that never ran, which is
+		// the shape a missing lane takes when nobody is told it is missing.
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return nil, nil
+		}
+		return nil, err
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }

@@ -10242,9 +10242,13 @@ paths:
         value. Counting it instead means the preview can never imply completeness it does
         not have.
 
-        Cursor-paginated with a bounded `limit`, over a deterministic
-        `occurred_at, id` order, so the five-line preview on the morning page is a page
-        rather than a sample.
+        Bounded by `limit`, over a deterministic `occurred_at, id` order, and the
+        totals are counted over the WINDOW rather than over the page — so a preview
+        drawing five lines can say "5 of 23" without implying it holds everything.
+
+        Not cursor-paginated yet. The window and the bound are what keep the read
+        honest today; a cursor arrives with the lane that needs one, rather than being
+        declared and ignored.
       parameters:
         - name: since
           in: query
@@ -10256,10 +10260,6 @@ paths:
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
-        - name: cursor
-          in: query
-          schema: { type: string }
-          description: The `next_cursor` of a previous page.
       x-agent-access: human-only
       responses:
         '200':
@@ -40417,8 +40417,6 @@ components:
           items: { $ref: '#/components/schemas/MagicLine' }
         totals:
           $ref: '#/components/schemas/MagicTotals'
-        page:
-          $ref: '#/components/schemas/PageInfo'
         not_shown:
           type: array
           items: { $ref: '#/components/schemas/MagicNotShown' }
