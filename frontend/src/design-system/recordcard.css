@@ -1,0 +1,102 @@
+/* RecordCard — a listed record: its mark and name, what it is here, and the
+   handles a reader can act on. */
+
+/* Two columns: the record's own side, and the track the surface's aside
+   keeps. Separate tracks rather than one flex row, so a long name ellipsises
+   before it reaches the aside instead of sliding under it.
+
+   The facts sit under the mark, not indented under the name: an indent would
+   have to name the mark's own width from another sheet, and a magnitude
+   copied between sheets is the drift the token ladders exist to stop. */
+.record-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--paneEdge);
+  border-radius: var(--r-control);
+  background: var(--bgCard);
+}
+
+/* The mark and the name are ONE target. No hover on the card itself: it is a
+   container and not a control, and a card that lights under the pointer
+   promises a press that does nothing where the reader aimed. */
+.record-card-open {
+  grid-column: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--textPrimary);
+  text-decoration: none;
+}
+
+a.record-card-open:hover .record-card-name {
+  text-decoration: underline;
+}
+
+a.record-card-open:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+.record-card-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+}
+
+/* Across BOTH tracks: the aside sits on the first row only, and a facts row
+   held to the first column would be shortened by a badge it never shares a
+   line with — an address ellipsising a third of the way from the card's own
+   edge, for no reason a reader can see. */
+.record-card-facts {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.record-card-position {
+  margin: 0;
+  color: var(--textMeta);
+  font-size: var(--fs-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record-card-handles {
+  margin: 0;
+  font-size: var(--fs-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Its own track on the first row, beside the name rather than under it. */
+.record-card-aside {
+  grid-column: 2;
+  grid-row: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* A list of them. The gap is the card's own edge doing the separating, so no
+   rule between rows — two borders a token apart read as a table someone drew
+   badly rather than as a stack of cards. */
+.record-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

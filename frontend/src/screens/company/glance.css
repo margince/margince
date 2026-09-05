@@ -115,37 +115,11 @@
   margin-top: var(--space-3);
 }
 
-/* People as chips: a face and a name, wrapping, with the remainder as one
-   more chip. A chip is a pill on the card ground, not a row — three names
-   are a glance, not a roster. */
-.co-people-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.co-person-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-block-size: 30px;
-  padding: 0 var(--space-3) 0 var(--space-1);
-  border: 1px solid var(--paneEdge);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgCard);
-  color: var(--textPrimary);
-  font-size: var(--fs-sm);
-  text-decoration: none;
-}
-a.co-person-chip:hover {
-  background: var(--bgHover);
-}
-.co-person-more {
-  padding-inline-start: var(--space-3);
-  color: var(--textMeta);
+/* The remainder line under the cards: how many people the glance did not
+   draw. Not a card and not a chip — it names no record, so it reads as the
+   caption it is. */
+.co-people-rest {
+  padding-inline-start: var(--space-2);
 }
 
 /* Ask as prepared questions: each one a full-width row on the recessed
