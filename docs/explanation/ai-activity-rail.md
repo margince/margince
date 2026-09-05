@@ -45,7 +45,7 @@ adds and nobody answers fails the build. Three answers:
 | Owner | What it means | What it can say |
 |---|---|---|
 | `SourceRouter` (`ai_router`) | The default. The router announces on the task's behalf, so a task is wired before its author has thought about the rail. | It learns of a call only once the call is over — plus a `running` line announced just before the call. Never `queued`. |
-| A **carrier** (`agent_runner`, `attachment_extraction`) | Work that owns a durable row reports for itself. | `queued`, `running`, and — because a carrier declares a lease — a dead attempt that can be derived as `stalled`. |
+| A **carrier** (`agent_runner`, `attachment_extraction`, `site_read`) | Work that owns a durable row reports for itself. | `queued`, `running`, and — because a carrier declares a lease — a dead attempt that can be derived as `stalled`. |
 | `SourceNoOccurrence` (`none`) | The work is a STEP inside somebody else's occurrence, not an occurrence of its own. | Nothing of its own; it is reported under the unit of work it serves. |
 
 `SourceNoOccurrence` is **not** an exemption from reporting, and every use owes a
@@ -58,6 +58,17 @@ decides what to draw.
 
 Where a carrier exists it is the better reporter and **the router stays silent**,
 so the two never write one occurrence between them.
+
+The website read is the one carrier that is not a task. A deep read
+(`people/sitereadactivity.go`, `source=site_read`, kind `site_read`) is a crawl of
+up to a dozen pages and several model calls, and the router announces each of
+those calls under its own task (`site_triage`, `site_extract`,
+`site_fact_extract`) — settled lines, because the router learns of a call once it
+is over. The dossier row is what can say `queued` when a person presses "read the
+site" and `running` while the crawl is in flight, so the dossier announces
+itself, one occurrence per read, keyed on its own id. The two grains do not
+collide: they are different sources with different keys, and the rail draws the
+read's line while leaving the per-call lines undisplayed.
 
 ## Who an occurrence belongs to
 

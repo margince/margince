@@ -580,6 +580,7 @@ const (
 	AiActivityKindSignalExtract                 AiActivityKind = "signal_extract"
 	AiActivityKindSiteExtract                   AiActivityKind = "site_extract"
 	AiActivityKindSiteFactExtract               AiActivityKind = "site_fact_extract"
+	AiActivityKindSiteRead                      AiActivityKind = "site_read"
 	AiActivityKindSiteTriage                    AiActivityKind = "site_triage"
 	AiActivityKindSummarize                     AiActivityKind = "summarize"
 	AiActivityKindTranscript                    AiActivityKind = "transcript"
@@ -634,6 +635,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindSiteExtract:
 		return true
 	case AiActivityKindSiteFactExtract:
+		return true
+	case AiActivityKindSiteRead:
 		return true
 	case AiActivityKindSiteTriage:
 		return true
@@ -15843,34 +15846,34 @@ func (e GetWorklistParamsScope) Valid() bool {
 
 // Defines values for GetWorklistParamsFilter.
 const (
-	GetWorklistParamsFilterAll             GetWorklistParamsFilter = "all"
-	GetWorklistParamsFilterCustomerWaiting GetWorklistParamsFilter = "customer_waiting"
-	GetWorklistParamsFilterDealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
-	GetWorklistParamsFilterDecisions       GetWorklistParamsFilter = "decisions"
-	GetWorklistParamsFilterLeads           GetWorklistParamsFilter = "leads"
-	GetWorklistParamsFilterMeetings        GetWorklistParamsFilter = "meetings"
-	GetWorklistParamsFilterSystem          GetWorklistParamsFilter = "system"
-	GetWorklistParamsFilterTasks           GetWorklistParamsFilter = "tasks"
+	All             GetWorklistParamsFilter = "all"
+	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
+	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
+	Decisions       GetWorklistParamsFilter = "decisions"
+	Leads           GetWorklistParamsFilter = "leads"
+	Meetings        GetWorklistParamsFilter = "meetings"
+	System          GetWorklistParamsFilter = "system"
+	Tasks           GetWorklistParamsFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
 func (e GetWorklistParamsFilter) Valid() bool {
 	switch e {
-	case GetWorklistParamsFilterAll:
+	case All:
 		return true
-	case GetWorklistParamsFilterCustomerWaiting:
+	case CustomerWaiting:
 		return true
-	case GetWorklistParamsFilterDealsAtRisk:
+	case DealsAtRisk:
 		return true
-	case GetWorklistParamsFilterDecisions:
+	case Decisions:
 		return true
-	case GetWorklistParamsFilterLeads:
+	case Leads:
 		return true
-	case GetWorklistParamsFilterMeetings:
+	case Meetings:
 		return true
-	case GetWorklistParamsFilterSystem:
+	case System:
 		return true
-	case GetWorklistParamsFilterTasks:
+	case Tasks:
 		return true
 	default:
 		return false
@@ -16341,9 +16344,11 @@ type AiActivityItem struct {
 	// What a reader is SHOWN is a separate decision and belongs to the client: a complete
 	// record is the server's obligation, an edited one is the interface's.
 	//
-	// Three names come from a durable carrier that owns its own occurrence and can say
-	// queued and running: the two scheduled kinds match a name in runner.Catalog(), and
-	// `document_extract` is a reading of an attached document a human asked for. Every other
+	// Four names come from a durable carrier that owns its own occurrence and can say
+	// queued and running: the two scheduled kinds match a name in runner.Catalog(),
+	// `document_extract` is a reading of an attached document a human asked for, and
+	// `site_read` is a deep read of a company's website — one occurrence for the whole crawl,
+	// where the site tasks below are the individual model calls it makes. Every other
 	// name is an api/ai-tasks.yaml task announced by the router on the task's own behalf —
 	// settled when it appears, because the router learns of a call once the call is over.
 	//
@@ -16398,9 +16403,11 @@ type AiActivityItemState string
 // What a reader is SHOWN is a separate decision and belongs to the client: a complete
 // record is the server's obligation, an edited one is the interface's.
 //
-// Three names come from a durable carrier that owns its own occurrence and can say
-// queued and running: the two scheduled kinds match a name in runner.Catalog(), and
-// `document_extract` is a reading of an attached document a human asked for. Every other
+// Four names come from a durable carrier that owns its own occurrence and can say
+// queued and running: the two scheduled kinds match a name in runner.Catalog(),
+// `document_extract` is a reading of an attached document a human asked for, and
+// `site_read` is a deep read of a company's website — one occurrence for the whole crawl,
+// where the site tasks below are the individual model calls it makes. Every other
 // name is an api/ai-tasks.yaml task announced by the router on the task's own behalf —
 // settled when it appears, because the router learns of a call once the call is over.
 //
