@@ -2675,10 +2675,11 @@ export const vi = {
   "home.readings.decisionsBasis":
     "có người phải chờ bạn trả lời mới đi tiếp được",
   "home.readings.pipeline": "Toàn cảnh pipeline",
-  "home.readings.pipelineWorkspace": "Toàn cảnh pipeline · toàn bộ workspace",
+  "home.readings.pipelineWorkspace": "Toàn cảnh pipeline · toàn bộ tổ chức",
   "home.readings.pipelineBasis":
     "{weighted} theo trọng số · {priced} trên {eligible} đã định giá",
   "home.readings.pipelineUnread": "không đọc được pipeline",
+  "home.readings.pipelineReading": "đang đọc pipeline",
   "home.readings.openLane": "Mở những mục này",
   "home.readings.meetings": "Cuộc họp hôm nay",
   "home.readings.meetingsBasis": "trong lịch hôm nay",

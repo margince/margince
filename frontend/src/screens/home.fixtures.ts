@@ -488,13 +488,23 @@ export function readingsDay(
   readings: Partial<Readings> = {},
   queue: WorklistItem[] = [meetingRow("m1", false), meetingRow("m2", true)],
   counts: WorklistCount[] = [wholeMeetings(queue.length)],
+  // The summary is overridable because the strip's first reading comes from it
+  // rather than from `readings`: a fixture that pinned it at zero could only
+  // ever exercise the empty case of the card a rep reads first.
+  summary: Partial<Worklist["summary"]> = {},
 ): Worklist {
   return {
     as_of: "2026-08-31T06:42:00Z",
     scope: "mine",
     scope_options: ["mine"],
     queue,
-    summary: { urgent: 0, due: 0, lower_priority: 0, total: queue.length },
+    summary: {
+      urgent: 0,
+      due: 0,
+      lower_priority: 0,
+      total: queue.length,
+      ...summary,
+    },
     sources_unavailable: [],
     reach: [],
     counts,

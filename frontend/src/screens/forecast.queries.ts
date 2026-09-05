@@ -21,11 +21,23 @@ export type ForecastReadings = components["schemas"]["ForecastReadings"];
  *
  * The population is part of the key: without it a scope change would show the
  * previous population's numbers under the new one's name.
+ *
+ * `undefined` is a real argument and means the reader's own default, which only
+ * the server can name — `useAnalyticsContext` answers it as `default_scope`.
+ * The query does not run until it arrives, because a read sent without it would
+ * ask a different question and land under a different key.
  */
-export function useForecastReadings(scope: AnalyticsScope) {
+export function useForecastReadings(scope: AnalyticsScope | undefined) {
   return useQuery({
-    queryKey: ["forecast", scopeKey(scope)],
+    queryKey: ["forecast", scope ? scopeKey(scope) : "unresolved"],
     queryFn: async () => {
+      if (!scope) {
+        // Unreachable: `enabled` holds the query until the scope is known. The
+        // throw is here because a queryFn must return a value, and returning a
+        // shaped nothing would put an empty pipeline in the cache under a key a
+        // later read would hit.
+        throw new Error("the forecast scope is not resolved yet");
+      }
       const { data, error } = await api.GET("/forecast", {
         params: { query: scopeQuery(scope) },
       });
@@ -34,5 +46,6 @@ export function useForecastReadings(scope: AnalyticsScope) {
       }
       return data;
     },
+    enabled: scope !== undefined,
   });
 }

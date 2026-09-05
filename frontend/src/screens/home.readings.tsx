@@ -6,6 +6,7 @@ import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import {
   formatDateTime,
+  formatMoneyCompact,
   formatMoneyOrAbsent,
   formatNumber,
 } from "../format/format";
@@ -17,6 +18,7 @@ import {
   usePlural,
   useT,
 } from "../i18n";
+import { useAnalyticsContext } from "./analytics.context";
 import { useForecastReadings } from "./forecast.queries";
 import { WORKLIST_FILTER_PARAM } from "./worklist";
 import { isUnprepared } from "./worklist.copy";
@@ -283,12 +285,6 @@ function replyDueAt(item: WorklistItem): string | undefined {
 // would be `StatCard` with its own props spelled twice — a rename, not a shared
 // answer. The primitive they genuinely share is `StatCard`, and both use it.
 
-// A slot whose question the product cannot answer yet.
-//
-// It draws an em dash and says why underneath. A zero here would be a false
-// answer — "you owe nobody a promise" is a claim, and nothing in the estate has
-// standing to make it.
-
 // The meetings reading: how many stand behind the day, and how many of those
 // nothing is prepared for — or that the second question could not be answered.
 //
@@ -340,25 +336,34 @@ function meetingsReading(day: Worklist): {
 function PipelineOutlook() {
   const t = useT();
   const { locale } = useLocale();
-  // The reader's OWN pipeline, through an UNNAMED scope.
+  // The reader's OWN pipeline, under the scope the SERVER names for them.
   //
-  // Unnamed rather than `owner` with the reader's id, because the server already
-  // answers this and the client does not hold the lens that decides it.
-  // compose/forecastseam.go resolves an unset scope against the caller's own
-  // lens — its comment says "a rep's own records" — and forecasting/store.go's
-  // ScopeUnset says the same from the other side. Naming a scope here would be
-  // a second answer to "whose forecast".
+  // `/analytics/context` answers `default_scope`, which is what Analytics starts
+  // from too: a rep's own records, a manager's managed teams, the workspace for
+  // a reader whose lens reaches it. Asking for it here is what makes the shared
+  // key true rather than merely claimed — an earlier version spelled the
+  // omission as a client-built `managed_teams` scope, which keyed as
+  // "managed_teams" while Analytics keyed the same rep's read as "owner:<id>",
+  // so the two surfaces held two cache entries for one identical request.
   //
-  // crm.yaml's `scope_kind` carries `default: workspace`, which describes the
-  // PARAMETER and not the omission: the handler treats an absent scope_kind as
-  // unset rather than as workspace, and the seam resolves it. The answer says
-  // which population it measured, and the card reads that back rather than
-  // trusting either document — a workspace figure under a heading that says
-  // "your morning" is the one way this card can be wrong without looking it.
-  const readings = useForecastReadings({ kind: "managed_teams", label: "" });
+  // It also stops the client constructing a scope it has no standing to name.
+  // `managed_teams` is documented as a server ANSWER, never a request, and
+  // building one meant filling its required `label` with an empty string —
+  // a placeholder where the code had nothing true to put.
+  const context = useAnalyticsContext();
+  const readings = useForecastReadings(context.data?.default_scope);
 
   if (readings.isPending) {
-    return <StatCard label={t("home.readings.pipeline")} value="…" />;
+    // KEEPS THE ROW'S SHAPE: a detail line, like every slot beside it. A card
+    // one line shorter reflows the whole strip when the read lands, which is the
+    // opposite of the property this plate's fixed slot count defends.
+    return (
+      <StatCard
+        label={t("home.readings.pipeline")}
+        value="—"
+        detail={t("home.readings.pipelineReading")}
+      />
+    );
   }
   if (readings.isError || !readings.data) {
     // A read that did not land is not a pipeline of nothing. The em dash says
@@ -380,7 +385,10 @@ function PipelineOutlook() {
           ? t("home.readings.pipelineWorkspace")
           : t("home.readings.pipeline")
       }
-      value={formatMoneyOrAbsent(data.open_minor, data.base_currency, locale)}
+      // formatMoneyCompact, not the full amount: its own doc says a strip slot
+      // has about 110px and a full euro figure wraps mid-number or clips. Every
+      // other money StatCard in the tree uses it.
+      value={formatMoneyCompact(data.open_minor, data.base_currency, locale)}
       // The weighted figure and the completeness in one line, because they are
       // read together: a weighted number over a partly priced population is a
       // floor, and a reader who cannot see the second cannot judge the first.

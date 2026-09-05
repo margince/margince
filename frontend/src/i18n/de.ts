@@ -2699,10 +2699,11 @@ export const de = {
   "home.readings.decisionsBasis":
     "jemand kommt erst weiter, wenn du antwortest",
   "home.readings.pipeline": "Pipeline",
-  "home.readings.pipelineWorkspace": "Pipeline · gesamter Workspace",
+  "home.readings.pipelineWorkspace": "Pipeline · gesamte Organisation",
   "home.readings.pipelineBasis":
     "{weighted} gewichtet · {priced} von {eligible} bewertet",
   "home.readings.pipelineUnread": "die Pipeline war nicht lesbar",
+  "home.readings.pipelineReading": "Pipeline wird gelesen",
   "home.readings.openLane": "Diese öffnen",
   "home.readings.meetings": "Termine heute",
   "home.readings.meetingsBasis": "im heutigen Kalender",

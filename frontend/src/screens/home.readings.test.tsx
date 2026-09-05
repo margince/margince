@@ -17,13 +17,14 @@ import {
 import { HomeReadingsStrip } from "./home.readings";
 
 // The Brief's readings strip, and the one claim it makes that the Worklist's
-// own strip does not: the row is FIVE slots on every morning, including the two
-// whose questions the product cannot answer yet.
+// own strip does not: the row is FIVE slots on every morning, quiet or busy, so
+// yesterday's five is never compared against today's four.
 //
-// The interesting cases are all about what the strip refuses to say. A zero
-// under "Promises due" would tell a reader they owe nobody anything, which
-// nothing in the estate has standing to claim; a four-slot row on a quiet day
-// would let yesterday's five be compared against today's four.
+// Every one of the five now answers something. Two of them used to draw an em
+// dash forever — promises, because the commitments lane is unwired, and quota
+// pace, because targets were retired from the product — and the interesting
+// cases are what replaced them: a pipeline figure that must never read as a
+// target, and must say whose pipeline it measured.
 
 function draw(...args: Parameters<typeof readingsDay>) {
   // A QueryClient, because the pipeline reading is a read of its own: it is the
@@ -41,9 +42,9 @@ function draw(...args: Parameters<typeof readingsDay>) {
   );
 }
 
-// Four READINGS, not four DOM children: a strip that wrapped its slots in a
+// Five READINGS, not five DOM children: a strip that wrapped its slots in a
 // container would satisfy a child count while drawing one card, and a strip of
-// four empty boxes would satisfy it while drawing none.
+// five empty boxes would satisfy it while drawing none.
 function labels(): string[] {
   return [...screen.getByTestId("home-readings").querySelectorAll(".stat-card")]
     .map((card) => card.querySelector(".stat-card-label")?.textContent ?? "")
@@ -58,6 +59,33 @@ function meetingsCard(): HTMLElement {
     throw new Error("the meetings reading is not on the page");
   }
   return card;
+}
+
+/**
+ * The two reads the pipeline card makes: the scope the server names for this
+ * reader, and the forecast under it.
+ *
+ * Both, because the card holds its read until the scope arrives — a stub that
+ * answered only the forecast would leave the query disabled and the test would
+ * assert against a pending card forever.
+ */
+function stubPipeline(forecast: () => Response) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes("/analytics/context")) {
+        return new Response(
+          JSON.stringify({
+            default_scope: { kind: "owner", id: "u-1", label: "Lena" },
+            scopes: [],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return forecast();
+    }),
+  );
 }
 
 afterEach(() => {
@@ -77,19 +105,38 @@ describe("the brief readings strip", () => {
     expect(screen.getByText(en["home.readings.decisions"])).toBeTruthy();
   });
 
-  // The two slots that are gone were permanent apologies: promises, because the
-  // commitments lane is unwired, and quota pace, because targets were retired
-  // from the product. A slot that will never fill is not a pending answer, and
-  // drawing it forever teaches a reader to skip the row.
-  it("draws no slot for a question the product decided not to ask", () => {
+  // The property that can actually regress: on a fully answered morning, no slot
+  // draws an em dash. The strings of the retired slots are gone from all three
+  // catalogs, so asserting THOSE are absent is an assertion nothing in the tree
+  // can fail — a test that cannot go red is not a guard.
+  it("draws no unanswered slot on a morning every read landed on", async () => {
+    stubPipeline(
+      () =>
+        new Response(
+          JSON.stringify({
+            period_start: "2026-07-01",
+            period_end: "2026-09-30",
+            scope_kind: "owner",
+            open_minor: 42_000_000,
+            weighted_minor: 16_800_000,
+            best_case_minor: 0,
+            evidence_minor: 0,
+            eligible_count: 12,
+            priced_count: 12,
+            confirmed_date_count: 8,
+            fx_missing_count: 0,
+            as_of: "2026-09-03T06:42:00Z",
+            base_currency: "EUR",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+    );
     draw();
 
-    expect(screen.queryByText(/Promises due/)).toBeNull();
-    expect(screen.queryByText(/Quota pace/)).toBeNull();
+    await screen.findByText(/420k|420,000/);
+    expect(screen.queryAllByText("—")).toHaveLength(0);
   });
 
-  // The whole reason the slots are fixed. A row that shrank on a quiet day
-  // would be compared against a fuller one and read as fewer questions asked.
   it("still draws five slots when nothing is waiting", () => {
     draw({ buyer_replies: 0, prospecting: 0 }, []);
 
@@ -164,15 +211,12 @@ describe("the brief readings strip", () => {
   // stays pending forever, and a test asserting the failure copy over a pending
   // card would pass on a card that never resolves either way.
   it("says the pipeline went unread rather than drawing a nought", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ title: "Server Error" }), {
-            status: 500,
-            headers: { "content-type": "application/problem+json" },
-          }),
-      ),
+    stubPipeline(
+      () =>
+        new Response(JSON.stringify({ title: "Server Error" }), {
+          status: 500,
+          headers: { "content-type": "application/problem+json" },
+        }),
     );
     draw();
 
@@ -194,33 +238,33 @@ describe("the brief readings strip", () => {
   // never say on track, attainment or gap — it would be inventing the thing
   // that was removed.
   it("draws the open pipeline with its weighted figure beside it", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(
-            JSON.stringify({
-              period_start: "2026-07-01",
-              period_end: "2026-09-30",
-              scope_kind: "owner",
-              open_minor: 42_000_000,
-              weighted_minor: 16_800_000,
-              best_case_minor: 0,
-              evidence_minor: 0,
-              eligible_count: 12,
-              priced_count: 11,
-              confirmed_date_count: 8,
-              fx_missing_count: 0,
-              as_of: "2026-09-03T06:42:00Z",
-              base_currency: "EUR",
-            }),
-            { status: 200, headers: { "content-type": "application/json" } },
-          ),
-      ),
+    stubPipeline(
+      () =>
+        new Response(
+          JSON.stringify({
+            period_start: "2026-07-01",
+            period_end: "2026-09-30",
+            scope_kind: "owner",
+            open_minor: 42_000_000,
+            weighted_minor: 16_800_000,
+            best_case_minor: 0,
+            evidence_minor: 0,
+            eligible_count: 12,
+            priced_count: 11,
+            confirmed_date_count: 8,
+            fx_missing_count: 0,
+            as_of: "2026-09-03T06:42:00Z",
+            base_currency: "EUR",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
     );
     draw();
 
-    expect(await screen.findByText(/420,000/)).toBeTruthy();
+    // COMPACT for the headline figure — the slot is ~110px and a full euro
+    // amount wraps mid-number. The weighted figure keeps its exact form on the
+    // detail line, where there is room for it.
+    expect(await screen.findByText(/420k/)).toBeTruthy();
     // The weighted figure and the priced-of-eligible completeness ride the same
     // line: a weighted number over a partly priced population is a floor, and a
     // reader who cannot see the second cannot judge the first.
@@ -239,35 +283,57 @@ describe("the brief readings strip", () => {
   //
   // So the card reads the answer's own `scope_kind` back and says so.
   it("says when the pipeline it drew is the whole workspace, not the reader's", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(
-            JSON.stringify({
-              period_start: "2026-07-01",
-              period_end: "2026-09-30",
-              scope_kind: "workspace",
-              open_minor: 42_000_000,
-              weighted_minor: 16_800_000,
-              best_case_minor: 0,
-              evidence_minor: 0,
-              eligible_count: 12,
-              priced_count: 12,
-              confirmed_date_count: 8,
-              fx_missing_count: 0,
-              as_of: "2026-09-03T06:42:00Z",
-              base_currency: "EUR",
-            }),
-            { status: 200, headers: { "content-type": "application/json" } },
-          ),
-      ),
+    stubPipeline(
+      () =>
+        new Response(
+          JSON.stringify({
+            period_start: "2026-07-01",
+            period_end: "2026-09-30",
+            scope_kind: "workspace",
+            open_minor: 42_000_000,
+            weighted_minor: 16_800_000,
+            best_case_minor: 0,
+            evidence_minor: 0,
+            eligible_count: 12,
+            priced_count: 12,
+            confirmed_date_count: 8,
+            fx_missing_count: 0,
+            as_of: "2026-09-03T06:42:00Z",
+            base_currency: "EUR",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
     );
     draw();
 
     expect(
       await screen.findByText(en["home.readings.pipelineWorkspace"]),
     ).toBeTruthy();
+  });
+
+  // The first card a rep reads, at a REAL figure.
+  //
+  // It moved from one lane's count (`readings.buyer_replies`) to the summary's
+  // own `urgent`, which is every row at the top two levels — somebody waiting or
+  // a promise breaking. Every other test on this plate runs against a fixture
+  // pinning `urgent: 0`, so the change was only ever exercised at zero and any
+  // other zero-valued field would have satisfied them.
+  it("counts every urgent row, not one lane's share of them", () => {
+    // Four urgent, while the lane counts beside them say something else: a card
+    // still reading buyer_replies would draw 3.
+    draw({ buyer_replies: 3 }, undefined, undefined, { urgent: 4 });
+
+    const card = screen
+      .getByText(en["home.readings.urgent"])
+      .closest(".stat-card");
+    if (!(card instanceof HTMLElement)) {
+      throw new Error("the urgent reading is not on the page");
+    }
+    expect(card.textContent).toContain("4");
+    // And it WARNS, because somebody is waiting. A figure drawn plain would say
+    // the morning is calm while four rows say it is not. The tone lands on the
+    // value rather than the card, which is where StatCard puts it.
+    expect(card.querySelector(".stat-card-warn")).toBeTruthy();
   });
 
   // The caveat belongs under the whole strip, the way the Worklist's strip

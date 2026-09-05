@@ -2761,10 +2761,11 @@ export const en = {
   "home.readings.decisions": "Decisions waiting",
   "home.readings.decisionsBasis": "somebody is blocked until you answer",
   "home.readings.pipeline": "Pipeline outlook",
-  "home.readings.pipelineWorkspace": "Pipeline outlook · whole workspace",
+  "home.readings.pipelineWorkspace": "Pipeline outlook · whole organization",
   "home.readings.pipelineBasis":
     "{weighted} weighted · {priced} of {eligible} priced",
   "home.readings.pipelineUnread": "the pipeline could not be read",
+  "home.readings.pipelineReading": "reading the pipeline",
   "home.readings.openLane": "Open these",
   "home.readings.meetings": "Meetings ahead",
   "home.readings.meetingsBasis": "on today's calendar",
