@@ -417,3 +417,30 @@ export const APrivacyRequestOnItsClock: Story = {
     return <WorklistRow {...args} />;
   },
 };
+
+/**
+ * A meeting that happened, and nobody has said how it went.
+ *
+ * The counterpart of the row above, and the differences are the point. There is
+ * no `due_at`: the meeting already began, so it cannot be late, and a deadline
+ * would draw an overdue mark on a row whose whole point is that it is over.
+ * `occurred_at` carries when it started instead, so the row reads as a debt
+ * that has been growing rather than a countdown.
+ */
+export const AMeetingWithNoOutcomeRecorded: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "m2",
+      source: "meeting_outcome",
+      category: "meetings",
+      level: 1,
+      consequence: "data_drifts",
+      title: "Quarterly review with Turbinenbau",
+      occurred_at: "2026-09-02T09:00:00Z",
+      because: [{ kind: "outcome_unrecorded" }],
+      actions: [],
+      subject: { type: "activity", id: "11111111-1111-7111-8111-111111111111" },
+    },
+  },
+};

@@ -41,6 +41,15 @@ func WithZone(z Zone) Option {
 	return func(s *Service) { s.zone = z }
 }
 
+// WithMeetingsAwaitingOutcome binds the lane of meetings that already happened.
+//
+// An Option rather than a twentieth constructor argument, for the reason above:
+// unbound means the feed does not carry the lane, which the response reports as
+// absent rather than as a day with nothing left to close off.
+func WithMeetingsAwaitingOutcome(m MeetingsAwaitingOutcome) Option {
+	return func(s *Service) { s.meetingsAwaitingOutcome = m }
+}
+
 // endOfDay is the boundary every due-dated lane stops at, so a promise, a task
 // and a meeting falling on the same afternoon are judged against one instant.
 //

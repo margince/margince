@@ -29418,6 +29418,22 @@ export interface components {
              */
             meetings?: components["schemas"]["AttentionItem"][];
             /**
+             * @description Today's meetings that have already started and whose result nobody has
+             *     recorded, longest unanswered first. The counterpart of `meetings`: that lane
+             *     is what to prepare for, this is what to close off.
+             *
+             *     A meeting carrying no status at all is here. A captured calendar event
+             *     arrives without one, so treating an absent status as settled would empty this
+             *     lane on exactly the installations whose calendars are connected.
+             *
+             *     `occurred_at` is when it began, and there is no `due_at`: a meeting that
+             *     happened cannot be late, and a deadline would put an overdue mark on a row
+             *     whose whole point is that the meeting is over.
+             *
+             *     Absent — not empty — on an installation whose feed does not read meetings.
+             */
+            meetings_unreported?: components["schemas"]["AttentionItem"][];
+            /**
              * @description Open deals going quiet, or whose expected close date has already passed — the
              *     ones most likely to be lost by inattention rather than by a decision.
              *
@@ -29617,7 +29633,7 @@ export interface components {
              */
             introductions?: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounces" | "undelivered" | "automation_health" | "notices" | "introductions")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounces" | "undelivered" | "automation_health" | "notices" | "introductions" | "meetings_unreported")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -29640,6 +29656,8 @@ export interface components {
             duplicates_open?: number;
             /** @description How many of today's meetings are still ahead — the bounded page, as the other lanes report. */
             meetings?: number;
+            /** @description How many of today's meetings have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear. */
+            meetings_unreported?: number;
             /** @description How many at-risk deals this lane is CARRYING, the bounded page rather than every deal at risk — the same bound the other lanes report under. */
             at_risk?: number;
             /** @description How many promises are due by the end of the installation's day — EVERY one this caller may see, not the bounded page below it, the same reading `planned` carries. A rep past the bound sees the soonest-due ones, which is the order the lane is in. */
@@ -29680,7 +29698,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**
@@ -30065,7 +30083,7 @@ export interface components {
              * @description Which producer these numbers are about. The same vocabulary as an item source.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "batch";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
@@ -30752,7 +30770,7 @@ export interface components {
              *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "batch";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "batch";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
@@ -31190,7 +31208,7 @@ export interface components {
              * @description Which fact this is. The client writes the phrase.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing";
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "meeting_soon" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "outcome_unrecorded";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
