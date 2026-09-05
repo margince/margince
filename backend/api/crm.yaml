@@ -13229,6 +13229,58 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /people/{id}/consent/suppress:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Compliance]
+      operationId: suppressPerson
+      security: [ { cookieAuth: [] } ]   # human session only
+      # HUMAN-ONLY, and this one is a rule rather than a rollout position. The
+      # verb records that a PERSON asked us to stop, which is a thing somebody
+      # was told — on a call, in a reply, at a desk. An agent has no such
+      # occasion, and a model inferring "they sound annoyed" into a durable
+      # stop that outranks every grant is the shape this door must not have.
+      x-agent-access: human-only
+      summary: Record that this person asked us to stop writing to them.
+      description: |
+        Writes a suppression, which is NOT the absence of consent. It outranks a grant, it does
+        not expire on its own, and a later re-grant does not erase it — so a subject who asked us
+        to stop stays stopped until somebody with the authority to lift it says otherwise.
+
+        **Who may lift it is part of the record.** The row carries the authority of whoever wrote
+        it, taken from the session and never from this body. A rep's row is liftable by an admin
+        and not by another rep; nothing an installation can do lifts the subject's own Art. 21
+        objection, which is a different kind this door cannot write.
+
+        The only kind recordable here is `subject_request`. An objection and a processing
+        restriction carry legal consequences a relayed phone call does not establish, and a hard
+        bounce is a fact about a mailbox only the mail path observes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind]
+              properties:
+                kind:
+                  type: string
+                  enum: [subject_request]
+                  description: Which stop this is. Only the subject's own request is recordable by hand.
+                reason:
+                  type: string
+                  maxLength: 500
+                  description: |
+                    What the person was told, in their words. Stored because a suppression somebody
+                    later asks to lift is only reviewable if the record says why it was made.
+      responses:
+        '204': { description: Recorded. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /people/{id}/consent/double-opt-in:
     parameters:
       - $ref: '#/components/parameters/Id'
