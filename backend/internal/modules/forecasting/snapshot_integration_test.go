@@ -127,7 +127,6 @@ func mixedPopulation(t *testing.T) Readings {
 }
 
 func TestASnapshotWritesEveryContributionShapeTheTableAccepts(t *testing.T) {
-	t.Parallel()
 	e := setupSnapshot(t)
 	ctx := e.as()
 
@@ -193,7 +192,6 @@ func TestASnapshotWritesEveryContributionShapeTheTableAccepts(t *testing.T) {
 // repeatedly so a worker that was down still backfills, and without the
 // constraint that produces two snapshots and no error.
 func TestASecondDailySnapshotForTheSameDayIsRefused(t *testing.T) {
-	t.Parallel()
 	e := setupSnapshot(t)
 	ctx := e.as()
 
@@ -245,7 +243,6 @@ func TestASecondDailySnapshotForTheSameDayIsRefused(t *testing.T) {
 // waterfall is then a number describing no decision anybody made, and the
 // figures are large enough to look real.
 func TestAMovementAcrossTwoDifferentWindowsIsRefused(t *testing.T) {
-	t.Parallel()
 	e := setupSnapshot(t)
 	ctx := e.as()
 
