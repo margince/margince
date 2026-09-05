@@ -262,6 +262,18 @@ func (s *AutomationStore) Update(ctx context.Context, id ids.AutomationID, in Up
 		if in.IfVersion != nil && *in.IfVersion != before.Version {
 			return apperrors.ErrVersionSkew
 		}
+		if in.Enabled != nil && *in.Enabled {
+			owner, err := claimDraftStarter(ctx, tx, before)
+			if err != nil {
+				return err
+			}
+			if !owner.IsZero() {
+				if _, err := storekit.Audit(ctx, tx, "update", "automation", id.UUID,
+					map[string]string{keyOwnerID: ""}, map[string]string{keyOwnerID: owner.String()}); err != nil {
+					return err
+				}
+			}
+		}
 		if in.Params != nil {
 			entry, ok := CatalogEntryByKey(before.Key)
 			if !ok {
@@ -332,19 +344,9 @@ func (s *AutomationStore) Archive(ctx context.Context, id ids.AutomationID) erro
 	})
 }
 
-// SeedStarterAutomationsTx enrolls EXACTLY the SIX seeded starter
-// templates (Catalog()'s Seeded entries — UAT.md:72) for a fresh
-// workspace inside the bootstrap transaction — ENABLED, deliberately:
-// the contract's created-paused rule governs user-configured instances;
-// a system-seeded floor ("no lead sits unseen") that arrived paused
-// would silently not exist. The authorable-but-unseeded entries
-// (assign_lead_owner, stage_change_create_task) are reachable through
-// the API but never land here unasked. Default params run through the
-// SAME entry.Validate a human author's create call does — an empty
-// params blob is what every seeded template's own handler reader
-// already treats as "use my own default" (e.g. DueInDays,
-// noActivityDays), so this seeds honestly-validated rows, never a blob
-// bypassing the catalog's own gate.
+// SeedStarterAutomationsTx enables the system-owned starters at bootstrap.
+// A draft needs a person's authority, so its template stays paused until an
+// authorized person enables it and takes ownership.
 func SeedStarterAutomationsTx(ctx context.Context, tx pgx.Tx) error {
 	for _, entry := range Catalog() {
 		if !entry.Seeded {
@@ -363,8 +365,12 @@ func SeedStarterAutomationsTx(ctx context.Context, tx pgx.Tx) error {
 		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO automation (key, name, origin, trigger, action, params, enabled, tier)
-			VALUES ($1, $2, 'catalog', $3, $4, $5, true, $6)`,
-			entry.Key, entry.Name, triggerJSON, actionJSON, paramsJSON, entry.Tier); err != nil {
+			VALUES (@key, @name, 'catalog', @trigger, @action, @params, @enabled, @tier)`,
+			pgx.NamedArgs{
+				"key": entry.Key, "name": entry.Name, "trigger": triggerJSON,
+				"action": actionJSON, "params": paramsJSON, "tier": entry.Tier,
+				"enabled": entry.Action != string(ActionTypeDraftEmail),
+			}); err != nil {
 			return fmt.Errorf("seed automation %s: %w", entry.Key, err)
 		}
 	}

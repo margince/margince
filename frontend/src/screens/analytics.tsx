@@ -1,8 +1,10 @@
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate, useRoute } from "../app/router";
+import { useCan } from "../app/capability";
+import { ENTITY } from "../app/entity";
+import { navigate, routeHash, useRoute } from "../app/router";
 import {
   Button,
   Card,
@@ -42,6 +44,7 @@ import {
 } from "./common";
 import { dealsFilteredBy } from "./dealsaddress";
 import { EntityRef } from "./entityref";
+import { isProjectPhase, PHASE_LABEL } from "./projects.form";
 import "./analytics.css";
 
 // Analytics (B-EP09.12c, D-11): a picker over three reports — deals-by-stage
@@ -74,7 +77,10 @@ type ReportKey =
   | "forecast"
   | "open-deals-per-company"
   | "win-loss"
-  | "stage-age";
+  | "stage-age"
+  | "projects-by-phase"
+  | "project-commitments"
+  | "projects-gone-quiet";
 
 // A SECTION is what the address names and what the tabs choose between; a
 // REPORT is one result inside it. They were the same thing while every section
@@ -86,7 +92,8 @@ type Section =
   | "pipeline"
   | "performance"
   | "outcomes"
-  | "coverage";
+  | "coverage"
+  | "delivery";
 
 // Which results each section holds, in the order they are drawn. The tab strip
 // and the bodies both read this, so a section cannot come to list a report it
@@ -108,6 +115,8 @@ const SECTION_REPORTS = {
   outcomes: [],
   // Source health: an ops view over the nightly check's own coverage rows.
   coverage: [],
+  // What was sold becoming what is delivered: the three project reports.
+  delivery: ["projects-by-phase", "project-commitments", "projects-gone-quiet"],
 } as const satisfies Record<Section, readonly ReportKey[]>;
 
 const SECTIONS = Object.keys(SECTION_REPORTS) as readonly Section[];
@@ -130,6 +139,9 @@ const SECTION_OF_REPORT: Readonly<Record<string, Section>> = {
   "open-deals-per-company": "pipeline",
   "win-loss": "performance",
   "stage-age": "performance",
+  "projects-by-phase": "delivery",
+  "project-commitments": "delivery",
+  "projects-gone-quiet": "delivery",
 };
 
 export function sectionFromAddress(segment: string | undefined): Section {
@@ -186,6 +198,11 @@ const REPORT_GROUP_BY: Record<ReportKey, string[]> = {
   "open-deals-per-company": ["organization_id", FIELD_CURRENCY],
   "win-loss": ["status"],
   "stage-age": ["stage_id"],
+  // The specs' own defaults: an empty plan takes each report's declared
+  // grouping and aggregates, which for these three is the whole point.
+  "projects-by-phase": [],
+  "project-commitments": [],
+  "projects-gone-quiet": [],
 };
 
 // A report row arrives as `{ [key: string]: unknown }`, so every read narrows.
@@ -218,6 +235,9 @@ const REPORT_LABEL_KEY = {
   "open-deals-per-company": "analytics.reportOpenByCompany",
   "win-loss": "analytics.reportWinLoss",
   "stage-age": "analytics.reportStageAge",
+  "projects-by-phase": "analytics.reportProjectsByPhase",
+  "project-commitments": "analytics.reportProjectCommitments",
+  "projects-gone-quiet": "analytics.reportProjectsGoneQuiet",
 } as const satisfies Record<ReportKey, string>;
 
 // The line under a report's title, for the reports whose copy says something
@@ -261,6 +281,9 @@ const REPORT_AGGREGATES: Record<ReportKey, ReportAggregate[]> = {
     { fn: "median", field: "days_in_stage", as: "median_days" },
     { fn: "p75", field: "days_in_stage", as: "p75_days" },
   ],
+  "projects-by-phase": [],
+  "project-commitments": [],
+  "projects-gone-quiet": [],
 };
 
 // Parse a server-minted `derivation_url` into the typed derivation query.
@@ -686,6 +709,7 @@ const DERIVATION_HEADERS: Readonly<Record<string, MessageKey>> = {
   owner_id: "explain.col.owner",
   pipeline_id: "explain.col.pipeline",
   organization_id: "analytics.company",
+  partner_org_id: "analytics.company",
 };
 
 // A column the vocabulary knows gets its word; anything else keeps the wire
@@ -740,10 +764,23 @@ function renderDerivationCell(
   row: Record<string, unknown>,
   baseCurrency: string | null,
   locale: Locale,
-): string {
+): ReactNode {
   const value = row[col];
   if (value == null) {
     return "";
+  }
+  if (typeof value === "string" && value !== "") {
+    if (col === "pipeline_id")
+      return <DerivationPipelineName pipelineId={value} />;
+    if (col === "stage_id" && typeof row.pipeline_id === "string") {
+      return (
+        <DerivationPipelineName pipelineId={row.pipeline_id} stageId={value} />
+      );
+    }
+    if (col === "owner_id") return <EntityRef kind="user" id={value} />;
+    if (col === "organization_id" || col === "partner_org_id") {
+      return <EntityRef kind="organization" id={value} />;
+    }
   }
   if (col.endsWith("_minor") && typeof value === "number") {
     return formatMoneyOrAbsent(
@@ -753,6 +790,33 @@ function renderDerivationCell(
     );
   }
   return String(value);
+}
+
+function DerivationPipelineName({
+  pipelineId,
+  stageId,
+}: Readonly<{ pipelineId: string; stageId?: string }>) {
+  const t = useT();
+  const pipeline = useQuery({
+    queryKey: ["pipeline", pipelineId],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/pipelines/{id}", {
+        params: { path: { id: pipelineId } },
+      });
+      if (error) throwProblem(error);
+      return data;
+    },
+  });
+  if (pipeline.isPending) return <>{t("common.loading")}</>;
+  if (pipeline.isError) return <>{t("common.error")}</>;
+  return (
+    <>
+      {stageId
+        ? (pipeline.data?.stages?.find((stage) => stage.id === stageId)?.name ??
+          t("common.empty"))
+        : pipeline.data?.name}
+    </>
+  );
 }
 
 // The source rows the explained figure reconciles to. A section INSIDE the
@@ -1062,6 +1126,10 @@ function DataCoverageView({
 }: Readonly<{ locale: Locale; timezone: string }>) {
   const t = useT();
   const coverage = useDataCoverage();
+  const allowed = useCan("data_coverage", "read");
+  if (!allowed) {
+    return <EmptyState>{t("common.permissionDenied")}</EmptyState>;
+  }
   return (
     <QueryGate query={coverage} pendingLabel={t("analytics.sectionCoverage")}>
       {(run) =>
@@ -1113,7 +1181,9 @@ function DataCoverageView({
 type DataCoverageRow = components["schemas"]["DataCoverage"]["sources"][number];
 
 function useDataCoverage() {
+  const allowed = useCan("data_coverage", "read");
   return useQuery({
+    enabled: allowed,
     queryKey: ["analytics-coverage"],
     retry: false,
     queryFn: async () => {
@@ -1268,6 +1338,260 @@ function MyOutcomesView({
   );
 }
 
+type PhaseRow = {
+  phase: string;
+  projects: number;
+  openMinor: number | null;
+  wonMinor: number | null;
+};
+
+// Projects per phase, with the deal money standing behind each phase — both
+// server-converted sums; this file only formats them.
+function ProjectsByPhaseTable({
+  rows,
+  locale,
+  baseCurrency,
+}: Readonly<{
+  rows: ReportRow[];
+  locale: Locale;
+  baseCurrency: string | null;
+}>) {
+  const t = useT();
+  const phased: PhaseRow[] = rows
+    .filter((row) => typeof row.phase === "string")
+    .map((row) => ({
+      phase: String(row.phase),
+      projects: rowCount(row, "projects"),
+      openMinor: rowMoney(row, "open_deal_value_minor"),
+      wonMinor: rowMoney(row, "won_deal_value_minor"),
+    }));
+  if (phased.length === 0) {
+    return <EmptyState>{t("analytics.noProjectsYet")}</EmptyState>;
+  }
+  return (
+    <DataTable
+      label={t("analytics.reportProjectsByPhase")}
+      columns={[
+        {
+          key: "phase",
+          header: t("project.phaseLabel"),
+          render: (row: PhaseRow) => phaseLabel(row.phase, t),
+        },
+        {
+          key: "projects",
+          header: t("analytics.projects"),
+          render: (row: PhaseRow) => formatNumber(row.projects, locale),
+        },
+        {
+          key: "open",
+          header: t("analytics.openDealValue", {
+            currency: baseCurrency ?? "",
+          }),
+          render: (row: PhaseRow) =>
+            formatMoneyOrAbsent(row.openMinor, baseCurrency, locale),
+        },
+        {
+          key: "won",
+          header: t("analytics.wonDealValue", { currency: baseCurrency ?? "" }),
+          render: (row: PhaseRow) =>
+            formatMoneyOrAbsent(row.wonMinor, baseCurrency, locale),
+        },
+      ]}
+      rows={phased}
+      rowKey={(row) => row.phase}
+    />
+  );
+}
+
+type ProjectListRow = {
+  projectId: string;
+  name: string;
+  phase: string;
+  overdue: number;
+  open: number;
+};
+
+function projectHref(projectId: string): string {
+  // The entity registry owns the route; a hand-written copy goes stale
+  // silently, which is the registry's own stated reason to exist.
+  return routeHash(ENTITY.project.route(projectId));
+}
+
+// A phase spelled to a human, the one way the Projects screen spells it.
+function phaseLabel(phase: string, t: ReturnType<typeof useT>): string {
+  return isProjectPhase(phase) ? t(PHASE_LABEL[phase]) : phase;
+}
+
+// Each project's promises: how many stand open, how many are already late.
+function ProjectCommitmentsTable({
+  rows,
+  locale,
+}: Readonly<{ rows: ReportRow[]; locale: Locale }>) {
+  const t = useT();
+  const listed: ProjectListRow[] = rows
+    .filter((row) => typeof row.project_id === "string")
+    .map((row) => ({
+      projectId: String(row.project_id),
+      name: typeof row.name === "string" ? row.name : "",
+      phase: typeof row.phase === "string" ? row.phase : "",
+      overdue: rowCount(row, "overdue_commitments"),
+      open: rowCount(row, "open_commitments"),
+    }));
+  if (listed.length === 0) {
+    return <EmptyState>{t("analytics.noProjectsYet")}</EmptyState>;
+  }
+  return (
+    <DataTable
+      label={t("analytics.reportProjectCommitments")}
+      columns={[
+        {
+          key: "project",
+          header: t("analytics.project"),
+          render: (row: ProjectListRow) => (
+            <a className="link-button" href={projectHref(row.projectId)}>
+              {row.name}
+            </a>
+          ),
+        },
+        {
+          key: "phase",
+          header: t("project.phaseLabel"),
+          render: (row: ProjectListRow) => phaseLabel(row.phase, t),
+        },
+        {
+          key: "open",
+          header: t("analytics.openCommitments"),
+          render: (row: ProjectListRow) => formatNumber(row.open, locale),
+        },
+        {
+          key: "overdue",
+          header: t("analytics.overdueCommitments"),
+          render: (row: ProjectListRow) => formatNumber(row.overdue, locale),
+        },
+      ]}
+      rows={listed}
+      rowKey={(row) => row.projectId}
+    />
+  );
+}
+
+// Delivering projects nobody has spoken into lately, oldest silence first on
+// the server's own ordering.
+function ProjectsGoneQuietTable({
+  rows,
+  locale,
+  timezone,
+}: Readonly<{ rows: ReportRow[]; locale: Locale; timezone: string | null }>) {
+  const t = useT();
+  const listed = rows
+    .filter((row) => typeof row.project_id === "string")
+    .map((row) => ({
+      projectId: String(row.project_id),
+      name: typeof row.name === "string" ? row.name : "",
+      phase: typeof row.phase === "string" ? row.phase : "",
+      quietSince: typeof row.quiet_since === "string" ? row.quiet_since : null,
+    }));
+  if (listed.length === 0) {
+    // Nothing quiet is the good answer, and it should say so rather than
+    // draw headers over blank space.
+    return <EmptyState>{t("analytics.nothingQuiet")}</EmptyState>;
+  }
+  return (
+    <DataTable
+      label={t("analytics.reportProjectsGoneQuiet")}
+      columns={[
+        {
+          key: "project",
+          header: t("analytics.project"),
+          render: (row: (typeof listed)[number]) => (
+            <a className="link-button" href={projectHref(row.projectId)}>
+              {row.name}
+            </a>
+          ),
+        },
+        {
+          key: "phase",
+          header: t("project.phaseLabel"),
+          render: (row: (typeof listed)[number]) => phaseLabel(row.phase, t),
+        },
+        {
+          key: "quiet",
+          header: t("analytics.quietSince"),
+          render: (row: (typeof listed)[number]) =>
+            row.quietSince && timezone
+              ? formatDateTime(row.quietSince, locale, timezone)
+              : "—",
+        },
+      ]}
+      rows={listed}
+      rowKey={(row) => row.projectId}
+    />
+  );
+}
+
+// Which table a report's rows become — a switch in its own component so the
+// card's render stays a frame plus a choice.
+function ReportBody({
+  report,
+  run,
+  stages,
+  locale,
+}: Readonly<{
+  report: ReportKey;
+  run: {
+    rows: ReportRow[];
+    base_currency?: string | null;
+    timezone?: string | null;
+  };
+  stages: readonly Stage[];
+  locale: Locale;
+}>) {
+  const base = run.base_currency ?? null;
+  switch (report) {
+    case "forecast":
+      return (
+        <ForecastStrip rows={run.rows} baseCurrency={base} locale={locale} />
+      );
+    case "open-deals-per-company":
+      return <CompanyTable rows={run.rows} locale={locale} />;
+    case "pipeline-current":
+      return (
+        <StageTable
+          rows={run.rows}
+          stages={stages}
+          locale={locale}
+          baseCurrency={base}
+        />
+      );
+    case "win-loss":
+      return (
+        <WinLossTable rows={run.rows} locale={locale} baseCurrency={base} />
+      );
+    case "stage-age":
+      return <StageAgeTable rows={run.rows} stages={stages} locale={locale} />;
+    case "projects-by-phase":
+      return (
+        <ProjectsByPhaseTable
+          rows={run.rows}
+          locale={locale}
+          baseCurrency={base}
+        />
+      );
+    case "project-commitments":
+      return <ProjectCommitmentsTable rows={run.rows} locale={locale} />;
+    case "projects-gone-quiet":
+      return (
+        <ProjectsGoneQuietTable
+          rows={run.rows}
+          locale={locale}
+          timezone={run.timezone ?? null}
+        />
+      );
+    default:
+      return null;
+  }
+}
+
 // One report: its own query, its own explain disclosure, its own card. A
 // section may hold several, and each has to be able to load, fail and be
 // explained on its own — a single query per screen would have made a section
@@ -1290,6 +1614,9 @@ function ReportCard({
     queryFn: async () => {
       const { data, error } = await api.POST("/reports/{report}", {
         params: { path: { report } },
+        // An empty list and an absent one both take the report's own declared
+        // defaults (report.go branches on len==0), so the delivery reports'
+        // empty plans ask for exactly what their specs declare.
         body: {
           group_by: REPORT_GROUP_BY[report],
           aggregates: REPORT_AGGREGATES[report],
@@ -1338,34 +1665,12 @@ function ReportCard({
                 {t(reportSub[report], { currency: run.base_currency ?? "" })}
               </p>
             )}
-            {report === "forecast" && (
-              <ForecastStrip
-                rows={run.rows}
-                baseCurrency={run.base_currency ?? null}
-                locale={locale}
-              />
-            )}
-            {report === "open-deals-per-company" && (
-              <CompanyTable rows={run.rows} locale={locale} />
-            )}
-            {report === "pipeline-current" && (
-              <StageTable
-                rows={run.rows}
-                stages={stages}
-                locale={locale}
-                baseCurrency={run.base_currency ?? null}
-              />
-            )}
-            {report === "win-loss" && (
-              <WinLossTable
-                rows={run.rows}
-                locale={locale}
-                baseCurrency={run.base_currency ?? null}
-              />
-            )}
-            {report === "stage-age" && (
-              <StageAgeTable rows={run.rows} stages={stages} locale={locale} />
-            )}
+            <ReportBody
+              report={report}
+              run={run}
+              stages={stages}
+              locale={locale}
+            />
             {/* The frame every figure above was cut in: the instant, and the
                 zone that instant is stated in. A total with no zone beside it
                 is a number a reader places by assumption, and the assumption
@@ -1467,6 +1772,7 @@ export function AnalyticsScreen() {
   // Sharing sits beside the tabs rather than inside a section, because the
   // thing being shared is the SECTION the reader is on — a button that moved
   // with the content would read as sharing one card.
+  const canReadCoverage = useCan("data_coverage", "read");
   const coverageProbe = useDataCoverage();
   const header = (
     <div className="analytics-header">
@@ -1476,10 +1782,9 @@ export function AnalyticsScreen() {
             return context.data?.default_scope.kind === "owner";
           }
           if (candidate === "coverage") {
-            // The server gates this read on the ops grant. The tab appears
-            // when the probe ANSWERS — hidden while pending, so a seat the
-            // server refuses never sees it flicker in and out.
-            return coverageProbe.isSuccess;
+            // The read starts only with the ops grant; the tab appears
+            // after the server has answered.
+            return canReadCoverage && coverageProbe.isSuccess;
           }
           return true;
         })}
@@ -1491,6 +1796,7 @@ export function AnalyticsScreen() {
           performance: t("analytics.sectionPerformance"),
           outcomes: t("analytics.sectionOutcomes"),
           coverage: t("analytics.sectionCoverage"),
+          delivery: t("analytics.sectionDelivery"),
         }}
         label={t("analytics.sections")}
       />

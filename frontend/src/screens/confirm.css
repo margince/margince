@@ -66,7 +66,7 @@
 .confirm-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-5);
+  gap: var(--gapActions);
   margin-top: var(--space-6);
   flex-wrap: wrap;
 }

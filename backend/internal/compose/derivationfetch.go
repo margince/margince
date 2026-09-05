@@ -11,6 +11,8 @@ package compose
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -64,9 +66,25 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		}
 		whereSQL := strings.Join(where, " AND ")
 
+		// A reference this reader cannot open comes back NULL, and its row
+		// stays. That is what a normal deal read does with the same column
+		// (deals/fieldmask.go blanks the reference and keeps the deal), so the
+		// drill-through and the list its link opens describe one population.
+		//
+		// On its OWN argument slice, forked from the shared one. The mask binds
+		// the reader's scope values, and only the rows statement names them —
+		// Postgres rejects a parameter a statement never references, so letting
+		// these land in `args` would break the aggregate recompute below, which
+		// selects no reference at all.
+		rowArgs := slices.Clone(args)
+		rowArg := func(v any) int { rowArgs = append(rowArgs, v); return len(rowArgs) }
+		selects, err := maskedDerivationSelects(ctx, spec, plan, rowArg)
+		if err != nil {
+			return err
+		}
 		rowsSQL, rowsArgs, err := bindReportTokens(ctx, frame, fmt.Sprintf(
 			"SELECT %s FROM %s WHERE %s ORDER BY t.id LIMIT %d",
-			strings.Join(plan.selects, ", "), spec.fromClause(), whereSQL, reportRowLimit), args)
+			strings.Join(selects, ", "), spec.fromClause(), whereSQL, reportRowLimit), rowArgs)
 		if err != nil {
 			return err
 		}
@@ -109,6 +127,95 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		}
 		return nil
 	})
+}
+
+// maskedDerivationSelects is plan.selects with each REFERENCE column wrapped so
+// that a row pointing at a record this caller cannot open returns NULL there
+// instead of the id.
+//
+// Masking rather than excluding, and the difference is the whole of it. The
+// drill-through returns every dimension the spec declares — that is deliberate,
+// so a reader can see why each record is in this group — which means it hands
+// back the partner id even when the number above it was a stage total. Dropping
+// those rows to avoid naming the partner would make the explanation smaller
+// than the number it explains. Blanking the column keeps both true: the row is
+// one this caller may read, and the reference is one they may not.
+//
+// It mirrors what an ordinary read of the same record already does
+// (deals/fieldmask.go blanks partner_org_id and keeps the deal), so a reader
+// who follows the link sees the same rows with the same holes.
+//
+// The aggregate recompute does NOT take this treatment and must not: it counts
+// rows, names no reference, and wrapping a column it never returns would only
+// make the two halves read different SQL for one row set.
+func maskedDerivationSelects(
+	ctx context.Context, spec reportSpec, plan derivationPlan, arg func(any) int,
+) ([]string, error) {
+	if len(spec.referenceScopes) == 0 {
+		return plan.selects, nil
+	}
+	// Only the references this plan actually RETURNS. A spec may scope a column
+	// it exposes as a filter alone (deals-by-stage scopes organization_id for
+	// that reason), and no select mentions it — while ScopeClauseFor registers a
+	// bind parameter for every column it is asked about. A parameter the
+	// finished statement never names is a Postgres error, not a no-op.
+	returned := make(map[string]bool, len(plan.columns))
+	for _, name := range plan.columns {
+		if expr, ok := spec.dimensions[name]; ok {
+			returned[expr] = true
+		}
+		if expr, ok := spec.measures[name]; ok {
+			returned[expr] = true
+		}
+	}
+	masks := make(map[string]string, len(spec.referenceScopes))
+	// Sorted, so one request renders one statement. Each mask binds its own
+	// parameter through arg, and map order would hand the same two references
+	// different positions from run to run — an irreproducible statement in a
+	// log, and no plan cache. referenceScopeClauses sorts for the same reason.
+	for _, column := range slices.Sorted(maps.Keys(spec.referenceScopes)) {
+		if !returned[column] {
+			continue
+		}
+		table := spec.referenceScopes[column]
+		scope, err := auth.ScopeClauseFor(ctx, table, "ref", arg)
+		if err != nil {
+			return nil, err
+		}
+		if scope == "" {
+			// An unbounded reader of that table: nothing to blank.
+			continue
+		}
+		masks[column] = fmt.Sprintf(
+			"(CASE WHEN EXISTS (SELECT 1 FROM %s ref WHERE ref.id = %s AND %s) THEN %s END)",
+			table, column, scope, column)
+	}
+	if len(masks) == 0 {
+		return plan.selects, nil
+	}
+	// plan.columns and plan.selects are built in one pass and stay aligned, so
+	// the column name at index i names the expression selected at index i.
+	//
+	// A column is a dimension or a measure (derivation.go appends both), and
+	// both are looked up: a spec that exposed a reference as a measure would
+	// otherwise return the id unmasked, which is a disclosure and not an error.
+	// TestNoMeasureCarriesAReference refuses that spec at the gate, and this
+	// stays honest either way rather than assuming the gate.
+	out := make([]string, len(plan.selects))
+	copy(out, plan.selects)
+	for i, name := range plan.columns {
+		expr, named := spec.dimensions[name]
+		if !named {
+			expr, named = spec.measures[name]
+		}
+		if !named {
+			continue
+		}
+		if mask, isReference := masks[expr]; isReference {
+			out[i] = mask + " AS " + name
+		}
+	}
+	return out, nil
 }
 
 // derivationWhere renders the drill-through's WHERE side: the report's
@@ -161,10 +268,11 @@ func derivationWhere(
 			where = append(where, population)
 		}
 	}
-	// The drill-through puts every dimension on its rows, so every reference
-	// the spec carries takes its row scope here too — the explanation must
-	// not out-see the number it explains.
-	refs, err := referenceScopeClauses(ctx, spec, arg)
+	// The drill-through puts every dimension on its rows, so a reference this
+	// plan RETURNS takes its row scope here — the explanation must not
+	// out-see the number it explains. A reference the plan never mentions is
+	// left alone, on the same terms as the headline (reportwhere.go).
+	refs, err := referenceScopeClauses(ctx, spec, namedByDerivation(spec, plan), arg)
 	if err != nil {
 		return nil, err
 	}

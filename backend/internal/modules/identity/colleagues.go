@@ -96,3 +96,59 @@ func (s *Service) Colleagues(ctx context.Context, q string) ([]Colleague, bool, 
 	}
 	return out, false, nil
 }
+
+// ResolveColleague finds the ONE live seat a name refers to, or answers that it
+// does not.
+//
+// For a writer that must decide whether to assign work to somebody a machine
+// read out of a document. The bar is deliberately higher than the roster
+// filter's, because the two answer different questions: Colleagues narrows a
+// list a person is about to look at, and a near-miss there costs them a glance.
+// This one hands a task to a seat, and a near-miss there gives somebody else's
+// work to the wrong colleague — who then does not do it, because it was never
+// theirs.
+//
+// So it resolves only an EXACT match, case- and space-insensitive, on the
+// display name or the email. "Lena" does not resolve to "Lena Fischer": it is
+// consistent with her, and with a Lena Bauer the installation may also employ,
+// and a writer cannot tell which from the string alone.
+//
+// Two matches answer not-found, the same as none. A tie is not a weaker answer
+// than an absence — it is the same absence of an answer, and picking the first
+// row would make the outcome depend on an ORDER BY nobody chose for this.
+//
+// An AGENT seat never resolves. The installation's own machine account can be
+// named in a transcript like anyone else, and giving it a person's promise
+// would file the work where no person will see it.
+//
+// The truncation flag is honoured: a filter that hit the roster cap has not
+// been shown its whole answer, so a "unique" match inside it is not known to be
+// unique.
+func (s *Service) ResolveColleague(ctx context.Context, name string) (Colleague, bool, error) {
+	wanted := strings.ToLower(strings.TrimSpace(name))
+	if wanted == "" {
+		return Colleague{}, false, nil
+	}
+	candidates, truncated, err := s.Colleagues(ctx, wanted)
+	if err != nil {
+		return Colleague{}, false, err
+	}
+	if truncated {
+		return Colleague{}, false, nil
+	}
+	var found Colleague
+	var matches int
+	for _, c := range candidates {
+		if c.IsAgent {
+			continue
+		}
+		if strings.ToLower(strings.TrimSpace(c.DisplayName)) == wanted ||
+			strings.ToLower(strings.TrimSpace(c.Email)) == wanted {
+			found, matches = c, matches+1
+		}
+	}
+	if matches != 1 {
+		return Colleague{}, false, nil
+	}
+	return found, true, nil
+}

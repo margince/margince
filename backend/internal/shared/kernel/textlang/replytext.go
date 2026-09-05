@@ -311,3 +311,16 @@ func NewTextOnly(text string) string {
 	}
 	return strings.TrimSpace(string(runes))
 }
+
+// CurrentMessage retains the sender's signature but excludes quoted messages.
+// Unlike language detection's cutAt fallback, attribution must not substitute
+// somebody else's quoted words when the sender wrote little or nothing.
+// A forwarded original remains available in the full activity, not presented
+// here as the forwarding person's own statement.
+func CurrentMessage(text string) string {
+	runes := []rune(text)
+	if offset := quoteStart(runes); offset >= 0 {
+		runes = runes[:offset]
+	}
+	return strings.TrimSpace(string(runes))
+}

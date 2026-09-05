@@ -1,32 +1,13 @@
-/* The contact's network tab. One payload, two renderings: a decorative ego
-   ring and the node list that is the real content. Every colour is a token, so
-   the ring follows the theme the rest of the page follows. */
+/* The contact's network tab: the verdict, the readings under it, the working
+   grid, and the picture. Every colour is a token, so the tab follows the
+   theme the rest of the page follows. */
 
 .pn-stack {
   display: grid;
   gap: var(--space-4);
 }
-/* The ring and the lists sit side by side where there is room. The ring is a
-   fixed column because it is square: letting it flex would stretch the circle
-   into an ellipse on a wide viewport. */
-.pn-split {
-  display: flex;
-  gap: var(--space-5);
-  align-items: flex-start;
-}
-.pn-groups {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: grid;
-  gap: var(--space-4);
-}
-@media (max-width: 760px) {
-  .pn-split {
-    flex-direction: column;
-  }
-}
 .pn-route {
-  margin: var(--space-2) 0 0;
+  margin: 0;
   line-height: 1.5;
 }
 /* The ways in, best first. An ordered list because the order is the meaning:
@@ -42,47 +23,69 @@
   padding-top: var(--space-3);
   border-top: 1px solid var(--borderSubtle);
 }
-/* The region the ring's selection writes into. */
-.pn-live {
-  margin-top: var(--space-3);
+/* One route as a row: rank, face, who and how, strength, the ask. */
+.pn-route-line {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  gap: var(--space-3);
+  align-items: center;
 }
+.pn-route-rank {
+  font-family: var(--f-mono);
+  font-size: var(--fs-meta);
+  color: var(--textTertiary);
+  min-width: 1.5em;
+}
+.pn-route-who {
+  min-width: 0;
+}
+.pn-route-blocked .pn-route-who,
+.pn-route-blocked .pn-meter {
+  opacity: 0.6;
+}
+/* The strength bucket as three bars and its word. The word is the fact; the
+   bars are for a reader scanning the column. */
+.pn-meter {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+  text-transform: capitalize;
+}
+.pn-meter-bars {
+  display: flex;
+  gap: var(--space-1);
+  align-items: flex-end;
+  height: 14px;
+}
+.pn-meter-bars i {
+  display: block;
+  width: 5px;
+  border-radius: var(--r-xs);
+  corner-shape: round;
+  background: var(--borderStrong);
+}
+.pn-meter-bars i:nth-child(1) {
+  height: 6px;
+}
+.pn-meter-bars i:nth-child(2) {
+  height: 10px;
+}
+.pn-meter-bars i:nth-child(3) {
+  height: 14px;
+}
+.pn-meter[data-band="strong"] i,
+.pn-meter[data-band="moderate"] i:nth-child(-n + 2),
+.pn-meter[data-band="weak"] i:nth-child(1) {
+  background: var(--accent);
+}
+/* The strength band beside whom an edge joins, in the map's edge detail. */
 .pn-band {
   margin: 0;
   display: flex;
   gap: var(--space-2);
   align-items: center;
-}
-.pn-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: var(--space-3) 0 0;
-  padding: 0;
-  list-style: none;
-}
-/* The moments strip: what changed about this relationship lately. Horizontal
-   because it is a chronology, and a reader scans it rather than reads it. */
-.pn-moments {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: var(--space-3) 0 0;
-  padding: 0;
-  list-style: none;
-}
-.pn-moment {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  padding: var(--space-1) var(--space-3);
-  font-size: var(--fs-sm);
-}
-.pn-moment-when {
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
 }
 .pn-counts {
   margin: var(--space-1) 0 0;
@@ -94,11 +97,6 @@
   padding-left: var(--space-4);
   font-size: var(--fs-sm);
 }
-.pn-note {
-  margin: var(--space-2) 0 0;
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
-}
 /* A read that failed. Danger, because the reader is being told the answer on
    screen is not the answer — not merely that there is none. */
 .pn-failed {
@@ -106,10 +104,106 @@
   color: var(--danger);
 }
 
-/* The prototype's two-column working grid: the decision and its evidence on
-   the left, the handoff and what moved on the right. One column below the
-   fold breakpoint, because a side column narrower than its content is a
-   column nobody reads. */
+/* The verdict's two halves: the move, and the figures it rests on. */
+.pn-verdict {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+}
+.pn-verdict-main {
+  padding: var(--space-4) var(--space-5);
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+.pn-evidence {
+  padding: var(--space-4) var(--space-5);
+  border-left: 1px solid var(--accentMed);
+  background: var(--accentLight);
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+.pn-readings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3) var(--space-5);
+}
+.pn-reading {
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+}
+.pn-reading b {
+  font-family: var(--f-display);
+  font-size: var(--fs-lead);
+  font-weight: var(--fw-semibold);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.pn-reading b small {
+  font-family: var(--f-body);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  color: var(--textSecondary);
+  margin-left: var(--space-1);
+}
+.pn-reading > span {
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+}
+/* Who sent what: the target's share in full accent, the colleague's in the
+   lighter one, and the counts in words under it. */
+.pn-split {
+  display: flex;
+  height: 6px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  overflow: hidden;
+  background: var(--borderSubtle);
+}
+.pn-split i {
+  display: block;
+  height: 100%;
+}
+.pn-split-in {
+  background: var(--accent);
+}
+.pn-split-out {
+  background: var(--accentMed);
+}
+.pn-split-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+}
+.pn-split-key-in::before,
+.pn-split-key-out::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-xs);
+  corner-shape: round;
+  margin-right: var(--space-1);
+  vertical-align: middle;
+  background: var(--accent);
+}
+.pn-split-key-out::before {
+  background: var(--accentMed);
+}
+.pn-evidence-receipts {
+  display: grid;
+  gap: var(--space-1);
+}
+.pn-evidence-receipts .pn-receipts {
+  margin-top: 0;
+}
+
+/* The two-column working grid: the alternatives on the left, the handoff and
+   what moved on the right. One column below the fold breakpoint, because a
+   side column narrower than its content is a column nobody reads. */
 .pn-work-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.65fr) minmax(285px, 0.75fr);
@@ -122,6 +216,10 @@
   gap: var(--space-4);
   min-width: 0;
 }
+.pn-side-only .pn-side-column {
+  grid-template-columns: repeat(auto-fit, minmax(285px, 1fr));
+  align-items: start;
+}
 
 /* The route chain, read left to right: who asks, through whom, to whom. */
 .pn-hero {
@@ -131,7 +229,9 @@
   gap: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--r-md);
-  background: var(--bgCard);
+  corner-shape: round;
+  border: 1px solid var(--borderSubtle);
+  background: var(--bgElevated);
 }
 .pn-hero-who {
   min-width: 0;
@@ -148,49 +248,161 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin-top: var(--space-3);
+}
+.pn-verdict-actions {
+  margin: var(--space-1) 0 0;
 }
 
-/* The handoff, as an ordered list. The number is decoration; the state is in
-   words beside it, so colour is never the only thing carrying it. */
+/* The handoff, as a connected stepper. The rail between the rings fills as
+   steps complete; the state is in words beside every ring, so colour is never
+   the only thing carrying it. */
 .pn-relay {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--space-3);
 }
 .pn-relay-step {
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: var(--space-3);
   align-items: start;
+  padding-bottom: var(--space-4);
+}
+.pn-relay-step:last-child {
+  padding-bottom: 0;
+}
+.pn-relay-step::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 26px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--borderSubtle);
+}
+.pn-relay-step:last-child::before {
+  display: none;
+}
+.pn-relay-done::before {
+  background: var(--accent);
+}
+.pn-relay-step strong {
+  display: block;
+  line-height: 26px;
+}
+.pn-relay-waiting strong {
+  color: var(--textSecondary);
+  font-weight: var(--fw-medium);
 }
 .pn-relay-step small {
   display: block;
-  margin-top: var(--space-1);
   color: var(--textSecondary);
 }
+.pn-relay-current small {
+  color: var(--accentText);
+  font-weight: var(--fw-medium);
+}
 .pn-relay-num {
+  position: relative;
+  z-index: 1;
   width: 26px;
   height: 26px;
   border-radius: 50%;
   corner-shape: round;
   display: grid;
   place-items: center;
-  border: 1px solid var(--borderStrong);
+  border: 2px solid var(--borderStrong);
+  background: var(--bgElevated);
   color: var(--textSecondary);
+  font-family: var(--f-mono);
   font-size: var(--fs-meta);
 }
-.pn-relay-done .pn-relay-num,
-.pn-relay-current .pn-relay-num {
+.pn-relay-done .pn-relay-num {
   background: var(--accent);
   border-color: var(--accent);
-  color: var(--bgElevated);
+  color: var(--textOnAccent);
+}
+.pn-relay-current .pn-relay-num {
+  border-color: var(--accent);
+  color: var(--accentText);
+  box-shadow: 0 0 0 4px var(--accentLight);
+}
+.pn-relay-owner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-control);
+  corner-shape: round;
+  background: var(--bgCard);
+  font-size: var(--fs-sm);
+}
+.pn-relay-due {
+  margin-left: auto;
+  font-family: var(--f-mono);
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+  white-space: nowrap;
+}
+
+/* What moved: a dated list, newest first. A column of dates because it is a
+   chronology, and a reader scans it rather than reads it. */
+.pn-moments {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.pn-moment {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-2) 0;
+  font-size: var(--fs-sm);
+}
+.pn-moment + .pn-moment {
+  border-top: 1px solid var(--borderSubtle);
+}
+.pn-moment p {
+  margin: 0;
+  color: var(--textContent);
+}
+.pn-moment:first-child p {
+  color: var(--textPrimary);
+  font-weight: var(--fw-medium);
+}
+.pn-moment p .badge {
+  margin-left: var(--space-2);
+  vertical-align: 1px;
+}
+.pn-moment-when {
+  font-family: var(--f-mono);
+  color: var(--textMeta);
+  font-size: var(--fs-meta);
+  white-space: nowrap;
 }
 
 @media (max-width: 1050px) {
   .pn-work-grid {
     grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 900px) {
+  .pn-verdict {
+    grid-template-columns: 1fr;
+  }
+  .pn-evidence {
+    border-left: 0;
+    border-top: 1px solid var(--accentMed);
+  }
+  .pn-route-line {
+    grid-template-columns: auto auto minmax(0, 1fr);
+  }
+  .pn-route-line > .pn-meter,
+  .pn-route-line > .btn {
+    grid-column: 3;
   }
 }

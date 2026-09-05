@@ -19,6 +19,8 @@ import { en } from "../i18n/en";
 import {
   DispositionVerbs,
   PutDownByThumb,
+  SNOOZE_DAYS,
+  SNOOZE_SPANS,
   SWIPE_SIDES,
 } from "./worklist.dispositions";
 import type { WorklistDisposition, WorklistItem } from "./worklist.queries";
@@ -149,6 +151,18 @@ function drawRows(count: number) {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+}
+
+// The body of the one write, read off the Request the generated client sends.
+// An `init.body` lookup finds null on every call and would report "nothing was
+// sent" for a request that went out correctly.
+async function sentBody(
+  fetchSpy: ReturnType<typeof vi.fn>,
+): Promise<Record<string, unknown>> {
+  const [input] = fetchSpy.mock.calls[0] ?? [];
+  const request = input instanceof Request ? input.clone() : undefined;
+  const raw = request ? await request.text() : "";
+  return raw === "" ? {} : (JSON.parse(raw) as Record<string, unknown>);
 }
 
 afterEach(() => {
@@ -326,6 +340,57 @@ describe("putting a row down below the fold", () => {
           "the two placements are not sharing one mutation",
       ).toBe(true);
     });
+  });
+
+  // EVERY SPAN SURVIVES THE FOLD, and reaches the wire as itself.
+  //
+  // The gesture sends the default day and nothing else, so a fold that carried
+  // only the verbs left a rep who knows a customer is away all week pressing
+  // the same button every morning — the state the spans were added to end.
+  // They are menu lines below the fold because a line costs no height where a
+  // fourth 44px control does.
+  it("offers every snooze span below the fold, and sends the one pressed", async () => {
+    const user = userEvent.setup();
+    atWidth(true);
+    const fetchSpy = draw(EVERY_JUDGEMENT);
+
+    await user.click(
+      screen.getByRole("button", { name: en["worklist.disposition.menu"] }),
+    );
+
+    // The whole span vocabulary, derived rather than named here: a census that
+    // lists its own subjects proves only that they were listed.
+    for (const days of SNOOZE_SPANS) {
+      const line =
+        days === SNOOZE_DAYS
+          ? en["worklist.disposition.verb.snooze"]
+          : en["worklist.disposition.snoozeForDays_other"].replace(
+              "{value}",
+              String(days),
+            );
+      expect(
+        screen.getByRole("button", { name: line }),
+        `a reader below the fold cannot snooze for ${days} day(s)`,
+      ).toBeInTheDocument();
+    }
+
+    // And the span REACHES THE SERVER. A line that sent the default day would
+    // read as three choices offering one answer.
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.disposition.snoozeForDays_other"].replace(
+          "{value}",
+          "7",
+        ),
+      }),
+    );
+    await waitFor(() => expect(fetchSpy.mock.calls.length).toBe(1));
+    const sent = await sentBody(fetchSpy);
+    const until = new Date(String(sent.snoozed_until));
+    const days = Math.round(
+      (until.getTime() - Date.now()) / (24 * 60 * 60 * 1000),
+    );
+    expect(days, "the seven-day line sent a different span").toBe(7);
   });
 
   it("draws no gesture at all on a row the server offers nothing for", () => {

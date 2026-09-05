@@ -3,33 +3,17 @@
 
 package main
 
-// Asking the nightly passes to run once, at the end of a seed.
-//
-// Three jobs fill the two surfaces a demo opens on. The close-date corrector
-// and the follow-up reconciler stage the worklist's cards: one asks a human to
-// confirm the real date on a deal that has gone quiet, the other proposes the
-// reply nobody sent. The morning brief ranks the deals themselves. All three
-// are nightly and all three read a deal's age — so on a freshly seeded
-// installation they have nothing to say for a day, and both surfaces are empty.
-//
-// That empty screen reads as a broken feature rather than a young database, and
-// it is not one somebody can wait out: the sweeps did already run, at boot,
-// against deals that did not exist yet. This is the same failure the finance
-// sync hit (see requestFinanceSync) and it is asked the same way — a row on
-// River's queue, which is how the scheduler itself asks. Reaching into the
-// deals module instead would be a second way to start a pass that already has
-// one.
-//
-// Ordering is the whole point of running this LAST. The passes read
-// last_activity_at, which the mailbox seeding sets when it writes the
-// correspondence; asked before that, they would look at deals whose newest
-// activity is their own creation and find nothing stale.
+// Request the scheduled readers after the seed has finished writing their inputs.
+// The scheduler may already have run against the empty installation at boot.
+// Queueing its declared jobs lets the production workers fill the demo surfaces.
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // requestNightlyWorklistPasses opens the owner connection and asks for one run
@@ -53,7 +37,7 @@ func requestNightlyWorklistPasses(dsn string, mode runMode) (err error) {
 			err = fmt.Errorf("closing the connection that requested the worklist passes: %w", closeErr)
 		}
 	}()
-	// One transaction over all three requests. Half a worklist is worse than
+	// One transaction over all requests. Half a worklist is worse than
 	// none: the surface fills with close-date cards and silently lacks the
 	// follow-ups, which reads as a working feature with nothing to say rather
 	// than as a seed that failed. The brief's delete joins it for the same
@@ -82,16 +66,17 @@ func requestNightlyWorklistPasses(dsn string, mode runMode) (err error) {
 // true. Printing inside the transaction would announce passes that a failed
 // commit then threw away.
 func reportRequestedPasses(cleared int64) {
+	fmt.Println("weekly review: requested — existing frozen reviews are retained; new reviews use the seeded records")
+	fmt.Println("finance sync:  requested — invoices and payments arrive with the next worker pass")
 	fmt.Println("worklist:      close-date and follow-up passes requested — " +
 		"cards arrive with the next worker pass")
 	fmt.Printf("brief:         %d empty run(s) cleared, morning brief requested — "+
 		"it fills once the installation's morning hour has arrived\n", cleared)
 }
 
-// nightlyWorklistJobs are the passes that stage the worklist's cards. Both are
-// workspace-scoped fan-outs: the job layer expands them per workspace, which is
-// why neither takes a workspace id here.
-var nightlyWorklistJobs = []string{"close_date_sweep", "follow_up_reconcile"}
+// nightlyWorklistJobs populate finance and the worklist after all records and
+// customer links exist. Each dispatcher resolves its own workspace population.
+var nightlyWorklistJobs = []string{"finance_sync_sweep", "close_date_sweep", "follow_up_reconcile", "weekly_review_generate"}
 
 // requestNightlyPasses queues one run of each worklist pass.
 //
@@ -105,9 +90,7 @@ var nightlyWorklistJobs = []string{"close_date_sweep", "follow_up_reconcile"}
 // failing over a queue nobody is reading.
 func requestNightlyPasses(ctx context.Context, tx pgx.Tx) error {
 	for _, kind := range nightlyWorklistJobs {
-		if _, err := tx.Exec(ctx,
-			`INSERT INTO river_job (state, kind, queue, priority, max_attempts, args, scheduled_at)
-			 VALUES ('available', $1, 'default', 1, 3, '{}'::jsonb, now())`, kind); err != nil {
+		if err := requestSeedPass(ctx, tx, kind); err != nil {
 			return fmt.Errorf("requesting the %s pass: %w", kind, err)
 		}
 	}
@@ -151,10 +134,22 @@ func requestTheMorningBrief(ctx context.Context, tx pgx.Tx) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("clearing the empty brief runs this seed outran: %w", err)
 	}
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO river_job (state, kind, queue, priority, max_attempts, args, scheduled_at)
-		 VALUES ('available', 'brief_generate', 'default', 1, 3, '{}'::jsonb, now())`); err != nil {
+	if err := requestSeedPass(ctx, tx, "brief_generate"); err != nil {
 		return 0, fmt.Errorf("requesting the morning brief: %w", err)
 	}
 	return cleared.RowsAffected(), nil
+}
+
+// requestSeedPass refuses stale job names before the seed can announce success.
+// The declaration owns the queue and whether an empty payload is meaningful.
+func requestSeedPass(ctx context.Context, tx pgx.Tx, kind string) error {
+	spec, ok := jobs.SpecFor(kind)
+	if !ok || len(spec.Args) != 0 {
+		return fmt.Errorf("seed pass %q is not a declared, argument-free job", kind)
+	}
+	_, err := tx.Exec(ctx,
+		`INSERT INTO river_job (state, kind, queue, priority, max_attempts, args, scheduled_at)
+		 VALUES ('available', @kind, @queue, 1, 3, '{}'::jsonb, now())`,
+		pgx.NamedArgs{"kind": kind, "queue": spec.Queue})
+	return err
 }

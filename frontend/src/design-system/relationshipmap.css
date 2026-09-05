@@ -47,10 +47,11 @@
   }
 }
 
-/* The drawing has an intrinsic width. A box narrower than that shrinks the
- * whole picture to fit — the viewBox keeps every node and edge in proportion —
- * down to the floor below which a name is no longer readable; past that floor
- * the box scrolls the PICTURE rather than making the page scroll sideways. */
+/* The drawing has an intrinsic width. In a box narrower than that it scales
+ * down to fit, so a half-width column shows the whole picture and not its
+ * left third — down to a floor where the names would stop being legible,
+ * below which it scrolls inside its own box rather than making the page
+ * scroll sideways. */
 .rmap-scroll {
   overflow-x: auto;
   background: var(--pane);
@@ -60,14 +61,12 @@
 }
 
 /* Never larger than drawn: the width attribute is the ceiling, so a wide
- * column leaves the picture at its natural size rather than blowing it up.
- * 600px is four-fifths of that natural width, where a 13px name is still
- * above 10px. */
+ * column leaves the picture at its natural size rather than blowing it up. */
 .rmap-svg {
   display: block;
   max-width: 100%;
+  min-width: 560px;
   height: auto;
-  min-width: 600px;
 }
 
 /* A lane heading IS an eyebrow, and the eyebrow has ONE spelling — the

@@ -347,7 +347,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                   )}
                 </Field>
               )}
-              <div className="row-inline">
+              <div className="form-actions">
                 <Button
                   variant="primary"
                   pending={save.isPending}

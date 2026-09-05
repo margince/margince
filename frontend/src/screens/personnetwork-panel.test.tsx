@@ -129,7 +129,9 @@ describe("PersonNetworkTab", () => {
     renderPanel();
     await waitFor(() =>
       expect(
-        screen.getByText("Direct Dana already corresponds with them."),
+        screen.getByText(
+          en["person.intro.verdictDirect"].replace("{name}", "Direct Dana"),
+        ),
       ).toBeTruthy(),
     );
     // The sentence the server used to write in English, now assembled from the

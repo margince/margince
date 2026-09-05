@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -33,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 func meetingBriefService(e *Env) *meetingbrief.Service {
@@ -575,5 +577,50 @@ func TestMeetingBriefReportsNoCommitmentFromAnotherEngagement(t *testing.T) {
 	}
 	if strings.Contains(commitments, "rack inventory") {
 		t.Errorf("commitments = %q; reports a promise made on the other engagement's mail", commitments)
+	}
+}
+
+// meetingSubjectLane records what the router would be told each call is
+// about. The sections and the plan are written concurrently on one lane, so
+// the record is guarded and every call is checked, not just the first.
+type meetingSubjectLane struct {
+	mu       sync.Mutex
+	subjects []ai.Subject
+}
+
+func (l *meetingSubjectLane) Complete(ctx context.Context, _ model.Request) (model.Response, error) {
+	subject, _ := ai.SubjectOf(ctx)
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.subjects = append(l.subjects, subject)
+	return model.Response{Text: "{}"}, nil
+}
+
+// The brief names the meeting to the rail by its subject line, which is how the
+// calendar and the timeline name it — so the reader's rail says "preparing
+// Cutover review" rather than "this company" about a meeting.
+func TestMeetingBriefNamesTheMeetingToTheRail(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	ours := e.SeedPerson(t, "Ana Roth", &e.Rep1)
+	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'meeting', 'Cutover review', $2, 'manual', 'human:x')`, roomTomorrow)
+	LinkActivity(t, owner, meeting, "person", ours)
+	seatInRoom(t, owner, e.WS, meeting, ours)
+
+	lane := &meetingSubjectLane{}
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	if _, err := meetingBriefService(e).WithLane(lane).Get(rep, meeting); err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	want := ai.Subject{Ref: ids.From[ids.ActivityKind](meeting).Ref(), Label: "Cutover review"}
+	if len(lane.subjects) == 0 {
+		t.Fatal("the lane was never asked, so nothing here proves the subject reaches it")
+	}
+	for i, got := range lane.subjects {
+		if got != want {
+			t.Errorf("call %d was made under subject %+v, want %+v", i, got, want)
+		}
 	}
 }

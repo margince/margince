@@ -453,15 +453,23 @@ func clearCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, addre
 	// deleted here they would return unsuppressed, having never withdrawn it.
 	// So the person link is cut and the address kept, which is exactly what the
 	// address-only row shape exists for.
+	// EVERY row is detached, revoked or not, and the revoked ones keep their
+	// revoked_at. Filtering on `revoked_at IS NULL` here was safe while nothing
+	// could set that column; consent's lift verb now can, and a lift committing
+	// between this statement and the DELETE below would leave the row unmatched
+	// here and then deleted there — losing an address the anonymizer is about to
+	// orphan. Detaching a revoked row costs nothing: it stays revoked, so it
+	// suppresses nothing, and it carries the address forward for the record
+	// rather than vanishing mid-transaction.
 	if _, err := tx.Exec(ctx, `
 		UPDATE communication_suppression
 		   SET person_id = NULL, address = coalesce(address, u.addr)
 		  FROM unnest($2::text[]) AS u(addr)
-		 WHERE person_id = $1 AND revoked_at IS NULL`, id, addresses); err != nil {
+		 WHERE person_id = $1`, id, addresses); err != nil {
 		return err
 	}
-	// A revoked suppression protects nobody and names a person who is going, so
-	// it goes with them.
+	// Whatever the detach could not reach — a row whose address is not among
+	// the subject's — names a person who is going, so it goes with them.
 	_, err := tx.Exec(ctx, `DELETE FROM communication_suppression WHERE person_id = $1`, id)
 	return err
 }

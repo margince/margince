@@ -580,6 +580,7 @@ const (
 	AiActivityKindSignalExtract                 AiActivityKind = "signal_extract"
 	AiActivityKindSiteExtract                   AiActivityKind = "site_extract"
 	AiActivityKindSiteFactExtract               AiActivityKind = "site_fact_extract"
+	AiActivityKindSiteRead                      AiActivityKind = "site_read"
 	AiActivityKindSiteTriage                    AiActivityKind = "site_triage"
 	AiActivityKindSummarize                     AiActivityKind = "summarize"
 	AiActivityKindTranscript                    AiActivityKind = "transcript"
@@ -634,6 +635,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindSiteExtract:
 		return true
 	case AiActivityKindSiteFactExtract:
+		return true
+	case AiActivityKindSiteRead:
 		return true
 	case AiActivityKindSiteTriage:
 		return true
@@ -6727,6 +6730,72 @@ func (e LicenseEntitlementState) Valid() bool {
 	}
 }
 
+// Defines values for MagicActorType.
+const (
+	MagicActorAgent     MagicActorType = "agent"
+	MagicActorConnector MagicActorType = "connector"
+	MagicActorSystem    MagicActorType = "system"
+)
+
+// Valid indicates whether the value is a known member of the MagicActorType enum.
+func (e MagicActorType) Valid() bool {
+	switch e {
+	case MagicActorAgent:
+		return true
+	case MagicActorConnector:
+		return true
+	case MagicActorSystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MagicLineLane.
+const (
+	MagicLaneCouldNotComplete MagicLineLane = "could_not_complete"
+	MagicLaneDone             MagicLineLane = "done"
+	MagicLaneNeedsYou         MagicLineLane = "needs_you"
+	MagicLaneWatching         MagicLineLane = "watching"
+)
+
+// Valid indicates whether the value is a known member of the MagicLineLane enum.
+func (e MagicLineLane) Valid() bool {
+	switch e {
+	case MagicLaneCouldNotComplete:
+		return true
+	case MagicLaneDone:
+		return true
+	case MagicLaneNeedsYou:
+		return true
+	case MagicLaneWatching:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MagicNotShownReason.
+const (
+	MagicNotShownOutOfScope        MagicNotShownReason = "out_of_scope"
+	MagicNotShownUnadmittedAction  MagicNotShownReason = "unadmitted_action"
+	MagicNotShownUnknownEntityType MagicNotShownReason = "unknown_entity_type"
+)
+
+// Valid indicates whether the value is a known member of the MagicNotShownReason enum.
+func (e MagicNotShownReason) Valid() bool {
+	switch e {
+	case MagicNotShownOutOfScope:
+		return true
+	case MagicNotShownUnadmittedAction:
+		return true
+	case MagicNotShownUnknownEntityType:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeResponsePassportScopes.
 const (
 	MeResponsePassportScopesActWithApproval    MeResponsePassportScopes = "act_with_approval"
@@ -6913,6 +6982,27 @@ func (e MeetingPlanUnknownKind) Valid() bool {
 	case MeetingPlanUnknownNoOpenDeal:
 		return true
 	case MeetingPlanUnknownNoPriorMeeting:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MorningBriefItemReopenOn.
+const (
+	MorningBriefItemReopenOnMeeting MorningBriefItemReopenOn = "meeting"
+	MorningBriefItemReopenOnReply   MorningBriefItemReopenOn = "reply"
+	MorningBriefItemReopenOnTime    MorningBriefItemReopenOn = "time"
+)
+
+// Valid indicates whether the value is a known member of the MorningBriefItemReopenOn enum.
+func (e MorningBriefItemReopenOn) Valid() bool {
+	switch e {
+	case MorningBriefItemReopenOnMeeting:
+		return true
+	case MorningBriefItemReopenOnReply:
+		return true
+	case MorningBriefItemReopenOnTime:
 		return true
 	default:
 		return false
@@ -10345,6 +10435,27 @@ func (e RenewContractRequestValueBasis) Valid() bool {
 	case RenewContractRequestValueBasisAnnualized12m:
 		return true
 	case RenewContractRequestValueBasisTotal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReopenCondition.
+const (
+	ReopenOnMeeting ReopenCondition = "meeting"
+	ReopenOnReply   ReopenCondition = "reply"
+	ReopenOnTime    ReopenCondition = "time"
+)
+
+// Valid indicates whether the value is a known member of the ReopenCondition enum.
+func (e ReopenCondition) Valid() bool {
+	switch e {
+	case ReopenOnMeeting:
+		return true
+	case ReopenOnReply:
+		return true
+	case ReopenOnTime:
 		return true
 	default:
 		return false
@@ -13799,6 +13910,7 @@ const (
 	WorklistMoveActionDraftReply       WorklistMoveAction = "draft_reply"
 	WorklistMoveActionNone             WorklistMoveAction = "none"
 	WorklistMoveActionOpenMeetingBrief WorklistMoveAction = "open_meeting_brief"
+	WorklistMoveActionOpenTask         WorklistMoveAction = "open_task"
 	WorklistMoveActionReconnect        WorklistMoveAction = "reconnect"
 )
 
@@ -13814,6 +13926,8 @@ func (e WorklistMoveAction) Valid() bool {
 	case WorklistMoveActionNone:
 		return true
 	case WorklistMoveActionOpenMeetingBrief:
+		return true
+	case WorklistMoveActionOpenTask:
 		return true
 	case WorklistMoveActionReconnect:
 		return true
@@ -15843,34 +15957,34 @@ func (e GetWorklistParamsScope) Valid() bool {
 
 // Defines values for GetWorklistParamsFilter.
 const (
-	GetWorklistParamsFilterAll             GetWorklistParamsFilter = "all"
-	GetWorklistParamsFilterCustomerWaiting GetWorklistParamsFilter = "customer_waiting"
-	GetWorklistParamsFilterDealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
-	GetWorklistParamsFilterDecisions       GetWorklistParamsFilter = "decisions"
-	GetWorklistParamsFilterLeads           GetWorklistParamsFilter = "leads"
-	GetWorklistParamsFilterMeetings        GetWorklistParamsFilter = "meetings"
-	GetWorklistParamsFilterSystem          GetWorklistParamsFilter = "system"
-	GetWorklistParamsFilterTasks           GetWorklistParamsFilter = "tasks"
+	All             GetWorklistParamsFilter = "all"
+	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
+	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
+	Decisions       GetWorklistParamsFilter = "decisions"
+	Leads           GetWorklistParamsFilter = "leads"
+	Meetings        GetWorklistParamsFilter = "meetings"
+	System          GetWorklistParamsFilter = "system"
+	Tasks           GetWorklistParamsFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
 func (e GetWorklistParamsFilter) Valid() bool {
 	switch e {
-	case GetWorklistParamsFilterAll:
+	case All:
 		return true
-	case GetWorklistParamsFilterCustomerWaiting:
+	case CustomerWaiting:
 		return true
-	case GetWorklistParamsFilterDealsAtRisk:
+	case DealsAtRisk:
 		return true
-	case GetWorklistParamsFilterDecisions:
+	case Decisions:
 		return true
-	case GetWorklistParamsFilterLeads:
+	case Leads:
 		return true
-	case GetWorklistParamsFilterMeetings:
+	case Meetings:
 		return true
-	case GetWorklistParamsFilterSystem:
+	case System:
 		return true
-	case GetWorklistParamsFilterTasks:
+	case Tasks:
 		return true
 	default:
 		return false
@@ -16341,9 +16455,11 @@ type AiActivityItem struct {
 	// What a reader is SHOWN is a separate decision and belongs to the client: a complete
 	// record is the server's obligation, an edited one is the interface's.
 	//
-	// Three names come from a durable carrier that owns its own occurrence and can say
-	// queued and running: the two scheduled kinds match a name in runner.Catalog(), and
-	// `document_extract` is a reading of an attached document a human asked for. Every other
+	// Four names come from a durable carrier that owns its own occurrence and can say
+	// queued and running: the two scheduled kinds match a name in runner.Catalog(),
+	// `document_extract` is a reading of an attached document a human asked for, and
+	// `site_read` is a deep read of a company's website — one occurrence for the whole crawl,
+	// where the site tasks below are the individual model calls it makes. Every other
 	// name is an api/ai-tasks.yaml task announced by the router on the task's own behalf —
 	// settled when it appears, because the router learns of a call once the call is over.
 	//
@@ -16398,9 +16514,11 @@ type AiActivityItemState string
 // What a reader is SHOWN is a separate decision and belongs to the client: a complete
 // record is the server's obligation, an edited one is the interface's.
 //
-// Three names come from a durable carrier that owns its own occurrence and can say
-// queued and running: the two scheduled kinds match a name in runner.Catalog(), and
-// `document_extract` is a reading of an attached document a human asked for. Every other
+// Four names come from a durable carrier that owns its own occurrence and can say
+// queued and running: the two scheduled kinds match a name in runner.Catalog(),
+// `document_extract` is a reading of an attached document a human asked for, and
+// `site_read` is a deep read of a company's website — one occurrence for the whole crawl,
+// where the site tasks below are the individual model calls it makes. Every other
 // name is an api/ai-tasks.yaml task announced by the router on the task's own behalf —
 // settled when it appears, because the router learns of a call once the call is over.
 //
@@ -17649,10 +17767,14 @@ type AttentionDealFacts struct {
 	Currency    *string `json:"currency,omitempty"`
 
 	// NoChampion `true` when the account has a buying committee and nobody engaged on it holds
-	// the champion seat. Null is not `false`: it is sent only when the answer is both
-	// known and negative, and stays absent for a committee the caller may not read in
-	// full, for a deal carrying no seats at all, and for a server that does not assess
-	// coverage. See `WorklistDealFacts.no_champion`, which carries the same fact out.
+	// the champion seat. There is no other value: `false` is NEVER sent, and absent
+	// is the answer in every case that is not that finding — a committee whose
+	// champion seat IS held, a committee the caller may not read in full, a deal
+	// carrying no seats at all, and a server that does not assess coverage.
+	//
+	// So absence does not mean "covered". It means this endpoint is making no claim,
+	// and a client MUST NOT read it as one. See `WorklistDealFacts.no_champion`,
+	// which carries the same fact out under the same rule.
 	NoChampion *bool               `json:"no_champion,omitempty"`
 	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
 
@@ -18464,10 +18586,24 @@ type BriefDeliveryMorningBriefDelivery string
 // BriefDeliveryWeeklyDelivery The same, for the weekly review.
 type BriefDeliveryWeeklyDelivery string
 
-// BriefSnoozeRequest Snooze a brief item until a future instant (A77/AC-home-6); it re-surfaces once the instant passes.
+// BriefSnoozeRequest Set a brief item aside until something happens. The something is `reopen_on`: a moment
+// on the clock, the customer writing back, or a named meeting being over.
 type BriefSnoozeRequest struct {
-	// SnoozedUntil When the item re-surfaces; must be in the future.
-	SnoozedUntil time.Time `json:"snoozed_until"`
+	// ReopenOn What lifts a snooze. `time` is the original behaviour and the default, so a client
+	// written before the other two keeps working unchanged. `reply` waits for the
+	// counterparty to write back on a conversation linked to the record. `meeting` waits for
+	// a named meeting to be over — an archived meeting counts as over, so a cancelled one
+	// returns the work rather than holding it forever.
+	ReopenOn *ReopenCondition `json:"reopen_on,omitempty"`
+
+	// ReopenRef The meeting to wait for. REQUIRED for `meeting` and refused otherwise, because
+	// "after the meeting" names nothing without saying which meeting.
+	ReopenRef *openapi_types.UUID `json:"reopen_ref,omitempty"`
+
+	// SnoozedUntil When the item re-surfaces. REQUIRED for `time` and refused for the other two — a
+	// snooze waiting on a reply lifts when the reply arrives, not on a date. Must be in
+	// the future.
+	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
 }
 
 // BuyerRoomAccess Whether the session admits the caller to content right now. `live` — the room
@@ -21887,14 +22023,13 @@ type DealStatusCard struct {
 }
 
 // DealStatusCardMove The one thing to do next, and what performing it means. `action` is one of
-// `draft_email`, `create_task`, `open_meeting_brief`, `none` — the same verbs
-// the retired next-best-action carried, so a client that already performs them
-// needs no new code. `arguments` is the body or operand the verb takes, ready
+// `draft_email`, `create_task`, `open_task`, `open_meeting_brief`, `none`.
+// `open_task` opens existing work without creating another task. `arguments` is the body or operand the verb takes, ready
 // to send; absent for `none`.
 type DealStatusCardMove struct {
 	Action string `json:"action"`
 
-	// Arguments `draft_email` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body.
+	// Arguments `draft_email`, `open_task` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body.
 	Arguments *map[string]interface{}      `json:"arguments,omitempty"`
 	Evidence  []DealNextBestActionEvidence `json:"evidence"`
 
@@ -24582,6 +24717,181 @@ type LoginRequest struct {
 	Password string              `json:"password"`
 }
 
+// MagicActor Who acted, and on whose behalf.
+//
+// `on_behalf_of` is the whole reason this is a shape rather than a string. The
+// auto-apply sweep binds a rep's own authority to do what that rep had already
+// agreed to, and a receipt saying only "agent" would hide which rep's standing
+// decision it was acting on.
+type MagicActor struct {
+	Id string `json:"id"`
+
+	// OnBehalfOf The seat whose authority the action was taken under, where it bound one.
+	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
+
+	// Type Human actors never appear here. This surface reports what ran WITHOUT being asked; a person's own change is their own, and reporting it back to them as machinery would be a lie about who did it.
+	Type MagicActorType `json:"type"`
+}
+
+// MagicActorType Human actors never appear here. This surface reports what ran WITHOUT being asked; a person's own change is their own, and reporting it back to them as machinery would be a lie about who did it.
+type MagicActorType string
+
+// MagicEntityRef The record this line is about, where it names one.
+type MagicEntityRef struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Label The record's own name, where the reader may see it. Absent rather than invented: a line naming a record it cannot label still says what happened.
+	Label *string `json:"label,omitempty"`
+	Type  string  `json:"type"`
+}
+
+// MagicLine One thing the machinery did, needs, could not finish, or is watching.
+//
+// EVERY LINE IS ATTRIBUTABLE. `actor` names who acted and on whose behalf; a change
+// with no author a reader can name is the spookiness this surface exists to remove.
+type MagicLine struct {
+	// Actor Who acted, and on whose behalf.
+	//
+	// `on_behalf_of` is the whole reason this is a shape rather than a string. The
+	// auto-apply sweep binds a rep's own authority to do what that rep had already
+	// agreed to, and a receipt saying only "agent" would hide which rep's standing
+	// decision it was acting on.
+	Actor MagicActor `json:"actor"`
+
+	// After The same fields, as they are now, under the same mask.
+	After *map[string]interface{} `json:"after,omitempty"`
+
+	// Before The fields this change moved, as they were. MASKED to what the reader may see, through the same field mask the record's own history uses — a receipt is not a way around the boundary the record keeps.
+	Before *map[string]interface{} `json:"before,omitempty"`
+
+	// Consequence What this means for the reader, where the action has one to state. A key, not a sentence: the product ships three languages.
+	Consequence *string `json:"consequence,omitempty"`
+
+	// Entity The record this line is about, where it names one.
+	Entity *MagicEntityRef `json:"entity,omitempty"`
+
+	// Id The underlying row's id — an audit entry, an approval.
+	Id openapi_types.UUID `json:"id"`
+
+	// Lane Which lane this line belongs to. Carried on the line as well as by the array it sits in, so a client that flattens the four for a preview does not lose which one a line came from.
+	Lane       MagicLineLane `json:"lane"`
+	OccurredAt time.Time     `json:"occurred_at"`
+
+	// Summary What happened, as a key and the values to fill it with.
+	//
+	// Typed rather than composed on the server for the reason every other sentence in
+	// this contract is: the product ships three languages, and a sentence assembled here
+	// reaches a German reader in English.
+	Summary MagicSentence `json:"summary"`
+
+	// Undo Whether this change can be taken back, and why not when it cannot.
+	//
+	// A greyed control with no reason is the shape this replaces. The reasons are
+	// compose/undoability's own vocabulary rather than a second set written here.
+	Undo *MagicUndo `json:"undo,omitempty"`
+}
+
+// MagicLineLane Which lane this line belongs to. Carried on the line as well as by the array it sits in, so a client that flattens the four for a preview does not lose which one a line came from.
+type MagicLineLane string
+
+// MagicNotShown One kind of thing this read left out, and how many of it there were.
+type MagicNotShown struct {
+	Count int `json:"count"`
+
+	// Reason `unadmitted_action` — a machine write whose action carries no customer-facing
+	// meaning: a maintenance sweep, a projection refresh.
+	// `unknown_entity_type` — an entity kind this build cannot scope, and therefore
+	// cannot safely show. Counted rather than served: showing a row this read cannot
+	// place is showing a row it cannot prove the reader may see.
+	// `out_of_scope` — a row about a record outside the reader's own scope. Counted
+	// so the total is honest, and never named.
+	Reason MagicNotShownReason `json:"reason"`
+}
+
+// MagicNotShownReason `unadmitted_action` — a machine write whose action carries no customer-facing
+// meaning: a maintenance sweep, a projection refresh.
+// `unknown_entity_type` — an entity kind this build cannot scope, and therefore
+// cannot safely show. Counted rather than served: showing a row this read cannot
+// place is showing a row it cannot prove the reader may see.
+// `out_of_scope` — a row about a record outside the reader's own scope. Counted
+// so the total is honest, and never named.
+type MagicNotShownReason string
+
+// MagicReceipt What the machinery did since a reader last looked, in four lanes.
+//
+// The lanes are separate arrays rather than one list with a kind, because they ask
+// different things of the reader and a client draws them differently: `done` is a
+// receipt, `needs_you` is a queue, `could_not_complete` is a fault to chase,
+// `watching` is a source to restore. One list would let a failure sort in beside a
+// success.
+type MagicReceipt struct {
+	// AsOf The instant this read was taken.
+	AsOf             time.Time   `json:"as_of"`
+	CouldNotComplete []MagicLine `json:"could_not_complete"`
+	Done             []MagicLine `json:"done"`
+	NeedsYou         []MagicLine `json:"needs_you"`
+
+	// NotShown What this read left out, by kind and count.
+	//
+	// A machine write with no customer-facing meaning is not Magic, and folding it
+	// in would turn internal churn into apparent value. Reporting the count instead
+	// means a preview showing five lines can never imply it is showing everything.
+	NotShown []MagicNotShown `json:"not_shown"`
+
+	// Since The start of the window reported, resolved by the server. A client shows it, because "nothing happened" over an hour and over a day are different claims.
+	Since time.Time `json:"since"`
+
+	// SourcesUnavailable Lanes that could not be read. "All clear" is forbidden while one is here: a lane the reader may not see and a lane with nothing in it are different answers.
+	SourcesUnavailable []WorklistSourceUnavailable `json:"sources_unavailable"`
+
+	// Totals How many each lane holds ON THIS PAGE.
+	//
+	// Not a window total, and the difference matters to a client: a preview drawing
+	// five of these lines may say "5 of 8" from `done`, and may NOT say "5 of 8 things
+	// happened today". The window's own size arrives with the cursor, which is the
+	// thing that makes it worth counting; a figure asserted before then would be
+	// neither the page nor the window.
+	Totals   MagicTotals `json:"totals"`
+	Watching []MagicLine `json:"watching"`
+}
+
+// MagicSentence What happened, as a key and the values to fill it with.
+//
+// Typed rather than composed on the server for the reason every other sentence in
+// this contract is: the product ships three languages, and a sentence assembled here
+// reaches a German reader in English.
+type MagicSentence struct {
+	Key    string             `json:"key"`
+	Values *map[string]string `json:"values,omitempty"`
+}
+
+// MagicTotals How many each lane holds ON THIS PAGE.
+//
+// Not a window total, and the difference matters to a client: a preview drawing
+// five of these lines may say "5 of 8" from `done`, and may NOT say "5 of 8 things
+// happened today". The window's own size arrives with the cursor, which is the
+// thing that makes it worth counting; a figure asserted before then would be
+// neither the page nor the window.
+type MagicTotals struct {
+	CouldNotComplete int `json:"could_not_complete"`
+	Done             int `json:"done"`
+	NeedsYou         int `json:"needs_you"`
+	Watching         int `json:"watching"`
+}
+
+// MagicUndo Whether this change can be taken back, and why not when it cannot.
+//
+// A greyed control with no reason is the shape this replaces. The reasons are
+// compose/undoability's own vocabulary rather than a second set written here.
+type MagicUndo struct {
+	// AuditId The entry a restore would name. Present exactly when `undoable` is true — a client that had one without the other would draw a control with nothing to send.
+	AuditId *openapi_types.UUID `json:"audit_id,omitempty"`
+
+	// Reason Why not, when it is not. Absent when it is.
+	Reason   *string `json:"reason,omitempty"`
+	Undoable bool    `json:"undoable"`
+}
+
 // MeResponse defines model for MeResponse.
 type MeResponse struct {
 	// AdminPasswordLink Whether THIS CALLER may issue member set-password links (`issueUserPasswordLink`) — true only when the caller holds `admin` AND the installation has no outbound-email channel AND a public base URL is configured. Deliberately a caller capability rather than a deployment-posture flag: `/me` answers every authenticated member, and a bare posture boolean would tell every rep whether the installation has email configured. Clients render the action on this, so an admin never sees a control that can only fail (ADR-0061 Amendment 1).
@@ -25079,7 +25389,13 @@ type MorningBriefItem struct {
 	// Rank Position in the queue (1 = top), after the L2 re-order.
 	Rank int `json:"rank"`
 
-	// SnoozedUntil When a snoozed item re-surfaces (A77/AC-home-6); set exactly while state=snoozed, null otherwise.
+	// ReopenOn What the item is waiting for; set exactly while state=snoozed, null otherwise.
+	ReopenOn *MorningBriefItemReopenOn `json:"reopen_on,omitempty"`
+
+	// ReopenRef The meeting being waited for; set exactly while reopen_on=meeting.
+	ReopenRef *openapi_types.UUID `json:"reopen_ref,omitempty"`
+
+	// SnoozedUntil When a snoozed item re-surfaces; set exactly while reopen_on=time, null otherwise — the other conditions lift on an event rather than a date.
 	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
 
 	// State The acting rep's queue state for this item.
@@ -25088,6 +25404,9 @@ type MorningBriefItem struct {
 	// StateAt When the rep acted/dismissed/snoozed; null while new.
 	StateAt *time.Time `json:"state_at,omitempty"`
 }
+
+// MorningBriefItemReopenOn What the item is waiting for; set exactly while state=snoozed, null otherwise.
+type MorningBriefItemReopenOn string
 
 // MorningBriefItemState The acting rep's queue state for this item.
 type MorningBriefItemState string
@@ -30120,6 +30439,13 @@ type RenewContractRequest struct {
 // RenewContractRequestValueBasis Stated explicitly rather than inherited: an open-ended agreement becoming a fixed term changes what its value measures.
 type RenewContractRequestValueBasis string
 
+// ReopenCondition What lifts a snooze. `time` is the original behaviour and the default, so a client
+// written before the other two keeps working unchanged. `reply` waits for the
+// counterparty to write back on a conversation linked to the record. `meeting` waits for
+// a named meeting to be over — an archived meeting counts as over, so a cancelled one
+// returns the work rather than holding it forever.
+type ReopenCondition string
+
 // ReplaceChannelTokenRequest defines model for ReplaceChannelTokenRequest.
 type ReplaceChannelTokenRequest struct {
 	// BotToken The replacement BotFather token. Sealed into the vault on arrival and never echoed back.
@@ -30709,6 +31035,19 @@ type SearchResultTrustTier string
 // SearchResultType defines model for SearchResult.Type.
 type SearchResultType string
 
+// SeatUsage How many full seats the installation is using, without what it is entitled to.
+//
+// Deliberately NOT a subset of LicenseEntitlement: it carries no cap and no posture,
+// because those are the commercial facts `seat_usage` exists to leave out. A client
+// needing both reads the entitlement surface, which requires the `license` grant.
+type SeatUsage struct {
+	// SeatsUsed Full seats in use: every one the installation has not withdrawn — neither
+	// deactivated nor suspended — agent seats included. Read seats are unlimited and
+	// never counted (A62/ADR-0047). This is the same number the entitlement surface
+	// reports and the same one a seat creation is refused against; there is one meter.
+	SeatsUsed int `json:"seats_used"`
+}
+
 // SendAccountEmailRequest One account-started send. It is SendEmailRequest plus the `links` an anchor would
 // otherwise have supplied — the records this new conversation belongs to.
 type SendAccountEmailRequest struct {
@@ -31213,9 +31552,20 @@ type SetActivityDispositionRequest struct {
 	// `not_mine` bind only the caller.
 	Disposition SetActivityDispositionRequestDisposition `json:"disposition"`
 
-	// SnoozedUntil When a snooze lifts. REQUIRED for `snooze` and refused for the other two — a snooze
-	// with no moment would never lift, and a moment on `not_mine` would make a hand-off
-	// expire on a Thursday.
+	// ReopenOn What lifts a snooze. `time` is the original behaviour and the default, so a client
+	// written before the other two keeps working unchanged. `reply` waits for the
+	// counterparty to write back on a conversation linked to the record. `meeting` waits for
+	// a named meeting to be over — an archived meeting counts as over, so a cancelled one
+	// returns the work rather than holding it forever.
+	ReopenOn *ReopenCondition `json:"reopen_on,omitempty"`
+
+	// ReopenRef The meeting to wait for. REQUIRED for `snooze` with `reopen_on: meeting` and
+	// refused otherwise.
+	ReopenRef *openapi_types.UUID `json:"reopen_ref,omitempty"`
+
+	// SnoozedUntil When a snooze lifts. REQUIRED for `snooze` with `reopen_on: time`, and refused
+	// everywhere else — a snooze waiting on a reply lifts when the reply arrives, and a
+	// moment on `not_mine` would make a hand-off expire on a Thursday.
 	//
 	// A moment already past is refused rather than stored: it would write a row that hides
 	// nothing, and read to the rep as a snooze that did not take.
@@ -33822,12 +34172,15 @@ type WorklistDealFacts struct {
 	// the champion seat — a deal drifting because nobody INSIDE is arguing for it,
 	// which needs a different move from the rep than a deal nobody outside has touched.
 	//
-	// Null is not `false`. It is sent only when the answer is both known and negative,
-	// and stays absent in the three cases that would otherwise be rounded down to a
-	// finding: a committee the caller may not read in full (a champion they cannot see
-	// is still a champion), a deal carrying no seats at all (no committee, so no gap),
-	// and a server that does not assess coverage. A client MUST NOT render an absent
-	// value as "nobody is carrying this".
+	// `false` is NEVER sent. The field carries a finding or it carries nothing, and
+	// absent is the answer in all FOUR cases that are not the finding: a committee
+	// whose champion seat IS held, a committee the caller may not read in full (a
+	// champion they cannot see is still a champion), a deal carrying no seats at all
+	// (no committee, so no gap), and a server that does not assess coverage.
+	//
+	// Absence therefore says nothing either way. A client MUST NOT render it as
+	// "nobody is carrying this", and MUST NOT render it as "somebody is": the four
+	// cases are indistinguishable on the wire by design.
 	NoChampion     *bool               `json:"no_champion,omitempty"`
 	OwnerId        *openapi_types.UUID `json:"owner_id,omitempty"`
 	QuietDays      *int                `json:"quiet_days,omitempty"`
@@ -34307,7 +34660,7 @@ type WorklistMove struct {
 	// and no thread behind it.
 	//
 	// `draft_email` opens a new message, `create_task` agrees a next step,
-	// `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
+	// `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
 	// sends the reader to reauthorize a source that stopped answering.
 	//
 	// `none` is a producer's answer that there is nothing to do — a closed deal has
@@ -34344,7 +34697,7 @@ type WorklistMove struct {
 // and no thread behind it.
 //
 // `draft_email` opens a new message, `create_task` agrees a next step,
-// `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
+// `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
 // sends the reader to reauthorize a source that stopped answering.
 //
 // `none` is a producer's answer that there is nothing to do — a closed deal has
@@ -36702,6 +37055,13 @@ type ExplainLeadScoreParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// GetMagicParams defines parameters for GetMagic.
+type GetMagicParams struct {
+	// Since The instant to report from. Absent means the acting rep's last brief cutoff, and 24 hours where there is no brief — a window the reader has not already seen, rather than a fixed one that repeats what they read this morning.
+	Since *time.Time `form:"since,omitempty" json:"since,omitempty"`
+	Limit *int       `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // GetMyAiActivityParams defines parameters for GetMyAiActivity.
 type GetMyAiActivityParams struct {
 	// Kinds Restrict both arrays to these kinds of AI work, applied BEFORE the bounds.
@@ -37857,6 +38217,14 @@ type SuppressPersonJSONBody struct {
 
 // SuppressPersonJSONBodyKind defines parameters for SuppressPerson.
 type SuppressPersonJSONBodyKind string
+
+// LiftSuppressionJSONBody defines parameters for LiftSuppression.
+type LiftSuppressionJSONBody struct {
+	// Reason Why the stop is being taken back. Required, unlike the reason for setting
+	// one: a record saying somebody asked us not to write, now overruled, is the
+	// change most worth being able to explain later.
+	Reason string `json:"reason"`
+}
 
 // DraftPersonEmailJSONBody defines parameters for DraftPersonEmail.
 type DraftPersonEmailJSONBody struct {
@@ -39910,6 +40278,9 @@ type RecordQualifyingEventJSONRequestBody = RecordQualifyingEventRequest
 
 // SuppressPersonJSONRequestBody defines body for SuppressPerson for application/json ContentType.
 type SuppressPersonJSONRequestBody SuppressPersonJSONBody
+
+// LiftSuppressionJSONRequestBody defines body for LiftSuppression for application/json ContentType.
+type LiftSuppressionJSONRequestBody LiftSuppressionJSONBody
 
 // DraftPersonEmailJSONRequestBody defines body for DraftPersonEmail for application/json ContentType.
 type DraftPersonEmailJSONRequestBody DraftPersonEmailJSONBody
@@ -48688,6 +49059,9 @@ type ServerInterface interface {
 	// Store one vendor's OAuth app for this installation (admin/ops).
 	// (PUT /installation/oauth-apps/{provider})
 	SetOauthApp(w http.ResponseWriter, r *http.Request, provider string)
+	// How many full seats this installation is using (capacity, not entitlement).
+	// (GET /installation/seat-usage)
+	GetSeatUsage(w http.ResponseWriter, r *http.Request)
 	// The installation's own settings.
 	// (GET /installation/settings)
 	GetInstallationSettings(w http.ResponseWriter, r *http.Request)
@@ -48811,6 +49185,9 @@ type ServerInterface interface {
 	// Explain This Score — the weighted-factor decomposition behind a lead's score.
 	// (GET /leads/{id}/score)
 	ExplainLeadScore(w http.ResponseWriter, r *http.Request, id Id, params ExplainLeadScoreParams)
+	// What the machinery did, what it needs, what it could not finish, and what it is watching.
+	// (GET /magic)
+	GetMagic(w http.ResponseWriter, r *http.Request, params GetMagicParams)
 	// Get the current authenticated principal (user or agent).
 	// (GET /me)
 	GetCurrentPrincipal(w http.ResponseWriter, r *http.Request)
@@ -49165,6 +49542,9 @@ type ServerInterface interface {
 	// Record that this person asked us to stop writing to them.
 	// (POST /people/{id}/consent/suppress)
 	SuppressPerson(w http.ResponseWriter, r *http.Request, id Id)
+	// Take back a stop, if you outrank the level that set it.
+	// (POST /people/{id}/consent/suppress/{suppressionId}/lift)
+	LiftSuppression(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID)
 	// Draft an email to this person, grounded in their record.
 	// (POST /people/{id}/draft-email)
 	DraftPersonEmail(w http.ResponseWriter, r *http.Request, id Id)
@@ -51220,6 +51600,12 @@ func (_ Unimplemented) SetOauthApp(w http.ResponseWriter, r *http.Request, provi
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// How many full seats this installation is using (capacity, not entitlement).
+// (GET /installation/seat-usage)
+func (_ Unimplemented) GetSeatUsage(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The installation's own settings.
 // (GET /installation/settings)
 func (_ Unimplemented) GetInstallationSettings(w http.ResponseWriter, r *http.Request) {
@@ -51463,6 +51849,12 @@ func (_ Unimplemented) PreviewLeadPromotion(w http.ResponseWriter, r *http.Reque
 // Explain This Score — the weighted-factor decomposition behind a lead's score.
 // (GET /leads/{id}/score)
 func (_ Unimplemented) ExplainLeadScore(w http.ResponseWriter, r *http.Request, id Id, params ExplainLeadScoreParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What the machinery did, what it needs, what it could not finish, and what it is watching.
+// (GET /magic)
+func (_ Unimplemented) GetMagic(w http.ResponseWriter, r *http.Request, params GetMagicParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -52171,6 +52563,12 @@ func (_ Unimplemented) RecordQualifyingEvent(w http.ResponseWriter, r *http.Requ
 // Record that this person asked us to stop writing to them.
 // (POST /people/{id}/consent/suppress)
 func (_ Unimplemented) SuppressPerson(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take back a stop, if you outrank the level that set it.
+// (POST /people/{id}/consent/suppress/{suppressionId}/lift)
+func (_ Unimplemented) LiftSuppression(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63339,6 +63737,26 @@ func (siw *ServerInterfaceWrapper) SetOauthApp(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// GetSeatUsage operation middleware
+func (siw *ServerInterfaceWrapper) GetSeatUsage(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSeatUsage(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetInstallationSettings operation middleware
 func (siw *ServerInterfaceWrapper) GetInstallationSettings(w http.ResponseWriter, r *http.Request) {
 
@@ -64972,6 +65390,60 @@ func (siw *ServerInterfaceWrapper) ExplainLeadScore(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ExplainLeadScore(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMagic operation middleware
+func (siw *ServerInterfaceWrapper) GetMagic(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMagicParams
+
+	// ------------- Optional query parameter "since" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "since", r.URL.Query(), &params.Since, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "since"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "since", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMagic(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -70386,6 +70858,47 @@ func (siw *ServerInterfaceWrapper) SuppressPerson(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SuppressPerson(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LiftSuppression operation middleware
+func (siw *ServerInterfaceWrapper) LiftSuppression(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "suppressionId" -------------
+	var suppressionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "suppressionId", chi.URLParam(r, "suppressionId"), &suppressionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "suppressionId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LiftSuppression(w, r, id, suppressionId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -79395,6 +79908,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/installation/oauth-apps/{provider}", wrapper.SetOauthApp)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/seat-usage", wrapper.GetSeatUsage)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/settings", wrapper.GetInstallationSettings)
 	})
 	r.Group(func(r chi.Router) {
@@ -79516,6 +80032,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/{id}/score", wrapper.ExplainLeadScore)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/magic", wrapper.GetMagic)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me", wrapper.GetCurrentPrincipal)
@@ -79870,6 +80389,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/consent/suppress", wrapper.SuppressPerson)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/people/{id}/consent/suppress/{suppressionId}/lift", wrapper.LiftSuppression)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/draft-email", wrapper.DraftPersonEmail)
