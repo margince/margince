@@ -75,6 +75,9 @@ func NewRegistry(adapters ...provider.Adapter) (*Registry, error) {
 		if err := prerequisitesAreFlat(d); err != nil {
 			return nil, err
 		}
+		if err := oneCascadePerFallback(d); err != nil {
+			return nil, err
+		}
 		if d.EgressHost == "" {
 			return nil, fmt.Errorf("integrations: provider %q declared no egress host", d.Name)
 		}
@@ -179,6 +182,34 @@ func prerequisitesAreFlat(d provider.Descriptor) error {
 					"map walks one hop, so the chain would be priced and requested short and refused by the server",
 				d.Name, category, prerequisite, next)
 		}
+	}
+	return nil
+}
+
+// oneCascadePerFallback refuses a descriptor declaring two cascades for the
+// same fallback category.
+//
+// The catalog PRICES a fallback with every trigger that can fire it and NAMES
+// one — Follows is a single category, because a button asks for a pair. With two
+// declared, the price would cover both triggers while the press sent one, and
+// the server would refuse the press for the trigger left out: a button quoting a
+// number nobody can spend.
+//
+// Refused where the author can see it rather than carried on the wire as a list,
+// for the reason pricedWith gives about hops: the shape nobody has written is
+// not the shape to build for, and this is the error that says so when somebody
+// does. TestTheCatalogNamesEveryCategoryItPricesWith is the backstop underneath
+// it — it fails on any descriptor whose named set and priced set differ.
+func oneCascadePerFallback(d provider.Descriptor) error {
+	after := make(map[provider.Category]provider.Category, len(d.Cascades))
+	for _, cascade := range d.Cascades {
+		if first, seen := after[cascade.Category]; seen {
+			return fmt.Errorf(
+				"integrations: provider %q declares %q as a fallback after both %q and %q: the catalog prices "+
+					"a fallback with every trigger and names one, so the button would quote both and ask for one",
+				d.Name, cascade.Category, first, cascade.After)
+		}
+		after[cascade.Category] = cascade.After
 	}
 	return nil
 }
