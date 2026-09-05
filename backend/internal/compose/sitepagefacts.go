@@ -335,16 +335,23 @@ func gatePageFactList(parsed pageFactsReply, page crawlPage, menu pageMenu, idx 
 			drop(lanePageFacts, f.F, f.V, dropZeroedStat)
 			continue
 		}
+		// ONE string, and both the stored value and its key derived from it.
+		// Keying the untrimmed value while storing the trimmed one is what made
+		// the two disagree on `"Capital One — "` and cost a whole read; the
+		// normalizer trims too, so this is belt and braces rather than the fix,
+		// and it is here because a reader of these three lines should not have
+		// to know that.
+		value := strings.TrimSpace(f.V)
 		valueKey := ""
 		if people.OrganizationFactMultiValue[f.F] {
-			valueKey = people.NormalizeFactValueKey(f.V)
+			valueKey = people.NormalizeFactValueKey(value)
 			if valueKey == "" {
 				drop(lanePageFacts, f.F, f.V, dropEmptyValueKey)
 				continue
 			}
 		}
 		fact := people.DeepReadFact{
-			Category: category, Field: f.F, Value: strings.TrimSpace(f.V), ValueKey: valueKey,
+			Category: category, Field: f.F, Value: value, ValueKey: valueKey,
 			EvidenceSnippet: evidence, SourceURL: page.URL, Confidence: gatedConfidence,
 		}
 		if _, dup := factIndex[factKey(fact)]; dup {
