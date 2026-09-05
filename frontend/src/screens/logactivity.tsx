@@ -198,9 +198,15 @@ function activityRequestBody(
     // server refuses an organization link on a meeting or a call whichever
     // else are present, and the company still reaches the activity: the
     // employer walk carries it there through the person who was named.
-    links: attendee
-      ? [{ entity_type: "person" as const, entity_id: attendee.id }]
-      : [{ entity_type: entityType, entity_id: entityId }],
+    //
+    // Only for the kinds that ask for one. The picker stops rendering when the
+    // reader switches to a note or a task, but the person they had already
+    // chosen stays in state — and filing a company note against that person
+    // takes it off the company screen it was written on.
+    links:
+      attendee && KINDS_WITH_A_PERSON.has(input.kind)
+        ? [{ entity_type: "person" as const, entity_id: attendee.id }]
+        : [{ entity_type: entityType, entity_id: entityId }],
     source: "manual",
   };
 }
