@@ -123,7 +123,7 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 
 	// Deliverability is derived here, after the gates, so both transports
 	// get it and neither can send marketing mail without it.
-	derived, err := s.deliverability(ctx, signed, in.Subject, in.Recipients, in.ConsentPurpose)
+	derived, err := s.deliverability(ctx, signed, in.Subject, in.Recipients, surfaceFor(in.Context, in.MarketingPurpose, in.ConsentPurpose))
 	if err != nil {
 		return PreparedSend{}, err
 	}
