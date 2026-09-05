@@ -14,7 +14,7 @@ import { CompanyLogo } from "../design-system/companylogo";
 import { Logomark } from "../design-system/logomark";
 import { useLocale, useT } from "../i18n";
 import { useCompany } from "../screens/onboarding";
-import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settings";
+import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settingsnav";
 import { AgentEdge } from "./agent-edge";
 import { AgentRail } from "./agentrail";
 import { EconomyBanner } from "./economybanner";

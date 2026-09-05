@@ -11,7 +11,7 @@ import {
 import type { Locale, useT } from "../i18n";
 import { translatePlural } from "../i18n";
 import { BRIEF_PARAM, COMPOSE_PARAM } from "./personpage.address";
-import { settingsAddress } from "./settings";
+import { settingsAddress } from "./settingsnav";
 import type {
   Worklist,
   WorklistComparison,
