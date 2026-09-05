@@ -2415,6 +2415,7 @@ public.forecast_contribution.in_open boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_won boolean NOT NULL gen=- def=false
 public.forecast_contribution.owner_id uuid gen=- def=-
 public.forecast_contribution.snapshot_id uuid NOT NULL gen=- def=-
+public.forecast_contribution.stage_id uuid gen=- def=-
 public.forecast_contribution.stage_probability integer gen=- def=-
 public.forecast_contribution.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.forecast_contribution.uq_forecast_contribution_deal UNIQUE (snapshot_id, deal_id)

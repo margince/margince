@@ -120,6 +120,15 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// identity's own sentence, which quotes the value that was refused. A
 	// second check here would name a different field and say less.
 	patch.FiscalYearStartMonth = req.FiscalYearStartMonth
+	// Same reasoning as the month above: the entry validates against the shared
+	// kernel's set, so an unknown measure comes back naming this field and
+	// quoting the value. Converted to a plain string because the patch carries
+	// what was ASKED for, and the generated enum type would claim it had already
+	// been checked against the vocabulary the projection enforces.
+	if req.ForecastForwardMeasure != nil {
+		measure := string(*req.ForecastForwardMeasure)
+		patch.ForecastForwardMeasure = &measure
+	}
 	// Passed through unvalidated against the deployment's list on purpose. A key
 	// this deployment holds no credentials for enables nothing — the effective
 	// answer is the intersection — so refusing it would be refusing a request
@@ -148,9 +157,11 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		BaseCurrency:         s.BaseCurrency,
 		BaseLanguage:         crmcontracts.InstallationSettingsBaseLanguage(s.BaseLanguage),
 		FiscalYearStartMonth: s.FiscalYearStartMonth,
-		BaseCurrencyLocked:   s.BaseCurrencyLocked,
-		MaxUploadBytes:       h.maxUploadBytes,
-		SignInProviders:      h.signInProviders(s.EnabledOidcProviders),
+		ForecastForwardMeasure: crmcontracts.InstallationSettingsForecastForwardMeasure(
+			s.ForecastForwardMeasure),
+		BaseCurrencyLocked: s.BaseCurrencyLocked,
+		MaxUploadBytes:     h.maxUploadBytes,
+		SignInProviders:    h.signInProviders(s.EnabledOidcProviders),
 	}
 	if s.BaseCurrencyLockedReason != "" {
 		reason := s.BaseCurrencyLockedReason
