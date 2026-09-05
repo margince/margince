@@ -6,7 +6,7 @@ import { formatNumber, formatPercent } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useConnectors } from "../screens/connectors";
 import { liveCapture } from "./capture-progress";
-import type { Route } from "./router";
+import { useImportRunOnScreen } from "./import-onscreen";
 import "./capture-chip.css";
 
 /** Where the chip leads: the connections card, which holds the run in full. */
@@ -31,19 +31,26 @@ const CONNECTIONS_HREF = "#/settings/connections";
  * the work. Both read the same connections body, so they cannot disagree
  * about the share.
  *
- * It is a link and not a button: pressing it goes to the connections card,
- * where the import can be watched in full or stopped. On that card it is
- * absent, because a link to the page under it is a link to nowhere and the
- * card already draws the run.
+ * It stands down wherever the run is already drawn in full — the connections
+ * card, onboarding's backread step — and those surfaces say so themselves
+ * (app/import-onscreen.ts) rather than being listed here as routes.
  */
-export function CaptureChip({ route }: Readonly<{ route: Route }>) {
+export function CaptureChip({
+  linked,
+}: Readonly<{
+  /**
+   * Whether pressing the chip may take the reader to the connections card.
+   * False on the rail-less routes, which carry no navigation at all: onboarding
+   * is a flow with a place in it, and a link out of it loses that place.
+   */
+  linked: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const connectors = useConnectors();
   const capture = liveCapture(connectors.data?.data ?? []);
-  const onConnections =
-    route.screen === "settings" && route.id === "connections";
-  if (capture === null || onConnections) {
+  const drawnOnScreen = useImportRunOnScreen();
+  if (capture === null || drawnOnScreen) {
     return null;
   }
   const detail =
@@ -56,34 +63,45 @@ export function CaptureChip({ route }: Readonly<{ route: Route }>) {
           scanned: formatNumber(capture.scanned, locale),
           total: formatNumber(capture.estimated, locale),
         });
+  const gauge = (
+    <>
+      {/* Always `ingest`: this chip exists only while mail is arriving, so
+          the one state it can honestly wear is the one named for that. The
+          rail's orb may be showing a fault or a named run at the same moment;
+          that is the agent's standing, and this is the import's. Dark
+          surface, because the chip's own ground is the rail's. */}
+      <MarginceCoreScene
+        state="ingest"
+        size="md"
+        surface="dark"
+        progress={capture.fraction ?? undefined}
+        className="capturechip-core"
+      />
+      <span className="capturechip-words">
+        <span className="capturechip-line">{t("shell.capture.importing")}</span>
+        <span className="capturechip-detail">{detail}</span>
+      </span>
+    </>
+  );
   return (
     // The live region is the wrapper and the link is inside it: a link that was
     // itself a status would announce every poll's new share as a navigation.
     <div className="capturechip" role="status">
-      <a
-        className="capturechip-link"
-        href={CONNECTIONS_HREF}
-        aria-label={`${t("shell.capture.importing")}. ${detail}. ${t("shell.capture.open")}`}
-      >
-        {/* Always `ingest`: this chip exists only while mail is arriving, so
-            the one state it can honestly wear is the one named for that. The
-            rail's orb may be showing a fault or a named run at the same moment;
-            that is the agent's standing, and this is the import's. Dark
-            surface, because the chip's own ground is the rail's. */}
-        <MarginceCoreScene
-          state="ingest"
-          size="md"
-          surface="dark"
-          progress={capture.fraction ?? undefined}
-          className="capturechip-core"
-        />
-        <span className="capturechip-words">
-          <span className="capturechip-line">
-            {t("shell.capture.importing")}
-          </span>
-          <span className="capturechip-detail">{detail}</span>
-        </span>
-      </a>
+      {linked ? (
+        <a
+          className="capturechip-link"
+          href={CONNECTIONS_HREF}
+          aria-label={`${t("shell.capture.importing")}. ${detail}. ${t("shell.capture.open")}`}
+        >
+          {gauge}
+        </a>
+      ) : (
+        // The same chip with nowhere to go: still a status, never a control, so
+        // it takes no focus, promises no destination, and — floating over a
+        // surface whose own composer and buttons sit where it lands — never
+        // takes a click back from what is under it.
+        <div className="capturechip-link capturechip-static">{gauge}</div>
+      )}
     </div>
   );
 }
