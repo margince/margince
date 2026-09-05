@@ -2581,6 +2581,9 @@ export const en = {
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet": "A quiet week — nothing closed and nothing moved.",
 
+  "brief.changed.lead": "Changed since the brief:",
+  "brief.changed.more": "+{count} more",
+  "brief.changed.open": "Open the worklist",
   "brief.feed.title": "Today",
   "brief.feed.sub": "One order, decided once.",
   "brief.feed.loading": "Reading your morning",
