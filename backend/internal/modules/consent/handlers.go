@@ -206,6 +206,34 @@ func (h Handlers) SuppressPerson(w http.ResponseWriter, r *http.Request, id crmc
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// LiftSuppression serves POST /people/{id}/consent/suppress/{suppressionId}/lift:
+// somebody taking back a stop they outrank.
+//
+// Wire-only, and completely so: the store judges the reason, the row scope and
+// the level. The comparison in particular belongs beside the row and inside the
+// transaction that revokes it — a handler that pre-checked the level would be
+// reading a value that can change before the write lands.
+func (h Handlers) LiftSuppression(
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, suppressionID openapi_types.UUID,
+) {
+	var req crmcontracts.LiftSuppressionJSONRequestBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	// The contract says maxLength 500 and the generated type does not enforce
+	// it. Unchecked, one caller stores a megabyte in an audit payload that every
+	// later reader of this person's history is served in full.
+	if err := h.store.Lift(r.Context(), LiftInput{
+		PersonID:      ids.From[ids.PersonKind](ids.UUID(id)),
+		SuppressionID: ids.UUID(suppressionID),
+		Reason:        req.Reason,
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // RecordQualifyingEvent serves POST /people/{id}/consent/qualifying-events: the
 // one lawful basis nothing can derive, written down by the person who was
 // there. The store owns the rules; this is wire-only.

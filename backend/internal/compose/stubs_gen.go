@@ -1191,6 +1191,10 @@ func (stubs) ExplainLeadScore(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "ExplainLeadScore")
 }
 
+func (stubs) GetMagic(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetMagicParams) {
+	httperr.NotImplemented(w, r, "GetMagic")
+}
+
 func (stubs) GetCurrentPrincipal(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCurrentPrincipal")
 }
@@ -1661,6 +1665,10 @@ func (stubs) RecordQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request,
 
 func (stubs) SuppressPerson(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "SuppressPerson")
+}
+
+func (stubs) LiftSuppression(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, suppressionId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "LiftSuppression")
 }
 
 func (stubs) DraftPersonEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

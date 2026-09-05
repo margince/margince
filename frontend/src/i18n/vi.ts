@@ -3285,6 +3285,19 @@ export const vi = {
   "analytics.noClosedDeals": "Chưa có deal nào được chốt.",
   "analytics.sectionOutcomes": "Kết quả của tôi",
   "analytics.sectionCoverage": "Độ phủ dữ liệu",
+  "analytics.sectionDelivery": "Triển khai",
+  "analytics.reportProjectsByPhase": "Dự án theo giai đoạn",
+  "analytics.reportProjectCommitments": "Cam kết dự án",
+  "analytics.reportProjectsGoneQuiet": "Dự án im ắng",
+  "analytics.projects": "Dự án",
+  "analytics.project": "Dự án",
+  "analytics.openDealValue": "Giá trị deal đang mở ({currency})",
+  "analytics.wonDealValue": "Giá trị deal đã thắng ({currency})",
+  "analytics.openCommitments": "Đang mở",
+  "analytics.overdueCommitments": "Quá hạn",
+  "analytics.quietSince": "Im ắng từ",
+  "analytics.nothingQuiet": "Không có dự án đang triển khai nào bị im ắng.",
+  "analytics.noProjectsYet": "Chưa có dự án nào — một deal thắng sẽ mở dự án.",
   "analytics.coverageSub":
     "Những nguồn nào kiểm tra hằng đêm đọc được, và đến đâu. Nguồn im ắng nhưng đã đọc là đã kiểm tra; nguồn chưa đọc sẽ nói lý do.",
   "analytics.covSource": "Nguồn",
@@ -3562,6 +3575,24 @@ export const vi = {
   "agent.activity.documentExtractNamed.degraded":
     "Tôi mới đọc được một phần {name} rồi dừng.",
   "agent.activity.documentExtractNamed.failed": "Tôi không đọc được {name}.",
+  "agent.activity.siteRead.queued": "Trang web của công ty đang chờ được đọc.",
+  "agent.activity.siteRead.running": "Tôi đang đọc trang web của công ty.",
+  "agent.activity.siteRead.stalled":
+    "Việc đọc trang web của công ty kéo dài bất thường. Có thể nó đã dừng.",
+  "agent.activity.siteRead.done": "Tôi đã đọc xong trang web của công ty.",
+  "agent.activity.siteRead.degraded":
+    "Tôi đã dừng trước khi đọc hết trang web của công ty.",
+  "agent.activity.siteRead.failed": "Tôi không đọc được trang web của công ty.",
+  "agent.activity.siteReadNamed.queued":
+    "Trang web của {name} đang chờ được đọc.",
+  "agent.activity.siteReadNamed.running": "Tôi đang đọc trang web của {name}.",
+  "agent.activity.siteReadNamed.stalled":
+    "Việc đọc trang web của {name} kéo dài bất thường. Có thể nó đã dừng.",
+  "agent.activity.siteReadNamed.done": "Tôi đã đọc xong trang web của {name}.",
+  "agent.activity.siteReadNamed.degraded":
+    "Tôi đã dừng trước khi đọc hết trang web của {name}.",
+  "agent.activity.siteReadNamed.failed":
+    "Tôi không đọc được trang web của {name}.",
   "agent.activity.summarize.queued": "Một bản tổng hợp đang chờ xử lý.",
   "agent.activity.summarize.running": "Tôi đang tổng hợp lại.",
   "agent.activity.summarize.done": "Bản tổng hợp của bạn đã sẵn sàng.",
@@ -7968,6 +7999,8 @@ export const vi = {
     "Không có việc đã thống nhất nào bị đình trệ.",
   "worklist.bandClear.review": "Không có gì để rà soát.",
   "worklist.disposition.verb.snooze": "Tạm gác",
+  "worklist.disposition.snoozeForDays_one": "Tạm gác {value} ngày",
+  "worklist.disposition.snoozeForDays_other": "Tạm gác {value} ngày",
   "worklist.disposition.snoozeFor": "Trong bao lâu",
   "worklist.disposition.snoozeDays_one": "{value} ngày",
   "worklist.disposition.snoozeDays_other": "{value} ngày",

@@ -3385,6 +3385,19 @@ export const en = {
   "analytics.noClosedDeals": "No deals have closed yet.",
   "analytics.sectionOutcomes": "My outcomes",
   "analytics.sectionCoverage": "Data coverage",
+  "analytics.sectionDelivery": "Delivery",
+  "analytics.reportProjectsByPhase": "Projects by phase",
+  "analytics.reportProjectCommitments": "Project promises",
+  "analytics.reportProjectsGoneQuiet": "Projects gone quiet",
+  "analytics.projects": "Projects",
+  "analytics.project": "Project",
+  "analytics.openDealValue": "Open deal value ({currency})",
+  "analytics.wonDealValue": "Won deal value ({currency})",
+  "analytics.openCommitments": "Open",
+  "analytics.overdueCommitments": "Overdue",
+  "analytics.quietSince": "Quiet since",
+  "analytics.nothingQuiet": "No delivering project has gone quiet.",
+  "analytics.noProjectsYet": "No projects yet — a won deal opens one.",
   "analytics.coverageSub":
     "Which sources the nightly check could read, and how far. A quiet source that was read is checked; an unread one says why.",
   "analytics.covSource": "Source",
@@ -3670,6 +3683,25 @@ export const en = {
   "agent.activity.documentExtractNamed.degraded":
     "I got partway through {name} and stopped.",
   "agent.activity.documentExtractNamed.failed": "I couldn't read {name}.",
+  // A company's website being read. The same shape as the document lines: the
+  // unnamed pair says which kind of thing, the named one says which company.
+  "agent.activity.siteRead.queued": "The company website is queued to be read.",
+  "agent.activity.siteRead.running": "I'm reading the company website.",
+  "agent.activity.siteRead.stalled":
+    "Reading the company website has taken unusually long. It may have stopped.",
+  "agent.activity.siteRead.done": "I've read the company website.",
+  "agent.activity.siteRead.degraded":
+    "I stopped before finishing the company website.",
+  "agent.activity.siteRead.failed": "I couldn't read the company website.",
+  "agent.activity.siteReadNamed.queued":
+    "The {name} website is queued to be read.",
+  "agent.activity.siteReadNamed.running": "I'm reading the {name} website.",
+  "agent.activity.siteReadNamed.stalled":
+    "Reading the {name} website has taken unusually long. It may have stopped.",
+  "agent.activity.siteReadNamed.done": "I've read the {name} website.",
+  "agent.activity.siteReadNamed.degraded":
+    "I stopped before finishing the {name} website.",
+  "agent.activity.siteReadNamed.failed": "I couldn't read the {name} website.",
   // The AI work a person ASKS for and then waits on. Same rules as the
   // scheduled lines above — first person, result first, and never a word that
   // reads as finished on a run that stopped part-way.
@@ -8178,6 +8210,8 @@ export const en = {
   "worklist.bandClear.keep_momentum": "Nothing agreed is drifting.",
   "worklist.bandClear.review": "Nothing to review.",
   "worklist.disposition.verb.snooze": "Snooze",
+  "worklist.disposition.snoozeForDays_one": "Snooze for {value} day",
+  "worklist.disposition.snoozeForDays_other": "Snooze for {value} days",
   "worklist.disposition.snoozeFor": "For how long",
   "worklist.disposition.snoozeDays_one": "{value} day",
   "worklist.disposition.snoozeDays_other": "{value} days",

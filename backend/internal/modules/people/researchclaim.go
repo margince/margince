@@ -94,6 +94,10 @@ func (s *Store) SaveResearchClaims(ctx context.Context, personID ids.PersonID, c
 				"a source is a document a reader can open — give an http or https URL with a host")
 		}
 	}
+	// After validation, so the messages above still point at the caller's own
+	// indices, and before authority, which is about the person rather than the
+	// batch.
+	claims = lastClaimPerField(claims)
 	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
 		return 0, err
 	}
@@ -164,6 +168,32 @@ func (s *Store) SaveResearchClaims(ctx context.Context, personID ids.PersonID, c
 		return 0, err
 	}
 	return saved, nil
+}
+
+// lastClaimPerField keeps one claim per field, the last the caller sent, in the
+// order the fields first appeared.
+//
+// Two claims for one field in a batch are two answers to one question, and
+// applying both did not merely pick one: the acceptance REPLACES, so the second
+// claim's value reached the evidence row, while the empty-social-slot fill the
+// first claim triggered is ADDITIVE and kept the first claim's URL. The record
+// then showed one LinkedIn address in its research section and a different one
+// on the rail, with nothing in the audit trail saying which the human meant.
+//
+// Last wins because the batch is one form submission read top to bottom, and
+// the caller's final word about a field is the one they left there.
+func lastClaimPerField(claims []ResearchClaimInput) []ResearchClaimInput {
+	out := make([]ResearchClaimInput, 0, len(claims))
+	at := make(map[string]int, len(claims))
+	for _, claim := range claims {
+		if i, seen := at[claim.Field]; seen {
+			out[i] = claim
+			continue
+		}
+		at[claim.Field] = len(out)
+		out = append(out, claim)
+	}
+	return out
 }
 
 // acceptedClaimFields is the audit image's list of what the human accepted —
