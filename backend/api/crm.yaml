@@ -32491,6 +32491,8 @@ components:
             mode: { type: string, enum: [native, overlay] }
         authorization:
           $ref: '#/components/schemas/Authorization'
+        settings_availability:
+          $ref: '#/components/schemas/SettingsAvailability'
         passport:
           type: [object, 'null']
           deprecated: true
@@ -33549,7 +33551,7 @@ components:
     Authorization:
       type: object
       additionalProperties: false
-      required: [seat_type, objects]
+      required: [seat_type, objects, row_scope]
       description: >
         What this principal may do, as the server itself computed it — never a client-side
         re-derivation from role keys, which drifts the moment an installation's stored grants
@@ -33561,9 +33563,9 @@ components:
 
         This is a snapshot, not an authority. A role change does not revoke live sessions, so a
         client refetches on window focus and after any 403, and treats the server's answer as
-        the only one that counts. It does NOT express row scope, nor the human-principal and
-        admin-role gates some routes carry independently of any grant — a permitted grant here
-        is necessary, never sufficient.
+        the only one that counts. It does not express the human-principal gate, nor the few
+        routes that still key on the literal admin role independently of any grant — a
+        permitted grant here is necessary, never sufficient.
       properties:
         seat_type:
           type: string
@@ -33579,6 +33581,57 @@ components:
             unknown object to the zero grant, and a client must do the same rather than treat a
             missing entry as unrestricted.
           additionalProperties: { $ref: '#/components/schemas/RbacObjectGrant' }
+        row_scope:
+          type: string
+          enum: [own, team, all]
+          description: >
+            How far the grants above reach: the caller's own rows, every row belonging to a
+            live team they share, or every row in the workspace. Widened to the maximum any of
+            the caller's roles holds, the same union the server applies.
+
+            It is a THIRD axis, independent of the seat ceiling and the object grants, and a
+            client that ignores it will describe a team lead's reach as if it were an admin's.
+
+            The server never sends a value outside this enum: an unresolved scope is narrowed
+            to `own` before it reaches the wire, so a client reading a value it does not
+            recognize is reading a newer server and should narrow it the same way.
+
+            This does not let a client decide which rows it gets — the server's scope clauses
+            do that on every query. It is what a client needs to EXPLAIN the answer it got, and
+            to label a setting as reaching only the reader, their team, or the company.
+
+    SettingsAvailability:
+      type: object
+      additionalProperties: false
+      required: [company_context]
+      description: >
+        Which settings surfaces EXIST in this installation, independently of whether this
+        caller may read them. A surface can be absent for two unrelated reasons — the
+        installation never enabled it, or this caller holds no grant on it — and settings
+        navigation has to tell them apart: the first is not a destination at all, the second
+        is a destination that explains itself.
+
+        Deployment facts only, never per-caller ones. Nothing here narrows with a role, so it
+        discloses no more than the deployment file already tells every seat. A caller
+        capability belongs beside `admin_password_link` instead, which folds the caller's role
+        into its answer for exactly that reason.
+
+        Carried on `/me` so navigation, the command palette, settings home and settings search
+        can resolve from ONE cached snapshot. Each of those surfaces has to agree about which
+        pages exist, and a screen-specific probe alongside them is how they came to disagree:
+        the rail asked, the palette did not, and a page appeared in one and not the other.
+
+        The whole object is optional, and a client that cannot read it should treat every
+        surface here as unavailable — the fail-closed direction hides a page that exists
+        rather than offering one that does not.
+      properties:
+        company_context:
+          type: boolean
+          description: >
+            True when the installation's company-context rollout has typed reads active — the
+            same predicate `GET /company-context/capabilities` reports as `read_enabled`, and
+            the same one its own endpoints gate on. False leaves the Company page to the
+            installation and currency settings beside it.
 
     # ---- Role administration (the /roles editor) ----
 
