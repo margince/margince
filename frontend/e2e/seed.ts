@@ -2253,6 +2253,36 @@ export async function mockApi(
         base_currency: "EUR",
       });
     }
+    // What the pipeline is worth. Analytics reads it, and so does the morning's
+    // own counter — one query, one cache entry, so an omission here is not one
+    // screen's problem.
+    //
+    // It needs a branch for the same reason `/analytics/context` above does,
+    // and the failure is worse than a blank card: the catch-all at the bottom
+    // answers an unmocked GET with `{data:[],page}`, a 200 whose `base_currency`
+    // is undefined, and the counter hands that straight to a money formatter.
+    // The throw takes the error boundary, the error boundary takes the shell,
+    // and every sweep over a route that draws the strip fails on a missing nav
+    // rail rather than on whatever it was measuring.
+    if (path === "/forecast") {
+      return json({
+        period_start: "2026-03-01",
+        period_end: "2026-03-31",
+        scope_kind: "workspace",
+        won_minor: 125000,
+        evidence_minor: 480000,
+        best_case_minor: 1240000,
+        open_minor: 960000,
+        weighted_minor: 520000,
+        eligible_count: 12,
+        priced_count: 11,
+        confirmed_date_count: 7,
+        fx_missing_count: 0,
+        as_of: "2026-03-04T09:00:00Z",
+        timezone: "Europe/Berlin",
+        base_currency: "EUR",
+      });
+    }
     if (path.startsWith("/reports/")) {
       return json({
         report: "deals-by-stage",
