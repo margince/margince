@@ -247,6 +247,14 @@ func winLossSpec() reportSpec {
 		fieldPipelineID:     colPipelineID,
 		fieldOrganizationID: colOrganizationID,
 		fieldCurrency:       colCurrency,
+		// WHY we lost, beside how much and how long. Two CHECK constraints on
+		// the table bind this column to the loss: deal_lost_reason wants one
+		// exactly when status is 'lost', and deal_lost_reason_only_when_lost
+		// refuses one otherwise. So every won deal groups under NULL here, and
+		// the wire reads that as "no reason" — which is the truth about a win,
+		// not a gap in it. A caller asking why we lose filters status='lost'
+		// first, exactly as the meeting_status dimension expects a kind filter.
+		fieldLostReason: colLostReason,
 	}
 	maps.Copy(dimensions, periodDimensions(colClosedAt))
 

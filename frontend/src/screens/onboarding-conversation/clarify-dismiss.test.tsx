@@ -370,10 +370,17 @@ describe("dismissing a clarify in the company act", () => {
     await userEvent.click(confirm);
     const body = await confirmBody(calls);
     expect(body.resolutions).toEqual([]);
-    // The confirm moved the machine on to the invite — the one thing on
-    // screen that proves the write actually landed, since the transcript
-    // that used to narrate "Company profile confirmed" is gone — and
-    // accepting it opens the voice act.
+    // The confirm moved the machine on — the one thing on screen that proves
+    // the write actually landed, since the transcript that used to narrate
+    // "Company profile confirmed" is gone — and accepting the invite that
+    // follows the basis opens the voice act.
+    // The basis act stands between the confirmation and the invite: its
+    // heading is the first proof the confirm landed, and Continue carries the
+    // installation's prefilled reporting basis forward unchanged.
+    await screen.findByRole("heading", {
+      name: "First, how the numbers are reported.",
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await userEvent.click(
       await screen.findByRole("radio", { name: /Yes, I'll work in Margince/ }),
     );

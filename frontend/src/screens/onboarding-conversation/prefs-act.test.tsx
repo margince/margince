@@ -10,20 +10,8 @@ import type { ConversationState } from "./conversation-machine";
 import { initialConversationState } from "./conversation-machine";
 import { PrefsAct } from "./prefs-act";
 
-// The preferences act closes every path. What it asks is prefilled from the
-// server, what it writes is only what changed, and completion is written
-// only after the settings patch has landed — never before.
-
-const settings = {
-  name: "Brandt Automotive",
-  timezone: "Europe/Berlin",
-  base_currency: "EUR",
-  base_language: "en",
-  fiscal_year_start_month: 1,
-  sign_in_providers: [],
-  base_currency_locked: false,
-  max_upload_bytes: 26214400,
-};
+// The preferences act closes every path. What it asks is the reader's own
+// autonomy switches, and completion is a server fact before the handoff plays.
 
 const autonomy = {
   data: [
@@ -37,14 +25,9 @@ const autonomy = {
   ],
 };
 
-function renderPrefs(admin: boolean, patches: unknown[] = []) {
+function renderPrefs(admin: boolean, persisted = true) {
   installFetchStub({
     "GET /me": meRoute(admin ? { installation_settings: ["update"] } : {}),
-    "GET /installation/settings": () => jsonResponse(settings),
-    "PATCH /installation/settings": (body: unknown) => {
-      patches.push(body);
-      return jsonResponse({ ...settings, ...(body as object) });
-    },
     "GET /autonomy": () => jsonResponse(autonomy),
   });
   const state: ConversationState = {
@@ -54,7 +37,7 @@ function renderPrefs(admin: boolean, patches: unknown[] = []) {
     memberPath: !admin,
   };
   const dispatch = vi.fn();
-  const persist = vi.fn(async () => true);
+  const persist = vi.fn(async () => persisted);
   render(
     <QueryClientProvider
       client={
@@ -78,71 +61,15 @@ afterEach(() => {
 });
 
 describe("PrefsAct", () => {
-  it("prefills the reporting basis for an admin and writes nothing when Done agrees with it", async () => {
-    const patches: unknown[] = [];
-    const { dispatch, persist } = renderPrefs(true, patches);
-    const user = userEvent.setup();
-
-    expect(await screen.findByLabelText("Base currency")).toHaveValue("EUR");
-    expect(screen.getByLabelText("Reporting timezone")).toHaveValue(
-      "Europe/Berlin",
-    );
-    expect(
-      await screen.findByText("What it may change on its own"),
-    ).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Done" }));
-
-    await waitFor(() =>
-      expect(dispatch).toHaveBeenCalledWith({ type: "PREFS_DONE" }),
-    );
-    expect(patches).toEqual([]);
-    expect(persist).toHaveBeenCalledWith(
-      expect.objectContaining({ step: "complete" }),
-    );
-  });
-
-  it("patches only what changed, and only then records completion", async () => {
-    const patches: unknown[] = [];
-    const { dispatch, persist } = renderPrefs(true, patches);
-    const user = userEvent.setup();
-
-    const currency = await screen.findByLabelText("Base currency");
-    await user.clear(currency);
-    await user.type(currency, "chf");
-    await user.click(screen.getByRole("button", { name: "Done" }));
-
-    await waitFor(() =>
-      expect(dispatch).toHaveBeenCalledWith({ type: "PREFS_DONE" }),
-    );
-    // Upper-cased, and the untouched timezone stays out of the patch.
-    expect(patches).toEqual([{ base_currency: "CHF" }]);
-    expect(persist).toHaveBeenCalledWith(
-      expect.objectContaining({ step: "complete" }),
-    );
-  });
-
-  it("names a malformed currency beside Done and goes nowhere", async () => {
+  it("asks what the agent may change on its own, and Done records completion", async () => {
     const { dispatch, persist } = renderPrefs(true);
     const user = userEvent.setup();
 
-    const currency = await screen.findByLabelText("Base currency");
-    await user.clear(currency);
-    await user.type(currency, "eu");
-    await user.click(screen.getByRole("button", { name: "Done" }));
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(/three letters/);
-    expect(dispatch).not.toHaveBeenCalled();
-    expect(persist).not.toHaveBeenCalled();
-  });
-
-  it("asks a member only what is theirs: no reporting basis, the autonomy switches, and Done completes", async () => {
-    const { dispatch, persist } = renderPrefs(false);
-    const user = userEvent.setup();
-
     expect(
       await screen.findByText("What it may change on its own"),
     ).toBeInTheDocument();
+    // The reporting basis was the basis act's question, right after the
+    // company; it is never asked twice.
     expect(screen.queryByLabelText("Base currency")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Done" }));
@@ -153,5 +80,36 @@ describe("PrefsAct", () => {
     expect(persist).toHaveBeenCalledWith(
       expect.objectContaining({ step: "complete" }),
     );
+  });
+
+  it("asks a member the same, on their own three-stop rail", async () => {
+    const { dispatch, persist } = renderPrefs(false);
+    const user = userEvent.setup();
+
+    expect(
+      await screen.findByText("What it may change on its own"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Step 3 of 3 · Preferences")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Done" }));
+
+    await waitFor(() =>
+      expect(dispatch).toHaveBeenCalledWith({ type: "PREFS_DONE" }),
+    );
+    expect(persist).toHaveBeenCalledWith(
+      expect.objectContaining({ step: "complete" }),
+    );
+  });
+
+  it("says so and stays when completion could not be written", async () => {
+    const { dispatch, persist } = renderPrefs(true, false);
+    const user = userEvent.setup();
+
+    await screen.findByText("What it may change on its own");
+    await user.click(screen.getByRole("button", { name: "Done" }));
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(persist).toHaveBeenCalledTimes(1);
+    expect(dispatch).not.toHaveBeenCalled();
   });
 });

@@ -385,8 +385,8 @@ describe("restore into the conversational shell", () => {
     ).toBeTruthy();
   });
 
-  it("the member path comes from the state row and skips voice and results entirely", async () => {
-    const calls = stubApi({
+  it("the member path comes from the state row and resumes at the step it names", async () => {
+    stubApi({
       state: stateRow({ path: "member", step: "connect" }),
       company: savedProfile,
     });
@@ -400,8 +400,16 @@ describe("restore into the conversational shell", () => {
     // provider card.
     const microsoft = screen.getByRole("button", { name: /Microsoft/ });
     await waitFor(() => expect(microsoft).not.toBeDisabled());
-    // A member restore never probes the voice surface.
-    expect(requestsTo(calls, "/voice-profiles", "GET").length).toBe(0);
+  });
+
+  it("a member with no row of their own begins at the voice act, company already settled", async () => {
+    const calls = stubApi({ state: null, company: savedProfile });
+    render(<OnboardingScreen />);
+
+    // Straight to the collect scene: no company act, no invite, no basis —
+    // those were the creator's, and the voice probe feeds the corpus meter.
+    expect(await screen.findByText(/Teach me how you write\./)).toBeTruthy();
+    expect(requestsTo(calls, "/voice-profiles", "GET").length).toBe(1);
   });
 
   it("reopens the invite for a creator whose company is confirmed", async () => {

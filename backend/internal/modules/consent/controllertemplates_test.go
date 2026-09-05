@@ -209,9 +209,11 @@ func TestEveryControllerTemplateIsPinnedToItsWording(t *testing.T) {
 		}
 		if got != want {
 			t.Errorf("%s wording changed but its version did not.\n  pinned: %s\n  now:    %s\n\n"+
-				"Bump the template's version and add a NEW row here, keeping the old one. "+
-				"consent_event records which version a person was shown, so editing version %d "+
-				"in place makes every existing proof row describe text that no longer exists",
+				"Bump the template's version and REPLACE this row with one for the new "+
+				"version. Do not keep the old row: this map is what THIS build sends, and the "+
+				"check below fails a pin nothing renders. What version %d actually showed a "+
+				"person is recoverable from consent_event.policy_text, which is where that "+
+				"history belongs — not here",
 				pin, want, got, rendered.Version)
 		}
 	}

@@ -39,7 +39,7 @@ export const ImapIdle: Story = {
     installFetchStub({});
     return (
       <StoryProviders>
-        <ImapConnectPanel onComplete={async () => {}} onDismiss={() => {}} />
+        <ImapConnectPanel onDone={() => {}} onDismiss={() => {}} />
       </StoryProviders>
     );
   },
@@ -60,7 +60,7 @@ export const ImapConnected: Story = {
     });
     return (
       <StoryProviders>
-        <ImapConnectPanel onComplete={async () => {}} onDismiss={() => {}} />
+        <ImapConnectPanel onDone={() => {}} onDismiss={() => {}} />
       </StoryProviders>
     );
   },
@@ -84,7 +84,7 @@ export const ImapLoginRejected: Story = {
     });
     return (
       <StoryProviders>
-        <ImapConnectPanel onComplete={async () => {}} onDismiss={() => {}} />
+        <ImapConnectPanel onDone={() => {}} onDismiss={() => {}} />
       </StoryProviders>
     );
   },
@@ -134,7 +134,7 @@ export const OAuthReturnLive: Story = {
     });
     return (
       <StoryProviders>
-        <OAuthReturnPanel outcome="ok" onComplete={async () => {}} />
+        <OAuthReturnPanel outcome="ok" onDone={() => {}} />
       </StoryProviders>
     );
   },

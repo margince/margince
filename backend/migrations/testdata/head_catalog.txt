@@ -2415,6 +2415,7 @@ public.forecast_contribution.in_open boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_won boolean NOT NULL gen=- def=false
 public.forecast_contribution.owner_id uuid gen=- def=-
 public.forecast_contribution.snapshot_id uuid NOT NULL gen=- def=-
+public.forecast_contribution.stage_id uuid gen=- def=-
 public.forecast_contribution.stage_probability integer gen=- def=-
 public.forecast_contribution.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.forecast_contribution.uq_forecast_contribution_deal UNIQUE (snapshot_id, deal_id)
@@ -3420,7 +3421,7 @@ public.onboarding_wizard_state.onboarding_wizard_state_path_check CHECK ((path =
 public.onboarding_wizard_state.onboarding_wizard_state_pkey PRIMARY KEY (id)
 public.onboarding_wizard_state.onboarding_wizard_state_read_fkey FOREIGN KEY (site_read_id) REFERENCES site_read(id) ON DELETE SET NULL (site_read_id)
 public.onboarding_wizard_state.onboarding_wizard_state_source_mode_check CHECK ((source_mode = ANY (ARRAY['website'::text, 'manual'::text])))
-public.onboarding_wizard_state.onboarding_wizard_state_step_check CHECK ((step = ANY (ARRAY['read'::text, 'confirm'::text, 'voice'::text, 'results'::text, 'connect'::text, 'complete'::text])))
+public.onboarding_wizard_state.onboarding_wizard_state_step_check CHECK ((step = ANY (ARRAY['read'::text, 'confirm'::text, 'basis'::text, 'invite'::text, 'team'::text, 'voice'::text, 'results'::text, 'connect'::text, 'complete'::text])))
 public.onboarding_wizard_state.onboarding_wizard_state_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.onboarding_wizard_state.onboarding_wizard_state_user_id_key UNIQUE (user_id)
 public.onboarding_wizard_state.onboarding_wizard_state_version_check CHECK ((version >= 1))

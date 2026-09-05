@@ -5791,6 +5791,45 @@ func (e ForecastCallScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for ForecastLandingCaveat.
+const (
+	LandingCaveatCallAbsent      ForecastLandingCaveat = "call_absent"
+	LandingCaveatCallBelowActual ForecastLandingCaveat = "call_below_actual"
+)
+
+// Valid indicates whether the value is a known member of the ForecastLandingCaveat enum.
+func (e ForecastLandingCaveat) Valid() bool {
+	switch e {
+	case LandingCaveatCallAbsent:
+		return true
+	case LandingCaveatCallBelowActual:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastLandingMeasure.
+const (
+	ForwardMeasureCommitEvidence ForecastLandingMeasure = "commit_evidence"
+	ForwardMeasureManagerCall    ForecastLandingMeasure = "manager_call"
+	ForwardMeasureWeighted       ForecastLandingMeasure = "weighted"
+)
+
+// Valid indicates whether the value is a known member of the ForecastLandingMeasure enum.
+func (e ForecastLandingMeasure) Valid() bool {
+	switch e {
+	case ForwardMeasureCommitEvidence:
+		return true
+	case ForwardMeasureManagerCall:
+		return true
+	case ForwardMeasureWeighted:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastMovementReading.
 const (
 	ForecastMovementReadingBestCase ForecastMovementReading = "best_case"
@@ -5881,6 +5920,42 @@ func (e ForecastReadingsScopeKind) Valid() bool {
 	case ForecastReadingsScopeKindTeam:
 		return true
 	case ForecastReadingsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastSufficiencyAbsent.
+const (
+	SufficiencyAbsenceInsufficientBasis   ForecastSufficiencyAbsent = "insufficient_basis"
+	SufficiencyAbsenceInsufficientHistory ForecastSufficiencyAbsent = "insufficient_history"
+)
+
+// Valid indicates whether the value is a known member of the ForecastSufficiencyAbsent enum.
+func (e ForecastSufficiencyAbsent) Valid() bool {
+	switch e {
+	case SufficiencyAbsenceInsufficientBasis:
+		return true
+	case SufficiencyAbsenceInsufficientHistory:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastSufficiencyBasis.
+const (
+	SufficiencyBasisHistoricalMedian ForecastSufficiencyBasis = "historical_median"
+	SufficiencyBasisManagerCall      ForecastSufficiencyBasis = "manager_call"
+)
+
+// Valid indicates whether the value is a known member of the ForecastSufficiencyBasis enum.
+func (e ForecastSufficiencyBasis) Valid() bool {
+	switch e {
+	case SufficiencyBasisHistoricalMedian:
+		return true
+	case SufficiencyBasisManagerCall:
 		return true
 	default:
 		return false
@@ -6238,6 +6313,27 @@ func (e InstallationSettingsBaseLanguage) Valid() bool {
 	case InstallationSettingsBaseLanguageEn:
 		return true
 	case InstallationSettingsBaseLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InstallationSettingsForecastForwardMeasure.
+const (
+	SettingsForwardMeasureCommitEvidence InstallationSettingsForecastForwardMeasure = "commit_evidence"
+	SettingsForwardMeasureManagerCall    InstallationSettingsForecastForwardMeasure = "manager_call"
+	SettingsForwardMeasureWeighted       InstallationSettingsForecastForwardMeasure = "weighted"
+)
+
+// Valid indicates whether the value is a known member of the InstallationSettingsForecastForwardMeasure enum.
+func (e InstallationSettingsForecastForwardMeasure) Valid() bool {
+	switch e {
+	case SettingsForwardMeasureCommitEvidence:
+		return true
+	case SettingsForwardMeasureManagerCall:
+		return true
+	case SettingsForwardMeasureWeighted:
 		return true
 	default:
 		return false
@@ -7410,6 +7506,7 @@ func (e OnboardingStateSourceMode) Valid() bool {
 
 // Defines values for OnboardingStateStep.
 const (
+	OnboardingStateStepBasis    OnboardingStateStep = "basis"
 	OnboardingStateStepComplete OnboardingStateStep = "complete"
 	OnboardingStateStepConfirm  OnboardingStateStep = "confirm"
 	OnboardingStateStepConnect  OnboardingStateStep = "connect"
@@ -7423,6 +7520,8 @@ const (
 // Valid indicates whether the value is a known member of the OnboardingStateStep enum.
 func (e OnboardingStateStep) Valid() bool {
 	switch e {
+	case OnboardingStateStepBasis:
+		return true
 	case OnboardingStateStepComplete:
 		return true
 	case OnboardingStateStepConfirm:
@@ -10080,6 +10179,7 @@ func (e PutOnboardingStateRequestSourceMode) Valid() bool {
 
 // Defines values for PutOnboardingStateRequestStep.
 const (
+	PutOnboardingStateRequestStepBasis    PutOnboardingStateRequestStep = "basis"
 	PutOnboardingStateRequestStepComplete PutOnboardingStateRequestStep = "complete"
 	PutOnboardingStateRequestStepConfirm  PutOnboardingStateRequestStep = "confirm"
 	PutOnboardingStateRequestStepConnect  PutOnboardingStateRequestStep = "connect"
@@ -10093,6 +10193,8 @@ const (
 // Valid indicates whether the value is a known member of the PutOnboardingStateRequestStep enum.
 func (e PutOnboardingStateRequestStep) Valid() bool {
 	switch e {
+	case PutOnboardingStateRequestStepBasis:
+		return true
 	case PutOnboardingStateRequestStepComplete:
 		return true
 	case PutOnboardingStateRequestStepConfirm:
@@ -12265,6 +12367,27 @@ func (e UpdateInstallationSettingsRequestBaseLanguage) Valid() bool {
 	case UpdateInstallationSettingsRequestBaseLanguageEn:
 		return true
 	case UpdateInstallationSettingsRequestBaseLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateInstallationSettingsRequestForecastForwardMeasure.
+const (
+	UpdateInstallationSettingsRequestForecastForwardMeasureCommitEvidence UpdateInstallationSettingsRequestForecastForwardMeasure = "commit_evidence"
+	UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall    UpdateInstallationSettingsRequestForecastForwardMeasure = "manager_call"
+	UpdateInstallationSettingsRequestForecastForwardMeasureWeighted       UpdateInstallationSettingsRequestForecastForwardMeasure = "weighted"
+)
+
+// Valid indicates whether the value is a known member of the UpdateInstallationSettingsRequestForecastForwardMeasure enum.
+func (e UpdateInstallationSettingsRequestForecastForwardMeasure) Valid() bool {
+	switch e {
+	case UpdateInstallationSettingsRequestForecastForwardMeasureCommitEvidence:
+		return true
+	case UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall:
+		return true
+	case UpdateInstallationSettingsRequestForecastForwardMeasureWeighted:
 		return true
 	default:
 		return false
@@ -15921,19 +16044,19 @@ func (e ListSignalsParamsResolutionState) Valid() bool {
 
 // Defines values for SetWeeklyPlanCommitmentStateJSONBodyState.
 const (
-	Done    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
-	Dropped SetWeeklyPlanCommitmentStateJSONBodyState = "dropped"
-	Open    SetWeeklyPlanCommitmentStateJSONBodyState = "open"
+	SetWeeklyPlanCommitmentStateJSONBodyStateDone    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
+	SetWeeklyPlanCommitmentStateJSONBodyStateDropped SetWeeklyPlanCommitmentStateJSONBodyState = "dropped"
+	SetWeeklyPlanCommitmentStateJSONBodyStateOpen    SetWeeklyPlanCommitmentStateJSONBodyState = "open"
 )
 
 // Valid indicates whether the value is a known member of the SetWeeklyPlanCommitmentStateJSONBodyState enum.
 func (e SetWeeklyPlanCommitmentStateJSONBodyState) Valid() bool {
 	switch e {
-	case Done:
+	case SetWeeklyPlanCommitmentStateJSONBodyStateDone:
 		return true
-	case Dropped:
+	case SetWeeklyPlanCommitmentStateJSONBodyStateDropped:
 		return true
-	case Open:
+	case SetWeeklyPlanCommitmentStateJSONBodyStateOpen:
 		return true
 	default:
 		return false
@@ -18276,6 +18399,19 @@ type AuthCapabilities struct {
 
 	// ReleaseVersion The release this api was built from (`YYYY.<edition>`). A client compares it against its OWN release and refuses to run against a different one — a mixed-release set must not serve. ABSENT is not a mismatch: it means this api carries no release version (a build that was not published as one), and a client MUST then make no comparison rather than treat the absence as a difference.
 	ReleaseVersion *string `json:"release_version,omitempty"`
+}
+
+// AuthenticationPolicy Which sign-in methods this installation offers, apart from the rest of its settings.
+//
+// Carries only what `authentication_policy` governs. The installation's name, timezone
+// and currency are NOT here — every role reads those, and repeating them in a document
+// governed by a narrower grant would make the same fact answer to two authorities.
+type AuthenticationPolicy struct {
+	// SignInProviders Every provider this deployment mounted, each marked with whether the
+	// installation has chosen to offer it — which is a stored choice, not a
+	// guarantee the provider has working credentials. Password is never listed: it
+	// is the method every installation always has and cannot switch off.
+	SignInProviders []SignInProvider `json:"sign_in_providers"`
 }
 
 // Authorization What this principal may do, as the server itself computed it — never a client-side re-derivation from role keys, which drifts the moment an installation's stored grants differ from the compiled-in defaults.
@@ -22874,6 +23010,31 @@ type ForecastCall struct {
 // ForecastCallScopeKind defines model for ForecastCall.ScopeKind.
 type ForecastCallScopeKind string
 
+// ForecastLanding Where the period finishes if nothing changes, and what that answer rests on.
+// The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
+type ForecastLanding struct {
+	// AmountMinor The projection itself, in the installation's base currency.
+	AmountMinor int64 `json:"amount_minor"`
+
+	// Caveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+	Caveat *ForecastLandingCaveat `json:"caveat,omitempty"`
+
+	// Measure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`.
+	Measure ForecastLandingMeasure `json:"measure"`
+
+	// RemainingMinor The forward half. Zero for a manager call, which is a single authored TOTAL rather than a remainder — a call is not added to won_minor, and a reconciliation line drawing this must say the call instead of a split.
+	RemainingMinor int64 `json:"remaining_minor"`
+
+	// WonMinor The money already banked, the backward half of the sum.
+	WonMinor int64 `json:"won_minor"`
+}
+
+// ForecastLandingCaveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+type ForecastLandingCaveat string
+
+// ForecastLandingMeasure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`.
+type ForecastLandingMeasure string
+
 // ForecastMovement The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly.
 type ForecastMovement struct {
 	// Buckets The named causes, in the order a waterfall draws them — what arrived, what crossed the period, what was repriced, and only then what the machinery did. A bucket that moved nothing is absent rather than zero.
@@ -22929,8 +23090,12 @@ type ForecastReadings struct {
 	EvidenceMinor int64 `json:"evidence_minor"`
 
 	// FxMissingCount Priced deals no rate could convert. Counted rather than silently totalled as zero, which would read as a smaller pipeline instead of an unconverted one.
-	FxMissingCount int   `json:"fx_missing_count"`
-	OpenMinor      int64 `json:"open_minor"`
+	FxMissingCount int `json:"fx_missing_count"`
+
+	// Landing Where the period finishes if nothing changes, and what that answer rests on.
+	// The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
+	Landing   *ForecastLanding `json:"landing,omitempty"`
+	OpenMinor int64            `json:"open_minor"`
 
 	// PeriodEnd The last day INSIDE the period, not an exclusive bound.
 	PeriodEnd   openapi_types.Date `json:"period_end"`
@@ -22946,6 +23111,10 @@ type ForecastReadings struct {
 	// ScopeLimited True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much.
 	ScopeLimited *bool `json:"scope_limited,omitempty"`
 
+	// Sufficiency Whether the open pipeline supports the reference landing, and what the reference is.
+	// NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
+	Sufficiency *ForecastSufficiency `json:"sufficiency,omitempty"`
+
 	// Timezone The zone the period's days were cut in, as an IANA name.
 	Timezone string `json:"timezone"`
 
@@ -22958,6 +23127,33 @@ type ForecastReadings struct {
 
 // ForecastReadingsScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
 type ForecastReadingsScopeKind string
+
+// ForecastSufficiency Whether the open pipeline supports the reference landing, and what the reference is.
+// NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
+type ForecastSufficiency struct {
+	// Absent Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
+	Absent *ForecastSufficiencyAbsent `json:"absent,omitempty"`
+
+	// Basis Where the reference came from. A current authored call outranks history: a manager who wrote a number down has said what this period is for, and the median of the last four completed comparable periods is the fallback for when nobody has.
+	Basis *ForecastSufficiencyBasis `json:"basis,omitempty"`
+
+	// CoverageBp Current over needed in BASIS POINTS, so the server chooses no rounding for the client. Nothing needed is 10000 (full) rather than a division by zero or an unbounded ratio, because "covered" is actionable and "infinity" is not.
+	CoverageBp       *int64 `json:"coverage_bp,omitempty"`
+	CurrentOpenMinor *int64 `json:"current_open_minor,omitempty"`
+
+	// NeededOpenMinor The open pipeline that remainder implies at the conversion rate.
+	NeededOpenMinor       *int64 `json:"needed_open_minor,omitempty"`
+	ReferenceLandingMinor *int64 `json:"reference_landing_minor,omitempty"`
+
+	// RemainingToSupportMinor The reference minus what is already won, floored at zero — a period already past its reference needs no more pipeline.
+	RemainingToSupportMinor *int64 `json:"remaining_to_support_minor,omitempty"`
+}
+
+// ForecastSufficiencyAbsent Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
+type ForecastSufficiencyAbsent string
+
+// ForecastSufficiencyBasis Where the reference came from. A current authored call outranks history: a manager who wrote a number down has said what this period is for, and the median of the last four completed comparable periods is the fallback for when nobody has.
+type ForecastSufficiencyBasis string
 
 // FxRate One effective-dated FX rate converting from_currency into the workspace base (to_currency). rate is a decimal string (numeric(20,10)), never a float.
 type FxRate struct {
@@ -23716,6 +23912,19 @@ type InstallationSettings struct {
 	// warned about is undecided: margince/margince#2569.
 	FiscalYearStartMonth int `json:"fiscal_year_start_month"`
 
+	// ForecastForwardMeasure Which remaining-pipeline reading a projected landing is built from. A setting
+	// rather than a fixed choice, because it is a question about how this installation
+	// SELLS rather than about the software: a team with a disciplined commit stage means
+	// something by it, and one that commits everything does not — their weighted number
+	// is the honest one.
+	//
+	// `commit_evidence` is the default and the strictest: committed deals whose close
+	// date somebody confirmed, a provisional date being a guess that stays out.
+	// `manager_call` takes the authored call as the whole period's landing and is not
+	// added to what is already won; with no current call the read falls back to
+	// `commit_evidence` and says so in the landing's `caveat`.
+	ForecastForwardMeasure InstallationSettingsForecastForwardMeasure `json:"forecast_forward_measure"`
+
 	// MaxUploadBytes The largest upload request this installation accepts, in bytes — set by whoever
 	// operates it, not compiled into the build (OPS-CFG-12, DOC-PARAM-11). Read-only:
 	// it is a deployment fact, so PATCH does not carry it.
@@ -23752,6 +23961,19 @@ type InstallationSettings struct {
 // the correspondence, so a German thread still gets a German reply, and a brief cached
 // for one reader keeps that reader's language.
 type InstallationSettingsBaseLanguage string
+
+// InstallationSettingsForecastForwardMeasure Which remaining-pipeline reading a projected landing is built from. A setting
+// rather than a fixed choice, because it is a question about how this installation
+// SELLS rather than about the software: a team with a disciplined commit stage means
+// something by it, and one that commits everything does not — their weighted number
+// is the honest one.
+//
+// `commit_evidence` is the default and the strictest: committed deals whose close
+// date somebody confirmed, a provisional date being a guess that stays out.
+// `manager_call` takes the authored call as the whole period's landing and is not
+// added to what is already won; with no current call the read falls back to
+// `commit_evidence` and says so in the landing's `caveat`.
+type InstallationSettingsForecastForwardMeasure string
 
 // InstallationSetup defines model for InstallationSetup.
 type InstallationSetup struct {
@@ -29985,7 +30207,7 @@ type PutOnboardingStateRequest struct {
 	SiteReadId       *openapi_types.UUID                  `json:"site_read_id,omitempty"`
 	SourceMode       *PutOnboardingStateRequestSourceMode `json:"source_mode"`
 
-	// Step Where the creator's setup stands. `invite` is the question asked once the company is confirmed — whether the person setting the installation up will also work in it, which is what decides whether the optional `voice` and `connect` steps are offered at all. `team` is where a creator who will not work in it invites the first person who will. `results` is kept for rows written before that question existed; a client treats it as the connect step being next.
+	// Step Where the setup stands. `basis` is the installation's reporting basis — base currency and reporting timezone — asked of the creator once the company is confirmed, before any step about the person answering. `invite` is the question asked next: whether the person setting the installation up will also work in it, which is what decides whether the `voice` and `connect` steps are walked now or by the first person they invite. `team` is where a creator who will not work in it invites that person. A member's route begins at `voice`: the company and its basis are already settled, so their steps are the personal ones alone. `results` is kept for rows written before the invite existed; a client treats it as the connect step being next.
 	Step         PutOnboardingStateRequestStep `json:"step"`
 	VoiceSkipped bool                          `json:"voice_skipped"`
 	WebsiteUrl   *string                       `json:"website_url,omitempty"`
@@ -29994,7 +30216,7 @@ type PutOnboardingStateRequest struct {
 // PutOnboardingStateRequestSourceMode defines model for PutOnboardingStateRequest.SourceMode.
 type PutOnboardingStateRequestSourceMode string
 
-// PutOnboardingStateRequestStep Where the creator's setup stands. `invite` is the question asked once the company is confirmed — whether the person setting the installation up will also work in it, which is what decides whether the optional `voice` and `connect` steps are offered at all. `team` is where a creator who will not work in it invites the first person who will. `results` is kept for rows written before that question existed; a client treats it as the connect step being next.
+// PutOnboardingStateRequestStep Where the setup stands. `basis` is the installation's reporting basis — base currency and reporting timezone — asked of the creator once the company is confirmed, before any step about the person answering. `invite` is the question asked next: whether the person setting the installation up will also work in it, which is what decides whether the `voice` and `connect` steps are walked now or by the first person they invite. `team` is where a creator who will not work in it invites that person. A member's route begins at `voice`: the company and its basis are already settled, so their steps are the personal ones alone. `results` is kept for rows written before the invite existed; a client treats it as the connect step being next.
 type PutOnboardingStateRequestStep string
 
 // QualifyDealRequest Open a deal in the same transaction as the promotion. Omit both ids to use the
@@ -32885,6 +33107,11 @@ type UpdateInstallationSettingsRequest struct {
 	// margince/margince#2569.
 	FiscalYearStartMonth *int `json:"fiscal_year_start_month,omitempty"`
 
+	// ForecastForwardMeasure Which remaining-pipeline reading a projected landing is built from. Never frozen:
+	// it is applied on READ and stores nothing, so changing it re-computes every landing
+	// at once and re-means no stored row.
+	ForecastForwardMeasure *UpdateInstallationSettingsRequestForecastForwardMeasure `json:"forecast_forward_measure,omitempty"`
+
 	// Name Rename the organization.
 	Name *string `json:"name,omitempty"`
 
@@ -32895,6 +33122,11 @@ type UpdateInstallationSettingsRequest struct {
 // UpdateInstallationSettingsRequestBaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
 // nothing already written, so artifacts stay in the language they were written in.
 type UpdateInstallationSettingsRequestBaseLanguage string
+
+// UpdateInstallationSettingsRequestForecastForwardMeasure Which remaining-pipeline reading a projected landing is built from. Never frozen:
+// it is applied on READ and stores nothing, so changing it re-computes every landing
+// at once and re-means no stored row.
+type UpdateInstallationSettingsRequestForecastForwardMeasure string
 
 // UpdateIntegrationsSettingsRequest A sparse provider-posture patch (admin/ops).
 type UpdateIntegrationsSettingsRequest struct {
@@ -49135,6 +49367,9 @@ type ServerInterface interface {
 	// Reverse a completed CSV import run.
 	// (POST /imports/{id}/undo)
 	UndoImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Which sign-in methods this installation offers.
+	// (GET /installation/authentication-policy)
+	GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request)
 	// The installation's entitlement and seat usage (admin/ops).
 	// (GET /installation/license)
 	GetLicenseEntitlement(w http.ResponseWriter, r *http.Request)
@@ -51676,6 +51911,12 @@ func (_ Unimplemented) GetImportRunReport(w http.ResponseWriter, r *http.Request
 // Reverse a completed CSV import run.
 // (POST /imports/{id}/undo)
 func (_ Unimplemented) UndoImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which sign-in methods this installation offers.
+// (GET /installation/authentication-policy)
+func (_ Unimplemented) GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63761,6 +64002,26 @@ func (siw *ServerInterfaceWrapper) UndoImportRun(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UndoImportRun(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAuthenticationPolicy operation middleware
+func (siw *ServerInterfaceWrapper) GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAuthenticationPolicy(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -80081,6 +80342,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/imports/{id}/undo", wrapper.UndoImportRun)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/authentication-policy", wrapper.GetAuthenticationPolicy)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/license", wrapper.GetLicenseEntitlement)

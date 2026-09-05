@@ -222,16 +222,22 @@ func TestAnIdleFleetMapsToEmptyListsNotNulls(t *testing.T) {
 func TestTheUntenantedArmResolvesItsKindsFromTheDeclaredRole(t *testing.T) {
 	var want []string
 	for kind, spec := range jobs.Declared() {
-		if spec.Role == jobs.Dispatcher {
+		// FLEET, not Role. `role: dispatcher` used to mean both "enumerates and
+		// enqueues" and "carries no tenant"; ADR-0103 split them, and a
+		// collapsed pass is the second without the first.
+		if spec.Fleet {
 			want = append(want, kind)
 		}
 	}
-	// A vacuous pass is the failure mode of any derived gate. The contract
-	// declares 24 dispatchers today; the floor sits below that so retiring a
-	// pass does not drag the gate along, while a filter that matched nothing
-	// still trips it.
+	// A vacuous pass is the failure mode of any derived gate. The floor sits
+	// below the number the contract declares, so retiring a pass does not drag
+	// the gate along, while a filter that matched nothing still trips it.
+	//
+	// It falls with the collapse: ADR-0103 is retiring the workspace
+	// dispatchers, and what is left at the end is the fan-outs over a
+	// CONNECTION or a BUILD, which stay.
 	if len(want) < 20 {
-		t.Fatalf("the contract declares only %d dispatchers; the filter is not resolving them", len(want))
+		t.Fatalf("the contract declares only %d fleet-wide kinds; the filter is not resolving them", len(want))
 	}
 
 	got := slices.Clone(dispatcherKinds())
@@ -270,9 +276,18 @@ func TestNoWorkspaceKindReachesTheUntenantedArm(t *testing.T) {
 			t.Errorf("%s is admitted untenanted but the contract declares no such kind", kind)
 			continue
 		}
-		if spec.Role != jobs.Dispatcher {
-			t.Errorf("%s carries one workspace's pass but is admitted as untenanted, so its "+
-				"rows reach an admin of a workspace that does not own them", kind)
+		// The ARGS, not the flag the read itself consults. Asking spec.Fleet
+		// here would restate what dispatcherKinds just filtered on and prove
+		// nothing; what makes a row safe to admit without a workspace test is
+		// that it carries no workspace to test, and that is a fact about the
+		// args struct. A kind that set fleet: true while still naming a
+		// Workspace arg is exactly the mistake this direction exists to catch,
+		// and only this field can see it.
+		for _, arg := range spec.Args {
+			if arg.Name == "Workspace" {
+				t.Errorf("%s carries one workspace's pass but is admitted as untenanted, so its "+
+					"rows reach an admin of a workspace that does not own them", kind)
+			}
 		}
 	}
 }

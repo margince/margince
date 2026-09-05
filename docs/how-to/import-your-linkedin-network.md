@@ -18,13 +18,12 @@ edge, and where this weaker evidence tier sits beside real interaction history �
 - **Not a contact import.** The rows never become people. See
   [What the imported rows are](#what-the-imported-rows-are).
 
-**The onboarding "Authorize with LinkedIn" step is still a placeholder.** The connect scene's LinkedIn
-card shows the scopes a live integration *will* request and then says so in the dialog itself: *"our
-LinkedIn app is still awaiting approval, so no connections sync yet — this only records your consent
-and profile. Upload Connections.csv under Settings, which works today."* Clicking **Authorize** does
-exactly one thing — `PUT /me/linkedin-account`, which stores your profile URL and a `connected_at`
-timestamp. No connections are fetched. The Member Data Portability API is designed as a second writer
-onto the same rows once an app is approved; the CSV path is the one that works now.
+**The onboarding LinkedIn card saves your profile, nothing more.** The connect scene asks for your
+profile URL and stores it with `PUT /me/linkedin-account` (`connected` stays false), so the network
+you import here is attributed to you — *"Anna knows them"*, never *"the company knows them"*. It
+authorizes nothing and fetches nothing; the dialog says so and points here. The Member Data
+Portability API is designed as a second writer onto the same rows once an app is approved; the CSV
+path is the one that works now.
 
 ## Step 1 — Get the file from LinkedIn
 

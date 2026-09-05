@@ -15,6 +15,7 @@ import { StatStrip } from "../design-system/statstrip";
 import { formatMoneyOrAbsent, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
+import { LandingCard, SufficiencyCard } from "./analytics.forecast.landing";
 import { ForecastReview } from "./analytics.forecast.review";
 import { QueryGate, throwProblem } from "./common";
 import {
@@ -161,6 +162,24 @@ function ForecastAnswer({
           value={money(readings.won_minor)}
           numeric
         />
+        {/* Both are absent for a managed-teams reading, which covers several
+            populations at once: a landing summed across books that are called
+            separately, and a coverage rate blended over them, would each
+            describe none of them. */}
+        {readings.landing && (
+          <LandingCard
+            landing={readings.landing}
+            currency={currency}
+            locale={locale}
+          />
+        )}
+        {readings.sufficiency && (
+          <SufficiencyCard
+            sufficiency={readings.sufficiency}
+            currency={currency}
+            locale={locale}
+          />
+        )}
       </StatStrip>
     </>
   );

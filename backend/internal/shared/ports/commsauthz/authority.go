@@ -26,7 +26,15 @@ const (
 	LevelMachine AuthorityLevel = "machine"
 	// LevelUser is a rep or SDR exercising judgement about a contact they know.
 	LevelUser AuthorityLevel = "user"
-	// LevelAdmin is ops or a workspace administrator.
+	// LevelAdmin is a workspace administrator: a seat that passes
+	// auth.RequireAdmin, which is the literal admin role and nothing else.
+	//
+	// NOT the `ops` role, despite ops administering most of the installation's
+	// wiring. The RBAC defaults separate the two deliberately — ops differs from
+	// admin "in row scope alone at this layer: what actually separates them is
+	// the literal-admin gate on identity and governance routes" — and reversing
+	// somebody's recorded stop is a governance act, not wiring. An ops seat
+	// therefore decides at LevelUser and cannot overrule a rep's judgement.
 	LevelAdmin AuthorityLevel = "admin"
 	// LevelSubject is the person the data is about, acting for themselves.
 	LevelSubject AuthorityLevel = "subject"

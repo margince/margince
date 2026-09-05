@@ -35,22 +35,18 @@ import (
 // — not because they are gated differently: the gating is the same nothing, and
 // that is why they belong here rather than behind a condition of their own.
 func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, briefMail BriefMailConfig) {
-	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{pool: pool})
-	addDeclaredWorker[CloseDateWorkspaceArgs](reg, &closeDateWorkspaceWorker{corrector: NewCloseDateCorrector(pool, log)})
-	addDeclaredWorker[FollowUpReconcileArgs](reg, &followUpReconcileWorker{pool: pool})
-	addDeclaredWorker[FollowUpWorkspaceArgs](reg, &followUpWorkspaceWorker{reconciler: NewFollowUpReconciler(pool, log)})
-	addDeclaredWorker[AssuranceSweepArgs](reg, &assuranceSweepWorker{pool: pool})
-	addDeclaredWorker[AssuranceWorkspaceArgs](reg, &assuranceWorkspaceWorker{
+	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{pool: pool, corrector: NewCloseDateCorrector(pool, log)})
+	addDeclaredWorker[FollowUpReconcileArgs](reg, &followUpReconcileWorker{pool: pool, reconciler: NewFollowUpReconciler(pool, log)})
+	addDeclaredWorker[AssuranceSweepArgs](reg, &assuranceSweepWorker{
 		pool: pool, now: func() time.Time { return time.Now().UTC() }, log: log,
 	})
-	addDeclaredWorker[ForecastSnapshotSweepArgs](reg, &forecastSnapshotSweepWorker{pool: pool})
-	addDeclaredWorker[ForecastSnapshotWorkspaceArgs](reg, &forecastSnapshotWorkspaceWorker{
+	addDeclaredWorker[ForecastSnapshotSweepArgs](reg, &forecastSnapshotSweepWorker{
 		pool: pool, now: func() time.Time { return time.Now().UTC() }, log: log,
 	})
-	addDeclaredWorker[TimeScanArgs](reg, &timeScanWorker{pool: pool})
-	addDeclaredWorker[TimeScanWorkspaceArgs](reg, &timeScanWorkspaceWorker{pool: pool, log: log})
-	addDeclaredWorker[IdempotencyRetentionArgs](reg, &idempotencyRetentionWorker{pool: pool})
-	addDeclaredWorker[IdempotencyRetentionWorkspaceArgs](reg, &idempotencyRetentionWorkspaceWorker{sweeper: NewIdempotencyRetentionSweeper(pool, log)})
+	addDeclaredWorker[TimeScanArgs](reg, &timeScanWorker{pool: pool, log: log})
+	addDeclaredWorker[IdempotencyRetentionArgs](reg, &idempotencyRetentionWorker{
+		pool: pool, sweeper: NewIdempotencyRetentionSweeper(pool, log),
+	})
 	addDeclaredWorker[AgentTaskRetentionArgs](reg, &agentTaskRetentionWorker{
 		sweeper: NewAgentTaskRetentionSweeper(pool, log), identity: identity.NewService(pool),
 	})

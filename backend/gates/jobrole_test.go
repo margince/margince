@@ -33,7 +33,10 @@ import (
 // matched nothing would otherwise report green. The tree holds ~30 job
 // kinds before the dispatcher split and more after; this floor only has to
 // be low enough never to false-alarm.
-const jobArgsFloor = 25
+// It falls with ADR-0103: collapsing the workspace dispatchers retires 27 child
+// kinds, and a child that carried a Workspace arg was one of the kinds this
+// census inspected.
+const jobArgsFloor = 20
 
 // goFilesUnder returns every hand-written .go file beneath root.
 //

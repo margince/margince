@@ -108,11 +108,12 @@ func writeAddDeclaredWorker(b *strings.Builder) {
 // on the wrong type is a build error at the args type, which is where a
 // contributor will actually see it.
 func writeRoleAssertions(b *strings.Builder, c contract) {
-	b.WriteString("// The declared dispatchers: each enumerates the fleet and enqueues, and does\n")
-	b.WriteString("// no tenant work of its own.\n")
+	b.WriteString("// The FLEET-WIDE kinds: a row of one carries no tenant. A dispatcher\n")
+	b.WriteString("// enumerates and enqueues; a collapsed pass walks the workspaces itself\n")
+	b.WriteString("// (ADR-0103). Both own no workspace, which is what the marker asserts.\n")
 	b.WriteString("var (\n")
 	for _, name := range c.sortedKinds() {
-		if def := c.Kinds[name]; def.Role == roleDispatcher {
+		if def := c.Kinds[name]; def.fleetWide() {
 			fmt.Fprintf(b, "\t_ jobs.FleetWide = %s{}\n", def.GoType)
 		}
 	}

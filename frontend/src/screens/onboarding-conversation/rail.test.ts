@@ -20,26 +20,27 @@ function at(
 }
 
 describe("the setup rail's stops", () => {
-  it("gives a creator five stops and a member four", () => {
+  it("gives a creator six stops and a member the three personal ones", () => {
     expect(railStops(false).map((stop) => stop.key)).toEqual([
       "read",
       "confirm",
+      "basis",
       "voice",
       "connect",
       "prefs",
     ]);
     expect(railStops(true).map((stop) => stop.key)).toEqual([
-      "read",
-      "confirm",
+      "voice",
       "connect",
       "prefs",
     ]);
   });
 
-  it("never shows a member the two stops that path cannot reach", () => {
+  it("never shows a member the installation's stops, settled before they arrived", () => {
     const keys = railStops(true).map((stop) => stop.key);
-    expect(keys).not.toContain("voice");
-    expect(keys).not.toContain("ready");
+    expect(keys).not.toContain("read");
+    expect(keys).not.toContain("confirm");
+    expect(keys).not.toContain("basis");
   });
 });
 
@@ -61,6 +62,7 @@ describe("which stop the conversation is standing on", () => {
   });
 
   it("maps each later act to its own stop", () => {
+    expect(currentStop(at("basis", "bs.ask"))).toBe("basis");
     expect(currentStop(at("invite", "in.ask"))).toBe("voice");
     expect(currentStop(at("team", "tm.ask"))).toBeNull();
     expect(currentStop(at("voice", "vo.collecting"))).toBe("voice");
@@ -107,10 +109,17 @@ describe("how each stop reads", () => {
     expect(stopState("prefs", at("done", "pf.done"))).toBe("done");
   });
 
-  it("reads todo for a stop the current path does not contain", () => {
+  it("reads a member's stops by their own positions", () => {
     const member = at("connect", "cn.consent", { memberPath: true });
-    expect(stopState("voice", member)).toBe("todo");
+    expect(stopState("voice", member)).toBe("done");
     expect(stopState("connect", member)).toBe("now");
+    expect(stopState("prefs", member)).toBe("todo");
+  });
+
+  it("reads the installation's stops as done while the creator invites the team", () => {
+    const team = at("team", "tm.ask");
+    expect(stopState("basis", team)).toBe("done");
+    expect(stopState("voice", team)).toBe("todo");
   });
 
   it("reads every stop as todo before the flow starts", () => {

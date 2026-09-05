@@ -8,22 +8,25 @@ import { LocaleProvider } from "../i18n";
 import { ChangePasswordCard } from "./passwordcard";
 
 // What this card must not do is let someone press submit into a request the
-// server will refuse, and what it must not hide is that the change signs them
-// out. Both are cheaper to hold here than to discover in the product.
+// server will refuse, and what it must not do afterwards is throw away the
+// session the server just handed back. Both are cheaper to hold here than to
+// discover in the product.
 //
 // The three fields live in a dialog the row's verb opens, so every case here
 // opens it first — and the two buttons are named for what each one does, the
 // row's for opening the form and the dialog's for saving what was typed into
 // it, which is what keeps them tellable apart while both are mounted.
 
-function renderCard() {
-  const client = new QueryClient({
+function renderCard(
+  client = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
-  });
+  }),
+  onChanged?: () => void,
+) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ChangePasswordCard />
+        <ChangePasswordCard onChanged={onChanged} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -35,10 +38,28 @@ const submitButton = () =>
 // The dialog, opened. Every case needs it, and `userEvent.setup()` is called
 // once per test by the caller rather than here: one instance carries the shared
 // input-device state, and a second one forgets which keys the first left held.
-async function openForm(user: ReturnType<typeof userEvent.setup>) {
-  renderCard();
+async function openForm(
+  user: ReturnType<typeof userEvent.setup>,
+  client?: QueryClient,
+  onChanged?: () => void,
+) {
+  renderCard(client, onChanged);
   await user.click(screen.getByRole("button", { name: /^change password$/i }));
   return screen.getByRole("dialog");
+}
+
+// The three fields, filled with a change the server would accept, and saved.
+async function submitChange(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByLabelText(/current password/i), "old password!");
+  await user.type(
+    screen.getByLabelText(/^new password/i),
+    "a fine new password",
+  );
+  await user.type(
+    screen.getByLabelText(/confirm new password/i),
+    "a fine new password",
+  );
+  await user.click(submitButton());
 }
 
 afterEach(() => {
@@ -47,12 +68,39 @@ afterEach(() => {
 });
 
 describe("ChangePasswordCard", () => {
-  it("warns that the change signs you out, before the button is pressed", async () => {
+  it("keeps the reader signed in after the change and re-asks who they are", async () => {
+    // The server answers a successful change with the cookie of a session it
+    // minted for this caller, so the app must NOT land on the login screen —
+    // that is what resetToSignedOut does, by dropping every cached query and
+    // resetting the identity probe. What the card owes instead is a re-probe:
+    // the identity's answer can change with the password (a forced rotation
+    // is lifted by this call), and the caller that sent the reader here is
+    // told so it can move on.
     const user = userEvent.setup();
-    await openForm(user);
-    expect(
-      screen.getByText(/signs you out everywhere, including here/i),
-    ).toBeInTheDocument();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, { status: 204 }),
+    );
+    const client = new QueryClient({
+      defaultOptions: {
+        mutations: { retry: false },
+        queries: { retry: false },
+      },
+    });
+    client.setQueryData(["me"], { email: "a@b.test" });
+    client.setQueryData(["people"], []);
+    const onChanged = vi.fn();
+    await openForm(user, client, onChanged);
+
+    await submitChange(user);
+    await screen.findByRole("status");
+
+    await waitFor(() => expect(onChanged).toHaveBeenCalledOnce());
+    const me = client.getQueryCache().find({ queryKey: ["me"] });
+    expect(me).toBeDefined();
+    expect(me?.state.data).toEqual({ email: "a@b.test" });
+    expect(me?.state.isInvalidated).toBe(true);
+    // Nothing else cached belonged to a session that ended: this one did not.
+    expect(client.getQueryData(["people"])).toEqual([]);
   });
 
   it("will not submit until the confirmation matches", async () => {
@@ -144,19 +192,7 @@ describe("ChangePasswordCard", () => {
     );
     await openForm(user);
 
-    await user.type(
-      screen.getByLabelText(/current password/i),
-      "old password!",
-    );
-    await user.type(
-      screen.getByLabelText(/^new password/i),
-      "a fine new password",
-    );
-    await user.type(
-      screen.getByLabelText(/confirm new password/i),
-      "a fine new password",
-    );
-    await user.click(submitButton());
+    await submitChange(user);
 
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledOnce());
     // The generated client hands its transport one Request rather than a URL
@@ -291,25 +327,13 @@ describe("ChangePasswordCard", () => {
     );
     await openForm(user);
 
-    await user.type(
-      screen.getByLabelText(/current password/i),
-      "old password!",
-    );
-    await user.type(
-      screen.getByLabelText(/^new password/i),
-      "a fine new password",
-    );
-    await user.type(
-      screen.getByLabelText(/confirm new password/i),
-      "a fine new password",
-    );
-    await user.click(submitButton());
+    await submitChange(user);
 
     expect(await screen.findByRole("status")).toHaveTextContent(
       /password changed/i,
     );
     // Gone, not blank: the outcome is a sentence on the row, and a reader who
-    // has just been signed out everywhere has nothing left to type here.
+    // has just changed their password has nothing left to type here.
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.queryByLabelText(/current password/i)).toBeNull();
   });

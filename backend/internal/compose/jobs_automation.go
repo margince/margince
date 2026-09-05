@@ -16,8 +16,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // TimeScanArgs schedules one clock-trigger scan pass (Task 14a): the
@@ -33,54 +35,29 @@ func (TimeScanArgs) Kind() string { return "time_scan" }
 // and does no tenant work of its own (jobs.FleetWide).
 func (TimeScanArgs) FleetWide() {}
 
-// timeScanWorker is the dispatcher: it enumerates the fleet and enqueues one
-// scan per workspace, and touches no tenant data itself.
+// timeScanWorker scans every live workspace.
+//
+// One worker where there were two (ADR-0103).
 type timeScanWorker struct {
-	pool *pgxpool.Pool
-}
-
-func (w *timeScanWorker) Work(ctx context.Context, _ *river.Job[TimeScanArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(TimeScanWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return TimeScanWorkspaceArgs{Workspace: ws} }))
-}
-
-// TimeScanWorkspaceArgs is one workspace's clock-trigger scan pass.
-type TimeScanWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (TimeScanWorkspaceArgs) Kind() string { return "time_scan_workspace" }
-
-// WorkspaceID binds this scan to its tenant (jobs.WorkspaceScoped).
-func (a TimeScanWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// timeScanWorkspaceWorker delegates one workspace's pass to the automation
-// module's TimeScanner — River-agnostic by construction (this file's own doc:
-// the adapters are the only code that knows about River).
-type timeScanWorkspaceWorker struct {
 	pool *pgxpool.Pool
 	log  *slog.Logger
 }
 
-func (w *timeScanWorkspaceWorker) Work(ctx context.Context, job *river.Job[TimeScanWorkspaceArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	// Built per job: this is a fleet pass, so the scanner's engine binds the
-	// workspace THIS job names rather than whatever an installation resolver
-	// would answer (ADR-0091 §9 step 3).
-	db, err := workspaceJobDB(w.pool, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+func (w *timeScanWorker) Work(ctx context.Context, _ *river.Job[TimeScanArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.scanWorkspace))
+}
+
+func (w *timeScanWorker) scanWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	// Built per WORKSPACE: this is a fleet pass, so the scanner's engine binds
+	// the workspace this turn is for rather than whatever an installation
+	// resolver would answer (ADR-0091 §9 step 3).
+	db := database.BindTo(w.pool, ids.From[ids.WorkspaceKind](workspace))
 	scanner := NewTimeScanner(db, w.log)
-	if err := scanner.ScanWorkspace(wsCtx, job.Args.Workspace); err != nil {
-		return jobs.FaultContext(ctx, err)
+	if err := scanner.ScanWorkspace(wsCtx, workspace); err != nil {
+		return err
 	}
 	// The lead first-response SLA is clock-triggered too (formulas §18.2)
 	// and rides this pass rather than a job of its own.
-	return jobs.FaultContext(ctx, scanLeadSLA(wsCtx, db, time.Now, w.log))
+	return scanLeadSLA(wsCtx, db, time.Now, w.log)
 }

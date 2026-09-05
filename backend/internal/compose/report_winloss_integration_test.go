@@ -55,6 +55,17 @@ func (e *forecastEnv) seedClosedDealFromSource(t *testing.T, name, source, close
 	e.seedClosedDealWith(t, name, "won", source, closedAt, amountMinor)
 }
 
+// seedLostDealWithReason writes a LOST deal carrying a specific lost reason,
+// so a test grouping by that dimension has more than one bucket to tell apart.
+// seedClosedDeal gives every lost deal the same "no reason", which would make a
+// group-by over it produce a single row that agrees with itself.
+func (e *forecastEnv) seedLostDealWithReason(t *testing.T, name, reason, closedAt string, amountMinor int64) {
+	t.Helper()
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, status, closed_at, lost_reason, fx_rate_to_base, source, captured_by)
+		VALUES ($1, $2, $3, $4, $5, 'EUR', 'lost', $6::timestamptz, $7, 1.0, 'manual', 'human:x')`,
+		name, e.pipeline, e.stages[60], amountMinor, closedAt, reason)
+}
+
 func (e *forecastEnv) seedClosedDealWith(t *testing.T, name, status, source, closedAt string, amountMinor int64) {
 	t.Helper()
 	lostReason := "no reason"
@@ -615,5 +626,101 @@ func TestABackdatedCloseHasNoDurationRatherThanANegativeOne(t *testing.T) {
 	}
 	if got := wireFloat(t, row, "median_days"); got != 10 {
 		t.Errorf("median days = %v, want 10 — the inverted row moved the median", got)
+	}
+}
+
+// WHY we lost, beside how much and how long. The report knew the amount and the
+// duration of a loss and never its cause, so a team losing to a competitor and a
+// team whose buyers never decided read identically — two different failures
+// needing two different responses.
+//
+// The won rows are the half that makes this honest. Two CHECK constraints bind
+// lost_reason to the loss (deal_lost_reason wants one exactly when status is
+// 'lost'; deal_lost_reason_only_when_lost refuses one otherwise), so every won
+// deal groups under NULL. That is a fact about a win, not a hole in the data,
+// and asserting it here is what stops a later "tidy up the NULLs" change from
+// quietly dropping wins out of the report.
+func TestWinLossGroupsLossesByTheirReason(t *testing.T) {
+	e := setupForecast(t)
+	e.seedLostDealWithReason(t, "Beaten on price", "competitive_loss", "2025-04-01T10:00:00Z", 50000)
+	e.seedLostDealWithReason(t, "Beaten on features", "competitive_loss", "2025-05-01T10:00:00Z", 30000)
+	e.seedLostDealWithReason(t, "Budget froze", "no_decision", "2025-06-01T10:00:00Z", 90000)
+	// A won deal, which carries no reason at all.
+	e.seedClosedDeal(t, "Won it", "won", "2025-07-01T10:00:00Z", 12000)
+
+	// currency rides along because amount_minor is money in each row's own
+	// currency: the engine refuses a native sum that could span two of them.
+	result := e.runReport(e.Admin(), t, "win-loss",
+		`{"group_by":["lost_reason","currency"],"aggregates":[{"fn":"count","as":"deals"},
+			{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}]}`)
+
+	// The two losses are TOLD APART — the whole point of the dimension. A
+	// report that lumped them would show one bucket of three.
+	competitive := bucketRow(t, result, map[string]string{"lost_reason": "competitive_loss"})
+	if got := wireInt(t, competitive, "deals"); got != 2 {
+		t.Errorf("competitive losses = %d, want 2", got)
+	}
+	if got := wireInt(t, competitive, "amount_minor_sum"); got != 80000 {
+		t.Errorf("competitive lost amount = %d, want 80000", got)
+	}
+
+	noDecision := bucketRow(t, result, map[string]string{"lost_reason": "no_decision"})
+	if got := wireInt(t, noDecision, "deals"); got != 1 {
+		t.Errorf("no-decision losses = %d, want 1", got)
+	}
+
+	// Three groups: two reasons and the wins' NULL. A fourth would mean the
+	// won deal grew a reason the CHECK constraints forbid.
+	if len(result.Rows) != 3 {
+		t.Fatalf("rows = %d, want 3 (two reasons plus the wins' NULL): %+v", len(result.Rows), result.Rows)
+	}
+
+	// The wins' bucket is a REAL null on the wire, not a filled-in stand-in.
+	// Counting three rows alone would pass just as happily against a
+	// COALESCE(lost_reason, 'none') that invented a reason for every won deal —
+	// the report would then name a cause the record does not carry, which is
+	// the one thing a report about causes must never do.
+	var wins map[string]any
+	for _, row := range result.Rows {
+		if row[fieldLostReason] == nil {
+			wins = row
+			break
+		}
+	}
+	if wins == nil {
+		t.Fatalf("no row carries a null lost_reason — the wins' bucket is missing or filled in: %+v", result.Rows)
+	}
+	if got := wireInt(t, wins, "deals"); got != 1 {
+		t.Errorf("won deals in the null bucket = %d, want 1", got)
+	}
+	if got := wireInt(t, wins, "amount_minor_sum"); got != 12000 {
+		t.Errorf("won amount = %d, want 12000", got)
+	}
+}
+
+// The dimension FILTERS as well as groups (REPORT-VOCAB-1: every dimension also
+// filters), so "show me the deals we lost to a competitor" is one call rather
+// than a group-by the caller then has to sift.
+func TestWinLossFiltersToOneLostReason(t *testing.T) {
+	e := setupForecast(t)
+	e.seedLostDealWithReason(t, "Beaten on price", "competitive_loss", "2025-04-01T10:00:00Z", 50000)
+	e.seedLostDealWithReason(t, "Budget froze", "no_decision", "2025-06-01T10:00:00Z", 90000)
+	e.seedClosedDeal(t, "Won it", "won", "2025-07-01T10:00:00Z", 12000)
+
+	result := e.runReport(e.Admin(), t, "win-loss",
+		`{"group_by":["status","currency"],"filters":{"lost_reason":"competitive_loss"},
+			"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}]}`)
+
+	// Exactly the one competitive loss: the no-decision loss AND the win are
+	// both excluded, which is what a filter on this column has to mean.
+	if len(result.Rows) != 1 {
+		t.Fatalf("rows = %d, want 1 (only the competitive loss): %+v", len(result.Rows), result.Rows)
+	}
+	row := bucketRow(t, result, map[string]string{"status": "lost"})
+	if got := wireInt(t, row, "deals"); got != 1 {
+		t.Errorf("deals = %d, want 1", got)
+	}
+	if got := wireInt(t, row, "amount_minor_sum"); got != 50000 {
+		t.Errorf("amount = %d, want 50000 — a filtered-out deal reached the sum", got)
 	}
 }

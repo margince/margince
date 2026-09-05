@@ -96,17 +96,30 @@ const fleetWideDispatcherFloor = 20
 // above for why the set is closed and why a direct River insert is not in it.
 // fanOutHelpers are the sanctioned ways a FleetWide job reaches the fleet.
 //
-// The first three ENQUEUE one child per unit; the runPer* pair RUNS the pass for
-// each workspace in this process, which is what ADR-0103 collapsed the
-// workspace dispatchers into — over the live workspaces, or over every one
-// including the archived, which is what a retention pass owes. All five are
-// listed together because the arm below is about the same thing for all of
-// them: a FleetWide job must reach the
+// The first two ENQUEUE one child per unit; the rest RUN the pass for each
+// workspace in this process, which is what ADR-0103 collapsed the workspace
+// dispatchers into — over the live workspaces, over every one including the
+// archived (what a retention pass owes), or over a set the pass scanned for
+// itself.
+//
+// runEach is that last case, and it is the loop the other two are built on. The
+// overlay reconcile uses it directly because its population is the DUE
+// connections rather than the fleet: its next_sweep_at gate is the backoff, and
+// sweeping a workspace that is not due would spend incumbent quota to do
+// nothing. Going through it rather than writing the loop is what keeps the
+// guarantee — every workspace attempted, the failures joined.
+//
+// dispatchPerWorkspace was a sixth, and it is gone: ADR-0103 retired the last
+// caller, and a helper nothing calls is a spelling this gate would go on
+// admitting for a shape the tree no longer has.
+//
+// All five are listed together because the arm below is about the same thing
+// for all of them: a FleetWide job must reach the
 // fleet through a helper that knows what a unit is, and not through a loop it
 // wrote itself.
 var fanOutHelpers = []string{
-	"dispatchPerWorkspace", "dispatchWith", "dispatchOne",
-	"runPerWorkspace", "runPerEveryWorkspace",
+	"dispatchWith", "dispatchOne",
+	"runPerWorkspace", "runPerEveryWorkspace", "runEach",
 }
 
 // fleetWideDispatcher is one resolved args→worker→Work association and what
@@ -388,7 +401,7 @@ func checkFleetWideDispatchers(t *testing.T, dir string) {
 			continue
 		}
 		if !d.fansOut {
-			t.Errorf("%s:%d: %s works FleetWide args %s but never reaches the fleet. It must do so through dispatchPerWorkspace, dispatchWith or dispatchOne — which build the child's insert options, so a direct River insert around them loses the sweep tag and the declared attempt cap — or through runPerWorkspace / runPerEveryWorkspace, which walk the workspaces in this process (ADR-0103). A loop of its own is the shape all four exist to replace.",
+			t.Errorf("%s:%d: %s works FleetWide args %s but never reaches the fleet. It must do so through dispatchWith or dispatchOne — which build the child's insert options, so a direct River insert around them loses the sweep tag and the declared attempt cap — or through runPerWorkspace / runPerEveryWorkspace / runEach, which walk the workspaces in this process (ADR-0103). A loop of its own is the shape all four exist to replace.",
 				d.pos.Filename, d.pos.Line, d.worker, d.args)
 		}
 		for _, verb := range d.writes {

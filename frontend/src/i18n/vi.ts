@@ -4803,7 +4803,6 @@ export const vi = {
   "ob.s4.capturedTitle": "Đã kết nối hộp thư",
   "ob.s4.capturedBody":
     "CRM đang tự dựng. Email mới hiện ở đây khi lượt quét đầu chạy, thường trong vài phút.",
-  "ob.s4.enterCrm": "Tiếp tục",
   "ob.s4.connectFailed": "Không kết nối được hộp thư đó",
   "ob.s4.notNow": "Để sau",
 
@@ -4969,19 +4968,22 @@ export const vi = {
     "Hãy chọn một. Người, công ty và lịch sử của bạn đều đến từ đây.",
   "ob.conv.connect.networkTitle": "Mạng lưới quan hệ của bạn",
   "ob.conv.connect.networkHint":
-    "Không bắt buộc nhưng đáng làm. Biến những người bạn quen thành tài khoản và theo dõi để bắt tín hiệu.",
+    "Lưu hồ sơ của bạn để mạng lưới bạn nhập sau này được ghi nhận cho bạn. Việc nhập nằm trong Cài đặt.",
   "ob.conv.connect.required": "bắt buộc",
   "ob.conv.connect.recommended": "nên có",
   "ob.conv.connect.gmailBrings": "Email được đọc và gửi qua Google",
   "ob.conv.connect.microsoftBrings": "Email được đọc và gửi qua Microsoft",
   "ob.conv.connect.imapBrings":
     "Email từ máy chủ bất kỳ, bằng địa chỉ email và mật khẩu ứng dụng",
-  "ob.conv.connect.linkedinAuth": "Đường dẫn hồ sơ, chỉ đọc",
+  "ob.conv.connect.linkedinAuth": "Đường dẫn hồ sơ, lưu vào tài khoản của bạn",
+  "ob.conv.connect.saveCta": "lưu →",
+  "ob.conv.connect.dialogDone": "Xong",
   "ob.conv.connect.scopeGoogle": "OAuth, phạm vi đọc và gửi",
   "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",
   "ob.conv.connect.scopeImap": "Địa chỉ email và mật khẩu",
   "ob.conv.connect.connectCta": "kết nối →",
   "ob.conv.connect.connectedCta": "đã kết nối",
+  "ob.conv.connect.savedCta": "đã lưu",
   "ob.conv.connect.blockedCard":
     "Bạn đã chọn một hộp thư rồi. Hãy ngắt kết nối trong Cài đặt nếu muốn đổi.",
   "ob.conv.connect.guaranteesToggle": "Kết nối thì thực sự làm gì",
@@ -4997,7 +4999,7 @@ export const vi = {
     "{brings}. Tôi đọc một lần để dựng hồ sơ người và lịch sử của bạn, rồi giữ đồng bộ về sau.",
   "ob.conv.connect.dialogClose": "Đóng",
   "ob.conv.connect.linkedinName": "LinkedIn",
-  "ob.conv.connect.linkedinConnected": "Đã kết nối",
+  "ob.conv.connect.linkedinSaved": "Đã lưu hồ sơ",
   "ob.conv.connect.linkedinSkippedNote": "Đã bỏ qua: bổ sung sau trong Cài đặt",
   "ob.conv.connect.rosterFailedTitle": "Không kiểm tra được hộp thư của bạn",
   "ob.conv.connect.rosterFailedBody":
@@ -5093,38 +5095,26 @@ export const vi = {
   "ob.conv.connect.mailboxNeeded":
     "Vẫn cần một hộp thư: thư là thứ được đọc và soạn nháp. Kết nối một hộp thư ở trên, hoặc tạm tiếp tục mà không có.",
   "ob.conv.linkedin.cardBody":
-    "Biến mạng lưới quan hệ của bạn thành tài khoản và người, và báo khi một người quen đổi việc.",
-  "ob.conv.linkedin.limitsToggle": "Margince thấy được gì và không thấy gì",
-  "ob.conv.linkedin.scope1Lead": "Danh sách kết nối của bạn —",
-  "ob.conv.linkedin.scope1Rest": "tên, chức danh, công ty và ngày bạn kết nối.",
-  "ob.conv.linkedin.scope2Lead": "Không gì khác.",
-  "ob.conv.linkedin.scope2Rest":
-    "Không tin nhắn, không bài đăng, không ai-đã-xem-bạn, không hoạt động.",
-  "ob.conv.linkedin.scope3Lead": "Mạng lưới quan hệ vẫn là của bạn.",
-  "ob.conv.linkedin.scope3Rest":
-    "Được ghi nhận cho bạn, không bao giờ cho công ty, và ngắt kết nối là gỡ đi.",
-  "ob.conv.linkedin.scope4Lead": "Không ai bị liên hệ.",
-  "ob.conv.linkedin.scope4Rest":
-    "Việc kết nối không gửi lời mời hay tin nhắn nào, không bao giờ.",
-  "ob.conv.linkedin.neverContacts":
-    "Kết nối của bạn không thành người trong CRM. Chúng chỉ trả lời: ai ở đây đã quen họ?",
+    "Địa chỉ hồ sơ của bạn, để một kết nối được nhập ghi là “Anna quen họ”, không phải “công ty quen họ”.",
+  "ob.conv.linkedin.dialogHeadline": "Hồ sơ LinkedIn của bạn",
   "ob.conv.linkedin.profileLabel": "Đường dẫn hồ sơ LinkedIn của bạn",
   "ob.conv.linkedin.profilePlaceholder": "https://www.linkedin.com/in/…",
   "ob.conv.linkedin.profileWhy":
     "Để mạng lưới ghi đích danh bạn: “Anna quen họ”, không phải “công ty quen họ”.",
-  "ob.conv.linkedin.authorize": "Cấp quyền qua LinkedIn",
-  "ob.conv.linkedin.appPending":
-    "Ứng dụng LinkedIn còn chờ duyệt nên chưa đồng bộ gì. Hãy tải Connections.csv lên trong Cài đặt.",
+  "ob.conv.linkedin.save": "Lưu hồ sơ",
   "ob.conv.linkedin.skip": "Tạm bỏ qua LinkedIn",
-  "ob.conv.linkedin.connected":
-    "Đã cấp quyền LinkedIn. Các kết nối của bạn sẽ đồng bộ ngay khi ứng dụng được duyệt.",
+  "ob.conv.linkedin.importLater":
+    "Các kết nối của bạn được nhập trong Cài đặt, từ tệp xuất Connections.csv.",
+  "ob.conv.linkedin.saved":
+    "Đã lưu hồ sơ LinkedIn. Mạng lưới bạn nhập sẽ được ghi nhận cho bạn.",
   "ob.conv.linkedin.skipped":
-    "Đã bỏ qua LinkedIn. Bạn kết nối lúc nào cũng được trong Cài đặt.",
+    "Đã bỏ qua LinkedIn. Bạn thêm hồ sơ lúc nào cũng được trong Cài đặt.",
 
-  // The setup rail: five stops, one word each. Long enough to name the step,
-  // short enough that five of them fit a column at 10px.
+  // The setup rail: six stops, one word each. Long enough to name the step,
+  // short enough that six of them fit a column at 10px.
   "ob.rail.read": "Đọc",
   "ob.rail.confirm": "Xác nhận",
+  "ob.rail.basis": "Cơ sở",
   "ob.rail.voice": "Giọng văn",
   "ob.rail.connect": "Kết nối",
   "ob.rail.prefs": "Tùy chọn",
@@ -5153,11 +5143,17 @@ export const vi = {
   "ob.conv.team.finish": "Hoàn tất thiết lập",
   "ob.conv.team.done":
     "Thiết lập đã hoàn tất. Người bạn thêm vào có thể tự huấn luyện giọng văn và kết nối tài khoản trong Cài đặt.",
+  "ob.conv.basis.title": "Trước hết, cách các con số được báo cáo.",
+  "ob.conv.basis.body":
+    "Đơn vị tiền tệ cơ sở và múi giờ báo cáo là của toàn hệ thống: mọi thương vụ, báo cáo và bản tóm tắt đều định giá và ghi ngày theo đó. Cả hai được điền sẵn và có thể đổi sau trong Cài đặt, cho đến khi một thương vụ đã khóa đơn vị tiền tệ.",
+  "ob.conv.basis.reportingTitle": "Cơ sở báo cáo",
+  "ob.conv.basis.timezoneNeeded": "Cần một múi giờ báo cáo.",
+  "ob.conv.basis.continue": "Tiếp tục",
+  "ob.conv.basis.done": "Đã chốt cơ sở báo cáo.",
+
   "ob.conv.prefs.title": "Cuối cùng, vài tùy chọn.",
   "ob.conv.prefs.body":
     "Mọi thứ ở đây được điền sẵn từ những gì đã ghi nhận, và có thể đổi sau trong Cài đặt. Nhấn Xong nếu tất cả đều đúng.",
-  "ob.conv.prefs.reportingTitle": "Cách các con số được báo cáo",
-  "ob.conv.prefs.timezoneNeeded": "Cần một múi giờ báo cáo.",
   "ob.conv.prefs.autonomyTitle": "Những gì nó có thể tự thay đổi",
   "ob.conv.prefs.autonomyBody":
     "Mỗi loại thay đổi bên dưới sẽ được đề xuất cho bạn trước. Bật một loại và nó sẽ áp dụng mà không hỏi; tắt lại bất cứ lúc nào.",
@@ -5399,13 +5395,11 @@ export const vi = {
   "password.hint": "Ít nhất 12 ký tự.",
   "password.tooShort": "Quá ngắn. Hãy dùng ít nhất 12 ký tự.",
   "password.mismatch": "Hai ô này không khớp.",
-  "password.signsYouOut":
-    "Việc đổi mật khẩu sẽ đăng xuất bạn ở mọi nơi, kể cả ở đây. Hãy đăng nhập lại bằng mật khẩu mới.",
   "password.changing": "Đang đổi mật khẩu…",
   "password.open": "Đổi mật khẩu",
   "password.cancel": "Hủy",
   "password.submit": "Lưu mật khẩu mới",
-  "password.done": "Đã đổi mật khẩu. Hãy đăng nhập lại bằng mật khẩu mới.",
+  "password.done": "Đã đổi mật khẩu. Mọi thiết bị khác đã được đăng xuất.",
   "password.errorGeneric": "Không đổi được mật khẩu. Hãy thử lại.",
   "setup.pageTitle": "Thiết lập Margince",
   "setup.title": "Nhận quyền quản trị bản cài đặt này",
@@ -6684,6 +6678,35 @@ export const vi = {
   "installationSettings.fiscalYearStart": "Năm tài chính bắt đầu",
   "installationSettings.fiscalYearStartHint":
     "Tháng bắt đầu năm tài chính của bạn. Báo cáo nhóm theo năm và quý này — năm không bắt đầu từ tháng 1 được đặt tên theo cả hai năm dương lịch mà nó trải qua, ví dụ FY2026/27. Thay đổi sẽ đặt lại tên mọi báo cáo ngay lập tức, và một khung nhìn đã lưu có lọc theo kỳ sẽ hỏi những tháng khác.",
+  "installationSettings.forwardMeasure": "Dự phóng kết quả kỳ dựa trên",
+  "installationSettings.forwardMeasureHint":
+    "Phần pipeline còn lại nào được cộng vào số tiền đã thắng. Bằng chứng cam kết là chặt nhất: các deal đã cam kết có ngày chốt được xác nhận. Có trọng số tính mọi deal đang mở theo xác suất giai đoạn — cách đọc trung thực cho đội cam kết mọi thứ. Đánh giá của quản lý thay thế toàn bộ dự phóng thay vì cộng thêm vào phần đã thắng; nếu kỳ chưa có đánh giá nào, kỳ đó quay về bằng chứng cam kết và nói rõ điều đó.",
+  "installationSettings.forwardMeasure.commit_evidence":
+    "Bằng chứng cam kết — chỉ ngày chốt đã xác nhận",
+  "installationSettings.forwardMeasure.weighted":
+    "Pipeline có trọng số — mọi deal đang mở theo xác suất giai đoạn",
+  "installationSettings.forwardMeasure.manager_call":
+    "Đánh giá của quản lý — con số đã ghi cho kỳ này",
+  "forecast.landing": "Dự phóng kết quả kỳ",
+  "forecast.landingFrom": "{won} đã thắng cộng {remaining} còn sắp tới.",
+  "forecast.landingFromCall":
+    "Đánh giá cho kỳ này. Nó thay thế dự phóng chứ không cộng vào {won} đã thắng.",
+  "forecast.landing.caveat.call_absent":
+    "Chưa ai đánh giá kỳ này, nên đây là bằng chứng cam kết.",
+  "forecast.landing.caveat.call_below_actual":
+    "Đánh giá thấp hơn số tiền đã thắng. Nó được hiển thị đúng như đã ghi, không chỉnh sửa.",
+  "forecast.pipelineNeeded": "Pipeline cần có",
+  "forecast.pipelineNeededDetail":
+    "{current} đang mở so với {needed} cần để đạt {reference}.",
+  "forecast.pipelineBasis.manager_call": "Đo theo đánh giá cho kỳ này.",
+  "forecast.pipelineBasis.historical_median":
+    "Đo theo trung vị của bốn kỳ tương đương gần nhất.",
+  "forecast.pipelineAbsentTitle": "Không có số liệu bao phủ cho kỳ này",
+  "forecast.pipelineAbsent.insufficient_basis":
+    "Không có gì để đối chiếu: kỳ này chưa ghi đánh giá nào, và chưa đủ bốn kỳ tương đương đã kết thúc. Một số liệu bao phủ đo theo con số rút ra từ chính pipeline này thì lúc nào cũng đẹp.",
+  "forecast.pipelineAbsent.insufficient_history":
+    "Quá ít deal đã chốt để rút ra tỷ lệ chuyển đổi. Tỷ lệ từ một nhúm deal dao động nhiều hơn giá trị của câu trả lời.",
+  "forecast.coverage": "{percent}% pipeline cần thiết",
   "installationSettings.baseCurrency": "Đơn vị tiền tệ cơ sở",
   "installationSettings.baseCurrencyHint":
     "Mã ISO-4217 mà mọi số tiền được quy đổi về khi tổng hợp. Có thể thay đổi cho đến khi số tiền đầu tiên được quy đổi theo nó.",
