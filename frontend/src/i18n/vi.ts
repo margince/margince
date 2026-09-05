@@ -3575,6 +3575,24 @@ export const vi = {
   "agent.activity.documentExtractNamed.degraded":
     "Tôi mới đọc được một phần {name} rồi dừng.",
   "agent.activity.documentExtractNamed.failed": "Tôi không đọc được {name}.",
+  "agent.activity.siteRead.queued": "Trang web của công ty đang chờ được đọc.",
+  "agent.activity.siteRead.running": "Tôi đang đọc trang web của công ty.",
+  "agent.activity.siteRead.stalled":
+    "Việc đọc trang web của công ty kéo dài bất thường. Có thể nó đã dừng.",
+  "agent.activity.siteRead.done": "Tôi đã đọc xong trang web của công ty.",
+  "agent.activity.siteRead.degraded":
+    "Tôi đã dừng trước khi đọc hết trang web của công ty.",
+  "agent.activity.siteRead.failed": "Tôi không đọc được trang web của công ty.",
+  "agent.activity.siteReadNamed.queued":
+    "Trang web của {name} đang chờ được đọc.",
+  "agent.activity.siteReadNamed.running": "Tôi đang đọc trang web của {name}.",
+  "agent.activity.siteReadNamed.stalled":
+    "Việc đọc trang web của {name} kéo dài bất thường. Có thể nó đã dừng.",
+  "agent.activity.siteReadNamed.done": "Tôi đã đọc xong trang web của {name}.",
+  "agent.activity.siteReadNamed.degraded":
+    "Tôi đã dừng trước khi đọc hết trang web của {name}.",
+  "agent.activity.siteReadNamed.failed":
+    "Tôi không đọc được trang web của {name}.",
   "agent.activity.summarize.queued":
     "Việc tổng hợp thông tin về công ty này đang chờ xử lý.",
   "agent.activity.summarize.running":
