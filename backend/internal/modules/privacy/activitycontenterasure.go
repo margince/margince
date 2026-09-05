@@ -72,6 +72,19 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 		DELETE FROM field_provenance WHERE object_type = 'activity' AND object_id = $1`, id); err != nil {
 		return err
 	}
+	// What a classifier concluded the message MEANT, and every human correction
+	// of that conclusion. It is derived from the text this act destroys, so it
+	// goes with it: a verdict saying somebody replied negatively is a claim
+	// about them that would otherwise outlive the words it was read from.
+	//
+	// Here rather than only beside the column write in the timeline redaction,
+	// because this path is the one BOTH acts run. Erasure and anonymization
+	// alike make the subject unfindable, and a history cleared by one of them
+	// holds the subject's data after an operator was told it was gone.
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM activity_reply_verdict_history WHERE activity_id = $1`, id); err != nil {
+		return err
+	}
 	if err := purgeTranscriptReadings(ctx, tx, []ids.UUID{id}); err != nil {
 		return err
 	}
