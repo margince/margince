@@ -316,45 +316,51 @@ export function DealCard({
       onClick={(event) => onOpen?.(deal, event)}
       {...dragHandlers}
     >
-      {/* Four lines, read as a triage (composed.css says why in this order):
-          who it is with and how long it has sat; what it is; what it is worth
-          and when it closes; and what is wrong with it, only when something is. */}
-      <span className="deal-head">
-        <DealCardCompany deal={deal} />
-        <span className="deal-age">{formatDuration(deal.ageMs, locale)}</span>
-      </span>
-      <span className="deal-name">{deal.name}</span>
-      <span className="deal-figure">
-        <span className="deal-value">
-          {formatMoneyOrAbsent(deal.valueMinor, deal.currency, locale)}
-        </span>
-        {deal.closeDate && (
-          <DealCloses
-            day={deal.closeDate}
-            provisional={deal.closeDateProvisional ?? false}
-            zone={zone}
-          />
-        )}
-      </span>
-      {(deal.archived ||
+      {/* Read in the order a rep asks (composed.css says why): what needs
+          them, on this card, if anything; whose deal it is; what it is worth
+          and when it closes; and what it is called. */}
+      {(deal.staged ||
         deal.stalled ||
         deal.singleThreaded ||
-        deal.staged) && (
+        deal.archived) && (
         <span className="deal-flags">
-          {deal.archived && <Badge quiet>{t("deal.archived")}</Badge>}
-          {deal.stalled && (
-            <Badge quiet tone="warn">
-              {t("deal.stalled")}
-            </Badge>
-          )}
+          {deal.staged && <Badge tone="ai">{t("deal.staged")}</Badge>}
           {deal.singleThreaded && (
             <Badge quiet tone="danger">
               {t("deal.singleThreaded")}
             </Badge>
           )}
-          {deal.staged && <Badge tone="ai">{t("deal.staged")}</Badge>}
+          {deal.stalled && (
+            <Badge quiet tone="warn">
+              {t("deal.stalled")}
+            </Badge>
+          )}
+          {/* How long it has sat is the size of the stall, and only then: on a
+              healthy card the number is a fact nobody acts on. */}
+          {deal.stalled && (
+            <span className="deal-age">
+              {formatDuration(deal.ageMs, locale)}
+            </span>
+          )}
+          {deal.archived && <Badge quiet>{t("deal.archived")}</Badge>}
         </span>
       )}
+      <DealCardCompany deal={deal} />
+      <span className="deal-figure">
+        <span className="deal-value">
+          {formatMoneyOrAbsent(deal.valueMinor, deal.currency, locale)}
+        </span>
+        {deal.closeDate ? (
+          <DealCloses
+            day={deal.closeDate}
+            provisional={deal.closeDateProvisional ?? false}
+            zone={zone}
+          />
+        ) : (
+          <span className="deal-closes">{t("deal.undated")}</span>
+        )}
+      </span>
+      <span className="deal-name">{deal.name}</span>
     </a>
   );
 }

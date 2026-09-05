@@ -295,6 +295,7 @@ export const vi = {
   "deal.staged": "chờ duyệt",
   "deal.archived": "đã lưu trữ",
   "deal.closes": "chốt {date}",
+  "deal.undated": "chưa có ngày chốt",
   "deal.closesProvisional": "ngày chốt tạm tính, chưa được ai xác nhận",
   "record.notShown": "Không hiển thị",
   "record.timelineLoading": "Đang tải lịch sử của bản ghi này…",

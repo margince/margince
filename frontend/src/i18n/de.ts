@@ -289,6 +289,7 @@ export const de = {
   "deal.singleThreaded": "nur eine Person",
   "deal.staged": "vorgemerkt",
   "deal.closes": "Abschluss {date}",
+  "deal.undated": "kein Abschlusstermin",
   "deal.closesProvisional":
     "vorläufiger Abschlusstermin, von niemandem bestätigt",
   "record.notShown": "Nicht angezeigt",
