@@ -605,7 +605,6 @@ export function toBoardDeal(deal: Deal, naming: CompanyNaming): BoardDeal {
     ageMs: Math.max(0, Date.now() - new Date(since).getTime()),
     stalled: deal.stalled ?? false,
     archived: deal.archived_at != null,
-    tags: deal.tags,
   };
 }
 

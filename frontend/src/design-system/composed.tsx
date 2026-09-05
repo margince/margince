@@ -22,13 +22,10 @@ import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { EmailEntry } from "./emailentry";
 
-type RowTag = components["schemas"]["RowTag"];
-
 import type { components } from "../api/schema";
 import { Avatar, Badge, Button } from "./atoms";
 import { PageZones, type PageZonesShape } from "./pagezones";
 import { FieldGuard } from "./rbac";
-import { RowTags } from "./rowtags";
 import { useTruncationTooltip } from "./tooltip";
 import { type Provenance, ProvenanceTag } from "./trust";
 import "./composed.css";
@@ -91,9 +88,6 @@ export type BoardDeal = BoardRecord & {
   valueMinor: number | null;
   currency: string | null;
   ageMs: number;
-  /** How this deal is filed. The board draws the same chip strip a list row
-   *  does, so a reader moving between the two reads one thing one way. */
-  tags?: readonly RowTag[];
   stalled?: boolean;
   singleThreaded?: boolean;
   staged?: boolean;
@@ -208,6 +202,17 @@ function DealCardCompany({ deal }: Readonly<{ deal: BoardDeal }>) {
   );
 }
 
+/**
+ * One deal, as a card on the board.
+ *
+ * NO TAG STRIP. How a deal is filed is a fact about the record, not about the
+ * work in front of the reader, and a board is scanned: three coloured chips per
+ * card turned five columns into a field of colour with the deal names competing
+ * against it. The words are a column in the deals table and a panel on the
+ * record, which are the two places a reader goes to ask how something is filed.
+ * What stays here is what a reader triages by — who it is with, what it is,
+ * what it is worth, how long it has sat, and what is wrong with it.
+ */
 export function DealCard({
   deal,
   href,
@@ -267,7 +272,6 @@ export function DealCard({
           the one it groups by. Weight still says which record the card opens. */}
       <DealCardCompany deal={deal} />
       <span className="deal-name">{deal.name}</span>
-      <RowTags tags={deal.tags} />
       <span className="deal-meta">
         <span className="deal-value">
           {formatMoneyOrAbsent(deal.valueMinor, deal.currency, locale)}

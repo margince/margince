@@ -25,7 +25,12 @@
   position: relative;
   flex: 1 1 220px;
   min-width: 220px;
-  background: var(--bgCard);
+  /* A RECESS in the surface, not a card on it: the page's own ground showing
+     through, which is one hair off the surface in light and one hair under it
+     in dark. --bgCard is a card's ground and read as one — five of them in a
+     row made the board a grid of grey slabs with the deals inside them, and
+     the cards had to fight their own containers to look like the subject. */
+  background: var(--bgPage);
   border-radius: var(--r-md);
   padding: var(--space-3);
   display: flex;
@@ -76,7 +81,9 @@
   align-items: baseline;
   gap: 6px;
   padding: 2px 4px 4px;
-  background: var(--bgCard);
+  /* The column's own ground, or the cards slide visibly behind a transparent
+     strip. It follows --bgPage for the same reason it followed --bgCard. */
+  background: var(--bgPage);
 }
 .board-col-head .stage {
   font-size: var(--fs-sm);
@@ -229,14 +236,6 @@
    whatever badge the deal happens to carry. */
 .deal-card .deal-age {
   margin-left: auto;
-}
-/* THE CARD IS NOT A TABLE ROW. rowtags.css keeps the strip on one line because
-   a taller cell shifts every row under it; a card owns its own height, and a
-   stage column is narrow enough that a strip which cannot wrap runs past the
-   card's right edge instead. */
-.deal-card .rowtags {
-  flex-wrap: wrap;
-  min-width: 0;
 }
 
 .record-head {
