@@ -25,11 +25,11 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | | |
 |---|---:|
 | Shipped invocation sites | 40 |
-| … best state `current` | 33 |
+| … best state `current` | 32 |
 | … best state `partial` | 0 |
-| … best state `stale` | 5 |
+| … best state `stale` | 6 |
 | … `absent` on every binding | 2 |
-| Scenarios in the corpus | 135 |
+| Scenarios in the corpus | 136 |
 | Committed records | 59 |
 | Bindings measured | 10 |
 
@@ -91,7 +91,7 @@ Which model to run each site on, and what that choice rests on.
 | [`cold_start/field_extract`](#cold_startfield_extract) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 1 | 3 |
 | [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `supported_degraded` | 0.83 | `current` | 2 | 3 |
 | [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 3 | 2 |
-| [`deal_health/deal_status`](#deal_healthdeal_status) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 2 | 1 |
+| [`deal_health/deal_status`](#deal_healthdeal_status) | - | - | - | `stale` | 3 | 1 |
 | [`document_extract/fields`](#document_extractfields) | `gemini · gemini-3.5-flash · eu_hosted` | `certified` | 1.00 | `current` | 4 | 1 |
 | [`draft_reply/account`](#draft_replyaccount) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
 | [`draft_reply/first`](#draft_replyfirst) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `supported_degraded` | 1.00 | `current` | 1 | 2 |
@@ -149,7 +149,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 6 | 0 | 0 | 42 | 39 | 0.93 | 4477ms | 5 | 0 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 31 | 25 | 0 | 6 | 333 | 269 | 0.81 | 68516ms | 12 | 7 | 12 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 31 | 24 | 0 | 7 | 333 | 269 | 0.81 | 68516ms | 12 | 7 | 12 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 
 ## Stale records, and why
@@ -179,6 +179,7 @@ model, real network).
 | `cold_start/company_message` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `cold_start/field_extract` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `cold_start/sitereadmessage` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
+| `deal_health/deal_status` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since, or the prompts built from them have: deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is |
 | `draft_reply/account` | `gemini · gemini-3.1-pro-preview · eu_hosted` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `draft_reply/account` | `gemini · gemini-3.5-flash · eu_hosted` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `draft_reply/intro_note` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | scenario intro_note_is_written_to_the_customer_not_about_the_request — or the prompt this build now builds from it — has changed since the record scored it |
@@ -486,10 +487,11 @@ Records (2):
 
 Scope a run of it can claim: `full_invocation`.
 
-Scenarios (2):
+Scenarios (3):
 
 | Scenario | Expects | Case |
 |---|---|---|
+| `deal_status_an_overdue_task_is_not_done_work` | `accepted` | [deal_status_overdue_task_is_not_done_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_overdue_task_is_not_done_01.yaml) |
 | `deal_status_offer_left_hanging` | `accepted` | [deal_status_offer_left_hanging_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_offer_left_hanging_01.yaml) |
 | `deal_status_says_nothing_is_wrong_when_nothing_is` | `accepted` | [deal_status_quiet_after_proposal_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_quiet_after_proposal_01.yaml) |
 
@@ -497,7 +499,7 @@ Records (1):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 2/2 | `certified` | 6 | 6 | 1.00 | 1139ms | 1778ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/3 | `certified` | 6 | 6 | 1.00 | 1139ms | 1778ms | 6 | 0 | 0 | 0 |
 
 ### `document_extract`
 
