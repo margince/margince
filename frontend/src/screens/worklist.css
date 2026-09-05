@@ -144,7 +144,12 @@
   column-gap: var(--space-4);
   row-gap: var(--space-2);
 }
-.worklist-row > :nth-child(n + 4) {
+/* The verbs and anything the row carries after them — a decision drawn inside
+   it, an answer — take the full width under the work. Spelled as two selectors
+   rather than one `:nth-child`, because the wide shape below moves ONLY the
+   verbs and needs a selector of equal weight to do it. */
+.worklist-row > .worklist-row-acts,
+.worklist-row > :nth-child(n + 5) {
   grid-column: 3 / -1;
 }
 /* The card's own ground, edge and padding — the pane every card in this
@@ -169,6 +174,29 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--gapActions);
+}
+
+/* A CARD WITH ROOM PUTS THE VERBS BESIDE THE WORK.
+   Under it, they left the card's right-hand half empty — measured at 812px of
+   nothing on a 1358px card, which is what a full-bleed row with all its ink on
+   the left reads as. Beside it, the work is bracketed by what can be done
+   about it and the card is used end to end.
+   The column is CAPPED: a row can carry seven verbs, and uncapped they took
+   the width and squeezed the subject and its reasons into a strip that wrapped
+   every line — which is what put them under the work in the first place. At
+   the cap they wrap among themselves instead, and the work keeps the rest. */
+@container (min-width: 44rem) {
+  .worklist-row {
+    grid-template-columns:
+      auto
+      var(--worklist-kind-w, 7.5rem)
+      minmax(0, 1fr)
+      minmax(min-content, var(--worklist-acts-w, 20rem));
+  }
+  .worklist-row > .worklist-row-acts {
+    grid-column: 4;
+    justify-content: flex-end;
+  }
 }
 
 /* The kind, as an eyebrow in the muted tone; in the warn tone on a row the day
@@ -325,6 +353,11 @@
   list-style: none;
   margin: 0;
   padding: 0 var(--padPanel) var(--space-3);
+  /* THE ROW MEASURES ITSELF AGAINST THIS LIST, not against the window. The same
+     queue is drawn in the Brief's work column and on a page of its own, and
+     those are different widths on one screen — a media query would give both
+     the shape the window deserves rather than the shape the column has. */
+  container-type: inline-size;
 }
 
 .worklist-row-verbs,
