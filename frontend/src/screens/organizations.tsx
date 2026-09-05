@@ -152,8 +152,8 @@ import { groupChronology } from "./timelinegroups";
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
-import { invalidateRecord } from "./recordwritekeys";
 import { LogActivityAction } from "./logactivity";
+import { invalidateRecord } from "./recordwritekeys";
 
 // Companies list + company 360 (B-EP09.10a/b). Firmographics render
 // evidence-or-omit: a field with no stored value is absent, never guessed.

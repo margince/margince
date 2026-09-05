@@ -254,7 +254,10 @@ describe("a citation's receipt", () => {
     renderCitations(
       [
         receipted,
-        { ...cited("activity", "a-2", "Contract questions"), origin: "Email you sent" },
+        {
+          ...cited("activity", "a-2", "Contract questions"),
+          origin: "Email you sent",
+        },
       ],
       false,
     );
@@ -287,9 +290,13 @@ describe("a citation's receipt", () => {
 
     // The chip's own click opens the receipt, not the deal: a reader who
     // rested on it to check the claim must not be carried off the page.
-    await user.click(screen.getByRole("button", { name: "Fleet renewal 2027" }));
+    await user.click(
+      screen.getByRole("button", { name: "Fleet renewal 2027" }),
+    );
     expect(open).not.toHaveBeenCalled();
-    expect(screen.getByText("Open deal, last worked · 14/03/2026")).toBeTruthy();
+    expect(
+      screen.getByText("Open deal, last worked · 14/03/2026"),
+    ).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Open the record" }));
     expect(open).toHaveBeenCalledWith("deal", "d-1", []);

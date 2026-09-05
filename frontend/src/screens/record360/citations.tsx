@@ -112,44 +112,17 @@ export function citationChips(
     const identity = `${cited.entity_type}:${cited.entity_id}`;
     const already = seenAt.get(identity);
     if (already !== undefined) {
-      // The same record cited twice is one source, so the chip stays — but the
-      // server names a record on the citation rather than once per record, and
-      // nothing promises the FIRST mention is the one that carried the name.
-      // Dropping the repeat outright therefore threw away the only name there
-      // was, and the chip fell back to its bare kind. Still one record, so it
-      // may still speak with its own name; `count === 1` is what says it has
-      // not since become a group speaking for several.
-      const held = chips[already];
-      if (held.name === undefined && held.count === 1 && cited.name) {
-        held.name = cited.name;
-      }
+      nameRepeat(chips[already], cited);
       continue;
     }
     const isOpenable = openable(cited.entity_type);
-    if (isOpenable && !groupable(cited.entity_type)) {
+    // Its own chip: a record with a page of its own, or one carrying a
+    // receipt. A citation with a receipt is never folded into a count — the
+    // quote is about ONE record, and a chip for three activities that opened
+    // one message's words would be claiming the other two said the same.
+    if ((isOpenable && !groupable(cited.entity_type)) || hasReceipt(cited)) {
       seenAt.set(identity, chips.length);
-      chips.push({
-        openable: true,
-        entityType: cited.entity_type,
-        entityId: cited.entity_id,
-        count: 1,
-        name: cited.name,
-        ...receiptOf(cited),
-      });
-      continue;
-    }
-    // A citation with a receipt is never folded into a count: the quote is
-    // about ONE record, and a chip for three activities that opened one
-    // message's words would be claiming the other two said the same.
-    if (hasReceipt(cited)) {
-      seenAt.set(identity, chips.length);
-      chips.push({
-        openable: false,
-        entityType: cited.entity_type,
-        count: 1,
-        name: cited.name,
-        ...receiptOf(cited),
-      });
+      chips.push(ownChip(cited, isOpenable));
       continue;
     }
     const at = groupAt.get(cited.entity_type);
@@ -185,6 +158,39 @@ export function citationChips(
     grouped.name = undefined;
   }
   return chips;
+}
+
+// The same record cited twice is one source, so the chip stays — but the
+// server names a record on the citation rather than once per record, and
+// nothing promises the FIRST mention is the one that carried the name.
+// Dropping the repeat outright therefore threw away the only name there was,
+// and the chip fell back to its bare kind. Still one record, so it may still
+// speak with its own name; `count === 1` is what says it has not since become
+// a group speaking for several.
+function nameRepeat(held: CitationChip, cited: Cited) {
+  if (held.name === undefined && held.count === 1 && cited.name) {
+    held.name = cited.name;
+  }
+}
+
+// A chip standing for exactly this record, with whatever receipt it carries.
+function ownChip(cited: Cited, isOpenable: boolean): CitationChip {
+  return isOpenable
+    ? {
+        openable: true,
+        entityType: cited.entity_type,
+        entityId: cited.entity_id,
+        count: 1,
+        name: cited.name,
+        ...receiptOf(cited),
+      }
+    : {
+        openable: false,
+        entityType: cited.entity_type,
+        count: 1,
+        name: cited.name,
+        ...receiptOf(cited),
+      };
 }
 
 // The citation kinds that open a RECEIPT rather than a record page. Only these
