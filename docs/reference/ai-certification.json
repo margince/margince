@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 40,
-    "sites_best_current": 31,
+    "sites_best_current": 30,
     "sites_best_partial": 0,
-    "sites_best_stale": 7,
+    "sites_best_stale": 8,
     "sites_absent": 2,
     "scenarios": 136,
     "records": 59,
@@ -17,9 +17,9 @@
         "env": "eu_hosted"
       },
       "sites": 20,
-      "sites_current": 15,
+      "sites_current": 14,
       "sites_partial": 1,
-      "sites_stale": 4,
+      "sites_stale": 5,
       "runs": 236,
       "passed": 215,
       "reliability": 0.9110169491525424,
@@ -157,9 +157,9 @@
         "env": "eu_hosted"
       },
       "sites": 6,
-      "sites_current": 6,
+      "sites_current": 5,
       "sites_partial": 0,
-      "sites_stale": 0,
+      "sites_stale": 1,
       "runs": 42,
       "passed": 39,
       "reliability": 0.9285714285714286,
@@ -1467,17 +1467,8 @@
       "key": "corpus_ask/corpus_ask",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "eu_hosted"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "corpus_ask_answers_only_from_the_passage_that_says_it",
@@ -1502,7 +1493,7 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
           "scenarios_measured": null,
           "scenarios_total": 3,
@@ -1517,7 +1508,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
         },
         {
           "binding": {
@@ -1525,9 +1516,9 @@
             "model": "mistralai/mistral-large-2512",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -1540,7 +1531,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since, or the prompts built from them have: corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer"
         }
       ]
     },

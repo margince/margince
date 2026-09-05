@@ -1,7 +1,8 @@
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCan } from "../app/capability";
 import { ENTITY } from "../app/entity";
 import { navigate, routeHash, useRoute } from "../app/router";
 import {
@@ -708,6 +709,7 @@ const DERIVATION_HEADERS: Readonly<Record<string, MessageKey>> = {
   owner_id: "explain.col.owner",
   pipeline_id: "explain.col.pipeline",
   organization_id: "analytics.company",
+  partner_org_id: "analytics.company",
 };
 
 // A column the vocabulary knows gets its word; anything else keeps the wire
@@ -762,10 +764,23 @@ function renderDerivationCell(
   row: Record<string, unknown>,
   baseCurrency: string | null,
   locale: Locale,
-): string {
+): ReactNode {
   const value = row[col];
   if (value == null) {
     return "";
+  }
+  if (typeof value === "string" && value !== "") {
+    if (col === "pipeline_id")
+      return <DerivationPipelineName pipelineId={value} />;
+    if (col === "stage_id" && typeof row.pipeline_id === "string") {
+      return (
+        <DerivationPipelineName pipelineId={row.pipeline_id} stageId={value} />
+      );
+    }
+    if (col === "owner_id") return <EntityRef kind="user" id={value} />;
+    if (col === "organization_id" || col === "partner_org_id") {
+      return <EntityRef kind="organization" id={value} />;
+    }
   }
   if (col.endsWith("_minor") && typeof value === "number") {
     return formatMoneyOrAbsent(
@@ -775,6 +790,33 @@ function renderDerivationCell(
     );
   }
   return String(value);
+}
+
+function DerivationPipelineName({
+  pipelineId,
+  stageId,
+}: Readonly<{ pipelineId: string; stageId?: string }>) {
+  const t = useT();
+  const pipeline = useQuery({
+    queryKey: ["pipeline", pipelineId],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/pipelines/{id}", {
+        params: { path: { id: pipelineId } },
+      });
+      if (error) throwProblem(error);
+      return data;
+    },
+  });
+  if (pipeline.isPending) return <>{t("common.loading")}</>;
+  if (pipeline.isError) return <>{t("common.error")}</>;
+  return (
+    <>
+      {stageId
+        ? (pipeline.data?.stages?.find((stage) => stage.id === stageId)?.name ??
+          t("common.empty"))
+        : pipeline.data?.name}
+    </>
+  );
 }
 
 // The source rows the explained figure reconciles to. A section INSIDE the
@@ -1084,6 +1126,10 @@ function DataCoverageView({
 }: Readonly<{ locale: Locale; timezone: string }>) {
   const t = useT();
   const coverage = useDataCoverage();
+  const allowed = useCan("data_coverage", "read");
+  if (!allowed) {
+    return <EmptyState>{t("common.permissionDenied")}</EmptyState>;
+  }
   return (
     <QueryGate query={coverage} pendingLabel={t("analytics.sectionCoverage")}>
       {(run) =>
@@ -1135,7 +1181,9 @@ function DataCoverageView({
 type DataCoverageRow = components["schemas"]["DataCoverage"]["sources"][number];
 
 function useDataCoverage() {
+  const allowed = useCan("data_coverage", "read");
   return useQuery({
+    enabled: allowed,
     queryKey: ["analytics-coverage"],
     retry: false,
     queryFn: async () => {
@@ -1724,6 +1772,7 @@ export function AnalyticsScreen() {
   // Sharing sits beside the tabs rather than inside a section, because the
   // thing being shared is the SECTION the reader is on — a button that moved
   // with the content would read as sharing one card.
+  const canReadCoverage = useCan("data_coverage", "read");
   const coverageProbe = useDataCoverage();
   const header = (
     <div className="analytics-header">
@@ -1733,10 +1782,9 @@ export function AnalyticsScreen() {
             return context.data?.default_scope.kind === "owner";
           }
           if (candidate === "coverage") {
-            // The server gates this read on the ops grant. The tab appears
-            // when the probe ANSWERS — hidden while pending, so a seat the
-            // server refuses never sees it flicker in and out.
-            return coverageProbe.isSuccess;
+            // The read starts only with the ops grant; the tab appears
+            // after the server has answered.
+            return canReadCoverage && coverageProbe.isSuccess;
           }
           return true;
         })}

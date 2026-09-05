@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { formatMoney, MONEY_ABSENT } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
@@ -87,6 +88,19 @@ function reportsStub(opts: ReportsStubOpts = {}) {
     // numbers cover, and whether this reader may publish a forecast. A stub
     // without it leaves the screen waiting and the assertions below looking
     // like a rendering bug.
+    if (url.endsWith("/me")) {
+      return jsonResponse(
+        meFixture({
+          roles: ["rep"],
+          allow: {
+            data_coverage:
+              opts.coverage !== undefined && opts.coverage.status !== 403
+                ? ["read"]
+                : [],
+          },
+        }),
+      );
+    }
     if (url.includes("/analytics/coverage")) {
       const cov = opts.coverage ?? { status: 403 };
       return jsonResponse(
@@ -337,8 +351,9 @@ describe("the data coverage section", () => {
     ).toBeTruthy();
   });
 
-  it("hides the tab from a seat the server refuses", async () => {
-    vi.stubGlobal("fetch", reportsStub({ coverage: { status: 403 } }));
+  it("does not request coverage without the ops grant", async () => {
+    const fetch = reportsStub({ coverage: { status: 403 } });
+    vi.stubGlobal("fetch", fetch);
     render(<AnalyticsScreen />);
     await screen.findByRole("button", { name: "Pipeline" });
     await waitFor(() =>
@@ -346,6 +361,13 @@ describe("the data coverage section", () => {
         screen.queryByRole("button", { name: "Data coverage" }),
       ).toBeNull(),
     );
+    expect(
+      fetch.mock.calls.some(([input]) =>
+        String(input instanceof Request ? input.url : input).includes(
+          "/analytics/coverage",
+        ),
+      ),
+    ).toBe(false);
   });
 });
 

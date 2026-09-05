@@ -247,6 +247,13 @@ export const vi = {
   "search.tier.mirrored": "từ hệ thống đã kết nối",
   "search.tier.unverified": "chưa xác minh",
 
+  "context.recentTouches": "Trao đổi gần đây",
+  "context.openTasks": "Công việc đang mở",
+  "context.relatedPeople": "Người liên quan",
+  "context.relatedCompanies": "Công ty liên quan",
+  "context.relatedProjects": "Dự án liên quan",
+  "context.whoKnows": "Ai biết họ",
+  "context.relatedDeals": "Cơ hội liên quan",
   "context.title": "Bằng chứng liên quan",
   "context.empty": "Chưa có gì liên quan.",
 
@@ -3207,7 +3214,7 @@ export const vi = {
     "Đây là trả lời tin nhắn của chính họ, nên bạn không cần nêu lý do.",
   "compose.sendLaterLabel": "Gửi sau (tùy chọn)",
   "compose.send": "Gửi",
-  "compose.sendConfirmTitle": "Gửi email này?",
+  "compose.sendConfirmTitle": "Soạn email",
   "compose.threadHeading": "Cuộc trao đổi này",
   "compose.continueHeading": "Tiếp nối một cuộc trao đổi?",
   "compose.threadLeave": "Chọn cuộc khác",
@@ -3216,7 +3223,7 @@ export const vi = {
   "compose.threadContinuing": "Lần trao đổi gần nhất, mà thư này tiếp nối",
   "compose.threadPending": "Đang tải cuộc trao đổi\u2026",
   "compose.sendBody":
-    "Bạn đang gửi email này ngay bây giờ. Đây là hành động gửi ra ngoài, không đảo ngược được.",
+    "Xem lại và chỉnh sửa bản nháp. Nhấn Gửi sẽ gửi email và không thể hoàn tác.",
   "compose.schedule": "Hẹn giờ",
   "compose.scheduleConfirmTitle": "Hẹn giờ gửi email này?",
   // The composer computed that it had scheduled a send and said nothing —
@@ -4390,7 +4397,7 @@ export const vi = {
   "overnightGrant.help":
     "Nó đọc thương vụ và email của bạn để sắp xếp việc gì cần bạn hôm nay, và ghi ghi chú trở lại. Nó không thể gửi: quyền bạn cấp ở đây chỉ gồm đọc và ghi, không bao giờ gửi.",
   "overnightGrant.danger":
-    "NGUY HIỂM: Không có quyền này, bản tóm tắt buổi sáng, danh sách công việc và bản đánh giá tuần của bạn sẽ trống. Đó là những màn hình Margince mở đầu tiên — phần lớn sản phẩm sẽ trông như không hoạt động.",
+    "Nếu không cấp quyền này, trợ lý không thể đọc hoặc thêm ghi chú vào bản tin qua đêm. Dữ liệu, danh sách công việc và bản tổng kết tuần theo lịch vẫn có sẵn.",
   "overnightGrant.saveFailed":
     "Không lưu được câu trả lời của bạn cho câu hỏi ban đêm. Mọi thứ khác đã được kết nối — hãy đặt lại trong Cài đặt → Kết nối khi bạn vào.",
   "overnightGrant.renew":
@@ -5603,6 +5610,7 @@ export const vi = {
   "recordmail.send": "Viết email",
   "deal360.rewrite": "Viết lại",
   "deal360.readFull": "Đọc bản tóm tắt đầy đủ",
+  "deal360.openTask": "Mở công việc hiện có",
   "deal360.createTask": "Thêm việc này",
   "deal360.openBrief": "Mở bản tóm tắt cuộc họp",
   "deal360.unreadable":

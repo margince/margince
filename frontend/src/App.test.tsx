@@ -122,6 +122,8 @@ describe("the custom-fields admin, at its address inside settings", () => {
   });
 
   it("mounts the field builder on the Data model page", async () => {
+    // Routing is under test; wait for the real lazy module before timing UI queries.
+    await import("./screens/settings");
     // Every query the surface fires must resolve, or QueryGate paints its error
     // card instead of the heading: /me (an admin holding the custom_field write
     // the entry is gated on), the per-object field list, and the audit rail.
@@ -218,6 +220,7 @@ describe("extension routes (vanilla registry)", () => {
 
 describe("locale switch", () => {
   it("mounts in English (A100) and flips the chrome to German on switch", async () => {
+    await import("./screens/settings");
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
