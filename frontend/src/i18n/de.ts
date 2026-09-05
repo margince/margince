@@ -867,7 +867,7 @@ export const de = {
   "co.strip.lastTouch.theirs": "Die Gegenseite hat zuletzt geschrieben",
   "co.strip.lastTouch.ours": "Du hast zuletzt geschrieben",
   "co.strip.lastTouch.never": "Noch kein Austausch",
-  "co.strip.next": "Als Nächstes",
+  "co.strip.nextMeeting": "Nächster Termin",
   "co.strip.next.none": "Nichts geplant",
   "co.strip.open.history": "Verlauf öffnen",
   "co.strip.open.tasks": "Aufgaben öffnen",

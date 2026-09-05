@@ -1017,12 +1017,23 @@ function NextStat({
   onOpen?: () => void;
   t: ReturnType<typeof useT>;
 }>) {
+  // This card reads next_meeting and nothing else, so it says so. It used to
+  // say "Next" over a meeting date, which let a company with a due task and no
+  // meeting booked read as a contradiction: "Next: nothing scheduled" beside a
+  // task list that plainly had something next in it.
+  //
+  // The DOOR still opens tasks, and that is deliberate rather than left over.
+  // A reader who looks here and finds nothing scheduled is asking what to do
+  // about this account, and the task list is the answer; the strip's other
+  // three cards open deals, finance and history, so tasks has no other route
+  // off it. The label names where the door goes, so the two no longer disagree
+  // about what the card is for.
   const door = { openLabel: t("co.strip.open.tasks"), onOpen };
   if (!view || omitted(view, "next_meeting")) {
     return (
       <StatCard
         {...door}
-        label={t("co.strip.next")}
+        label={t("co.strip.nextMeeting")}
         value={t(WITHHELD_READING)}
       />
     );
@@ -1032,7 +1043,7 @@ function NextStat({
     return (
       <StatCard
         {...door}
-        label={t("co.strip.next")}
+        label={t("co.strip.nextMeeting")}
         value={t("co.strip.next.none")}
       />
     );
@@ -1040,7 +1051,7 @@ function NextStat({
   return (
     <StatCard
       {...door}
-      label={t("co.strip.next")}
+      label={t("co.strip.nextMeeting")}
       value={formatDateAbbrev(meeting.starts_at, locale, recordZone)}
       detail={join(
         meeting.subject,

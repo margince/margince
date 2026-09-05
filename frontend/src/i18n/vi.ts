@@ -855,7 +855,7 @@ export const vi = {
   "co.strip.lastTouch.theirs": "Họ viết gần nhất",
   "co.strip.lastTouch.ours": "Bạn viết gần nhất",
   "co.strip.lastTouch.never": "Chưa có trao đổi",
-  "co.strip.next": "Tiếp theo",
+  "co.strip.nextMeeting": "Cuộc họp tiếp theo",
   "co.strip.next.none": "Chưa có lịch",
   "co.strip.open.history": "Mở lịch sử",
   "co.strip.open.tasks": "Mở công việc",

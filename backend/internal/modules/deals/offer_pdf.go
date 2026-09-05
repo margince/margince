@@ -151,22 +151,31 @@ func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 		pdf.Ln(4)
 	}
 
-	if buyerBlock == nil {
+	// The buyer is identified by NAME. The snapshot also carries our internal
+	// organization_id, and printing it put a UUID — under a hardcoded English
+	// label, on an otherwise translated document — as the first line the
+	// customer read about themselves. It identifies the record to us and
+	// nothing to them.
+	//
+	// So a block holding neither name draws no section at all, rather than a
+	// heading over blank paper: an offer that cannot say who it is for says
+	// nothing there, and the reader sees a document missing its buyer instead
+	// of one whose buyer is an empty line. A block built here always has a
+	// display_name; a snapshot frozen by an older release may not.
+	displayName := pdfBuyerBlockString(buyerBlock, "display_name")
+	legalName := pdfBuyerBlockString(buyerBlock, "legal_name")
+	if buyerBlock == nil || (displayName == "" && legalName == "") {
 		return
 	}
 	pdf.SetFont("Helvetica", "B", 12)
 	pdf.Cell(0, 6, tr(labels.buyer))
 	pdf.Ln(7)
 	pdf.SetFont("Helvetica", "", 11)
-	if id := pdfBuyerBlockString(buyerBlock, "organization_id"); id != "" {
-		pdf.Cell(0, 6, tr("Organization ID: "+id))
-		pdf.Ln(6)
-	}
-	if displayName := pdfBuyerBlockString(buyerBlock, "display_name"); displayName != "" {
+	if displayName != "" {
 		pdf.Cell(0, 6, tr(displayName))
 		pdf.Ln(6)
 	}
-	if legalName := pdfBuyerBlockString(buyerBlock, "legal_name"); legalName != "" {
+	if legalName != "" {
 		pdf.Cell(0, 6, tr(legalName))
 		pdf.Ln(6)
 	}
