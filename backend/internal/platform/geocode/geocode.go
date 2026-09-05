@@ -70,6 +70,21 @@ const UserAgent = outbound.GeocodeHeader
 // the caller records that rather than retrying.
 var ErrNotConfigured = errors.New("geocode: no geocoding provider is configured")
 
+// Configured answers whether an installation that read MARGINCE_GEOCODE_BASE_URL
+// into baseURL geocodes at all — the ONE predicate both processes that read
+// that variable must agree on (the worker to build a client, the api to decide
+// whether to queue a lookup for one).
+//
+// It differs from what NewNominatim itself does with baseURL: NewNominatim
+// treats "" as a request for the public service, because a caller that already
+// decided to build a client has no unconfigured case left to express. This is
+// that earlier decision, made once so it cannot read differently on either side
+// of the wire — which is exactly how the two roles came to disagree, one
+// queueing lookups the other would never answer.
+func Configured(baseURL string) bool {
+	return baseURL != ""
+}
+
 // Nominatim is the OSM client.
 type Nominatim struct {
 	baseURL string

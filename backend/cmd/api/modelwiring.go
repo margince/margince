@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/vatcheck"
 )
@@ -214,7 +215,9 @@ func offerDraftOptions(pool *pgxpool.Pool, modelPath *compose.ModelPath) []compo
 // (jobs.NewInserter documents that Start is never called on it). The deep
 // read additionally carries the cold-start completer when this role has a
 // model path (the workbench read-back); nil keeps it enqueue-only.
-func jobEnqueueOptions(pool *pgxpool.Pool, logger *slog.Logger, modelPath *compose.ModelPath, vatCheckBaseURL string) ([]compose.Option, error) {
+func jobEnqueueOptions(
+	pool *pgxpool.Pool, logger *slog.Logger, modelPath *compose.ModelPath, gates queueGates,
+) ([]compose.Option, error) {
 	inserter, err := jobs.NewInserter(pool, logger)
 	if err != nil {
 		return nil, err
@@ -230,21 +233,54 @@ func jobEnqueueOptions(pool *pgxpool.Pool, logger *slog.Logger, modelPath *compo
 		compose.WithDocumentRead(inserter),
 		compose.WithKnowledgeIngest(inserter),
 		knowledgeAskOption(modelPath, logger),
-		// An address that lands queues a coordinate lookup. The api role only
-		// ENQUEUES — the provider lives on the worker (JobRunnerConfig.Geocoder)
-		// — and that split is what keeps the single-requester rule enforceable:
-		// several api replicas may queue, exactly one worker asks.
-		compose.WithGeocoding(inserter),
 	}
 	// Loud rather than silent, the same reason modelPathFor logs an unbound
 	// ladder rung: an installation that split MARGINCE_VAT_CHECK_BASE_URL
 	// across roles (set on the worker only, following what the docs said
 	// before this change) needs to see its VAT checking went quiet, not
 	// discover it from a rep asking why a number never gets verified.
-	if !vatcheck.Configured(vatCheckBaseURL) {
+	if !vatcheck.Configured(gates.vatCheck) {
 		logger.Warn("api: MARGINCE_VAT_CHECK_BASE_URL is unset — this role queues no VAT consultation, whatever the worker carries")
 	}
-	return append(opts, vatCheckEnqueueOptions(inserter, vatCheckBaseURL)...), nil
+	if !geocode.Configured(gates.geocode) {
+		logger.Warn("api: MARGINCE_GEOCODE_BASE_URL is unset — this role queues no coordinate lookup, whatever the worker carries")
+	}
+	opts = append(opts, vatCheckEnqueueOptions(inserter, gates.vatCheck)...)
+	return append(opts, geocodeEnqueueOptions(inserter, gates.geocode)...), nil
+}
+
+// queueGates are the base URLs this role reads NOT to reach a service — the
+// worker does that — but to decide whether queueing work for one means
+// anything.
+//
+// One value rather than two string parameters: they are the same KIND of
+// answer, they travel together through the same two hops, and adjacent
+// same-typed arguments are a call site away from being handed to each other
+// with nothing to notice it.
+type queueGates struct {
+	vatCheck string
+	geocode  string
+}
+
+// geocodeEnqueueOptions wires the coordinate-lookup enqueue only when
+// geocode.Configured says this installation geocodes — the same predicate
+// cmd/worker's geocoderFor gates its own client on.
+//
+// The api role only ENQUEUES: the provider lives on the worker
+// (JobRunnerConfig.Geocoder), and that split is what keeps the
+// single-requester rule enforceable — several api replicas may queue, exactly
+// one worker asks. Which is also why an unset variable HERE has to stop the
+// queueing rather than being left to the worker: the worker's nil-provider
+// path does answer honestly, but what it writes is people.GeocodeFailed, and
+// an operator asking why geocoding does not work then reads a lookup failure
+// on every address when the truth is that no provider was ever configured for
+// the role that queued it. A wrong answer delivered confidently is worse for
+// diagnosis than an empty queue.
+func geocodeEnqueueOptions(inserter *jobs.Runner, baseURL string) []compose.Option {
+	if !geocode.Configured(baseURL) {
+		return nil
+	}
+	return []compose.Option{compose.WithGeocoding(inserter)}
 }
 
 // vatCheckEnqueueOptions wires the VAT-check enqueue only when

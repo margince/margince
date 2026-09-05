@@ -407,7 +407,8 @@ func modelAndHandoffOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 	if err != nil {
 		return nil, nil, err
 	}
-	handoffOpts, err := workerHandoffOptions(pool, logger, modelPath, cfg.vatCheckBaseURL)
+	handoffOpts, err := workerHandoffOptions(pool, logger, modelPath,
+		queueGates{vatCheck: cfg.vatCheckBaseURL, geocode: cfg.geocodeBaseURL})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -424,7 +425,9 @@ func modelAndHandoffOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 // workerHandoffOptions wires the api-side half of the work this role hands to
 // cmd/worker: the outbound send path plus the deep-read, voice-build,
 // rate-refresh and embed-reindex enqueue transports.
-func workerHandoffOptions(pool *pgxpool.Pool, logger *slog.Logger, modelPath *compose.ModelPath, vatCheckBaseURL string) ([]compose.Option, error) {
+func workerHandoffOptions(
+	pool *pgxpool.Pool, logger *slog.Logger, modelPath *compose.ModelPath, gates queueGates,
+) ([]compose.Option, error) {
 	// The outbound send path: an accepted message stages a delivery row and
 	// its transmit job on ONE transaction, so the 202 the caller gets means
 	// something durable will actually carry it. Insert-only here (the worker
@@ -446,7 +449,7 @@ func workerHandoffOptions(pool *pgxpool.Pool, logger *slog.Logger, modelPath *co
 		compose.WithControllerMail(sendInserter),
 	}
 
-	enqueueOpts, err := jobEnqueueOptions(pool, logger, modelPath, vatCheckBaseURL)
+	enqueueOpts, err := jobEnqueueOptions(pool, logger, modelPath, gates)
 	if err != nil {
 		return nil, err
 	}
