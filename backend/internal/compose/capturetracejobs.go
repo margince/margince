@@ -18,6 +18,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -46,45 +47,23 @@ type captureTraceSweepWorker struct {
 	pool *pgxpool.Pool
 }
 
+// Work sweeps EVERY workspace, archived ones included — the enumeration the
+// other retention passes use, and for the reason its own comment gives:
+// archiving a workspace does not un-store the data inside it, and storage
+// limitation does not pause because a tenant stopped logging in.
+//
+// It matters more here than for most passes. Under the trace_payloads posture
+// these rows hold correspondence content, so skipping archived tenants would
+// keep it past the 24-hour retention this feature promises, in exactly the
+// workspaces nobody looks at any more.
+//
+// One worker where there were two (ADR-0103).
 func (w *captureTraceSweepWorker) Work(ctx context.Context, _ *river.Job[CaptureTraceSweepArgs]) error {
-	// EVERY workspace, archived ones included — the enumeration the other
-	// retention passes use, and for the reason its own comment gives: archiving
-	// a workspace does not un-store the data inside it, and storage limitation
-	// does not pause because a tenant stopped logging in.
-	//
-	// It matters more here than for most passes. Under the trace_payloads
-	// posture these rows hold correspondence content, so skipping archived
-	// tenants would keep it past the 24-hour retention this feature promises,
-	// in exactly the workspaces nobody looks at any more.
-	workspaces, err := enumerateEveryWorkspace(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	return jobs.FaultContext(ctx, dispatchWith(ctx, workspaces, clientInsertMany(ctx),
-		workspaceSweepOpts(CaptureTraceSweepWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return CaptureTraceSweepWorkspaceArgs{Workspace: ws} }))
+	return jobs.FaultContext(ctx, runPerEveryWorkspace(ctx, w.pool, w.sweepWorkspace))
 }
 
-// CaptureTraceSweepWorkspaceArgs sweeps one workspace's trace tail.
-type CaptureTraceSweepWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (CaptureTraceSweepWorkspaceArgs) Kind() string { return "capture_trace_sweep_workspace" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a CaptureTraceSweepWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-type captureTraceSweepWorkspaceWorker struct {
-	pool *pgxpool.Pool
-}
-
-func (w *captureTraceSweepWorkspaceWorker) Work(ctx context.Context, job *river.Job[CaptureTraceSweepWorkspaceArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+func (w *captureTraceSweepWorker) sweepWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	// Bound HERE rather than in a helper, and assigned rather than called: a
 	// queue carries no principal to inherit, and both of these return a new
 	// context and mutate nothing, so an unassigned call reads like a binding and
@@ -105,12 +84,16 @@ func (w *captureTraceSweepWorkspaceWorker) Work(ctx context.Context, job *river.
 	// invisibly behind it. Under the payload posture those rows are addresses
 	// and subject lines, so the retention this feature promises would stop
 	// holding with no symptom at all.
-	db, err := workspaceJobDB(w.pool, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	_, err = capture.NewTraceStore(db).SweepOlderThan(wsCtx, traceRetention)
-	return jobs.FaultContext(ctx, err)
+	// BindTo directly, where the child called workspaceJobDB with its args. The
+	// comment that method carried still applies and is why neither reaches for
+	// InstallationDB: that resolver answers ErrMultipleWorkspaces the moment a
+	// database holds more than one live tenant, so every turn would fail,
+	// exhaust its attempts and delete nothing — while the read kept filtering
+	// to 24 hours and the table grew invisibly behind it. Under the payload
+	// posture those rows are addresses and subject lines.
+	db := database.BindTo(w.pool, ids.From[ids.WorkspaceKind](workspace))
+	_, err := capture.NewTraceStore(db).SweepOlderThan(wsCtx, traceRetention)
+	return err
 }
 
 // traceSweepActorID names the sweep in whatever it touches.
