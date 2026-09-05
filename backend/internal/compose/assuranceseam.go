@@ -18,8 +18,71 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// assuranceSubjectsSQL is AssuranceSubjects' one read, held at package
+// level so the function stays within the length a reader holds at once.
+const assuranceSubjectsSQL = `
+		SELECT d.id, d.owner_id, d.amount_minor, d.currency,
+		       d.expected_close_date, d.close_date_provisional,
+		       d.forecast_category, s.name,
+		       (SELECT max(a.occurred_at)
+		          FROM activity a
+		          JOIN activity_link al ON al.activity_id = a.id
+		         WHERE al.deal_id = d.id
+		           AND a.direction = 'inbound'
+		           AND a.archived_at IS NULL) AS last_inbound_at,
+		       (SELECT o.gross_minor
+		          FROM offer o
+		         WHERE o.deal_id = d.id
+		           AND o.archived_at IS NULL
+		           AND o.status IN ('sent', 'accepted')
+		           AND o.currency = d.currency
+		         ORDER BY o.updated_at DESC
+		         LIMIT 1) AS offer_total_minor,
+		       (SELECT c.value_minor
+		          FROM contract c
+		         WHERE c.deal_id = d.id
+		           AND c.archived_at IS NULL
+		           AND c.status = 'active'
+		           AND c.currency = d.currency
+		         ORDER BY c.signed_on DESC NULLS LAST, c.created_at DESC
+		         LIMIT 1) AS contract_total_minor,
+		       (SELECT count(*)
+		          FROM audit_log au
+		         WHERE au.entity_type = 'deal'
+		           AND au.entity_id = d.id
+		           AND au.action = 'update'
+		           AND au.occurred_at >= $1
+		           AND (au.before ->> 'expected_close_date') IS NOT NULL
+		           AND (au.after ->> 'expected_close_date') IS NOT NULL
+		           AND (au.after ->> 'expected_close_date')::date
+		               > (au.before ->> 'expected_close_date')::date) AS close_date_pushes,
+		       EXISTS (SELECT 1
+		          FROM activity a
+		          JOIN activity_link al ON al.activity_id = a.id
+		         WHERE al.deal_id = d.id
+		           AND a.archived_at IS NULL
+		           AND ((a.kind = 'task' AND a.is_done = false)
+		                OR (a.kind = 'meeting' AND a.meeting_status = 'booked'
+		                    AND a.occurred_at > $2))) AS has_next_step,
+		       EXISTS (SELECT 1
+		          FROM relationship r
+		         WHERE r.kind = 'deal_stakeholder'
+		           AND r.deal_id = d.id
+		           AND r.role = $3
+		           AND r.archived_at IS NULL) AS has_economic_buyer
+		FROM deal d
+		LEFT JOIN stage s ON s.id = d.stage_id
+		WHERE d.archived_at IS NULL AND d.status = 'open'
+		ORDER BY d.id`
+
+// closePushWindow bounds how far back the close-date-push count looks. One
+// quarter: the closePushed rule asks whether the date keeps moving NOW, and a
+// push from a year ago is history, not a pattern anybody should be paged about.
+const closePushWindow = 90 * 24 * time.Hour
 
 // AssuranceSubjects reads every live open deal the run should examine.
 //
@@ -35,27 +98,20 @@ import (
 // counts, the brief candidate, the worklist row and the task subject line. A
 // finding about a deal the reader cannot open is a finding they never see.
 //
-// The deal a message is filed against is `activity_link.deal_id`, not a generic
-// `entity_id` — that column does not exist, and `entity_type` only says which
-// of the five id columns is the populated one (the `activity_link_shape` check
-// enforces exactly one). The query named a column the table has never had, and
-// nothing failed: this seam had no caller, and the scanner's own suite passes a
-// SubjectsFunc of its own, so the real one was never once executed.
+// Every field a rule reads is assembled here, and the two sides are held equal
+// by TestEveryRuleInputHasAnAssembledSource: this seam once populated nine of
+// fourteen fields, so a scheduled pass would have raised "no next step" and
+// "no economic buyer" against every deal in the installation — the unpopulated
+// zero value is exactly the shape those rules fire on.
+//
+// The two money comparisons only carry a total in the DEAL's own currency. An
+// offer or contract in a different currency is not comparable minor-for-minor,
+// and handing the rule such a number would report a "discrepancy" that is
+// entirely exchange rate.
 func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT d.id, d.owner_id, d.amount_minor, d.currency,
-		       d.expected_close_date, d.close_date_provisional,
-		       d.forecast_category, s.name,
-		       (SELECT max(a.occurred_at)
-		          FROM activity a
-		          JOIN activity_link al ON al.activity_id = a.id
-		         WHERE al.deal_id = d.id
-		           AND a.direction = 'inbound'
-		           AND a.archived_at IS NULL) AS last_inbound_at
-		FROM deal d
-		LEFT JOIN stage s ON s.id = d.stage_id
-		WHERE d.archived_at IS NULL AND d.status = 'open'
-		ORDER BY d.id`)
+	now := time.Now().UTC()
+	rows, err := tx.Query(ctx, assuranceSubjectsSQL,
+		now.Add(-closePushWindow), now, dealrole.EconomicBuyer)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals to check: %w", err)
 	}
@@ -68,7 +124,9 @@ func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, err
 		var currency, category, stage *string
 		var lastInbound *time.Time
 		err := row.Scan(&dealID, &owner, &out.AmountMinor, &currency,
-			&out.ExpectedClose, &out.CloseProvisional, &category, &stage, &lastInbound)
+			&out.ExpectedClose, &out.CloseProvisional, &category, &stage, &lastInbound,
+			&out.OfferTotalMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
+			&out.HasNextStep, &out.HasEconomicBuyer)
 		out.DealID = dealID.String()
 		if owner != nil {
 			out.Owner = owner.String()
@@ -96,33 +154,80 @@ func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, err
 func AssuranceCoverage(ctx context.Context, tx pgx.Tx, now time.Time) []assurance.SourceCoverage {
 	return []assurance.SourceCoverage{
 		mailCoverage(ctx, tx, now),
-		offerCoverage(ctx, tx, now),
+		offerCoverage(now),
 	}
 }
 
-// mailCoverage says whether the installation's mail is current enough to check
-// a close date against what a buyer actually said.
+// sourceMail names the mailbox in coverage rows; the assurance store's CHECK
+// constraint owns the vocabulary.
+const sourceMail = "mail"
+
+// mailProviders are the capture connectors that carry mail. gcal is calendar
+// and the chat providers are messaging; a healthy WhatsApp says nothing about
+// whether anybody read the mailbox a close date would be checked against.
+var mailProviders = []string{providerGmail, "imap", providerGraph, "offline_demo"}
+
+// mailCoverage grades the mailbox by CONNECTOR health, not by mail volume.
+//
+// It used to read max(occurred_at) over captured email, which conflates two
+// different facts: a quiet mailbox on a healthy connector was reported stale —
+// nothing arrived, so "the source fell behind" — while a broken connector under
+// recent mail read as checked. The sync checkpoint is the fact this state
+// actually claims: when the connector last successfully read the source.
 func mailCoverage(ctx context.Context, tx pgx.Tx, now time.Time) assurance.SourceCoverage {
-	var newest *time.Time
-	if err := tx.QueryRow(ctx,
-		`SELECT max(occurred_at) FROM activity
-		  WHERE kind = 'email' AND archived_at IS NULL`).Scan(&newest); err != nil {
-		// The read itself failed. Unavailable, not stale: we did not get far
-		// enough to say how current anything is.
-		return assurance.SourceCoverage{Source: "mail", State: assurance.CoverageUnavailable}
+	// Aggregates fail CLOSED over every live, not-deliberately-disconnected
+	// connection: min() ignores NULL, so a never-synced broken mailbox next to
+	// a healthy one would otherwise vanish from the aggregate and the run
+	// would claim checked over a source it never read.
+	var live, reauth, unsynced int
+	var oldestSuccess *time.Time
+	if err := tx.QueryRow(ctx, `
+		SELECT count(*) FILTER (WHERE c.status <> 'disconnected'),
+		       count(*) FILTER (WHERE c.status = 'reauth_required'),
+		       count(*) FILTER (WHERE c.status <> 'disconnected' AND s.last_success_at IS NULL),
+		       min(s.last_success_at) FILTER (WHERE c.status <> 'disconnected')
+		FROM capture_connection c
+		LEFT JOIN capture_sync_state s ON s.connection_id = c.id
+		WHERE c.provider = ANY($1) AND c.archived_at IS NULL`,
+		mailProviders).Scan(&live, &reauth, &unsynced, &oldestSuccess); err != nil {
+		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageUnavailable}
 	}
-	return freshness("mail", newest, now)
+	switch {
+	case live == 0:
+		// Never configured, or every mailbox deliberately disconnected. Either
+		// way there is nothing to fix, only something to decide, and the two
+		// route to different people than a broken connector does.
+		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageNotConnected}
+	case reauth > 0:
+		// Somebody must re-grant access; until then part of the mailbox is
+		// unreadable for a permission reason, not a technical one.
+		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoveragePermissionLimited}
+	case unsynced > 0:
+		// At least one live mailbox has never been read. One healthy sibling
+		// does not make the source checked — the claim covers all of them.
+		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageUnavailable}
+	case now.Sub(*oldestSuccess) > staleAfter:
+		// The slowest mailbox decides: "mail was checked" over three mailboxes
+		// means all three, so the oldest checkpoint grades the source and caps
+		// the checked-through date below.
+		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageStale}
+	default:
+		return assurance.SourceCoverage{
+			Source: sourceMail, State: assurance.CoverageChecked, CheckedThrough: oldestSuccess,
+		}
+	}
 }
 
-// offerCoverage says whether the offers an amount would be checked against are
-// current.
-func offerCoverage(ctx context.Context, tx pgx.Tx, now time.Time) assurance.SourceCoverage {
-	var newest *time.Time
-	if err := tx.QueryRow(ctx,
-		`SELECT max(updated_at) FROM offer WHERE archived_at IS NULL`).Scan(&newest); err != nil {
-		return assurance.SourceCoverage{Source: "offers", State: assurance.CoverageUnavailable}
+// offerCoverage reports the native offers table.
+//
+// Always checked: the table lives in the same database as the run, so if this
+// code executes at all the source was readable. It used to grade the table by
+// its newest row's age, which reported "checked and found no offer" — an
+// ordinary fact about most installations — as the source being unavailable.
+func offerCoverage(now time.Time) assurance.SourceCoverage {
+	return assurance.SourceCoverage{
+		Source: "offers", State: assurance.CoverageChecked, CheckedThrough: &now,
 	}
-	return freshness("offers", newest, now)
 }
 
 // staleAfter is how far behind a source may fall before a run should stop
@@ -132,22 +237,3 @@ func offerCoverage(ctx context.Context, tx pgx.Tx, now time.Time) assurance.Sour
 // run today is normal, and a threshold that called that stale would report
 // checks_incomplete every morning until somebody stopped reading the word.
 const staleAfter = 48 * time.Hour
-
-// freshness grades one source by how far behind it has fallen.
-func freshness(source string, newest *time.Time, now time.Time) assurance.SourceCoverage {
-	if newest == nil {
-		// Nothing there at all. A new installation with no mail yet is not a
-		// broken connector, but it is equally not a source that confirmed
-		// anything — and the readiness rule is right to hold back on both.
-		return assurance.SourceCoverage{Source: source, State: assurance.CoverageUnavailable}
-	}
-	if now.Sub(*newest) > staleAfter {
-		// Stale carries NO checked-through date. A date here would read as
-		// "checked up to then", when what happened is that nothing arrived
-		// since and we cannot tell a quiet week from a broken connector.
-		return assurance.SourceCoverage{Source: source, State: assurance.CoverageStale}
-	}
-	return assurance.SourceCoverage{
-		Source: source, State: assurance.CoverageChecked, CheckedThrough: newest,
-	}
-}

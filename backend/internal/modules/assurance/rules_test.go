@@ -31,7 +31,7 @@ func healthy() Subject {
 		Category:         "commit",
 		StageName:        "Negotiation",
 		LastInboundAt:    ptrTime(at(time.May, 10)),
-		NextStep:         "Send the revised terms",
+		HasNextStep:      true,
 		HasEconomicBuyer: true,
 	}
 }
@@ -102,9 +102,9 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 		},
 		{
 			ruleType: TypeNoNextStep,
-			fires:    func(s Subject) Subject { s.NextStep = ""; return s },
+			fires:    func(s Subject) Subject { s.HasNextStep = false; return s },
 			// No next step on a deal nobody is forecasting is not a finding.
-			quiet: func(s Subject) Subject { s.NextStep, s.Category = "", "omitted"; return s },
+			quiet: func(s Subject) Subject { s.HasNextStep, s.Category = false, "omitted"; return s },
 		},
 		{
 			ruleType: TypeNoEconomicBuyer,
@@ -190,7 +190,7 @@ func TestNoRuleCopiesFreeTextIntoAFinding(t *testing.T) {
 	// A deal whose every text field carries something a rule could be tempted
 	// to quote back.
 	loaded := healthy()
-	loaded.NextStep = "Buyer said their CFO is on sick leave until October"
+	loaded.HasNextStep = true
 	loaded.StageName = "Negotiation — blocked on legal review of clause 7"
 	loaded.ExpectedClose = ptrTime(at(time.April, 30))
 	loaded.CloseProvisional = true
@@ -213,7 +213,7 @@ func TestNoRuleCopiesFreeTextIntoAFinding(t *testing.T) {
 				if !isText {
 					continue
 				}
-				if text == loaded.NextStep || text == loaded.StageName {
+				if text == loaded.StageName {
 					t.Errorf("%s copied the deal's free text into %s[%q]: %q — a frozen "+
 						"copy of a protected sentence outlives the protection on its source",
 						rule.Type, slot, key, text)

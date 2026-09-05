@@ -35,8 +35,11 @@ type Subject struct {
 	ContractTotalMinor *int64
 	// How many times the close date has been pushed within this period.
 	CloseDatePushes int
-	// What the deal's next step is, if anybody wrote one.
-	NextStep string
+	// Whether anybody wrote a next step — an open task or a booked upcoming
+	// meeting on the deal. Existence only, deliberately: the step's own text is
+	// activity content with an audience of its own, and no rule needs the words
+	// to ask whether there are any.
+	HasNextStep bool
 	// Whether an economic buyer has been identified on the deal.
 	HasEconomicBuyer bool
 }
@@ -244,13 +247,13 @@ func noNextStep() Rule {
 		if s.Category != categoryCommit && s.Category != categoryBestCase {
 			return nil
 		}
-		if s.NextStep != "" {
+		if s.HasNextStep {
 			return nil
 		}
 		return &Finding{
 			Type: TypeNoNextStep, SubjectID: s.DealID, Severity: SeverityLow,
 			Claim:         map[string]any{slotCategory: s.Category},
-			Observed:      map[string]any{"next_step": ""},
+			Observed:      map[string]any{"has_next_step": false},
 			AffectedMinor: s.AmountMinor, Currency: s.Currency,
 		}
 	}}

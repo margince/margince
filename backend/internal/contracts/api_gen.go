@@ -5713,6 +5713,7 @@ func (e ForecastAssuranceSourceSource) Valid() bool {
 // Defines values for ForecastAssuranceSourceState.
 const (
 	ForecastAssuranceSourceStateChecked           ForecastAssuranceSourceState = "checked"
+	ForecastAssuranceSourceStateNotConnected      ForecastAssuranceSourceState = "not_connected"
 	ForecastAssuranceSourceStatePermissionLimited ForecastAssuranceSourceState = "permission_limited"
 	ForecastAssuranceSourceStateStale             ForecastAssuranceSourceState = "stale"
 	ForecastAssuranceSourceStateUnavailable       ForecastAssuranceSourceState = "unavailable"
@@ -5722,6 +5723,8 @@ const (
 func (e ForecastAssuranceSourceState) Valid() bool {
 	switch e {
 	case ForecastAssuranceSourceStateChecked:
+		return true
+	case ForecastAssuranceSourceStateNotConnected:
 		return true
 	case ForecastAssuranceSourceStatePermissionLimited:
 		return true
