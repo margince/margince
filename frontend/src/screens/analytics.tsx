@@ -1547,12 +1547,11 @@ function SectionBody({
 }>) {
   switch (section) {
     case "coverage":
-      return (
-        <DataCoverageView
-          locale={locale}
-          timezone={context?.timezone ?? null}
-        />
-      );
+      // Like the other context-bearing sections: nothing renders before the
+      // frame arrives, so the view never has to guess a zone.
+      return context ? (
+        <DataCoverageView locale={locale} timezone={context.timezone} />
+      ) : null;
     case "outcomes":
       return context ? (
         <MyOutcomesView defaultScope={context.default_scope} locale={locale} />
