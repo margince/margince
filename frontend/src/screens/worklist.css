@@ -452,3 +452,14 @@
     min-block-size: 44px;
   }
 }
+
+/* The coaching list inside its callout.
+   Unstyled markers and no indent: these are three sentences a lead reads, not
+   a nested outline, and the callout already carries the tone. */
+.worklist-coaching {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
+}
