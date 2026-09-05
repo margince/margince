@@ -111,6 +111,7 @@ components:
         - intro_request.replied
         - intro_request.closed
         - consent.changed
+        - consent.suppressed
         - email_signature.changed
         - user_locale.changed
         - linkedin_account.changed
@@ -2497,6 +2498,40 @@ components:
             from the address on the mail path and from the channel
             identity on a messaging one (absent when the counterparty
             resolves only in a follow-up ensure).
+      additionalProperties: false
+
+    PublicEventConsentSuppressed:
+      type: object
+      x-event-type: consent.suppressed
+      x-entity-type: person
+      x-version: 1
+      description: >-
+        Payload for consent.suppressed — somebody recorded that we may not
+        write to a subject (consent/suppress.go's Suppress). Its own event
+        rather than a consent.changed, because a suppression is not the
+        absence of consent: it outranks a grant, it does not expire on its
+        own, and a later re-grant must not silently erase it. A consumer
+        that folded the two would resume mail the subject asked us to stop.
+
+        The subject is a person and only a person: the write door names that
+        object as a literal, so this is a static entity whose delivery scope
+        the fan-out gate proves mechanically rather than by hand-ratification.
+
+        It names WHAT was recorded and at WHICH authority, never the reason
+        the subject gave: that is their words about themselves, and an event
+        fans out further than the record it describes.
+      required:
+        - kind
+        - decided_by_level
+      properties:
+        kind:
+          type: string
+          description: Which stop this is (subject_request for a hand-recorded one).
+        decided_by_level:
+          type: string
+          description: >-
+            Whose decision it is, which is what says who may lift it
+            (machine | user | admin | subject).
       additionalProperties: false
 
     PublicEventConsentChanged:

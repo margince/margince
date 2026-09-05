@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { HomeScreen } from "./home";
 import { readingsDay } from "./home.fixtures";
 import type { Deal } from "./home.queries";
@@ -235,9 +236,14 @@ describe("HomeScreen — the context rail", () => {
     });
     render(<HomeScreen />);
 
-    await screen.findByText(/ranks the deals worth your first hour/);
-    expect(screen.queryByText("Overnight")).toBeNull();
-    expect(document.querySelector("[aria-busy='true']")).toBeNull();
+    await screen.findByRole("region", { name: en["brief.feed.title"] });
+    // The rail's own reads settle after the feed's region appears, so this
+    // waits for the page to go quiet rather than asserting into a page still
+    // in flight.
+    await waitFor(() =>
+      expect(document.querySelector("[aria-busy='true']")).toBeNull(),
+    );
+    expect(screen.queryByRole("heading", { name: "Overnight" })).toBeNull();
     expect(screen.queryByText(/couldn't load/i)).toBeNull();
     expect(document.body.textContent).not.toContain("not yet implemented");
   });
@@ -246,8 +252,14 @@ describe("HomeScreen — the context rail", () => {
     stubApi({});
     render(<HomeScreen />);
 
-    await screen.findByText(/ranks the deals worth your first hour/);
-    expect(screen.queryByText("Overnight")).toBeNull();
+    // The rail's reads must have ANSWERED before absence means anything. The
+    // feed's region is drawn on the first paint, so awaiting it proves only
+    // that the page mounted — an assertion made against it would pass over a
+    // panel that renders unconditionally, which is the defect being excluded.
+    await waitFor(() =>
+      expect(document.querySelector("[aria-busy='true']")).toBeNull(),
+    );
+    expect(screen.queryByRole("heading", { name: "Overnight" })).toBeNull();
   });
 
   // The one place connector health reaches a reader without visiting Settings.
@@ -486,7 +498,12 @@ describe("HomeScreen — the open pipeline", () => {
     stubApi({});
     render(<HomeScreen />);
 
-    await screen.findByText(/ranks the deals worth your first hour/);
+    // Waits for the reads to answer, for the reason the overnight case above
+    // gives: absence proves nothing until the read that would have filled it
+    // has come back.
+    await waitFor(() =>
+      expect(document.querySelector("[aria-busy='true']")).toBeNull(),
+    );
     expect(screen.queryByText("Position")).toBeNull();
   });
 });

@@ -145,6 +145,28 @@ const routes: RouteMap = {
   "GET /pipelines": () => jsonResponse(pipelines),
   "POST /reports/pipeline-current": () => run("pipeline-current", stageRows),
   "POST /reports/forecast": () => run("forecast", forecastRows),
+  "POST /reports/win-loss": () =>
+    run("win-loss", [
+      {
+        status: "won",
+        deal_count: 8,
+        raw_minor: 500000,
+        median_days: 21,
+        p75_days: 40,
+      },
+      {
+        status: "lost",
+        deal_count: 4,
+        raw_minor: 200000,
+        median_days: 55,
+        p75_days: null,
+      },
+    ]),
+  "POST /reports/stage-age": () =>
+    run("stage-age", [
+      { stage_id: "pl-s1", deal_count: 6, median_days: 12, p75_days: 30 },
+      { stage_id: "pl-s2", deal_count: 3, median_days: null, p75_days: null },
+    ]),
   "POST /reports/open-deals-per-company": () =>
     run("open-deals-per-company", companyRows),
   "GET /reports/pipeline-current/derivation": () => jsonResponse(derivation),
@@ -206,6 +228,14 @@ export const OpenDealsPerCompany: Story = {
 
 // "Explain this number" open: the report card above, the derivation card below
 // it, both the same titled-card surface.
+// The performance section: closed outcomes beside stage velocity, every
+// duration the server's own, and a withheld percentile rendered as words
+// rather than a zero.
+export const Performance: Story = {
+  render: screenStory,
+  play: clickButton("Performance"),
+};
+
 export const Explain: Story = {
   render: screenStory,
   // Pipeline first: the explain verb belongs to a report card's action row, and

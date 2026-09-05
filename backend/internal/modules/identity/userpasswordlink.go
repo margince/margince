@@ -27,6 +27,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -74,9 +75,6 @@ var errAgentSeatHasNoPassword = errors.New("identity: the agent seat has no pass
 // image or the event payload. Losing it means issuing another, never recovering
 // this one.
 func (s *Service) IssuePasswordLink(ctx context.Context, actor Identity, userID ids.UserID) (string, time.Time, error) {
-	if !actor.hasRole(roleAdmin) {
-		return "", time.Time{}, apperrors.ErrPermissionDenied
-	}
 	// The seat ceiling sits ABOVE RBAC (A62/ADR-0047) and the HTTP middleware
 	// already refuses a read seat every mutating method. It is re-checked here
 	// because THIS is the gate the arch fitness waiver names as the authority:
@@ -97,8 +95,18 @@ func (s *Service) IssuePasswordLink(ctx context.Context, actor Identity, userID 
 		return "", time.Time{}, err
 	}
 	ctx = actorCtx(ctx, actor)
+	if err := auth.Require(ctx, objectUserAdmin, principal.ActionUpdate); err != nil {
+		return "", time.Time{}, err
+	}
 	var expiresAt time.Time
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Inside the transaction and before the supersede: this mints an
+		// account-takeover credential, so a delegated holder must not reach an
+		// admin's account, and a role assignment changing between the check and
+		// the write must not decide the answer against a state that has passed.
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, userID); err != nil {
+			return err
+		}
 		superseded, err := supersedeSetPasswordTokens(ctx, tx, userID)
 		if err != nil {
 			return err

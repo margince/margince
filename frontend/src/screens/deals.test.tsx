@@ -1063,7 +1063,17 @@ describe("DealsScreen", () => {
   // cards. The seeded card's own amount×probability would give a different,
   // WRONG figure if the board still computed it client-side — this proves
   // it renders the server's number instead.
+  // The board asks for stage totals only while the owner filter names the
+  // viewer, because that is the only selection under which the report's
+  // population and the board's card list are the same set of deals. Every test
+  // below whose subject IS the totals request has to put the board in that
+  // state first, the way a reader does by choosing "My deals".
+  function narrowToMyDeals() {
+    window.location.hash = "#/deals?owner_id=u-me";
+  }
+
   it("renders the board's column total from the deals-by-stage report, not from the loaded cards", async () => {
+    narrowToMyDeals();
     vi.stubGlobal(
       "fetch",
       stubBackend([deal({ id: "a", stage_id: "s1", amount_minor: 1 })], {
@@ -1091,7 +1101,59 @@ describe("DealsScreen", () => {
     expect(screen.getByText("250 deals")).toBeTruthy();
   });
 
+  // The defect this guard exists for: `GET /deals` returns every deal the
+  // reader may SEE, while the deals-by-stage report measures the caller's OWN
+  // population. A Qualified column said "1 deal" over eight cards because the
+  // header counted the reader's one and the board drew all eight.
+  //
+  // With no owner filter the two sets differ, so the board asks for no total
+  // and says why, rather than printing a number it did not measure.
+  it("asks for no stage total, and says so, until the owner filter names the viewer", async () => {
+    let totalsAsked = false;
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({ id: "a", stage_id: "s1" })], {
+        onStageTotalsBody: () => {
+          totalsAsked = true;
+        },
+      }),
+    );
+    render(<DealsScreen />);
+    await waitFor(() =>
+      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+    );
+
+    expect(totalsAsked).toBe(false);
+    // Once per stage column, exactly. Each one owes the reader a reason where
+    // its figure would be, and "more than zero" would pass with one column
+    // explaining itself while the rest drew blanks.
+    expect(
+      screen.getAllByText("Loaded only — filter to My deals for the total")
+        .length,
+    ).toBe(stages.length);
+  });
+
+  // A tag filter withholds totals too — the report has no tag field and sending
+  // one is a 422 — and it must say THAT, not tell the reader to press an owner
+  // filter they may already have pressed.
+  it("names the tag filter, not the owner filter, when a tag is what withheld the total", async () => {
+    window.location.hash = "#/deals?owner_id=u-me&tag_id=t1";
+    vi.stubGlobal("fetch", stubBackend([deal({ id: "a", stage_id: "s1" })]));
+    render(<DealsScreen />);
+    await waitFor(() =>
+      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+    );
+
+    expect(
+      screen.getAllByText("Loaded only — no total while a tag filters").length,
+    ).toBe(stages.length);
+    expect(
+      screen.queryByText("Loaded only — filter to My deals for the total"),
+    ).toBeNull();
+  });
+
   it("sends the board's active filters to the deals-by-stage totals request", async () => {
+    narrowToMyDeals();
     let sentBody: unknown;
     vi.stubGlobal(
       "fetch",
@@ -2427,10 +2489,17 @@ describe("the partner filter", () => {
       return stubBackend([d], { single: d })(request);
     });
 
+    // The owner filter comes from the address rather than from a click,
+    // because it is this test's PRECONDITION and not its subject: totals are
+    // asked for only while it names the viewer, so without it there is no
+    // report body for the partner assertion to inspect. A reader reaches the
+    // same state by choosing "My deals", and the case that covers that choice
+    // is the withheld-total one above.
+    window.location.hash = "#/deals?owner_id=u-me";
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
     await userEvent.click(screen.getByRole("button", { name: "Table" }));
-    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+    // The partner dial itself IS the subject, so it is pressed, not addressed.
     const menu = screen.getByRole("group", { name: "Filter" });
     await userEvent.click(
       within(menu).getByRole("button", { name: "Partner" }),

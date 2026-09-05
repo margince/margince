@@ -110,11 +110,11 @@ func (s *Service) Worklist(
 	case resolved == scopeUnassigned:
 		reader = reader.forUnowned()
 	}
-	// The day AND the night's finding per deal, from one read of the brief
-	// lane. The findings travel as a value rather than on the service: feed.go's
-	// assembleDay states why a field there would carry one reader's findings
-	// onto the next reader's page.
-	day, findings, err := reader.assembleDay(ctx)
+	// The day AND what the night knows about each deal — its finding and its
+	// score — from one read of the brief lane. Both travel as values rather than
+	// on the service: feed.go's assembleDay states why a field there would carry
+	// one reader's night onto the next reader's page.
+	day, night, err := reader.assembleDay(ctx)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -164,6 +164,12 @@ func (s *Service) Worklist(
 		return crmcontracts.Worklist{}, err
 	}
 	withPins = withPins.readingWalk(walk, walking)
+	// The night's scores, on the same per-read copy the pins and the walk ride.
+	// They are read by the classifier, which runs inside the projection below,
+	// so they cannot travel as an argument the way the findings do — and they
+	// must not sit on the shared service, for the reason feed.go's assembleDay
+	// gives about the findings.
+	withPins = withPins.readingScores(night.scores, night.cutoff)
 	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, leads, cursor,
 		[]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr})
@@ -181,7 +187,7 @@ func (s *Service) Worklist(
 	// row can carry a move and no verdict, or a verdict and no move, and neither
 	// absence is a reason to withhold the other. dealstanding.go states the
 	// three-source order and why its floor is no verdict at all.
-	if err := reader.nameTheStanding(ctx, out.Queue, findings); err != nil {
+	if err := reader.nameTheStanding(ctx, out.Queue, night.findings); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
 	// And the name beside each owner id, over the same cut page and for the same
@@ -213,6 +219,11 @@ func (s *Service) worklistFrom(
 	rows := classifyDay(day, day.AsOf, s.money)
 	rows = append(rows, s.rankedWaits(ctx, waiting, day.AsOf, scope)...)
 	rows = append(rows, rankedLeads(leads, day.AsOf)...)
+	// What the night thought of each deal, onto whichever row is about it — the
+	// brief's own row, and the at-risk row the fold below keeps. Stamped BEFORE
+	// the fold so the surviving row can inherit a score even where the night's
+	// own row is the one that goes.
+	rows = stampOpportunity(rows, s.briefScores)
 	// One unanswered message is one row: the deal it belongs to does not also
 	// appear as drifting.
 	rows = dropDealsAlreadyWaiting(rows)
@@ -230,6 +241,19 @@ func (s *Service) worklistFrom(
 	// it judges against is the same wherever it sits. A fourth pass that
 	// removed waiting rows would break that, and would have to run last.
 	rows = dropDecayAlreadyWaiting(rows)
+	// One deal is ONE row: a deal the night surfaced and the day also found
+	// arrives twice, and the row that survives keeps the brief's id and score.
+	//
+	// LAST of the folds, and the three comments above say why. Each of those
+	// drops rows of a source none of the others reads, so their order among
+	// themselves does not matter. This one is different: it attaches the brief's
+	// id to a row the others may then REMOVE. Run earlier, a deal that is both in
+	// the night's brief and has an unanswered message lost its brief verbs
+	// entirely — the at-risk row took the id and dropDealsAlreadyWaiting then
+	// deleted that row, and the waiting row it was absorbed into inherits the
+	// deal's figures and reasons but not the brief's id. So this runs against
+	// whatever actually survives.
+	rows = foldBriefIntoRisk(rows)
 	// The reader's own override, raised AFTER the dedupe passes and before the
 	// ranking. After, because a pin on a row those passes remove is a pin on a
 	// row that is not on the page — the day decides what it holds, and the pin
@@ -324,6 +348,9 @@ func (s *Service) worklistFrom(
 	// cut from the ranking above; a frozen walk's sequence is a previous run of
 	// that same comparator, and running it again here would return the reader's
 	// own rows in today's order rather than the one they were shown.
+	// Which of these the night had not seen, against the run's own data cutoff.
+	// Over the CUT page, because it is drawn and never ranked.
+	shown = markChangedSinceBrief(shown, s.briefCutoff)
 	ordered := renderInOrder(stampAsOf(shown, day.AsOf), readerOf(ctx))
 	bands := bandsOf(ordered)
 	out := crmcontracts.Worklist{

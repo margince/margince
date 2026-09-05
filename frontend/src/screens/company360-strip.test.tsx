@@ -248,17 +248,21 @@ describe("a slot with no reading says which absence it is", () => {
 });
 
 describe("a reading offers the tab it is a reading of", () => {
-  it("sends the reader to deals, finance, history and tasks from their own doors", async () => {
+  it("sends the reader to deals, finance and history from their own doors", async () => {
     stubFinance(NO_CONNECTION);
     const opened: string[] = [];
     renderStrip(view({ state_strip: customer }), (tab) => opened.push(tab));
     await readings();
 
-    for (const name of ["Open deals", "Open finance", "Open tasks"]) {
+    for (const name of ["Open deals", "Open finance"]) {
       await userEvent.click(screen.getByRole("button", { name }));
     }
-    // Two readings open the same page: the conversation and the last touch
-    // are both read off the exchanges, and both lead to them.
+    // THREE readings open the same page, and each is read off it: the
+    // conversation, the last touch and the next meeting all live on the
+    // history. The next-meeting card used to open the task list instead,
+    // which made it the strip's only route to tasks — and made it a card
+    // that said one thing and did another. Tasks is reached from the tab
+    // strip; a meeting card is not the place to hide the door to it.
     for (const door of screen.getAllByRole("button", {
       name: "Open history",
     })) {
@@ -268,7 +272,7 @@ describe("a reading offers the tab it is a reading of", () => {
     expect(opened).toEqual([
       "deals",
       "finance",
-      "tasks",
+      "timeline",
       "timeline",
       "timeline",
     ]);

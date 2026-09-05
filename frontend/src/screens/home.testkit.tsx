@@ -150,25 +150,6 @@ export function writes(calls: readonly Call[]): Call[] {
   );
 }
 
-/**
- * The `snoozed_until` a write carried, narrowed rather than asserted: a body is
- * `unknown` here because it came off the wire, and casting one into shape hides
- * the case where the field never went at all.
- */
-export function readSnoozedUntil(body: unknown): string {
-  if (
-    typeof body !== "object" ||
-    body === null ||
-    !("snoozed_until" in body) ||
-    typeof body.snoozed_until !== "string"
-  ) {
-    throw new Error(
-      `the snooze write carried no instant: ${JSON.stringify(body)}`,
-    );
-  }
-  return body.snoozed_until;
-}
-
 /** The routes those writes named, which is what a commit is judged on. */
 export function writeRoutes(calls: readonly Call[]): string[] {
   return writes(calls).map((call) => `${call.method} ${call.path}`);
@@ -176,7 +157,7 @@ export function writeRoutes(calls: readonly Call[]): string[] {
 
 /** Home's two work sections, in the order the document holds them. */
 export function workOrder(): string[] {
-  return [...document.querySelectorAll("#home-decisions, #home-focus")].map(
+  return [...document.querySelectorAll("#home-decisions, #brief-feed")].map(
     (section) => section.id,
   );
 }
@@ -219,20 +200,6 @@ export const run: MorningBrief = {
       state: "new",
       state_at: null,
     },
-  ],
-};
-
-/**
- * The same run with three suggestions, for the cases about which section owns
- * which. One item cannot show a section SKIPPING one and keeping the rest.
- */
-export const threeRanked: MorningBrief = {
-  ...run,
-  candidate_count: 3,
-  items: [
-    run.items[0],
-    { ...run.items[0], id: "bi-2", deal_id: "d-2", rank: 2, composite: 0.61 },
-    { ...run.items[0], id: "bi-3", deal_id: "d-3", rank: 3, composite: 0.44 },
   ],
 };
 

@@ -193,6 +193,13 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// a model asking on their behalf may not see either.
 	agents.RegisterAnalyticsReportTool(registry,
 		analyticsReportComposer(pool, analyticsquery.DefaultFloor))
+	// The typed analytics query, through the SAME engine POST /analytics/query
+	// calls: one compiler, one derived per-caller schema, one floor, one run
+	// store — so a tool and a screen cannot disagree about one aggregate. Its
+	// vocabulary is published at margince://schema/analytics rather than
+	// recited in the tool schema, the same move run_report made.
+	agents.RegisterAnalyticsQueryTool(registry,
+		nativeOnlyAnalyticsRunner(sorMode, analyticsQueryToolRunner(InstallationDB(pool))))
 	// The grammar that document is written in, as a TOOL and not only as the
 	// margince://schema/report-blocks resource — same reason
 	// describe_report_vocabulary exists beside run_report: the Surface-B runner
