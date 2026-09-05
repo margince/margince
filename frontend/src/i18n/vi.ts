@@ -7659,7 +7659,11 @@ export const vi = {
   "today.scan.queued": "Margince sẽ đọc tài khoản này trong giây lát.",
   "today.scan.reading":
     "Margince đang đọc các trao đổi và giao dịch của tài khoản này.",
-  "today.scan.read": "Đã đọc {exchanges} trao đổi và {deals} giao dịch",
+  "today.scan.read": "Đã đọc {exchanges} và {deals}",
+  "today.scan.readExchanges_one": "{count} trao đổi",
+  "today.scan.readExchanges_other": "{count} trao đổi",
+  "today.scan.readDeals_one": "{count} giao dịch",
+  "today.scan.readDeals_other": "{count} giao dịch",
   "today.scan.stale":
     "Tài khoản đã thay đổi kể từ đó. Nó sẽ được đọc lại trong vòng một giờ.",
   "today.scan.resumes": "Việc đọc sẽ tiếp tục {when}; ngân sách AI đã hoãn nó.",

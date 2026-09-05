@@ -252,7 +252,10 @@ func (s *Service) Run(ctx context.Context, scanID ids.UUID, orgID ids.Organizati
 		s.log.Warn("account scan: the lane did not answer usably", "scan_id", claimed.ID, "err", lane.Cause)
 		out.Status, out.DegradeReason = StatusDegraded, "The model did not answer in a form the records support, so the rules' own advice stands alone."
 	case err != nil:
-		return err
+		// The row is claimed: left running it would be served as a read in
+		// flight for as long as it sat there. It closes with the reason the
+		// reader can act on, and the cause goes back to the carrier.
+		return errors.Join(err, s.fail(ctx, claimed.ID, "The account could not be read. Try again later."))
 	case s.lane == nil:
 		out.Status, out.DegradeReason = StatusDegraded, "No model lane is configured, so the rules' own advice stands alone."
 	case len(in.Messages) == 0:
@@ -427,8 +430,11 @@ func (s *Service) deferBudget(ctx context.Context, scanID ids.UUID, next time.Ti
 	})
 }
 
+// fail closes a claimed row. It writes under a context that outlives the
+// read's own cancellation: the one failure a cancelled read must still
+// record is that it was cancelled.
 func (s *Service) fail(ctx context.Context, scanID ids.UUID, reason string) error {
-	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	return database.WithWorkspaceTx(context.WithoutCancel(ctx), s.pool, func(tx pgx.Tx) error {
 		return fail(ctx, tx, scanID, reason)
 	})
 }

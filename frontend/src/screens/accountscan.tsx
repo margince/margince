@@ -80,8 +80,13 @@ export function useAccountScan(
       return data;
     },
     // The ensure's answer IS the scan as it now stands, so the query takes it
-    // rather than re-reading what the server just said.
-    onSuccess: (data) => client.setQueryData(accountScanKey(orgId), data),
+    // rather than re-reading what the server just said. The open's own read
+    // is cancelled first: it left before the ensure queued anything, and
+    // landing after it would put "never" over "queued" and stop the poll.
+    onSuccess: async (data) => {
+      await client.cancelQueries({ queryKey: accountScanKey(orgId) });
+      client.setQueryData(accountScanKey(orgId), data);
+    },
   });
   const fire = ensure.mutate;
   useEffect(() => {

@@ -11,7 +11,7 @@ import { PanelBody, PanelRow } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
 import { stable } from "../format/collate";
 import { formatDateTime, formatNumber } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { type AccountScan, scanHasSettled, scanIsLive } from "./accountscan";
 import {
@@ -143,6 +143,7 @@ export function useTodayReading({
   scan,
 }: TodayReadingInputs): TodayReading {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   // Called before the loading/failed branches below, like every other hook
@@ -245,7 +246,7 @@ export function useTodayReading({
     footer: briefFooter(
       commitment,
       suggestions.footer,
-      scanFoot({ scan, t, locale, recordZone }),
+      scanFoot({ scan, t, plural, locale, recordZone }),
     ),
     notice:
       (view.sections_omitted?.length ?? 0) > 0 ? (
@@ -441,12 +442,14 @@ function briefFooter(
  */
 function scanFoot({
   scan,
+  plural,
   t,
   locale,
   recordZone,
 }: Readonly<{
   scan?: AccountScan;
   t: ReturnType<typeof useT>;
+  plural: ReturnType<typeof usePlural>;
   locale: Locale;
   recordZone: string;
 }>): ReactNode {
@@ -471,8 +474,12 @@ function scanFoot({
       {scan.read && (
         <span className="co-row-meta">
           {t("today.scan.read", {
-            exchanges: formatNumber(scan.read.exchanges, locale),
-            deals: formatNumber(scan.read.deals, locale),
+            exchanges: plural("today.scan.readExchanges", scan.read.exchanges, {
+              count: formatNumber(scan.read.exchanges, locale),
+            }),
+            deals: plural("today.scan.readDeals", scan.read.deals, {
+              count: formatNumber(scan.read.deals, locale),
+            }),
           })}
         </span>
       )}

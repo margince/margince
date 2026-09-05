@@ -131,6 +131,16 @@ func TestAnUnchangedAccountIsServedFromWhatWasReadAndAChangedOneIsMarkedStale(t 
 	if forced.State != crmcontracts.OrganizationScanStateQueued || len(queued) != 2 {
 		t.Errorf("forced = %q with %d queued; want a second read", forced.State, len(queued))
 	}
+	// The re-armed row is a later attempt of the same occurrence, so the
+	// rail — which takes only a later attempt's transitions — draws it.
+	var attempt int
+	if err := integration.OwnerConn(t).QueryRow(context.Background(),
+		`SELECT attempt FROM org_scan WHERE id = $1`, queued[1].ScanID).Scan(&attempt); err != nil {
+		t.Fatalf("read the attempt: %v", err)
+	}
+	if attempt != 2 {
+		t.Errorf("attempt after a forced re-read = %d, want 2", attempt)
+	}
 }
 
 func TestAChangedAccountPastTheFloorIsReadAgainOnItsOwn(t *testing.T) {

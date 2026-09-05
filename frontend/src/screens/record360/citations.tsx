@@ -63,6 +63,10 @@ export type CitationChip =
   | ({
       openable: false;
       entityType: CitedKind;
+      // The record's id where the chip stands for one: not for opening it —
+      // this chip opens nothing — but for telling two chips of one kind
+      // apart, which their labels alone cannot when neither carries a name.
+      entityId?: string;
       count: number;
       // A chip a reader cannot open needs its name MORE than an openable one,
       // not less: there is no click to find out which record it means. An
@@ -187,6 +191,7 @@ function ownChip(cited: Cited, isOpenable: boolean): CitationChip {
     : {
         openable: false,
         entityType: cited.entity_type,
+        entityId: cited.entity_id,
         count: 1,
         name: cited.name,
         ...receiptOf(cited),
@@ -354,11 +359,9 @@ export function Citations({
 // counts several: two receipted activities on one sentence are two chips, and
 // keying both on their kind would draw one.
 function chipKey(chip: CitationChip): string {
-  return chip.openable
+  return chip.count === 1 && chip.entityId
     ? `${chip.entityType}:${chip.entityId}`
-    : chip.count === 1 && chip.name
-      ? `${chip.entityType}:${chip.name}`
-      : chip.entityType;
+    : chip.entityType;
 }
 
 /**

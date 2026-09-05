@@ -302,3 +302,35 @@ describe("a citation's receipt", () => {
     expect(open).toHaveBeenCalledWith("deal", "d-1", []);
   });
 });
+
+// Two receipted records of one kind are two chips — a receipt is never folded
+// into a count — and two chips of one kind with no name to tell them apart
+// are still two: keyed on the record each stands for, never on the kind.
+describe("two nameless receipted records of one kind", () => {
+  it("draw as two chips with keys of their own", () => {
+    const warned = vi.spyOn(console, "error").mockImplementation(() => {});
+    renderCitations(
+      [
+        {
+          ...cited("activity", "a-1"),
+          quote: "Two slots next week would work on our side.",
+          at: "2026-08-03T14:20:00Z",
+          origin: "Email they sent",
+        },
+        {
+          ...cited("activity", "a-2"),
+          quote: "Could you resend the pricing sheet before Friday?",
+          at: "2026-08-04T09:05:00Z",
+          origin: "Email they sent",
+        },
+      ],
+      false,
+    );
+    expect(screen.getAllByRole("button", { name: /activity/ })).toHaveLength(2);
+    const sameKey = warned.mock.calls.some((call) =>
+      String(call[0]).includes("same key"),
+    );
+    warned.mockRestore();
+    expect(sameKey).toBe(false);
+  });
+});

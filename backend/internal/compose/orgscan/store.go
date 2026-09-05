@@ -115,12 +115,15 @@ func load(ctx context.Context, tx pgx.Tx, userID ids.UserID, orgID ids.Organizat
 
 // queue writes the reader's row as a read waiting to run — a fresh row, or
 // the existing one re-armed with its last findings kept — and announces it.
+// Re-arming counts a new attempt rather than starting the count over: the
+// rail keys the row as one occurrence and takes only a later attempt's
+// transitions, so an attempt that ran backwards would never be drawn.
 func queue(ctx context.Context, tx pgx.Tx, userID ids.UserID, orgID ids.OrganizationID) (row, error) {
 	r, err := scanRow(tx.QueryRow(ctx, `
 		INSERT INTO org_scan (user_id, organization_id, status)
 		VALUES ($1, $2, 'queued')
 		ON CONFLICT (user_id, organization_id) DO UPDATE
-		SET status = 'queued', attempt = 1, requested_at = now(),
+		SET status = 'queued', attempt = org_scan.attempt + 1, requested_at = now(),
 		    started_at = NULL, finished_at = NULL, next_attempt_at = NULL
 		RETURNING `+rowColumns, userID, orgID))
 	if err != nil {

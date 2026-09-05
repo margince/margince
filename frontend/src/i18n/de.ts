@@ -7762,7 +7762,11 @@ export const de = {
   "today.scan.queued": "Margince liest diesen Account gleich.",
   "today.scan.reading":
     "Margince liest die Korrespondenz und die Deals dieses Accounts.",
-  "today.scan.read": "{exchanges} Nachrichten und {deals} Deals gelesen",
+  "today.scan.read": "{exchanges} und {deals} gelesen",
+  "today.scan.readExchanges_one": "{count} Nachricht",
+  "today.scan.readExchanges_other": "{count} Nachrichten",
+  "today.scan.readDeals_one": "{count} Deal",
+  "today.scan.readDeals_other": "{count} Deals",
   "today.scan.stale":
     "Der Account hat sich seitdem verändert. Er wird innerhalb einer Stunde erneut gelesen.",
   "today.scan.resumes":

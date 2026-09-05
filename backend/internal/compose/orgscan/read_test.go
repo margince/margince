@@ -121,9 +121,9 @@ func TestABudgetDeferralPassesThroughForTheCarrierToSnoozeOn(t *testing.T) {
 func TestAFindingMissingItsWordsOrItsVerbIsRefused(t *testing.T) {
 	in, nudge := scanInput()
 	org := ids.New[ids.OrganizationKind]()
-	wordless := finding(nudge, "did the sample reports")
+	wordless := finding(nudge, "did the sample reports get held up")
 	wordless["title"] = ""
-	oddVerb := finding(nudge, "did the sample reports")
+	oddVerb := finding(nudge, "did the sample reports get held up")
 	oddVerb["action"] = "phone_them"
 	kept, refused, err := ParseFindings(reply(wordless, oddVerb), org, in)
 	if err != nil {
@@ -139,7 +139,7 @@ func TestAFindingMissingItsWordsOrItsVerbIsRefused(t *testing.T) {
 
 func TestARefusalEchoesAModelTokenOnlyAsFarAsItIsBounded(t *testing.T) {
 	in, nudge := scanInput()
-	inflated := finding(nudge, "did the sample reports")
+	inflated := finding(nudge, "did the sample reports get held up")
 	inflated["kind"] = strings.Repeat("x", 500)
 	_, refused, err := ParseFindings(reply(inflated), ids.New[ids.OrganizationKind](), in)
 	if err != nil || len(refused) != 1 {
@@ -160,7 +160,7 @@ func TestTheReadKeepsAtMostItsCapAndSaysNothingOfTheRest(t *testing.T) {
 			Text: "Can you confirm the delivery window for unit " + string(rune('A'+i)) + "?",
 		}
 		in.Messages = append(in.Messages, message)
-		findings = append(findings, finding(message, "confirm the delivery window"))
+		findings = append(findings, finding(message, "Can you confirm the delivery window"))
 	}
 	kept, refused, err := ParseFindings(reply(findings...), ids.New[ids.OrganizationKind](), in)
 	if err != nil || len(refused) != 0 {
@@ -177,7 +177,7 @@ func TestTheReadKeepsAtMostItsCapAndSaysNothingOfTheRest(t *testing.T) {
 func TestAFindingThatAsksForAStepCarriesTheStepItself(t *testing.T) {
 	in, nudge := scanInput()
 	org := ids.New[ids.OrganizationKind]()
-	step := finding(nudge, "did the sample reports")
+	step := finding(nudge, "did the sample reports get held up")
 	step["action"] = "add_task"
 	kept, refused, err := ParseFindings(reply(step), org, in)
 	if err != nil || len(refused) != 0 || len(kept) != 1 {
@@ -193,5 +193,36 @@ func TestAFindingThatAsksForAStepCarriesTheStepItself(t *testing.T) {
 	link := (*action.Task.Links)[0]
 	if string(link.EntityType) != "organization" || link.EntityId.String() != org.String() {
 		t.Errorf("link = %+v, want the account itself", link)
+	}
+}
+
+// A quote is bounded on both sides: too short to check a claim against, or
+// long enough to be the message itself, and it is refused — except that a
+// message shorter than the floor may be quoted whole.
+func TestAQuoteIsNeitherAWordNorTheWholeMessage(t *testing.T) {
+	in, nudge := scanInput()
+	org := ids.New[ids.OrganizationKind]()
+	brief := MessageIn{ID: ids.NewV7(), Kind: "email", Direction: "inbound", At: scanAt, Text: "Any news on the reports?"}
+	in.Messages = append(in.Messages, brief)
+	long := MessageIn{ID: ids.NewV7(), Kind: "email", Direction: "inbound", At: scanAt, Text: strings.Repeat("We need the sample reports before Thursday. ", 8)}
+	in.Messages = append(in.Messages, long)
+	for name, tc := range map[string]struct {
+		finding map[string]any
+		kept    bool
+	}{
+		"a word":                 {finding(nudge, "reports"), false},
+		"the whole long message": {finding(long, strings.TrimSpace(long.Text)), false},
+		"a short message, whole": {finding(brief, "Any news on the reports?"), true},
+		"a bounded excerpt":      {finding(nudge, "did the sample reports get held up somewhere"), true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			kept, refused, err := ParseFindings(reply(tc.finding), org, in)
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			if (len(kept) == 1) != tc.kept {
+				t.Errorf("kept %d, refused %v; want kept=%v", len(kept), refused, tc.kept)
+			}
+		})
 	}
 }

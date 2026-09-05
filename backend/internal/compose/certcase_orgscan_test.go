@@ -109,6 +109,7 @@ func TestOrgScanCaseRefusesWhatNoReplyCouldFail(t *testing.T) {
 	for name, tc := range map[string]struct{ fixture, expected string }{
 		"nothing expected":                  {orgScanFixtureJSON, `[]`},
 		"a message the fixture lacks":       {orgScanFixtureJSON, `["a_message_that_is_not_there"]`},
+		"a contact rather than an exchange": {orgScanFixtureJSON, `["jonas"]`},
 		"an account with no exchange":       {`{"name":"Acme","messages":[]}`, `["ask"]`},
 		"an unlabelled message":             {`{"name":"Acme","messages":[{"label":"","kind":"email","direction":"inbound","at":"2026-08-19T08:45:00Z","text":"hi"}]}`, `["x"]`},
 		"a message dated in prose":          {`{"name":"Acme","messages":[{"label":"ask","kind":"email","direction":"inbound","at":"yesterday","text":"hi"}]}`, `["ask"]`},
@@ -134,7 +135,7 @@ func TestOrgScanCaseEvaluatesEachOutcome(t *testing.T) {
 		want   string
 	}{
 		"cites the exchange the scenario names": {scanReply(t, scan, "ask", "did the sample reports get held up"), aitasks.OutcomeAccepted},
-		"cites a different exchange":            {scanReply(t, scan, "thanks", "the invoice arrived"), aitasks.OutcomeWrongAnswer},
+		"cites a different exchange":            {scanReply(t, scan, "thanks", "the invoice arrived and is paid"), aitasks.OutcomeWrongAnswer},
 		"raises nothing":                        {`{"findings":[]}`, aitasks.OutcomeAbstained},
 		"quotes words the message lacks":        {scanReply(t, scan, "ask", "we are cancelling"), aitasks.OutcomeInvalid},
 		"did not answer at all":                 {"not json", aitasks.OutcomeInvalid},

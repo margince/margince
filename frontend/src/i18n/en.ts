@@ -7859,7 +7859,11 @@ export const en = {
   "today.scan.queued": "Margince will read this account in a moment.",
   "today.scan.reading":
     "Margince is reading this account's exchanges and deals.",
-  "today.scan.read": "Read {exchanges} exchanges and {deals} deals",
+  "today.scan.read": "Read {exchanges} and {deals}",
+  "today.scan.readExchanges_one": "{count} exchange",
+  "today.scan.readExchanges_other": "{count} exchanges",
+  "today.scan.readDeals_one": "{count} deal",
+  "today.scan.readDeals_other": "{count} deals",
   "today.scan.stale":
     "The account has moved since. It is read again within the hour.",
   "today.scan.resumes": "Reading resumes {when}; the AI budget deferred it.",

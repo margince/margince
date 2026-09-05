@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -252,6 +253,9 @@ func ground(raw rawFinding, orgID ids.OrganizationID, in Input) (crmcontracts.Or
 		return crmcontracts.Organization360Suggestion{}, fmt.Sprintf("action %q is not one the page performs", clamp(raw.Action))
 	}
 	quote := claims.CollapseSpace(raw.Quote)
+	if why := quoteOutOfBounds(quote, claims.CollapseSpace(message.Text)); why != "" {
+		return crmcontracts.Organization360Suggestion{}, why
+	}
 	evidence := []crmcontracts.OrganizationBriefEvidence{{
 		EntityType: crmcontracts.OrganizationBriefEvidenceEntityTypeActivity,
 		EntityId:   openapi_types.UUID(message.ID),
@@ -313,6 +317,27 @@ func origin(message MessageIn) string {
 		return channel + " they sent"
 	}
 	return channel
+}
+
+// The quote's bounds, as the prompt states them. A quote under the floor is
+// too little to check a claim against — one word is in every message — and
+// one past the cap is the message itself rather than the words the claim
+// rests on. The floor bends for a message shorter than it: the whole of a
+// short message is the most that can be quoted.
+const (
+	quoteFloor = 30
+	quoteCap   = 200
+)
+
+func quoteOutOfBounds(quote, text string) string {
+	length := utf8.RuneCountInString(quote)
+	if length > quoteCap {
+		return fmt.Sprintf("the quote runs to %d characters; the cap is %d", length, quoteCap)
+	}
+	if floor := min(quoteFloor, utf8.RuneCountInString(text)); length < floor {
+		return fmt.Sprintf("the quote is %d characters; at least %d are needed to check a claim against", length, floor)
+	}
+	return ""
 }
 
 // clamp bounds a model-authored token before it is echoed into a refusal, so

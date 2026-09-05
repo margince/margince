@@ -508,6 +508,24 @@ describe("the account scan on the needs list", () => {
     ).toBeTruthy();
   });
 
+  it("counts one exchange and one deal in the singular", () => {
+    show(
+      { ...BASE, suggestions: [ruleRow] },
+      {
+        scan: {
+          organization_id: "o-1",
+          state: "done",
+          generated_at: "2026-08-07T08:58:00Z",
+          generated_by: "model",
+          read: { exchanges: 1, deals: 1 },
+          findings: [ruleRow],
+          findings_dropped: 0,
+        },
+      },
+    );
+    expect(screen.getByText("Read 1 exchange and 1 deal")).toBeTruthy();
+  });
+
   it("says why the model did not write the rows when the read degraded", () => {
     show(
       { ...BASE, suggestions: [ruleRow] },

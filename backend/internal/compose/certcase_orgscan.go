@@ -82,7 +82,14 @@ func (orgScanCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepared
 	if err != nil {
 		return nil, fmt.Errorf("account_scan/org_scan: %w", err)
 	}
-	if err := refuseUngroundableBrief(want, label); err != nil {
+	// Only an exchange can be what a finding rests on, so only an exchange's
+	// label is an expectation: a contact's name here would be one no reply
+	// could ever cite.
+	exchanges := map[string]string{}
+	for _, message := range f.Messages {
+		exchanges[message.Label] = label[message.Label]
+	}
+	if err := refuseUngroundableBrief(want, exchanges); err != nil {
 		return nil, fmt.Errorf("account_scan/org_scan: %w", err)
 	}
 	return &orgScanCase{in: in, orgID: ids.New[ids.OrganizationKind](), label: label, expected: want}, nil
