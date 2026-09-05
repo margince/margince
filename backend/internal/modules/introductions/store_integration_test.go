@@ -184,6 +184,24 @@ func TestAClosedAskFreesTheRouteAgain(t *testing.T) {
 	}
 }
 
+// AN INTRODUCTION IS ASKED OF SOMEBODY ELSE.
+//
+// The network tab ranks every colleague who corresponds with a contact and the
+// reader is among them, so the way in it recommends can be the reader's own
+// relationship. An ask naming yourself writes a favour into your own queue and
+// records a handoff nobody made — and it passes every other check on this path,
+// because the requester and the introducer are each individually a real party.
+func TestNobodyIsTheirOwnIntroducer(t *testing.T) {
+	e := setupIntro(t)
+	ask := e.ask()
+	ask.IntroducerUser = e.requester
+
+	_, err := e.store.Create(e.asUser(e.requester), ask)
+	if !errors.Is(err, apperrors.ErrInvalidArgument) {
+		t.Fatalf("a rep asked themselves for an introduction: %v", err)
+	}
+}
+
 // The colleague's answer is the colleague's to give, and a stranger cannot
 // even see that the ask exists: telling them it is not theirs would disclose
 // that this colleague was asked about this contact, which is the fact the row

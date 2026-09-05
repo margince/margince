@@ -7,7 +7,7 @@ import type {
   MapNode,
   RelationshipMapModel,
 } from "../../design-system/relationshipmap.layout";
-import { routeFor } from "../../design-system/relationshipmap.layout";
+import { strongest } from "../../design-system/relationshipmap.layout";
 import type { IntroTarget } from "./introrequest";
 
 // The wire read, as the picture the map draws.
@@ -19,6 +19,16 @@ import type { IntroTarget } from "./introrequest";
 
 type Coverage = components["schemas"]["OrganizationCoverage"];
 type Seat = components["schemas"]["OrganizationCoverageSeat"];
+
+// A colleague's id in the drawing. Nodes of different kinds share one id
+// space, so a person and a colleague carrying the same uuid must not collide —
+// and the prefix is written HERE alone, because a second spelling of it is a
+// lookup that silently matches nothing.
+const USER_PREFIX = "u:";
+
+function colleagueNodeId(userId: string): string {
+  return `${USER_PREFIX}${userId}`;
+}
 
 /** The lanes a committee reads in, and the order they read. */
 const ROLES = [
@@ -61,6 +71,11 @@ export function mapModelFromCoverage(
   coverage: Coverage,
   accountName: string,
   copy: MapCopy,
+  // The reader, when the session has answered. They are ranked among the
+  // colleagues who can reach a seat like anybody else, and an introduction is
+  // asked of somebody ELSE — so the verb below is offered on their behalf and
+  // never from them.
+  viewerId?: string,
 ): RelationshipMapModel {
   const committee = coverage.committee;
   if (!committee) {
@@ -81,14 +96,14 @@ export function mapModelFromCoverage(
     }
   }
   for (const [id, name] of colleagues) {
-    nodes.push({ id: `u:${id}`, kind: "user", label: name });
+    nodes.push({ id: colleagueNodeId(id), kind: "user", label: name });
   }
   if (colleagues.size > 0) {
     lanes.push({
       id: "ourside",
       column: "left",
       label: copy.ourSide,
-      nodeIds: [...colleagues.keys()].map((id) => `u:${id}`),
+      nodeIds: [...colleagues.keys()].map(colleagueNodeId),
     });
   }
 
@@ -110,18 +125,27 @@ export function mapModelFromCoverage(
   lanes.push({ id: "centre", column: "center", label: "", nodeIds: centre });
 
   // Their people, by role, with a gap where a critical role is unheld.
-  buildRoleLanes(committee, deal, copy, nodes, lanes, edges);
+  buildRoleLanes(committee, deal, copy, viewerId, nodes, lanes, edges);
 
   return { nodes, lanes, edges };
 }
 
-function personNode(seat: Seat, copy: MapCopy): MapNode {
+function personNode(
+  seat: Seat,
+  copy: MapCopy,
+  viewerId: string | undefined,
+): MapNode {
   const engagement = seat.engagement as MapEngagement | undefined;
-  // The verb goes ONLY on a seat somebody can actually reach. Asking for an
+  // The verb goes ONLY on a seat SOMEBODY ELSE can reach. Asking for an
   // introduction from nobody is not a move, and offering it on a contact with
   // no route would send the reader to a dialog that can only refuse — the
-  // endpoint requires a recorded route and answers 404 without one.
-  const reachable = (seat.routes?.top ?? []).length > 0;
+  // endpoint requires a recorded route and answers 404 without one. A seat only
+  // the reader reaches is the same dead control for a different reason: the
+  // endpoint refuses an introduction whose introducer is the caller, and the
+  // reader had the relationship all along.
+  const reachable = (seat.routes?.top ?? []).some(
+    (route) => route.user_id !== viewerId,
+  );
   return {
     id: `p:${seat.person_id}`,
     kind: "person",
@@ -151,7 +175,7 @@ export const ASK_INTRO = "ask_intro";
 function routeEdges(seat: Seat, copy: MapCopy): MapEdge[] {
   return (seat.routes?.top ?? []).map((route) => ({
     id: `e:${route.user_id}:${seat.person_id}`,
-    from: `u:${route.user_id}`,
+    from: colleagueNodeId(route.user_id),
     to: `p:${seat.person_id}`,
     kind: "route" as const,
     band: route.strength_bucket as MapBand,
@@ -186,6 +210,7 @@ function buildRoleLanes(
   committee: NonNullable<Coverage["committee"]>,
   deal: Coverage["deals"][number] | undefined,
   copy: MapCopy,
+  viewerId: string | undefined,
   nodes: MapNode[],
   lanes: MapLane[],
   edges: MapEdge[],
@@ -204,7 +229,7 @@ function buildRoleLanes(
     }
     const ids: string[] = [];
     for (const seat of seats) {
-      nodes.push(personNode(seat, copy));
+      nodes.push(personNode(seat, copy, viewerId));
       ids.push(`p:${seat.person_id}`);
       edges.push(...routeEdges(seat, copy));
       if (deal) {
@@ -231,7 +256,7 @@ function buildRoleLanes(
     }
   }
 
-  buildOtherLane(committee, deal, copy, drawn, nodes, lanes, edges);
+  buildOtherLane(committee, deal, copy, viewerId, drawn, nodes, lanes, edges);
 }
 
 /**
@@ -245,6 +270,7 @@ function buildOtherLane(
   committee: NonNullable<Coverage["committee"]>,
   deal: Coverage["deals"][number] | undefined,
   copy: MapCopy,
+  viewerId: string | undefined,
   drawn: Set<string>,
   nodes: MapNode[],
   lanes: MapLane[],
@@ -259,7 +285,7 @@ function buildOtherLane(
   }
   for (const seat of other) {
     drawn.add(seat.person_id);
-    nodes.push(personNode(seat, copy));
+    nodes.push(personNode(seat, copy, viewerId));
     edges.push(...routeEdges(seat, copy));
     if (deal) {
       edges.push(dealEdge(seat.person_id, deal.deal_id, copy));
@@ -288,9 +314,12 @@ function dealEdge(personId: string, dealId: string, copy: MapCopy): MapEdge {
  * introTargetFor names the colleague to ask, from the map the reader is
  * looking at.
  *
- * The STRONGEST route, which is the one the panel has already named as the
- * best way in — so the dialog asks about the person the reader just read
- * about, rather than whichever edge happened to be first.
+ * The STRONGEST route the reader can actually ask for, ranked by the drawing's
+ * own comparison — so the dialog names the colleague the panel beside it named,
+ * rather than whichever edge happened to be first. The one case where the two
+ * differ is the reader's own route being the warmest: the picture still lights
+ * it, because it is the most useful fact on the page, and the ask goes to the
+ * best colleague there is to ask.
  *
  * It refuses anything that is not a PERSON. A route edge runs colleague →
  * person, so reading `from` as the colleague is only true for a person focus;
@@ -303,15 +332,28 @@ function dealEdge(personId: string, dealId: string, copy: MapCopy): MapEdge {
 export function introTargetFor(
   model: RelationshipMapModel,
   nodeId: string,
+  viewerId?: string,
 ): IntroTarget | null {
   const person = model.nodes.find((node) => node.id === nodeId);
   if (person?.kind !== "person") {
     return null;
   }
-  const { route } = routeFor(model, nodeId);
-  const best = route
-    ? model.edges.find((edge) => edge.id === route.edgeIds[0])
-    : null;
+  // The strongest route SOMEBODY ELSE holds. The reader is ranked among the
+  // colleagues who can reach this contact like anybody else, and the endpoint
+  // refuses an introduction whose introducer is the caller — so their own
+  // route is filtered out BEFORE the ranking rather than after it, which is
+  // what lets the second-best colleague be asked instead of nobody.
+  //
+  // `strongest` is the drawing's own comparison, borrowed rather than repeated:
+  // a second one here would light one route on the picture and open a dialog
+  // about another.
+  const mine = viewerId === undefined ? null : colleagueNodeId(viewerId);
+  const best = strongest(
+    model.edges.filter(
+      (edge) =>
+        edge.kind === "route" && edge.to === nodeId && edge.from !== mine,
+    ),
+  );
   const colleague = best && model.nodes.find((node) => node.id === best.from);
   if (!best || colleague?.kind !== "user") {
     return null;
@@ -323,7 +365,7 @@ export function introTargetFor(
     // letters cannot be trimmed into a different record.
     personId: nodeId.slice("p:".length),
     personName: person.label,
-    viaUserId: colleague.id.slice("u:".length),
+    viaUserId: colleague.id.slice(USER_PREFIX.length),
     viaName: colleague.label,
   };
 }

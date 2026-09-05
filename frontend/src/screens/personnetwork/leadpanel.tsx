@@ -14,7 +14,11 @@ import { Eyebrow } from "../../design-system/eyebrow";
 import { Panel } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
-import { evidenceSentence, lastContactBucket } from "../personroutes";
+import {
+  evidenceSentence,
+  lastContactBucket,
+  useOwnRoute,
+} from "../personroutes";
 import { ReceiptList } from "./receipts";
 
 type RouteCandidate = components["schemas"]["PersonGraphRouteCandidate"];
@@ -49,10 +53,14 @@ export function LeadPanel({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  // The reader is one of the colleagues the server ranks, so the warmest way
+  // in is often their own relationship. Every sentence below is written about
+  // somebody to ask, and about the reader every one of them is false.
+  const mine = useOwnRoute()(route);
   return (
     <Panel
       tone="accent"
-      title={verdict(route, t)}
+      title={verdict(route, mine, t)}
       sub={t("person.intro.leadEyebrow")}
       titleAction={
         <Badge tone={blocked ? undefined : "success"} quiet={Boolean(blocked)}>
@@ -72,14 +80,10 @@ export function LeadPanel({
               size="md"
             />
             <div className="pn-hero-who">
-              <strong>{route.via_display_name}</strong>
-              <p>
-                {route.through_display_name
-                  ? t("person.intro.heroIndirect", {
-                      through: route.through_display_name,
-                    })
-                  : t("person.intro.heroDirect")}
-              </p>
+              <strong>
+                {mine ? t("person.intro.heroYou") : route.via_display_name}
+              </strong>
+              <p>{heroLine(route, mine, t)}</p>
             </div>
             <span className="pn-hero-arrow" aria-hidden="true">
               →
@@ -109,8 +113,16 @@ export function LeadPanel({
 
           {/* The ask sits with the move, not in a band under both halves:
               the button answers the sentence above it, and the figures to
-              the right are what a reader checks before pressing it. */}
-          {blocked ? null : (
+              the right are what a reader checks before pressing it.
+
+              The reader's own route gets the sentence instead of the button.
+              The server refuses an ask whose introducer is the person making
+              it, so a button here would be a control that exists to fail —
+              and the panel is this page's one recommendation, so it still has
+              to say what the move is. */}
+          {blocked ? null : mine ? (
+            <p className="pn-counts">{t("person.intro.ownRouteNoAsk")}</p>
+          ) : (
             <p className="pn-verdict-actions">
               <Button variant="primary" onClick={() => onAsk(route)}>
                 {t("person.intro.askFirstName", {
@@ -121,7 +133,7 @@ export function LeadPanel({
           )}
         </div>
 
-        <EvidencePlate route={route} targetName={targetName} />
+        <EvidencePlate route={route} targetName={targetName} mine={mine} />
       </div>
     </Panel>
   );
@@ -130,22 +142,39 @@ export function LeadPanel({
 /**
  * verdict is the panel's headline: the move, with the one fact that earns it.
  *
- * Three sentences for three shapes of route. A one-sided route is named as
- * such in the headline rather than only in a badge below, because "already
- * write to each other" over thirty unanswered sends would be the lie the
- * evidence line exists to prevent.
+ * Three sentences for three shapes of route, in either person. A one-sided
+ * route is named as such in the headline rather than only in a badge below,
+ * because "already write to each other" over thirty unanswered sends would be
+ * the lie the evidence line exists to prevent.
  */
-function verdict(route: RouteCandidate, t: Translate): string {
+function verdict(route: RouteCandidate, mine: boolean, t: Translate): string {
   const name = route.via_display_name;
-  if (route.through_display_name) {
-    return t("person.intro.verdictVia", {
-      name,
-      through: route.through_display_name,
-    });
+  const through = route.through_display_name;
+  if (through) {
+    return mine
+      ? t("person.intro.verdictViaYou", { through })
+      : t("person.intro.verdictVia", { name, through });
   }
-  return route.evidence.two_way
-    ? t("person.intro.verdictDirect", { name })
+  if (route.evidence.two_way) {
+    return mine
+      ? t("person.intro.verdictDirectYou")
+      : t("person.intro.verdictDirect", { name });
+  }
+  return mine
+    ? t("person.intro.verdictOneSidedYou")
     : t("person.intro.verdictOneSided", { name });
+}
+
+// The chain's second line, which continues the name above it — so it is a verb
+// phrase in both persons and never a sentence of its own.
+function heroLine(route: RouteCandidate, mine: boolean, t: Translate): string {
+  const through = route.through_display_name;
+  if (through) {
+    return mine
+      ? t("person.intro.heroIndirectYou", { through })
+      : t("person.intro.heroIndirect", { through });
+  }
+  return mine ? t("person.intro.heroDirectYou") : t("person.intro.heroDirect");
 }
 
 /**
@@ -159,7 +188,8 @@ function verdict(route: RouteCandidate, t: Translate): string {
 function EvidencePlate({
   route,
   targetName,
-}: Readonly<{ route: RouteCandidate; targetName: string }>) {
+  mine,
+}: Readonly<{ route: RouteCandidate; targetName: string; mine: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
   const ev = route.evidence;
@@ -180,6 +210,7 @@ function EvidencePlate({
             evidence={ev}
             viaName={route.via_display_name}
             targetName={targetName}
+            mine={mine}
           />
         </div>
         <div className="pn-reading">
@@ -216,10 +247,12 @@ function ExchangeSplit({
   evidence,
   viaName,
   targetName,
+  mine,
 }: Readonly<{
   evidence: RouteEvidence;
   viaName: string;
   targetName: string;
+  mine: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -243,10 +276,14 @@ function ExchangeSplit({
           })}
         </span>
         <span className="pn-split-key-out">
-          {t("person.intro.evidenceFrom", {
-            count: formatNumber(outbound, locale),
-            name: viaName,
-          })}
+          {mine
+            ? t("person.intro.evidenceFromYou", {
+                count: formatNumber(outbound, locale),
+              })
+            : t("person.intro.evidenceFrom", {
+                count: formatNumber(outbound, locale),
+                name: viaName,
+              })}
         </span>
       </span>
     </>

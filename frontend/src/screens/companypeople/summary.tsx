@@ -23,6 +23,7 @@ import {
   problemCodeOf,
   problemMessageOf,
   throwProblem,
+  useViewerId,
 } from "../common";
 import { EntityRef } from "../entityref";
 import { ENGAGEMENT_LABELS, ENGAGEMENT_TONES } from "./contacts";
@@ -328,9 +329,12 @@ function CommitteeBoard({
   // here rather than in the map: the map is data-only by design, and a dialog
   // that fetched would make it a screen.
   const [asking, setAsking] = useState<IntroTarget | null>(null);
+  // Who is reading, so the picture never offers them an introduction from
+  // themselves — the endpoint refuses one whose introducer is the caller.
+  const viewerId = useViewerId();
   const model = useMemo(
-    () => mapModelFromCoverage(coverage, accountName, mapCopy(t)),
-    [coverage, accountName, t],
+    () => mapModelFromCoverage(coverage, accountName, mapCopy(t), viewerId),
+    [coverage, accountName, t, viewerId],
   );
   const committee = coverage.committee;
   if (!committee) {
@@ -413,7 +417,7 @@ function CommitteeBoard({
           labels={mapLabels(t, locale)}
           onAction={(nodeId, actionId) => {
             if (actionId === ASK_INTRO) {
-              setAsking(introTargetFor(model, nodeId));
+              setAsking(introTargetFor(model, nodeId, viewerId));
             }
           }}
         />

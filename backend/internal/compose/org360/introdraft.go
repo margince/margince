@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -84,6 +85,21 @@ func (s *Service) IntroRequestDraft(
 	// will send under their own name.
 	if err := auth.RequireHuman(ctx); err != nil {
 		return crmcontracts.AccountEmailDraft{}, err
+	}
+	// The colleague being asked is never the reader asking. The routes this
+	// draft is written from rank everyone on our side who corresponds with the
+	// contact, the reader included, so a client that offers its own reader as
+	// the way in lands here — and what came back was a letter addressed to its
+	// own sender, written at the workspace's expense. The same rule holds the
+	// ask itself, in introductions.Store.Create.
+	//
+	// RequireHuman above is what refuses a call with nobody behind it, so this
+	// branch only answers whether the reader is also the colleague named.
+	if asker, ok := principal.Actor(ctx); ok &&
+		req.ViaUserID == ids.From[ids.UserKind](asker.UserID) {
+		return crmcontracts.AccountEmailDraft{}, fmt.Errorf(
+			"org360: an introduction is asked of somebody else: %w",
+			apperrors.ErrInvalidArgument)
 	}
 	// The custom-field catalog BEFORE the transaction opens. It takes a
 	// connection of its own, and a second connection inside somebody else's
