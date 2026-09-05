@@ -30,6 +30,7 @@ import {
   useAnalyticsSelection,
 } from "./analytics.context";
 import { ForecastView } from "./analytics.forecast";
+import { sourceName } from "./analytics.forecast.review";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { ShareViewButton } from "./analytics.share";
 import {
@@ -1058,50 +1059,53 @@ const COVERAGE_STATE_KEY: Readonly<Record<string, MessageKey>> = {
 function DataCoverageView({
   locale,
   timezone,
-}: Readonly<{ locale: Locale; timezone: string | null }>) {
+}: Readonly<{ locale: Locale; timezone: string }>) {
   const t = useT();
   const coverage = useDataCoverage();
   return (
     <QueryGate query={coverage} pendingLabel={t("analytics.sectionCoverage")}>
-      {(run) => (
-        <Card title={t("analytics.sectionCoverage")}>
-          <p className="sub">{t("analytics.coverageSub")}</p>
-          <DataTable
-            label={t("analytics.sectionCoverage")}
-            columns={[
-              {
-                key: "source",
-                header: t("analytics.covSource"),
-                render: (row: DataCoverageRow) => row.source,
-              },
-              {
-                key: "state",
-                header: t("analytics.covState"),
-                render: (row: DataCoverageRow) =>
-                  COVERAGE_STATE_KEY[row.state]
-                    ? t(COVERAGE_STATE_KEY[row.state])
-                    : row.state,
-              },
-              {
-                key: "through",
-                header: t("analytics.covThrough"),
-                render: (row: DataCoverageRow) =>
-                  // The instant renders only once the frame's own zone is
-                  // known — a screen must not name a zone of its own, and a
-                  // date placed in a guessed one is worse than a beat of "—".
-                  row.checked_through && timezone
-                    ? formatDateTime(row.checked_through, locale, timezone)
-                    : "—",
-              },
-            ]}
-            rows={run.sources}
-            rowKey={(row) => row.source}
-          />
-          {/* Record-level input problems live where they are answered: the
+      {(run) =>
+        run == null ? (
+          <Card title={t("analytics.sectionCoverage")}>
+            <EmptyState>{t("analytics.coverageNeverRun")}</EmptyState>
+          </Card>
+        ) : (
+          <Card title={t("analytics.sectionCoverage")}>
+            <p className="sub">{t("analytics.coverageSub")}</p>
+            <DataTable
+              label={t("analytics.sectionCoverage")}
+              columns={[
+                {
+                  key: "source",
+                  header: t("analytics.covSource"),
+                  render: (row: DataCoverageRow) => sourceName(row.source, t),
+                },
+                {
+                  key: "state",
+                  header: t("analytics.covState"),
+                  render: (row: DataCoverageRow) =>
+                    COVERAGE_STATE_KEY[row.state]
+                      ? t(COVERAGE_STATE_KEY[row.state])
+                      : row.state,
+                },
+                {
+                  key: "through",
+                  header: t("analytics.covThrough"),
+                  render: (row: DataCoverageRow) =>
+                    row.checked_through
+                      ? formatDateTime(row.checked_through, locale, timezone)
+                      : "—",
+                },
+              ]}
+              rows={run.sources}
+              rowKey={(row) => row.source}
+            />
+            {/* Record-level input problems live where they are answered: the
               Forecast input review. One resolution surface, not two. */}
-          <p className="sub">{t("analytics.coverageInputsElsewhere")}</p>
-        </Card>
-      )}
+            <p className="sub">{t("analytics.coverageInputsElsewhere")}</p>
+          </Card>
+        )
+      }
     </QueryGate>
   );
 }
@@ -1115,9 +1119,11 @@ function useDataCoverage() {
     queryFn: async () => {
       const { data, error, response } = await api.GET("/analytics/coverage");
       if (response.status === 404) {
-        // A fresh installation: no run has completed. The gate renders the
-        // typed empty state rather than an error.
-        return { run_id: "", as_of: "", sources: [] };
+        // A fresh installation: no run has completed yet. Null, so the view
+        // says that in words rather than drawing headers over blank space —
+        // "nothing has looked yet" and "everything looked fine" are opposite
+        // instructions about whether to trust the numbers elsewhere.
+        return null;
       }
       if (error) {
         throwProblem(error);

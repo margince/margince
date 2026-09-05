@@ -3455,6 +3455,12 @@ export const en = {
   // reader was told "mail, offers" in English — words that name a table, not a
   // thing they would go and fix.
   "review.source.mail": "the mailbox",
+  "review.source.calendar": "the calendar",
+  "review.source.documents": "documents",
+  "review.source.contracts": "contracts",
+  "review.source.incumbent": "the incumbent system",
+  "analytics.coverageNeverRun":
+    "No check has run yet. A fresh installation has not been looked at — different from one that was looked at and found healthy.",
   "review.source.offers": "offers",
   "review.sourcesUnread":
     "Not read: {sources}. Findings below cover only what could be checked.",

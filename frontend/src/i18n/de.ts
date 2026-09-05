@@ -3385,6 +3385,12 @@ export const de = {
   "review.checksIncomplete": "Prüfung unvollständig",
   "review.allSourcesRead": "Alle Quellen wurden gelesen.",
   "review.source.mail": "das Postfach",
+  "review.source.calendar": "der Kalender",
+  "review.source.documents": "Dokumente",
+  "review.source.contracts": "Verträge",
+  "review.source.incumbent": "das Altsystem",
+  "analytics.coverageNeverRun":
+    "Noch keine Prüfung gelaufen. Eine frische Installation wurde noch nicht angesehen — etwas anderes als eine, die geprüft und für gesund befunden wurde.",
   "review.source.offers": "Angebote",
   "review.sourcesUnread":
     "Nicht gelesen: {sources}. Die Befunde unten decken nur ab, was geprüft werden konnte.",

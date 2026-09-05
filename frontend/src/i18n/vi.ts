@@ -3351,6 +3351,12 @@ export const vi = {
   "review.checksIncomplete": "Kiểm tra chưa đầy đủ",
   "review.allSourcesRead": "Đã đọc mọi nguồn.",
   "review.source.mail": "hộp thư",
+  "review.source.calendar": "lịch",
+  "review.source.documents": "tài liệu",
+  "review.source.contracts": "hợp đồng",
+  "review.source.incumbent": "hệ thống cũ",
+  "analytics.coverageNeverRun":
+    "Chưa có lần kiểm tra nào chạy. Bản cài đặt mới chưa được xem xét — khác với bản đã được xem và thấy ổn.",
   "review.source.offers": "báo giá",
   "review.sourcesUnread":
     "Chưa đọc: {sources}. Các phát hiện bên dưới chỉ bao gồm những gì kiểm tra được.",

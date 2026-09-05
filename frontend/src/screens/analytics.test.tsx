@@ -224,12 +224,27 @@ describe("the data coverage section", () => {
       .setup()
       .click(await screen.findByRole("button", { name: "Data coverage" }));
     expect(await screen.findByText("Checked")).toBeTruthy();
+    // The source column speaks the reader's words, not the wire's.
+    expect(screen.getByText("the mailbox")).toBeTruthy();
     // An unconnected source is a decision, not a repair — its words say so.
     expect(
       screen.getByText("Not connected — nothing to fix, something to decide"),
     ).toBeTruthy();
     // Only the read source carries a date; the unread one shows absence.
     expect(screen.getByText("—")).toBeTruthy();
+  });
+
+  it("says a fresh installation was never looked at, in words", async () => {
+    vi.stubGlobal("fetch", reportsStub({ coverage: { status: 404 } }));
+    render(<AnalyticsScreen />);
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Data coverage" }));
+    expect(
+      await screen.findByText(
+        "No check has run yet. A fresh installation has not been looked at — different from one that was looked at and found healthy.",
+      ),
+    ).toBeTruthy();
   });
 
   it("hides the tab from a seat the server refuses", async () => {
