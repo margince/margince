@@ -98,6 +98,33 @@ describe("useAccountScan", () => {
     );
   });
 
+  it("holds no scan when the server refuses, rather than a broken one", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = new Request(input, init);
+        calls.push(`${request.method} ${new URL(request.url).pathname}`);
+        return new Response(
+          JSON.stringify({ title: "Unavailable", code: "internal" }),
+          {
+            status: 500,
+            headers: { "content-type": "application/problem+json" },
+          },
+        );
+      }),
+    );
+    mount(true);
+    await waitFor(() =>
+      expect(calls).toContain("POST /v1/organizations/o-1/scan"),
+    );
+    await waitFor(() =>
+      expect(calls).toContain("GET /v1/organizations/o-1/scan"),
+    );
+    await act(async () => {});
+    expect(screen.getByRole("status").textContent).toBe("none");
+  });
+
   it("asks nothing where the page cannot show it", async () => {
     const calls = stubScan([]);
     mount(false);

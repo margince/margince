@@ -17,9 +17,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/orgbrief"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -80,38 +78,6 @@ func Fingerprint(in Input, routingVersion, lang string) (string, error) {
 		floorVersion + "\x00" + promptVersion + "\x00" + routingVersion + "\x00" + lang + "\x00" + string(encoded)))
 	return hex.EncodeToString(sum[:]), nil
 }
-
-// KnownRecords is every (type, id) the model was handed, which is exactly
-// what a finding may cite. Keyed on the pair rather than the id alone, for
-// the brief's reason: a deal id cited as a person passes an id-only check and
-// routes the reader to the wrong screen.
-func KnownRecords(orgID string, in Input) map[claims.Evidence]bool {
-	known := map[claims.Evidence]bool{{EntityType: citeOrganization, EntityID: orgID}: true}
-	for _, deal := range in.Account.OpenDeals {
-		known[claims.Evidence{EntityType: citeDeal, EntityID: deal.ID}] = true
-	}
-	for _, contact := range in.Account.Contacts {
-		known[claims.Evidence{EntityType: citePerson, EntityID: contact.ID}] = true
-	}
-	for _, task := range in.Account.OpenTasks {
-		known[claims.Evidence{EntityType: citeActivity, EntityID: task.ID}] = true
-	}
-	for _, act := range in.Account.Recent {
-		known[claims.Evidence{EntityType: citeActivity, EntityID: act.ID}] = true
-	}
-	for _, message := range in.Messages {
-		known[claims.Evidence{EntityType: citeActivity, EntityID: message.ID.String()}] = true
-	}
-	return known
-}
-
-// The citable kinds, derived from the contract's enum rather than re-spelled.
-var (
-	citeOrganization = string(crmcontracts.OrganizationBriefEvidenceEntityTypeOrganization)
-	citeDeal         = string(crmcontracts.OrganizationBriefEvidenceEntityTypeDeal)
-	citeActivity     = string(crmcontracts.OrganizationBriefEvidenceEntityTypeActivity)
-	citePerson       = string(crmcontracts.OrganizationBriefEvidenceEntityTypePerson)
-)
 
 // message finds the exchange a finding cites, by the id the model was given.
 func (in Input) message(id string) (MessageIn, bool) {

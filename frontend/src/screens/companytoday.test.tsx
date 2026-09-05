@@ -490,6 +490,24 @@ describe("the account scan on the needs list", () => {
     ).toBeTruthy();
   });
 
+  it("says when a read the budget put off resumes", () => {
+    show(
+      { ...BASE, suggestions: [ruleRow] },
+      {
+        scan: {
+          organization_id: "o-1",
+          state: "queued",
+          resumes_at: "2026-08-07T09:30:00Z",
+          findings: [ruleRow],
+          findings_dropped: 0,
+        },
+      },
+    );
+    expect(
+      screen.getByText(/Reading resumes .*the AI budget deferred it/),
+    ).toBeTruthy();
+  });
+
   it("says why the model did not write the rows when the read degraded", () => {
     show(
       { ...BASE, suggestions: [ruleRow] },
