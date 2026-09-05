@@ -120,6 +120,18 @@ export type BoardColumn<Record extends BoardRecord = BoardDeal> = {
    */
   sumHidden?: boolean;
   /**
+   * WHY the sum is hidden, as the words to print in its place.
+   *
+   * The default says the stage mixes currencies, which was the only reason a
+   * total could go missing when this column was written. It is not the only one
+   * now: a board whose card list and whose totals query measure DIFFERENT
+   * populations has no figure it may honestly print either, and printing the
+   * mixed-currency sentence there would state a reason that is not true.
+   *
+   * A caller that hides a sum for its own reason passes its own words.
+   */
+  sumHiddenReason?: string;
+  /**
    * Draw the column narrow: its head and its count, and none of its cards.
    *
    * For a stage that is a DESTINATION more than a queue — a lead board's
@@ -440,7 +452,7 @@ function BoardLayout<Record extends BoardRecord>({
                   euros, dollars and dong, five of six columns are this state. */}
               {money && column.sumHidden && (
                 <span className="board-col-weighted">
-                  {t("board.mixedCurrencies")}
+                  {column.sumHiddenReason ?? t("board.mixedCurrencies")}
                 </span>
               )}
             </div>

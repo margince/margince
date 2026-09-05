@@ -2399,6 +2399,13 @@ export const en = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Stalled only",
   "deals.filterOwnerMe": "My deals",
+  // Both reasons say "loaded only" rather than naming the sum alone: with no
+  // server aggregate the column's figure is the cards LOADED, and the board
+  // pages on demand, so that number grows as the reader presses Load more.
+  // Naming only the total would leave the count reading as final.
+  "deals.totalsNeedOwnerFilter":
+    "Loaded only — filter to My deals for the total",
+  "deals.totalsNoTagFilter": "Loaded only — no total while a tag filters",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Any partner",
   "deals.filterForecast": "Forecast",
