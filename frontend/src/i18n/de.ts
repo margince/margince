@@ -4573,7 +4573,7 @@ export const de = {
   "connectors.originUnreachable": "Antwortet nicht",
   "connectors.originUnchecked": "Noch nicht gepr\u00fcft",
   "connectors.sub":
-    "Die Postfächer und Kalender, die dein CRM automatisch füllen. Trenne eines bei Bedarf — bereits erfasste Datensätze bleiben.",
+    "Postfächer und Kalender, die dein CRM automatisch füllen. Trenne eines bei Bedarf — bereits erfasste Datensätze bleiben.",
   "connectors.loading": "Verbindungen werden geladen…",
   "connectors.loadFailed": "Verbindungen konnten nicht geladen werden.",
   "connectors.empty": "Noch kein Postfach und kein Kalender verbunden.",

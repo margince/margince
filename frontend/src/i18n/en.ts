@@ -4650,7 +4650,7 @@ export const en = {
   "connectors.originUnreachable": "Not answering",
   "connectors.originUnchecked": "Not checked yet",
   "connectors.sub":
-    "The mailboxes and calendars capturing into your CRM. Disconnect any one when you need to — already-captured records stay.",
+    "Mailboxes and calendars capturing into your CRM. Disconnect any one when you need to — already-captured records stay.",
   "connectors.loading": "Loading your connections…",
   "connectors.loadFailed": "Couldn't load your connections.",
   "connectors.empty": "No mailbox or calendar is connected yet.",
