@@ -161,14 +161,21 @@ func NormalizeFactValueKey(value string) string {
 	// its key is empty — which is what lets the producer drop it rather than
 	// stage a fact nothing can dedupe. Checked before the cut, because
 	// collapsing has taken the separator's leading space away.
-	if collapsed == factValueDash || strings.HasPrefix(collapsed, factValueDash+" ") {
+	//
+	// On the DASH, with no space required. A model that writes "—description"
+	// has said the same thing as " — description", and asking for the space
+	// would read the whole line as a name.
+	if strings.HasPrefix(collapsed, factValueDash) {
 		return ""
 	}
 	name, _, _ := strings.Cut(collapsed, factValueSeparator)
 	// And a value that ENDS on it is a name with no description. The cut finds
 	// nothing there for the same reason — collapsing took the trailing space —
-	// so the dash is still on the name and comes off here.
-	name = strings.TrimSuffix(name, " "+factValueDash)
+	// so the dash is still on the name and comes off here, again without
+	// requiring the space: "Capital One—" names the same customer as
+	// "Capital One — ", and keying them apart is the dedupe miss this whole
+	// function exists to avoid.
+	name = strings.TrimSuffix(name, factValueDash)
 	return strings.ToLower(strings.TrimSpace(name))
 }
 

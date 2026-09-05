@@ -19,6 +19,9 @@ func TestNormalizeFactValueKeyReducesAValueToItsNameIdentity(t *testing.T) {
 		"  crm   ROLLOUT  ":                 "crm rollout",
 		"Data Migration":                    "data migration",
 		" — only a description":             "",
+		// The same shape written tight, which is a description with no name
+		// however the dash is spaced.
+		"—only a description": "",
 	}
 	for value, want := range cases {
 		if got := NormalizeFactValueKey(value); got != want {
@@ -46,6 +49,12 @@ func TestTheKeyIsTheSameWhicheverSideTrims(t *testing.T) {
 		"Capital One  —  ",
 		"  Capital One — a bank  ",
 		"Capital One",
+		// Without the space the prompt asks for. Recognised at the ENDPOINTS
+		// only, and that is the whole of what is unambiguous: a dash with
+		// nothing after it has no description, and one with nothing before it
+		// has no name. A dash in the MIDDLE could be either a separator or a
+		// name that contains one, so it is left alone rather than guessed at.
+		"Capital One—",
 	} {
 		raw := NormalizeFactValueKey(value)
 		trimmed := NormalizeFactValueKey(strings.TrimSpace(value))
