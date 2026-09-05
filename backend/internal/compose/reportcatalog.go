@@ -160,3 +160,21 @@ func unservedPlanArguments(planArgs json.RawMessage) []string {
 	slices.Sort(unserved)
 	return unserved
 }
+
+// reportPlanVocabulary is what the engine accepts from a plan beyond the
+// per-report names: the aggregate functions.
+//
+// DERIVED from the engine's own vocabulary for the reason the catalog above is.
+// The tool listed these five by hand, and when the engine grew median and p75
+// the list stayed at five — so stage-age and win-loss came to DEFAULT to a
+// percentile that no agent could ask for, and nothing failed, because a
+// hand-written list cannot notice what it does not contain.
+//
+// Sorted, so the rendered schema is byte-stable across processes.
+func reportPlanVocabulary() agents.ReportPlanVocabulary {
+	functions := []string{
+		aggFnCount, aggFnSum, aggFnAvg, aggFnMin, aggFnMax, aggFnMedian, aggFnP75,
+	}
+	slices.Sort(functions)
+	return agents.ReportPlanVocabulary{Functions: functions}
+}

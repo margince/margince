@@ -170,7 +170,9 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// call was staged in. Nothing here decides anything the person behind the
 	// passport could not decide in the app.
 	agents.RegisterApprovalTools(registry, approvalQueue(approvalsSvc))
-	agents.RegisterReportTool(registry, nativeOnlyReportRunner(sorMode, reportToolRunner(newReportEngine(pool))), reportToolCatalog())
+	agents.RegisterReportTool(registry,
+		nativeOnlyReportRunner(sorMode, reportToolRunner(newReportEngine(pool))),
+		reportToolCatalog(), reportPlanVocabulary())
 	// The vocabulary that plan is written in, as a TOOL and not only as the
 	// margince://schema/reports resource — same reason describe_query_vocabulary
 	// exists next to query_workspace, and one reason more: the Surface-B runner

@@ -749,3 +749,96 @@ func sortedKeys[V any](m map[string]V) []string {
 	sort.Strings(out)
 	return out
 }
+
+// A grant an operator narrowed BEFORE the backfill ran survives it.
+//
+// The two arms above prove convergence: replay every write over a document that
+// lacks the object, and the end state is the seeded matrix. Neither asks what
+// happens when the object is already THERE and set to something the seed does
+// not say — which is the case an installation actually presents, because
+// `role_admin` and its twelve siblings exist to be delegated, and delegating one
+// means an operator narrowing or widening it by hand.
+//
+// The guard that answers this is the `AND NOT (permissions -> 'objects') ? '…'`
+// clause on every statement. It is easy to drop and impossible to see: without
+// it every UPDATE still lands on exactly the roles the seed names, the
+// convergence arms still pass, and the only difference is that an installation's
+// deliberate setting is silently overwritten on upgrade. So the case is asserted
+// here rather than inferred from the SQL.
+func TestABackfillLeavesAnOperatorsOwnGrantAlone(t *testing.T) {
+	writes := rolePermissionMigrations(t)
+	if len(writes) == 0 {
+		t.Fatal("no migration writes role.permissions — the detection has gone blind")
+	}
+
+	e := apptest.SetupApp(t)
+	ctx := context.Background()
+	bootstrapInstallation(t, e)
+
+	// The narrowing an operator would actually perform: read on an object the
+	// seed grants nobody but admin, handed to the role that reads the roster.
+	// Deliberately NOT the seeded value, so an overwrite is visible as a
+	// difference rather than as a coincidence.
+	const narrowed = `{"create": false, "read": true, "update": false, "delete": false}`
+	var touched []string
+	for _, write := range writes {
+		touched = append(touched, write.objects...)
+	}
+	rewindTo(ctx, t, e, touched)
+
+	// Only objects the seed still names. A migration may also RETIRE an object —
+	// `quota` was removed when a revenue target stopped being a record — and a
+	// retirement deleting the operator's setting along with the object is the
+	// correct behaviour, not a preservation failure.
+	seeded := readSeededDefaults(t)
+	current := map[string]bool{}
+	for _, document := range seeded {
+		for object := range document.Objects {
+			current[object] = true
+		}
+	}
+	settings := map[string]string{}
+	for _, object := range touched {
+		if !current[object] {
+			continue
+		}
+		settings[object] = narrowed
+		if _, err := e.Owner.Exec(ctx,
+			`UPDATE role SET permissions = jsonb_set(permissions, ARRAY['objects', $1], $2::jsonb, true)
+			 WHERE is_system AND key = 'ops'`, object, narrowed); err != nil {
+			t.Fatalf("recording the operator's setting for %q: %v", object, err)
+		}
+	}
+
+	for _, write := range writes {
+		for _, statement := range write.statements {
+			if _, err := e.Owner.Exec(ctx, statement); err != nil {
+				t.Fatalf("replaying %s: %v\n%s", write.name, err, statement)
+			}
+		}
+	}
+
+	var live json.RawMessage
+	if err := e.Owner.QueryRow(ctx,
+		`SELECT permissions -> 'objects' FROM role WHERE key = 'ops'`).Scan(&live); err != nil {
+		t.Fatalf("reading the operator's document back: %v", err)
+	}
+	var got map[string]json.RawMessage
+	if err := json.Unmarshal(live, &got); err != nil {
+		t.Fatalf("decoding the operator's document: %v", err)
+	}
+	for _, object := range sortedKeys(settings) {
+		if len(got[object]) == 0 {
+			t.Errorf("a backfill DELETED the operator's own grant on %q — the object is gone "+
+				"from the document entirely, not merely reset to the seeded value", object)
+			continue
+		}
+		if !sameJSON(t, json.RawMessage(narrowed), got[object]) {
+			t.Errorf("a backfill overwrote the operator's own grant on %q: it is now %s, want %s.\n"+
+				"The statement writing that object is missing its "+
+				"`AND NOT (permissions -> 'objects') ? '%s'` guard, so an upgrade "+
+				"silently reverts a setting the installation chose.",
+				object, got[object], narrowed, object)
+		}
+	}
+}
