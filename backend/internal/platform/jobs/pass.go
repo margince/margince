@@ -47,10 +47,11 @@ type Pass struct {
 //
 // The next time is taken from a row River has ALREADY scheduled where there is
 // one, because that is the fire time rather than a projection of it. Failing
-// that it is the last completed run plus the cadence, which is the same number
-// River's own interval produces: a periodic pass starts one interval after the
-// previous one started, and a pass that took a minute moves the answer by a
-// minute. A kind with neither — nothing scheduled, nothing completed inside
+// that it is the last completed run's OWN moment plus the cadence, which is the
+// number River's interval produces: the ticks are an interval apart from each
+// other, not from when the work happened to finish. Projecting from finalized_at
+// instead would run late by however long the pass took — up to the twenty
+// minutes these two are allowed, on the screen that exists to say when. A kind with neither — nothing scheduled, nothing completed inside
 // River's retention — answers nil, and the caller says how often instead of
 // when.
 //
@@ -81,17 +82,18 @@ func PassFor(ctx context.Context, pool *pgxpool.Pool, kind string) (Pass, error)
 		       (SELECT min(scheduled_at) FROM river_job
 		         WHERE kind = $1 AND state::text IN ('available','scheduled','retryable')
 		           AND scheduled_at > now()),
-		       (SELECT max(finalized_at) FROM river_job
-		         WHERE kind = $1 AND state::text = 'completed')`
-	var scheduled, completed *time.Time
-	if err := pool.QueryRow(ctx, q, kind).Scan(&out.Running, &out.Queued, &scheduled, &completed); err != nil {
+		       (SELECT scheduled_at FROM river_job
+		         WHERE kind = $1 AND state::text = 'completed'
+		         ORDER BY scheduled_at DESC LIMIT 1)`
+	var scheduled, ranAt *time.Time
+	if err := pool.QueryRow(ctx, q, kind).Scan(&out.Running, &out.Queued, &scheduled, &ranAt); err != nil {
 		return Pass{}, fmt.Errorf("jobs: reading when %q next runs: %w", kind, err)
 	}
 	switch {
 	case scheduled != nil:
 		out.NextAt = scheduled
-	case completed != nil && out.Every > 0:
-		next := completed.Add(out.Every)
+	case ranAt != nil && out.Every > 0:
+		next := ranAt.Add(out.Every)
 		out.NextAt = &next
 	}
 	return out, nil

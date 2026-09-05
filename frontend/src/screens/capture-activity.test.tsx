@@ -16,6 +16,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
+import { formatDateTime } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { CaptureActivityTab } from "./capture-activity";
 
@@ -430,7 +432,17 @@ describe("capture activity", () => {
     );
     const note = await screen.findByTestId("verdict-pass-senders");
     expect(note).toHaveTextContent(/every 60 minutes/i);
-    expect(note).toHaveTextContent(/next pass/i);
+    // The TIME itself, not only the label around it: a note that dropped the
+    // timestamp, or printed a raw ISO string, would satisfy "next pass" and
+    // tell the reader nothing.
+    //
+    // Computed through the same formatter rather than written out, because a
+    // literal would be a claim about the runner's zone — the reader's own is
+    // what the component renders in, and a test that pinned one would pass in
+    // CI and fail on a laptop east of UTC.
+    expect(note).toHaveTextContent(
+      formatDateTime("2026-08-15T22:21:00Z", "en", viewerZone()),
+    );
   });
 
   it("says a pass is running rather than naming a time it is already past", async () => {

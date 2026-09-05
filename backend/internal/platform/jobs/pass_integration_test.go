@@ -56,8 +56,20 @@ func TestWithNothingScheduledThePassIsTheLastRunPlusItsCadence(t *testing.T) {
 
 	// Two completed runs: the LATEST is the one the next pass follows, and a
 	// read taking the earliest would name a time already past.
-	seedJob(ctx, t, pool, seed{Kind: aScheduledKind, State: "completed", CreatedAt: ran.Add(-time.Hour)})
-	seedJob(ctx, t, pool, seed{Kind: aScheduledKind, State: "completed", CreatedAt: ran})
+	//
+	// Each is seeded with its scheduled_at APART from when it finished — the
+	// helper's CreatedAt sets finalized_at and Scheduled sets the tick — because
+	// the tick is what the interval measures from. A read that projected off the
+	// finish would run late by however long the pass took, which for these two
+	// kinds is up to the twenty minutes their timeout allows.
+	seedJob(ctx, t, pool, seed{
+		Kind: aScheduledKind, State: "completed",
+		Scheduled: ran.Add(-time.Hour), CreatedAt: ran.Add(-time.Hour).Add(9 * time.Minute),
+	})
+	seedJob(ctx, t, pool, seed{
+		Kind: aScheduledKind, State: "completed",
+		Scheduled: ran, CreatedAt: ran.Add(9 * time.Minute),
+	})
 
 	pass, err := jobs.PassFor(ctx, pool, aScheduledKind)
 	if err != nil {
@@ -65,7 +77,8 @@ func TestWithNothingScheduledThePassIsTheLastRunPlusItsCadence(t *testing.T) {
 	}
 	want := ran.Add(time.Hour)
 	if pass.NextAt == nil || !pass.NextAt.Equal(want) {
-		t.Errorf("next = %v, want the last run plus the cadence %v", pass.NextAt, want)
+		t.Errorf("next = %v, want the last TICK plus the cadence %v — a projection off the "+
+			"finish runs late by however long the pass took", pass.NextAt, want)
 	}
 }
 

@@ -31,8 +31,16 @@ export function VerdictPassNote({
   const plural = usePlural();
   const { locale } = useLocale();
   if (!clock || clock.every_seconds <= 0) {
-    // No clock runs this pass, or this deployment cannot say. Silence is the
-    // honest answer: a cadence nobody keeps is worse than no sentence at all.
+    // NOTHING TO SAY, said by saying nothing.
+    //
+    // Two shapes reach here and neither is a status: a server too old to send
+    // the field at all, and a deployment where no clock runs this pass. Printing
+    // "unavailable" would turn an absent field into a claim about the pipeline,
+    // and a reader cannot act on either one.
+    //
+    // A clock that HAS a cadence and no next time is a different case and does
+    // not come here: it renders the cadence, which is the true half — how often
+    // this runs is knowable even where the next moment is not.
     return null;
   }
   const minutes = Math.round(clock.every_seconds / 60);
