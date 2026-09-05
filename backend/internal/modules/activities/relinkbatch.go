@@ -259,6 +259,16 @@ func relinkedChangedFields(entityType string, entityID ids.UUID) crmcontracts.Pu
 // No pin is the ordinary case and is not an error: a human's relink through the
 // app conditions on nothing, and a static-tier agent call has nothing to
 // condition on either.
+//
+// What makes that safe is that the callers who DO owe a version cannot arrive
+// without one. A tier resolved by reading the record is a verdict about the
+// record as it was, and every tool that resolves one takes its pin from
+// agents.pinForWrite — held by TestEveryReadResolvedToolPinsItsWrite
+// (backend/gates/agentwritepin_test.go), which derives its corpus from the
+// resolver hook so a fourth such tool is subject without anybody adding it. The
+// REST door carries the same version as If-Match (compose/agentgate.go). So an
+// absent pin here means nobody read anything to decide this call, not that a
+// reading was taken and dropped.
 func relinkMeetsItsPin(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, held bool) error {
 	// held=true skips the compare: every write to a held row is refused by
 	// activity_refuse_restricted_mutation below regardless of version, so a
