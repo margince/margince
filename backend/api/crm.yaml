@@ -38835,6 +38835,14 @@ components:
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         owner_id: { type: [string, 'null'], format: uuid }
+        no_champion:
+          type: [boolean, 'null']
+          description: |
+            `true` when the account has a buying committee and nobody engaged on it holds
+            the champion seat. Null is not `false`: it is sent only when the answer is both
+            known and negative, and stays absent for a committee the caller may not read in
+            full, for a deal carrying no seats at all, and for a server that does not assess
+            coverage. See `WorklistDealFacts.no_champion`, which carries the same fact out.
 
     AttentionRelationshipFacts:
       type: object
@@ -40096,6 +40104,19 @@ components:
         expected_minor_base: { type: [integer, 'null'], format: int64, description: 'The deal amount converted to the base currency, NOT weighted by win_probability. Null when the amount or the conversion rate is unknown.' }
         expected_close_date: { type: [string, 'null'], format: date }
         quiet_days: { type: [integer, 'null'], minimum: 0 }
+        no_champion:
+          type: [boolean, 'null']
+          description: |
+            `true` when the account has a buying committee and nobody engaged on it holds
+            the champion seat — a deal drifting because nobody INSIDE is arguing for it,
+            which needs a different move from the rep than a deal nobody outside has touched.
+
+            Null is not `false`. It is sent only when the answer is both known and negative,
+            and stays absent in the three cases that would otherwise be rounded down to a
+            finding: a committee the caller may not read in full (a champion they cannot see
+            is still a champion), a deal carrying no seats at all (no committee, so no gap),
+            and a server that does not assess coverage. A client MUST NOT render an absent
+            value as "nobody is carrying this".
 
     WorklistSourceUnavailable:
       type: object

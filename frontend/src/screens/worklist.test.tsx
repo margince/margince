@@ -402,6 +402,89 @@ describe("what the ranked queue tells a reader", () => {
     expect(container.textContent).not.toContain("worklist.because");
   });
 
+  // The reasons past the third go behind a tap — NOT away.
+  //
+  // A cap that dropped them was tried and abandoned: the reasons that matter
+  // most are appended LAST, because they are applied late. `pinned` drives the
+  // row to the top and is appended by applyPins after everything else;
+  // `expected_revenue` is absorbed onto a waiting row last and is a ranking
+  // comparator. A head-of-list cut takes exactly the facts that decided where
+  // the row sits.
+  it("folds the reasons past the third rather than dropping them", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            title: "A buyer is waiting on a funded deal",
+            source: "customer_waiting",
+            because: [
+              { kind: "buyer_wrote_last" },
+              { kind: "stale" },
+              { kind: "no_reply_history" },
+              { kind: "asks_nothing" },
+              // Absorbed from the deal this wait suppressed, appended last.
+              { kind: "expected_revenue" },
+            ],
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+      }),
+    );
+    const { container } = renderWorklist();
+
+    await screen.findByText("A buyer is waiting on a funded deal");
+    // The first three are said outright.
+    for (const kind of [
+      "buyer_wrote_last",
+      "stale",
+      "no_reply_history",
+    ] as const) {
+      expect(container.textContent).toContain(en[`worklist.because.${kind}`]);
+    }
+    // The rest are PRESENT — folded, never discarded. The one that decided the
+    // rank is in here, which is the whole reason a cap was wrong.
+    expect(container.textContent).toContain(
+      en["worklist.because.expected_revenue"],
+    );
+    expect(container.textContent).toContain(
+      en["worklist.because.asks_nothing"],
+    );
+    // And the fold names HOW MANY, so a reader can decide whether to spend the
+    // tap. "+2 more reasons", not "more".
+    expect(container.textContent).toContain("2");
+    expect(
+      container.querySelector("details.worklist-row-because-fold"),
+    ).not.toBeNull();
+  });
+
+  // Three reasons still fit on one line at 390px, so folding them would cost a
+  // tap and save nothing. Measured 2026-09-05: two and three are both 19px; the
+  // fourth wraps to 37px.
+  it("draws no fold when every reason fits", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            title: "A task",
+            because: [
+              { kind: "overdue" },
+              { kind: "due_today" },
+              { kind: "unassigned" },
+            ],
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+      }),
+    );
+    const { container } = renderWorklist();
+
+    await screen.findByText("A task");
+    expect(container.textContent).toContain(en["worklist.because.unassigned"]);
+    expect(
+      container.querySelector("details.worklist-row-because-fold"),
+    ).toBeNull();
+  });
+
   it("offers a verb that goes somewhere, and none that does not", async () => {
     stub(
       day({

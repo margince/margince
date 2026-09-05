@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCan } from "../app/capability";
 import { Badge, DataTable, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem, useMe } from "./common";
 
 // Whether the model lanes are answering.
 //
@@ -22,8 +23,19 @@ type RungHealth = components["schemas"]["AiRungHealth"];
 export function AiHealthCard() {
   const t = useT();
   const { locale } = useLocale();
+  // `GET /ai/health` is gated on `automation:update` server-side, which the
+  // seeded manager, rep and read_only roles do not hold — and this page opens
+  // on `automation:read`, which they do. Asking here is what keeps a reader who
+  // may not have this from being told their installation is broken when their
+  // ROLE is what stopped them: without it the refusal arrives as a red failure
+  // with a Retry that cannot succeed, and `refetchInterval` re-issues the
+  // doomed call every minute for as long as the tab is open. The keys and calls
+  // cards beside it answer the same question the same way.
+  const canSee = useCan("automation", "update");
+  const me = useMe();
   const query = useQuery({
     queryKey: ["ai-health"],
+    enabled: canSee,
     queryFn: async () => {
       const { data, error } = await api.GET("/ai/health");
       if (error) throwProblem(error);
@@ -33,8 +45,30 @@ export function AiHealthCard() {
     // page open watches it rather than reading a snapshot from when they
     // arrived. One minute against a one-hour window: often enough to notice a
     // lane die, rare enough to cost nothing.
-    refetchInterval: 60_000,
+    //
+    // Off with the grant, not merely disabled with it: `enabled` stops the poll
+    // today, and an interval left standing is what would resume it the moment
+    // the flag flipped mid-session.
+    refetchInterval: canSee ? 60_000 : false,
   });
+
+  if (!canSee) {
+    // Withheld rather than absent, and the card keeps its place: a missing
+    // health panel on a page that opens for a reader would read as "the lanes
+    // are fine", which is a different claim from "this is not yours to read".
+    // Behind the /me probe, because every grant reads false while it is in
+    // flight and an admin must not see this line flash on every load.
+    return (
+      <Panel title={t("aiHealth.title")}>
+        <PanelBody>
+          <p className="settings-panel-sub">{t("aiHealth.sub")}</p>
+          <QueryGate query={me} pendingLabel={t("aiHealth.title")}>
+            {() => <EmptyState>{t("aiHealth.withheld")}</EmptyState>}
+          </QueryGate>
+        </PanelBody>
+      </Panel>
+    );
+  }
 
   return (
     <Panel title={t("aiHealth.title")}>

@@ -9,7 +9,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { AiHealthCard } from "./ai-health";
 
@@ -38,7 +38,16 @@ const DEAD: RungHealth = {
   last_call_at: "2026-09-01T09:10:00Z",
 };
 
-function renderCard(rungs: RungHealth[], windowHours = 1) {
+// The grant `GET /ai/health` is gated on server-side. Named rather than
+// implied: a fixture that grants nothing renders the withheld state, and every
+// claim below about what the table says would then pass against an empty panel.
+const OPERATOR: GrantSpec = { automation: ["read", "update"] };
+
+function renderCard(
+  rungs: RungHealth[],
+  windowHours = 1,
+  allow: GrantSpec = OPERATOR,
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -51,7 +60,7 @@ function renderCard(rungs: RungHealth[], windowHours = 1) {
       const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
       const body =
         key === "GET /me"
-          ? meFixture({})
+          ? meFixture({ allow })
           : { window_hours: windowHours, rungs };
       return new Response(JSON.stringify(body), {
         status: 200,
@@ -103,5 +112,35 @@ describe("model lane health", () => {
     expect(
       await screen.findByText(/no model was called in the last 1 hour/i),
     ).toBeInTheDocument();
+  });
+
+  it("withholds the lanes from a reader whose role cannot read them", async () => {
+    // The AI page opens on `automation:read`, which every seeded role holds,
+    // while this card's endpoint demands `automation:update`, which manager,
+    // rep and read_only do not. Without the card's own gate the refusal
+    // arrives as a red failure telling that reader the installation is
+    // broken, and the poll re-issues the doomed call every minute.
+    renderCard([ANSWERING], 1, { automation: ["read"] });
+    expect(
+      await screen.findByText(/only an operator can read whether/i),
+    ).toBeInTheDocument();
+    // The lane that WOULD have rendered is absent, so this is the withheld
+    // state and not merely a card that failed to draw its table.
+    expect(screen.queryByText("local_small")).not.toBeInTheDocument();
+  });
+
+  it("asks the server for nothing it may not read", async () => {
+    // The half a rendered EmptyState cannot show: `enabled` is what keeps a
+    // withheld reader from a 403 they cannot act on, and a refetchInterval
+    // left standing would resume the call the moment a grant changed.
+    renderCard([ANSWERING], 1, { automation: ["read"] });
+    await screen.findByText(/only an operator can read whether/i);
+    const calls = (
+      globalThis.fetch as unknown as { mock: { calls: unknown[][] } }
+    ).mock.calls;
+    const asked = calls.map((call) =>
+      String(call[0] instanceof Request ? call[0].url : call[0]),
+    );
+    expect(asked.some((url) => url.includes("/ai/health"))).toBe(false);
   });
 });

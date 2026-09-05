@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // UnsubscribeLinker resolves a recipient address to their preference-center
@@ -187,6 +188,56 @@ func (d sendDeliverability) htmlFooter() string {
 		html.EscapeString(d.words.ManagePreferencesLabel) + `</a></p>`
 }
 
+// unsubscribeSurface says whether this message offers a way to stop, and which
+// topic that offer is about.
+//
+// TWO fields because they answer two questions and the old single purpose key
+// conflated them: whether an unsubscribe surface belongs on this message at all
+// (the category), and which consent purpose the link should point at (the
+// marketing topic). A marketing send names its topic in MarketingPurpose; the
+// deprecated ConsentPurpose is still read as a fallback so an older caller that
+// names only a key keeps the surface it had.
+type unsubscribeSurface struct {
+	category   commsauthz.Category
+	purposeKey string
+}
+
+// surfaceFor reads the unsubscribe surface off a send's own fields.
+//
+// The topic wins over the deprecated key, and both are read: a marketing send
+// names its topic in MarketingPurpose, while an older caller that names only a
+// consent key keeps pointing the link where it always did.
+func surfaceFor(category commsauthz.Category, marketingPurpose, consentPurpose string) unsubscribeSurface {
+	key := marketingPurpose
+	if key == "" {
+		key = consentPurpose
+	}
+	return unsubscribeSurface{category: category, purposeKey: key}
+}
+
+// carries reports whether this message offers an unsubscribe at all.
+//
+// A message with NO category falls back to the deprecated key, so a caller that
+// predates the category — an MCP tool, a stored scheduled send — keeps the
+// behaviour it was written against rather than silently losing or gaining a
+// footer.
+func (u unsubscribeSurface) carries() bool {
+	if u.category != "" {
+		return u.category.CarriesUnsubscribe()
+	}
+	return u.purposeKey != "" && !lockedPurposeKey(u.purposeKey)
+}
+
+// lockedPurposeKey mirrors consent.LockedPurpose for the legacy arm above.
+// activities may not import consent, and the composition root injects the
+// linker rather than the rule, so the one key that has ever been locked is
+// named here.
+//
+// Held by: TestTheLegacyLockedKeyAgreesWithConsent (backend/gates/unsubscribesurface_test.go)
+func lockedPurposeKey(key string) bool {
+	return strings.EqualFold(strings.TrimSpace(key), "transactional")
+}
+
 // deliverability derives what a send must carry for a mailbox provider to
 // accept it as bulk mail: the RFC 8058 List-Unsubscribe header value and the
 // human-visible footer, both built from ONE token so they cannot diverge.
@@ -202,13 +253,23 @@ func (d sendDeliverability) htmlFooter() string {
 // the refusal above counts who RECEIVES the rendered message rather than how
 // they were addressed.
 func (s *Store) deliverability(
-	ctx context.Context, body, subject string, recipients []string, purposeKey string,
+	ctx context.Context, body, subject string, recipients []string, surface unsubscribeSurface,
 ) (sendDeliverability, error) {
 	untokenized := sendDeliverability{transmitted: body, recorded: body}
 	if s.unsubscribe == nil || len(recipients) == 0 {
 		return untokenized, nil
 	}
-	token, ok, err := s.unsubscribe.UnsubscribeToken(ctx, recipients[0], purposeKey)
+	// WHICH MESSAGES CARRY THE SURFACE AT ALL, asked before the linker.
+	//
+	// It reads the CATEGORY and not the purpose key. The key answer was
+	// "anything but the locked transactional purpose", which has no meaning for
+	// a send that carries no key — and a composer that omits one, which is now
+	// the ordinary case for a reply, would have every message come out wearing
+	// an offer to unsubscribe from a conversation the recipient started.
+	if !surface.carries() {
+		return untokenized, nil
+	}
+	token, ok, err := s.unsubscribe.UnsubscribeToken(ctx, recipients[0], surface.purposeKey)
 	if err != nil {
 		return sendDeliverability{}, err
 	}
@@ -234,8 +295,8 @@ func (s *Store) deliverability(
 	}
 	lang := s.footerLanguage(ctx, body, subject)
 	words := mailcopy.For(string(lang))
-	live := unsubscribeLinksFor(s.publicBaseURL, token, purposeKey, lang)
-	redacted := unsubscribeLinksFor(s.publicBaseURL, redactedToken, purposeKey, lang)
+	live := unsubscribeLinksFor(s.publicBaseURL, token, surface.purposeKey, lang)
+	redacted := unsubscribeLinksFor(s.publicBaseURL, redactedToken, surface.purposeKey, lang)
 	return sendDeliverability{
 		listUnsubscribe: listUnsubscribeHeader(live.oneClick),
 		links:           live,

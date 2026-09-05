@@ -70,6 +70,18 @@ type RiskyDeal struct {
 	// CloseOverdue is set when the expected close date has already passed.
 	CloseOverdue      bool
 	ExpectedCloseDate *time.Time
+	// NoChampion says the account has a committee and nobody engaged on it
+	// holds the champion seat — a deal drifting because nobody inside is
+	// arguing for it, which is a different problem from one nobody outside has
+	// touched and needs a different move from the rep.
+	//
+	// Nil rather than false when the reader could not see every seat, or when
+	// the deal has no committee at all. Both would render as "nobody is
+	// carrying this", and neither is that: a champion the reader may not read
+	// is still a champion, and a deal with no seats has no coverage gap to
+	// report. A tri-state here is what keeps the lane from turning a boundary
+	// into a finding.
+	NoChampion *bool
 }
 
 // Decay is the reader's own relationships that have gone silent.
