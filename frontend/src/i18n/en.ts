@@ -3269,6 +3269,32 @@ export const en = {
   "compose.whyThisDraft": "Why this draft?",
   "compose.body": "Body",
   "compose.bodyHint": "Click into the text to edit it.",
+  "compose.transport": "How to send",
+  "compose.transportEmail": "Email",
+  "compose.intentLabel": "What should it be about?",
+  "compose.recipientHint": "Name or address",
+  "compose.subjectHint": "What it is about",
+  "compose.bodyPlaceholder": "Write the message…",
+  "compose.bcc": "Bcc",
+  "compose.bccHint":
+    "The named recipients cannot see these addresses, and cannot see that anyone else was copied.",
+  "compose.threadGone":
+    "That conversation can no longer be answered, so this opened on the usual way of writing to them. Check the recipient before you send.",
+  "compose.files": "Files",
+  "compose.attach": "Attach",
+  "compose.filesOnRecord": "On this record",
+  "compose.filesLoading": "Reading the record's files…",
+  "compose.filesNone": "No files are filed on this record yet.",
+  "compose.filesFull":
+    "{most} files is the most one message can carry. Send the rest as a second message.",
+  "compose.fileRemove": "Do not send {filename}",
+  "compose.fileUpload": "Send a new file",
+  "compose.fileUploadHint":
+    "It is filed on this record first, so the timeline keeps what the message carried.",
+  "compose.fileUploadEmpty": "Drop a file here, or choose one",
+  "compose.fileUploading": "Filing the file…",
+  "compose.fileStoredUnnamed":
+    "The file is on the record, but we could not read back which one it is. Attach it from the list above.",
   "calendar.previousMonth": "Previous month",
   "calendar.nextMonth": "Next month",
   "compose.schedulePick": "Pick date and time",
@@ -3330,7 +3356,6 @@ export const en = {
     "This message cannot be sent, and it is not something a seat here can overrule.",
   "compose.derivedReply":
     "This continues their own message, so it needs no reason from you.",
-  "compose.sendLaterLabel": "Send later (optional)",
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Draft email",
   "compose.threadHeading": "This conversation",
@@ -3390,7 +3415,6 @@ export const en = {
   "compose.missingSubject": "Give this email a subject.",
   "compose.missingBody": "Write the message before sending it.",
   "compose.missingWhy": "Say why you are writing to them.",
-  "compose.removeRecipient": "Remove {recipient}",
   "compose.actionFailed": "The request failed. Please try again.",
 
   "tasks.complete": "Done",
@@ -7720,51 +7744,16 @@ export const en = {
   "person.rail.nothingCaptured": "Nothing captured yet.",
   "person.rail.viewAllActivity": "View all activity",
   "person.drawer.close": "Close",
-  "person.composer.title": "Draft follow-up · {name}",
-  "person.composer.to": "To",
-  "person.composer.transport": "How to send",
-  "person.composer.transportEmail": "Email",
-  "person.composer.toConversation": "Continues your {transport} conversation",
-  "person.composer.subject": "Subject",
-  "person.composer.bcc": "Bcc",
-  "person.composer.bccPlaceholder":
-    "One address per line — they receive the message and no other recipient sees them",
-  "person.composer.body": "Message",
   "richtext.bold": "Bold",
   "richtext.italic": "Italic",
   "richtext.bulletList": "Bulleted list",
   "richtext.numberList": "Numbered list",
   "richtext.link": "Link",
   "richtext.linkPrompt": "Web address for this link (leave empty to remove it)",
-  "person.composer.drafting": "Writing a draft…",
-  "person.composer.why": "Why this draft",
-  "person.composer.consentUnknown":
-    "No consent decision is recorded for this channel.",
-  "person.composer.sendNote":
-    "Pressing send delivers this message from your own mailbox.",
-  "person.composer.purpose": "Consent purpose",
-  "person.composer.blockedLead":
-    "This message cannot go out under this purpose.",
-  "person.composer.blockedRewrite":
-    "A message sent under another purpose has to BE that kind of message — relabelling this one does not make it so.",
-  "person.composer.blockedRecordConsent":
-    "If you have a basis for writing, record the consent decision on their record.",
-  "person.composer.consentPickPurpose":
-    "Choose what this message is for — consent is decided per purpose.",
-  "person.composer.intent": "What should it be about?",
-  "person.composer.intentHint":
-    "Optional — e.g. ask for a date in the first week of September",
-  "person.composer.draftWithAi": "Draft with AI",
   "person.composer.intentAgenda": "propose an agenda for the upcoming meeting",
-  "person.composer.threadGone":
-    "The conversation this link named can no longer be answered — the channel or address it was on is gone. This is a new message to them.",
   "person.composer.intentReply": "reply to their last message",
   "person.composer.intentCommitment": "deliver what we promised them",
   "person.composer.intentFollowUp": "follow up — it has gone quiet",
-  "person.composer.send": "Send",
-  "person.composer.sending": "Sending…",
-  "person.composer.sent": "Sent",
-  "person.composer.aiDisclosure": "AI-assisted draft · review every word",
   "person.research.title": "Deep research · {name}",
   "person.research.publicOnly": "Public sources only",
   "person.research.running": "Reading public sources…",

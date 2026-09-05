@@ -45,6 +45,7 @@ export function RichText({
   placeholder,
   rows = 12,
   id,
+  disabled = false,
 }: Readonly<{
   /**
    * The markup to show. Read on mount and when it changes from OUTSIDE — an
@@ -69,6 +70,18 @@ export function RichText({
   placeholder?: string;
   rows?: number;
   id?: string;
+  /**
+   * Not now — the surface and its toolbar both refuse.
+   *
+   * `contentEditable` has no `disabled`, so an editor left editable while a
+   * write about its own words is in flight is one a reader can keep typing
+   * into: the composer freezes the body while a draft rejection is being
+   * recorded, and text typed into that window would be text the returning
+   * reference claims to name and never saw. The toolbar goes with it, because a
+   * live Bold over a frozen surface is a control that reports success and
+   * changes nothing.
+   */
+  disabled?: boolean;
 }>) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
@@ -107,6 +120,9 @@ export function RichText({
   };
 
   const apply = (command: string) => {
+    if (disabled) {
+      return;
+    }
     editor.current?.focus();
     // execCommand is deprecated and still the only cross-browser way to apply
     // formatting to a selection without a document model. The alternative is
@@ -117,6 +133,9 @@ export function RichText({
   };
 
   const addLink = () => {
+    if (disabled) {
+      return;
+    }
     const href = window.prompt(labels.linkPrompt);
     if (href === null) {
       return;
@@ -133,27 +152,41 @@ export function RichText({
   };
 
   return (
-    <div className="richtext">
+    <div className={`richtext${disabled ? " is-disabled" : ""}`}>
       <div className="richtext-bar" role="toolbar" aria-label={label}>
-        <RichTextButton onClick={() => apply("bold")} title={labels.bold}>
+        <RichTextButton
+          onClick={() => apply("bold")}
+          title={labels.bold}
+          disabled={disabled}
+        >
           <Bold size={15} aria-hidden="true" />
         </RichTextButton>
-        <RichTextButton onClick={() => apply("italic")} title={labels.italic}>
+        <RichTextButton
+          onClick={() => apply("italic")}
+          title={labels.italic}
+          disabled={disabled}
+        >
           <Italic size={15} aria-hidden="true" />
         </RichTextButton>
         <RichTextButton
           onClick={() => apply("insertUnorderedList")}
           title={labels.bulletList}
+          disabled={disabled}
         >
           <List size={15} aria-hidden="true" />
         </RichTextButton>
         <RichTextButton
           onClick={() => apply("insertOrderedList")}
           title={labels.numberList}
+          disabled={disabled}
         >
           <ListOrdered size={15} aria-hidden="true" />
         </RichTextButton>
-        <RichTextButton onClick={addLink} title={labels.link}>
+        <RichTextButton
+          onClick={addLink}
+          title={labels.link}
+          disabled={disabled}
+        >
           <Link2 size={15} aria-hidden="true" />
         </RichTextButton>
       </div>
@@ -164,8 +197,13 @@ export function RichText({
         role="textbox"
         aria-multiline="true"
         aria-label={label}
-        contentEditable
+        contentEditable={!disabled}
         suppressContentEditableWarning
+        // `contentEditable` carries no `disabled`, so the refusal is stated the
+        // way a role="textbox" states it — which is also what a checker and a
+        // screen reader read.
+        aria-disabled={disabled || undefined}
+        aria-readonly={disabled || undefined}
         // contentEditable is focusable in every engine, but stating it is what
         // makes the role and the behaviour agree for a checker and a reader.
         tabIndex={0}
@@ -182,16 +220,19 @@ export function RichText({
 function RichTextButton({
   onClick,
   title,
+  disabled,
   children,
 }: Readonly<{
   onClick: () => void;
   title: string;
+  disabled?: boolean;
   children: React.ReactNode;
 }>) {
   return (
     <button
       type="button"
       className="richtext-btn"
+      disabled={disabled}
       // The pointer-down default is what steals the selection the command is
       // about to act on, so the button never takes focus from the text.
       onMouseDown={(event) => event.preventDefault()}
@@ -401,4 +442,35 @@ function escapeText(text: string): string {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+}
+
+/**
+ * Plain text as the markup this editor round-trips — the inverse of
+ * {@link plainTextOf}, and the way a machine-written draft arrives in a field a
+ * human formats from.
+ *
+ * The drafting endpoints answer in PLAIN text by contract. Handed to the editor
+ * unchanged, a three-paragraph mail renders as one run-on block that the rep
+ * then has to break up by hand before they can read what was written for them;
+ * handed through here it arrives shaped the way the model wrote it. Nothing is
+ * INVENTED on the rep's behalf — a blank line is a paragraph and a single
+ * newline is a line break, which is what those two characters already mean in
+ * the text being converted.
+ *
+ * It escapes before it wraps. A draft is model output and can carry the three
+ * characters that would otherwise close a tag; escaping after wrapping would
+ * escape our own markup instead of the words inside it.
+ */
+export function paragraphsFrom(text: string): string {
+  const escaped = (line: string) =>
+    line
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+  return text
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter((block) => block !== "")
+    .map((block) => `<p>${escaped(block).replaceAll("\n", "<br>")}</p>`)
+    .join("");
 }

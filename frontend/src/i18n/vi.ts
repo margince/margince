@@ -3169,6 +3169,32 @@ export const vi = {
   "compose.whyThisDraft": "Vì sao có bản nháp này?",
   "compose.body": "Nội dung",
   "compose.bodyHint": "Nhấp vào văn bản để chỉnh sửa.",
+  "compose.transport": "Cách gửi",
+  "compose.transportEmail": "Email",
+  "compose.intentLabel": "Nội dung nên nói về điều gì?",
+  "compose.recipientHint": "Tên hoặc địa chỉ",
+  "compose.subjectHint": "Nội dung chính",
+  "compose.bodyPlaceholder": "Viết tin nhắn…",
+  "compose.bcc": "Bcc",
+  "compose.bccHint":
+    "Những người nhận được nêu tên không thấy các địa chỉ này, và cũng không thấy rằng có ai khác được gửi kèm.",
+  "compose.threadGone":
+    "Không thể trả lời cuộc trò chuyện đó nữa, nên cửa sổ này mở theo cách viết thông thường. Hãy kiểm tra người nhận trước khi gửi.",
+  "compose.files": "Tệp",
+  "compose.attach": "Đính kèm",
+  "compose.filesOnRecord": "Trên hồ sơ này",
+  "compose.filesLoading": "Đang đọc tệp của hồ sơ…",
+  "compose.filesNone": "Hồ sơ này chưa có tệp nào.",
+  "compose.filesFull":
+    "Một tin nhắn chỉ mang được tối đa {most} tệp. Hãy gửi phần còn lại trong tin nhắn thứ hai.",
+  "compose.fileRemove": "Không gửi {filename}",
+  "compose.fileUpload": "Gửi kèm tệp mới",
+  "compose.fileUploadHint":
+    "Tệp được lưu vào hồ sơ trước, để dòng thời gian giữ đúng những gì tin nhắn đã mang.",
+  "compose.fileUploadEmpty": "Kéo tệp vào đây, hoặc chọn một tệp",
+  "compose.fileUploading": "Đang lưu tệp…",
+  "compose.fileStoredUnnamed":
+    "Tệp đã ở trên hồ sơ, nhưng chúng tôi không đọc lại được đó là tệp nào. Hãy đính kèm nó từ danh sách phía trên.",
   "calendar.previousMonth": "Tháng trước",
   "calendar.nextMonth": "Tháng sau",
   "compose.schedulePick": "Chọn ngày và giờ",
@@ -3230,7 +3256,6 @@ export const vi = {
     "Tin nhắn này không thể gửi, và không vai trò nào ở đây có thể bỏ qua điều đó.",
   "compose.derivedReply":
     "Đây là trả lời tin nhắn của chính họ, nên bạn không cần nêu lý do.",
-  "compose.sendLaterLabel": "Gửi sau (tùy chọn)",
   "compose.send": "Gửi",
   "compose.sendConfirmTitle": "Soạn email",
   "compose.threadHeading": "Cuộc trao đổi này",
@@ -3284,7 +3309,6 @@ export const vi = {
   "compose.missingSubject": "Hãy đặt tiêu đề cho email này.",
   "compose.missingBody": "Hãy viết nội dung trước khi gửi.",
   "compose.missingWhy": "Hãy cho biết vì sao bạn viết cho họ.",
-  "compose.removeRecipient": "Gỡ {recipient}",
   "compose.actionFailed": "Yêu cầu thất bại. Hãy thử lại.",
 
   "tasks.complete": "Đánh dấu xong",
@@ -7520,51 +7544,16 @@ export const vi = {
   "person.rail.nothingCaptured": "Chưa ghi nhận gì.",
   "person.rail.viewAllActivity": "Xem tất cả hoạt động",
   "person.drawer.close": "Đóng",
-  "person.composer.title": "Soạn thư tiếp theo · {name}",
-  "person.composer.to": "Đến",
-  "person.composer.transport": "Cách gửi",
-  "person.composer.transportEmail": "Email",
-  "person.composer.toConversation":
-    "Tiếp tục cuộc trò chuyện {transport} của bạn",
-  "person.composer.subject": "Chủ đề",
-  "person.composer.bcc": "Bcc",
-  "person.composer.bccPlaceholder":
-    "Mỗi dòng một địa chỉ — họ nhận được thư và không người nhận nào khác thấy họ",
-  "person.composer.body": "Nội dung",
   "richtext.bold": "Đậm",
   "richtext.italic": "Nghiêng",
   "richtext.bulletList": "Danh sách dấu đầu dòng",
   "richtext.numberList": "Danh sách đánh số",
   "richtext.link": "Liên kết",
   "richtext.linkPrompt": "Địa chỉ web cho liên kết này (để trống để gỡ bỏ)",
-  "person.composer.drafting": "Đang soạn bản nháp…",
-  "person.composer.why": "Vì sao có bản nháp này",
-  "person.composer.consentUnknown":
-    "Chưa có quyết định về sự đồng ý cho kênh này.",
-  "person.composer.sendNote":
-    "Khi bấm gửi, thư sẽ đi từ hộp thư của chính bạn.",
-  "person.composer.purpose": "Mục đích đồng ý",
-  "person.composer.blockedLead": "Thư này không thể gửi với mục đích đã chọn.",
-  "person.composer.blockedRewrite":
-    "Thư gửi với mục đích khác thì phải THỰC SỰ là loại thư đó — đổi nhãn không làm nó thành như vậy.",
-  "person.composer.blockedRecordConsent":
-    "Nếu bạn có cơ sở để viết, hãy ghi nhận quyết định đồng ý trên hồ sơ của họ.",
-  "person.composer.consentPickPurpose":
-    "Hãy chọn mục đích của thư này — sự đồng ý được xét theo từng mục đích.",
-  "person.composer.intent": "Nội dung nên nói về điều gì?",
-  "person.composer.intentHint":
-    "Tùy chọn — ví dụ: xin một buổi hẹn trong tuần đầu tháng 9",
-  "person.composer.draftWithAi": "Soạn bằng AI",
   "person.composer.intentAgenda": "đề xuất chương trình cho buổi hẹn sắp tới",
-  "person.composer.threadGone":
-    "Cuộc trò chuyện mà liên kết này trỏ tới không còn trả lời được nữa — kênh hoặc địa chỉ của nó đã không còn. Đây là một tin nhắn mới.",
   "person.composer.intentReply": "trả lời tin nhắn gần nhất của họ",
   "person.composer.intentCommitment": "thực hiện điều chúng ta đã hứa",
   "person.composer.intentFollowUp": "nhắc lại — đã lâu không có phản hồi",
-  "person.composer.send": "Gửi",
-  "person.composer.sending": "Đang gửi…",
-  "person.composer.sent": "Đã gửi",
-  "person.composer.aiDisclosure": "Bản nháp có hỗ trợ AI · hãy đọc kỹ từng từ",
   "person.research.title": "Nghiên cứu sâu · {name}",
   "person.research.publicOnly": "Chỉ nguồn công khai",
   "person.research.running": "Đang đọc các nguồn công khai…",

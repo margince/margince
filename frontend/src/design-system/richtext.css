@@ -119,3 +119,14 @@
   border-left: 2px solid var(--borderSubtle);
   color: var(--textSecondary);
 }
+
+/* Not now. `contentEditable` has no disabled state of its own, so the refusal is
+   drawn here and stated in ARIA beside it — the composer freezes the body while
+   a verdict about those very words is being recorded, and a surface that still
+   looked live would invite text the returning reference never saw. */
+.richtext.is-disabled .richtext-input,
+.richtext.is-disabled .richtext-bar {
+  color: var(--textTertiary);
+  background: var(--bgCard);
+  cursor: not-allowed;
+}

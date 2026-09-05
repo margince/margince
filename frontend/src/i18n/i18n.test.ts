@@ -126,7 +126,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // "Email" is the Vietnamese word for email. de has "E-Mail" and differs;
   // vi does not, and inventing a difference would name the transport
   // something no Vietnamese speaker calls it.
-  "person.composer.transportEmail",
   // The same proper noun as connectors.provGmail and its neighbours, one
   // surface over.
   "provider.profile.linkedin",
@@ -142,7 +141,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // client in every locale — a translated label would name a field the
   // recipient's own client does not call that, and the placeholder beside it
   // is what carries the meaning.
-  "person.composer.bcc",
 
   // CRM domain nouns kept in English by design (glossary, design.md §6.1):
   // "deal", "pipeline", "timeline" etc. read the same in Vietnamese usage.
@@ -180,6 +178,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "settings.voice.register.email",
   "product.sku",
   "compose.cc",
+  "compose.bcc",
+  "compose.transportEmail",
   "settings.token",
   "passport.select",
 

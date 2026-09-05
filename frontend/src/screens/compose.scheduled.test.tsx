@@ -13,12 +13,18 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { ComposeModal } from "./compose";
 import { allowedPreview, isPreviewDoor } from "./sendpermission.testkit";
 
+// The composer's "why are you writing?" dial, named rather than reached for
+// by role alone: the To, Cc and Bcc lines are comboboxes of their own now
+// (they offer the record's people), so a bare role query matches four
+// controls and the readiness signal every suite waits on has to say which.
+const WHY_ASK = "Why are you writing?";
 // The door out of a scheduled send.
 //
 // The composer already computed whether it had scheduled — 201 waits, 202 has
@@ -104,12 +110,16 @@ async function composeAndSend() {
       onClose={onClose}
     />,
   );
-  await screen.findByRole("combobox");
+  await screen.findByRole("combobox", { name: WHY_ASK });
   await userEvent.type(screen.getByLabelText("To"), "a@x.com");
   await userEvent.tab();
-  await userEvent.type(screen.getByPlaceholderText("Subject"), "Hi there");
-  await userEvent.type(screen.getByPlaceholderText("Body"), "Body content");
-  await pickOption(userEvent.setup(), screen.getByRole("combobox"), WHY_LABEL);
+  await userEvent.type(screen.getByLabelText("Subject"), "Hi there");
+  writeMessage("Body", "Body content");
+  await pickOption(
+    userEvent.setup(),
+    screen.getByRole("combobox", { name: WHY_ASK }),
+    WHY_LABEL,
+  );
   await userEvent.click(screen.getByRole("button", { name: "Send" }));
   return onClose;
 }

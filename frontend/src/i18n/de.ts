@@ -3199,6 +3199,32 @@ export const de = {
   "compose.whyThisDraft": "Warum dieser Entwurf?",
   "compose.body": "Nachricht",
   "compose.bodyHint": "In den Text klicken, um ihn zu bearbeiten.",
+  "compose.transport": "Versandweg",
+  "compose.transportEmail": "E-Mail",
+  "compose.intentLabel": "Worum soll es gehen?",
+  "compose.recipientHint": "Name oder Adresse",
+  "compose.subjectHint": "Worum es geht",
+  "compose.bodyPlaceholder": "Nachricht schreiben…",
+  "compose.bcc": "Bcc",
+  "compose.bccHint":
+    "Die genannten Empfänger sehen diese Adressen nicht — und sehen auch nicht, dass überhaupt jemand in Kopie ist.",
+  "compose.threadGone":
+    "Diese Unterhaltung lässt sich nicht mehr beantworten, deshalb ist der übliche Weg geöffnet. Prüfen Sie den Empfänger vor dem Senden.",
+  "compose.files": "Dateien",
+  "compose.attach": "Anhängen",
+  "compose.filesOnRecord": "Auf diesem Datensatz",
+  "compose.filesLoading": "Dateien des Datensatzes werden gelesen…",
+  "compose.filesNone": "Auf diesem Datensatz liegen noch keine Dateien.",
+  "compose.filesFull":
+    "Mehr als {most} Dateien kann eine Nachricht nicht tragen. Senden Sie den Rest als zweite Nachricht.",
+  "compose.fileRemove": "{filename} nicht mitsenden",
+  "compose.fileUpload": "Neue Datei mitsenden",
+  "compose.fileUploadHint":
+    "Sie wird zuerst am Datensatz abgelegt, damit der Verlauf festhält, was die Nachricht getragen hat.",
+  "compose.fileUploadEmpty": "Datei hierher ziehen oder auswählen",
+  "compose.fileUploading": "Datei wird abgelegt…",
+  "compose.fileStoredUnnamed":
+    "Die Datei liegt am Datensatz, aber wir konnten nicht zurücklesen, welche es ist. Hängen Sie sie über die Liste oben an.",
   "calendar.previousMonth": "Voriger Monat",
   "calendar.nextMonth": "Nächster Monat",
   "compose.schedulePick": "Datum und Uhrzeit wählen",
@@ -3261,7 +3287,6 @@ export const de = {
     "Diese Nachricht kann nicht gesendet werden, und keine Rolle hier kann das übergehen.",
   "compose.derivedReply":
     "Das ist eine Antwort auf ihre eigene Nachricht — dafür brauchst du keinen Grund anzugeben.",
-  "compose.sendLaterLabel": "Später senden (optional)",
   "compose.send": "Senden",
   "compose.sendConfirmTitle": "E-Mail entwerfen",
   "compose.threadHeading": "Dieser Verlauf",
@@ -3317,7 +3342,6 @@ export const de = {
   "compose.missingSubject": "Gib dieser E-Mail einen Betreff.",
   "compose.missingBody": "Schreibe die Nachricht, bevor du sie sendest.",
   "compose.missingWhy": "Sag, warum du ihnen schreibst.",
-  "compose.removeRecipient": "{recipient} entfernen",
   "compose.actionFailed":
     "Die Anfrage ist fehlgeschlagen. Bitte erneut versuchen.",
 
@@ -7618,16 +7642,6 @@ export const de = {
   "person.rail.nothingCaptured": "Noch nichts erfasst.",
   "person.rail.viewAllActivity": "Alle Aktivitäten ansehen",
   "person.drawer.close": "Schließen",
-  "person.composer.title": "Follow-up entwerfen · {name}",
-  "person.composer.to": "An",
-  "person.composer.transport": "Versandweg",
-  "person.composer.transportEmail": "E-Mail",
-  "person.composer.toConversation": "Setzt Ihre {transport}-Unterhaltung fort",
-  "person.composer.subject": "Betreff",
-  "person.composer.bcc": "Bcc",
-  "person.composer.bccPlaceholder":
-    "Eine Adresse pro Zeile – sie erhalten die Nachricht, kein anderer Empfänger sieht sie",
-  "person.composer.body": "Nachricht",
   "richtext.bold": "Fett",
   "richtext.italic": "Kursiv",
   "richtext.bulletList": "Aufzählung",
@@ -7635,37 +7649,11 @@ export const de = {
   "richtext.link": "Link",
   "richtext.linkPrompt":
     "Webadresse für diesen Link (leer lassen zum Entfernen)",
-  "person.composer.drafting": "Entwurf wird geschrieben…",
-  "person.composer.why": "Warum dieser Entwurf",
-  "person.composer.consentUnknown":
-    "Für diesen Kanal ist keine Einwilligungsentscheidung erfasst.",
-  "person.composer.sendNote":
-    "Mit dem Senden geht diese Nachricht aus Ihrem eigenen Postfach raus.",
-  "person.composer.purpose": "Einwilligungszweck",
-  "person.composer.blockedLead":
-    "Unter diesem Zweck kann diese Nachricht nicht rausgehen.",
-  "person.composer.blockedRewrite":
-    "Eine Nachricht unter einem anderen Zweck muss auch diese Art von Nachricht SEIN — sie umzuetikettieren macht sie nicht dazu.",
-  "person.composer.blockedRecordConsent":
-    "Wenn Sie eine Rechtsgrundlage haben, erfassen Sie die Einwilligungsentscheidung am Datensatz der Person.",
-  "person.composer.consentPickPurpose":
-    "Wählen Sie, wofür diese Nachricht ist — die Einwilligung gilt je Zweck.",
-  "person.composer.intent": "Worum soll es gehen?",
-  "person.composer.intentHint":
-    "Optional — z. B. um einen Termin in der ersten Septemberwoche bitten",
-  "person.composer.draftWithAi": "Mit KI entwerfen",
   "person.composer.intentAgenda":
     "eine Agenda für den anstehenden Termin vorschlagen",
-  "person.composer.threadGone":
-    "Das Gespräch, auf das dieser Link zeigt, kann nicht mehr beantwortet werden — der Kanal oder die Adresse dazu gibt es nicht mehr. Das hier ist eine neue Nachricht.",
   "person.composer.intentReply": "auf die letzte Nachricht antworten",
   "person.composer.intentCommitment": "einlösen, was wir zugesagt haben",
   "person.composer.intentFollowUp": "nachfassen — es ist still geworden",
-  "person.composer.send": "Senden",
-  "person.composer.sending": "Wird gesendet…",
-  "person.composer.sent": "Gesendet",
-  "person.composer.aiDisclosure":
-    "KI-unterstützter Entwurf · jedes Wort prüfen",
   "person.research.title": "Tiefenrecherche · {name}",
   "person.research.publicOnly": "Nur öffentliche Quellen",
   "person.research.running": "Öffentliche Quellen werden gelesen…",
