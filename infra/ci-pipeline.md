@@ -535,21 +535,23 @@ beside the gate, deliberately outside it:
   [The shared Go build cache](#the-shared-go-build-cache) for why it is scheduled
   rather than per-push.
 
-- **`merge-attest.yml`** — on every push to `main`, and it runs no lane: two API
-  reads and a jq, which is what makes a push trigger affordable at ~85 merges a
-  day. It asks one question the health check cannot — not *is `main` red*, but
-  *did what just landed have a verdict behind it*: a pull request that named the
-  commit, and a `ci` check that reported, was green, and finished **before** the
-  merge. A required check that never reported is the case it exists for, because
-  an absent verdict is not a red one and nothing asking "was it green?" can tell
-  them apart.
+- **`merge-attest.yml`** — on every push to `main`. It runs no lane, but it does
+  **wait**: `ci` is a fan-in that starts only once every other lane has finished,
+  so it posts minutes after the merge and a read at push time would see nothing.
+  The wait is bounded at 20 minutes, and reaching that bound is not a finding.
 
-  **Gates nothing, and never will.** It runs after the merge. A repository role
-  merging past `ci` is deliberate — an infrastructure outage that reds every
-  pull request, a revert that has to land now — and what this changes is only
-  that the fact is loud and attributed at push time instead of surfacing two
-  hours later as somebody else's pull request going red against a base they did
-  not break. Prevention is a branch-protection decision (#2496). Judged by
+  It reports exactly two things: a commit **no pull request names** at all, and a
+  required check that **reported an adverse verdict** — the tree on `main` does
+  not pass its own required check. It says nothing about a verdict that was
+  merely *absent* at merge time. A repository role merging past `ci` is a
+  standing decision here, so an absent verdict is the expected shape of that
+  decision and not an incident; an alarm that fires on the expected state is one
+  that gets muted, and it would bury the two findings above.
+
+  **Gates nothing, and never will.** It runs after the merge. What it changes is
+  that a bad verdict is loud and attributed at push time, instead of surfacing
+  two hours later as somebody else's pull request going red against a base they
+  did not break. Prevention is a branch-protection decision (#2496). Judged by
   [`scripts/check-merge-verdict.sh`](../scripts/check-merge-verdict.sh), which
   reads its evidence from the environment so every arm is drivable from a
   fixture (`make test-merge-verdict`); a finding is filed as one issue per
