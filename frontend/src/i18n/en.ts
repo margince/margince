@@ -5180,7 +5180,8 @@ export const en = {
   "ob.conv.voice.footFloor":
     "{min} words minimum. Below that the model just copies phrasing.",
   "ob.conv.voice.buildingTitle": "Learning your voice",
-  "ob.conv.voice.buildingMeta": "{words} words, {sources} sources",
+  "ob.conv.voice.buildingMeta_one": "{words} words, {sources} source",
+  "ob.conv.voice.buildingMeta_other": "{words} words, {sources} sources",
   "ob.conv.voice.resultSub":
     "Read the sample first. If it lands, confirm. If it is off, add more sources and I rebuild.",
   "ob.conv.voice.resultSubNoSample":

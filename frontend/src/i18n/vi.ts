@@ -5025,7 +5025,8 @@ export const vi = {
   "ob.conv.voice.footFloor":
     "Tối thiểu {min} từ. Dưới mức đó, mô hình chỉ chép lại cách dùng từ.",
   "ob.conv.voice.buildingTitle": "Đang học giọng văn của bạn",
-  "ob.conv.voice.buildingMeta": "{words} từ, {sources} nguồn",
+  "ob.conv.voice.buildingMeta_one": "{words} từ, {sources} nguồn",
+  "ob.conv.voice.buildingMeta_other": "{words} từ, {sources} nguồn",
   "ob.conv.voice.resultSub":
     "Hãy đọc mẫu trước. Thấy đúng thì xác nhận. Thấy lệch thì thêm nguồn và tôi dựng lại.",
   "ob.conv.voice.resultSubNoSample":
