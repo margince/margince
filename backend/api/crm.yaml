@@ -39740,9 +39740,9 @@ components:
     TeamBoardCounts:
       type: object
       description: |
-        Three counts of work somebody owes, all read under the CALLER's visibility rather
-        than the teammate's — so this is how much of their load the reader can see.
-      required: [waiting, at_risk, overdue]
+        Counts of work somebody owes, all read under the CALLER's visibility rather than the
+        teammate's — so this is how much of their load the reader can see.
+      required: [waiting, at_risk, overdue, promises_due]
       properties:
         waiting:
           type: integer
@@ -39756,6 +39756,15 @@ components:
         overdue:
           type: integer
           description: 'Open tasks whose due moment has already passed.'
+        promises_due:
+          type: integer
+          description: |
+            Commitments due by the instant the board was read, from the same extracted claims
+            the rep's own day counts — not from open tasks, which are a different question
+            wearing the same heading.
+
+            A zero here means they owe nothing, not that nobody asked: claims have a writer on
+            every installation, so this count is always read.
 
     WorklistBand:
       type: object

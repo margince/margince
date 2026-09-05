@@ -8126,6 +8126,12 @@ export const vi = {
   "worklist.board.atRisk": "Giao dịch có rủi ro",
   "worklist.board.overdue": "Quá hạn",
   "worklist.board.nobody": "Chưa có ai",
+  "worklist.coaching.title": "Đáng trao đổi sáng nay",
+  "worklist.coaching.promises":
+    "{name} còn {count} cam kết đã đến hạn — khách hàng đang chờ.",
+  "worklist.coaching.waiting": "{count} khách hàng đang chờ {name}.",
+  "worklist.coaching.overdue": "{name} có {count} công việc đã quá hạn.",
+  "worklist.board.promises": "Cam kết đến hạn",
   "worklist.board.truncated":
     "Có nhiều việc hơn số đếm được ở đây. Đây là mức tối thiểu, không phải tổng số.",
   "worklist.readings.label": "Hôm nay có gì đang bị đe dọa",

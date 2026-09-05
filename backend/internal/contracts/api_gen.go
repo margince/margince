@@ -32173,19 +32173,27 @@ type TeamBoard struct {
 	// so here rather than presenting a floor as a total.
 	Truncated bool `json:"truncated"`
 
-	// Unassigned Three counts of work somebody owes, all read under the CALLER's visibility rather
-	// than the teammate's — so this is how much of their load the reader can see.
+	// Unassigned Counts of work somebody owes, all read under the CALLER's visibility rather than the
+	// teammate's — so this is how much of their load the reader can see.
 	Unassigned TeamBoardCounts `json:"unassigned"`
 }
 
-// TeamBoardCounts Three counts of work somebody owes, all read under the CALLER's visibility rather
-// than the teammate's — so this is how much of their load the reader can see.
+// TeamBoardCounts Counts of work somebody owes, all read under the CALLER's visibility rather than the
+// teammate's — so this is how much of their load the reader can see.
 type TeamBoardCounts struct {
 	// AtRisk Open deals gone quiet or already past their expected close date.
 	AtRisk int `json:"at_risk"`
 
 	// Overdue Open tasks whose due moment has already passed.
 	Overdue int `json:"overdue"`
+
+	// PromisesDue Commitments due by the instant the board was read, from the same extracted claims
+	// the rep's own day counts — not from open tasks, which are a different question
+	// wearing the same heading.
+	//
+	// A zero here means they owe nothing, not that nobody asked: claims have a writer on
+	// every installation, so this count is always read.
+	PromisesDue int `json:"promises_due"`
 
 	// Waiting Customers who wrote and have had no reply, attributed by the record the thread is
 	// filed under: deal, then lead, then person, then organization, first owner found.
@@ -32195,8 +32203,8 @@ type TeamBoardCounts struct {
 
 // TeamBoardMember One teammate and the work they are answerable for.
 type TeamBoardMember struct {
-	// Counts Three counts of work somebody owes, all read under the CALLER's visibility rather
-	// than the teammate's — so this is how much of their load the reader can see.
+	// Counts Counts of work somebody owes, all read under the CALLER's visibility rather than the
+	// teammate's — so this is how much of their load the reader can see.
 	Counts TeamBoardCounts `json:"counts"`
 
 	// DisplayName The teammate, as the roster names them.

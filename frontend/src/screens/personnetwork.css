@@ -375,6 +375,10 @@
   font-weight: var(--fw-medium);
 }
 .pn-moment p .badge {
+  /* ds:ignore a badge trailing a sentence is not a spacing role — it is the
+     gap between a word and the label after it, and none of gapActions,
+     gapCards or the pad roles describes that. Changing the primitive would
+     move every badge in the product, including the ones that sit alone. */
   margin-left: var(--space-2);
   vertical-align: 1px;
 }

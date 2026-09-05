@@ -55,7 +55,7 @@ func (s *Service) TeamBoard(ctx context.Context) (crmcontracts.TeamBoard, error)
 		return crmcontracts.TeamBoard{}, err
 	}
 	asOf := s.now()
-	load, err := s.teamLoad(ctx, asOf)
+	load, err := s.teamLoad(ctx, roster, asOf)
 	if err != nil {
 		return crmcontracts.TeamBoard{}, err
 	}
@@ -102,7 +102,7 @@ type teamCounts struct {
 // has somewhere to say it; a board is nothing but numbers, and a zero that means
 // "you may not see this" is indistinguishable from one that means "they are
 // clear" — which is the reading that would tell a lead their team is fine.
-func (s *Service) teamLoad(ctx context.Context, asOf time.Time) (teamCounts, error) {
+func (s *Service) teamLoad(ctx context.Context, roster []TeamMember, asOf time.Time) (teamCounts, error) {
 	load := teamCounts{counts: map[ids.UUID]crmcontracts.TeamBoardCounts{}}
 	if s.waiting != nil {
 		// The SAME read the ranked queue takes, bucketed by owner. A count from
@@ -163,5 +163,51 @@ func (s *Service) teamLoad(ctx context.Context, asOf time.Time) (teamCounts, err
 		// total. The bound belongs to the reader that applied it.
 		load.truncated = load.truncated || cut
 	}
+	if err := s.addPromisesDue(ctx, &load, roster, asOf); err != nil {
+		return teamCounts{}, err
+	}
 	return load, nil
+}
+
+// addPromisesDue folds each teammate's due commitments into the tally.
+//
+// Its own function because it needs the ROSTER, which the sources above do not:
+// they answer for everybody at once, and this one asks per owner because who
+// owns a promise lives inside the store's query rather than on the claim.
+func (s *Service) addPromisesDue(
+	ctx context.Context, load *teamCounts, roster []TeamMember, asOf time.Time,
+) error {
+	if s.promiseLoad == nil {
+		// Unbound leaves the column at zero, which is what every required count
+		// on this board already does — `waiting` and `overdue` are nil-guarded
+		// the same way. Production binds all three, so an unbound source is a
+		// test that does not exercise the column rather than a deployment.
+		//
+		// The risk this shares with its two siblings is real and named here
+		// rather than fixed only for the newest: a source dropped from the
+		// composition would report a clean team instead of failing. Making that
+		// a hard error is one change across all three, with its own gate, and
+		// not something to do for one column while the other two keep the old
+		// behaviour — two rules on one board is worse than one wrong one.
+		// Tracked as its own change rather than left as a comment: issue 4444.
+		return nil
+	}
+	owners := make([]ids.UUID, 0, len(roster))
+	for _, member := range roster {
+		owners = append(owners, member.UserID)
+	}
+	// Due by the SAME instant the rest of the board is read at, so every column
+	// describes one moment. A promise lane bounded by end-of-day while the
+	// others read now would put a row in one column and not the next for no
+	// reason a lead could see.
+	due, err := s.promiseLoad.DuePerOwner(ctx, owners, asOf)
+	if err != nil {
+		return err
+	}
+	for owner, count := range due {
+		row := load.counts[owner]
+		row.PromisesDue = count
+		load.counts[owner] = row
+	}
+	return nil
 }
