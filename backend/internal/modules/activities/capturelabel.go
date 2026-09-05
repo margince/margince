@@ -45,7 +45,15 @@ func (s *Store) UnlabeledCaptureEmails(ctx context.Context, limit, bodyLimit int
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT id, coalesce(subject, ''), coalesce(left(body, $1), ''),
-			       direction = 'inbound'
+			       -- direction is NULLABLE, and a NULL is not an inbound message.
+			       -- Compared bare, the equality yields NULL for a row that never
+			       -- recorded a direction, which fails the scan and takes the whole
+			       -- batch down: one directionless row would stop the pass for
+			       -- every message queued behind it. Unknown reads as outbound,
+			       -- which is the safe way round — the message is still labelled,
+			       -- and it is asked no reply question rather than having its
+			       -- direction guessed.
+			       coalesce(direction = 'inbound', false)
 			FROM activity
 			WHERE `+ClassifyBacklogPredicate+`
 			ORDER BY occurred_at

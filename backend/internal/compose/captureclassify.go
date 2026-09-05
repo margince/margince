@@ -80,7 +80,11 @@ more), "negative" (not interested, the wrong person with no referral, a request 
 writing), or "neutral" (neither — an out-of-office, a bare acknowledgement, a redirect with no
 view of its own). Omit "reply" entirely for a message marked "inbound: no": we wrote it, so it
 answers nobody. Omit it too when the message does not read as an answer at all. A guess here
-becomes a number somebody is measured on, so leave it out when you cannot tell.`
+becomes a number somebody is measured on, so leave it out when you cannot tell.
+
+"confidence" covers EVERY judgement you emit for that message — the label and, when you give
+one, the reply. Report the LOWEST of the two, not the label's alone. If you are sure of the
+label and unsure of the reply, either omit the reply or let the lower number stand for both.`
 
 // classifySystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func classifySystemFor(fence promptfence.Fence) string {
@@ -239,6 +243,13 @@ func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeled
 // one. Absent is the common case and a legitimate answer: outbound mail, and any
 // inbound message that does not read as a reply, leave the column NULL — which a
 // rate counts in neither half.
+//
+// It rides the SAME confidence the label was gated on, and the prompt is what
+// makes that honest: it defines `confidence` as covering every judgement in the
+// entry and asks for the LOWER of the two. Without that sentence the number
+// would be the label's alone, and a model sure the mail is a meeting but unsure
+// whether it was a yes would have its guess stored — a number somebody is
+// measured on, resting on a certainty nobody reported.
 //
 // It shares the label's confidence rather than carrying its own. Both judgements
 // come from one reading of one message, and a second number would claim the

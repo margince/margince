@@ -64,72 +64,6 @@ const (
 	ReplyVerdictNeutral = "neutral"
 )
 
-// UnjudgedReply is one reply-backlog row as the classify prompt consumes it.
-type UnjudgedReply struct {
-	ID      ids.UUID
-	Subject string
-	Body    string // pre-truncated by the caller's body limit
-}
-
-// ReplyBacklogPredicate is what makes an activity eligible for a reply verdict.
-//
-// It is the classify backlog's own exclusions plus direction: the audience and
-// hold clauses are here for the reason they are there — a message the worklist
-// may not open is not one to spend a model call on, and a row under a statutory
-// hold is out of reach of every ordinary read path.
-//
-// INBOUND ONLY, which is the clause that is not shared. The classify backlog
-// carries both directions because a label routes attention either way; judging
-// our own outbound mail as though it were a customer's answer would put the
-// workspace's own words into a rate about what customers said.
-//
-// The unqualified `activity` reference matches ClassifyBacklogPredicate's
-// posture beside it: the caller queries the table under its own name.
-const ReplyBacklogPredicate = `reply_verdict IS NULL
-	  AND direction = 'inbound'
-	  AND captured_by LIKE 'connector:%' AND kind IN ('email', 'message')
-	  AND archived_at IS NULL
-	  AND audience = 'workspace'
-	  AND restricted_at IS NULL`
-
-// UnjudgedReplies reads the oldest inbound correspondence carrying no reply
-// verdict — the partial-index backlog (idx_activity_unjudged_reply).
-func (s *Store) UnjudgedReplies(ctx context.Context, limit, bodyLimit int) ([]UnjudgedReply, error) {
-	// Reading the backlog reads customer correspondence, so it takes the same
-	// object gate every other read of this table takes. No row-scope clause
-	// beside it: the pass runs as the system principal over the whole
-	// workspace, and the predicate's own audience and hold clauses are what
-	// bound which messages it may be given.
-	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		return nil, err
-	}
-	var out []UnjudgedReply
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT id, coalesce(subject, ''), coalesce(left(body, $1), '')
-			FROM activity
-			WHERE `+ReplyBacklogPredicate+`
-			ORDER BY occurred_at
-			LIMIT $2`, bodyLimit, limit)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var m UnjudgedReply
-			if err := rows.Scan(&m.ID, &m.Subject, &m.Body); err != nil {
-				return err
-			}
-			out = append(out, m)
-		}
-		return rows.Err()
-	})
-	if err != nil {
-		return nil, fmt.Errorf("activities: reading the reply backlog: %w", err)
-	}
-	return out, nil
-}
-
 // SetReplyVerdict writes one verdict and its first history row, reporting
 // whether it applied.
 //
@@ -209,6 +143,16 @@ func (s *Store) CorrectReplyVerdict(ctx context.Context, id ids.UUID, verdict *s
 	}
 	who := actor.ID
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// A HUMAN write takes the row-scope gate, where the classifier's does
+		// not. The classifier runs as the system principal over the whole
+		// workspace and its population is bounded by the backlog predicate; a
+		// person correcting a verdict is bounded by what they may write, and
+		// without this any seat holding activity:update could re-judge a
+		// colleague's message. The gate answers 404 for a row out of scope, so
+		// the refusal does not disclose that the message exists.
+		if err := auth.EnsureActivityWritable(ctx, tx, id); err != nil {
+			return err
+		}
 		// A correction may not reach a row an ordinary read cannot: the same
 		// three exclusions the classifier's own write re-tests.
 		tag, err := tx.Exec(ctx, `

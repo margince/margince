@@ -55,34 +55,82 @@ func TestTheReplyVerdictVocabularyIsSpelledOnceEverywhere(t *testing.T) {
 			fromConstants, fromDB)
 	}
 
-	// And the engine's own map must be built FROM those constants rather than
-	// from string literals of its own — a literal would agree today and drift
-	// the moment either side is edited alone.
+	// The history table's CHECK is a second copy of the same closed set, and a
+	// migration widening one and not the other leaves a correction the activity
+	// accepts and the history refuses — the write fails halfway through a
+	// transaction that has already updated the row.
+	if history := replyVerdictsFromHistoryCheck(t); !equalSets(history, fromDB) {
+		t.Errorf("the history CHECK allows %v and the activity CHECK allows %v — "+
+			"a correction the row accepts would be refused by the record of it", history, fromDB)
+	}
+
 	engine, err := os.ReadFile("internal/compose/captureclassify.go")
 	if err != nil {
 		t.Fatalf("reading the classify engine: %v", err)
+	}
+
+	// The engine's map must be built FROM the module's constants, and this reads
+	// the MAP rather than the file: a whole-file search is satisfied by a mention
+	// in a comment or an error string, so it would keep passing after the map
+	// itself drifted to literals — the exact drift this gate exists to catch.
+	mapBody := between(string(engine), "var replyVerdicts = map[string]bool{", "}")
+	if mapBody == "" {
+		t.Fatal("no `var replyVerdicts = map[string]bool{` in the classify engine — " +
+			"the map this gate measures has been renamed or removed")
 	}
 	for _, want := range []string{
 		"activities.ReplyVerdictPositive",
 		"activities.ReplyVerdictNegative",
 		"activities.ReplyVerdictNeutral",
 	} {
-		if !strings.Contains(string(engine), want) {
-			t.Errorf("the classify engine's verdict map does not reference %s.\n"+
+		if !strings.Contains(mapBody, want) {
+			t.Errorf("the verdict map does not reference %s.\n"+
 				"\tBuild it from the module's constants; a literal here is a second spelling "+
 				"that agrees until somebody edits one side.", want)
 		}
 	}
 
-	// The prompt has to OFFER every word the database accepts. One missing is a
-	// verdict the product can store and no model is ever asked for — a value
-	// that exists in the schema and never in the data.
+	// The response schema's enum is the third copy: a word the database accepts
+	// and the schema omits is one no model may ever return, so the column could
+	// hold a value nothing can produce.
+	schemaEnum := between(string(engine), `"reply": schema.Enum(`, ")")
+	if schemaEnum == "" {
+		t.Fatal(`no "reply": schema.Enum(...) in the classify engine — ` +
+			"the response schema this gate measures has moved")
+	}
+	// And the PROMPT has to offer every word too. Read from the system prompt
+	// alone, for the same reason the map is: a word appearing anywhere in the
+	// file would satisfy a whole-file search after the prompt stopped naming it.
+	systemPrompt := between(string(engine), "const classifySystem = `", "`")
+	if systemPrompt == "" {
+		t.Fatal("no `const classifySystem` in the classify engine — the prompt this gate measures has moved")
+	}
 	for _, verdict := range fromDB {
-		if !strings.Contains(string(engine), `"`+verdict+`"`) {
+		if !strings.Contains(schemaEnum, `"`+verdict+`"`) {
+			t.Errorf("the response schema's reply enum omits %q, which the database accepts.\n"+
+				"\tA verdict no schema admits is a column value no model can ever return.", verdict)
+		}
+		if !strings.Contains(systemPrompt, `"`+verdict+`"`) {
 			t.Errorf("the classify prompt never offers %q, which the database accepts.\n"+
 				"\tA verdict nothing asks for is a column value that can never occur.", verdict)
 		}
 	}
+}
+
+// replyVerdictsFromHistoryCheck reads the closed set off the history table's own
+// constraint, so the two copies are compared rather than assumed equal.
+func replyVerdictsFromHistoryCheck(t *testing.T) []string {
+	t.Helper()
+	raw, err := os.ReadFile(replyVerdictCatalog)
+	if err != nil {
+		t.Fatalf("reading the head catalog: %v", err)
+	}
+	re := regexp.MustCompile(`activity_reply_verdict_history_verdict CHECK .*verdict = ANY \(ARRAY\[([^\]]*)\]`)
+	match := re.FindSubmatch(raw)
+	if match == nil {
+		t.Fatalf("no activity_reply_verdict_history_verdict constraint in %s", replyVerdictCatalog)
+	}
+	return splitCatalogTokens(string(match[1]))
 }
 
 // replyVerdictsFromMigration reads the closed set off the CHECK constraint that
@@ -98,11 +146,17 @@ func replyVerdictsFromMigration(t *testing.T) []string {
 		t.Fatalf("no activity_reply_verdict_check in %s — the constraint this gate "+
 			"measures everything else against has moved or been renamed", replyVerdictCatalog)
 	}
-	// TrimSuffix and not Trim: a cutset removes ANY of its characters from
-	// either end, so trimming "'::text" off 'positive' also eats the final e and
-	// the gate then compares words that were never in the catalog.
+	return splitCatalogTokens(string(match[1]))
+}
+
+// splitCatalogTokens turns a catalog ARRAY[...] body into its bare words.
+//
+// TrimSuffix and not Trim: a cutset removes ANY of its characters from either
+// end, so trimming "'::text" off 'positive' also eats the final e, and the gate
+// then compares words that were never in the catalog.
+func splitCatalogTokens(body string) []string {
 	var out []string
-	for _, part := range strings.Split(string(match[1]), ",") {
+	for _, part := range strings.Split(body, ",") {
 		token := strings.TrimSuffix(strings.TrimSpace(part), "::text")
 		out = append(out, strings.Trim(token, "'"))
 	}
