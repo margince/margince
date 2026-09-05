@@ -122,6 +122,14 @@ describe("the custom-fields admin, at its address inside settings", () => {
   });
 
   it("mounts the field builder on the Data model page", async () => {
+    // The settings screen is a lazy chunk, and since the shell stopped importing
+    // the screen module for its route constants it is loaded for the first time
+    // HERE. Under vitest that first load is the on-demand transform of every
+    // settings card, which runs longer than the finder below waits — and a
+    // finder that expires on a chunk still being compiled says nothing about
+    // whether the address mounts the builder. Warming the module first leaves
+    // the routing as the only thing being timed.
+    await import("./screens/settings");
     // Every query the surface fires must resolve, or QueryGate paints its error
     // card instead of the heading: /me (an admin holding the custom_field write
     // the entry is gated on), the per-object field list, and the audit rail.
