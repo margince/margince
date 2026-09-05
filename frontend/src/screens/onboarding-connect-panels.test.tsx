@@ -66,8 +66,8 @@ describe("ImapConnectPanel", () => {
         });
       },
     });
-    const onComplete = vi.fn().mockResolvedValue(undefined);
-    render(<ImapConnectPanel onComplete={onComplete} onDismiss={() => {}} />);
+    const onDone = vi.fn();
+    render(<ImapConnectPanel onDone={onDone} onDismiss={() => {}} />);
     await fillValidForm();
     await userEvent.click(
       screen.getByRole("button", { name: /test and connect/i }),
@@ -92,7 +92,7 @@ describe("ImapConnectPanel", () => {
     expect(screen.queryByText(/skipped/i)).not.toBeInTheDocument();
   });
 
-  it("finishes the step (without claiming a connection) when entering the CRM", async () => {
+  it("closes (without claiming a connection) once the mailbox is live", async () => {
     installFetchStub({
       "POST /connectors/imap/connect": () =>
         jsonResponse({
@@ -104,15 +104,15 @@ describe("ImapConnectPanel", () => {
           },
         }),
     });
-    const onComplete = vi.fn().mockResolvedValue(undefined);
-    render(<ImapConnectPanel onComplete={onComplete} onDismiss={() => {}} />);
+    const onDone = vi.fn();
+    render(<ImapConnectPanel onDone={onDone} onDismiss={() => {}} />);
     await fillValidForm();
     await userEvent.click(
       screen.getByRole("button", { name: /test and connect/i }),
     );
     await screen.findByText(/mailbox connected/i);
-    await userEvent.click(screen.getByRole("button", { name: /^continue$/i }));
-    expect(onComplete).toHaveBeenCalledWith(false);
+    await userEvent.click(screen.getByRole("button", { name: /^done$/i }));
+    expect(onDone).toHaveBeenCalledTimes(1);
   });
 
   it("surfaces a rejected IMAP login without echoing the host back", async () => {
@@ -126,12 +126,7 @@ describe("ImapConnectPanel", () => {
           422,
         ),
     });
-    render(
-      <ImapConnectPanel
-        onComplete={vi.fn().mockResolvedValue(undefined)}
-        onDismiss={() => {}}
-      />,
-    );
+    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
     await fillValidForm();
     await userEvent.click(
       screen.getByRole("button", { name: /test and connect/i }),
@@ -147,12 +142,7 @@ describe("ImapConnectPanel", () => {
       "POST /connectors/imap/connect": () =>
         jsonResponse({ code: "imap_unreachable", detail: "unreachable" }, 502),
     });
-    render(
-      <ImapConnectPanel
-        onComplete={vi.fn().mockResolvedValue(undefined)}
-        onDismiss={() => {}}
-      />,
-    );
+    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
     await fillValidForm();
     await userEvent.click(
       screen.getByRole("button", { name: /test and connect/i }),
@@ -177,13 +167,7 @@ describe("ImapConnectPanel", () => {
       defaultOptions: { queries: { retry: false } },
     });
     const invalidateSpy = vi.spyOn(client, "invalidateQueries");
-    render(
-      <ImapConnectPanel
-        onComplete={vi.fn().mockResolvedValue(undefined)}
-        onDismiss={() => {}}
-      />,
-      client,
-    );
+    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />, client);
     await fillValidForm();
     await userEvent.click(
       screen.getByRole("button", { name: /test and connect/i }),
@@ -209,12 +193,7 @@ describe("ImapConnectPanel", () => {
         return jsonResponse({ code: "connector_unsupported" }, 422);
       },
     });
-    render(
-      <ImapConnectPanel
-        onComplete={vi.fn().mockResolvedValue(undefined)}
-        onDismiss={() => {}}
-      />,
-    );
+    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
     await fillValidForm();
     await userEvent.click(
       screen.getByRole("button", { name: /test and connect/i }),
@@ -243,12 +222,12 @@ describe("ImapConnectPanel", () => {
         });
       },
     });
-    const onComplete = vi.fn().mockResolvedValue(undefined);
+    const onDone = vi.fn();
     const onDismiss = vi.fn();
-    render(<ImapConnectPanel onComplete={onComplete} onDismiss={onDismiss} />);
+    render(<ImapConnectPanel onDone={onDone} onDismiss={onDismiss} />);
     await userEvent.click(screen.getByRole("button", { name: "Not now" }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
-    expect(onComplete).not.toHaveBeenCalled();
+    expect(onDone).not.toHaveBeenCalled();
     expect(calls.length).toBe(0);
   });
 
@@ -268,12 +247,7 @@ describe("ImapConnectPanel", () => {
         }),
     });
     const onDismiss = vi.fn();
-    render(
-      <ImapConnectPanel
-        onComplete={vi.fn().mockResolvedValue(undefined)}
-        onDismiss={onDismiss}
-      />,
-    );
+    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={onDismiss} />);
     await fillValidForm();
     await userEvent.click(
       screen.getByRole("button", { name: /test and connect/i }),
@@ -317,7 +291,7 @@ describe("ImapConnectPanel", () => {
     const pendingChanges: boolean[] = [];
     render(
       <ImapConnectPanel
-        onComplete={vi.fn().mockResolvedValue(undefined)}
+        onDone={vi.fn()}
         onDismiss={() => {}}
         onPendingChange={(pending) => pendingChanges.push(pending)}
       />,
@@ -372,7 +346,7 @@ describe("OAuthReturnPanel handing off to the backread", () => {
         return jsonResponse({ state: "running" });
       },
     });
-    render(<OAuthReturnPanel outcome="ok" onComplete={vi.fn()} />);
+    render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
 
     expect(
       await screen.findByRole("heading", { name: "Reading your mailbox" }),
@@ -381,7 +355,7 @@ describe("OAuthReturnPanel handing off to the backread", () => {
     expect(statusReads).toEqual([]);
     // The backread owns the exit while it runs; a second "enter" button beside
     // it would finish the step without the read's own leave copy.
-    expect(screen.queryByRole("button", { name: /^continue$/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^done$/i })).toBeNull();
   });
 
   it("asks for the window when the mailbox has no read yet", async () => {
@@ -394,7 +368,7 @@ describe("OAuthReturnPanel handing off to the backread", () => {
           computed_at: "2026-07-31T09:00:00Z",
         }),
     });
-    render(<OAuthReturnPanel outcome="ok" onComplete={vi.fn()} />);
+    render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
 
     expect(
       await screen.findByRole("heading", {
@@ -408,12 +382,10 @@ describe("OAuthReturnPanel handing off to the backread", () => {
 
   it("keeps the plain exit when no connection could be confirmed", async () => {
     installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
-    render(<OAuthReturnPanel outcome="ok" onComplete={vi.fn()} />);
+    render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
 
     await screen.findByText("We couldn't confirm the connection.");
-    expect(
-      screen.getByRole("button", { name: /^continue$/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^done$/i })).toBeInTheDocument();
     expect(screen.queryByText(/How far back should I read/)).toBeNull();
   });
 
@@ -423,22 +395,22 @@ describe("OAuthReturnPanel handing off to the backread", () => {
   // skipped — a choice the reader did not make, on the strength of a request
   // that came back with nothing to say. The stage's own exit stays available;
   // it just belongs to the reader.
-  it("withholds the Enter CRM escape when the roster query failed", async () => {
+  it("withholds the Done escape when the roster query failed", async () => {
     installFetchStub({
       "GET /connectors": () => jsonResponse({ title: "boom" }, 500),
     });
-    render(<OAuthReturnPanel outcome="ok" onComplete={vi.fn()} />);
+    render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
 
     await screen.findByText("We couldn't confirm the connection.");
     expect(
-      screen.queryByRole("button", { name: /^continue$/i }),
+      screen.queryByRole("button", { name: /^done$/i }),
     ).not.toBeInTheDocument();
   });
 
   // Without this gate the escape reads on `live === undefined`, which is also
   // true of the roster's very first render — a reader could click straight
   // through before the OAuth connection was ever confirmed live.
-  it("withholds the Enter CRM escape while the roster is still verifying", async () => {
+  it("withholds the Done escape while the roster is still verifying", async () => {
     // A box, not a bare `let`: TS's control-flow narrowing otherwise loses
     // the function type across the callback boundary that assigns it.
     const deferred: { resolve: ((r: Response) => void) | null } = {
@@ -450,16 +422,16 @@ describe("OAuthReturnPanel handing off to the backread", () => {
           deferred.resolve = resolve;
         }),
     });
-    render(<OAuthReturnPanel outcome="ok" onComplete={vi.fn()} />);
+    render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
 
     await screen.findByText("Confirming the connection…");
     expect(
-      screen.queryByRole("button", { name: /^continue$/i }),
+      screen.queryByRole("button", { name: /^done$/i }),
     ).not.toBeInTheDocument();
 
     deferred.resolve?.(jsonResponse({ data: [] }));
     expect(
-      await screen.findByRole("button", { name: /^continue$/i }),
+      await screen.findByRole("button", { name: /^done$/i }),
     ).toBeInTheDocument();
   });
 });

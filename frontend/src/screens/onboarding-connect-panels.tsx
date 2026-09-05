@@ -250,12 +250,16 @@ export function OAuthConnectPanel({
 export function OAuthReturnPanel({
   outcome,
   provider,
-  onComplete,
+  onDone,
 }: Readonly<{
   outcome?: string;
   /** The provider the consent returned for, from the deep-link route. */
   provider?: string;
-  onComplete: (skipped: boolean) => Promise<void>;
+  /** Closes the result. The mailbox question is answered by the roster the
+   * connect surface reads, and leaving the STEP is that surface's own way
+   * onward — so a reader who has just connected mail is back among the cards,
+   * LinkedIn included, rather than carried out of the step. */
+  onDone: () => void;
 }>) {
   const t = useT();
   const connections = useQuery({
@@ -363,7 +367,7 @@ export function OAuthReturnPanel({
             provider={live.provider}
             initial={live.backfill}
             disabled={postureSaving}
-            onFinish={(skipped) => void onComplete(skipped)}
+            onDone={onDone}
           />
         </>
       )}
@@ -374,18 +378,13 @@ export function OAuthReturnPanel({
         />
       )}
       {/* A roster that ANSWERED and showed no connected mailbox is a fact: the
-        consent came back, nothing is connected, and leaving records `skipped`.
-        (The false this once sent wrote "a mailbox was connected" for a step the
-        warning above had just called unconfirmable, and scheduled an overnight
-        import for a mailbox that is not there.)
-
-        A roster that FAILED is not a fact in either direction, so this exit is
-        withheld: the reader still leaves, through the stage's own "continue
-        without a mailbox", where the answer is theirs rather than one this
-        panel invented from a request that never came back. */}
+        consent came back and nothing is connected, which the cards behind this
+        dialog already show. A roster that FAILED is not a fact in either
+        direction, so this exit is withheld: the reader closes the dialog by
+        its own chrome and the surface's roster failure says what to do. */}
       {!connections.isPending && !connections.isError && live === undefined && (
-        <Button variant="primary" onClick={() => void onComplete(true)}>
-          {t("ob.s4.enterCrm")} <ArrowRight aria-hidden />
+        <Button variant="primary" onClick={onDone}>
+          {t("ob.conv.connect.dialogDone")} <ArrowRight aria-hidden />
         </Button>
       )}
     </div>
@@ -404,11 +403,13 @@ const IMAP_DEFAULT_PORT = "993";
 // `onDismiss` closes the dialog without connecting — see `OAuthConnectPanel`
 // for why that is a distinct action from skipping the whole required step.
 export function ImapConnectPanel({
-  onComplete,
+  onDone,
   onDismiss,
   onPendingChange,
 }: Readonly<{
-  onComplete: (skipped: boolean) => Promise<void>;
+  /** Closes the panel once the mailbox is live; the step is left from the
+   * connect surface, never from here (see `OAuthReturnPanel`). */
+  onDone: () => void;
   onDismiss: () => void;
   /** See `OAuthConnectPanel`'s own `onPendingChange` for what this reports
    * and why the caller needs it. */
@@ -498,12 +499,12 @@ export function ImapConnectPanel({
         />
         <Button
           variant="primary"
-          // Leaving mid-write lands the reader in the CRM while the answer is
-          // still in flight, with no surface left to show a refusal.
+          // Closing mid-write leaves the answer in flight with no surface left
+          // to show a refusal.
           disabled={postureSaving}
-          onClick={() => void onComplete(false)}
+          onClick={onDone}
         >
-          {t("ob.s4.enterCrm")} <ArrowRight aria-hidden />
+          {t("ob.conv.connect.dialogDone")} <ArrowRight aria-hidden />
         </Button>
       </div>
     );

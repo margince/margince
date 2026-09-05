@@ -21,10 +21,13 @@ import { initialConversationState } from "./conversation-machine";
 // disabled "Soon" badge), and the post-consent return view no longer depends
 // on which chip was open when the redirect left — it reads the roster fresh.
 //
-// The act also owns the finish: the backread that follows a confirmed
-// connection can be left running or declined, and either way the step
-// completes exactly once — CONNECT_DONE is the only event this act dispatches
-// and a second one would move the machine out from under the wizard.
+// The act also owns the finish, and only the surface's own Continue reaches
+// it: the backread that follows a confirmed connection can be left running or
+// declined, and either way its dialog closes back onto the cards — LinkedIn
+// still waiting — rather than carrying the reader out of the step. The step
+// completes exactly once, from the surface: CONNECT_DONE is the only event the
+// mail path dispatches and a second one would move the machine out from under
+// the wizard.
 
 // Every stub in this file routes the session probe, because ConnectAct mounts
 // capability-aware chrome and story-utils refuses to guess a session: an
@@ -371,7 +374,10 @@ it("asks how far back to read once the mailbox is confirmed", async () => {
   ).toHaveLength(1);
 });
 
-it("finishes the step once, leaving a running backread to the server", async () => {
+// Leaving the backread with the read still running puts the reader back on
+// the surface, LinkedIn card and all: the step is not left until they press
+// its own Continue, which then records the mailbox as connected.
+it("closes the backread onto the surface and finishes only from the surface's Continue", async () => {
   stubWithSession({
     "GET /connectors": rosterWith({
       state: "running",
@@ -384,6 +390,15 @@ it("finishes the step once, leaving a running backread to the server", async () 
     await screen.findByRole("button", { name: "Continue while it reads" }),
   );
 
+  // Nothing left the step; the result is gone and the LinkedIn card is
+  // reachable, which is the whole point of not leaving.
+  await waitFor(() =>
+    expect(screen.queryByText("Live and capturing")).toBeNull(),
+  );
+  expect(dispatch).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: /LinkedIn/ })).not.toBeDisabled();
+
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
   await waitFor(() => expect(dispatch).toHaveBeenCalledTimes(1));
   expect(dispatch).toHaveBeenCalledWith({ type: "CONNECT_DONE" });
   // The mailbox IS connected on this path, so the connect step was not skipped.
@@ -392,7 +407,7 @@ it("finishes the step once, leaving a running backread to the server", async () 
   );
 });
 
-it("finishes the step once when the history read is declined", async () => {
+it("declining the history read closes the result without starting one or leaving the step", async () => {
   const starts: unknown[] = [];
   stubWithSession({
     "GET /connectors": rosterWith({ state: "none" }),
@@ -413,8 +428,10 @@ it("finishes the step once when the history read is declined", async () => {
     await screen.findByRole("button", { name: "Do not read history now" }),
   );
 
-  await waitFor(() => expect(dispatch).toHaveBeenCalledTimes(1));
-  expect(dispatch).toHaveBeenCalledWith({ type: "CONNECT_DONE" });
+  await waitFor(() =>
+    expect(screen.queryByText("Live and capturing")).toBeNull(),
+  );
+  expect(dispatch).not.toHaveBeenCalled();
   expect(starts).toEqual([]);
 });
 
@@ -469,39 +486,41 @@ it("keeps the mailbox-less exit open when consent returned but no mailbox could 
   ).toBeInTheDocument();
 });
 
-// LinkedIn lives beside mail on the same screen now: connecting or skipping
-// it never touches the mail flow above, and neither dispatch is CONNECT_DONE
-// or a wizard-state write — the mail gate owns those exclusively.
+// LinkedIn lives beside mail on the same screen: saving or skipping it never
+// touches the mail flow above, and neither dispatch is CONNECT_DONE or a
+// wizard-state write — the mail gate owns those exclusively. It is not a
+// connection: the member writes down which profile their imported network is
+// attributed to, and nothing is authorized.
 describe("the LinkedIn card", () => {
+  const saves: unknown[] = [];
   beforeEach(() => {
+    saves.length = 0;
     stubWithSession({
       "GET /connectors": () => jsonResponse({ data: [] }),
-      "PUT /me/linkedin-account": () =>
-        jsonResponse({ connected: true, connections: 0 }),
+      "PUT /me/linkedin-account": (body: unknown) => {
+        saves.push(body);
+        return jsonResponse({ connected: false, connections: 0 });
+      },
     });
   });
 
-  it("keeps the authorization form closed until its card is clicked", () => {
+  it("keeps the profile form closed until its card is clicked", () => {
     renderConnectAct();
-    expect(
-      screen.queryByRole("button", { name: "Authorize with LinkedIn" }),
-    ).toBeNull();
+    expect(screen.getByText("save →")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Save profile" })).toBeNull();
   });
 
-  it("will not authorize until the profile it attributes the network to is given", async () => {
+  it("saves the profile the network is attributed to, and authorizes nothing", async () => {
     const { dispatch } = renderConnectAct();
     await userEvent.click(screen.getByRole("button", { name: /LinkedIn/ }));
 
-    // The ask opens as its own dialog, same as a mail provider's.
+    // The ask opens as its own dialog, same as a mail provider's, and says
+    // where the connections themselves come from.
     expect(await screen.findByRole("dialog")).toBeTruthy();
-    const button = screen.getByRole("button", {
-      name: "Authorize with LinkedIn",
-    });
+    expect(screen.getByText(en["ob.conv.linkedin.importLater"])).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /authori[sz]e/i })).toBeNull();
+    const button = screen.getByRole("button", { name: "Save profile" });
     expect(button).toBeDisabled();
-    // The disclosure a member is owed before handing over their address
-    // book: exactly what is read, and the promise it never becomes a contact.
-    expect(screen.getByText(en["ob.conv.linkedin.scope1Rest"])).toBeTruthy();
-    expect(screen.getByText(en["ob.conv.linkedin.neverContacts"])).toBeTruthy();
 
     await userEvent.type(
       screen.getByLabelText("Your LinkedIn profile URL"),
@@ -512,10 +531,15 @@ describe("the LinkedIn card", () => {
 
     await waitFor(() =>
       expect(dispatch).toHaveBeenCalledWith({
-        type: "LINKEDIN_CONNECTED",
+        type: "LINKEDIN_SAVED",
         profile: "https://www.linkedin.com/in/lars",
       }),
     );
+    // `connected: false` on the wire: a saved address grants nothing, and the
+    // store keeps whatever authorization already exists.
+    expect(saves).toEqual([
+      { profile_url: "https://www.linkedin.com/in/lars", connected: false },
+    ]);
   });
 
   it("can be declined from the open dialog, without a profile", async () => {
@@ -527,34 +551,6 @@ describe("the LinkedIn card", () => {
     expect(dispatch).toHaveBeenCalledWith({ type: "LINKEDIN_SKIPPED" });
   });
 
-  it("admits that nothing syncs yet once the dialog is open", async () => {
-    renderConnectAct();
-    await userEvent.click(screen.getByRole("button", { name: /LinkedIn/ }));
-    expect(screen.getByText(en["ob.conv.linkedin.appPending"])).toBeTruthy();
-  });
-
-  // The three consent guarantees the dialog owes a reader before they click
-  // Authorize, each proven on the RENDERED dialog: the sentences come from the
-  // catalog so a rewording is free, but a guarantee that stops being rendered
-  // at all still fails here rather than in review.
-  it("states that connections never become contacts", async () => {
-    renderConnectAct();
-    await userEvent.click(screen.getByRole("button", { name: /LinkedIn/ }));
-    expect(screen.getByText(en["ob.conv.linkedin.neverContacts"])).toBeTruthy();
-  });
-
-  it("states that nothing is sent to a connection", async () => {
-    renderConnectAct();
-    await userEvent.click(screen.getByRole("button", { name: /LinkedIn/ }));
-    expect(screen.getByText(en["ob.conv.linkedin.scope4Rest"])).toBeTruthy();
-  });
-
-  it("states that no connections sync yet", async () => {
-    renderConnectAct();
-    await userEvent.click(screen.getByRole("button", { name: /LinkedIn/ }));
-    expect(screen.getByText(en["ob.conv.linkedin.appPending"])).toBeTruthy();
-  });
-
   it("shows the resolved state and offers no further action once skipped", () => {
     renderConnectAct(undefined, "skipped");
     expect(screen.getByText("Skipped: add it later in Settings")).toBeTruthy();
@@ -562,14 +558,14 @@ describe("the LinkedIn card", () => {
   });
 
   it("shows the resolved state and offers no further action once connected", () => {
-    renderConnectAct(undefined, "connected");
-    expect(screen.getByText("Connected")).toBeTruthy();
+    renderConnectAct(undefined, "saved");
+    expect(screen.getByText("Profile saved")).toBeTruthy();
     expect(screen.getByRole("button", { name: /LinkedIn/ })).toBeDisabled();
   });
 
-  // A failed authorization must stay visible and retryable, not vanish
-  // behind a dialog that already closed on the click that failed.
-  it("keeps the dialog open and shows the failure when authorization fails", async () => {
+  // A failed save must stay visible and retryable, not vanish behind a
+  // dialog that already closed on the click that failed.
+  it("keeps the dialog open and shows the failure when the save fails", async () => {
     stubWithSession({
       "GET /connectors": () => jsonResponse({ data: [] }),
       "PUT /me/linkedin-account": () =>
@@ -581,16 +577,14 @@ describe("the LinkedIn card", () => {
       screen.getByLabelText("Your LinkedIn profile URL"),
       "https://www.linkedin.com/in/lars",
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Authorize with LinkedIn" }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
 
     expect(
       await screen.findByText("LinkedIn refused the profile."),
     ).toBeInTheDocument();
     // Still open and retryable — not silently dismissed on the failed click.
     expect(
-      screen.getByRole("button", { name: "Authorize with LinkedIn" }),
+      screen.getByRole("button", { name: "Save profile" }),
     ).toBeInTheDocument();
   });
 });
@@ -779,9 +773,9 @@ describe("dismissal during an in-flight connect request", () => {
 
   // LinkedIn's skip and its save race the same way mail's dismiss does: a
   // successful PUT landing after a skip already dispatched would leave the
-  // account connected on the server against a machine state that says
-  // skipped, with no way to tell the later LINKEDIN_CONNECTED dispatch apart
-  // from a stale one.
+  // profile saved on the server against a machine state that says skipped,
+  // with no way to tell the later LINKEDIN_SAVED dispatch apart from a stale
+  // one.
   it("keeps the LinkedIn dialog open and Skip disabled while its save is pending", async () => {
     const deferred: { resolve: ((r: Response) => void) | null } = {
       resolve: null,
@@ -799,9 +793,7 @@ describe("dismissal during an in-flight connect request", () => {
       screen.getByLabelText("Your LinkedIn profile URL"),
       "https://www.linkedin.com/in/lars",
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Authorize with LinkedIn" }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: "Skip LinkedIn for now" }),
@@ -812,10 +804,10 @@ describe("dismissal during an in-flight connect request", () => {
     expect(screen.getByRole("dialog")).toBeTruthy();
     expect(dispatch).not.toHaveBeenCalledWith({ type: "LINKEDIN_SKIPPED" });
 
-    deferred.resolve?.(jsonResponse({ connected: true, connections: 0 }));
+    deferred.resolve?.(jsonResponse({ connected: false, connections: 0 }));
     await waitFor(() =>
       expect(dispatch).toHaveBeenCalledWith({
-        type: "LINKEDIN_CONNECTED",
+        type: "LINKEDIN_SAVED",
         profile: "https://www.linkedin.com/in/lars",
       }),
     );

@@ -3365,34 +3365,6 @@
   white-space: nowrap;
 }
 
-/* The connect act's per-purpose consent list, rendered with the thread. Each
-   row's claim and qualifier live in ONE flex item (the `<span>` in the JSX),
-   not two competing ones — two items each shrinking to their own leftover
-   width is what broke "Your connection list —" across three ragged lines;
-   one item wraps as continuous prose instead. */
-.ob-conv-scopes {
-  display: grid;
-  gap: var(--space-2);
-  margin: 0;
-}
-
-.ob-conv-scopes p {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  margin: 0;
-  color: var(--textContent);
-  font: var(--fw-regular) var(--fs-body) / var(--lh-normal) var(--f-body);
-}
-
-.ob-conv-scopes svg {
-  flex: none;
-  width: 14px;
-  height: 14px;
-  margin-top: 3px;
-  color: var(--success);
-}
-
 /* Keyboard focus on option chips and chip rows reads the same accent-token
  * ring as the atom inputs, not the browser's off-palette native outline. */
 .ob-conv-option:focus-visible {

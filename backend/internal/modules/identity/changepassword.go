@@ -26,6 +26,11 @@ import (
 // else in this file follows from that: the verify happens before the KDF spend,
 // the §27 lock binds the same way it binds login, and a wrong guess is counted
 // and recorded rather than answered for free.
+//
+// The change itself ends every credential that existed before it and mints the
+// one the caller continues on. Whoever else held a session, a grant or a token
+// for this account is out; the person who just proved the current password is
+// not asked for it a third time.
 
 // ErrCurrentPasswordWrong marks a change whose current-password check failed.
 // Distinct from ErrBadCredentials at the seam so the handler can answer the
@@ -40,28 +45,39 @@ var ErrCurrentPasswordWrong = errors.New("identity: the current password does no
 // old password has stopped working when it has not.
 var ErrPasswordUnchanged = errors.New("identity: the new password is the current one")
 
-// ChangePassword rotates the caller's own password.
+// ChangePassword rotates the caller's own password and returns the raw token
+// of the session the caller continues on.
 //
-// Every other credential that could act as this account ends with it —
+// Every credential that existed before the change is dead afterwards —
 // sessions, OAuth grants and their refresh chains, unconsumed authorization
-// codes, locally minted passports — including the session making the call. A
-// rotation exists to make what someone else may hold stop working, and a
-// carve-out for "this browser" is a carve-out for whoever is sitting at it.
-// The caller signs in again with the password they just chose.
-func (s *Service) ChangePassword(ctx context.Context, current, next string) error {
+// codes, locally minted passports, unredeemed set-password tokens — the
+// session making the call included. A rotation exists to make what someone
+// else may hold stop working, and a carve-out for "this browser" is a carve-out
+// for whoever is sitting at it. What the caller keeps is not that session but a
+// fresh one, minted by the change itself in the same transaction, after the
+// revocation: it exists only if the rotation committed, and nothing that
+// predates the new password can name it.
+func (s *Service) ChangePassword(ctx context.Context, current, next string) (string, error) {
 	userID, ok := callerUserID(ctx)
 	if !ok {
-		return apperrors.ErrPermissionDenied
+		return "", apperrors.ErrPermissionDenied
 	}
 	if err := passwordLengthError("new_password", next); err != nil {
-		return err
+		return "", err
 	}
 	wsID, ok := workspaceFrom(ctx)
 	if !ok {
-		return apperrors.ErrNotFound
+		return "", apperrors.ErrNotFound
+	}
+	// Minted before the transaction, the way Login mints it: the raw value
+	// never touches the database, and a token whose insert rolls back is a
+	// string nobody was ever handed.
+	token, tokenHash, err := mintSessionToken()
+	if err != nil {
+		return "", err
 	}
 
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := s.proveCurrentPassword(ctx, tx, userID, current); err != nil {
 			return err
 		}
@@ -101,8 +117,13 @@ func (s *Service) ChangePassword(ctx context.Context, current, next string) erro
 			passwordChangeRevokeReason); err != nil {
 			return err
 		}
+		// AFTER the revocation, which ends every session by user id: minted
+		// before it, the fresh session would be revoked in the same breath.
+		if err := insertSession(ctx, tx, userID, tokenHash); err != nil {
+			return err
+		}
 		return logAuthEvent(ctx, tx, userID, "password_changed",
-			"password changed by its owner; every borrowed credential revoked")
+			"password changed by its owner; every prior credential revoked, a fresh session issued")
 	})
 	// Counted and recorded in the SERVICE, the way Login records its own
 	// failures — not in the handler. A transport-only counter means every
@@ -116,7 +137,10 @@ func (s *Service) ChangePassword(ctx context.Context, current, next string) erro
 				"user_id", userID.String(), "err", recErr)
 		}
 	}
-	return err
+	if err != nil {
+		return "", err
+	}
+	return token, nil
 }
 
 // proveCurrentPassword is the authorization this route runs on: the caller must
@@ -282,7 +306,7 @@ func (h Handlers) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.svc.ChangePassword(r.Context(), req.CurrentPassword, req.NewPassword)
+	token, err := h.svc.ChangePassword(r.Context(), req.CurrentPassword, req.NewPassword)
 	switch {
 	case errors.Is(err, errAccountLocked):
 		// Same answer the login path gives a locked account, for the same
@@ -323,10 +347,11 @@ func (h Handlers) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	// The session that made this call is gone with every other credential, so
-	// the cookie is cleared here too — leaving it would hand the browser a
-	// token that now authenticates nothing and read as a broken session
-	// rather than a completed rotation.
-	clearSessionCookie(w)
+	// The session that made this call is gone with every other credential, and
+	// the cookie is replaced by the one the change minted — leaving the old
+	// value would hand the browser a token that now authenticates nothing and
+	// read as a broken session rather than a completed rotation. Same 204 as
+	// before: the outcome is the cookie, not a body.
+	setSessionCookie(w, token)
 	w.WriteHeader(http.StatusNoContent)
 }

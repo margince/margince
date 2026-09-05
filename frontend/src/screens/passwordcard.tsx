@@ -7,7 +7,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { usePasswordReveal } from "../design-system/passwordreveal";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { problemMessageOf, resetToSignedOut, throwProblem } from "./common";
+import { problemMessageOf, throwProblem } from "./common";
 import { isTooShort } from "./passwordrule";
 
 // Changing your own password, from the account settings page.
@@ -43,9 +43,9 @@ export function PasswordSettingRow({
   onChanged,
 }: Readonly<{
   // Called after a successful change. The settings page needs nothing — the
-  // sign-out below is the whole outcome there. A caller that sent the reader
-  // here BECAUSE of a refused credential uses it to re-probe, since the change
-  // is what resolves the refusal.
+  // confirmation on the row is the whole outcome there. A caller that sent the
+  // reader here BECAUSE of a refused credential uses it to re-probe, since the
+  // change is what resolves the refusal.
   onChanged?: () => void;
 }> = {}) {
   const t = useT();
@@ -81,16 +81,16 @@ export function PasswordSettingRow({
       setFields(EMPTY);
       setDone(true);
       // The dialog closes on success and the confirmation is left on the row
-      // behind it: a reader who has just been signed out everywhere needs the
-      // sentence, not the form they no longer have anything to type into.
+      // behind it: the outcome is a sentence, not a form with nothing left to
+      // type into.
       setOpen(false);
-      // The server revoked every credential for this account, this session
-      // included, and cleared the cookie. Without dropping the cached identity
-      // the app would keep rendering the signed-in shell against a session that
-      // no longer exists, and every later request would 401 — a success message
-      // followed by unexplained failures, which is exactly what the warning
-      // above this button exists to prevent.
-      await resetToSignedOut(queryClient);
+      // The server revoked every credential that existed before the change and
+      // set the cookie for the fresh session it minted, so the reader stays
+      // signed in HERE and is signed out everywhere else. The identity probe
+      // is re-asked rather than the cache dropped: what it answers may have
+      // changed — a forced rotation is lifted by this very call — and nothing
+      // else cached belongs to a session that ended.
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
       onChanged?.();
     },
   });
@@ -232,11 +232,6 @@ export function PasswordSettingRow({
                 />
               )}
             </Field>
-            {/* Said before the button is pressed, not after: the change ends
-                every session including this one, so the next thing that happens
-                is a sign-in screen. A person who is not told that reads it as
-                being kicked out. */}
-            <p className="t-small">{t("password.signsYouOut")}</p>
             <div className="form-actions">
               <Button small variant="ghost" onClick={close}>
                 {t("password.cancel")}

@@ -81,8 +81,8 @@ func run() error {
 	}
 	// A configured bootstrap holds the account until the operator's password
 	// is replaced. Doing that first is what lets everything below write at
-	// all, and it returns a client signed in on the new credential.
-	client, *password, err = replaceOperatorPassword(*baseURL, *email, *password, client)
+	// all, and it hands back the client on the session the change minted.
+	client, *password, err = replaceOperatorPassword(*password, client)
 	if err != nil {
 		return err
 	}

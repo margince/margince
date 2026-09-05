@@ -60,22 +60,26 @@ cannot disagree with it). State persists server-side (`/onboarding/state`,
 `onboarding_wizard_state` in the identity module), so a reload or an OAuth
 round-trip reconstructs the same scene.
 
-The creator's rail reads **Read · Confirm · Voice · Ready · Connect**.
+The creator's rail reads **Read · Confirm · Basis · Voice · Connect · Preferences**.
+Basis is the installation's reporting basis — base currency and reporting
+timezone — asked once, right after the company is confirmed and before any step
+about the person answering; an admin can change either later in Settings, and a
+currency a deal has already frozen is shown locked there as it is here.
 
-**An invited member gets three stops.** Their company is already confirmed, so
-their rail shows Read · Confirm · Connect with the first two already **done**,
-and the restore plan routes them straight to Connect — Voice and Ready are not
-theirs to walk, and a greyed step that will never happen is a promise the flow
-does not keep.
+**An invited member walks the personal stops.** Their company and its basis are
+already settled, so their rail reads Voice · Connect · Preferences and the
+restore plan lands them straight in the voice act. The app's onboarding gate
+sends every human whose wizard state is absent or unfinished here, a read seat
+excepted (it cannot write the checkpoint the journey ends on), so a member
+invited later trains their voice and connects their mailbox exactly as the
+creator did.
 
-The server half is stricter than that description sounds: it refuses a member
-checkpoint at `read` or `confirm` outright. Its error text reads "members begin
-at Voice", which is the *checkpoint* vocabulary and now outlives the flow it
-described — the client sends members to Connect, not to Voice. Read the refusal
-as "a member may not claim the creator's steps", not as a route.
+The server refuses a member checkpoint at any creator-only step (`read`,
+`confirm`, `basis`, `invite`, `team`) with the text "members begin at Voice",
+which is now also the route.
 
-The `step` enum on the wire (`read, confirm, voice, results, connect, complete`)
-is the checkpoint vocabulary, not the rail's — the rail's fifth stop is a
+The `step` enum on the wire (`read, confirm, basis, invite, team, voice, results,
+connect, complete`) is the checkpoint vocabulary, not the rail's — the rail is a
 detour-aware view over it, so a clarify question can take the whole screen
 without claiming a numbered slot.
 

@@ -39,6 +39,22 @@ beforeEach(() => {
   window.location.hash = "";
 });
 
+// A wizard row at the step named — the shape the shell's journey gate reads.
+function wizardRow(step: string) {
+  return {
+    path: "member",
+    step,
+    source_mode: null,
+    company_draft: {},
+    selected_fact_keys: [],
+    voice_skipped: false,
+    connect_skipped: false,
+    version: 1,
+    created_at: "2026-07-01T00:00:00Z",
+    updated_at: "2026-07-01T00:00:00Z",
+  };
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -60,6 +76,13 @@ describe("the custom-fields admin, at its address inside settings", () => {
         const url = String(input instanceof Request ? input.url : input);
         if (url.endsWith("/v1/me")) {
           return new Response(JSON.stringify(meFixture({ roles: ["admin"] })), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        // A finished journey, or the gate's second half takes the address.
+        if (url.endsWith("/v1/onboarding/state")) {
+          return new Response(JSON.stringify(wizardRow("complete")), {
             status: 200,
             headers: { "Content-Type": "application/json" },
           });
@@ -684,18 +707,38 @@ describe("onboarding gate", () => {
     );
   };
 
-  // Every call the shell makes resolves; only /company's status varies, so the
-  // gate is the single thing under test.
-  const stubCompany = (status: number) =>
+  // Every call the shell makes resolves; only /company's status and the
+  // journey's own row vary, so the gate is the single thing under test. The
+  // journey defaults to finished, which is what lets a described installation
+  // stay where it was asked to go.
+  const stubCompany = (
+    status: number,
+    journey: { row: unknown; status: number } = {
+      row: wizardRow("complete"),
+      status: 200,
+    },
+    seat: "full" | "read" = "full",
+  ) =>
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: Request | string | URL) => {
         const url = String(input instanceof Request ? input.url : input);
         if (url.endsWith("/v1/me")) {
           return new Response(
-            JSON.stringify({ user: { id: "u1" }, roles: ["admin"], teams: [] }),
+            JSON.stringify(meFixture({ roles: ["admin"], seat })),
             { status: 200, headers: { "Content-Type": "application/json" } },
           );
+        }
+        if (url.endsWith("/v1/onboarding/state")) {
+          return new Response(JSON.stringify(journey.row), {
+            status: journey.status,
+            headers: {
+              "Content-Type":
+                journey.status === 200
+                  ? "application/json"
+                  : "application/problem+json",
+            },
+          });
         }
         if (url.endsWith("/v1/company")) {
           return status === 200
@@ -743,6 +786,37 @@ describe("onboarding gate", () => {
     await waitFor(() =>
       expect(window.location.hash).toBe("#/onboarding/company"),
     );
+  });
+
+  // The gate's second half: a described installation still walks every human
+  // whose own journey is unfinished through it. That is how a member invited
+  // later trains their voice and connects their mailbox as the creator did.
+  it("sends a human with no journey of their own to onboarding, company or not", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(200, { row: { code: "not_found" }, status: 404 });
+    mount();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/onboarding/company"),
+    );
+  });
+
+  it("sends a human whose journey stopped short back into it", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(200, { row: wizardRow("voice"), status: 200 });
+    mount();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/onboarding/company"),
+    );
+  });
+
+  // A read seat cannot write the checkpoint the journey ends on, so a gate
+  // that held it would hold it forever.
+  it("leaves a read seat alone, whatever its journey says", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(200, { row: { code: "not_found" }, status: 404 }, "read");
+    mount();
+    await screen.findByRole("navigation", { name: "Primary navigation" });
+    expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
   });
 
   it("leaves a described installation on the route it asked for", async () => {

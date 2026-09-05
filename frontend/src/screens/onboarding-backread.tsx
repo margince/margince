@@ -108,10 +108,11 @@ export type OnboardingBackreadProps = Readonly<{
    *  the first render, so returning to a read in progress shows it immediately
    *  and never offers to start a second one. */
   initial?: BackfillStatus;
-  /** Finish onboarding. `skipped` is the CONNECT step's flag, not the
-   *  backread's: the mailbox is connected on every path through this surface,
-   *  so declining the history read still finishes with `false`. */
-  onFinish: (skipped: boolean) => void;
+  /** Leave the backread. The mailbox is connected on every path through this
+   *  surface, and a read that is running keeps running; what closes is the
+   *  dialog, so the reader lands back on the connect surface — where LinkedIn
+   *  still waits and the step's own way onward stands. */
+  onDone: () => void;
   /** Hold the start verb while a decision ABOUT this mailbox is still being
    *  written — the posture, today. A read that begins first imports under the
    *  answer the write was about to replace. */
@@ -122,7 +123,7 @@ export function OnboardingBackread({
   provider,
   initial,
   disabled,
-  onFinish,
+  onDone,
 }: OnboardingBackreadProps) {
   const t = useT();
   const qc = useQueryClient();
@@ -230,8 +231,8 @@ export function OnboardingBackread({
           {t("backfill.statusUnavailable")}
         </p>
         <div className="ob-backread-acts">
-          <Button variant="primary" onClick={() => onFinish(false)}>
-            {t("ob.s4.enterCrm")}
+          <Button variant="primary" onClick={() => onDone()}>
+            {t("ob.conv.connect.dialogDone")}
           </Button>
         </div>
       </section>
@@ -263,7 +264,7 @@ export function OnboardingBackread({
         held={disabled}
         startProblem={safeDetail(start.isError, start.error, t)}
         onStart={() => start.mutate(selected)}
-        onFinish={onFinish}
+        onDone={onDone}
       />
     );
   }
@@ -274,7 +275,7 @@ export function OnboardingBackread({
       cancelling={cancel.isPending}
       cancelProblem={safeDetail(cancel.isError, cancel.error, t)}
       onCancel={() => cancel.mutate()}
-      onFinish={onFinish}
+      onDone={onDone}
     />
   );
 }
@@ -292,7 +293,7 @@ function BackreadSetup({
   startProblem,
   held,
   onStart,
-  onFinish,
+  onDone,
 }: Readonly<{
   selected: BackreadWindow;
   onSelect: (pick: BackreadWindow) => void;
@@ -309,7 +310,7 @@ function BackreadSetup({
   starting: boolean;
   startProblem: string | null;
   onStart: () => void;
-  onFinish: (skipped: boolean) => void;
+  onDone: () => void;
 }>) {
   const t = useT();
   const group = useId();
@@ -340,7 +341,7 @@ function BackreadSetup({
         >
           {t("ob.backread.start")}
         </Button>
-        <Button onClick={() => onFinish(false)}>{t("ob.backread.skip")}</Button>
+        <Button onClick={() => onDone()}>{t("ob.backread.skip")}</Button>
       </div>
       {startProblem !== null && (
         <p className="ob-backread-problem" role="alert">
@@ -412,13 +413,13 @@ function BackreadRun({
   cancelling,
   cancelProblem,
   onCancel,
-  onFinish,
+  onDone,
 }: Readonly<{
   run: BackfillStatus;
   cancelling: boolean;
   cancelProblem: string | null;
   onCancel: () => void;
-  onFinish: (skipped: boolean) => void;
+  onDone: () => void;
 }>) {
   const t = useT();
   const heading = headingKey(run.state);
@@ -436,8 +437,8 @@ function BackreadRun({
         </p>
       )}
       <div className="ob-backread-acts">
-        <Button variant="primary" onClick={() => onFinish(false)}>
-          {live ? t("ob.backread.explore") : t("ob.s4.enterCrm")}
+        <Button variant="primary" onClick={() => onDone()}>
+          {live ? t("ob.backread.explore") : t("ob.conv.connect.dialogDone")}
         </Button>
         {live && (
           <Button disabled={cancelling} onClick={onCancel}>

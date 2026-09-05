@@ -30,7 +30,7 @@ const PREVIEW_ROUTE = "POST /connectors/gmail/backfill/preview";
 const START_ROUTE = "POST /connectors/gmail/backfill";
 const CANCEL_ROUTE = "DELETE /connectors/gmail/backfill";
 
-function render(initial: BackfillStatus, onFinish = vi.fn()) {
+function render(initial: BackfillStatus, onDone = vi.fn()) {
   const view = rtlRender(
     <QueryClientProvider
       client={
@@ -41,12 +41,12 @@ function render(initial: BackfillStatus, onFinish = vi.fn()) {
         <OnboardingBackread
           provider="gmail"
           initial={initial}
-          onFinish={onFinish}
+          onDone={onDone}
         />
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return { ...view, onFinish };
+  return { ...view, onDone };
 }
 
 const previewOf = (body: Record<string, unknown>) =>
@@ -473,7 +473,7 @@ describe("outcomes", () => {
     installFetchStub({
       [STATUS_ROUTE]: () => jsonResponse({ code: "internal" }, 500),
     });
-    const onFinish = vi.fn();
+    const onDone = vi.fn();
     rtlRender(
       <QueryClientProvider
         client={
@@ -481,7 +481,7 @@ describe("outcomes", () => {
         }
       >
         <LocaleProvider initial="en">
-          <OnboardingBackread provider="gmail" onFinish={onFinish} />
+          <OnboardingBackread provider="gmail" onDone={onDone} />
         </LocaleProvider>
       </QueryClientProvider>,
     );
@@ -489,13 +489,13 @@ describe("outcomes", () => {
     expect(
       await screen.findByText(/import status can't be read right now/),
     ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /^continue$/i }));
-    expect(onFinish).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByRole("button", { name: /^done$/i }));
+    expect(onDone).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("leaving", () => {
-  it("walks into the app with the read still running", async () => {
+  it("closes with the read still running", async () => {
     const cancels: unknown[] = [];
     installFetchStub({
       [CANCEL_ROUTE]: (body) => {
@@ -505,7 +505,7 @@ describe("leaving", () => {
       [STATUS_ROUTE]: () =>
         jsonResponse({ state: "running", counts: { messages_scanned: 5 } }),
     });
-    const { onFinish } = render({
+    const { onDone } = render({
       state: "running",
       counts: { messages_scanned: 5 },
     });
@@ -513,10 +513,9 @@ describe("leaving", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "Continue while it reads" }),
     );
-    // The mailbox is connected on this path, so the CONNECT step is not
-    // skipped — only the history read would have been.
-    expect(onFinish).toHaveBeenCalledTimes(1);
-    expect(onFinish).toHaveBeenCalledWith(false);
+    // Leaving the backread is not leaving the step: the read keeps running
+    // and nothing is cancelled.
+    expect(onDone).toHaveBeenCalledTimes(1);
     expect(cancels).toEqual([]);
   });
 
@@ -529,15 +528,14 @@ describe("leaving", () => {
         return jsonResponse({ state: "queued" }, 202);
       },
     });
-    const { onFinish } = render({ state: "none" });
+    const { onDone } = render({ state: "none" });
 
     await screen.findByText("About 1,234 messages in that window.");
     await userEvent.click(
       screen.getByRole("button", { name: "Do not read history now" }),
     );
 
-    expect(onFinish).toHaveBeenCalledTimes(1);
-    expect(onFinish).toHaveBeenCalledWith(false);
+    expect(onDone).toHaveBeenCalledTimes(1);
     expect(starts).toEqual([]);
   });
 

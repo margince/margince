@@ -227,7 +227,7 @@ export interface paths {
         put?: never;
         /**
          * Change your own password.
-         * @description The signed-in human rotates their own credential. The CURRENT PASSWORD is the authority, not the session: a session is what a stolen laptop already has, and letting one set a new password would turn a borrowed browser into a permanent takeover. Every credential that could act as the account ends with the change — sessions, OAuth grants and their refresh chains, unconsumed authorization codes, locally minted passports — INCLUDING the session making the call, so the caller signs in again with the password they just chose. A new password equal to the current one is refused rather than accepted as a no-op. Audited.
+         * @description The signed-in human rotates their own credential. The CURRENT PASSWORD is the authority, not the session: a session is what a stolen laptop already has, and letting one set a new password would turn a borrowed browser into a permanent takeover. Every credential that existed before the change is dead afterwards — sessions, OAuth grants and their refresh chains, unconsumed authorization codes, locally minted passports, unredeemed set-password tokens — INCLUDING the session making the call. The caller continues on a fresh session minted by the change itself, delivered in the session cookie of the response, so the password they just proved is not asked for a third time. A new password equal to the current one is refused rather than accepted as a no-op. Audited.
          */
         post: operations["changePassword"];
         delete?: never;
@@ -25513,10 +25513,10 @@ export interface components {
             /** @description Zero creates; otherwise the version last read. */
             expected_version: number;
             /**
-             * @description Where the creator's setup stands. `invite` is the question asked once the company is confirmed — whether the person setting the installation up will also work in it, which is what decides whether the optional `voice` and `connect` steps are offered at all. `team` is where a creator who will not work in it invites the first person who will. `results` is kept for rows written before that question existed; a client treats it as the connect step being next.
+             * @description Where the setup stands. `basis` is the installation's reporting basis — base currency and reporting timezone — asked of the creator once the company is confirmed, before any step about the person answering. `invite` is the question asked next: whether the person setting the installation up will also work in it, which is what decides whether the `voice` and `connect` steps are walked now or by the first person they invite. `team` is where a creator who will not work in it invites that person. A member's route begins at `voice`: the company and its basis are already settled, so their steps are the personal ones alone. `results` is kept for rows written before the invite existed; a client treats it as the connect step being next.
              * @enum {string}
              */
-            step: "read" | "confirm" | "invite" | "team" | "voice" | "results" | "connect" | "complete";
+            step: "read" | "confirm" | "basis" | "invite" | "team" | "voice" | "results" | "connect" | "complete";
             /** @enum {string|null} */
             source_mode: "website" | "manual" | null;
             /** Format: uri */
@@ -25532,7 +25532,7 @@ export interface components {
             /** @enum {string} */
             readonly path: "creator" | "member";
             /** @enum {string} */
-            step: "read" | "confirm" | "invite" | "team" | "voice" | "results" | "connect" | "complete";
+            step: "read" | "confirm" | "basis" | "invite" | "team" | "voice" | "results" | "connect" | "complete";
             /** @enum {string|null} */
             source_mode: "website" | "manual" | null;
             /** Format: uri */
@@ -31409,7 +31409,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Password changed; every credential for the account, including this session, is revoked. */
+            /** @description Password changed; every credential that existed before it, this session included, is revoked, and the session cookie now carries the one the change minted. */
             204: {
                 headers: {
                     [name: string]: unknown;

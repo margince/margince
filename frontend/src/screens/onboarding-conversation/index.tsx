@@ -8,7 +8,13 @@ import { navigateReplacing, useRoute } from "../../app/router";
 import { Button } from "../../design-system/atoms";
 import { useLocale, useT } from "../../i18n";
 import { throwProblem } from "../common";
-import { EMPTY_DRAFT, pickBuiltVersion, useCompany } from "../onboarding";
+import {
+  EMPTY_DRAFT,
+  loadWizardState,
+  pickBuiltVersion,
+  useCompany,
+} from "../onboarding";
+import { BasisAct } from "./basis-act";
 import { CompanyAct } from "./company-act";
 import { ConnectAct } from "./connect-act";
 import {
@@ -37,28 +43,30 @@ import { WorkbenchEntranceScope } from "./workbench";
 type OnboardingState = components["schemas"]["OnboardingState"];
 type CompanySiteRead = components["schemas"]["CompanySiteRead"];
 
-// The wizard steps whose restore needs the voice server truth (built
-// versions, corpus meter); the member path never does.
-// "invite" is in the set because accepting the invite walks straight into the
-// voice act without another restore: probing only from "voice" onwards handed
-// VoiceAct a null summary, and the collect scene then reported zero words over
-// a corpus the server already held.
+// The creator steps whose restore needs the voice server truth (built
+// versions, corpus meter). "basis" and "invite" are in the set because the
+// invite walks straight into the voice act without another restore: probing
+// only from "voice" onwards handed VoiceAct a null summary, and the collect
+// scene then reported zero words over a corpus the server already held. A
+// member's journey BEGINS at voice, so their restore always needs it.
 const voiceProbeSteps = new Set<OnboardingState["step"]>([
+  "basis",
   "invite",
   "voice",
   "results",
   "connect",
 ]);
 
-export async function loadWizardState(): Promise<OnboardingState | null> {
-  const { data, error, response } = await api.GET("/onboarding/state");
-  if (error) {
-    if (response.status === 404) {
-      return null;
-    }
-    throwProblem(error);
+// Whether the restore needs the voice probe, from the same facts restorePlan
+// routes on: the wizard row's path when one exists, else company existence.
+function voiceProbeNeeded(
+  wizard: OnboardingState | null,
+  companyExists: boolean,
+): boolean {
+  if (wizard === null) {
+    return companyExists;
   }
-  return data;
+  return wizard.path === "member" || voiceProbeSteps.has(wizard.step);
 }
 
 // One probe per fact the restore needs: does a built version exist, and
@@ -94,47 +102,41 @@ async function probeVoice(): Promise<VoiceRestoreProbe> {
 
 // Live act transitions the server must remember, keyed by the phase pair
 // that only a user action (never a restore RESUME out of co.confirmed)
-// produces.
+// produces. A pair absent here is a move the server need not remember.
+//
+// Declining the invite records BOTH personal steps as skipped on the way into
+// the team act: the answer was about them, and a reload must not reopen a
+// question already answered. Entering the connect screen shows both mail and
+// LinkedIn at once, so there is nothing left behind a reload could strand —
+// its checkpoint fires on arrival, unlike voice which fires on departure.
+// Finishing is not here either: the connect act records how it left (a
+// mailbox connected or skipped) before it moves, and the preferences act
+// writes step "complete" itself before the handoff.
+const actCheckpoints: ReadonlyMap<
+  string,
+  Omit<WizardPersistInput, "values">
+> = new Map([
+  ["co.review>bs.ask", { step: "basis" }],
+  ["co.manual>bs.ask", { step: "basis" }],
+  ["bs.ask>in.ask", { step: "invite" }],
+  ["in.ask>vo.collecting", { step: "voice", voiceSkipped: false }],
+  ["in.ask>tm.ask", { step: "team", voiceSkipped: true, connectSkipped: true }],
+  ["vo.collecting>vo.skipped", { step: "voice", voiceSkipped: true }],
+  ["vo.result>cn.consent", { step: "connect" }],
+  ["vo.skipped>cn.consent", { step: "connect" }],
+]);
+
 function actCheckpoint(
   prev: ConversationPhase,
   next: ConversationPhase,
   buildSucceeded: boolean,
 ): Omit<WizardPersistInput, "values"> | null {
-  if ((prev === "co.review" || prev === "co.manual") && next === "in.ask") {
-    return { step: "invite" };
+  // The one pair that is a checkpoint only on a particular outcome: a build
+  // that failed or deferred leaves the voice act where it was.
+  if (prev === "vo.building" && next === "vo.result") {
+    return buildSucceeded ? { step: "voice", voiceSkipped: false } : null;
   }
-  if (prev === "in.ask" && next === "vo.collecting") {
-    return { step: "voice", voiceSkipped: false };
-  }
-  // Declining the invite records BOTH personal steps as skipped here, on the
-  // way into the team act: the answer was about them, and a reload must not
-  // reopen a question already answered.
-  if (prev === "in.ask" && next === "tm.ask") {
-    return { step: "team", voiceSkipped: true, connectSkipped: true };
-  }
-  if (prev === "vo.collecting" && next === "vo.skipped") {
-    return { step: "voice", voiceSkipped: true };
-  }
-  if (prev === "vo.building" && next === "vo.result" && buildSucceeded) {
-    return { step: "voice", voiceSkipped: false };
-  }
-  // Entering the connect screen (out of the voice act, or straight off
-  // company confirmation on the member path) shows both mail and LinkedIn at
-  // once, so there is nothing left behind a reload could strand — the
-  // checkpoint fires on arrival, unlike voice which fires on departure.
-  // Finishing is not here either: the connect act records how it left (a
-  // mailbox connected or skipped) before it moves, and the preferences act
-  // writes step "complete" itself before the handoff.
-  if (
-    (prev === "vo.result" ||
-      prev === "vo.skipped" ||
-      prev === "co.review" ||
-      prev === "co.manual") &&
-    next === "cn.consent"
-  ) {
-    return { step: "connect" };
-  }
-  return null;
+  return actCheckpoints.get(`${prev}>${next}`) ?? null;
 }
 
 // The welcome gate: restore lookups still in flight, or a load failure with
@@ -181,14 +183,16 @@ function useRestore(
 ) {
   const { locale } = useLocale();
   const existing = useCompany(true);
+  // The restore's own snapshot, not the live entry the shell gates on: a
+  // checkpoint landing mid-journey must not re-run the restore's reads.
   const wizard = useQuery({
     queryKey: ["onboarding-conv-state"],
     queryFn: loadWizardState,
   });
   const voiceNeeded =
-    wizard.data != null &&
-    wizard.data.path === "creator" &&
-    voiceProbeSteps.has(wizard.data.step);
+    wizard.isSuccess &&
+    existing.isSuccess &&
+    voiceProbeNeeded(wizard.data ?? null, existing.data !== null);
   const voice = useQuery({
     queryKey: ["onboarding-conv-voice"],
     queryFn: probeVoice,
@@ -390,6 +394,8 @@ function CurrentAct({
           initialSummary={voice.data?.summary ?? null}
         />
       );
+    case "basis":
+      return <BasisAct state={state} dispatch={dispatch} />;
     case "invite":
       return <InviteAct state={state} dispatch={dispatch} />;
     case "team":
