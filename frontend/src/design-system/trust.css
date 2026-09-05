@@ -201,7 +201,7 @@ button.evidence-chip:hover {
 
 .approval-gate {
   display: flex;
-  gap: 8px;
+  gap: var(--gapActions);
   margin-top: 12px;
   flex-wrap: wrap;
 }

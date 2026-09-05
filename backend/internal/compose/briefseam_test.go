@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // withheldFromTheTool names each persisted brief field the agent surface does
@@ -55,6 +56,7 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 	asOf := time.Date(2026, 8, 8, 5, 22, 0, 0, time.UTC)
 	stateAt := time.Date(2026, 8, 8, 7, 33, 0, 0, time.UTC)
 	snoozedUntil := time.Date(2026, 8, 9, 8, 44, 0, 0, time.UTC)
+	meetingID := ids.NewV7()
 	annotatedAt := time.Date(2026, 8, 8, 6, 12, 0, 0, time.UTC)
 	run := briefs.BriefRun{
 		ID: runID, UserID: userID, GeneratedAt: generated, AsOf: asOf,
@@ -69,6 +71,7 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 			},
 			EvidenceIDs: []ids.UUID{evidence}, State: "snoozed",
 			StateAt: &stateAt, SnoozedUntil: &snoozedUntil,
+			ReopenOn: values.ReopenOnMeeting, ReopenRef: &meetingID,
 			Finding: "He asked about the delivery date yesterday.",
 			Lineage: &briefs.ItemLineage{
 				DismissedOn:  time.Date(2026, 8, 5, 0, 0, 0, 0, time.UTC),
@@ -121,6 +124,10 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		"Rank": `"rank":3`, "Composite": `"composite":0.815`, "Features": `"momentum":0.44`,
 		"EvidenceIDs": `"evidence_ids":["` + evidence.String(), "State": `"state":"snoozed"`,
 		"StateAt": `"state_at":"2026-08-08T07:33:00Z"`, "SnoozedUntil": `"snoozed_until":"2026-08-09T08:44:00Z"`,
+		// Served, not withheld: without the condition a snooze carrying no
+		// moment reads to an agent as one that never lifts, and it would report
+		// a deal as abandoned when the person is waiting for a reply.
+		"ReopenOn": `"reopen_on":"meeting"`, "ReopenRef": `"reopen_ref":"` + meetingID.String(),
 		"Finding": "He asked about the delivery date yesterday.",
 		"Lineage": `"dismissed_on":"2026-08-05"`,
 	}, string(served))

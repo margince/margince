@@ -241,7 +241,7 @@ function EnrichedField({
         <div
           style={{
             display: "flex",
-            gap: "var(--space-2)",
+            gap: "var(--gapActions)",
             marginTop: "var(--space-2)",
           }}
         >

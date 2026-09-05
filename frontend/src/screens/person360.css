@@ -4,16 +4,6 @@
    pages share the RecordView shell and the design system beneath it; what is
    here is only what the person's own anatomy needs. */
 
-/* The rails stack cards vertically at a tighter rhythm than the main column,
-   because a rail card is a glance and a main-column card is something you
-   read. Same reasoning — and the same numbers — as the company page. */
-.record-rail,
-.record-aside {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
 /* The relationship state strip (§5.3) is the design system's `StatStrip` — one
    plate of ruled slots, the same shape and the same type scale the company
    record's readings row draws. Nothing about it is the person page's own, so
@@ -97,7 +87,7 @@
 .pe-today-actions {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--gapActions);
   align-items: stretch;
   min-width: 160px;
 }
@@ -324,6 +314,7 @@
    rows beside it, and the head grows to hold both. */
 .pe-memory .panel-head {
   flex-wrap: wrap;
+  /* ds:ignore a head that wraps to two rows pays a row's interval, not a band's */
   padding-block: var(--space-2);
 }
 
@@ -462,7 +453,7 @@
 }
 .pe-rail .pe-sect .disclosure-body {
   margin-top: 0;
-  padding: 0 var(--space-5) var(--space-5);
+  padding: 0 var(--padPanel) var(--padPanel);
 }
 
 /* A rail row is one action or one reading: label left, value right. */
@@ -782,7 +773,7 @@
 .pe-drawer-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--gapActions);
 }
 
 /* Research: the staged notice is the whole promise of the drawer — nothing

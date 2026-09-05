@@ -62,6 +62,13 @@ CASES=(
 #                           invisible to it by design. Its own census lives in
 #                           check-ds-spacing.test.sh.
 #   check-ds-spacing.test.sh — that census; a test, not a gate.
+#   check-ds-spacing-roles.sh — whole-tree, but CSS-only, and the fixtures this
+#                           file plants are *.tsx: a stylesheet gate has nothing
+#                           to say about them. Its own suite plants unit
+#                           STYLESHEETS at both depths and requires the gate to
+#                           name each, which is this file's property proved in
+#                           the shape that gate reads.
+#   check-ds-spacing-roles.test.sh — that suite; a test, not a gate.
 #   check-contract-fetch.test.sh — the contract-fetch gate's own census, which
 #                           holds the two properties this file cannot see: that
 #                           the refused mount is DERIVED from crm.yaml, and that
@@ -71,6 +78,8 @@ CASES=(
 EXCUSED=(
   check-ds-spacing.sh
   check-ds-spacing.test.sh
+  check-ds-spacing-roles.sh
+  check-ds-spacing-roles.test.sh
   check-contract-fetch.test.sh
   check-ext-frontend-walk.test.sh
 )

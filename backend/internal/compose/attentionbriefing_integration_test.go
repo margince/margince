@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // briefingLaneEnv is one workspace with the seam's own reader over the real
@@ -173,7 +174,7 @@ func TestASetAsideBriefingItemComesBackWhenItsWindowPasses(t *testing.T) {
 	}
 	item := run.Items[0]
 	until := b.now.Add(3 * time.Hour)
-	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, until, b.now.Add(time.Minute)); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnTime, &until, nil, b.now.Add(time.Minute)); err != nil {
 		t.Fatal(err)
 	}
 

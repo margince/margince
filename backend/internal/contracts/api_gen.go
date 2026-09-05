@@ -6988,6 +6988,27 @@ func (e MeetingPlanUnknownKind) Valid() bool {
 	}
 }
 
+// Defines values for MorningBriefItemReopenOn.
+const (
+	MorningBriefItemReopenOnMeeting MorningBriefItemReopenOn = "meeting"
+	MorningBriefItemReopenOnReply   MorningBriefItemReopenOn = "reply"
+	MorningBriefItemReopenOnTime    MorningBriefItemReopenOn = "time"
+)
+
+// Valid indicates whether the value is a known member of the MorningBriefItemReopenOn enum.
+func (e MorningBriefItemReopenOn) Valid() bool {
+	switch e {
+	case MorningBriefItemReopenOnMeeting:
+		return true
+	case MorningBriefItemReopenOnReply:
+		return true
+	case MorningBriefItemReopenOnTime:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MorningBriefItemState.
 const (
 	MorningBriefItemStateActed     MorningBriefItemState = "acted"
@@ -10414,6 +10435,27 @@ func (e RenewContractRequestValueBasis) Valid() bool {
 	case RenewContractRequestValueBasisAnnualized12m:
 		return true
 	case RenewContractRequestValueBasisTotal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReopenCondition.
+const (
+	ReopenOnMeeting ReopenCondition = "meeting"
+	ReopenOnReply   ReopenCondition = "reply"
+	ReopenOnTime    ReopenCondition = "time"
+)
+
+// Valid indicates whether the value is a known member of the ReopenCondition enum.
+func (e ReopenCondition) Valid() bool {
+	switch e {
+	case ReopenOnMeeting:
+		return true
+	case ReopenOnReply:
+		return true
+	case ReopenOnTime:
 		return true
 	default:
 		return false
@@ -18540,10 +18582,24 @@ type BriefDeliveryMorningBriefDelivery string
 // BriefDeliveryWeeklyDelivery The same, for the weekly review.
 type BriefDeliveryWeeklyDelivery string
 
-// BriefSnoozeRequest Snooze a brief item until a future instant (A77/AC-home-6); it re-surfaces once the instant passes.
+// BriefSnoozeRequest Set a brief item aside until something happens. The something is `reopen_on`: a moment
+// on the clock, the customer writing back, or a named meeting being over.
 type BriefSnoozeRequest struct {
-	// SnoozedUntil When the item re-surfaces; must be in the future.
-	SnoozedUntil time.Time `json:"snoozed_until"`
+	// ReopenOn What lifts a snooze. `time` is the original behaviour and the default, so a client
+	// written before the other two keeps working unchanged. `reply` waits for the
+	// counterparty to write back on a conversation linked to the record. `meeting` waits for
+	// a named meeting to be over — an archived meeting counts as over, so a cancelled one
+	// returns the work rather than holding it forever.
+	ReopenOn *ReopenCondition `json:"reopen_on,omitempty"`
+
+	// ReopenRef The meeting to wait for. REQUIRED for `meeting` and refused otherwise, because
+	// "after the meeting" names nothing without saying which meeting.
+	ReopenRef *openapi_types.UUID `json:"reopen_ref,omitempty"`
+
+	// SnoozedUntil When the item re-surfaces. REQUIRED for `time` and refused for the other two — a
+	// snooze waiting on a reply lifts when the reply arrives, not on a date. Must be in
+	// the future.
+	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
 }
 
 // BuyerRoomAccess Whether the session admits the caller to content right now. `live` — the room
@@ -25329,7 +25385,13 @@ type MorningBriefItem struct {
 	// Rank Position in the queue (1 = top), after the L2 re-order.
 	Rank int `json:"rank"`
 
-	// SnoozedUntil When a snoozed item re-surfaces (A77/AC-home-6); set exactly while state=snoozed, null otherwise.
+	// ReopenOn What the item is waiting for; set exactly while state=snoozed, null otherwise.
+	ReopenOn *MorningBriefItemReopenOn `json:"reopen_on,omitempty"`
+
+	// ReopenRef The meeting being waited for; set exactly while reopen_on=meeting.
+	ReopenRef *openapi_types.UUID `json:"reopen_ref,omitempty"`
+
+	// SnoozedUntil When a snoozed item re-surfaces; set exactly while reopen_on=time, null otherwise — the other conditions lift on an event rather than a date.
 	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
 
 	// State The acting rep's queue state for this item.
@@ -25338,6 +25400,9 @@ type MorningBriefItem struct {
 	// StateAt When the rep acted/dismissed/snoozed; null while new.
 	StateAt *time.Time `json:"state_at,omitempty"`
 }
+
+// MorningBriefItemReopenOn What the item is waiting for; set exactly while state=snoozed, null otherwise.
+type MorningBriefItemReopenOn string
 
 // MorningBriefItemState The acting rep's queue state for this item.
 type MorningBriefItemState string
@@ -30370,6 +30435,13 @@ type RenewContractRequest struct {
 // RenewContractRequestValueBasis Stated explicitly rather than inherited: an open-ended agreement becoming a fixed term changes what its value measures.
 type RenewContractRequestValueBasis string
 
+// ReopenCondition What lifts a snooze. `time` is the original behaviour and the default, so a client
+// written before the other two keeps working unchanged. `reply` waits for the
+// counterparty to write back on a conversation linked to the record. `meeting` waits for
+// a named meeting to be over — an archived meeting counts as over, so a cancelled one
+// returns the work rather than holding it forever.
+type ReopenCondition string
+
 // ReplaceChannelTokenRequest defines model for ReplaceChannelTokenRequest.
 type ReplaceChannelTokenRequest struct {
 	// BotToken The replacement BotFather token. Sealed into the vault on arrival and never echoed back.
@@ -30959,6 +31031,19 @@ type SearchResultTrustTier string
 // SearchResultType defines model for SearchResult.Type.
 type SearchResultType string
 
+// SeatUsage How many full seats the installation is using, without what it is entitled to.
+//
+// Deliberately NOT a subset of LicenseEntitlement: it carries no cap and no posture,
+// because those are the commercial facts `seat_usage` exists to leave out. A client
+// needing both reads the entitlement surface, which requires the `license` grant.
+type SeatUsage struct {
+	// SeatsUsed Full seats in use: every one the installation has not withdrawn — neither
+	// deactivated nor suspended — agent seats included. Read seats are unlimited and
+	// never counted (A62/ADR-0047). This is the same number the entitlement surface
+	// reports and the same one a seat creation is refused against; there is one meter.
+	SeatsUsed int `json:"seats_used"`
+}
+
 // SendAccountEmailRequest One account-started send. It is SendEmailRequest plus the `links` an anchor would
 // otherwise have supplied — the records this new conversation belongs to.
 type SendAccountEmailRequest struct {
@@ -31463,9 +31548,20 @@ type SetActivityDispositionRequest struct {
 	// `not_mine` bind only the caller.
 	Disposition SetActivityDispositionRequestDisposition `json:"disposition"`
 
-	// SnoozedUntil When a snooze lifts. REQUIRED for `snooze` and refused for the other two — a snooze
-	// with no moment would never lift, and a moment on `not_mine` would make a hand-off
-	// expire on a Thursday.
+	// ReopenOn What lifts a snooze. `time` is the original behaviour and the default, so a client
+	// written before the other two keeps working unchanged. `reply` waits for the
+	// counterparty to write back on a conversation linked to the record. `meeting` waits for
+	// a named meeting to be over — an archived meeting counts as over, so a cancelled one
+	// returns the work rather than holding it forever.
+	ReopenOn *ReopenCondition `json:"reopen_on,omitempty"`
+
+	// ReopenRef The meeting to wait for. REQUIRED for `snooze` with `reopen_on: meeting` and
+	// refused otherwise.
+	ReopenRef *openapi_types.UUID `json:"reopen_ref,omitempty"`
+
+	// SnoozedUntil When a snooze lifts. REQUIRED for `snooze` with `reopen_on: time`, and refused
+	// everywhere else — a snooze waiting on a reply lifts when the reply arrives, and a
+	// moment on `not_mine` would make a hand-off expire on a Thursday.
 	//
 	// A moment already past is refused rather than stored: it would write a row that hides
 	// nothing, and read to the rep as a snooze that did not take.
@@ -48956,6 +49052,9 @@ type ServerInterface interface {
 	// Store one vendor's OAuth app for this installation (admin/ops).
 	// (PUT /installation/oauth-apps/{provider})
 	SetOauthApp(w http.ResponseWriter, r *http.Request, provider string)
+	// How many full seats this installation is using (capacity, not entitlement).
+	// (GET /installation/seat-usage)
+	GetSeatUsage(w http.ResponseWriter, r *http.Request)
 	// The installation's own settings.
 	// (GET /installation/settings)
 	GetInstallationSettings(w http.ResponseWriter, r *http.Request)
@@ -51491,6 +51590,12 @@ func (_ Unimplemented) GetOauthApp(w http.ResponseWriter, r *http.Request, provi
 // Store one vendor's OAuth app for this installation (admin/ops).
 // (PUT /installation/oauth-apps/{provider})
 func (_ Unimplemented) SetOauthApp(w http.ResponseWriter, r *http.Request, provider string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How many full seats this installation is using (capacity, not entitlement).
+// (GET /installation/seat-usage)
+func (_ Unimplemented) GetSeatUsage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63616,6 +63721,26 @@ func (siw *ServerInterfaceWrapper) SetOauthApp(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetOauthApp(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSeatUsage operation middleware
+func (siw *ServerInterfaceWrapper) GetSeatUsage(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSeatUsage(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -79774,6 +79899,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/installation/oauth-apps/{provider}", wrapper.SetOauthApp)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/seat-usage", wrapper.GetSeatUsage)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/settings", wrapper.GetInstallationSettings)

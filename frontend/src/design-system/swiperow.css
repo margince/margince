@@ -31,6 +31,6 @@
 .swipe-row-staged {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--gapActions);
   margin-block-start: var(--space-2);
 }

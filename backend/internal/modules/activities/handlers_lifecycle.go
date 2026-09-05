@@ -172,13 +172,15 @@ func (h Handlers) SetActivityDisposition(w http.ResponseWriter, r *http.Request,
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	// A moment belongs to a snooze and to nothing else. Accepting one on a
-	// judgement that does not expire would leave the rep believing their
-	// not-mine lifts on Thursday, and nothing would ever tell them otherwise;
-	// a snooze without one would never lift, which is not a snooze.
-	wantsMoment := req.Disposition == crmcontracts.SetActivityDispositionRequestDispositionSnooze
-	if wantsMoment != (req.SnoozedUntil != nil) {
-		httperr.Write(w, r, momentMismatch(wantsMoment))
+	// A moment and a reopen condition belong to a snooze and to nothing else.
+	// Accepting either on a judgement that does not expire would leave the rep
+	// believing their not-mine lifts on Thursday, and nothing would ever tell
+	// them otherwise. WHICH shape a snooze itself must take is the store's to
+	// judge, because the two tables that hold set-asides answer it identically
+	// and a copy here would be the half that drifts.
+	isSnooze := req.Disposition == crmcontracts.SetActivityDispositionRequestDispositionSnooze
+	if !isSnooze && (req.SnoozedUntil != nil || req.ReopenOn != nil || req.ReopenRef != nil) {
+		httperr.Write(w, r, momentMismatch(false))
 		return
 	}
 	activityID := pathID[ids.ActivityKind](id)
@@ -189,7 +191,7 @@ func (h Handlers) SetActivityDisposition(w http.ResponseWriter, r *http.Request,
 	case crmcontracts.SetActivityDispositionRequestDispositionNotMine:
 		err = h.store.SetMessageNotMine(r.Context(), activityID)
 	case crmcontracts.SetActivityDispositionRequestDispositionSnooze:
-		err = h.store.SnoozeMessage(r.Context(), activityID, *req.SnoozedUntil)
+		err = h.snoozeFromRequest(r, activityID, req)
 	default:
 		// An unknown or absent disposition. Without this the switch matches
 		// nothing, err stays nil, and the caller is told 204 — that their
@@ -287,4 +289,27 @@ func (h Handlers) UnpinWorklistRow(
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// snoozeFromRequest turns the wire's three optional snooze fields into the
+// store's call, refusing a condition outside the set before any of it is
+// written.
+func (h Handlers) snoozeFromRequest(
+	r *http.Request, id ids.ActivityID, req crmcontracts.SetActivityDispositionRequest,
+) error {
+	var raw *string
+	if req.ReopenOn != nil {
+		on := string(*req.ReopenOn)
+		raw = &on
+	}
+	on, err := values.ParseReopenCondition(raw, "reopen_on")
+	if err != nil {
+		return err
+	}
+	var ref *ids.UUID
+	if req.ReopenRef != nil {
+		named := ids.UUID(*req.ReopenRef)
+		ref = &named
+	}
+	return h.store.SnoozeMessage(r.Context(), id, on, req.SnoozedUntil, ref)
 }

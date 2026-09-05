@@ -362,7 +362,13 @@ function PartnerForm({
           {problemMessageOf(mutation.error, t)}
         </p>
       )}
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "var(--gapActions)",
+          justifyContent: "flex-end",
+        }}
+      >
         {onCancel && (
           <Button small type="button" onClick={onCancel}>
             {t("create.cancel")}
@@ -486,7 +492,11 @@ export function PartnerTab({
     <QueryGate query={query} pendingLabel={t("nav.partners")}>
       {(partner) =>
         partner ? (
-          <>
+          // The record's own stack: this tab is three cards, and the account
+          // page's work column draws its children with no interval of its own,
+          // so as bare siblings they met at the border and read as one card
+          // ruled into thirds.
+          <div className="record-stack">
             <PartnerDetail
               organizationId={organizationId}
               partner={partner}
@@ -499,7 +509,7 @@ export function PartnerTab({
             {/* What the tier above has actually produced. A margin tier with no
                 money beside it is a number nobody can check. */}
             <PartnerCommissions organizationId={organizationId} />
-          </>
+          </div>
         ) : (
           <Card title={t("tab.partner")}>
             <EmptyState>{t("partner.none")}</EmptyState>
