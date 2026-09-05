@@ -6950,9 +6950,9 @@ export interface paths {
          *     value. Counting it instead means the preview can never imply completeness it does
          *     not have.
          *
-         *     Bounded by `limit`, over a deterministic `occurred_at, id` order, and the
-         *     totals are counted over the WINDOW rather than over the page — so a preview
-         *     drawing five lines can say "5 of 23" without implying it holds everything.
+         *     Bounded by `limit`, over a deterministic `occurred_at, id` order, and bounded
+         *     again by how far back it will look: a receipt answers "since you last looked",
+         *     never "since installation".
          *
          *     Not cursor-paginated yet. The window and the bound are what keep the read
          *     honest today; a cursor arrives with the lane that needs one, rather than being
@@ -30588,11 +30588,13 @@ export interface components {
             sources_unavailable: components["schemas"]["WorklistSourceUnavailable"][];
         };
         /**
-         * @description How many each lane holds, over the WINDOW rather than over the page.
+         * @description How many each lane holds ON THIS PAGE.
          *
-         *     A preview drawing five lines must be able to say "5 of 23" without paging to find
-         *     out. Reading the count off the array it was handed would report the page as the
-         *     total, which is the shape a capped list takes when nobody carries its real size.
+         *     Not a window total, and the difference matters to a client: a preview drawing
+         *     five of these lines may say "5 of 8" from `done`, and may NOT say "5 of 8 things
+         *     happened today". The window's own size arrives with the cursor, which is the
+         *     thing that makes it worth counting; a figure asserted before then would be
+         *     neither the page nor the window.
          */
         MagicTotals: {
             done: number;

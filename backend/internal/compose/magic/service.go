@@ -65,6 +65,19 @@ const defaultWindow = 24 * time.Hour
 // it too; this is the half that holds when a caller ignores the contract.
 const maxLimit = 100
 
+// maxLookback bounds the WINDOW the same way, and for a sharper reason.
+//
+// This surface answers "what happened since you last looked". Without a floor,
+// any authenticated seat could pass since=1970 and page the whole ledger back to
+// installation — turning a morning receipt into an arbitrary historical
+// audit-log read for a seat holding one object grant, and making every scan
+// unbounded besides.
+//
+// A month, because that is the outer edge of "recently" for a receipt somebody
+// reads daily. A reader who wants more history has the record's own page, which
+// is where history is a feature rather than a side effect.
+const maxLookback = 30 * 24 * time.Hour
+
 // Read answers the receipt for one window.
 func (s *Service) Read(
 	ctx context.Context, since *time.Time, limit int,
@@ -105,12 +118,21 @@ func (s *Service) Read(
 		if refused != nil {
 			receipt.SourcesUnavailable = append(receipt.SourcesUnavailable, *refused)
 		}
-		// The TOTALS are over the window rather than over the page: a preview
-		// drawing five lines must be able to say "5 of 23" without paging to
-		// find out, and counting the array it was handed would report the page
-		// as the total.
+		// THE TOTALS COUNT WHAT IS DRAWN, and say so by being derived from the
+		// drawn lines rather than from the fetch behind them.
+		//
+		// An earlier version used len(entries), which is neither the page nor
+		// the window: each of the six arms applies the same LIMIT separately, so
+		// a bound of 100 could fetch 600 rows and report that as the total while
+		// the page held 100. A figure wrong in both directions is worse than no
+		// figure, because a client draws "5 of 23" from it and the 23 means
+		// nothing.
+		//
+		// A true window count needs its own COUNT per arm without the bound.
+		// That arrives with the cursor, which is the thing that makes a window
+		// total worth having; until then the honest claim is the smaller one.
 		receipt.Totals = crmcontracts.MagicTotals{
-			Done:             len(entries),
+			Done:             len(receipt.Done),
 			CouldNotComplete: len(failed),
 		}
 		return nil
@@ -130,8 +152,14 @@ func (s *Service) Read(
 func (s *Service) windowStart(
 	ctx context.Context, since *time.Time, asOf time.Time,
 ) (time.Time, error) {
+	// The floor holds whatever the caller asked for. maxLookback states why.
+	floor := asOf.Add(-maxLookback)
 	if since != nil {
-		return since.UTC(), nil
+		asked := since.UTC()
+		if asked.Before(floor) {
+			return floor, nil
+		}
+		return asked, nil
 	}
 	if s.brief == nil {
 		return asOf.Add(-defaultWindow), nil
@@ -151,7 +179,13 @@ func (s *Service) windowStart(
 	if !ran {
 		return asOf.Add(-defaultWindow), nil
 	}
-	return cutoff.UTC(), nil
+	// The floor holds here too. A rep who has not opened the product in three
+	// months has a brief cutoff three months old, and the receipt is not the
+	// place to hand them the quarter's ledger.
+	if resolved := cutoff.UTC(); resolved.After(floor) {
+		return resolved, nil
+	}
+	return floor, nil
 }
 
 // notShownOf turns the counted omissions into the wire's shape.

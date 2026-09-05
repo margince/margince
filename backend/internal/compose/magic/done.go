@@ -31,6 +31,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -89,6 +91,18 @@ func doneSince(
 		return nil, nil, err
 	}
 	found = append(found, activities...)
+	// WHAT THIS READ COULD NOT PLACE, counted rather than guessed at. `update`
+	// alone is audited against some forty entity types and this build places
+	// seven; without the count, a receipt showing four lines implies those were
+	// the only four machine actions in the window, which is the completeness
+	// claim the field exists to refuse.
+	unplaceable, err := unplaceableSince(ctx, tx, since)
+	if err != nil {
+		return nil, nil, err
+	}
+	if unplaceable > 0 {
+		notShown[string(crmcontracts.MagicNotShownUnknownEntityType)] = unplaceable
+	}
 	return found, notShown, nil
 }
 
@@ -127,9 +141,22 @@ func doneForType(
 	if err != nil {
 		return nil, err
 	}
+	// THE ERASURE BOUNDARY. audit_log is append-only, so a record erased under
+	// Art. 17 or anonymized by retention keeps every image written before the
+	// scrub — with the subject's real name, email and phone still in it. The
+	// record row itself survives too (anonymized IN PLACE, archived rather than
+	// deleted), so it still satisfies the scope clause for its original owner.
+	// Without this predicate a receipt over a long window republishes exactly
+	// what the erasure certified destroyed.
+	//
+	// privacy.UnscrubbedImageSQL, never a hand-written copy: its own comment
+	// asks every reader of this boundary to call it rather than restate it, and
+	// says why — almost-the-same is how a certified erasure comes back.
+	unscrubbed := privacy.UnscrubbedImageSQL("a", fmt.Sprintf("$%d", arg(privacy.ScrubVerbs())))
+
 	where := fmt.Sprintf(
-		`a.occurred_at >= $%d AND a.actor_type = ANY($%d) AND a.action = ANY($%d) AND a.entity_type = $%d`,
-		sinceAt, actors, actions, typeAt)
+		`a.occurred_at >= $%d AND a.actor_type = ANY($%d) AND a.action = ANY($%d) AND a.entity_type = $%d AND %s`,
+		sinceAt, actors, actions, typeAt, unscrubbed)
 	if scope != "" {
 		where += " AND " + scope
 	}
@@ -179,9 +206,12 @@ func doneForActivities(
 	if err != nil {
 		return nil, err
 	}
+	// The same boundary, for the same reason: an erased message's audit images
+	// hold what the erasure certified gone.
+	unscrubbed := privacy.UnscrubbedImageSQL("a", fmt.Sprintf("$%d", arg(privacy.ScrubVerbs())))
 	where := fmt.Sprintf(
-		`a.occurred_at >= $%d AND a.actor_type = ANY($%d) AND a.action = ANY($%d) AND a.entity_type = 'activity'`,
-		sinceAt, actors, actions)
+		`a.occurred_at >= $%d AND a.actor_type = ANY($%d) AND a.action = ANY($%d) AND a.entity_type = 'activity' AND %s`,
+		sinceAt, actors, actions, unscrubbed)
 	if content != "" {
 		where += " AND " + content
 	}
@@ -228,4 +258,36 @@ func admittedActions() []string {
 		actions = append(actions, action)
 	}
 	return actions
+}
+
+// unplaceableSince counts the admitted machine actions this build cannot place.
+//
+// An entity type absent from every arm above has no table this read knows to
+// join, and therefore no gate it can apply. Such a row is never served — serving
+// it would serve a row this read cannot prove the reader may see — but it is
+// COUNTED, so the receipt can say how much it is not showing.
+//
+// The count is deliberately coarse: it does not name the types, because naming
+// them would say which kinds of record exist and were touched, which is a fact
+// about the installation rather than about this reader's work.
+func unplaceableSince(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
+	placed := make([]string, 0, len(scopedTypes)+1)
+	for entityType := range scopedTypes {
+		placed = append(placed, entityType)
+	}
+	placed = append(placed, "activity")
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	query := fmt.Sprintf(`
+		SELECT count(*) FROM audit_log a
+		 WHERE a.occurred_at >= $%d
+		   AND a.actor_type = ANY($%d)
+		   AND a.action = ANY($%d)
+		   AND NOT (a.entity_type = ANY($%d))`,
+		arg(since), arg(machineActors()), arg(admittedActions()), arg(placed))
+	var count int
+	if err := tx.QueryRow(ctx, query, args...).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count the machine actions this build cannot place: %w", err)
+	}
+	return count, nil
 }

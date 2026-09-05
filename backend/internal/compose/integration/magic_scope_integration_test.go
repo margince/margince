@@ -197,3 +197,146 @@ func seedMachineAction(
 	}
 	return deal
 }
+
+// AN ERASED RECORD'S PRE-SCRUB IMAGES STAY BURIED.
+//
+// audit_log is append-only, so a person erased under Art. 17 or anonymized by
+// retention keeps every image written before the scrub — with their real name,
+// email and phone still in it. The record row survives too: anonymize works IN
+// PLACE and archives rather than deletes, so it still satisfies the scope clause
+// for its original owner.
+//
+// Without the erasure boundary a receipt over a long window republishes exactly
+// what the erasure certified destroyed. This read applies
+// privacy.UnscrubbedImageSQL rather than a predicate of its own, because that
+// helper's own doc comment asks every reader of the boundary to call it.
+func TestAnErasedRecordsImagesAreNotRepublishedByTheReceipt(t *testing.T) {
+	e := Setup(t)
+	ctx := context.Background()
+	since := time.Now().Add(-time.Hour)
+
+	person := ids.NewV7()
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
+			VALUES ($1, $2, 'Dana Buyer', 'manual', 'human:x')`, person, e.Rep1); err != nil {
+			return err
+		}
+		// A machine updated them while they were still a person.
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, before, after, occurred_at)
+			VALUES ('agent', 'agent:enrich', 'update', 'person', $1,
+			        '{"full_name":"D. Buyer"}', '{"full_name":"Dana Buyer"}', now() - interval '10 minutes')`,
+			person); err != nil {
+			return err
+		}
+		// And then they were erased. The scrub is AFTER the row above.
+		_, err := tx.Exec(ctx, `
+			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, occurred_at)
+			VALUES ('human', 'human:dpo', 'erase', 'person', $1, now() - interval '1 minute')`, person)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("seeding the erased person: %v", err)
+	}
+
+	svc := magic.NewService(e.Pool, nil, time.Now)
+	receipt, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, personRepPerms()), &since, 20)
+	if err != nil {
+		t.Fatalf("reading the receipt: %v", err)
+	}
+
+	for _, line := range receipt.Done {
+		if line.Entity != nil && ids.UUID(line.Entity.Id) == person {
+			t.Fatalf("an erased person's pre-scrub image came back on the receipt: %+v", line)
+		}
+	}
+}
+
+// The other half: a record that was NOT erased still reports. Without this the
+// fix above could be "serve nothing" and the test beside it would pass.
+func TestAnUnerasedRecordsMachineActionStillReports(t *testing.T) {
+	e := Setup(t)
+	ctx := context.Background()
+	since := time.Now().Add(-time.Hour)
+
+	person := ids.NewV7()
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
+			VALUES ($1, $2, 'Ines Bauer', 'manual', 'human:x')`, person, e.Rep1); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, occurred_at)
+			VALUES ('agent', 'agent:enrich', 'update', 'person', $1, now() - interval '10 minutes')`, person)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("seeding the person: %v", err)
+	}
+
+	svc := magic.NewService(e.Pool, nil, time.Now)
+	receipt, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, personRepPerms()), &since, 20)
+	if err != nil {
+		t.Fatalf("reading the receipt: %v", err)
+	}
+
+	var found bool
+	for _, line := range receipt.Done {
+		if line.Entity != nil && ids.UUID(line.Entity.Id) == person {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("an unerased record's machine action was withheld — the erasure " +
+			"boundary beside this proves nothing if the read returns nothing at all")
+	}
+}
+
+// THE WINDOW HAS A FLOOR. Without one, any authenticated seat passes since=1970
+// and pages the whole ledger back to installation — a morning receipt turned
+// into an arbitrary historical audit read, which is what makes the erasure gap
+// above reachable at all rather than a same-day race.
+func TestTheWindowRefusesToReachBackToInstallation(t *testing.T) {
+	e := Setup(t)
+	ctx := context.Background()
+	ancient := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	person := ids.NewV7()
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
+			VALUES ($1, $2, 'Long ago', 'manual', 'human:x')`, person, e.Rep1); err != nil {
+			return err
+		}
+		// Older than any floor this surface would accept.
+		_, err := tx.Exec(ctx, `
+			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, occurred_at)
+			VALUES ('agent', 'agent:enrich', 'update', 'person', $1, now() - interval '200 days')`, person)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("seeding the ancient action: %v", err)
+	}
+
+	svc := magic.NewService(e.Pool, nil, time.Now)
+	receipt, err := svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, personRepPerms()), &ancient, 20)
+	if err != nil {
+		t.Fatalf("reading the receipt: %v", err)
+	}
+
+	if !receipt.Since.After(ancient) {
+		t.Errorf("the window starts at %v, which is what the caller asked for — "+
+			"a receipt that reaches back to installation is a historical audit read",
+			receipt.Since)
+	}
+	for _, line := range receipt.Done {
+		if line.Entity != nil && ids.UUID(line.Entity.Id) == person {
+			t.Fatal("an action from 200 days ago reached a morning receipt")
+		}
+	}
+}
+
+// personRepPerms is a rep who reads people. RepPerms already does; this names
+// the grant the cases above depend on rather than leaving it implied.
+func personRepPerms() principal.Permissions {
+	return RepPerms
+}

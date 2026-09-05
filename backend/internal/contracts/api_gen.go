@@ -24775,11 +24775,13 @@ type MagicReceipt struct {
 	// SourcesUnavailable Lanes that could not be read. "All clear" is forbidden while one is here: a lane the reader may not see and a lane with nothing in it are different answers.
 	SourcesUnavailable []WorklistSourceUnavailable `json:"sources_unavailable"`
 
-	// Totals How many each lane holds, over the WINDOW rather than over the page.
+	// Totals How many each lane holds ON THIS PAGE.
 	//
-	// A preview drawing five lines must be able to say "5 of 23" without paging to find
-	// out. Reading the count off the array it was handed would report the page as the
-	// total, which is the shape a capped list takes when nobody carries its real size.
+	// Not a window total, and the difference matters to a client: a preview drawing
+	// five of these lines may say "5 of 8" from `done`, and may NOT say "5 of 8 things
+	// happened today". The window's own size arrives with the cursor, which is the
+	// thing that makes it worth counting; a figure asserted before then would be
+	// neither the page nor the window.
 	Totals   MagicTotals `json:"totals"`
 	Watching []MagicLine `json:"watching"`
 }
@@ -24794,11 +24796,13 @@ type MagicSentence struct {
 	Values *map[string]string `json:"values,omitempty"`
 }
 
-// MagicTotals How many each lane holds, over the WINDOW rather than over the page.
+// MagicTotals How many each lane holds ON THIS PAGE.
 //
-// A preview drawing five lines must be able to say "5 of 23" without paging to find
-// out. Reading the count off the array it was handed would report the page as the
-// total, which is the shape a capped list takes when nobody carries its real size.
+// Not a window total, and the difference matters to a client: a preview drawing
+// five of these lines may say "5 of 8" from `done`, and may NOT say "5 of 8 things
+// happened today". The window's own size arrives with the cursor, which is the
+// thing that makes it worth counting; a figure asserted before then would be
+// neither the page nor the window.
 type MagicTotals struct {
 	CouldNotComplete int `json:"could_not_complete"`
 	Done             int `json:"done"`
