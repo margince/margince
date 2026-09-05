@@ -435,14 +435,15 @@ func (s *Service) deferBudget(ctx context.Context, scanID ids.UUID, next time.Ti
 // the one failure a cancelled read must still record is that it was
 // cancelled, and the row's update and the rail's announcement both ride it.
 func (s *Service) fail(ctx context.Context, scanID ids.UUID, reason string) error {
-	recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), failWriteBudget)
+	recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), failWriteTimeout)
 	defer cancel()
 	return database.WithWorkspaceTx(recordCtx, s.pool, func(tx pgx.Tx) error {
 		return fail(recordCtx, tx, scanID, reason)
 	})
 }
 
-// failWriteBudget bounds the write that closes a failed read: long enough
-// for a healthy database, short enough that a dead one does not keep the
-// worker's slot.
-const failWriteBudget = 5 * time.Second
+// failWriteTimeout bounds the write that closes a failed read. Nobody is
+// waiting on it — the reader sees the row's state whenever they next look —
+// so it is the worker's slot that the ceiling protects: long enough for a
+// healthy database, short enough that a dead one does not keep the slot.
+const failWriteTimeout = 5 * time.Second
