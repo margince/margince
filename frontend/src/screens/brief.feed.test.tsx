@@ -164,7 +164,10 @@ describe("the morning feed", () => {
       />,
     );
 
-    expect(titles(container)).toHaveLength(8);
+    // The BOUNDARY, both sides: the eighth row is drawn and the ninth is not.
+    // Asserting only the length restates the cap rather than locating it.
+    expect(container.querySelectorAll(".brief-feed-list > li")).toHaveLength(8);
+    expect(container.textContent).toContain("Row 7");
     expect(container.textContent).not.toContain("Row 8");
   });
 
@@ -184,6 +187,33 @@ describe("the morning feed", () => {
       en["brief.feed.rest"].replace("{count}", "3"),
     );
     expect(link.getAttribute("href")).toBe("#/worklist");
+  });
+
+  // The remainder counts what THIS surface is showing, not what the queue
+  // holds. A footer that counted the excluded approvals would send a reader to
+  // the worklist for rows this page deliberately did not draw.
+  //
+  // Carried across from the deleted "Do next" suite, which had this case and
+  // this reason. Without it a regression computing the remainder from
+  // `day.queue.length` rather than from the approval-filtered rows passes every
+  // other test in this file, because none of them mixes an approval into a
+  // queue long enough to have a remainder.
+  it("counts the remainder over what it shows, not over the whole queue", () => {
+    render(
+      <BriefFeed
+        day={day([
+          item({ id: "decision", source: "approval" }),
+          ...Array.from({ length: 9 }, (_, at) => item({ id: `row-${at}` })),
+        ])}
+        state="ready"
+      />,
+    );
+
+    // Nine drawable rows, eight shown: ONE remains, not the two a count over
+    // the whole ten-row queue would report.
+    expect(
+      screen.getByText(en["brief.feed.rest"].replace("{count}", "1")),
+    ).toBeTruthy();
   });
 
   it("says nothing about a remainder when it is showing everything", () => {

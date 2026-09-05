@@ -148,11 +148,3 @@ describe("the opening sentence", () => {
     expect(sentence?.key).toMatch(/^brief\.sentence\.one/);
   });
 });
-
-// Which overnight suggestions the section BELOW must leave out.
-//
-// The Brief reads one brief run through two endpoints, so a suggestion that
-// ranks into the lead is on the page twice unless the lower section skips it —
-// once as a worklist row with its own controls, once as a card with its own.
-// That is the same duplication the decisions deck exclusion exists to stop, one
-// section further down.

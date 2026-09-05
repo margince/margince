@@ -126,8 +126,8 @@ function HomeWork({
   // Whether the reader's scope reaches a team, off the worklist read the page
   // already makes. The same gate the team BOARD uses, so one tier decides both.
   teamOffered: boolean;
-  // The ONE ranked order, already read by the page for its coverage line. Do
-  // next shows its head, from the same query key — so the Brief and the
+  // The ONE ranked order, already read by the page for its coverage line. The
+  // feed draws a prefix of it, from the same query key — so the Brief and the
   // Worklist cannot disagree about what is waiting.
   day: Worklist | undefined;
   dayState: SectionState;

@@ -252,7 +252,13 @@ describe("HomeScreen — the context rail", () => {
     stubApi({});
     render(<HomeScreen />);
 
-    await screen.findByRole("region", { name: en["brief.feed.title"] });
+    // The rail's reads must have ANSWERED before absence means anything. The
+    // feed's region is drawn on the first paint, so awaiting it proves only
+    // that the page mounted — an assertion made against it would pass over a
+    // panel that renders unconditionally, which is the defect being excluded.
+    await waitFor(() =>
+      expect(document.querySelector("[aria-busy='true']")).toBeNull(),
+    );
     expect(screen.queryByRole("heading", { name: "Overnight" })).toBeNull();
   });
 
@@ -492,7 +498,12 @@ describe("HomeScreen — the open pipeline", () => {
     stubApi({});
     render(<HomeScreen />);
 
-    await screen.findByRole("region", { name: en["brief.feed.title"] });
+    // Waits for the reads to answer, for the reason the overnight case above
+    // gives: absence proves nothing until the read that would have filled it
+    // has come back.
+    await waitFor(() =>
+      expect(document.querySelector("[aria-busy='true']")).toBeNull(),
+    );
     expect(screen.queryByText("Position")).toBeNull();
   });
 });

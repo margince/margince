@@ -16,8 +16,6 @@ import type { Worklist, WorklistItem } from "./worklist.queries";
 // It is also why the sentence carries NO agent tag: indigo means "Margince
 // decided this" everywhere in the product, and marking a client-composed
 // sentence that way would be a claim about authorship that is simply false.
-// The overnight narrative is agent-written and IS tagged, one line further
-// down, where TodayNarrative draws it.
 
 /**
  * What the sentence says, as a key and the parts to fill it with.
@@ -103,14 +101,6 @@ export function briefSentence(
     key: consequence ? "brief.sentence.manyWithCost" : "brief.sentence.many",
     values,
   };
-}
-
-/** How many rows lead the page — what "Do next" draws. */
-export const LEAD = 3;
-
-/** The rows "Do next" draws: the head of the one ranked order. */
-export function leadRows(day: Worklist | undefined): readonly WorklistItem[] {
-  return waitingRows(day).slice(0, LEAD);
 }
 
 /**
