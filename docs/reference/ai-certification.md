@@ -25,9 +25,9 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | | |
 |---|---:|
 | Shipped invocation sites | 40 |
-| … best state `current` | 32 |
+| … best state `current` | 31 |
 | … best state `partial` | 0 |
-| … best state `stale` | 6 |
+| … best state `stale` | 7 |
 | … `absent` on every binding | 2 |
 | Scenarios in the corpus | 136 |
 | Committed records | 59 |
@@ -119,7 +119,7 @@ Which model to run each site on, and what that choice rests on.
 | [`voice_build/derive`](#voice_buildderive) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 1 | 3 |
 | [`voice_build/eval_draft`](#voice_buildeval_draft) | - | - | - | `stale` | 1 | 3 |
 | [`voice_build/eval_scores`](#voice_buildeval_scores) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 1 | 3 |
-| [`weekly_review/narrative`](#weekly_reviewnarrative) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `not_supported` | 0.44 | `current` | 3 | 1 |
+| [`weekly_review/narrative`](#weekly_reviewnarrative) | - | - | - | `stale` | 3 | 1 |
 
 **Best model tested** is the strongest result that still describes what ships.
 Only a `current` or `partial` record is eligible; among those the pick is the
@@ -149,7 +149,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 6 | 0 | 0 | 42 | 39 | 0.93 | 4477ms | 5 | 0 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 31 | 24 | 0 | 7 | 333 | 269 | 0.81 | 68516ms | 12 | 7 | 12 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 31 | 23 | 0 | 8 | 333 | 269 | 0.81 | 68516ms | 12 | 7 | 12 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 
 ## Stale records, and why
@@ -202,6 +202,7 @@ model, real network).
 | `voice_build/eval_draft` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | scenario held_out_draft_sits_close_to_the_author — or the prompt this build now builds from it — has changed since the record scored it |
 | `voice_build/eval_scores` | `gemini · gemini-3.1-flash-lite · eu_hosted` | scenario judge_ranks_the_author_rhythm_above_generic_ai_prose — or the prompt this build now builds from it — has changed since the record scored it |
 | `voice_build/eval_scores` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
+| `weekly_review/narrative` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 3 scenarios it scored have changed since, or the prompts built from them have: a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, the_sentence_leads_with_what_changed_not_with_a_count |
 
 ## Sites, their scenarios and their records
 
@@ -1051,5 +1052,5 @@ Records (1):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 3/3 | `not_supported` | 9 | 4 | 0.44 | 779ms | 1315ms | 4 | 5 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/3 | `not_supported` | 9 | 4 | 0.44 | 779ms | 1315ms | 4 | 5 | 0 | 0 |
 
