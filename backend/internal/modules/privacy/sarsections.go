@@ -260,7 +260,8 @@ func sarCommunicationSections(pkg *SARPackage, personID ids.PersonID, leads []id
 		          captured_at, revoked_at
 		   FROM communication_basis
 		   WHERE person_id = $1 OR lead_id = ANY($2)`, append(subjects, leads)},
-		{&pkg.CommunicationSuppression, `SELECT kind, source, address, recorded_at, revoked_at
+		{&pkg.CommunicationSuppression, `SELECT kind, source, address, recorded_at, revoked_at,
+		          decided_by_level
 		   FROM communication_suppression
 		   WHERE person_id = $1 OR lead_id = ANY($2)`, append(subjects, leads)},
 	}
