@@ -157,13 +157,14 @@ func WriteGhostedSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Ghosted
 	if err != nil {
 		return GhostedPass{}, err
 	}
+	said := signalSummaryCopyFor(baseLanguageForSummary(ctx, tx))
 	pass := GhostedPass{Considered: len(candidates)}
 	for _, found := range candidates {
 		days := int(now.Sub(found.At).Hours() / 24)
 		raised, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
 			Kind:           kindGhostedThread,
 			OrganizationID: found.OrganizationID,
-			Summary:        fmt.Sprintf("We wrote %d days ago and nobody has answered.", days),
+			Summary:        fmt.Sprintf(said.ghostedThread, days),
 			Severity:       severityWarn,
 			Fingerprint:    signalFingerprint(kindGhostedThread, found.OrganizationID, found.ActivityID),
 			// The message is CITED, not quoted. This finding is shared with
