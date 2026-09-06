@@ -59,48 +59,34 @@ func sourceVocabulary(specs []mcp.ToolSpec) map[string]bool {
 // reply that would not parse.
 const outputValidatorSource = "output_validator"
 
-// PromptTokenCeiling bounds the prompt (§3: the window has a hard token
-// ceiling; a long run cannot silently grow the context). Only the transcript
-// gives way to it — the tool listing is in the system prompt and is never
-// elided — so it is exported for the composition that knows how large the real
-// catalog is to hold that listing against it.
+// MinimumPromptWindow is the smallest prompt window any provider this build
+// supports will carry — the SUPPORTED FLOOR, not the window of whatever is
+// configured today.
 //
-// The number is DERIVED from the tightest provider this runner speaks to, not
-// chosen. Ollama's num_ctx bounds prompt and completion together, the adapter
-// will not ask for more than ollamaMaxContext (32,768) — an uncapped window
-// lets whoever wrote a crawled page pick the host's KV-cache allocation — and
-// one completion may take perCallOutputCeiling (4,096).
+// Two different questions used to share one constant, and separating them is
+// what this name is for:
 //
-// That leaves ONE BUCKET of slack rather than every token arithmetic allows,
-// and the slack is the point. Two facts eat into it, and neither is visible
-// from here:
+//   - How much TRANSCRIPT may one run carry? That follows the configured
+//     provider, which a cloud deployment sizes far above this. Brain.PromptWindow
+//     answers it, per step; this constant does not.
+//   - How large may the TOOL CATALOG grow? That must stay pinned to this floor.
+//     The listing lives in the system prompt and is NEVER elided, so a catalog
+//     sized against a large cloud window would be one a local deployment cannot
+//     serve at all — and the failure would appear only after somebody rebinds
+//     routing, far from the change that caused it.
 //
-//   - ollamaWindowFor rounds a request UP by adding a whole bucket, so the
-//     largest estimate that is not clamped back to the cap is 32,767, not
-//     32,768. Subtracting alone gives a ceiling one token too high.
-//   - The adapter's estimate is BIGGER than this package's for the same
-//     prompt. estimateTokens counts system + content; contextWindow also
-//     counts each message's role, an 8-byte per-message frame, and the
-//     response schema in `Format`. A long transcript with a schema is several
-//     hundred tokens heavier over there than it looks here.
+// The floor is Ollama's, because a local runner is the tightest wire this
+// product speaks to: it allocates a KV cache from the number it is handed, so
+// its limit is real and small where a cloud window is neither. The arithmetic
+// behind the figure lives with the adapter that owns it
+// (ai.ollamaPromptWindow); this is the runner's copy of the answer, held equal
+// to it by backend/gates/promptwindow_test.go.
 //
-// So the ceiling is the largest value whose worst case still clears the cap:
-// 24,576 + 4,096 = 28,672, which rounds to exactly 32,768 and fits, with a
-// bucket to absorb what this side cannot count. Trimming that slack to make
-// the catalog floor roomier trades a silent truncation — the completion cut
-// inside a reasoning model's thinking, which returns well-formed empty content
-// and reads as a bad model — for a few more tool descriptions.
-//
-// It was 24,000, a round number with no derivation at all, and it had stopped
-// being only a runner concern: the catalog floor below is a fraction of this,
-// and at 24,000 that floor left 63 tokens of headroom for a 67-tool catalog, so
-// the next verb anyone added failed a gate that was never meant to ration
-// features (margince/margince#3882). Tying the number to ollamaMaxContext is
-// what stops it drifting back into a round one.
-//
-// A cloud provider's window dwarfs this and is not the binding constraint. If
-// the local cap moves, this moves with it.
-const PromptTokenCeiling = 24_576
+// It was 24,000 once, a round number with no derivation, and at that value the
+// catalog floor below left 63 tokens of headroom for a 67-tool catalog — so the
+// next verb anyone added failed a gate that was never meant to ration features
+// (margince/margince#3882). Deriving it is what stops it drifting back.
+const MinimumPromptWindow = 24_576
 
 // roleUser is the wire role every window message carries: the goal, each
 // observation, and the elision notice are all things the runner SAYS to the
@@ -220,27 +206,41 @@ func (w *window) snapshot() []model.Message {
 
 //promptlang:exempt the rule IS present and is not visible here: it reaches this prompt as Job.LanguageRule, rendered by promptlang.Rule in compose/runnerservice.go, because a module may not import compose. The gate reads one file at a time and cannot follow a string across that boundary, so this waiver stands in for what it cannot see — systemPrompt writes the block it is given, and TestTheRunnerPromptCarriesTheLanguageItWasGiven holds that.
 //promptvoice:exempt the agent loop's output is a tool call, not prose; whatever it eventually writes for a person is written by the surface that renders it.
-func (w *window) asRequest(remainingOutputTokens int) model.Request {
+func (w *window) asRequest(remainingOutputTokens, promptWindow int) model.Request {
 	maxTokens := perCallOutputCeiling
 	if remainingOutputTokens < maxTokens {
 		maxTokens = remainingOutputTokens
 	}
 	return model.Request{
 		System:    w.system,
-		Messages:  w.bounded(),
+		Messages:  w.bounded(promptWindow),
 		MaxTokens: maxTokens,
 	}
 }
 
 const elisionMarker = "[earlier observations elided to fit the context window]"
 
-// bounded elides the oldest observations until the estimated prompt
-// fits the ceiling. The first message (goal + grounding) is never
-// dropped; the newest observations are kept because they are what the
-// model is reasoning over right now.
-func (w *window) bounded() []model.Message {
+// bounded elides the oldest observations until the estimated prompt fits the
+// window. The first message (goal + grounding) is never dropped; the newest
+// observations are kept because they are what the model is reasoning over now.
+//
+// The window is a PARAMETER because the provider serving this run can change
+// under it — a routing rebind, or a budget guardrail demoting the call to a
+// cheaper tier, either of which can happen between two steps of one run. Read
+// per call, a run that starts on a large cloud window and degrades to a local
+// one simply elides more from that step on. Frozen at construction, it would
+// keep assembling a prompt sized for a provider no longer serving it, which is
+// the case that actually overflows.
+//
+// A window of zero means the wire declares no limit worth planning around, and
+// nothing is elided: see Capabilities.PromptWindow for why that is the ordinary
+// answer for a cloud adapter rather than a missing value.
+func (w *window) bounded(promptWindow int) []model.Message {
 	msgs := append([]model.Message(nil), w.msgs...)
-	for estimateTokens(w.system, msgs) > PromptTokenCeiling && len(msgs) > 2 {
+	if promptWindow <= 0 {
+		return msgs
+	}
+	for estimateTokens(w.system, msgs) > promptWindow && len(msgs) > 2 {
 		oldest := 1
 		if msgs[1].Content == elisionMarker {
 			oldest = 2
@@ -337,7 +337,7 @@ const surfaceSchemaRules = "- An argument no tool declares is refused by name, n
 // fence, measured with the same ~4-bytes-per-token heuristic the window bounds
 // itself with.
 //
-// Exported for the same reason ToolListing and PromptTokenCeiling are: moving a
+// Exported for the same reason ToolListing and MinimumPromptWindow are: moving a
 // per-tool sentence into the frame trades (tools × sentence) for (1 × sentence),
 // and the catalog floor holds ToolListing alone. Without this number a frame
 // that grew a paragraph would spend it on every run of every agent with nothing
@@ -354,7 +354,7 @@ func SystemFrameTokens() int {
 //
 // It is exported because it is never elided — the transcript gives way to the
 // ceiling, the system prompt does not — so how large it is for the REAL catalog
-// is something that has to be held against PromptTokenCeiling somewhere, and
+// is something that has to be held against MinimumPromptWindow somewhere, and
 // the only place that knows the whole catalog is the composition. Measuring a
 // second, hand-written idea of this format there would drift from this one
 // silently, and the drift would read as headroom that is not there.

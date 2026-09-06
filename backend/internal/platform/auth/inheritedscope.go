@@ -135,6 +135,11 @@ func ActivityAudienceArm(ctx context.Context, alias string, arg func(any) int) (
 // activityAudienceArm renders the audience membership test for one human (or
 // the human behind an agent). The participant arms hold for every audience:
 // a person on a conversation always reads it, limited or not.
+//
+// Its existential twin — does ANYBODY match, which is the question an audience
+// write owes before it narrows a row — is ActivityHasAReaderTx in
+// audienceorphan.go. Change an arm here and change it there; the pair is held by
+// a test named in that file's doc comment.
 func activityAudienceArm(p principal.Principal, alias string, arg func(any) int) string {
 	me := arg(p.UserID)
 	// captured_by is `human:<uuid>` for a hand-logged row and

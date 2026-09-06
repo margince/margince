@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { installFetchStub, jsonResponse, type RouteMap } from "../story-utils";
+import { jsonResponse, type RouteMap, stubWithSession } from "../story-utils";
 import { CompanyAct } from "./company-act";
 import type {
   ConversationEvent,
@@ -43,8 +43,15 @@ function entityQuestion(id: string): ConversationQuestion {
   };
 }
 
+// Every stub in this file routes the session probe, because this act mounts
+// capability-aware chrome and story-utils refuses to guess a session: an
+// unrouted GET /me answers 501, every grant fails closed, and the surface
+// draws a branch no assertion here is about — late enough under load to change
+// the verdict. The grants are empty on purpose: this is onboarding, before any
+// of them are held.
+
 function renderCompanyAct(state: ConversationState) {
-  installFetchStub({});
+  stubWithSession({}, {});
   return render(
     <QueryClientProvider
       client={
@@ -313,23 +320,26 @@ describe("the dossier's legal-entity picker", () => {
     // collected but never becomes confirmable, so no review scene takes the
     // surface — the dossier stays, with its "edit fields directly" escape
     // hatch and the entity cards behind it.
-    installFetchStub({
-      [`GET /company/site-reads/${REVIEW_READ_ID}`]: () =>
-        jsonResponse({
-          ...REVIEW_READ,
-          status: "deferred",
-          status_code: "budget_deferred",
-          legal_entities: [
-            GRADION_LTD,
-            {
-              name: "Gradion Holding GmbH",
-              source_url: "https://gradion.com/legal-notice",
-            },
-          ],
-        }),
-      "GET /onboarding/company/proposal": () =>
-        jsonResponse({ title: "not ready", code: "not_found" }, 404),
-    });
+    stubWithSession(
+      {
+        [`GET /company/site-reads/${REVIEW_READ_ID}`]: () =>
+          jsonResponse({
+            ...REVIEW_READ,
+            status: "deferred",
+            status_code: "budget_deferred",
+            legal_entities: [
+              GRADION_LTD,
+              {
+                name: "Gradion Holding GmbH",
+                source_url: "https://gradion.com/legal-notice",
+              },
+            ],
+          }),
+        "GET /onboarding/company/proposal": () =>
+          jsonResponse({ title: "not ready", code: "not_found" }, 404),
+      },
+      {},
+    );
     render(
       <QueryClientProvider
         client={
@@ -380,8 +390,9 @@ describe("arriving at the review scene", () => {
     const scrollSpy = vi
       .spyOn(Element.prototype, "scrollIntoView")
       .mockImplementation(() => {});
-    installFetchStub(
+    stubWithSession(
       reviewRoutes(REVIEW_FIELDS, reviewProposal(REVIEW_FIELDS)),
+      {},
     );
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -505,28 +516,31 @@ describe("recovering from a rejected confirm", () => {
     // Boxed rather than a bare `let`: TypeScript narrows a variable only
     // assigned inside a nested closure to `never` at the call site.
     const gate: { release: (() => void) | null } = { release: null };
-    installFetchStub({
-      [`GET /company/site-reads/${REVIEW_READ_ID}`]: () =>
-        jsonResponse({
-          ...REVIEW_READ,
-          profile_fields: CONFIRM_FIELDS.map(toColdField),
-        }),
-      "GET /onboarding/company/proposal": async () => {
-        proposalCalls += 1;
-        if (proposalCalls > 1) {
-          await new Promise<void>((resolve) => {
-            gate.release = resolve;
+    stubWithSession(
+      {
+        [`GET /company/site-reads/${REVIEW_READ_ID}`]: () =>
+          jsonResponse({
+            ...REVIEW_READ,
+            profile_fields: CONFIRM_FIELDS.map(toColdField),
+          }),
+        "GET /onboarding/company/proposal": async () => {
+          proposalCalls += 1;
+          if (proposalCalls > 1) {
+            await new Promise<void>((resolve) => {
+              gate.release = resolve;
+            });
+          }
+          const hash = proposalCalls === 1 ? "proposal-1" : "proposal-2";
+          return jsonResponse({
+            ...reviewProposal(CONFIRM_FIELDS),
+            proposal_hash: hash,
           });
-        }
-        const hash = proposalCalls === 1 ? "proposal-1" : "proposal-2";
-        return jsonResponse({
-          ...reviewProposal(CONFIRM_FIELDS),
-          proposal_hash: hash,
-        });
+        },
+        [CONFIRM_PATH]: () =>
+          jsonResponse({ title: "conflict", code: "version_skew" }, 409),
       },
-      [CONFIRM_PATH]: () =>
-        jsonResponse({ title: "conflict", code: "version_skew" }, 409),
-    });
+      {},
+    );
     render(
       <QueryClientProvider
         client={
@@ -581,24 +595,27 @@ describe("recovering from a rejected confirm", () => {
     // Continue button this notice disables.
     let siteReadCalls = 0;
     const gate: { release: (() => void) | null } = { release: null };
-    installFetchStub({
-      [`GET /company/site-reads/${REVIEW_READ_ID}`]: async () => {
-        siteReadCalls += 1;
-        if (siteReadCalls > 1) {
-          await new Promise<void>((resolve) => {
-            gate.release = resolve;
+    stubWithSession(
+      {
+        [`GET /company/site-reads/${REVIEW_READ_ID}`]: async () => {
+          siteReadCalls += 1;
+          if (siteReadCalls > 1) {
+            await new Promise<void>((resolve) => {
+              gate.release = resolve;
+            });
+          }
+          return jsonResponse({
+            ...REVIEW_READ,
+            profile_fields: CONFIRM_FIELDS.map(toColdField),
           });
-        }
-        return jsonResponse({
-          ...REVIEW_READ,
-          profile_fields: CONFIRM_FIELDS.map(toColdField),
-        });
+        },
+        "GET /onboarding/company/proposal": () =>
+          Promise.reject(new Error("proposal endpoint unreachable")),
+        [CONFIRM_PATH]: () =>
+          jsonResponse({ title: "conflict", code: "version_skew" }, 409),
       },
-      "GET /onboarding/company/proposal": () =>
-        Promise.reject(new Error("proposal endpoint unreachable")),
-      [CONFIRM_PATH]: () =>
-        jsonResponse({ title: "conflict", code: "version_skew" }, 409),
-    });
+      {},
+    );
     render(
       <QueryClientProvider
         client={
@@ -649,28 +666,31 @@ describe("recovering from a rejected confirm", () => {
     // things on, once the draft underneath has genuinely changed.
     let proposalCalls = 0;
     const gate: { release: (() => void) | null } = { release: null };
-    installFetchStub({
-      [`GET /company/site-reads/${REVIEW_READ_ID}`]: () =>
-        jsonResponse({
-          ...REVIEW_READ,
-          profile_fields: CONFIRM_FIELDS.map(toColdField),
-        }),
-      "GET /onboarding/company/proposal": async () => {
-        proposalCalls += 1;
-        if (proposalCalls > 1) {
-          await new Promise<void>((resolve) => {
-            gate.release = resolve;
+    stubWithSession(
+      {
+        [`GET /company/site-reads/${REVIEW_READ_ID}`]: () =>
+          jsonResponse({
+            ...REVIEW_READ,
+            profile_fields: CONFIRM_FIELDS.map(toColdField),
+          }),
+        "GET /onboarding/company/proposal": async () => {
+          proposalCalls += 1;
+          if (proposalCalls > 1) {
+            await new Promise<void>((resolve) => {
+              gate.release = resolve;
+            });
+          }
+          const hash = proposalCalls <= 2 ? "proposal-1" : "proposal-2";
+          return jsonResponse({
+            ...reviewProposal(CONFIRM_FIELDS),
+            proposal_hash: hash,
           });
-        }
-        const hash = proposalCalls <= 2 ? "proposal-1" : "proposal-2";
-        return jsonResponse({
-          ...reviewProposal(CONFIRM_FIELDS),
-          proposal_hash: hash,
-        });
+        },
+        [CONFIRM_PATH]: () =>
+          jsonResponse({ title: "conflict", code: "version_skew" }, 409),
       },
-      [CONFIRM_PATH]: () =>
-        jsonResponse({ title: "conflict", code: "version_skew" }, 409),
-    });
+      {},
+    );
     render(
       <QueryClientProvider
         client={
@@ -716,30 +736,33 @@ describe("recovering from a rejected confirm", () => {
   it("holds Continue back on a read the server refuses as not confirmable, and probes nothing to work that out", async () => {
     let readCalls = 0;
     let getCompanyCalls = 0;
-    installFetchStub({
-      [`GET /company/site-reads/${REVIEW_READ_ID}`]: () => {
-        readCalls += 1;
-        return jsonResponse({
-          ...REVIEW_READ,
-          profile_fields: CONFIRM_FIELDS.map(toColdField),
-        });
+    stubWithSession(
+      {
+        [`GET /company/site-reads/${REVIEW_READ_ID}`]: () => {
+          readCalls += 1;
+          return jsonResponse({
+            ...REVIEW_READ,
+            profile_fields: CONFIRM_FIELDS.map(toColdField),
+          });
+        },
+        "GET /onboarding/company/proposal": () =>
+          jsonResponse(reviewProposal(CONFIRM_FIELDS)),
+        "GET /company": () => {
+          // An existing member company from BEFORE this attempt — present
+          // regardless of whether this read's own confirmation landed, so it
+          // must never be read as proof that it did.
+          getCompanyCalls += 1;
+          return jsonResponse({
+            display_name: "Some Other Existing Co",
+            offer_summary: "unrelated",
+            icp: "unrelated",
+          });
+        },
+        [CONFIRM_PATH]: () =>
+          jsonResponse({ title: "conflict", code: "not_confirmable" }, 409),
       },
-      "GET /onboarding/company/proposal": () =>
-        jsonResponse(reviewProposal(CONFIRM_FIELDS)),
-      "GET /company": () => {
-        // An existing member company from BEFORE this attempt — present
-        // regardless of whether this read's own confirmation landed, so it
-        // must never be read as proof that it did.
-        getCompanyCalls += 1;
-        return jsonResponse({
-          display_name: "Some Other Existing Co",
-          offer_summary: "unrelated",
-          icp: "unrelated",
-        });
-      },
-      [CONFIRM_PATH]: () =>
-        jsonResponse({ title: "conflict", code: "not_confirmable" }, 409),
-    });
+      {},
+    );
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
@@ -760,24 +783,27 @@ describe("recovering from a rejected confirm", () => {
 
   it("re-arms Continue only once a re-check finds the read confirmable again", async () => {
     let readCalls = 0;
-    installFetchStub({
-      [`GET /company/site-reads/${REVIEW_READ_ID}`]: () => {
-        readCalls += 1;
-        // The review was built from a confirmable snapshot; the first
-        // re-check finds the read deferred (still nothing to confirm), the
-        // second finds it confirmable again.
-        return jsonResponse({
-          ...REVIEW_READ,
-          status: readCalls === 2 ? "deferred" : "ready",
-          status_code: readCalls === 2 ? "budget_deferred" : null,
-          profile_fields: CONFIRM_FIELDS.map(toColdField),
-        });
+    stubWithSession(
+      {
+        [`GET /company/site-reads/${REVIEW_READ_ID}`]: () => {
+          readCalls += 1;
+          // The review was built from a confirmable snapshot; the first
+          // re-check finds the read deferred (still nothing to confirm), the
+          // second finds it confirmable again.
+          return jsonResponse({
+            ...REVIEW_READ,
+            status: readCalls === 2 ? "deferred" : "ready",
+            status_code: readCalls === 2 ? "budget_deferred" : null,
+            profile_fields: CONFIRM_FIELDS.map(toColdField),
+          });
+        },
+        "GET /onboarding/company/proposal": () =>
+          jsonResponse(reviewProposal(CONFIRM_FIELDS)),
+        [CONFIRM_PATH]: () =>
+          jsonResponse({ title: "conflict", code: "not_confirmable" }, 409),
       },
-      "GET /onboarding/company/proposal": () =>
-        jsonResponse(reviewProposal(CONFIRM_FIELDS)),
-      [CONFIRM_PATH]: () =>
-        jsonResponse({ title: "conflict", code: "not_confirmable" }, 409),
-    });
+      {},
+    );
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
@@ -811,23 +837,26 @@ describe("recovering from a rejected confirm", () => {
 
   it("never re-arms Continue on a re-check that itself failed", async () => {
     let readCalls = 0;
-    installFetchStub({
-      [`GET /company/site-reads/${REVIEW_READ_ID}`]: () => {
-        readCalls += 1;
-        return readCalls > 1
-          ? Promise.reject(new Error("site-read endpoint unreachable"))
-          : Promise.resolve(
-              jsonResponse({
-                ...REVIEW_READ,
-                profile_fields: CONFIRM_FIELDS.map(toColdField),
-              }),
-            );
+    stubWithSession(
+      {
+        [`GET /company/site-reads/${REVIEW_READ_ID}`]: () => {
+          readCalls += 1;
+          return readCalls > 1
+            ? Promise.reject(new Error("site-read endpoint unreachable"))
+            : Promise.resolve(
+                jsonResponse({
+                  ...REVIEW_READ,
+                  profile_fields: CONFIRM_FIELDS.map(toColdField),
+                }),
+              );
+        },
+        "GET /onboarding/company/proposal": () =>
+          jsonResponse(reviewProposal(CONFIRM_FIELDS)),
+        [CONFIRM_PATH]: () =>
+          jsonResponse({ title: "conflict", code: "not_confirmable" }, 409),
       },
-      "GET /onboarding/company/proposal": () =>
-        jsonResponse(reviewProposal(CONFIRM_FIELDS)),
-      [CONFIRM_PATH]: () =>
-        jsonResponse({ title: "conflict", code: "not_confirmable" }, 409),
-    });
+      {},
+    );
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
@@ -861,24 +890,27 @@ describe("recovering from a rejected confirm", () => {
   it("never re-arms Continue on a re-check whose proposal half failed, however ready the read comes back", async () => {
     let proposalCalls = 0;
     let readCalls = 0;
-    installFetchStub({
-      [`GET /company/site-reads/${REVIEW_READ_ID}`]: () => {
-        readCalls += 1;
-        return jsonResponse({
-          ...REVIEW_READ,
-          ...(readCalls > 1 ? MOVED_DRAFT : {}),
-          profile_fields: CONFIRM_FIELDS.map(toColdField),
-        });
+    stubWithSession(
+      {
+        [`GET /company/site-reads/${REVIEW_READ_ID}`]: () => {
+          readCalls += 1;
+          return jsonResponse({
+            ...REVIEW_READ,
+            ...(readCalls > 1 ? MOVED_DRAFT : {}),
+            profile_fields: CONFIRM_FIELDS.map(toColdField),
+          });
+        },
+        "GET /onboarding/company/proposal": () => {
+          proposalCalls += 1;
+          return proposalCalls > 1
+            ? Promise.reject(new Error("proposal endpoint unreachable"))
+            : Promise.resolve(jsonResponse(reviewProposal(CONFIRM_FIELDS)));
+        },
+        [CONFIRM_PATH]: () =>
+          jsonResponse({ title: "conflict", code: "not_confirmable" }, 409),
       },
-      "GET /onboarding/company/proposal": () => {
-        proposalCalls += 1;
-        return proposalCalls > 1
-          ? Promise.reject(new Error("proposal endpoint unreachable"))
-          : Promise.resolve(jsonResponse(reviewProposal(CONFIRM_FIELDS)));
-      },
-      [CONFIRM_PATH]: () =>
-        jsonResponse({ title: "conflict", code: "not_confirmable" }, 409),
-    });
+      {},
+    );
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
@@ -907,22 +939,25 @@ describe("recovering from a rejected confirm", () => {
   it("never re-arms Continue on a proposal that answered for a draft the read has moved past", async () => {
     let proposalCalls = 0;
     let readCalls = 0;
-    installFetchStub({
-      [`GET /company/site-reads/${REVIEW_READ_ID}`]: () => {
-        readCalls += 1;
-        return jsonResponse({
-          ...REVIEW_READ,
-          ...(readCalls > 1 ? MOVED_DRAFT : {}),
-          profile_fields: CONFIRM_FIELDS.map(toColdField),
-        });
+    stubWithSession(
+      {
+        [`GET /company/site-reads/${REVIEW_READ_ID}`]: () => {
+          readCalls += 1;
+          return jsonResponse({
+            ...REVIEW_READ,
+            ...(readCalls > 1 ? MOVED_DRAFT : {}),
+            profile_fields: CONFIRM_FIELDS.map(toColdField),
+          });
+        },
+        "GET /onboarding/company/proposal": () => {
+          proposalCalls += 1;
+          return jsonResponse(reviewProposal(CONFIRM_FIELDS));
+        },
+        [CONFIRM_PATH]: () =>
+          jsonResponse({ title: "conflict", code: "not_confirmable" }, 409),
       },
-      "GET /onboarding/company/proposal": () => {
-        proposalCalls += 1;
-        return jsonResponse(reviewProposal(CONFIRM_FIELDS));
-      },
-      [CONFIRM_PATH]: () =>
-        jsonResponse({ title: "conflict", code: "not_confirmable" }, 409),
-    });
+      {},
+    );
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
@@ -951,19 +986,22 @@ describe("recovering from a rejected confirm", () => {
   // re-check that can never release, on a read the server calls confirmable.
   it("re-arms Continue when the proposal endpoint has never answered at all", async () => {
     let readCalls = 0;
-    installFetchStub({
-      [`GET /company/site-reads/${REVIEW_READ_ID}`]: () => {
-        readCalls += 1;
-        return jsonResponse({
-          ...REVIEW_READ,
-          profile_fields: CONFIRM_FIELDS.map(toColdField),
-        });
+    stubWithSession(
+      {
+        [`GET /company/site-reads/${REVIEW_READ_ID}`]: () => {
+          readCalls += 1;
+          return jsonResponse({
+            ...REVIEW_READ,
+            profile_fields: CONFIRM_FIELDS.map(toColdField),
+          });
+        },
+        "GET /onboarding/company/proposal": () =>
+          Promise.reject(new Error("proposal endpoint unreachable")),
+        [CONFIRM_PATH]: () =>
+          jsonResponse({ title: "conflict", code: "not_confirmable" }, 409),
       },
-      "GET /onboarding/company/proposal": () =>
-        Promise.reject(new Error("proposal endpoint unreachable")),
-      [CONFIRM_PATH]: () =>
-        jsonResponse({ title: "conflict", code: "not_confirmable" }, 409),
-    });
+      {},
+    );
     renderConfirmReview();
 
     const continueButton = await screen.findByRole("button", {
@@ -982,25 +1020,28 @@ describe("recovering from a rejected confirm", () => {
   it("walks the reader on to the company an already-confirmed read created, with no second look at the read", async () => {
     let readCalls = 0;
     const dispatch = vi.fn();
-    installFetchStub({
-      [`GET /company/site-reads/${REVIEW_READ_ID}`]: () => {
-        readCalls += 1;
-        return jsonResponse({
-          ...REVIEW_READ,
-          profile_fields: CONFIRM_FIELDS.map(toColdField),
-        });
+    stubWithSession(
+      {
+        [`GET /company/site-reads/${REVIEW_READ_ID}`]: () => {
+          readCalls += 1;
+          return jsonResponse({
+            ...REVIEW_READ,
+            profile_fields: CONFIRM_FIELDS.map(toColdField),
+          });
+        },
+        "GET /onboarding/company/proposal": () =>
+          jsonResponse(reviewProposal(CONFIRM_FIELDS)),
+        "GET /company": () =>
+          jsonResponse({
+            display_name: "Acme Inc",
+            offer_summary: "CRM software",
+            icp: "Mid-market B2B",
+          }),
+        [CONFIRM_PATH]: () =>
+          jsonResponse({ title: "conflict", code: "already_confirmed" }, 409),
       },
-      "GET /onboarding/company/proposal": () =>
-        jsonResponse(reviewProposal(CONFIRM_FIELDS)),
-      "GET /company": () =>
-        jsonResponse({
-          display_name: "Acme Inc",
-          offer_summary: "CRM software",
-          icp: "Mid-market B2B",
-        }),
-      [CONFIRM_PATH]: () =>
-        jsonResponse({ title: "conflict", code: "already_confirmed" }, 409),
-    });
+      {},
+    );
     renderConfirmReview(dispatch);
 
     fireEvent.click(
@@ -1027,34 +1068,37 @@ describe("recovering from a rejected confirm", () => {
     let confirmCalls = 0;
     const gate: { release: (() => void) | null } = { release: null };
     const dispatch = vi.fn();
-    installFetchStub({
-      [`GET /company/site-reads/${REVIEW_READ_ID}`]: () =>
-        jsonResponse({
-          ...REVIEW_READ,
-          profile_fields: CONFIRM_FIELDS.map(toColdField),
-        }),
-      "GET /onboarding/company/proposal": () =>
-        jsonResponse(reviewProposal(CONFIRM_FIELDS)),
-      // Held open deliberately, so the in-flight window is observable here
-      // rather than racing a mocked fetch that settles first.
-      "GET /company": async () => {
-        await new Promise<void>((resolve) => {
-          gate.release = resolve;
-        });
-        return jsonResponse({
-          display_name: "Acme Inc",
-          offer_summary: "CRM software",
-          icp: "Mid-market B2B",
-        });
+    stubWithSession(
+      {
+        [`GET /company/site-reads/${REVIEW_READ_ID}`]: () =>
+          jsonResponse({
+            ...REVIEW_READ,
+            profile_fields: CONFIRM_FIELDS.map(toColdField),
+          }),
+        "GET /onboarding/company/proposal": () =>
+          jsonResponse(reviewProposal(CONFIRM_FIELDS)),
+        // Held open deliberately, so the in-flight window is observable here
+        // rather than racing a mocked fetch that settles first.
+        "GET /company": async () => {
+          await new Promise<void>((resolve) => {
+            gate.release = resolve;
+          });
+          return jsonResponse({
+            display_name: "Acme Inc",
+            offer_summary: "CRM software",
+            icp: "Mid-market B2B",
+          });
+        },
+        [CONFIRM_PATH]: () => {
+          confirmCalls += 1;
+          return jsonResponse(
+            { title: "conflict", code: "already_confirmed" },
+            409,
+          );
+        },
       },
-      [CONFIRM_PATH]: () => {
-        confirmCalls += 1;
-        return jsonResponse(
-          { title: "conflict", code: "already_confirmed" },
-          409,
-        );
-      },
-    });
+      {},
+    );
     renderConfirmReview(dispatch);
 
     const continueButton = await screen.findByRole("button", {
@@ -1087,32 +1131,35 @@ describe("recovering from a rejected confirm", () => {
   it("admits the company never loaded after an already-confirmed read, and offers the load again", async () => {
     let companyCalls = 0;
     const dispatch = vi.fn();
-    installFetchStub({
-      [`GET /company/site-reads/${REVIEW_READ_ID}`]: () =>
-        jsonResponse({
-          ...REVIEW_READ,
-          profile_fields: CONFIRM_FIELDS.map(toColdField),
-        }),
-      "GET /onboarding/company/proposal": () =>
-        jsonResponse(reviewProposal(CONFIRM_FIELDS)),
-      "GET /company": () => {
-        companyCalls += 1;
-        // The one probe that could move the reader forward fails first: a
-        // problem body, so the profile never arrives.
-        return companyCalls > 1
-          ? jsonResponse({
-              display_name: "Acme Inc",
-              offer_summary: "CRM software",
-              icp: "Mid-market B2B",
-            })
-          : jsonResponse(
-              { title: "backend unavailable", code: "internal" },
-              503,
-            );
+    stubWithSession(
+      {
+        [`GET /company/site-reads/${REVIEW_READ_ID}`]: () =>
+          jsonResponse({
+            ...REVIEW_READ,
+            profile_fields: CONFIRM_FIELDS.map(toColdField),
+          }),
+        "GET /onboarding/company/proposal": () =>
+          jsonResponse(reviewProposal(CONFIRM_FIELDS)),
+        "GET /company": () => {
+          companyCalls += 1;
+          // The one probe that could move the reader forward fails first: a
+          // problem body, so the profile never arrives.
+          return companyCalls > 1
+            ? jsonResponse({
+                display_name: "Acme Inc",
+                offer_summary: "CRM software",
+                icp: "Mid-market B2B",
+              })
+            : jsonResponse(
+                { title: "backend unavailable", code: "internal" },
+                503,
+              );
+        },
+        [CONFIRM_PATH]: () =>
+          jsonResponse({ title: "conflict", code: "already_confirmed" }, 409),
       },
-      [CONFIRM_PATH]: () =>
-        jsonResponse({ title: "conflict", code: "already_confirmed" }, 409),
-    });
+      {},
+    );
     renderConfirmReview(dispatch);
 
     fireEvent.click(

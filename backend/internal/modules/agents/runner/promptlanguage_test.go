@@ -29,7 +29,7 @@ func TestTheRunnerPromptCarriesTheLanguageItWasGiven(t *testing.T) {
 	const rule = "LANGUAGE\nWrite every human-readable sentence of your output in Vietnamese."
 
 	win := newWindow(Job{Goal: "prep the meeting", LanguageRule: rule}, nil, nil)
-	system := win.asRequest(1000).System
+	system := win.asRequest(1000, MinimumPromptWindow).System
 
 	if !strings.Contains(system, rule) {
 		t.Fatalf("the language rule never reached the system prompt.\nwanted to find:\n%s\n\ngot:\n%s", rule, system)
@@ -46,7 +46,7 @@ func TestARunGivenNoLanguageRuleCarriesNone(t *testing.T) {
 	// a fixed corpus, and a score that moved with an installation's settings
 	// would not be comparable between two installations.
 	win := newWindow(Job{Goal: "prep the meeting"}, nil, nil)
-	system := win.asRequest(1000).System
+	system := win.asRequest(1000, MinimumPromptWindow).System
 
 	if strings.Contains(system, "LANGUAGE") {
 		t.Errorf("a run given no language rule still carries one:\n%s", system)
