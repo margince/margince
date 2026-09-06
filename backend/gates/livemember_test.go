@@ -77,7 +77,7 @@ const (
 // ratifies nothing stable.
 var cannotReachIdentity = gatekit.Waive(map[string]string{
 	"internal/modules/activities/audience.go":        "activities cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/activities/lifecycle.go":       "activities cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/activities/assignee.go":        "activities cannot import identity (ADR-0054 §3); the predicate must move tier first. This one asks a second question of the same row — whether the seat is an agent — which identity.LiveMemberSQL does not answer and which the assignee refusal is entirely about",
 	"internal/modules/dealrooms/store_public.go":     "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/capture/owneridentitystore.go": "capture cannot import identity (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/people/counterpartyname.go":    "people cannot import identity (ADR-0054 §3); the predicate must move tier first",

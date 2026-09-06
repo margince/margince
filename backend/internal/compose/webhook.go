@@ -26,6 +26,33 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
+
+	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
+)
+
+// How many admission refusals one client address may spend per window before
+// the chassis stops reading its requests at all.
+//
+// It meters REFUSALS rather than deliveries, and that is what makes a number
+// safe to choose here. Admission on these endpoints is a deployment-wide shared
+// secret in the query string; Graph signs nothing on a change notification, so
+// for that provider the secret is the only factor and an unmetered edge lets it
+// be guessed at line rate. A meter on deliveries would need a measurement
+// nobody has — Pub/Sub bursts for a large fleet, and a ceiling set too low
+// drops real mail — while a meter on refusals cannot touch a legitimate
+// delivery, because a legitimate delivery carries the right secret and is never
+// counted. The provider's own address only reaches this budget while its
+// deliveries are already failing, which is the case where nothing further is
+// lost.
+//
+// Twenty a minute leaves an operator rotating a secret room to be wrong a few
+// times, and leaves a guess at roughly one in 10^30 per year against a
+// 128-bit token.
+const (
+	webhookRefusalLimit  = 20
+	webhookRefusalWindow = time.Minute
 )
 
 // Disposition is why a webhook handler stopped, not merely whether it
@@ -92,31 +119,16 @@ type WebhookSpec struct {
 // the mount point (routes.go), not here — this handler is the webhook
 // itself.
 func Webhook(spec WebhookSpec, log *slog.Logger) http.Handler {
+	// One budget per provider, held by the chassis rather than passed in, so a
+	// provider mounted later cannot be the one that forgot it.
+	refusals := ratelimit.New(webhookRefusalLimit, webhookRefusalWindow)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-
-		// Digesting both values before comparing equalizes their length, so
-		// ConstantTimeCompare leaks neither the secret's content nor its
-		// length: a wrong guess of any size gets the identical 401, with an
-		// empty body naming no connection ids for an attacker to learn from.
-		want, got := spec.Secret(r)
-		wantSum := sha256.Sum256([]byte(want))
-		gotSum := sha256.Sum256([]byte(got))
-		if subtle.ConstantTimeCompare(wantSum[:], gotSum[:]) != 1 {
-			w.WriteHeader(http.StatusUnauthorized)
+		if !admitted(w, r, spec, log, refusals) {
 			return
-		}
-
-		if spec.Verify != nil {
-			if err := spec.Verify(r.Context(), r); err != nil {
-				log.WarnContext(r.Context(), "webhook: second-factor verification failed",
-					"provider", spec.Provider, "err", err)
-				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
 		}
 
 		if spec.Challenge != nil {
@@ -169,4 +181,55 @@ func Webhook(spec WebhookSpec, log *slog.Logger) http.Handler {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	})
+}
+
+// admitted runs the admission sequence — refusal budget, constant-time secret
+// comparison, the optional second factor — and reports whether the request may
+// go on. It writes its own refusal, so a caller that sees false is done.
+//
+// The refusal branches are where the client address is recorded. Until this
+// existed the only line a wrong secret produced was the generic access log,
+// which carries no remote address, so an operator watching a brute force could
+// see that one was happening and not where it came from.
+func admitted(
+	w http.ResponseWriter,
+	r *http.Request,
+	spec WebhookSpec,
+	log *slog.Logger,
+	refusals *ratelimit.Limiter,
+) bool {
+	client := httpserver.ClientIP(r)
+	if refusals.Blocked(client) {
+		// Silent: the line that mattered was written when the budget ran out,
+		// and repeating it per request would let the flood fill the log it is
+		// meant to be visible in.
+		w.WriteHeader(http.StatusTooManyRequests)
+		return false
+	}
+
+	// Digesting both values before comparing equalizes their length, so
+	// ConstantTimeCompare leaks neither the secret's content nor its
+	// length: a wrong guess of any size gets the identical 401, with an
+	// empty body naming no connection ids for an attacker to learn from.
+	want, got := spec.Secret(r)
+	wantSum := sha256.Sum256([]byte(want))
+	gotSum := sha256.Sum256([]byte(got))
+	if subtle.ConstantTimeCompare(wantSum[:], gotSum[:]) != 1 {
+		refusals.Record(client)
+		log.WarnContext(r.Context(), "webhook: shared secret refused",
+			"provider", spec.Provider, "client_ip", client)
+		w.WriteHeader(http.StatusUnauthorized)
+		return false
+	}
+
+	if spec.Verify != nil {
+		if err := spec.Verify(r.Context(), r); err != nil {
+			refusals.Record(client)
+			log.WarnContext(r.Context(), "webhook: second-factor verification failed",
+				"provider", spec.Provider, "client_ip", client, "err", err)
+			w.WriteHeader(http.StatusUnauthorized)
+			return false
+		}
+	}
+	return true
 }
