@@ -256,3 +256,93 @@ func TestAnOmittedPageSizeStillAsksForTheDefault(t *testing.T) {
 		t.Errorf("the seam saw %+v, want one query asking for the default page size", seam.queries)
 	}
 }
+
+// A partner list can be narrowed by the two filters the partner list declares.
+//
+// The store half has bound `partner_role` and `cert_status` since the partner
+// program shipped; the contract half named the operation `search_records`, so
+// the generator produced no partner key and the tool never asked. An agent
+// pulled every partner and filtered them itself, which works while the list is
+// small and stops when it is not.
+func TestAPartnerListNarrowsByRoleAndCertification(t *testing.T) {
+	seam := &listProbeProvider{}
+	tool := listRecords{p: seam, filters: bindableFilters(probeVocabulary{})}
+
+	published := filterNamesOf(tool, "partner")
+	for _, want := range []string{"partner_role", "cert_status"} {
+		if !slices.Contains(published, want) {
+			t.Errorf("partner publishes %v, without %s — an agent can only pull the whole list",
+				published, want)
+		}
+	}
+
+	if _, err := tool.Handle(t.Context(),
+		json.RawMessage(`{"record_type":"partner","filters":{"cert_status":"certified"}}`)); err != nil {
+		t.Fatalf("narrowing a partner list: %v", err)
+	}
+	if len(seam.queries) != 1 {
+		t.Fatalf("the seam saw %d quer(ies), want 1", len(seam.queries))
+	}
+	if got := seam.queries[0].Filters["cert_status"]; got != "certified" {
+		t.Errorf("the seam was asked with %v — the narrowing has to REACH it, or the list runs "+
+			"whole and answers a wider question than the caller asked", seam.queries[0].Filters)
+	}
+}
+
+// And a filter partner does not carry is refused rather than dropped. An
+// unbindable name that reached the seam would run the list unnarrowed while
+// looking narrowed, which is this tool's stated failure mode.
+func TestAFilterPartnerDoesNotCarryIsRefused(t *testing.T) {
+	seam := &listProbeProvider{}
+	tool := listRecords{p: seam, filters: bindableFilters(probeVocabulary{})}
+
+	_, err := tool.Handle(t.Context(),
+		json.RawMessage(`{"record_type":"partner","filters":{"stage_id":"x"}}`))
+
+	if err == nil {
+		t.Fatal("a filter partner does not publish was accepted")
+	}
+	if seam.queries != nil {
+		t.Errorf("the call reached the seam before it was refused: %+v", seam.queries)
+	}
+}
+
+// Every record_type the CONTRACT puts on list_records is one this surface can
+// actually enumerate, or is named here with the reason it is not.
+//
+// The two halves are generated and hand-written respectively, and nothing
+// paired them: `listPartners` was annotated for the tool and absent from the
+// vocabulary, so its filters were generated for nobody — which is #2361 — and
+// `listCommissionEntries` is the same mismatch pointing the other way. Neither
+// fails anything on its own, because a key nobody looks up and a lookup that
+// finds nothing both read as silence.
+func TestEveryRecordTypeTheContractOffersIsOneThisSurfaceEnumerates(t *testing.T) {
+	// A record_type the contract offers that this surface deliberately does not
+	// enumerate, with the reason. It leaves this map by gaining a store.
+	notEnumerated := map[string]string{
+		"commission": "no store binds commission through Provider.ListFilters, so publishing it " +
+			"would offer a record type the seam answers with an unsupported-entity error",
+	}
+
+	for recordType := range listRecordFilters {
+		if slices.Contains(listRecordTypes, recordType) {
+			if _, excluded := notEnumerated[recordType]; excluded {
+				t.Errorf("%s is both enumerated and listed as not enumerated — one of the two is wrong",
+					recordType)
+			}
+			continue
+		}
+		if _, excluded := notEnumerated[recordType]; !excluded {
+			t.Errorf("the contract annotates a list_records operation for %q and this surface does "+
+				"not enumerate it, so its declared filters are generated for nobody.\n"+
+				"\tAdd it to listRecordTypes once a store binds it, or say here why it stays out.",
+				recordType)
+		}
+	}
+	for recordType := range notEnumerated {
+		if _, offered := listRecordFilters[recordType]; !offered {
+			t.Errorf("notEnumerated names %q, which the contract no longer offers — drop the entry "+
+				"rather than leaving a stale exclusion standing", recordType)
+		}
+	}
+}

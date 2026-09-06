@@ -287,7 +287,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/overlay/export":                                             {Op: "downloadOverlayExport", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/overlay/owners":                                             {Op: "listOverlayOwners", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/overlay/user-map":                                           {Op: "listOverlayUserMap", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"GET /v1/partners":                                                   {Op: "listPartners", Access: "tool", Tool: "search_records", RecordType: "partner", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/partners":                                                   {Op: "listPartners", Access: "tool", Tool: "list_records", RecordType: "partner", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/passports":                                                  {Op: "listPassports", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/people":                                                     {Op: "listPeople", Access: "tool", Tool: "list_records", RecordType: "person", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/people/{id}":                                                {Op: "getPerson", Access: "tool", Tool: "read_record", RecordType: "person", Tier: "auto_execute", Scope: "read"},

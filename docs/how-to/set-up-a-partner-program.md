@@ -119,7 +119,7 @@ partners so filtering stays useful.
 
 Agents can READ partners directly. `partner` is a record type the generic tools accept, so
 `read_record` returns one partner's terms — tier, certification, relationship stage — and
-`search_records(record_type="partner")` returns the partner list. Three things to know about
+`list_records(record_type="partner")` returns the partner list. Three things to know about
 the shape:
 
 - **A partner is addressed by its ORGANIZATION's id.** The partner row is that company's terms,
@@ -127,11 +127,11 @@ the shape:
 - **A partner has no text search, and an untyped sweep skips it.** Every word you would search
   for lives on the organization, so searching without naming a type finds the company once
   rather than twice. Name `record_type=partner` to reach the terms.
-- **The role and certification dials are not on the tool surface yet.** `GET /partners` narrows
-  by `partner_role` and `cert_status`, and the store binds both. But `search_records` — the tool
-  that serves partner — takes no filters at all, and `list_records`, which does carry them, does
-  not serve `partner`. So an agent gets the whole partner list and narrows it itself. Tracked as
-  a follow-up.
+- **Narrow by role and certification on the tool, not afterwards.**
+  `list_records(record_type="partner", filters={"cert_status": "certified"})` asks the database
+  the question, the way `GET /partners` does. `partner_role` narrows the same way. An agent that
+  pulls the whole list and filters it itself works while the list is small and stops when it is
+  not.
 
 **The generic tools only READ a partner.** `partner` is not one of the record types
 `update_record` accepts, so an agent working through those tools cannot set a tier or a

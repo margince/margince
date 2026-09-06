@@ -68,6 +68,7 @@ type FilterVocabulary interface {
 var listRecordTypes = []string{
 	string(datasource.EntityPerson), string(datasource.EntityOrganization),
 	string(datasource.EntityDeal), string(datasource.EntityLead), string(datasource.EntityProject),
+	string(datasource.EntityPartner),
 }
 
 // RegisterListTool joins list_records to the surface.

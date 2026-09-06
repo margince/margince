@@ -42,25 +42,10 @@ const activityLinkEntityTypeEnum = `["person","organization","deal","lead","proj
 // unnarrowed while looking narrowed — and
 // TestOnlyAFilterBothTheContractAndAStoreCarryIsPublished holds that.
 var listRecordFilters = map[string][]listFilter{
-	"person": {
-		{Name: "organization_id", Type: "string"},
-		{Name: "owner_id", Type: "string"},
-		{Name: "owner_team_id", Type: "string"},
-		{Name: "tag_id", Type: "array"},
-		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},
-		{Name: "unassigned", Type: "boolean"},
-	},
-	"organization": {
-		{Name: "domain", Type: "string"},
-		{Name: "industry", Type: "string"},
-		{Name: "lifecycle", Type: "string", Enum: []string{"unknown", "target", "prospect", "opportunity", "customer", "former_customer", "disqualified"}},
-		{Name: "owner_id", Type: "string"},
-		{Name: "owner_team_id", Type: "string"},
-		{Name: "relationship_type", Type: "string", Enum: []string{"customer", "partner", "supplier", "investor", "portfolio_company", "competitor", "other"}},
-		{Name: "size_band", Type: "string", Enum: []string{"1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5000+"}},
-		{Name: "tag_id", Type: "array"},
-		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},
-		{Name: "unassigned", Type: "boolean"},
+	"commission": {
+		{Name: "deal_id", Type: "string"},
+		{Name: "partner_org_id", Type: "string"},
+		{Name: "status", Type: "string"},
 	},
 	"deal": {
 		{Name: "forecast_category", Type: "string", Enum: []string{"commit", "best_case", "pipeline", "omitted"}},
@@ -84,6 +69,30 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "sla_state", Type: "string", Enum: []string{"within_target", "at_risk", "breached"}},
 		{Name: "source", Type: "string"},
 		{Name: "status", Type: "string", Enum: []string{"new", "contacted", "engaged", "promoted", "disqualified"}},
+		{Name: "unassigned", Type: "boolean"},
+	},
+	"organization": {
+		{Name: "domain", Type: "string"},
+		{Name: "industry", Type: "string"},
+		{Name: "lifecycle", Type: "string", Enum: []string{"unknown", "target", "prospect", "opportunity", "customer", "former_customer", "disqualified"}},
+		{Name: "owner_id", Type: "string"},
+		{Name: "owner_team_id", Type: "string"},
+		{Name: "relationship_type", Type: "string", Enum: []string{"customer", "partner", "supplier", "investor", "portfolio_company", "competitor", "other"}},
+		{Name: "size_band", Type: "string", Enum: []string{"1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5000+"}},
+		{Name: "tag_id", Type: "array"},
+		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},
+		{Name: "unassigned", Type: "boolean"},
+	},
+	"partner": {
+		{Name: "cert_status", Type: "string", Enum: []string{"applied", "certified", "suspended"}},
+		{Name: "partner_role", Type: "string", Enum: []string{"hosting", "consulting", "strategic"}},
+	},
+	"person": {
+		{Name: "organization_id", Type: "string"},
+		{Name: "owner_id", Type: "string"},
+		{Name: "owner_team_id", Type: "string"},
+		{Name: "tag_id", Type: "array"},
+		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},
 		{Name: "unassigned", Type: "boolean"},
 	},
 	"project": {
