@@ -30459,6 +30459,14 @@ type RecordConsentRequest struct {
 	NewState    RecordConsentRequestNewState `json:"new_state"`
 	PurposeId   openapi_types.UUID           `json:"purpose_id"`
 	Source      *string                      `json:"source,omitempty"`
+
+	// Wording The exact wording the subject was shown, stored verbatim as proof. Required with a
+	// grant and refused as a 422 without one: Art. 7(1) asks the controller to demonstrate
+	// what the subject agreed TO, and a grant that cannot say what was shown demonstrates
+	// nothing. A withdrawal needs none — nothing is being demonstrated when somebody takes
+	// consent back, and refusing that would leave a person unable to opt out. The 2000-character
+	// bound matches the confirm-details door, which stores wording on the same proof row.
+	Wording *string `json:"wording,omitempty"`
 }
 
 // RecordConsentRequestNewState defines model for RecordConsentRequest.NewState.

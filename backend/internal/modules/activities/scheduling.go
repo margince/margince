@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -406,6 +407,14 @@ func (h Handlers) BookMeeting(w http.ResponseWriter, r *http.Request, _ crmcontr
 		}
 		if req.Consent.PolicyVersion == "" {
 			httperr.Write(w, r, httperr.Validation("consent.policy_version", "required", "the consent wording version shown to the subject is required"))
+			return
+		}
+		// Both halves of the proof row are settled before anything is written,
+		// for the reason stated above: recording is mandatory once the field is
+		// present, and a grant that cannot say what the subject read is not
+		// demonstrable.
+		if req.Consent.Wording == nil || strings.TrimSpace(*req.Consent.Wording) == "" {
+			httperr.Write(w, r, httperr.Validation("consent.wording", "required", "the consent wording shown to the subject is required"))
 			return
 		}
 		personID, ok := consentSubjectLink(w, r, in.Links)

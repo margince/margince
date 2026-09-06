@@ -27313,6 +27313,15 @@ export interface components {
             new_state: "granted" | "withdrawn";
             lawful_basis?: string | null;
             source?: string | null;
+            /**
+             * @description The exact wording the subject was shown, stored verbatim as proof. Required with a
+             *     grant and refused as a 422 without one: Art. 7(1) asks the controller to demonstrate
+             *     what the subject agreed TO, and a grant that cannot say what was shown demonstrates
+             *     nothing. A withdrawal needs none — nothing is being demonstrated when somebody takes
+             *     consent back, and refusing that would leave a person unable to opt out. The 2000-character
+             *     bound matches the confirm-details door, which stores wording on the same proof row.
+             */
+            wording?: string;
         };
         RecordClaim: {
             /** @enum {string} */

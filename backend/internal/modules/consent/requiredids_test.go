@@ -36,6 +36,7 @@ func TestAnOmittedPurposeIsNamed(t *testing.T) {
 
 	_, err := store.Record(ctx, RecordInput{
 		PersonID: ids.New[ids.PersonKind](), NewState: "granted",
+		PolicyText: &grantWording,
 	})
 	faulttest.AssertNamesOmittedID(t, err, "purpose_id")
 }

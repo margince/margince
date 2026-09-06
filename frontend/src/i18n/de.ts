@@ -785,6 +785,8 @@ export const de = {
   "org.filterSizeBandAll": "Alle Größen",
   "person.consent": "Einwilligung",
   "consent.grant": "Erteilen",
+  "consent.operatorWording":
+    "Von einem Mitarbeiter im CRM erfasst, der bestätigt hat, dass diese Person ihre Einwilligung für {label} außerhalb des Produkts erteilt hat. Ihr wurde hier kein Text angezeigt.",
   "consent.withdraw": "Widerrufen",
   "consent.doiBySubject":
     "Diesen Zweck best\u00e4tigt die Person selbst \u2013 \u00fcber einen Link an ihre eigene Adresse. Nutzen Sie unten \u201eUm Best\u00e4tigung der Daten bitten\u201c.",

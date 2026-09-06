@@ -773,6 +773,8 @@ export const vi = {
   "org.filterSizeBandAll": "Mọi quy mô",
   "person.consent": "Chấp thuận",
   "consent.grant": "Cấp chấp thuận",
+  "consent.operatorWording":
+    "Được nhân viên ghi nhận trong CRM, xác nhận rằng người này đã đồng ý cho {label} bên ngoài sản phẩm. Không có nội dung nào được hiển thị cho họ tại đây.",
   "consent.withdraw": "Rút lại",
   "consent.doiBySubject":
     "M\u1ee5c \u0111\u00edch n\u00e0y do ch\u00ednh ng\u01b0\u1eddi \u0111\u00f3 x\u00e1c nh\u1eadn, qua li\u00ean k\u1ebft g\u1eedi t\u1edbi \u0111\u1ecba ch\u1ec9 c\u1ee7a h\u1ecd. H\u00e3y d\u00f9ng \u201c\u0110\u1ec1 ngh\u1ecb h\u1ecd x\u00e1c nh\u1eadn th\u00f4ng tin\u201d b\u00ean d\u01b0\u1edbi.",
