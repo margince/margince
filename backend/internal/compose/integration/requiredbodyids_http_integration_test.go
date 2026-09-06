@@ -172,8 +172,10 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 		},
 		"RecordConsentRequest.purpose_id": {
 			method: "POST", path: "/v1/people/" + f.person + "/consent",
-			omitted:  AnyMap{"new_state": "granted"},
-			supplied: AnyMap{"new_state": "granted", "purpose_id": absent},
+			// wording rides along because a grant without it is refused naming
+			// THAT field, and this case asserts the refusal names purpose_id.
+			omitted:  AnyMap{"new_state": "granted", "wording": "Yes, you may contact me about this."},
+			supplied: AnyMap{"new_state": "granted", "wording": "Yes, you may contact me about this.", "purpose_id": absent},
 			field:    "purpose_id",
 		},
 		"IssueDoubleOptInJSONBody.purpose_id": {

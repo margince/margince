@@ -302,3 +302,69 @@ export function useNoticeRead(invalidateKeys: readonly QueryKey[]) {
     },
   });
 }
+
+/**
+ * Running one failed automation firing again.
+ *
+ * It resolves with the server's answer rather than throwing on a refusal,
+ * because a refusal is a fact about the run and not a fault: the firing was
+ * blocked on purpose, or its handler has not been established safe to repeat,
+ * or its trigger event cannot be rebuilt. Each of those is something to TELL
+ * the reader, and an error path would have to reconstruct which one it was.
+ */
+export function useAutomationRetry(invalidateKeys: readonly QueryKey[]) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await api.POST("/automations/runs/{id}/retry", {
+        params: { path: { id } },
+      });
+      if (error) {
+        throwProblem(error, t);
+      }
+      return data;
+    },
+    onSuccess: () => {
+      for (const queryKey of invalidateKeys) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+    },
+  });
+}
+
+/**
+ * Recording how a meeting went.
+ *
+ * Its own hook rather than a wider `useTaskUpdate`: that one's body is
+ * task-shaped (is_done, due_at, remind_at), and a meeting outcome is a
+ * different fact about a different kind of activity. Widening it would let a
+ * caller send `is_done` for a meeting, which the server refuses with a
+ * `field_not_valid_for_kind` fault — a refusal the types can prevent instead.
+ */
+export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      status: "held" | "no_show" | "canceled";
+    }) => {
+      const { error } = await api.PATCH("/activities/{id}", {
+        params: { path: { id: input.id } },
+        body: { meeting_status: input.status },
+      });
+      if (error) {
+        throwProblem(error, t);
+      }
+    },
+    onSuccess: (_data, input) => {
+      for (const queryKey of invalidateKeys) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+      // The meeting's own detail read too: a drawer open on it would otherwise
+      // keep showing the row as unanswered after it has been answered.
+      queryClient.invalidateQueries({ queryKey: ["activity", input.id] });
+    },
+  });
+}

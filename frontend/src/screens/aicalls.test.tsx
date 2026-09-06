@@ -27,10 +27,14 @@ const summary = {
   has_payload: true,
 };
 
-// The trace is gated on automation:update — the server treats the runtime's calls as
-// operator information — so a stub that never answers /me leaves the caller holding
-// no grant and the card correctly says it is withheld instead of rendering rows.
-const OPERATOR: GrantSpec = { automation: ["read", "update"] };
+// The trace is gated on `ai_diagnostics:read`, which is what `GET /ai/calls`
+// asks for — so a stub that never answers /me leaves the caller holding no
+// grant and the card correctly says it is withheld instead of rendering rows.
+//
+// The card asked `automation:update` before the runtime's spend got an object of
+// its own: a write verb guarding a GET, which kept a management seat off a read
+// the server would have served.
+const OPERATOR: GrantSpec = { ai_diagnostics: ["read"] };
 
 function mount(
   captureEnabled = true,
@@ -165,11 +169,11 @@ it("distinguishes capture disabled from a call without payload", async () => {
   ).toBeTruthy();
 });
 
-it("withholds the trace from a principal without the automation grant, and asks the server for nothing", async () => {
+it("withholds the trace from a principal without the diagnostics read, and asks the server for nothing", async () => {
   // Withheld, not absent: an absent trace claims the installation made no model
   // calls. The card keeps its title and says whose record this is — and the list
   // read never fires, because the denial is already known.
-  const { seen } = mount(true, true, { automation: ["read"] });
+  const { seen } = mount(true, true, { automation: ["read", "update"] });
 
   expect(
     await screen.findByText(/only an operator can read the per-call trace/i),
