@@ -48,6 +48,10 @@ func (followUpOwnerReconcile) Spec() workflow.Spec {
 		Name:    "follow_up_owner_reconcile",
 		Trigger: workflow.Trigger{EventType: "lead.updated"},
 		Tier:    mcp.TierAutoExecute,
+		// Reconciliation converges by construction: it selects the tasks whose
+		// assignee_id IS DISTINCT FROM the lead's current owner, and a first
+		// pass leaves none of those behind.
+		RedrivableWithoutDuplicating: true,
 	}
 }
 

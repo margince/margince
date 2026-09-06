@@ -1632,6 +1632,7 @@ public.consent_event.consent_event_person_id_fkey FOREIGN KEY (person_id) REFERE
 public.consent_event.consent_event_pkey PRIMARY KEY (id)
 public.consent_event.consent_event_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
 public.consent_event.consent_event_subject CHECK (((person_id IS NOT NULL) OR (lead_id IS NOT NULL)))
+public.consent_event.consent_event_wording_pairs CHECK (((policy_text IS NULL) = (policy_version IS NULL)))
 public.consent_event.double_opt_in_confirmed_at timestamp with time zone gen=- def=-
 public.consent_event.id uuid NOT NULL gen=- def=uuidv7()
 public.consent_event.issuance_trigger text gen=- def=-
@@ -1639,8 +1640,8 @@ public.consent_event.lawful_basis text gen=- def=-
 public.consent_event.lead_id uuid gen=- def=-
 public.consent_event.new_state text NOT NULL gen=- def=-
 public.consent_event.person_id uuid gen=- def=-
-public.consent_event.policy_text text NOT NULL gen=- def=-
-public.consent_event.policy_version text NOT NULL gen=- def=-
+public.consent_event.policy_text text gen=- def=-
+public.consent_event.policy_version text gen=- def=-
 public.consent_event.purpose_id uuid NOT NULL gen=- def=-
 public.consent_event.source text NOT NULL gen=- def=-
 public.consent_event_pkey CREATE UNIQUE INDEX consent_event_pkey ON public.consent_event USING btree (id)
@@ -5690,6 +5691,40 @@ public.weekly_review_outlook.weighted_minor bigint gen=- def=-
 public.weekly_review_outlook.won_minor bigint gen=- def=-
 public.weekly_review_outlook_pkey CREATE UNIQUE INDEX weekly_review_outlook_pkey ON public.weekly_review_outlook USING btree (id)
 public.weekly_review_pkey CREATE UNIQUE INDEX weekly_review_pkey ON public.weekly_review USING btree (id)
+public.weekly_review_scorecard acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.weekly_review_scorecard.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.weekly_review_scorecard.deal_advances integer gen=- def=-
+public.weekly_review_scorecard.deal_close_date_sound integer gen=- def=-
+public.weekly_review_scorecard.deal_forecast_down integer gen=- def=-
+public.weekly_review_scorecard.deal_forecast_up integer gen=- def=-
+public.weekly_review_scorecard.deal_median_days_in_stage integer gen=- def=-
+public.weekly_review_scorecard.deal_multi_threaded integer gen=- def=-
+public.weekly_review_scorecard.deal_open integer gen=- def=-
+public.weekly_review_scorecard.deal_regressions integer gen=- def=-
+public.weekly_review_scorecard.deal_with_next_step integer gen=- def=-
+public.weekly_review_scorecard.has_deal_block boolean NOT NULL gen=- def=-
+public.weekly_review_scorecard.has_lead_block boolean NOT NULL gen=- def=-
+public.weekly_review_scorecard.id uuid NOT NULL gen=- def=uuidv7()
+public.weekly_review_scorecard.lead_advanced integer gen=- def=-
+public.weekly_review_scorecard.lead_answered_in_target integer gen=- def=-
+public.weekly_review_scorecard.lead_breached integer gen=- def=-
+public.weekly_review_scorecard.lead_disqualified integer gen=- def=-
+public.weekly_review_scorecard.lead_promoted integer gen=- def=-
+public.weekly_review_scorecard.meetings_booked integer gen=- def=-
+public.weekly_review_scorecard.meetings_held integer gen=- def=-
+public.weekly_review_scorecard.meetings_no_show integer gen=- def=-
+public.weekly_review_scorecard.meetings_partial_history integer gen=- def=-
+public.weekly_review_scorecard.weekly_review_id uuid NOT NULL gen=- def=-
+public.weekly_review_scorecard.weekly_review_scorecard_counts_nonnegative CHECK (((COALESCE(lead_advanced, 0) >= 0) AND (COALESCE(lead_disqualified, 0) >= 0) AND (COALESCE(lead_promoted, 0) >= 0) AND (COALESCE(lead_answered_in_target, 0) >= 0) AND (COALESCE(lead_breached, 0) >= 0) AND (COALESCE(meetings_booked, 0) >= 0) AND (COALESCE(meetings_held, 0) >= 0) AND (COALESCE(meetings_no_show, 0) >= 0) AND (COALESCE(meetings_partial_history, 0) >= 0) AND (COALESCE(deal_advances, 0) >= 0) AND (COALESCE(deal_regressions, 0) >= 0) AND (COALESCE(deal_median_days_in_stage, 0) >= 0) AND (COALESCE(deal_with_next_step, 0) >= 0) AND (COALESCE(deal_open, 0) >= 0) AND (COALESCE(deal_multi_threaded, 0) >= 0) AND (COALESCE(deal_close_date_sound, 0) >= 0) AND (COALESCE(deal_forecast_up, 0) >= 0) AND (COALESCE(deal_forecast_down, 0) >= 0)))
+public.weekly_review_scorecard.weekly_review_scorecard_deal_block_shape CHECK ((((NOT (has_deal_block IS DISTINCT FROM true)) = (deal_advances IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_regressions IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_with_next_step IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_open IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_multi_threaded IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_close_date_sound IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_forecast_up IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_forecast_down IS NOT NULL))))
+public.weekly_review_scorecard.weekly_review_scorecard_lead_block_shape CHECK ((((NOT (has_lead_block IS DISTINCT FROM true)) = (lead_advanced IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (lead_disqualified IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (lead_promoted IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (lead_answered_in_target IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (lead_breached IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (meetings_booked IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (meetings_held IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (meetings_no_show IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (meetings_partial_history IS NOT NULL))))
+public.weekly_review_scorecard.weekly_review_scorecard_median_needs_block CHECK (((deal_median_days_in_stage IS NULL) OR (NOT (has_deal_block IS DISTINCT FROM true))))
+public.weekly_review_scorecard.weekly_review_scorecard_one_per_review UNIQUE (weekly_review_id)
+public.weekly_review_scorecard.weekly_review_scorecard_pkey PRIMARY KEY (id)
+public.weekly_review_scorecard.weekly_review_scorecard_review_fkey FOREIGN KEY (weekly_review_id) REFERENCES weekly_review(id) ON DELETE CASCADE
+public.weekly_review_scorecard.weekly_review_scorecard_subsets_fit CHECK (((deal_open IS NULL) OR ((deal_with_next_step <= deal_open) AND (deal_multi_threaded <= deal_open) AND (deal_close_date_sound <= deal_open))))
+public.weekly_review_scorecard_one_per_review CREATE UNIQUE INDEX weekly_review_scorecard_one_per_review ON public.weekly_review_scorecard USING btree (weekly_review_id)
+public.weekly_review_scorecard_pkey CREATE UNIQUE INDEX weekly_review_scorecard_pkey ON public.weekly_review_scorecard USING btree (id)
 public.workflow_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.workflow_run.applied jsonb gen=- def=-
 public.workflow_run.created_at timestamp with time zone NOT NULL gen=- def=now()

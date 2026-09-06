@@ -294,21 +294,18 @@ export function AddDocumentDialog({
   );
 
   const parent = parentOf(anchor, filing, deal);
-  // All three asked unconditionally: the number of hooks a render performs must
-  // not depend on which record the reader is filing against.
-  const canWriteOrg = useCanWrite("organization", "update");
-  const canWriteDeal = useCanWrite("deal", "update");
-  const canWritePerson = useCanWrite("person", "update");
   // The upload's RBAC object IS the parent's entity type, so the grant this
-  // dialog checks follows the CHOICE rather than the record it was opened from.
-  // With "a deal" chosen and none picked yet there is no parent, and the grant
-  // that governs the press is still the deal one.
-  const writable: Readonly<Record<AttachmentParent["entityType"], boolean>> = {
-    organization: canWriteOrg,
-    person: canWritePerson,
-    deal: canWriteDeal,
-  };
-  const permitted = writable[parent?.entityType ?? "deal"];
+  // dialog checks follows the CHOICE rather than the record it was opened from —
+  // asked as the parent names it rather than through a table of the kinds this
+  // dialog happens to file against today. The table was that, and it fell
+  // behind the endpoint's own list the moment a kind was added to it: a map has
+  // to be maintained, and this cannot be wrong.
+  //
+  // One hook whose ARGUMENT varies, never a hook that appears and disappears:
+  // the number of hooks a render performs must not depend on which record the
+  // reader is filing against. With "a deal" chosen and none picked yet there is
+  // no parent, and the grant that governs the press is still the deal one.
+  const permitted = useCanWrite(parent?.entityType ?? "deal", "update");
 
   // Emptying the form is separate from closing it, because the two happen at
   // different moments: every close empties, and the partial-failure path

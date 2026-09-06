@@ -4,8 +4,9 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
-import { SettingsScreen, settingsAddress } from "./settings";
+import { SettingsScreen } from "./settings";
 import { IDLE_JOB_HEALTH, jsonResponse, render } from "./settings.testkit";
+import { settingsHref } from "./settingsrouting";
 
 // The danger zone on the Maintenance entry. Reset data is the one control on
 // this screen that destroys an installation's data, so it is gated twice — the
@@ -28,9 +29,13 @@ afterEach(() => {
 // role AND me.data_reset_available — the switch a deployment arms, not the
 // posture it happens to run under. A dedicated backend per test so the
 // role/capability combination is explicit rather than layered on the shared
-// default. `allow` defaults to the reindex write that opens the Maintenance
-// entry the card lives on — a test about the card should not also have to argue
-// its way onto the entry, and one that wants it CLOSED says so with `{}`.
+// default.
+//
+// `allow` defaults to `system_reset:delete`, the grant that opens the page this
+// card now has to itself — a test about the card should not also have to argue
+// its way onto the page, and one that wants it CLOSED says so with `{}`. It was
+// the reindex write while the card sat on a combined Maintenance entry; the
+// reindex and the job report are their own page now.
 function resetDataBackend(opts: {
   roles: string[];
   dataResetAvailable: boolean;
@@ -47,7 +52,7 @@ function resetDataBackend(opts: {
     if (url.endsWith("/v1/me")) {
       const me = meFixture({
         roles: opts.roles,
-        allow: opts.allow ?? { embedding_reindex: ["read", "update"] },
+        allow: opts.allow ?? { system_reset: ["delete"] },
       });
       return jsonResponse({
         ...me,
@@ -90,7 +95,7 @@ describe("ResetDataCard (danger zone)", () => {
       "fetch",
       resetDataBackend({ roles: ["admin"], dataResetAvailable: true }),
     );
-    render(<SettingsScreen route={settingsAddress("maintenance")} />);
+    render(<SettingsScreen route={settingsHref("reset")} />);
     expect(await screen.findByText(/reset data/i)).toBeTruthy();
   });
 
@@ -99,47 +104,52 @@ describe("ResetDataCard (danger zone)", () => {
       "fetch",
       resetDataBackend({ roles: ["admin"], dataResetAvailable: false }),
     );
-    render(<SettingsScreen route={settingsAddress("maintenance")} />);
-    // The job report is the entry's own card, so its heading proves Maintenance
-    // rendered — the danger zone below it is what has to stay away.
-    await waitFor(() =>
-      expect(
-        screen.getByRole("heading", { name: "Background jobs" }),
-      ).toBeTruthy(),
-    );
+    render(<SettingsScreen route={settingsHref("reset")} />);
+    // A STRONGER answer than the card hiding itself, and it is the split that
+    // buys it: the danger zone had to sit unarmed on a page a reader was
+    // already on, so the page rendered and the card withheld itself. It has a
+    // page of its own now, so an unarmed installation has no such destination —
+    // the address falls back and nothing about resetting appears anywhere.
+    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
     expect(screen.queryByText(/reset data/i)).toBeNull();
   });
 
   it("hides Reset data from a rep even where the reset is armed", async () => {
     vi.stubGlobal(
       "fetch",
-      // A rep is no admin and holds no embedding_reindex grant, so Maintenance
-      // is not theirs to reach in the first place.
+      // A rep holds no `system_reset` grant, so the page is not theirs to
+      // reach in the first place.
       resetDataBackend({ roles: ["rep"], dataResetAvailable: true, allow: {} }),
     );
-    render(<SettingsScreen route={settingsAddress("maintenance")} />);
+    render(<SettingsScreen route={settingsHref("reset")} />);
     // With no member grant, the rep falls back to Account — proven here by
     // the identity card rendering instead of anything maintenance-shaped.
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
     expect(screen.queryByText(/reset data/i)).toBeNull();
   });
 
-  // The card is admin-ONLY, narrower than the Maintenance entry that hosts it:
-  // the server's auth.RequireAdmin on /admin/reset-data admits only the literal
-  // "admin" role, so an ops user — who reaches the entry on the reindex grant
-  // and uses its other cards — must never see a Reset-data button that could
-  // only 403 on confirm.
-  it("reaches Maintenance as ops but never sees Reset data", async () => {
+  // Admin-ONLY, and narrower than the grant that opens the page: the server's
+  // auth.RequireAdmin on /admin/reset-data admits only the literal "admin"
+  // role, so an ops user holding `system_reset:delete` through an edited role
+  // must never see a button that could only 403 on confirm.
+  //
+  // The page renders for them — they hold what it asks for — and the card
+  // inside it withholds itself. That is the pair worth keeping: the page's
+  // grant and the card's role are two different questions.
+  it("opens the page for ops but never shows the control", async () => {
     vi.stubGlobal(
       "fetch",
-      resetDataBackend({ roles: ["ops"], dataResetAvailable: true }),
+      resetDataBackend({
+        roles: ["ops"],
+        dataResetAvailable: true,
+        allow: { system_reset: ["delete"] },
+      }),
     );
-    render(<SettingsScreen route={settingsAddress("maintenance")} />);
-    await waitFor(() =>
-      expect(
-        screen.getByRole("heading", { name: "Search index" }),
-      ).toBeTruthy(),
-    );
+    render(<SettingsScreen route={settingsHref("reset")} />);
+    // The page is theirs — they hold its grant — so it renders rather than
+    // falling back. Waiting on the identity would prove the opposite, so this
+    // waits on /me settling and then asserts the control's absence.
+    await waitFor(() => expect(screen.queryByText("Reading…")).toBeNull());
     expect(screen.queryByText(/reset data/i)).toBeNull();
   });
 
@@ -154,7 +164,7 @@ describe("ResetDataCard (danger zone)", () => {
         onReset: (body) => posted.push(body),
       }),
     );
-    render(<SettingsScreen route={settingsAddress("maintenance")} />);
+    render(<SettingsScreen route={settingsHref("reset")} />);
     await user.click(
       await screen.findByRole("button", { name: /reset data/i }),
     );
@@ -192,7 +202,7 @@ describe("ResetDataCard (danger zone)", () => {
         },
       }),
     );
-    render(<SettingsScreen route={settingsAddress("maintenance")} />);
+    render(<SettingsScreen route={settingsHref("reset")} />);
     await user.click(
       await screen.findByRole("button", { name: /reset data/i }),
     );
@@ -233,7 +243,7 @@ describe("ResetDataCard (danger zone)", () => {
         resetBody: opts.resetResponse,
       }),
     );
-    return render(<SettingsScreen route={settingsAddress("maintenance")} />);
+    return render(<SettingsScreen route={settingsHref("reset")} />);
   }
 
   // Opens the confirm dialog, types the confirmation, and submits — the same
@@ -312,7 +322,7 @@ describe("ResetDataCard (danger zone)", () => {
         if (url.endsWith("/v1/me")) {
           const me = meFixture({
             roles: ["admin"],
-            allow: { embedding_reindex: ["read", "update"] },
+            allow: { system_reset: ["delete"] },
           });
           return jsonResponse({
             ...me,
@@ -339,7 +349,7 @@ describe("ResetDataCard (danger zone)", () => {
         });
       }),
     );
-    render(<SettingsScreen route={settingsAddress("maintenance")} />);
+    render(<SettingsScreen route={settingsHref("reset")} />);
 
     await confirmReset(user, "Acme Inc");
     expect(

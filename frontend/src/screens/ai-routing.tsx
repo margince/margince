@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
+import { useUnsavedGuard } from "../app/unsaved";
 import {
   Badge,
   Button,
@@ -103,16 +104,8 @@ function useReplaceRouting() {
 }
 
 export function AiRoutingCard({
-  onDirtyChange,
   onPriceSheet,
 }: Readonly<{
-  // The page above owns the strip a reader leaves this card by, and the draft
-  // below is a document rather than a field that saves itself. The app's own
-  // unsaved guard watches addresses and every tab on this page shares one, so
-  // the card says whether it is holding work and the page decides what to do
-  // about a move. Optional: the card is composed on its own in a story and in
-  // the tests, where there is nothing to tell.
-  onDirtyChange?: (dirty: boolean) => void;
   // Where the prices behind these bindings are read. A link rather than a
   // second copy of the sheet: it is one table, and the lane rows only need to
   // say which model each binds.
@@ -143,7 +136,6 @@ export function AiRoutingCard({
         <RoutingForm
           routing={routing}
           canManage={canManage}
-          onDirtyChange={onDirtyChange}
           onPriceSheet={onPriceSheet}
         />
       )}
@@ -180,12 +172,10 @@ function orderedTiers(tiers: Routing["tiers"] | undefined): string[] {
 function RoutingForm({
   routing,
   canManage,
-  onDirtyChange,
   onPriceSheet,
 }: Readonly<{
   routing: Routing;
   canManage: boolean;
-  onDirtyChange?: (dirty: boolean) => void;
   onPriceSheet?: () => void;
 }>) {
   const t = useT();
@@ -215,7 +205,15 @@ function RoutingForm({
   const [editing, setEditing] = useState<string | null>(null);
 
   const dirty = JSON.stringify(draft) !== seeded;
-  useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
+  // The card claims the guard itself, rather than reporting up to a page that
+  // decides. It could not before: the routing editor was one tab of a page whose
+  // five tabs shared ONE address, and the app's guard watches addresses — so a
+  // move between tabs was invisible to it and the page had to ask instead.
+  //
+  // Each of those tabs is its own page now, so leaving this one IS an address
+  // change and the guard sees it. Claiming here also covers the moves the page
+  // never could: the rail, the palette, a pasted link, the back button.
+  useUnsavedGuard(dirty);
 
   // A binding another role changed re-seeds an UNTOUCHED form, and never
   // replaces one somebody is working in.

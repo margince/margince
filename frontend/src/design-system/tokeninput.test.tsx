@@ -206,3 +206,85 @@ describe("TokenList", () => {
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
   });
 });
+
+// The optional half: a vocabulary the field offers while the reader types. Every
+// rule below is one that decides whether the list is HELP or a constraint.
+
+const PEOPLE = [
+  { value: "dana@nordwand.example", label: "Dana Ellwanger", hint: "Nordwand" },
+  { value: "milo@nordwand.example", label: "Milo Fenn", hint: "Nordwand" },
+] as const;
+
+function Offering({ start = [] }: Readonly<{ start?: readonly string[] }>) {
+  const [values, setValues] = useState<readonly string[]>(start);
+  return (
+    <TokenInput
+      values={values}
+      onChange={setValues}
+      suggestions={PEOPLE}
+      aria-label="To"
+      placeholder="name@example.com"
+    />
+  );
+}
+
+const toBox = () =>
+  screen.getByRole<HTMLInputElement>("combobox", { name: "To" });
+
+describe("offering a vocabulary", () => {
+  // A `combobox` that never opens tells a reader to press a key that does
+  // nothing, so a field with no vocabulary must not claim the role. `box()`
+  // resolving at all is the textbox half; the absence of a combobox is the other.
+  it("stays a plain text box when the call site declared no list", () => {
+    render(<Harness />);
+    expect(box()).toBeTruthy();
+    expect(screen.queryByRole("combobox")).toBeNull();
+  });
+
+  it("offers the rows on focus and commits the one that is picked", async () => {
+    const user = userEvent.setup();
+    render(<Offering />);
+    await user.click(toBox());
+    await user.click(screen.getByRole("option", { name: /Dana Ellwanger/ }));
+    expect(screen.getByText("dana@nordwand.example")).toBeTruthy();
+    // The box empties on a pick exactly as it does on a typed commit: what was
+    // being typed became the token, so leaving it behind would offer the reader
+    // a second copy of what they just chose.
+    expect(toBox().value).toBe("");
+  });
+
+  it("finds a row by the person's name, not only by the address", async () => {
+    const user = userEvent.setup();
+    render(<Offering />);
+    await user.type(toBox(), "Fenn");
+    expect(screen.getByRole("option", { name: /Milo Fenn/ })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: /Dana/ })).toBeNull();
+  });
+
+  it("stops offering a value the field already holds", async () => {
+    const user = userEvent.setup();
+    render(<Offering start={["dana@nordwand.example"]} />);
+    await user.click(toBox());
+    expect(screen.queryByRole("option", { name: /Dana/ })).toBeNull();
+    expect(screen.getByRole("option", { name: /Milo/ })).toBeTruthy();
+  });
+
+  // The list is help, never a constraint: an address nobody has on file is the
+  // ordinary case for a first message, and a field that refused it would be
+  // worse than the plain box it replaced.
+  it("commits a typed value that is on no list", async () => {
+    const user = userEvent.setup();
+    render(<Offering />);
+    await user.type(toBox(), "stranger@example.com{Enter}");
+    expect(screen.getByText("stranger@example.com")).toBeTruthy();
+  });
+
+  it("takes the highlighted row on Enter rather than the typed text", async () => {
+    const user = userEvent.setup();
+    render(<Offering />);
+    await user.type(toBox(), "dan");
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(screen.getByText("dana@nordwand.example")).toBeTruthy();
+    expect(screen.queryByText("dan")).toBeNull();
+  });
+});

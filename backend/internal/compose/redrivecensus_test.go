@@ -59,15 +59,17 @@ var judged = map[string]struct {
 	"recompute_lead_score":           {true, "recomputes a score FROM the records it reads; a second pass over unchanged records lands on the same number"},
 	"recompute_lead_score_on_update": {true, "the same recompute on a different trigger"},
 
-	// Not yet audited. FALSE here is a decision to refuse until somebody looks,
-	// which is a different thing from the zero value meaning nobody has.
-	"assign_lead_owner":                      {false, "RouteLead assigns with no IfVersion, so a delayed repeat can overwrite a reassignment a human made in between"},
-	"lead_first_response":                    {false, "writes an SLA stamp through its own store; not audited for a repeat"},
-	"lead_status_ladder":                     {false, "writes a status transition through its own store; not audited for a repeat"},
-	"follow_up_auto_resolve":                 {false, "closes tasks through its own store; not audited for a repeat"},
-	"follow_up_auto_resolve_on_promoted":     {false, "the same resolve on a different trigger"},
-	"follow_up_auto_resolve_on_disqualified": {false, "the same resolve on a different trigger"},
-	"follow_up_owner_reconcile":              {false, "reassigns follow-ups through its own store; not audited for a repeat"},
+	// These write through their own stores, and each was read to the statement
+	// that makes a repeat a no-op. The guard is structural in every case — a
+	// row lock plus a condition that a completed first pass has already made
+	// false — rather than a claim the store happens to hold today.
+	"assign_lead_owner":                      {true, "RouteLead returns already_owned and writes nothing once the lead has an owner, under a row lock inside the workspace routing lock"},
+	"lead_first_response":                    {true, "stamps only an EARLIER first response; a later-or-equal stamp on an answered lead returns without writing"},
+	"lead_status_ladder":                     {true, "the ladder only climbs: AdvanceLeadStatus returns unless the current status Advances to the target"},
+	"follow_up_auto_resolve":                 {true, "completes only tasks still is_done=false, so a second pass finds none open"},
+	"follow_up_auto_resolve_on_promoted":     {true, "the same resolve on a different trigger"},
+	"follow_up_auto_resolve_on_disqualified": {true, "the same resolve on a different trigger"},
+	"follow_up_owner_reconcile":              {true, "reconciles to the owner NOW, selecting on assignee_id IS DISTINCT FROM it, so an aligned task is not selected twice"},
 }
 
 // TestEveryAutomationAnswersWhetherItMayRunTwice derives its corpus from the

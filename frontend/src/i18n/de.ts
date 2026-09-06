@@ -560,6 +560,13 @@ export const de = {
   "state.staleAsOf": "Zuletzt bekannte Werte, Stand {when}",
   "state.partial": "Nur ein Teil der Liste",
   "state.partialCount": "{count} weitere nicht angezeigt",
+  "filePreview.download": "Herunterladen",
+  "filePreview.print": "Drucken",
+  "filePreview.close": "Vorschau schließen",
+  "filePreview.loading": "Datei wird geöffnet…",
+  "filePreview.failedTitle": "Diese Datei kann hier nicht angezeigt werden",
+  "filePreview.failed":
+    "Laden Sie sie herunter, um sie in einer anderen Anwendung zu öffnen.",
 
   "list.headActions": "Weitere Aktionen",
   "list.search": "Suchen",
@@ -778,6 +785,8 @@ export const de = {
   "org.filterSizeBandAll": "Alle Größen",
   "person.consent": "Einwilligung",
   "consent.grant": "Erteilen",
+  "consent.operatorWording":
+    "Von einem Mitarbeiter im CRM erfasst, der bestätigt hat, dass diese Person ihre Einwilligung für {label} außerhalb des Produkts erteilt hat. Ihr wurde hier kein Text angezeigt.",
   "consent.withdraw": "Widerrufen",
   "consent.doiBySubject":
     "Diesen Zweck best\u00e4tigt die Person selbst \u2013 \u00fcber einen Link an ihre eigene Adresse. Nutzen Sie unten \u201eUm Best\u00e4tigung der Daten bitten\u201c.",
@@ -2502,6 +2511,32 @@ export const de = {
   "home.pipelineUnavailable": "Diese Zahl konnte nicht geladen werden.",
   "home.panel.weekly": "Letzte Woche",
   "home.weekly.weekOf": "Woche ab {day}",
+  "home.weekly.scorecard.title": "Wie die Woche lief",
+  "home.weekly.scorecard.leadBlock": "Leads und Termine",
+  "home.weekly.scorecard.dealBlock": "Deals",
+  "home.weekly.scorecard.advanced": "Leads weitergekommen",
+  "home.weekly.scorecard.advancedBasis": "Stufen nach oben, je Schritt gezählt",
+  "home.weekly.scorecard.answeredInTarget": "Fristgerecht beantwortet",
+  "home.weekly.scorecard.breachedDetail": "{count} über der Frist",
+  "home.weekly.scorecard.meetingsHeld": "Termine gehalten",
+  "home.weekly.scorecard.meetingsBasis":
+    "{booked} gebucht · {noShow} nicht erschienen",
+  "home.weekly.scorecard.partialHistory": "Termine ohne Verlauf",
+  "home.weekly.scorecard.partialHistoryBasis":
+    "Diese liegen vor dem Terminverlauf, die Zahlen oben sind daher ein Mindestwert",
+  "home.weekly.scorecard.advances": "Phasen vorangekommen",
+  "home.weekly.scorecard.regressionsDetail": "{count} zurückgefallen",
+  "home.weekly.scorecard.medianDaysInStage": "Median Tage in Phase",
+  "home.weekly.scorecard.medianBasis":
+    "Für die Phasen, die Deals diese Woche verlassen haben",
+  "home.weekly.scorecard.withNextStep": "Mit nächstem Schritt",
+  "home.weekly.scorecard.ofOpen": "von {total} offenen Deals",
+  "home.weekly.scorecard.multiThreaded": "Mehr als eine Person",
+  "home.weekly.scorecard.multiThreadedBasis":
+    "von {total} offenen Deals, in den letzten 30 Tagen",
+  "home.weekly.scorecard.closeDateSound": "Abschlussdatum trägt",
+  "home.weekly.scorecard.forecastMoves": "Forecast hochgestuft",
+  "home.weekly.scorecard.forecastMovesBasis": "{down} herabgestuft",
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
   // einzige Teil dieser Seite, den noch jemand ändern kann.
   "plan.title": "Nächste Woche planen",
@@ -3229,6 +3264,31 @@ export const de = {
   "compose.whyThisDraft": "Warum dieser Entwurf?",
   "compose.body": "Nachricht",
   "compose.bodyHint": "In den Text klicken, um ihn zu bearbeiten.",
+  "compose.transport": "Versandweg",
+  "compose.transportEmail": "E-Mail",
+  "compose.intentLabel": "Worum soll es gehen?",
+  "compose.recipientHint": "Name oder Adresse",
+  "compose.subjectHint": "Worum es geht",
+  "compose.bodyPlaceholder": "Nachricht schreiben…",
+  "compose.bcc": "Bcc",
+  "compose.bccHint":
+    "Die genannten Empfänger sehen diese Adressen nicht — und sehen auch nicht, dass überhaupt jemand in Kopie ist.",
+  "compose.threadGone":
+    "Diese Unterhaltung lässt sich nicht mehr beantworten, deshalb ist der übliche Weg geöffnet. Prüfen Sie den Empfänger vor dem Senden.",
+  "compose.attach": "Anhängen",
+  "compose.filesOnRecord": "Auf diesem Datensatz",
+  "compose.filesLoading": "Dateien des Datensatzes werden gelesen…",
+  "compose.filesNone": "Auf diesem Datensatz liegen noch keine Dateien.",
+  "compose.filesFull":
+    "Mehr als {most} Dateien kann eine Nachricht nicht tragen. Senden Sie den Rest als zweite Nachricht.",
+  "compose.fileRemove": "{filename} nicht mitsenden",
+  "compose.fileUpload": "Neue Datei mitsenden",
+  "compose.fileUploadHint":
+    "Sie wird zuerst am Datensatz abgelegt, damit der Verlauf festhält, was die Nachricht getragen hat.",
+  "compose.fileUploadEmpty": "Datei hierher ziehen oder auswählen",
+  "compose.fileUploading": "Datei wird abgelegt…",
+  "compose.fileStoredUnnamed":
+    "Die Datei liegt am Datensatz, aber wir konnten nicht zurücklesen, welche es ist. Hängen Sie sie über die Liste oben an.",
   "calendar.previousMonth": "Voriger Monat",
   "calendar.nextMonth": "Nächster Monat",
   "compose.schedulePick": "Datum und Uhrzeit wählen",
@@ -3291,7 +3351,6 @@ export const de = {
     "Diese Nachricht kann nicht gesendet werden, und keine Rolle hier kann das übergehen.",
   "compose.derivedReply":
     "Das ist eine Antwort auf ihre eigene Nachricht — dafür brauchst du keinen Grund anzugeben.",
-  "compose.sendLaterLabel": "Später senden (optional)",
   "compose.send": "Senden",
   "compose.sendConfirmTitle": "E-Mail entwerfen",
   "compose.threadHeading": "Dieser Verlauf",
@@ -3347,7 +3406,6 @@ export const de = {
   "compose.missingSubject": "Gib dieser E-Mail einen Betreff.",
   "compose.missingBody": "Schreibe die Nachricht, bevor du sie sendest.",
   "compose.missingWhy": "Sag, warum du ihnen schreibst.",
-  "compose.removeRecipient": "{recipient} entfernen",
   "compose.actionFailed":
     "Die Anfrage ist fehlgeschlagen. Bitte erneut versuchen.",
 
@@ -5964,6 +6022,31 @@ export const de = {
   // "Allgemein" statt "Organisation" für den ersten Eintrag: die Gruppen-
   // überschrift darüber sagt das Wort schon, und eine Zeile, die ihre eigene
   // Überschrift wiederholt, benennt nichts.
+  "settings.tab.company": "Unternehmensprofil",
+  "settings.tab.authentication": "Anmeldung & Apps",
+  "settings.tab.members": "Mitglieder",
+  "settings.tab.teams": "Teams",
+  "settings.tab.seats": "Lizenzen & Plätze",
+  "settings.tab.pipelines": "Pipelines",
+  "settings.tab.leads": "Lead-Bearbeitung",
+  "settings.tab.fields": "Felder",
+  "settings.tab.tags": "Tags",
+  "settings.tab.products": "Produkte & Angebote",
+  "settings.tab.import": "Datenimport",
+  "settings.tab.models": "Modelle & Routing",
+  "settings.tab.automations": "Automatisierungen",
+  "settings.tab.usage": "KI-Nutzung",
+  "settings.tab.model-calls": "Modellaufrufe",
+  "settings.tab.audit": "Audit-Log",
+  "settings.tab.system-health": "Systemzustand",
+  "settings.tab.reset": "Daten zurücksetzen",
+  "settings.group.me": "Sie",
+  "settings.group.company": "Unternehmen",
+  "settings.group.people": "Personen",
+  "settings.group.sales": "Vertrieb",
+  "settings.group.data": "Daten",
+  "settings.group.ai": "KI",
+  "settings.group.governance": "Governance",
   "settings.tab.account": "Konto",
   "settings.tab.voice": "Schreibstimme",
   "settings.tab.agents": "Agenten",
@@ -6891,14 +6974,6 @@ export const de = {
   "firstRun.ai.modelHint":
     "Ein Ausgangspunkt. Jedes Modell, das Ihr Anbieter bedient, ist möglich.",
   "firstRun.ai.embedModel": "Embedding-Modell",
-  "aiSettings.sub":
-    "Wohin der Text dieser Installation geht und was er kostet.",
-  "aiSettings.tabs": "Welcher Teil der KI-Einstellungen offen ist",
-  "aiSettings.tab.routing": "Routing",
-  "aiSettings.tab.providers": "Anbieter",
-  "aiSettings.tab.automations": "Automatisierungen",
-  "aiSettings.tab.usage": "Verbrauch",
-  "aiSettings.tab.logs": "Protokoll",
   "aiSettings.withheld": "Nicht für Sie einsehbar",
   "aiSettings.unread": "Konnte nicht gelesen werden",
   "aiSettings.pending": "Wird gelesen…",
@@ -6909,10 +6984,6 @@ export const de = {
   "aiSettings.providers.value": "{count} mit Schlüssel",
   "aiSettings.providers.missing": "{count} gebunden, ohne Schlüssel",
   "aiSettings.providers.lastCall": "letzter Aufruf {elapsed}",
-  "aiSettings.discardTitle": "Änderungen am Routing verwerfen?",
-  "aiSettings.discardBody":
-    "Die geänderten Bindungen sind nicht gespeichert. Wer diesen Tab verlässt, verwirft sie.",
-  "aiSettings.discard": "Verwerfen",
   "elapsed.justNow": "gerade eben",
   "elapsed.minutes": "vor {minutes} Min.",
   "elapsed.hours": "vor {hours} Std.",
@@ -7668,16 +7739,6 @@ export const de = {
   "person.rail.nothingCaptured": "Noch nichts erfasst.",
   "person.rail.viewAllActivity": "Alle Aktivitäten ansehen",
   "person.drawer.close": "Schließen",
-  "person.composer.title": "Follow-up entwerfen · {name}",
-  "person.composer.to": "An",
-  "person.composer.transport": "Versandweg",
-  "person.composer.transportEmail": "E-Mail",
-  "person.composer.toConversation": "Setzt Ihre {transport}-Unterhaltung fort",
-  "person.composer.subject": "Betreff",
-  "person.composer.bcc": "Bcc",
-  "person.composer.bccPlaceholder":
-    "Eine Adresse pro Zeile – sie erhalten die Nachricht, kein anderer Empfänger sieht sie",
-  "person.composer.body": "Nachricht",
   "richtext.bold": "Fett",
   "richtext.italic": "Kursiv",
   "richtext.bulletList": "Aufzählung",
@@ -7685,37 +7746,11 @@ export const de = {
   "richtext.link": "Link",
   "richtext.linkPrompt":
     "Webadresse für diesen Link (leer lassen zum Entfernen)",
-  "person.composer.drafting": "Entwurf wird geschrieben…",
-  "person.composer.why": "Warum dieser Entwurf",
-  "person.composer.consentUnknown":
-    "Für diesen Kanal ist keine Einwilligungsentscheidung erfasst.",
-  "person.composer.sendNote":
-    "Mit dem Senden geht diese Nachricht aus Ihrem eigenen Postfach raus.",
-  "person.composer.purpose": "Einwilligungszweck",
-  "person.composer.blockedLead":
-    "Unter diesem Zweck kann diese Nachricht nicht rausgehen.",
-  "person.composer.blockedRewrite":
-    "Eine Nachricht unter einem anderen Zweck muss auch diese Art von Nachricht SEIN — sie umzuetikettieren macht sie nicht dazu.",
-  "person.composer.blockedRecordConsent":
-    "Wenn Sie eine Rechtsgrundlage haben, erfassen Sie die Einwilligungsentscheidung am Datensatz der Person.",
-  "person.composer.consentPickPurpose":
-    "Wählen Sie, wofür diese Nachricht ist — die Einwilligung gilt je Zweck.",
-  "person.composer.intent": "Worum soll es gehen?",
-  "person.composer.intentHint":
-    "Optional — z. B. um einen Termin in der ersten Septemberwoche bitten",
-  "person.composer.draftWithAi": "Mit KI entwerfen",
   "person.composer.intentAgenda":
     "eine Agenda für den anstehenden Termin vorschlagen",
-  "person.composer.threadGone":
-    "Das Gespräch, auf das dieser Link zeigt, kann nicht mehr beantwortet werden — der Kanal oder die Adresse dazu gibt es nicht mehr. Das hier ist eine neue Nachricht.",
   "person.composer.intentReply": "auf die letzte Nachricht antworten",
   "person.composer.intentCommitment": "einlösen, was wir zugesagt haben",
   "person.composer.intentFollowUp": "nachfassen — es ist still geworden",
-  "person.composer.send": "Senden",
-  "person.composer.sending": "Wird gesendet…",
-  "person.composer.sent": "Gesendet",
-  "person.composer.aiDisclosure":
-    "KI-unterstützter Entwurf · jedes Wort prüfen",
   "person.research.title": "Tiefenrecherche · {name}",
   "person.research.publicOnly": "Nur öffentliche Quellen",
   "person.research.running": "Öffentliche Quellen werden gelesen…",
