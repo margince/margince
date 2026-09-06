@@ -567,6 +567,12 @@ jobs:
       - name: both integration entry points resolve one Redis address
         working-directory: .
         run: make test-testdb-redis
+      # And when the lane does break, it has to name what broke: a package over
+      # its budget used to read as a sharding failure, which is the wrong thing
+      # to debug.
+      - name: a package over its budget reads as a timeout
+        working-directory: .
+        run: make test-lane-timeout-report
       # The pin gate rides along here, and only here, because it reads the WHOLE
       # workflow directory while the backend scope names one file: sbom.yml and
       # patch.yml match no scope, so gated on the classifier this check would
