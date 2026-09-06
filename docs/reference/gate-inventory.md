@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (87)
+## Parity (89)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -34,6 +34,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `bookinginvite_test.go` | H2 | What booking a meeting CLAIMS and what it DOES, held against each other. |
 | `coachingroles_test.go` | H2 | The seats that may coach are seats that exist. |
 | `companyprofilevocabulary_test.go` | H3 | The company-profile vocabulary is spelled in eight places, and this gate is what makes widening seven of them a failure instead of a silent half-job. |
+| `composedfrontendbuilders_test.go` | H3 | Four builders compile the composed SPA — the make lane, the release image and the desktop bundle on each platform — and every one of them must install the composed workspace before it does. |
 | `configpresets_test.go` | H3 | Every preset under config/presets/ is a binding the parser accepts. |
 | `configschema_test.go` | H3 | The margince.yaml schema is editor tooling, and editor tooling that lies is worse than none: an operator trusts the squiggle. |
 | `consumergroupwiring_test.go` | H3 | Every lane the worker starts is a group the catalog declares. |
@@ -89,6 +90,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `overdueboundary_test.go` | H1 | "Is this late?" is one question about one record, and a reader can ask it of a list, a card, a brief or an agent tool. |
 | `personalpurgewindow_test.go` | H3 | The page that names a deletion date and the sweep that carries it out must read ONE window, or the product promises a date it does not keep. |
 | `planprosebounds_test.go` | H3 | A plan's prose columns are bounded twice, and the two numbers must agree. |
+| `pnpmversionpins_test.go` | H3 | One pnpm version, and package.json's "packageManager" field is it. |
 | `pollcadenceparity_test.go` | H3 | A connector that POSTPONES a tick on an unreachable provider asks to run again after a fixed delay, and that delay has to EQUAL the cadence its dispatcher already ticks at — and has to survive the seam's ceiling on the way to the queue. |
 | `previewauthority_test.go` | H2 | The authority levels a composer can receive are the ones the engine can send. |
 | `processingrecord_test.go` | H3 | The Art. 30 processing record names the code that enforces each entry, and this fails when that code is not there any more. |

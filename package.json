@@ -1,5 +1,6 @@
 {
   "name": "margince",
   "private": true,
-  "description": "Workspace root. pnpm needs a manifest where the workspace is rooted, and the workspace is rooted here so a unit's extensions/<name>/frontend package can be a member. Nothing is built from this file — the SPA is frontend/, and every script still lives there. It declares no packageManager on purpose: CI pins pnpm through pnpm/action-setup, and a second source of that version is what ERR_PNPM_BAD_PM_VERSION is about."
+  "description": "Workspace root. pnpm needs a manifest where the workspace is rooted, and the workspace is rooted here so a unit's extensions/<name>/frontend package can be a member. Nothing is built from this file — the SPA is frontend/, and every script still lives there. What it does decide is the pnpm version: \"packageManager\" is the ONE pin, read by corepack, by pnpm's own self-management and by pnpm/action-setup, so no environment picks a major off npm's release schedule. A workflow must therefore not also pass a `version:` input — two sources of the same version is what ERR_PNPM_BAD_PM_VERSION is about, and backend/gates/pnpmversionpins_test.go fails a second one.",
+  "packageManager": "pnpm@11.25.0+sha512.5cde925b4f075f725eb71fbae18a42ffe784524789f19b61c731cb8721ec28aaee160e01a8d5af4fedb2a42cdbf300efe23db356b0d4a17b4d63e11f8ab7c956"
 }

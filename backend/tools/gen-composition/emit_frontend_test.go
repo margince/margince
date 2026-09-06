@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -334,5 +335,85 @@ func TestReEmittingTheWorkspaceReplacesTheMembers(t *testing.T) {
 	}
 	if strings.Contains(string(ws), "relay-probe") {
 		t.Error("a removed unit is still a member of the composed workspace")
+	}
+}
+
+// The overrides reach the host through the workspace's own `host` link, and no
+// target may climb out with `../`. pnpm 12 miscounts such a target — it writes
+// the member's symlink with two extra parent segments for every `../` the spec
+// asked for — and nothing says so: the install exits 0 and the composed lane
+// fails hundreds of lines later on `Cannot find module 'react'`. pnpm 10 and 11
+// resolve both spellings, so no lane on a pinned version can notice the
+// difference, which is what this test is for.
+func TestNoOverrideTargetClimbsOutOfTheWorkspace(t *testing.T) {
+	dir := t.TempDir()
+	if err := emitComposedFrontendWorkspace(dir, []string{"notes"}); err != nil {
+		t.Fatalf("emit: %v", err)
+	}
+	ws, err := os.ReadFile(filepath.Join(dir, "pnpm-workspace.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The overrides are the file's last block, so what follows the header is
+	// all of them — read that way rather than from a list here, which would be
+	// a second copy of the emitter and would pass over an override it had not
+	// heard of.
+	_, overrides, ok := strings.Cut(string(ws), "\noverrides:\n")
+	if !ok {
+		t.Fatalf("the emitted workspace declares no overrides:\n%s", ws)
+	}
+	var checked int
+	for _, line := range strings.Split(overrides, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		checked++
+		_, target, isLink := strings.Cut(line, "link:")
+		if !isLink {
+			t.Errorf("override %q is not a link: — an installed copy is a second copy of what the host owns", line)
+			continue
+		}
+		if strings.Contains(target, "..") {
+			t.Errorf("override %q climbs out of the workspace; pnpm 12 writes that symlink two segments too deep per `../` and it dangles", line)
+		}
+	}
+	if checked == 0 {
+		t.Fatal("the overrides block is empty — a workspace that overrides nothing resolves @margince/frontend to a package that does not exist, and this test would have reported it clean")
+	}
+}
+
+// The host link is what lets an override name its target without a `../`, so
+// where it points is the whole of that property. It is REPLACED on every
+// emission for the reason the member list is: one left behind by a move
+// resolves somewhere nobody chose.
+func TestTheWorkspaceLinksTheHostSPA(t *testing.T) {
+	dir := t.TempDir()
+	if err := emitComposedFrontendWorkspace(dir, []string{"notes"}); err != nil {
+		t.Fatalf("emit: %v", err)
+	}
+	link := filepath.Join(dir, hostLinkName)
+	target, err := os.Readlink(link)
+	if err != nil {
+		t.Fatalf("the workspace carries no host link: %v", err)
+	}
+	// Walked from where the workspace really lives, the link must land on the
+	// host SPA — which is the `../` count checked against its own source rather
+	// than against a number written out here a second time.
+	if got := path.Join(composedFrontendWorkspaceDir, target); got != "frontend" {
+		t.Errorf("host link resolves to %q from %s, want the host SPA at frontend", got, composedFrontendWorkspaceDir)
+	}
+
+	if err := os.Remove(link); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("somewhere-else", link); err != nil {
+		t.Fatal(err)
+	}
+	if err := emitComposedFrontendWorkspace(dir, []string{"notes"}); err != nil {
+		t.Fatalf("re-emit: %v", err)
+	}
+	if again, err := os.Readlink(link); err != nil || again != target {
+		t.Errorf("re-emitting left the host link at %q (err %v), want it replaced with %q", again, err, target)
 	}
 }

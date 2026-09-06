@@ -208,9 +208,13 @@ jobs:
               # dependency change is exactly the kind that needs fe-drift,
               # fe-unit and fe-bundle to have an opinion. pnpm-workspace.yaml is
               # named because `overrides` lives there: it resolves versions the
-              # lockfile then merely records.
+              # lockfile then merely records, and the root package.json because
+              # `packageManager` decides WHICH pnpm reads both — a pnpm major
+              # resolves the same lockfile differently, which is how this lane
+              # went red on a commit that touched nothing else.
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
+              - 'package.json'
               # And the root scripts the lane's own targets execute —
               # check-contract-frontend-drift.sh is a gate this lane is the only
               # runner of, and phase-timer.sh brackets every leg of it. The whole
@@ -866,9 +870,9 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
+      # No version input: the pin is package.json's "packageManager", which pnpm
+      # and corepack read too. A second one here is refused as a mismatch.
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
-        with:
-          version: 11
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
@@ -973,9 +977,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # No version input: the pin is package.json's "packageManager", which pnpm
+      # and corepack read too. A second one here is refused as a mismatch.
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
-        with:
-          version: 11
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
