@@ -26,10 +26,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/search"
-	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // offerDraftPerms is the deal-desk grant this suite drives the drafter
@@ -196,7 +197,7 @@ func TestDraftOfferLinesStagesGroundedLinesAndDiscloses(t *testing.T) {
 	if !result.AIGenerated {
 		t.Fatalf("AIGenerated = false, want true (two candidates ground)")
 	}
-	if result.AIDisclosure == nil || *result.AIDisclosure != signals.Art50Disclosure {
+	if result.AIDisclosure == nil || *result.AIDisclosure != draftfloor.AIDisclosure(textlang.English) {
 		t.Fatalf("AIDisclosure = %v, want the Art.50 disclosure", result.AIDisclosure)
 	}
 	if result.Diff == nil || result.Diff.Added == nil || len(*result.Diff.Added) != 2 {

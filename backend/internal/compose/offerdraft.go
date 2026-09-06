@@ -52,11 +52,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
@@ -232,7 +233,7 @@ func (d offerDrafter) DraftOfferLines(ctx context.Context, offerID ids.OfferID) 
 	}
 
 	added, removed, changed := diffOfferLines(linesOf(before), linesOf(after))
-	disclosure := signals.Art50Disclosure
+	disclosure := draftfloor.AIDisclosure(textlang.Lang(identity.BaseLanguageForPrompt(ctx, d.pool)))
 	diff := buildOfferDiff(added, removed, changed)
 	after.AiGenerated = boolPtr(true)
 	after.AiDisclosure = &disclosure

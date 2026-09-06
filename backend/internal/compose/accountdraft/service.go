@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Assembler is the caller's own composite read of the account — the same seam
@@ -183,7 +184,7 @@ func (s *Service) Draft(
 	if err != nil {
 		return crmcontracts.AccountEmailDraft{}, err
 	}
-	out := wire(draft, by, voice.Degraded)
+	out := wire(draft, by, voice.Degraded, req.Envelope.Language)
 	// The scoped read's own report of what the narrowing kept, so the
 	// composer's scope line counts what the draft was actually written from.
 	out.Scope = view.Scope
@@ -200,7 +201,7 @@ func (s *Service) Draft(
 // draft_ref is deliberately absent. The reply drafter returns one so the voice
 // model can learn from what the rep changed — and recording a served draft is
 // a WRITE, which this operation does not perform.
-func wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool) crmcontracts.AccountEmailDraft {
+func wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang string) crmcontracts.AccountEmailDraft {
 	aiWritten := by == crmcontracts.Model
 	out := crmcontracts.AccountEmailDraft{
 		Subject:       draft.Subject,
@@ -218,16 +219,14 @@ func wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool) crmcontrac
 		out.To = &to
 	}
 	if aiWritten {
-		disclosure := aiDisclosure
+		// The DRAFT's language, not the server's: this line used to be an
+		// English constant, so a German draft carried an English legal
+		// sentence. draftfloor holds the one spelling, in all three.
+		disclosure := draftfloor.AIDisclosure(textlang.Lang(lang))
 		out.AiDisclosure = &disclosure
 	}
 	return out
 }
-
-// The machine-readable Art. 50 line, the same sentence the reply drafter
-// stamps. Written once here rather than assembled per call: a disclosure that
-// varies by call site is one a reader learns to skim.
-const aiDisclosure = "This message was drafted with AI assistance."
 
 func wireReasons(reasons []Reason) []crmcontracts.AccountDraftReason {
 	out := make([]crmcontracts.AccountDraftReason, 0, len(reasons))

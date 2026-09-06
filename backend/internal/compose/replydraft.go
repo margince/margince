@@ -20,11 +20,11 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 const replyActivityMaxRunes = 12_000
@@ -180,7 +180,10 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		d.logger().WarnContext(ctx, "model reply draft unavailable; using deterministic draft", "err", err)
 		return activities.DraftResult{Subject: fallbackSubject, Body: fallbackBody, VoiceDegraded: voice.Degraded}, nil
 	}
-	disclosure := signals.Art50Disclosure
+	// The draft's OWN language, from the envelope the drafter already resolved:
+	// a German reply used to carry an English legal line, which is the half of
+	// the drift a reader meets rather than a maintainer.
+	disclosure := draftfloor.AIDisclosure(textlang.Lang(envelope.Language))
 	return activities.DraftResult{
 		Subject:             draft.Subject,
 		Body:                draft.Body,
