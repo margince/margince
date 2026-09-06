@@ -708,14 +708,14 @@ func pinnedMailWithAnOriginal(t *testing.T, e *Env) (activity ids.UUID, sourceID
 			INSERT INTO activity (id, kind, subject, body, counterparty_email, occurred_at,
 			                      source, source_system, source_id, captured_by)
 			VALUES ($1, 'email', 'Lieferschein 88-2026', 'Delivery note attached.', 'supplier@parts.test',
-			        now() - interval '30 days', 'capture_email', 'imap', $2, 'human:x')`,
+			        now() - interval '30 days', 'capture_email', 'email', $2, 'human:x')`,
 			activity, sourceID); err != nil {
 			return err
 		}
 		// The verbatim original, joined on the pair every erasure here keeps.
 		_, err := tx.Exec(ctx, `
 			INSERT INTO raw_capture (source_system, source_id, payload)
-			VALUES ('imap', $1, $2::jsonb)`,
+			VALUES ('email', $1, $2::jsonb)`,
 			sourceID, `{"subject":"Lieferschein 88-2026","body":"Delivery note attached."}`)
 		return err
 	}); err != nil {
@@ -738,7 +738,7 @@ func originalsBehind(t *testing.T, e *Env, sourceID string) int {
 	var n int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM raw_capture WHERE source_system = 'imap' AND source_id = $1`,
+			`SELECT count(*) FROM raw_capture WHERE source_system = 'email' AND source_id = $1`,
 			sourceID).Scan(&n)
 	}); err != nil {
 		t.Fatal(err)

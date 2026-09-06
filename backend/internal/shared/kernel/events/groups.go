@@ -86,6 +86,11 @@ func Groups() []Group {
 		// activity arm can act on, and without the person event that reply
 		// would be lost permanently while the ask read unanswered.
 		{Name: "cg:intro-advance", Streams: forEntities(activityStreamEntity, personStreamEntity)},
+		// What the installation owes a contact it obtained without asking them.
+		// Person stream only: the duty is decided from how the contact was
+		// acquired, and the acquisition row is written in the same transaction
+		// as the person and the event that announces it.
+		{Name: "cg:notice-case-open", Streams: forEntities(personStreamEntity)},
 		// What happened in a Deal Room, written onto the deal's timeline. Its own
 		// group because a room's traffic is live and conversational while the
 		// projections above are batchy: a backlog of embeddings must not delay the

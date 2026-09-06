@@ -19,7 +19,7 @@ import { installFetchStub, jsonResponse } from "./story-utils";
 // checking exactly what the shared card is allowed to vary.
 
 const meta: Meta<typeof OAuthAppCard> = {
-  title: "Settings/Admin settings/General/Connector app",
+  title: "Settings/Company/Sign-in & apps/Connector app",
   component: OAuthAppCard,
   parameters: { layout: "padded" },
 };

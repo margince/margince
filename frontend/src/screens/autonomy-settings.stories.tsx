@@ -47,7 +47,7 @@ function story(data: Row[]) {
 }
 
 const meta: Meta<typeof AutonomySettingsCard> = {
-  title: "Settings/Account/What answers itself",
+  title: "Settings/You/Account/What answers itself",
   component: AutonomySettingsCard,
 };
 export default meta;

@@ -14,7 +14,7 @@ import { installFetchStub, StoryProviders } from "./story-utils";
 // the company sees.
 
 const meta: Meta<typeof CompanyMark> = {
-  title: "Settings/Company logo",
+  title: "Settings/Company/Company profile/Company logo",
   component: CompanyMark,
   parameters: { layout: "padded" },
 };

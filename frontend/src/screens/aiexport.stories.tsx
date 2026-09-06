@@ -14,7 +14,7 @@ const call = {
   },
 } satisfies AiCallDetail;
 const meta: Meta<typeof ExportScenarioDialog> = {
-  title: "Settings/Admin settings/AI/Scenario export",
+  title: "Settings/AI/Model calls/Scenario export",
   component: ExportScenarioDialog,
 };
 export default meta;

@@ -112,11 +112,11 @@ func TestGmailConnectorSyncsAnActivity(t *testing.T) {
 	var capturedBy, sourceID string
 	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM activity WHERE source_system = 'gmail'`).Scan(&activities); err != nil {
+			`SELECT count(*) FROM activity WHERE source_system = 'email'`).Scan(&activities); err != nil {
 			return err
 		}
 		return tx.QueryRow(context.Background(),
-			`SELECT captured_by, source_id FROM activity WHERE source_system = 'gmail'`).Scan(&capturedBy, &sourceID)
+			`SELECT captured_by, source_id FROM activity WHERE source_system = 'email'`).Scan(&capturedBy, &sourceID)
 	})
 	if err != nil {
 		t.Fatal(err)
