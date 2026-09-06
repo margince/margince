@@ -90,10 +90,11 @@ export type OnboardingBackreadProps = Readonly<{
    *  the first render, so returning to a read in progress shows it immediately
    *  and never offers to start a second one. */
   initial?: BackfillStatus;
-  /** Finish onboarding. `skipped` is the CONNECT step's flag, not the
-   *  backread's: the mailbox is connected on every path through this surface,
-   *  so declining the history read still finishes with `false`. */
-  onFinish: (skipped: boolean) => void;
+  /** Leave the backread. The mailbox is connected on every path through this
+   *  surface, and a read that is running keeps running; what closes is the
+   *  dialog, so the reader lands back on the connect surface — where LinkedIn
+   *  still waits and the step's own way onward stands. */
+  onDone: () => void;
   /** Hold the start verb while a decision ABOUT this mailbox is still being
    *  written — the posture, today. A read that begins first imports under the
    *  answer the write was about to replace. */
@@ -104,7 +105,7 @@ export function OnboardingBackread({
   provider,
   initial,
   disabled,
-  onFinish,
+  onDone,
 }: OnboardingBackreadProps) {
   const t = useT();
   const importRun = useBackfillRun({ provider, initial });
@@ -135,8 +136,16 @@ export function OnboardingBackread({
           {t("backfill.statusUnavailable")}
         </p>
         <div className="ob-backread-acts">
-          <Button variant="primary" onClick={() => onFinish(false)}>
-            {t("ob.s4.enterCrm")}
+          {/* Every exit from this surface waits on `disabled`: a decision
+              about the mailbox still being written (the posture) needs this
+              dialog mounted to show its refusal, and closing it mid-write
+              would leave that refusal with nowhere to land. */}
+          <Button
+            variant="primary"
+            disabled={disabled}
+            onClick={() => onDone()}
+          >
+            {t("ob.conv.connect.dialogDone")}
           </Button>
         </div>
       </section>
@@ -168,7 +177,7 @@ export function OnboardingBackread({
         held={disabled}
         startProblem={safeDetail(start.isError, start.error, t)}
         onStart={() => start.mutate(selected)}
-        onFinish={onFinish}
+        onDone={onDone}
       />
     );
   }
@@ -179,9 +188,10 @@ export function OnboardingBackread({
       run={run}
       cancelling={cancel.isPending}
       cancelProblem={safeDetail(cancel.isError, cancel.error, t)}
+      held={disabled}
       onCancel={() => cancel.mutate()}
       onRestart={() => importRun.restart(run)}
-      onFinish={onFinish}
+      onDone={onDone}
     />
   );
 }
@@ -199,7 +209,7 @@ function BackreadSetup({
   startProblem,
   held,
   onStart,
-  onFinish,
+  onDone,
 }: Readonly<{
   selected: ImportWindow;
   onSelect: (pick: ImportWindow) => void;
@@ -216,7 +226,7 @@ function BackreadSetup({
   starting: boolean;
   startProblem: string | null;
   onStart: () => void;
-  onFinish: (skipped: boolean) => void;
+  onDone: () => void;
 }>) {
   const t = useT();
   const group = useId();
@@ -247,7 +257,9 @@ function BackreadSetup({
         >
           {t("ob.backread.start")}
         </Button>
-        <Button onClick={() => onFinish(false)}>{t("ob.backread.skip")}</Button>
+        <Button disabled={held} onClick={() => onDone()}>
+          {t("ob.backread.skip")}
+        </Button>
       </div>
       {startProblem !== null && (
         <p className="ob-backread-problem" role="alert">
@@ -318,19 +330,23 @@ function BackreadRun({
   run,
   cancelling,
   cancelProblem,
+  held,
   onCancel,
   onRestart,
-  onFinish,
+  onDone,
 }: Readonly<{
   run: BackfillStatus;
   cancelling: boolean;
   cancelProblem: string | null;
+  /** A decision about this mailbox is still being written; the exit waits
+   *  for it, for the reason the setup's does. */
+  held?: boolean;
   onCancel: () => void;
   /** Put the window pick back in front of the reader. Offered on every read
    *  this view draws that is not live: stopping one is a decision about that
    *  read, never about the mailbox. */
   onRestart: () => void;
-  onFinish: (skipped: boolean) => void;
+  onDone: () => void;
 }>) {
   const t = useT();
   const heading = headingKey(run.state);
@@ -348,8 +364,8 @@ function BackreadRun({
         </p>
       )}
       <div className="ob-backread-acts">
-        <Button variant="primary" onClick={() => onFinish(false)}>
-          {live ? t("ob.backread.explore") : t("ob.s4.enterCrm")}
+        <Button variant="primary" disabled={held} onClick={() => onDone()}>
+          {live ? t("ob.backread.explore") : t("ob.conv.connect.dialogDone")}
         </Button>
         {live ? (
           <Button disabled={cancelling} onClick={onCancel}>

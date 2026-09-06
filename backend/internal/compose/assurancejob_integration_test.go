@@ -26,9 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/riverqueue/river"
-	"github.com/riverqueue/river/rivertype"
-
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -37,7 +34,7 @@ import (
 // assuranceJobEnv is one workspace holding an open deal for the pass to examine.
 type assuranceJobEnv struct {
 	*integration.Env
-	worker *assuranceWorkspaceWorker
+	worker *assuranceSweepWorker
 	at     time.Time
 }
 
@@ -60,7 +57,7 @@ func setupAssuranceJob(t *testing.T) *assuranceJobEnv {
 	}
 	return &assuranceJobEnv{
 		Env: e,
-		worker: &assuranceWorkspaceWorker{
+		worker: &assuranceSweepWorker{
 			pool: e.Pool,
 			now:  func() time.Time { return at },
 			log:  slog.New(slog.DiscardHandler),
@@ -69,13 +66,13 @@ func setupAssuranceJob(t *testing.T) *assuranceJobEnv {
 	}
 }
 
-// run drives the worker exactly as River would.
+// run drives the worker's per-workspace turn, which is what River's row now
+// walks rather than what it carries: the pass takes no workspace in its args
+// (ADR-0103), so Work would enumerate the fleet and lose the one this suite is
+// about. It is the same code Work calls per tenant.
 func (e *assuranceJobEnv) run(t *testing.T) error {
 	t.Helper()
-	return e.worker.Work(context.Background(), &river.Job[AssuranceWorkspaceArgs]{
-		JobRow: &rivertype.JobRow{},
-		Args:   AssuranceWorkspaceArgs{Workspace: e.WS},
-	})
+	return e.worker.assureWorkspace(context.Background(), e.WS)
 }
 
 // latestRun is the read the Forecast tab opens on, taken as an ordinary seat

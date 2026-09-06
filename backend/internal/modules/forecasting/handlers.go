@@ -44,20 +44,37 @@ type PeriodFunc func(ctx context.Context, tx pgx.Tx, kind PeriodKind, at time.Ti
 // module owns neither.
 type ResolveScopeFunc func(ctx context.Context, tx pgx.Tx, requested Scope) (Scope, error)
 
+// HistoryFunc reads the conversion evidence a sufficiency answer rests on.
+//
+// A seam for the same reason DealsFunc is: the rates come from tables this
+// module does not own, and the composition applies the caller's row scope
+// before any of it reaches the arithmetic.
+type HistoryFunc func(ctx context.Context, tx pgx.Tx, period Period, scope Scope, asOf time.Time, baseCurrency string) (ConversionHistory, error)
+
+// MeasureFunc reads which remaining-pipeline reading this installation builds
+// its landing from.
+type MeasureFunc func(ctx context.Context, tx pgx.Tx) (ForwardMeasure, error)
+
 // Handlers is the forecast's HTTP surface.
 type Handlers struct {
 	store   *Store
 	deals   DealsFunc
 	period  PeriodFunc
 	resolve ResolveScopeFunc
+	history HistoryFunc
+	measure MeasureFunc
 	now     func() time.Time
 }
 
 // NewHandlers binds the routes to the store and its seams.
 func NewHandlers(
-	store *Store, deals DealsFunc, period PeriodFunc, resolve ResolveScopeFunc, now func() time.Time,
+	store *Store, deals DealsFunc, period PeriodFunc, resolve ResolveScopeFunc,
+	history HistoryFunc, measure MeasureFunc, now func() time.Time,
 ) Handlers {
-	return Handlers{store: store, deals: deals, period: period, resolve: resolve, now: now}
+	return Handlers{
+		store: store, deals: deals, period: period, resolve: resolve,
+		history: history, measure: measure, now: now,
+	}
 }
 
 // GetForecast answers the readings for one period.
@@ -116,24 +133,106 @@ func (h Handlers) GetForecast(
 		if scope.Kind == ScopeManagedTeams {
 			return nil
 		}
+		var called *int64
 		call, err := h.store.CurrentCallTx(ctx, tx, period, scope)
 		switch {
 		case err == nil:
 			wire := callToWire(call)
 			out.CurrentCall = &wire
+			called = &call.AmountMinor
 		case IsNoStandingCall(err):
 			// Nobody has called this period. A real answer, and absent rather
 			// than an error.
 		default:
 			return err
 		}
-		return nil
+		return h.project(ctx, tx, &out, period, scope, readings, called, at, baseCurrency)
 	})
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// project adds where the period lands and whether the pipeline supports it.
+//
+// Separate from GetForecast because it is a second question over the same
+// readings, and because both halves must be able to fail SOFTLY: a landing this
+// installation cannot build, or a history too thin to divide by, is an answer —
+// the reading itself is still true and still worth returning.
+func (h Handlers) project(
+	ctx context.Context, tx pgx.Tx, out *crmcontracts.ForecastReadings,
+	period Period, scope Scope, readings Readings, call *int64,
+	asOf time.Time, baseCurrency string,
+) error {
+	measure, err := h.measure(ctx, tx)
+	if err != nil {
+		return err
+	}
+	landing, err := ProjectLanding(readings, measure, call)
+	if err != nil {
+		return err
+	}
+	wire := landingToWire(landing)
+	out.Landing = &wire
+
+	// The managed-teams reading covers several populations, so a conversion
+	// rate over it would blend books that are measured separately — and the
+	// coverage figure it produced would describe none of them.
+	if scope.Kind == ScopeManagedTeams {
+		return nil
+	}
+	history, err := h.history(ctx, tx, period, scope, asOf, baseCurrency)
+	if err != nil {
+		return err
+	}
+	sufficiency, err := AssessSufficiency(readings, history, call)
+	if err != nil {
+		return err
+	}
+	assessed := sufficiencyToWire(sufficiency)
+	out.Sufficiency = &assessed
+	return nil
+}
+
+// landingToWire maps a projection onto the wire shape.
+//
+// The caveat is omitted rather than sent empty when there is none: an empty
+// string would render as a warning that says nothing.
+func landingToWire(in Landing) crmcontracts.ForecastLanding {
+	out := crmcontracts.ForecastLanding{
+		AmountMinor:    in.AmountMinor,
+		Measure:        crmcontracts.ForecastLandingMeasure(in.Measure),
+		WonMinor:       in.WonMinor,
+		RemainingMinor: in.RemainingMinor,
+	}
+	if in.Caveat != "" {
+		caveat := crmcontracts.ForecastLandingCaveat(in.Caveat)
+		out.Caveat = &caveat
+	}
+	return out
+}
+
+// sufficiencyToWire maps an assessment onto the wire shape.
+//
+// An absence carries ONLY its reason. Sending the zeroed figures beside it
+// would let a client draw "0 needed, 0 covered" — which reads as a fully
+// covered pipeline and is the opposite of what an absence means.
+func sufficiencyToWire(in Sufficiency) crmcontracts.ForecastSufficiency {
+	if in.Absent != "" {
+		absent := crmcontracts.ForecastSufficiencyAbsent(in.Absent)
+		return crmcontracts.ForecastSufficiency{Absent: &absent}
+	}
+	basis := crmcontracts.ForecastSufficiencyBasis(in.Basis)
+	return crmcontracts.ForecastSufficiency{
+		Basis:                   &basis,
+		ReferenceLandingMinor:   &in.ReferenceLandingMinor,
+		RemainingToSupportMinor: &in.RemainingToSupportMinor,
+		NeededOpenMinor:         &in.NeededOpenMinor,
+		CurrentOpenMinor:        &in.CurrentOpenMinor,
+		CoverageBp:              &in.CoverageBp,
+	}
 }
 
 // RecordForecastCall records what somebody believes will close.

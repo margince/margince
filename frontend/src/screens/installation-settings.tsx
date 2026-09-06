@@ -83,6 +83,7 @@ const EDITABLE_FACTS = [
   "base_currency",
   "base_language",
   "fiscal_year_start_month",
+  "forecast_forward_measure",
 ] as const;
 
 // Which fact the reader pressed Edit on. The dialog always edits all of them —
@@ -191,6 +192,22 @@ function languageName(code: string, t: ReturnType<typeof useT>): string {
 // The twelve months a fiscal year may start in, as the picker offers them.
 // Derived rather than typed out, so the list cannot go short of twelve.
 const MONTHS = Array.from({ length: 12 }, (_, index) => index + 1);
+
+// Which remaining pipeline a projected landing is built from, in the order the
+// server offers them: strictest first, then the two that soften it.
+//
+// Typed as the schema's own union with `satisfies`, so a measure added to the
+// contract and not to this list is a typecheck failure rather than an option
+// that silently stops being offered.
+type ForwardMeasure = NonNullable<
+  components["schemas"]["InstallationSettings"]["forecast_forward_measure"]
+>;
+
+const FORWARD_MEASURES = [
+  "commit_evidence",
+  "weighted",
+  "manager_call",
+] as const satisfies readonly ForwardMeasure[];
 
 export function fiscalYearStartSummary(
   month: number,
@@ -387,6 +404,20 @@ function InstallationSettingsForm({
             control={editVerb(
               "fiscal_year_start_month",
               t("installationSettings.fiscalYearStart"),
+            )}
+          />
+          <SettingRow
+            label={t("installationSettings.forwardMeasure")}
+            description={t("installationSettings.forwardMeasureHint")}
+            // The measure's own sentence rather than the stored word: an admin
+            // is deciding what a projection MEANS, and "manager_call" does not
+            // say that the call replaces the projection instead of adding to it.
+            value={t(
+              `installationSettings.forwardMeasure.${settings.forecast_forward_measure}`,
+            )}
+            control={editVerb(
+              "forecast_forward_measure",
+              t("installationSettings.forwardMeasure"),
             )}
           />
         </SettingList>
@@ -626,6 +657,38 @@ function InstallationProfileDialog({
                   const picked = MONTHS.find((month) => String(month) === next);
                   if (picked) {
                     onChange({ ...draft, fiscal_year_start_month: picked });
+                  }
+                }}
+              />
+            )}
+          </Field>
+        </div>
+
+        <div data-fact="forecast_forward_measure">
+          <Field
+            label={t("installationSettings.forwardMeasure")}
+            hint={t("installationSettings.forwardMeasureHint")}
+            error={refused.get("forecast_forward_measure")}
+          >
+            {(control) => (
+              <Select
+                {...control}
+                aria-describedby={describe(control)}
+                value={draft.forecast_forward_measure}
+                disabled={!canManage}
+                options={FORWARD_MEASURES.map((measure) => ({
+                  value: measure,
+                  label: t(`installationSettings.forwardMeasure.${measure}`),
+                }))}
+                // Narrowed back through the offered set rather than cast, so a
+                // value this build does not know cannot reach the draft and be
+                // saved as a measure the server would then refuse on every read.
+                onChange={(next) => {
+                  const picked = FORWARD_MEASURES.find(
+                    (measure) => measure === next,
+                  );
+                  if (picked) {
+                    onChange({ ...draft, forecast_forward_measure: picked });
                   }
                 }}
               />

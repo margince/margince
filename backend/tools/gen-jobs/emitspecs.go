@@ -69,6 +69,9 @@ func writeSpec(b *strings.Builder, name string, def kindDef) {
 	fmt.Fprintf(b, "\t\tKind: %q,\n", name)
 	fmt.Fprintf(b, "\t\tGoType: %q,\n", def.GoType)
 	fmt.Fprintf(b, "\t\tRole: %s,\n", roleConst(def.Role))
+	if def.fleetWide() {
+		b.WriteString("\t\tFleet: true,\n")
+	}
 	fmt.Fprintf(b, "\t\tQueue: %q,\n", def.Queue)
 	fmt.Fprintf(b, "\t\tTimeout: %s,\n", timeoutLiteral(*def.Timeout))
 	if def.MaxAttempts != nil {

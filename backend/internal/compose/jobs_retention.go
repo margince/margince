@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // IdempotencyRetentionArgs schedules one purge of replay claims past the
@@ -35,39 +36,14 @@ func (IdempotencyRetentionArgs) FleetWide() {}
 // snapshots inside a workspace, and idempotency_key.workspace_id is
 // ON DELETE RESTRICT, so leftovers would also refuse the eventual hard delete.
 type idempotencyRetentionWorker struct {
-	pool *pgxpool.Pool
-}
-
-func (w *idempotencyRetentionWorker) Work(ctx context.Context, _ *river.Job[IdempotencyRetentionArgs]) error {
-	workspaces, err := enumerateEveryWorkspace(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	return jobs.FaultContext(ctx, dispatchWith(ctx, workspaces, clientInsertMany(ctx),
-		workspaceSweepOpts(IdempotencyRetentionWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return IdempotencyRetentionWorkspaceArgs{Workspace: ws} }))
-}
-
-// IdempotencyRetentionWorkspaceArgs purges one workspace's expired claims.
-type IdempotencyRetentionWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (IdempotencyRetentionWorkspaceArgs) Kind() string { return "idempotency_retention_workspace" }
-
-// WorkspaceID binds this purge to its tenant (jobs.WorkspaceScoped).
-func (a IdempotencyRetentionWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// idempotencyRetentionWorkspaceWorker purges one workspace.
-type idempotencyRetentionWorkspaceWorker struct {
+	pool    *pgxpool.Pool
 	sweeper *IdempotencyRetentionSweeper
 }
 
-func (w *idempotencyRetentionWorkspaceWorker) Work(ctx context.Context, job *river.Job[IdempotencyRetentionWorkspaceArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	return jobs.FaultContext(ctx, w.sweeper.SweepWorkspace(wsCtx))
+func (w *idempotencyRetentionWorker) Work(ctx context.Context, _ *river.Job[IdempotencyRetentionArgs]) error {
+	return jobs.FaultContext(ctx, runPerEveryWorkspace(ctx, w.pool, w.retainWorkspace))
+}
+
+func (w *idempotencyRetentionWorker) retainWorkspace(ctx context.Context, workspace ids.UUID) error {
+	return w.sweeper.SweepWorkspace(principal.WithWorkspaceID(ctx, workspace))
 }

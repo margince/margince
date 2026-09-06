@@ -1044,6 +1044,14 @@ export type MockApiOptions = Readonly<{
   // Which meeting brief the drawer gets. The default is the everyday one,
   // carrying a withheld source so the AC that reads it has something to read.
   meetingBrief?: "rep" | "plan" | "manager" | "empty" | "failed";
+  // Where the acting human stands in the setup journey. "finished" (the
+  // default) is the state every AC assumes: the installation has described
+  // itself and the human's wizard row reads complete, so the shell's gate lets
+  // every screen render. "unstarted" is the first screen anyone meets — no
+  // company saved, no wizard row — which is what the onboarding AC has to
+  // reach; under the default, the conversation would (rightly) send a
+  // finished reader home.
+  journey?: "finished" | "unstarted";
 }>;
 
 export async function mockApi(
@@ -1413,10 +1421,44 @@ export async function mockApi(
     }
     // The installation's own company. A described installation is the state
     // every AC below assumes: the shell gates on this, and a 404 would (rightly)
-    // redirect them all into onboarding. Onboarding's own AC reaches the wizard
-    // by route regardless. Shaped as the contract's CompanyProfile — the generic
+    // redirect them all into onboarding — which is exactly what an "unstarted"
+    // journey asks for. Shaped as the contract's CompanyProfile — the generic
     // list fallthrough is not a company, and the form would read display_name
     // off it and crash.
+    if (path === "/company" && options?.journey === "unstarted") {
+      return json(
+        { type: "about:blank", title: "Not Found", status: 404 },
+        404,
+      );
+    }
+    // The acting human's wizard row. The shell gates on this as well as on the
+    // company: a full seat whose row is absent or unfinished is sent through
+    // the journey, so the generic fallthrough's list envelope — a row with no
+    // step — would redirect every AC into onboarding. A finished creator row
+    // is the state a described installation's admin is in; "unstarted" has no
+    // row, which the contract spells as 404.
+    if (path === "/onboarding/state" && method === "GET") {
+      if (options?.journey === "unstarted") {
+        return json(
+          { type: "about:blank", title: "Not Found", status: 404 },
+          404,
+        );
+      }
+      return json({
+        path: "creator",
+        step: "complete",
+        source_mode: "website",
+        website_url: "https://brandt.example",
+        company_draft: { display_name: "Brandt Automotive GmbH" },
+        selected_fact_keys: [],
+        voice_skipped: false,
+        connect_skipped: false,
+        version: 9,
+        completed_at: "2026-06-01T09:00:00Z",
+        created_at: "2026-06-01T08:00:00Z",
+        updated_at: "2026-06-01T09:00:00Z",
+      });
+    }
     if (path === "/company") {
       return json({
         organization_id: "o-self",

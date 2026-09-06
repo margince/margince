@@ -18,6 +18,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/integrations"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -42,10 +43,8 @@ func addProviderRunJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfi
 		return nil
 	}
 	addDeclaredWorker[ProviderRunSubmitArgs](reg, &providerRunSubmitWorker{pool: pool, cfg: cfg.ProviderRuns})
-	addDeclaredWorker[ProviderRunPollSweepArgs](reg, &providerRunPollSweepWorker{pool: pool})
-	addDeclaredWorker[ProviderRunPollArgs](reg, &providerRunPollWorker{pool: pool, cfg: cfg.ProviderRuns})
-	addDeclaredWorker[ProviderLookupSweepArgs](reg, &providerLookupSweepWorker{pool: pool})
-	addDeclaredWorker[ProviderLookupArgs](reg, &providerLookupWorker{pool: pool, cfg: cfg.ProviderRuns})
+	addDeclaredWorker[ProviderRunPollSweepArgs](reg, &providerRunPollSweepWorker{pool: pool, cfg: cfg.ProviderRuns})
+	addDeclaredWorker[ProviderLookupSweepArgs](reg, &providerLookupSweepWorker{pool: pool, cfg: cfg.ProviderRuns})
 	return append(periodicFor(cfg, ProviderRunPollSweepArgs{}),
 		periodicFor(cfg, ProviderLookupSweepArgs{})...)
 }
@@ -55,11 +54,11 @@ func addProviderRunJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfi
 // domain callbacks of their own except at hand-off, where an unbound writer
 // parks the claims for the sweep; providerDomainStore (provider.go) is the
 // one place the domain edges attach for every role.
-func providerRunStore(pool *pgxpool.Pool, cfg ProviderRunsConfig, args jobs.WorkspaceScoped) (*integrations.Store, error) {
-	db, err := workspaceJobDB(pool, args)
-	if err != nil {
-		return nil, err
-	}
+func providerRunStore(pool *pgxpool.Pool, cfg ProviderRunsConfig, workspace ids.UUID) (*integrations.Store, error) {
+	// The workspace directly, where this took a job's ARGS. A collapsed pass
+	// carries none (ADR-0103): it takes the tenant from the fleet walk, so the
+	// handle is bound from that rather than read off a row.
+	db := database.BindTo(pool, ids.From[ids.WorkspaceKind](workspace))
 	store, err := integrations.NewStore(db, cfg.Vault, cfg.Registry, time.Now)
 	if err != nil {
 		return nil, err
@@ -107,7 +106,7 @@ func (w *providerRunSubmitWorker) Work(ctx context.Context, job *river.Job[Provi
 		return jobs.FaultContext(ctx, err)
 	}
 	wsCtx = providerJobActor(wsCtx)
-	store, err := providerRunStore(w.pool, w.cfg, job.Args)
+	store, err := providerRunStore(w.pool, w.cfg, job.Args.WorkspaceID())
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
@@ -150,42 +149,20 @@ func providerJobActor(ctx context.Context) context.Context {
 // providerRunPollSweepWorker fans one drain job out per live workspace.
 type providerRunPollSweepWorker struct {
 	pool *pgxpool.Pool
-}
-
-func (w *providerRunPollSweepWorker) Work(ctx context.Context, _ *river.Job[ProviderRunPollSweepArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		// The tick is the real cadence: a failed workspace is re-enqueued on
-		// the next pass, so River's ladder only rides out a transient blip.
-		workspaceSweepOpts(ProviderRunPollArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return ProviderRunPollArgs{Workspace: ws} }))
-}
-
-// ProviderRunPollArgs drains one workspace's due runs.
-type ProviderRunPollArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (ProviderRunPollArgs) Kind() string { return "provider_run_poll" }
-
-// WorkspaceID binds this drain to its tenant (jobs.WorkspaceScoped).
-func (a ProviderRunPollArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// providerRunPollWorker drains one workspace.
-type providerRunPollWorker struct {
-	pool *pgxpool.Pool
 	cfg  ProviderRunsConfig
 }
 
-func (w *providerRunPollWorker) Work(ctx context.Context, job *river.Job[ProviderRunPollArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
+// The tick is the real cadence: a workspace that failed is picked up by the
+// next pass, so nothing here needs a ladder of its own.
+func (w *providerRunPollSweepWorker) Work(ctx context.Context, _ *river.Job[ProviderRunPollSweepArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.pollWorkspace))
+}
+
+func (w *providerRunPollSweepWorker) pollWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := providerJobActor(principal.WithWorkspaceID(ctx, workspace))
+	store, err := providerRunStore(w.pool, w.cfg, workspace)
 	if err != nil {
-		return jobs.FaultContext(ctx, err)
+		return err
 	}
-	wsCtx = providerJobActor(wsCtx)
-	store, err := providerRunStore(w.pool, w.cfg, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	return jobs.FaultContext(ctx, store.RunDueSweep(wsCtx))
+	return store.RunDueSweep(wsCtx)
 }

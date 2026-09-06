@@ -226,10 +226,13 @@ func TestRiverCloseDateSweepStagesSameProvisionalAsDirectSweep(t *testing.T) {
 	}()
 
 	// RunOnStart enqueues both periodic dispatchers at boot; wait for the
-	// close-date WORKSPACE job to complete, then assert the same outcome the
-	// direct per-workspace pass produces. Waiting on the dispatcher would race
-	// the work: a dispatcher completes as soon as its fan-out is enqueued.
-	awaitKindCompleted(t, sub, CloseDateWorkspaceArgs{}.Kind())
+	// close-date pass to complete, then assert the same outcome the direct
+	// per-workspace turn produces. This used to wait on the WORKSPACE child,
+	// because a dispatcher completed as soon as its fan-out was enqueued and
+	// waiting on it raced the work; a collapsed pass completes when the work is
+	// done (ADR-0103), so the row to wait for and the row that does the work are
+	// the same one.
+	awaitKindCompleted(t, sub, CloseDateSweepArgs{}.Kind())
 
 	swept := e.readSwept(t, id)
 	if swept.expectedClose == nil || swept.expectedClose.Before(today()) {

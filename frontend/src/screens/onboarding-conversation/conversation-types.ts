@@ -7,20 +7,24 @@ import type { MessageKey } from "../../i18n/en";
 export type ConversationAct =
   | "welcome"
   | "company"
-  // The question a creator is asked once the company is confirmed: will they
-  // work in Margince themselves? Voice and connect are only offered to
-  // someone who will; an administrator setting the installation up for
-  // others finishes here.
+  // The installation's reporting basis — base currency and reporting timezone
+  // — asked of the creator once the company is confirmed and before any step
+  // about the person answering. A member's installation has already settled
+  // it, so the act is the creator's alone.
+  | "basis"
+  // The question a creator is asked once the basis is settled: will they work
+  // in Margince themselves? Voice and connect are walked now by someone who
+  // will; an administrator setting the installation up for others finishes
+  // here, and the first person they invite walks them instead.
   | "invite"
   // Where a creator who declined the invite adds the first person who will
   // work in Margince, and finishes.
   | "team"
   | "voice"
   | "connect"
-  // The last word before the app: the installation's reporting basis and
-  // what the agent may change on its own, prefilled from what is already
-  // recorded. Every path ends here — the team act's and the connect act's.
-  | "prefs"
+  // The journey has closed and the handoff plays. Both ways out land here —
+  // the connect act's and the team act's — and each writes completion itself
+  // before it moves.
   | "done";
 
 export type ConversationPhase =
@@ -34,6 +38,7 @@ export type ConversationPhase =
   // confirmation advances straight to the next act because a reducer cannot
   // self-advance out of a momentary state.
   | "co.confirmed"
+  | "bs.ask"
   | "vo.collecting"
   | "vo.speaker"
   | "vo.building"
@@ -43,13 +48,12 @@ export type ConversationPhase =
   | "tm.ask"
   // The connect act carries BOTH mail and LinkedIn on one surface: mail is
   // the required gate (it is what CONNECT_DONE waits on), LinkedIn is the
-  // recommended addition beside it (linkedinStatus tracks its own
-  // resolution independently and never gates the act's finish).
+  // profile saved beside it (linkedinStatus tracks its own resolution
+  // independently and never gates the act's finish).
   | "cn.consent"
-  // The preferences act: asked once, then the one terminal every path shares.
-  // The team act reaches it without ever entering connect.
-  | "pf.ask"
-  | "pf.done";
+  // The one terminal every path shares. The team act reaches it without ever
+  // entering connect.
+  | "done";
 
 // Exactly one label source — a blank button is unrepresentable.
 type LabelSource =
@@ -160,9 +164,9 @@ export type ConversationState = {
    * resumes on its own and its later events re-enter vo.building. */
   lastBuildStatus: BuildTerminalStatus | null;
   /** LinkedIn's own resolution on the connect screen, independent of mail:
-   * "pending" admits LINKEDIN_CONNECTED/LINKEDIN_SKIPPED exactly once; either
+   * "pending" admits LINKEDIN_SAVED/LINKEDIN_SKIPPED exactly once; either
    * resolves it, and neither ever gates CONNECT_DONE. */
-  linkedinStatus: "pending" | "connected" | "skipped";
+  linkedinStatus: "pending" | "saved" | "skipped";
 };
 
 export type ReadTerminalStatus = "ready" | "partial" | "failed" | "deferred";
@@ -176,15 +180,15 @@ export type BuildTerminalStatus = "succeeded" | "failed" | "deferred";
  */
 export type ResumePoint = Extract<
   ConversationPhase,
-  "in.ask" | "tm.ask" | "vo.collecting" | "vo.skipped" | "cn.consent"
+  "bs.ask" | "in.ask" | "tm.ask" | "vo.collecting" | "vo.skipped" | "cn.consent"
 >;
 
 export type ConversationEvent =
-  // LinkedIn's own two resolutions on the connect screen. Skipping is a
-  // first-class outcome, not a failure: a member who does not want their
-  // network read says so once and is never asked again in this journey —
-  // and unlike mail, saying so never blocks finishing the act.
-  | { type: "LINKEDIN_CONNECTED"; profile: string }
+  // LinkedIn's own two resolutions on the connect screen: the member's
+  // profile is saved, or they chose not to give it now. Skipping is a
+  // first-class outcome, not a failure: said once, it is never asked again in
+  // this journey — and unlike mail, saying so never blocks finishing the act.
+  | { type: "LINKEDIN_SAVED"; profile: string }
   | { type: "LINKEDIN_SKIPPED" }
   | {
       type: "START";
@@ -221,10 +225,13 @@ export type ConversationEvent =
   | { type: "REVIEW_READY" }
   | { type: "MANUAL_CHOSEN" }
   | { type: "COMPANY_CONFIRMED" }
-  // Restore routing out of co.confirmed. No target (or any target on the
-  // member path) takes the same route the live confirmation takes; a target
-  // fast-forwards a creator to the stable point the wizard state recorded.
+  // Restore routing out of co.confirmed. No target takes the same route the
+  // live confirmation takes; a target fast-forwards to the stable point the
+  // wizard state recorded. A member's journey has no creator acts to land in,
+  // so their default — and any creator-only target — is the voice act.
   | { type: "RESUME"; target?: ResumePoint }
+  // Leaving the basis act opens the invite.
+  | { type: "BASIS_DONE" }
   // The two answers to the invite. Accepting opens the voice act; declining
   // opens the team act instead, because the steps left are all about the
   // person who just said they will not be here — so the one thing left to do
@@ -244,7 +251,6 @@ export type ConversationEvent =
   // A succeeded build the reader does not recognise as their own: back to
   // collecting, so more of their writing can go in before the next build.
   | { type: "VOICE_REVISE" }
-  // Leaving the connect act and leaving the team act both land on the
-  // preferences act; PREFS_DONE is the one terminal move.
-  | { type: "CONNECT_DONE" }
-  | { type: "PREFS_DONE" };
+  // Leaving the connect act ends the journey, as leaving the team act does:
+  // the two are the terminal moves, one per way out.
+  | { type: "CONNECT_DONE" };

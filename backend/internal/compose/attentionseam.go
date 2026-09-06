@@ -322,6 +322,11 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// due-dated lanes. Unbound it would be UTC's, which is nobody's day
 		// outside one timezone.
 		attention.WithZone(attentionZone(pool)),
+		// The day's other half: the meetings that already started and whose
+		// result nobody recorded. Same store as the lane above, opposite
+		// question — that one is what to prepare for, this is what to close off.
+		attention.WithMeetingsAwaitingOutcome(
+			attentionMeetingsAwaitingOutcome{store: activities.NewStore(db)}),
 	).WithWaiting(attentionWaiting{
 		store: activities.NewStore(db).WithOwnDomains(
 			ownDomainReader{store: capture.NewOwnDomainStore(db)}),

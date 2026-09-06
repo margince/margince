@@ -45,8 +45,7 @@ func addOverlayJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, l
 	if meter == nil {
 		meter = failClosedOverlayMeter()
 	}
-	addDeclaredWorker[OverlayReconcileArgs](reg, &overlayReconcileWorker{pool: pool, log: log})
-	addDeclaredWorker[OverlayReconcileWorkspaceArgs](reg, &overlayReconcileWorkspaceWorker{
+	addDeclaredWorker[OverlayReconcileArgs](reg, &overlayReconcileWorker{
 		pool: pool, vault: cfg.OverlayVault, meter: meter, log: log,
 		newIncumbent: overlayIncumbentFactory(cfg.OverlayBackfillLimit),
 	})
@@ -79,8 +78,11 @@ func (OverlayReconcileArgs) FleetWide() {}
 // drives via capture.Registry.DueConnections) and enqueues one reconcile per
 // due connection. It sweeps nothing itself.
 type overlayReconcileWorker struct {
-	pool *pgxpool.Pool
-	log  *slog.Logger
+	pool         *pgxpool.Pool
+	vault        keyvault.Vault
+	meter        *overlaybudget.Meter
+	newIncumbent func(region, token string) overlay.Incumbent
+	log          *slog.Logger
 }
 
 // reconcileWorkerCtx builds the per-workspace scope one due connection's
@@ -107,66 +109,34 @@ func reconcileWorkerCtx(ctx context.Context, workspaceID ids.WorkspaceID) contex
 // provider-level burst; running these concurrently could exceed the
 // incumbent's per-second Search limit. Each connection still gets its own job
 // row, which is the visibility this phase is after.
+// It walks the DUE connections rather than every workspace, which is why it
+// uses runEach over its own scan instead of runPerWorkspace: the due-scan's
+// next_sweep_at gate IS the backoff, and reconciling a workspace that is not
+// due would spend incumbent quota to do nothing.
+//
+// The seriality the fan-out bought is now structural. Children landed on a
+// SERIAL queue because overlaybudget.ConsumeSearch counts but does not pace,
+// and its keys are per workspace, so it cannot bound a provider-level burst;
+// running them concurrently could exceed the incumbent's per-second Search
+// limit. One pass walking them in order cannot burst at all.
+//
+// What it costs is the per-connection job row, which was the visibility the
+// fan-out phase was after. A reconcile is now one line in the pass's own
+// failure rather than a row of its own — and the pass still fails, because
+// runEach joins what each workspace returned.
 func (w *overlayReconcileWorker) Work(ctx context.Context, _ *river.Job[OverlayReconcileArgs]) error {
 	due, enumErr := overlay.DueOverlayConnections(ctx, w.pool)
+	workspaces := make([]ids.UUID, 0, len(due))
 	for _, d := range due {
-		if err := dispatchOne(ctx, OverlayReconcileWorkspaceArgs{Workspace: d.Workspace.UUID}, nil); err != nil {
-			// A refused enqueue means this workspace gets no sweep at all, so
-			// it fails the DISPATCHER rather than being logged past: a green
-			// tick over a tenant nobody swept is the shape this phase removes.
-			enumErr = errors.Join(enumErr, fmt.Errorf("enqueueing the reconcile for workspace %s: %w", d.Workspace, err))
-		}
+		workspaces = append(workspaces, d.Workspace.UUID)
 	}
-	return jobs.FaultContext(ctx, enumErr)
+	return jobs.FaultContext(ctx, errors.Join(enumErr, runEach(ctx, workspaces, w.reconcileWorkspace)))
 }
-
-// OverlayReconcileWorkspaceArgs reconciles ONE workspace's incumbent mirror.
-// It names the workspace and nothing else: the connection's incumbent, region,
-// credential ref and connected-at are re-read at work time, so a connection
-// that changed between the due-scan and the sweep is swept under its CURRENT
-// identity rather than the scan's snapshot of it.
-type OverlayReconcileWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (OverlayReconcileWorkspaceArgs) Kind() string { return "overlay_reconcile_workspace" }
-
-// WorkspaceID binds this reconcile to its tenant (jobs.WorkspaceScoped).
-func (a OverlayReconcileWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // overlayReconcileWorkspaceWorker runs one workspace's reconcile and records
 // its outcome against the sweep backoff.
-//
-// Building the per-workspace incumbent adapter HERE — via newIncumbent
-// (liveIncumbentFactory in production) from the due connection's own
-// vaulted token + region — answers the seam left open by
-// compose/overlay.go's NewOverlayProvider (which wires FreshnessReader
-// with inc:nil, "a per-workspace credential lookup the Dispatcher — one
-// process-wide instance shared by every workspace — has no seam to
-// thread per call"). That gap is NOT closed by this worker:
-// NewOverlayProvider serves cmd/api's live HTTP reads under ONE shared
-// Provider/FreshnessReader instance across every tenant, so a genuinely
-// per-request-workspace adapter there needs its own construction-time
-// change, out of scope for the poller. This worker's adapter is built
-// fresh per due connection, per tick, and discarded after — it never
-// leaks into cmd/api's force-fresh path. The factory is injected (not a
-// hardcoded hubspot.NewAdapter) so the whole sweep is drivable against a
-// fake incumbent in a test.
-type overlayReconcileWorkspaceWorker struct {
-	pool         *pgxpool.Pool
-	vault        keyvault.Vault
-	meter        *overlaybudget.Meter
-	newIncumbent func(region, token string) overlay.Incumbent
-	log          *slog.Logger
-}
-
-func (w *overlayReconcileWorkspaceWorker) Work(ctx context.Context, job *river.Job[OverlayReconcileWorkspaceArgs]) error {
-	bound, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	wsCtx := reconcileWorkerCtx(bound, ids.From[ids.WorkspaceKind](job.Args.Workspace))
+func (w *overlayReconcileWorker) reconcileWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := reconcileWorkerCtx(ctx, ids.From[ids.WorkspaceKind](workspace))
 
 	d, err := overlay.DueConnection(wsCtx, w.pool)
 	if errors.Is(err, apperrors.ErrNotFound) {

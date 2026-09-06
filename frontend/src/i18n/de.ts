@@ -2641,6 +2641,36 @@ export const de = {
   "plan.new.save": "Hinzufügen",
   "plan.new.cancel": "Abbrechen",
 
+  "home.weekly.outlook": "Wohin die Woche lief",
+  "home.weekly.outlook.week": "Diese Woche",
+  "home.weekly.outlook.month": "Dieser Monat",
+  "home.weekly.outlook.quarter": "Dieses Quartal",
+  "home.weekly.outlook.none":
+    "Beim Schreiben dieses Rückblicks war keine Prognose eingebunden, daher hält diese Woche kein Ergebnis fest. Das ist etwas anderes als eine Woche, die bei null landete.",
+  "home.weekly.outlook.won": "Gewonnen",
+  "home.weekly.outlook.commit": "Zusage, noch offen",
+  "home.weekly.outlook.bestCase": "Bester Fall (inkl. Zusage)",
+  "home.weekly.outlook.weighted": "Gewichtet",
+  "home.weekly.outlook.landing": "Prognostizierter Abschluss",
+  "home.weekly.outlook.measure.commit_evidence":
+    "Aus dem Commit-Nachweis gelesen",
+  "home.weekly.outlook.measure.weighted":
+    "Aus der gewichteten Pipeline gelesen",
+  "home.weekly.outlook.measure.manager_call":
+    "Aus der Einschätzung der Führungskraft gelesen",
+  "home.weekly.bridge": "Wie die Woche das bewegt hat",
+  "home.weekly.bridge.opening": "Montag",
+  "home.weekly.bridge.closing": "Freitag",
+  "home.weekly.bridge.noOpening":
+    "Für diese Woche gibt es keinen Montags-Stand, also fehlt der Ausgangswert, von dem aus sich etwas bewegt hätte.",
+  "home.weekly.bridge.reconcile":
+    "Diese Balken ergeben zusammen nicht den Endwert. Lesen Sie die beiden Summen, nicht die Schritte.",
+  "home.weekly.bar.created": "Neu entstanden",
+  "home.weekly.bar.advanced": "Vorangekommen",
+  "home.weekly.bar.slipped": "Zurückgefallen",
+  "home.weekly.bar.won": "Gewonnen",
+  "home.weekly.bar.lost": "Verloren",
+  "home.weekly.bar.other": "Kurse und Definitionen",
   "home.weekly.frozen": "Eingefroren",
   "home.weekly.written": "geschrieben {at}",
   "home.weekly.pickWeek": "Andere Woche öffnen",
@@ -4881,7 +4911,6 @@ export const de = {
   "ob.s4.capturedTitle": "Postfach verbunden",
   "ob.s4.capturedBody":
     "Dein CRM baut sich selbst. Neue Post landet hier, sobald der erste Durchlauf läuft, meist in Minuten.",
-  "ob.s4.enterCrm": "Weiter",
   "ob.s4.connectFailed": "Dieses Postfach ließ sich nicht verbinden",
   "ob.s4.notNow": "Nicht jetzt",
 
@@ -5049,19 +5078,22 @@ export const de = {
     "Wähle eins. Von hier kommen deine Personen, Firmen und Historie.",
   "ob.conv.connect.networkTitle": "Dein Netzwerk",
   "ob.conv.connect.networkHint":
-    "Optional, aber lohnend. Macht aus Bekannten Accounts und beobachtet sie auf Trigger.",
+    "Hinterlege dein Profil, damit das Netzwerk, das du später importierst, dir zugeordnet wird. Der Import selbst liegt in den Einstellungen.",
   "ob.conv.connect.required": "erforderlich",
   "ob.conv.connect.recommended": "empfohlen",
   "ob.conv.connect.gmailBrings": "Mail über Google gelesen und gesendet",
   "ob.conv.connect.microsoftBrings": "Mail über Microsoft gelesen und gesendet",
   "ob.conv.connect.imapBrings":
     "Mail von jedem Host, mit E-Mail-Adresse und App-Passwort",
-  "ob.conv.connect.linkedinAuth": "Profillink, nur lesend",
+  "ob.conv.connect.linkedinAuth": "Profillink, in deinem Konto hinterlegt",
+  "ob.conv.connect.saveCta": "speichern →",
+  "ob.conv.connect.dialogDone": "Fertig",
   "ob.conv.connect.scopeGoogle": "OAuth, Lese- und Sendeberechtigung",
   "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",
   "ob.conv.connect.scopeImap": "E-Mail-Adresse und Passwort",
   "ob.conv.connect.connectCta": "verbinden →",
   "ob.conv.connect.connectedCta": "verbunden",
+  "ob.conv.connect.savedCta": "gespeichert",
   "ob.conv.connect.blockedCard":
     "Du hast schon ein Postfach gewählt. Trenne es in den Einstellungen, um zu wechseln.",
   "ob.conv.connect.guaranteesToggle": "Was Verbinden tatsächlich bedeutet",
@@ -5078,7 +5110,7 @@ export const de = {
     "{brings}. Ich lese es einmal, um deine Personen und Historie aufzubauen, und halte es danach synchron.",
   "ob.conv.connect.dialogClose": "Schließen",
   "ob.conv.connect.linkedinName": "LinkedIn",
-  "ob.conv.connect.linkedinConnected": "Verbunden",
+  "ob.conv.connect.linkedinSaved": "Profil gespeichert",
   "ob.conv.connect.linkedinSkippedNote":
     "Übersprungen: später in den Einstellungen nachholbar",
   "ob.conv.connect.rosterFailedTitle":
@@ -5106,7 +5138,8 @@ export const de = {
   "ob.conv.voice.footFloor":
     "Mindestens {min} Wörter. Darunter kopiert das Modell nur Formulierungen.",
   "ob.conv.voice.buildingTitle": "Ich lerne deine Stimme",
-  "ob.conv.voice.buildingMeta": "{words} Wörter, {sources} Quellen",
+  "ob.conv.voice.buildingMeta_one": "{words} Wörter, {sources} Quelle",
+  "ob.conv.voice.buildingMeta_other": "{words} Wörter, {sources} Quellen",
   "ob.conv.voice.resultSub":
     "Lies zuerst das Beispiel. Passt es, bestätige. Passt es nicht, gib mir mehr Quellen und ich baue neu.",
   "ob.conv.voice.resultSubNoSample":
@@ -5172,34 +5205,20 @@ export const de = {
   "ob.conv.recap.readDeferred":
     "Willkommen zurück. Mein Lesevorgang von {host} pausiert gerade. Nenn mir wieder eine Website oder erzähl es mir direkt.",
   "ob.conv.linkedin.cardBody":
-    "Macht aus deinem Netzwerk Firmen und Personen, und meldet, wenn jemand aus deinem Netzwerk den Job wechselt.",
-  "ob.conv.linkedin.limitsToggle": "Was Margince sehen kann und was nicht",
-  "ob.conv.linkedin.scope1Lead": "Deine Kontaktliste \u2014",
-  "ob.conv.linkedin.scope1Rest":
-    "Name, Position, Unternehmen und das Datum der Vernetzung.",
-  "ob.conv.linkedin.scope2Lead": "Sonst nichts.",
-  "ob.conv.linkedin.scope2Rest":
-    "Keine Nachrichten, keine Beitr\u00e4ge, keine Profilbesuche, keine Aktivit\u00e4ten.",
-  "ob.conv.linkedin.scope3Lead": "Dein Netzwerk bleibt deins.",
-  "ob.conv.linkedin.scope3Rest":
-    "Es wird dir zugeordnet, nie dem Unternehmen, und beim Trennen wird es entfernt.",
-  "ob.conv.linkedin.scope4Lead": "Niemand wird kontaktiert.",
-  "ob.conv.linkedin.scope4Rest":
-    "Das Verbinden verschickt keine Einladungen und keine Nachrichten \u2014 nie.",
-  "ob.conv.linkedin.neverContacts":
-    "Deine Kontakte werden nie zu Personen im CRM. Sie beantworten nur: Wer hier kennt sie schon?",
+    "Deine Profiladresse, damit ein importierter Kontakt „Anna kennt sie“ heißt, nie „das Unternehmen kennt sie“.",
+  "ob.conv.linkedin.dialogHeadline": "Dein LinkedIn-Profil",
   "ob.conv.linkedin.profileLabel": "Deine LinkedIn-Profil-URL",
   "ob.conv.linkedin.profilePlaceholder": "https://www.linkedin.com/in/…",
   "ob.conv.linkedin.profileWhy":
     "So gehört das Netzwerk dir: „Anna kennt sie“, nie „das Unternehmen kennt sie“.",
-  "ob.conv.linkedin.authorize": "Mit LinkedIn autorisieren",
-  "ob.conv.linkedin.appPending":
-    "Unsere LinkedIn-App wartet noch auf Freigabe, es synchronisiert nichts. Lade solange Connections.csv hoch.",
+  "ob.conv.linkedin.save": "Profil speichern",
   "ob.conv.linkedin.skip": "LinkedIn vorerst \u00fcberspringen",
-  "ob.conv.linkedin.connected":
-    "LinkedIn autorisiert. Deine Kontakte werden synchronisiert, sobald die App freigegeben ist.",
+  "ob.conv.linkedin.importLater":
+    "Deine Kontakte selbst kommen \u00fcber die Einstellungen herein, aus einem Connections.csv-Export.",
+  "ob.conv.linkedin.saved":
+    "LinkedIn-Profil gespeichert. Dein importiertes Netzwerk wird dir zugeordnet.",
   "ob.conv.linkedin.skipped":
-    "LinkedIn \u00fcbersprungen. Du kannst es jederzeit in den Einstellungen verbinden.",
+    "LinkedIn \u00fcbersprungen. Du kannst dein Profil jederzeit in den Einstellungen hinterlegen.",
   "ob.conv.connect.skip": "Ohne Postfach weiter",
   "ob.conv.connect.continue": "Weiter",
   "ob.conv.connect.mailboxNeeded":
@@ -5209,9 +5228,9 @@ export const de = {
   // benennen, kurz genug, dass fünf davon bei 10px in eine Spalte passen.
   "ob.rail.read": "Lesen",
   "ob.rail.confirm": "Bestätigen",
+  "ob.rail.basis": "Basis",
   "ob.rail.voice": "Stimme",
   "ob.rail.connect": "Verbinden",
-  "ob.rail.prefs": "Einstellungen",
 
   "ob.conv.invite.title": "Wirst du selbst in Margince arbeiten?",
   "ob.conv.invite.body":
@@ -5237,17 +5256,18 @@ export const de = {
   "ob.conv.team.finish": "Einrichtung abschließen",
   "ob.conv.team.done":
     "Die Einrichtung ist abgeschlossen. Wen du hinzufügst, kann Stimme und Konten in den Einstellungen selbst einrichten.",
-  "ob.conv.prefs.title": "Zum Schluss ein paar Einstellungen.",
-  "ob.conv.prefs.body":
-    "Alles hier ist mit bereits hinterlegten Angaben vorausgefüllt und lässt sich später in den Einstellungen ändern. Drücke Fertig, wenn alles stimmt.",
-  "ob.conv.prefs.reportingTitle": "Wie die Zahlen berichtet werden",
-  "ob.conv.prefs.timezoneNeeded": "Eine Berichtszeitzone wird benötigt.",
-  "ob.conv.prefs.autonomyTitle": "Was es eigenständig ändern darf",
-  "ob.conv.prefs.autonomyBody":
-    "Jede Art von Änderung unten wird dir zuerst vorgeschlagen. Schalte eine ein, und sie gilt ohne Rückfrage; jederzeit wieder abschaltbar.",
-  "ob.conv.prefs.done": "Fertig",
-  "ob.conv.prefs.persistFailed":
+  "ob.conv.team.persistFailed":
     "Ich konnte nicht festhalten, dass die Einrichtung abgeschlossen ist. Versuche es noch einmal oder schließe sie später in den Einstellungen ab.",
+  "ob.conv.basis.title": "Zuerst: die Basis.",
+  "ob.conv.basis.body":
+    "Basiswährung und Berichtszeitzone gehören der Installation: jeder Deal, jeder Bericht und jedes Briefing wird darauf bepreist und datiert. Was es ohne Rückfrage ändern darf, entscheidest du. Alles ist vorausgefüllt und lässt sich später in den Einstellungen ändern, bis ein Deal die Währung eingefroren hat.",
+  "ob.conv.basis.reportingTitle": "Berichtsbasis",
+  "ob.conv.basis.timezoneNeeded": "Eine Berichtszeitzone wird benötigt.",
+  "ob.conv.basis.autonomyTitle": "Was es eigenständig ändern darf",
+  "ob.conv.basis.autonomyBody":
+    "Jede Art von Änderung unten wird dir zuerst vorgeschlagen. Schalte eine ein, und sie gilt ohne Rückfrage; jederzeit wieder abschaltbar.",
+  "ob.conv.basis.continue": "Weiter",
+  "ob.conv.basis.done": "Berichtsbasis festgelegt.",
 
   // --- das Tor: der erste Screen nach der Anmeldung ----------------------
   // Eine Frage und sonst nichts. Niemand soll das ganze Werkzeug auf dem
@@ -5474,13 +5494,11 @@ export const de = {
   "password.hint": "Mindestens 12 Zeichen.",
   "password.tooShort": "Zu kurz. Verwende mindestens 12 Zeichen.",
   "password.mismatch": "Die beiden stimmen nicht überein.",
-  "password.signsYouOut":
-    "Die Änderung meldet dich überall ab, auch hier. Melde dich mit dem neuen Passwort erneut an.",
   "password.changing": "Passwort wird geändert…",
   "password.open": "Passwort ändern",
   "password.cancel": "Abbrechen",
   "password.submit": "Neues Passwort speichern",
-  "password.done": "Passwort geändert. Melde dich mit dem neuen an.",
+  "password.done": "Passwort geändert. Alle anderen Geräte wurden abgemeldet.",
   "password.errorGeneric":
     "Das Passwort konnte nicht geändert werden. Versuche es erneut.",
   "setup.pageTitle": "Margince einrichten",
@@ -6782,6 +6800,38 @@ export const de = {
   "installationSettings.fiscalYearStart": "Geschäftsjahr beginnt",
   "installationSettings.fiscalYearStartHint":
     "Der Monat, in dem Ihr Geschäftsjahr beginnt. Auswertungen gruppieren nach diesem Jahr und Quartal — ein Jahr, das nicht im Januar beginnt, wird mit beiden Kalenderjahren benannt, die es umfasst, etwa FY2026/27. Eine Änderung benennt alle Auswertungen sofort neu, und eine gespeicherte Ansicht mit Periodenfilter fragt danach andere Monate ab.",
+  "installationSettings.forwardMeasure":
+    "Prognostizierter Abschluss beruht auf",
+  "installationSettings.forwardMeasureHint":
+    "Welche verbleibende Pipeline zu den bereits gewonnenen Beträgen addiert wird. Commit-Nachweis ist am strengsten: zugesagte Deals mit bestätigtem Abschlussdatum. Gewichtet zählt jeden offenen Deal mit seiner Phasenwahrscheinlichkeit — die ehrliche Lesart für ein Team, das alles zusagt. Die Einschätzung der Führungskraft ersetzt die Prognose ganz, statt zum Gewonnenen zu addieren; ohne erfasste Einschätzung fällt die Periode auf den Commit-Nachweis zurück und sagt das auch.",
+  "installationSettings.forwardMeasure.commit_evidence":
+    "Commit-Nachweis — nur bestätigte Abschlussdaten",
+  "installationSettings.forwardMeasure.weighted":
+    "Gewichtete Pipeline — jeder offene Deal mit seiner Phasenwahrscheinlichkeit",
+  "installationSettings.forwardMeasure.manager_call":
+    "Einschätzung der Führungskraft — die erfasste Zahl für die Periode",
+  "forecast.landing": "Prognostizierter Abschluss",
+  "forecast.landingFrom":
+    "{won} bereits gewonnen zuzüglich {remaining} noch ausstehend.",
+  "forecast.landingFromCall":
+    "Die Einschätzung für diese Periode. Sie ersetzt die Prognose, statt zu den bereits gewonnenen {won} zu addieren.",
+  "forecast.landing.caveat.call_absent":
+    "Für diese Periode liegt keine Einschätzung vor, daher steht hier der Commit-Nachweis.",
+  "forecast.landing.caveat.call_below_actual":
+    "Die Einschätzung liegt unter dem bereits Gewonnenen. Sie wird wie erfasst gezeigt und nicht korrigiert.",
+  "forecast.pipelineNeeded": "Benötigte Pipeline",
+  "forecast.pipelineNeededDetail":
+    "{current} offen gegenüber {needed} benötigt, um {reference} zu erreichen.",
+  "forecast.pipelineBasis.manager_call":
+    "Gemessen an der Einschätzung für diese Periode.",
+  "forecast.pipelineBasis.historical_median":
+    "Gemessen am Median der letzten vier vergleichbaren Perioden.",
+  "forecast.pipelineAbsentTitle": "Keine Deckungszahl für diese Periode",
+  "forecast.pipelineAbsent.insufficient_basis":
+    "Es fehlt der Vergleichsmaßstab: Für diese Periode wurde keine Einschätzung erfasst, und es sind weniger als vier vergleichbare Perioden abgeschlossen. Eine Deckungszahl, gemessen an einer aus derselben Pipeline abgeleiteten Zahl, sähe immer gut aus.",
+  "forecast.pipelineAbsent.insufficient_history":
+    "Zu wenige abgeschlossene Deals für eine Abschlussquote. Eine Quote aus einer Handvoll Deals schwankt stärker, als die Antwort wert ist.",
+  "forecast.coverage": "{percent}% der dafür nötigen Pipeline",
   "installationSettings.baseCurrency": "Basiswährung",
   "installationSettings.baseCurrencyHint":
     "ISO-4217-Code, in den alle Beträge für Auswertungen umgerechnet werden. Änderbar, bis der erste Betrag dagegen umgerechnet wurde.",
@@ -8362,6 +8412,7 @@ export const de = {
   "worklist.because.legal_deadline": "eine gesetzliche Frist läuft",
   "worklist.because.meeting_soon": "beginnt gleich",
   "worklist.because.meeting_unprepared": "nichts vorbereitet",
+  "worklist.because.outcome_unrecorded": "kein Ergebnis festgehalten",
   "worklist.because.response_overdue": "Antwort überfällig",
   "worklist.because.response_due_soon": "Antwort bald fällig",
   "worklist.because.response_due_soon.value": "Antwort fällig bis {value}",
@@ -8421,6 +8472,7 @@ export const de = {
   "worklist.untitled.lead_response": "Ein Lead",
   "worklist.untitled.deal_at_risk": "Ein Deal treibt ab",
   "worklist.untitled.meeting": "Ein Termin",
+  "worklist.untitled.meeting_outcome": "Ein Termin",
   "worklist.untitled.relationship_decay": "Eine Beziehung schläft ein",
   "worklist.untitled.failed_approval": "Etwas Zugestimmtes lief nicht",
   "worklist.untitled.dsr": "Eine offene Datenschutzanfrage",

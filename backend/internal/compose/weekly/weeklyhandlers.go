@@ -98,6 +98,69 @@ func reviewToWire(review Review) crmcontracts.WeeklyReview {
 			Pipeline:       pipelineToWire(review.Prior.Money),
 		}
 	}
+	if len(review.Outlook) > 0 {
+		outlook := make([]crmcontracts.WeeklyReviewOutlook, 0, len(review.Outlook))
+		for _, horizon := range review.Outlook {
+			outlook = append(outlook, outlookToWire(horizon))
+		}
+		out.Outlook = &outlook
+	}
+	return out
+}
+
+// outlookToWire renders one horizon's frozen landing.
+//
+// The opening side is omitted rather than zeroed when no Monday snapshot
+// existed: the two are different facts, and a zero opening draws a week that
+// started from nothing and made everything.
+func outlookToWire(horizon Outlook) crmcontracts.WeeklyReviewOutlook {
+	out := crmcontracts.WeeklyReviewOutlook{
+		PeriodKind:    crmcontracts.WeeklyReviewOutlookPeriodKind(horizon.PeriodKind),
+		PeriodStart:   openapi_types.Date{Time: horizon.PeriodStart},
+		PeriodEnd:     openapi_types.Date{Time: horizon.PeriodEnd},
+		BaseCurrency:  horizon.BaseCurrency,
+		WonMinor:      horizon.WonMinor,
+		CommitMinor:   horizon.CommitMinor,
+		BestCaseMinor: horizon.BestCaseMinor,
+		WeightedMinor: horizon.WeightedMinor,
+		Movement:      movementToWire(horizon.Movement),
+	}
+	if horizon.Opening.Known {
+		opening := horizon.Opening.LandingMinor
+		out.OpeningLandingMinor = &opening
+	}
+	if horizon.Closing.Known {
+		closing := horizon.Closing.LandingMinor
+		out.ClosingLandingMinor = &closing
+	}
+	if horizon.ForwardMeasure != "" {
+		measure := crmcontracts.WeeklyReviewOutlookForwardMeasure(horizon.ForwardMeasure)
+		out.ForwardMeasure = &measure
+	}
+	return out
+}
+
+// movementToWire renders the bars, each with the deals behind it.
+func movementToWire(bars []Movement) []crmcontracts.WeeklyReviewMovement {
+	out := make([]crmcontracts.WeeklyReviewMovement, 0, len(bars))
+	for _, bar := range bars {
+		wire := crmcontracts.WeeklyReviewMovement{
+			Bar:        crmcontracts.WeeklyReviewMovementBar(bar.Bar),
+			DeltaMinor: bar.DeltaMinor,
+		}
+		if len(bar.Drivers) > 0 {
+			drivers := make([]crmcontracts.WeeklyReviewDriver, 0, len(bar.Drivers))
+			for _, driver := range bar.Drivers {
+				drivers = append(drivers, crmcontracts.WeeklyReviewDriver{
+					DealId:     openapi_types.UUID(driver.DealID),
+					DealLabel:  driver.DealLabel,
+					DeltaMinor: driver.DeltaMinor,
+				})
+			}
+			wire.Drivers = &drivers
+		}
+		out = append(out, wire)
+	}
 	return out
 }
 

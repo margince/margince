@@ -23,8 +23,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/riverqueue/river"
-
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -58,11 +56,11 @@ func TestTheRepairSweepActuallyRepairsWhenDrivenAsTheJob(t *testing.T) {
 		INSERT INTO activity_participant (id, activity_id, address, role)
 		VALUES ($1, $2, 'stranded@sweep.test', 'from')`, ids.NewV7(), activity)
 
-	// Drive the worker exactly as River does.
+	// The per-workspace turn, which is what River's row walks rather than what
+	// it carries (ADR-0103): Work enumerates the fleet, and this suite is about
+	// one tenant. It is the same code Work calls per tenant.
 	worker := compose.NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
-	if err := worker.Work(context.Background(), &river.Job[compose.LinkReconcileWorkspaceArgs]{
-		Args: compose.LinkReconcileWorkspaceArgs{Workspace: e.WS},
-	}); err != nil {
+	if err := worker.ReconcileWorkspaceForTest(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
 	}
 

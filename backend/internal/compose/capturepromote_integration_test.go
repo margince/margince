@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -554,9 +553,7 @@ func TestAContactTheCeilingRefusedIsAskedAboutByTheSweep(t *testing.T) {
 
 	store := people.NewStore(InstallationDB(e.Pool))
 	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
-	if err := worker.Work(context.Background(), &river.Job[LinkReconcileWorkspaceArgs]{
-		Args: LinkReconcileWorkspaceArgs{Workspace: e.WS},
-	}); err != nil {
+	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
 	}
 
@@ -598,9 +595,7 @@ func TestTheSweepDoesNotReaskASettledSender(t *testing.T) {
 	before := countDispositions(t, e, advisor)
 	store := people.NewStore(InstallationDB(e.Pool))
 	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
-	if err := worker.Work(context.Background(), &river.Job[LinkReconcileWorkspaceArgs]{
-		Args: LinkReconcileWorkspaceArgs{Workspace: e.WS},
-	}); err != nil {
+	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
 	}
 	if after := countDispositions(t, e, advisor); after != before {
@@ -654,9 +649,7 @@ func TestTheSweepLeavesAContactAHumanKeptPrivate(t *testing.T) {
 	runVerdict(t, e, &scriptedVerdictBrain{})
 	store := people.NewStore(InstallationDB(e.Pool))
 	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
-	if err := worker.Work(context.Background(), &river.Job[LinkReconcileWorkspaceArgs]{
-		Args: LinkReconcileWorkspaceArgs{Workspace: e.WS},
-	}); err != nil {
+	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
 	}
 

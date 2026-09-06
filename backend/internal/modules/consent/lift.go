@@ -28,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -74,18 +75,8 @@ func admitLift(ctx context.Context, in LiftInput) (subject, commsauthz.Authority
 			Reason: "name the suppression to lift; a subject may carry more than one",
 		}
 	}
-	if strings.TrimSpace(in.Reason) == "" {
-		return subject{}, "", &ValidationError{
-			Field:  fieldReason,
-			Reason: "taking back a stop needs a reason somebody can review later",
-		}
-	}
-	if len([]rune(in.Reason)) > liftReasonMax {
-		return subject{}, "", &ValidationError{
-			Field: fieldReason,
-			Reason: fmt.Sprintf("a reason is at most %d characters; this one is %d",
-				liftReasonMax, len([]rune(in.Reason))),
-		}
+	if err := requireReason(in.Reason, "taking back a stop"); err != nil {
+		return subject{}, "", err
 	}
 	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
 		return subject{}, "", err
@@ -97,11 +88,43 @@ func admitLift(ctx context.Context, in LiftInput) (subject, commsauthz.Authority
 // payload spell it the same way.
 const fieldReason = "reason"
 
-// liftReasonMax bounds the reason. It is the contract's own maxLength written
-// again here because nothing generated enforces it — unchecked, one caller
-// stores a megabyte in an audit payload every later reader of this person's
-// history is served in full.
-const liftReasonMax = 500
+// reasonMax bounds a reason. It is the contract's own maxLength written again
+// here because nothing generated enforces it — unchecked, one caller stores a
+// megabyte in an audit payload every later reader of this person's history is
+// served in full.
+const reasonMax = 500
+
+// boundReason holds the LENGTH rule, which both doors that take a reason share.
+// Only the bound: whether a reason must be given at all differs between them,
+// and the contract is what says so.
+func boundReason(reason string) error {
+	if n := len([]rune(reason)); n > reasonMax {
+		return &ValidationError{
+			Field:  fieldReason,
+			Reason: fmt.Sprintf("a reason is at most %d characters; this one is %d", reasonMax, n),
+		}
+	}
+	return nil
+}
+
+// requireReason is the LIFT's rule: a reason is mandatory here and optional on
+// the door that records a stop. That asymmetry is the contract's, not an
+// oversight — `crm.yaml` marks the suppress body `required: [kind]` and the
+// lift body's own description says "Required, unlike the reason for setting
+// one". A rep relaying "please stop emailing me" can record that stop with no
+// explanation; taking one back has to be explainable.
+//
+// Sharing the bound and not the requirement is the whole point of the split:
+// unifying both would have turned a conforming suppress request into a 422.
+func requireReason(reason, act string) error {
+	if strings.TrimSpace(reason) == "" {
+		return &ValidationError{
+			Field:  fieldReason,
+			Reason: act + " needs a reason somebody can review later",
+		}
+	}
+	return boundReason(reason)
+}
 
 // liftAdmittedTx reads the row's authority, compares it, and revokes.
 func (s *Store) liftAdmittedTx(
@@ -123,6 +146,13 @@ func (s *Store) liftAdmittedTx(
 	// decision rests on is the level still on the row when the write lands. Read
 	// outside and a concurrent lift could change it between the check and the
 	// update — the shape that lets a rep's request act on an admin's answer.
+	// Before the read, so the count below observes every concurrent lift of this
+	// person as committed or not-yet-started, never as half-applied.
+	if _, err = tx.Exec(ctx,
+		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, sub.id.String()); err != nil {
+		return fmt.Errorf("consent: serialising lifts for this person: %w", err)
+	}
+
 	var decided string
 	err = tx.QueryRow(ctx, `
 		SELECT decided_by_level FROM communication_suppression
@@ -150,6 +180,53 @@ func (s *Store) liftAdmittedTx(
 		return fmt.Errorf("consent: revoking the suppression: %w", err)
 	}
 
+	// Counted AFTER the revoke and inside the same transaction, so the number
+	// describes this lift's own snapshot rather than the world before it. Not a
+	// serialized by the FOR UPDATE above, which locks only the row being lifted.
+	// Two lifts of DIFFERENT rows on one person would otherwise each see the
+	// other's row still live and both emit still_suppressed=true — and nothing
+	// emits again afterwards, so both consumers hold mail forever on a person
+	// with no stop left. "A moment of over-counting" was the wrong reading: an
+	// event is not a poll, and there is no later correction.
+	//
+	// So the whole person is taken first, and every lift of the same person
+	// queues behind it. One person's lock, held for the length of one lift —
+	// this is not a table lock and it does not touch anybody else's subject.
+	//
+	// NOT held by a test, deliberately. Each Lift opens its own short
+	// transaction, so two goroutines started together almost never overlap in
+	// the count window: a timing test passed identically with the lock removed,
+	// three runs out of three, which makes it a green that proves nothing
+	// rather than a guard. Reproducing it needs two transactions held open by
+	// hand around the read — worth writing when this file next gains a seam
+	// that can do it, and worth nobody's confidence until then.
+	//
+	// Person AND address, not person alone. A row pinned to an address carries
+	// no person_id, so counting by person would report "nothing stands" while
+	// the engine still refuses every message to that mailbox. Reporting fewer
+	// stops than exist is the one error this field must not make: it is the
+	// direction that resumes mail.
+	//
+	// liveSuppression carries a third arm, lead_id, because it is called with
+	// either a person or a lead. This is not: LiftInput takes a PersonID and
+	// consentSubject resolves it, so a lead arm here would be a clause that can
+	// never match — the appearance of mirroring the engine without the fact.
+	//
+	// Held by TestALiftReportsAnAddressPinnedStopAsStanding.
+	var remaining int
+	if err = tx.QueryRow(ctx, `
+		SELECT count(*) FROM communication_suppression s
+		 WHERE s.revoked_at IS NULL
+		   AND (s.person_id = $1
+		        OR (s.address IS NOT NULL AND EXISTS (
+		              SELECT 1 FROM person_email pe
+		               WHERE pe.person_id = $1
+		                 AND pe.archived_at IS NULL
+		                 AND pe.email = lower(s.address))))`,
+		sub.id).Scan(&remaining); err != nil {
+		return fmt.Errorf("consent: counting the stops still standing: %w", err)
+	}
+
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id,
 		map[string]any{
 			"lifted_suppression": in.SuppressionID.String(),
@@ -165,7 +242,8 @@ func (s *Store) liftAdmittedTx(
 	if err != nil {
 		return err
 	}
-	return storekit.EmitEvent(ctx, tx, auditID, sub.id, suppressionLiftedPayload(decided, level))
+	return storekit.EmitEvent(ctx, tx, auditID, sub.id,
+		suppressionLiftedPayload(in.SuppressionID, decided, level, remaining))
 }
 
 // suppressionLiftedPayload says a stop was taken back and by whose authority.
@@ -173,9 +251,31 @@ func (s *Store) liftAdmittedTx(
 // It carries the two levels rather than the reason, for the same reason the
 // recording event does: the words belong to the people who wrote them, and an
 // event reaches readers the explanation was not given to.
-func suppressionLiftedPayload(recorded string, by commsauthz.AuthorityLevel) crmcontracts.PublicEventConsentSuppressionLifted {
+//
+// It also carries what the lift did NOT do. One person can hold several stops —
+// their own objection and a rep's separate note — and lifting one leaves the
+// others standing. An event saying only "a stop was lifted" reads as "you may
+// write to them now", so `still_suppressed` states the opposite plainly and
+// `remaining` says how many reasons remain. The engine never needed this (it
+// re-reads the strongest live row when it sends); the readers outside do.
+func suppressionLiftedPayload(
+	lifted ids.UUID,
+	recorded string,
+	by commsauthz.AuthorityLevel,
+	remaining int,
+) crmcontracts.PublicEventConsentSuppressionLifted {
+	// Always populated. The contract marks them optional so a consumer written
+	// against the older shape keeps validating, not because this installation
+	// may omit them: a payload that left them out would be one a reader could
+	// only interpret as "unknown", and there is no case here where the answer
+	// is unknown.
+	id := openapi_types.UUID(lifted)
+	stands := remaining > 0
 	return crmcontracts.PublicEventConsentSuppressionLifted{
-		RecordedAtLevel: recorded,
-		LiftedByLevel:   string(by),
+		SuppressionId:         &id,
+		RecordedAtLevel:       recorded,
+		LiftedByLevel:         string(by),
+		RemainingSuppressions: &remaining,
+		StillSuppressed:       &stands,
 	}
 }

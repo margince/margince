@@ -3,7 +3,7 @@
 
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
-import { settingsAddress } from "../screens/settingsnav";
+import { settingsHref } from "../screens/settingsrouting";
 import { ENTITY, type EntityKind, isEntityKind } from "./entity";
 import type { Route } from "./router";
 
@@ -105,7 +105,12 @@ export function searchHitRoute(type: SearchHitType, id: string): Route | null {
     return { screen: "tags", id };
   }
   if (type === "product" || type === "offer_template") {
-    return settingsAddress("data-model");
+    // Through settingsHref rather than a path spelled here, and naming a page
+    // the SCREEN renders today. The catalog already splits this entry into
+    // fields/tags/products, but the screen still renders the combined one, so
+    // minting `products` would send a reader to a page that falls back to
+    // Account. It moves to `products` in the same change that splits the cards.
+    return settingsHref("fields");
   }
   return null;
 }

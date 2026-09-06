@@ -11,7 +11,7 @@ import {
 import type { Locale, useT } from "../i18n";
 import { translatePlural } from "../i18n";
 import { BRIEF_PARAM, COMPOSE_PARAM, THREAD_PARAM } from "./personpage.address";
-import { settingsAddress } from "./settingsnav";
+import { settingsHref } from "./settingsrouting";
 import type {
   Worklist,
   WorklistComparison,
@@ -61,7 +61,7 @@ export function subjectHref(item: WorklistItem): string | undefined {
 // decides whether a tab sits under the admin segment, and a second spelling of
 // that decision would keep pointing at the old address the day it moves.
 const SOURCE_QUEUE: Partial<Record<WorklistItem["source"], string>> = {
-  dsr: routeHash(settingsAddress("privacy")),
+  dsr: routeHash(settingsHref("privacy")),
   // A rule that failed, and the page that lists the rules.
   //
   // The row named a broken automation and offered no address at all — not the
@@ -77,13 +77,14 @@ const SOURCE_QUEUE: Partial<Record<WorklistItem["source"], string>> = {
   // nothing on day four. Offering one would be the promise this table exists
   // to avoid making.
   //
-  // The `ai` tab is where the automations list lives, and its read is the one
-  // every seeded role holds — so this address answers for a rep as well as for
-  // an operator rather than routing most readers into a refusal.
-  automation_run: routeHash(settingsAddress("ai")),
+  // The AI page, whose read is the one every seeded role holds — so this
+  // answers for a rep as well as an operator rather than routing most readers
+  // into a refusal. The catalog splits it into models/automations/usage/
+  // model-calls; this follows when the screen does, not before.
+  automation_run: routeHash(settingsHref("models")),
   // The same page answers for the AI work that a rule set off, for the same
   // reason and with the same limit.
-  ai_work_health: routeHash(settingsAddress("ai")),
+  ai_work_health: routeHash(settingsHref("models")),
 };
 
 // The address a row's headline links to: its record where it has one, the
@@ -210,6 +211,7 @@ const KNOWN_REASONS = {
   stale: true,
   no_reply_history: true,
   asks_nothing: true,
+  outcome_unrecorded: true,
 } as const;
 
 type KnownReason = keyof typeof KNOWN_REASONS;
@@ -739,6 +741,7 @@ export const KNOWN_SOURCES = {
   lead_response: true,
   deal_at_risk: true,
   meeting: true,
+  meeting_outcome: true,
   relationship_decay: true,
   failed_approval: true,
   dsr: true,

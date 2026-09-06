@@ -80,6 +80,14 @@ type SARPackage struct {
 	// person about them, and the suppressions are the record of which claims
 	// this installation has agreed to stop making.
 	Corrections []map[string]any `json:"corrections"`
+	// ReplyJudgements is what this installation concluded the subject's own
+	// messages MEANT — whether each reply read as positive, negative or
+	// neutral — and every human correction of that conclusion. A verdict is a
+	// claim about the subject derived from their words, so Art. 15 owes it for
+	// the same reason Corrections above is owed: the subject is entitled to
+	// know not only what they wrote but what we decided it meant, and which
+	// classifier decided it.
+	ReplyJudgements []map[string]any `json:"reply_judgements"`
 	// ProviderClaims is what a licensed data provider asserted about the
 	// subject and this installation retained — bought from a third party
 	// rather than given by them, which is precisely the holding Art. 15(1)(g)

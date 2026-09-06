@@ -312,3 +312,55 @@ func TestAMovementAcrossTwoDifferentWindowsIsRefused(t *testing.T) {
 		t.Fatalf("two readings of the same quarter were refused: %v", err)
 	}
 }
+
+// A frozen contribution remembers the stage the deal stood in.
+//
+// The conversion rate behind pipeline sufficiency asks what happened to deals
+// that REACHED a stage, and the only durable record of where a deal stood on a
+// given day is the snapshot that froze it. Read from the deal's current stage
+// instead, that history credits today's stage with the outcome of a deal that
+// passed through three others.
+func TestAContributionRemembersTheStageTheDealWasIn(t *testing.T) {
+	t.Parallel()
+	e := setupSnapshot(t)
+	ctx := e.as()
+
+	zone, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2026, time.November, 9, 12, 0, 0, 0, zone)
+	period, err := ResolvePeriod(PeriodQuarter, at, 1, zone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stage := ids.NewV7()
+	row := open(ids.NewV7().String(), 100_00)
+	row.StageID = stage.String()
+	readings := Readings{Contributions: []Contribution{row}, EligibleCount: 1, PricedCount: 1}
+
+	var id ids.UUID
+	if err := e.store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		id, err = e.store.TakeSnapshot(ctx, tx, NewSnapshot{
+			Period: period, Scope: Scope{Kind: ScopeWorkspace},
+			Trigger: TriggerDaily, BaseCurrency: "EUR",
+			Readings: readings, TakenAt: at,
+		})
+		return err
+	}); err != nil {
+		t.Fatalf("taking the snapshot: %v", err)
+	}
+
+	var stored *ids.UUID
+	if err := e.store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT stage_id FROM forecast_contribution WHERE snapshot_id = $1`, id).Scan(&stored)
+	}); err != nil {
+		t.Fatalf("reading the contribution back: %v", err)
+	}
+	if stored == nil || *stored != stage {
+		t.Fatalf("the contribution stored stage %v, want %v — without it the conversion "+
+			"history has no record of where the deal actually stood", stored, stage)
+	}
+}

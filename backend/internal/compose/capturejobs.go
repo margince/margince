@@ -51,7 +51,28 @@ func (w *captureClassifyWorker) Work(ctx context.Context, _ *river.Job[CaptureCl
 }
 
 func (w *captureClassifyWorker) classifyWorkspace(ctx context.Context, workspace ids.UUID) error {
-	return w.classifier.RunWorkspace(principal.WithWorkspaceID(ctx, workspace), 0)
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	// The workspace binding stopped being enough when this pass began writing a
+	// reply verdict beside the label. SetCaptureLabel carries no gate, so a bare
+	// workspace context served for as long as labelling was all this did;
+	// SetReplyVerdict is RBAC-gated like every other write of a derived claim
+	// about correspondence, and an unbound context fails it with "no actor bound
+	// to context" — on every message, every tick, while the labels keep landing
+	// so the pass looks alive. owedjobs.go beside this records the same lesson
+	// from the other direction, and named this worker as the one that did not
+	// need it yet.
+	//
+	// A SYSTEM principal, which is what this is: nobody asked for the pass and no
+	// seat acts through it. auth.Require admits a system principal before it
+	// reads any object grant, so the grants are deliberately absent — RowScopeAll
+	// is what the row clauses need, and listing objects would suggest they were
+	// consulted.
+	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
+	wsCtx = principal.WithActor(wsCtx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:capture_classify",
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+	return w.classifier.RunWorkspace(wsCtx, 0)
 }
 
 // CaptureEnrichArgs runs one signature-enrich pass (ADR-0063; §2.9).
@@ -134,39 +155,23 @@ func (OrgNamePromotionArgs) Kind() string { return "org_name_promotion" }
 func (OrgNamePromotionArgs) FleetWide() {}
 
 // orgNamePromotionWorker is the dispatcher for the corroborated-name sweep.
+// orgNamePromotionWorker promotes names for every live workspace.
+//
+// One worker where there were two (ADR-0103).
 type orgNamePromotionWorker struct {
-	pool *pgxpool.Pool
-}
-
-func (w *orgNamePromotionWorker) Work(ctx context.Context, _ *river.Job[OrgNamePromotionArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(OrgNamePromotionWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return OrgNamePromotionWorkspaceArgs{Workspace: ws} }))
-}
-
-// OrgNamePromotionWorkspaceArgs is one workspace's org-name promotion pass.
-type OrgNamePromotionWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (OrgNamePromotionWorkspaceArgs) Kind() string { return "org_name_promotion_workspace" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a OrgNamePromotionWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// orgNamePromotionWorkspaceWorker runs one workspace's pass: a database-only
-// walk over the org_name evidence the enrich job collects.
-type orgNamePromotionWorkspaceWorker struct {
+	pool     *pgxpool.Pool
 	promoter *OrgNamePromoter
 }
 
-func (w *orgNamePromotionWorkspaceWorker) Work(ctx context.Context, job *river.Job[OrgNamePromotionWorkspaceArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	return jobs.FaultContext(ctx, w.promoter.RunWorkspace(wsCtx, job.Args.Workspace))
+func (w *orgNamePromotionWorker) Work(ctx context.Context, _ *river.Job[OrgNamePromotionArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.promoteWorkspace))
+}
+
+// orgNamePromotionWorkspaceWorker runs one workspace's pass: a database-only
+// walk over the org_name evidence the enrich job collects.
+func (w *orgNamePromotionWorker) promoteWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	return jobs.FaultContext(ctx, w.promoter.RunWorkspace(wsCtx, workspace))
 }
 
 // CaptureDigestArgs builds the morning digests (CAP-DDL-6; the nightly

@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ProviderLookupSweepArgs schedules one fleet-wide catch-up pass.
@@ -38,43 +39,20 @@ func (ProviderLookupSweepArgs) FleetWide() {}
 // providerLookupSweepWorker fans the pass out per workspace.
 type providerLookupSweepWorker struct {
 	pool *pgxpool.Pool
-}
-
-func (w *providerLookupSweepWorker) Work(ctx context.Context, _ *river.Job[ProviderLookupSweepArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		// The tick is the real cadence: a workspace that failed is picked up by
-		// the next pass a minute later, which is also why the worker takes one
-		// attempt and no ladder.
-		workspaceSweepOpts(ProviderLookupArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return ProviderLookupArgs{Workspace: ws} }))
-}
-
-// ProviderLookupArgs is one workspace's catch-up tick.
-type ProviderLookupArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (ProviderLookupArgs) Kind() string { return "provider_lookup" }
-
-// WorkspaceID binds this tick to its tenant (jobs.WorkspaceScoped).
-func (a ProviderLookupArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// providerLookupWorker runs one workspace's tick.
-type providerLookupWorker struct {
-	pool *pgxpool.Pool
 	cfg  ProviderRunsConfig
 }
 
-func (w *providerLookupWorker) Work(ctx context.Context, job *river.Job[ProviderLookupArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
+// The tick is the real cadence: a workspace that failed is picked up by the
+// next pass a minute later, which is why this takes one attempt and no ladder.
+func (w *providerLookupSweepWorker) Work(ctx context.Context, _ *river.Job[ProviderLookupSweepArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.lookupWorkspace))
+}
+
+func (w *providerLookupSweepWorker) lookupWorkspace(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := providerJobActor(principal.WithWorkspaceID(ctx, workspace))
+	store, err := providerLookupStore(w.pool, w.cfg, workspace)
 	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	wsCtx = providerJobActor(wsCtx)
-	store, err := providerLookupStore(w.pool, w.cfg, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
+		return err
 	}
 	// The count is deliberately dropped: this lane's progress is the backlog
 	// count the settings card reads, which is derived from the same predicate
@@ -96,8 +74,8 @@ func (w *providerLookupWorker) Work(ctx context.Context, job *river.Job[Provider
 // puts its client there for exactly this, and the three capture lanes already
 // reach it the same way. Threading a runner through ProviderRunsConfig would
 // make every construction site carry one so that this path could enqueue.
-func providerLookupStore(pool *pgxpool.Pool, cfg ProviderRunsConfig, args jobs.WorkspaceScoped) (*integrations.Store, error) {
-	store, err := providerRunStore(pool, cfg, args)
+func providerLookupStore(pool *pgxpool.Pool, cfg ProviderRunsConfig, workspace ids.UUID) (*integrations.Store, error) {
+	store, err := providerRunStore(pool, cfg, workspace)
 	if err != nil {
 		return nil, err
 	}

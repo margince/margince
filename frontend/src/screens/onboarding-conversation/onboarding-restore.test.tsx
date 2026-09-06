@@ -385,8 +385,8 @@ describe("restore into the conversational shell", () => {
     ).toBeTruthy();
   });
 
-  it("the member path comes from the state row and skips voice and results entirely", async () => {
-    const calls = stubApi({
+  it("the member path comes from the state row and resumes at the step it names", async () => {
+    stubApi({
       state: stateRow({ path: "member", step: "connect" }),
       company: savedProfile,
     });
@@ -400,8 +400,16 @@ describe("restore into the conversational shell", () => {
     // provider card.
     const microsoft = screen.getByRole("button", { name: /Microsoft/ });
     await waitFor(() => expect(microsoft).not.toBeDisabled());
-    // A member restore never probes the voice surface.
-    expect(requestsTo(calls, "/voice-profiles", "GET").length).toBe(0);
+  });
+
+  it("a member with no row of their own begins at the voice act, company already settled", async () => {
+    const calls = stubApi({ state: null, company: savedProfile });
+    render(<OnboardingScreen />);
+
+    // Straight to the collect scene: no company act, no invite, no basis —
+    // those were the creator's, and the voice probe feeds the corpus meter.
+    expect(await screen.findByText(/Teach me how you write\./)).toBeTruthy();
+    expect(requestsTo(calls, "/voice-profiles", "GET").length).toBe(1);
   });
 
   it("reopens the invite for a creator whose company is confirmed", async () => {
@@ -476,10 +484,10 @@ describe("restore into the conversational shell", () => {
     expect(body.connect_skipped).toBe(true);
   });
 
-  // Leaving the team act hands on to the preferences act, and THAT is the
-  // finish: the row goes to "complete" before the handoff, so a reload after
-  // the write lands on the app rather than back in the journey.
-  it("skipping the team act reaches the preferences act, whose Done completes setup before the handoff", async () => {
+  // Leaving the team act IS the finish: the row goes to "complete" before the
+  // handoff, so a reload after the write lands on the app rather than back in
+  // the journey.
+  it("skipping the team act writes completion, then plays the handoff", async () => {
     const calls = stubApi({
       state: stateRow({
         step: "team",
@@ -494,13 +502,6 @@ describe("restore into the conversational shell", () => {
       await screen.findByRole("button", { name: "Skip for now" }),
     );
 
-    expect(
-      await screen.findByText("Last, a few preferences."),
-    ).toBeInTheDocument();
-    expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(0);
-
-    await userEvent.click(screen.getByRole("button", { name: "Done" }));
-
     await waitFor(() => {
       expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
     });
@@ -510,7 +511,7 @@ describe("restore into the conversational shell", () => {
     expect(body.step).toBe("complete");
     // The handoff scene has the surface.
     await waitFor(() =>
-      expect(screen.queryByText("Last, a few preferences.")).toBeNull(),
+      expect(screen.queryByText("Invite the first user.")).toBeNull(),
     );
   });
 
@@ -740,25 +741,12 @@ describe("finishing the connect act", () => {
     ).toBeTruthy();
     expect(window.location.hash).toBe("");
 
-    // The retry succeeds: how the step was left lands, THEN the preferences
-    // act takes the surface.
+    // The retry succeeds: how the step was left lands as the completion
+    // itself, THEN the shell navigates.
     options.putStatus = undefined;
     await userEvent.click(
       screen.getByRole("button", { name: /Continue without a mailbox/ }),
     );
-    expect(
-      await screen.findByText("Last, a few preferences."),
-    ).toBeInTheDocument();
-    const left = requestsTo(calls, "/onboarding/state", "PUT");
-    const leftBody = (await left[left.length - 1].clone().json()) as Record<
-      string,
-      unknown
-    >;
-    expect(leftBody.step).toBe("connect");
-    expect(leftBody.connect_skipped).toBe(true);
-
-    // Done writes completion, THEN the shell navigates.
-    await userEvent.click(screen.getByRole("button", { name: "Done" }));
     await waitFor(() => {
       expect(window.location.hash).toBe("#/home");
     });

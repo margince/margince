@@ -45,6 +45,11 @@ import (
 // scheduled for later. Naming a sixth would not compile, and a reader coming to
 // add one should know the case is already held rather than go looking for the
 // constant.
+//
+// That is a claim about a dependency's vocabulary, so it is checked against the
+// dependency: TestEveryRiverJobStateIsEitherInFlightOrFinished
+// (jobsweepstates_test.go) walks rivertype.JobStates() and fails on any state
+// this list and the finished set do not between them account for.
 var activeSweepStates = []rivertype.JobState{
 	rivertype.JobStateAvailable,
 	rivertype.JobStatePending,
@@ -401,6 +406,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addGraphJobs(reg, pool, cfg, log),
 		addEmbedDriftSweepJob(reg, pool, cfg, log),
 		addScheduledSendRecoveryJob(reg, pool, cfg, log),
+		addControllerPayloadSweepJob(reg, pool, cfg, log),
 		addPrivacyRetentionJobs(reg, pool, cfg, log),
 		addWebhookRetryJobs(reg, pool, cfg),
 		addGeocodeBackfillJobs(reg, pool, cfg),

@@ -130,7 +130,11 @@ func TestNoActivityReminderReachesTheOwnersTasksScreenThroughTheRealRiverJob(t *
 
 	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	AwaitKindCompleted(waitCtx, t, sub, compose.TimeScanWorkspaceArgs{}.Kind())
+	// THE PASS, which is the only kind there is (ADR-0103). This waited on the
+	// workspace child, because a dispatcher completed as soon as its fan-out
+	// was enqueued and waiting on it raced the work; a collapsed pass completes
+	// when the work is done.
+	AwaitKindCompleted(waitCtx, t, sub, compose.TimeScanArgs{}.Kind())
 
 	// The firing must have cleared Sam's own gate as 'applied', not
 	// 'blocked' — if the seeded role above did not actually grant

@@ -193,9 +193,14 @@ var tableOwners = map[string]string{
 	// floor (A165/ADR-0114). It hangs off `activity` and is written by the
 	// stamp, so it belongs to the module that owns the row it substantiates.
 	"activity_retention_evidence": "internal/modules/activities",
-	"activity_sales_state":        "internal/modules/activities",
-	"activity_reader_state":       "internal/modules/activities",
-	"worklist_pin":                "internal/modules/activities",
+	// How a reply verdict came to be what it is: the classifier's own judgement
+	// and every human correction after it. It hangs off `activity` and is
+	// written beside the column it explains, so it belongs to the module that
+	// owns that row.
+	"activity_reply_verdict_history": "internal/modules/activities",
+	"activity_sales_state":           "internal/modules/activities",
+	"activity_reader_state":          "internal/modules/activities",
+	"worklist_pin":                   "internal/modules/activities",
 	// ACT-DDL-3: who was in the interaction. It belongs beside activity and
 	// activity_link for the same reason they belong together — it is part of
 	// what an activity IS, not a graph artifact derived from one.
@@ -435,6 +440,9 @@ var tableOwners = map[string]string{
 	"weekly_plan":               "internal/modules/weeklyplan",
 	"weekly_plan_commitment":    "internal/modules/weeklyplan",
 	"weekly_review_deal":        "internal/compose/weekly",
+	"weekly_review_outlook":     "internal/compose/weekly",
+	"weekly_review_movement":    "internal/compose/weekly",
+	"weekly_review_driver":      "internal/compose/weekly",
 	// The company view's per-user visit baseline: view state, not a record
 	// fact, so it is written without an audit row — the saved-view ruling.
 	// The person view acknowledges visits into the SAME table (one baseline

@@ -292,18 +292,14 @@ func BootstrapWorkspaceSession(t *testing.T, e *AppEnv, organizationName, adminE
 	// fixture does what a real first login does rather than clearing the flag
 	// in SQL — a suite arranged around a state the product cannot reach would
 	// prove nothing about the product.
+	//
+	// The change ends the session that made it and sets the cookie for the one
+	// it minted; the jar picks that up, so the suites carry on exactly as a
+	// real admin's browser does — with no second sign-in.
 	if status := e.Call(t, "POST", "/v1/auth/change-password", map[string]any{
 		"current_password": operatorSupplied, "new_password": adminPassword,
 	}, nil, nil); status != http.StatusNoContent {
 		t.Fatalf("completing setup (change-password) → %d", status)
-	}
-	// The change ended every session, this one included. Signing in again with
-	// the chosen password is what a real admin does next, and it leaves the
-	// suites holding the session they expect.
-	if status := e.Call(t, "POST", "/v1/auth/login", map[string]any{
-		"email": adminEmail, "password": adminPassword,
-	}, nil, nil); status != http.StatusOK {
-		t.Fatalf("login after completing setup → %d", status)
 	}
 }
 

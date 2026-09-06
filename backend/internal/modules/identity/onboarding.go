@@ -33,6 +33,10 @@ const (
 	OnboardingStepRead = "read"
 	// OnboardingStepConfirm reviews the company draft.
 	OnboardingStepConfirm = "confirm"
+	// OnboardingStepBasis settles the installation's reporting basis — base
+	// currency and reporting timezone — the one installation-wide answer the
+	// setup asks for, taken before any step about the person answering.
+	OnboardingStepBasis = "basis"
 	// OnboardingStepInvite asks whether the person setting the installation up
 	// will work in it, which decides whether the voice and connect steps are
 	// offered at all.
@@ -71,20 +75,21 @@ const (
 )
 
 var onboardingSteps = map[string]struct{}{
-	OnboardingStepRead: {}, OnboardingStepConfirm: {}, OnboardingStepInvite: {},
-	OnboardingStepTeam: {}, OnboardingStepVoice: {}, OnboardingStepResults: {},
-	OnboardingStepConnect: {}, OnboardingStepComplete: {},
+	OnboardingStepRead: {}, OnboardingStepConfirm: {}, OnboardingStepBasis: {},
+	OnboardingStepInvite: {}, OnboardingStepTeam: {}, OnboardingStepVoice: {},
+	OnboardingStepResults: {}, OnboardingStepConnect: {}, OnboardingStepComplete: {},
 }
 
 // creatorSteps are the steps that exist only on the creator's route: the
-// company a member's installation already has, and the two questions only the
-// person setting it up can answer. A member's route begins at Voice, so
-// persisting any of these against a member is a state nothing can reach.
+// company a member's installation already has, its reporting basis, and the
+// two questions only the person setting it up can answer. A member's route
+// begins at Voice, so persisting any of these against a member is a state
+// nothing can reach.
 //
 // A set rather than a condition, because every step added before Voice belongs
 // here and a chain of `||` is where the last one was forgotten.
 var creatorSteps = map[string]struct{}{
-	OnboardingStepRead: {}, OnboardingStepConfirm: {},
+	OnboardingStepRead: {}, OnboardingStepConfirm: {}, OnboardingStepBasis: {},
 	OnboardingStepInvite: {}, OnboardingStepTeam: {},
 }
 

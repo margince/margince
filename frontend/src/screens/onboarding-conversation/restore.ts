@@ -7,9 +7,11 @@ import type { NarrationEntry, ResumePoint } from "./conversation-types";
 // The wizard state's `path` field is THE member signal; an existing company
 // profile is only the fallback when no state row exists (a returning creator
 // has both a state row and a saved company, and must NOT be demoted to the
-// member path, which would silently skip the voice act). Recap turns are
-// derived here from server facts, never persisted narration, so a reload
-// summarizes what happened instead of replaying it.
+// member path, which would silently skip the installation acts). A member's
+// company is settled before they arrive, so their plan always opens confirmed
+// and lands on a personal act — the voice act first. Recap turns are derived
+// here from server facts, never persisted narration, so a reload summarizes
+// what happened instead of replaying it.
 
 type OnboardingState = components["schemas"]["OnboardingState"];
 type CompanyProfile = components["schemas"]["CompanyProfile"];
@@ -122,6 +124,7 @@ function readRecap(read: CompanySiteRead, locale: Locale): NarrationEntry[] {
 // happened (the classic coordinator only advances past step "read"/"confirm"
 // by persisting the confirmed company).
 const confirmedSteps = new Set<OnboardingState["step"]>([
+  "basis",
   "invite",
   "team",
   "voice",
@@ -129,12 +132,18 @@ const confirmedSteps = new Set<OnboardingState["step"]>([
   "connect",
 ]);
 
-function creatorTarget(state: OnboardingState): ResumePoint {
+// Where a confirmed journey resumes, creator and member alike: the creator-only
+// steps land in their own acts, and the server never writes those against a
+// member, so a member's row can only name a personal step.
+function resumeTarget(state: OnboardingState): ResumePoint {
   // "results" is a row written before the invite existed, by a journey whose
   // voice act had already concluded: the recap it pointed at is gone, and
   // what came after the recap was connect.
   if (state.step === "connect" || state.step === "results") {
     return "cn.consent";
+  }
+  if (state.step === "basis") {
+    return "bs.ask";
   }
   if (state.step === "invite") {
     return "in.ask";
@@ -150,7 +159,6 @@ function creatorTarget(state: OnboardingState): ResumePoint {
 
 function recapEntries(
   inputs: RestoreInputs,
-  memberPath: boolean,
   target: ResumePoint,
 ): NarrationEntry[] {
   const { state, profile, voice, locale } = inputs;
@@ -172,9 +180,6 @@ function recapEntries(
       id: "recap:company-unsaved",
       i18nKey: "ob.conv.recap.companyUnsaved",
     });
-  }
-  if (memberPath) {
-    return entries;
   }
   // The voice act's recap, only once that act concluded or holds material.
   if (voice?.built === true) {
@@ -202,6 +207,30 @@ function recapEntries(
   return entries;
 }
 
+// A member's company was confirmed before they arrived, so their plan always
+// opens confirmed. A first visit has no row and nothing to recap: the journey
+// opens at voice. A returning member resumes where their row says, and the
+// OAuth return deep link reopens connect exactly as it does for a creator.
+function memberPlan(
+  inputs: RestoreInputs,
+  state: OnboardingState | null,
+): RestorePlan {
+  let target: ResumePoint = "vo.collecting";
+  if (inputs.routeConnect) {
+    target = "cn.consent";
+  } else if (state !== null) {
+    target = resumeTarget(state);
+  }
+  return {
+    kind: "start",
+    memberPath: true,
+    companyConfirmed: true,
+    resumeTarget: target,
+    adoptRead: null,
+    recap: state === null ? [] : recapEntries(inputs, target),
+  };
+}
+
 export function restorePlan(inputs: RestoreInputs): RestorePlan {
   const { state, profile, read, routeConnect, locale } = inputs;
   // "complete" is the wizard row's own word, and it can outrun the record it
@@ -222,6 +251,9 @@ export function restorePlan(inputs: RestoreInputs): RestorePlan {
   }
   const memberPath =
     state !== null ? state.path === "member" : profile !== null;
+  if (memberPath) {
+    return memberPlan(inputs, state);
+  }
   const companyConfirmed = state !== null && confirmedSteps.has(state.step);
   if (state === null || !companyConfirmed) {
     // The company act is still open (fresh, or step read/confirm). A
@@ -237,14 +269,13 @@ export function restorePlan(inputs: RestoreInputs): RestorePlan {
       recap: read !== null ? readRecap(read, locale) : [],
     };
   }
-  const target: ResumePoint =
-    memberPath || routeConnect ? "cn.consent" : creatorTarget(state);
+  const target: ResumePoint = routeConnect ? "cn.consent" : resumeTarget(state);
   return {
     kind: "start",
-    memberPath,
+    memberPath: false,
     companyConfirmed: true,
     resumeTarget: target,
     adoptRead: null,
-    recap: recapEntries(inputs, memberPath, target),
+    recap: recapEntries(inputs, target),
   };
 }

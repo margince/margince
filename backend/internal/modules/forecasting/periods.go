@@ -238,3 +238,93 @@ func periodStart(kind PeriodKind, local time.Time, fiscalStartMonth int) (int, t
 	opening := firstOfMonth.AddDate(0, -(elapsed % 3), 0)
 	return opening.Year(), opening.Month()
 }
+
+// ComparablePeriodsNeeded is how many completed periods a historical median
+// needs before it is offered as a basis.
+//
+// Exported so the read that fetches them asks for exactly as many as the
+// arithmetic requires. A reader fetching its own number would either waste
+// queries or hand over too few and get an absence it could not explain.
+func ComparablePeriodsNeeded() int { return comparablePeriods }
+
+// calendarDaysInclusive counts the days in [from, to], both ends included.
+//
+// Counted by WALKING calendar days rather than by dividing an elapsed duration.
+// A week spanning a daylight change is 167 or 169 hours, so dividing by 24
+// yields six days or seven-and-a-fraction — and a six-day step lands the
+// previous week on a Tuesday. Both dates are local midnights in one zone, so
+// the walk terminates on the day itself.
+func calendarDaysInclusive(from, to time.Time) int {
+	if to.Before(from) {
+		return 0
+	}
+	days := 1
+	for day := from; !sameCalendarDay(day, to); day = day.AddDate(0, 0, 1) {
+		days++
+		if days > maxWindowDays {
+			// A window longer than any period this product cuts. Refused rather
+			// than walked forever on a pair of dates that never meet.
+			return 0
+		}
+	}
+	return days
+}
+
+// maxWindowDays bounds the walk above. A quarter is the longest window the
+// resolvers produce, so a year of days is generous and still finite.
+const maxWindowDays = 366
+
+// sameCalendarDay compares two local days, ignoring the clock and the offset.
+func sameCalendarDay(a, b time.Time) bool {
+	ay, am, ad := a.Date()
+	by, bm, bd := b.Date()
+	return ay == by && am == bm && ad == bd
+}
+
+// PrecedingPeriod is the window of the same length immediately before this one.
+//
+// The step is derived from the window's own span rather than from a kind,
+// because a Period does not carry one: it is the resolved answer, and two
+// callers holding the same dates must get the same predecessor whatever kind
+// produced them.
+//
+// Calendar arithmetic, never a subtracted Duration. A quarter is three months
+// and a month is not 30 days, so stepping back by an elapsed duration lands
+// mid-month; and across a DST boundary a week is 167 or 169 hours, which would
+// walk the series off the local midnights the days were cut on.
+func PrecedingPeriod(p Period) (Period, bool) {
+	if p.Zone == nil || p.StartDate.IsZero() || p.EndDate.IsZero() {
+		return Period{}, false
+	}
+	days := calendarDaysInclusive(p.StartDate, p.EndDate)
+	if days <= 0 {
+		return Period{}, false
+	}
+
+	var start time.Time
+	switch {
+	case days >= 28 && days <= 31:
+		// One calendar month back, anchored on the first: a window shorter than
+		// its own month cannot be stepped by months without inventing a day.
+		start = p.StartDate.AddDate(0, -1, 0)
+	case days >= 89 && days <= 92:
+		start = p.StartDate.AddDate(0, -3, 0)
+	default:
+		// Everything else steps by its own day count, which is what a week is
+		// and what any window the resolvers gain later will be.
+		start = p.StartDate.AddDate(0, 0, -days)
+	}
+	end := p.StartDate.AddDate(0, 0, -1)
+
+	// Rebuilt from the local days rather than by shifting the instants, so the
+	// bounds sit on the zone's own midnights even when a DST change moved them.
+	from := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, p.Zone)
+	to := time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, p.Zone)
+	return Period{
+		Start:     from,
+		End:       to.AddDate(0, 0, 1),
+		StartDate: start,
+		EndDate:   end,
+		Zone:      p.Zone,
+	}, true
+}

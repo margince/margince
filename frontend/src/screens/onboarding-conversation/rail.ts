@@ -10,11 +10,12 @@ import type { ConversationState } from "./conversation-types";
 // The stops are NOT the phases: READ is already finished by the time the
 // two-column view first renders, CONFIRM covers the whole clarify/review/
 // manual cluster, and the invite is the doorway to VOICE rather than a stop
-// of its own. A member never reaches voice, so their rail has four stops —
-// a greyed step that will never happen is a promise the flow does not keep.
+// of its own. A member's company and basis were settled before they arrived,
+// so their rail carries only the two personal stops — a stop already done
+// by somebody else is not theirs to be shown walking.
 
 export type RailStop = Readonly<{
-  key: "read" | "confirm" | "voice" | "connect" | "prefs";
+  key: "read" | "confirm" | "basis" | "voice" | "connect";
   labelKey: MessageKey;
 }>;
 
@@ -23,14 +24,19 @@ export type RailStopState = "done" | "now" | "todo";
 const CREATOR_STOPS: readonly RailStop[] = [
   { key: "read", labelKey: "ob.rail.read" },
   { key: "confirm", labelKey: "ob.rail.confirm" },
+  { key: "basis", labelKey: "ob.rail.basis" },
   { key: "voice", labelKey: "ob.rail.voice" },
   { key: "connect", labelKey: "ob.rail.connect" },
-  { key: "prefs", labelKey: "ob.rail.prefs" },
 ];
 
-// The creator's rail minus the stop the member path never visits.
+// The creator's rail minus the stops the member path never visits.
+const INSTALLATION_STOPS: ReadonlySet<RailStop["key"]> = new Set([
+  "read",
+  "confirm",
+  "basis",
+]);
 const MEMBER_STOPS: readonly RailStop[] = CREATOR_STOPS.filter(
-  (stop) => stop.key !== "voice",
+  (stop) => !INSTALLATION_STOPS.has(stop.key),
 );
 
 export function railStops(memberPath: boolean): readonly RailStop[] {
@@ -48,6 +54,8 @@ export function currentStop(state: ConversationState): RailStop["key"] | null {
       return state.phase === "co.intro" || state.phase === "co.reading"
         ? null
         : "confirm";
+    case "basis":
+      return "basis";
     // The invite asks whether the voice stop happens at all, so it stands on
     // that stop: a rail pointing at the stop the question is about.
     case "invite":
@@ -60,11 +68,11 @@ export function currentStop(state: ConversationState): RailStop["key"] | null {
     // Every account the setup asks for — mailbox and LinkedIn alike — belongs to
     // this one stop. A stop per integration would grow the rail once per provider
     // for something the reader already reads as "connecting".
+    // The journey closes from this stop, so a finished flow still stands on
+    // it — read as done, below, rather than as a stop past the last.
     case "connect":
-      return "connect";
-    case "prefs":
     case "done":
-      return "prefs";
+      return "connect";
   }
 }
 
@@ -95,7 +103,7 @@ function stopStateByPosition(
   }
   // The last stop only reads `done` once the flow actually finished, so
   // it does not claim completion while the user is still choosing.
-  return stop === "prefs" && state.act === "done" ? "done" : "now";
+  return stop === "connect" && state.act === "done" ? "done" : "now";
 }
 
 export function stopState(
@@ -106,12 +114,13 @@ export function stopState(
   const currentIndex = currentIndexOf(currentStop(state), stops);
 
   // The team act stands on no stop, so `currentIndex` is -1 and the position
-  // arithmetic would read every stop as `todo` — including the two the creator
-  // finished to get here, and including `read` on a restored flow where
-  // `readCompleted` has not come back yet. It is a way OUT of the personal
-  // stops: those stay `todo` because this creator will not be walking them.
+  // arithmetic would read every stop as `todo` — including the three the
+  // creator finished to get here, and including `read` on a restored flow
+  // where `readCompleted` has not come back yet. It is a way OUT of the
+  // personal stops: those stay `todo` because this creator will not be
+  // walking them.
   if (state.act === "team") {
-    return stop === "read" || stop === "confirm" ? "done" : "todo";
+    return INSTALLATION_STOPS.has(stop) ? "done" : "todo";
   }
   if (stop === "read") {
     return readStopState(state, currentIndex > 0);

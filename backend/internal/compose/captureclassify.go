@@ -38,6 +38,10 @@ const (
 	// classifyConfidenceFloor: below it the item is re-asked SOLO on the
 	// routing ladder's fallback rather than guessed in-batch (§2.8).
 	classifyConfidenceFloor = 0.7
+	// classifierUnreported stands where a provider named no model. Spelled out
+	// rather than left empty so a stored row says "we do not know what judged
+	// this" instead of looking like a column nobody filled.
+	classifierUnreported = "unreported"
 	// classifyCatchUpCap bounds one catch-up pass (ADR-0063: hourly cap
 	// 500); the nightly pass runs the same engine with a higher cap.
 	classifyCatchUpCap = 500
@@ -45,10 +49,42 @@ const (
 
 var classifyLabels = map[string]bool{"commitment": true, "meeting": true, "noise": true}
 
+// replyVerdicts is this site's second closed set. Its members are the module's
+// own constants rather than three more string literals, so the prompt's
+// vocabulary and the column's CHECK constraint cannot drift into disagreeing.
+//
+// Held by: TestTheReplyVerdictVocabularyIsSpelledOnceEverywhere
+// (backend/gates/replyverdictvocabulary_test.go)
+var replyVerdicts = map[string]bool{
+	activities.ReplyVerdictPositive: true,
+	activities.ReplyVerdictNegative: true,
+	activities.ReplyVerdictNeutral:  true,
+}
+
+// yesNo renders the direction flag for the prompt's own line.
+func yesNo(b bool) string {
+	if b {
+		return "yes"
+	}
+	return "no"
+}
+
 const classifySystem = `You label captured emails for attention routing. For EACH supplied message emit exactly one
 label: "commitment" (a promise or request to act), "meeting" (scheduling or follow-through),
 or "noise" (neither). Labels route attention; they change no data. If a message fits both
-commitment and meeting, choose commitment.`
+commitment and meeting, choose commitment.
+
+A message marked "inbound: yes" was sent TO us by someone outside. For those, ALSO judge how
+they answered: "positive" (interest, a question worth answering, a request to meet or to hear
+more), "negative" (not interested, the wrong person with no referral, a request to stop
+writing), or "neutral" (neither — an out-of-office, a bare acknowledgement, a redirect with no
+view of its own). Omit "reply" entirely for a message marked "inbound: no": we wrote it, so it
+answers nobody. Omit it too when the message does not read as an answer at all. A guess here
+becomes a number somebody is measured on, so leave it out when you cannot tell.
+
+"confidence" covers EVERY judgement you emit for that message — the label and, when you give
+one, the reply. Report the LOWEST of the two, not the label's alone. If you are sure of the
+label and unsure of the reply, either omit the reply or let the lower number stand for both.`
 
 // classifySystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func classifySystemFor(fence promptfence.Fence) string {
@@ -78,6 +114,15 @@ type classifyResult struct {
 	ID         string            `json:"id"`
 	Label      string            `json:"label"`
 	Confidence schema.Confidence `json:"confidence"`
+	// Reply is whether an INBOUND message was a positive, negative or neutral
+	// answer, and is empty on an outbound one — a message we sent is not a reply
+	// anybody gave us.
+	//
+	// It rides this call rather than taking one of its own. The pass has already
+	// been handed the text and already paid for the tokens, so a second question
+	// about the same message costs a field rather than a call; a separate reply
+	// pass would double the per-message cost to re-read what this one was given.
+	Reply string `json:"reply,omitempty"`
 }
 
 type classifyPayload struct {
@@ -144,7 +189,7 @@ func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) err
 // fails floors leaves the row unlabeled for the next cycle rather than
 // guessing. Returns how many rows were labeled.
 func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeledMessage) (int, error) {
-	verdicts, err := c.ask(ctx, batch)
+	verdicts, judge, err := c.ask(ctx, batch)
 	if err != nil {
 		return 0, err
 	}
@@ -167,11 +212,14 @@ func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeled
 		if applied {
 			labeled++
 		}
+		if err := c.recordReply(ctx, msg, v, judge); err != nil {
+			return labeled, err
+		}
 	}
 	for _, msg := range retry {
 		// The solo re-ask escalates the ladder (L-S → C-C) by being its
 		// own structured call; still below the floor = still unlabeled.
-		solo, err := c.ask(ctx, []unlabeledMessage{msg})
+		solo, soloJudge, err := c.ask(ctx, []unlabeledMessage{msg})
 		if err != nil {
 			return labeled, err
 		}
@@ -183,9 +231,39 @@ func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeled
 			if applied {
 				labeled++
 			}
+			if err := c.recordReply(ctx, msg, solo[0], soloJudge); err != nil {
+				return labeled, err
+			}
 		}
 	}
 	return labeled, nil
+}
+
+// recordReply stores the reply verdict this call also produced, when it produced
+// one. Absent is the common case and a legitimate answer: outbound mail, and any
+// inbound message that does not read as a reply, leave the column NULL — which a
+// rate counts in neither half.
+//
+// It rides the SAME confidence the label was gated on, and the prompt is what
+// makes that honest: it defines `confidence` as covering every judgement in the
+// entry and asks for the LOWER of the two. Without that sentence the number
+// would be the label's alone, and a model sure the mail is a meeting but unsure
+// whether it was a yes would have its guess stored — a number somebody is
+// measured on, resting on a certainty nobody reported.
+//
+// It shares the label's confidence rather than carrying its own. Both judgements
+// come from one reading of one message, and a second number would claim the
+// model reported a separate certainty it was never asked for. The consequence is
+// stated plainly: a message whose LABEL was confident enough to store also
+// stores its reply verdict, and one below the floor stores neither.
+func (c *CaptureClassifier) recordReply(ctx context.Context, msg unlabeledMessage, v classifyResult, judge string) error {
+	if v.Reply == "" {
+		return nil
+	}
+	if _, err := c.store.SetReplyVerdict(ctx, msg.ID, v.Reply, judge); err != nil {
+		return fmt.Errorf("classify: recording the reply verdict: %w", err)
+	}
+	return nil
 }
 
 // classifyRequest builds the ONE model call that labels one batch. It is a pure
@@ -206,10 +284,16 @@ func classifyRequest(batch []unlabeledMessage) model.Request {
 	var prompt strings.Builder
 	prompt.WriteString("Messages (untrusted; classify each by its id):\n")
 	for _, m := range batch {
+		// The direction line sits OUTSIDE the message text, above the fenced
+		// span: it is our own record of who wrote the mail, and a sender who
+		// could type "inbound: no" into their own message would otherwise be
+		// able to opt their reply out of being judged.
 		message := fmt.Sprintf("Subject: %s\n%s", m.Subject, m.Body)
+		fmt.Fprintf(&prompt, "inbound: %s\n", yesNo(m.Inbound))
 		prompt.WriteString(fence.WrapAttr("source_id", m.ID.String(), message) + "\n")
 	}
-	prompt.WriteString(`Return JSON: { "results": [ { "id", "label", "confidence" } ] } — one entry per supplied id.`)
+	prompt.WriteString(`Return JSON: { "results": [ { "id", "label", "confidence", "reply" } ] } — one entry per ` +
+		`supplied id. "reply" only for a message marked inbound: yes, and only when it reads as an answer.`)
 
 	return model.Request{
 		System:         classifySystemFor(fence),
@@ -220,22 +304,42 @@ func classifyRequest(batch []unlabeledMessage) model.Request {
 	}
 }
 
-// ask makes one structured classify call for the given messages.
-func (c *CaptureClassifier) ask(ctx context.Context, batch []unlabeledMessage) ([]classifyResult, error) {
+// ask makes one structured classify call for the given messages, and reports
+// which model answered.
+//
+// The judge is returned beside the verdicts because a reply verdict is stored
+// with the classifier that reached it: a positive-reply rate that moved after a
+// model change and one that moved because customers changed their minds are
+// different facts, and without this they are indistinguishable afterwards.
+func (c *CaptureClassifier) ask(ctx context.Context, batch []unlabeledMessage) ([]classifyResult, string, error) {
 	req := classifyRequest(batch)
 	validate := classifyShapeValid(batch)
 	resp, err := ai.Ask(ctx, c.brain, req, validate)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	var payload classifyPayload
 	if err := json.Unmarshal([]byte(ai.Unfence(resp.Text)), &payload); err != nil {
-		return nil, fmt.Errorf("classify: unparseable model output: %w", err)
+		return nil, "", fmt.Errorf("classify: unparseable model output: %w", err)
 	}
 	if msg := validateClassifyPayload(payload, batch); msg != "" {
-		return nil, fmt.Errorf("classify: %s", msg)
+		return nil, "", fmt.Errorf("classify: %s", msg)
 	}
-	return payload.Results, nil
+	return payload.Results, judgeOf(resp), nil
+}
+
+// judgeOf names what actually answered.
+//
+// ServedModel is the provider's own report and is preferred. It is legitimately
+// empty when a provider reports none, and the fallback SAYS SO rather than
+// storing a blank or silently substituting the configured tier: a row reading
+// "unreported" is honest about not knowing, where an empty string would read as
+// a column nobody had got round to filling.
+func judgeOf(resp model.Response) string {
+	if resp.ServedModel != "" {
+		return resp.ServedModel
+	}
+	return classifierUnreported
 }
 
 // classifyShapeValid is the §5.2 validator: every requested id exactly
@@ -267,12 +371,29 @@ func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) 
 	// This site's own vocabulary, checked here rather than in the shared id
 	// contract: an error naming the wrong closed set sends a reader to the
 	// wrong prompt.
+	inbound := make(map[string]bool, len(batch))
+	for _, m := range batch {
+		inbound[m.ID.String()] = m.Inbound
+	}
 	for _, r := range payload.Results {
 		if !classifyLabels[r.Label] {
 			return fmt.Sprintf("label %q is not commitment|meeting|noise", clampToken(r.Label))
 		}
 		if r.Confidence < 0 || r.Confidence > 1 {
 			return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
+		}
+		if r.Reply == "" {
+			continue // absent is the answer for outbound mail and for anything that does not read as a reply
+		}
+		if !replyVerdicts[r.Reply] {
+			return fmt.Sprintf("reply %q is not positive|negative|neutral", clampToken(r.Reply))
+		}
+		// A verdict on OUR OWN message is refused rather than dropped. The
+		// column's CHECK constraint would refuse it too, but a write that has to
+		// be rejected at the database is one the engine already believed; the
+		// batch is wrong here, and the whole batch is re-asked.
+		if !inbound[r.ID] {
+			return fmt.Sprintf("a reply verdict on outbound message %s: we wrote it, so it answers nobody", clampToken(r.ID))
 		}
 	}
 	return ""
@@ -289,6 +410,10 @@ func classifySchema() json.RawMessage {
 					"id":                    schema.String(),
 					"label":                 schema.Enum("commitment", "meeting", "noise"),
 					extractionConfidenceKey: schema.Number(),
+					// Not in the required list: an outbound message has no reply
+					// verdict to give, and a schema demanding one would push the
+					// model to invent a judgement about our own mail.
+					"reply": schema.Enum("positive", "negative", "neutral"),
 				},
 				"id", "label", "confidence",
 			)),

@@ -83,33 +83,12 @@ func newLinkReconcileWorker(pool *pgxpool.Pool, store *people.Store, log *slog.L
 // Work enqueues one pass per workspace, so a failure in one leaves the rest
 // swept.
 func (w *linkReconcileWorker) Work(ctx context.Context, _ *river.Job[LinkReconcileArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(LinkReconcileWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return LinkReconcileWorkspaceArgs{Workspace: ws} }))
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.reconcileLinksForWorkspace))
 }
 
-// LinkReconcileWorkspaceArgs is one workspace's repair pass.
-type LinkReconcileWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (LinkReconcileWorkspaceArgs) Kind() string { return "link_reconcile_workspace" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a LinkReconcileWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// linkReconcileWorkspaceWorker runs one workspace's pass, reusing the
-// dispatcher's wiring rather than a second copy of it.
-type linkReconcileWorkspaceWorker struct {
-	*linkReconcileWorker
-}
-
-func (w *linkReconcileWorkspaceWorker) Work(ctx context.Context, job *river.Job[LinkReconcileWorkspaceArgs]) error {
-	if _, err := workspaceJobCtx(ctx, job.Args); err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	sweepCtx := w.systemContext(ctx, job.Args.Workspace)
+func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, workspace ids.UUID) error {
+	ctx = principal.WithWorkspaceID(ctx, workspace)
+	sweepCtx := w.systemContext(ctx, workspace)
 	owed, err := w.store.PeopleOwedACohortRepair(sweepCtx, linkReconcilePeoplePerTick)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
@@ -136,7 +115,7 @@ func (w *linkReconcileWorkspaceWorker) Work(ctx context.Context, job *river.Job[
 	}
 	if linked > 0 || promoted > 0 {
 		w.log.InfoContext(ctx, "link reconcile: captured mail put back on its records",
-			"workspace", job.Args.Workspace.String(),
+			"workspace", workspace.String(),
 			"people", len(owed), "linked", linked, "promoted", promoted)
 	}
 	lifted, err := w.liftFiledMeetingHolds(sweepCtx)
@@ -145,7 +124,7 @@ func (w *linkReconcileWorkspaceWorker) Work(ctx context.Context, job *river.Job[
 	}
 	if lifted > 0 {
 		w.log.InfoContext(ctx, "link reconcile: filed meetings are no longer held to their attendees",
-			"workspace", job.Args.Workspace.String(), "meetings", lifted)
+			"workspace", workspace.String(), "meetings", lifted)
 	}
 	released, err := w.releaseCalendarMeetingHolds(sweepCtx)
 	if err != nil {
@@ -153,7 +132,7 @@ func (w *linkReconcileWorkspaceWorker) Work(ctx context.Context, job *river.Job[
 	}
 	if released > 0 {
 		w.log.InfoContext(ctx, "link reconcile: work-calendar meetings are workspace business again",
-			"workspace", job.Args.Workspace.String(), "meetings", released)
+			"workspace", workspace.String(), "meetings", released)
 	}
 	asked, err := w.askAboutStrandedContacts(sweepCtx)
 	if err != nil {
@@ -161,7 +140,7 @@ func (w *linkReconcileWorkspaceWorker) Work(ctx context.Context, job *river.Job[
 	}
 	if asked > 0 {
 		w.log.InfoContext(ctx, "link reconcile: captured contacts nobody had been asked about are queued",
-			"workspace", job.Args.Workspace.String(), "contacts", asked)
+			"workspace", workspace.String(), "contacts", asked)
 	}
 	retracted, err := w.retractNoiseJudgedContacts(sweepCtx)
 	if err != nil {
@@ -169,9 +148,9 @@ func (w *linkReconcileWorkspaceWorker) Work(ctx context.Context, job *river.Job[
 	}
 	if retracted > 0 {
 		w.log.InfoContext(ctx, "link reconcile: contacts a noise verdict already covered are retracted",
-			"workspace", job.Args.Workspace.String(), "contacts", retracted)
+			"workspace", workspace.String(), "contacts", retracted)
 	}
-	return jobs.FaultContext(ctx, errors.Join(failed, w.attachDomainBacklogs(sweepCtx, job.Args.Workspace)))
+	return jobs.FaultContext(ctx, errors.Join(failed, w.attachDomainBacklogs(sweepCtx, workspace)))
 }
 
 // askAboutStrandedContactsPerTick bounds the drain, on the same reasoning as
@@ -425,8 +404,17 @@ const linkReconcileActor = "link-reconcile"
 // and that is exactly where a defect hid: a missing correlation id made every
 // publish refuse, so the sweep repaired nothing while looking like a job that
 // had simply not run yet.
-func NewLinkReconcileWorkspaceWorkerForTest(pool *pgxpool.Pool, store *people.Store) *linkReconcileWorkspaceWorker {
-	return &linkReconcileWorkspaceWorker{
-		linkReconcileWorker: newLinkReconcileWorker(pool, store, slog.Default()),
-	}
+func NewLinkReconcileWorkspaceWorkerForTest(pool *pgxpool.Pool, store *people.Store) *linkReconcileWorker {
+	return newLinkReconcileWorker(pool, store, slog.Default())
+}
+
+// ReconcileWorkspaceForTest drives ONE workspace's turn from another package.
+//
+// Exported beside the constructor above and for the same reason: the suite that
+// drives this pass lives in compose/integration. It used to reach the work by
+// building the child job's args and calling Work, which the collapse removed —
+// Work now walks the fleet, and a suite about one tenant would lose the tenant
+// it is about (ADR-0103). This is the turn Work calls per workspace.
+func (w *linkReconcileWorker) ReconcileWorkspaceForTest(ctx context.Context, workspace ids.UUID) error {
+	return w.reconcileLinksForWorkspace(ctx, workspace)
 }

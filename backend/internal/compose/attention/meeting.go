@@ -40,15 +40,10 @@ import (
 // names the way in; a queue that tried to summarise it here would be a second
 // answer to "prepare me for this".
 //
-// It offers no OUTCOME either, and that is the same fact rather than a second
-// gap. Recording what a meeting came to is a write on the activity —
-// `meeting_status` on PATCH /activities/{id} takes booked, held, no_show and
-// canceled, and the log-activity screen already sends `held` — so the write
-// exists and it is the row that has nowhere to put it: the card's subject is a
-// timeline entry with no page, which is why it carries no `open`. Giving the
-// outcome a verb here means either a control that answers inline, the way the
-// approval card does, or a destination for an activity that has none. Both are
-// larger than wiring, and neither is decided.
+// It offers no OUTCOME, and that is a fact about THIS lane rather than about
+// the product: every row here is a meeting still ahead, and a meeting that has
+// not happened has no result to record. The rows that do are on the lane
+// beside this one — see meetingAwaitingOutcomeItem below.
 func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 	subject := meeting.Subject
 	starts := meeting.StartsAt
@@ -140,6 +135,57 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		// The activity carries no owner this lane reads, so nobody is named. A
 		// meeting's real owner is its organiser, which arrives with the attendee
 		// read that does not exist yet.
+		ownerRef: unassigned(),
+	}
+}
+
+// meetingAwaitingOutcomeItem draws one meeting that happened and owes an answer.
+//
+// The counterpart of meetingItem, and deliberately thinner. That row is about
+// preparing, so it carries a person to read the brief on and a prep tri-state;
+// this one is about closing off, which needs the meeting and nothing else.
+//
+// `OccurredAt` and no `DueAt`. The lane above races a start time, so its rows
+// carry a deadline; a meeting that already began cannot be late, and stamping
+// one would put an overdue mark on a row whose whole point is that the meeting
+// is over.
+func meetingAwaitingOutcomeItem(meeting MeetingAwaitingOutcome) crmcontracts.AttentionItem {
+	subject := meeting.Subject
+	started := meeting.StartedAt
+	return crmcontracts.AttentionItem{
+		Id:         meeting.ID.String(),
+		Source:     crmcontracts.AttentionItemSource("meeting_outcome"),
+		Title:      &subject,
+		OccurredAt: &started,
+		Subject:    subjectOf("activity", meeting.ID),
+		Actions:    []crmcontracts.AttentionItemActions{},
+	}
+}
+
+// classifyUnansweredMeeting places a meeting that happened and owes an answer.
+//
+// levelAgreed, the same rung the lane beside it starts on and never above it: a
+// meeting nobody has closed off is real admin, and putting it over a customer
+// waiting for a reply would rank tidying above answering.
+//
+// It carries no deadline. stampDeadline is what marks a row overdue, and this
+// row has no due moment to give it — the meeting already happened, so being
+// late is not a state it can be in.
+func classifyUnansweredMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
+	// data_drifts, from the queue's own closed vocabulary of consequences: what
+	// an unanswered meeting costs is that the record stops matching what
+	// happened, so every count over held meetings reads short. It is not a
+	// second spelling of the reason beside it — the reason says what is true,
+	// the consequence says what it costs.
+	row := base(item, levelAgreed, "meetings", "data_drifts")
+	row.Because = []crmcontracts.WorklistReason{reason("outcome_unrecorded", nil)}
+	return ranked{
+		item:       row,
+		occurredAt: occurredOf(item, asOf),
+		// Nobody, for the reason classifyMeeting gives at length: the lane reads
+		// meeting activities under the caller's ROW SCOPE with no owner or
+		// attendee predicate, so a team-scoped reader receives their team's and
+		// naming the reader would make each one look like their own.
 		ownerRef: unassigned(),
 	}
 }

@@ -247,8 +247,16 @@ type Spec struct {
 	// an import: it is what lets a gate assert that the kind↔type pairing still
 	// holds without re-parsing the contract, which is the pairing a renamed
 	// struct silently breaks.
-	GoType       string
-	Role         Role
+	GoType string
+	Role   Role
+	// Fleet reports that a row of this kind carries NO tenant.
+	//
+	// It is not derivable from Role any more. `role: dispatcher` used to imply
+	// it, and ADR-0103 split the two: a collapsed pass walks the workspaces
+	// itself, so it is a worker that dispatches nothing and still owns no
+	// workspace. Every dispatcher is Fleet; not every Fleet kind is a
+	// dispatcher.
+	Fleet        bool
 	Queue        string
 	Timeout      TimeoutPolicy
 	MaxAttempts  int

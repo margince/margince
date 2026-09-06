@@ -79,7 +79,25 @@ Follow this checklist — several obligations are enforced by fitness tests, so 
    const set, or `enumsync_test.go` fails.
 4. **Reach erasure + SAR** if the table holds PII (`piicoverage_test.go`), and record the table in the
    owning module's `doc.go` "Tables owned" list (`tableownership_test.go`).
-5. **Apply and verify** — `make migrate`, then `make check` / `make test-integration`.
+5. **`SET LOCAL lock_timeout` bounds the WAIT, never the HOLD.** It caps how long a statement
+   queues for a lock before giving up. Once the lock is granted it is held until the transaction
+   ends — and the runner wraps each migration in exactly one transaction, so an `ALTER TABLE ...
+   ADD COLUMN` followed by a full-table `UPDATE` and a `CHECK` keeps `ACCESS EXCLUSIVE` for the
+   whole backfill. Every reader of that table blocks for the duration.
+
+   `backend/migrations/core/1788572167_a_suppression_records_who_decided_it.up.sql` has this shape,
+   and its own comment claims the timeout makes it safe on a live table. It does not. The migration
+   is harmless in practice — `communication_suppression` was empty when it ran, and a fresh install
+   backfills nothing — but do not copy the pattern onto a table that holds rows and expect the
+   timeout to protect readers.
+
+   On a table with real rows, the backfill cannot be batched here: one transaction per migration is
+   the runner's contract. Land the column with a `DEFAULT` and no rewrite, then backfill from
+   application code or a job, then add the `CHECK` as `NOT VALID` and `VALIDATE` it separately —
+   `1787831200_a_company_event_is_a_signal.up.sql` is the worked example of that last step, and
+   explains why: `NOT VALID` takes the lock without scanning, and `VALIDATE` drops to
+   `SHARE UPDATE EXCLUSIVE` for the pass.
+6. **Apply and verify** — `make migrate`, then `make check` / `make test-integration`.
 
 Fork-local schema goes in `backend/migrations/custom/`, which has its own tracking table and applies
 after core (`YYYYMMDDHHMMSS`-named, `x_`-prefixed columns) and survives upstream merges untouched.

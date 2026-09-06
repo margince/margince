@@ -95,6 +95,12 @@ func admitSuppress(ctx context.Context, in SuppressInput) (subject, commsauthz.A
 				"processing restriction and a bounce are not recorded by hand here",
 		}
 	}
+	// The BOUND only. The contract makes this reason optional (`required: [kind]`),
+	// and a rep relaying a phone call may have nothing to add — what it must not
+	// be is a megabyte every later reader of this person's history is served.
+	if err := boundReason(in.Reason); err != nil {
+		return subject{}, "", err
+	}
 	// "person" as a literal rather than sub.entityType, which is the same value
 	// on every path this door has: SuppressInput reaches it from a person route
 	// only. A computed object name is a door no static check can resolve, and
@@ -111,6 +117,10 @@ func admitSuppress(ctx context.Context, in SuppressInput) (subject, commsauthz.A
 // Never from the request. A body naming its own level would let any caller
 // write a `subject`-level row, which nothing in the installation can lift —
 // a denial of service against one contact, spelled as a permission.
+//
+// auth.RequireAdmin is the literal admin role, so an `ops` seat lands at
+// LevelUser. That is deliberate and matches the RBAC defaults, where ops and
+// admin are separated by exactly this gate — see LevelAdmin's own comment.
 func authorityOf(ctx context.Context) commsauthz.AuthorityLevel {
 	if auth.RequireAdmin(ctx) == nil {
 		return commsauthz.LevelAdmin

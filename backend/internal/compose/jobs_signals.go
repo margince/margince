@@ -41,34 +41,8 @@ func (SignalScanArgs) Kind() string { return "signal_scan" }
 // tenant work of its own (jobs.FleetWide).
 func (SignalScanArgs) FleetWide() {}
 
-// SignalScanWorkspaceArgs is one workspace's signal-producer pass.
-type SignalScanWorkspaceArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-}
-
-// Kind is the stable job identifier River persists in river_job.
-func (SignalScanWorkspaceArgs) Kind() string { return "signal_scan_workspace" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a SignalScanWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
 // signalScanWorker is the dispatcher.
 type signalScanWorker struct {
-	pool *pgxpool.Pool
-}
-
-func (w *signalScanWorker) Work(ctx context.Context, _ *river.Job[SignalScanArgs]) error {
-	return jobs.FaultContext(ctx, dispatchPerWorkspace(ctx, w.pool,
-		workspaceSweepOpts(SignalScanWorkspaceArgs{}.Kind()),
-		func(ws ids.UUID) river.JobArgs { return SignalScanWorkspaceArgs{Workspace: ws} }))
-}
-
-// signalScanWorkspaceWorker runs both producers for one workspace.
-//
-// The extractor is nil when no model lane is configured. That is not a
-// degraded state to log about on every tick — it is an installation that
-// bought no model, and the deterministic half is the whole product for it.
-type signalScanWorkspaceWorker struct {
 	pool      *pgxpool.Pool
 	extractor *SignalExtractor
 	proposer  *SignalProposer
@@ -76,6 +50,12 @@ type signalScanWorkspaceWorker struct {
 	log       *slog.Logger
 }
 
+func (w *signalScanWorker) Work(ctx context.Context, _ *river.Job[SignalScanArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.scanWorkspaceSignals))
+}
+
+// signalScanWorkspaceWorker runs both producers for one workspace.
+//
 // signalScanTimeout overrides River's one-minute default.
 //
 // One pass reads up to extractThreadCap conversations, each of them a model
@@ -91,22 +71,19 @@ type signalScanWorkspaceWorker struct {
 const signalScanTimeout = 5 * time.Minute
 
 // Timeout gives one pass room to work through a real backlog.
-func (w *signalScanWorkspaceWorker) Timeout(*river.Job[SignalScanWorkspaceArgs]) time.Duration {
+func (w *signalScanWorker) Timeout(*river.Job[SignalScanArgs]) time.Duration {
 	return signalScanTimeout
 }
 
-func (w *signalScanWorkspaceWorker) Work(ctx context.Context, job *river.Job[SignalScanWorkspaceArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
+func (w *signalScanWorker) scanWorkspaceSignals(ctx context.Context, workspace ids.UUID) error {
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	// The producer is the acting principal: every signal it writes carries
 	// agent: provenance, and a reader can tell it from a human's own note.
 	wsCtx = principal.WithActor(wsCtx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "agent:signal-scan",
 	})
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
-	wsID := ids.From[ids.WorkspaceKind](job.Args.Workspace)
+	wsID := ids.From[ids.WorkspaceKind](workspace)
 
 	now := w.now()
 	var ghosted, quiet GhostedPass
@@ -195,8 +172,7 @@ func newSignalExtractorIfConfigured(pool *pgxpool.Pool, brain completer, log *sl
 func addSignalJobs(
 	reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger,
 ) []*river.PeriodicJob {
-	addDeclaredWorker[SignalScanArgs](reg, &signalScanWorker{pool: pool})
-	addDeclaredWorker[SignalScanWorkspaceArgs](reg, &signalScanWorkspaceWorker{
+	addDeclaredWorker[SignalScanArgs](reg, &signalScanWorker{
 		pool:      pool,
 		extractor: newSignalExtractorIfConfigured(pool, cfg.SignalExtractBrain, log),
 		// The SAME approvals service the HTTP surface decides on, so a released

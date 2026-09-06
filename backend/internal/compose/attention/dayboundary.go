@@ -41,6 +41,15 @@ func WithZone(z Zone) Option {
 	return func(s *Service) { s.zone = z }
 }
 
+// WithMeetingsAwaitingOutcome binds the lane of meetings that already happened.
+//
+// An Option rather than a twentieth constructor argument, for the reason above:
+// unbound means the feed does not carry the lane, which the response reports as
+// absent rather than as a day with nothing left to close off.
+func WithMeetingsAwaitingOutcome(m MeetingsAwaitingOutcome) Option {
+	return func(s *Service) { s.meetingsAwaitingOutcome = m }
+}
+
 // endOfDay is the boundary every due-dated lane stops at, so a promise, a task
 // and a meeting falling on the same afternoon are judged against one instant.
 //
@@ -58,21 +67,52 @@ func WithZone(z Zone) Option {
 // each resolution is a transaction, so asking per lane also pays three times for
 // one fact.
 func (s *Service) endOfDay(ctx context.Context, asOf time.Time) (time.Time, error) {
-	loc := time.UTC
-	if s.zone != nil {
-		resolved, err := s.zone(ctx)
-		if err != nil {
-			return time.Time{}, err
-		}
-		if resolved == nil {
-			// A seam that answers "no zone, no error" would otherwise reach
-			// time.In with a nil location, which panics — a nil answer is a
-			// broken binding, and this says so where the feed can report it.
-			return time.Time{}, errors.New("attention: the installation timezone resolved to no location")
-		}
-		loc = resolved
+	loc, err := s.location(ctx)
+	if err != nil {
+		return time.Time{}, err
 	}
 	return startOfNextDay(asOf.In(loc), loc), nil
+}
+
+// startOfDay is the other end of the same day, for a lane that looks BACK.
+//
+// The forward lanes ask what is still coming and stop at endOfDay; a lane about
+// what already happened needs where today began, and "today" has to mean the
+// same thing at both ends or a meeting at 08:00 falls between them.
+//
+// It is startOfNextDay asked about YESTERDAY, rather than a second walk: that
+// function's whole subtlety is the zones where local midnight does not exist,
+// and a midnight built here directly would be wrong on exactly the mornings
+// that comment describes.
+func (s *Service) startOfDay(ctx context.Context, asOf time.Time) (time.Time, error) {
+	loc, err := s.location(ctx)
+	if err != nil {
+		return time.Time{}, err
+	}
+	local := asOf.In(loc)
+	return startOfNextDay(local.AddDate(0, 0, -1), loc), nil
+}
+
+// location resolves the installation's zone, or UTC when none is bound.
+//
+// One spelling for both boundaries: they must agree about where the reader is,
+// and an operator moving the installation between two resolutions would
+// otherwise hand one end of a day to one zone and the other end to another.
+func (s *Service) location(ctx context.Context) (*time.Location, error) {
+	if s.zone == nil {
+		return time.UTC, nil
+	}
+	resolved, err := s.zone(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if resolved == nil {
+		// A seam that answers "no zone, no error" would otherwise reach
+		// time.In with a nil location, which panics — a nil answer is a
+		// broken binding, and this says so where the feed can report it.
+		return nil, errors.New("attention: the installation timezone resolved to no location")
+	}
+	return resolved, nil
 }
 
 // startOfNextDay is the first instant of the day after local's, in loc.

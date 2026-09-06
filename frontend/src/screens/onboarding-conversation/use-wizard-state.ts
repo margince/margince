@@ -1,9 +1,14 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { throwProblem } from "../common";
 import type { CompanyForm } from "../onboarding";
-import { wizardStateBody, writeWizardState } from "../onboarding";
+import {
+  ONBOARDING_PROGRESS_KEY,
+  wizardStateBody,
+  writeWizardState,
+} from "../onboarding";
 import { isCompanyField } from "./company-proposal";
 
 // Minimal wizard-state persistence for the conversational shell: the server
@@ -101,15 +106,16 @@ function mergedValues(
 }
 
 // One write on top of the saved base: current values (blanks filled from
-// the saved draft), explicit input fields winning over saved ones.
+// the saved draft), explicit input fields winning over saved ones. The
+// server's answer is returned whole so the caller can publish it.
 async function writeMerged(
   base: SavedState,
   input: WizardPersistInput,
-): Promise<SavedState> {
+): Promise<OnboardingState> {
   const values = mergedValues(input.values, base.draft);
   const website =
     values.website.trim() !== "" ? values.website : (base.websiteUrl ?? "");
-  const data = await writeWizardState(
+  return writeWizardState(
     wizardStateBody({
       expectedVersion: base.version,
       step: input.step,
@@ -122,30 +128,37 @@ async function writeMerged(
       skippedConnect: input.connectSkipped ?? base.connectSkipped,
     }),
   );
-  return fromServerState(data);
 }
 
 export function useWizardStatePersist() {
   const saved = useRef<SavedState | null>(null);
   const queue = useRef<Promise<boolean>>(Promise.resolve(true));
+  const client = useQueryClient();
 
-  const persist = useCallback((input: WizardPersistInput): Promise<boolean> => {
-    queue.current = queue.current.then(async () => {
-      try {
-        saved.current ??= await loadSavedState();
-        saved.current = await writeMerged(saved.current, input);
-        return true;
-      } catch {
-        // Best-effort by design: the act must never stall on state
-        // persistence. The caller learns via the false result (the proposal
-        // join is gated on it and falls back to the site-read snapshot);
-        // resetting forces a fresh version sync on the next attempt.
-        saved.current = null;
-        return false;
-      }
-    });
-    return queue.current;
-  }, []);
+  const persist = useCallback(
+    (input: WizardPersistInput): Promise<boolean> => {
+      queue.current = queue.current.then(async () => {
+        try {
+          saved.current ??= await loadSavedState();
+          const written = await writeMerged(saved.current, input);
+          saved.current = fromServerState(written);
+          // The app shell gates on this same entry: a completion it never
+          // learned of would send the finished journey straight back here.
+          client.setQueryData(ONBOARDING_PROGRESS_KEY, written);
+          return true;
+        } catch {
+          // Best-effort by design: the act must never stall on state
+          // persistence. The caller learns via the false result (the proposal
+          // join is gated on it and falls back to the site-read snapshot);
+          // resetting forces a fresh version sync on the next attempt.
+          saved.current = null;
+          return false;
+        }
+      });
+      return queue.current;
+    },
+    [client],
+  );
 
   return { persist };
 }

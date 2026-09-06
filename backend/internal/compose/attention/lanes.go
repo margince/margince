@@ -361,6 +361,34 @@ type Meetings interface {
 	Today(ctx context.Context, from, until time.Time, limit int) ([]Meeting, error)
 }
 
+// MeetingsAwaitingOutcome is today's meetings that have started and whose
+// result nobody has recorded.
+//
+// A separate seam from Meetings rather than a second method on it, because it
+// asks the opposite question of the same table and every stub of that interface
+// would otherwise have to answer both. Optional the same way: nil means this
+// feed does not read them, which is not a day with none.
+type MeetingsAwaitingOutcome interface {
+	Since(ctx context.Context, from, until time.Time, limit int) ([]MeetingAwaitingOutcome, error)
+}
+
+// MeetingAwaitingOutcome is one appointment that happened and owes an answer.
+//
+// It carries less than Meeting because the two rows ask for different things: a
+// meeting still ahead offers preparation, which needs a person's page and a
+// readable body to judge. This one offers recording what happened, which needs
+// the activity and nothing else — so there is no PersonID or prep tri-state
+// here, and adding them would be fields no caller reads.
+type MeetingAwaitingOutcome struct {
+	ID      ids.UUID
+	Subject string
+	// StartedAt is when it began, which is in the past for every row here. It
+	// is not a due moment: a meeting that happened cannot be late, and stamping
+	// it as due would put an overdue mark on a row whose whole point is that
+	// the meeting is over.
+	StartedAt time.Time
+}
+
 // Meeting is one appointment still ahead of the reader.
 type Meeting struct {
 	ID       ids.UUID

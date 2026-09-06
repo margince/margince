@@ -219,6 +219,7 @@ type kindDef struct {
 	Queue        string                 `yaml:"queue"`
 	Timeout      *timeoutDef            `yaml:"timeout"`
 	MaxAttempts  *int                   `yaml:"max_attempts"`
+	Fleet        bool                   `yaml:"fleet"`
 	FansOutTo    string                 `yaml:"fans_out_to"`
 	FanOutUnit   string                 `yaml:"fan_out_unit"`
 	OptsOwner    string                 `yaml:"opts_owner"`
@@ -229,6 +230,18 @@ type kindDef struct {
 	Reason       string                 `yaml:"reason"`
 	DerivesFrom  string                 `yaml:"derives-from"`
 }
+
+// fleetWide reports whether a row of this kind carries no tenant, which is
+// what the untenanted arms — the job-health read's scope and the generated
+// jobs.FleetWide marker — actually ask.
+//
+// Role ALONE stopped answering it. `role: dispatcher` implied both "enumerates
+// and enqueues" and "carries no tenant", and ADR-0103 split the two: a
+// collapsed pass walks the fleet itself, so it is a worker that dispatches
+// nothing and still owns no workspace. `fleet: true` is that second half said
+// on its own, and a dispatcher keeps answering true without declaring it —
+// there is no such thing as a dispatcher whose rows name a tenant.
+func (k kindDef) fleetWide() bool { return k.Role == roleDispatcher || k.Fleet }
 
 // hasWorkspaceArg reports whether this kind's args name a workspace, which is
 // what decides whether the type can bind one. It is asked instead of the role

@@ -100,6 +100,19 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// on its own terms.
 	"internal/compose/weekly:readDealLines": "the weekly review's frozen deal lines: every word served was written when the review was and no live record is joined, and the review row is already scoped to the acting rep by reviewUser",
 
+	// The movement bridge's frozen drivers, the same shape as the deal lines
+	// above and for the same reasons: the label was written when the review was,
+	// the query joins no deal, and the review is already the acting rep's own.
+	//
+	// The scope is applied on the WRITE side instead, which is where it can
+	// still mean something: compose/weeklyforecastseam.go's dealLabels takes
+	// auth.ScopeClauseFor for "deal" when it chooses which deals to freeze, so a
+	// deal the rep could not read never becomes a driver row at all. Re-scoping
+	// on read would narrow a record against a lens the reader did not have when
+	// the week closed, which is a different question from the one the row
+	// answers.
+	"internal/compose/weekly:readDrivers": "the bridge's frozen drivers: labels written when the review was, no live record joined, the review already scoped to the acting rep — and the deals were chosen under the rep's own scope clause by the seam that froze them",
+
 	// The buying-role reading's pre-write committee check. It asks whether a
 	// seat would SECOND an answer somebody has already given, and a seat the
 	// caller cannot see is still an answer — so scoping it would let the

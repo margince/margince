@@ -57,7 +57,7 @@ describe("a failed automation reaches the page that owns it", () => {
     await screen.findByText(/Notify sales on a new lead/);
     // The ADDRESS, not merely that a link exists: a row pointing at the wrong
     // screen renders exactly like one pointing at the right screen.
-    expect(linksIn(container)).toContain("#/settings/admin/ai");
+    expect(linksIn(container)).toContain("#/settings/models");
   });
 
   it("gives the same address to the AI work a rule set off", async () => {
@@ -76,7 +76,7 @@ describe("a failed automation reaches the page that owns it", () => {
     const { container } = renderWorklist();
 
     await screen.findByText(/A drafting run did not finish/);
-    expect(linksIn(container)).toContain("#/settings/admin/ai");
+    expect(linksIn(container)).toContain("#/settings/models");
   });
 
   // The queue can send a reader somewhere; it cannot fix a rule. A button here

@@ -118,9 +118,17 @@ const CORE_SCREENS = [
   // the weakness to know about: it went stale once already, claiming twelve
   // while three pages — capture-activity, knowledge, license — were in neither
   // sweep and nothing failed to say so. A census that can fall short reports
-  // PASS on the smaller tree. The fix is to read the ids from SETTINGS_TABS,
-  // which this file cannot import today without pulling the screen's whole
-  // module graph through Playwright's transform.
+  // PASS on the smaller tree.
+  //
+  // The blocker named here — that reading the ids would pull the screen's whole
+  // module graph through Playwright's transform — is GONE: `settingscatalog.ts`
+  // is pure data and imports like `../src/i18n/de` above it already does. What
+  // still blocks deriving it is the mock's grants: E2E_ADMIN_GRANTS in seed.ts
+  // predates the thirteen settings objects, so a derived sweep would name pages
+  // this principal cannot open, each of them landing on the fallback and
+  // reporting a page the run never read — the same short census in a new shape.
+  // Extend the grants first, then derive; doing it in that order is the whole
+  // point.
   "settings/data-model",
   "settings/integrations",
   "settings/users",
@@ -787,6 +795,12 @@ test("AC-onboarding-1: onboarding is the rail-less conversational shell", async 
   // exists — nobody should meet the whole tool on their first screen. So the AC
   // asserts what it always meant (rail-less, no stepper) against the surface
   // that is actually first, and that the single question is the whole ask.
+  //
+  // That first screen belongs to an installation nobody has described yet.
+  // Under the global seed the journey is finished, and a finished reader on
+  // this route is sent home — so this AC layers the unstarted journey on top
+  // (the most recently registered route answers first).
+  await mockApi(page, { journey: "unstarted" });
   await page.goto("/#/onboarding");
   await expect(page.locator("nav.rail")).toHaveCount(0);
   await expect(page.locator(".stepper")).toHaveCount(0);
@@ -872,7 +886,7 @@ test.describe("B-EP09.23: overlay mode", () => {
     // Integrations lives under the admin segment, which is the address the
     // chip has to mint: the personal Connections entry now holds only a
     // reader's own mailbox and network.
-    await expect(chip).toHaveAttribute("href", "#/settings/admin/integrations");
+    await expect(chip).toHaveAttribute("href", "#/settings/integrations");
   });
 
   test("AC-overlay-2: the card shows connection, sync rows and budget band", async ({

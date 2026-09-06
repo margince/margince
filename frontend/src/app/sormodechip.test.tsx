@@ -65,7 +65,7 @@ it("links to Settings → Integrations and explains the mode in its label", asyn
   // is managed, so the target is part of its contract: it must be the entry
   // that actually holds the overlay cards, which is the installation-wide one
   // rather than the reader's own connections.
-  expect(link.getAttribute("href")).toBe("#/settings/admin/integrations");
+  expect(link.getAttribute("href")).toBe("#/settings/integrations");
   // The chip text itself is too small to carry the explanation — it rides
   // title/aria-label instead. Both must actually name the mode, not just
   // exist, or a screen reader / hover user gets no more than sighted users

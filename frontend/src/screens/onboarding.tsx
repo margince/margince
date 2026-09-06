@@ -28,6 +28,7 @@ type CompanyProfile = components["schemas"]["CompanyProfile"];
 type ColdField = components["schemas"]["ColdStartField"];
 
 type PutOnboardingState = components["schemas"]["PutOnboardingStateRequest"];
+type OnboardingState = components["schemas"]["OnboardingState"];
 type SourceMode = "website" | "manual";
 
 // Legal identity comes first. The remaining groups then explain the offer,
@@ -216,6 +217,38 @@ export function useCompany(enabled: boolean) {
       }
       return data;
     },
+  });
+}
+
+/**
+ * The cache key of the LIVE wizard state: what the app shell's gate reads,
+ * and where the conversation's checkpoint writer lands each server answer —
+ * a completion written under one key and gated under another is how a
+ * finished journey gets sent back to its start. The conversation's own
+ * restore reads the same endpoint under a key of its own, on purpose: a
+ * restore is a snapshot taken at mount, and a checkpoint landing mid-journey
+ * must not re-run it.
+ */
+export const ONBOARDING_PROGRESS_KEY = ["onboarding-progress"] as const;
+
+export async function loadWizardState(): Promise<OnboardingState | null> {
+  const { data, error, response } = await api.GET("/onboarding/state");
+  if (error) {
+    if (response.status === 404) {
+      return null;
+    }
+    throwProblem(error);
+  }
+  return data;
+}
+
+// useOnboardingProgress reads the acting human's live wizard state, or null
+// when nothing was persisted yet (404): the app shell's journey gate.
+export function useOnboardingProgress(enabled: boolean) {
+  return useQuery({
+    queryKey: ONBOARDING_PROGRESS_KEY,
+    enabled,
+    queryFn: loadWizardState,
   });
 }
 

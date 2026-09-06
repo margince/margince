@@ -8,18 +8,19 @@ import {
   meRoute,
   StoryProviders,
 } from "../story-utils";
+import { BasisAct } from "./basis-act";
 import { initialConversationState } from "./conversation-machine";
 import type { ConversationState } from "./conversation-types";
-import { PrefsAct } from "./prefs-act";
 
-// The last word before the app, in the two shapes it takes: an admin sees the
-// installation's reporting basis above what the agent may change on its own;
-// a member sees only the second, because the first is not theirs to change.
+// The basis, asked right after the company is confirmed: base currency and
+// reporting timezone, prefilled from the installation, with the currency shown
+// locked once a deal has frozen it — and beside them, what the agent may
+// change on its own.
 
 const asking: ConversationState = {
   ...initialConversationState,
-  act: "prefs",
-  phase: "pf.ask",
+  act: "basis",
+  phase: "bs.ask",
 };
 
 const settings = {
@@ -52,37 +53,40 @@ const autonomy = {
   ],
 };
 
-function act(admin: boolean, locale?: "de") {
+function act(locked: boolean, locale?: "de") {
   return () => {
     installFetchStub({
-      "GET /me": meRoute(admin ? { installation_settings: ["update"] } : {}),
-      "GET /installation/settings": () => jsonResponse(settings),
+      "GET /me": meRoute({ installation_settings: ["update"] }),
+      "GET /installation/settings": () =>
+        jsonResponse({
+          ...settings,
+          base_currency_locked: locked,
+          ...(locked
+            ? { base_currency_locked_reason: "3 deals have frozen EUR" }
+            : {}),
+        }),
       "GET /autonomy": () => jsonResponse(autonomy),
     });
     return (
       <StoryProviders locale={locale}>
-        <PrefsAct
-          state={{ ...asking, memberPath: !admin }}
-          dispatch={() => {}}
-          persist={async () => true}
-        />
+        <BasisAct state={asking} dispatch={() => {}} />
       </StoryProviders>
     );
   };
 }
 
-const meta: Meta<typeof PrefsAct> = {
-  title: "Onboarding/Conversation/Preferences act",
-  component: PrefsAct,
+const meta: Meta<typeof BasisAct> = {
+  title: "Onboarding/Conversation/Basis act",
+  component: BasisAct,
 };
 export default meta;
-type Story = StoryObj<typeof PrefsAct>;
+type Story = StoryObj<typeof BasisAct>;
 
-/** An admin: the reporting basis, prefilled, above the autonomy switches. */
-export const Admin: Story = { render: act(true) };
+/** Both fields open, prefilled, with the autonomy switches beneath. */
+export const Open: Story = { render: act(false) };
 
-/** A member: only what the agent may change on their own behalf. */
-export const Member: Story = { render: act(false) };
+/** The currency frozen by a deal: the field says it cannot change. */
+export const CurrencyLocked: Story = { render: act(true) };
 
 /** The German act. */
-export const AdminGerman: Story = { render: act(true, "de") };
+export const OpenGerman: Story = { render: act(false, "de") };

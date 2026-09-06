@@ -322,6 +322,20 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		_, err = tx.Exec(ctx, `DELETE FROM person_profile_field WHERE person_id = $1`, id)
 	}
 	if err == nil {
+		// What a classifier concluded this person's replies MEANT, and every
+		// human correction of it. Anonymizing the person row cascades to
+		// nothing here either, so a sweep that skipped it would leave "replied
+		// negatively, corrected by a colleague" standing beside an "Erased
+		// Subject" record — a judgement about somebody the row no longer names.
+		//
+		// The subject's activity TEXT survives an anonymize: the eraser redacts
+		// it under the statutory correspondence floor and the anonymize applies
+		// no floor at all. That is what makes this a delete rather than an
+		// omission — the words stay, so a verdict left beside them goes on being
+		// read as a live conclusion about a person.
+		err = deleteReplyVerdictHistoryFor(ctx, tx, id)
+	}
+	if err == nil {
 		err = purgeSubjectPurchases(ctx, tx, id)
 	}
 	if err == nil {

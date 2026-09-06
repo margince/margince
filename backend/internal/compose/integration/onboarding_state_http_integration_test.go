@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 type onboardingStateDTO struct {
@@ -96,5 +97,58 @@ func TestOnboardingStateResumesAndRejectsStaleTabs(t *testing.T) {
 	}
 	if unchanged.Step != "voice" || unchanged.Version != 2 {
 		t.Fatalf("stale write changed state: %+v", unchanged)
+	}
+}
+
+// Every step the contract names is a step the store and the database accept,
+// in the order a creator walks them. The baseline's step check once lagged the
+// contract by two steps (invite, team), so every checkpoint at either failed
+// at the database and a reload reopened the company act — with the client's
+// best-effort writer swallowing the refusal. The walk is spelled here rather
+// than derived because the contract generator emits no value list, only a
+// membership test; that test runs on every step below, so a step renamed or
+// dropped from the contract fails here, and a step added to the contract is
+// added to this walk when it is added to the flow.
+func TestOnboardingStateAcceptsEveryStepTheContractNames(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	// The company act's two steps, before a company exists.
+	var state onboardingStateDTO
+	status := e.Call(t, http.MethodPut, "/v1/onboarding/state",
+		onboardingStateBody(0, "read"), onboardingHeaders("walk-read"), &state)
+	if status != http.StatusOK {
+		t.Fatalf("create at read = %d, want 200", status)
+	}
+	status = e.Call(t, http.MethodPut, "/v1/onboarding/state",
+		onboardingStateBody(state.Version, "confirm"), onboardingHeaders("walk-confirm"), &state)
+	if status != http.StatusOK {
+		t.Fatalf("advance to confirm = %d, want 200", status)
+	}
+	if status := e.Call(t, http.MethodPut, "/v1/company", wellFormedCompany(), nil, nil); status != http.StatusOK {
+		t.Fatalf("saving minimum company = %d, want 200", status)
+	}
+
+	// Everything after the confirmation, ending on the terminal checkpoint.
+	walk := []crmcontracts.PutOnboardingStateRequestStep{
+		crmcontracts.PutOnboardingStateRequestStepBasis,
+		crmcontracts.PutOnboardingStateRequestStepInvite,
+		crmcontracts.PutOnboardingStateRequestStepTeam,
+		crmcontracts.PutOnboardingStateRequestStepVoice,
+		crmcontracts.PutOnboardingStateRequestStepResults,
+		crmcontracts.PutOnboardingStateRequestStepConnect,
+		crmcontracts.PutOnboardingStateRequestStepComplete,
+	}
+	for _, step := range walk {
+		if !step.Valid() {
+			t.Fatalf("step %q is not one the contract names", step)
+		}
+		var next onboardingStateDTO
+		status := e.Call(t, http.MethodPut, "/v1/onboarding/state",
+			onboardingStateBody(state.Version, string(step)), onboardingHeaders("walk-"+string(step)), &next)
+		if status != http.StatusOK || next.Step != string(step) {
+			t.Fatalf("checkpoint at %q = %d %+v, want 200 at that step", step, status, next)
+		}
+		state = next
 	}
 }

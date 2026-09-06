@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (84)
+## Parity (85)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -49,6 +49,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `enumsync_test.go` | H3 | The enum-vocabulary sync as a fitness function: where domain logic branches on a typed Go enum, its constant set must equal the schema's CHECK (col IN (...)) set for the column it mirrors. |
 | `filtervocabularyparity_test.go` | H3 | Two surfaces answer a filtered question: the list/segment compiler in `platform/database/storekit`, and the query compiler in `modules/search`. |
 | `forecastperiodparity_test.go` | H3 | Every period the contract offers must be a window the server can resolve. |
+| `forwardmeasureparity_test.go` | H3 | Every forward measure must be spelled the same on all three sides. |
 | `frontendapprovalkinds_test.go` | H1 | Every kind a proposal can be staged under must have words a reader recognises, or the queue prints the wire enum at them. |
 | `frontendattentionsources_test.go` | H1 | Every source the Worklist can carry must have a body the decision lane knows how to draw, or the lane asks the wrong endpoint about it. |
 | `frontendaudiencereasons_test.go` | H3 | A held message says WHY, or the reader cannot argue with the verdict. |
@@ -243,7 +244,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthorityreach_test.go` | H2 | Every write of a shareable record reaches a write-authority probe. |
 | `writeshape_test.go` | H2 | The write-shape obligation as a fitness function: every mutation that writes an audit row commits a paired outbox event on the same static call path (data-model §11, events.md §4.2 — spelled once in storekit), across modules AND the composition layer. |
 
-## Shape (23)
+## Shape (24)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -262,6 +263,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `manifestdigest_test.go` | H2 | Manifest-hash encoding fitness function (ADR-0069 §7): every hash a generated unit manifest publishes says which algorithm produced it. |
 | `positionalrowscan_test.go` | H2 | A positional row mapping may only target a struct its own package declares. |
 | `promptversionderived_test.go` | H2 | A cached answer is keyed by a fingerprint, and the fingerprint has to move when the prompt that produced the answer moves. |
+| `replyverdictvocabulary_test.go` | H1 | The reply verdict is spelled in three places, and they have to agree. |
 | `resetwireshape_test.go` | H2 | The reset-data 200 body as a fitness function. |
 | `rowgatespelling_test.go` | H2 | A module's READ spelling of a row gate is not a licence to write through it. |
 | `subjectlockorder_test.go` | H2 | The subject lock is the FIRST row a transaction takes. |

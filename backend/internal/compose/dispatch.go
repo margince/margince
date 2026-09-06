@@ -210,16 +210,6 @@ func fanOutChildSpec(childKind string) jobs.Spec {
 // without a database or a live client.
 type insertManyFunc func(ctx context.Context, params []river.InsertManyParams) error
 
-// dispatchPerWorkspace enqueues one job per live workspace, built by argsFor,
-// as ONE atomic insert.
-func dispatchPerWorkspace(ctx context.Context, pool *pgxpool.Pool, opts *river.InsertOpts, argsFor func(ids.UUID) river.JobArgs) error {
-	workspaces, err := enumerateWorkspaces(ctx, pool)
-	if err != nil {
-		return err
-	}
-	return dispatchWith(ctx, workspaces, clientInsertMany(ctx), opts, argsFor)
-}
-
 // runPerWorkspace runs a scheduled pass for every live workspace, IN THIS
 // PROCESS, and is what a collapsed pass uses where it used to fan out.
 //
@@ -291,8 +281,8 @@ func clientInsertMany(ctx context.Context) insertManyFunc {
 	}
 }
 
-// dispatchWith is dispatchPerWorkspace over an already-read fleet and an
-// injected inserter.
+// dispatchWith is a fan-out over an already-read fleet and an injected
+// inserter.
 //
 // Atomicity is not a nicety here, it is the correctness argument. A
 // per-workspace loop of single inserts that fails partway leaves some

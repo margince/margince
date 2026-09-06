@@ -5,7 +5,6 @@ import type { Dispatch } from "react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
 import { useCanWrite } from "../../app/capability";
-import { navigate } from "../../app/router";
 import { useInstallationSettings } from "../../app/uploadlimit";
 import { Field, TextInput } from "../../design-system/atoms";
 import { ordinalNumber } from "../../format/format";
@@ -16,37 +15,37 @@ import {
   currencyNote,
   useUpdateInstallationSettings,
 } from "../installation-settings";
-import { EMPTY_DRAFT } from "../onboarding";
-import { BuildScene } from "../onboarding-build-scene";
 import type {
   ConversationEvent,
   ConversationState,
 } from "./conversation-machine";
 import { presenceFor } from "./presence";
 import { railStops } from "./rail";
-import type { WizardPersistInput } from "./use-wizard-state";
 import { WayOnward } from "./way-onward";
 import { ConversationWorkbench } from "./workbench";
 
-// The preferences act: the last word before the app. Two things are asked,
-// both prefilled from what the installation already holds, so a reader who
-// agrees presses Done and nothing is written twice.
+// The basis act: what the setup settles right after the company is confirmed,
+// before any step about the person answering. Two things are asked. The
+// installation's reporting basis — base currency and reporting timezone — is
+// the one installation-wide answer the setup needs, and it belongs with the
+// company rather than at the end: every deal, report and brief that follows is
+// priced and dated on it. What the agent may change on its own is the reader's
+// own answer, asked here beside the basis so the administrator settles both
+// before anything personal; every switch records itself the moment it moves,
+// as it does in Settings.
 //
-// The reporting basis — base currency and reporting timezone — is the
-// installation's, so it is shown only to a reader who may change it (the same
-// grant Settings checks), and written as the one sparse patch Settings writes.
-// What the agent may change on its own is the reader's own, every seat has it,
-// and each switch records itself the moment it moves, as it does in Settings.
+// The reporting fields are prefilled from what the installation already holds,
+// so a reader who agrees presses Continue and nothing is written twice. They
+// are the installation's, so they are shown only to a reader who may change
+// them (the same grant Settings checks), and written as the one sparse patch
+// Settings writes; a reader without the grant simply continues.
 //
-// Finishing is a server fact before it is a UI fact: the settings patch lands
-// first (a refusal stays on its field), then step "complete", then the handoff
-// plays. A completion written before the patch would send a reload into the
-// app with a currency the admin believed they had changed.
+// Leaving is a server fact before it is a UI fact: the settings patch lands
+// first (a refusal stays on its field), and only then does the act move on.
 
-type PrefsActProps = Readonly<{
+type BasisActProps = Readonly<{
   state: ConversationState;
   dispatch: Dispatch<ConversationEvent>;
-  persist: (input: WizardPersistInput) => Promise<boolean>;
 }>;
 
 // A currency is three letters, whatever case it was typed in; the server
@@ -72,20 +71,18 @@ function reportingPatch(
   return Object.keys(patch).length > 0 ? patch : null;
 }
 
-export function PrefsAct({ state, dispatch, persist }: PrefsActProps) {
+export function BasisAct({ state, dispatch }: BasisActProps) {
   const t = useT();
   const canManage = useCanWrite("installation_settings", "update");
   const settings = useInstallationSettings(canManage);
-  const autonomy = useAutonomy();
   // What the reader typed over the stored values, and nothing else: the
   // fields show the edit where there is one and the server's value otherwise,
   // so an answer arriving late never overwrites what somebody is typing.
   const [currencyEdit, setCurrencyEdit] = useState<string | null>(null);
   const [timezoneEdit, setTimezoneEdit] = useState<string | null>(null);
   const update = useUpdateInstallationSettings(() => undefined);
-  const [finishing, setFinishing] = useState(false);
-  const [finishFailed, setFinishFailed] = useState(false);
-  const [entering, setEntering] = useState(false);
+  const autonomy = useAutonomy();
+  const [leaving, setLeaving] = useState(false);
 
   const stored = settings.data;
   const currency = currencyEdit ?? stored?.base_currency ?? "";
@@ -94,7 +91,7 @@ export function PrefsAct({ state, dispatch, persist }: PrefsActProps) {
   const blockers = reportingShown
     ? [
         [!CURRENCY_CODE.test(currency), t("setup.baseCurrencyMalformed")],
-        [timezone.trim() === "", t("ob.conv.prefs.timezoneNeeded")],
+        [timezone.trim() === "", t("ob.conv.basis.timezoneNeeded")],
       ]
         .filter((need): need is [true, string] => need[0] === true)
         .map(([, why]) => why)
@@ -106,9 +103,8 @@ export function PrefsAct({ state, dispatch, persist }: PrefsActProps) {
     ]),
   );
 
-  const finish = async () => {
-    setFinishing(true);
-    setFinishFailed(false);
+  const leave = async () => {
+    setLeaving(true);
     const patch = reportingShown
       ? reportingPatch(stored, currency, timezone)
       : null;
@@ -117,33 +113,20 @@ export function PrefsAct({ state, dispatch, persist }: PrefsActProps) {
         await update.mutateAsync(patch);
       } catch {
         // The refusal is on the field (or in the notice below); the reader
-        // fixes it here rather than learning of it after the handoff.
-        setFinishing(false);
+        // fixes it here rather than learning of it after the act moved on.
+        setLeaving(false);
         return;
       }
     }
-    const persisted = await persist({
-      step: "complete",
-      values: EMPTY_DRAFT.values,
-    });
-    setFinishing(false);
-    if (!persisted) {
-      setFinishFailed(true);
-      return;
-    }
-    dispatch({ type: "PREFS_DONE" });
-    setEntering(true);
+    setLeaving(false);
+    dispatch({ type: "BASIS_DONE" });
   };
-
-  if (entering || state.phase === "pf.done") {
-    return <BuildScene onDone={() => navigate({ screen: "home" })} />;
-  }
 
   const stops = railStops(state.memberPath);
   const eyebrow = t("ob.conv.scene.step", {
-    n: ordinalNumber(stops.findIndex((stop) => stop.key === "prefs") + 1),
+    n: ordinalNumber(stops.findIndex((stop) => stop.key === "basis") + 1),
     m: ordinalNumber(stops.length),
-    label: t("ob.rail.prefs"),
+    label: t("ob.rail.basis"),
   });
   const autonomyRows = autonomy.data?.data ?? [];
 
@@ -153,15 +136,15 @@ export function PrefsAct({ state, dispatch, persist }: PrefsActProps) {
       railState={state}
       status={t("ob.ai.ready")}
       eyebrow={eyebrow}
-      title={t("ob.conv.prefs.title")}
-      sub={t("ob.conv.prefs.body")}
+      title={t("ob.conv.basis.title")}
+      sub={t("ob.conv.basis.body")}
     >
-      <div className="ob-scene ob-prefs-scene">
+      <div className="ob-scene ob-basis-scene">
         {canManage && (
-          <QueryGate query={settings} pendingLabel={t("ob.conv.prefs.title")}>
+          <QueryGate query={settings} pendingLabel={t("ob.conv.basis.title")}>
             {(current) => (
-              <section className="ob-prefs-section">
-                <h3>{t("ob.conv.prefs.reportingTitle")}</h3>
+              <section className="ob-basis-section">
+                <h3>{t("ob.conv.basis.reportingTitle")}</h3>
                 <Field
                   label={t("installationSettings.baseCurrency")}
                   hint={currencyNote(current, t)}
@@ -175,7 +158,7 @@ export function PrefsAct({ state, dispatch, persist }: PrefsActProps) {
                       autoComplete="off"
                       // A frozen currency is frozen for an admin too: the
                       // hint above says why, and the field says it cannot.
-                      disabled={current.base_currency_locked || finishing}
+                      disabled={current.base_currency_locked || leaving}
                       onChange={(event) => setCurrencyEdit(event.target.value)}
                     />
                   )}
@@ -190,7 +173,7 @@ export function PrefsAct({ state, dispatch, persist }: PrefsActProps) {
                       {...control}
                       value={timezone}
                       autoComplete="off"
-                      disabled={finishing}
+                      disabled={leaving}
                       onChange={(event) => setTimezoneEdit(event.target.value)}
                     />
                   )}
@@ -201,29 +184,34 @@ export function PrefsAct({ state, dispatch, persist }: PrefsActProps) {
         )}
         {/* An empty set is this seat's own answer — nothing is routed to it
             of any kind — and on this surface that is nothing to ask, not an
-            empty card. */}
+            empty card. The switches write themselves, so Continue does not
+            wait on them the way it waits on the reporting basis. */}
         {autonomyRows.length > 0 && (
-          <section className="ob-prefs-section">
-            <h3>{t("ob.conv.prefs.autonomyTitle")}</h3>
-            <p className="ob-prefs-lead">{t("ob.conv.prefs.autonomyBody")}</p>
+          <section className="ob-basis-section">
+            <h3>{t("ob.conv.basis.autonomyTitle")}</h3>
+            <p className="ob-basis-lead">{t("ob.conv.basis.autonomyBody")}</p>
             <AutonomyChoices rows={autonomyRows} />
           </section>
         )}
         <WayOnward
-          label={t("ob.conv.prefs.done")}
-          pending={finishing}
+          label={t("ob.conv.basis.continue")}
+          pending={leaving}
           blockers={blockers}
+          // A reader who MAY change the basis does not leave until it has been
+          // read: with nothing stored yet there is nothing to show, nothing to
+          // patch, and a Continue that pressed would record the basis as
+          // settled on values nobody saw. The gate above carries the read's
+          // own pending and retry states meanwhile.
+          held={canManage && !settings.isSuccess}
           stillNeeded={(why) => why.join(" ")}
           note={
-            finishFailed || (update.isError && refused.size === 0) ? (
+            update.isError && refused.size === 0 ? (
               <p className="ob-stage-note" role="alert">
-                {finishFailed
-                  ? t("ob.conv.prefs.persistFailed")
-                  : problemMessageOf(update.error, t)}
+                {problemMessageOf(update.error, t)}
               </p>
             ) : undefined
           }
-          onGo={() => void finish()}
+          onGo={() => void leave()}
         />
       </div>
     </ConversationWorkbench>

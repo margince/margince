@@ -51,6 +51,22 @@ type sendLane struct {
 	atColumn string
 	// only is what makes a row this lane's business rather than the other's.
 	only string
+	// recipientColumn names the address the card reports, or is empty where the
+	// lane has none to name. A bounce report names ONE failed address and the
+	// row records it; a park is about the send as a whole and has no such
+	// column, so that lane says nothing about where it was aimed rather than
+	// naming a recipient the failure was not about.
+	recipientColumn string
+}
+
+// recipientExpr is the column the lane reads its address from, or a literal
+// empty string where it has none. A literal rather than a NULL so the scan
+// target stays a plain string on both lanes.
+func (l sendLane) recipientExpr() string {
+	if l.recipientColumn == "" {
+		return "''"
+	}
+	return "COALESCE(o." + l.recipientColumn + ", '')"
 }
 
 // laneSend is one send on a lane: the five facts a card is drawn from.
@@ -60,6 +76,11 @@ type laneSend struct {
 	Reason   string
 	At       time.Time
 	PersonID ids.UUID
+	// Recipient is the address the lane's failure was about, or empty where the
+	// lane names none. Never derived from the send's recipient list: a report
+	// names ONE address, and a send carrying a CC would otherwise blame the
+	// first name on it for a refusal that came from another.
+	Recipient string
 }
 
 // statement joins each send to the person its activity is filed under.
@@ -86,7 +107,8 @@ func (l sendLane) statement(ctx context.Context, userID ids.UUID, since time.Tim
 		visible = alwaysVisible
 	}
 	return fmt.Sprintf(`
-SELECT o.id, left(COALESCE(o.subject, ''), %d), COALESCE(o.%s, ''), o.%s, l.person_id
+SELECT o.id, left(COALESCE(o.subject, ''), %d), COALESCE(o.%s, ''), o.%s, l.person_id,
+       %s
   FROM comms_outbound o
   LEFT JOIN LATERAL (
     SELECT al.person_id FROM activity_link al
@@ -98,7 +120,7 @@ SELECT o.id, left(COALESCE(o.subject, ''), %d), COALESCE(o.%s, ''), o.%s, l.pers
    AND o.%s >= $%d
  ORDER BY o.%s DESC, o.id DESC
  LIMIT $%d`,
-		subjectLineBound, l.reasonColumn, l.atColumn,
+		subjectLineBound, l.reasonColumn, l.atColumn, l.recipientExpr(),
 		arg(userID), l.only, l.atColumn, arg(since), l.atColumn, arg(limit)), nil
 }
 
@@ -138,7 +160,7 @@ func (s *Store) readSendLane(ctx context.Context, lane sendLane, what string, si
 		for rows.Next() {
 			var send laneSend
 			var person *ids.UUID
-			if scanErr := rows.Scan(&send.ID, &send.Subject, &send.Reason, &send.At, &person); scanErr != nil {
+			if scanErr := rows.Scan(&send.ID, &send.Subject, &send.Reason, &send.At, &person, &send.Recipient); scanErr != nil {
 				return scanErr
 			}
 			if person != nil {

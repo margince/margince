@@ -41,9 +41,9 @@ import (
 // jobActorUnbound: workers that predate this gate and bind no actor. Each
 // needs its own subsystem checked before it is changed — see #1127.
 var jobActorUnbound = gatekit.Waive(map[string]string{
-	"privacyRetentionWorker":  "retention sweep; whether its writes are gated is #1127's question",
-	"timeScanWorkspaceWorker": "automation time-scan; same audit",
-	"webhookRetryWorker":      "webhook delivery retry; same audit",
+	"privacyRetentionWorker": "retention sweep; whether its writes are gated is #1127's question",
+	"timeScanWorker":         "automation time-scan; same audit",
+	"webhookRetryWorker":     "webhook delivery retry; same audit",
 })
 
 // storeBuilders are the handle constructors a store is built on. A Work method
@@ -54,10 +54,21 @@ var jobActorUnbound = gatekit.Waive(map[string]string{
 // per-tenant fan-out (ADR-0103 §1) stops calling workspaceJobDB and starts
 // calling this one, so a regex naming only the old constructor would let every
 // collapsed worker slip out of this gate's sight while reading as green.
-var storeBuilders = regexp.MustCompile(`(providerRunStore|workspaceJobDB|InstallationDB)\(`)
+// database.BindTo joined the list with ADR-0103. workspaceJobDB reads the
+// workspace off a job's ARGS, and a collapsed pass has none — it takes the
+// workspace from the fleet walk instead and binds the handle directly, so a
+// pass that reaches a store now does it through BindTo. Leaving it out would
+// have let every collapsed pass build a store unwatched.
+var storeBuilders = regexp.MustCompile(`(providerRunStore|workspaceJobDB|InstallationDB|database\.BindTo)\(`)
 
-// actorBinders are the ways a worker legitimately names its principal: the
-// helper in this package, or principal.WithActor directly.
+// actorBinders are the ways a worker legitimately names its principal: one of
+// this package's context helpers, or principal.WithActor directly.
+//
+// reconcileWorkerCtx is one of those helpers — it binds the workspace, the
+// actor and a correlation id together and returns the context. It is listed for
+// the same reason providerJobActor is, and it was found the way a missing entry
+// here always will be: as a false positive, on a worker whose actor is bound
+// one call away.
 //
 // The ASSIGNMENT is part of the pattern, not decoration. Both calls return a
 // new context and mutate nothing, so `providerJobActor(wsCtx)` on its own line
@@ -65,11 +76,20 @@ var storeBuilders = regexp.MustCompile(`(providerRunStore|workspaceJobDB|Install
 // no actor in it — the precise bug this gate exists to catch, sailing past a
 // check that only asked whether the name appeared.
 var actorBinders = regexp.MustCompile(
-	`\w+\s*(=|:=)\s*(providerJobActor|principal\.WithActor)\(`)
+	`\w+\s*(=|:=)\s*(providerJobActor|reconcileWorkerCtx|principal\.WithActor)\(`)
 
 // workMethod matches a River worker's entry point and captures its receiver,
 // which is the worker's name in the failure message.
-var workMethod = regexp.MustCompile(`func \(\w+ \*(\w+)\) Work\(`)
+// A worker's ENTRY POINTS, which is Work and — since ADR-0103 collapsed the
+// workspace dispatchers — the per-workspace turn Work walks the fleet with.
+//
+// Both, because the collapse MOVED the store build out of Work. A collapsed
+// pass's Work is one line handing runPerWorkspace a method, and the store is
+// built inside that method, per tenant. Reading Work alone would have quietly
+// emptied this gate of subjects exactly as the passes were rewritten — every
+// one of them would have stopped being checked, and the gate would have gone
+// green by having nothing left to look at.
+var workMethod = regexp.MustCompile(`func \(\w+ \*(\w+)\) (?:Work|\w*[Ww]orkspace)\(`)
 
 func TestEveryJobWorkerThatReachesAStoreBindsAnActor(t *testing.T) {
 	defer jobActorUnbound.AssertAllMatched(t)
@@ -117,7 +137,7 @@ func TestEveryJobWorkerThatReachesAStoreBindsAnActor(t *testing.T) {
 	}
 	sort.Strings(names)
 	for _, w := range names {
-		t.Errorf("%s.Work (%s) builds a store but binds no actor — its first RBAC-gated write will be refused with \"no actor bound to context\", and a queue carries no principal to inherit. Bind one the way providerJobActor does",
+		t.Errorf("%s (%s) builds a store but binds no actor — its first RBAC-gated write will be refused with \"no actor bound to context\", and a queue carries no principal to inherit. Bind one the way providerJobActor does",
 			w, offenders[w])
 	}
 }

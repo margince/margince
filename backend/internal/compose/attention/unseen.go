@@ -70,6 +70,11 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	atCap("introduction_request", day.Introductions, doneCap)
 	// Each of these carries its own, declared where the lane is read.
 	atCap("task", &day.Planned, plannedCap)
+	// The meetings that owe an answer share the planned bound, because the lane
+	// reads at it. Without this a day holding twelve unsettled meetings reports
+	// itself complete while the twelfth pushed a thirteenth off the page — the
+	// under-reading a truncation flag exists to prevent.
+	atCap("meeting_outcome", day.MeetingsUnreported, plannedCap)
 	atCap(sourceAtRisk, day.AtRisk, quietDealBound)
 	atCap("relationship_decay", day.RelationshipDecay, decayBound)
 	atCap("conversation_claim", day.Commitments, doneCap)

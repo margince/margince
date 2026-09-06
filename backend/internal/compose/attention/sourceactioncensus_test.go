@@ -47,6 +47,9 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	"deal_at_risk":       {"open"},
 	"conversation_claim": {"open"},
 	"meeting":            {"open"},
+	// No verb yet: the row says a meeting owes an answer and the answer is
+	// recorded on the activity, which this queue does not yet reach into.
+	"meeting_outcome": {},
 	// The task's own verbs. `complete` acts in place through TaskComplete;
 	// `snooze` opens the record, where the due date lives.
 	"task": {"complete", "snooze", "open"},

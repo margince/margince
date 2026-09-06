@@ -84,8 +84,15 @@ const RECAP_ROWS = 5;
 /** How much dimmer each row's mark is than the one above it. */
 const MARK_FADE = 0.16;
 
-/** Where the whole trace lives, and where a model gets bound. Same tab. */
-const AI_SETTINGS_HREF = "#/settings/admin/ai";
+/**
+ * Where the whole trace lives, and where a model gets bound. Same page.
+ *
+ * The catalog splits that page into four, and this link belongs on
+ * `model-calls` — the rail's "full log" is the call list. It moves there in the
+ * change that splits the cards; pointing at it now would land a reader on
+ * Account, because the screen still renders the combined entry.
+ */
+const AI_SETTINGS_HREF = "#/settings/ai";
 
 /** What the installation can actually tell us, and what it cannot. */
 type Signals = Readonly<{

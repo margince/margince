@@ -117,8 +117,42 @@ func TestSubWorkspaceFanOutsSelectsExactlyTheFinerGrains(t *testing.T) {
 			t.Errorf("%s is grouped on %q, want its declared unit's key %q", kind, argsKeys[i], unit.ArgsKey())
 		}
 	}
-	if workspaceGrain == 0 || finerGrain == 0 {
-		t.Fatalf("%d workspace-grain / %d finer-grain fan-outs declared; one side is unexercised and the partition is untested",
-			workspaceGrain, finerGrain)
+	// The FINER side must be exercised by real declarations: it is the side the
+	// loop above actually checks, and an empty one would mean this gate passed
+	// on nothing.
+	if finerGrain == 0 {
+		t.Fatalf("no finer-grain fan-outs declared; the partition's checked side is unexercised")
+	}
+	// The WORKSPACE side no longer is, and that is the collapse rather than a
+	// gap. ADR-0103 retired every workspace fan-out: a scheduled pass walks the
+	// tenants itself, so no kind declares FanOutWorkspace any more. The unit
+	// survives — an extension may still declare one (compose/extjobs.go) — so
+	// the partition still has to hold, and it is exercised below against a
+	// table this test builds rather than against a live declaration that no
+	// longer exists.
+	if workspaceGrain != 0 {
+		t.Errorf("%d workspace-grain fan-out(s) declared; ADR-0103 retired them, so a new one is a decision somebody should have to make deliberately", workspaceGrain)
+	}
+}
+
+// The workspace side of the partition, against a table this test builds.
+//
+// It stopped being reachable from the live declarations when ADR-0103 retired
+// the workspace fan-outs, and the rule it proves did not stop mattering: a
+// workspace-grain fan-out must NOT be read by the unit pair, because
+// margince_sweep_workspaces already states exactly that number and a second
+// series carrying the same one is two answers to one question.
+func TestAWorkspaceGrainFanOutIsNotReadByTheUnitPair(t *testing.T) {
+	t.Parallel()
+
+	kinds, _ := subWorkspaceFanOutsOf(map[string]FanOutUnit{
+		"a_workspace_child":  FanOutWorkspace,
+		"a_connection_child": FanOutConnection,
+	})
+	if slices.Contains(kinds, "a_workspace_child") {
+		t.Error("a workspace-grain fan-out reached the unit pair, where it would restate margince_sweep_workspaces exactly")
+	}
+	if !slices.Contains(kinds, "a_connection_child") {
+		t.Error("a connection-grain fan-out was dropped from the unit pair, so a failed connection would stay masked by a healthy sibling")
 	}
 }
