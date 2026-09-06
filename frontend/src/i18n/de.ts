@@ -3436,6 +3436,7 @@ export const de = {
 
   "tasks.complete": "Erledigt",
   "tasks.snooze": "1 Tag später",
+  "tasks.moveTo": "Verschieben auf",
   "tasks.detail": "Aufgabe",
   "tasks.detailLoading": "Aufgabe wird gelesen…",
   "tasks.isDone": "Abgeschlossen",
@@ -6125,6 +6126,10 @@ export const de = {
     "Die Einheiten, die dieser Build zusammengesetzt hat, und welche Rollen sie erreichen.",
   "settings.page.reset.sub":
     "Diese Installation leeren. Es gibt kein Zur\u00fcck.",
+  "settings.search.label": "Einstellungen durchsuchen",
+  "settings.search.placeholder": "Einstellungen suchen",
+  "settings.search.none": "Keine Einstellungsseite passt dazu.",
+  "settings.search.count": "{n} Einstellungsseiten passen.",
   "settings.tab.company": "Unternehmensprofil",
   "settings.tab.authentication": "Anmeldung & Apps",
   "settings.tab.members": "Mitglieder",
@@ -8677,6 +8682,9 @@ export const de = {
   "worklist.verb.complete": "Öffnen",
   "worklist.verb.snooze": "Öffnen",
   "worklist.verb.acknowledge": "Verstanden",
+  "worklist.verb.promiseKept": "Erledigt",
+  "worklist.verb.promiseSettled": "Als eingehalten vermerkt.",
+  "worklist.verb.promiseSettleFailed": "Das konnte nicht vermerkt werden.",
   "worklist.verb.meetingHeld": "Hat stattgefunden",
   "worklist.verb.meetingNoShow": "Niemand kam",
   "worklist.verb.meetingCanceled": "Wurde abgesagt",

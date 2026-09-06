@@ -3523,6 +3523,7 @@ export const en = {
 
   "tasks.complete": "Done",
   "tasks.snooze": "Snooze 1d",
+  "tasks.moveTo": "Move to",
   "tasks.detail": "Task",
   "tasks.detailLoading": "Reading this task…",
   "tasks.isDone": "Completed",
@@ -6260,6 +6261,10 @@ export const en = {
   "settings.page.extensions.sub":
     "The units this build composed, and which roles reach them.",
   "settings.page.reset.sub": "Emptying this installation. There is no undo.",
+  "settings.search.label": "Search settings",
+  "settings.search.placeholder": "Search settings",
+  "settings.search.none": "No settings page matches that.",
+  "settings.search.count": "{n} settings pages match.",
   "settings.tab.company": "Company profile",
   "settings.tab.authentication": "Sign-in & apps",
   "settings.tab.members": "Members",
@@ -8812,6 +8817,9 @@ export const en = {
   "worklist.verb.complete": "Open",
   "worklist.verb.snooze": "Open",
   "worklist.verb.acknowledge": "Got it",
+  "worklist.verb.promiseKept": "Done",
+  "worklist.verb.promiseSettled": "Marked as kept.",
+  "worklist.verb.promiseSettleFailed": "That could not be marked as kept.",
   "worklist.verb.meetingHeld": "It happened",
   "worklist.verb.meetingNoShow": "They didn't come",
   "worklist.verb.meetingCanceled": "It was called off",

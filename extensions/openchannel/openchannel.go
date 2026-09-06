@@ -74,7 +74,10 @@ func New() extension.Extension {
 		// generator cannot resolve. The two are the same string on purpose and a
 		// test holds them equal.
 		Channels: []extension.Channel{
-			{Provider: "openchannel", Send: send, Live: live},
+			// per_member because the inbound credential above is user-scoped:
+			// each member holds their own, so a conversation on it is that
+			// member's correspondence rather than the company's.
+			{Provider: "openchannel", CredentialModel: extension.CredentialPerMember, Send: send, Live: live},
 		},
 		Jobs: []extension.Job{
 			{Name: "drain", Handle: drain},

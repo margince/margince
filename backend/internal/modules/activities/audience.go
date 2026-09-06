@@ -122,6 +122,22 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		if err := replaceAudienceMembers(ctx, tx, id, members); err != nil {
 			return err
 		}
+		// The state this write actually produced, asked of the audience gate
+		// itself: is there still a human who can read the message?
+		//
+		// AFTER the column and the member rows, not before them. A `selected`
+		// audience's readers are the rows replaceAudienceMembers just wrote, so
+		// a check that ran earlier would be answering about a state the write
+		// then changed — and the member set is exactly where the two ways to
+		// orphan a row by hand live: naming nobody, and naming only a team that
+		// has no members.
+		reachable, err := auth.ActivityHasAReaderTx(ctx, tx, id.UUID)
+		if err != nil {
+			return err
+		}
+		if !reachable {
+			return &OrphanedAudienceError{Audience: in.Audience}
+		}
 		stored, err := readAudienceImage(ctx, tx, id)
 		if err != nil {
 			return err
@@ -383,4 +399,32 @@ func (e *CapturedAudienceError) FieldFault() (field, code, message string) {
 	return "audience", "audience_is_derived",
 		"This message came from a mailbox, so who can read it follows from what each " +
 			"importing mailbox asks for. Share or keep the thread private instead."
+}
+
+// OrphanedAudienceError refuses an audience write that would leave the message
+// readable by nobody.
+//
+// The reachable case is a captured CHANNEL message narrowed to `participants`:
+// a bot binding has no seat, so the row's captured_by carries no user id, no
+// mailbox imported it and the sink stamped no our-side participant — and
+// `audience = 'workspace'` was the only arm holding it visible. Turning that
+// arm off leaves a row the system principal alone can read, which nothing can
+// undo: widening it back needs the content visibility the write just destroyed.
+//
+// The same refusal covers the two hand-made spellings of it — `selected`
+// naming nobody, and `selected` naming only an empty team — because the rule is
+// about the state produced, not about how a caller reached it.
+type OrphanedAudienceError struct {
+	Audience string
+}
+
+func (e *OrphanedAudienceError) Error() string {
+	return "activities: audience " + e.Audience + " would leave this message readable by nobody"
+}
+
+// FieldFault answers the orphaning write as a 422 on the audience field.
+func (e *OrphanedAudienceError) FieldFault() (field, code, message string) {
+	return "audience", "audience_leaves_no_reader",
+		"Nobody would be able to read this message afterwards, including you, and it " +
+			"could not be re-opened. Choose people to share it with instead."
 }

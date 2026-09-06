@@ -12,7 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { installFetchStub, jsonResponse, meRoute } from "../story-utils";
+import { jsonResponse, stubWithSession } from "../story-utils";
 import { ConnectAct } from "./connect-act";
 import type { ConversationState } from "./conversation-machine";
 import { initialConversationState } from "./conversation-machine";
@@ -34,9 +34,6 @@ import { initialConversationState } from "./conversation-machine";
 // unrouted GET /me answers 501, every grant fails closed, and the provider
 // cards stay disabled for a reason no assertion here is about. The grants are
 // empty on purpose — this act is onboarding, before any of them are held.
-function stubWithSession(routes: Parameters<typeof installFetchStub>[0]) {
-  installFetchStub({ "GET /me": meRoute({}), ...routes });
-}
 
 function renderConnectAct(
   outcome?: string,
@@ -101,7 +98,7 @@ afterEach(() => {
 });
 
 it("offers Microsoft as a live card and opens its dialog", async () => {
-  stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) });
+  stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) }, {});
   renderConnectAct();
   // The card names the provider AND what connecting it grants, so the
   // accessible name is the whole card, not the brand alone.
@@ -126,17 +123,20 @@ it("offers Microsoft as a live card and opens its dialog", async () => {
 // do nothing about, so an unconnectable provider stops being a button and says
 // what is missing instead.
 it("does not offer a provider whose OAuth app is not registered", async () => {
-  stubWithSession({
-    "GET /connectors": () =>
-      jsonResponse({
-        data: [],
-        providers: [
-          { provider: "gmail", reason: "ready" },
-          { provider: "graph", reason: "app_missing" },
-          { provider: "imap", reason: "ready" },
-        ],
-      }),
-  });
+  stubWithSession(
+    {
+      "GET /connectors": () =>
+        jsonResponse({
+          data: [],
+          providers: [
+            { provider: "gmail", reason: "ready" },
+            { provider: "graph", reason: "app_missing" },
+            { provider: "imap", reason: "ready" },
+          ],
+        }),
+    },
+    {},
+  );
   renderConnectAct();
 
   // Google is untouched: this is one vendor's configuration, not a broken
@@ -158,13 +158,16 @@ it("does not offer a provider whose OAuth app is not registered", async () => {
 // all: telling this operator that none exists sends them to register a second
 // one they already have.
 it("separates an unusable app from a missing one", async () => {
-  stubWithSession({
-    "GET /connectors": () =>
-      jsonResponse({
-        data: [],
-        providers: [{ provider: "graph", reason: "app_unusable" }],
-      }),
-  });
+  stubWithSession(
+    {
+      "GET /connectors": () =>
+        jsonResponse({
+          data: [],
+          providers: [{ provider: "graph", reason: "app_unusable" }],
+        }),
+    },
+    {},
+  );
   renderConnectAct();
 
   expect(
@@ -176,13 +179,16 @@ it("separates an unusable app from a missing one", async () => {
 // Nothing in Settings fixes a deployment that does not serve the provider at
 // all, so the card offers no link to a form that would have nothing in it.
 it("offers no settings link for a provider this deployment does not serve", async () => {
-  stubWithSession({
-    "GET /connectors": () =>
-      jsonResponse({
-        data: [],
-        providers: [{ provider: "graph", reason: "unsupported" }],
-      }),
-  });
+  stubWithSession(
+    {
+      "GET /connectors": () =>
+        jsonResponse({
+          data: [],
+          providers: [{ provider: "graph", reason: "unsupported" }],
+        }),
+    },
+    {},
+  );
   renderConnectAct();
 
   expect(await screen.findByText(/does not serve Microsoft/)).toBeTruthy();
@@ -200,12 +206,15 @@ it("withholds every mail provider card until the roster load settles", async () 
   const deferred: { resolve: ((r: Response) => void) | null } = {
     resolve: null,
   };
-  stubWithSession({
-    "GET /connectors": () =>
-      new Promise((resolve) => {
-        deferred.resolve = resolve;
-      }),
-  });
+  stubWithSession(
+    {
+      "GET /connectors": () =>
+        new Promise((resolve) => {
+          deferred.resolve = resolve;
+        }),
+    },
+    {},
+  );
   renderConnectAct();
 
   for (const name of [/Google/, /Microsoft/, /Any other mailbox/]) {
@@ -222,9 +231,12 @@ it("withholds every mail provider card until the roster load settles", async () 
 // one still loading — actionable cards here would offer to connect a second
 // mailbox the failed read simply never got to report.
 it("withholds every mail provider card when the roster fetch fails", async () => {
-  stubWithSession({
-    "GET /connectors": () => jsonResponse({ code: "internal" }, 500),
-  });
+  stubWithSession(
+    {
+      "GET /connectors": () => jsonResponse({ code: "internal" }, 500),
+    },
+    {},
+  );
   renderConnectAct();
 
   await waitFor(() =>
@@ -240,11 +252,14 @@ it("withholds every mail provider card when the roster fetch fails", async () =>
 // outcome URL (see `attemptedProvider` in connect-act.tsx) — it has to be
 // written before the redirect actually leaves, not after.
 it("marks this tab's own attempt before the real redirect fires", async () => {
-  stubWithSession({
-    "GET /connectors": () => jsonResponse({ data: [] }),
-    "POST /connectors/graph/connect": () =>
-      jsonResponse({ authorize_url: "https://login.microsoftonline/x" }),
-  });
+  stubWithSession(
+    {
+      "GET /connectors": () => jsonResponse({ data: [] }),
+      "POST /connectors/graph/connect": () =>
+        jsonResponse({ authorize_url: "https://login.microsoftonline/x" }),
+    },
+    {},
+  );
   const assign = vi.fn();
   vi.stubGlobal("location", { ...globalThis.location, assign });
   renderConnectAct();
@@ -259,20 +274,23 @@ it("marks this tab's own attempt before the real redirect fires", async () => {
 describe("returning to the dialog a proven attempt left from", () => {
   it("reopens the same dialog, showing the result rather than a fresh ask", async () => {
     sessionStorage.setItem("ob.connect.oauthAttempt", "graph");
-    stubWithSession({
-      "GET /connectors": () =>
-        jsonResponse({
-          data: [
-            {
-              id: "g1",
-              provider: "graph",
-              status: "connected",
-              scopes: ["read"],
-              backfill: { state: "done" },
-            },
-          ],
-        }),
-    });
+    stubWithSession(
+      {
+        "GET /connectors": () =>
+          jsonResponse({
+            data: [
+              {
+                id: "g1",
+                provider: "graph",
+                status: "connected",
+                scopes: ["read"],
+                backfill: { state: "done" },
+              },
+            ],
+          }),
+      },
+      {},
+    );
     renderConnectAct("ok", "pending", "cn.consent", "graph");
 
     const dialog = await screen.findByRole("dialog");
@@ -289,20 +307,23 @@ describe("returning to the dialog a proven attempt left from", () => {
 
   it("falls back to the plain inline result when the URL's provider does not match this tab's own attempt", async () => {
     sessionStorage.setItem("ob.connect.oauthAttempt", "gmail");
-    stubWithSession({
-      "GET /connectors": () =>
-        jsonResponse({
-          data: [
-            {
-              id: "g1",
-              provider: "graph",
-              status: "connected",
-              scopes: ["read"],
-              backfill: { state: "done" },
-            },
-          ],
-        }),
-    });
+    stubWithSession(
+      {
+        "GET /connectors": () =>
+          jsonResponse({
+            data: [
+              {
+                id: "g1",
+                provider: "graph",
+                status: "connected",
+                scopes: ["read"],
+                backfill: { state: "done" },
+              },
+            ],
+          }),
+      },
+      {},
+    );
     renderConnectAct("ok", "pending", "cn.consent", "graph");
 
     expect(await screen.findByText("Live and capturing")).toBeTruthy();
@@ -310,20 +331,23 @@ describe("returning to the dialog a proven attempt left from", () => {
   });
 
   it("falls back to the plain inline result when no mark is recorded at all — a stale or bookmarked link", async () => {
-    stubWithSession({
-      "GET /connectors": () =>
-        jsonResponse({
-          data: [
-            {
-              id: "g1",
-              provider: "graph",
-              status: "connected",
-              scopes: ["read"],
-              backfill: { state: "done" },
-            },
-          ],
-        }),
-    });
+    stubWithSession(
+      {
+        "GET /connectors": () =>
+          jsonResponse({
+            data: [
+              {
+                id: "g1",
+                provider: "graph",
+                status: "connected",
+                scopes: ["read"],
+                backfill: { state: "done" },
+              },
+            ],
+          }),
+      },
+      {},
+    );
     renderConnectAct("ok", "pending", "cn.consent", "graph");
 
     expect(await screen.findByText("Live and capturing")).toBeTruthy();
@@ -332,34 +356,40 @@ describe("returning to the dialog a proven attempt left from", () => {
 });
 
 it("renders the provider-agnostic return view on OAuth return", async () => {
-  stubWithSession({
-    "GET /connectors": () =>
-      jsonResponse({
-        data: [
-          {
-            id: "g1",
-            provider: "graph",
-            status: "connected",
-            scopes: ["read"],
-            backfill: { state: "done" },
-          },
-        ],
-      }),
-  });
+  stubWithSession(
+    {
+      "GET /connectors": () =>
+        jsonResponse({
+          data: [
+            {
+              id: "g1",
+              provider: "graph",
+              status: "connected",
+              scopes: ["read"],
+              backfill: { state: "done" },
+            },
+          ],
+        }),
+    },
+    {},
+  );
   renderConnectAct("ok");
   expect(await screen.findByText("Live and capturing")).toBeTruthy();
 });
 
 it("asks how far back to read once the mailbox is confirmed", async () => {
-  stubWithSession({
-    "GET /connectors": rosterWith({ state: "none" }),
-    "POST /connectors/gmail/backfill/preview": () =>
-      jsonResponse({
-        window: "6m",
-        estimated_messages: 900,
-        computed_at: "2026-07-31T10:00:00Z",
-      }),
-  });
+  stubWithSession(
+    {
+      "GET /connectors": rosterWith({ state: "none" }),
+      "POST /connectors/gmail/backfill/preview": () =>
+        jsonResponse({
+          window: "6m",
+          estimated_messages: 900,
+          computed_at: "2026-07-31T10:00:00Z",
+        }),
+    },
+    {},
+  );
   renderConnectAct("ok");
   expect(
     await screen.findByRole("heading", {
@@ -378,12 +408,15 @@ it("asks how far back to read once the mailbox is confirmed", async () => {
 // the surface, LinkedIn card and all: the step is not left until they press
 // its own Continue, which then records the mailbox as connected.
 it("closes the backread onto the surface and finishes only from the surface's Continue", async () => {
-  stubWithSession({
-    "GET /connectors": rosterWith({
-      state: "running",
-      counts: { messages_scanned: 12 },
-    }),
-  });
+  stubWithSession(
+    {
+      "GET /connectors": rosterWith({
+        state: "running",
+        counts: { messages_scanned: 12 },
+      }),
+    },
+    {},
+  );
   const { dispatch, persist } = renderConnectAct("ok");
 
   await userEvent.click(
@@ -410,19 +443,22 @@ it("closes the backread onto the surface and finishes only from the surface's Co
 
 it("declining the history read closes the result without starting one or leaving the step", async () => {
   const starts: unknown[] = [];
-  stubWithSession({
-    "GET /connectors": rosterWith({ state: "none" }),
-    "POST /connectors/gmail/backfill/preview": () =>
-      jsonResponse({
-        window: "6m",
-        estimated_messages: 900,
-        computed_at: "2026-07-31T10:00:00Z",
-      }),
-    "POST /connectors/gmail/backfill": (body) => {
-      starts.push(body);
-      return jsonResponse({ state: "queued" }, 202);
+  stubWithSession(
+    {
+      "GET /connectors": rosterWith({ state: "none" }),
+      "POST /connectors/gmail/backfill/preview": () =>
+        jsonResponse({
+          window: "6m",
+          estimated_messages: 900,
+          computed_at: "2026-07-31T10:00:00Z",
+        }),
+      "POST /connectors/gmail/backfill": (body) => {
+        starts.push(body);
+        return jsonResponse({ state: "queued" }, 202);
+      },
     },
-  });
+    {},
+  );
   const { dispatch } = renderConnectAct("ok");
 
   await userEvent.click(
@@ -439,7 +475,7 @@ it("declining the history read closes the result without starting one or leaving
 // The way past a missing mailbox is offered while connecting is still the
 // open question — worded for what it is, since LinkedIn may be connected.
 it("offers to continue without a mailbox before any consent round trip", () => {
-  stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) });
+  stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) }, {});
   renderConnectAct();
   expect(
     screen.getByRole("button", { name: "Continue without a mailbox" }),
@@ -450,7 +486,7 @@ it("offers to continue without a mailbox before any consent round trip", () => {
 // and goes nowhere: the step is not left by accident, and the reader is told
 // what the honest exit beside it is for.
 it("names the missing mailbox when Continue is pressed without one", async () => {
-  stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) });
+  stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) }, {});
   const { dispatch, persist } = renderConnectAct();
   await userEvent.click(screen.getByRole("button", { name: "Continue" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -463,9 +499,12 @@ it("names the missing mailbox when Continue is pressed without one", async () =>
 // After a successful consent it is no longer true, and recording the step as
 // skipped would persist a fact contradicted by the roster.
 it("stops offering the mailbox-less exit once consent has returned", async () => {
-  stubWithSession({
-    "GET /connectors": rosterWith({ state: "done" }),
-  });
+  stubWithSession(
+    {
+      "GET /connectors": rosterWith({ state: "done" }),
+    },
+    {},
+  );
   renderConnectAct("ok");
   await screen.findByText("Live and capturing");
   expect(
@@ -479,7 +518,7 @@ it("stops offering the mailbox-less exit once consent has returned", async () =>
 // exit (recorded truthfully as no mailbox) has to stay reachable until a live
 // mailbox is confirmed.
 it("keeps the mailbox-less exit open when consent returned but no mailbox could be confirmed", async () => {
-  stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) });
+  stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) }, {});
   renderConnectAct("ok");
   await screen.findByText("We couldn't confirm the connection.");
   expect(
@@ -496,13 +535,16 @@ describe("the LinkedIn card", () => {
   const saves: unknown[] = [];
   beforeEach(() => {
     saves.length = 0;
-    stubWithSession({
-      "GET /connectors": () => jsonResponse({ data: [] }),
-      "PUT /me/linkedin-account": (body: unknown) => {
-        saves.push(body);
-        return jsonResponse({ connected: false, connections: 0 });
+    stubWithSession(
+      {
+        "GET /connectors": () => jsonResponse({ data: [] }),
+        "PUT /me/linkedin-account": (body: unknown) => {
+          saves.push(body);
+          return jsonResponse({ connected: false, connections: 0 });
+        },
       },
-    });
+      {},
+    );
   });
 
   it("keeps the profile form closed until its card is clicked", () => {
@@ -571,11 +613,14 @@ describe("the LinkedIn card", () => {
   // A failed save must stay visible and retryable, not vanish behind a
   // dialog that already closed on the click that failed.
   it("keeps the dialog open and shows the failure when the save fails", async () => {
-    stubWithSession({
-      "GET /connectors": () => jsonResponse({ data: [] }),
-      "PUT /me/linkedin-account": () =>
-        jsonResponse({ detail: "LinkedIn refused the profile." }, 422),
-    });
+    stubWithSession(
+      {
+        "GET /connectors": () => jsonResponse({ data: [] }),
+        "PUT /me/linkedin-account": () =>
+          jsonResponse({ detail: "LinkedIn refused the profile." }, 422),
+      },
+      {},
+    );
     renderConnectAct();
     await userEvent.click(screen.getByRole("button", { name: /LinkedIn/ }));
     await userEvent.type(
@@ -598,7 +643,10 @@ describe("the LinkedIn card", () => {
 // reader has been looking at, not a chip surfaced beside the transcript.
 describe("the way onward", () => {
   it("renders on the stage's rail — never as a thread chip", () => {
-    stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) });
+    stubWithSession(
+      { "GET /connectors": () => jsonResponse({ data: [] }) },
+      {},
+    );
     renderConnectAct();
     const onward = screen.getByRole("button", { name: "Continue" });
     expect(onward.closest(".ob-stage-acts")).toBeTruthy();
@@ -608,7 +656,7 @@ describe("the way onward", () => {
   // With a mailbox live the step is left as connected: the skip flag is
   // false, and leaving the last stop is what writes completion.
   it("records the step as connected and hands on when a mailbox is live", async () => {
-    stubWithSession({ "GET /connectors": rosterWith({ state: "none" }) });
+    stubWithSession({ "GET /connectors": rosterWith({ state: "none" }) }, {});
     const { dispatch, persist } = renderConnectAct();
     const onward = screen.getByRole("button", { name: "Continue" });
     await waitFor(() =>
@@ -634,7 +682,10 @@ describe("the way onward", () => {
 // than from inside a provider's dialog.
 describe("the consent guarantees", () => {
   it("sit on the surface behind a named fold, not in the rail", async () => {
-    stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) });
+    stubWithSession(
+      { "GET /connectors": () => jsonResponse({ data: [] }) },
+      {},
+    );
     renderConnectAct();
 
     const toggle = screen.getByText(en["ob.conv.connect.guaranteesToggle"]);
@@ -658,7 +709,10 @@ describe("the consent guarantees", () => {
 
 describe("the IMAP dialog", () => {
   it("carries only the real contract's fields — no invented SMTP host, port or TLS toggle", async () => {
-    stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) });
+    stubWithSession(
+      { "GET /connectors": () => jsonResponse({ data: [] }) },
+      {},
+    );
     renderConnectAct();
     await userEvent.click(
       screen.getByRole("button", { name: /Any other mailbox/ }),
@@ -683,7 +737,10 @@ describe("the IMAP dialog", () => {
   });
 
   it("closes on 'Not now' without touching the required-step skip", async () => {
-    stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) });
+    stubWithSession(
+      { "GET /connectors": () => jsonResponse({ data: [] }) },
+      {},
+    );
     const { dispatch, persist } = renderConnectAct();
     await userEvent.click(
       screen.getByRole("button", { name: /Any other mailbox/ }),
@@ -712,13 +769,16 @@ describe("dismissal during an in-flight connect request", () => {
     const deferred: { resolve: ((r: Response) => void) | null } = {
       resolve: null,
     };
-    stubWithSession({
-      "GET /connectors": () => jsonResponse({ data: [] }),
-      "POST /connectors/graph/connect": () =>
-        new Promise((resolve) => {
-          deferred.resolve = resolve;
-        }),
-    });
+    stubWithSession(
+      {
+        "GET /connectors": () => jsonResponse({ data: [] }),
+        "POST /connectors/graph/connect": () =>
+          new Promise((resolve) => {
+            deferred.resolve = resolve;
+          }),
+      },
+      {},
+    );
     renderConnectAct();
     await userEvent.click(screen.getByRole("button", { name: /Microsoft/ }));
     await userEvent.click(
@@ -740,13 +800,16 @@ describe("dismissal during an in-flight connect request", () => {
     const deferred: { resolve: ((r: Response) => void) | null } = {
       resolve: null,
     };
-    stubWithSession({
-      "GET /connectors": () => jsonResponse({ data: [] }),
-      "POST /connectors/imap/connect": () =>
-        new Promise((resolve) => {
-          deferred.resolve = resolve;
-        }),
-    });
+    stubWithSession(
+      {
+        "GET /connectors": () => jsonResponse({ data: [] }),
+        "POST /connectors/imap/connect": () =>
+          new Promise((resolve) => {
+            deferred.resolve = resolve;
+          }),
+      },
+      {},
+    );
     renderConnectAct();
     await userEvent.click(
       screen.getByRole("button", { name: /Any other mailbox/ }),
@@ -785,13 +848,16 @@ describe("dismissal during an in-flight connect request", () => {
     const deferred: { resolve: ((r: Response) => void) | null } = {
       resolve: null,
     };
-    stubWithSession({
-      "GET /connectors": () => jsonResponse({ data: [] }),
-      "PUT /me/linkedin-account": () =>
-        new Promise((resolve) => {
-          deferred.resolve = resolve;
-        }),
-    });
+    stubWithSession(
+      {
+        "GET /connectors": () => jsonResponse({ data: [] }),
+        "PUT /me/linkedin-account": () =>
+          new Promise((resolve) => {
+            deferred.resolve = resolve;
+          }),
+      },
+      {},
+    );
     const { dispatch } = renderConnectAct();
     await userEvent.click(screen.getByRole("button", { name: /LinkedIn/ }));
     await userEvent.type(
@@ -828,26 +894,29 @@ it("keeps mail provider cards disabled during a roster refetch, not just its fir
     resolve: null,
   };
   let rosterCalls = 0;
-  stubWithSession({
-    "GET /connectors": () => {
-      rosterCalls += 1;
-      if (rosterCalls === 1) {
-        return jsonResponse({ data: [] });
-      }
-      return new Promise((resolve) => {
-        deferred.resolve = resolve;
-      });
+  stubWithSession(
+    {
+      "GET /connectors": () => {
+        rosterCalls += 1;
+        if (rosterCalls === 1) {
+          return jsonResponse({ data: [] });
+        }
+        return new Promise((resolve) => {
+          deferred.resolve = resolve;
+        });
+      },
+      "POST /connectors/imap/connect": () =>
+        jsonResponse({
+          connection: {
+            id: "c1",
+            provider: "imap",
+            status: "connected",
+            scopes: [],
+          },
+        }),
     },
-    "POST /connectors/imap/connect": () =>
-      jsonResponse({
-        connection: {
-          id: "c1",
-          provider: "imap",
-          status: "connected",
-          scopes: [],
-        },
-      }),
-  });
+    {},
+  );
   renderConnectAct();
   await waitFor(() =>
     expect(screen.getByRole("button", { name: /Google/ })).not.toBeDisabled(),
@@ -894,15 +963,18 @@ it("keeps mail provider cards disabled during a roster refetch, not just its fir
 // from an ordinary still-loading moment.
 it("says why every mail card is disabled when the roster read fails, and offers a retry", async () => {
   let rosterCalls = 0;
-  stubWithSession({
-    "GET /connectors": () => {
-      rosterCalls += 1;
-      if (rosterCalls === 1) {
-        return jsonResponse({ code: "internal" }, 500);
-      }
-      return jsonResponse({ data: [] });
+  stubWithSession(
+    {
+      "GET /connectors": () => {
+        rosterCalls += 1;
+        if (rosterCalls === 1) {
+          return jsonResponse({ code: "internal" }, 500);
+        }
+        return jsonResponse({ data: [] });
+      },
     },
-  });
+    {},
+  );
   renderConnectAct();
 
   expect(
@@ -926,7 +998,7 @@ it("says why every mail card is disabled when the roster read fails, and offers 
 // draws the checkbox, which owns no state of its own.
 
 it("asks the overnight question preselected, beside the mailboxes", async () => {
-  stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) });
+  stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) }, {});
   renderConnectAct();
   const box = await screen.findByTestId("overnight-grant-choice");
   // Preselected: the features it feeds are the ones the product opens on, so
@@ -939,13 +1011,16 @@ it("asks the overnight question preselected, beside the mailboxes", async () => 
 
 it("grants nothing when the reader skips connecting a mailbox", async () => {
   const grants: unknown[] = [];
-  stubWithSession({
-    "GET /connectors": () => jsonResponse({ data: [] }),
-    "PUT /me/agent-grants/morning_brief": (body: unknown) => {
-      grants.push(body);
-      return jsonResponse({});
+  stubWithSession(
+    {
+      "GET /connectors": () => jsonResponse({ data: [] }),
+      "PUT /me/agent-grants/morning_brief": (body: unknown) => {
+        grants.push(body);
+        return jsonResponse({});
+      },
     },
-  });
+    {},
+  );
   const { dispatch } = renderConnectAct();
 
   const without = screen.getByRole("button", {
@@ -965,13 +1040,16 @@ it("grants nothing when the reader skips connecting a mailbox", async () => {
 
 it("keeps an opt-out across the OAuth round trip", async () => {
   const answers: unknown[] = [];
-  stubWithSession({
-    "GET /connectors": () => jsonResponse({ data: [] }),
-    "PUT /me/agent-grants/morning_brief": (body: unknown) => {
-      answers.push(body);
-      return jsonResponse({});
+  stubWithSession(
+    {
+      "GET /connectors": () => jsonResponse({ data: [] }),
+      "PUT /me/agent-grants/morning_brief": (body: unknown) => {
+        answers.push(body);
+        return jsonResponse({});
+      },
     },
-  });
+    {},
+  );
 
   // The rep unticks the box, then leaves for the provider's consent screen.
   const first = renderConnectAct();
@@ -988,13 +1066,16 @@ it("keeps an opt-out across the OAuth round trip", async () => {
 
 it("records a decline, rather than leaving it unanswered", async () => {
   const answers: unknown[] = [];
-  stubWithSession({
-    "GET /connectors": rosterWith({ state: "none" }),
-    "PUT /me/agent-grants/morning_brief": (body: unknown) => {
-      answers.push(body);
-      return jsonResponse({});
+  stubWithSession(
+    {
+      "GET /connectors": rosterWith({ state: "none" }),
+      "PUT /me/agent-grants/morning_brief": (body: unknown) => {
+        answers.push(body);
+        return jsonResponse({});
+      },
     },
-  });
+    {},
+  );
   renderConnectAct(undefined, "skipped");
 
   await userEvent.click(screen.getByTestId("overnight-grant-choice"));

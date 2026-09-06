@@ -229,6 +229,13 @@ type ForecastWeek interface {
 	// one, which would give the next week two candidate openings.
 	CloseWeek(ctx context.Context, tx pgx.Tx, weekStart, weekEnd time.Time) (
 		[]Outlook, []Movement, []Driver, error)
+
+	// CloseTeamWeek is the same over a TEAM's book. Not the sum of its
+	// members': a deal owned by nobody on the team is in neither, and one the
+	// team works but a member owns is in both, so adding six personal outlooks
+	// would answer a question nobody asked.
+	CloseTeamWeek(ctx context.Context, tx pgx.Tx, teamID ids.UUID, weekStart, weekEnd time.Time) (
+		[]Outlook, []Movement, []Driver, error)
 }
 
 // NewEngine binds the engine to the installation pool and to the membership

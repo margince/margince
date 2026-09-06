@@ -143,12 +143,41 @@ func writeOutlook(
 }
 
 func insertOutlook(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, out Outlook) error {
+	return insertOutlookInto(ctx, tx, repOutlook, reviewID, out)
+}
+
+// outlookTable names one of the two tables that freeze a landing.
+//
+// Two, because the parent differs — a rep's hangs off weekly_review and a
+// team's off team_weekly_review — and one table cannot have two foreign keys of
+// which exactly one is set. The FIGURES are a deliberate mirror, held in both
+// directions by TestTheTeamOutlookMirrorsTheRepOutlook, and this type is what
+// keeps the WRITER single: the column list below is spelled once, so a figure
+// added for a rep cannot be forgotten for a team.
+//
+// Held by: TestTheTeamOutlookMirrorsTheRepOutlook
+// (backend/gates/teamoutlookmirror_test.go)
+type outlookTable struct {
+	name   string
+	parent string
+}
+
+var (
+	repOutlook  = outlookTable{name: "weekly_review_outlook", parent: "weekly_review_id"}
+	teamOutlook = outlookTable{
+		name: "team_weekly_review_outlook", parent: "team_weekly_review_id",
+	}
+)
+
+func insertOutlookInto(
+	ctx context.Context, tx pgx.Tx, table outlookTable, reviewID ids.UUID, out Outlook,
+) error {
 	cols, args := insertColumns{}, []any(nil)
 	add := func(name string, value any) {
 		cols = append(cols, name)
 		args = append(args, value)
 	}
-	add("weekly_review_id", reviewID)
+	add(table.parent, reviewID)
 	add("period_kind", out.PeriodKind)
 	add("period_start", out.PeriodStart)
 	add("period_end", out.PeriodEnd)
@@ -170,10 +199,12 @@ func insertOutlook(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, out Outloo
 		add("forward_measure", out.ForwardMeasure)
 	}
 
+	// The table and its parent column are IDENTIFIERS, formatted in from this
+	// package's own two constants and never from anything a request carries.
 	_, err := tx.Exec(ctx, fmt.Sprintf(`
-		INSERT INTO weekly_review_outlook (%s) VALUES (%s)
-		ON CONFLICT (weekly_review_id, period_kind) DO NOTHING`,
-		cols.names(), cols.placeholders()), args...)
+		INSERT INTO %s (%s) VALUES (%s)
+		ON CONFLICT (%s, period_kind) DO NOTHING`,
+		table.name, cols.names(), cols.placeholders(), table.parent), args...)
 	if err != nil {
 		return fmt.Errorf("weekly: freezing the %s outlook: %w", out.PeriodKind, err)
 	}
@@ -221,14 +252,24 @@ func insertDriver(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, driver Driv
 // the snapshot still exists. Reading through the id would make a retrospective
 // answer differently before and after retention ran.
 func readOutlook(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) ([]Outlook, error) {
-	rows, err := tx.Query(ctx, `
+	return readOutlookFrom(ctx, tx, repOutlook, reviewID)
+}
+
+// readOutlookFrom reads one frozen outlook, from whichever of the two tables
+// holds it. One column list for both, for the reason insertOutlookInto states:
+// a figure read for a rep and not for a team is a panel that quietly differs.
+func readOutlookFrom(
+	ctx context.Context, tx pgx.Tx, table outlookTable, reviewID ids.UUID,
+) ([]Outlook, error) {
+	// Identifiers from this package's own constants, never from a request.
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT period_kind, period_start, period_end, base_currency,
 		       won_minor, commit_minor, best_case_minor, weighted_minor,
 		       opening_snapshot_id, opening_landing_minor,
 		       closing_snapshot_id, closing_landing_minor, forward_measure
-		  FROM weekly_review_outlook
-		 WHERE weekly_review_id = $1
-		 ORDER BY period_kind`, reviewID)
+		  FROM %s
+		 WHERE %s = $1
+		 ORDER BY period_kind`, table.name, table.parent), reviewID)
 	if err != nil {
 		return nil, fmt.Errorf("weekly: reading the frozen outlook: %w", err)
 	}

@@ -88,6 +88,49 @@ func (r *Router) AttachmentMIMEs(task Task) []string {
 	return carried
 }
 
+// PromptWindow is the largest prompt a caller may assemble for task, in tokens,
+// or 0 when no rung this task might land on declares a limit worth planning
+// around.
+//
+// The MINIMUM over the bound ladder, not the leading rung's, and for the reason
+// AttachmentMIMEs takes the intersection: a call walks its ladder, the budget
+// guardrail can demote it to a lower rung mid-month, and a caller that sized a
+// prompt against the top rung would be right until the month it was not — and
+// would then overflow on the one call it had already decided was safe.
+//
+// A rung declaring 0 contributes NOTHING rather than forcing the answer to
+// zero. Zero means "no limit worth planning around", so a cloud rung sitting
+// beside a local one must not erase the local rung's real constraint; a ladder
+// where every rung says 0 still answers 0, which is the right answer.
+//
+// It walks ServableTiers and NOT taskLadders, which is what separates it from
+// the two functions above. BoundLadder prices the standing configuration and
+// AttachmentMIMEs asks what a caller may hand the task — both questions about
+// how the installation is configured. THIS is a safety bound on what actually
+// goes on the wire, so it has to cover every rung the call might land on, and
+// the ladder is not that set: the budget guardrail degrades cheap_cloud to
+// local_small, and the sovereign profile remaps cloud rungs to local ones.
+// Either can serve an agent-loop call on a tier taskLadders never names, and a
+// window read off the ladder alone then answers "no limit" for a run a local
+// model with a real one is about to serve.
+func (r *Router) PromptWindow(task Task) int {
+	smallest := 0
+	for _, tier := range ServableTiers(task) {
+		client, bound := r.binding().clients[tier]
+		if !bound {
+			continue
+		}
+		declared := client.Caps().PromptWindow
+		if declared <= 0 {
+			continue
+		}
+		if smallest == 0 || declared < smallest {
+			smallest = declared
+		}
+	}
+	return smallest
+}
+
 // CurrentModelForTier returns the model currently bound to tier; ok=false when
 // that tier is unbound (no routeMeta entry, or an entry whose model is empty).
 // This is the reprice target for a served slice whose own model has since

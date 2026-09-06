@@ -51,9 +51,13 @@ func addGmailCaptureJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConf
 	// dispatcher's own cadence can be frequent without meaning frequent
 	// provider calls.
 	addDeclaredWorker[CaptureSyncArgs](reg, &captureSyncWorker{registry: cfg.GmailRegistry, log: log})
-	// Backfill jobs are enqueued by the api (start op); the worker role only
-	// needs the pager registered.
+	// Backfill jobs are enqueued by the api (start op); the worker role needs
+	// the pager registered, and the nightly reconcile that puts a pager back
+	// behind a run whose own was lost (ADR-0063).
 	addDeclaredWorker[CaptureBackfillArgs](reg, &captureBackfillWorker{registry: cfg.GmailRegistry, log: log})
+	addDeclaredWorker[CaptureBackfillReconcileArgs](reg, &captureBackfillReconcileWorker{
+		pool: pool, registry: cfg.GmailRegistry, log: log,
+	})
 	if cfg.GmailWatch.Topic == "" {
 		return
 	}

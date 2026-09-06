@@ -53,7 +53,7 @@ func teamReviewToWire(review TeamReview) crmcontracts.TeamWeeklyReview {
 		})
 	}
 	c := review.Counts
-	return crmcontracts.TeamWeeklyReview{
+	out := crmcontracts.TeamWeeklyReview{
 		Id:             openapi_types.UUID(review.ID),
 		TeamId:         openapi_types.UUID(review.TeamID),
 		TeamName:       review.TeamName,
@@ -76,6 +76,16 @@ func teamReviewToWire(review TeamReview) crmcontracts.TeamWeeklyReview {
 		// before the agenda existed answers one anyway.
 		Agenda: agendaToWire(agendaOrder(review.Reps)),
 	}
+	// Rendered by the SAME function the rep's outlook uses, so the two panels
+	// cannot disagree about how a landing is put on the wire.
+	if len(review.Outlook) > 0 {
+		outlook := make([]crmcontracts.WeeklyReviewOutlook, 0, len(review.Outlook))
+		for _, horizon := range review.Outlook {
+			outlook = append(outlook, outlookToWire(horizon))
+		}
+		out.Outlook = &outlook
+	}
+	return out
 }
 
 // agendaToWire renders the agenda's order in the contract's uuid type.

@@ -13,11 +13,17 @@
 // page asks for without running it.
 
 import type { components } from "../api/schema";
+// `accessgrants`, not `capability`: the latter's other exports are hooks that
+// reach `useMe` and through it the design system's stylesheets, so importing it
+// pulls the component graph into anything that only wants to read this table.
+// `e2e/ac.spec.ts` derives its sweep from SETTINGS_PAGES, and that chain took
+// Playwright's transform into a CSS file — the whole suite failed to boot
+// before a single test ran.
 import {
   type AccessSnapshot,
   grants,
   type RbacObject,
-} from "../app/capability";
+} from "../app/accessgrants";
 
 type RbacAction = components["schemas"]["RbacAction"];
 

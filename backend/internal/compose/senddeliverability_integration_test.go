@@ -44,6 +44,7 @@ func TestToolSurfaceSendCarriesTheUnsubscribeSurface(t *testing.T) {
 		}
 		if _, err := consentStore.Record(admin, consent.RecordInput{
 			PersonID: ids.From[ids.PersonKind](person), PurposeID: purpose.ID, NewState: "granted",
+			PolicyText: &grantedWording,
 		}); err != nil {
 			t.Fatalf("grant %s: %v", key, err)
 		}

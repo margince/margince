@@ -3396,6 +3396,7 @@ export const vi = {
 
   "tasks.complete": "Đánh dấu xong",
   "tasks.snooze": "Hoãn 1 ngày",
+  "tasks.moveTo": "Dời sang",
   "tasks.detail": "Công việc",
   "tasks.detailLoading": "Đang đọc công việc này…",
   "tasks.isDone": "Đã hoàn thành",
@@ -6061,6 +6062,11 @@ export const vi = {
     "C\u00e1c \u0111\u01a1n v\u1ecb b\u1ea3n d\u1ef1ng n\u00e0y \u0111\u00e3 k\u1ebft h\u1ee3p, v\u00e0 vai tr\u00f2 n\u00e0o t\u1edbi \u0111\u01b0\u1ee3c.",
   "settings.page.reset.sub":
     "L\u00e0m r\u1ed7ng b\u1ea3n tri\u1ec3n khai n\u00e0y. Kh\u00f4ng th\u1ec3 ho\u00e0n t\u00e1c.",
+  "settings.search.label": "T\u00ecm trong c\u00e0i \u0111\u1eb7t",
+  "settings.search.placeholder": "T\u00ecm c\u00e0i \u0111\u1eb7t",
+  "settings.search.none":
+    "Kh\u00f4ng c\u00f3 trang c\u00e0i \u0111\u1eb7t n\u00e0o kh\u1edbp.",
+  "settings.search.count": "{n} trang c\u00e0i \u0111\u1eb7t kh\u1edbp.",
   "settings.tab.company": "Hồ sơ công ty",
   "settings.tab.authentication": "Đăng nhập & ứng dụng",
   "settings.tab.members": "Thành viên",
@@ -8563,6 +8569,9 @@ export const vi = {
   "worklist.verb.complete": "Mở",
   "worklist.verb.snooze": "Mở",
   "worklist.verb.acknowledge": "Đã hiểu",
+  "worklist.verb.promiseKept": "Xong",
+  "worklist.verb.promiseSettled": "Đã ghi nhận là hoàn thành.",
+  "worklist.verb.promiseSettleFailed": "Không thể ghi nhận.",
   "worklist.verb.meetingHeld": "Đã diễn ra",
   "worklist.verb.meetingNoShow": "Không ai đến",
   "worklist.verb.meetingCanceled": "Đã bị hủy",

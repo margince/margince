@@ -349,10 +349,15 @@ func briefItem(entry BriefEntry) crmcontracts.AttentionItem {
 // against what was actually written, and a card showing only the paraphrase
 // asks them to trust the extractor instead.
 //
-// Marking a promise kept is the claim's own endpoint's job, and this feed adds
-// no authority the record does not already have. What it does offer is `open`:
-// the person the promise was made to is named on the card, and a reader who
-// cannot reach them has been told about a debt and denied the way to pay it.
+// It offers `complete`, which settles the claim through the claim's own
+// endpoint — this feed adds no authority the record does not already have, it
+// spends the authority the reader already has where they are standing. The row
+// used to name a debt every morning with no way to say it was paid, because
+// nothing anywhere could write the `done` the status column has always had.
+//
+// And `open`: the person the promise was made to is named on the card, and a
+// reader who cannot reach them has been told about a debt and denied the way to
+// pay it.
 func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionItem {
 	body := promise.Body
 	quote := promise.Quote
@@ -366,7 +371,10 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 		Subject: subjectOf("person", promise.PersonID),
 		DueAt:   &due,
 		Overdue: &past,
-		Actions: []crmcontracts.AttentionItemActions{actionOpen},
+		Actions: []crmcontracts.AttentionItemActions{
+			crmcontracts.AttentionItemActionsComplete,
+			actionOpen,
+		},
 	}
 	if promise.SourceLabel != "" {
 		label := promise.SourceLabel
