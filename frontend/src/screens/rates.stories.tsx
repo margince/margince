@@ -78,8 +78,13 @@ function RateSheets() {
   );
 }
 
+// Filed under the tree rather than under a page, because it is neither page's
+// story: `FxRatesCard` renders on Company profile and `ModelCostsCard` on AI
+// usage, and this puts them side by side on purpose — the two price sheets an
+// operator reconciles against each other. A title naming one page would say the
+// other card lives there.
 const meta: Meta<typeof RateSheets> = {
-  title: "Settings/Admin settings/Rates and model costs",
+  title: "Settings/Across pages/Rates and model costs",
   component: RateSheets,
 };
 export default meta;

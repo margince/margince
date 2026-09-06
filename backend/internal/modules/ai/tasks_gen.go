@@ -56,6 +56,8 @@ const (
 	TaskTranscriptPropose Task = "transcript_propose"
 	// TaskVoiceBuild is owner-requested or automatic durable Voice DNA candidate build; own-authored corpus only, CompanyContext none (ADR-0066). Three sites: the derive pass plus the two evaluation passes.
 	TaskVoiceBuild Task = "voice_build"
+	// TaskWeeklyLearnings is weekly_learnings/learn — what a week TEACHES, as against what it was. The narrative beside it describes a week the reader can already see, so a wrong sentence is visibly wrong; a learning is a claim about cause that a reader cannot check against anything in front of them. So every learning cites rows from the week it was shown, a reply citing anything else is refused WHOLE rather than trimmed, and a week with fewer than three citable rows never reaches the model at all. A refusal stamps insufficient_evidence, which is a different state from not_run: the rep is told whether anybody looked.
+	TaskWeeklyLearnings Task = "weekly_learnings"
 	// TaskWeeklyReview is weekly_review/narrative — one or two sentences over a week's own counts and deal lines, for the rep reading them on Monday. It adds nothing: every fact it may state is already in the deterministic review beside it, which is what makes the whole thing safe to lose. A rep with no lane, an exhausted budget or a provider outage reads the same counts and the same lines, and the screen says which.
 	TaskWeeklyReview Task = "weekly_review"
 )
@@ -93,6 +95,7 @@ var taskDisplayNames = map[Task]string{
 	TaskTranscript:                    "Transcript reading",
 	TaskTranscriptPropose:             "Meeting follow-up extraction",
 	TaskVoiceBuild:                    "Voice DNA build",
+	TaskWeeklyLearnings:               "What last week taught",
 	TaskWeeklyReview:                  "Weekly review narrative",
 }
 
@@ -126,7 +129,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "fc1108b4e0953f5f3416a642133098287b6b03d5938ca670888f3faf1088b5d5"
+const TaskContractHash = "d28b3058ae5ab30bcd40520648a1a21c37429a0d83cbfa375b64d11d5284c059"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -159,6 +162,7 @@ func AllTasks() []Task {
 		TaskTranscript,
 		TaskTranscriptPropose,
 		TaskVoiceBuild,
+		TaskWeeklyLearnings,
 		TaskWeeklyReview,
 	}
 }
@@ -192,6 +196,7 @@ var taskLadders = map[Task][]Tier{
 	TaskTranscript:                    {TierCheapCloud, TierPremium},
 	TaskTranscriptPropose:             {TierCheapCloud, TierPremium},
 	TaskVoiceBuild:                    {TierCheapCloud, TierPremium},
+	TaskWeeklyLearnings:               {TierCheapCloud, TierPremium},
 	TaskWeeklyReview:                  {TierCheapCloud, TierPremium},
 }
 
@@ -234,6 +239,7 @@ var taskExecutionModes = map[Task]ExecutionMode{
 	TaskTranscript:                    ExecutionModeInteractive,
 	TaskTranscriptPropose:             ExecutionModeBackground,
 	TaskVoiceBuild:                    ExecutionModeBackground,
+	TaskWeeklyLearnings:               ExecutionModeBackground,
 	TaskWeeklyReview:                  ExecutionModeBackground,
 }
 
@@ -283,6 +289,7 @@ var taskStatus = map[Task]string{
 	TaskTranscript:                    "planned",
 	TaskTranscriptPropose:             "shipped",
 	TaskVoiceBuild:                    "shipped",
+	TaskWeeklyLearnings:               "shipped",
 	TaskWeeklyReview:                  "shipped",
 }
 
@@ -393,6 +400,9 @@ var taskSites = map[Task][]Site{
 		{Name: "eval_draft", Kind: "one_shot"},
 		{Name: "eval_scores", Kind: "one_shot"},
 	},
+	TaskWeeklyLearnings: {
+		{Name: "learn", Kind: "one_shot"},
+	},
 	TaskWeeklyReview: {
 		{Name: "narrative", Kind: "one_shot"},
 	},
@@ -478,6 +488,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskTranscript:                    {TokenBudget: 0, Conditional: false},
 	TaskTranscriptPropose:             {TokenBudget: 0, Conditional: false},
 	TaskVoiceBuild:                    {TokenBudget: 0, Conditional: false},
+	TaskWeeklyLearnings:               {TokenBudget: 0, Conditional: false},
 	TaskWeeklyReview:                  {TokenBudget: 0, Conditional: false},
 }
 

@@ -1779,3 +1779,101 @@
   container-type: inline-size;
   container-name: work;
 }
+
+/* Settings search, standing above the rail's rows.
+ *
+ * The rows below it are twenty-eight on an admin seat, so the box is the first
+ * thing a reader reaches for. Every interval and colour is a token: a raw value
+ * here would be the one gap in the rail that does not move when the scale does.
+ *
+ * Not `.suggest-popup`'s geometry, and deliberately: that list is PORTALLED and
+ * measured against the viewport because its anchor can sit anywhere in a form.
+ * This one lives in the rail, which is a positioned column of known width, so
+ * it hangs off its own wrapper and needs no measuring at all. */
+.navlead {
+  padding: var(--space-2) var(--space-3);
+}
+
+/* Absent in the collapsed rail, which is 56px wide: a text field in there is a
+   box too narrow to read your own typing in, over a result list narrower still.
+   The rail's own rows survive collapse because each is an icon with a tooltip;
+   a search box has no icon-sized form, so it stands down rather than shrinking
+   into an unusable one. Expanding the rail brings it back. */
+.rail.collapsed .navlead {
+  display: none;
+}
+
+.settingssearch {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.settingssearch > svg {
+  position: absolute;
+  left: var(--space-2);
+  width: 16px;
+  height: 16px;
+  color: var(--textMeta);
+  /* Decoration over the field: it must not eat a click aimed at the box. */
+  pointer-events: none;
+}
+
+.settingssearch input {
+  width: 100%;
+  height: var(--control-h-sm);
+  padding-inline: calc(var(--space-2) + 16px + var(--space-1)) var(--space-2);
+  border: 1px solid var(--borderStrong);
+  border-radius: var(--r-sm);
+  background: var(--bgElevated);
+  color: var(--textPrimary);
+  font-family: var(--f-body);
+  font-size: var(--fs-body);
+}
+
+.settingssearch input:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+/* Over the rows rather than pushing them down: a rail that grew by four rows
+   while a reader typed would move the destination they were reaching for. */
+.settingssearch-list {
+  position: absolute;
+  z-index: 70;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1);
+  border: 1px solid var(--borderStrong);
+  border-radius: var(--r-sm);
+  background: var(--bgElevated);
+  box-shadow: var(--shadow-pop);
+  max-height: 60vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.settingssearch-hit {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--r-sm);
+  color: var(--textPrimary);
+  text-decoration: none;
+}
+
+/* One state for keyboard and pointer, because the list tracks one active
+   option through `aria-activedescendant` whichever input moved it. */
+.settingssearch-hit.active,
+.settingssearch-hit:hover {
+  background: var(--bgHover);
+}
+
+.settingssearch-empty {
+  padding: var(--space-1) var(--space-2);
+  color: var(--textMeta);
+  font-size: var(--fs-body);
+}

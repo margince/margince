@@ -20,7 +20,6 @@ package consent
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -85,7 +84,7 @@ func (g *Gate) AuthorizeStagingTx(ctx context.Context, tx pgx.Tx, deliveryID ids
 // to. The fingerprint is of the message as staged, so a later reader can tell
 // whether what went out is what was authorized.
 func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID, setID ids.UUID, req commsauthz.Request, set commsauthz.DecisionSet) error {
-	sum := sha256.Sum256([]byte(req.Subject + "\x00" + req.Body))
+	sum := WordingDigest(req.Subject, req.Body)
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err

@@ -339,6 +339,21 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	}
 	if openableSubject(row.Subject) {
 		row.Actions = append(row.Actions, crmcontracts.WorklistItemActions(actionOpen))
+		// Answering where the reader is standing, offered only for an EMAIL. The
+		// lane also carries channel messages, and the composer this verb opens
+		// speaks mail — a chat message it addressed would be answered in the
+		// wrong place, to a counterparty resolved from a thread that is not one.
+		//
+		// `email_summary` is the honest test rather than the kind word: the
+		// contract sets it exactly when the wait is mail, and it is absent for a
+		// reader the content gate did not admit — who has no message to answer.
+		//
+		// It rides the same subject test as `open`, because the composer files
+		// the reply against that record. A wait with no subject would open a
+		// composer with nothing to link the sent message to.
+		if row.EmailSummary != nil {
+			row.Actions = append(row.Actions, crmcontracts.WorklistItemActionsReply)
+		}
 	}
 	occurred := waiting.Since
 	row.OccurredAt = &occurred
