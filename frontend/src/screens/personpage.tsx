@@ -51,7 +51,7 @@ import {
   PersonMattersCard,
 } from "./personcards";
 import { EnrichedFields } from "./personcorrections";
-import { PersonComposer, PersonResearchDrawer } from "./persondrawers";
+import { PersonResearchDrawer } from "./persondrawers";
 import { PersonFilesTab } from "./personfiles";
 import { PersonMemory } from "./personmemory";
 import { PersonNetworkTab } from "./personnetwork";
@@ -67,7 +67,11 @@ import {
 } from "./persontabs";
 import { PersonToday } from "./persontoday";
 import type { Transport } from "./persontransports";
-import { primaryTransportAction, useTransports } from "./persontransports";
+import {
+  primaryTransportAction,
+  transportForActivity,
+  useTransports,
+} from "./persontransports";
 import { RecordReading, RecordReadingPair } from "./record360";
 import { EmailVerb, RecordEmailAside } from "./recordemail";
 import { ShareAction } from "./share";
@@ -416,7 +420,6 @@ export function PersonPageV2({
             personId={id}
             overlay={overlay}
             onWrite={() => openComposer("")}
-            onWriteMail={() => setDrawer("mail")}
             onResearch={() => setDrawer("research")}
             onLogActivity={() => setDrawer("activity_log")}
             onAddTask={() => setDrawer("activity_task")}
@@ -522,15 +525,6 @@ export function PersonPageV2({
           onBriefMeeting={openBrief}
           onOpenEmail={setOpenEmail}
         />
-        <PersonComposer
-          personId={id}
-          view={view.data}
-          guard={guard.data}
-          open={composer.open}
-          intent={composer.intent}
-          threadId={composer.threadId}
-          onClose={composer.close}
-        />
         {/* One drawer over the record. The timeline's rows and the rail's
             citations both open into it, so a reader who finds a message in the
             aside and one who finds it in the body land in the same place. */}
@@ -541,9 +535,12 @@ export function PersonPageV2({
         />
         <PersonMailDrawer
           personId={id}
+          view={view.data}
           recordAddress={primaryEmail(person.emails)}
-          open={drawer === "mail"}
-          onClose={() => setDrawer(null)}
+          open={composer.open}
+          intent={composer.intent}
+          threadId={composer.threadId}
+          onClose={composer.close}
         />
         <PersonResearchDrawer
           personId={id}
@@ -576,13 +573,7 @@ export function PersonPageV2({
 // reachable only for the soonest meeting and only while the prep moment was
 // live — every other meeting on the record had a brief the backend would
 // happily assemble and no way to ask for it.
-type Drawer =
-  | "composer"
-  | "mail"
-  | "research"
-  | "activity_log"
-  | "activity_task"
-  | null;
+type Drawer = "composer" | "research" | "activity_log" | "activity_task" | null;
 
 /**
  * Which meeting the address says to brief, and how to change it.
@@ -854,27 +845,50 @@ function PersonEmailPanel({
   );
 }
 
-// The header's generic mail verb opens the shared compose drawer — the thread
-// offers and the conversation beside the form, the same shape every record's
-// mail box opens. Split out so the page renders it unconditionally, the same
-// way PersonMeetingBrief carries its own `open`. Keyed by the record: navigating
-// to another person while it is open remounts it rather than re-pointing it —
-// without the key the text written for one contact would be filed against
-// another.
+// The contact page's ONE composer.
+//
+// It used to be two. The header verb opened this drawer for a contact reachable
+// only by mail and a second, older composer for one who also had a chat channel;
+// the worklist's "draft a reply" link and every moment-card action opened that
+// second one whatever the contact's transports. So the same button gave two
+// different surfaces, and the half of the traffic that went to the older one got
+// no thread beside the reply, no conversation to continue and no read of what
+// the send would be permitted to do. The transport question is answered INSIDE
+// the shared drawer now, which is where it always belonged: which way a message
+// goes is a property of the message, not a reason for a different composer.
+//
+// Keyed by the record: navigating to another contact while it is open remounts
+// it rather than re-pointing it — without the key the text written for one
+// contact would be filed against another.
 function PersonMailDrawer({
   personId,
+  view,
   recordAddress,
   open,
+  intent,
+  threadId,
   onClose,
 }: Readonly<{
   personId: string;
+  view: Person360;
   // Which of the contact's addresses a FIRST message goes to. A person carries
   // a list, so this is the shared decision rather than a field — see
   // format/primaryemail.ts, mirrored by the drafter.
   recordAddress?: string;
   open: boolean;
+  /** What the action that opened it wanted written. */
+  intent: string;
+  /** The conversation a caller named, when one did. */
+  threadId?: string;
   onClose: () => void;
 }>) {
+  // Read unconditionally, above the early return: the number of hooks a render
+  // performs must not depend on whether the drawer is open.
+  const transports = useTransports(view);
+  // Which transport that conversation is ON, rather than the contact's own
+  // lead. A worklist row is about one message, and opening on whatever the
+  // person happens to lead with would draft a reply into a different thread.
+  const anchored = transportForActivity(transports, view, threadId);
   if (!open) {
     return null;
   }
@@ -885,6 +899,10 @@ function PersonMailDrawer({
       entityId={personId}
       personId={personId}
       recordAddress={recordAddress}
+      transports={transports}
+      initialTransportId={anchored.chosen?.id}
+      staleThread={anchored.stale}
+      intent={intent}
       open
       onClose={onClose}
     />
@@ -927,7 +945,6 @@ function PersonActions({
   personId,
   overlay,
   onWrite,
-  onWriteMail,
   onResearch,
   onLogActivity,
   onAddTask,
@@ -942,7 +959,6 @@ function PersonActions({
   // trigger drawn here would set drawer state a mount elsewhere refuses.
   overlay: boolean;
   onWrite: () => void;
-  onWriteMail: () => void;
   onResearch: () => void;
   onLogActivity: () => void;
   onAddTask: () => void;
@@ -971,11 +987,6 @@ function PersonActions({
   const write = primaryTransportAction(transports, t);
   const WriteIcon = write.icon;
   const refusal = writeRefusal({ transports, consentAllows, consentKnown }, t);
-  // Where the verb goes. Mail as the only way in opens the shared compose
-  // drawer, which knows the record's conversations; a channel in the mix keeps
-  // PersonComposer, the one place that can ask which transport and answer a
-  // provider-anchored conversation.
-  const mailOnly = transports.length === 1 && transports[0].id === "email";
   return (
     <>
       {/* The shared Email verb, wearing the transport it will open when there
@@ -986,7 +997,7 @@ function PersonActions({
         icon={<WriteIcon size={15} aria-hidden="true" />}
         disabled={!consentKnown}
         reason={refusal}
-        onClick={mailOnly ? onWriteMail : onWrite}
+        onClick={onWrite}
       />
       {/* Square, because a phone and a calendar are verbs a reader already
           knows from the glyph — and five labelled buttons in a row is a header

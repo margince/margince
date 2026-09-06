@@ -183,7 +183,11 @@ describe("the custom-fields admin, at its address inside settings", () => {
         });
       }),
     );
-    window.location.hash = "#/settings/data-model";
+    // The custom-field editor's own page since the data-model entry split into
+    // five. `data-model` still resolves — it is a declared alias — but naming
+    // the current page means this test fails if the page moves rather than
+    // silently riding a redirect.
+    window.location.hash = "#/settings/fields";
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });

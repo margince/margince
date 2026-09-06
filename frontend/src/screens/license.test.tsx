@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { LicenseCard } from "./license";
 
@@ -60,6 +61,14 @@ function backendFor(entitlement: Entitlement) {
     const req =
       input instanceof Request ? input : new Request(String(input), init);
     const url = new URL(req.url, "http://localhost");
+    // The card asks which half this reader may have before it asks for either,
+    // so /me is now part of its own read rather than ambient context.
+    if (url.pathname.endsWith("/v1/me")) {
+      return new Response(
+        JSON.stringify(meFixture({ allow: { license: ["read"] } })),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
     if (url.pathname.endsWith("/installation/license")) {
       return new Response(JSON.stringify(entitlement), {
         status: 200,
@@ -267,6 +276,107 @@ describe("LicenseCard", () => {
     const meter = screen.getByRole("meter");
     expect(meter.getAttribute("aria-valuenow")).toBe("11");
     expect(meter.getAttribute("aria-valuemax")).toBe("10");
+  });
+});
+
+describe("the capacity half, for a reader who may not see the commercial one", () => {
+  // `seat_usage` shipped so management could plan headcount without being handed
+  // what the installation pays. The card reads the entitlement for a `license`
+  // holder and falls back to `/installation/seat-usage` for a `seat_usage` one.
+  //
+  // Both cases assert which endpoint was ASKED, not only what was drawn. The
+  // wrong one is not a rendering difference: for a `seat_usage` holder the
+  // entitlement 403s, and for a `license` holder the capacity call is a second
+  // request for a number the first already carried.
+  function twoHalfBackend(
+    allow: NonNullable<Parameters<typeof meFixture>[0]>["allow"],
+    asked: string[],
+  ) {
+    return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req =
+        input instanceof Request ? input : new Request(String(input), init);
+      const url = new URL(req.url, "http://localhost");
+      asked.push(url.pathname);
+      const body = url.pathname.endsWith("/v1/me")
+        ? meFixture({ roles: ["management"], allow })
+        : url.pathname.endsWith("/installation/seat-usage")
+          ? { seats_used: 7 }
+          : {
+              state: "valid",
+              seats_used: 7,
+              over_limit: false,
+              checked_at: checkedAt,
+            };
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+  }
+
+  it("reads capacity for a seat_usage holder, and never asks for the entitlement", async () => {
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", twoHalfBackend({ seat_usage: ["read"] }, asked));
+    render(<LicenseCard />);
+
+    expect(await screen.findByText("7")).toBeTruthy();
+    expect(asked).toContain("/v1/installation/seat-usage");
+    expect(asked).not.toContain("/v1/installation/license");
+  });
+
+  it("reads the entitlement for a license holder, and never asks for capacity", async () => {
+    // The half that a naive `!canReadLicense` gets wrong: every capability
+    // predicate reads false while /me is in flight, so a fallback keyed on it
+    // alone fires the capacity request for a licence holder on every load,
+    // before the grant has resolved.
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", twoHalfBackend({ license: ["read"] }, asked));
+    render(<LicenseCard />);
+
+    await waitFor(() => expect(asked).toContain("/v1/installation/license"));
+    expect(asked).not.toContain("/v1/installation/seat-usage");
+  });
+
+  // The third state of the snapshot, which is neither of the two above: /me
+  // FAILED. `isPending` goes false with no grants to read, so a branch keyed on
+  // `!canReadLicense` alone is true for a licence holder exactly as it is for a
+  // capacity reader — and it would pick capacity permanently, offering a retry
+  // that retries seats rather than the snapshot that actually failed.
+  it("asks for neither half when the access snapshot itself failed", async () => {
+    const asked: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        const url = new URL(req.url, "http://localhost");
+        asked.push(url.pathname);
+        if (url.pathname.endsWith("/v1/me")) {
+          return new Response(JSON.stringify({ title: "upstream" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({ seats_used: 7 }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+    render(<LicenseCard />);
+
+    // Waited on the FAILURE having been rendered, not merely on the request
+    // having been made: asserting an absence a beat after mount passes before
+    // the wrong branch has had a chance to fire, which is the vacuous shape
+    // this whole file is careful about. The retry button is the /me gate's own
+    // and only appears once the query has actually errored.
+    expect(
+      await screen.findByRole("button", { name: /try again|retry/i }),
+    ).toBeTruthy();
+    // Only then: no capacity reading claimed, and no request spent guessing.
+    expect(asked).not.toContain("/v1/installation/seat-usage");
+    expect(asked).not.toContain("/v1/installation/license");
+    expect(screen.queryByText("7")).toBeNull();
   });
 });
 

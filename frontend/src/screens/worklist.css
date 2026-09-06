@@ -7,8 +7,19 @@
   margin-bottom: var(--space-4);
 }
 
+/* The sentence and the scope share a line: the sentence takes the room, the
+   scope sits at the far edge, and on a phone the scope drops under it. */
+.worklist-header-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
 .worklist-lead {
   margin: 0;
+  color: var(--textContent);
 }
 
 /* A manager's control over one row: the picker or the question, then the verbs
@@ -105,10 +116,88 @@
   margin: 0;
 }
 
+/* Three columns a reader runs down as three lists: the rank, the KIND of work,
+   and the work itself — which takes the whole rest of the row. The kind column
+   is fixed so the titles beside it start at one x whatever the kind says, which
+   is what lets the eye read the kinds alone and then the titles alone. The
+   verbs are NOT a fourth column: seven controls beside the work took the width
+   and left the subject, the snippet and the reasons a strip that wrapped every
+   line. They sit under the work, one wrapping line, and so does anything else
+   the row carries after it — a decision drawn inside the row, an answer. */
 .worklist-row {
   align-items: flex-start;
+  display: grid;
+  grid-template-columns: auto var(--worklist-kind-w, 7.5rem) minmax(0, 1fr);
+  column-gap: var(--space-4);
+  row-gap: var(--space-2);
+}
+/* The verbs and anything the row carries after them — a decision drawn inside
+   it, an answer — take the full width under the work. Spelled as two selectors
+   rather than one `:nth-child`, because the wide shape below moves ONLY the
+   verbs and needs a selector of equal weight to do it. */
+.worklist-row > .worklist-row-acts,
+.worklist-row > :nth-child(n + 5) {
+  grid-column: 3 / -1;
+}
+.worklist-row-acts {
   display: flex;
-  gap: var(--space-3);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
+/* A CARD WITH ROOM PUTS THE VERBS BESIDE THE WORK.
+   Under it, they left the card's right-hand half empty — measured at 812px of
+   nothing on a 1358px card, which is what a full-bleed row with all its ink on
+   the left reads as. Beside it, the work is bracketed by what can be done
+   about it and the card is used end to end.
+   The column is CAPPED: a row can carry seven verbs, and uncapped they took
+   the width and squeezed the subject and its reasons into a strip that wrapped
+   every line — which is what put them under the work in the first place. At
+   the cap they wrap among themselves instead, and the work keeps the rest.
+   60rem is measured rather than picked: the Brief's work column is narrower
+   than that, and there the verbs stay under the work so the subject and its
+   reasons keep the whole width. Only a queue on a page of its own is wide
+   enough to spend on both. */
+@container (min-width: 60rem) {
+  .worklist-row {
+    grid-template-columns:
+      auto
+      var(--worklist-kind-w, 7.5rem)
+      minmax(0, 1fr)
+      minmax(min-content, var(--worklist-acts-w, 20rem));
+  }
+  .worklist-row > .worklist-row-acts {
+    grid-column: 4;
+    justify-content: flex-end;
+  }
+}
+
+/* The kind, as an eyebrow in the muted tone; in the warn tone on a row the day
+   put in its first band, where the kind is also the reason it is there. Wraps
+   rather than elides: "Customer waiting" is two words and both are the fact. */
+.worklist-row-kind {
+  color: var(--textSecondary);
+  padding-top: var(--space-1);
+  text-wrap: balance;
+}
+.worklist-row-kind-now {
+  color: var(--warn);
+}
+
+/* On a phone the kind sits above the title rather than beside it: a 390px row
+   has no column to give a second word. */
+@media (max-width: 40rem) {
+  .worklist-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .worklist-row-kind {
+    grid-column: 2 / -1;
+    padding-top: 0;
+  }
+  .worklist-row > :nth-child(n + 3) {
+    grid-column: 2 / -1;
+  }
 }
 
 /* The rank reads as a marker beside the row rather than as part of the
@@ -223,8 +312,13 @@
 }
 
 /* The queue is an ordered list for assistive technology and a plain stack on
-   screen: the rank number is already drawn in the row. */
+   screen: the rank number is already drawn in the row.
+   It is also the CONTAINER the row measures itself against — see the row's own
+   wide shape below. A media query would read the window, and this same queue is
+   drawn in the Brief's work column and on a page of its own, which are two
+   widths on one screen. */
 .worklist-list {
+  container-type: inline-size;
   list-style: none;
   margin: 0;
   padding: 0;

@@ -60,6 +60,9 @@ describe("HomeScreen — the deck stages, and only the commit sends", () => {
     });
     const user = userEvent.setup();
     render(<HomeScreen />);
+    // The list is what the Brief opens on now (decisiondeck.tsx says why);
+    // this case is about the DECK, so it opens the deck as a reader would.
+    await user.click(await screen.findByRole("button", { name: "Deck" }));
 
     // One card at a time: staging the live one brings the next forward.
     await screen.findByText("Send the Weber follow-up");
@@ -233,6 +236,9 @@ describe("HomeScreen — the deck stages, and only the commit sends", () => {
     });
     const user = userEvent.setup();
     render(<HomeScreen />);
+    // The list is what the Brief opens on now (decisiondeck.tsx says why);
+    // this case is about the DECK, so it opens the deck as a reader would.
+    await user.click(await screen.findByRole("button", { name: "Deck" }));
 
     await screen.findByText("Send the Weber follow-up");
     await user.click(screen.getByRole("button", { name: "Accept" }));
@@ -650,7 +656,11 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
           new Set(),
         ),
     });
+    const user = userEvent.setup();
     render(<HomeScreen />);
+    // The list is what the Brief opens on now (decisiondeck.tsx says why);
+    // this case is about the DECK, so it opens the deck as a reader would.
+    await user.click(await screen.findByRole("button", { name: "Deck" }));
 
     // The DECK is where decisions are said now, and it draws the proposal
     // itself rather than a count of them — a stronger claim than the line that

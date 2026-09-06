@@ -12,6 +12,7 @@ package privacy
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -112,6 +113,11 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 	rows, err := tx.Query(ctx, `
 		UPDATE activity a SET subject = $5, body = NULL, raw = NULL,
 		  counterparty_email = NULL,
+		  -- What a classifier concluded the message MEANT goes with the words it
+		  -- read. A verdict saying a subject replied negatively is a claim about
+		  -- them, derived from text this same statement is emptying, and leaving
+		  -- it would keep the conclusion after destroying the evidence.
+		  reply_verdict = NULL, reply_verdict_at = NULL, reply_verdict_by = NULL,
 		  source_id = CASE WHEN a.source_system || ':' || split_part(coalesce(a.thread_key, ''), ':', 3) = ANY($6)
 		                   THEN NULL ELSE a.source_id END,
 		  thread_key = CASE WHEN a.source_system || ':' || split_part(coalesce(a.thread_key, ''), ':', 3) = ANY($6)
@@ -137,6 +143,25 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 		DELETE FROM field_provenance
 		WHERE object_type = 'activity' AND object_id IN (`+subjectOnlyDestroyable+`)`,
 		personID, floorInterval, floorAnchor); err != nil {
+		return nil, err
+	}
+	// And how the reply verdict came to be what it was. DELETED rather than
+	// nulled, the way ai_feedback is: a history of judgements about somebody
+	// nobody may now assert anything about has nothing left to record. The
+	// table's own ON DELETE CASCADE does not reach it — this erasure UPDATES
+	// the activity in place and never removes the row.
+	//
+	// Through the shared helper, which scopes by PERSON rather than by the
+	// floor-bounded activity set this function redacts. The wider scope is
+	// deliberate: the floor holds back a message's TEXT for a statutory period,
+	// and a conclusion about what that message meant is not the message. Keeping
+	// the verdict to satisfy a correspondence floor would preserve our reading
+	// of the subject's words on the ground that we must preserve the words.
+	if err := deleteReplyVerdictHistoryFor(ctx, tx, personID); err != nil {
+		return nil, err
+	}
+	// And the handoffs naming them, for the same reason and on the same act.
+	if err := deleteSubjectHandoffs(ctx, tx, personID); err != nil {
 		return nil, err
 	}
 	return redacted, nil
@@ -243,4 +268,70 @@ func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, personID ids.PersonID, d
 		}
 	}
 	return rawPurged, aiPayloadsPurged, nil
+}
+
+// deleteSubjectHandoffs drops every SDR handoff naming the subject, and with it
+// the transitions that cascade from each one.
+//
+// A handoff carries the subject's id, a free-text note one seat wrote about
+// them, and a judgement — accepted, or refused for this reason — that people
+// made about this person. Erasure UPDATEs the person in place and never removes
+// the row, so the ON DELETE CASCADE on lead_id and person_id never fires for an
+// Art. 17 request: this statement is what actually reaches them.
+//
+// DELETED rather than nulled, on the ground ai_feedback records: a decision
+// about somebody nobody may now assert anything about has nothing left to say.
+// sdr_handoff_event goes with it through its own cascade, which DOES fire here
+// because this is a real delete.
+func deleteSubjectHandoffs[ID ids.UUID | ids.PersonID](ctx context.Context, tx pgx.Tx, personID ID) error {
+	// The transitions first, by name. sdr_handoff_event cascades from the delete
+	// below and would go anyway — but a cascade is invisible to the census that
+	// asks whether Art. 17 reaches a table, and invisible to the next reader
+	// auditing what this erasure destroys. Naming it costs one statement and
+	// makes both able to see it.
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM sdr_handoff_event
+		WHERE handoff_id IN (
+		      SELECT id FROM sdr_handoff
+		       WHERE person_id = $1
+		          OR lead_id IN (SELECT id FROM lead WHERE promoted_person_id = $1))`,
+		personID); err != nil {
+		return fmt.Errorf("privacy: clearing the subject's handoff transitions: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM sdr_handoff
+		WHERE person_id = $1
+		   OR lead_id IN (SELECT id FROM lead WHERE promoted_person_id = $1)`,
+		personID); err != nil {
+		return fmt.Errorf("privacy: clearing the subject's handoffs: %w", err)
+	}
+	return nil
+}
+
+// deleteReplyVerdictHistoryFor drops every judgement this installation recorded
+// about what one person's replies meant — the classifier's own and every human
+// correction after it.
+//
+// ONE spelling, called by both acts. The Art. 17 timeline redaction reaches
+// these rows through the activities it empties; the anonymize reaches them
+// through the person, because it empties no activity at all. Two statements
+// would be two answers to "which rows belong to this subject", and the anonymize
+// parity gate exists precisely because those two answers drift.
+//
+// Scoped through activity_link, the same join the SAR export uses to decide
+// which activities are this person's.
+//
+// The type parameter is there because the two callers hold the subject id in
+// different types — the erasure spine in ids.PersonID, the retention sweep in
+// ids.UUID — and a second function per type would be a second answer to "which
+// rows belong to this subject". The constraint keeps it to those two rather
+// than admitting any id at all.
+func deleteReplyVerdictHistoryFor[ID ids.UUID | ids.PersonID](ctx context.Context, tx pgx.Tx, personID ID) error {
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM activity_reply_verdict_history
+		WHERE activity_id IN (SELECT l.activity_id FROM activity_link l WHERE l.person_id = $1)`,
+		personID); err != nil {
+		return fmt.Errorf("privacy: clearing the subject's reply verdicts: %w", err)
+	}
+	return nil
 }

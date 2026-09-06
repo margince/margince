@@ -58,6 +58,7 @@ import {
   useChronologyFilter,
   useRecordChronology,
 } from "./recordchronology";
+import { RecordEmailVerb } from "./recordemail";
 import { ShareAction } from "./share";
 import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
@@ -332,6 +333,25 @@ function ProjectActions({
   const overlay = useSorMode() === "overlay";
   return (
     <>
+      {/* Writing from the record, on the record page — the verb every other
+          record already carries, and the one this page did not. A project's
+          mail is a NEW conversation with somebody on the account behind it: the
+          composer offers that roster in To and files the send under this
+          project, which is the filing a message written from here can only
+          mean. Off in overlay for the reason the other verbs are: a mirrored
+          workspace has no send of its own.
+
+          No `recordAddress`: a project is not a person and has no address of its
+          own to open with. A deal offers its champion's; here the reader picks
+          from the account's people, which is an honest ask rather than a guess
+          at which of them a project-wide message is to. */}
+      {!overlay && (
+        <RecordEmailVerb
+          entityType="project"
+          entityId={project.id}
+          disabledReasonId={refusedReasonId}
+        />
+      )}
       <EditAction<Project>
         disabledReasonId={refusedReasonId}
         label={t("project.edit")}

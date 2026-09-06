@@ -124,6 +124,7 @@ describe("DecisionDeck — stage, then commit", () => {
     const user = userEvent.setup();
     const onCommit = vi.fn();
     render(deck({ onCommit }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     await user.click(screen.getByRole("button", { name: "Accept" }));
     expect(onCommit).not.toHaveBeenCalled();
     expect(screen.getByText("1 staged")).toBeInTheDocument();
@@ -133,6 +134,7 @@ describe("DecisionDeck — stage, then commit", () => {
     const user = userEvent.setup();
     const onCommit = vi.fn();
     render(deck({ onCommit }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     await user.click(screen.getByRole("button", { name: "Accept" }));
     await user.click(screen.getByRole("button", { name: "Reject" }));
     await user.click(screen.getByRole("button", { name: "Commit" }));
@@ -149,6 +151,7 @@ describe("DecisionDeck — stage, then commit", () => {
     const user = userEvent.setup();
     const onCommit = vi.fn();
     render(deck({ onCommit }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     await user.click(screen.getByRole("button", { name: "Accept" }));
     await user.click(screen.getByRole("button", { name: "Reject" }));
     await user.click(screen.getByRole("button", { name: "Undo the last" }));
@@ -166,6 +169,7 @@ describe("DecisionDeck — stage, then commit", () => {
     const user = userEvent.setup();
     const onCommit = vi.fn();
     render(deck({ onCommit }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     expect(
       screen.queryByRole("button", { name: "Commit" }),
     ).not.toBeInTheDocument();
@@ -179,6 +183,7 @@ describe("DecisionDeck — stage, then commit", () => {
     const user = userEvent.setup();
     const onCommit = vi.fn();
     render(deck({ onCommit, commitState: "sending" }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     await user.click(screen.getByRole("button", { name: "Accept" }));
     await user.click(screen.getByRole("button", { name: "Commit" }));
     expect(onCommit).not.toHaveBeenCalled();
@@ -230,6 +235,7 @@ describe("DecisionDeck — the keyboard is the equal of the pointer", () => {
     const byPointer = vi.fn();
     const user = userEvent.setup();
     render(deck({ onCommit: byPointer }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     await user.click(screen.getByRole("button", { name: "Accept" }));
     await user.click(screen.getByRole("button", { name: "Reject" }));
     await user.click(screen.getByRole("button", { name: "Later" }));
@@ -238,6 +244,7 @@ describe("DecisionDeck — the keyboard is the equal of the pointer", () => {
 
     const byKeyboard = vi.fn();
     render(deck({ onCommit: byKeyboard }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     liveSurface().focus();
     await user.keyboard("{ArrowRight}{ArrowLeft}{ArrowDown}{Enter}");
     expect(byKeyboard.mock.calls).toEqual(byPointer.mock.calls);
@@ -251,6 +258,7 @@ describe("DecisionDeck — the keyboard is the equal of the pointer", () => {
   it("hands focus to the commit control when the last card is staged", async () => {
     const user = userEvent.setup();
     render(deck({ items: [single(1)] }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     liveSurface().focus();
     await user.keyboard("{ArrowRight}");
     expect(screen.getByRole("button", { name: "Commit" })).toHaveFocus();
@@ -260,6 +268,7 @@ describe("DecisionDeck — the keyboard is the equal of the pointer", () => {
     const user = userEvent.setup();
     const onCommit = vi.fn();
     render(deck({ onCommit }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     liveSurface().focus();
     await user.keyboard("{ArrowRight}{ArrowLeft}u{Enter}");
     expect(onCommit).toHaveBeenCalledWith([{ id: "id-1", verdict: "accept" }]);
@@ -271,6 +280,7 @@ describe("DecisionDeck — the keyboard is the equal of the pointer", () => {
     const user = userEvent.setup();
     const onCommit = vi.fn();
     render(deck({ onCommit }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     await user.click(screen.getByRole("button", { name: "Accept" }));
     screen.getByRole("button", { name: "Reject" }).focus();
     await user.keyboard("{Enter}");
@@ -280,9 +290,11 @@ describe("DecisionDeck — the keyboard is the equal of the pointer", () => {
   });
 
   // The drag as the browser delivers it: down, move past the threshold, up.
-  it("stages the drag's verdict when the finger travels far enough", () => {
+  it("stages the drag's verdict when the finger travels far enough", async () => {
     const onCommit = vi.fn();
+    const user = userEvent.setup();
     render(deck({ onCommit }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     const surface = liveSurface();
     fireEvent.pointerDown(surface, { pointerId: 1, clientX: 0, clientY: 0 });
     fireEvent.pointerMove(surface, { pointerId: 1, clientX: 220, clientY: 4 });
@@ -290,8 +302,10 @@ describe("DecisionDeck — the keyboard is the equal of the pointer", () => {
     expect(screen.getByText("1 staged")).toBeInTheDocument();
   });
 
-  it("springs back from a drag that stopped short", () => {
+  it("springs back from a drag that stopped short", async () => {
+    const user = userEvent.setup();
     render(deck({ onCommit: () => undefined }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     const surface = liveSurface();
     fireEvent.pointerDown(surface, { pointerId: 1, clientX: 0, clientY: 0 });
     fireEvent.pointerMove(surface, { pointerId: 1, clientX: 18, clientY: 0 });
@@ -312,6 +326,7 @@ describe("DecisionDeck — what it refuses", () => {
         items: [single(9, { expires_at: new Date(NOW - HOUR).toISOString() })],
       }),
     );
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     expect(
       screen.queryByRole("button", { name: "Accept" }),
     ).not.toBeInTheDocument();
@@ -453,8 +468,10 @@ describe("DecisionDeck — the states it can honestly be in", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("counts what is still behind the live card", () => {
+  it("counts what is still behind the live card", async () => {
+    const user = userEvent.setup();
     render(deck());
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     expect(screen.getByText("2 more behind")).toBeInTheDocument();
   });
 
@@ -483,6 +500,7 @@ describe("DecisionDeck — the states it can honestly be in", () => {
   it("keeps the staged verdicts when the commit came back refused", async () => {
     const user = userEvent.setup();
     const { rerender } = render(deck());
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     await user.click(screen.getByRole("button", { name: "Accept" }));
     rerender(deck({ commitState: "failed" }));
     expect(screen.getByText("1 staged")).toBeInTheDocument();
@@ -505,15 +523,19 @@ describe("DecisionDeck — a press on a control belongs to the control", () => {
   // the fieldset and the button under the finger never heard about it. jsdom
   // implements neither capture nor that retargeting, so the observable half is
   // what is asserted here — a press that starts on a control starts no drag.
-  it("starts no drag from a press on one of the card's verbs", () => {
+  it("starts no drag from a press on one of the card's verbs", async () => {
+    const user = userEvent.setup();
     render(deck());
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     const accept = screen.getByRole("button", { name: "Accept" });
     fireEvent.pointerDown(accept, { button: 0, pointerId: 1 });
     expect(liveBox()).not.toHaveAttribute("data-dragging");
   });
 
-  it("still starts a drag from the card itself", () => {
+  it("still starts a drag from the card itself", async () => {
+    const user = userEvent.setup();
     render(deck());
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     fireEvent.pointerDown(liveSurface(), {
       button: 0,
       pointerId: 1,
@@ -527,8 +549,10 @@ describe("DecisionDeck — a press on a control belongs to the control", () => {
 describe("DecisionDeck — what the swipe tells the reader", () => {
   // The whole point of the hint: which direction means what, learned while the
   // finger is still down rather than after the card has gone.
-  it("names the verdict a drag would stage, once it has travelled far enough", () => {
+  it("names the verdict a drag would stage, once it has travelled far enough", async () => {
+    const user = userEvent.setup();
     render(deck());
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     const surface = liveSurface();
     fireEvent.pointerDown(surface, { pointerId: 1, clientX: 0, clientY: 0 });
     fireEvent.pointerMove(surface, { pointerId: 1, clientX: 20, clientY: 0 });
@@ -541,8 +565,10 @@ describe("DecisionDeck — what the swipe tells the reader", () => {
 
   // The exit continues the gesture. Starting the flight from the middle of the
   // plate is what made a successful swipe read as the same card snapping back.
-  it("starts the card's exit where the hand let go", () => {
+  it("starts the card's exit where the hand let go", async () => {
+    const user = userEvent.setup();
     const { container } = render(deck());
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     const surface = liveSurface();
     fireEvent.pointerDown(surface, { pointerId: 1, clientX: 0, clientY: 0 });
     fireEvent.pointerMove(surface, { pointerId: 1, clientX: 130, clientY: 12 });
@@ -561,6 +587,7 @@ describe("DecisionDeck — what the swipe tells the reader", () => {
   it("keeps the keyboard's tab stop through a verdict", async () => {
     const user = userEvent.setup();
     render(deck());
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     liveSurface().focus();
     await user.keyboard("{ArrowRight}");
     expect(document.activeElement).toBe(liveSurface());
@@ -609,6 +636,7 @@ describe("DecisionDeck — a verdict that sends nothing", () => {
     const user = userEvent.setup();
     const onCommit = vi.fn();
     render(deck({ items: [single(1), single(2)], onCommit }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
     await user.click(screen.getByRole("button", { name: "Later" }));
     expect(screen.getByText("1 staged")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Commit" }));

@@ -43,6 +43,10 @@ export type CapabilityExpression =
   | { kind: "always" }
   | { kind: "grant"; object: RbacObject; action: RbacAction }
   | { kind: "availability"; key: SettingsAvailabilityKey }
+  // A top-level /me flag that is not a permission and not a settings-availability
+  // key. `data_reset_available` is the deployment's own consent to a wipe, and
+  // it rides /me at the root because it predates that object.
+  | { kind: "flag"; flag: "data_reset_available" }
   // Whether this BUILD composed any extension unit keeping secrets at `scope`.
   // A composition fact, not a permission and not a deployment flag: the unit's
   // settings live on the page below and there is no other route to them, so a
@@ -60,6 +64,9 @@ export const reads = (object: RbacObject): CapabilityExpression => ({
 export const available = (
   key: SettingsAvailabilityKey,
 ): CapabilityExpression => ({ kind: "availability", key });
+export const flagged = (
+  flag: "data_reset_available",
+): CapabilityExpression => ({ kind: "flag", flag });
 export const composedUnits = (
   scope: UnitSecretScope,
 ): CapabilityExpression => ({
@@ -119,6 +126,8 @@ export function holds(
       return grants(snapshot, expression.object, expression.action);
     case "availability":
       return snapshot?.settings_availability?.[expression.key] ?? false;
+    case "flag":
+      return snapshot?.[expression.flag] ?? false;
     case "units":
       // Not from the snapshot: which units this binary composed is fixed at
       // build time and identical for every reader. Absent context means none,
@@ -191,9 +200,19 @@ export const SETTINGS_PAGES = [
     id: "authentication",
     group: "company",
     scope: "installation",
-    // The narrow sign-in projection, split out of the installation aggregate so
-    // it stops riding a grant every seeded role holds.
-    requires: anyOf(reads("authentication_policy"), reads("oauth_application")),
+    // `authentication_policy`, which SignInMethodsCard now reads through
+    // `GET /installation/authentication-policy`.
+    //
+    // Not `installation_settings`: that grant is held by every seeded role — a
+    // rep reads it for the base currency — so a page opening on it would put
+    // the installation's sign-in policy in front of the whole workspace, which
+    // is the disclosure the backend split existed to close.
+    //
+    // The two OAuth cards on this page still ride `capture_settings`, so they
+    // are readable by a rep who cannot reach the page at all. That is the safe
+    // direction — a card narrower than its page withholds itself — and it
+    // closes when they move to `oauth_application`.
+    requires: reads("authentication_policy"),
   },
 
   // `GET /users` answers 200 to any authenticated principal and the roster is
@@ -202,18 +221,24 @@ export const SETTINGS_PAGES = [
   // everyone and its controls withhold themselves.
   { id: "members", group: "people", scope: "workspace", requires: always },
   { id: "teams", group: "people", scope: "workspace", requires: always },
-  {
-    id: "roles",
-    group: "people",
-    scope: "workspace",
-    requires: reads("role_admin"),
-  },
+  // `roles` is NOT here, and its absence is the point.
+  //
+  // The plan gives it a full page — role definitions, row scope, field masks,
+  // extension grants, preview-as-role — and none of that is built. A catalog
+  // entry would put a "Roles & permissions" row in front of every admin and ops
+  // seat, because `role_admin:read` OPENS the page rather than closing it, and
+  // the row would lead to a blank column.
+  //
+  // A destination becomes reachable when it is complete, not when its id is
+  // decided. It joins the table in the change that builds it.
   {
     id: "seats",
     group: "people",
     scope: "installation",
-    // Either grant opens it and they show different things: seat_usage is the
-    // capacity half, license the commercial one.
+    // Either grant, and they show different things: `LicenseCard` reads the
+    // entitlement for a `license` holder and falls back to the capacity
+    // endpoint for a `seat_usage` one — management sees how full the
+    // installation is without seeing what it pays.
     requires: anyOf(reads("seat_usage"), reads("license")),
   },
 
@@ -227,7 +252,12 @@ export const SETTINGS_PAGES = [
     id: "leads",
     group: "sales",
     scope: "workspace",
-    requires: reads("pipeline"),
+    // `custom_field`, not `pipeline`. The three cards here — lead sources,
+    // disqualify reasons, handling — are stored as custom-field vocabulary and
+    // the server gates their reads on that object. Asking for `pipeline` would
+    // hide the page from a holder who may read it, and open it for one whose
+    // reads then 403.
+    requires: reads("custom_field"),
   },
   {
     id: "fields",
@@ -279,7 +309,12 @@ export const SETTINGS_PAGES = [
     id: "models",
     group: "ai",
     scope: "workspace",
-    requires: reads("ai_routing"),
+    // Two cards, two grants. The routing and provider-key cards read on
+    // `ai_routing`; `AiHealthCard` reads on `ai_diagnostics` (ai/health.go),
+    // and Models is the ONLY page that renders it. Management is seeded
+    // diagnostics WITHOUT routing, so on the routing grant alone this page was
+    // shut to the one role the health card was widened for.
+    requires: anyOf(reads("ai_routing"), reads("ai_diagnostics")),
   },
   {
     id: "automations",
@@ -291,6 +326,9 @@ export const SETTINGS_PAGES = [
     id: "usage",
     group: "ai",
     scope: "workspace",
+    // The diagnostics read, or the price grant that authors the table beside it.
+    // Both cards on this page ask `ai_diagnostics:read` now; `ai_model_rate`
+    // stays in the union because its holder authors the rate sheet here.
     requires: anyOf(reads("ai_diagnostics"), reads("ai_model_rate")),
   },
   {
@@ -305,12 +343,18 @@ export const SETTINGS_PAGES = [
     group: "governance",
     scope: "workspace",
     requires: anyOf(
-      reads("consent_config"),
       reads("retention_policy"),
       reads("privacy_request"),
       // The purposes list is gated on person.read server-side, which is not a
       // role and not "any member" — moving it would 403 the Person 360 for
       // every rep, so the page follows the gate the endpoint actually applies.
+      //
+      // `consent_config` is deliberately NOT here, though the purposes card is
+      // what that object administers. It buys no READ: the list stays on
+      // `person` (consent/store.go ListPurposes) and only the writes moved. On
+      // the consent grant alone a reader would open a page whose every card is
+      // withheld — every seeded holder of it also holds `person:read`, so this
+      // only ever bit a custom role, silently.
       reads("person"),
     ),
   },
@@ -318,25 +362,47 @@ export const SETTINGS_PAGES = [
     id: "audit",
     group: "governance",
     scope: "workspace",
+    // The trail's own object, which the card now asks for too. A role edited to
+    // carry `audit_log:read` reaches it and one that lost it does not — which
+    // the admin role name could not say either way.
     requires: reads("audit_log"),
   },
   {
     id: "system-health",
     group: "governance",
     scope: "installation",
+    // Either card's grant. `JobHealthCard` asks `job_health:read` and the
+    // reindex card asks its own, so a reader holding one finds that card and
+    // the other withheld — which is the union being a union rather than one
+    // object with a decorative term.
     requires: anyOf(reads("job_health"), reads("embedding_reindex")),
   },
   {
     id: "extensions",
     group: "governance",
     scope: "installation",
-    requires: reads("extension_access"),
+    // BOTH reads the card makes, because it makes them behind ONE flag: the
+    // unit inventory from `GET /v1/extensions` and every role's grant on every
+    // object from `GET /v1/roles`. On the inventory grant alone the page opens
+    // and the card 403s on its second query, which is an unreadable page rather
+    // than a narrower one.
+    requires: allOf(reads("extension_access"), reads("role_admin")),
   },
   {
     id: "reset",
     group: "governance",
     scope: "installation",
-    requires: { kind: "grant", object: "system_reset", action: "delete" },
+    // The grant AND the deployment's consent. `system_reset:delete` says this
+    // reader may wipe an installation that permits wiping; `data_reset_available`
+    // says whether this one does — the compiled default is false everywhere, and
+    // a deployment that never opted in has no such destination at all.
+    //
+    // Both, not either: a page offering a reset the server would refuse is worse
+    // here than anywhere else in settings.
+    requires: allOf(
+      { kind: "grant", object: "system_reset", action: "delete" },
+      flagged("data_reset_available"),
+    ),
   },
 ] as const satisfies readonly {
   id: string;
@@ -347,11 +413,14 @@ export const SETTINGS_PAGES = [
 
 export type SettingsPageId = (typeof SETTINGS_PAGES)[number]["id"];
 
+/** One row of the table, for callers that carry a page around rather than an id. */
+export type SettingsPage = (typeof SETTINGS_PAGES)[number];
+
 /** The pages this snapshot may open, in declaration order. */
 export function visibleSettingsPages(
   snapshot: AccessSnapshot,
   context: CatalogContext = {},
-): readonly (typeof SETTINGS_PAGES)[number][] {
+): readonly SettingsPage[] {
   return SETTINGS_PAGES.filter((page) =>
     holds(page.requires, snapshot, context),
   );

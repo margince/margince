@@ -153,6 +153,7 @@ func TestConsentGateRefusesAChannelRecipientWithoutAGrant(t *testing.T) {
 
 	if _, err := e.store.Record(e.ctx, RecordInput{
 		PersonID: e.person, PurposeID: e.newsletter, NewState: "granted",
+		PolicyText: &grantWording,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -186,6 +187,7 @@ func TestConsentGateRefusesAChannelRecipientAfterWithdrawal(t *testing.T) {
 
 	if _, err := e.store.Record(e.ctx, RecordInput{
 		PersonID: e.person, PurposeID: e.newsletter, NewState: "granted",
+		PolicyText: &grantWording,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -242,6 +244,7 @@ func TestRequireGrantedForEmailsStillAnswersThroughTheSharedRule(t *testing.T) {
 	}
 	if _, err := e.store.Record(e.ctx, RecordInput{
 		PersonID: e.person, PurposeID: e.newsletter, NewState: "granted",
+		PolicyText: &grantWording,
 	}); err != nil {
 		t.Fatal(err)
 	}

@@ -1,0 +1,46 @@
+/* The attachment shelf and the picker behind its paperclip. */
+
+/* What the message carries, under the words it is about. Drawn only when
+   there IS something — the paperclip that fills it lives in the editor's
+   footer, so the way in does not depend on this row existing. */
+.compose-files {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* The picker sits inside a popover, so it owns its own width: wide enough that
+   a filename ends before the size beside it, narrow enough to stay an aside. */
+.compose-files-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  inline-size: 22rem;
+  max-inline-size: 100%;
+}
+
+.compose-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-block-size: 12rem;
+  overflow-y: auto;
+}
+
+/* Each row is one press over the whole line: the filename at the start and its
+   size at the end, so two files are tellable apart before the click rather than
+   after it. */
+.compose-files-row {
+  inline-size: 100%;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.compose-files-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

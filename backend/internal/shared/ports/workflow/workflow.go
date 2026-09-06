@@ -48,6 +48,24 @@ type Spec struct {
 	Name    string // stable id: "flag_idle_deals", "route_lead", …
 	Trigger Trigger
 	Tier    mcp.RiskTier
+	// RedrivableWithoutDuplicating says whether applying this handler's effect a
+	// SECOND time repeats a side effect nobody asked for.
+	//
+	// Apply is documented idempotent on IdempotencyKey(ev), and nothing enforces
+	// that: no Apply in the tree reads the key. The promise costs nothing while
+	// every run happens once, and becomes load-bearing the moment anything
+	// re-drives one — a retry then means "the row lands where it already was"
+	// for one handler and "the customer is told a second time" for another.
+	//
+	// The answer belongs HERE rather than on the action kind, because the kind
+	// does not decide what runs: leadRouting plans assign_owner and applies it
+	// through RouteLead, while the engine's own handlers plan the same kind and
+	// apply it through applyAssignOwner. One vocabulary, two writes.
+	//
+	// FALSE IS THE ZERO VALUE, so a handler that has not considered the question
+	// answers no. A caller re-driving reads this; a false answer means the run
+	// needs a human rather than a button.
+	RedrivableWithoutDuplicating bool
 }
 
 // Trigger binds to the event bus or a schedule: EventType for bus events,
@@ -87,6 +105,18 @@ type Event struct {
 	// behind it at all): the match-time owner-permission gate reads this
 	// to decide whose live authority a firing must still hold.
 	OwnerID ids.UUID
+
+	// RetryAttempt distinguishes a re-driven firing from the one it retries.
+	// Zero for an ordinary firing, and the engine's own retry path sets it
+	// (automation's RetryRun) — a handler never reads it and never sets it.
+	//
+	// It exists because the run claim is UNIQUE on (handler, idempotency_key):
+	// re-dispatching under the original key finds the failed run's own row,
+	// takes no claim, and returns having applied nothing. The marker rides the
+	// EVENT rather than being spliced into the key at one call site, because
+	// runKey is read by seven recorders inside one run and they must all agree
+	// on which row this firing is writing.
+	RetryAttempt int
 }
 
 // Effect is the typed, enumerable set of actions a run may take. No
