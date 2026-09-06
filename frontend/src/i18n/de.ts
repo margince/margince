@@ -8571,6 +8571,12 @@ export const de = {
   "worklist.verb.complete": "Öffnen",
   "worklist.verb.snooze": "Öffnen",
   "worklist.verb.acknowledge": "Verstanden",
+  "worklist.verb.meetingHeld": "Hat stattgefunden",
+  "worklist.verb.meetingNoShow": "Niemand kam",
+  "worklist.verb.meetingCanceled": "Wurde abgesagt",
+  "worklist.verb.meetingOutcomeRecorded":
+    "Der Verlauf des Termins wurde festgehalten.",
+  "worklist.verb.meetingOutcomeFailed": "Das konnte nicht festgehalten werden.",
   "worklist.verb.retry": "Erneut ausf\u00fchren",
   "worklist.verb.retryStarted": "Die Regel l\u00e4uft erneut.",
   "worklist.verb.retryFailed":

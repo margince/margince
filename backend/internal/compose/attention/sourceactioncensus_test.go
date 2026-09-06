@@ -47,9 +47,9 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	"deal_at_risk":       {"open"},
 	"conversation_claim": {"open"},
 	"meeting":            {"open"},
-	// No verb yet: the row says a meeting owes an answer and the answer is
-	// recorded on the activity, which this queue does not yet reach into.
-	"meeting_outcome": {},
+	// Answered inline, like an approval: `decide` reaches MeetingOutcome, which
+	// writes meeting_status through PATCH /activities/{id}.
+	"meeting_outcome": {"decide"},
 	// The task's own verbs. `complete` acts in place through TaskComplete;
 	// `snooze` opens the record, where the due date lives.
 	"task": {"complete", "snooze", "open"},
@@ -103,6 +103,10 @@ func TestNoLaneAdvertisesAVerbTheClientCannotPerform(t *testing.T) {
 	mustReach := []string{
 		"task", "brief_item", "approval", "dedupe_candidate",
 		"relationship_decay", "notice",
+		// Named for the reason the others are, learned the same way: this lane
+		// rides an Option rather than a positional seam, so the fixture omitted
+		// it silently and the census reported PASS over a source it never saw.
+		"meeting_outcome",
 	}
 	reached := map[string]bool{}
 	for _, items := range lanes {
@@ -262,7 +266,16 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		&stubAutomations{rows: []TroubledAutomationRun{{ID: ids.NewV7(), Name: "a broken rule", Outcome: "failed", OccurredAt: readInstant}}},
 		&stubNotices{rows: []UnreadNotice{{ID: ids.NewV7(), Kind: "automation", Subject: "a notice", CreatedAt: readInstant}}},
 		nil,
-		fixedClock)
+		fixedClock,
+		// An OPTION rather than a positional seam, and so the one a fixture is
+		// likeliest to leave out — which is exactly what happened: the census
+		// declared `meeting_outcome` and never assembled one, so the entry sat
+		// unchecked while the source shipped with no verb at all.
+		WithMeetingsAwaitingOutcome(&stubMeetingsAwaitingOutcome{
+			rows: []MeetingAwaitingOutcome{{
+				ID: ids.NewV7(), Subject: "a meeting that happened", StartedAt: readInstant,
+			}},
+		}))
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling the day: %v", err)

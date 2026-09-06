@@ -10,9 +10,11 @@ package attention
 // category catch it by default, and both defaults are wrong for it.
 
 import (
+	"slices"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Nobody walks into a meeting that is over.
@@ -65,5 +67,35 @@ func TestAFullPageOfUnsettledMeetingsIsReportedAsCut(t *testing.T) {
 	if boundedSources(day)["meeting_outcome"] {
 		t.Error("a lane short of its bound reports itself cut, which would put a " +
 			"there-may-be-more notice on a day that is genuinely clear")
+	}
+}
+
+// A row that states an obligation and offers no way to meet it.
+//
+// This is what the sibling census cannot catch. TestNoLaneAdvertisesAVerbThe
+// ClientCannotPerform asks the question in ONE direction — every verb sent has
+// a client that performs it — and a source sending NO verb satisfies that
+// vacuously. `meeting_outcome` shipped exactly that way: the row said a meeting
+// owed an answer, and there was nothing to press.
+//
+// So the direction the census cannot see is asserted here, for this source. It
+// is not a claim about every source: plenty of rows correctly offer no verb —
+// a health card names something to fix elsewhere, and a meeting still ahead has
+// no result yet. What makes silence wrong HERE is what the row says, which is
+// that an answer is outstanding.
+func TestAMeetingOwedAnAnswerOffersAWayToGiveIt(t *testing.T) {
+	t.Parallel()
+	item := meetingAwaitingOutcomeItem(MeetingAwaitingOutcome{
+		ID:      ids.NewV7(),
+		Subject: "Discovery call",
+	})
+	if len(item.Actions) == 0 {
+		t.Fatal("a meeting that owes an answer offers no verb: the row tells a rep " +
+			"something is unfinished and gives them no way to finish it, which is the " +
+			"queue doing the opposite of its job")
+	}
+	if !slices.Contains(item.Actions, crmcontracts.AttentionItemActionsDecide) {
+		t.Errorf("the row offers %v, want decide — the answer is given ON the row, the "+
+			"way an approval's is", item.Actions)
 	}
 }
