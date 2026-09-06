@@ -33,6 +33,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // suppressPerson records an Art. 21 marketing objection against a person.
@@ -43,32 +44,47 @@ import (
 // liveSuppression reads, and when that writer arrives this helper is what
 // should be repointed at it.
 //
-// decided_by_level is named rather than defaulted, because the column has no
-// default: the migration that added it dropped the scaffolding one on purpose,
-// so that a writer states who decided or the INSERT fails where its author can
-// see it. 'subject' is what this row IS — a marketing objection is the person's
-// own act under Art. 21, the one tier no seat in the installation may lift —
-// and it is the level that migration's own backfill gives the same kind.
+// A SUBJECT REQUEST, not a marketing objection, and the difference is the whole
+// reason this helper is written out rather than inlined.
+//
+// These two tests are about STAGING — that a refused send leaves no delivery row
+// behind — and they need a suppression that actually binds the message they
+// send. #4701 narrowed an Art. 21 marketing objection to bind marketing alone,
+// deliberately: objecting to direct marketing had been refusing that person's
+// invoice. Both sends below are non-marketing, so a marketing objection stopped
+// stopping them, and these tests began asserting the behaviour that change
+// existed to remove.
+//
+// ReasonSubjectRequest binds every category — the subject asked us to stop, in
+// their own words — so the refusal is real again and the assertion is once more
+// about the transaction rather than about the category rule. The category rule
+// has its own tests, in the module that owns it.
+//
+// Written directly rather than through a store method because there is no
+// production writer for communication_suppression yet — the unsubscribe path
+// that will own it lands with the preference centre. The row shape is the one
+// liveSuppression reads, and when that writer arrives this helper is what
+// should be repointed at it.
 func suppressPerson(t *testing.T, e *apptest.AppEnv, personID string) {
 	t.Helper()
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		// decided_by_level is stated rather than defaulted, because the column
 		// deliberately has no default: a writer names who decided or the INSERT
-		// fails where the author can see it. `subject` is what this row IS — a
-		// marketing objection is Art. 21 by definition, which is the same
-		// classification the migration gave the rows that predate the column.
+		// fails where the author can see it. `subject` is what this row IS — the
+		// person's own request, the one tier no seat in the installation may
+		// lift.
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO communication_suppression (person_id, kind, source, captured_by, decided_by_level)
-			VALUES ($1, 'marketing_objection', 'test', $2, 'subject')`, personID, "test")
+			VALUES ($1, $3, 'test', $2, 'subject')`, personID, "test", commsauthz.ReasonSubjectRequest)
 		return err
 	}); err != nil {
-		t.Fatalf("recording the objection: %v", err)
+		t.Fatalf("recording the subject's request to stop: %v", err)
 	}
 }
 
-// The mail door. A staged send to an objecting recipient is refused with the
+// The mail door. A staged send to a recipient who asked us to stop is refused with the
 // whole transaction, so no delivery row survives it.
-func TestAMailSendToAnObjectingRecipientStagesNothing(t *testing.T) {
+func TestAMailSendToASuppressedRecipientStagesNothing(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
 	suppressPerson(t, p.AppEnv, p.personID)
@@ -76,7 +92,7 @@ func TestAMailSendToAnObjectingRecipientStagesNothing(t *testing.T) {
 	status, code, _ := p.send(t)
 
 	if status != http.StatusConflict || code != "consent_not_granted" {
-		t.Fatalf("mail to an objecting recipient → %d %q, want 409 consent_not_granted", status, code)
+		t.Fatalf("mail to a recipient who asked us to stop → %d %q, want 409 consent_not_granted", status, code)
 	}
 	if n := p.stagedDeliveries(t); n != 0 {
 		t.Fatalf("%d deliveries staged behind a refused send, want 0 — "+
@@ -87,7 +103,7 @@ func TestAMailSendToAnObjectingRecipientStagesNothing(t *testing.T) {
 // The channel door, which is a second implementation of staging rather than a
 // variant of the mail one. A fix to the mail path does not reach it, so it is
 // asserted separately.
-func TestAChannelSendToAnObjectingRecipientStagesNothing(t *testing.T) {
+func TestAChannelSendToASuppressedRecipientStagesNothing(t *testing.T) {
 	c := setupChannelSend(t)
 	c.grantConsent(t, "transactional")
 	suppressPerson(t, c.AppEnv, c.personID)
@@ -95,9 +111,9 @@ func TestAChannelSendToAnObjectingRecipientStagesNothing(t *testing.T) {
 	status, code, _ := c.sendReply(t, "transactional", "Yes — shipping Monday.", nil)
 
 	if status != http.StatusConflict || code != "consent_not_granted" {
-		t.Fatalf("channel reply to an objecting recipient → %d %q, want 409 consent_not_granted", status, code)
+		t.Fatalf("channel reply to a recipient who asked us to stop → %d %q, want 409 consent_not_granted", status, code)
 	}
-	c.assertNoOutboundEffect(t, "a send to an objecting recipient")
+	c.assertNoOutboundEffect(t, "a send to a recipient who asked us to stop")
 }
 
 // stagingDecisions reads back what the engine wrote for one delivery at the
