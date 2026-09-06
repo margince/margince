@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
@@ -55,12 +56,32 @@ func setupAssuranceJob(t *testing.T) *assuranceJobEnv {
 		pipeline, open, e.Rep1, at.AddDate(0, 0, 3)); err != nil {
 		t.Fatalf("seeding the deal the check examines: %v", err)
 	}
+
+	// A deal the rules FAULT, and fault more than once: its expected close is in
+	// the past (close_past, high) and it is committed with no next step
+	// (no_next_step, low). The healthy deal above is what keeps the eligible
+	// count honest; this one is what gives the bundling suite something to
+	// bundle. Two findings on ONE deal is the shape #4004 is about — a rep
+	// clearing them should clear one task, not two.
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO deal (pipeline_id, stage_id, name, owner_id, status, source, captured_by,
+		                  amount_minor, currency, expected_close_date, forecast_category)
+		VALUES ($1, $2, 'Assurance Faulted', $3, 'open', 'manual', 'test', 3100000, 'EUR', $4, 'commit')`,
+		pipeline, open, e.Rep1, at.AddDate(0, 0, -7)); err != nil {
+		t.Fatalf("seeding the deal the check faults: %v", err)
+	}
+
 	return &assuranceJobEnv{
 		Env: e,
 		worker: &assuranceSweepWorker{
 			pool: e.Pool,
 			now:  func() time.Time { return at },
 			log:  slog.New(slog.DiscardHandler),
+			// The REAL activities store, not a double. The task a finding is
+			// bundled onto has to be one the rest of the product renders, so a
+			// stub here would prove the seam calls something rather than that a
+			// rep is handed a task.
+			activities: activities.NewStore(InstallationDB(e.Pool)),
 		},
 		at: at,
 	}
