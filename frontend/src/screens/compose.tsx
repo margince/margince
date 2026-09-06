@@ -63,7 +63,11 @@ import {
   type CommunicationContext,
   contextFor,
 } from "./compose-context";
-import { AttachmentShelf, type ChosenFile } from "./composeattachments";
+import {
+  AttachAction,
+  AttachedFiles,
+  type ChosenFile,
+} from "./composeattachments";
 import {
   AddressBlock,
   FieldNeed,
@@ -3268,6 +3272,18 @@ export function ComposeModal({
                 link: t("richtext.link"),
                 linkPrompt: t("richtext.linkPrompt"),
               }}
+              hint={t("compose.bodyHint")}
+              // The paperclip sits with bold and italic because it is the same
+              // kind of thing: something you do to the message you are writing.
+              actions={
+                <AttachAction
+                  entityType={entityType}
+                  entityId={entityId}
+                  chosen={files}
+                  onChange={setFiles}
+                  disabled={rejectionInFlight}
+                />
+              }
               rows={10}
               disabled={rejectionInFlight}
             />
@@ -3275,15 +3291,11 @@ export function ComposeModal({
               show={flagged.has("body")}
               need={t("compose.missingBody")}
             />
-            <p className="t-caption">{t("compose.bodyHint")}</p>
-            {/* What travels WITH the message, under the words it is about — the
-            order a mail client puts them in, and the order a rep writes in:
-            the sentence about the offer, then the offer. Drawn on every mail,
-            empty or not, because a paperclip a rep has to discover is a
-            feature that does not exist for the rep who never found it. */}
-            <AttachmentShelf
-              entityType={entityType}
-              entityId={entityId}
+            {/* What travels WITH the message, under the words it is about —
+            the order a mail client puts them in, and the order a rep writes
+            in: the sentence about the offer, then the offer. Nothing at all
+            until something is attached; the way in is the paperclip above. */}
+            <AttachedFiles
               chosen={files}
               onChange={setFiles}
               disabled={rejectionInFlight}

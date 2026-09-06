@@ -3210,7 +3210,6 @@ export const de = {
     "Die genannten Empfänger sehen diese Adressen nicht — und sehen auch nicht, dass überhaupt jemand in Kopie ist.",
   "compose.threadGone":
     "Diese Unterhaltung lässt sich nicht mehr beantworten, deshalb ist der übliche Weg geöffnet. Prüfen Sie den Empfänger vor dem Senden.",
-  "compose.files": "Dateien",
   "compose.attach": "Anhängen",
   "compose.filesOnRecord": "Auf diesem Datensatz",
   "compose.filesLoading": "Dateien des Datensatzes werden gelesen…",

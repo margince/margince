@@ -221,7 +221,9 @@ export function AddressBlock({
         label={t("compose.cc")}
         trailing={
           bccOpen ? undefined : (
-            <Button small onClick={onOpenBcc}>
+            // Quiet, and against the field rather than at the drawer's margin:
+            // it belongs to the Cc line it extends, not to the head as a whole.
+            <Button small variant="ghost" onClick={onOpenBcc}>
               {t("compose.bcc")}
             </Button>
           )

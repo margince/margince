@@ -3280,7 +3280,6 @@ export const en = {
     "The named recipients cannot see these addresses, and cannot see that anyone else was copied.",
   "compose.threadGone":
     "That conversation can no longer be answered, so this opened on the usual way of writing to them. Check the recipient before you send.",
-  "compose.files": "Files",
   "compose.attach": "Attach",
   "compose.filesOnRecord": "On this record",
   "compose.filesLoading": "Reading the record's files…",

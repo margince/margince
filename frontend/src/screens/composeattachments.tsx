@@ -29,7 +29,6 @@ import { useLocale, useT } from "../i18n";
 import { type AttachmentParent, uploadAttachment } from "./attachmentupload";
 import { problemMessageOf, throwProblem } from "./common";
 import type { RelinkKind } from "./compose";
-import { MailRow } from "./composehead";
 import "./composeattachments.css";
 
 type Attachment = components["schemas"]["Attachment"];
@@ -95,15 +94,7 @@ export function useRecordFiles(
  * does not exist for the rep who never found it, and the row costs one line when
  * nothing is attached.
  */
-export function AttachmentShelf({
-  entityType,
-  entityId,
-  chosen,
-  onChange,
-  disabled,
-}: Readonly<{
-  entityType: RelinkKind;
-  entityId: string;
+type ShelfProps = Readonly<{
   chosen: readonly ChosenFile[];
   /**
    * An UPDATER, never a finished list.
@@ -118,59 +109,92 @@ export function AttachmentShelf({
     update: (current: readonly ChosenFile[]) => readonly ChosenFile[],
   ) => void;
   disabled?: boolean;
-}>) {
+}>;
+
+/**
+ * The paperclip, as one of the message's own quiet verbs.
+ *
+ * It sits in the editor's footer beside bold and italic rather than in a
+ * labelled row of its own, because that is what it IS: something you do to the
+ * message you are writing. A row cost a line of the drawer on every mail to say
+ * "Files" over an empty space, and drew a full bordered button next to a message
+ * it is not more important than.
+ */
+export function AttachAction({
+  entityType,
+  entityId,
+  chosen,
+  onChange,
+  disabled,
+}: ShelfProps & Readonly<{ entityType: RelinkKind; entityId: string }>) {
+  const t = useT();
+  return (
+    <Popover
+      // NO `variant`: a variant draws the trigger as a full control, and this
+      // one stands in a row of flat marks. Bare, it inherits the row and takes
+      // the same box the formatting buttons do (richtext.css), so five glyphs
+      // read as five glyphs rather than four and a button.
+      className="richtext-btn"
+      label={
+        <>
+          <Paperclip size={14} aria-hidden="true" />
+          <span className="sr-only">{t("compose.attach")}</span>
+        </>
+      }
+    >
+      <AttachPicker
+        entityType={entityType}
+        entityId={entityId}
+        chosen={chosen}
+        onChange={onChange}
+        full={chosen.length >= MOST_FILES}
+        disabled={disabled}
+      />
+    </Popover>
+  );
+}
+
+/**
+ * What the message carries, under the words it is about.
+ *
+ * Nothing at all when nothing is attached — the row exists to name files, and a
+ * label over an empty space names none. The paperclip that fills it lives in the
+ * footer above (see {@link AttachAction}), so the way IN is always on screen
+ * whether or not this is.
+ */
+export function AttachedFiles({ chosen, onChange, disabled }: ShelfProps) {
   const t = useT();
   const { locale } = useLocale();
-  const full = chosen.length >= MOST_FILES;
+  if (chosen.length === 0) {
+    return null;
+  }
   return (
-    <MailRow label={t("compose.files")}>
-      {chosen.length > 0 && (
-        <TokenList
-          items={chosen.map((file) => ({
-            id: file.id,
-            label:
-              file.byteSize == null
-                ? file.filename
-                : `${file.filename} · ${formatBytes(file.byteSize, locale)}`,
-          }))}
-          removeLabel={(item) =>
-            t("compose.fileRemove", { filename: item.label })
-          }
-          disabled={disabled}
-          onRemove={(id) =>
-            onChange((current) => current.filter((file) => file.id !== id))
-          }
-        />
+    <div className="compose-files">
+      <TokenList
+        items={chosen.map((file) => ({
+          id: file.id,
+          label:
+            file.byteSize == null
+              ? file.filename
+              : `${file.filename} · ${formatBytes(file.byteSize, locale)}`,
+        }))}
+        removeLabel={(item) =>
+          t("compose.fileRemove", { filename: item.label })
+        }
+        disabled={disabled}
+        onRemove={(id) =>
+          onChange((current) => current.filter((file) => file.id !== id))
+        }
+      />
+      {/* The cap said where it bites, rather than at the send. Ten is the
+          contract's, and a message about more records than that is a message
+          about none of them — the same reasoning the link list is bounded by. */}
+      {chosen.length >= MOST_FILES && (
+        <span className="t-caption">
+          {t("compose.filesFull", { most: formatNumber(MOST_FILES, locale) })}
+        </span>
       )}
-      <div className="compose-files-add">
-        <Popover
-          variant="ghost"
-          label={
-            <>
-              <Paperclip size={14} aria-hidden="true" /> {t("compose.attach")}
-            </>
-          }
-        >
-          <AttachPicker
-            entityType={entityType}
-            entityId={entityId}
-            chosen={chosen}
-            onChange={onChange}
-            full={full}
-          />
-        </Popover>
-        {/* The cap said where it bites, rather than at the send. Ten is the
-            contract's, and a message about more records than that is a message
-            about none of them — the same reasoning the link list is bounded by. */}
-        {full && (
-          <span className="t-caption">
-            {t("compose.filesFull", {
-              most: formatNumber(MOST_FILES, locale),
-            })}
-          </span>
-        )}
-      </div>
-    </MailRow>
+    </div>
   );
 }
 
@@ -187,6 +211,7 @@ function AttachPicker({
   chosen,
   onChange,
   full,
+  disabled,
 }: Readonly<{
   entityType: RelinkKind;
   entityId: string;
@@ -195,6 +220,7 @@ function AttachPicker({
     update: (current: readonly ChosenFile[]) => readonly ChosenFile[],
   ) => void;
   full: boolean;
+  disabled?: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -267,7 +293,7 @@ function AttachPicker({
               <Button
                 small
                 className="compose-files-row"
-                disabled={taken.has(file.id) || full}
+                disabled={disabled || taken.has(file.id) || full}
                 onClick={() => add(file)}
               >
                 <span className="compose-files-name">{file.filename}</span>

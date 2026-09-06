@@ -3180,7 +3180,6 @@ export const vi = {
     "Những người nhận được nêu tên không thấy các địa chỉ này, và cũng không thấy rằng có ai khác được gửi kèm.",
   "compose.threadGone":
     "Không thể trả lời cuộc trò chuyện đó nữa, nên cửa sổ này mở theo cách viết thông thường. Hãy kiểm tra người nhận trước khi gửi.",
-  "compose.files": "Tệp",
   "compose.attach": "Đính kèm",
   "compose.filesOnRecord": "Trên hồ sơ này",
   "compose.filesLoading": "Đang đọc tệp của hồ sơ…",

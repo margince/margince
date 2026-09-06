@@ -30,10 +30,15 @@
   flex-direction: column;
   gap: var(--space-1);
 }
+/* A control that acts on the row it sits in — the Bcc reveal. Its own column,
+   so the value column's right edge is one margin down the whole block whether a
+   row has one or not; and the gap is the field's, not the head's, because it
+   reads as an extension of the field beside it rather than as a verb for the
+   drawer. */
 .mailrow-trailing {
   display: flex;
   align-items: center;
-  gap: var(--gapActions);
+  gap: var(--space-2);
 }
 
 /* The transport dial, with the mark for the one it is on in front of it: a rep

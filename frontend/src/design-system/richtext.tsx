@@ -43,6 +43,8 @@ export function RichText({
   label,
   labels,
   placeholder,
+  hint,
+  actions,
   rows = 12,
   id,
   disabled = false,
@@ -68,6 +70,25 @@ export function RichText({
     linkPrompt: string;
   }>;
   placeholder?: string;
+  /**
+   * One line about the control, shown beside the toolbar rather than above or
+   * below it. Copy never lives in a primitive: the words arrive translated.
+   *
+   * It shares the footer with the formatting buttons because the two are the
+   * same sentence read twice — this is a box you write in, and here is what you
+   * can do to what you wrote. On their own lines they were two claims stacked
+   * under one field.
+   */
+  hint?: string;
+  /**
+   * Further verbs for the same message, drawn in the footer beside the
+   * formatting marks — the composer's paperclip is the one today.
+   *
+   * A slot rather than a prop per verb: what else you can do to a message is the
+   * CALLER's list and grows on their side, and a primitive that enumerated it
+   * would have to be edited every time it did.
+   */
+  actions?: React.ReactNode;
   rows?: number;
   id?: string;
   /**
@@ -85,6 +106,7 @@ export function RichText({
 }>) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
+  const hintId = `${fieldId}-hint`;
   const editor = useRef<HTMLDivElement>(null);
   // What we last handed the caller, or last wrote into the node. Comparing
   // against it tells an outside change (a draft arriving) from the echo of our
@@ -153,43 +175,6 @@ export function RichText({
 
   return (
     <div className={`richtext${disabled ? " is-disabled" : ""}`}>
-      <div className="richtext-bar" role="toolbar" aria-label={label}>
-        <RichTextButton
-          onClick={() => apply("bold")}
-          title={labels.bold}
-          disabled={disabled}
-        >
-          <Bold size={15} aria-hidden="true" />
-        </RichTextButton>
-        <RichTextButton
-          onClick={() => apply("italic")}
-          title={labels.italic}
-          disabled={disabled}
-        >
-          <Italic size={15} aria-hidden="true" />
-        </RichTextButton>
-        <RichTextButton
-          onClick={() => apply("insertUnorderedList")}
-          title={labels.bulletList}
-          disabled={disabled}
-        >
-          <List size={15} aria-hidden="true" />
-        </RichTextButton>
-        <RichTextButton
-          onClick={() => apply("insertOrderedList")}
-          title={labels.numberList}
-          disabled={disabled}
-        >
-          <ListOrdered size={15} aria-hidden="true" />
-        </RichTextButton>
-        <RichTextButton
-          onClick={addLink}
-          title={labels.link}
-          disabled={disabled}
-        >
-          <Link2 size={15} aria-hidden="true" />
-        </RichTextButton>
-      </div>
       {/* biome-ignore lint/a11y/useSemanticElements: a textarea cannot carry formatting; this is the editable surface the toolbar acts on */}
       <div
         ref={editor}
@@ -197,6 +182,7 @@ export function RichText({
         role="textbox"
         aria-multiline="true"
         aria-label={label}
+        aria-describedby={hint ? hintId : undefined}
         contentEditable={!disabled}
         suppressContentEditableWarning
         // `contentEditable` carries no `disabled`, so the refusal is stated the
@@ -213,6 +199,60 @@ export function RichText({
         onInput={report}
         onBlur={report}
       />
+      {/* UNDER the words, and quiet. The toolbar led the control for a while —
+          a filled band above the box, before a reader had written anything to
+          format — which made four glyphs the first thing on a surface whose
+          subject is the message. Bold and italic are marks everybody already
+          knows; they do not need to announce themselves, and putting them at the
+          end of the line the hint occupies costs the field no height at all.
+
+          The buttons keep their names for a screen reader and their tooltips
+          for a pointer: quieter is about ink, never about who can use it. */}
+      <div className="richtext-foot">
+        {hint && (
+          <p id={hintId} className="t-caption richtext-hint">
+            {hint}
+          </p>
+        )}
+        <div className="richtext-bar" role="toolbar" aria-label={label}>
+          <RichTextButton
+            onClick={() => apply("bold")}
+            title={labels.bold}
+            disabled={disabled}
+          >
+            <Bold size={14} aria-hidden="true" />
+          </RichTextButton>
+          <RichTextButton
+            onClick={() => apply("italic")}
+            title={labels.italic}
+            disabled={disabled}
+          >
+            <Italic size={14} aria-hidden="true" />
+          </RichTextButton>
+          <RichTextButton
+            onClick={() => apply("insertUnorderedList")}
+            title={labels.bulletList}
+            disabled={disabled}
+          >
+            <List size={14} aria-hidden="true" />
+          </RichTextButton>
+          <RichTextButton
+            onClick={() => apply("insertOrderedList")}
+            title={labels.numberList}
+            disabled={disabled}
+          >
+            <ListOrdered size={14} aria-hidden="true" />
+          </RichTextButton>
+          <RichTextButton
+            onClick={addLink}
+            title={labels.link}
+            disabled={disabled}
+          >
+            <Link2 size={14} aria-hidden="true" />
+          </RichTextButton>
+        </div>
+        {actions}
+      </div>
     </div>
   );
 }

@@ -1,6 +1,9 @@
 /* The attachment shelf and the picker behind its paperclip. */
 
-.compose-files-add {
+/* What the message carries, under the words it is about. Drawn only when
+   there IS something — the paperclip that fills it lives in the editor's
+   footer, so the way in does not depend on this row existing. */
+.compose-files {
   display: flex;
   align-items: center;
   gap: var(--space-3);
