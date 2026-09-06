@@ -193,9 +193,10 @@ func closedInWeek(
 // deref reads a nullable sum as zero. A week in which nothing closed sums to
 // NULL, and that IS zero — unlike an unconvertible week, which countWeekMoney
 // has already turned into an absent Money above.
-func deref(v *int64) int64 {
+func deref[T any](v *T) T {
 	if v == nil {
-		return 0
+		var zero T
+		return zero
 	}
 	return *v
 }

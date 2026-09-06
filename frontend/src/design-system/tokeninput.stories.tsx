@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, useState } from "react";
 import { Field } from "./atoms";
 import { DateInput } from "./dateinput";
-import { TokenInput, TokenList } from "./tokeninput";
+import { TokenInput, TokenList, type TokenSuggestion } from "./tokeninput";
 
 /**
  * The two value controls a typed filter clause needs and the design system did
@@ -41,12 +41,14 @@ function TokenDemo({
   placeholder,
   disabled,
   hint,
+  suggestions,
 }: Readonly<{
   start?: readonly string[];
   label: string;
   placeholder?: string;
   disabled?: boolean;
   hint?: string;
+  suggestions?: readonly TokenSuggestion[];
 }>) {
   const [values, setValues] = useState<readonly string[]>(start);
   return (
@@ -56,6 +58,7 @@ function TokenDemo({
           {...control}
           values={values}
           onChange={setValues}
+          suggestions={suggestions}
           placeholder={placeholder}
           disabled={disabled}
         />
@@ -165,6 +168,60 @@ export const ListWithoutAField: Story = {
       <TokenList
         items={[{ id: "8801", label: "Chi Mai" }]}
         removeLabel={(item) => `Take ${item.label} off the list`}
+      />
+    </div>
+  ),
+};
+
+/** The people a composer's To line offers. A label the reader recognises over a
+ *  value they would have to remember, which is the whole reason the list helps. */
+const PEOPLE: readonly TokenSuggestion[] = [
+  { value: "dana@nordwand.example", label: "Dana Ellwanger", hint: "Nordwand" },
+  { value: "milo@nordwand.example", label: "Milo Fenn", hint: "Nordwand" },
+  {
+    value: "r.sattler@nordwand.example",
+    label: "Rike Sattler",
+    hint: "Nordwand",
+  },
+  {
+    value: "kontakt@hochbau-weiss.example",
+    label: "Hochbau Weiß",
+    hint: "Account",
+  },
+];
+
+/**
+ * The field OFFERING a vocabulary — the composer's To line, where the addresses
+ * already on the record are help and a stranger's address is still typeable.
+ *
+ * The two things to look at: a token already committed leaves the list (the set
+ * is what it is, and offering back what is standing in front of the reader is
+ * help that isn't), and the popup is as wide as the FIELD rather than as the box
+ * left over beside the tokens.
+ */
+export const Offering: Story = {
+  render: () => (
+    <div style={column}>
+      <TokenDemo
+        label="To"
+        start={["dana@nordwand.example"]}
+        suggestions={PEOPLE}
+        placeholder="name@example.com"
+        hint="Type a name or an address. The list is help — an address nobody has on file still commits."
+      />
+    </div>
+  ),
+};
+
+/** The offered list in dark, where every row colour re-resolves. */
+export const OfferingDark: Story = {
+  globals: { theme: "dark" },
+  render: () => (
+    <div style={column}>
+      <TokenDemo
+        label="To"
+        suggestions={PEOPLE}
+        placeholder="name@example.com"
       />
     </div>
   ),

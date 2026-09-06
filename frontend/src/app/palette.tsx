@@ -8,12 +8,9 @@ import { useDialogFocus } from "../design-system/dialogfocus";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
-import {
-  SETTINGS_TABS,
-  type SettingsTabId,
-  settingsAddress,
-  useSettingsEntryVisibility,
-} from "../screens/settingsnav";
+import type { SettingsPageId } from "../screens/settingscatalog";
+import { useVisibleSettingsPages } from "../screens/settingsnav";
+import { settingsHref } from "../screens/settingsrouting";
 import {
   CUSTOM_SCREEN,
   customPaletteScreens,
@@ -55,42 +52,48 @@ export type Command = {
 // editor into the AI page, and somebody who learned "custom fields" or
 // "automations" must not be told the product no longer has one.
 const SETTINGS_ALIASES: Readonly<
-  Partial<Record<SettingsTabId, readonly string[]>>
+  Partial<Record<SettingsPageId, readonly string[]>>
 > = {
   account: ["password", "profile", "language", "theme"],
   voice: ["tone", "writing style"],
   agents: ["passport", "api key", "token"],
   connections: ["oauth", "mailbox", "calendar"],
   "capture-activity": ["capture log", "trace"],
-  general: ["company", "currency", "workspace"],
-  users: ["roles", "permissions", "seats", "team"],
-  integrations: ["webhook", "api", "overlay"],
+  company: ["general", "currency", "workspace", "fx"],
+  authentication: ["sign-in", "sso", "oauth app", "login"],
+  members: ["users", "people", "roster", "invite"],
+  teams: ["team"],
+  seats: ["license", "billing", "plan", "subscription"],
+  pipelines: ["stages", "deal stages"],
+  leads: ["lead sources", "disqualify"],
+  fields: ["custom-fields", "data model", "schema"],
+  tags: ["labels", "vocabulary"],
+  products: ["price list", "rate card", "offer-templates"],
   capture: ["email capture", "inbox"],
-  "data-model": [
-    "custom-fields",
-    "products",
-    "price list",
-    "rate card",
-    "offer-templates",
-    "pipelines",
-    "tags",
-  ],
-  ai: ["automations", "models", "routing", "embeddings"],
+  integrations: ["webhook", "api", "overlay"],
   knowledge: ["handbook", "corpus", "documents"],
+  import: ["csv", "upload", "migration"],
+  models: ["routing", "providers", "keys", "embeddings"],
+  automations: ["rules", "triggers"],
+  usage: ["spend", "cost", "budget", "tokens"],
+  "model-calls": ["logs", "trace", "calls"],
   privacy: ["gdpr", "consent", "retention", "erasure"],
-  license: ["billing", "plan", "subscription"],
-  maintenance: ["reset", "jobs", "health"],
+  audit: ["trail", "log", "history"],
+  "system-health": ["jobs", "health", "reindex", "maintenance"],
+  extensions: ["units", "plugins"],
+  reset: ["danger", "wipe", "delete everything"],
 };
 
 export function useBuiltinCommands(): Command[] {
   const t = useT();
   const { locale } = useLocale();
-  // The same snapshot the settings rail reads, so the two cannot disagree about
-  // which pages exist. This used to pass `false` to skip a network probe the
-  // hook fired for the company-rollout fact alone — which meant the palette
-  // answered that question differently from the rail. The fact rides /me now,
-  // so there is no request to skip and no parameter to pass.
-  const visible = useSettingsEntryVisibility();
+  // The same table the settings rail walks, not a second opinion about it.
+  //
+  // This read the retired register while the rail read the catalog, which is
+  // precisely the disagreement the catalog exists to prevent: the palette would
+  // offer a shortcut to a page the rail no longer lists, or miss one it does.
+  // Both resolve `visibleSettingsPages` now.
+  const visible = useVisibleSettingsPages();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
       id: `screen:${item.screen}`,
@@ -148,14 +151,12 @@ export function useBuiltinCommands(): Command[] {
     // falls back to Account for an entry the principal may not open — so an
     // ungated command would be a shortcut that silently goes somewhere else.
     // Only the admin half has a predicate; the `you` half is every reader's.
-    const settingsScreens: Command[] = SETTINGS_TABS.filter(
-      (entry) => entry.group !== "admin" || visible[entry.id],
-    ).map((entry) => ({
-      id: `screen:settings-${entry.id}`,
-      label: t(`settings.tab.${entry.id}`),
-      keywords: [entry.id, ...(SETTINGS_ALIASES[entry.id] ?? [])],
+    const settingsScreens: Command[] = visible.map((page) => ({
+      id: `screen:settings-${page.id}`,
+      label: t(`settings.tab.${page.id}`),
+      keywords: [page.id, ...(SETTINGS_ALIASES[page.id] ?? [])],
       type: "screen",
-      route: settingsAddress(entry.id),
+      route: settingsHref(page.id),
     }));
     // The scheduled queue, which is off the rail deliberately — a queue of one
     // person's own unsent mail is not an eleventh destination (pagemeta.ts says

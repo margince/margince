@@ -119,14 +119,22 @@ var tableOwners = map[string]string{
 	"signal_thread_scan":             "internal/compose",
 	// One reader's frozen walk through their worklist. Owned by the compose
 	// package that writes it, the way compose/weekly owns team_weekly_review.
-	"worklist_snapshot":          "internal/compose/worklistsnap",
-	"relationship":               "internal/modules/people",
-	"partner":                    "internal/modules/people",
-	"lead":                       "internal/modules/people",
-	"lead_score_history":         "internal/modules/people",
-	"lead_manual_signal":         "internal/modules/people",
-	"lead_source":                "internal/modules/people",
-	"lead_disqualify_reason":     "internal/modules/people",
+	"worklist_snapshot":      "internal/compose/worklistsnap",
+	"relationship":           "internal/modules/people",
+	"partner":                "internal/modules/people",
+	"lead":                   "internal/modules/people",
+	"lead_score_history":     "internal/modules/people",
+	"lead_manual_signal":     "internal/modules/people",
+	"lead_source":            "internal/modules/people",
+	"lead_disqualify_reason": "internal/modules/people",
+	// A prospect passed from an SDR to an account executive: the row carrying
+	// its current state, the append-only transitions behind it, and the
+	// administered reason a refusal names. people owns them because the SUBJECT
+	// is a lead or a person; the deal an acceptance produces is an outcome, and
+	// compose wires the caller that does both.
+	"sdr_handoff":                "internal/modules/people",
+	"sdr_handoff_event":          "internal/modules/people",
+	"sdr_handoff_reason":         "internal/modules/people",
 	"organization_profile_field": "internal/modules/people",
 	"organization_vat_check":     "internal/modules/people",
 	"person_profile_field":       "internal/modules/people",
@@ -193,9 +201,14 @@ var tableOwners = map[string]string{
 	// floor (A165/ADR-0114). It hangs off `activity` and is written by the
 	// stamp, so it belongs to the module that owns the row it substantiates.
 	"activity_retention_evidence": "internal/modules/activities",
-	"activity_sales_state":        "internal/modules/activities",
-	"activity_reader_state":       "internal/modules/activities",
-	"worklist_pin":                "internal/modules/activities",
+	// How a reply verdict came to be what it is: the classifier's own judgement
+	// and every human correction after it. It hangs off `activity` and is
+	// written beside the column it explains, so it belongs to the module that
+	// owns that row.
+	"activity_reply_verdict_history": "internal/modules/activities",
+	"activity_sales_state":           "internal/modules/activities",
+	"activity_reader_state":          "internal/modules/activities",
+	"worklist_pin":                   "internal/modules/activities",
 	// ACT-DDL-3: who was in the interaction. It belongs beside activity and
 	// activity_link for the same reason they belong together — it is part of
 	// what an activity IS, not a graph artifact derived from one.
@@ -427,14 +440,24 @@ var tableOwners = map[string]string{
 	"assurance_run_finding":     "internal/modules/assurance",
 	"assurance_run":             "internal/modules/assurance",
 	"assurance_source_coverage": "internal/modules/assurance",
-	"assurance_exception":       "internal/modules/assurance",
-	"assurance_resolution":      "internal/modules/assurance",
-	"forecast_call":             "internal/modules/forecasting",
-	"forecast_snapshot":         "internal/modules/forecasting",
-	"forecast_contribution":     "internal/modules/forecasting",
-	"weekly_plan":               "internal/modules/weeklyplan",
-	"weekly_plan_commitment":    "internal/modules/weeklyplan",
-	"weekly_review_deal":        "internal/compose/weekly",
+	// One pass of assurance over a scope, and what each finding contributed to
+	// that pass's task. They belong to assurance because a cycle is a window
+	// over its own findings; the TASK is an ordinary activity the caller mints
+	// through the activities door, so no activity write lives here.
+	"assurance_cycle":         "internal/modules/assurance",
+	"assurance_task_item":     "internal/modules/assurance",
+	"assurance_exception":     "internal/modules/assurance",
+	"assurance_resolution":    "internal/modules/assurance",
+	"forecast_call":           "internal/modules/forecasting",
+	"forecast_snapshot":       "internal/modules/forecasting",
+	"forecast_contribution":   "internal/modules/forecasting",
+	"weekly_plan":             "internal/modules/weeklyplan",
+	"weekly_plan_commitment":  "internal/modules/weeklyplan",
+	"weekly_review_deal":      "internal/compose/weekly",
+	"weekly_review_outlook":   "internal/compose/weekly",
+	"weekly_review_movement":  "internal/compose/weekly",
+	"weekly_review_driver":    "internal/compose/weekly",
+	"weekly_review_scorecard": "internal/compose/weekly",
 	// The company view's per-user visit baseline: view state, not a record
 	// fact, so it is written without an audit row — the saved-view ruling.
 	// The person view acknowledges visits into the SAME table (one baseline

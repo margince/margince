@@ -13,6 +13,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 
@@ -41,7 +42,23 @@ import (
 // (troubledruns.go) for the cross-instance health read — a change to the
 // "@<automation id>" suffix lands on both.
 func runKey(h workflow.Handler, ev workflow.Event) string {
-	return h.IdempotencyKey(ev) + "@" + ev.AutomationID.String()
+	return retryPrefix(ev) + h.IdempotencyKey(ev) + "@" + ev.AutomationID.String()
+}
+
+// retryPrefix marks a re-driven firing so its run claims its own row instead
+// of colliding with the failed run it retries.
+//
+// It PREFIXES for a reason that is easy to get backwards: both readers of this
+// shape match "@<automation id>" anchored at the END of the key — ListRuns
+// (automations_runs.go) and troubledRunsSQL (troubledruns.go). A marker
+// appended after the automation id would break both, and it would break them
+// silently: retried runs would simply stop appearing in the health lane that
+// offered the retry, with nothing failing anywhere.
+func retryPrefix(ev workflow.Event) string {
+	if ev.RetryAttempt == 0 {
+		return ""
+	}
+	return "retry" + strconv.Itoa(ev.RetryAttempt) + ":"
 }
 
 // isClockTrigger distinguishes the two trigger shapes runOne must treat

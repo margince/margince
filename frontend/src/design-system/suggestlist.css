@@ -1,0 +1,64 @@
+/* The list a text box offers, portalled to the body.
+ *
+ * `position: fixed` and no positioned ancestor to lean on: every coordinate
+ * arrives as an inline style from suggestlist.tsx, measured against the
+ * viewport by anchoredpopup.ts. Shared by `ComboBox` and `TokenInput`, which is
+ * why the geometry is stated here once — two sheets would be two ideas of how
+ * far a row sits from the edge of the list it is in. */
+
+.suggest-popup {
+  position: fixed;
+  z-index: 70;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bgElevated);
+  border: 1px solid var(--borderStrong);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-pop);
+  padding: var(--space-1);
+}
+.suggest-list {
+  display: flex;
+  flex-direction: column;
+}
+.suggest-option {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 7px 9px; /* ds:ignore the option's own row rhythm, shared with Select's list */
+  border-radius: var(--r-sm);
+  font-family: var(--f-body);
+  font-size: var(--fs-body);
+  color: var(--textPrimary);
+  cursor: pointer;
+}
+.suggest-option-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* A model id is a machine name and reads as one — the same face the routing
+   document spells it in, so the list and the field agree. An address and a
+   person's name are words and take the body face. */
+.suggest-option-value.is-mono {
+  font-family: var(--f-mono);
+}
+.suggest-option-hint {
+  flex: none;
+  color: var(--textMeta);
+  font-size: var(--fs-meta);
+}
+/* Where the keyboard is, and what a pointer is hovering — one state, because
+   the popup tracks one active option through `aria-activedescendant` whichever
+   input moved it. */
+.suggest-option.is-active {
+  background: var(--bgHover);
+}
+.suggest-option[aria-selected="true"] {
+  color: var(--accentText);
+  font-weight: 500;
+}
+.suggest-option[aria-selected="true"].is-active {
+  background: var(--accentLight);
+}

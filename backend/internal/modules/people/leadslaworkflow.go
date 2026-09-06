@@ -41,6 +41,10 @@ func (leadFirstResponse) Spec() workflow.Spec {
 		Name:    "lead_first_response",
 		Trigger: workflow.Trigger{EventType: "activity.captured"},
 		Tier:    mcp.TierAutoExecute,
+		// The stamp is the EARLIEST response, not the latest pass: a stamp
+		// later than or equal to the one already on the lead is a replay and
+		// writes nothing, which is what an at-least-once bus needs anyway.
+		RedrivableWithoutDuplicating: true,
 	}
 }
 
@@ -88,6 +92,9 @@ func (leadStatusLadder) Spec() workflow.Spec {
 		Name:    "lead_status_ladder",
 		Trigger: workflow.Trigger{EventType: "activity.captured"},
 		Tier:    mcp.TierAutoExecute,
+		// The ladder only climbs. A second pass asks Advances() about a status
+		// its own first pass already moved, which answers false.
+		RedrivableWithoutDuplicating: true,
 	}
 }
 

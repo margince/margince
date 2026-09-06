@@ -288,11 +288,12 @@ describe("a moment action that opens the composer", () => {
     expect(await intentValue()).toBe("follow up — it has gone quiet");
   });
 
-  it("opens the shared compose drawer for the generic Email verb, not the steering composer", async () => {
-    // Mail as the only way in goes to the drawer every record shares — the
-    // one that knows the record's conversations. The rung's labelled verb
-    // above keeps the steering composer, because it arrives carrying an
-    // intent the shared drawer has no field for.
+  it("opens the same drawer for the generic verb, carrying no reason", async () => {
+    // ONE composer, two doors. The rung's labelled verb arrives carrying a
+    // reason and the header's generic one does not, and that is the whole of
+    // the difference: the surface, its thread pane and its conversations are
+    // the same either way. Two drawers is what this replaced — the half of the
+    // traffic that went to the older one got no thread beside the reply at all.
     const user = userEvent.setup();
     mount("overview", { ...view, moment: quietMoment }, [mailAllowed]);
 
@@ -302,9 +303,9 @@ describe("a moment action that opens the composer", () => {
     expect(
       await screen.findByRole("dialog", { name: /Draft email/ }),
     ).toBeTruthy();
-    expect(
-      screen.queryByRole("textbox", { name: "What should it be about?" }),
-    ).toBeNull();
+    // The steer field is here, and EMPTY: pressing the generic verb must not
+    // inherit the reason the last rung left behind.
+    expect(await intentValue()).toBe("");
   });
 });
 
@@ -940,8 +941,8 @@ describe("PersonPageV2 — the addressed composer", () => {
     // The INTENT is what makes this different from the generic "Write an
     // email": the draft opens knowing what it is for. It is the field's VALUE
     // rather than text on the page — the composer hands it to a model.
-    const intent = await screen.findByLabelText(en["person.composer.intent"]);
-    expect((intent as HTMLTextAreaElement).value).toBe(
+    const intent = await screen.findByLabelText(en["compose.intentLabel"]);
+    expect((intent as HTMLInputElement).value).toBe(
       en["person.composer.intentReply"],
     );
   });
@@ -953,7 +954,7 @@ describe("PersonPageV2 — the addressed composer", () => {
     mount("overview");
 
     await screen.findByRole("heading", { name: view.person.full_name });
-    expect(screen.queryByLabelText(en["person.composer.intent"])).toBeNull();
+    expect(screen.queryByLabelText(en["compose.intentLabel"])).toBeNull();
   });
 
   // Derived from the address rather than seeded from it — the same reason the
@@ -962,13 +963,13 @@ describe("PersonPageV2 — the addressed composer", () => {
   it("closes when the address stops asking for it", async () => {
     window.location.hash = "#/contacts/p-1?compose=reply";
     mount("overview");
-    await screen.findByLabelText(en["person.composer.intent"]);
+    await screen.findByLabelText(en["compose.intentLabel"]);
 
     window.location.hash = "#/contacts/p-1";
     window.dispatchEvent(new HashChangeEvent("hashchange"));
 
     await waitFor(() =>
-      expect(screen.queryByLabelText(en["person.composer.intent"])).toBeNull(),
+      expect(screen.queryByLabelText(en["compose.intentLabel"])).toBeNull(),
     );
   });
 });

@@ -6,7 +6,7 @@ import { TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useHoldsAdminRole } from "../app/capability";
+import { useCan } from "../app/capability";
 import { Badge, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CardBoundary } from "../design-system/cardboundary";
@@ -375,19 +375,23 @@ export function JobHealthCard() {
   // Resolved once for the card and handed down, so the stamp in the footer and
   // the failure timestamps in the body cannot read two different clocks.
   const zone = viewerZone();
-  // The probe itself, not only its answer: useHoldsAdminRole reads false while
-  // /me is in flight, so branching on `!isAdmin` alone told every administrator
-  // that job health was admin-only, on every load of the Maintenance tab,
-  // until the session landed.
+  // The probe itself, not only its answer: every capability predicate reads
+  // false while /me is in flight, so branching on `!canSee` alone told every
+  // administrator that job health was not theirs, on every load, until the
+  // session landed.
   const me = useMe();
-  // The role, not a grant: the endpoint gates on `admin` server-side and no
-  // RBAC object describes background work. `enabled` is what keeps a non-admin
-  // from issuing a call that could only 403 — a refusal the reader cannot act
-  // on has no business becoming this card's error state.
-  const isAdmin = useHoldsAdminRole();
+  // `job_health:read`, which is what the endpoint asks for (compose/jobhealth.go).
+  //
+  // It was the literal admin role while no RBAC object described background
+  // work. One does now, and ops holds it — so an operator watching a stalled
+  // queue reads it rather than being told the surface is an admin's. `enabled`
+  // is what keeps a reader without the grant from issuing a call that could
+  // only 403: a refusal they cannot act on has no business becoming this
+  // card's error state.
+  const canSee = useCan("job_health", "read");
   const query = useQuery({
     queryKey: ["job-health"],
-    enabled: isAdmin,
+    enabled: canSee,
     queryFn: async () => {
       const { data, error } = await api.GET("/admin/job-health");
       if (error) {
@@ -417,7 +421,7 @@ export function JobHealthCard() {
   });
 
   let body: ReactNode;
-  if (!isAdmin) {
+  if (!canSee) {
     // Withheld, not absent. The card keeps its place on a maintenance page a
     // non-admin reaches for its other sections, and an absent card there would
     // read as "nothing is queued" — a different claim entirely.
@@ -446,11 +450,11 @@ export function JobHealthCard() {
   // the states that have no report — withheld, pending, failed — and present
   // for every state that does, the idle one included: an operator trusting
   // "nothing is queued" needs to know how old that answer is.
-  // Behind `isAdmin` as well as behind the data, because a cache outlives a
+  // Behind `canSee` as well as behind the data, because a cache outlives a
   // grant: a role edited mid-session leaves the last report sitting in the
   // query cache, and a stamp under a withheld body would date a reading the
   // card is no longer showing.
-  const report = isAdmin ? query.data : undefined;
+  const report = canSee ? query.data : undefined;
 
   // No bottom margin: `.settings-stack` owns the gap between cards, and a card
   // that adds its own gets two.

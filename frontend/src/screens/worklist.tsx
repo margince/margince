@@ -143,45 +143,50 @@ function WorklistHeader({
   const completeness = completenessText(day, filter, t, locale, loaded);
   return (
     <div className="worklist-header">
-      {/* Five figures, ONE scope: the whole assembled day. All five come off
+      {/* The facts line and the scope on one line: what the day holds, and
+          whose day. The scope belongs beside the sentence it changes rather
+          than under it, where it read as a control over the pills below. */}
+      <div className="worklist-header-line">
+        {/* Five figures, ONE scope: the whole assembled day. All five come off
           `summary`, which the server counts over every candidate it weighed
           rather than over the page it cut — so the sentence stays still as the
           reader pages, and a total the browser derived a second way cannot
           disagree with the bands beside it. */}
-      <p className="t-h2 worklist-lead">
-        {t(
-          // `in_play` is optional, and a server that does not send it has not
-          // said there is none — it has said nothing. Printing 0 for silence
-          // is the under-reporting this line must never do, so the sentence
-          // without the figure is drawn instead.
-          day.summary.in_play === undefined
-            ? "worklist.summary.noMiddle"
-            : "worklist.summary",
-          {
-            urgent: formatNumber(day.summary.urgent, locale),
-            due: formatNumber(day.summary.due, locale),
-            inPlay: formatNumber(day.summary.in_play ?? 0, locale),
-            lower: formatNumber(day.summary.lower_priority, locale),
-            total: formatNumber(day.summary.total, locale),
-          },
-        )}
-      </p>
-      {/* Drawn only when there is a choice: a rep who can see only their own
+        <p className="t-h3 worklist-lead">
+          {t(
+            // `in_play` is optional, and a server that does not send it has not
+            // said there is none — it has said nothing. Printing 0 for silence
+            // is the under-reporting this line must never do, so the sentence
+            // without the figure is drawn instead.
+            day.summary.in_play === undefined
+              ? "worklist.summary.noMiddle"
+              : "worklist.summary",
+            {
+              urgent: formatNumber(day.summary.urgent, locale),
+              due: formatNumber(day.summary.due, locale),
+              inPlay: formatNumber(day.summary.in_play ?? 0, locale),
+              lower: formatNumber(day.summary.lower_priority, locale),
+              total: formatNumber(day.summary.total, locale),
+            },
+          )}
+        </p>
+        {/* Drawn only when there is a choice: a rep who can see only their own
           work is never offered a switch that would refuse when pressed. */}
-      {scopes.length > 1 && owner === "" && (
-        <SegmentedControl
-          options={scopes}
-          value={scope}
-          onChange={onScope}
-          label={t("worklist.scope.label")}
-          labels={{
-            mine: t("worklist.scope.mine"),
-            unassigned: t("worklist.scope.unassigned"),
-            team: t("worklist.scope.team"),
-            all: t("worklist.scope.all"),
-          }}
-        />
-      )}
+        {scopes.length > 1 && owner === "" && (
+          <SegmentedControl
+            options={scopes}
+            value={scope}
+            onChange={onScope}
+            label={t("worklist.scope.label")}
+            labels={{
+              mine: t("worklist.scope.mine"),
+              unassigned: t("worklist.scope.unassigned"),
+              team: t("worklist.scope.team"),
+              all: t("worklist.scope.all"),
+            }}
+          />
+        )}
+      </div>
       {/* Whose queue. Offered on the same tier the server admits a named owner
           on — `team` in the options means this reader reaches past themselves —
           so the control and the refusal cannot disagree. It replaces the scope

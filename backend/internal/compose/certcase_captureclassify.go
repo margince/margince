@@ -44,6 +44,14 @@ type captureClassifyFixture []captureClassifyMessage
 type captureClassifyMessage struct {
 	Subject string `json:"subject"`
 	Body    string `json:"body"`
+	// Inbound says the counterparty wrote this one. The same call judges whether
+	// an inbound message was a positive reply, and that half of the prompt is
+	// unreachable from a fixture with no way to say a message came from outside.
+	//
+	// It defaults to FALSE, which is the safe direction for an omitted field: a
+	// fixture that does not say is treated as our own outbound mail and asked no
+	// reply question, rather than certified as a customer's answer by silence.
+	Inbound bool `json:"inbound"`
 }
 
 // captureClassifyCases serves the one site that labels captured mail for
@@ -96,7 +104,7 @@ func (captureClassifyCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 	}
 	batch := make([]unlabeledMessage, len(messages))
 	for i, m := range messages {
-		batch[i] = unlabeledMessage{ID: ids.NewV7(), Subject: m.Subject, Body: m.Body}
+		batch[i] = unlabeledMessage{ID: ids.NewV7(), Subject: m.Subject, Body: m.Body, Inbound: m.Inbound}
 	}
 	return &captureClassifyCase{batch: batch, expected: want}, nil
 }

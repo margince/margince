@@ -409,6 +409,27 @@ export function formatDate(
   }).format(new Date(utcIso));
 }
 
+/**
+ * The day as a page names it over a greeting: the weekday, the day and the
+ * month written out — "Thursday, 4 September". Intl's own names in the
+ * reader's locale, so de and vi read correctly with no lookup table of ours.
+ * Zone-by-purpose as everywhere here: the day a reader is in, so it takes
+ * the viewer's zone, never the workspace's.
+ */
+export function formatDayLong(
+  utcIso: string,
+  locale: Locale,
+  zone: string,
+): string {
+  assertIanaZone(zone);
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: zone,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date(utcIso));
+}
+
 // A date a reader SCANS rather than keys into a form — a record's header
 // meta line, never a table column someone might copy into a spreadsheet.
 // The abbreviated month (Intl's own locale name, so de/vi read correctly

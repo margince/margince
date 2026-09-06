@@ -2,8 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { X } from "lucide-react";
-import { type KeyboardEvent, useState } from "react";
+import { type KeyboardEvent, useRef, useState } from "react";
+import { type Suggestion, SuggestPopup, useSuggestList } from "./suggestlist";
 import "./tokeninput.css";
+
+export type TokenSuggestion = Suggestion;
 
 /**
  * A set of short values a reader builds one at a time — the control the `in`
@@ -35,10 +38,35 @@ import "./tokeninput.css";
  * Every token carries a remove control rather than relying on Backspace alone:
  * the keyboard path is for the reader mid-flow, and the button is for the one
  * returning to a filter they built last week.
+ *
+ * `suggestions` is OPTIONAL and changes nothing about any of the above: the set
+ * is still whatever the reader commits, and a value that is on no list is
+ * committed exactly as one that is. It exists because some sets are built out of
+ * a vocabulary somebody else already knows — the people on a record, offered to
+ * the composer's To line — and a reader who remembers a colleague's name but not
+ * their address should not have to leave the field to find it. The list, its
+ * matching and its keyboard grammar are `suggestlist.tsx`, shared with
+ * `ComboBox`, so a set-building field and a value-binding one open the same
+ * dropdown rather than two that drift.
  */
 export type TokenInputProps = Readonly<{
   values: readonly string[];
   onChange: (values: readonly string[]) => void;
+  /** What this field could hold, offered as the reader types. Omit it and the
+   *  control is the plain text-and-tokens box it has always been. */
+  suggestions?: readonly TokenSuggestion[];
+  /**
+   * The reader has started typing, before anything is committed.
+   *
+   * `values` does not say this and cannot: text sits uncommitted until Enter or
+   * blur, so a field somebody is halfway through filling looks exactly like an
+   * untouched empty one to anybody reading the set. A host that PREFILLS this
+   * field needs the difference — the composer offers a thread's counterparty
+   * into an empty To line, and without this a lookup landing mid-word would add
+   * its address beside the one being typed and send the reply to somebody the
+   * reader never chose.
+   */
+  onEditing?: () => void;
   placeholder?: string;
   disabled?: boolean;
   id?: string;
@@ -52,11 +80,19 @@ export type TokenInputProps = Readonly<{
 export function TokenInput({
   values,
   onChange,
+  suggestions,
+  onEditing,
   placeholder,
   disabled,
   ...aria
 }: TokenInputProps) {
   const [typed, setTyped] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  // The list is as wide as the FIELD, not as the box left over beside the
+  // tokens: anchored to the input, a field holding three recipients opened a
+  // popup two inches wide in the middle of the row.
+  const fieldRef = useRef<HTMLSpanElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
 
   const commit = (raw: string) => {
     // One paste can carry several values; one keystroke carries one. Splitting
@@ -84,7 +120,30 @@ export function TokenInput({
     setTyped("");
   };
 
+  const list = useSuggestList({
+    anchorRef: fieldRef,
+    popupRef,
+    suggestions: suggestions ?? EMPTY,
+    typed,
+    disabled,
+    // A value already on the field is not on offer: the set is what it is, and
+    // offering a reader the token standing in front of them is help that
+    // isn't.
+    taken: new Set(values),
+    // A picked row is a commit like any other — it goes through `commit` so the
+    // duplicate rule, the blank rule and the clearing of the box are decided in
+    // one place whether a value was typed or chosen.
+    onPick: commit,
+  });
+
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    // The list first, and only for the keys it claims: Enter on a highlighted
+    // row takes that row, and Enter on nothing highlighted still commits what
+    // the reader typed. A control that let the list swallow every Enter would
+    // refuse a value simply because it was not on a list that is help.
+    if (list.navigate(event)) {
+      return;
+    }
     if (event.key === "Enter" || event.key === ",") {
       // Enter must not submit the surrounding form: the reader is adding a
       // value, not finishing the filter.
@@ -104,6 +163,7 @@ export function TokenInput({
     // static element interactive to buy back only the gaps BETWEEN tokens, which
     // is not worth an a11y exception.
     <span
+      ref={fieldRef}
       className={`token-input input ${disabled ? "is-disabled" : ""}`.trim()}
     >
       {values.map((value) => (
@@ -122,19 +182,46 @@ export function TokenInput({
       ))}
       <input
         {...aria}
+        // The combobox role, and the rest of the list's wiring, only where the
+        // call site declared a vocabulary to offer. A field with no list is an
+        // ordinary text box and must announce itself as one: a `combobox` that
+        // never opens tells a reader to press a key that does nothing. Keyed on
+        // the PROP rather than on whether it currently has rows, so a field does
+        // not change what it is while its suggestions load or while the reader
+        // types past the last match.
+        {...(suggestions ? list.fieldAria : {})}
+        ref={inputRef}
         className="token-box"
+        autoComplete="off"
         value={typed}
         disabled={disabled}
         placeholder={values.length === 0 ? placeholder : undefined}
-        onChange={(event) => setTyped(event.target.value)}
+        onChange={(event) => {
+          setTyped(event.target.value);
+          onEditing?.();
+          list.retype();
+        }}
+        onFocus={list.show}
         onKeyDown={onKeyDown}
         // A value left typed but not committed would be silently dropped when
-        // the reader clicks away, so blur commits it.
-        onBlur={() => commit(typed)}
+        // the reader clicks away, so blur commits it. The list closes with it:
+        // a popup left hanging under a control nobody is focused on is what a
+        // keyboard reader gets otherwise, since the outside-press dismissal
+        // never fires for them.
+        onBlur={() => {
+          list.close();
+          commit(typed);
+        }}
       />
+      <SuggestPopup list={list} />
     </span>
   );
 }
+
+// One frozen empty list rather than a fresh `[]` per render: the suggestion
+// hook filters on identity-stable input, and a new array each time would remake
+// the matches on every keystroke of a field that was given nothing to offer.
+const EMPTY: readonly Suggestion[] = [];
 
 /**
  * The same tokens, WITHOUT a text box: a set somebody built somewhere else.

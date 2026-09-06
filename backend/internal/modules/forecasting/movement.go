@@ -38,6 +38,24 @@ var bucketOrder = []string{
 	BucketDefinition, BucketModel,
 }
 
+// MovementBuckets is the set of buckets a change can land in, in drawing order.
+//
+// Held by: TestEveryForecastBucketLandsInExactlyOneBridgeBar
+// (backend/internal/compose/weekly/weeklybridge_test.go), which walks this set
+// and fails when the weekly bridge has no bar for a member — the census that
+// stops a bucket added here from silently vanishing from a waterfall.
+//
+// Exported so a reader that must account for ALL of them derives the set rather
+// than keeping its own copy — the weekly bridge folds these twelve into seven
+// bars, and a hand-kept list there would silently drop a bucket added here,
+// which is money vanishing from a waterfall that still sums to something.
+//
+// Returned as a fresh slice because a package-level array would let one caller
+// reorder every other caller's waterfall.
+func MovementBuckets() []string {
+	return append([]string{}, bucketOrder...)
+}
+
 // Movement is the difference between two snapshots, classified.
 //
 // Opening plus every bucket equals Closing, exactly. Both sides are sums of

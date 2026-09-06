@@ -8,37 +8,21 @@
   margin-bottom: 12px;
 }
 
-/* A labelled control in the composer: the name ABOVE the field, not beside it.
+/* A QUESTION the composer asks, below the message: the name above the field.
 
-   Beside it, the label was one flex item against a select that took the rest
-   of the drawer, so "Draft to" broke across two lines into a two-word column
-   while the field beside it ran full width. Stacked, it also reads the same way
-   as every other field in the drawer — To, Cc, Subject, Body all name
-   themselves above the box — and a form with two label positions makes a
-   reader look for the name of each field twice. */
+   Two label positions in one drawer, deliberately. The mail's own head — how it
+   goes, who it is to, what it is about, what it carries — is a BLOCK a reader
+   sweeps down, so those names sit beside their fields in one column
+   (composehead.css). These are not that: "Why are you writing?" and the project
+   filing are questions about the message, asked in sentences under it, and a
+   sentence squeezed into a fixed label column breaks across two lines while the
+   control beside it runs full width — which is what this rule was written to
+   stop. The head is a table; this is prose. */
 .compose-check {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: var(--space-1);
-}
-
-/* One line of the mail's head: what it is, then what it says. A fixed label
-   column so five short names cannot each wrap into a two-word paragraph, and
-   the values line up in one margin the reader sweeps down. */
-.mailrow {
-  display: grid;
-  grid-template-columns: minmax(0, 4.5rem) minmax(0, 1fr);
-  align-items: baseline;
-  gap: var(--space-3);
-  padding-block: var(--space-2);
-  border-block-end: 1px solid var(--borderSubtle);
-}
-.mailrow-label {
-  color: var(--textMeta);
-}
-.mailrow-value {
-  min-inline-size: 0;
 }
 
 /* The band that says a machine wrote what is below it. Indigo ground, indigo
@@ -184,58 +168,6 @@
   flex: 1;
 }
 
-/* Border, radius, padding, fill, and focus ring come from the shared .textarea
- * atom; this only sets the composer's size and resize affordance. */
-.compose-body {
-  width: 100%;
-  /* Tall enough to hold a short business email whole. A body the rep has to
-     scroll to read is a body they will confirm without reading, and this send
-     cannot be taken back. */
-  min-height: 220px;
-  resize: vertical;
-}
-
-.recipient-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.recipient-field .chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.recipient-field .chips li {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px; /* ds:ignore the chip height is the remove button's 24px floor */
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgHover);
-  color: var(--textContent);
-}
-/* Removing a recipient is a mistake nobody wants to make twice, and at the size
-   of its own 14px cross it was a target a third of the 24px WCAG 2.2 AA 2.5.8
-   asks for. The box takes the floor; the mark keeps its size, so the chip still
-   reads as a chip with a small cross rather than as a button with a word in it. */
-.recipient-field .chips button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-inline-size: var(--space-6);
-  min-block-size: var(--space-6);
-  border: 0;
-  background: none;
-  color: var(--textMeta);
-  cursor: pointer;
-  line-height: 1;
-  padding: 0;
-}
-
 /* The Art. 50 disclosure card: the offer surface's banner treatment, stacked to
  * the composer's rhythm. Items hug the start so the maturity Badge keeps its
  * pill width instead of stretching to the card. */
@@ -280,17 +212,4 @@
 .mw-answering {
   margin: 0 0 var(--space-2);
   color: var(--textMeta);
-}
-
-/* What a pressed Send is still waiting for, under the field it is waiting on.
-   The danger tone is the same one the composer already gives a send-time
-   refusal, and it sits tight to the control so the message and the thing to
-   fix are read as one. */
-/* Both classes, not one: `.t-caption` carries the size and sets its own
-   colour at the same specificity, so a single class left the message grey
-   whenever the bundler put the base sheet last. The pairing states the
-   override rather than depending on file order. */
-.t-caption.compose-need {
-  color: var(--danger);
-  margin-top: var(--space-1);
 }

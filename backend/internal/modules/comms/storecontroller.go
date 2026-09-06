@@ -130,12 +130,16 @@ func (s *Store) StageControllerTx(ctx context.Context, tx pgx.Tx, in StageContro
 // record that a message went out. What must not survive is a live credential
 // pointing at somebody's mailbox.
 //
-// The dispatcher calls this when the relay has taken the message or the
-// delivery reaches a terminal state. That transport lands with the controller
-// relay; until it does, this method has no caller inside comms, and what
-// retires the material is Art. 17 erasure — which destroys the vault entry and
-// nulls the reference in the same transaction, on every arm that scrubs a
-// delivery.
+// Two callers, and they are the two halves of the same obligation. The
+// dispatcher calls it when the relay has taken the message or the delivery
+// reached a terminal state (closePayload), and the payload sweep calls it for
+// the material no terminal outcome ever reached. Art. 17 erasure retires the
+// material too, on its own path: it destroys the vault entry and nulls the
+// reference in one transaction on every arm that scrubs a delivery.
+//
+// Every caller destroys the vault entry BEFORE calling this. Clearing first
+// would leave live material with nothing left pointing at it, which no later
+// pass and no erasure can find by reference again.
 func (s *Store) ClearPayloadRef(ctx context.Context, id ids.UUID) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
@@ -145,6 +149,79 @@ func (s *Store) ClearPayloadRef(ctx context.Context, id ids.UUID) error {
 		}
 		return nil
 	})
+}
+
+// ExpiredControllerPayloads names the controller deliveries still holding
+// one-time link material past its expiry.
+//
+// Deliberately NOT filtered by status. A payload outliving payload_expires_at
+// is a live credential to somebody's mailbox whatever the row's disposition
+// says, and the two dispositions that retire it — accepted and parked — already
+// cleared payload_ref, so a row reaching this read has by definition not been
+// retired by either. Adding a status predicate would only be able to exclude
+// rows that should be swept.
+//
+// Ordered by expiry so the oldest material goes first: a bounded pass that
+// cannot drain its backlog should shorten the longest exposure, not an
+// arbitrary one.
+//
+// `after` is what stops that ordering starving the newer rows. A batch of rows
+// that will never delete — a vault rejecting them, a ref the store cannot
+// resolve — would otherwise be re-selected by every cadence forever, and every
+// payload behind them would sit undestroyed while the pass reported itself busy.
+// The sweep pages past what it has already tried in this run, so one poisoned
+// batch costs one batch rather than the whole backlog.
+func (s *Store) ExpiredControllerPayloads(
+	ctx context.Context, now time.Time, after time.Time, limit int,
+) ([]ids.UUID, time.Time, error) {
+	var out []ids.UUID
+	var last time.Time
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// payload_expires_at IS NOT NULL is not restated: the table's own
+		// payload_needs_expiry CHECK already makes it implied by payload_ref
+		// being present, and a reader who saw it here would go looking for the
+		// case it handles.
+		rows, err := tx.Query(ctx, `
+			SELECT id, payload_expires_at FROM comms_outbound
+			 WHERE payload_ref IS NOT NULL
+			   AND payload_expires_at < $1
+			   AND payload_expires_at > $2
+			 ORDER BY payload_expires_at
+			 LIMIT $3`, now, after, limit)
+		if err != nil {
+			return fmt.Errorf("comms: reading expired link material: %w", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id ids.UUID
+			var expires time.Time
+			if err := rows.Scan(&id, &expires); err != nil {
+				return fmt.Errorf("comms: reading an expired payload row: %w", err)
+			}
+			out = append(out, id)
+			last = expires
+		}
+		return rows.Err()
+	})
+	return out, last, err
+}
+
+// PayloadRefFor reads the material reference a delivery still holds, so a sweep
+// can destroy the vault entry before clearing the column that names it.
+//
+// Order matters and is the same one erasure uses: clear the column first and a
+// failure leaves an orphan in the vault that nothing can find again.
+func (s *Store) PayloadRefFor(ctx context.Context, id ids.UUID) (string, error) {
+	var ref string
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		err := tx.QueryRow(ctx,
+			`SELECT coalesce(payload_ref, '') FROM comms_outbound WHERE id = $1`, id).Scan(&ref)
+		if err != nil {
+			return fmt.Errorf("comms: reading the payload reference: %w", err)
+		}
+		return nil
+	})
+	return ref, err
 }
 
 // checkPlaceholder holds the body and the material to the same story.

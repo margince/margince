@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "33dfa88be4755d1810da2a5d587de7f6dd352ca7856b924998ecb2b949657a2a"
+const JobContractHash = "3c27788b9c8659aa51e648db4cce293fd8655ca7721c4b1faba697735c95abd3"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -232,6 +232,17 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 24 * time.Hour},
+	},
+	"comms_controller_payload_sweep": {
+		Kind:         "comms_controller_payload_sweep",
+		GoType:       "ControllerPayloadSweepArgs",
+		Role:         Worker,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{Fixed: 15 * time.Minute},
+		Registration: Registration{When: []string{"SendRegistry", "SendDelivery"}},
+		Fault:        FaultPolicy{NilAfterLogging: "A batch of independent payloads, and one that will not destroy must not strand the others: the pass logs that row and carries on. The retry policy is the CADENCE — this runs every 15 minutes and re-reads what is still expired, so a payload that failed here is picked up by the next pass. Failing the whole job would re-read the rows already retired and leave one permanently unreadable row blocking every other payload behind it forever, which is the opposite of what a cleanup owes."},
 	},
 	"comms_scheduled_send": {
 		Kind:         "comms_scheduled_send",
