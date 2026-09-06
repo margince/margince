@@ -1457,7 +1457,7 @@ export const vi = {
   "co.suggest.kind.stalled_deal": "Deal đình trệ",
   "co.suggest.kind.no_next_step": "Chưa có gì lên lịch",
   "co.suggest.kind.lifecycle_conflict": "Bản ghi mâu thuẫn",
-  "co.suggest.kind.commitment_unmet": "Lời hứa còn mở",
+  "co.suggest.kind.commitment_unmet": "Lời hứa chưa thực hiện",
   "co.suggest.kind.question_unanswered": "Câu hỏi chưa trả lời",
   "co.suggest.kind.risk_raised": "Rủi ro được nêu",
   "co.suggest.kind.need_raised": "Nhu cầu được nêu",

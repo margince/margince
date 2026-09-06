@@ -1537,7 +1537,7 @@ export const en = {
   "co.suggest.kind.stalled_deal": "Stalled deal",
   "co.suggest.kind.no_next_step": "Nothing scheduled",
   "co.suggest.kind.lifecycle_conflict": "Record disagrees",
-  "co.suggest.kind.commitment_unmet": "Promise open",
+  "co.suggest.kind.commitment_unmet": "Promise unmet",
   "co.suggest.kind.question_unanswered": "Question unanswered",
   "co.suggest.kind.risk_raised": "Risk raised",
   "co.suggest.kind.need_raised": "Need raised",

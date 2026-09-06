@@ -1462,7 +1462,7 @@ export const de = {
   "co.suggest.kind.stalled_deal": "Deal steht",
   "co.suggest.kind.no_next_step": "Nichts geplant",
   "co.suggest.kind.lifecycle_conflict": "Widerspruch im Datensatz",
-  "co.suggest.kind.commitment_unmet": "Zusage offen",
+  "co.suggest.kind.commitment_unmet": "Zusage nicht eingelöst",
   "co.suggest.kind.question_unanswered": "Frage unbeantwortet",
   "co.suggest.kind.risk_raised": "Risiko benannt",
   "co.suggest.kind.need_raised": "Bedarf benannt",
