@@ -35,12 +35,12 @@ import (
 // something has to choose, and a constant refused every rep whose only mailbox
 // was the other vendor's.
 //
-// Whichever way it is arrived at, the SAME value is the delivery's provider and
-// the activity's source_system — the provider files its own copy of every sent
-// message back into the mailbox, and that copy is only recognised as this
-// activity when the natural key it carries, (source_system, source_id), is the
-// one the send wrote. Two answers here would be a duplicate timeline row for
-// every message anybody sends.
+// Whichever way it is arrived at, this value names the DELIVERY alone. The
+// timeline row the send writes is keyed on the transport-independent mail
+// identity instead (connector.EmailSourceSystem), so the copy the provider
+// files back into the mailbox is recognised as this activity whichever
+// connector reads it — the recognition no longer depends on this answer
+// matching the one capture happens to be running.
 const DefaultSendProvider = "gmail"
 
 // sourceManual is the provenance every send this system composes carries: a

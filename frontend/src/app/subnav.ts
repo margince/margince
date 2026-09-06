@@ -35,6 +35,10 @@ export type NavLevelEntry = {
   // the `id` stays the entry's identity either way — so `activeId` matching is
   // unaffected by how deep the entry lives.
   prefix?: readonly string[];
+  // Whether this row addresses the LEVEL itself rather than something under it.
+  // Settings home is the only one today: it is the settings address with no
+  // page segment, so its id names a row and never a destination.
+  level?: true;
   icon: LucideIcon;
   // The level this entry opens. Grouping is possible at every depth, so the
   // children are a flat list only until one needs headings.
@@ -123,8 +127,11 @@ export type NavTrailLevel = {
 // The route an entry of `path` addresses. The router parses four segments, so a
 // level can be addressed three deep below the screen and no deeper — a fifth
 // level would have to arrive with the route that can name it.
-export function navLevelRoute(path: readonly string[], id: string): Route {
-  const segments = [...path, id];
+export function navLevelRoute(path: readonly string[], id?: string): Route {
+  // An absent id is the level's OWN address, which is the path and nothing
+  // more. `[...path, undefined]` would put an undefined segment in the middle
+  // and shift every one after it, so the id is appended only when there is one.
+  const segments = id === undefined ? [...path] : [...path, id];
   return {
     // A level's path is strings by the time a row is a link, so its first
     // segment is checked here exactly as a typed hash's is: a level rooted at no
@@ -155,6 +162,17 @@ export function navEntryRoute(
   path: readonly string[],
   entry: NavLevelEntry,
 ): Route {
+  // A row that IS the level's own address rather than something below it: the
+  // settings home row is `#/settings`, not `#/settings/home`. Without this the
+  // id would be spelled into the address as if it were a page, and `home` would
+  // have to become a real page id to answer there — which is the collision, not
+  // the fix.
+  //
+  // `level: true` rather than an empty id, because an entry still needs an id
+  // to go current on and to be keyed by.
+  if (entry.level) {
+    return navLevelRoute([...path, ...(entry.prefix ?? [])]);
+  }
   return navLevelRoute([...path, ...(entry.prefix ?? [])], entry.id);
 }
 

@@ -249,28 +249,3 @@ export function useHoldsOperatorSeat(): boolean {
   const roles = useMe().data?.roles ?? [];
   return roles.includes("admin") || roles.includes("ops");
 }
-
-/**
- * Whether the principal may administer consent configuration — `admin` or
- * `ops`.
- *
- * Separate from `useHoldsAdminRole` because the authority genuinely differs:
- * the consent purpose registry is an Admin/Ops surface, while the subject-request
- * queue beside it and the audit log are the admin's alone. Collapsing the two
- * into one predicate is what put an Ops seat in front of surfaces the server
- * refuses.
- *
- * This one is interim in a way the admin predicate is not. `consent_config` IS
- * a governed object upstream; it is simply absent from the shipped `RbacObject`
- * vocabulary, so there is no grant to ask for yet. When it lands, this becomes
- * `useCan("consent_config", "read")` and disappears.
- */
-export function useHoldsConsentAdminRole(): boolean {
-  // The same seat set as `useHoldsOperatorSeat`, read through it rather than
-  // spelled a second time: two copies of one expression drift, and this is the
-  // one that is meant to disappear. The NAMES stay apart because the
-  // authorities do — when `consent_config` lands in the RbacObject vocabulary
-  // this becomes `useCan("consent_config", "read")` and the section gate above
-  // is untouched.
-  return useHoldsOperatorSeat();
-}

@@ -310,9 +310,16 @@ func displayName(list []*mail.Address, addr string) string {
 func (m Message) ID() string { return m.messageID }
 
 // ToRecord builds the provenance-stamped activity record for the connector
-// named connectorName (e.g. "imap", "gmail"): NaturalKey.SourceSystem and
-// the Source/CapturedBy prefixes all carry that name, so the same message
-// read over a different transport is still deduped on (name, Message-ID).
+// named connectorName (e.g. "imap", "gmail").
+//
+// The natural key is (connector.EmailSourceSystem, Message-ID) — the SAME key
+// whichever adapter read the message, which is what makes one mail one
+// activity when a workspace connects both Gmail and IMAP over one mailbox. The
+// connector's own name stays on Source and CapturedBy, so provenance still
+// answers which transport carried it and whose mailbox it came through; only
+// the IDENTITY stopped depending on the transport. Keying it on connectorName
+// is what put the same message on the timeline twice.
+//
 // The counterparty (From/To) is folded into a compact header on the body —
 // the activity schema has no dedicated participant column, and the timeline
 // needs to show who the mail was with.
@@ -327,7 +334,7 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 
 	return connector.NormalizedRecord{
 		EntityType: datasource.EntityActivity,
-		NaturalKey: connector.NaturalKey{SourceSystem: connectorName, SourceID: m.messageID},
+		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: m.messageID},
 		Fields: capture.ActivityFields{
 			Kind:            "email",
 			Subject:         m.subject,

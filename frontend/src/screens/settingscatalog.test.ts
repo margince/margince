@@ -236,84 +236,136 @@ describe("holds — the evaluator the four surfaces share", () => {
 // Each case below is a deliberate correction of a client that disagreed with
 // the server, and stating them as tests is what stops the next author reading
 // the difference as an accident.
-// A page must not open on a grant the CARDS inside it still refuse.
+// Each page opens on the grant its cards actually ask for, and the two moved
+// together.
 //
-// The server moved these reads onto narrow objects, and the plan widens each
-// page to match. The cards have not followed: JobHealthCard,
-// ExtensionAccessCard, AuditLogCard and ResetDataCard still gate on the literal
-// admin role, the AI cards still check `automation:update`, SignInMethodsCard
-// still reads the installation aggregate, and LicenseCard never calls the
-// seat-usage endpoint the split shipped.
-//
-// So each page keeps a requirement its cards actually honour, and these cases
-// hold that pairing rather than the widening — a page that opened and then said
-// "admin only" is worse than one that stayed shut, because the reader cannot
-// tell a missing permission from a broken screen.
-//
-// Every case here is written to FAIL when the card is rewritten, which is the
-// signal to widen the page in the same change.
-describe("no page promises what its cards will not give", () => {
+// The previous shape of this block held the opposite: pages narrowed to what
+// their cards honoured, with every case written to FAIL when a card was
+// rewritten. Those cases fired, which is what brought the change here — the
+// gates below are their other half.
+describe("a page and its cards ask the same question", () => {
   function opens(page: SettingsPageId, allow: Parameters<typeof meFixture>[0]) {
     return visibleSettingsPages(meFixture(allow)).some((p) => p.id === page);
   }
 
-  it("keeps extensions shut for an ops holder of the grant", () => {
-    // ExtensionAccessCard: useHoldsAdminRole.
+  it("opens extensions to an ops holder of both grants the card reads", () => {
+    // The card is TWO reads behind one flag: the unit inventory from
+    // `GET /v1/extensions` (extension_access) and every role's grant on every
+    // object from `GET /v1/roles` (role_admin, identity/roles.go). Ops is
+    // seeded both, which is why the page is ops's at all.
+    expect(
+      opens("extensions", {
+        roles: ["ops"],
+        allow: { extension_access: ["read"], role_admin: ["read"] },
+      }),
+    ).toBe(true);
+    // The inventory grant ALONE opens a page whose card 403s on its second
+    // request — an unreadable page, which is worse than a closed one.
     expect(
       opens("extensions", {
         roles: ["ops"],
         allow: { extension_access: ["read"] },
       }),
     ).toBe(false);
+    expect(opens("extensions", { roles: ["rep"], allow: {} })).toBe(false);
   });
 
-  it("keeps system-health shut for a job_health holder", () => {
-    // JobHealthCard: useHoldsAdminRole. The page opens on the reindex read,
-    // which is what its other card honours.
+  it("opens system-health on either of its two cards' grants", () => {
+    // A union that is really a union: the job report and the reindex are
+    // different reads, and a holder of one finds the other card withheld.
     expect(
       opens("system-health", {
         roles: ["ops"],
         allow: { job_health: ["read"] },
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       opens("system-health", {
         roles: ["ops"],
         allow: { embedding_reindex: ["read"] },
       }),
     ).toBe(true);
+    expect(opens("system-health", { roles: ["rep"], allow: {} })).toBe(false);
   });
 
-  it("keeps audit shut for a delegated audit_log holder", () => {
-    // AuditLogCard: useHoldsAdminRole.
+  it("opens audit on audit_log, without needing the admin role", () => {
     expect(
       opens("audit", { roles: ["management"], allow: { audit_log: ["read"] } }),
+    ).toBe(true);
+    expect(
+      opens("audit", { roles: ["rep"], allow: { person: ["read"] } }),
     ).toBe(false);
   });
 
-  it("keeps seats shut for a seat_usage holder without license", () => {
-    // LicenseCard calls /installation/license and nothing else, so this reader
-    // would land on an error rather than on the capacity count.
+  it("opens seats to a seat_usage holder, which is the reader the split shipped for", () => {
+    // LicenseCard reads the entitlement for a `license` holder and falls back
+    // to `/installation/seat-usage` for this one — capacity without commercial
+    // standing, which is what management needs and may have.
     expect(
       opens("seats", {
         roles: ["management"],
         allow: { seat_usage: ["read"] },
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       opens("seats", { roles: ["admin"], allow: { license: ["read"] } }),
+    ).toBe(true);
+    expect(opens("seats", { roles: ["rep"], allow: {} })).toBe(false);
+  });
+
+  it("opens the AI diagnostics pages on ai_diagnostics", () => {
+    // The three cards asked `automation:update` — a write verb guarding a GET,
+    // from when the runtime's spend was operator information. The object is its
+    // own now, so management reads what it spends without holding the
+    // automation editor.
+    const management = {
+      roles: ["management"],
+      allow: { ai_diagnostics: ["read"] },
+    } satisfies Parameters<typeof meFixture>[0];
+    expect(opens("usage", management)).toBe(true);
+    expect(opens("model-calls", management)).toBe(true);
+    // Models too, and NOT because the routing editor is theirs — it is not,
+    // and the card refuses them. `AiHealthCard` reads on `ai_diagnostics` and
+    // Models is the only page rendering it, so a page shut on the routing
+    // grant alone would put a card behind a door its own reader cannot open.
+    expect(opens("models", management)).toBe(true);
+  });
+
+  // The other half of that: the page opens for a diagnostics holder because of
+  // ONE card, so the routing grant must still be what opens it for a routing
+  // holder. A page requiring both would shut out the operator who came to edit
+  // the bindings.
+  it("opens models on either the routing grant or the diagnostics one", () => {
+    expect(
+      opens("models", { roles: ["ops"], allow: { ai_routing: ["read"] } }),
+    ).toBe(true);
+    expect(
+      opens("models", { roles: ["rep"], allow: { automation: ["read"] } }),
+    ).toBe(false);
+  });
+
+  // The purposes card is what `consent_config` administers, but the object
+  // buys no READ — the list stays on `person` (consent/store.go ListPurposes)
+  // and only the writes moved. A page opening on it would be a page whose every
+  // card is withheld. Invisible in the seeded roles, where every consent holder
+  // also holds `person:read`; a custom role is where it would have shown.
+  it("does not open privacy on a grant that reads nothing on it", () => {
+    expect(
+      opens("privacy", {
+        roles: ["custom"],
+        allow: { consent_config: ["read", "create"] },
+      }),
+    ).toBe(false);
+    // The grant that actually reads the purposes list does open it.
+    expect(
+      opens("privacy", { roles: ["rep"], allow: { person: ["read"] } }),
     ).toBe(true);
   });
 
   it("opens authentication on its own grant, and not on the one every role holds", () => {
-    // The one page in this describe that is FIXED rather than waiting: its card
-    // reads GET /installation/authentication-policy now, so the page can ask
-    // for the grant that endpoint takes.
-    //
-    // The second half is the point. `installation_settings:read` is held by
-    // every seeded role — a rep reads it for the base currency — so a page
-    // opening on it would put the installation's sign-in policy in front of the
-    // whole workspace, which is what the backend split existed to close.
+    // `installation_settings:read` is held by every seeded role — a rep reads
+    // it for the base currency — so a page opening on it would put the
+    // installation's sign-in policy in front of the whole workspace.
     expect(
       opens("authentication", {
         roles: ["management"],
@@ -328,28 +380,7 @@ describe("no page promises what its cards will not give", () => {
     ).toBe(false);
   });
 
-  it("opens the AI pages on the grant their cards check", () => {
-    // `automation:update`, not `ai_diagnostics`: the runtime's spend is
-    // operator information, so seeing it takes the automation WRITE grant.
-    const withDiagnostics = {
-      roles: ["management"],
-      allow: { ai_diagnostics: ["read"] },
-    } satisfies Parameters<typeof meFixture>[0];
-    expect(opens("usage", withDiagnostics)).toBe(false);
-    expect(opens("model-calls", withDiagnostics)).toBe(false);
-
-    const withAutomationWrite = {
-      roles: ["ops"],
-      allow: { automation: ["read", "update"] },
-    } satisfies Parameters<typeof meFixture>[0];
-    expect(opens("usage", withAutomationWrite)).toBe(true);
-    expect(opens("model-calls", withAutomationWrite)).toBe(true);
-  });
-
   it("opens leads on custom_field, which is what its three cards read", () => {
-    // Lead sources, disqualify reasons and handling are custom-field vocabulary
-    // server-side. Asking for `pipeline` would hide the page from a holder who
-    // may read it and open it for one whose reads then 403.
     expect(
       opens("leads", { roles: ["rep"], allow: { custom_field: ["read"] } }),
     ).toBe(true);

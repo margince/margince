@@ -20,11 +20,14 @@ vi.mock("../format/timezone", async (importOriginal) => {
 
 const budget = { monthly_tokens: 1000, spent_tokens: 850, band: "degraded" };
 
-// The card is gated on automation:update — the server treats the runtime's spend as
-// operator information — so a stub that answers every request with the usage body
-// leaves the caller holding no grant, and the card correctly says it is withheld
-// instead of rendering. Routing /me is what makes these tests about the BODY again.
-const OPERATOR: GrantSpec = { automation: ["read", "update"] };
+// The card is gated on `ai_diagnostics:read`, which is what `GET /ai/usage`
+// asks for — so a stub that answers every request with the usage body leaves the
+// caller holding no grant, and the card correctly says it is withheld instead of
+// rendering. Routing /me is what makes these tests about the BODY again.
+//
+// The card asked `automation:update` before the runtime's spend got an object of
+// its own: a write verb guarding a GET.
+const OPERATOR: GrantSpec = { ai_diagnostics: ["read"] };
 
 function mount(body: unknown, status = 200, allow: GrantSpec = OPERATOR) {
   const seen: string[] = [];
@@ -183,11 +186,13 @@ it("surfaces an unknown budget band", async () => {
   expect(await screen.findByText("unknown budget state")).toBeTruthy();
 });
 
-it("withholds the spend from a principal without the automation grant, and asks the server for nothing", async () => {
+it("withholds the spend from a principal without the diagnostics read, and asks the server for nothing", async () => {
   // Withheld, not absent: an absent spend card claims the installation spent
   // nothing. The card keeps its title and says whose figures these are — and the
   // usage read never fires, because the denial is already known.
-  const { seen } = mount({ budget, days: [] }, 200, { automation: ["read"] });
+  const { seen } = mount({ budget, days: [] }, 200, {
+    automation: ["read", "update"],
+  });
 
   expect(
     await screen.findByText(

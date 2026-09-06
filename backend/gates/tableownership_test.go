@@ -251,6 +251,7 @@ var tableOwners = map[string]string{
 	// the gate's own evidence (ADR-0098 D2/D4), written where the gate that
 	// relies on them lives.
 	"person_acquisition_evidence":    "internal/modules/people",
+	"privacy_notice_case":            "internal/modules/consent",
 	"communication_decision":         "internal/modules/consent",
 	"communication_basis":            "internal/modules/consent",
 	"communication_suppression":      "internal/modules/consent",
