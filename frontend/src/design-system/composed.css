@@ -36,15 +36,34 @@
      what a narrower window changes is how many stages are on screen, not how
      wide one is. The BOARD scrolls, a stage holds still. */
   flex: 0 0 var(--board-col-w);
+  /* The basis is the width; `min-width` only stops a flex line from squeezing
+     it. Two declarations of one number, not three — a third would be a number
+     that has to move with the other two and nothing to notice when it does
+     not. */
   min-width: var(--board-col-w);
-  width: var(--board-col-w);
   /* A STAGE NEVER SCROLLS SIDEWAYS. Everything in a column — the head, the
      totals, the cards — is bounded by the width above, so overflow on this axis
      is a child that refused to shrink, and the scrollbar it paints under every
      stage reveals nothing a reader can use. Stated rather than left implicit:
      the list surface gives a column `overflow-y: auto` for long stages, and a
-     `visible` other axis computes to `auto` alongside it. */
-  overflow-x: hidden;
+     `visible` other axis computes to `auto` alongside it.
+
+     CLIP, not `hidden`. The two cut the same; they differ in that `hidden`
+     makes the box a SCROLL CONTAINER and `clip` does not, and which of those a
+     column needs is decided by the SURFACE AROUND IT rather than by the screen
+     that drew it. Inside a list surface every column is already handed
+     `overflow-y: auto` (listtable.css), so it is a scroller whatever this says
+     and `clip` computes to `hidden` beside that `auto` — the pipeline and the
+     lead board, both of which render into `.lt`, read the same under either
+     spelling. Outside one a column is handed nothing, and there `hidden` would
+     compute the other axis from `visible` to `auto` and make every column a
+     scrollport: the sticky head would hold its place against a column that
+     never scrolls rather than against the shell's scroller, and
+     `scrollIntoView` on a card would move the column instead of the page.
+     `clip` leaves that axis `visible` and such a board where it was. Which
+     boards those are is a fact about callers and changes without this file
+     hearing about it, so the condition is the surface. */
+  overflow-x: clip;
   /* A RECESS in the surface, not a card on it. --bgCard is a card's ground and
      read as one — five of them in a row made the board a grid of grey slabs
      with the deals inside them, and the cards had to fight their own
@@ -72,12 +91,11 @@
  * two folded terminal ones. */
 .board-col-collapsed {
   /* Out of the shared width: it takes what its name and count need and gives
-     the rest back to the columns a reader is working out of. All three of the
-     sizing declarations above are overridden, or the fixed width would win and
+     the rest back to the columns a reader is working out of. Both of the
+     sizing declarations above are overridden, or the fixed basis would win and
      the fold would give nothing back. */
   flex: 0 0 auto;
   min-width: 0;
-  width: auto;
   min-height: 120px;
 }
 .board-col-collapsed .board-col-head {
@@ -145,11 +163,11 @@
   color: var(--textMeta);
   padding: 0 4px 4px;
 }
-/* Both figures are `nowrap`, because a money amount broken across lines is
-   unreadable — so each one has to be told what to do when it does not fit, or
-   it simply paints past the stage it belongs to. It ELLIPSISES: a total the
-   reader can see is cut is a total they know to open the stage for, where a
-   figure running under the next column is one they may read as complete. */
+/* A MONEY FIGURE IS ONE LINE AND ELLIPSISES; A SENTENCE WRAPS.
+   Both totals are `nowrap`, because an amount broken across lines is
+   unreadable — so each has to be told what to do when it does not fit, or it
+   paints past the stage it belongs to. Cut, a figure is visibly incomplete,
+   where one running on under the next column can be read as whole. */
 .board-col-total {
   display: flex;
   align-items: baseline;
@@ -173,20 +191,52 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* The line that stands in for a refused total is PROSE, and the rule above is
+   exactly wrong for it: ellipsised in a 240px stage it read "Loaded only —
+   filter to My deals fo…" on all six columns of the deals board, and there is
+   no fold on this board to open for the rest of it. A cut figure still says
+   "there is more of me"; a sentence cut mid-word says nothing at all. So it is
+   its own class and it wraps.
+
+   `white-space` is stated rather than left to the initial value because
+   wrapping is the whole reason this is not a `.board-col-weighted`, and
+   `overflow-wrap` is not a default: the reason is caller text, and one long
+   token would otherwise be cut off by the column's clip. */
+.board-col-refusal {
+  white-space: normal;
+  overflow-wrap: break-word;
+}
 
 /* A phone SWIPES between stages rather than showing them all at once. One stage
  * and the gap after it take four fifths of the board, which leaves about a
  * quarter of the next one on screen — that peek is what says there is more to
- * the right, and it says it without a scrollbar. Snapping stops a swipe leaving
- * the reader parked between two stages.
+ * the right. Snapping stops a swipe leaving the reader parked between two
+ * stages.
  *
  * Sizing lives with the board rather than with the list surface, so a board
- * standing on its own — the lead presentation, a company's seats — swipes the
- * same way as the pipeline. */
-@media (max-width: 720px) {
+ * that renders outside one — a company's seat board is the one doing that
+ * today — swipes exactly the way the pipeline does.
+ *
+ * 700px is THE SHELL'S PHONE BREAKPOINT (app/shell.css, topbar.css,
+ * agentrail.css): it is the width at which the sidebar leaves the layout row
+ * altogether and becomes a fixed bottom bar, so it is also the width at which
+ * the board is handed the whole window. At 720 the swipe shape switched on
+ * while the rail was still a 224px column beside it — a 720px desktop window
+ * got mandatory snap and a stage that jumped 240 → 328px next to a full
+ * sidebar. The swipe and the phone chrome change on one line. */
+@media (max-width: 700px) {
   .board {
     --board-col-w: calc(80% - var(--space-4));
     scroll-snap-type: x mandatory;
+    /* NO BAR UNDER THE SWIPE. The peek and the snap already say the pipeline
+       carries on, and a hairline bar is a control for a pointer that is not on
+       this screen — the same reading `.lt-views` and `.recordtabs-strip` make
+       of their own strips. The desktop board keeps its bar, where the pointer
+       is what drags the board and the bar is how far along it says you are. */
+    scrollbar-width: none;
+  }
+  .board::-webkit-scrollbar {
+    display: none;
   }
   .board-col {
     scroll-snap-align: start;

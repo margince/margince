@@ -98,7 +98,7 @@ export const NativeControls: Story = {
 
 /**
  * The scrollbar: thin, a neutral thumb that takes the accent only while the
- * pointer is over its scroller, and a TRANSPARENT track. The track colour is
+ * pointer is over the bar itself, and a TRANSPARENT track. The track colour is
  * the interesting decision — a scroller is not always on the page surface (the
  * rail is a dark green field in both themes, a code block has its own fill), so
  * naming a colour would be wrong for every scroller that sits somewhere else.

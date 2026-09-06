@@ -456,6 +456,66 @@ export const BoardWithALongStageName: StoryObj = {
   ),
 };
 
+// A FOLDED STAGE beside open ones, which is the only shape a fold can be read
+// in: it takes the width its name and count need and hands the rest back, and
+// "the rest" is only visible next to a stage that kept it.
+//
+// Three stages rather than the deal board above, because a fold belongs at the
+// terminal end of a pipeline and the deal board's right-hand end is past the
+// edge of every frame this catalog captures — a folded column nobody can see
+// documents nothing. Same reason it is not on the phone story: one stage takes
+// four fifths of that width, so anything but the first is off screen.
+//
+// The head is a real control here (`aria-expanded`, Enter and Space) because
+// the column carries `collapsed`; the two open stages stay the plain text they
+// have always been, which is the per-column rule the board keeps. Pressing it
+// does nothing — the catalog draws states rather than driving them.
+const foldedStageColumns: BoardMoneyColumn[] = [
+  {
+    stage: "negotiation",
+    label: "Negotiation",
+    probabilityPct: 80,
+    rawMinor: 54_000,
+    weightedMinor: 43_200,
+    currency: "EUR",
+    deals: [boardDeal("f1", "Initech upgrade", 54_000, 21)],
+  },
+  {
+    stage: "won",
+    label: "Closed Won",
+    probabilityPct: 100,
+    rawMinor: 61_000,
+    weightedMinor: 61_000,
+    currency: "EUR",
+    deals: [boardDeal("f2", "Umbrella Corp", 61_000, 2)],
+  },
+  {
+    // Its count comes from the stage rather than from the cards: a folded
+    // column draws none of them, and a figure taken from what is drawn would
+    // read zero on every stage a reader folds away.
+    stage: "lost",
+    label: "Closed Lost",
+    probabilityPct: 0,
+    rawMinor: 18_000,
+    weightedMinor: 0,
+    currency: "EUR",
+    count: 8,
+    collapsed: true,
+    deals: [],
+  },
+];
+
+export const BoardWithAFoldedStage: StoryObj = {
+  render: () => (
+    <PipelineBoard
+      columns={foldedStageColumns}
+      cardHref={(d) => `#/deals/${d.id}`}
+      zone="Europe/Berlin"
+      onToggleColumn={() => undefined}
+    />
+  ),
+};
+
 /**
  * The same board on a phone, where a reader swipes between stages instead of
  * seeing them side by side.

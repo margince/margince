@@ -40,9 +40,14 @@ body {
  * Declared at the root because these properties INHERIT. The scrollbar pair is
  * the exception and has its own rules below: `scrollbar-width` does not inherit
  * at all, and the thumb colour answers the pointer per element, which an
- * inherited value cannot. A component that wants different can still say so
- * locally — `.mw-artifact` and the conversation thread already hide their
- * scrollbars this way, and a class selector outranks the root here.
+ * inherited value cannot. What a component can still say for itself differs
+ * between the two, and the difference is specificity. The WIDTH sits on `*`,
+ * which carries none, so one class beats it — `.mw-artifact` and the
+ * conversation thread hide their bars exactly that way. The COLOUR under the
+ * pointer is `*:hover:not(:has(:hover))`, and `:not()` and `:has()` each take
+ * their argument's, so that is (0,2,0): a single class LOSES to it, and a
+ * component that wants a thumb colour of its own needs two classes or `:hover`
+ * in its own selector.
  */
 :root {
   /* The colour only. The caret keeps the platform's own BAR: a block caret is
@@ -57,37 +62,20 @@ body {
 }
 
 /*
- * The thin scrollbar, on EVERY scroller: neutral at rest, accent under the
- * pointer.
+ * The thin scrollbar on EVERY scroller. --accent at rest would put the
+ * palette's one loud colour on every capped card, so a bar is --borderControl
+ * until the pointer says which scroller it is on.
  *
- * A bar is chrome, not content. Painted --accent everywhere it is at rest, the
- * palette's one loud colour sits on every capped card and stops meaning
- * anything; --borderControl is the grey drawn to stay visible on any ground, so
- * it can be the resting state in both themes. The accent is then a statement —
- * this is the scroller the pointer is on — and `:hover` is the whole mechanism,
- * so where there is no pointer to hover (a touch screen) the neutral bar simply
- * stands.
+ * That accent has to light ONE bar, not a stack: hover is a chain, so `*:hover`
+ * matches html, body, the pane and the board together and the shell's bar would
+ * be accent whenever the pointer was anywhere in the window. Excluding an
+ * element that has a hovered descendant leaves the one whose own box — bar,
+ * padding, gutter — the pointer is actually over.
  *
- * Both properties are declared per element rather than inherited from the root.
- * `scrollbar-width` does not inherit at all, so a root-only declaration styled
- * the document scroller and nothing else: every in-app scroller — the content
- * area, the rail, a capped card — kept the platform's default-width bar. An
- * inherited COLOUR would be worse than useless here, because a hovered scroller
- * would hand the accent down to every scroller nested inside it and hovering a
- * board would light all of its columns. Declared on `*`, each bar answers for
- * its own element only.
- *
- * The track is TRANSPARENT rather than --bgPage on purpose: a scroller is not
- * always on the page surface — the rail is a dark green field in both themes,
- * and a code block has its own fill — so naming a colour would mismatch every
- * scroller that is not on the page background. Transparent shows whatever is
- * actually behind it and cannot be wrong.
- *
- * The universal selector carries zero specificity, so a scroller that
- * deliberately hides its bar (`scrollbar-width: none` on `.mw-artifact`, the
- * conversation thread, `.lt-views`, `.recordtabs-strip`) still wins. The hover
- * rule is a pseudo-class and therefore only TIES with a single class, so a
- * component that ever needs a thumb colour of its own has to say `:hover` too.
+ * Both properties sit on `*`: `scrollbar-width` does not inherit at all, and an
+ * inherited colour would hand a hovered scroller's accent to every bar nested
+ * inside it. The track is transparent because a scroller is not always on
+ * --bgPage — the rail is a dark green field, a code block has its own fill.
  */
 *,
 ::backdrop {
@@ -95,7 +83,7 @@ body {
   scrollbar-color: var(--borderControl) transparent;
 }
 
-*:hover {
+*:hover:not(:has(:hover)) {
   scrollbar-color: var(--accent) transparent;
 }
 
