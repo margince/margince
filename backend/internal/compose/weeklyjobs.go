@@ -62,7 +62,8 @@ type WeeklyReviewGenerateArgs struct{}
 // Kind names the job in the contract.
 func (WeeklyReviewGenerateArgs) Kind() string { return "weekly_review_generate" }
 
-// FleetWide marks this as an enumerator that does no tenant work itself.
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (WeeklyReviewGenerateArgs) FleetWide() {}
 
 // weeklyGenerateWorker measures every live workspace's reps.
@@ -79,6 +80,11 @@ type weeklyGenerateWorker struct {
 	// only the sentence is absent, and the screen says so rather than
 	// pretending the week was unremarkable.
 	narrator completer
+	// learner is the lane that says what the week TAUGHT. Separate from the
+	// narrator because the two fail differently: a missing sentence costs a
+	// remark, and a missing learning costs advice the rep would have acted on
+	// — so this one is allowed to refuse where that one is allowed to shrug.
+	learner completer
 	// mail is the outbound channel, off by omission the same way. An
 	// installation with no operator relay measures every week and mails none.
 	mail WeeklyMailConfig
@@ -220,6 +226,13 @@ func (w *weeklyGenerateWorker) measureFor(
 	// that has alone: re-narrating would rewrite a sentence the rep has read.
 	if review.NarratedAt == nil {
 		w.narrate(repCtx, review, now)
+	}
+	// After the sentence, and on the same retry terms: a week that has not been
+	// learned from is learned from on a later tick, and one that has is left
+	// alone. RecordLearnings is the arbiter — it refuses a second pass itself —
+	// so this check is the cheap half and not the correctness half.
+	if review.LearningsState == weekly.LearningsNotRun {
+		w.learn(repCtx, review, now)
 	}
 	_ = created
 	// HANDED BACK rather than mailed here. The caller runs every send after

@@ -126,8 +126,12 @@ function story(allow: GrantSpec) {
   };
 }
 
+// Across pages, not on one: `ProvidersStat` renders on Models & routing and
+// `SpendStat` on AI usage. The pair is the point — the two readings an operator
+// opens AI settings for — so the title says across rather than picking one and
+// misplacing the other.
 const meta: Meta<typeof AiReadings> = {
-  title: "Settings/Admin settings/AI/AI page",
+  title: "Settings/Across pages/AI readings",
   component: AiReadings,
 };
 export default meta;

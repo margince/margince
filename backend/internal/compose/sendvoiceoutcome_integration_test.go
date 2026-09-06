@@ -177,6 +177,7 @@ func setupVoiceSend(t *testing.T) *voiceSendEnv {
 	}
 	if _, err := store.Record(admin, consent.RecordInput{
 		PersonID: ids.From[ids.PersonKind](person), PurposeID: purpose.ID, NewState: "granted",
+		PolicyText: &grantedWording,
 	}); err != nil {
 		t.Fatalf("grant: %v", err)
 	}

@@ -15,7 +15,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/weekly"
@@ -108,37 +107,6 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 // newServer assembles the module handler sets. Every cross-module edge is
 // injected here, or in the assembly step this calls for it
 // (serverassembly.go) — never as a sibling import (ADR-0054).
-// newAssuranceHandlers reads what last night's pass found. The scan itself is a
-// job rather than a request, so this handler set is a read.
-func newAssuranceHandlers(pool *pgxpool.Pool) assurance.Handlers {
-	return assurance.NewHandlers(
-		assurance.NewStore(InstallationDB(pool)),
-		AssuranceExceptions,
-		func() time.Time { return time.Now().UTC() },
-	)
-}
-
-// newForecastHandlers owns its arithmetic and nothing about deals, so the deal
-// rows and the fiscal window arrive as seams. Row scope is applied in
-// ForecastDeals, where the caller's authority already sits.
-func newForecastHandlers(pool *pgxpool.Pool) forecasting.Handlers {
-	return forecasting.NewHandlers(
-		forecasting.NewStore(InstallationDB(pool)),
-		ForecastDeals, ForecastPeriodAt, ForecastWritableScope,
-		ForecastConversionHistory, ForecastForwardMeasure,
-		func() time.Time { return time.Now().UTC() },
-	)
-}
-
-// newAnalyticsShareHandlersFor runs the share routes in the FORECAST store's
-// transaction, whose InTx gates on forecast:read — so the whole surface,
-// issuing included, sits behind the grant that reads the thing being shared.
-func newAnalyticsShareHandlersFor(pool *pgxpool.Pool) analyticsShareHandlers {
-	utcNow := func() time.Time { return time.Now().UTC() }
-	return newAnalyticsShareHandlers(
-		NewAnalyticsShareStore(utcNow), forecasting.NewStore(InstallationDB(pool)), utcNow)
-}
-
 func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH dealsHandlers) Server {
 	// The compiled-in ceilings, taken from the deployment-config defaults rather
 	// than restated here: one place resolves a default, so no composition can
@@ -228,16 +196,13 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// The forecast owns its arithmetic and nothing about deals, so the deal
 		// rows and the fiscal window arrive as seams. Row scope is applied in
 		// ForecastDeals, where the caller's authority already sits.
-		assuranceHandlers: newAssuranceHandlers(pool),
-		forecastHandlers:  newForecastHandlers(pool),
-		// The floor comes from the constant rather than a setting for now:
-		// one number, and moving it to installation settings is a migration
-		// plus a reader, which is its own change.
-		analyticsQueryHandlers: newAnalyticsQueryHandlers(
-			InstallationDB(pool), analyticsquery.DefaultFloor),
-		analyticsContextHandlers: newAnalyticsContextHandlers(
-			InstallationDB(pool), func() time.Time { return time.Now().UTC() }),
-		analyticsShareHandlers: newAnalyticsShareHandlersFor(pool),
+		// The assurance surface reads what last night's pass found. Its scan
+		// is a job rather than a request, so the handler set is a read.
+		assuranceHandlers: assurance.NewHandlers(
+			assurance.NewStore(InstallationDB(pool)),
+			AssuranceExceptions,
+			func() time.Time { return time.Now().UTC() },
+		),
 		// One assembler, shared with the test that drives this handler: the
 		// tab greys out a route the duplicate guard would refuse, so the rep
 		// learns the door is taken before writing the ask rather than from the
@@ -297,6 +262,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// the reader last looked. It reads the same clock the rest of the surface
 	// does, so "since your brief" means the same instant everywhere.
 	srv.magicHandlers = magic.NewHandlers(newMagicService(pool, time.Now))
+	srv.wireAnalyticsSurface(pool)
 	srv.wireCaptureSettingsSurface(pool)
 	srv.wireExportSurface(pool, log)
 	srv.wireOnboardingSurface(pool)

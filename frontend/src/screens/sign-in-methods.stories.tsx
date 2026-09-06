@@ -14,7 +14,7 @@ import { installFetchStub, jsonResponse } from "./story-utils";
 // the DEPLOYMENT composed and what the admin chose of it.
 
 const meta: Meta<typeof SignInMethodsCard> = {
-  title: "Settings/Admin settings/General/Sign-in methods",
+  title: "Settings/Company/Sign-in & apps/Sign-in methods",
   component: SignInMethodsCard,
   parameters: { layout: "padded" },
 };

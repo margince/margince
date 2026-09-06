@@ -125,6 +125,18 @@ func (s *Store) SubmitHandoff(ctx context.Context, in NewSDRHandoff) (ids.UUID, 
 	}
 	var id ids.UUID
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The three prospect references are CALLER-SUPPLIED, so each is a read of
+		// the record it names and takes the target probe before it lands.
+		//
+		// auth.Require above answers "may this role hand prospects on at all",
+		// which is a different question from "may this seat hand on THIS one".
+		// Without the probe a seat could name a lead outside its scope and learn
+		// from the outcome that the id exists — and the handoff it wrote would
+		// then point at a record its own author cannot open. ErrNotFound for an
+		// id out of scope, the same answer an id that does not exist gets.
+		if err := ensureHandoffTargetsVisible(ctx, tx, in); err != nil {
+			return err
+		}
 		// captured_by comes from the authenticated principal and never from the
 		// request body — the write shape's rule, and the reason a handoff can be
 		// attributed at all.
@@ -197,6 +209,16 @@ func (s *Store) DecideHandoff(ctx context.Context, id ids.UUID, in HandoffDecisi
 		// but a new decision citing one would record a reason nobody is offered.
 		if err := refuseRetiredReason(ctx, tx, in.ReasonID); err != nil {
 			return err
+		}
+		// The deal an acceptance links is caller-supplied like the prospect
+		// references on the submit, and is gated on the same terms: without this
+		// an AE could anchor a handoff to a deal they cannot open, and the
+		// held-meeting conversion would then read that deal through a link its
+		// own author had no scope for.
+		if in.DealID != nil {
+			if err := auth.EnsureLinkTarget(ctx, tx, "deal", *in.DealID); err != nil {
+				return err
+			}
 		}
 		kind := reasonKindFor(in)
 		tag, err := tx.Exec(ctx, `
@@ -291,6 +313,32 @@ var (
 	errHandoffDealOnRefusal = errors.New(
 		"a refused handoff carries no deal: attaching one would credit the submitter for work their handoff was refused for")
 )
+
+// ensureHandoffTargetsVisible puts every record a submitted handoff NAMES
+// through the target probe, in the transaction that is about to reference it.
+//
+// All three arrive from the request body. The subject — a lead or a person,
+// exactly one — is what the handoff is about, and the organization is the
+// company it is filed under; a reference to any of them is a read of it.
+func ensureHandoffTargetsVisible(ctx context.Context, tx pgx.Tx, in NewSDRHandoff) error {
+	targets := []struct {
+		table string
+		id    *ids.UUID
+	}{
+		{"lead", in.LeadID},
+		{"person", in.PersonID},
+		{entityOrganization, in.OrganizationID},
+	}
+	for _, t := range targets {
+		if t.id == nil {
+			continue
+		}
+		if err := auth.EnsureLinkTarget(ctx, tx, t.table, *t.id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // ensureHandoffSubjectWritable applies the SUBJECT's row scope to a handoff
 // decision.

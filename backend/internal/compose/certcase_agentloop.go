@@ -349,6 +349,14 @@ func (r *agentLoopRecorder) Complete(ctx context.Context, req model.Request) (mo
 	return resp, runner.Meta{}, nil
 }
 
+// PromptWindow is the supported FLOOR, not the configured provider's window.
+//
+// A certification result has to mean the same thing on every installation, and
+// a lane that elided its transcript at whatever the local routing happens to
+// bind would measure the deployment rather than the build. The floor is also
+// the strict case: a prompt that fits here fits wherever this product runs.
+func (*agentLoopRecorder) PromptWindow() int { return runner.MinimumPromptWindow }
+
 // agentLoopReplay answers with the reply the run recorded, so Evaluate reaches
 // the step protocol the only way it is reachable: by running the loop.
 type agentLoopReplay struct{ reply string }
@@ -356,6 +364,10 @@ type agentLoopReplay struct{ reply string }
 func (r agentLoopReplay) Complete(context.Context, model.Request) (model.Response, runner.Meta, error) {
 	return model.Response{Text: r.reply}, runner.Meta{}, nil
 }
+
+// PromptWindow matches the recorder's, so a replay elides exactly where the
+// recording did — a different window here would replay a different prompt.
+func (agentLoopReplay) PromptWindow() int { return runner.MinimumPromptWindow }
 
 // agentLoopToolSurface is the tool surface a certification run is offered: it
 // advertises the fixture's tools and applies none of them.

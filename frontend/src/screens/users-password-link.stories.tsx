@@ -15,7 +15,7 @@ const LINK = {
 };
 
 const meta: Meta<typeof PasswordLinkModal> = {
-  title: "Settings/Admin settings/People & access/Password link",
+  title: "Settings/People/Members/Password link",
   component: PasswordLinkModal,
   decorators: [
     (Story) => (

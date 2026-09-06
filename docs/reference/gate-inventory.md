@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (86)
+## Parity (87)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -92,7 +92,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `pollcadenceparity_test.go` | H3 | A connector that POSTPONES a tick on an unreachable provider asks to run again after a fixed delay, and that delay has to EQUAL the cadence its dispatcher already ticks at — and has to survive the seam's ceiling on the way to the queue. |
 | `previewauthority_test.go` | H2 | The authority levels a composer can receive are the ones the engine can send. |
 | `processingrecord_test.go` | H3 | The Art. 30 processing record names the code that enforces each entry, and this fails when that code is not there any more. |
-| `prompt_ceiling_test.go` | H1 | The runner's prompt ceiling is DERIVED from the tightest provider it speaks to, and this holds the derivation it claims. |
+| `promptwindow_test.go` | H1 | runner.MinimumPromptWindow is the SUPPORTED FLOOR — the smallest prompt window any provider this build binds will carry — and this holds it equal to the adapter that owns the figure. |
 | `providername_test.go` | H2 | The rule a REGISTERED NAME must satisfy is the contract's, on both surfaces that have one. |
 | `publicevents_test.go` | H3 | The public-events contract as a cross-cutting fitness function (A15): the outbound-webhook surface has three moving parts that must stay in lock-step, and nothing in the build forces them to. |
 | `rbacvocabulary_test.go` | H3 | The RBAC vocabulary is DECLARED in the contract and restated in Go, and the two must not drift. |
@@ -102,11 +102,12 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seedemploymentpredicate_test.go` | H2 | The dev seeder and the boot proof ask "is this person currently employed?" the way the PRODUCT asks it, and they ask it in the same words. |
 | `seedresetparity_test.go` | H3 | "What survives a reset" is one decision, and it is written down twice: the in-product data reset applies it in Go (internal/compose/datasweep.go's preservedResetTables), and the developer's `make seed-reset` applies it in SQL (scripts/seed-reset.sql). |
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
+| `teamoutlookmirror_test.go` | H3 | The team's frozen outlook and the rep's are the same fact over different books, so they are the same SHAPE or one of them is lying. |
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are ONE id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (115)
+## Census (116)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -223,6 +224,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `uniquenessclaimscorpus_test.go` | H2 | WHERE the claim sweep looks, as against what it looks for. |
 | `validatedreplypath_test.go` | H2 | A model reply this tree can REFUSE must be asked for through the validated lane, so the refusal reaches the model that can act on it. |
 | `vaultwriters_test.go` | H2 | Every writer of the installation's ciphertext store records its act somewhere. |
+| `wordingdigest_test.go` | H3 | One way to reduce a subject line and a body to a digest. |
 | `worklistdestination_test.go` | H2 | Every source the worklist can emit has one screen it belongs on. |
 | `worklistreasonkinds_test.go` | H2 | Every reason a row gives is one the contract declares and a client can render. |
 

@@ -123,7 +123,11 @@ func TestASendingProviderThatDeclaredNoCarriageCarriesNothing(t *testing.T) {
 // The wire entry carries every bound, not just the bool. An entry that published
 // carries=true with zero limits would tell a composer it may attach anything.
 func TestThePublishedEntryCarriesEveryBound(t *testing.T) {
-	published := publishedChannelProviders([]string{"telegram"},
+	published := publishedChannelProviders(
+		[]channelProviderFacts{{
+			provider: "telegram", transport: transportCore, label: "Telegram",
+			credentialModel: credentialWorkspaceBot, suppliesTransport: true,
+		}},
 		map[string]connector.Carriage{"telegram": {
 			Carries: true, MaxBytesPerFile: 20 << 20, MaxFiles: 10, MaxBodyWithFiles: 1024,
 		}})
@@ -160,5 +164,44 @@ func TestSendableCarriageGivesAnUndeclaredTransportNothing(t *testing.T) {
 	}
 	if carriage.Carries {
 		t.Errorf("a transport whose connector declared no carriage was published as able to carry files: %+v", carriage)
+	}
+}
+
+// The directory reads its two halves from two places, and a registry row cannot
+// make a reply leave an installation that composed no sender.
+//
+// This is the regression the credential_model fix nearly shipped. Once the
+// snapshot started carrying the registry's own columns it was tempting to take
+// `supplies_transport` from the row as well — every other display fact comes
+// from there. But the row says what the transport is REGISTERED as supplying,
+// and the question this field answers is whether THIS binary can send on it. A
+// worker-less role, or an installation whose connector was compiled out, would
+// then publish `supplies_transport: true` and offer a rep a reply box that parks
+// every message it accepts — the one failure a rep cannot tell from a broken
+// provider.
+func TestSuppliesTransportComesFromTheComposedSenderAndNotFromTheRegistryRow(t *testing.T) {
+	registered := []channelProviderFacts{{
+		provider: "mine_chat", transport: transportUnit, label: "Mine Chat",
+		credentialModel: string(extension.CredentialPerMember),
+		// The registry's answer, and deliberately the OPPOSITE of this
+		// binary's: nothing composed a sender for it below.
+		suppliesTransport: true,
+	}}
+
+	published := publishedChannelProviders(registered, map[string]connector.Carriage{})
+	if len(published) != 1 {
+		t.Fatalf("published %d entries for one provider", len(published))
+	}
+	if published[0].SuppliesTransport {
+		t.Error("the directory published supplies_transport=true from the registry row while this binary composed no sender for it — " +
+			"every reply a rep wrote on it would be staged and then parked")
+	}
+	// And the row's own facts still come from the row, or the fix this test
+	// guards would have thrown out what it was for.
+	if got := string(published[0].CredentialModel); got != string(extension.CredentialPerMember) {
+		t.Errorf("credential_model = %q, want %q — the display facts come from the registry row", got, extension.CredentialPerMember)
+	}
+	if published[0].Label != "Mine Chat" {
+		t.Errorf("label = %q, want the row's own", published[0].Label)
 	}
 }

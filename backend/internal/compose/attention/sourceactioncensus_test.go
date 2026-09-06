@@ -45,10 +45,11 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// `reply` opens the composer over the row, through ChannelReplyAction. Sent
 	// only where the wait IS mail (email_summary present) and names a record to
 	// file the answer against.
-	"customer_waiting":   {"open", "reply"},
-	"lead_response":      {"open"},
-	"deal_at_risk":       {"open"},
-	"conversation_claim": {"open"},
+	"customer_waiting": {"open", "reply"},
+	"lead_response":    {"open"},
+	"deal_at_risk":     {"open"},
+	// `complete` settles the claim as done, through POST /claims/{id}/settle.
+	"conversation_claim": {"open", "complete"},
 	"meeting":            {"open"},
 	// Answered inline, like an approval: `decide` reaches MeetingOutcome, which
 	// writes meeting_status through PATCH /activities/{id}.

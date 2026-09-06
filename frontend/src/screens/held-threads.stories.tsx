@@ -98,7 +98,7 @@ function story(rows: HeldThread[]) {
 }
 
 const meta: Meta<typeof HeldThreadsCard> = {
-  title: "Settings/You/Held threads",
+  title: "Settings/You/Connections/Held threads",
   component: HeldThreadsCard,
 };
 export default meta;

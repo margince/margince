@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/weekly/learnings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -80,6 +81,15 @@ type Review struct {
 	// absent when the rep had no such work, which is a different fact from
 	// every count in it being zero.
 	Scorecard *Scorecard
+
+	// What the week taught, and whether anybody looked.
+	//
+	// LearningsState is load-bearing beside the list: an empty list means the
+	// pass found nothing it could ground, and `not_run` means no pass has
+	// looked at all. A reader that drew both as "nothing to learn" would tell a
+	// rep something the product never established.
+	LearningsState string
+	Learnings      []learnings.Learning
 }
 
 // PriorWeek is the earlier review a week is compared against.
@@ -218,6 +228,13 @@ type ForecastWeek interface {
 	// already taken and reports the same figures rather than freezing a second
 	// one, which would give the next week two candidate openings.
 	CloseWeek(ctx context.Context, tx pgx.Tx, weekStart, weekEnd time.Time) (
+		[]Outlook, []Movement, []Driver, error)
+
+	// CloseTeamWeek is the same over a TEAM's book. Not the sum of its
+	// members': a deal owned by nobody on the team is in neither, and one the
+	// team works but a member owns is in both, so adding six personal outlooks
+	// would answer a question nobody asked.
+	CloseTeamWeek(ctx context.Context, tx pgx.Tx, teamID ids.UUID, weekStart, weekEnd time.Time) (
 		[]Outlook, []Movement, []Driver, error)
 }
 
