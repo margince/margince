@@ -3436,6 +3436,7 @@ export const de = {
 
   "tasks.complete": "Erledigt",
   "tasks.snooze": "1 Tag später",
+  "tasks.moveTo": "Verschieben auf",
   "tasks.detail": "Aufgabe",
   "tasks.detailLoading": "Aufgabe wird gelesen…",
   "tasks.isDone": "Abgeschlossen",

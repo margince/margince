@@ -3523,6 +3523,7 @@ export const en = {
 
   "tasks.complete": "Done",
   "tasks.snooze": "Snooze 1d",
+  "tasks.moveTo": "Move to",
   "tasks.detail": "Task",
   "tasks.detailLoading": "Reading this task…",
   "tasks.isDone": "Completed",

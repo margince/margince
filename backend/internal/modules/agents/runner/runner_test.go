@@ -21,11 +21,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
+// flooredWindow gives a test double the SUPPORTED FLOOR as its prompt window.
+//
+// Embedded rather than spelled out in each double: they all want the same
+// answer, and the floor is the strict case — a transcript that fits it fits any
+// provider this product can bind. A double that needs to prove something ABOUT
+// the window declares its own method and shadows this one.
+type flooredWindow struct{}
+
+func (flooredWindow) PromptWindow() int { return MinimumPromptWindow }
+
 // scriptedBrain returns queued texts; when empty it keeps proposing the
 // same tool call — the runaway-model shape the budget must bound. It also
 // stamps a fixed served-model identity (meta) and per-call token counts so
 // the trace-enrichment assertion has deterministic evidence to check.
 type scriptedBrain struct {
+	flooredWindow
 	texts      []string
 	exhausted  string
 	perCallOut int
@@ -595,8 +606,8 @@ func TestWindowBoundingElidesOldestKeepsGoal(t *testing.T) {
 	for i := 0; i < 50; i++ {
 		win.observe("read_record", strings.Repeat("x", 4000)+fmt.Sprintf("-%d", i))
 	}
-	req := win.asRequest(1000)
-	if got := estimateTokens(req.System, req.Messages); got > PromptTokenCeiling {
+	req := win.asRequest(1000, MinimumPromptWindow)
+	if got := estimateTokens(req.System, req.Messages); got > MinimumPromptWindow {
 		t.Fatalf("window not bounded: %d tokens", got)
 	}
 	if !strings.Contains(req.Messages[0].Content, "the goal survives") {

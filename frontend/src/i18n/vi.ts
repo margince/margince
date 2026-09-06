@@ -3396,6 +3396,7 @@ export const vi = {
 
   "tasks.complete": "Đánh dấu xong",
   "tasks.snooze": "Hoãn 1 ngày",
+  "tasks.moveTo": "Dời sang",
   "tasks.detail": "Công việc",
   "tasks.detailLoading": "Đang đọc công việc này…",
   "tasks.isDone": "Đã hoàn thành",

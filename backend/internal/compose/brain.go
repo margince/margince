@@ -405,6 +405,13 @@ func (b agentBrain) Complete(ctx context.Context, req model.Request) (model.Resp
 	return resp, runner.Meta{ModelID: info.ModelID, Tier: string(info.Tier)}, err
 }
 
+// PromptWindow is the window of the agent loop's own ladder, read fresh on
+// every step so a routing rebind or a budget demotion partway through a run is
+// seen by the step after it rather than at the next restart.
+func (b agentBrain) PromptWindow() int {
+	return b.router.PromptWindow(ai.TaskAgentLoop)
+}
+
 // CompleteValidated exposes the §5.2 structured-output pipeline
 // (validate → retry with feedback → escalate a tier) on the lane's own
 // task label.

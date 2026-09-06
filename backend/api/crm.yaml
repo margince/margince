@@ -39021,6 +39021,21 @@ components:
             Who was on the team that week — the frozen membership, which a join against the
             live team could never answer. Ordered by name, because that is what a membership
             list is read as; the order a MEETING takes them in is `agenda`.
+        outlook:
+          type: array
+          items: { $ref: '#/components/schemas/WeeklyReviewOutlook' }
+          description: |
+            Where the TEAM's week was landing, one entry per horizon — the week, the month and
+            the fiscal quarter.
+
+            NOT the sum of its members' outlooks. A deal owned by nobody on the team is in
+            neither, and one the team works but a member owns is in both, so adding six personal
+            landings would answer a question nobody asked. This is read over the team's own book.
+
+            EMPTY when no forecast was composed when the snapshot was written, which is not the
+            same as a team that landed on nothing — a reader says "no forecast" rather than
+            drawing zeros. Every figure is a COPY, so it still reads after the snapshots it came
+            from age out under retention.
         agenda:
           type: array
           items: { type: string, format: uuid }

@@ -20,14 +20,12 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// credentialWorkspaceBot and credentialPerMember are the two shapes a channel
-// credential takes. Closed on purpose, unlike the provider vocabulary: this
-// describes the SHAPE of a credential, which is installation-independent, not
-// which providers exist, which is not.
-const (
-	credentialWorkspaceBot = "workspace_bot" //nolint:gosec // G101 false positive: the SHAPE a credential takes, published in the contract's enum — not a credential
-	credentialPerMember    = "per_member"
-)
+// credentialWorkspaceBot is the shape a CORE connector's credential takes: one
+// bot for the installation. It is the published vocabulary's own value rather
+// than a second spelling of it — a unit declares from the same two constants,
+// and a registry that agreed with the enum only by coincidence would drift the
+// first time either moved.
+const credentialWorkspaceBot = string(extension.CredentialWorkspaceBot)
 
 // transportCore and transportUnit are who SUPPLIES a transport: a connector
 // compiled into the core, or an extension unit under extensions/. Closed for
@@ -127,7 +125,7 @@ func titleCasedID(id string) string {
 // in one and missing from the other.
 //
 // credential_model is workspace_bot for every core connector, because a core
-// channel connector binds ONE bot for the installation. A unit's is per_member —
+// channel connector binds ONE bot for the installation. A unit declares its own;
 // see unitChannelFacts.
 func channelProviderFactsFor(registered []string, sending map[string]connector.Carriage) []channelProviderFacts {
 	out := make([]channelProviderFacts, 0, len(registered))
@@ -174,10 +172,19 @@ func channelProviderFactsFor(registered []string, sending map[string]connector.C
 // and every previously-unrepliable WhatsApp conversation in the installation
 // became one the unit transmits.
 //
-// credential_model is per_member for every unit transport, because that is what
-// the tier makes available: a unit holds one sealed secret per member (the
-// user-scoped SecretsRequest) and has no installation credential to send under.
-// A unit that grows a workspace-wide one declares it, and this derives it.
+// credential_model is the unit's OWN declaration, carried through unchanged.
+//
+// It used to be derived — per_member for everything under extensions/, on the
+// reasoning that a unit holds one sealed secret per member. That is true of a
+// personal-account transport and false of a company one, and the tier permits
+// both: an Official Account is a shared business account that happens to ship as
+// a unit. Deriving it answered wrongly for that whole class, and wrongly in the
+// direction nothing detects — a message narrowed onto the mailbox path keeps
+// exactly one reader, the connecting admin, so no orphan invariant fires while a
+// company's customer correspondence has become one person's private mail.
+//
+// Channel.Validate refuses a unit that declares neither, so there is no default
+// to be wrong about here.
 //
 // The label is DERIVED from the id rather than declared, which is the same
 // decision providerLabel documents: this endpoint is readable by every
@@ -186,6 +193,15 @@ func unitChannelFacts(reserved map[string]bool) ([]channelProviderFacts, error) 
 	var out []channelProviderFacts
 	for _, ext := range ComposedExtensions() {
 		for _, ch := range ext.Channels {
+			if !ch.CredentialModel.Valid() {
+				// The registry column has its own CHECK, so an undeclared model
+				// is refused either way — but by name, three layers down, at the
+				// upsert. Refusing here names the unit, the transport and the
+				// two answers, which is what a unit author needs and what a
+				// constraint name cannot give them.
+				return nil, fmt.Errorf("compose: extension %q declares the transport %q without a credential model — say %q if one credential serves the whole installation, %q if each member deposits their own; it decides whether this transport's messages are the company's correspondence or one person's",
+					ext.Name, ch.Provider, extension.CredentialWorkspaceBot, extension.CredentialPerMember)
+			}
 			if reserved[ch.Provider] {
 				return nil, fmt.Errorf("compose: extension %q declares the transport %q, which this installation reserves for the core — a message on it would leave on the unit's credential instead of the workspace's, so rename the unit's channel", ext.Name, ch.Provider)
 			}
@@ -193,7 +209,7 @@ func unitChannelFacts(reserved map[string]bool) ([]channelProviderFacts, error) 
 				provider:          ch.Provider,
 				transport:         transportUnit,
 				label:             providerLabel(ch.Provider),
-				credentialModel:   credentialPerMember,
+				credentialModel:   string(ch.CredentialModel),
 				suppliesTransport: ch.SuppliesTransport(),
 				// The zero descriptor: extension.Channel has no field for a
 				// unit to declare carriage on yet. sendableCarriage states why
