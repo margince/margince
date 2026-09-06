@@ -37,6 +37,10 @@ var forecastPeriodSites = []struct {
 	{"the readings query", []string{"paths", "/forecast", "get"}},
 	{"the calls query", []string{"paths", "/forecast/calls", "get"}},
 	{"the call body", []string{"components", "schemas", "NewForecastCall"}},
+	// The weekly review's frozen horizons. It names which window each landing
+	// covers, so a value here the server cannot resolve would freeze a
+	// retrospective against a window nothing can re-cut.
+	{"the frozen weekly outlook", []string{"components", "schemas", "WeeklyReviewOutlook"}},
 }
 
 // The census this gate is derived from: every place in the contract that
@@ -242,11 +246,18 @@ func periodEnumAt(t *testing.T, doc map[string]any, path []string) []string {
 		}
 	}
 	if props, ok := mapped["properties"].(map[string]any); ok {
-		schema, isMap := props["period"].(map[string]any)
-		if !isMap {
-			return nil
+		// Two spellings, because two kinds of site name a window. A request
+		// asks for a `period`; a frozen record says which `period_kind` it
+		// covers. Both constrain the same vocabulary, and a reader that knew
+		// only one would pass over the other — the under-recognition this gate
+		// exists to refuse.
+		for _, named := range []string{"period", "period_kind"} {
+			schema, isMap := props[named].(map[string]any)
+			if !isMap {
+				continue
+			}
+			return enumStrings(t, schema, "the "+named+" property")
 		}
-		return enumStrings(t, schema, "the period property")
 	}
 	return nil
 }
