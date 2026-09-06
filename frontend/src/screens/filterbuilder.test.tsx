@@ -115,6 +115,38 @@ function stubSeats() {
   );
 }
 
+// The companies door as the search calls it, plus the seats every other picker
+// on this screen reads on mount.
+function stubOrganizations() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      let body: unknown = {
+        data: [],
+        page: { next_cursor: null, has_more: false },
+      };
+      if (url.includes("/organizations")) {
+        // Answers only what the query narrows to, so a test asking for
+        // something absent gets the empty answer rather than a stub that
+        // always has a hit.
+        const q = new URL(url, "http://test").searchParams.get("q") ?? "";
+        body = {
+          data:
+            "northgate".includes(q.toLowerCase()) && q !== ""
+              ? [{ id: "org-1", display_name: "Northgate" }]
+              : [],
+          page: { next_cursor: null, has_more: false },
+        };
+      }
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }),
+  );
+}
+
 function wire() {
   return JSON.parse(screen.getByTestId("wire").textContent ?? "{}");
 }
@@ -200,20 +232,61 @@ describe("an id clause names a record, not a uuid", () => {
     });
   });
 
-  it("keeps a plain box for a target too large to enumerate", async () => {
+  it("searches for a target too large to enumerate, and only a hit becomes the value", async () => {
     resetIDsForTest();
-    stubSeats();
+    stubOrganizations();
+    const user = userEvent.setup();
     render(
       <Harness
         start={newGroup("and", [newLeaf("organization_id", "eq", "")])}
       />,
     );
 
-    // An account list grows with the business, so it is not a dropdown. The box
-    // stays until the async picker exists — a half-filled list would be worse,
-    // since a reader could not tell a missing account from an absent one.
-    expect(await screen.findByRole("textbox", { name: "Value" })).toBeTruthy();
+    // An account list grows with the business, so it is not a dropdown. It is
+    // not a uuid box either: nobody types one from memory, and one typed wrong
+    // matches nothing and reads as "no companies match".
+    const box = await screen.findByRole("textbox", {
+      name: "Search companies",
+    });
     expect(screen.queryByRole("combobox", { name: "Value" })).toBeNull();
+
+    // The TYPED WORDS ARE NOT THE VALUE. This is the whole guarantee: until a
+    // hit is chosen the clause carries nothing, so a half-typed name cannot
+    // reach the engine as one.
+    await user.type(box, "north");
+    expect(wire()).toEqual({
+      and: [{ field: "organization_id", op: "eq", value: "" }],
+    });
+
+    await user.click(await screen.findByRole("button", { name: "Northgate" }));
+
+    // And what lands on the wire is the id, chosen rather than composed.
+    expect(wire()).toEqual({
+      and: [{ field: "organization_id", op: "eq", value: "org-1" }],
+    });
+    // The name stands where the search box was, so the reader can see their
+    // choice took rather than wondering whether it did.
+    expect(screen.getByText("Northgate")).toBeTruthy();
+  });
+
+  it("says a search found nothing rather than showing an empty list", async () => {
+    resetIDsForTest();
+    stubOrganizations();
+    const user = userEvent.setup();
+    render(
+      <Harness
+        start={newGroup("and", [newLeaf("organization_id", "eq", "")])}
+      />,
+    );
+
+    // A list with no rows and no line above it reads as a confident "this
+    // workspace has no such company", which is a settled answer to a question
+    // that got one — the exact failure this whole surface exists to prevent.
+    await user.type(
+      await screen.findByRole("textbox", { name: "Search companies" }),
+      "zzz",
+    );
+    expect(await screen.findByText("No companies match")).toBeTruthy();
   });
 
   it("asks nothing of a reader when the operator already answered", async () => {

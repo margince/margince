@@ -16,9 +16,13 @@
 // component handles both depths, so nesting is not a special case to maintain.
 
 import { X } from "lucide-react";
-import { useId } from "react";
+import { useId, useState } from "react";
 import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { DateInput } from "../design-system/dateinput";
+import {
+  type SearchResult,
+  useDebouncedSearch,
+} from "../design-system/debouncedsearch";
 import { Select, type SelectOption } from "../design-system/select";
 import { TokenInput } from "../design-system/tokeninput";
 import { useT } from "../i18n";
@@ -29,6 +33,7 @@ import { fieldLabel, groupFields, type VocabularyField } from "./filterdata";
 import {
   boundedReference,
   type Reference,
+  searchOrganizations,
   useReferenceOptions,
 } from "./filterreference";
 import {
@@ -441,6 +446,9 @@ function ValueControl({
       />
     );
   }
+  if (references === "organization") {
+    return <SearchedRecordValue value={value} onChange={onChange} />;
+  }
   if (options !== undefined && options.length > 0) {
     // A closed set is picked, not typed. Typing it invites the failure this whole
     // surface exists to prevent: a value outside the set compiles, matches
@@ -460,6 +468,104 @@ function ValueControl({
     );
   }
   return <ScalarValue type={type} value={value} onChange={onChange} />;
+}
+
+/**
+ * The one reference too large to list: an organization, found by typing part of
+ * its name.
+ *
+ * A box was the previous answer and it was the wrong one for the reason this
+ * whole surface exists: a uuid typed wrong compiles, matches nothing, and reads
+ * as "no companies match" rather than as a mistake. Nobody types a uuid
+ * correctly from memory anyway, so the box was asking for a paste from another
+ * screen.
+ *
+ * The typed words are NEVER the value. The input searches and the value is only
+ * ever an id the reader picked out of an answer, which is what makes it
+ * impossible to compose a clause the engine would refuse.
+ *
+ * Once chosen, the name stands in place of the search box with a way back to it:
+ * a picker that kept showing its search box would leave the reader unsure
+ * whether their choice took.
+ */
+function SearchedRecordValue({
+  value,
+  onChange,
+}: Readonly<{
+  value: LeafValue;
+  onChange: (next: LeafValue) => void;
+}>) {
+  const t = useT();
+  const [query, setQuery] = useState("");
+  const [chosen, setChosen] = useState<SearchResult | undefined>(undefined);
+  const { results, pending, failed } = useDebouncedSearch(
+    searchOrganizations,
+    query,
+  );
+
+  // A clause restored from a saved view carries the id and not the name, so the
+  // chosen label is known only for a choice made in this session. The id is
+  // shown when it is not — the reader can still see WHICH clause this is and
+  // replace it, where an empty control would read as an unfinished one.
+  const picked = typeof value === "string" && value !== "" ? value : undefined;
+  if (picked !== undefined) {
+    return (
+      <div className="filter-value">
+        <span className="filter-picked">{chosen?.label ?? picked}</span>
+        <button
+          type="button"
+          className="btn-link"
+          onClick={() => {
+            setChosen(undefined);
+            setQuery("");
+            onChange("");
+          }}
+        >
+          {t("filters.changeRecord")}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="filter-value">
+      <label>
+        <span className="sr-only">{t("filters.searchRecords")}</span>
+        <input
+          className="input"
+          value={query}
+          placeholder={t("filters.searchRecords")}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </label>
+      {/* Each state says which one it is. An empty list with no line above it
+          is the failure this control exists to avoid: it reads as a confident
+          "this workspace has none" for a question that never got an answer. */}
+      {!query && <p className="t-caption">{t("filters.typeToSearch")}</p>}
+      {query && pending && (
+        <p className="t-caption">{t("filters.searching")}</p>
+      )}
+      {query && failed && (
+        <p className="t-caption error">{t("filters.searchFailed")}</p>
+      )}
+      {query && !pending && !failed && results.length === 0 && (
+        <p className="t-caption">{t("filters.noRecordMatches")}</p>
+      )}
+      {results.map((option) => (
+        <button
+          type="button"
+          key={option.value}
+          className="btn-link"
+          onClick={() => {
+            setChosen(option);
+            onChange(option.value);
+          }}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 /**

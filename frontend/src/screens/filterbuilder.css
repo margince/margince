@@ -81,3 +81,9 @@
 .filter-value > p {
   margin: 0;
 }
+
+/* A chosen record reads as the name it was picked under, not as a control that
+ * still looks unanswered. */
+.filter-picked {
+  align-self: flex-start;
+}
