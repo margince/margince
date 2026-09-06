@@ -48,15 +48,21 @@ const (
 	sendPermissionContract  = "api/crm.yaml"
 	sendPermissionFrontend  = "../frontend/src"
 	sendPermissionComponent = "../frontend/src/screens/sendpermission.tsx"
+	// composerSurface is the file this walk must always see. It stands where a
+	// COUNT floor stood, deliberately: a number tracks how many composers the
+	// app happens to have and gets edited down each time they consolidate, while
+	// a name fails when the walk goes blind — the one way a census breaks
+	// silently — and says which file to go looking for.
+	composerSurface = "screens/compose.tsx"
 )
 
 // silentSendSurfaces ratifies each surface that posts to a send door without
 // asking the engine first, with what the omission costs.
 //
-// Empty today. It held screens/persondrawers.tsx until the person page's
-// composer was consolidated into the one mail drawer every record now shares:
-// that file posts to no send door any more, so there is nothing left to ratify.
-// The remaining composer asks the engine, which is why nothing takes its place.
+// Empty, and that is the answer rather than an absence: every surface that posts
+// to a door renders the component, so there is nothing left to ratify.
+// AssertAllMatched below is what keeps it that way — a key whose subject is gone
+// fails here rather than standing as a permission for a file nobody can find.
 var silentSendSurfaces = gatekit.Waive(map[string]string{})
 
 // contractPathLine matches a path entry under `paths:`.
@@ -139,6 +145,33 @@ func namesADoor(source string, doors []string) bool {
 	return false
 }
 
+// clientPostPath captures the path a typed-client POST names. The generated
+// client takes its path as a LITERAL — an interpolated one does not typecheck —
+// so a surface cannot reach a door without spelling it here.
+//
+// This is the census's SECOND opinion, computed from the call rather than from a
+// bare mention anywhere in the file, and the two are compared below. namesADoor
+// asks "does this file contain the door as a whole quoted string"; a file that
+// posts to `/emails/draft` names no door by that test while posting through one,
+// and a door list that went stale against the contract makes every surface
+// invisible at once. Either failure is silent in a single matcher and loud when
+// two disagree.
+var clientPostPath = regexp.MustCompile("api\\.POST\\(\\s*[\"'`]([^\"'`]+)")
+
+// postsThroughADoor reports whether source POSTs to a path that IS a door or
+// sits under one. The prefix half is what catches the surface namesADoor cannot
+// see: a longer path through the same door.
+func postsThroughADoor(source string, doors []string) bool {
+	for _, m := range clientPostPath.FindAllStringSubmatch(source, -1) {
+		for _, door := range doors {
+			if m[1] == door || strings.HasPrefix(m[1], door+"/") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // rendersSendPermission matches the component's JSX tag and nothing that merely
 // starts with its name: a `<SendPermissionBanner` of a surface's own would be
 // the second spelling this gate exists to refuse.
@@ -189,7 +222,7 @@ func TestEverySurfaceThatSendsAsksTheEngineFirst(t *testing.T) {
 			"this gate by naming it now renders something else, or nothing")
 	}
 
-	surfaces := 0
+	var seen, posting []string
 	walkErr := filepath.WalkDir(sendPermissionFrontend, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -210,10 +243,13 @@ func TestEverySurfaceThatSendsAsksTheEngineFirst(t *testing.T) {
 			return readErr
 		}
 		source := string(raw)
+		if postsThroughADoor(source, doors) {
+			posting = append(posting, rel)
+		}
 		if !namesADoor(source, doors) {
 			return nil
 		}
-		surfaces++
+		seen = append(seen, rel)
 		if asksTheEngine(source) || silentSendSurfaces.Waived(t, rel) {
 			return nil
 		}
@@ -225,13 +261,22 @@ func TestEverySurfaceThatSendsAsksTheEngineFirst(t *testing.T) {
 	if walkErr != nil {
 		t.Fatalf("walking the frontend: %v", walkErr)
 	}
-	// ONE composer posts to a door today: the single mail drawer every record
-	// shares. It was two until the person page's own composer was consolidated
-	// into it, and the floor moved down with the consolidation rather than being
-	// deleted — a census that cannot fail short reports PASS over a tree it has
-	// stopped reading, and there is no failing assertion to notice.
-	if surfaces < 1 {
-		t.Fatalf("found %d frontend file(s) posting to a send door, want at least the mail drawer: "+
-			"the census has stopped seeing its subject", surfaces)
+	// A surface the CALL sees and the mention does not is one this gate stopped
+	// asking about, which is the failure that reports PASS. The reverse is fine
+	// and expected: sendpermission.tsx names the preview door to ask about it and
+	// posts to nothing.
+	for _, rel := range posting {
+		if !slices.Contains(seen, rel) {
+			t.Errorf("%s posts through a send door that namesADoor cannot see, so the gate never "+
+				"asked whether it renders SendPermission: widen the match or name the door as a "+
+				"whole string literal", rel)
+		}
+	}
+	// Both matchers going blind at once — a door list that stopped resolving
+	// against the contract does exactly that — leaves the two agreeing on
+	// nothing at all, which the comparison above reads as success.
+	if !slices.Contains(seen, composerSurface) {
+		t.Fatalf("the walk saw %v and not %s: the census has stopped seeing its subject",
+			seen, composerSurface)
 	}
 }
