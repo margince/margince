@@ -41,6 +41,16 @@ CREATE TABLE IF NOT EXISTS sdr_handoff_reason (
     CONSTRAINT sdr_handoff_reason_applies_to CHECK (applies_to IN ('rejected', 'recycled'))
 );
 
+-- One label per transition. It is what makes the seed below idempotent — an
+-- ON CONFLICT with nothing to conflict ON is a no-op that reads as protection,
+-- and this migration re-runs on any database whose ledger has not recorded this
+-- exact version, which a renumber during review produces. It is also the rule an
+-- operator wants: two rows reading "Not qualified" on one dropdown are a choice
+-- nobody can make correctly, and a report grouping by reason would split one
+-- reason across two bars.
+CREATE UNIQUE INDEX IF NOT EXISTS sdr_handoff_reason_label_once
+    ON sdr_handoff_reason (applies_to, lower(btrim(label)));
+
 -- The handoff itself.
 --
 -- ONE ROW PER HANDOFF, carrying its CURRENT state, with the transitions kept
@@ -155,4 +165,4 @@ INSERT INTO sdr_handoff_reason (label, applies_to, sort_order, system) VALUES
     ('Not enough information to act on', 'rejected', 40, true),
     ('Timing is wrong, worth another try later', 'recycled', 10, true),
     ('Needs more qualification first', 'recycled', 20, true)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (applies_to, lower(btrim(label))) DO NOTHING;
