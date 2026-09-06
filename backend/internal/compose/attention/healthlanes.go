@@ -163,6 +163,12 @@ type AutomationHealth interface {
 	TroubledRuns(ctx context.Context, since time.Time, limit int) ([]TroubledAutomationRun, error)
 }
 
+// outcomeFailed is the one troubled outcome a retry acts on. `blocked` is the
+// permission gate having refused a firing on purpose, and re-running it asks
+// the same question of the same authority — the retry endpoint declines it, so
+// a row must not offer the verb.
+const outcomeFailed = "failed"
+
 // TroubledAutomationRun is one firing that did not do its work.
 type TroubledAutomationRun struct {
 	ID ids.UUID

@@ -93,7 +93,13 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 			return err
 		}
 
-		review = Review{UserID: userID, LocalWeekStart: weekStart, AsOf: now.UTC()}
+		// LearningsState is set here, not left as Go's zero value: the column
+		// defaults to not_run, and a returned review whose state was "" would
+		// disagree with the same review read back a moment later.
+		review = Review{
+			UserID: userID, LocalWeekStart: weekStart, AsOf: now.UTC(),
+			LearningsState: LearningsNotRun,
+		}
 		if review.Counts, err = countWeek(ctx, tx, userID, start, end); err != nil {
 			return err
 		}

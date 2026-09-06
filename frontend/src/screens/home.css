@@ -22,14 +22,33 @@
  * panes there have something to be glass OVER. Faint enough that the eye does
  * not find it, and never animated — the rule the shell's own lights keep.
  *
- * A BACKGROUND, the way the shell paints its two (app/shell.css), and not a
- * positioned box bleeding past the page's edge. A background cannot widen the
- * page; that box could and did — its 10% bleed pushed the shell's content
- * scroller 39px past a 390px viewport, which is the page scrolling sideways on
- * a phone. The centre sits outside the box on the same reasoning, so the pool
- * is cut by the edge rather than reaching past it. */
-.home-wrap {
-  background: radial-gradient(46% 32% at 104% 1%, var(--glowB), transparent 70%)
+ * ON A LAYER OF ITS OWN, sized to the VIEWPORT rather than to the page column.
+ * A light is a thing in the room, so it has to be painted by something the size
+ * of the room: as a background on the column it was clipped to that column's
+ * box, and the pool met the column's top and right edges at full strength and
+ * simply stopped — a straight seam across the page, which is what a light never
+ * has.
+ *
+ * `fixed` is what makes the layer the viewport's rather than the column's, and
+ * it is also why this cannot repeat the defect the background was reaching for:
+ * a fixed box is laid out against the viewport and contributes nothing to any
+ * scroller's width, where the absolutely positioned box this replaces bled 10%
+ * past the column and pushed the shell's content scroller 39px past a 390px
+ * viewport. Held by §3.8's own criteria, which measure exactly that.
+ *
+ * Behind the page's content and inert: it is atmosphere, and atmosphere that
+ * can be clicked is a control nobody meant to draw. */
+.home-wrap::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+      900px 620px at 100% 0,
+      var(--glowB),
+      transparent 70%
+    )
     no-repeat;
 }
 

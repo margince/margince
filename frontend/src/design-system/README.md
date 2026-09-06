@@ -477,7 +477,7 @@ free to describe the surface rather than the file:
 |---|---|
 | `Design System/` | One node per primitive in this directory. |
 | `Records/` | The screens a rep works in, and the cards on them (`Company 360/`, `Company rail/`). |
-| `Settings/` | `You/` and `Admin settings/`, mirroring `SETTINGS_TABS` in `screens/settings.tsx` one for one — group label included — with the card as the leaf. |
+| `Settings/` | `<Group>/<Page>/<Card>`, mirroring the settings catalog one for one: the seven groups of `SETTINGS_GROUPS` and the pages of `SETTINGS_PAGES`, under their own sidebar labels. `screens/settingsstories.test.ts` holds the two together, so a story filed under a group or page the catalog does not declare fails. |
 | `Patterns/` | Screen-tier building blocks that are not a page: the query gate, the create/edit/merge/share actions, the composer. |
 | `Onboarding/`, `Signed out/`, `Shell/` | The first run, the pages reachable without a session, and the application frame. |
 | `MCP Apps/` | The governed tool surfaces and their document forms. |

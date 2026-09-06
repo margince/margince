@@ -3,6 +3,9 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RbacObject } from "../app/capability";
 import { type GrantSpec, meFixture } from "../app/mefixture";
+import type { Route } from "../app/router";
+import * as router from "../app/router";
+import { SettingsRail } from "../app/shell";
 import { translate } from "../i18n";
 import { SettingsScreen } from "./settings";
 import {
@@ -18,6 +21,7 @@ import {
   type SettingsGroupId,
   type SettingsPageId,
 } from "./settingscatalog";
+import { SETTINGS_HOME_ID } from "./settingsnav";
 import { settingsHref } from "./settingsrouting";
 
 // WHICH settings pages a principal is offered at all, and which group holds each
@@ -94,7 +98,7 @@ describe("SettingsScreen page layout", () => {
   });
 
   it("renders only the active page's cards — the passport is off the Account page", async () => {
-    render(<SettingsScreen route={settingsHref()} />);
+    render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
     // Scout lives on Agents; the default Account page must not render it.
     expect(screen.queryByText("Scout")).toBeNull();
@@ -196,9 +200,14 @@ function settingsNavBackend(opts: {
 function navPages(): string[] {
   return screen
     .getAllByRole("link")
-    .filter((link) =>
-      (link.getAttribute("href") ?? "").startsWith("#/settings/"),
-    )
+    .filter((link) => {
+      const href = link.getAttribute("href") ?? "";
+      // `#/settings` exactly is Settings home — a row of this level whose
+      // address is the level itself. The trailing slash alone would drop it,
+      // which is how a helper quietly stops seeing the row it was meant to
+      // prove is there.
+      return href === "#/settings" || href.startsWith("#/settings/");
+    })
     .map((link) => link.textContent ?? "");
 }
 
@@ -230,11 +239,19 @@ const groupLabelOf = (group: SettingsGroupId) =>
 // The pages a caller reaches by naming a set of page ids, in CATALOG order —
 // so a case states which pages a grant opens and the order comes from the one
 // table that decides it, never from the order the case happened to list them.
-const pagesNamed = (...ids: readonly SettingsPageId[]) =>
-  SETTINGS_PAGES.filter((page) => ids.includes(page.id)).map((page) =>
+// Settings home leads every list, for every reader. It is not a page and no
+// grant reaches it — it is the address with no page segment — so it belongs in
+// the shared expectation rather than in each case that would otherwise have to
+// remember it.
+const pagesNamed = (...ids: readonly SettingsPageId[]) => [
+  translate("en", "settings.home"),
+  ...SETTINGS_PAGES.filter((page) => ids.includes(page.id)).map((page) =>
     labelOf(page.id),
-  );
+  ),
+];
 
+// Without the home row: a claim about ONE group's rows is not a claim about the
+// headingless row above all of them.
 const pagesIn = (group: SettingsGroupId) =>
   SETTINGS_PAGES.filter((page) => page.group === group).map((page) =>
     labelOf(page.id),
@@ -272,12 +289,12 @@ const floorPlus = (...ids: readonly SettingsPageId[]) =>
 // object, plus the reset page's `delete` — emptying an installation is not a
 // thing you read.
 //
-// Three of these are not reads, and each names a page whose CARDS decide the
-// grant. `automation:update` opens AI usage and Model calls because those cards
-// treat the runtime's spend as operator information. `system_reset:delete`
-// opens the danger zone AND stands in for "is admin" on Extensions and Audit
-// log, whose cards still call `useHoldsAdminRole`. `license:read` opens Seats
-// because `LicenseCard` calls `/installation/license` and nothing else.
+// Every term is the object its page's own cards ask for. `system_reset:delete`
+// opens the danger zone and nothing else now: it used to stand in for "is
+// admin" on Extensions and Audit log, whose cards asked `useHoldsAdminRole`,
+// and those cards ask `extension_access:read` and `audit_log:read` instead.
+// `ai_diagnostics:read` is what `AiUsageCard` and `AiCallsCard` ask, where they
+// used to ask `automation:update`.
 const EVERY_PAGE_GRANTED: GrantSpec = {
   installation_settings: ["read"],
   // Sign-in & apps, whose card reads the narrow projection.
@@ -292,14 +309,25 @@ const EVERY_PAGE_GRANTED: GrantSpec = {
   knowledge_corpus: ["read"],
   import_run: ["read"],
   ai_routing: ["read"],
-  automation: ["read", "update"],
+  automation: ["read"],
+  ai_diagnostics: ["read"],
   person: ["read"],
   audit_log: ["read"],
+  job_health: ["read"],
   embedding_reindex: ["read"],
   extension_access: ["read"],
+  // Extensions is TWO reads: the unit inventory on `extension_access` and every
+  // role's grant on every object on `role_admin` (identity/roles.go ListRoles).
+  // The card fires both behind one flag, so the page needs both.
+  role_admin: ["read"],
   system_reset: ["delete"],
 };
-const EVERY_PAGE = SETTINGS_PAGES.map((page) => labelOf(page.id));
+// Home leads this list too, for the same reason it leads pagesNamed: it is a
+// row of the nav, and this is the nav's every row.
+const EVERY_PAGE = [
+  translate("en", "settings.home"),
+  ...SETTINGS_PAGES.map((page) => labelOf(page.id)),
+];
 
 // The five reads the old Data model entry unioned, now spread across five pages
 // of their own. Each still has to open its page ALONE: a page wired to one
@@ -348,10 +376,10 @@ const SEEDED_READS: GrantSpec = {
 // migration 0261 grants to admin and ops and to nobody else — is what opens
 // Seats & license.
 //
-// `ai_model_rate` opens AI usage and NOT Model calls, which is the two pages
-// disagreeing rather than a gap in this fixture: AI usage unions the model
-// prices with `automation:update`, and Model calls has only the write grant,
-// because `AiCallsCard` checks it and nothing else.
+// `ai_model_rate` opens AI usage and NOT Model calls, which is the two entries
+// differing rather than a gap in this fixture: AI usage unions the model prices
+// with `ai_diagnostics:read` because a rate-sheet author belongs on the page
+// carrying the table, and Model calls asks `ai_diagnostics:read` alone.
 const SEEDED_OPS_READS: GrantSpec = {
   ...SEEDED_READS,
   ai_model_rate: ["read"],
@@ -602,19 +630,27 @@ describe("SettingsScreen page visibility", () => {
     );
   });
 
-  it("keeps Seats & license shut for a lone seat_usage read, which no card calls", async () => {
+  it("opens Seats & license for a lone seat_usage read", async () => {
     // The capacity half of the split, and the reader it shipped for:
-    // management, which may see headcount without commercial standing. The
-    // endpoint exists and the card does not call it, so admitting this holder
-    // lands them on a failed `/installation/license` read rather than on the
-    // count.
-    //
-    // Written to FAIL when `LicenseCard` learns to call the seat-usage
-    // endpoint, which is the signal to widen the catalog entry back to the
-    // union in the same change.
+    // management, which may see headcount without commercial standing.
+    // `LicenseCard` reads `/installation/license` for a `license` holder and
+    // falls back to `/installation/seat-usage` for this one, so the page it
+    // opens has content rather than a failed entitlement read.
     vi.stubGlobal(
       "fetch",
       settingsNavBackend({ roles: ["ops"], allow: readOn("seat_usage") }),
+    );
+    renderNav();
+    await waitFor(() =>
+      expect(navPages()).toEqual(floorPlus("seats", "privacy")),
+    );
+    cleanup();
+
+    // The other half, or the assertion above would pass against a page that
+    // opened for everybody: a seat holding neither read does not reach it.
+    vi.stubGlobal(
+      "fetch",
+      settingsNavBackend({ roles: ["ops"], allow: readOn("person") }),
     );
     renderNav();
     await waitFor(() => expect(navPages()).toEqual(floorPlus("privacy")));
@@ -654,55 +690,52 @@ describe("SettingsScreen page visibility", () => {
     );
   });
 
-  it("keeps System health shut for a lone job_health read, whose card still asks for the admin role", async () => {
-    // `JobHealthCard` refuses a non-admin with `useHoldsAdminRole`. The server
-    // moved the job report onto `job_health:read`; admitting that holder here
-    // offers an ops seat a page that then says "admin only", which reads as a
-    // broken screen rather than as a permission they lack.
+  it("opens System health for a lone job_health read", async () => {
+    // The job report's own object, which `GET /v1/jobs/health` asks for and
+    // which `JobHealthCard` now asks for too — where it used to ask whether the
+    // reader WAS an admin, and so refused an ops seat the server answers 200.
     //
-    // Written to FAIL when `JobHealthCard` honours the grant, which is the
-    // signal to add the `job_health` arm back in the same change.
+    // The page unions this with the reindex read, and each term has to open it
+    // alone or the union is one object with a decorative second term.
     vi.stubGlobal(
       "fetch",
       settingsNavBackend({ roles: ["ops"], allow: readOn("job_health") }),
     );
     renderNav();
-    await waitFor(() => expect(navPages()).toEqual(floorPlus("privacy")));
-  });
+    await waitFor(() =>
+      expect(navPages()).toEqual(floorPlus("privacy", "system-health")),
+    );
+    cleanup();
 
-  it("keeps Extensions shut for a lone extension_access read, whose card still asks for the admin role", async () => {
-    // `GET /extensions` is auth.RequireAdmin and `ExtensionAccessCard` gates
-    // itself on the literal admin role, so this ops holder would find the card
-    // refusing them on a page that opened for them.
-    //
-    // The entry therefore ANDs the read with `system_reset:delete`, which only
-    // admin holds — a stand-in for "is admin" chosen because there is no role
-    // arm in the catalog's vocabulary and there must not be: a role arm would
-    // encode the seeded matrix into the client.
-    //
-    // Written to FAIL when the card honours `extension_access`, which is the
-    // change that drops the `system_reset` term.
+    // And a seat holding neither term still does not reach it, or the case
+    // above would pass against a page that opened for everybody.
     vi.stubGlobal(
       "fetch",
-      settingsNavBackend({ roles: ["ops"], allow: readOn("extension_access") }),
+      settingsNavBackend({ roles: ["ops"], allow: readOn("person") }),
     );
     renderNav();
     await waitFor(() => expect(navPages()).toEqual(floorPlus("privacy")));
   });
 
-  it("opens Extensions for a holder of the read who is also an admin", async () => {
-    // The other half: the read is still load-bearing rather than decorative, so
-    // an admin who LOST `extension_access:read` does not reach the page either.
-    // Both terms are asserted, or the AND collapses into a role check nobody
-    // wrote down.
+  it("opens Extensions for a lone extension_access read", async () => {
+    // `GET /v1/extensions` asks for `extension_access:read`, and
+    // `ExtensionAccessCard` asks the same object — where it used to ask whether
+    // the reader WAS an admin, which refused an ops seat the endpoint answers.
+    //
+    // The read is the WHOLE gate now: the entry used to AND it with
+    // `system_reset:delete` as a stand-in for "is admin", and dropping that
+    // term is what lets an edited role reach the page.
     vi.stubGlobal(
       "fetch",
       settingsNavBackend({
-        roles: ["admin"],
+        roles: ["ops"],
+        // `person:read` is the floor `readOn` holds steady for every other case
+        // here — without it this stops being a case about Extensions and also
+        // becomes one about losing Privacy.
         allow: {
           person: ["read"],
           extension_access: ["read"],
-          system_reset: ["delete"],
+          role_admin: ["read"],
         },
       }),
     );
@@ -712,6 +745,21 @@ describe("SettingsScreen page visibility", () => {
     );
     cleanup();
 
+    // The inventory read ALONE is not the page. The card makes a second request
+    // for every role's grants, which asks `role_admin:read` — so on this grant
+    // the page opened and the card 403'd inside it, which is an unreadable page
+    // rather than a narrower one.
+    vi.stubGlobal(
+      "fetch",
+      settingsNavBackend({ roles: ["ops"], allow: readOn("extension_access") }),
+    );
+    renderNav();
+    await waitFor(() => expect(navPages()).toEqual(floorPlus("privacy")));
+    cleanup();
+
+    // And the read is load-bearing rather than decorative: an ADMIN who lost it
+    // does not reach the page, which is what says the entry stopped asking for
+    // the role.
     vi.stubGlobal(
       "fetch",
       settingsNavBackend({
@@ -798,28 +846,38 @@ describe("SettingsScreen page visibility", () => {
     );
   });
 
-  it("keeps both AI diagnostics pages shut for a lone ai_diagnostics read", async () => {
-    // `ai_diagnostics` is the object the SERVER moved these reads onto. The
-    // cards did not follow: `AiUsageCard` and `AiCallsCard` both check
-    // `automation:update`, so this holder would open two pages and be refused
-    // by every card on them.
+  it("opens both AI diagnostics pages for a lone ai_diagnostics read", async () => {
+    // `ai_diagnostics` is the object the server moved these reads onto, and
+    // `AiUsageCard`, `AiCallsCard` and `AiHealthCard` all ask for it now. They
+    // used to ask `automation:update` — a write verb guarding a GET, from when
+    // the runtime's spend was operator information.
     //
-    // Written to FAIL when those cards honour `ai_diagnostics`, which is the
-    // signal to move both entries onto it in the same change.
+    // One grant opens two pages, which is what makes granting it alone worth
+    // asserting: a Model calls wired to some other object would be invisible
+    // here and everywhere else.
+    //
+    // THREE pages, not two: `AiHealthCard` reads on this object too and Models
+    // is the only page that renders it, so a Models shut on `ai_routing` alone
+    // put that card behind a door its own reader could not open. Management is
+    // seeded diagnostics WITHOUT routing, which is exactly that reader.
     vi.stubGlobal(
       "fetch",
       settingsNavBackend({ roles: ["ops"], allow: readOn("ai_diagnostics") }),
     );
     renderNav();
-    await waitFor(() => expect(navPages()).toEqual(floorPlus("privacy")));
+    await waitFor(() =>
+      expect(navPages()).toEqual(
+        floorPlus("models", "usage", "model-calls", "privacy"),
+      ),
+    );
   });
 
-  it("opens both AI diagnostics pages for the automation write their cards check", async () => {
-    // A read-shaped question answered by a WRITE grant, which is why neither
-    // page can simply ask for an AI-named object: the runtime's spend is
-    // treated as operator information. One grant opens two pages, which is what
-    // makes granting it alone worth asserting — a Model calls wired to some
-    // other object would be invisible here and everywhere else.
+  it("keeps both AI diagnostics pages shut for the automation write the cards used to check", async () => {
+    // The other half of the move, and the reason it is a move rather than a
+    // widening: `automation:update` no longer reaches either page. An
+    // automation editor is not thereby entitled to the installation's model
+    // spend, and a case asserting only the positive above would pass whether or
+    // not the old term was dropped.
     vi.stubGlobal(
       "fetch",
       settingsNavBackend({
@@ -828,29 +886,43 @@ describe("SettingsScreen page visibility", () => {
       }),
     );
     renderNav();
-    // `automations` stays shut: it asks for `automation:read`, and the write on
-    // the same object is not it. A page is reached by reading it.
-    await waitFor(() =>
-      expect(navPages()).toEqual(floorPlus("usage", "model-calls", "privacy")),
-    );
+    // `automations` stays shut too: it asks for `automation:read`, and the
+    // write on the same object is not it. A page is reached by reading it.
+    await waitFor(() => expect(navPages()).toEqual(floorPlus("privacy")));
   });
 
-  it.each([
-    "consent_config",
-    "retention_policy",
-    "privacy_request",
-    "person",
-  ] as const)("opens Privacy for a lone %s read", async (object) => {
-    // Four terms, each opening the page alone — the consent registry, the
-    // retention ladder, the DSR queue, and `person`, which is the gate the
-    // registry endpoint actually applies (consent/store.go's ListPurposes calls
-    // auth.Require on person:read). A union read as one object with three
-    // decorative terms would pass any fixture granting all four.
-    const allow: GrantSpec = {};
-    allow[object] = ["read"];
-    vi.stubGlobal("fetch", settingsNavBackend({ roles: ["rep"], allow }));
+  it.each(["retention_policy", "privacy_request", "person"] as const)(
+    "opens Privacy for a lone %s read",
+    async (object) => {
+      // Three terms, each opening the page alone — the retention ladder, the DSR
+      // queue, and `person`, which is the gate the registry endpoint actually
+      // applies (consent/store.go's ListPurposes calls auth.Require on
+      // person:read). A union read as one object with two decorative terms would
+      // pass any fixture granting all three.
+      //
+      // `consent_config` is deliberately NOT a term. It is what the purposes card
+      // ADMINISTERS, but it buys no read: only the writes moved to it. On that
+      // grant alone the page opened with every card inside it withheld.
+      const allow: GrantSpec = {};
+      allow[object] = ["read"];
+      vi.stubGlobal("fetch", settingsNavBackend({ roles: ["rep"], allow }));
+      renderNav();
+      await waitFor(() => expect(navPages()).toEqual(floorPlus("privacy")));
+    },
+  );
+
+  // The term that was dropped, asserted as an absence so nobody adds it back
+  // without meeting the card that would have to read on it.
+  it("does not open Privacy for a lone consent_config read", async () => {
+    vi.stubGlobal(
+      "fetch",
+      settingsNavBackend({
+        roles: ["custom"],
+        allow: { consent_config: ["read", "create"] },
+      }),
+    );
     renderNav();
-    await waitFor(() => expect(navPages()).toEqual(floorPlus("privacy")));
+    await waitFor(() => expect(navPages()).toEqual(floorPlus()));
   });
 
   it("opens Audit log without opening Privacy, for an admin holding the trail read", async () => {
@@ -859,35 +931,42 @@ describe("SettingsScreen page visibility", () => {
     // page carrying it. Granting the trail read and NOT `person:read` is what
     // proves the split — the two pages move independently.
     //
-    // `system_reset:delete` rides along because `AuditLogCard` still gates
-    // itself on the literal admin role, so the entry ANDs the read with the one
-    // grant only admin holds. It is not what the case is about; without it the
-    // page is shut for a reason this claim is not making.
+    // The trail read is the WHOLE gate now: the entry used to AND it with
+    // `system_reset:delete` as a stand-in for "is admin", because `AuditLogCard`
+    // asked whether the reader WAS one. Both card and entry ask `audit_log:read`
+    // — what `GET /v1/audit-log` asks for — so nothing rides along.
     vi.stubGlobal(
       "fetch",
       settingsNavBackend({
         roles: ["admin"],
-        allow: { audit_log: ["read"], system_reset: ["delete"] },
+        allow: { audit_log: ["read"] },
       }),
     );
     renderNav();
     await waitFor(() => expect(navPages()).toEqual(floorPlus("audit")));
   });
 
-  it("keeps Audit log shut for a delegated audit_log holder who is no admin", async () => {
-    // The server moved this read onto `audit_log`, and a management seat can
-    // hold it. `AuditLogCard` has not followed and still calls
-    // `useHoldsAdminRole`, so admitting them opens a page that then refuses
-    // them.
-    //
-    // Written to FAIL when the card honours the grant, which is the change that
-    // drops the `system_reset:delete` term from the entry.
+  it("opens Audit log for a delegated audit_log holder who is no admin", async () => {
+    // The reader the split shipped for: a management seat holding the trail
+    // read and no admin role. Both the entry and `AuditLogCard` ask
+    // `audit_log:read`, so this holder reaches the page and the trail on it —
+    // where the role check refused them a page the server answers 200.
     vi.stubGlobal(
       "fetch",
       settingsNavBackend({
         roles: ["management"],
         allow: { audit_log: ["read"] },
       }),
+    );
+    renderNav();
+    await waitFor(() => expect(navPages()).toEqual(floorPlus("audit")));
+    cleanup();
+
+    // And a management seat WITHOUT the read still does not reach it, or the
+    // assertion above would pass against a page that opened for everybody.
+    vi.stubGlobal(
+      "fetch",
+      settingsNavBackend({ roles: ["management"], allow: {} }),
     );
     renderNav();
     await waitFor(() => expect(navPages()).toEqual(UNGATED_PAGES));
@@ -1038,5 +1117,98 @@ describe("SettingsScreen page visibility", () => {
 
     await waitFor(() => expect(navPages()).toEqual(floorPlus("privacy")));
     expect(screen.queryByRole("link", { name: labelOf("company") })).toBeNull();
+  });
+});
+
+// The access boundary, which replaced a silent fallback.
+//
+// The fallback was wrong in a way the reader could not see: a denied address
+// rendered Account AND rewrote the URL to say Account, so somebody following a
+// colleague's link had no evidence the link had gone anywhere else. They would
+// report it broken; the sender would open it and find it worked.
+// The home ROW's id is not a page id, and must never become one. If a page
+// were ever added called `home`, its row and the home row would collide on
+// `activeId` and one of them would go current on the other's address — and
+// `#/settings/home` would stop being an unknown address and start being that
+// page, silently.
+//
+// Derived from the catalog rather than restated: a list that named the ids by
+// hand would agree with itself while the catalog moved underneath it.
+it("keeps the home row's id out of the page vocabulary", () => {
+  expect(SETTINGS_PAGES.map((page) => page.id)).not.toContain(SETTINGS_HOME_ID);
+});
+
+describe("the settings access boundary", () => {
+  it("tells a reader the page is not theirs, and leaves the address alone", async () => {
+    const replaced: Route[] = [];
+    vi.spyOn(router, "navigateReplacing").mockImplementation((route) => {
+      replaced.push(route);
+    });
+    vi.stubGlobal("fetch", settingsNavBackend({ roles: ["rep"], allow: {} }));
+    // Both halves, because the claim spans them: the SCREEN says the page is
+    // not theirs, and the RAIL must not go on marking a page current beside it.
+    render(
+      <>
+        <SettingsRail route={settingsHref("audit")} />
+        <SettingsScreen route={settingsHref("audit")} />
+      </>,
+    );
+
+    // The boundary is ALSO what renders while /me is in flight — every
+    // capability predicate reads false until the snapshot lands — so finding it
+    // proves nothing on its own. Waited on a row only a RESOLVED snapshot can
+    // draw, and only then asserted the denial, which is what makes it a claim
+    // about the grant rather than about the load.
+    expect(
+      await screen.findByRole("link", { name: labelOf("account") }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/this settings page is not yours to open/i),
+    ).toBeTruthy();
+    // Account's own content is what the fallback used to show here.
+    expect(screen.queryByText("test@example.test")).toBeNull();
+    // And the address is untouched, which is the whole affordance: the reader
+    // can read what they asked for and quote it to somebody who holds it.
+    expect(replaced).toEqual([]);
+    // Nor does the CHROME claim a page. The sidebar used to mark Account
+    // current beside a body saying "not yours" — half the false fallback,
+    // living on in the rail.
+    expect(
+      screen
+        .getByRole("link", { name: labelOf("account") })
+        .getAttribute("aria-current"),
+    ).toBeNull();
+  });
+
+  it("tells a reader an address names no page, which is a different fact", async () => {
+    vi.stubGlobal("fetch", settingsNavBackend({ roles: ["admin"], allow: {} }));
+    render(
+      <SettingsScreen route={{ screen: "settings", id: "no-such-page" }} />,
+    );
+
+    expect(
+      await screen.findByText(/no settings page has this address/i),
+    ).toBeTruthy();
+    // Not the denial: an admin holding every grant is refused nothing, and
+    // telling them the page is "not theirs" would send them asking for a grant
+    // that would not help.
+    expect(screen.queryByText(/not yours to open/i)).toBeNull();
+  });
+
+  it("opens the page for a reader who does hold the grant", async () => {
+    // The control: the same address, one grant apart. Without it the two cases
+    // above would pass against a page nobody can ever open.
+    vi.stubGlobal(
+      "fetch",
+      settingsNavBackend({ roles: ["admin"], allow: readOn("audit_log") }),
+    );
+    render(<SettingsScreen route={settingsHref("audit")} />);
+
+    await waitFor(() =>
+      expect(screen.queryByText(/not yours to open/i)).toBeNull(),
+    );
+    expect(
+      screen.getByText(translate("en", "settings.tab.audit")),
+    ).toBeTruthy();
   });
 });

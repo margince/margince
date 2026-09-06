@@ -251,6 +251,8 @@ var tableOwners = map[string]string{
 	// the gate's own evidence (ADR-0098 D2/D4), written where the gate that
 	// relies on them lives.
 	"person_acquisition_evidence":    "internal/modules/people",
+	"privacy_notice_case":            "internal/modules/consent",
+	"consent_text_version":           "internal/modules/consent",
 	"communication_decision":         "internal/modules/consent",
 	"communication_basis":            "internal/modules/consent",
 	"communication_suppression":      "internal/modules/consent",
@@ -440,18 +442,26 @@ var tableOwners = map[string]string{
 	"assurance_run_finding":     "internal/modules/assurance",
 	"assurance_run":             "internal/modules/assurance",
 	"assurance_source_coverage": "internal/modules/assurance",
-	"assurance_exception":       "internal/modules/assurance",
-	"assurance_resolution":      "internal/modules/assurance",
-	"forecast_call":             "internal/modules/forecasting",
-	"forecast_snapshot":         "internal/modules/forecasting",
-	"forecast_contribution":     "internal/modules/forecasting",
-	"weekly_plan":               "internal/modules/weeklyplan",
-	"weekly_plan_commitment":    "internal/modules/weeklyplan",
-	"weekly_review_deal":        "internal/compose/weekly",
-	"weekly_review_outlook":     "internal/compose/weekly",
-	"weekly_review_movement":    "internal/compose/weekly",
-	"weekly_review_driver":      "internal/compose/weekly",
-	"weekly_review_scorecard":   "internal/compose/weekly",
+	// One pass of assurance over a scope, and what each finding contributed to
+	// that pass's task. They belong to assurance because a cycle is a window
+	// over its own findings; the TASK is an ordinary activity the caller mints
+	// through the activities door, so no activity write lives here.
+	"assurance_cycle":                 "internal/modules/assurance",
+	"assurance_task_item":             "internal/modules/assurance",
+	"assurance_exception":             "internal/modules/assurance",
+	"assurance_resolution":            "internal/modules/assurance",
+	"forecast_call":                   "internal/modules/forecasting",
+	"forecast_snapshot":               "internal/modules/forecasting",
+	"forecast_contribution":           "internal/modules/forecasting",
+	"weekly_plan":                     "internal/modules/weeklyplan",
+	"weekly_plan_commitment":          "internal/modules/weeklyplan",
+	"weekly_review_deal":              "internal/compose/weekly",
+	"weekly_review_outlook":           "internal/compose/weekly",
+	"weekly_review_movement":          "internal/compose/weekly",
+	"weekly_review_driver":            "internal/compose/weekly",
+	"weekly_review_scorecard":         "internal/compose/weekly",
+	"weekly_review_learning":          "internal/compose/weekly",
+	"weekly_review_learning_citation": "internal/compose/weekly",
 	// The company view's per-user visit baseline: view state, not a record
 	// fact, so it is written without an audit row — the saved-view ruling.
 	// The person view acknowledges visits into the SAME table (one baseline

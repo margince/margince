@@ -50,7 +50,7 @@ const OPS = { capture_settings: ["read", "update"] } as const;
 const READER = { capture_settings: ["read"] } as const;
 
 const meta: Meta<typeof CaptureExclusionsCard> = {
-  title: "Settings/Admin settings/Capture/Keep out of capture",
+  title: "Settings/You/Capture activity/Keep out of capture",
   component: CaptureExclusionsCard,
 };
 export default meta;

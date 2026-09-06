@@ -13,6 +13,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 func TestActivityLogInputRefusesTheImporterNamespace(t *testing.T) {
@@ -26,6 +27,8 @@ func TestActivityLogInputRefusesTheImporterNamespace(t *testing.T) {
 	}
 }
 
+// A connector's NAME is not the mail identity and stays writable: the guard is
+// one reserved value, not a ban on naming a system.
 func TestActivityLogInputAcceptsAnOrdinarySourceSystem(t *testing.T) {
 	ordinary := "gmail"
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
@@ -40,6 +43,28 @@ func TestActivityLogInputAcceptsAnOrdinarySourceSystem(t *testing.T) {
 }
 
 func strPtr(s string) *string { return &s }
+
+// The mail identity is the store's replay key for every captured and sent
+// message, so a caller who could write it would plant a row under a Message-ID
+// and have the real capture of that message hand the planted row back as
+// already existing.
+func TestActivityLogInputRefusesTheMailIdentity(t *testing.T) {
+	// Every kind, not just email: the unique index spans kinds, so a planted
+	// note under a Message-ID suppresses the mail just as well.
+	for _, kind := range []crmcontracts.CreateActivityRequestKind{"email", "note", "call"} {
+		reserved := connector.EmailSourceSystem
+		_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
+			Kind: kind, SourceSystem: &reserved, SourceId: strPtr("planted@acme.test"),
+		})
+		var refused *ReservedMailIdentityError
+		if !errors.As(err, &refused) {
+			t.Fatalf("[%s] err = %v, want ReservedMailIdentityError — a client must not claim a mail identity", kind, err)
+		}
+		if field, code, _ := refused.FieldFault(); field != "source_system" || code != "reserved_source_system" {
+			t.Errorf("[%s] refusal names (%q, %q), want (source_system, reserved_source_system)", kind, field, code)
+		}
+	}
+}
 
 // The `source` guard matters as much as source_system's: activity is one
 // of the classes the crash repair scans by provenance, so a client that

@@ -339,6 +339,10 @@ func (stubs) ListAutomationCatalog(w nethttp.ResponseWriter, r *nethttp.Request)
 	httperr.NotImplemented(w, r, "ListAutomationCatalog")
 }
 
+func (stubs) RetryAutomationRun(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RetryAutomationRun")
+}
+
 func (stubs) DeleteAutomation(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DeleteAutomation")
 }
@@ -2365,6 +2369,10 @@ func (stubs) GetCurrentWeeklyPlan(w nethttp.ResponseWriter, r *nethttp.Request) 
 
 func (stubs) StartWeeklyPlan(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "StartWeeklyPlan")
+}
+
+func (stubs) SetWeeklyPlanContract(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SetWeeklyPlanContract")
 }
 
 func (stubs) GetTeammateWeeklyPlan(w nethttp.ResponseWriter, r *nethttp.Request, ownerId openapi_types.UUID) {

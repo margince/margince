@@ -253,12 +253,22 @@ func planToWire(plan Plan) crmcontracts.WeeklyPlan {
 	for _, c := range plan.Commitments {
 		commitments = append(commitments, commitmentToWire(c))
 	}
-	return crmcontracts.WeeklyPlan{
+	out := crmcontracts.WeeklyPlan{
 		Id:             openapi_types.UUID(plan.ID),
 		LocalWeekStart: openapi_types.Date{Time: plan.LocalWeekStart},
 		Status:         crmcontracts.WeeklyPlanStatus(plan.Status),
 		Commitments:    commitments,
+		Risks:          plan.Risks,
+		CapacityNote:   plan.CapacityNote,
 	}
+	// Absent when no calendar reader is composed. Sending zeros instead would
+	// tell a rep their week is free on the strength of a missing integration.
+	if c := plan.Capacity; c != nil {
+		out.Capacity = &crmcontracts.WeeklyPlanCapacity{
+			Meetings: c.Meetings, Tasks: c.Tasks,
+		}
+	}
+	return out
 }
 
 // commitmentToWire puts one commitment on the contract's shape.
@@ -299,4 +309,58 @@ func nullableText(value string) *string {
 		return nil
 	}
 	return &value
+}
+
+// SetWeeklyPlanContract records what the rep says about the week ahead.
+//
+// The body distinguishes THREE states per field, which a *string cannot: absent
+// (leave it alone), explicit null (clear it back to unwritten), and a string
+// (set it). Decoded as RawMessage for exactly that reason — a plain pointer
+// reads an omitted field and a JSON null identically as nil, and the two mean
+// opposite things here.
+func (h Handlers) SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request) {
+	var body map[string]json.RawMessage
+	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	edit := ContractEdit{}
+	var err error
+	if edit.SetRisks, edit.Risks, err = contractField(body, fieldRisks); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	if edit.SetCapacityNote, edit.CapacityNote, err = contractField(body, fieldCapacityNote); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	plan, err := h.store.SetContract(r.Context(), h.now(), edit)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, planToWire(plan))
+}
+
+// contractField reads one half of the contract body.
+//
+// It reports whether the key was SENT at all, separately from its value. An
+// absent key leaves that half alone — resolved by the store under its row lock,
+// never here, because a value read before the lock is one another request can
+// have moved. An explicit null clears; anything else must be a string.
+func contractField(body map[string]json.RawMessage, field string) (bool, *string, error) {
+	raw, sent := body[field]
+	if !sent {
+		return false, nil, nil
+	}
+	if string(raw) == "null" {
+		return true, nil, nil
+	}
+	var text string
+	if err := json.Unmarshal(raw, &text); err != nil {
+		return false, nil, &values.ParseError{
+			Field: field, Code: "invalid_type",
+			Message: field + " is a string or null",
+		}
+	}
+	return true, &text, nil
 }

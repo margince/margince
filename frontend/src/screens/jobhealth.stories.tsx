@@ -78,7 +78,7 @@ const HEALTHY = {
 };
 
 const meta: Meta<typeof JobHealthCard> = {
-  title: "Settings/Admin settings/Maintenance/Job health",
+  title: "Settings/Governance/System health/Job health",
   component: JobHealthCard,
 };
 export default meta;

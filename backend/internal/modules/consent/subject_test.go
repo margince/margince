@@ -47,9 +47,10 @@ func TestConsentSubjectIsExactlyOne(t *testing.T) {
 func TestRecordRefusesAnAmbiguousSubjectBeforeAnyWrite(t *testing.T) {
 	store := NewStore(nil)
 	_, err := store.Record(context.Background(), RecordInput{
-		PersonID: ids.New[ids.PersonKind](),
-		LeadID:   ids.New[ids.LeadKind](),
-		NewState: "granted",
+		PersonID:   ids.New[ids.PersonKind](),
+		LeadID:     ids.New[ids.LeadKind](),
+		NewState:   "granted",
+		PolicyText: &grantWording,
 	})
 	var invalid *ValidationError
 	if !errors.As(err, &invalid) {
@@ -59,3 +60,12 @@ func TestRecordRefusesAnAmbiguousSubjectBeforeAnyWrite(t *testing.T) {
 		t.Fatalf("error names field %q, want subject", invalid.Field)
 	}
 }
+
+// grantWording is what a fixture shows the subject.
+//
+// Not decoration: a grant that cannot say what was shown is refused
+// (requireWordingForGrant), because Art. 7(1) asks the controller to
+// demonstrate what the subject agreed TO. A fixture omitting it would model a
+// request the product does not accept, and every test written against it would
+// describe a product we do not ship.
+var grantWording = "Yes, send me the newsletter. I can unsubscribe at any time."

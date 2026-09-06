@@ -111,7 +111,7 @@ func (a ladderAccount) capture(t *testing.T, sourceID, threadKey, subject string
 	}
 	ref, err := a.sink.Upsert(a.captureCtx, connector.NormalizedRecord{
 		EntityType: datasource.EntityActivity,
-		NaturalKey: connector.NaturalKey{SourceSystem: "gmail", SourceID: sourceID},
+		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: sourceID},
 		Fields: capture.ActivityFields{
 			Kind: "email", Subject: subject, Body: "hello", Direction: connector.DirectionInbound,
 		},

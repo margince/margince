@@ -201,8 +201,18 @@ func parkedItem(send ParkedSend) crmcontracts.AttentionItem {
 
 // automationItem draws one troubled firing. The rule's own name is the
 // headline and the engine's recorded reason the supporting line; `kind` is
-// the closed failed/blocked vocabulary. No subject and no verbs: fixing the
-// rule lives on the automation screens.
+// the closed failed/blocked vocabulary. No subject: fixing the RULE lives on
+// the automation screens, and this row does not pretend to.
+//
+// A FAILED firing carries `retry`, and a blocked one does not. The difference
+// is not tidiness: `blocked` is the permission gate having refused the firing
+// on purpose, so a Retry button there would offer to overrule a refusal it
+// cannot overrule — the retry endpoint declines it, and a control whose only
+// outcome is a refusal is worse than no control.
+//
+// The verb rides `item.Id`, which is the RUN's id. That is what the endpoint
+// takes: a retry re-dispatches one firing, while `cause_ref` below names the
+// rule the firings are grouped under.
 func automationItem(run TroubledAutomationRun) crmcontracts.AttentionItem {
 	outcome := run.Outcome
 	name := run.Name
@@ -214,6 +224,9 @@ func automationItem(run TroubledAutomationRun) crmcontracts.AttentionItem {
 		Title:      &name,
 		OccurredAt: &occurred,
 		Actions:    []crmcontracts.AttentionItemActions{},
+	}
+	if run.Outcome == outcomeFailed {
+		item.Actions = append(item.Actions, crmcontracts.AttentionItemActionsRetry)
 	}
 	// The condition is the RULE, not this firing of it and not its name: a
 	// name is mutable and not unique, so two rules sharing a name would merge

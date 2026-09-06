@@ -58,10 +58,17 @@ const (
 	replayNoOwner           = "no_owner"
 )
 
-// The connectors whose stored originals this pass can re-read. A source system
+// The connectors whose stored originals this pass can re-read. A connector
 // absent from here is marked unreadable rather than skipped: skipping would
 // re-select it on every pass, and the honest record is that this parser has no
 // reading of that format.
+//
+// These are CONNECTOR names, read from the row's captured_by provenance, not
+// natural-key systems: mail from every adapter now shares one identity
+// (connector.EmailSourceSystem), so the identity no longer says which bytes are
+// on file. The offline demo stores JSON under that same mail identity, and
+// handing its payload to the RFC822 parser is exactly the confusion this
+// distinction prevents.
 const (
 	sourceGmail    = "gmail"
 	sourceIMAP     = "imap"
@@ -74,8 +81,12 @@ const (
 type replayCandidate struct {
 	activityID ids.ActivityID
 	kind       string
-	source     string
-	payload    []byte
+	// source is the CONNECTOR that captured this row, read from captured_by —
+	// which format its stored payload is in. Not the natural-key system: mail
+	// from every adapter shares one identity now, so that column no longer
+	// distinguishes an RFC822 original from the demo generator's JSON.
+	source  string
+	payload []byte
 	// owner is the mailbox address the connection reads, taken from the
 	// connection's own account label rather than the granting user's login
 	// address — those differ, and it is the MAILBOX the headers name.
@@ -126,28 +137,50 @@ func replayParticipantsBatch(ctx context.Context, pool *pgxpool.Pool, limit int,
 // selectReplayCandidates finds interaction activities whose original is still
 // stored and which have not been re-read yet.
 //
-// The owner arm mirrors the two-end backfill's class 2b rule: a provider with
-// exactly one connection identifies the mailbox, and with two it does not,
-// because nothing on the activity row separates them. An ambiguous mailbox
-// yields no owner here rather than a guess — parsing against the wrong address
-// would file the mailbox owner as a participant of their own conversation.
+// Both the mailbox owner and the format are resolved from captured_by, which
+// the sink stamps from the AUTHENTICATED principal as `connector:<name>:<user>`
+// — never from anything a record claimed. That is a stricter answer than the
+// one it replaces: the old query matched capture_connection.provider against
+// the activity's source_system and accepted it only when the provider had
+// exactly ONE connection, so a workspace with two Gmail mailboxes replayed
+// nothing at all. Naming the user directly resolves those, and
+// capture_connection is unique on (user_id, provider), so the pair identifies
+// one mailbox or none.
+//
+// A row whose provenance does not parse — a human-logged activity, an older
+// stamp carrying no user — yields no owner and is recorded as such rather than
+// guessed at. Parsing against the wrong address would file the mailbox owner as
+// a participant of their own conversation.
 func selectReplayCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replayCandidate, error) {
+	// split_part on a `connector:<name>:<user>` stamp: field 2 is the connector,
+	// field 3 the seat.
+	//
+	// The seat is missing on rows captured before provenance carried one, whose
+	// stamp is the bare `connector:gmail`. Those fall back to the rule this
+	// query used to apply to every row -- the provider's connection, when it has
+	// exactly one -- so an old row still replays, and still declines rather than
+	// guessing when two mailboxes share a provider. A stamp naming a seat never
+	// reaches the fallback, so a workspace with two Gmail mailboxes resolves both
+	// of its NEW rows, which the single-connection rule alone could not do.
 	rows, err := tx.Query(ctx, `
-		SELECT a.id, a.kind, a.source_system, rc.payload,
+		SELECT a.id, a.kind, split_part(a.captured_by, ':', 2), rc.payload,
 		       coalesce(a.counterparty_outbound_attested, false),
 		       coalesce((
 		         SELECT c.account_label
 		           FROM capture_connection c
-		          WHERE c.provider = a.source_system
-		            AND NOT EXISTS (
-		                SELECT 1 FROM capture_connection other
-		                 WHERE other.provider = c.provider AND other.id <> c.id)
+		          WHERE c.provider = split_part(a.captured_by, ':', 2)
+		            AND (
+		              c.user_id::text = split_part(a.captured_by, ':', 3)
+		              OR (split_part(a.captured_by, ':', 3) = '' AND NOT EXISTS (
+		                  SELECT 1 FROM capture_connection other
+		                   WHERE other.provider = c.provider AND other.id <> c.id)))
 		          LIMIT 1), '')
 		  FROM activity a
 		  JOIN raw_capture rc
 		    ON rc.source_system = a.source_system AND rc.source_id = a.source_id
 		 WHERE a.archived_at IS NULL
 		   AND a.source_system <> ''
+		   AND a.captured_by LIKE 'connector:%'
 		   AND NOT EXISTS (
 		       SELECT 1 FROM activity_participant_replay r WHERE r.activity_id = a.id)
 		 ORDER BY a.id
@@ -204,7 +237,10 @@ func replayOne(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error
 	case sourceGmail, sourceIMAP, sourceGraph:
 		// All three store the message as its RFC822 original, so one reader
 		// serves them: Graph hands over the MIME itself (/$value), which is why
-		// the Outlook mailbox needs no parser of its own.
+		// the Outlook mailbox needs no parser of its own. Anything else that
+		// shares the mail IDENTITY but not the format — the offline demo, which
+		// stores JSON — falls to the default arm rather than being fed to this
+		// parser, which is why the switch reads the connector and not the key.
 		participants, parseErr = mailmap.ParticipantsOf(raw, c.owner)
 	case sourceGCal:
 		participants, parseErr = gcal.ParticipantsOf(raw, c.owner)

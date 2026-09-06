@@ -345,6 +345,9 @@ func admitRecord(ctx context.Context, in RecordInput) (subject, ConsentState, er
 	if err != nil {
 		return subject{}, "", err
 	}
+	if err := requireRecordableWording(state, in.PolicyText, in.PolicyVersion); err != nil {
+		return subject{}, "", err
+	}
 	return sub, state, nil
 }
 
@@ -448,8 +451,8 @@ func (s *Store) recordAdmittedTx(
 	if ConsentState(in.NewState) == StateWithdrawn {
 		action = "consent_withdraw"
 	}
-	auditID, err := storekit.Audit(ctx, tx, action, sub.entityType, sub.id, map[string]any{"state": stateOrUnknown(current)}, map[string]any{
-		"purpose": purposeKey, "state": in.NewState,
+	auditID, err := storekit.Audit(ctx, tx, action, sub.entityType, sub.id, map[string]any{fieldState: stateOrUnknown(current)}, map[string]any{
+		"purpose": purposeKey, fieldState: in.NewState,
 	})
 	if err != nil {
 		return State{}, err

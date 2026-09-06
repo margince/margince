@@ -119,7 +119,7 @@ func (h Handlers) GetPersonConsent(w http.ResponseWriter, r *http.Request, id cr
 	for _, ev := range events {
 		wireEvents = append(wireEvents, wireEvent(ev))
 	}
-	httperr.WriteJSON(w, http.StatusOK, map[string]any{"state": wireStates, "events": wireEvents})
+	httperr.WriteJSON(w, http.StatusOK, map[string]any{fieldState: wireStates, "events": wireEvents})
 }
 
 func (h Handlers) RecordConsent(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.RecordConsentParams) {
@@ -133,6 +133,10 @@ func (h Handlers) RecordConsent(w http.ResponseWriter, r *http.Request, id crmco
 		NewState:    string(req.NewState),
 		LawfulBasis: req.LawfulBasis,
 		Source:      req.Source,
+		// Passed through unchanged, including absent. admitRecord decides
+		// whether this door may record without it, so the rule lives in one
+		// place rather than at each caller that reaches the writer.
+		PolicyText: req.Wording,
 	})
 	if err != nil {
 		writeConsentErr(w, r, err)

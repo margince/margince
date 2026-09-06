@@ -786,6 +786,18 @@ BEGIN
   RETURN NULL;
 END;
 
+public.assurance_cycle acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.assurance_cycle.assurance_cycle_closes_after_opening CHECK (((closed_at IS NULL) OR (closed_at >= opened_at)))
+public.assurance_cycle.assurance_cycle_pkey PRIMARY KEY (id)
+public.assurance_cycle.assurance_cycle_scope_present CHECK ((length(btrim(scope)) > 0))
+public.assurance_cycle.closed_at timestamp with time zone gen=- def=-
+public.assurance_cycle.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.assurance_cycle.id uuid NOT NULL gen=- def=uuidv7()
+public.assurance_cycle.opened_at timestamp with time zone NOT NULL gen=- def=now()
+public.assurance_cycle.opened_by text NOT NULL gen=- def=-
+public.assurance_cycle.scope text NOT NULL gen=- def=-
+public.assurance_cycle_one_open_per_scope CREATE UNIQUE INDEX assurance_cycle_one_open_per_scope ON public.assurance_cycle USING btree (scope) WHERE (closed_at IS NULL)
+public.assurance_cycle_pkey CREATE UNIQUE INDEX assurance_cycle_pkey ON public.assurance_cycle USING btree (id)
 public.assurance_exception acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.assurance_exception.affected_minor bigint gen=- def=-
 public.assurance_exception.assurance_exception_amount_currency_pair CHECK (((affected_minor IS NULL) = (currency IS NULL)))
@@ -882,6 +894,28 @@ public.assurance_source_coverage.updated_at timestamp with time zone NOT NULL ge
 public.assurance_source_coverage.uq_assurance_source_coverage_run_source UNIQUE (run_id, source)
 public.assurance_source_coverage.version bigint NOT NULL gen=- def=1
 public.assurance_source_coverage_pkey CREATE UNIQUE INDEX assurance_source_coverage_pkey ON public.assurance_source_coverage USING btree (id)
+public.assurance_task_item acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.assurance_task_item.assurance_task_item_cycle_id_fkey FOREIGN KEY (cycle_id) REFERENCES assurance_cycle(id) ON DELETE CASCADE
+public.assurance_task_item.assurance_task_item_exception_id_fkey FOREIGN KEY (exception_id) REFERENCES assurance_exception(id) ON DELETE CASCADE
+public.assurance_task_item.assurance_task_item_once UNIQUE (exception_id, cycle_id)
+public.assurance_task_item.assurance_task_item_one_task_per_subject EXCLUDE USING gist (cycle_id WITH =, subject_kind WITH =, subject_id WITH =, task_activity_id WITH <>)
+public.assurance_task_item.assurance_task_item_pkey PRIMARY KEY (id)
+public.assurance_task_item.assurance_task_item_state CHECK ((state = ANY (ARRAY['open'::text, 'resolved'::text, 'dismissed'::text])))
+public.assurance_task_item.assurance_task_item_subject_kind CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'offer'::text, 'contract'::text])))
+public.assurance_task_item.assurance_task_item_task_activity_id_fkey FOREIGN KEY (task_activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.assurance_task_item.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.assurance_task_item.cycle_id uuid NOT NULL gen=- def=-
+public.assurance_task_item.exception_id uuid NOT NULL gen=- def=-
+public.assurance_task_item.id uuid NOT NULL gen=- def=uuidv7()
+public.assurance_task_item.state text NOT NULL gen=- def='open'::text
+public.assurance_task_item.subject_id uuid NOT NULL gen=- def=-
+public.assurance_task_item.subject_kind text NOT NULL gen=- def=-
+public.assurance_task_item.task_activity_id uuid NOT NULL gen=- def=-
+public.assurance_task_item_by_task CREATE INDEX assurance_task_item_by_task ON public.assurance_task_item USING btree (task_activity_id)
+public.assurance_task_item_once CREATE UNIQUE INDEX assurance_task_item_once ON public.assurance_task_item USING btree (exception_id, cycle_id)
+public.assurance_task_item_one_task_per_subject CREATE INDEX assurance_task_item_one_task_per_subject ON public.assurance_task_item USING gist (cycle_id, subject_kind, subject_id, task_activity_id)
+public.assurance_task_item_open_in_cycle CREATE INDEX assurance_task_item_open_in_cycle ON public.assurance_task_item USING btree (cycle_id, subject_kind, subject_id) WHERE (state = 'open'::text)
+public.assurance_task_item_pkey CREATE UNIQUE INDEX assurance_task_item_pkey ON public.assurance_task_item USING btree (id)
 public.attachment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.attachment.activity_id uuid gen=- def=-
 public.attachment.archived_at timestamp with time zone gen=- def=-
@@ -1626,12 +1660,15 @@ public.consent_event.captured_at timestamp with time zone NOT NULL gen=- def=-
 public.consent_event.captured_by text NOT NULL gen=- def=-
 public.consent_event.confirm_ip text gen=- def=-
 public.consent_event.confirm_user_agent text gen=- def=-
+public.consent_event.consent_event_consent_text_version_id_fkey FOREIGN KEY (consent_text_version_id) REFERENCES consent_text_version(id)
 public.consent_event.consent_event_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id)
 public.consent_event.consent_event_new_state_check CHECK ((new_state = ANY (ARRAY['granted'::text, 'withdrawn'::text])))
 public.consent_event.consent_event_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.consent_event.consent_event_pkey PRIMARY KEY (id)
 public.consent_event.consent_event_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
 public.consent_event.consent_event_subject CHECK (((person_id IS NOT NULL) OR (lead_id IS NOT NULL)))
+public.consent_event.consent_event_wording_pairs CHECK (((policy_text IS NULL) = (policy_version IS NULL)))
+public.consent_event.consent_text_version_id uuid gen=- def=-
 public.consent_event.double_opt_in_confirmed_at timestamp with time zone gen=- def=-
 public.consent_event.id uuid NOT NULL gen=- def=uuidv7()
 public.consent_event.issuance_trigger text gen=- def=-
@@ -1639,8 +1676,8 @@ public.consent_event.lawful_basis text gen=- def=-
 public.consent_event.lead_id uuid gen=- def=-
 public.consent_event.new_state text NOT NULL gen=- def=-
 public.consent_event.person_id uuid gen=- def=-
-public.consent_event.policy_text text NOT NULL gen=- def=-
-public.consent_event.policy_version text NOT NULL gen=- def=-
+public.consent_event.policy_text text gen=- def=-
+public.consent_event.policy_version text gen=- def=-
 public.consent_event.purpose_id uuid NOT NULL gen=- def=-
 public.consent_event.source text NOT NULL gen=- def=-
 public.consent_event_pkey CREATE UNIQUE INDEX consent_event_pkey ON public.consent_event USING btree (id)
@@ -1691,6 +1728,58 @@ public.consent_qualifying_event.source_entity_type text gen=- def=-
 public.consent_qualifying_event_person_ix CREATE INDEX consent_qualifying_event_person_ix ON public.consent_qualifying_event USING btree (person_id, occurred_at DESC)
 public.consent_qualifying_event_pkey CREATE UNIQUE INDEX consent_qualifying_event_pkey ON public.consent_qualifying_event USING btree (id)
 public.consent_qualifying_event_source_unique CREATE UNIQUE INDEX consent_qualifying_event_source_unique ON public.consent_qualifying_event USING btree (person_id, source_entity_type, source_entity_id) WHERE (source_entity_id IS NOT NULL)
+public.consent_text_version acl=margince_owner=arwdDxt/margince_owner,margince_app=ar/margince_owner rls=false force=false
+public.consent_text_version.body text NOT NULL gen=- def=-
+public.consent_text_version.channel text gen=- def=-
+public.consent_text_version.consent_text_version_no_edit_after_publish CREATE TRIGGER consent_text_version_no_edit_after_publish BEFORE UPDATE ON public.consent_text_version FOR EACH ROW EXECUTE FUNCTION consent_text_version_is_immutable()
+public.consent_text_version.consent_text_version_pkey PRIMARY KEY (id)
+public.consent_text_version.consent_text_version_published_shape CHECK (((published_at IS NULL) OR (content_hash IS NOT NULL)))
+public.consent_text_version.consent_text_version_purpose_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
+public.consent_text_version.consent_text_version_window CHECK (((effective_until IS NULL) OR (effective_from IS NULL) OR (effective_until > effective_from)))
+public.consent_text_version.content_hash text gen=- def=-
+public.consent_text_version.disclosures jsonb NOT NULL gen=- def='{}'::jsonb
+public.consent_text_version.effective_from timestamp with time zone gen=- def=-
+public.consent_text_version.effective_until timestamp with time zone gen=- def=-
+public.consent_text_version.id uuid NOT NULL gen=- def=uuidv7()
+public.consent_text_version.jurisdiction text gen=- def=-
+public.consent_text_version.key text NOT NULL gen=- def=-
+public.consent_text_version.locale text gen=- def=-
+public.consent_text_version.published_at timestamp with time zone gen=- def=-
+public.consent_text_version.purpose_id uuid gen=- def=-
+public.consent_text_version.subject_line text gen=- def=-
+public.consent_text_version.version text NOT NULL gen=- def=-
+public.consent_text_version_is_immutable() secdef=false cfg=- acl=- 
+BEGIN
+    IF OLD.published_at IS NULL THEN
+        RETURN NEW;
+    END IF;
+    IF NEW.key IS DISTINCT FROM OLD.key
+       OR NEW.version IS DISTINCT FROM OLD.version
+       OR NEW.subject_line IS DISTINCT FROM OLD.subject_line
+       OR NEW.body IS DISTINCT FROM OLD.body
+       OR NEW.disclosures IS DISTINCT FROM OLD.disclosures
+       OR NEW.content_hash IS DISTINCT FROM OLD.content_hash
+       OR NEW.published_at IS DISTINCT FROM OLD.published_at
+       -- Not only the words: what the version APPLIED TO is evidence too.
+       -- Backdating effective_from makes a version claim it was live on a day
+       -- it was not, which is how a proof row from March is made to resolve
+       -- against wording published in June — retroactive fabrication of the
+       -- evidentiary window, and unlike an edited body it leaves no trace.
+       -- jurisdiction, locale and channel say who it applied to; purpose_id
+       -- says what it is evidence OF.
+       OR NEW.effective_from IS DISTINCT FROM OLD.effective_from
+       OR NEW.jurisdiction IS DISTINCT FROM OLD.jurisdiction
+       OR NEW.locale IS DISTINCT FROM OLD.locale
+       OR NEW.channel IS DISTINCT FROM OLD.channel
+       OR NEW.purpose_id IS DISTINCT FROM OLD.purpose_id THEN
+        RAISE EXCEPTION 'consent_text_version % is published and its wording cannot change; publish a new version instead', OLD.id
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    RETURN NEW;
+END;
+
+public.consent_text_version_pkey CREATE UNIQUE INDEX consent_text_version_pkey ON public.consent_text_version USING btree (id)
+public.consent_text_version_published CREATE UNIQUE INDEX consent_text_version_published ON public.consent_text_version USING btree (key, version) WHERE (published_at IS NOT NULL)
 public.contract acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contract.archived_at timestamp with time zone gen=- def=-
 public.contract.auto_renew boolean NOT NULL gen=- def=false
@@ -4235,6 +4324,31 @@ public.preference_token.revoked_at timestamp with time zone gen=- def=-
 public.preference_token.token text NOT NULL gen=- def=-
 public.preference_token_pkey CREATE UNIQUE INDEX preference_token_pkey ON public.preference_token USING btree (id)
 public.preference_token_token_key CREATE UNIQUE INDEX preference_token_token_key ON public.preference_token USING btree (token)
+public.privacy_notice_case acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.privacy_notice_case.acquisition_id uuid NOT NULL gen=- def=-
+public.privacy_notice_case.allowed_routes text[] NOT NULL gen=- def='{}'::text[]
+public.privacy_notice_case.attempts integer NOT NULL gen=- def=0
+public.privacy_notice_case.blocked_reason text gen=- def=-
+public.privacy_notice_case.completed_at timestamp with time zone gen=- def=-
+public.privacy_notice_case.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.privacy_notice_case.due_at timestamp with time zone NOT NULL gen=- def=-
+public.privacy_notice_case.id uuid NOT NULL gen=- def=uuidv7()
+public.privacy_notice_case.owner_user_id uuid gen=- def=-
+public.privacy_notice_case.person_id uuid NOT NULL gen=- def=-
+public.privacy_notice_case.privacy_notice_case_acquisition_fkey FOREIGN KEY (acquisition_id) REFERENCES person_acquisition_evidence(id) ON DELETE CASCADE
+public.privacy_notice_case.privacy_notice_case_blocked_shape CHECK (((state = 'blocked'::text) = (blocked_reason IS NOT NULL)))
+public.privacy_notice_case.privacy_notice_case_completion_shape CHECK (((state = ANY (ARRAY['completed'::text, 'not_required'::text])) = (completed_at IS NOT NULL)))
+public.privacy_notice_case.privacy_notice_case_owner_fkey FOREIGN KEY (owner_user_id) REFERENCES app_user(id) ON DELETE SET NULL
+public.privacy_notice_case.privacy_notice_case_person_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
+public.privacy_notice_case.privacy_notice_case_pkey PRIMARY KEY (id)
+public.privacy_notice_case.privacy_notice_case_rule CHECK ((rule = ANY (ARRAY['art13'::text, 'art14'::text])))
+public.privacy_notice_case.privacy_notice_case_state CHECK ((state = ANY (ARRAY['open'::text, 'queued'::text, 'completed'::text, 'blocked'::text, 'not_required'::text])))
+public.privacy_notice_case.rule text NOT NULL gen=- def=-
+public.privacy_notice_case.state text NOT NULL gen=- def='open'::text
+public.privacy_notice_case.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.privacy_notice_case_acquisition CREATE UNIQUE INDEX privacy_notice_case_acquisition ON public.privacy_notice_case USING btree (acquisition_id)
+public.privacy_notice_case_due CREATE INDEX privacy_notice_case_due ON public.privacy_notice_case USING btree (due_at, id) WHERE (state = ANY (ARRAY['open'::text, 'queued'::text]))
+public.privacy_notice_case_pkey CREATE UNIQUE INDEX privacy_notice_case_pkey ON public.privacy_notice_case USING btree (id)
 public.product acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.product.active boolean NOT NULL gen=- def=true
 public.product.archived_at timestamp with time zone gen=- def=-
@@ -5521,6 +5635,7 @@ public.webhook_subscription.webhook_subscription_state_check CHECK ((state = ANY
 public.webhook_subscription.webhook_subscription_target_url_check CHECK ((target_url ~ '^https://'::text))
 public.webhook_subscription_pkey CREATE UNIQUE INDEX webhook_subscription_pkey ON public.webhook_subscription USING btree (id)
 public.weekly_plan acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.weekly_plan.capacity_note text gen=- def=-
 public.weekly_plan.captured_by text NOT NULL gen=- def=-
 public.weekly_plan.commitments_due integer gen=- def=-
 public.weekly_plan.commitments_kept integer gen=- def=-
@@ -5528,14 +5643,17 @@ public.weekly_plan.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.weekly_plan.id uuid NOT NULL gen=- def=uuidv7()
 public.weekly_plan.local_week_start date NOT NULL gen=- def=-
 public.weekly_plan.owner_id uuid NOT NULL gen=- def=-
+public.weekly_plan.risks text gen=- def=-
 public.weekly_plan.status text NOT NULL gen=- def='open'::text
 public.weekly_plan.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.weekly_plan.uq_weekly_plan_owner_week UNIQUE (owner_id, local_week_start)
 public.weekly_plan.version bigint NOT NULL gen=- def=1
+public.weekly_plan.weekly_plan_capacity_note_bounded CHECK (((capacity_note IS NULL) OR (length(capacity_note) <= 2000)))
 public.weekly_plan.weekly_plan_outcome_is_a_tally CHECK (((commitments_due IS NULL) OR ((commitments_due >= 0) AND (commitments_kept >= 0) AND (commitments_kept <= commitments_due))))
 public.weekly_plan.weekly_plan_outcome_matches_status CHECK ((((status = 'closed'::text) = (commitments_due IS NOT NULL)) AND ((commitments_due IS NULL) = (commitments_kept IS NULL))))
 public.weekly_plan.weekly_plan_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.weekly_plan.weekly_plan_pkey PRIMARY KEY (id)
+public.weekly_plan.weekly_plan_risks_bounded CHECK (((risks IS NULL) OR (length(risks) <= 2000)))
 public.weekly_plan.weekly_plan_status_check CHECK ((status = ANY (ARRAY['open'::text, 'closed'::text])))
 public.weekly_plan_commitment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.weekly_plan_commitment.captured_by text NOT NULL gen=- def=-
@@ -5690,6 +5808,40 @@ public.weekly_review_outlook.weighted_minor bigint gen=- def=-
 public.weekly_review_outlook.won_minor bigint gen=- def=-
 public.weekly_review_outlook_pkey CREATE UNIQUE INDEX weekly_review_outlook_pkey ON public.weekly_review_outlook USING btree (id)
 public.weekly_review_pkey CREATE UNIQUE INDEX weekly_review_pkey ON public.weekly_review USING btree (id)
+public.weekly_review_scorecard acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.weekly_review_scorecard.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.weekly_review_scorecard.deal_advances integer gen=- def=-
+public.weekly_review_scorecard.deal_close_date_sound integer gen=- def=-
+public.weekly_review_scorecard.deal_forecast_down integer gen=- def=-
+public.weekly_review_scorecard.deal_forecast_up integer gen=- def=-
+public.weekly_review_scorecard.deal_median_days_in_stage integer gen=- def=-
+public.weekly_review_scorecard.deal_multi_threaded integer gen=- def=-
+public.weekly_review_scorecard.deal_open integer gen=- def=-
+public.weekly_review_scorecard.deal_regressions integer gen=- def=-
+public.weekly_review_scorecard.deal_with_next_step integer gen=- def=-
+public.weekly_review_scorecard.has_deal_block boolean NOT NULL gen=- def=-
+public.weekly_review_scorecard.has_lead_block boolean NOT NULL gen=- def=-
+public.weekly_review_scorecard.id uuid NOT NULL gen=- def=uuidv7()
+public.weekly_review_scorecard.lead_advanced integer gen=- def=-
+public.weekly_review_scorecard.lead_answered_in_target integer gen=- def=-
+public.weekly_review_scorecard.lead_breached integer gen=- def=-
+public.weekly_review_scorecard.lead_disqualified integer gen=- def=-
+public.weekly_review_scorecard.lead_promoted integer gen=- def=-
+public.weekly_review_scorecard.meetings_booked integer gen=- def=-
+public.weekly_review_scorecard.meetings_held integer gen=- def=-
+public.weekly_review_scorecard.meetings_no_show integer gen=- def=-
+public.weekly_review_scorecard.meetings_partial_history integer gen=- def=-
+public.weekly_review_scorecard.weekly_review_id uuid NOT NULL gen=- def=-
+public.weekly_review_scorecard.weekly_review_scorecard_counts_nonnegative CHECK (((COALESCE(lead_advanced, 0) >= 0) AND (COALESCE(lead_disqualified, 0) >= 0) AND (COALESCE(lead_promoted, 0) >= 0) AND (COALESCE(lead_answered_in_target, 0) >= 0) AND (COALESCE(lead_breached, 0) >= 0) AND (COALESCE(meetings_booked, 0) >= 0) AND (COALESCE(meetings_held, 0) >= 0) AND (COALESCE(meetings_no_show, 0) >= 0) AND (COALESCE(meetings_partial_history, 0) >= 0) AND (COALESCE(deal_advances, 0) >= 0) AND (COALESCE(deal_regressions, 0) >= 0) AND (COALESCE(deal_median_days_in_stage, 0) >= 0) AND (COALESCE(deal_with_next_step, 0) >= 0) AND (COALESCE(deal_open, 0) >= 0) AND (COALESCE(deal_multi_threaded, 0) >= 0) AND (COALESCE(deal_close_date_sound, 0) >= 0) AND (COALESCE(deal_forecast_up, 0) >= 0) AND (COALESCE(deal_forecast_down, 0) >= 0)))
+public.weekly_review_scorecard.weekly_review_scorecard_deal_block_shape CHECK ((((NOT (has_deal_block IS DISTINCT FROM true)) = (deal_advances IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_regressions IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_with_next_step IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_open IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_multi_threaded IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_close_date_sound IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_forecast_up IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_forecast_down IS NOT NULL))))
+public.weekly_review_scorecard.weekly_review_scorecard_lead_block_shape CHECK ((((NOT (has_lead_block IS DISTINCT FROM true)) = (lead_advanced IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (lead_disqualified IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (lead_promoted IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (lead_answered_in_target IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (lead_breached IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (meetings_booked IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (meetings_held IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (meetings_no_show IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (meetings_partial_history IS NOT NULL))))
+public.weekly_review_scorecard.weekly_review_scorecard_median_needs_block CHECK (((deal_median_days_in_stage IS NULL) OR (NOT (has_deal_block IS DISTINCT FROM true))))
+public.weekly_review_scorecard.weekly_review_scorecard_one_per_review UNIQUE (weekly_review_id)
+public.weekly_review_scorecard.weekly_review_scorecard_pkey PRIMARY KEY (id)
+public.weekly_review_scorecard.weekly_review_scorecard_review_fkey FOREIGN KEY (weekly_review_id) REFERENCES weekly_review(id) ON DELETE CASCADE
+public.weekly_review_scorecard.weekly_review_scorecard_subsets_fit CHECK (((deal_open IS NULL) OR ((deal_with_next_step <= deal_open) AND (deal_multi_threaded <= deal_open) AND (deal_close_date_sound <= deal_open))))
+public.weekly_review_scorecard_one_per_review CREATE UNIQUE INDEX weekly_review_scorecard_one_per_review ON public.weekly_review_scorecard USING btree (weekly_review_id)
+public.weekly_review_scorecard_pkey CREATE UNIQUE INDEX weekly_review_scorecard_pkey ON public.weekly_review_scorecard USING btree (id)
 public.workflow_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.workflow_run.applied jsonb gen=- def=-
 public.workflow_run.created_at timestamp with time zone NOT NULL gen=- def=now()

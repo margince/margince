@@ -132,6 +132,7 @@ func grantPurpose(t *testing.T, c *consentEnv, purposeID string) {
 	t.Helper()
 	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
 		"purpose_id": purposeID, "new_state": "granted", "lawful_basis": "consent",
+		"wording": "Yes, you may contact me about this.",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("grant %s → %d", purposeID, status)
 	}

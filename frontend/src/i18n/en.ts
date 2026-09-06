@@ -837,6 +837,13 @@ export const en = {
   "org.filterSizeBandAll": "Any size",
   "person.consent": "Consent",
   "consent.grant": "Grant",
+  // Submitted as the proof row's wording when an operator records a grant
+  // here. It does NOT quote a screen the subject read — this door has none —
+  // so it says what actually happened: a named operator attested to a consent
+  // obtained away from the product. A canned subject-facing sentence would be
+  // the fabricated proof this rule exists to remove.
+  "consent.operatorWording":
+    "Recorded in the CRM by a member of staff, who attested that this person gave their consent for {label} outside the product. No wording was shown to them here.",
   "consent.withdraw": "Withdraw",
   "consent.doiBySubject":
     "This purpose is confirmed by the person themselves, through a link mailed to their own address. Use \u201cAsk them to confirm their details\u201d below.",
@@ -2584,6 +2591,19 @@ export const en = {
   // the work that waits on a person, and this is a view of that same work.
   "home.panel.weekly": "Last week",
   "home.weekly.weekOf": "Week of {day}",
+  // What the week TAUGHT, as against what it was. Every learning shows what it
+  // rests on, because a claim about cause is one the reader cannot check
+  // against anything else on the page.
+  "home.weekly.learnings.title": "What this week taught",
+  "home.weekly.learnings.worked": "What worked",
+  "home.weekly.learnings.didNotWork": "What did not",
+  "home.weekly.learnings.pattern": "A pattern",
+  "home.weekly.learnings.experiment": "Worth trying",
+  // Two empty states, never one: a week nobody read and a week that held no
+  // lesson are different facts, and only one of them is about the week.
+  "home.weekly.learnings.notRun": "Nobody has read this week yet.",
+  "home.weekly.learnings.insufficient":
+    "Not enough happened this week to draw a lesson from.",
   // How WELL the week went, beside what happened in it. Each block is drawn only
   // when the server sent it: a rep who carried no leads did not score zero on
   // the funnel, and an empty row would read as failure at something nobody
@@ -2741,6 +2761,25 @@ export const en = {
   "plan.state.missed": "Missed",
   "plan.state.dropped": "Dropped",
   "plan.help.label": "What do you need from your lead?",
+  // What the week is up against, beside what it is for. The two prose fields
+  // draw three states, not two: unwritten, "nothing to name", and text. A lead
+  // who cannot tell the first two apart reads an unconsidered week as a safe one.
+  "plan.contract.title": "What this week is up against",
+  "plan.contract.risks": "What could get in the way",
+  "plan.contract.risksHint": "What you expect to go wrong, in your own words",
+  "plan.contract.capacityNote": "Room you have",
+  "plan.contract.capacityNoteHint":
+    "Anything the calendar does not know — leave, travel, a launch",
+  "plan.contract.unwritten": "Not written yet",
+  "plan.contract.nothingToName": "Nothing to name",
+  "plan.contract.edit": "Edit",
+  "plan.contract.save": "Save",
+  "plan.contract.cancel": "Cancel",
+  "plan.contract.capacityLine":
+    "Next week already holds {meetings} meetings and {tasks} tasks.",
+  "plan.contract.crowded": "Next week is already full",
+  "plan.contract.crowdedBody":
+    "{committed} things are already booked and you have written {commitments} commitments. Something will have to give.",
   "plan.help.ask": "Ask for help",
   "plan.help.edit": "Edit request",
   "plan.help.send": "Send",
@@ -3767,6 +3806,19 @@ export const en = {
     "Your week is measured, without a summary — the numbers are all there.",
   "agent.activity.weeklyReview.failed":
     "No summary of your week this time. The numbers are still the week's own.",
+  // What the week TAUGHT, which is a different promise from the summary above:
+  // a learning is advice, so the failed and degraded lines say the numbers
+  // still stand rather than implying the week went unmeasured.
+  "agent.activity.weeklyLearnings.queued":
+    "Your week is queued to be read for lessons.",
+  "agent.activity.weeklyLearnings.running": "Reading your week for lessons…",
+  "agent.activity.weeklyLearnings.stalled":
+    "Reading your week for lessons is taking longer than expected.",
+  "agent.activity.weeklyLearnings.done": "Your week has its lessons.",
+  "agent.activity.weeklyLearnings.degraded":
+    "Your week is measured, without lessons — the numbers are all there.",
+  "agent.activity.weeklyLearnings.failed":
+    "No lessons from your week this time. The numbers are still the week's own.",
   "agent.activity.morningBrief.queued": "Your morning brief is queued.",
   "agent.activity.morningBrief.running":
     "I'm putting your morning brief together.",
@@ -4021,7 +4073,7 @@ export const en = {
   "settings.jobs": "Background jobs",
   "settings.jobsSub": "What the queue is holding, and whose work failed.",
   "jobs.adminOnly":
-    "Only an admin can see background-job health. It reports work across the whole installation, so it is not shown more widely.",
+    "Seeing background-job health needs permission your seat does not hold. It reports work across the whole installation, so it is not open to everyone.",
   "jobs.empty":
     "Nothing in the background queue — no work waiting, running, retrying or dead.",
   "jobs.workspaceKinds": "This organization",
@@ -4074,7 +4126,7 @@ export const en = {
   "audit.noHumanAuthority": "No human authority recorded",
   "settings.auditSub": "every action, attributed — human, agent, or connector",
   "settings.auditAdminOnly":
-    "Only an admin can read the full trail. It records every actor and every record they touched, so it is not shown more widely.",
+    "Reading the full trail needs permission your seat does not hold. It records every actor and every record they touched, so it is not open to everyone.",
   "settings.auditFilters": "Filters",
   "settings.auditEntries": "Audit log",
   "settings.auditTrailLabel": "Recorded actions",
@@ -4094,7 +4146,7 @@ export const en = {
   "privacy.addPurpose": "Add purpose",
   "privacy.purposesRegistry": "Registered purposes",
   "privacy.purposesReadOnly":
-    "Read-only view — only an admin or ops can add a purpose.",
+    "Read-only view — adding a purpose needs permission your seat does not hold.",
   "privacy.purposeKey": "Key",
   "privacy.purposeLabel": "Label",
   "privacy.purposeDoi": "Requires double opt-in",
@@ -4103,7 +4155,7 @@ export const en = {
     "A purpose cannot be renamed or removed once created — the catalogue is append-only. Choose the key carefully.",
   "privacy.facetAll": "All",
   "privacy.inboxAdminOnly":
-    "Only an admin can see subject requests. They name the people who asked, so the queue is not shown more widely.",
+    "Seeing subject requests needs permission your seat does not hold. They name the people who asked, so the queue is not open to everyone.",
   "privacy.overdue": "Overdue",
   "privacy.closed":
     "Closed — a closed request never reopens. A new concern is a new request.",
@@ -6147,6 +6199,68 @@ export const en = {
   // are: the mailbox and the network a PERSON connected, against the outside
   // systems the INSTALLATION is wired to. One row carried both before, which
   // is why it had to be ungated to keep a rep's own mailbox reachable.
+  "settings.home": "Settings home",
+  "settings.home.yours": "Your settings",
+  "settings.home.access": "Your access",
+  "settings.boundary.deniedTitle": "This settings page is not yours to open",
+  "settings.boundary.deniedBody":
+    "The address in the bar is a real page \u2014 your seat does not reach it. It is still there to copy if you need to ask somebody who does.",
+  "settings.boundary.unknownTitle": "No settings page has this address",
+  "settings.boundary.unknownBody":
+    "The link may be from an older version, or mistyped. Settings home lists every page your seat can open.",
+  "settings.boundary.back": "Settings home",
+  "settings.page.account.sub": "How you appear and sign in \u2014 yours alone.",
+  "settings.page.voice.sub": "The words drafts use when they write as you.",
+  "settings.page.agents.sub":
+    "What an agent may do unattended, and which clients hold your credentials.",
+  "settings.page.connections.sub":
+    "The mailboxes and addresses this seat reads from.",
+  "settings.page.capture-activity.sub":
+    "What capture did with your mail, and why.",
+  "settings.page.company.sub":
+    "The name, currency and context every record is read against.",
+  "settings.page.authentication.sub":
+    "How people sign in to this installation, and which apps may act for it.",
+  "settings.page.members.sub":
+    "Everyone with a seat, and what each one may reach.",
+  "settings.page.teams.sub":
+    "Who works together, which is what row scope reads.",
+  "settings.page.seats.sub":
+    "How many seats are in use against what this installation is entitled to.",
+  "settings.page.pipelines.sub":
+    "The stages a deal moves through, for the whole company.",
+  "settings.page.leads.sub":
+    "The words this company uses to describe where a lead came from.",
+  "settings.page.fields.sub":
+    "The columns this company keeps beyond the ones every installation has.",
+  "settings.page.tags.sub":
+    "The shared vocabulary \u2014 renaming one here renames it on every record.",
+  "settings.page.products.sub":
+    "What this company sells, and the templates an offer starts from.",
+  "settings.page.capture.sub":
+    "Which mail becomes a record, and which is left alone.",
+  "settings.page.integrations.sub":
+    "The systems this installation exchanges records with.",
+  "settings.page.knowledge.sub":
+    "The documents drafts and answers are allowed to read from.",
+  "settings.page.import.sub":
+    "Bringing records in from a file, one run at a time.",
+  "settings.page.models.sub":
+    "Which vendor answers each kind of work, and whether it can.",
+  "settings.page.automations.sub":
+    "The rules that run without anyone pressing anything.",
+  "settings.page.usage.sub":
+    "What the AI runtime spent this month, against its ceiling.",
+  "settings.page.model-calls.sub":
+    "What each call asked a model, and how it answered.",
+  "settings.page.privacy.sub":
+    "Subject requests, the purposes consent is recorded against, and how long records are kept.",
+  "settings.page.audit.sub": "Every actor and every record they touched.",
+  "settings.page.system-health.sub":
+    "Whether the work behind the screens is keeping up.",
+  "settings.page.extensions.sub":
+    "The units this build composed, and which roles reach them.",
+  "settings.page.reset.sub": "Emptying this installation. There is no undo.",
   "settings.tab.company": "Company profile",
   "settings.tab.authentication": "Sign-in & apps",
   "settings.tab.members": "Members",
@@ -6389,6 +6503,8 @@ export const en = {
   "license.refused.title": "This installation's license was refused",
   "license.refused.body":
     "The token in the deployment was presented and rejected. Everything keeps working, uncapped, until it is replaced — check the token and the installation's clock.",
+  "license.seats.capacityOnly":
+    "How many full seats this installation is using. What it is entitled to is not yours to see.",
   "license.seats.title": "Seats",
   "license.seats.used": "Seats in use",
   "license.seats.granted": "Seats granted",
@@ -6614,7 +6730,8 @@ export const en = {
   "extAccess.title": "Extensions & access",
   "extAccess.sub":
     "What each composed extension unit brought into this installation, and which role may use it. Admin-only.",
-  "extAccess.adminOnly": "Extension access is available to admins only.",
+  "extAccess.adminOnly":
+    "This page needs permission to read the installation's extensions and its roles. Your seat holds one or neither.",
   "extAccess.readOnly":
     "Your seat reads this page. Changing a grant needs a full seat.",
   "extAccess.empty": "No extension units are composed into this installation.",
@@ -8696,6 +8813,20 @@ export const en = {
   "worklist.verb.complete": "Open",
   "worklist.verb.snooze": "Open",
   "worklist.verb.acknowledge": "Got it",
+  "worklist.verb.meetingHeld": "It happened",
+  "worklist.verb.meetingNoShow": "They didn't come",
+  "worklist.verb.meetingCanceled": "It was called off",
+  "worklist.verb.meetingOutcomeRecorded": "Recorded how the meeting went.",
+  "worklist.verb.meetingOutcomeFailed": "That could not be recorded.",
+  "worklist.verb.retry": "Run it again",
+  "worklist.verb.retryStarted": "Running the rule again.",
+  "worklist.verb.retryFailed": "That could not be run again.",
+  "worklist.verb.retryRefusedNotFailed":
+    "Nothing to run again \u2014 this firing was stopped on purpose, not by an error.",
+  "worklist.verb.retryRefusedRepeats":
+    "This rule has not been cleared to run twice, so running it again could repeat what it already did.",
+  "worklist.verb.retryRefusedEventGone":
+    "The event behind this firing is gone, so it cannot be repeated. A scheduled rule checks again on its own.",
   "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
   "worklist.verb.completeFailed": "That task could not be completed.",
   "worklist.verb.pin": "Pin",

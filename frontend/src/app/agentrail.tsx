@@ -273,7 +273,8 @@ function useRecentCalls(): Readonly<{
   allowed: boolean;
   calls: readonly AiCall[];
 }> {
-  const allowed = useCan("automation", "update");
+  // GET /ai/calls asks for ai_diagnostics:read (ai/callread.go).
+  const allowed = useCan("ai_diagnostics", "read");
   const recent = useQuery({
     queryKey: ["ai-calls", "agentrail-recent"],
     enabled: allowed,
@@ -318,7 +319,8 @@ function useAiSpend(): Readonly<{
   daily: readonly number[];
 }> {
   const admin = useHoldsAdminRole();
-  const granted = useCan("automation", "update");
+  // GET /ai/usage asks for ai_diagnostics:read (ai/usage.go).
+  const granted = useCan("ai_diagnostics", "read");
   const allowed = admin && granted;
   const usage = useQuery({
     queryKey: ["ai-usage", "agentrail-month"],

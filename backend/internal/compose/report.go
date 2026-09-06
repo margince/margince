@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"time"
 
@@ -204,6 +205,20 @@ type reportSpec struct {
 	// gate before the filter binds, so a report cannot be used to learn
 	// whether a record the caller may not open exists (reportthreshold.go).
 	filterScopes map[string]string
+	// scopeVia names each dimension or filter that reads an ATTRIBUTE of a
+	// joined record, mapped to the column holding that record's id.
+	//
+	// referenceScopes renders `ref.id = <column>`, so it only reaches a column
+	// that IS an id. A dimension reading a joined attribute — a company's size
+	// band, its industry — is not an id and matches no entry, so it carried no
+	// row scope at all: a seat excluded from an account could still group by
+	// that account's size and read its deal count off the row. Naming the id
+	// column here activates the SAME clause the id itself would have.
+	//
+	// It is keyed by the vocabulary NAME rather than the expression because the
+	// expression is the joined attribute, which is exactly the string that
+	// matches nothing.
+	scopeVia map[string]string
 	// orderBy replaces the dimension-position ordering when a report has a
 	// reading order of its own — overdue work first — spelled over the
 	// aggregate expressions, never the caller's aliases.
@@ -281,10 +296,19 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 		return reportOutcome{}, err
 	}
 
-	req.Filters = withThresholdDefaults(spec, req.Filters)
 	// What the caller asked for by name, kept before the defaults land: the
 	// grant check below refuses a field the caller NAMED and must not start
 	// refusing one the spec supplied for them.
+	//
+	// A FILTER IS A READ, which is why its keys are collected here and not
+	// after. Grouping by a granted field and filtering on one ask the same
+	// question two ways: "how many deals at companies of 1001-5000" answers
+	// whether such a company exists as surely as grouping by size does, and the
+	// count is the answer. Only the group-by and the measures were checked, so a
+	// seat without the company grant could not GROUP by a company attribute and
+	// could filter by one freely.
+	filtered := slices.Sorted(maps.Keys(req.Filters))
+	req.Filters = withThresholdDefaults(spec, req.Filters)
 	asked := req.GroupBy
 	// The default group-by becomes the REQUEST's. Everything downstream that
 	// asks what this query groups by — the plan echo, the derivation handle,
@@ -302,7 +326,8 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 	}
 	// What the caller asked for by name is refused by name; what they did not
 	// ask for was narrowed above.
-	if err := requireVocabularyGrants(ctx, spec, slices.Concat(asked, aggregateFields(req.Aggregates))); err != nil {
+	if err := requireVocabularyGrants(ctx, spec,
+		slices.Concat(asked, filtered, aggregateFields(req.Aggregates))); err != nil {
 		return reportOutcome{}, err
 	}
 

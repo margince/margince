@@ -42,11 +42,11 @@ type SendAuthority interface {
 	// a rep whose only mailbox is Microsoft was refused by a pre-flight asking
 	// about a Google connection they never made.
 	//
-	// The answer is one provider and it is used TWICE — the delivery's provider
-	// and the activity's source_system — which is why this returns rather than
-	// being asked twice. The provider files its own copy of every sent message
-	// back into the mailbox, and that copy is only recognised as this activity
-	// when the natural key it carries is the one the send wrote.
+	// The answer names the delivery: which mailbox this message actually leaves
+	// through. It is no longer also the activity's source_system — the timeline
+	// row carries the transport-independent mail identity — so the provider's
+	// own copy of the sent message folds onto that row whichever connector
+	// reads it back.
 	SendableMailProvider(ctx context.Context) (string, error)
 }
 

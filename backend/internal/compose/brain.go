@@ -120,6 +120,14 @@ type ModelPath struct {
 	// counts and the same lines, and the screen says the sentence is missing
 	// rather than pretending the week was unremarkable.
 	WeeklyReview completer
+	// WeeklyLearnings says what a week TAUGHT, which is not what the sentence
+	// above it says. A narrative describes a week the reader can already see,
+	// so losing the lane costs a remark; a learning is a claim about cause the
+	// reader cannot check, so losing this one costs advice they would have
+	// acted on. That is why the two are separate lanes and why this one refuses
+	// where the other shrugs: every learning cites rows from the week, and a
+	// reply citing anything else is refused whole.
+	WeeklyLearnings completer
 	// TranscriptPropose is the S-E04.3 lane that reads a meeting transcript
 	// for the next steps it states. Separate from SignalExtract because the
 	// citable unit differs: that site cites the message an event was stated
@@ -293,6 +301,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		CaptureConfidentialityVerdict: brain(ai.TaskCaptureConfidentialityVerdict),
 		SignalExtract:                 brain(ai.TaskSignalExtract),
 		WeeklyReview:                  brain(ai.TaskWeeklyReview),
+		WeeklyLearnings:               brain(ai.TaskWeeklyLearnings),
 		TranscriptPropose:             brain(ai.TaskTranscriptPropose),
 		DocumentExtract:               brain(ai.TaskDocumentExtract),
 		Enrich:                        brain(ai.TaskEnrich),

@@ -131,6 +131,7 @@ func TestLeadScopedConsentRecordsProofAndReadsBack(t *testing.T) {
 
 	state, err := e.store.Record(e.ctx, RecordInput{
 		LeadID: e.lead, PurposeID: e.newsletter, NewState: "granted",
+		PolicyText: &grantWording,
 	})
 	if err != nil {
 		t.Fatalf("recording a lead-scoped grant: %v", err)
@@ -154,6 +155,7 @@ func TestLeadScopedConsentRecordsProofAndReadsBack(t *testing.T) {
 	// Re-asserting the same state appends no second proof row.
 	if _, err := e.store.Record(e.ctx, RecordInput{
 		LeadID: e.lead, PurposeID: e.newsletter, NewState: "granted",
+		PolicyText: &grantWording,
 	}); err != nil {
 		t.Fatalf("re-asserting the grant: %v", err)
 	}
@@ -189,6 +191,7 @@ func TestLeadScopedDOIGrantIsRefused(t *testing.T) {
 	e := setupLeadConsent(t)
 	_, err := e.store.Record(e.ctx, RecordInput{
 		LeadID: e.lead, PurposeID: e.doiNews, NewState: "granted",
+		PolicyText: &grantWording,
 	})
 	var invalid *ValidationError
 	if !errors.As(err, &invalid) {
@@ -206,6 +209,7 @@ func TestOutboundGateAcceptsTheLeadArm(t *testing.T) {
 	}
 	if _, err := e.store.Record(e.ctx, RecordInput{
 		LeadID: e.lead, PurposeID: e.newsletter, NewState: "granted",
+		PolicyText: &grantWording,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -261,6 +265,7 @@ func TestTheEngineAnswersAboutALeadRatherThanShrugging(t *testing.T) {
 
 	if _, err := e.store.Record(e.ctx, RecordInput{
 		LeadID: e.lead, PurposeID: e.newsletter, NewState: "granted",
+		PolicyText: &grantWording,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -294,6 +299,7 @@ func TestTheEngineAndTheLegacyGateAgreeAboutALead(t *testing.T) {
 		if step.grant {
 			if _, err := e.store.Record(e.ctx, RecordInput{
 				LeadID: e.lead, PurposeID: e.newsletter, NewState: "granted",
+				PolicyText: &grantWording,
 			}); err != nil {
 				t.Fatal(err)
 			}
@@ -338,6 +344,9 @@ func TestAWithdrawnLeadIsNotReportedAsNeverGranted(t *testing.T) {
 	for _, state := range []string{"granted", "withdrawn"} {
 		if _, err := e.store.Record(e.ctx, RecordInput{
 			LeadID: e.lead, PurposeID: e.newsletter, NewState: state,
+			// Both arms of the loop carry it: the grant needs it, and the
+			// withdrawal ignores it, so one literal covers the pair.
+			PolicyText: &grantWording,
 		}); err != nil {
 			t.Fatalf("recording %s: %v", state, err)
 		}

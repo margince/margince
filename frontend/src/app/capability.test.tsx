@@ -13,7 +13,6 @@ import {
   useCanUpsert,
   useCanWrite,
   useCanWriteRecord,
-  useHoldsConsentAdminRole,
   useHoldsOperatorSeat,
 } from "./capability";
 import { meFixture } from "./mefixture";
@@ -325,23 +324,20 @@ describe("useHoldsOperatorSeat — the Admin settings section's gate", () => {
   // of question that fails silently when it drifts — the section would simply
   // appear for a rep, and no other assertion in the app would move.
   //
-  // Asked together with the consent predicate on purpose: that one now READS this
-  // one, and the two have to keep answering the same set. Their NAMES stay apart
-  // because their authorities do, so nothing but a case like this would notice
-  // the delegation quietly stopping.
+  // The consent predicate that used to be asked alongside this one is gone: it
+  // was interim, waiting for `consent_config` to reach the shipped vocabulary,
+  // and the purposes card asks `useCan("consent_config", "create")` now.
   async function operator(): Promise<boolean> {
     const { result } = renderHook(
       () => ({
         me: useMe(),
         seat: useHoldsOperatorSeat(),
-        consentAdmin: useHoldsConsentAdminRole(),
       }),
       { wrapper },
     );
     await waitFor(() => {
       expect(result.current.me.isPending).toBe(false);
     });
-    expect(result.current.consentAdmin).toBe(result.current.seat);
     return result.current.seat;
   }
 

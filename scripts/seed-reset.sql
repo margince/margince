@@ -45,6 +45,7 @@ DECLARE
     'channel_provider',
     'currency_minor_digits',
     'embed_store_binding',
+    'consent_text_version',
     'event_outbox',
     'lead_disqualify_reason',
     'lead_source',
