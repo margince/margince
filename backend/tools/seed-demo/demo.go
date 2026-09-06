@@ -289,6 +289,11 @@ type demoConsent struct {
 	PersonIndex int    `json:"person_index"`
 	Purpose     string `json:"purpose"`
 	State       string `json:"state"`
+	// The exact sentence this person was shown, stored verbatim on the proof
+	// row. Optional, and only a grant uses it: a dataset that leaves it out
+	// gets a stand-in that says it is seeded rather than one that impersonates
+	// consent copy. See grantWording.
+	Wording string `json:"wording"`
 }
 
 // demoPartner is one channel partner: a company the installation SELLS WITH

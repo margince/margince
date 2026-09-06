@@ -90,7 +90,8 @@ export const PickAFile: Story = {
 /**
  * The deal carries no shareable file yet. The picker says so in its own face
  * and disables itself — an empty list a reader can open reads as a loading
- * state that never finished.
+ * state that never finished — and "Upload a file" beside it is the way out of
+ * the state, since a room shares the deal's files and holds none of its own.
  */
 export const NoFilesToShare: Story = {
   render: addDocument({
