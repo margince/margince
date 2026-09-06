@@ -2371,6 +2371,10 @@ func (stubs) StartWeeklyPlan(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "StartWeeklyPlan")
 }
 
+func (stubs) SetWeeklyPlanContract(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SetWeeklyPlanContract")
+}
+
 func (stubs) GetTeammateWeeklyPlan(w nethttp.ResponseWriter, r *nethttp.Request, ownerId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "GetTeammateWeeklyPlan")
 }

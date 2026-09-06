@@ -190,6 +190,13 @@ describe("the nav rows a reader actually clicks", () => {
     // A level that rendered nothing would pass every claim below it.
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) {
+      // Settings home is a row and not a page: it is the address with NO page
+      // segment, so it has no entry in PAGE_BY_LABEL and its href is the bare
+      // `#/settings`. Skipped by its HREF rather than its label, so a page that
+      // ever went missing from the map still fails below.
+      if (row.href === "#/settings") {
+        continue;
+      }
       const page = PAGE_BY_LABEL.get(row.label);
       if (!page) {
         throw new Error(`the level published a row for no page: ${row.label}`);

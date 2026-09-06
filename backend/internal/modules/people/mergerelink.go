@@ -122,10 +122,8 @@ func relinkPersonReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	// by an erasure of the survivor, so the evidence would outlive whichever
 	// request came second. Every satellite in this function moves for the same
 	// reason.
-	if _, err := tx.Exec(ctx, `
-		UPDATE person_acquisition_evidence SET person_id = $2
-		WHERE person_id = $1`, sourceID, targetID); err != nil {
-		return counts, fmt.Errorf("relink acquisition evidence: %w", err)
+	if err := relinkAcquisitionAndDuty(ctx, tx, sourceID, targetID); err != nil {
+		return counts, err
 	}
 	// The promotion outcome pointer follows the survivor so a
 	// re-promote 409 names a live person.
@@ -372,6 +370,29 @@ func relinkParticipantRows(ctx context.Context, tx pgx.Tx, sourceID, targetID id
 		`UPDATE activity_participant SET person_id = $2 WHERE person_id = $1`,
 		sourceID, targetID); err != nil {
 		return fmt.Errorf("repoint the participant rows: %w", err)
+	}
+	return nil
+}
+
+// relinkAcquisitionAndDuty moves why the contact exists, and what that obliged,
+// onto the survivor.
+//
+// One function because they are one fact over two tables: the evidence says how
+// the contact arrived and the case says what the installation owes for it, and
+// a case left on the retired record is a disclosure still owed that the
+// survivor's queue can no longer see. In this file because the lifecycle census
+// (gates/satellite_lifecycle_test.go) reads this FILE's SQL literals to prove
+// every satellite joins the merge path.
+func relinkAcquisitionAndDuty(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.PersonID) error {
+	if _, err := tx.Exec(ctx, `
+		UPDATE person_acquisition_evidence SET person_id = $2
+		WHERE person_id = $1`, sourceID, targetID); err != nil {
+		return fmt.Errorf("relink acquisition evidence: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE privacy_notice_case SET person_id = $2, updated_at = now()
+		WHERE person_id = $1`, sourceID, targetID); err != nil {
+		return fmt.Errorf("relink notice cases: %w", err)
 	}
 	return nil
 }

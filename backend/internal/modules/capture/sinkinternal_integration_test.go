@@ -95,7 +95,7 @@ func mailSinkContext(ctx context.Context, ws ids.UUID) context.Context {
 func mailRecord(sourceID string, counterparty string, addresses ...string) connector.NormalizedRecord {
 	return connector.NormalizedRecord{
 		EntityType: "activity",
-		NaturalKey: connector.NaturalKey{SourceSystem: "imap", SourceID: sourceID},
+		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: sourceID},
 		Fields: capture.ActivityFields{
 			Kind:      "email",
 			Subject:   "Salary review for the team",

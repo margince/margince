@@ -44,7 +44,7 @@ function story(identities: Record<string, unknown>[]) {
 }
 
 const meta: Meta<typeof OwnerIdentitiesCard> = {
-  title: "Settings/Admin settings/Capture/Your other addresses",
+  title: "Settings/You/Connections/Your other addresses",
   component: OwnerIdentitiesCard,
 };
 export default meta;

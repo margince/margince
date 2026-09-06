@@ -61,7 +61,7 @@ function purposes(roles: string[], purposeList: unknown = PURPOSES) {
 }
 
 const meta: Meta<typeof ConsentPurposesCard> = {
-  title: "Settings/Admin settings/Privacy & audit/Consent purposes",
+  title: "Settings/Governance/Privacy & audit/Consent purposes",
   component: ConsentPurposesCard,
 };
 export default meta;

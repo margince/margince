@@ -16,7 +16,7 @@ import { TagVocabularyCard } from "./tagadmin";
 // anybody may extend is a list of everything anybody ever typed.
 
 const meta: Meta = {
-  title: "Settings/Admin settings/Data model/Tag vocabulary",
+  title: "Settings/Sales/Tags/Tag vocabulary",
   parameters: { layout: "padded" },
 };
 export default meta;

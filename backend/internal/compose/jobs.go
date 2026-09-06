@@ -211,6 +211,10 @@ type JobRunnerConfig struct {
 	// role with no weekly_review lane: every rep still gets the measured
 	// review, without the remark.
 	WeeklyReviewBrain completer
+	// WeeklyLearningsBrain says what a week TAUGHT. Nil is a role without the
+	// lane, and the screen then says nobody looked — which is a different
+	// answer from a week that held no lesson.
+	WeeklyLearningsBrain completer
 
 	// WeeklyMail is the retrospective's outbound channel. A zero value mails
 	// nothing, which is the posture of an installation with no operator relay

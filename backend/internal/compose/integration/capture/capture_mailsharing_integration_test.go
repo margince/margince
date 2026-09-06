@@ -39,7 +39,7 @@ func TestMailSharingOffHoldsNewMailToItsParticipants(t *testing.T) {
 		t.Helper()
 		var audience string
 		if err := e.Owner.QueryRow(context.Background(),
-			`SELECT audience FROM activity WHERE source_system = 'graph' AND source_id = $1`, sourceID).Scan(&audience); err != nil {
+			`SELECT audience FROM activity WHERE source_system = 'email' AND source_id = $1`, sourceID).Scan(&audience); err != nil {
 			t.Fatal(err)
 		}
 		return audience

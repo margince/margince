@@ -3255,7 +3255,11 @@ export interface paths {
         /**
          * Log an activity (the `log_activity` MCP verb).
          * @description Captured activities carry `source_system` + `source_id`; re-running capture with the
-         *     same pair is idempotent (no duplicate). An activity may link to >1 entity
+         *     same pair is idempotent (no duplicate). Captured and sent MAIL is keyed
+         *     `source_system: email` + the RFC822 Message-ID, one identity shared by every mail
+         *     transport, so the same message reaching two connected mailboxes is one activity —
+         *     and that reserved value is refused here (422): only a connector, or this system's
+         *     own send, may claim a mail identity. An activity may link to >1 entity
          *     (person and deal). `log_activity` is 🟢 (reversible).
          */
         post: operations["logActivity"];
@@ -12271,6 +12275,37 @@ export interface paths {
          *     a lead a second time.
          */
         put: operations["askForWeeklyPlanHelp"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/weekly-plans/current/contract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Say what could go wrong this week, and what room there is for it.
+         * @description Both fields are written together and either may be omitted to leave that half alone.
+         *     Sending an explicit `null` CLEARS a field back to unwritten, which is a different
+         *     state from an empty string: cleared means nobody has said, empty means the rep says
+         *     there is nothing to name.
+         *
+         *     Opens the week if the rep has not started one — writing your risks is starting to
+         *     plan, and a rep whose first sentence could not be saved would have to invent a
+         *     commitment before they were allowed to record a worry.
+         *
+         *     A closed week is refused with `week_closed`: its counts are already frozen into the
+         *     review, and a plan that kept accepting prose would let a rep rewrite what their lead
+         *     has read.
+         */
+        put: operations["setWeeklyPlanContract"];
         post?: never;
         delete?: never;
         options?: never;
@@ -21675,7 +21710,7 @@ export interface components {
              * @enum {string|null}
              */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
-            /** @description gmail/gcal/outlook/transcript — idempotency key part. */
+            /** @description Which system this record came from — `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. Idempotency key part. */
             source_system?: string | null;
             /** @description Provider message/event id — idempotency key part. */
             source_id?: string | null;
@@ -24949,6 +24984,42 @@ export interface components {
              */
             status: "open" | "closed";
             commitments: components["schemas"]["WeeklyPlanCommitment"][];
+            /**
+             * @description What the rep expects to get in the way this week, in their own words.
+             *
+             *     NULL and the empty string are different answers and a reader must draw them
+             *     differently: null is a rep who has written nothing, and "" is one who looked and
+             *     says there is nothing to name. Folding the two would report an unconsidered week
+             *     as a safe one.
+             */
+            risks?: string | null;
+            /**
+             * @description What the rep says about the room they have — "two days at the conference" — which
+             *     is the half of capacity no query can know. It stands beside `capacity`, which is
+             *     counted, and never replaces it.
+             *
+             *     Null and empty carry the same distinction as `risks`.
+             */
+            capacity_note?: string | null;
+            /**
+             * @description What next week's calendar already holds, counted rather than authored.
+             *
+             *     ABSENT when the installation composed no calendar reader. Absent is NOT zero: a
+             *     week nobody has looked at is unknown, and drawing it as "nothing booked" would
+             *     tell a rep their week is free on the strength of a missing integration.
+             */
+            capacity?: components["schemas"]["WeeklyPlanCapacity"];
+        };
+        /** @description How much of the coming week is already spoken for. */
+        WeeklyPlanCapacity: {
+            /**
+             * @description Meetings BOOKED in next week's local window. Booked and not held: the week has not
+             *     happened, so a meeting there has no outcome yet, and counting `held` would only
+             *     find rows somebody backdated.
+             */
+            meetings: number;
+            /** @description Open tasks assigned to the rep and due inside next week's local window. */
+            tasks: number;
         };
         /** @description One thing a rep said they would do this week. */
         WeeklyPlanCommitment: {
@@ -25786,7 +25857,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "propose_roles" | "owed_verdict";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -29169,6 +29240,52 @@ export interface components {
              */
             focus_label: string;
         };
+        /** @description A week's lessons and whether anybody looked for them. */
+        WeeklyReviewLearnings: {
+            /**
+             * @description Whether a pass ran, and what it found. `not_run` and `insufficient_evidence` both
+             *     carry no items and mean different things — see the parent's description.
+             * @enum {string}
+             */
+            state: "not_run" | "insufficient_evidence" | "synthesized";
+            /**
+             * @description In the order the pass produced, because the first is the one a rep reads. At most
+             *     four: a retrospective is read in a few minutes, and a longer list is a report
+             *     nobody finishes.
+             */
+            items: components["schemas"]["WeeklyReviewLearning"][];
+        };
+        /** @description One thing the week taught, with what it was drawn from. */
+        WeeklyReviewLearning: {
+            /**
+             * @description What sort of claim this is. A closed vocabulary because the surface draws each
+             *     differently and a reader learns the four shapes.
+             * @enum {string}
+             */
+            kind: "worked" | "did_not_work" | "pattern" | "experiment";
+            /** @description One sentence, in the reader's own language. */
+            text: string;
+            /**
+             * @description The rows this claim rests on. NEVER empty: a learning is advice a reader cannot
+             *     check against anything in front of them, so one that points at nothing is refused
+             *     before it is stored rather than shown unsourced.
+             */
+            citations: components["schemas"]["WeeklyLearningCitation"][];
+        };
+        /** @description One row a learning was drawn from, by the name it carried that week. */
+        WeeklyLearningCitation: {
+            /** @enum {string} */
+            subject_type: "deal" | "commitment";
+            /**
+             * Format: uuid
+             * @description The row cited. It may no longer exist — a citation outlives the deal it names, as
+             *     the review's own frozen deal lines do — so a client resolves it or draws the label
+             *     alone rather than treating absence as an error.
+             */
+            subject_id: string;
+            /** @description What the row was CALLED when the learning was written, so a citation still reads after a rename. */
+            label: string;
+        };
         /**
          * @description One week's judgement of one rep's work, frozen with the review. Both blocks are optional
          *     and each is absent when the rep had no such work that week.
@@ -29318,6 +29435,16 @@ export interface components {
              *     days back.
              */
             prior?: components["schemas"]["WeeklyReviewPrior"];
+            /**
+             * @description What the week TAUGHT, as against what it was.
+             *
+             *     `state` is load-bearing beside `items`: `not_run` means no pass has looked at this
+             *     week — the lane may be unbound, the budget exhausted, the provider down — and
+             *     `insufficient_evidence` means a pass ran, read the week and had too little it could
+             *     ground. Both carry an empty list, and a reader that draws them the same way tells a
+             *     rep "nothing to learn" about a week nobody examined.
+             */
+            learnings?: components["schemas"]["WeeklyReviewLearnings"];
             /**
              * @description How WELL the week went, as against what happened in it — the counts beside this say
              *     forty leads arrived, this says twelve were answered inside the target.
@@ -30126,7 +30253,7 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -31185,7 +31312,7 @@ export interface components {
              */
             occurred_at?: string;
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *
@@ -50857,6 +50984,36 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    setWeeklyPlanContract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    risks?: string | null;
+                    capacity_note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description The plan as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyPlan"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

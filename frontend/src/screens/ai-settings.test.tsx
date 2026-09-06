@@ -89,6 +89,7 @@ const KEYS = {
 function backendFor(
   allow: GrantSpec,
   fail: { usage?: boolean; keys?: boolean } = {},
+  routing: unknown = ROUTING,
 ) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const req =
@@ -107,7 +108,7 @@ function backendFor(
         : jsonResponse(KEYS);
     }
     if (req.url.includes("/ai/routing")) {
-      return jsonResponse(ROUTING);
+      return jsonResponse(routing);
     }
     if (req.url.includes("/ai/health")) {
       // Its own shape: the card reads `rungs`, and a catch-all that answered
@@ -161,6 +162,26 @@ const BothStats = () => (
 );
 
 describe("the AI readings", () => {
+  // A 200 that is not the routing document is an ABSENT read, not a crash.
+  //
+  // `tiers` and `embeddings` are both required of `AiRouting`, so the generated
+  // type says they are there — but nothing validates a response, and the type is
+  // a promise only the server keeps. Reading `Object.values(undefined)` threw
+  // inside render, and a throw here does not cost the reading: the error
+  // boundary sits above the shell, so the WHOLE settings page became "this view
+  // no longer works". A server too old, a projection that lost a field and a
+  // proxy answering something else all produce this body.
+  //
+  // The keyed count still answers, because it comes from a different read that
+  // was fine — the page degrades to what it actually knows.
+  it("says nothing about vendors when the routing read answers off-contract", async () => {
+    vi.stubGlobal("fetch", backendFor(OPERATOR, {}, { profile: "eu_hosted" }));
+    render(<BothStats />);
+
+    expect(await screen.findByText("1 keyed")).toBeTruthy();
+    expect(screen.queryByText(/bound with no key/)).toBeNull();
+  });
+
   it("answers both readings", async () => {
     vi.stubGlobal("fetch", backendFor(OPERATOR));
     render(<BothStats />);

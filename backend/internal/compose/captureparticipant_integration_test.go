@@ -101,7 +101,7 @@ func captureMail(t *testing.T, e *integration.Env, owner ids.UUID, sourceID, dir
 	sink := capture.NewSink(e.DB())
 	ref, err := sink.Upsert(mailboxOwnerCtx(e, owner), connector.NormalizedRecord{
 		EntityType:   "activity",
-		NaturalKey:   connector.NaturalKey{SourceSystem: "gmail", SourceID: sourceID},
+		NaturalKey:   connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: sourceID},
 		Counterparty: connector.Counterparty{Email: counterparty, DisplayName: "Pat Counterparty"},
 		Fields: capture.ActivityFields{
 			Kind: "email", Subject: "Angebot", Body: "Anbei.", Direction: direction,

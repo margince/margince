@@ -108,7 +108,42 @@ func reviewToWire(review Review) crmcontracts.WeeklyReview {
 	if review.Scorecard != nil {
 		out.Scorecard = scorecardToWire(*review.Scorecard)
 	}
+	out.Learnings = learningsToWire(review)
 	return out
+}
+
+// learningsToWire renders what the week taught, and whether anybody looked.
+//
+// ALWAYS present, unlike the scorecard beside it: the state is the answer even
+// when the list is empty, and omitting the whole object would make "no pass has
+// run" indistinguishable from an older review that predates the lane.
+func learningsToWire(review Review) *crmcontracts.WeeklyReviewLearnings {
+	state := review.LearningsState
+	if state == "" {
+		// A review row written before this column existed. It has not been
+		// learned from, which is exactly what not_run says.
+		state = LearningsNotRun
+	}
+	items := make([]crmcontracts.WeeklyReviewLearning, 0, len(review.Learnings))
+	for _, item := range review.Learnings {
+		cites := make([]crmcontracts.WeeklyLearningCitation, 0, len(item.Citations))
+		for _, c := range item.Citations {
+			cites = append(cites, crmcontracts.WeeklyLearningCitation{
+				SubjectType: crmcontracts.WeeklyLearningCitationSubjectType(c.SubjectType),
+				SubjectId:   openapi_types.UUID(c.SubjectID),
+				Label:       c.Label,
+			})
+		}
+		items = append(items, crmcontracts.WeeklyReviewLearning{
+			Kind:      crmcontracts.WeeklyReviewLearningKind(item.Kind),
+			Text:      item.Text,
+			Citations: cites,
+		})
+	}
+	return &crmcontracts.WeeklyReviewLearnings{
+		State: crmcontracts.WeeklyReviewLearningsState(state),
+		Items: items,
+	}
 }
 
 // scorecardToWire renders the week's judgement.

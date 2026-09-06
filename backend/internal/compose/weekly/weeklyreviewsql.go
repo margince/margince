@@ -80,7 +80,8 @@ const reviewSelect = `
 	       meetings_held, meetings_with_next_step,
 	       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor,
 	       base_currency, prior_review_id,
-	       coalesce(narrative, ''), narrated_at
+	       coalesce(narrative, ''), narrated_at,
+	       learnings_state
 	  FROM weekly_review`
 
 // scanReview reads one review row and its frozen deal lines.
@@ -99,7 +100,7 @@ func scanReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (Review, error) {
 		&c.LeadsRouted, &c.LeadsAnsweredInTarget, &c.LeadsBreached,
 		&c.MeetingsHeld, &c.MeetingsWithNextStep,
 		&created, &won, &lost, &currency, &review.PriorReviewID,
-		&review.Narrative, &review.NarratedAt); {
+		&review.Narrative, &review.NarratedAt, &review.LearningsState); {
 	case errors.Is(err, pgx.ErrNoRows):
 		return Review{}, apperrors.ErrNotFound
 	case err != nil:
@@ -132,6 +133,12 @@ func scanReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (Review, error) {
 		return Review{}, err
 	}
 	review.Scorecard = card
+	// The state travels whether or not any learning did: an empty list under
+	// `synthesized` cannot happen, but an empty list under `not_run` and one
+	// under `insufficient_evidence` are different weeks and both are empty.
+	if review.Learnings, err = readLearnings(ctx, tx, review.ID); err != nil {
+		return Review{}, err
+	}
 	return review, nil
 }
 

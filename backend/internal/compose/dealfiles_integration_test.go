@@ -146,7 +146,7 @@ func TestAColleagueOutsideTheMessagesAudienceSeesNoFileOnTheDeal(t *testing.T) {
 		t.Fatalf("capture: %v", err)
 	}
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `UPDATE activity SET audience = 'participants' WHERE source_system = 'imap' AND source_id = $1`, "msg-private-"+tag)
+		_, err := tx.Exec(ctx, `UPDATE activity SET audience = 'participants' WHERE source_system = 'email' AND source_id = $1`, "msg-private-"+tag)
 		return err
 	}); err != nil {
 		t.Fatalf("narrow the audience: %v", err)
@@ -163,7 +163,7 @@ func TestAColleagueOutsideTheMessagesAudienceSeesNoFileOnTheDeal(t *testing.T) {
 	}
 	var attachmentID ids.UUID
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT id FROM attachment WHERE external_source_id = $1`, "imap:msg-private-"+tag).Scan(&attachmentID)
+		return tx.QueryRow(ctx, `SELECT id FROM attachment WHERE external_source_id = $1`, "email:msg-private-"+tag).Scan(&attachmentID)
 	}); err != nil {
 		t.Fatalf("read the file: %v", err)
 	}

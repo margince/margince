@@ -51,7 +51,7 @@ const anthropic = {
 };
 
 const meta: Meta<typeof AiProviderKeysCard> = {
-  title: "Settings/Admin settings/AI/Model provider keys",
+  title: "Settings/AI/Models & routing/Model provider keys",
   component: AiProviderKeysCard,
 };
 export default meta;

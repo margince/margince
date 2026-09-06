@@ -251,6 +251,16 @@ tasks:
     company_context: none
     doc: "weekly_review/narrative — one or two sentences over a week's own counts and deal lines, for the rep reading them on Monday. It adds nothing: every fact it may state is already in the deterministic review beside it, which is what makes the whole thing safe to lose. A rep with no lane, an exhausted budget or a provider outage reads the same counts and the same lines, and the screen says which."
 
+  weekly_learnings:
+    display_name: "What last week taught"
+    ladder: [cheap_cloud, premium]
+    execution_mode: background
+    on_budget_exhausted: queue
+    status: shipped
+    sites: [learn]
+    company_context: none
+    doc: "weekly_learnings/learn — what a week TEACHES, as against what it was. The narrative beside it describes a week the reader can already see, so a wrong sentence is visibly wrong; a learning is a claim about cause that a reader cannot check against anything in front of them. So every learning cites rows from the week it was shown, a reply citing anything else is refused WHOLE rather than trimmed, and a week with fewer than three citable rows never reaches the model at all. A refusal stamps insufficient_evidence, which is a different state from not_run: the rep is told whether anybody looked."
+
   brief_ranking:
     display_name: "Morning brief ranking"
     ladder: [premium, cheap_cloud]
