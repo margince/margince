@@ -187,10 +187,14 @@ func TestACapturedMeetingIsFiledUnderTheAttendeeWhoIsAContact(t *testing.T) {
 }
 
 // Nobody has a record for the attendee, so there is nothing to file the meeting
-// under — and it is STILL workspace business, because a connected calendar is a
-// work calendar. An invite is not correspondence, though: this path must not
-// create a person to have something to link.
-func TestACapturedMeetingWithNoKnownAttendeeIsStillWorkspaceBusiness(t *testing.T) {
+// under — and a meeting filed under nothing is HELD to the people on it. It
+// arrived from one seat's calendar without anybody choosing to share it, and
+// reading a link-less row as a workspace-shared note published that seat's
+// private diary to every account in the installation.
+//
+// An invite is still not correspondence: this path must not create a person to
+// have something to link.
+func TestACapturedMeetingWithNoKnownAttendeeIsHeldToItsParticipants(t *testing.T) {
 	e := integration.SetupSearch(t)
 
 	activity := syncOneGcalMeeting(t, e)
@@ -199,10 +203,10 @@ func TestACapturedMeetingWithNoKnownAttendeeIsStillWorkspaceBusiness(t *testing.
 	if len(linked) != 0 {
 		t.Fatalf("meeting filed under %v, want nothing — no attendee has a record, and an invite does not create one", linked)
 	}
-	if audience != "workspace" || reason != nil {
-		t.Errorf("meeting born audience=%q reason=%v, want workspace/nil — every event on a connected work calendar is workspace business, "+
-			"and holding one to its attendees hid it from colleagues while the invitation MAIL beside it stayed readable",
-			audience, reason)
+	if audience != "participants" || reason == nil || *reason != activities.ReasonNoCounterparty {
+		t.Errorf("meeting born audience=%q reason=%v, want participants/%s — nothing files this meeting anywhere, "+
+			"and a link-less calendar row read as workspace-shared is one seat's diary published to everybody",
+			audience, reason, activities.ReasonNoCounterparty)
 	}
 	var persons int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -213,91 +217,5 @@ func TestACapturedMeetingWithNoKnownAttendeeIsStillWorkspaceBusiness(t *testing.
 	}
 	if persons != 0 {
 		t.Errorf("the capture created %d records for an unknown attendee, want 0 — an invitation is not correspondence", persons)
-	}
-}
-
-// systemRepairCtx is the context a scheduled repair runs under: the workspace,
-// a correlation id (storekit refuses to publish without one), and the system
-// principal that has no human behind it.
-func systemRepairCtx(e *integration.SearchEnv) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:test-repair",
-		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
-	})
-}
-
-// A meeting captured BEFORE the limiter stopped holding calendar records still
-// wears the hold, and the release is what opens it.
-//
-// This is the state Chris's meeting was found in: every meeting already in the
-// database carried the hold, so shipping the rule for new captures alone left
-// the whole existing calendar invisible to everyone but the invitees, while the
-// invitation EMAILS beside them stayed workspace-readable.
-//
-// The hold is stamped by hand here because production can no longer produce one
-// — which is the point. The row is the shape the old writer left behind, and
-// what is under test is that the release recognises it.
-func TestAMeetingHeldByTheOldRuleIsReleased(t *testing.T) {
-	e := integration.SetupSearch(t)
-
-	activity := syncOneGcalMeeting(t, e)
-	for _, held := range []string{activities.ReasonNoRecord, activities.ReasonNoCounterparty} {
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-			_, err := tx.Exec(context.Background(),
-				`UPDATE activity SET audience = 'participants', audience_reason = $2 WHERE id = $1`,
-				activity, held)
-			return err
-		}); err != nil {
-			t.Fatalf("stamping the old hold %s: %v", held, err)
-		}
-
-		repair := systemRepairCtx(e)
-		if err := database.WithWorkspaceTx(repair, e.Pool, func(tx pgx.Tx) error {
-			return activities.ReleaseCalendarMeetingHoldTx(repair, tx, activity)
-		}); err != nil {
-			t.Fatalf("releasing the hold %s: %v", held, err)
-		}
-
-		_, _, audience, reason := meetingFiling(t, e, activity)
-		if audience != "workspace" || reason != nil {
-			t.Errorf("after releasing %s: meeting audience=%q reason=%v, want workspace/nil — "+
-				"the rule that held it no longer exists, and nothing else asks for it to be held",
-				held, audience, reason)
-		}
-	}
-}
-
-// The release removes ONE contributor and asks the rest. A human who narrowed
-// the meeting by hand is not a contributor it may overrule: opening the row
-// would publish what a person deliberately closed.
-func TestTheReleaseLeavesAHumansOwnNarrowingAlone(t *testing.T) {
-	e := integration.SetupSearch(t)
-
-	activity := syncOneGcalMeeting(t, e)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(),
-			`UPDATE activity SET audience = 'participants', audience_reason = $2 WHERE id = $1`,
-			activity, activities.ReasonManual)
-		return err
-	}); err != nil {
-		t.Fatalf("recording the human's narrowing: %v", err)
-	}
-
-	// A context that COULD write, so the refusal under test is the guard's and
-	// not a missing actor's: with the manual check removed this opens the row.
-	repair := systemRepairCtx(e)
-	if err := database.WithWorkspaceTx(repair, e.Pool, func(tx pgx.Tx) error {
-		return activities.ReleaseCalendarMeetingHoldTx(repair, tx, activity)
-	}); err != nil {
-		t.Fatalf("releasing: %v", err)
-	}
-
-	_, _, audience, reason := meetingFiling(t, e, activity)
-	if audience != "participants" || reason == nil || *reason != activities.ReasonManual {
-		t.Errorf("meeting audience=%q reason=%v, want participants/%s — a person closed this row by hand, "+
-			"and a repair that opens it publishes what they closed",
-			audience, reason, activities.ReasonManual)
 	}
 }

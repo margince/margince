@@ -235,6 +235,13 @@ func (s *Store) CloseCleared(ctx context.Context, tx pgx.Tx, types []string, sub
 		// exactly the night everything should clear.
 		seen = []string{}
 	}
+	// The deferral carve-out compares against OutcomeRemindLater, spelled from
+	// the constant rather than written into the SQL. It read 'deferred' until
+	// this fix — the vocabulary this table shipped with, renamed by migration
+	// 1788416000 before any row existed — so the clause matched nothing and a
+	// deferred finding cleared like any other. A literal here agrees with the
+	// writer only until somebody renames an outcome, which is exactly what
+	// happened.
 	tag, err := tx.Exec(ctx, `
 		UPDATE assurance_exception
 		SET status = $1, updated_at = now()
@@ -245,9 +252,9 @@ func (s *Store) CloseCleared(ctx context.Context, tx pgx.Tx, types []string, sub
 		  AND NOT (logical_key = ANY($4))
 		  AND NOT EXISTS (SELECT 1 FROM assurance_resolution r
 		                   WHERE r.exception_id = assurance_exception.id
-		                     AND r.outcome = 'deferred'
+		                     AND r.outcome = $5
 		                     AND r.remind_at > now())`,
-		ExceptionConditionCleared, subjects, types, seen)
+		ExceptionConditionCleared, subjects, types, seen, OutcomeRemindLater)
 	if err != nil {
 		return 0, fmt.Errorf("assurance: closing cleared findings: %w", err)
 	}

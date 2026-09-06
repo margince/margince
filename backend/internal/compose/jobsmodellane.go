@@ -38,6 +38,7 @@ func addModelLaneJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig,
 		newSiteDeepReadWorker(pool, cfg.DeepReadBrain, cfg.DeepReadFactBrain, cfg.DeepReadTriageBrain, log, cfg.DeepReadCaps, cfg.Blobstore),
 		deepReadTimeout(cfg.DeepReadCaps))
 	addDeclaredWorker[TranscriptProposeArgs](reg, newTranscriptProposeWorker(pool, cfg.TranscriptProposeBrain, log))
+	addDeclaredWorker[AccountScanArgs](reg, newAccountScanWorker(pool, cfg.AccountScanBrain, cfg.AccountScanRoutingVersion, log))
 	addDeclaredWorker[GeocodeOrganizationArgs](reg, newGeocodeWorker(pool, cfg.Geocoder))
 	addDeclaredWorker[CheckOrganizationVatArgs](reg, newVatCheckWorker(pool, cfg.VatChecker, nil))
 	addDeclaredWorker[DocumentExtractArgs](reg, newDocumentExtractWorker(pool, cfg.DocumentExtractBrain, cfg.SendBlob, log))

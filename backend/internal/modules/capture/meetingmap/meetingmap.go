@@ -203,6 +203,12 @@ func (m Meeting) ID() string { return m.id }
 // who the meeting was with (the same shape mailmap uses for From/To).
 // Addresses carry every party so the ONE Sink's RC-2 personal-mail gate covers
 // calendar exactly as it covers mail.
+// The attendee list is attested as the provider's own: it is read back from the
+// calendar over the authenticated connection of a seat that is on the event, not
+// parsed out of a header a sender typed. That is what lets capture bind an
+// invited colleague's user_id, which the mail rule refuses for a Cc line.
+// connectorName comes from the registry that ran this connector, so no record
+// can claim the attestation by describing itself.
 func (m Meeting) ToRecord(connectorName string, raw []byte) connector.NormalizedRecord {
 	return connector.NormalizedRecord{
 		EntityType: datasource.EntityActivity,
@@ -220,7 +226,7 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 		Raw:          raw,
 		Participants: m.participants,
 		Addresses:    m.addresses,
-	}
+	}.WithProviderAttestedParticipants(true)
 }
 
 // organizerIsExternal reports whether the organizer is a party outside the

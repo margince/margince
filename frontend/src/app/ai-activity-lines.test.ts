@@ -259,6 +259,13 @@ describe("the site-read lanes carry one reason of their own", () => {
 describe("the kinds the rail asks for", () => {
   it("is exactly the reviewed set", () => {
     expect([...displayedKinds()].sort()).toEqual([
+      // The account scan's sentence. It reaches one person's feed — the read
+      // runs under the reader's own principal, for the account they opened,
+      // so the occurrence is theirs rather than the workspace's. And it fits:
+      // one per reader per account opened, held to one read an hour by the
+      // rescan floor, so a morning's reading does not push the rest out of
+      // `recent`'s ten.
+      "account_scan",
       "document_extract",
       "draft_reply",
       "morning_brief",

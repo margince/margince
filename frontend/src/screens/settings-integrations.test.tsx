@@ -77,12 +77,16 @@ function overlaySettingsBackend(opts: {
   });
 }
 
-// The reads the seeded matrix gives every role on the installation's wiring, and
-// the two terms of the Integrations predicate — granted wherever a case needs the
-// entry to be OPEN, so an absent card on it can only mean the card is elsewhere.
-const WIRING_READS: GrantSpec = {
-  overlay_connection: ["read"],
-  webhook_subscription: ["read"],
+// The two terms of the Integrations predicate, granted wherever a case needs the
+// entry to be OPEN — so an absent card on it can only mean the card is elsewhere.
+//
+// The WRITE, because that is what the page asks: every seeded role reads both
+// objects, and gating the page on the read put the installation's outside wiring
+// in front of a rep who could only look at it. These cases are about what the
+// page renders, so they hold the grant that reaches it.
+const WIRING_WRITES: GrantSpec = {
+  overlay_connection: ["read", "create", "update"],
+  webhook_subscription: ["read", "create", "update"],
 };
 
 describe("SettingsScreen connections and integrations tabs", () => {
@@ -91,7 +95,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
       "fetch",
       overlaySettingsBackend({
         roles: ["admin"],
-        allow: WIRING_READS,
+        allow: WIRING_WRITES,
         sorMode: "native",
       }),
     );
@@ -121,7 +125,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
       "fetch",
       overlaySettingsBackend({
         roles: ["admin"],
-        allow: WIRING_READS,
+        allow: WIRING_WRITES,
         sorMode: "overlay",
       }),
     );
@@ -138,17 +142,26 @@ describe("SettingsScreen connections and integrations tabs", () => {
     ).toBeNull();
   });
 
-  // The overlay is the installation's, so its page sits in the admin group and
-  // asks for the wiring read on top of the operator seat. An OPS principal is the
-  // case worth proving: they reach the entry, and reaching it costs no
-  // confidentiality — both cards' write and management reads are admin-only on
-  // the server, and each keeps them unsent for anyone else, so ops sees the
-  // connection card's read-only state and the mapping card's admin-only notice,
-  // never the directory.
-  it("shows Integrations to a non-admin ops with both overlay cards in their read-only state", async () => {
+  // The page opens for whoever may CHANGE the installation's wiring, and this
+  // principal may. Reaching it still costs no confidentiality: both overlay
+  // cards gate themselves on their own grants — the overlay verbs, which this
+  // fixture withholds — so this reader sees the connection card's read-only
+  // state and the mapping card's notice, never the directory.
+  //
+  // Two different questions, and the card is the narrower one — which is the
+  // safe direction, because a card narrower than its page withholds itself.
+  it("shows Integrations to a webhook writer with both overlay cards in their read-only state", async () => {
+    // Reached through the WEBHOOK write, holding only the READ on the overlay.
+    // That is the shape this case needs and the one the product produces: the
+    // two objects are separate terms of the page's requirement, and the overlay
+    // cards gate themselves on the overlay verbs. Granting both writes would
+    // reach the page and make every card writable, which is a different case.
     const fetchMock = overlaySettingsBackend({
       roles: ["ops"],
-      allow: WIRING_READS,
+      allow: {
+        overlay_connection: ["read"],
+        webhook_subscription: ["read", "create", "update"],
+      },
       sorMode: "native",
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -198,7 +211,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
       "fetch",
       overlaySettingsBackend({
         roles: ["admin"],
-        allow: WIRING_READS,
+        allow: WIRING_WRITES,
         sorMode: "native",
       }),
     );
@@ -233,7 +246,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
       "fetch",
       overlaySettingsBackend({
         roles: ["admin"],
-        allow: WIRING_READS,
+        allow: WIRING_WRITES,
         sorMode: "native",
       }),
     );

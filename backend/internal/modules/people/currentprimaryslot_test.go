@@ -3,7 +3,7 @@
 
 package people
 
-// CurrentPrimarySlotSQL mirrors uq_rel_current_primary_employer, and this is
+// employment.CurrentPrimarySlotSQL mirrors uq_rel_current_primary_employer, and this is
 // what holds it to the index rather than to somebody's memory of the index.
 //
 // It lives beside the helper and not with the census in gates because
@@ -15,10 +15,12 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 )
 
 // slotPredicateName is what the failure report calls the function it is about.
-const slotPredicateName = "CurrentPrimarySlotSQL"
+const slotPredicateName = "employment.CurrentPrimarySlotSQL"
 
 // headCatalog is the generated shape of a freshly migrated database — the
 // index's own text, and therefore the only statement of what the slot
@@ -76,7 +78,7 @@ func TestTheCurrentPrimarySlotPredicateMirrorsItsIndex(t *testing.T) {
 			"`A AND (B OR C)` from `(A AND B) OR C`. Compare the predicates structurally before trusting it again",
 			slotIndex, predicate)
 	}
-	if want, got := normalizedPredicate(predicate), normalizedPredicate(CurrentPrimarySlotSQL("")); want != got {
+	if want, got := normalizedPredicate(predicate), normalizedPredicate(employment.CurrentPrimarySlotSQL("")); want != got {
 		t.Errorf("%s renders %q, but %s is %q.\n\n"+
 			"The helper IS that index's predicate. A guard that asks a narrower question skips a write "+
 			"the index then refuses with a 409; a wider one skips a write the index would have accepted.",
@@ -84,7 +86,7 @@ func TestTheCurrentPrimarySlotPredicateMirrorsItsIndex(t *testing.T) {
 	}
 	// The aliased form is the same predicate with every column qualified, and
 	// nothing else — the shape four of the six call sites need.
-	if want, got := "b.", CurrentPrimarySlotSQL("b"); strings.Count(got, want) != 3 {
+	if want, got := "b.", employment.CurrentPrimarySlotSQL("b"); strings.Count(got, want) != 3 {
 		t.Errorf("%s(%q) = %q, want every one of the three columns qualified", slotPredicateName, "b", got)
 	}
 }
@@ -103,7 +105,7 @@ func normalizedPredicate(sql string) string {
 // live employment per person per company, whatever the primary slot says.
 const liveEmploymentIndex = "uq_rel_employment"
 
-// LiveEmploymentSlotSQL mirrors that index, and this holds it there for the
+// employment.LiveSlotSQL mirrors that index, and this holds it there for the
 // reason the primary-slot mirror exists: a guard that asks a NARROWER question
 // than the index offers work the insert then drops on conflict, which is how a
 // sweep comes to return the same rows on every pass for ever.
@@ -132,12 +134,12 @@ func TestTheLiveEmploymentSlotPredicateMirrorsItsIndex(t *testing.T) {
 		t.Fatalf("%s now carries an OR (%s), and this comparison strips parentheses — compare the "+
 			"predicates structurally before trusting it again", liveEmploymentIndex, predicate)
 	}
-	if want, got := normalizedPredicate(predicate), normalizedPredicate(LiveEmploymentSlotSQL("")); want != got {
-		t.Errorf("LiveEmploymentSlotSQL renders %q, but %s is %q.\n\n"+
+	if want, got := normalizedPredicate(predicate), normalizedPredicate(employment.LiveSlotSQL("")); want != got {
+		t.Errorf("employment.LiveSlotSQL renders %q, but %s is %q.\n\n"+
 			"The helper IS that index's predicate. A guard narrower than the index offers a write the "+
 			"index refuses, and the caller that keeps offering it never drains.", got, liveEmploymentIndex, want)
 	}
-	if want, got := "held.", LiveEmploymentSlotSQL("held"); strings.Count(got, want) != 3 {
-		t.Errorf("LiveEmploymentSlotSQL(%q) = %q, want every one of the three columns qualified", "held", got)
+	if want, got := "held.", employment.LiveSlotSQL("held"); strings.Count(got, want) != 3 {
+		t.Errorf("employment.LiveSlotSQL(%q) = %q, want every one of the three columns qualified", "held", got)
 	}
 }

@@ -35,6 +35,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -386,7 +387,7 @@ func (s *Store) DomainsOwedTheirPeople(ctx context.Context, limit int) ([]Domain
 			   AND p.archived_at IS NULL AND p.merged_into_id IS NULL
 			   AND NOT EXISTS (
 			       SELECT 1 FROM relationship r
-			        WHERE r.person_id = p.id AND `+CurrentPrimarySlotSQL("r")+`)
+			        WHERE r.person_id = p.id AND `+employment.CurrentPrimarySlotSQL("r")+`)
 			   -- And not a person the index will refuse anyway. uq_rel_employment
 			   -- admits ONE live employment per (person, organization), so
 			   -- somebody already holding a non-primary edge to this company is a
@@ -395,7 +396,7 @@ func (s *Store) DomainsOwedTheirPeople(ctx context.Context, limit int) ([]Domain
 			   AND NOT EXISTS (
 			       SELECT 1 FROM relationship held
 			        WHERE held.person_id = p.id AND held.organization_id = od.organization_id
-			          AND `+LiveEmploymentSlotSQL("held")+`)
+			          AND `+employment.LiveSlotSQL("held")+`)
 			 ORDER BY od.organization_id, od.domain
 			 LIMIT $1`, limit)
 		if err != nil {

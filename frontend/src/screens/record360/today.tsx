@@ -25,7 +25,6 @@ import {
   Skeleton,
 } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
-import { Popover } from "../../design-system/popover";
 import { useT } from "../../i18n";
 import "../company360.css";
 
@@ -145,9 +144,11 @@ export function WithheldNotice({
  * is the part a rep judges — and, opposite all of it, what a reader can do
  * about it.
  *
- * The reason is also the handle on what the advice rests on. Behind it the
- * records are one glance away for the reader who is questioning the advice,
- * and out of the way of the one who is not.
+ * Under the reason sit the records it was read from, each a chip that opens
+ * the record's own words on hover. They are in the row rather than behind a
+ * second hover, because a reader questioning the advice first has to find the
+ * working — and a popover that listed the same chips the reader would then
+ * have to open said "record" and, opened, said "record" again.
  */
 export function FoundMove({
   when,
@@ -170,10 +171,9 @@ export function FoundMove({
   // The reason, which is the part a rep judges. Absent when the ask IS the
   // reason — a move written as one sentence has nothing to put under itself.
   why?: ReactNode;
-  // The records the reason was read from, shown behind it. Absent, the reason
-  // is plain text: a dotted rule that opens nothing teaches the reader that
-  // the working is never there. With no reason to hang it on, the records
-  // are listed in the reason's place.
+  // The records the reason was read from, listed under it with what they
+  // rest on one hover away. With no reason to hang under, the records are
+  // listed in the reason's place.
   basis?: ReactNode;
   // What performing the move means, as the caller's own control. Absent when
   // the record cannot say — a rule that named no action draws nothing rather
@@ -194,16 +194,15 @@ export function FoundMove({
           </span>
         )}
         <span className="co-move-ask">{title}</span>
-        {why && basis && (
-          <Popover className="co-move-why t-sub" onHover label={why}>
+        {why && <span className="co-move-reason t-sub">{why}</span>}
+        {basis && (
+          <span className="co-move-basis">
             <span className="co-move-basis-head t-eyebrow">
               {t("co.suggest.basedOn")}
             </span>
             {basis}
-          </Popover>
+          </span>
         )}
-        {why && !basis && <span className="co-move-reason t-sub">{why}</span>}
-        {!why && basis && <span className="co-move-reason t-sub">{basis}</span>}
         {(action || defer) && (
           <span className="co-move-do">
             <span className="co-move-actions">

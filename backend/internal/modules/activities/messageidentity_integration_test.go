@@ -228,3 +228,54 @@ func TestReconcileIsANoOpWhenTheProviderHonouredTheIdentity(t *testing.T) {
 		t.Errorf("%d audit rows for a re-key that changed nothing, want 0", writes)
 	}
 }
+
+// A CALLER'S source_id NEVER BECOMES THE DELIVERY'S THREAD KEY.
+//
+// The REST activity door maps source_id straight from the request body and does
+// not map thread_key at all, so an activity created there has a caller-chosen
+// source_id and a NULL thread_key. An earlier version of anchorThreading fell
+// back to the anchor's source_id when its thread_key was empty, which let
+// anybody name a stranger's conversation as this delivery's: post an email
+// activity whose source_id is a Message-ID from their thread, reply to it, and
+// the delivery carried their thread key.
+//
+// That mattered because the authorization engine reads the delivery's thread
+// key at transmit to re-derive the reply evidence staging proved with the
+// anchor. A forged key manufactured a subject_initiated_correspondence basis
+// for somebody who never wrote to us.
+func TestAnAnchorsSourceIDDoesNotBecomeTheThreadKey(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+
+	// The victim's real thread root, as an attacker would supply it: a
+	// Message-ID they saw quoted, planted as source_id on an activity whose
+	// thread_key is NULL because REST cannot set one.
+	const victimsThreadRoot = "victim-root@corp.example"
+	anchor := e.seedAnchor(t, victimsThreadRoot, "")
+
+	const minted = "019fad38-ours@margince.test"
+	var chain threading
+	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		var err error
+		chain, err = anchorThreading(ctx, tx, anchor, minted)
+		return err
+	}); err != nil {
+		t.Fatalf("deriving the chain: %v", err)
+	}
+
+	if chain.threadKey == victimsThreadRoot {
+		t.Fatalf("the delivery took the anchor's caller-supplied source_id %q as its thread key: "+
+			"the engine reads that key at transmit and would find the victim's own messages on it",
+			chain.threadKey)
+	}
+	if chain.threadKey != minted {
+		t.Errorf("thread key = %q, want the minted identity %q: an anchor with no stored thread "+
+			"key starts a conversation, and this send's own identity is its root",
+			chain.threadKey, minted)
+	}
+	// The chain still NAMES the anchor, so the reply threads correctly for a
+	// mail client. Only the key the engine trusts is refused.
+	if len(chain.references) == 0 || chain.references[0] != victimsThreadRoot {
+		t.Errorf("references = %v, want the anchor's identity kept for RFC822 threading", chain.references)
+	}
+}

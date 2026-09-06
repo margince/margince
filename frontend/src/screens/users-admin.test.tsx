@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { UsersAdminCard } from "./users-admin";
 
 // The admin member-management card renders the include-inactive roster and drives
@@ -139,10 +140,32 @@ async function rowMenu(user: ReturnType<typeof userEvent.setup>, name: string) {
 // `roles` defaults to the admin this suite is mostly about; a caller naming
 // another role gets the same routed backend, so a non-admin case differs from an
 // admin one by the principal alone and not by a second hand-rolled stub.
+//
+// GRANTS, not the role name. The card asks `user_admin` verb by verb now, and a
+// /me carrying a role and no `authorization` describes a principal the API
+// cannot produce — every gate would read false and every case would pass by
+// construction. The admin default holds all four verbs because the seeded admin
+// role does; a case wanting less passes `allow` explicitly.
+const ADMIN_USER_ADMIN: Record<string, string[]> = {
+  user_admin: ["read", "create", "update", "delete"],
+};
 function backend(
   calls: { method: string; url: string; body?: unknown }[],
-  me: { roles: string[] } = { roles: ["admin"] },
+  me: { roles: string[]; allow?: Record<string, string[]> } = {
+    roles: ["admin"],
+  },
 ) {
+  const allow =
+    me.allow ?? (me.roles.includes("admin") ? ADMIN_USER_ADMIN : {});
+  const objects: Record<string, Record<string, boolean>> = {};
+  for (const [object, verbs] of Object.entries(allow)) {
+    objects[object] = {
+      read: verbs.includes("read"),
+      create: verbs.includes("create"),
+      update: verbs.includes("update"),
+      delete: verbs.includes("delete"),
+    };
+  }
   // openapi-fetch calls fetch(request) with a Request object, so read the
   // method + body off it rather than a separate init.
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -153,6 +176,12 @@ function backend(
         user: { email: "admin@acme.test" },
         roles: me.roles,
         teams: [],
+        // The seat rides here too: `useCanWrite` folds the ceiling that
+        // identity/admission.go enforces ABOVE RBAC, so a snapshot without a
+        // seat refuses every write however wide its grants.
+        // `row_scope` is REQUIRED on Authorization (crm.yaml), so a stub without
+        // it describes a /me the server cannot send.
+        authorization: { objects, seat_type: "full", row_scope: "all" },
         // The installation CAN mint set-password links. Without this the card
         // withholds that action from every row, and any assertion that one
         // particular row lacks it passes without the row having anything to do
@@ -175,7 +204,21 @@ function backend(
       });
     }
     if (req.url.includes("/users") && req.method === "GET") {
-      return jsonResponse(ROSTER);
+      // The SAME projection the server makes: `roles` and the deactivated
+      // members ride the privileged view, which handlers_roster.go sends only
+      // to a caller passing `user_admin:read`. A fixture answering the full
+      // roster to everyone describes a response the API cannot produce — and
+      // a case asserting a rep sees "Read-only" would then be leaning on data
+      // the rep would never have received.
+      if (allow.user_admin?.includes("read")) {
+        return jsonResponse(ROSTER);
+      }
+      return jsonResponse({
+        ...ROSTER,
+        data: ROSTER.data
+          .filter((u) => u.status !== "deactivated")
+          .map(({ roles: _withheld, ...rest }) => rest),
+      });
     }
     let body: unknown;
     try {
@@ -228,19 +271,69 @@ describe("UsersAdminCard", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
     expect(screen.getByRole("heading", { name: /^Users$/ })).toBeTruthy();
 
-    // A role they cannot change is a FACT, so it reads as text rather than as a
-    // picker that could only be refused, and no row offers a verb at all — so
-    // no row offers the menu those verbs live behind either.
+    // No picker, and no menu the verbs would live behind. Nor any role TEXT:
+    // this reader is not sent `roles` at all (handlers_roster.go withholds the
+    // privileged projection), so there is no fact to state — which is why the
+    // fixture above answers them the narrow roster the server would.
     expect(screen.queryByRole("combobox")).toBeNull();
-    expect(screen.getByText("Read-only")).toBeTruthy();
+    expect(screen.queryByText("Read-only")).toBeNull();
     expect(screen.queryByRole("button", { name: /actions for/i })).toBeNull();
+    // The deactivated member is absent for the same reason: `include_inactive`
+    // is honoured only for a caller who passes that read.
+    expect(screen.queryByText("Otto Off")).toBeNull();
 
     // Inviting IS the admin's, and the card SAYS it is withheld rather than
     // simply dropping the verb: the page opens for every seat, so a roster with
     // no explanation reads as "this installation cannot add people".
     expect(screen.queryByRole("button", { name: /invite a user/i })).toBeNull();
-    expect(screen.getByText(/admins only/i)).toBeTruthy();
+    // Matched on the KEY's text, not on the words "admins only": the string
+    // stopped saying that when these became delegatable grants.
+    expect(
+      screen.getByText(new RegExp(en["users.adminOnly"], "i")),
+    ).toBeTruthy();
     expect(screen.queryByLabelText(/new user's email/i)).toBeNull();
+  });
+
+  // The escalation Codex found: `user_admin:update` WITHOUT the read. The
+  // roster omits every member's roles for this caller, `RoleCell` would read the
+  // missing field as [], and `ChangeUserRole` REPLACES the whole role set — so
+  // picking a role would silently drop every other role the target holds, none
+  // of which this reader can see. The picker is withheld until the read is
+  // there too.
+  it("offers no role picker to a write holder who cannot read the roster", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backend([], {
+        roles: ["custom"],
+        allow: { user_admin: ["create", "update", "delete"] },
+      }),
+    );
+    render(<UsersAdminCard />);
+
+    // The positive control first: a member row only a resolved snapshot draws.
+    // Without it every assertion below would run against the loading render,
+    // where each predicate reads false and nothing is offered anyway.
+    await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.queryByRole("button", { name: /actions for/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /invite a user/i })).toBeNull();
+  });
+
+  // And the same holder WITH the read gets all of it, so the case above is not
+  // passing because the fixture refuses everyone.
+  it("offers the picker once the write holder can read the roster", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backend([], {
+        roles: ["custom"],
+        allow: { user_admin: ["read", "create", "update", "delete"] },
+      }),
+    );
+    render(<UsersAdminCard />);
+
+    await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
+    expect(screen.getAllByRole("combobox").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /invite a user/i })).toBeTruthy();
   });
 
   it("carries the roster count and the invite verb in one card's header", async () => {
@@ -498,6 +591,21 @@ describe("UsersAdminCard", () => {
             user: { email: "admin@acme.test" },
             roles: ["admin"],
             teams: [],
+            // The card asks `user_admin` verb by verb and folds the seat, so a
+            // snapshot carrying a role alone refuses every control this case is
+            // about — and the case would pass with nothing rendered.
+            authorization: {
+              objects: {
+                user_admin: {
+                  read: true,
+                  create: true,
+                  update: true,
+                  delete: true,
+                },
+              },
+              seat_type: "full",
+              row_scope: "all",
+            },
           });
         }
         if (req.url.includes("/teams") && req.method === "GET") {
@@ -603,6 +711,21 @@ describe("UsersAdminCard", () => {
             user: { email: "admin@acme.test" },
             roles: ["admin"],
             teams: [],
+            // The card asks `user_admin` verb by verb and folds the seat, so a
+            // snapshot carrying a role alone refuses every control this case is
+            // about — and the case would pass with nothing rendered.
+            authorization: {
+              objects: {
+                user_admin: {
+                  read: true,
+                  create: true,
+                  update: true,
+                  delete: true,
+                },
+              },
+              seat_type: "full",
+              row_scope: "all",
+            },
           });
         }
         if (req.url.includes("/teams") && req.method === "GET") {
@@ -685,6 +808,21 @@ describe("UsersAdminCard", () => {
             user: { email: "admin@acme.test" },
             roles: ["admin"],
             teams: [],
+            // The card asks `user_admin` verb by verb and folds the seat, so a
+            // snapshot carrying a role alone refuses every control this case is
+            // about — and the case would pass with nothing rendered.
+            authorization: {
+              objects: {
+                user_admin: {
+                  read: true,
+                  create: true,
+                  update: true,
+                  delete: true,
+                },
+              },
+              seat_type: "full",
+              row_scope: "all",
+            },
           });
         }
         if (req.url.includes("/teams") && req.method === "GET") {
@@ -738,6 +876,21 @@ describe("UsersAdminCard", () => {
             user: { email: "admin@acme.test" },
             roles: ["admin"],
             teams: [],
+            // The card asks `user_admin` verb by verb and folds the seat, so a
+            // snapshot carrying a role alone refuses every control this case is
+            // about — and the case would pass with nothing rendered.
+            authorization: {
+              objects: {
+                user_admin: {
+                  read: true,
+                  create: true,
+                  update: true,
+                  delete: true,
+                },
+              },
+              seat_type: "full",
+              row_scope: "all",
+            },
           });
         }
         if (req.url.includes("/teams") && req.method === "GET") {
@@ -794,6 +947,21 @@ describe("UsersAdminCard", () => {
             user: { email: "admin@acme.test" },
             roles: ["admin"],
             teams: [],
+            // The card asks `user_admin` verb by verb and folds the seat, so a
+            // snapshot carrying a role alone refuses every control this case is
+            // about — and the case would pass with nothing rendered.
+            authorization: {
+              objects: {
+                user_admin: {
+                  read: true,
+                  create: true,
+                  update: true,
+                  delete: true,
+                },
+              },
+              seat_type: "full",
+              row_scope: "all",
+            },
           });
         }
         if (req.url.includes("/teams") && req.method === "GET") {
@@ -858,6 +1026,21 @@ describe("UsersAdminCard", () => {
             user: { email: "admin@acme.test" },
             roles: ["admin"],
             teams: [],
+            // The card asks `user_admin` verb by verb and folds the seat, so a
+            // snapshot carrying a role alone refuses every control this case is
+            // about — and the case would pass with nothing rendered.
+            authorization: {
+              objects: {
+                user_admin: {
+                  read: true,
+                  create: true,
+                  update: true,
+                  delete: true,
+                },
+              },
+              seat_type: "full",
+              row_scope: "all",
+            },
           });
         }
         if (req.url.includes("/teams") && req.method === "GET") {

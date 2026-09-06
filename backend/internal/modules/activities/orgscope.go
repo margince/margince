@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -76,10 +77,10 @@ func OrgLinkedActivityExistsAny(orgsPos int) string {
 // The deal arm deliberately does not exclude archived or lost deals: a set
 // stricter than the predicate would show a message on the timeline whose
 // account never gets a signal about it.
-const orgArms = `FROM activity_link l
+var orgArms = `FROM activity_link l
 		    LEFT JOIN deal d ON d.id = l.deal_id
 		    LEFT JOIN relationship r ON r.person_id = l.person_id AND r.kind = 'employment'
-		      AND r.ended_at IS NULL AND r.archived_at IS NULL`
+		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL`
 
 // participantEmployerArm is the READER's fourth arm: the employer of somebody
 // who is on the event as a participant rather than as a link.
@@ -102,10 +103,10 @@ const orgArms = `FROM activity_link l
 // The alias is emp rather than r: the row-scope clause a caller composes
 // alongside this one is recognized by its "r." tokens, and a second
 // relationship in scope under that name reads as the first.
-const participantEmployerArm = `EXISTS (
+var participantEmployerArm = `EXISTS (
 		    SELECT 1 FROM activity_participant ap
 		      JOIN relationship emp ON emp.person_id = ap.person_id AND emp.kind = 'employment'
-		        AND emp.ended_at IS NULL AND emp.archived_at IS NULL
+		        AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
 		    WHERE ap.activity_id = a.id AND emp.organization_id = %s)`
 
 // activityReachesOrg is the walk as a PREDICATE, for a query that aliases
@@ -289,6 +290,27 @@ func unassignedQueueClause() string {
 	return "a.assignee_id IS NULL AND a.kind = 'task' AND NOT a.is_done"
 }
 
+// onMeetingOfClause is the meetings one person is actually on.
+//
+// Three sources, because a meeting reaches a person three ways and any one of
+// them alone is wrong. The host column names whose calendar it came off, which
+// misses every meeting a colleague was invited to. The import row names the seat
+// whose connector landed it, which misses a meeting booked in the app. The
+// participant row names who was stamped as present, which is the invitation's
+// own answer.
+//
+// It narrows a worklist and grants nothing: these rows have already passed the
+// row-scope gate and the audience arm before this clause is applied.
+func onMeetingOfClause(reader *ids.UserID, arg func(any) int) string {
+	if reader == nil {
+		return ""
+	}
+	me := arg(*reader)
+	return sprintf(`a.kind = 'meeting' AND (a.host_user_id = $%[1]d
+	   OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = $%[1]d)
+	   OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = a.id AND ap.user_id = $%[1]d))`, me)
+}
+
 // entityLinkFilter narrows the timeline to one record, in the SAME vocabulary
 // the write uses. A second list here drifted from linkTargets and silently
 // dropped two kinds: an activity could be linked to a lead or a project and
@@ -362,6 +384,15 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 	}
 	if in.UnassignedQueue {
 		where = append(where, unassignedQueueClause())
+	}
+	if clause := onMeetingOfClause(in.OnMeetingOf, arg); clause != "" {
+		where = append(where, clause)
+	}
+	if in.MeetingHost != nil {
+		where = append(where, sprintf("a.kind = 'meeting' AND a.host_user_id = $%d", arg(*in.MeetingHost)))
+	}
+	if in.UnhostedMeetings {
+		where = append(where, "a.kind = 'meeting' AND a.host_user_id IS NULL")
 	}
 	if clause := openTaskAssigneeClause(in.AssigneeID, arg); clause != "" {
 		where = append(where, clause)
@@ -446,5 +477,5 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 // with the answer blanked.
 func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
-		in.WaitingReplyAsOf != nil
+		in.WaitingReplyAsOf != nil || in.ReadableOnly
 }

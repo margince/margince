@@ -46,6 +46,7 @@ const (
 	// carrier actually emits, which is the check that makes the literal safe.
 	sourceAgentRunner          = "agent_runner"
 	sourceAttachmentExtraction = "attachment_extraction"
+	sourceAccountScan          = "account_scan"
 )
 
 // railOwners answers who reports each task. TOTAL over the contract's task
@@ -60,6 +61,7 @@ const (
 var railOwners = map[Task]string{
 	TaskAgentLoop:       sourceAgentRunner,
 	TaskDocumentExtract: sourceAttachmentExtraction,
+	TaskAccountScan:     sourceAccountScan,
 
 	TaskEmbeddings: SourceNoOccurrence,
 

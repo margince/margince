@@ -19,7 +19,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
 import "./users-admin.css";
-import { useHoldsAdminRole } from "../app/capability";
+import { useCan, useCanWrite } from "../app/capability";
 import { isOption } from "../app/options";
 import {
   InviteUserForm,
@@ -55,7 +55,40 @@ function useMembers() {
 
 export function UsersAdminCard() {
   const me = useMe();
-  const isAdmin = useHoldsAdminRole();
+  // The four verbs the server actually distinguishes, not one "is admin".
+  // `user_admin` has been seeded and enforced since the roster's gates moved off
+  // the literal role, and each of these is the grant its own endpoint takes:
+  // invite is CREATE (invite.go), a role change is UPDATE (users.go
+  // ChangeUserRole), and deactivate AND reactivate are both DELETE — one verb
+  // for turning a seat off and back on, because they are the same authority
+  // over the same thing.
+  //
+  // `useCanWrite`, not `useCan`: the seat ceiling is enforced ABOVE RBAC
+  // (identity/admission.go), so a read seat holding the grant is still refused
+  // every one of these. A control it was shown could only ever 403.
+  // Every roster verb ANDs with the read, because the write needs what the read
+  // carries and the server does not send it otherwise:
+  //
+  //   - `ChangeUserRole` REPLACES the whole role set with the one picked
+  //     (users.go). Without the read the roster omits `roles`, `RoleCell` reads
+  //     the missing field as [], and picking a role would silently drop every
+  //     other role the target holds — destroying authority the reader could not
+  //     see.
+  //   - `include_inactive` is honoured only for a caller who passes the read
+  //     (handlers_roster.go), so a delete holder without it never sees a
+  //     deactivated member to reactivate, nor an invited one to switch off.
+  //
+  // Inviting does not strictly need it, but a roster this reader cannot read is
+  // not a page to invite from either.
+  // Each hook on its own line and called unconditionally: `&&` short-circuits,
+  // and the number of hooks a render performs must not depend on an answer.
+  const administersRoster = useCan("user_admin", "read");
+  const mayInvite = useCanWrite("user_admin", "create");
+  const mayChangeRole = useCanWrite("user_admin", "update");
+  const maySetStatus = useCanWrite("user_admin", "delete");
+  const canInvite = administersRoster && mayInvite;
+  const canChangeRole = administersRoster && mayChangeRole;
+  const canSetStatus = administersRoster && maySetStatus;
   const members = useMembers();
   // The server answers whether THIS caller can mint set-password links: admin,
   // on an installation with no email channel and a configured base URL. Where
@@ -68,19 +101,24 @@ export function UsersAdminCard() {
   // member" — the same three words, three times, above a list nine members
   // long that a reader came here to read.
   //
-  // The ROSTER is not admin surface: `GET /users` answers 200 to any
-  // authenticated principal, and "who is on my team and what may they do" is not
-  // an admin's private question. So every seat gets the member list, and the two
-  // things the server refuses them — inviting somebody, and changing a role or a
-  // status — are the admin's. `probeSettled` is what keeps the read-only line
-  // from flashing at an admin while /me is still in flight: a probe in flight is
-  // not a denial.
+  // `GET /users` answers 200 to any authenticated principal, so the share and
+  // assignee pickers keep working for every seat. What that endpoint CONTAINS
+  // is narrowed instead: role keys and the deactivated members ride the
+  // privileged projection, which handlers_roster.go sends only to a caller
+  // holding `user_admin:read`.
+  //
+  // This settings PAGE follows the same read, because a roster nobody may act
+  // on is a directory rather than an administration surface. `probeSettled` is
+  // what keeps the read-only line from flashing while /me is still in flight: a
+  // probe in flight is not a denial.
   return (
     <MembersCard
       members={members}
       probeSettled={me.isSuccess}
       canIssueLink={canIssueLink}
-      canAdminister={isAdmin}
+      canInvite={canInvite}
+      canChangeRole={canChangeRole}
+      canSetStatus={canSetStatus}
     />
   );
 }
@@ -89,13 +127,22 @@ function MembersCard({
   members,
   probeSettled,
   canIssueLink,
-  canAdminister,
+  canInvite,
+  canChangeRole,
+  canSetStatus,
 }: Readonly<{
   members: ReturnType<typeof useMembers>;
   probeSettled: boolean;
   canIssueLink: boolean;
-  canAdminister: boolean;
+  canInvite: boolean;
+  canChangeRole: boolean;
+  canSetStatus: boolean;
 }>) {
+  // Whether this reader administers the roster AT ALL, for the one read-only
+  // line the card states once. A reader holding some verbs and not others is
+  // not read-only, and telling them so beside controls they can use would be
+  // false — the individual verbs decide what each row offers.
+  const administers = canInvite || canChangeRole || canSetStatus;
   const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
@@ -118,7 +165,7 @@ function MembersCard({
               })}
             </Badge>
           )}
-          {canAdminister && <InviteAction canIssueLink={canIssueLink} />}
+          {canInvite && <InviteAction canIssueLink={canIssueLink} />}
         </>
       }
     >
@@ -132,7 +179,7 @@ function MembersCard({
             withheld). */}
         <p className="settings-panel-sub">
           {t("users.membersSub")}
-          {probeSettled && !canAdminister && ` ${t("users.adminOnly")}`}
+          {probeSettled && !administers && ` ${t("users.adminOnly")}`}
         </p>
         <QueryGate query={members} pendingLabel={t("users.membersTitle")}>
           {(list) =>
@@ -150,7 +197,8 @@ function MembersCard({
                     key={u.id}
                     member={u}
                     canIssueLink={canIssueLink}
-                    canAdminister={canAdminister}
+                    canChangeRole={canChangeRole}
+                    canSetStatus={canSetStatus}
                   />
                 ))}
               </SettingList>
@@ -294,13 +342,13 @@ function RoleCell({
 // row draws a picker instead.
 function roleAnswer(
   member: User,
-  canAdminister: boolean,
+  canChangeRole: boolean,
   t: ReturnType<typeof useT>,
 ): string | undefined {
   if (member.is_agent) {
     return t("users.agentSeatRole");
   }
-  if (canAdminister) {
+  if (canChangeRole) {
     return undefined;
   }
   const held = (member.roles ?? []).map(roleLabel(t)).join(", ");
@@ -380,11 +428,13 @@ function statusTone(status: string): "success" | "warn" | "danger" | undefined {
 function MemberRow({
   member,
   canIssueLink,
-  canAdminister,
+  canChangeRole,
+  canSetStatus,
 }: Readonly<{
   member: User;
   canIssueLink: boolean;
-  canAdminister: boolean;
+  canChangeRole: boolean;
+  canSetStatus: boolean;
 }>) {
   const t = useT();
   const qc = useQueryClient();
@@ -494,18 +544,23 @@ function MemberRow({
   // Invited matters most here: an invitation whose link expired leaves a member
   // with no password, so the self-service reset refuses them and this is the
   // only route back into the account. Withholding it would strand them.
+  // A set-password link is a credential for somebody else's account, so it
+  // rides the role-change verb rather than the status one: `admin_password_link`
+  // already folds the deployment posture and the seat, and userpasswordlink.go
+  // asks `user_admin:update`.
   const canMintLink =
-    canAdminister &&
+    canChangeRole &&
     canIssueLink &&
     !member.is_agent &&
     (member.status === "active" || member.status === "invited");
   // Offered on an invitation too, and that is not cosmetic: an unredeemed
   // invitation holds a licensed seat, so without this an invitation sent to the
   // wrong address consumes a seat with no way to release it.
+  // Both on DELETE, which is the verb both endpoints take (users.go): turning a
+  // seat off and turning it back on are one authority over one thing.
   const canDeactivate =
-    canAdminister &&
-    (member.status === "active" || member.status === "invited");
-  const canReactivate = canAdminister && member.status === "deactivated";
+    canSetStatus && (member.status === "active" || member.status === "invited");
+  const canReactivate = canSetStatus && member.status === "deactivated";
 
   return (
     // The row's own wrapper, so a refusal reads UNDER the member it belongs to
@@ -517,7 +572,7 @@ function MemberRow({
       <SettingRow
         label={member.display_name}
         description={member.email}
-        value={roleAnswer(member, canAdminister, t)}
+        value={roleAnswer(member, canChangeRole, t)}
         // Status, then role, then the verbs — and that ORDER is what keeps nine
         // role pickers at one x. The control column packs from the right, so an
         // item's position is decided by the width of everything after it: with
@@ -533,7 +588,7 @@ function MemberRow({
                 OWNS records — a client resolving an owner has to find it — so
                 the row says what it is rather than passing for a colleague. */}
             {member.is_agent && <Badge tone="ai">{t("users.agentSeat")}</Badge>}
-            {canAdminister && !member.is_agent && (
+            {canChangeRole && !member.is_agent && (
               <RoleCell
                 member={member}
                 pending={pending}

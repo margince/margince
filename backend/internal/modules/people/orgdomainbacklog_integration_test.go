@@ -30,6 +30,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -41,7 +42,7 @@ func (e *dedupeEnv) employerOf(ctx context.Context, t *testing.T, person ids.Per
 		return tx.QueryRow(ctx, `
 			SELECT organization_id FROM relationship
 			 WHERE person_id = $1 AND kind = 'employment'
-			   AND `+EmploymentIsCurrentSQL("ended_at")+`
+			   AND `+employment.IsCurrentSQL("ended_at")+`
 			   AND archived_at IS NULL
 			 LIMIT 1`, person).Scan(&org)
 	}); err != nil {

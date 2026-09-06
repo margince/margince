@@ -259,13 +259,20 @@ func keepOwnedBy(rows []ranked, owner ids.UUID) []ranked {
 // narrowedByItsOwnLane reports whether a source already answered the ownership
 // question in its own query.
 //
-// Two lanes take the scope and the owner as ARGUMENTS — tasks and owed leads —
-// so what they return is already the right person's, whichever scope this read
-// runs at. Re-judging their rows here is not a second safety net: it asks a
-// different question of an answer that was already correct, and it gets it
-// wrong. A lead the lane returned under `mine` is the reader's by the store's
-// own predicate, and comparing its owner id against the reader drops it whenever
-// the two disagree for a reason the store already accounted for.
+// Four lanes take the scope and the owner as ARGUMENTS — tasks, owed leads and
+// the two meeting lanes — so what they return is already the right person's,
+// whichever scope this read runs at. Re-judging their rows here is not a second
+// safety net: it asks a different question of an answer that was already
+// correct, and it gets it wrong. A lead the lane returned under `mine` is the
+// reader's by the store's own predicate, and comparing its owner id against the
+// reader drops it whenever the two disagree for a reason the store already
+// accounted for.
+//
+// The meeting lanes are the sharpest case. Their rows name the HOST, and a
+// meeting a colleague hosted and invited the reader to is genuinely the
+// reader's under `mine` — the store said so, by matching them as a participant.
+// Comparing the host against the reader afterwards would drop exactly the
+// meetings somebody else called and this reader has to attend.
 //
 // One helper rather than a case per source in each of three filters, because
 // the case that gets forgotten fails silently: the lane goes missing from the
@@ -276,7 +283,8 @@ func keepOwnedBy(rows []ranked, owner ids.UUID) []ranked {
 // narrowToScope, so a fourth caller with its own source list cannot appear
 // without that test naming it.
 func narrowedByItsOwnLane(row ranked) bool {
-	return row.item.Source == sourceTask || row.item.Source == sourceLeadResponse
+	return row.item.Source == sourceTask || row.item.Source == sourceLeadResponse ||
+		row.item.Source == sourceMeeting || row.item.Source == sourceMeetingOutcome
 }
 
 // keepUnowned keeps the rows that answer to nobody.

@@ -281,17 +281,39 @@ func (s *Store) DealHealth(ctx context.Context, dealID ids.DealID, now time.Time
 // transaction: the deal row, its stage-entry instant, the won-deal
 // stage-duration median, and the per-factor evidence rows.
 func healthInputs(ctx context.Context, tx pgx.Tx, now time.Time, in *dealHealthInputs) error {
+	// The deal's own fields AND the record behind last_activity_at, in ONE
+	// statement.
+	//
+	// Read apart, they are two snapshots: this transaction is READ COMMITTED,
+	// so an activity committed between the two statements is counted by the
+	// later one and not by the earlier. The evidence would then name a row the
+	// timestamp does not, and the card would cite a message as the reason for a
+	// staleness the message disproves — a contradiction a reader can see and
+	// nothing can explain.
+	//
+	// The subquery's filters must match last_activity_of_deal exactly, or the
+	// evidence points at a row the timestamp does not count even when nothing
+	// raced.
 	var pipelineID ids.PipelineID
+	var recent *ids.UUID
 	err := tx.QueryRow(ctx, `
-		SELECT status, created_at, last_activity_at, wait_until, stage_id, pipeline_id
-		FROM deal WHERE id = $1 AND archived_at IS NULL`, in.dealID).
-		Scan(&in.status, &in.createdAt, &in.lastActivityAt, &in.waitUntil, &in.stageID, &pipelineID)
+		SELECT d.status, d.created_at, d.last_activity_at, d.wait_until, d.stage_id, d.pipeline_id,
+		       (SELECT a.id FROM activity a
+		          JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
+		         WHERE a.archived_at IS NULL
+		           `+auth.OriginIsEngagement("a")+auth.AudienceWorkspaceOnly("a")+`
+		         ORDER BY a.occurred_at DESC, a.id DESC
+		         LIMIT 1)
+		FROM deal d WHERE d.id = $1 AND d.archived_at IS NULL`, in.dealID).
+		Scan(&in.status, &in.createdAt, &in.lastActivityAt, &in.waitUntil, &in.stageID, &pipelineID, &recent)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return apperrors.ErrNotFound
 	}
 	if err != nil {
 		return err
 	}
+	// No activity ever: recency is 0.0 with no record to point at.
+	in.mostRecentActivityID = recent
 
 	// Days in current stage: the latest entry INTO this stage; a deal
 	// that never moved has sat there since creation.
@@ -369,27 +391,6 @@ func healthActivityEvidence(ctx context.Context, tx pgx.Tx, now time.Time, in *d
 		return err
 	}
 	in.engagedStakeholderIDs = engaged
-
-	// Recency evidence: the freshest live activity on the deal — the
-	// record behind deal.last_activity_at. Its filters must match
-	// last_activity_of_deal exactly, or this points at a row the timestamp
-	// does not count and the evidence contradicts the number it explains.
-	var recent ids.UUID
-	err = tx.QueryRow(ctx, `
-		SELECT a.id FROM activity a
-		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
-		WHERE a.archived_at IS NULL
-		  `+auth.OriginIsEngagement("a")+auth.AudienceWorkspaceOnly("a")+`
-		ORDER BY a.occurred_at DESC, a.id DESC
-		LIMIT 1`, in.dealID).Scan(&recent)
-	switch {
-	case errors.Is(err, pgx.ErrNoRows):
-		// No activity ever: recency is 0.0 with no record to point at.
-	case err != nil:
-		return err
-	default:
-		in.mostRecentActivityID = &recent
-	}
 
 	// Commitments evidence: the open overdue tasks on the deal. No audience
 	// clause, and that is the difference rather than an omission: a task is

@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
@@ -170,29 +171,14 @@ func valueSupportedByQuote(field documentField) bool {
 	return true
 }
 
-// quotedFromDocument reports whether a quote is the document's own words.
-//
-// Whitespace is collapsed on both sides before comparing, and only whitespace: a
-// document's text arrives with the line breaks and column padding its layout
-// happened to have, and a reply that reads a value off two lines writes it as
-// one sentence. Normalizing more than that — case, punctuation, accents — would
-// start admitting quotes the document does not contain, which is the one thing
-// this check exists to refuse.
-// An EMPTY quote never matches, and that guard lives here rather than at a
-// caller. strings.Contains is true for the empty string against anything, so
-// without it a reply that quoted nothing would be admitted everywhere — and
-// "nothing" is exactly what a model reaches for when it has no span to point
-// at. The field-extract caller happens to refuse an empty quote before it gets
-// here; the corpus ask has no such upstream check and does not need one.
-func quotedFromDocument(text, quote string) bool {
-	quote = collapseSpace(quote)
-	if quote == "" {
-		return false
-	}
-	return strings.Contains(collapseSpace(text), quote)
-}
+// quotedFromDocument reports whether a quote is the document's own words —
+// claims.Quoted, which the corpus ask and the account scan share, under the
+// name this lane has always called it. The field-extract caller happens to
+// refuse an empty quote before it gets here; the corpus ask has no such
+// upstream check and does not need one, because the shared rule refuses it.
+func quotedFromDocument(text, quote string) bool { return claims.Quoted(text, quote) }
 
-func collapseSpace(s string) string { return strings.Join(strings.Fields(s), " ") }
+func collapseSpace(s string) string { return claims.CollapseSpace(s) }
 
 // numberTokens pulls the whole figures out of a quote — every maximal run of
 // digits and the separators a printed amount carries — and normalizes each the

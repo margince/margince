@@ -23,6 +23,7 @@ it can be answered for.
 
 | Task | Ladder | Stays local | Prompt not retained | Status |
 | --- | --- | --- | --- | --- |
+| `account_scan` | `cheap_cloud` → `premium` | no | yes | shipped |
 | `agent_loop` | `cheap_cloud` → `premium` | no | no | shipped |
 | `brief_ranking` | `premium` → `cheap_cloud` | no | no | shipped |
 | `capture_classify` | `local_small` → `cheap_cloud` | no | yes | shipped |

@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -347,7 +348,7 @@ func relinkOrgEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Organ
 		  is_current_primary = a.is_current_primary AND NOT EXISTS (
 		    SELECT 1 FROM relationship b
 		    WHERE b.person_id = a.person_id AND b.id <> a.id
-		      AND `+CurrentPrimarySlotSQL("b")+`)
+		      AND `+employment.CurrentPrimarySlotSQL("b")+`)
 		WHERE a.organization_id = $1 AND a.archived_at IS NULL`, sourceID, targetID); err != nil {
 		return err
 	}

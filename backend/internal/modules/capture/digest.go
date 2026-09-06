@@ -19,10 +19,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-
-	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
 // DigestPayload is the stored CAP-DDL-6 payload — the wire shape verbatim.

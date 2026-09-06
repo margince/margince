@@ -528,6 +528,368 @@ test("AC-pipeline-7: board↔table swaps views preserving the deal set", async (
   ).toBeVisible();
 });
 
+/**
+ * One stage, in pixels — `--board-col-w` in design-system/composed.css.
+ *
+ * Written out here rather than read off the sheet, and that is the point: the
+ * NUMBER is the acceptance. A test that asked the stylesheet how wide a stage
+ * should be would agree with whatever the stylesheet said, including the
+ * grow-into-the-leftover-room sizing this replaced, and would have passed on
+ * the defect it exists to catch.
+ */
+const STAGE_WIDTH_PX = 240;
+
+/**
+ * The stage geometry a reader is actually handed, read off the rendered board.
+ *
+ * `inner` is the width the stages are laid out in — the board's own padding is
+ * not board a reader can see — and it is what the phone proportion below is
+ * measured against. A stage is named by the words in its HEAD: `data-stage`
+ * carries the stage's id, which names it to the database and to nobody reading
+ * a failure. `BoardLayout` labels every column it draws, so there is no
+ * unnamed stage to stand in for.
+ */
+async function boardGeometry(page: Page) {
+  const geometry = await page.evaluate(() => {
+    const board = document.querySelector(".board");
+    if (board === null) {
+      return null;
+    }
+    const style = getComputedStyle(board);
+    return {
+      inner:
+        board.clientWidth -
+        Number.parseFloat(style.paddingLeft) -
+        Number.parseFloat(style.paddingRight),
+      gap: Number.parseFloat(style.columnGap),
+      snap: style.scrollSnapType,
+      scrollsSideways: board.scrollWidth > board.clientWidth,
+      columns: Array.from(board.querySelectorAll(".board-col")).map(
+        (column) => ({
+          stage: column.getAttribute("aria-label"),
+          folded: column.classList.contains("board-col-collapsed"),
+          width: Math.round(column.getBoundingClientRect().width),
+          past: column.scrollWidth - column.clientWidth,
+          // Read rather than assumed: it decides whether `past` above means
+          // anything at all.
+          clipping: getComputedStyle(column).overflowX,
+        }),
+      ),
+    };
+  });
+  // Thrown rather than asserted, so what comes back has no null in it: every
+  // reader below would otherwise be optional, and a width divided by a divisor
+  // invented on the spot is an assertion that passes on a board that is not
+  // there.
+  if (geometry === null) {
+    throw new Error("this screen drew no .board, so it has no stage geometry");
+  }
+  if (geometry.columns.length === 0) {
+    throw new Error("the board drew no stages, so there is nothing to measure");
+  }
+  // A `clip` box reports `scrollWidth === clientWidth` however much it is
+  // cutting off, so on a board outside a list surface — where the column keeps
+  // the `clip` composed.css declares — the spill reading below is not a smaller
+  // answer but NO answer, and it would call any board clean however far its
+  // contents ran past the stage. Refused here rather than returned, because a
+  // caller cannot tell the two zeroes apart.
+  const unmeasurable = geometry.columns.filter(
+    ({ clipping }) => clipping !== "hidden",
+  );
+  if (unmeasurable.length > 0) {
+    throw new Error(
+      `${unmeasurable.map(({ stage, clipping }) => `${stage}: overflow-x ${clipping}`).join(", ")} — a clip box reports no horizontal overflow whatever it cuts, so this helper can only measure a board whose columns are scrollers, which is a board inside a list surface`,
+    );
+  }
+  return geometry;
+}
+
+/** The stages that scroll sideways, each naming itself and by how much. */
+function stagesSpillingSideways(
+  geometry: Awaited<ReturnType<typeof boardGeometry>>,
+) {
+  return geometry.columns
+    .filter(({ past }) => past > 0)
+    .map(({ stage, past }) => `${stage}: ${past}px past its column`);
+}
+
+// A stage is ONE width, and the window decides how many of them are on screen
+// rather than how wide one is. A column that grows into leftover room shows the
+// same pipeline as four stages to one reader and six to another, and neither
+// can say how many there are or compare a stage against the same stage on
+// somebody else's screen.
+//
+// The other half is that a stage never scrolls sideways ITSELF. Its totals are
+// `nowrap` money, and a column that scrolls its cards vertically resolves the
+// other axis to `auto` alongside it — so a figure that does not ellipsise puts
+// a scrollbar under every stage on the board, which reveals nothing a reader
+// can use and costs each of them a line.
+test("AC-pipeline-8: one stage width at every window, and no stage scrolls sideways", async ({
+  page,
+}) => {
+  await page.goto("/#/deals");
+  await expect(page.locator(".board-col").first()).toBeVisible();
+
+  // 768 is inside the fold and 1440 is a wide desktop: the point is that the
+  // stage does not care. Each width is kept against the window that produced
+  // it, so a failure names the window that disagreed instead of printing four
+  // bare numbers and leaving the reader to count along.
+  const stageWidths: Record<number, number> = {};
+  for (const width of [1440, 1280, 1024, 768]) {
+    await page.setViewportSize({ width, height: 900 });
+    const geometry = await boardGeometry(page);
+    expect(stagesSpillingSideways(geometry)).toEqual([]);
+    stageWidths[width] = geometry.columns[0].width;
+  }
+  expect(stageWidths).toEqual({
+    1440: STAGE_WIDTH_PX,
+    1280: STAGE_WIDTH_PX,
+    1024: STAGE_WIDTH_PX,
+    768: STAGE_WIDTH_PX,
+  });
+
+  // The board itself is what scrolls, and the shell around it never does.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const desktop = await boardGeometry(page);
+  expect(
+    desktop.scrollsSideways,
+    "six stages at 240px do not fit 1280px, so the board has to scroll",
+  ).toBe(true);
+  expect(await pageOverflow(page)).toEqual([]);
+
+  // On a phone the reader swipes: one stage and the gap after it take four
+  // fifths of the board, which leaves about a quarter of the next stage on
+  // screen. That peek is the only thing saying the pipeline carries on.
+  await page.setViewportSize({ width: 390, height: 844 });
+  const phone = await boardGeometry(page);
+  expect(stagesSpillingSideways(phone)).toEqual([]);
+  expect(await pageOverflow(page)).toEqual([]);
+  const stage = phone.columns[0].width;
+  const stageAndGap = stage + phone.gap;
+  expect(Math.abs(stageAndGap - phone.inner * 0.8)).toBeLessThanOrEqual(2);
+  const peek = phone.inner - stageAndGap;
+  expect(peek / stage).toBeGreaterThan(0.2);
+  expect(peek / stage).toBeLessThan(0.35);
+  // Snapping is what stops a swipe parking the reader between two stages.
+  expect(phone.snap).toBe("x mandatory");
+});
+
+// A FOLDED stage hands its width back, and the shared stage width is exactly
+// what it has to escape — a fold that still drew 240px would have bought the
+// stages a reader works out of nothing at all, which is the whole reason to
+// fold one. The lead board is where this ships: its two terminal stages are
+// folded until somebody opens one, beside three open ones.
+test("AC-pipeline-9: a folded stage keeps none of the shared stage width", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/#/leads?view=board");
+  await expect(page.locator(".board-col-collapsed").first()).toBeVisible();
+
+  const geometry = await boardGeometry(page);
+  const folded = geometry.columns.filter((column) => column.folded);
+  const open = geometry.columns.filter((column) => !column.folded);
+  expect(
+    open.length,
+    "a fold is only worth anything beside a stage that did not fold",
+  ).toBeGreaterThan(0);
+  expect(open.filter(({ width }) => width !== STAGE_WIDTH_PX)).toEqual([]);
+  expect(folded.filter(({ width }) => width >= STAGE_WIDTH_PX)).toEqual([]);
+  expect(stagesSpillingSideways(geometry)).toEqual([]);
+  expect(await pageOverflow(page)).toEqual([]);
+});
+
+/**
+ * Which scroller's bar is LIT, named per scroller.
+ *
+ * Read back as the words `neutral` and `accent` rather than as colours: what
+ * has to be checked is "the board is grey and the stage under the pointer is
+ * not", and a failure printing two triples of numbers makes the reader do the
+ * palette arithmetic themselves. A thumb that is neither is reported as it
+ * comes, so a third colour can never be read as one of these two.
+ *
+ * The two are resolved by asking the browser what the sheet's own declaration
+ * computes to on this page. A literal `rgb(...)` here would be a second copy of
+ * the palette: it would keep passing on a colour nobody paints any more, and
+ * fail on a token change that was correct.
+ */
+async function scrollbarStates(page: Page) {
+  return page.evaluate(() => {
+    // Off-screen, because a probe under the pointer would take the accent from
+    // the very rule being measured and report it as the resting colour.
+    function declared(thumb: string) {
+      const probe = document.createElement("span");
+      probe.style.position = "absolute";
+      probe.style.left = "-9999px";
+      probe.style.scrollbarColor = `var(${thumb}) transparent`;
+      document.body.append(probe);
+      const computed = getComputedStyle(probe).scrollbarColor;
+      probe.remove();
+      return computed;
+    }
+    const words = new Map([
+      [declared("--borderControl"), "neutral"],
+      [declared("--accent"), "accent"],
+    ]);
+    function read(element: Element | null) {
+      if (element === null) {
+        return "no such scroller on this page";
+      }
+      const painted = getComputedStyle(element).scrollbarColor;
+      return words.get(painted) ?? painted;
+    }
+    return {
+      shell: read(document.querySelector(".scroll")),
+      board: read(document.querySelector(".board")),
+      stages: Array.from(document.querySelectorAll(".board-col")).map(
+        (column) => ({
+          stage: column.getAttribute("aria-label"),
+          bar: read(column),
+        }),
+      ),
+    };
+  });
+}
+
+/**
+ * The bars, plus WHAT the pointer is standing on, as `tag.class`.
+ *
+ * The rule under test picks ONE element, so which element it picked is the
+ * claim's premise: a stage that stayed grey because the pointer landed a pixel
+ * outside it is a different defect from one that stayed grey with the pointer
+ * squarely on it, and two lists of colours cannot tell those apart. Asserted
+ * only where the premise is the point — at rest and on a card the claim is
+ * "no stage is lit", which every landing inside the board satisfies equally.
+ */
+async function barsAndPointer(page: Page) {
+  const bars = await scrollbarStates(page);
+  const pointerOver = await page.evaluate(() => {
+    // Document order is ancestor-first along the one hover chain, so the last
+    // match is the element `:not(:has(:hover))` leaves standing.
+    const deepest = Array.from(document.querySelectorAll(":hover")).at(-1);
+    if (deepest === undefined) {
+      return "nothing: the pointer is outside the document";
+    }
+    return [deepest.tagName.toLowerCase(), ...deepest.classList].join(".");
+  });
+  return { ...bars, pointerOver };
+}
+
+/**
+ * A point that is the first stage's OWN box and no other element's.
+ *
+ * Not the corner a reader might reach for. A column's padding edge is one
+ * pixel's rounding from the board behind it — CI hovered `first.x + 4,
+ * first.y + 4` and got the board — and the top inset belongs to the sticky
+ * head, which is a different element again. The empty run below the last thing
+ * in the column has neither problem: inside a list surface a column is
+ * stretched to the surface's height and scrolls its own cards, so a stage the
+ * seed leaves half-empty is its own ground from its last child down to its
+ * bottom edge, and the middle of that run is nowhere near an edge of anything.
+ * A stage full enough to have no such run keeps the flex gap between its first
+ * two cards, which is the same ground.
+ */
+async function pointInsideFirstStage(page: Page) {
+  const point = await page.evaluate(() => {
+    const column = document.querySelector(".board-col");
+    if (column === null) {
+      return "the board drew no stage, so there is nothing to hover";
+    }
+    const box = column.getBoundingClientRect();
+    const x = box.left + box.width / 2;
+    const last = Array.from(column.children).at(-1)?.getBoundingClientRect();
+    // A run thinner than a card's own gap is back to being decided by
+    // rounding, which is the whole reason the padding edge was given up.
+    const roomToStand = 8;
+    if (last !== undefined && box.bottom - last.bottom >= roomToStand) {
+      return { x, y: (last.bottom + box.bottom) / 2 };
+    }
+    const cards = Array.from(column.querySelectorAll(".deal-card"), (card) =>
+      card.getBoundingClientRect(),
+    );
+    if (cards.length >= 2) {
+      return { x, y: (cards[0].bottom + cards[1].top) / 2 };
+    }
+    return "the first stage is filled to its bottom edge by a single card, so it has neither an empty run nor a gap between cards to hover";
+  });
+  if (typeof point === "string") {
+    throw new Error(point);
+  }
+  return point;
+}
+
+// ONE bar takes the accent, and it is the bar the pointer is on.
+//
+// Hover is a chain: the pointer inside a stage is inside the board, the shell's
+// content column and the document too, so a bare `*:hover` lights every
+// scroller between the cursor and the root and the accent says only "the
+// pointer is somewhere in this window". `*:hover:not(:has(:hover))` (app.css)
+// leaves the one element whose own box — its bar, its padding, its gutter —
+// the pointer is actually over. The board is where that matters most, because
+// it is the one surface that nests a scroller inside a scroller inside a
+// scroller.
+test("AC-pipeline-10: the bar under the pointer is the one that lights", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/#/deals");
+  const stages = page.locator(".board-col");
+  await expect(stages.first()).toBeVisible();
+  expect(
+    await stages.count(),
+    "this is about ONE scroller among several, so it takes at least two stages to be about anything",
+  ).toBeGreaterThan(1);
+
+  // AT REST: the pointer in the corner of the window, on the chrome beside the
+  // board rather than anywhere in it.
+  await page.mouse.move(0, 0);
+  const resting = await scrollbarStates(page);
+  const everyStageNeutral = resting.stages.map(({ stage }) => ({
+    stage,
+    bar: "neutral",
+  }));
+  expect(resting).toEqual({
+    shell: "neutral",
+    board: "neutral",
+    stages: everyStageNeutral,
+  });
+
+  // ON THE FIRST STAGE, on ground that is the column's own box and nothing
+  // else's. The seeded board holds too few cards for a stage to overflow, so
+  // there is no vertical bar to aim at — the empty run below the last card is
+  // the strip that bar would be drawn in, and either way it is the deepest
+  // element at that point.
+  const probe = await pointInsideFirstStage(page);
+  await page.mouse.move(probe.x, probe.y);
+  await expect
+    .poll(() => barsAndPointer(page))
+    .toEqual({
+      shell: "neutral",
+      board: "neutral",
+      pointerOver: "section.board-col",
+      stages: resting.stages.map(({ stage }, index) => ({
+        stage,
+        bar: index === 0 ? "accent" : "neutral",
+      })),
+    });
+
+  // ON A CARD: the deepest element is inside the stage rather than the stage,
+  // so no scroller on the page is the one under the pointer and every bar is
+  // grey again.
+  const card = await page.locator(".deal-card").first().boundingBox();
+  if (card === null) {
+    throw new Error("the board drew no deal card to hover");
+  }
+  await page.mouse.move(card.x + card.width / 2, card.y + card.height / 2);
+  await expect
+    .poll(() => scrollbarStates(page))
+    .toEqual({
+      shell: "neutral",
+      board: "neutral",
+      stages: everyStageNeutral,
+    });
+});
+
 test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before Confirm", async ({
   page,
 }) => {

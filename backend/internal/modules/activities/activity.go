@@ -217,7 +217,8 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		return crmcontracts.Activity{}, false, err
 	}
 	if replay != nil {
-		return *replay, false, nil
+		moved, err := replayMovedTheMeeting(ctx, tx, *replay, in)
+		return moved, false, err
 	}
 
 	id := ids.New[ids.ActivityKind]()
@@ -288,6 +289,36 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 // scope: replaying someone else's external key must not hand over their
 // activity. Out of scope answers the same 409 the unique-index race
 // does — the key is taken, the record is not disclosed.
+// replayMovedTheMeeting applies the one thing a redelivery of the same natural
+// key may legitimately change: how the meeting went.
+//
+// A replay is otherwise the same fact arriving twice and writes nothing — that
+// is what makes capture idempotent, and it is why the subject a rep corrected
+// and the body they cleaned up survive the provider sending its own version
+// again. The status is different in kind: booked → held / no_show / canceled is
+// a vocabulary that EXISTS to change over time, and nothing on this side of
+// the connector can know it moved.
+//
+// Left untouched, the row went on rendering an upcoming meeting that had been
+// cancelled, the call answered 200 saying so, and no activity.updated fired —
+// so the lead ladder and everything else downstream never re-read it.
+//
+// Through updateActivityInTx rather than an UPDATE here, so the move takes the
+// write lock, records the transition (once, because it changed), and carries
+// the same bounded delta a human's PATCH does. A held row refuses this write
+// like any other, which is the point of the hold — the capture reports the
+// refusal rather than claiming a success it did not have.
+func replayMovedTheMeeting(
+	ctx context.Context, tx pgx.Tx, replay crmcontracts.Activity, in LogActivityInput,
+) (crmcontracts.Activity, error) {
+	if in.MeetingStatus == nil || *in.MeetingStatus == meetingStatusString(replay.MeetingStatus) {
+		return replay, nil
+	}
+	return updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(replay.Id)), UpdateActivityInput{
+		MeetingStatus: in.MeetingStatus,
+	})
+}
+
 func replayedActivity(ctx context.Context, tx pgx.Tx, in LogActivityInput) (*crmcontracts.Activity, error) {
 	if in.SourceSystem == nil || in.SourceID == nil {
 		return nil, nil

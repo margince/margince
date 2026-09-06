@@ -133,7 +133,12 @@ func (s *Service) raisesSuggestion(
 			return true, nil
 		}
 	}
-	return false, nil
+	// Not the rules', so perhaps the scan's: a finding the model raised for
+	// this reader is theirs to put off exactly as a rule's row is.
+	if s.scans == nil {
+		return false, nil
+	}
+	return s.scans.RaisesForCaller(ctx, tx, orgID, fingerprint)
 }
 
 // fingerprintPattern is the shape fingerprint() produces: a sha256 digest in

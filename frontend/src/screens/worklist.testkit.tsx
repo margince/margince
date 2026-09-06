@@ -95,6 +95,13 @@ export function stub(day: Worklist, answer?: unknown) {
       if (isTeamBoardRead(url)) {
         return jsonResponse(QUIET_BOARD);
       }
+      // A task write answers the row it produced, version and all. The verbs
+      // chain — a completion is undone by a second write — and the second one
+      // pins on what the first returned, so a stub answering an empty envelope
+      // would make the undo refuse itself.
+      if (/\/activities\/[^/?]+$/.test(url.split("?")[0])) {
+        return jsonResponse({ version: 4 });
+      }
       return jsonResponse({ data: [] });
     }),
   );
@@ -177,6 +184,11 @@ export function row(over: Partial<WorklistItem> = {}): WorklistItem {
     consequence: "task_slips",
     because: [],
     actions: [],
+    // The version the row's own verbs write with. Present on every fixture row
+    // because the server sends it for every row whose verbs write: a fixture
+    // without one describes a payload the read cannot produce, and the write
+    // under test would refuse rather than run.
+    version: 3,
     ...over,
   };
 }

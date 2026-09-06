@@ -85,7 +85,20 @@ const ollamaContextFloor = 4096
 //
 // Clamping buys a better failure: past this point the prompt truncates, which
 // is confined to the page that caused it.
-const ollamaMaxContext = 32768
+//
+// The value is one bucket above the 32,768 a model of this class typically
+// holds, because the cap is not only a DoS clamp: ollamaPromptWindow derives
+// from it, and that window is what the agent tool catalog is budgeted against.
+// At 32,768 the catalog had 13 tokens of room left, so the next report key to
+// be published would have failed the budget gate rather than the feature that
+// added it being the thing under discussion. A binding that serves this
+// adapter therefore needs a model with a 40,960-token context; every 8B-class
+// model current at this release carries one.
+//
+// The cost is honest and bounded: the worst-case KV allocation a remote party
+// can ask this host to find grows by a quarter. It is still a fixed ceiling,
+// which is the property that matters.
+const ollamaMaxContext = 40960
 
 // ollamaContextBucket quantizes the window. num_ctx is a RUNNER parameter —
 // Ollama reloads the model when a request's value differs from the loaded

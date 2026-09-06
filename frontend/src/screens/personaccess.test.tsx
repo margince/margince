@@ -17,6 +17,9 @@ const base: Person = {
   captured_by: "connector:gmail",
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-08-01T08:00:00Z",
+  // The write pins the row it overwrites, so a fixture with no version is a
+  // row this panel refuses to write — see the last test in this file.
+  version: 7,
 };
 
 const seatMayWrite = {
@@ -74,10 +77,10 @@ afterEach(() => {
 });
 
 describe("PersonAccess", () => {
-  it("says a captured contact is private to the reader, which no other surface does", async () => {
+  it("says a captured contact is private to its owner, which no other surface does", async () => {
     stub();
     draw({ ...base, visibility: "owner", writable: true, owner_id: "u1" });
-    expect(await screen.findByText(/private to you/i)).toBeTruthy();
+    expect(await screen.findByText(/private to its owner/i)).toBeTruthy();
   });
 
   it("says a promoted contact is the organization's", async () => {
@@ -88,7 +91,7 @@ describe("PersonAccess", () => {
     ).toBeTruthy();
   });
 
-  it("offers the owner the one verb that changes the answer", async () => {
+  it("publishes a private contact through the ordinary person patch", async () => {
     const sent: string[] = [];
     stub(sent);
     draw({ ...base, visibility: "owner", writable: true, owner_id: "u1" });
@@ -97,10 +100,23 @@ describe("PersonAccess", () => {
         name: /share with the organization/i,
       }),
     );
-    expect(sent).toContain("POST /people/p-1/publish");
+    expect(sent).toContain("PATCH /people/p-1");
   });
 
-  it("offers no verb to a reader who is not the owner", async () => {
+  it("makes a workspace contact private again — the direction that did not exist", async () => {
+    // The whole point of the change. A contact the sender classifier published
+    // with nobody approving it could not be narrowed by anybody, its own owner
+    // included.
+    const sent: string[] = [];
+    stub(sent);
+    draw({ ...base, visibility: "workspace", writable: true, owner_id: "u1" });
+    await userEvent.click(
+      await screen.findByRole("button", { name: /make private/i }),
+    );
+    expect(sent).toContain("PATCH /people/p-1");
+  });
+
+  it("offers no verb to a reader who may not write the record", async () => {
     stub();
     draw({
       ...base,
@@ -108,38 +124,58 @@ describe("PersonAccess", () => {
       writable: false,
       owner_id: "someone-else",
     });
-    expect(await screen.findByText(/private to you/i)).toBeTruthy();
+    expect(await screen.findByText(/private to its owner/i)).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: /share with the organization/i }),
     ).toBeNull();
   });
 
-  it("offers no verb to a colleague holding a write grant", async () => {
-    // `writable` is true for a write grant and for an unbounded seat, neither
-    // of which is the mailbox this contact came from. The endpoint matches on
-    // owner_id exactly, so a button drawn on writability would 404 the click.
-    stub();
+  it("offers the verb to a colleague holding a write grant", async () => {
+    // Write access is the whole gate now. The patch path runs the ordinary
+    // write test — object grant plus EnsureWritable — so a grant holder the
+    // server would admit must not be refused by the drawing.
+    const sent: string[] = [];
+    stub(sent);
     draw({
       ...base,
       visibility: "owner",
       writable: true,
       owner_id: "someone-else",
     });
-    expect(await screen.findByText(/private to you/i)).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: /share with the organization/i }),
-    ).toBeNull();
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: /share with the organization/i,
+      }),
+    );
+    expect(sent).toContain("PATCH /people/p-1");
   });
 
-  it("offers no verb on a contact the organization can already see", async () => {
+  it("offers no verb on any contact to a reader who cannot write it", async () => {
     stub();
-    draw({ ...base, visibility: "workspace", writable: true, owner_id: "u1" });
+    draw({ ...base, visibility: "workspace", writable: false, owner_id: "u1" });
     expect(
       await screen.findByText(/everyone in the organization/i),
     ).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: /share with the organization/i }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /make private/i })).toBeNull();
+  });
+
+  it("refuses to write a row it read back without a version", async () => {
+    // Unpinned is last-write-wins, and this write moves the column that
+    // decides who may read the record. The refusal surfaces through the
+    // mutation's error path rather than sending an unconditional PATCH.
+    const sent: string[] = [];
+    stub(sent);
+    draw({
+      ...base,
+      version: undefined,
+      visibility: "workspace",
+      writable: true,
+      owner_id: "u1",
+    });
+    await userEvent.click(
+      await screen.findByRole("button", { name: /make private/i }),
+    );
+    expect(sent).not.toContain("PATCH /people/p-1");
   });
 
   it("draws nothing at all when the server sent no visibility", () => {

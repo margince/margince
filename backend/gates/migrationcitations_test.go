@@ -53,7 +53,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -353,37 +352,6 @@ func citationScanExempt(rel string) bool {
 		return strings.HasPrefix(rel, "backend/internal/") || strings.HasPrefix(rel, "extensions/")
 	}
 	return false
-}
-
-// trackedFile is one entry from the index, with the one mode bit this gate
-// cares about.
-type trackedFile struct {
-	path    string
-	symlink bool
-}
-
-// trackedFiles reads the index. `-s` carries the mode, which is how a symlink is
-// told from a file without stat-ing it; `-z` makes the output NUL-delimited, so
-// no filename can be misread.
-func trackedFiles(t *testing.T) []trackedFile {
-	t.Helper()
-	out, err := exec.Command("git", "-C", "..", "ls-files", "-sz").Output()
-	if err != nil {
-		t.Fatalf("listing tracked files: %v (this test must run inside the git worktree)", err)
-	}
-	var files []trackedFile
-	for _, row := range strings.Split(strings.TrimRight(string(out), "\x00"), "\x00") {
-		if row == "" {
-			continue
-		}
-		// <mode> <sha> <stage>\t<path>
-		meta, path, ok := strings.Cut(row, "\t")
-		if !ok {
-			continue
-		}
-		files = append(files, trackedFile{path: path, symlink: strings.HasPrefix(meta, "120000")})
-	}
-	return files
 }
 
 // danglingCitationsIn reports the citations in one file naming a version no

@@ -133,6 +133,7 @@ export const en = {
   "history.field.occurred_at": "Occurred",
   "history.field.organization_id": "Company",
   "history.field.owner_id": "Owner",
+  "history.field.visibility": "Visibility",
   "history.field.parent_org_id": "Parent company",
   "history.field.partner_attribution": "Partner attribution",
   "history.field.partner_org_id": "Partner",
@@ -1537,8 +1538,13 @@ export const en = {
   "co.suggest.kind.stalled_deal": "Stalled deal",
   "co.suggest.kind.no_next_step": "Nothing scheduled",
   "co.suggest.kind.lifecycle_conflict": "Record disagrees",
+  "co.suggest.kind.commitment_unmet": "Promise unmet",
+  "co.suggest.kind.question_unanswered": "Question unanswered",
+  "co.suggest.kind.risk_raised": "Risk raised",
+  "co.suggest.kind.need_raised": "Need raised",
   "co.suggest.more": "{count} more not shown here.",
   "co.suggest.basedOn": "What this is based on",
+  "co.cite.open": "Open the record",
   "co.suggest.dismiss": "Not now",
   "co.suggest.byline": "Margince suggests",
   "co.suggest.dismissFailed":
@@ -3323,11 +3329,14 @@ export const en = {
 
   "personAccess.title": "Who can see this person",
   "personAccess.privateToYou":
-    "Private to you. Your mailbox created this person, and nobody else in the organization can see them — not your team, and not an admin.",
+    "Private to its owner. Nobody else in the organization can see this person — not the team, and not an admin.",
   "personAccess.organization":
     "Everyone in the organization can see this person.",
   "personAccess.share": "Share with the organization",
   "personAccess.published": "The organization can see this person now.",
+  "personAccess.makePrivate": "Make private",
+  "personAccess.madePrivate":
+    "This person is the owner's again. Anyone the record was explicitly shared with keeps their access.",
   "compose.reply": "Reply",
   "compose.writeEmail": "Write email",
   "compose.relink": "Relink",
@@ -3887,6 +3896,26 @@ export const en = {
   // These four were deliberately not narrated until the router could say
   // `running`: reporting them settled-only meant a line that appeared already
   // finished, which tells a waiting reader nothing they did not already know.
+  // The account scan: one reader's read of one account, filed under them
+  // and named for the account the rail can say which one is ready.
+  "agent.activity.accountScan.queued": "Reading an account is queued.",
+  "agent.activity.accountScan.running":
+    "I'm reading an account's exchanges and deals.",
+  "agent.activity.accountScan.stalled":
+    "Reading an account has taken unusually long. It may have stopped.",
+  "agent.activity.accountScan.done": "What an account needs is ready.",
+  "agent.activity.accountScan.degraded":
+    "I read an account as far as the records let me and stopped.",
+  "agent.activity.accountScan.failed": "I couldn't finish reading an account.",
+  "agent.activity.accountScanNamed.queued": "Reading {name} is queued.",
+  "agent.activity.accountScanNamed.running":
+    "I'm reading {name}'s exchanges and deals.",
+  "agent.activity.accountScanNamed.stalled":
+    "Reading {name} has taken unusually long. It may have stopped.",
+  "agent.activity.accountScanNamed.done": "What {name} needs is ready.",
+  "agent.activity.accountScanNamed.degraded":
+    "I read {name} as far as the records let me and stopped.",
+  "agent.activity.accountScanNamed.failed": "I couldn't finish reading {name}.",
   //
   // summarize is five sites over three kinds of record — a company, a person,
   // a meeting — so the unnamed lines name none of them: "this company" was a
@@ -6764,17 +6793,18 @@ export const en = {
   "extAccess.nobodyReads":
     "No role holds read on {object}, so every member sees an empty screen where this extension should be. Grant read to at least one role below.",
   "users.empty": "No users yet.",
-  "users.adminOnly": "Managing users is available to admins only.",
+  "users.adminOnly": "You do not have permission to manage users.",
   "users.inviteTitle": "Invite a user",
   "users.teamsLabel": "Teams",
   "users.noTeamsYet": "No teams yet.",
   "users.teamMembersLabel": "Who is in this team",
-  "users.teamMembersAdminOnly": "Membership is visible to admins only.",
+  "users.teamMembersAdminOnly":
+    "You do not have permission to see who is in this team.",
   "users.teamNobodyToAdd": "No users to add yet.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
     "Named groups you can share records with. Membership alone still grants no access for most roles — the exception is Team Lead: adding one to a team gives them that team's records to read and work, without a share being arranged.",
-  "users.teamsAdminOnly": "Managing teams is available to admins only.",
+  "users.teamsAdminOnly": "You do not have permission to manage teams.",
   "users.deactivated": "{name} deactivated",
   "users.reactivated": "{name} reactivated",
   "users.roleSaved": "Role changed for {name}",
@@ -8043,6 +8073,17 @@ export const en = {
   // The licensed data provider (ADR-0101). Two surfaces share this
   // vocabulary — the Settings card and the person page — so a state reads
   // the same wherever it appears.
+  "today.scan.queued": "Margince will read this account in a moment.",
+  "today.scan.reading":
+    "Margince is reading this account's exchanges and deals.",
+  "today.scan.read": "Read {exchanges} and {deals}",
+  "today.scan.readExchanges_one": "{count} exchange",
+  "today.scan.readExchanges_other": "{count} exchanges",
+  "today.scan.readDeals_one": "{count} deal",
+  "today.scan.readDeals_other": "{count} deals",
+  "today.scan.stale":
+    "The account has moved since. It is read again within the hour.",
+  "today.scan.resumes": "Reading resumes {when}; the AI budget deferred it.",
   "provider.title": "Contact data",
   "provider.readOnly":
     "Read-only view — connecting a provider spends money, so it is an admin or ops action.",
@@ -8263,6 +8304,13 @@ export const en = {
   "filters.noMatches": "No records match this filter.",
   "filters.loadView": "Load a saved filter",
   "filters.pickRecord": "Choose one",
+  "filters.searchRecords": "Search companies",
+  "filters.typeToSearch": "Type to search",
+  "filters.searching": "Searching…",
+  "filters.searchFailed": "Could not search",
+  "filters.noRecordMatches": "No companies match",
+  "filters.changeRecord": "Change",
+  "filters.removeRecord": "Remove {record}",
   "filters.loadingRecords": "Loading choices…",
   "filters.pickValue": "Choose a value",
   "filters.exportCsv": "Export CSV",

@@ -310,7 +310,7 @@ func anonymizeSubjectRows(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 	}
 	if _, err := tx.Exec(ctx, fmt.Sprintf(`
 		UPDATE person SET first_name = NULL, last_name = NULL, full_name = $2,
-		  title = NULL, raw = NULL,
+		  title = NULL, raw = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
 		  archived_at = coalesce(archived_at, now())%s

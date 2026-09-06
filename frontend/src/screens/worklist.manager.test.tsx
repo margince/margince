@@ -100,7 +100,10 @@ function renderUnderAToastRegion(ui: React.ReactNode) {
 // the assertion compares undefined against the write it wanted.
 async function wrote(
   fetched: ReturnType<typeof vi.fn>,
-): Promise<{ method: string; url: string; body: unknown } | undefined> {
+): Promise<
+  | { method: string; url: string; ifMatch: string | null; body: unknown }
+  | undefined
+> {
   const calls = fetched.mock.calls;
   for (let at = calls.length - 1; at >= 0; at--) {
     const [input] = calls[at] as [RequestInfo | URL, RequestInit?];
@@ -108,6 +111,7 @@ async function wrote(
       return {
         method: input.method,
         url: input.url,
+        ifMatch: input.headers.get("If-Match"),
         body: await input.clone().json(),
       };
     }
@@ -142,6 +146,10 @@ describe("handing a task to somebody else", () => {
     expect(sent?.method).toBe("PATCH");
     expect(sent?.url).toContain("/activities/task-1");
     expect(sent?.body).toEqual({ assignee_id: MINH });
+    // Conditioned on the version the lead was looking at. Unpinned, two leads
+    // hand one task to different people and the second press wins silently —
+    // the row then sits on one queue while the other believes they delegated it.
+    expect(sent?.ifMatch).toBe("3");
     expect(
       await screen.findByText(en["worklist.manager.reassigned"]),
     ).toBeTruthy();

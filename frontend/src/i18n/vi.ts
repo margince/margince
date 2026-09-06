@@ -139,6 +139,7 @@ export const vi = {
   "history.field.occurred_at": "Thời điểm",
   "history.field.organization_id": "Công ty",
   "history.field.owner_id": "Người sở hữu",
+  "history.field.visibility": "Phạm vi hiển thị",
   "history.field.parent_org_id": "Công ty mẹ",
   "history.field.partner_attribution": "Ghi nhận đối tác",
   "history.field.partner_org_id": "Đối tác",
@@ -1457,8 +1458,13 @@ export const vi = {
   "co.suggest.kind.stalled_deal": "Deal đình trệ",
   "co.suggest.kind.no_next_step": "Chưa có gì lên lịch",
   "co.suggest.kind.lifecycle_conflict": "Bản ghi mâu thuẫn",
+  "co.suggest.kind.commitment_unmet": "Lời hứa chưa thực hiện",
+  "co.suggest.kind.question_unanswered": "Câu hỏi chưa trả lời",
+  "co.suggest.kind.risk_raised": "Rủi ro được nêu",
+  "co.suggest.kind.need_raised": "Nhu cầu được nêu",
   "co.suggest.more": "Còn {count} mục không hiện ở đây.",
   "co.suggest.basedOn": "Dựa trên những gì",
+  "co.cite.open": "Mở bản ghi",
   "co.suggest.dismiss": "Để sau",
   "co.suggest.byline": "Margince đề xuất",
   "co.suggest.dismissFailed":
@@ -3209,6 +3215,9 @@ export const vi = {
     "Mọi người trong tổ chức đều xem được người này.",
   "personAccess.share": "Chia sẻ với tổ chức",
   "personAccess.published": "Tổ chức đã xem được người này.",
+  "personAccess.makePrivate": "Đặt ở chế độ riêng tư",
+  "personAccess.madePrivate":
+    "Người này thuộc về chủ sở hữu trở lại. Những ai đã được chia sẻ bản ghi vẫn giữ quyền truy cập.",
   "compose.reply": "Trả lời",
   "compose.writeEmail": "Viết email",
   "compose.relink": "Liên kết lại",
@@ -3724,6 +3733,26 @@ export const vi = {
   "agent.activity.documentExtractNamed.degraded":
     "Tôi mới đọc được một phần {name} rồi dừng.",
   "agent.activity.documentExtractNamed.failed": "Tôi không đọc được {name}.",
+  "agent.activity.accountScan.queued": "Việc đọc một tài khoản đang chờ xử lý.",
+  "agent.activity.accountScan.running":
+    "Tôi đang đọc các trao đổi và giao dịch của một tài khoản.",
+  "agent.activity.accountScan.stalled":
+    "Việc đọc một tài khoản kéo dài bất thường. Có thể nó đã dừng.",
+  "agent.activity.accountScan.done": "Những gì một tài khoản cần đã sẵn sàng.",
+  "agent.activity.accountScan.degraded":
+    "Tôi đã đọc một tài khoản đến mức các bản ghi cho phép rồi dừng.",
+  "agent.activity.accountScan.failed":
+    "Tôi không hoàn thành được việc đọc một tài khoản.",
+  "agent.activity.accountScanNamed.queued": "Việc đọc {name} đang chờ xử lý.",
+  "agent.activity.accountScanNamed.running":
+    "Tôi đang đọc các trao đổi và giao dịch của {name}.",
+  "agent.activity.accountScanNamed.stalled":
+    "Việc đọc {name} kéo dài bất thường. Có thể nó đã dừng.",
+  "agent.activity.accountScanNamed.done": "Những gì {name} cần đã sẵn sàng.",
+  "agent.activity.accountScanNamed.degraded":
+    "Tôi đã đọc {name} đến mức các bản ghi cho phép rồi dừng.",
+  "agent.activity.accountScanNamed.failed":
+    "Tôi không hoàn thành được việc đọc {name}.",
   "agent.activity.siteRead.queued": "Trang web của công ty đang chờ được đọc.",
   "agent.activity.siteRead.running": "Tôi đang đọc trang web của công ty.",
   "agent.activity.siteRead.stalled":
@@ -6572,17 +6601,18 @@ export const vi = {
   "extAccess.nobodyReads":
     "Không vai trò nào được đọc {object}, nên mọi thành viên chỉ thấy màn hình trống ở nơi lẽ ra là tiện ích này. Hãy cấp quyền đọc cho ít nhất một vai trò bên dưới.",
   "users.empty": "Chưa có người dùng nào.",
-  "users.adminOnly": "Chỉ quản trị viên mới quản lý được người dùng.",
+  "users.adminOnly": "Bạn không có quyền quản lý người dùng.",
   "users.inviteTitle": "Mời một người dùng",
   "users.teamsLabel": "Nhóm",
   "users.noTeamsYet": "Chưa có nhóm.",
   "users.teamNobodyToAdd": "Chưa có người dùng nào để thêm.",
   "users.teamMembersLabel": "Ai ở trong nhóm này",
-  "users.teamMembersAdminOnly": "Chỉ quản trị viên mới xem được thành viên.",
+  "users.teamMembersAdminOnly":
+    "Bạn không có quyền xem thành viên của nhóm này.",
   "users.teamsTitle": "Nhóm",
   "users.teamsSub":
     "Nhóm có tên để bạn chia sẻ bản ghi. Chỉ thuộc một nhóm thì hầu hết vai trò vẫn chưa có quyền gì thêm — ngoại lệ là Trưởng nhóm: thêm họ vào một nhóm sẽ cho họ đọc và xử lý bản ghi của nhóm đó mà không cần thiết lập chia sẻ.",
-  "users.teamsAdminOnly": "Chỉ quản trị viên mới có thể quản lý nhóm.",
+  "users.teamsAdminOnly": "Bạn không có quyền quản lý nhóm.",
   "users.deactivated": "Đã vô hiệu hóa {name}",
   "users.reactivated": "Đã kích hoạt lại {name}",
   "users.roleSaved": "Đã đổi vai trò cho {name}",
@@ -7823,6 +7853,17 @@ export const vi = {
   // Nhà cung cấp dữ liệu liên hệ (ADR-0101). Hai màn hình dùng chung bộ từ
   // vựng này — thẻ Cài đặt và trang cá nhân — để một trạng thái luôn đọc
   // giống nhau ở mọi nơi.
+  "today.scan.queued": "Margince sẽ đọc tài khoản này trong giây lát.",
+  "today.scan.reading":
+    "Margince đang đọc các trao đổi và giao dịch của tài khoản này.",
+  "today.scan.read": "Đã đọc {exchanges} và {deals}",
+  "today.scan.readExchanges_one": "{count} trao đổi",
+  "today.scan.readExchanges_other": "{count} trao đổi",
+  "today.scan.readDeals_one": "{count} giao dịch",
+  "today.scan.readDeals_other": "{count} giao dịch",
+  "today.scan.stale":
+    "Tài khoản đã thay đổi kể từ đó. Nó sẽ được đọc lại trong vòng một giờ.",
+  "today.scan.resumes": "Việc đọc sẽ tiếp tục {when}; ngân sách AI đã hoãn nó.",
   "provider.readOnly":
     "Chế độ chỉ đọc — kết nối nhà cung cấp tiêu tốn tiền, nên đây là hành động của quản trị viên hoặc ops.",
   "provider.title": "Dữ liệu liên hệ",
@@ -8028,6 +8069,13 @@ export const vi = {
     "Kh\u00f4ng c\u00f3 b\u1ea3n ghi n\u00e0o kh\u1edbp b\u1ed9 l\u1ecdc n\u00e0y.",
   "filters.loadView": "T\u1ea3i b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u",
   "filters.pickRecord": "Ch\u1ecdn m\u1ed9t",
+  "filters.searchRecords": "Tìm kiếm công ty",
+  "filters.typeToSearch": "Nhập để tìm",
+  "filters.searching": "Đang tìm…",
+  "filters.searchFailed": "Không thể tìm kiếm",
+  "filters.noRecordMatches": "Không có công ty nào khớp",
+  "filters.changeRecord": "Thay đổi",
+  "filters.removeRecord": "Xóa {record}",
   "filters.loadingRecords": "\u0110ang t\u1ea3i l\u1ef1a ch\u1ecdn\u2026",
   "filters.pickValue": "Ch\u1ecdn gi\u00e1 tr\u1ecb",
   "filters.exportCsv": "Xu\u1ea5t CSV",

@@ -103,8 +103,11 @@ export const Folded: Story = {
     const canvas = within(canvasElement);
     const user = userEvent.setup();
     await expect(canvasElement.querySelector("aside")).toBeNull();
+    // The switch renders nothing until the screen's `usePageAside` effect has
+    // claimed the pane, which is a commit past mount: the query has to wait for
+    // it rather than assume the first paint carried it.
     await user.click(
-      canvas.getByRole("button", { name: en["record.panel.details"] }),
+      await canvas.findByRole("button", { name: en["record.panel.details"] }),
     );
     await expect(canvasElement.querySelector("aside")).not.toBeNull();
     await expect(

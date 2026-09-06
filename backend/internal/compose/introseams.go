@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -207,7 +208,7 @@ func accountContacts(ctx context.Context, tx pgx.Tx, orgID ids.UUID) ([]accountC
 		   -- that row as live. Two spellings would let one surface call them
 		   -- gone while the other calls them current.
 		   AND r.archived_at IS NULL
-		   AND `+people.EmploymentIsCurrentSQL("r.ended_at")+`
+		   AND `+employment.IsCurrentSQL("r.ended_at")+`
 		   AND (%s) AND (%s)
 		 ORDER BY p.id LIMIT %d`, orgPos, edgeBound, visible, accountContactFetch+1), args...)
 	if err != nil {

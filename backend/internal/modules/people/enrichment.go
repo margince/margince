@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
@@ -250,7 +251,7 @@ func SubjectIdentifiers(ctx context.Context, tx pgx.Tx, personID string) (provid
 		  LEFT JOIN organization_domain d
 		    ON d.organization_id = o.id AND d.is_primary AND d.archived_at IS NULL
 		 WHERE r.kind = 'employment' AND r.person_id = $1
-		   AND `+CurrentPrimaryEmploymentSQL("r")+` AND r.archived_at IS NULL
+		   AND `+employment.CurrentPrimarySQL("r")+` AND r.archived_at IS NULL
 		 LIMIT 1`, personID).
 		Scan(&id.CompanyName, &id.CompanyDomain); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return provider.PersonIdentifiers{}, fmt.Errorf("people: reading the subject's employer: %w", err)

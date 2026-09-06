@@ -231,6 +231,17 @@ tasks:
     company_context: none
     doc: "corpus_ask — one bounded document corpus, asked in free text and answered only from what the workspace filed in it. Everything a REFUSAL rests on is decided before this task is reached: readiness, the embed binding, and the grounding floor are settled deterministically, so the model is asked only when passages already cleared the floor. Its whole job is prose, and its answer is a list of claims each carrying a citation and a verbatim quote checked against the retrieved text — a claim whose quote is not found is dropped, and an answer with no surviving claim is not_covered. The ladder leads premium as a PREFERENCE and not a contract, because the guardrail is verbatim quoting and cheaper tiers paraphrase; a demoted rung is not trusted, it is checked like any other and falls back only if it actually fails. A missing chat lane, or a reply the guardrail refuses, degrades to the retrieved passages themselves with generated_by saying deterministic — deal_health's rule, for deal_health's reason, and honest because the grounded part of a grounded answer was never the prose. Over budget is NOT a separate outcome: an interactive task is never refused on budget, it is pinned to the on-box rung and asked, and whichever answer survives the quote check is what generated_by reports. What is invariant, and what the test asserts, is narrower: an over-budget ask never refuses and never spends a cloud rung."
 
+  account_scan:
+    display_name: "Reading what an account needs"
+    ladder: [cheap_cloud, premium]
+    execution_mode: background
+    on_budget_exhausted: queue
+    status: shipped
+    sites: [org_scan]
+    company_context: {scopes: [identity], token_budget: 300, conditional: true}
+    no_payload: true
+    doc: "org_scan — what one account needs, read for ONE reader from the account's own exchanges and pipeline: the 360 as that reader sees it plus the recent messages' own words, admitted by their audience. The model raises findings in a closed vocabulary (an unmet commitment of ours, a question of theirs nobody answered, a risk they raised, a need they raised), each citing the records it rests on and quoting the words it read; the server drops whole any finding whose citation it did not supply or whose quote is not in the message it cites. Merged with the 360's own rule advice under one fingerprint vocabulary, so a dismissal holds across both. Runs as a background job the account page ensures on open, cached per reader on a fingerprint of the input and rescanned at most hourly, so a busy inbox does not re-read the account on every message. no_payload because the prompt carries message bodies. With no lane, or a deferral past the job's patience, the rules' advice stands alone and generated_by says so."
+
   deal_health:
     display_name: "Deal status card"
     ladder: [cheap_cloud, premium]

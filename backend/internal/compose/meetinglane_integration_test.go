@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -55,7 +56,10 @@ func meetingSubjects(t *testing.T, e *integration.Env, now time.Time) []string {
 	t.Helper()
 	lane := attentionMeetings{store: activities.NewStore(InstallationDB(e.Pool))}
 	endOfDay := now.Truncate(24 * time.Hour).Add(24 * time.Hour)
-	rows, err := lane.Today(e.Admin(), now, endOfDay, 12)
+	// TasksVisible: these tests are about the WINDOW and the ordering, so the
+	// lane is read with no ownership narrowing — what the reader may see, which
+	// is the scope the feed uses when nobody asked for one person's day.
+	rows, err := lane.Today(e.Admin(), now, endOfDay, 12, attention.TasksVisible, ids.UUID{})
 	if err != nil {
 		t.Fatalf("reading the meeting lane: %v", err)
 	}

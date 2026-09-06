@@ -17,8 +17,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	peoplemod "github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -49,6 +49,11 @@ type dealFacts struct {
 	// date, so a deal nobody has contacted and one contacted the day it was
 	// written down carry the same instant.
 	everTouched bool
+	// asOf is the DATABASE's clock, read in the same statement as the row.
+	// going-cold measures against it rather than against the service's, so
+	// both ends of that subtraction come from the clock that wrote the touch —
+	// see DealCoverage.TouchedAsOf.
+	asOf time.Time
 }
 
 // readDealFacts loads the deal row the rules decide on.
@@ -60,8 +65,9 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (dealFacts
 	var org *ids.UUID
 	err := tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT status, organization_id, %s,
-		       last_activity_at IS NOT NULL
-		  FROM deal WHERE id = $1`, idlebase.SQL("")), dealID).Scan(&out.status, &org, &out.lastTouchAt, &out.everTouched)
+		       last_activity_at IS NOT NULL, now()
+		  FROM deal WHERE id = $1`, idlebase.SQL("")), dealID).
+		Scan(&out.status, &org, &out.lastTouchAt, &out.everTouched, &out.asOf)
 	if err != nil {
 		return out, fmt.Errorf("network: reading the deal a coverage view describes: %w", err)
 	}
@@ -90,7 +96,7 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (dealFacts
 // because a colleague fixed a data-entry error is exactly the false alarm that
 // teaches a rep to ignore the flag.
 //
-// "Still employed there" is people.EmploymentIsCurrentSQL, and both halves of
+// "Still employed there" is employment.IsCurrentSQL, and both halves of
 // this statement are written from it: the live half asserts it, the departed
 // half is its NEGATION. Spelled that way rather than as an equivalent
 // hand-written `ended_at IS NOT NULL AND ended_at <= today`, because the
@@ -103,7 +109,7 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (dealFacts
 // while the live half compared against Postgres' current_date, so one statement
 // asked its two questions on two different days whenever the server and the
 // database disagreed about the date — which is precisely what
-// EmploymentIsCurrentSQL's own comment says the predicate exists to prevent.
+// employment.IsCurrentSQL's own comment says the predicate exists to prevent.
 //
 // No person visibility probe: the caller passes the stakeholder ids it already
 // read under its own person row scope, so a seat this caller cannot see never
@@ -138,7 +144,7 @@ func readDeparted(ctx context.Context, tx pgx.Tx, orgID ids.UUID, people []ids.U
 		   AND r.organization_id = $%[1]d
 		   AND r.person_id = ANY($%[2]d)
 		   AND r.archived_at IS NULL
-		   AND NOT `+peoplemod.EmploymentIsCurrentSQL("r.ended_at")+`
+		   AND NOT `+employment.IsCurrentSQL("r.ended_at")+`
 		   AND (%[3]s)
 		   AND NOT EXISTS (
 		       SELECT 1 FROM relationship live
@@ -146,7 +152,7 @@ func readDeparted(ctx context.Context, tx pgx.Tx, orgID ids.UUID, people []ids.U
 		          AND live.organization_id = r.organization_id
 		          AND live.person_id = r.person_id
 		          AND live.archived_at IS NULL
-		          AND `+peoplemod.EmploymentIsCurrentSQL("live.ended_at")+`)
+		          AND `+employment.IsCurrentSQL("live.ended_at")+`)
 		 ORDER BY r.person_id`, orgPos, peoplePos, edgeBound), args...)
 	if err != nil {
 		return nil, fmt.Errorf("network: reading which stakeholders have left the account: %w", err)

@@ -114,3 +114,34 @@ export const Unopenable: Story = {
     </StoryProviders>
   ),
 };
+
+export const Receipted: Story = {
+  render: () => (
+    // A chip carrying the record's own words: resting on it opens the quote
+    // in the agent's rule, the origin and the date under it, and the way to
+    // the record where it has a page. What the reader checks the claim
+    // against without leaving the row.
+    <StoryProviders>
+      <SentenceList
+        sentences={[
+          sentence("You reached out 12 days ago and nobody has come back.", [
+            {
+              ...cite("activity", "a-1", "Slots for the pilot review"),
+              quote: "Hi Anna, two slots next week would work on our side.",
+              at: "2026-05-01T09:00:00Z",
+              origin: "Email you sent",
+            },
+          ]),
+          sentence('"Fleet renewal 2027" has stalled.', [
+            {
+              ...cite("deal", "d-1", "Fleet renewal 2027"),
+              at: "2026-03-14T09:00:00Z",
+              origin: "Open deal, last worked",
+            },
+          ]),
+        ]}
+        onOpenRecord={openRecord}
+      />
+    </StoryProviders>
+  ),
+};

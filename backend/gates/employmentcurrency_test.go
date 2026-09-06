@@ -5,7 +5,7 @@
 
 package gates
 
-// people.EmploymentIsCurrentSQL calls itself "the ONE spelling of 'this job is
+// employment.IsCurrentSQL calls itself "the ONE spelling of 'this job is
 // still theirs', and the only definition of a current employment in this
 // product". That was a claim with nothing holding it, and it was false eleven
 // times over.
@@ -46,38 +46,37 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// blockedByTheModuleDAG ratifies the statements that cannot adopt the helper
-// TODAY, each with the reason it cannot — which is the same reason in every
-// case and is architectural, not a matter of somebody not getting round to it.
+// Nothing is ratified here, and that is the point.
 //
-// EmploymentIsCurrentSQL lives in modules/people, and a module never imports a
-// sibling (ADR-0054 §3). compose may reach it and does; people's own files
-// reach it directly; FIVE sibling modules cannot — activities, projects,
-// signals, consent and search — and the predicate would have to move tier
-// before they could. That is an architecture decision with an owner, so it is
-// an issue rather than a change smuggled into this one — margince/margince#2360.
+// The helper used to live in modules/people, where a module never imports a
+// sibling (ADR-0054 §3). compose could reach it and did; people's own files
+// reach it directly, and so can the five sibling modules that could not — the
+// predicate moved to shared/kernel/employment, which is Tier 0 and reachable
+// from everywhere. Eight statements in seven files were ratified here by name
+// while it lived in `modules/people`; all eight now call it, so there is
+// nothing left to ratify and the map is gone rather than emptied.
+// carriesASecondEdgeKind ratifies the two statements whose employment arm DOES
+// call the helper and which still read as findings here, because they ask about
+// another edge kind in the same statement and this census matches per statement
+// rather than per arm.
 //
-// EIGHT statements in the seven files below, since resolver.go carries two. The
-// count is stated because it is the debt, and it is the map's own arithmetic
-// rather than a second answer: one per key, plus resolver.go's extra.
+// The other kind is a stakeholder edge — on a deal, on a project — and it has no
+// notice period: a stakeholder either is on the deal or is not, so `ended_at IS
+// NULL` is the whole question there and the date comparison would be wrong. What
+// the gate cannot see is which arm the test belongs to.
 //
-// Each entry is a FILE and not the whole module, so a new statement in one of
-// these packages is still a finding — the ratification covers the sites that
-// exist, not the topic.
-var blockedByTheModuleDAG = gatekit.Waive(map[string]string{
-	"internal/modules/activities/orgscope.go":          "activities cannot import people (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/projects/surface.go":             "projects cannot import people (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/signals/resolver.go":             "signals cannot import people (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/signals/warmroom.go":             "signals cannot import people (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/consent/authorizevalidators.go":  "consent cannot import people (ADR-0054 §3); the predicate must move tier first. Same date comparison as the helper, and the cost of getting it wrong here is the sharpest on this list: a null check would stop an invoice or a contract notice reaching a finance contact the day their notice was filed, while they are still the person handling it",
-	"internal/modules/consent/confirmcard.go":          "consent cannot import people (ADR-0054 §3); the predicate must move tier first. The copy is the helper's own date comparison rather than a null check, so a person serving notice still sees their employer on their own confirm card",
-	"internal/modules/search/graphorgreach.go":         "search cannot import people (ADR-0054 §3); the predicate must move tier first. It is a CHARACTER-FOR-CHARACTER copy of activities/orgscope.go's arms, held so by TestTheAccountReachWalkIsOneAnswer — adopting the helper on one side alone would break that parity before it fixed anything, so the two move together or not at all",
-	"internal/modules/search/graphactivitysubjects.go": "search cannot import people (ADR-0054 §3); the predicate must move tier first. Same shape as the org-reach arm beside it: an attendee serving notice stops carrying their employer into a prep, which is the cost stated on every other entry here",
+// TWO, and a different reason from the eight this map replaced. Those said the
+// predicate was out of reach; it is not any more. These say the census reads a
+// statement whole. Sharpening it to judge the conjunction the employment kind
+// sits in would retire them, and is worth doing the moment a third appears.
+var carriesASecondEdgeKind = gatekit.Waive(map[string]string{
+	"internal/modules/projects/surface.go": "the employment arm calls employment.CurrentPrimarySQL; the project_stakeholder arm beside it tests its own ended_at, which has no notice period to allow for",
+	"internal/modules/signals/warmroom.go": "the employment arm calls employment.IsCurrentSQL; the deal_stakeholder arm beside it tests its own ended_at, which has no notice period to allow for",
 })
 
 const (
-	employmentHelper = "EmploymentIsCurrentSQL"
-	primaryHelper    = "CurrentPrimaryEmploymentSQL"
+	employmentHelper = "IsCurrentSQL"
+	primaryHelper    = "CurrentPrimarySQL"
 	employmentIssue  = "eight statements in five sibling modules are ratified separately: a module may not import people (ADR-0054 §3), so the predicate has to move tier before they can adopt it; see issue 2360"
 )
 
@@ -109,14 +108,14 @@ var endedAtCurrency = regexp.MustCompile(`ended_at\s+IS\s+(NOT\s+)?NULL|ended_at
 
 // employmentCurrencyOwner is where the definition lives. Its own statements are
 // the definition rather than a copy of it.
-const employmentCurrencyOwner = "internal/modules/people/employmentcurrency.go"
+const employmentCurrencyOwner = "internal/shared/kernel/employment/employment.go"
 
 func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 	t.Parallel()
-	// A ratification that stops matching is a ratification for a site that has
-	// moved or been fixed, and leaving it in place quietly re-exempts whatever
-	// takes its name next.
-	defer blockedByTheModuleDAG.AssertAllMatched(t)
+	// A ratification that stops matching is one for a site that has moved or
+	// been fixed, and leaving it in place quietly re-exempts whatever takes its
+	// name next.
+	defer carriesASecondEdgeKind.AssertAllMatched(t)
 
 	fset := token.NewFileSet()
 	var findings []string
@@ -131,8 +130,8 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
 		scope := helperScope{
-			qualifier: importAliasOf(file, "github.com/margince/margince/backend/internal/modules/people"),
-			inside:    file.Name != nil && file.Name.Name == "people",
+			qualifier: importAliasOf(file, "github.com/margince/margince/backend/internal/shared/kernel/employment"),
+			inside:    file.Name != nil && file.Name.Name == "employment",
 			names:     map[string]bool{employmentHelper: true, primaryHelper: true},
 		}
 		for _, decl := range file.Decls {
@@ -144,7 +143,7 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 				if !endedAtCurrency.MatchString(sql) {
 					continue
 				}
-				if blockedByTheModuleDAG.Waived(t, filepath.ToSlash(path)) {
+				if carriesASecondEdgeKind.Waived(t, filepath.ToSlash(path)) {
 					continue
 				}
 				findings = append(findings, fmt.Sprintf("%s: %s", path, firstEmploymentLine(sql)))
@@ -172,7 +171,7 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 //
 // A statement, not a literal. A query that calls the helper is written as
 //
-//	`… WHERE r.kind = 'employment' AND ` + people.EmploymentIsCurrentSQL("r.ended_at") + ` AND …`
+//	`… WHERE r.kind = 'employment' AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND …`
 //
 // which the parser gives as three separate nodes, so judging each *ast.BasicLit
 // on its own splits the question in half: the piece naming the employment kind
@@ -263,7 +262,7 @@ func read() string {
 }`},
 	{"the helper AND a hand-written test beside it", true, "", `
 func read() string {
-	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + people.EmploymentIsCurrentSQL("r.ended_at") + ` + "`" + ` AND r.ended_at IS NOT NULL` + "`" + `
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + employment.IsCurrentSQL("r.ended_at") + ` + "`" + ` AND r.ended_at IS NOT NULL` + "`" + `
 }`},
 	// The name alone is not the helper. markSeen claims a helper call's whole
 	// subtree, so a LOOKALIKE would have had its arguments hidden and could
@@ -275,16 +274,16 @@ func read() string {
 
 	{"the real helper, qualified", false, "", `
 func read() string {
-	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + people.EmploymentIsCurrentSQL("r.ended_at") + ` + "`" + ` AND r.archived_at IS NULL` + "`" + `
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + employment.IsCurrentSQL("r.ended_at") + ` + "`" + ` AND r.archived_at IS NULL` + "`" + `
 }`},
 	{"the real helper, unqualified inside people", false, "people", `
 func read() string {
-	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + EmploymentIsCurrentSQL("r.ended_at") + ` + "`" + ` AND r.archived_at IS NULL` + "`" + `
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + employment.IsCurrentSQL("r.ended_at") + ` + "`" + ` AND r.archived_at IS NULL` + "`" + `
 }`},
 	// A bare call outside people names something else entirely.
 	{"an unqualified call outside people", true, "", `
 func read() string {
-	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + EmploymentIsCurrentSQL("r.ended_at IS NULL") + ` + "`" + ` AND 1=1` + "`" + `
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + employment.IsCurrentSQL("r.ended_at IS NULL") + ` + "`" + ` AND 1=1` + "`" + `
 }`},
 	// Another relationship kind is a different question, deliberately not this
 	// gate's.
@@ -299,7 +298,7 @@ func read() string {
 	// "this file does not import people", and most of the tree is the second.
 	{"a bare helper name in a file that does not import people", true, "noimport", `
 func read() string {
-	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + EmploymentIsCurrentSQL("r.ended_at IS NULL") + ` + "`" + ` AND 1=1` + "`" + `
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND ` + "`" + ` + employment.IsCurrentSQL("r.ended_at IS NULL") + ` + "`" + ` AND 1=1` + "`" + `
 }`},
 	{"an IN list whose earlier item is a subquery", true, "", `
 func read() string {
@@ -355,7 +354,7 @@ func TestTheEmploymentDetectorSeesWhatItClaimsTo(t *testing.T) {
 
 // The OTHER question about is_current_primary: which row holds the slot
 // uq_rel_current_primary_employer keeps unique. It is date-BLIND, so it cannot
-// share EmploymentIsCurrentSQL — a guard that asked "are they still employed"
+// share employment.IsCurrentSQL — a guard that asked "are they still employed"
 // would read a person serving notice as having freed a slot the index still
 // holds, and the write behind it would 409 instead of skipping.
 //
@@ -367,7 +366,7 @@ func TestTheEmploymentDetectorSeesWhatItClaimsTo(t *testing.T) {
 
 // currentPrimarySlotPredicate names the helper this census requires, so the
 // report can point at it.
-const currentPrimarySlotPredicate = "CurrentPrimarySlotSQL"
+const currentPrimarySlotPredicate = "employment.CurrentPrimarySlotSQL"
 
 // slotBlockedByTheModuleDAG ratifies the statement that cannot adopt the
 // helper today, for the architectural reason above and not for want of
@@ -377,9 +376,7 @@ const currentPrimarySlotPredicate = "CurrentPrimarySlotSQL"
 // records what reached it, and AssertAllMatched belongs to exactly one census —
 // two sweeping the same set would make whichever ran first report false
 // staleness.
-var slotBlockedByTheModuleDAG = gatekit.Waive(map[string]string{
-	"internal/modules/projects/surface.go": "projects cannot import people (ADR-0054 §3); the predicate must move tier first",
-})
+var slotBlockedByTheModuleDAG = gatekit.Waive(map[string]string{})
 
 // spellsSlotPredicate reports whether a statement tests the flag and an
 // archived test IN ONE CONJUNCTION — which is the slot predicate, however it is
@@ -554,8 +551,8 @@ func TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling(t *testing.T) {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
 		scope := helperScope{
-			qualifier: importAliasOf(file, "github.com/margince/margince/backend/internal/modules/people"),
-			inside:    file.Name != nil && file.Name.Name == "people",
+			qualifier: importAliasOf(file, "github.com/margince/margince/backend/internal/shared/kernel/employment"),
+			inside:    file.Name != nil && file.Name.Name == "employment",
 			names:     map[string]bool{currentPrimarySlotPredicate: true},
 		}
 		for _, decl := range file.Decls {
@@ -641,14 +638,14 @@ var slotProbes = []struct {
 	// A helper call claims its whole subtree, so a lookalike from another
 	// package would have hidden a hand-written fragment inside its arguments.
 	{"a lookalike helper from another package", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE ` + other.CurrentPrimarySlotSQL(\"b.is_current_primary AND b.archived_at IS NULL\")\n}"},
-	{"a bare helper name in a file that does not import people", true, "noimport", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE ` + CurrentPrimarySlotSQL(\"b.is_current_primary AND b.archived_at IS NULL\")\n}"},
+	{"a bare helper name in a file that does not import people", true, "noimport", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE ` + employment.CurrentPrimarySlotSQL(\"b.is_current_primary AND b.archived_at IS NULL\")\n}"},
 
-	{"the real helper, qualified", false, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE b.person_id = $1 AND ` + people.CurrentPrimarySlotSQL(\"b\")\n}"},
-	{"the real helper, unqualified inside people", false, "people", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE person_id = $1 AND ` + CurrentPrimarySlotSQL(\"\")\n}"},
+	{"the real helper, qualified", false, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE b.person_id = $1 AND ` + employment.CurrentPrimarySlotSQL(\"b\")\n}"},
+	{"the real helper, unqualified inside people", false, "people", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE person_id = $1 AND ` + employment.CurrentPrimarySlotSQL(\"\")\n}"},
 	// The create path's guard is deliberately WIDER than the slot: it refuses
 	// the flag when the person has any employment that is current OR flagged,
 	// which is not the index's predicate and must not be rewritten as it.
-	{"the wider create-path guard, where the flag sits inside an OR", false, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE kind = 'employment' AND person_id = $2 AND archived_at IS NULL AND (` + EmploymentIsCurrentSQL(\"ended_at\") + ` OR is_current_primary)`\n}"},
+	{"the wider create-path guard, where the flag sits inside an OR", false, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE kind = 'employment' AND person_id = $2 AND archived_at IS NULL AND (` + employment.IsCurrentSQL(\"ended_at\") + ` OR is_current_primary)`\n}"},
 	{"the flag with no archived test beside it", false, "", "\nfunc read() string {\n\treturn `UPDATE relationship SET is_current_primary = coalesce($3, is_current_primary)`\n}"},
 
 	// Four spellings a two-term pattern missed, each verified green against it

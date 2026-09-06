@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -301,7 +302,7 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, orgID 
 			       OR right(split_part(pe.email, '@', 2), length($4) + 1) = '.' || $4))
 		  AND NOT EXISTS (
 			SELECT 1 FROM relationship r
-			WHERE r.person_id = p.id AND `+CurrentPrimarySlotSQL("r")+`)
+			WHERE r.person_id = p.id AND `+employment.CurrentPrimarySlotSQL("r")+`)
 		FOR UPDATE OF p
 		ON CONFLICT DO NOTHING
 		RETURNING id, person_id`,

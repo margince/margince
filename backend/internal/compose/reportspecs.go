@@ -312,6 +312,11 @@ var prebuiltReports = map[string]reportSpec{
 	// it: that report is the board's own totals, where a won deal still
 	// belongs to the stage it was won in.
 	"pipeline-current": pipelineCurrentSpec(),
+	// The SDR funnel's last conversion (reportmeetingconversion.go): what share
+	// of the meetings somebody got HELD became work an AE took on. It joins the
+	// handoff acceptance rather than looking for a deal at the same company,
+	// because that inference flatters the biggest accounts most.
+	"meeting-conversion": meetingConversionSpec(),
 	// The project keys (reportprojects.go): what a delivery manager asks of
 	// the bodies of work in flight.
 	"projects-by-phase":   projectsByPhaseSpec(),

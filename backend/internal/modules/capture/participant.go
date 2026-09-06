@@ -189,12 +189,18 @@ func namesSomebody(participants []connector.MessageParticipant) bool {
 // A party who resolves to neither a colleague nor a known contact is still
 // recorded by address. An attendee nobody has a record for is a fact about the
 // meeting, and dropping them is what the body-text fold already does badly.
+// partyListIsAttested is what decides whether a colleague may be bound by
+// user_id, and it has two sources: our own provider attesting that this seat
+// SENT the mail (so the Cc line is what our user typed), or the provider
+// enumerating a calendar's attendees over an authenticated connection. Both are
+// the provider's word; neither is a sender's text. ParticipantListAttested is
+// the one place that decision is taken.
 func StampFurtherParticipants(
 	ctx context.Context,
 	tx pgx.Tx,
 	activityID ids.ActivityID,
 	kind string,
-	ourHeaderIsTrusted bool,
+	partyListIsAttested bool,
 	participants []connector.MessageParticipant,
 ) error {
 	if !relstrength.IsInteractionKind(kind) || len(participants) == 0 {
@@ -222,13 +228,19 @@ func StampFurtherParticipants(
 	// Both lookups run under the workspace GUC, so neither can resolve an
 	// address to somebody in another tenant.
 	//
-	// The COLLEAGUE arm is gated on ourHeaderIsTrusted, and that gate is the
+	// The COLLEAGUE arm is gated on partyListIsAttested, and that gate is the
 	// load-bearing part. A recipient list on an INBOUND message is written by
 	// whoever sent it: nothing authenticates it, and DKIM does not cover a Cc
 	// line the sender chose. Binding a user_id from one would let an outsider
 	// mail a synced mailbox with `Cc: ceo@ourcompany.com` and manufacture an
 	// interaction edge — the graph would then name that colleague as the
 	// warmest route to the sender's own contact, on evidence the sender wrote.
+	//
+	// A calendar attendee list passes the gate for the opposite reason: it is
+	// not text on a message at all. It is the provider's own record of who was
+	// invited, read back over the authenticated connection of a seat that is on
+	// the event, and the connector core stamps that attestation from the
+	// registry rather than from anything the record said about itself.
 	//
 	// Nothing is lost by refusing it. A colleague genuinely copied on inbound
 	// mail receives that message in their OWN mailbox, where their own
@@ -251,7 +263,7 @@ func StampFurtherParticipants(
 		        ORDER BY p.person_id
 		        LIMIT 1) pe ON u.id IS NULL
 		ON CONFLICT DO NOTHING`,
-		activityID, addresses, roles, ourHeaderIsTrusted, names); err != nil {
+		activityID, addresses, roles, partyListIsAttested, names); err != nil {
 		return fmt.Errorf("capture: stamping the further participants of an interaction: %w", err)
 	}
 	return nil
@@ -300,4 +312,46 @@ func actorUserID(ctx context.Context) ids.UUID {
 		return ids.Nil
 	}
 	return actor.UserID
+}
+
+// ParticipantListAttested answers whether this record's party list came from the
+// PROVIDER rather than from a sender, which is what StampFurtherParticipants
+// needs before it binds a colleague's user_id.
+//
+// One function because two writers ask it — live capture and the replay pass in
+// compose — and a second spelling is how one of them ends up trusting a list the
+// other refuses. Either half is sufficient and both are the provider's word:
+//
+//   - the provider attested that our own seat SENT this mail, so its recipient
+//     list is what our user typed;
+//   - the provider enumerated a calendar's attendees, which is its record of who
+//     was invited rather than anybody's prose.
+//
+// A record that carries neither leaves the answer false and keeps the strict
+// mail rule, which is what the extension ingress gets: it copies a third-party
+// unit's kind through with no vocabulary check, so a unit calling its record a
+// meeting attests nothing by saying so.
+func ParticipantListAttested(rec connector.NormalizedRecord) bool {
+	return rec.Counterparty.SentByOwner() || rec.ParticipantsAreProviderAttested()
+}
+
+// meetingHostUserID is the seat whose calendar this meeting was captured from,
+// for the activity.host_user_id column — nil for every other kind, and for a
+// principal carrying no user.
+//
+// It records WHOSE CALENDAR the row came from, not a claim that they organized
+// the invitation: an attendee's own connector captures an event somebody else
+// called, and this names that attendee. The brief lanes read it to say whose
+// meeting a row is. It is not an authorization input — no read is granted from
+// it alone, because a label saying "this came off your calendar" is ownership,
+// not membership.
+func meetingHostUserID(ctx context.Context, kind string) *ids.UUID {
+	if kind != meetingKind {
+		return nil
+	}
+	user := actorUserID(ctx)
+	if user.IsZero() {
+		return nil
+	}
+	return &user
 }

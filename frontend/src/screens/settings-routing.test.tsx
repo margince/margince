@@ -217,7 +217,13 @@ function companyReaderBackend() {
       return jsonResponse(
         meFixture({
           roles: ["admin"],
-          allow: readOn("installation_settings"),
+          // The UPDATE, which is what Company profile asks: the read is held by
+          // every seat and no longer opens the page. These cases are about the
+          // address rewrite, so they hold the grant that reaches the page.
+          allow: {
+            ...readOn("installation_settings"),
+            installation_settings: ["read", "update"],
+          },
         }),
       );
     }
