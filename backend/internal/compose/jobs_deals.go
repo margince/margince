@@ -32,8 +32,8 @@ type CloseDateSweepArgs struct{}
 // Kind is the stable job identifier River persists in river_job.
 func (CloseDateSweepArgs) Kind() string { return "close_date_sweep" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues,
-// and does no tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (CloseDateSweepArgs) FleetWide() {}
 
 // FollowUpReconcileArgs schedules one overnight follow-up reconciliation
@@ -43,12 +43,10 @@ type FollowUpReconcileArgs struct{}
 // Kind is the stable job identifier River persists in river_job.
 func (FollowUpReconcileArgs) Kind() string { return "follow_up_reconcile" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues,
-// and does no tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (FollowUpReconcileArgs) FleetWide() {}
 
-// closeDateSweepWorker is the dispatcher: it enumerates and enqueues, and
-// touches no tenant data itself.
 // closeDateSweepWorker corrects close dates for every live workspace.
 //
 // One worker where there were two (ADR-0103).
@@ -77,7 +75,9 @@ func (w *closeDateSweepWorker) correctWorkspace(ctx context.Context, workspace i
 	return jobs.FaultContext(ctx, w.corrector.SweepWorkspace(wsCtx))
 }
 
-// followUpReconcileWorker is the dispatcher for the overnight pass.
+// followUpReconcileWorker runs the overnight pass for every live workspace.
+//
+// One worker where there were two (ADR-0103).
 type followUpReconcileWorker struct {
 	pool       *pgxpool.Pool
 	reconciler *deals.FollowUpReconciler

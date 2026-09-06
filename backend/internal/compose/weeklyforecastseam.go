@@ -68,7 +68,39 @@ func (w *WeeklyForecast) CloseWeek(
 		return nil, nil, nil, apperrors.ErrPermissionDenied
 	}
 	owner := ids.UUID(actor.UserID)
-	scope := forecasting.Scope{Kind: forecasting.ScopeOwner, ID: &owner}
+	return w.closeHorizons(ctx, tx,
+		forecasting.Scope{Kind: forecasting.ScopeOwner, ID: &owner}, weekStart, weekEnd)
+}
+
+// CloseTeamWeek is CloseWeek over the TEAM's book.
+//
+// A separate entry point and not a flag, because the scope is the whole
+// difference and it is the part that can be refused: forecasting's scope
+// authority admits ScopeTeam only to a caller who is IN the team
+// (scopeauthority.go), so the lead the weekly job binds passes and anybody else
+// gets ErrNotFound.
+//
+// The team's landing is NOT the sum of its members'. A deal owned by nobody on
+// the team is in neither, and one the team works but a member owns is in both —
+// so summing six personal outlooks would answer a question nobody asked.
+func (w *WeeklyForecast) CloseTeamWeek(
+	ctx context.Context, tx pgx.Tx, teamID ids.UUID, weekStart, weekEnd time.Time,
+) ([]weekly.Outlook, []weekly.Movement, []weekly.Driver, error) {
+	if teamID.IsZero() {
+		return nil, nil, nil, apperrors.ErrNotFound
+	}
+	return w.closeHorizons(ctx, tx,
+		forecasting.Scope{Kind: forecasting.ScopeTeam, ID: &teamID}, weekStart, weekEnd)
+}
+
+// closeHorizons freezes every window this review reports, over one book.
+//
+// Shared by the rep's and the team's entry points above so the three horizons,
+// their order and their bar folding are decided once: two copies would let a
+// team's outlook quietly report two windows where a rep's reports three.
+func (w *WeeklyForecast) closeHorizons(
+	ctx context.Context, tx pgx.Tx, scope forecasting.Scope, weekStart, weekEnd time.Time,
+) ([]weekly.Outlook, []weekly.Movement, []weekly.Driver, error) {
 	var outlooks []weekly.Outlook
 	var movements []weekly.Movement
 	var drivers []weekly.Driver

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
@@ -31,6 +32,21 @@ func TestSeedPassesQueueRegisteredJobsAfterTheRecordsExist(t *testing.T) {
 		}
 	})
 	if err := testdb.EnsureSchema(ctx, conn); err != nil {
+		t.Fatal(err)
+	}
+	// River's tables are NOT core migrations, so EnsureSchema does not build
+	// them and the insert below has nothing to land in. Every other suite that
+	// reads river_job says so at its own setup; this one relied on finding the
+	// tables already standing, which holds only in a database some other
+	// package migrated first — so under the parallel lane's private clone per
+	// package it fails, and under the serial lane it passed on a neighbour's
+	// work.
+	ownerPool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(ownerPool.Close)
+	if err := testdb.EnsureRiverSchema(ctx, ownerPool, jobs.Migrate); err != nil {
 		t.Fatal(err)
 	}
 	tx, err := conn.Begin(ctx)

@@ -160,6 +160,7 @@
   "channels": [
     {
       "provider": "openchannel",
+      "credential_model": "per_member",
       "supplies_transport": true
     }
   ],

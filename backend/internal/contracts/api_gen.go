@@ -32953,6 +32953,19 @@ type TeamWeeklyReview struct {
 	Id             openapi_types.UUID   `json:"id"`
 	LocalWeekStart openapi_types.Date   `json:"local_week_start"`
 
+	// Outlook Where the TEAM's week was landing, one entry per horizon — the week, the month and
+	// the fiscal quarter.
+	//
+	// NOT the sum of its members' outlooks. A deal owned by nobody on the team is in
+	// neither, and one the team works but a member owns is in both, so adding six personal
+	// landings would answer a question nobody asked. This is read over the team's own book.
+	//
+	// EMPTY when no forecast was composed when the snapshot was written, which is not the
+	// same as a team that landed on nothing — a reader says "no forecast" rather than
+	// drawing zeros. Every figure is a COPY, so it still reads after the snapshots it came
+	// from age out under retention.
+	Outlook *[]WeeklyReviewOutlook `json:"outlook,omitempty"`
+
 	// Pipeline What the team's week did to the pipeline. ABSENT when any member's week could not
 	// be converted — summing only the ones that did would be a confident number quietly
 	// missing a rep.
