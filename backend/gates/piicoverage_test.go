@@ -246,6 +246,14 @@ var piiTables = map[string]piiHandling{
 	// a subject asking what we concluded about their mail is asking for exactly
 	// this.
 	"activity_reply_verdict_history": {erasureWrite: true, sarRead: true},
+	// A handoff names the subject it was about, and its note is what one seat
+	// wrote about them to another. The judgement — accepted, or refused for this
+	// reason — is a decision people made about that person, the same holding
+	// ai_feedback carries. The foreign keys cascade on DELETE and erasure UPDATEs
+	// in place, so the cascade never fires for an Art. 17 request and the erasure
+	// has to reach these rows itself.
+	"sdr_handoff":       {erasureWrite: true, sarRead: true},
+	"sdr_handoff_event": {erasureWrite: true, sarRead: true},
 	// The capture disposition ledger keys on the subject's own address and
 	// keeps the display name their mail arrived with (CAP-DDL-8).
 	"capture_pending_counterparty": {erasureWrite: true, sarRead: true},

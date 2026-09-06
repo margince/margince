@@ -143,6 +143,12 @@ var notAnEdge = map[string]string{
 	"attachment": "a file, which is a record in its own right. Its extra references are the " +
 		"ROLL-UP READ PATH core 0195 declares them to be — the primary parent still owns the " +
 		"file's visibility — so they denormalize one record's parentage rather than relating two",
+	"sdr_handoff": "a decision ABOUT a prospect, not a path from one record to another. Its four " +
+		"references are the subject that was handed on (a lead or a person, never both), the company " +
+		"it belongs to, and the deal an acceptance produced — a hop through it would answer \"which " +
+		"deals came from leads\" by way of somebody's routing decision, when deal.organization_id " +
+		"already answers that about the records themselves. The same ground activity_retention_evidence " +
+		"sits on: it relates a record to a judgement made about it",
 	"contract": "a finance record in its own right. Its references are the scalar kind any record " +
 		"declares; they are untraversable only because contract is not a searchable record type, " +
 		"which is a different question from this one",

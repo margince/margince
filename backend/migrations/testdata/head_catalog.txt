@@ -2754,6 +2754,11 @@ public.idx_saved_view_owner CREATE INDEX idx_saved_view_owner ON public.saved_vi
 public.idx_scheduled_send_anchor CREATE INDEX idx_scheduled_send_anchor ON public.scheduled_send USING btree (anchor_activity_id) WHERE (anchor_activity_id IS NOT NULL)
 public.idx_scheduled_send_due CREATE INDEX idx_scheduled_send_due ON public.scheduled_send USING btree (scheduled_at) WHERE (status = 'scheduled'::text)
 public.idx_scheduled_send_owner CREATE INDEX idx_scheduled_send_owner ON public.scheduled_send USING btree (scheduled_by, status, scheduled_at DESC)
+public.idx_sdr_handoff_awaiting CREATE INDEX idx_sdr_handoff_awaiting ON public.sdr_handoff USING btree (assigned_to, submitted_at) WHERE (status = 'submitted'::text)
+public.idx_sdr_handoff_event_handoff CREATE INDEX idx_sdr_handoff_event_handoff ON public.sdr_handoff_event USING btree (handoff_id, occurred_at DESC)
+public.idx_sdr_handoff_lead CREATE INDEX idx_sdr_handoff_lead ON public.sdr_handoff USING btree (lead_id) WHERE (lead_id IS NOT NULL)
+public.idx_sdr_handoff_person CREATE INDEX idx_sdr_handoff_person ON public.sdr_handoff USING btree (person_id) WHERE (person_id IS NOT NULL)
+public.idx_sdr_handoff_submitter CREATE INDEX idx_sdr_handoff_submitter ON public.sdr_handoff USING btree (submitted_by, submitted_at DESC)
 public.idx_session_user CREATE INDEX idx_session_user ON public.session USING btree (user_id) WHERE (revoked_at IS NULL)
 public.idx_signal_open CREATE INDEX idx_signal_open ON public.signal USING btree (status, severity, detected_at DESC)
 public.idx_signal_owner_private CREATE INDEX idx_signal_owner_private ON public.signal USING btree (owner_id) WHERE ((visibility = 'owner'::text) AND (archived_at IS NULL))
@@ -4655,6 +4660,73 @@ public.scheduled_send.status text NOT NULL gen=- def='scheduled'::text
 public.scheduled_send.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.scheduled_send.version bigint NOT NULL gen=- def=1
 public.scheduled_send_pkey CREATE UNIQUE INDEX scheduled_send_pkey ON public.scheduled_send USING btree (id)
+public.sdr_handoff acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.sdr_handoff.assigned_to uuid gen=- def=-
+public.sdr_handoff.captured_by text NOT NULL gen=- def=-
+public.sdr_handoff.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.sdr_handoff.deal_id uuid gen=- def=-
+public.sdr_handoff.decided_at timestamp with time zone gen=- def=-
+public.sdr_handoff.id uuid NOT NULL gen=- def=uuidv7()
+public.sdr_handoff.lead_id uuid gen=- def=-
+public.sdr_handoff.note text gen=- def=-
+public.sdr_handoff.organization_id uuid gen=- def=-
+public.sdr_handoff.person_id uuid gen=- def=-
+public.sdr_handoff.reason_applies_to text gen=- def=-
+public.sdr_handoff.reason_id uuid gen=- def=-
+public.sdr_handoff.sdr_handoff_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES app_user(id)
+public.sdr_handoff.sdr_handoff_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE RESTRICT
+public.sdr_handoff.sdr_handoff_deal_when_accepted CHECK (((status = 'accepted'::text) = (deal_id IS NOT NULL)))
+public.sdr_handoff.sdr_handoff_decided_stamped CHECK (((status = ANY (ARRAY['accepted'::text, 'rejected'::text])) = (decided_at IS NOT NULL)))
+public.sdr_handoff.sdr_handoff_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
+public.sdr_handoff.sdr_handoff_one_subject CHECK (((lead_id IS NULL) <> (person_id IS NULL)))
+public.sdr_handoff.sdr_handoff_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organization(id) ON DELETE SET NULL
+public.sdr_handoff.sdr_handoff_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
+public.sdr_handoff.sdr_handoff_pkey PRIMARY KEY (id)
+public.sdr_handoff.sdr_handoff_reason_id_reason_applies_to_fkey FOREIGN KEY (reason_id, reason_applies_to) REFERENCES sdr_handoff_reason(id, applies_to) ON DELETE RESTRICT
+public.sdr_handoff.sdr_handoff_reason_matches_status CHECK (((reason_applies_to IS NULL) OR (reason_applies_to = status)))
+public.sdr_handoff.sdr_handoff_reason_pair CHECK (((reason_id IS NULL) = (reason_applies_to IS NULL)))
+public.sdr_handoff.sdr_handoff_reason_when_refused CHECK (((status = ANY (ARRAY['rejected'::text, 'recycled'::text])) = (reason_id IS NOT NULL)))
+public.sdr_handoff.sdr_handoff_status CHECK ((status = ANY (ARRAY['submitted'::text, 'accepted'::text, 'rejected'::text, 'recycled'::text])))
+public.sdr_handoff.sdr_handoff_submitted_by_fkey FOREIGN KEY (submitted_by) REFERENCES app_user(id)
+public.sdr_handoff.status text NOT NULL gen=- def='submitted'::text
+public.sdr_handoff.submitted_at timestamp with time zone NOT NULL gen=- def=now()
+public.sdr_handoff.submitted_by uuid NOT NULL gen=- def=-
+public.sdr_handoff.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.sdr_handoff.version bigint NOT NULL gen=- def=1
+public.sdr_handoff_event acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.sdr_handoff_event.actor text NOT NULL gen=- def=-
+public.sdr_handoff_event.handoff_id uuid NOT NULL gen=- def=-
+public.sdr_handoff_event.id uuid NOT NULL gen=- def=uuidv7()
+public.sdr_handoff_event.note text gen=- def=-
+public.sdr_handoff_event.occurred_at timestamp with time zone NOT NULL gen=- def=now()
+public.sdr_handoff_event.reason_applies_to text gen=- def=-
+public.sdr_handoff_event.reason_id uuid gen=- def=-
+public.sdr_handoff_event.sdr_handoff_event_handoff_id_fkey FOREIGN KEY (handoff_id) REFERENCES sdr_handoff(id) ON DELETE CASCADE
+public.sdr_handoff_event.sdr_handoff_event_pkey PRIMARY KEY (id)
+public.sdr_handoff_event.sdr_handoff_event_reason_id_reason_applies_to_fkey FOREIGN KEY (reason_id, reason_applies_to) REFERENCES sdr_handoff_reason(id, applies_to) ON DELETE RESTRICT
+public.sdr_handoff_event.sdr_handoff_event_reason_matches CHECK (((reason_applies_to IS NULL) OR (reason_applies_to = to_status)))
+public.sdr_handoff_event.sdr_handoff_event_reason_pair CHECK (((reason_id IS NULL) = (reason_applies_to IS NULL)))
+public.sdr_handoff_event.sdr_handoff_event_status CHECK ((to_status = ANY (ARRAY['submitted'::text, 'accepted'::text, 'rejected'::text, 'recycled'::text])))
+public.sdr_handoff_event.to_status text NOT NULL gen=- def=-
+public.sdr_handoff_event_pkey CREATE UNIQUE INDEX sdr_handoff_event_pkey ON public.sdr_handoff_event USING btree (id)
+public.sdr_handoff_pkey CREATE UNIQUE INDEX sdr_handoff_pkey ON public.sdr_handoff USING btree (id)
+public.sdr_handoff_reason acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.sdr_handoff_reason.active boolean NOT NULL gen=- def=true
+public.sdr_handoff_reason.applies_to text NOT NULL gen=- def=-
+public.sdr_handoff_reason.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.sdr_handoff_reason.id uuid NOT NULL gen=- def=uuidv7()
+public.sdr_handoff_reason.label text NOT NULL gen=- def=-
+public.sdr_handoff_reason.sdr_handoff_reason_applies_to CHECK ((applies_to = ANY (ARRAY['rejected'::text, 'recycled'::text])))
+public.sdr_handoff_reason.sdr_handoff_reason_id_kind UNIQUE (id, applies_to)
+public.sdr_handoff_reason.sdr_handoff_reason_label_present CHECK ((length(btrim(label)) > 0))
+public.sdr_handoff_reason.sdr_handoff_reason_pkey PRIMARY KEY (id)
+public.sdr_handoff_reason.sort_order integer NOT NULL gen=- def=0
+public.sdr_handoff_reason.system boolean NOT NULL gen=- def=false
+public.sdr_handoff_reason.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.sdr_handoff_reason.version bigint NOT NULL gen=- def=1
+public.sdr_handoff_reason_id_kind CREATE UNIQUE INDEX sdr_handoff_reason_id_kind ON public.sdr_handoff_reason USING btree (id, applies_to)
+public.sdr_handoff_reason_label_once CREATE UNIQUE INDEX sdr_handoff_reason_label_once ON public.sdr_handoff_reason USING btree (applies_to, lower(btrim(label)))
+public.sdr_handoff_reason_pkey CREATE UNIQUE INDEX sdr_handoff_reason_pkey ON public.sdr_handoff_reason USING btree (id)
 public.session acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.session.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.session.expires_at timestamp with time zone NOT NULL gen=- def=-
