@@ -586,6 +586,7 @@ const (
 	AiActivityKindTranscript                    AiActivityKind = "transcript"
 	AiActivityKindTranscriptPropose             AiActivityKind = "transcript_propose"
 	AiActivityKindVoiceBuild                    AiActivityKind = "voice_build"
+	AiActivityKindWeeklyLearnings               AiActivityKind = "weekly_learnings"
 	AiActivityKindWeeklyReview                  AiActivityKind = "weekly_review"
 )
 
@@ -647,6 +648,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindTranscriptPropose:
 		return true
 	case AiActivityKindVoiceBuild:
+		return true
+	case AiActivityKindWeeklyLearnings:
 		return true
 	case AiActivityKindWeeklyReview:
 		return true
@@ -13387,6 +13390,24 @@ func (e WebhookSubscriptionState) Valid() bool {
 	}
 }
 
+// Defines values for WeeklyLearningCitationSubjectType.
+const (
+	WeeklyLearningCitationSubjectTypeCommitment WeeklyLearningCitationSubjectType = "commitment"
+	WeeklyLearningCitationSubjectTypeDeal       WeeklyLearningCitationSubjectType = "deal"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyLearningCitationSubjectType enum.
+func (e WeeklyLearningCitationSubjectType) Valid() bool {
+	switch e {
+	case WeeklyLearningCitationSubjectTypeCommitment:
+		return true
+	case WeeklyLearningCitationSubjectTypeDeal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WeeklyPlanStatus.
 const (
 	WeeklyPlanStatusClosed WeeklyPlanStatus = "closed"
@@ -13471,6 +13492,51 @@ func (e WeeklyReviewDealOutcome) Valid() bool {
 	case WeeklyReviewDealOutcomeMoved:
 		return true
 	case WeeklyReviewDealOutcomeWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyReviewLearningKind.
+const (
+	DidNotWork WeeklyReviewLearningKind = "did_not_work"
+	Experiment WeeklyReviewLearningKind = "experiment"
+	Pattern    WeeklyReviewLearningKind = "pattern"
+	Worked     WeeklyReviewLearningKind = "worked"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyReviewLearningKind enum.
+func (e WeeklyReviewLearningKind) Valid() bool {
+	switch e {
+	case DidNotWork:
+		return true
+	case Experiment:
+		return true
+	case Pattern:
+		return true
+	case Worked:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyReviewLearningsState.
+const (
+	InsufficientEvidence WeeklyReviewLearningsState = "insufficient_evidence"
+	NotRun               WeeklyReviewLearningsState = "not_run"
+	Synthesized          WeeklyReviewLearningsState = "synthesized"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyReviewLearningsState enum.
+func (e WeeklyReviewLearningsState) Valid() bool {
+	switch e {
+	case InsufficientEvidence:
+		return true
+	case NotRun:
+		return true
+	case Synthesized:
 		return true
 	default:
 		return false
@@ -34061,6 +34127,21 @@ type WebhookSubscriptionListResponse struct {
 	Page            PageInfo `json:"page"`
 }
 
+// WeeklyLearningCitation One row a learning was drawn from, by the name it carried that week.
+type WeeklyLearningCitation struct {
+	// Label What the row was CALLED when the learning was written, so a citation still reads after a rename.
+	Label string `json:"label"`
+
+	// SubjectId The row cited. It may no longer exist — a citation outlives the deal it names, as
+	// the review's own frozen deal lines do — so a client resolves it or draws the label
+	// alone rather than treating absence as an error.
+	SubjectId   openapi_types.UUID                `json:"subject_id"`
+	SubjectType WeeklyLearningCitationSubjectType `json:"subject_type"`
+}
+
+// WeeklyLearningCitationSubjectType defines model for WeeklyLearningCitation.SubjectType.
+type WeeklyLearningCitationSubjectType string
+
 // WeeklyPlan One rep's week as they meant it to go — the forward counterpart to the frozen
 // WeeklyReview beside it.
 type WeeklyPlan struct {
@@ -34185,6 +34266,15 @@ type WeeklyReview struct {
 	// GeneratedAt When the review was written.
 	GeneratedAt time.Time          `json:"generated_at"`
 	Id          openapi_types.UUID `json:"id"`
+
+	// Learnings What the week TAUGHT, as against what it was.
+	//
+	// `state` is load-bearing beside `items`: `not_run` means no pass has looked at this
+	// week — the lane may be unbound, the budget exhausted, the provider down — and
+	// `insufficient_evidence` means a pass ran, read the week and had too little it could
+	// ground. Both carry an empty list, and a reader that draws them the same way tells a
+	// rep "nothing to learn" about a week nobody examined.
+	Learnings *WeeklyReviewLearnings `json:"learnings,omitempty"`
 
 	// LocalWeekStart The Monday of the week under review, in the installation reporting timezone.
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
@@ -34346,6 +34436,41 @@ type WeeklyReviewIndex struct {
 	// Weeks The Monday of each week with a review, newest first.
 	Weeks []openapi_types.Date `json:"weeks"`
 }
+
+// WeeklyReviewLearning One thing the week taught, with what it was drawn from.
+type WeeklyReviewLearning struct {
+	// Citations The rows this claim rests on. NEVER empty: a learning is advice a reader cannot
+	// check against anything in front of them, so one that points at nothing is refused
+	// before it is stored rather than shown unsourced.
+	Citations []WeeklyLearningCitation `json:"citations"`
+
+	// Kind What sort of claim this is. A closed vocabulary because the surface draws each
+	// differently and a reader learns the four shapes.
+	Kind WeeklyReviewLearningKind `json:"kind"`
+
+	// Text One sentence, in the reader's own language.
+	Text string `json:"text"`
+}
+
+// WeeklyReviewLearningKind What sort of claim this is. A closed vocabulary because the surface draws each
+// differently and a reader learns the four shapes.
+type WeeklyReviewLearningKind string
+
+// WeeklyReviewLearnings A week's lessons and whether anybody looked for them.
+type WeeklyReviewLearnings struct {
+	// Items In the order the pass produced, because the first is the one a rep reads. At most
+	// four: a retrospective is read in a few minutes, and a longer list is a report
+	// nobody finishes.
+	Items []WeeklyReviewLearning `json:"items"`
+
+	// State Whether a pass ran, and what it found. `not_run` and `insufficient_evidence` both
+	// carry no items and mean different things — see the parent's description.
+	State WeeklyReviewLearningsState `json:"state"`
+}
+
+// WeeklyReviewLearningsState Whether a pass ran, and what it found. `not_run` and `insufficient_evidence` both
+// carry no items and mean different things — see the parent's description.
+type WeeklyReviewLearningsState string
 
 // WeeklyReviewMovement One bar of the movement bridge, and the deals behind it.
 type WeeklyReviewMovement struct {

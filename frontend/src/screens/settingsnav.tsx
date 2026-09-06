@@ -554,6 +554,13 @@ export function useSettingsSection(route: Route): NavSection {
           (page): NavLevelEntry => ({
             id: page.id,
             labelKey: `settings.tab.${page.id}`,
+            // One line under the page's heading, saying what the label cannot:
+            // which state it changes and whose. Composed from the id like the
+            // label above it, and NOT cast — the field's own MessageKey type is
+            // what narrows the template literal, so a page whose `.sub` key is
+            // missing from the catalogs is a compile error rather than a
+            // subtitle that silently translates to nothing.
+            subKey: `settings.page.${page.id}.sub`,
             icon: PAGE_ICONS[page.id],
           }),
         ),

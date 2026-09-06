@@ -697,7 +697,10 @@ export function PageTitle({
   // Read only on the branch that prints an h1: a surface that names itself gets
   // no subtitle from here either, or the page would carry a description of a
   // heading it is not showing.
-  const subKey = PAGE_SUB_KEYS[route.screen];
+  // The ENTRY's own line first: a section is many pages behind one screen, and
+  // the screen-keyed table can only carry a sentence true of all of them. The
+  // table remains for screens that ARE one page.
+  const subKey = inSection?.entry.subKey ?? PAGE_SUB_KEYS[route.screen];
 
   if (recordNamesPage || unitNamesPage || selfHeaded) {
     return null;

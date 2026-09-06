@@ -18,7 +18,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 type AutomationRun = components["schemas"]["AutomationRun"];
 
 const meta: Meta = {
-  title: "Settings/Admin settings/AI/Automation detail",
+  title: "Settings/AI/Automations/Automation detail",
   parameters: { layout: "padded" },
 };
 export default meta;

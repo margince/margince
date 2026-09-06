@@ -25856,7 +25856,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "propose_roles" | "owed_verdict";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -29239,6 +29239,52 @@ export interface components {
              */
             focus_label: string;
         };
+        /** @description A week's lessons and whether anybody looked for them. */
+        WeeklyReviewLearnings: {
+            /**
+             * @description Whether a pass ran, and what it found. `not_run` and `insufficient_evidence` both
+             *     carry no items and mean different things — see the parent's description.
+             * @enum {string}
+             */
+            state: "not_run" | "insufficient_evidence" | "synthesized";
+            /**
+             * @description In the order the pass produced, because the first is the one a rep reads. At most
+             *     four: a retrospective is read in a few minutes, and a longer list is a report
+             *     nobody finishes.
+             */
+            items: components["schemas"]["WeeklyReviewLearning"][];
+        };
+        /** @description One thing the week taught, with what it was drawn from. */
+        WeeklyReviewLearning: {
+            /**
+             * @description What sort of claim this is. A closed vocabulary because the surface draws each
+             *     differently and a reader learns the four shapes.
+             * @enum {string}
+             */
+            kind: "worked" | "did_not_work" | "pattern" | "experiment";
+            /** @description One sentence, in the reader's own language. */
+            text: string;
+            /**
+             * @description The rows this claim rests on. NEVER empty: a learning is advice a reader cannot
+             *     check against anything in front of them, so one that points at nothing is refused
+             *     before it is stored rather than shown unsourced.
+             */
+            citations: components["schemas"]["WeeklyLearningCitation"][];
+        };
+        /** @description One row a learning was drawn from, by the name it carried that week. */
+        WeeklyLearningCitation: {
+            /** @enum {string} */
+            subject_type: "deal" | "commitment";
+            /**
+             * Format: uuid
+             * @description The row cited. It may no longer exist — a citation outlives the deal it names, as
+             *     the review's own frozen deal lines do — so a client resolves it or draws the label
+             *     alone rather than treating absence as an error.
+             */
+            subject_id: string;
+            /** @description What the row was CALLED when the learning was written, so a citation still reads after a rename. */
+            label: string;
+        };
         /**
          * @description One week's judgement of one rep's work, frozen with the review. Both blocks are optional
          *     and each is absent when the rep had no such work that week.
@@ -29388,6 +29434,16 @@ export interface components {
              *     days back.
              */
             prior?: components["schemas"]["WeeklyReviewPrior"];
+            /**
+             * @description What the week TAUGHT, as against what it was.
+             *
+             *     `state` is load-bearing beside `items`: `not_run` means no pass has looked at this
+             *     week — the lane may be unbound, the budget exhausted, the provider down — and
+             *     `insufficient_evidence` means a pass ran, read the week and had too little it could
+             *     ground. Both carry an empty list, and a reader that draws them the same way tells a
+             *     rep "nothing to learn" about a week nobody examined.
+             */
+            learnings?: components["schemas"]["WeeklyReviewLearnings"];
             /**
              * @description How WELL the week went, as against what happened in it — the counts beside this say
              *     forty leads arrived, this says twelve were answered inside the target.

@@ -24,7 +24,9 @@ import (
 // function for the same reason the brief's is: the workspace worker needs the
 // weekly engine and the identity service, neither of which the group's other
 // members carry.
-func addWeeklyReviewJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, narrator completer, mail WeeklyMailConfig) {
+func addWeeklyReviewJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger,
+	narrator, learner completer, mail WeeklyMailConfig,
+) {
 	addDeclaredWorker[WeeklyReviewGenerateArgs](reg, &weeklyGenerateWorker{
 		// The job re-reads a snapshot it has just written when a later tick
 		// finds one already there, and that read takes the same team gate a
@@ -36,6 +38,7 @@ func addWeeklyReviewJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger,
 		now:      time.Now,
 		log:      log,
 		narrator: narrator,
+		learner:  learner,
 		mail:     mail,
 	})
 }

@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -53,46 +52,6 @@ func WeekStartOf(ctx context.Context, tx pgx.Tx, now time.Time) (time.Time, erro
 	// and weekday-1 otherwise.
 	back := (int(day.Weekday()) + 6) % 7
 	return day.AddDate(0, 0, -back), nil
-}
-
-// measureWeek reads everything the closed week came to, for one rep.
-//
-// Leads and meetings read separately from the tallies: different tables,
-// different scope clauses, and each dated by a rule that takes a paragraph to
-// justify. They fold onto the same Counts because a reader of a week wants one
-// set of figures. Money stays beside Counts rather than inside it because a
-// tally and a conversion fail differently.
-//
-// The plan's outcome is settled here, BEFORE anything is written, so the review
-// records what the week actually came to rather than what was still open when
-// the job happened to run. CloseWeek is idempotent, so the dispatcher's extra
-// ticks inside a week do not re-settle a commitment the rep completed after the
-// first pass.
-func (e *Engine) measureWeek(
-	ctx context.Context, tx pgx.Tx, userID ids.UUID, now, start, end time.Time,
-) (Counts, Money, error) {
-	c, err := countWeek(ctx, tx, userID, start, end)
-	if err != nil {
-		return Counts{}, Money{}, err
-	}
-	c.LeadsRouted, c.LeadsAnsweredInTarget, c.LeadsBreached, err = countWeekLeads(ctx, tx, userID, start, end)
-	if err != nil {
-		return Counts{}, Money{}, err
-	}
-	c.MeetingsHeld, c.MeetingsWithNextStep, err = countWeekMeetings(ctx, tx, userID, start, end)
-	if err != nil {
-		return Counts{}, Money{}, err
-	}
-	money, err := countWeekMoney(ctx, tx, userID, start, end)
-	if err != nil {
-		return Counts{}, Money{}, err
-	}
-	if e.plan != nil {
-		if c.CommitmentsDue, c.CommitmentsKept, err = e.plan.CloseWeek(ctx, now); err != nil {
-			return Counts{}, Money{}, err
-		}
-	}
-	return c, money, nil
 }
 
 // AssembleFor measures the week that just closed for the acting rep and writes
@@ -134,9 +93,44 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 			return err
 		}
 
-		review = Review{UserID: userID, LocalWeekStart: weekStart, AsOf: now.UTC()}
-		if review.Counts, review.Money, err = e.measureWeek(ctx, tx, userID, now, start, end); err != nil {
+		// LearningsState is set here, not left as Go's zero value: the column
+		// defaults to not_run, and a returned review whose state was "" would
+		// disagree with the same review read back a moment later.
+		review = Review{
+			UserID: userID, LocalWeekStart: weekStart, AsOf: now.UTC(),
+			LearningsState: LearningsNotRun,
+		}
+		if review.Counts, err = countWeek(ctx, tx, userID, start, end); err != nil {
 			return err
+		}
+		// Leads and meetings read separately from the tallies above: different
+		// tables, different scope clauses, and each dated by a rule that takes
+		// a paragraph to justify. They fold onto the same Counts because a
+		// reader of a week wants one set of figures.
+		c := &review.Counts
+		if c.LeadsRouted, c.LeadsAnsweredInTarget, c.LeadsBreached, err =
+			countWeekLeads(ctx, tx, userID, start, end); err != nil {
+			return err
+		}
+		if c.MeetingsHeld, c.MeetingsWithNextStep, err =
+			countWeekMeetings(ctx, tx, userID, start, end); err != nil {
+			return err
+		}
+		if review.Money, err = countWeekMoney(ctx, tx, userID, start, end); err != nil {
+			return err
+		}
+		// The plan's outcome, settled once and then frozen alongside the rest.
+		//
+		// Settled BEFORE the counts are written, so the review records what the
+		// week actually came to rather than what was still open when the job
+		// happened to run. CloseWeek is idempotent, so the dispatcher's extra
+		// ticks inside a week do not re-settle a commitment the rep completed
+		// after the first pass.
+		if e.plan != nil {
+			c := &review.Counts
+			if c.CommitmentsDue, c.CommitmentsKept, err = e.plan.CloseWeek(ctx, now); err != nil {
+				return err
+			}
 		}
 		if review.Deals, err = readWeekDeals(ctx, tx, userID, start, end); err != nil {
 			return err
