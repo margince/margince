@@ -997,6 +997,10 @@ const VERB_LABEL: Record<
   act: (t) => t("worklist.verb.open"),
   dismiss: (t) => t("worklist.verb.open"),
   set_aside: (t) => t("worklist.verb.open"),
+  // Named for the same reason: the map is total. `retry` is drawn by
+  // AutomationRetry, which acts in place, so VERB_DESTINATION routes it
+  // nowhere and this label is never the one a reader sees.
+  retry: (t) => t("worklist.verb.retry"),
 };
 
 // The day's figures, and the dials that narrow them.
@@ -1099,7 +1103,9 @@ function AutomationRetry({ id }: Readonly<{ id: string }>) {
 // The reason a retry was declined, in the reader's words. An unrecognised
 // refusal falls back to the generic failure rather than rendering a raw enum:
 // a value this build has no wording for is still a thing that did not happen.
-function refusalMessage(refusal: string | undefined): string {
+function refusalMessage(
+  refusal: string | undefined,
+): Parameters<ReturnType<typeof useT>>[0] {
   switch (refusal) {
     case "not_failed":
       return "worklist.verb.retryRefusedNotFailed";

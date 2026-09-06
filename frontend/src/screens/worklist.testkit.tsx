@@ -83,7 +83,10 @@ export function stub(day: Worklist, answer?: unknown) {
       // One optional answer, served to whichever of the two single-record
       // endpoints a test drives. They cannot both be in play in one test: an
       // approval read and a retry write sit on different rows.
-      if (answer && /\/automations\/runs\/[^/]+\/retry$/.test(url.split("?")[0])) {
+      if (
+        answer &&
+        /\/automations\/runs\/[^/]+\/retry$/.test(url.split("?")[0])
+      ) {
         return jsonResponse(answer);
       }
       if (answer && /\/approvals\/[^/]+$/.test(url.split("?")[0])) {
