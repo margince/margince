@@ -6260,6 +6260,10 @@ export const en = {
   "settings.page.extensions.sub":
     "The units this build composed, and which roles reach them.",
   "settings.page.reset.sub": "Emptying this installation. There is no undo.",
+  "settings.search.label": "Search settings",
+  "settings.search.placeholder": "Search settings",
+  "settings.search.none": "No settings page matches that.",
+  "settings.search.count": "{n} settings pages match.",
   "settings.tab.company": "Company profile",
   "settings.tab.authentication": "Sign-in & apps",
   "settings.tab.members": "Members",

@@ -6125,6 +6125,10 @@ export const de = {
     "Die Einheiten, die dieser Build zusammengesetzt hat, und welche Rollen sie erreichen.",
   "settings.page.reset.sub":
     "Diese Installation leeren. Es gibt kein Zur\u00fcck.",
+  "settings.search.label": "Einstellungen durchsuchen",
+  "settings.search.placeholder": "Einstellungen suchen",
+  "settings.search.none": "Keine Einstellungsseite passt dazu.",
+  "settings.search.count": "{n} Einstellungsseiten passen.",
   "settings.tab.company": "Unternehmensprofil",
   "settings.tab.authentication": "Anmeldung & Apps",
   "settings.tab.members": "Mitglieder",

@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RbacObject } from "../app/capability";
 import { type GrantSpec, meFixture } from "../app/mefixture";
@@ -1136,6 +1137,47 @@ describe("SettingsScreen page visibility", () => {
 // hand would agree with itself while the catalog moved underneath it.
 it("keeps the home row's id out of the page vocabulary", () => {
   expect(SETTINGS_PAGES.map((page) => page.id)).not.toContain(SETTINGS_HOME_ID);
+});
+
+// The search box in the rail searches the READER'S pages, not the catalog.
+//
+// The box's own tests hand it a page list directly, so they cannot see which
+// list the rail passes — a wiring that handed it SETTINGS_PAGES would offer a
+// rep the audit log, and every one of those tests would still pass. This is the
+// case that fails when that happens.
+describe("the settings search in the rail", () => {
+  it("offers a rep no page their own sidebar does not draw", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", settingsNavBackend({ roles: ["rep"], allow: {} }));
+    renderNav();
+
+    // Waited on a row a resolved snapshot draws, so the empty result below is
+    // about the grants rather than about a rail that has not loaded.
+    await screen.findByRole("link", { name: labelOf("account") });
+    await user.type(screen.getByRole("combobox"), "audit");
+
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
+  });
+
+  // The control: the same word, one grant apart. Without it the case above
+  // would pass against a search that finds nothing for anybody.
+  it("offers the page to a reader who holds its grant", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      settingsNavBackend({ roles: ["admin"], allow: readOn("audit_log") }),
+    );
+    renderNav();
+
+    await screen.findByRole("link", { name: labelOf("audit") });
+    await user.type(screen.getByRole("combobox"), "audit");
+
+    expect(
+      screen
+        .queryAllByRole("option")
+        .some((option) => option.textContent?.includes(labelOf("audit"))),
+    ).toBe(true);
+  });
 });
 
 describe("the settings access boundary", () => {
