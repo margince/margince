@@ -28,6 +28,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/overlay"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -105,7 +106,9 @@ func overlayWirePerson(ctx context.Context, rec datasource.Record) (crmcontracts
 		fullName = overlayUnnamed
 	}
 	personID := openapi_types.UUID(rec.Ref.ID)
+	mayEdit := overlay.Writable(ctx, datasource.EntityPerson)
 	return crmcontracts.Person{
+		Writable:   &mayEdit,
 		Id:         personID,
 		Source:     overlaySource,
 		CapturedBy: ptrString(overlayCapturedByValue),
@@ -143,7 +146,9 @@ func overlayWireOrganization(ctx context.Context, rec datasource.Record) (crmcon
 	}
 	orgID := openapi_types.UUID(rec.Ref.ID)
 	domains := overlayOrganizationDomains(orgID, fields)
+	mayEdit := overlay.Writable(ctx, datasource.EntityOrganization)
 	org := crmcontracts.Organization{
+		Writable:    &mayEdit,
 		Id:          orgID,
 		Source:      overlaySource,
 		CapturedBy:  ptrString(overlayCapturedByValue),
@@ -217,7 +222,9 @@ func overlayWireDeal(ctx context.Context, rec datasource.Record) (crmcontracts.D
 	if name == "" {
 		name = overlayUnnamed
 	}
+	mayEdit := overlay.Writable(ctx, datasource.EntityDeal)
 	deal := crmcontracts.Deal{
+		Writable:   &mayEdit,
 		Id:         openapi_types.UUID(rec.Ref.ID),
 		Source:     overlaySource,
 		CapturedBy: ptrString(overlayCapturedByValue),
@@ -261,7 +268,9 @@ func overlayWireLead(ctx context.Context, rec datasource.Record) (crmcontracts.L
 		return crmcontracts.Lead{}, err
 	}
 	syncedAt := rec.Freshness.LastSyncedAt
+	mayEdit := overlay.Writable(ctx, datasource.EntityLead)
 	lead := crmcontracts.Lead{
+		Writable:    &mayEdit,
 		Id:          openapi_types.UUID(rec.Ref.ID),
 		Source:      overlaySource,
 		CapturedBy:  ptrString(overlayCapturedByValue),

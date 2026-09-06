@@ -16,6 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -117,7 +118,7 @@ func personEmployerClause(ctx context.Context, orgID *ids.OrganizationID, arg fu
 		SELECT 1 FROM relationship rel
 		WHERE rel.person_id = person.id
 		  AND rel.kind = 'employment'
-		  AND `+CurrentPrimaryEmploymentSQL("rel")+`
+		  AND `+employment.CurrentPrimarySQL("rel")+`
 		  AND rel.archived_at IS NULL
 		  AND `+edgeBound+`
 		  AND rel.organization_id = $%d)`, arg(*orgID)), nil

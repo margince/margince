@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "253c873e99809cdb538a3da45bfb8e43db5c16d5c16f72b20fcd05a5d8a56101"
+const jobContractHash = "89832584baed3c704d58409dee3814229e62d2454c4aa9ad714f58c2da1e51cf"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -25,7 +25,8 @@ const jobContractHash = "253c873e99809cdb538a3da45bfb8e43db5c16d5c16f72b20fcd05a
 type declaredJobArgs interface {
 	river.JobArgs
 
-	AgentSchedulerArgs |
+	AccountScanArgs |
+		AgentSchedulerArgs |
 		AgentTaskRetentionArgs |
 		AIActivityReconcileArgs |
 		AIActivityRetentionArgs |
@@ -166,6 +167,7 @@ var (
 // The declared tenant-scoped kinds: each says which workspace it is for
 // in its own args.
 var (
+	_ jobs.WorkspaceScoped = AccountScanArgs{}
 	_ jobs.WorkspaceScoped = AiModelRateRefreshArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
 	_ jobs.WorkspaceScoped = CaptureSyncArgs{}

@@ -28,6 +28,7 @@ import type { MarginceCoreState } from "../design-system/margince-core";
  * readable instead of disappearing.
  */
 export const TASK_SAID: Readonly<Record<string, string>> = {
+  account_scan: "Read what an account needs",
   agent_loop: "Worked through a request",
   brief_ranking: "Ranked your morning brief",
   capture_classify: "Sorted captured mail",

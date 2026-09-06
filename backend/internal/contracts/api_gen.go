@@ -558,6 +558,7 @@ func (e AiActivityItemState) Valid() bool {
 
 // Defines values for AiActivityKind.
 const (
+	AiActivityKindAccountScan                   AiActivityKind = "account_scan"
 	AiActivityKindBriefRanking                  AiActivityKind = "brief_ranking"
 	AiActivityKindCaptureClassify               AiActivityKind = "capture_classify"
 	AiActivityKindCaptureConfidentialityVerdict AiActivityKind = "capture_confidentiality_verdict"
@@ -593,6 +594,8 @@ const (
 // Valid indicates whether the value is a known member of the AiActivityKind enum.
 func (e AiActivityKind) Valid() bool {
 	switch e {
+	case AiActivityKindAccountScan:
+		return true
 	case AiActivityKindBriefRanking:
 		return true
 	case AiActivityKindCaptureClassify:
@@ -8034,20 +8037,32 @@ func (e Organization360SuggestionActionKind) Valid() bool {
 
 // Defines values for Organization360SuggestionKind.
 const (
-	Organization360SuggestionKindLifecycleConflict Organization360SuggestionKind = "lifecycle_conflict"
-	Organization360SuggestionKindNoNextStep        Organization360SuggestionKind = "no_next_step"
-	Organization360SuggestionKindNoReply           Organization360SuggestionKind = "no_reply"
-	Organization360SuggestionKindStalledDeal       Organization360SuggestionKind = "stalled_deal"
+	Organization360SuggestionKindCommitmentUnmet    Organization360SuggestionKind = "commitment_unmet"
+	Organization360SuggestionKindLifecycleConflict  Organization360SuggestionKind = "lifecycle_conflict"
+	Organization360SuggestionKindNeedRaised         Organization360SuggestionKind = "need_raised"
+	Organization360SuggestionKindNoNextStep         Organization360SuggestionKind = "no_next_step"
+	Organization360SuggestionKindNoReply            Organization360SuggestionKind = "no_reply"
+	Organization360SuggestionKindQuestionUnanswered Organization360SuggestionKind = "question_unanswered"
+	Organization360SuggestionKindRiskRaised         Organization360SuggestionKind = "risk_raised"
+	Organization360SuggestionKindStalledDeal        Organization360SuggestionKind = "stalled_deal"
 )
 
 // Valid indicates whether the value is a known member of the Organization360SuggestionKind enum.
 func (e Organization360SuggestionKind) Valid() bool {
 	switch e {
+	case Organization360SuggestionKindCommitmentUnmet:
+		return true
 	case Organization360SuggestionKindLifecycleConflict:
+		return true
+	case Organization360SuggestionKindNeedRaised:
 		return true
 	case Organization360SuggestionKindNoNextStep:
 		return true
 	case Organization360SuggestionKindNoReply:
+		return true
+	case Organization360SuggestionKindQuestionUnanswered:
+		return true
+	case Organization360SuggestionKindRiskRaised:
 		return true
 	case Organization360SuggestionKindStalledDeal:
 		return true
@@ -8527,6 +8542,36 @@ func (e OrganizationQuestion) Valid() bool {
 	case OrganizationQuestionWhatsChanged:
 		return true
 	case OrganizationQuestionWhatsOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OrganizationScanState.
+const (
+	OrganizationScanStateDegraded OrganizationScanState = "degraded"
+	OrganizationScanStateDone     OrganizationScanState = "done"
+	OrganizationScanStateFailed   OrganizationScanState = "failed"
+	OrganizationScanStateNever    OrganizationScanState = "never"
+	OrganizationScanStateQueued   OrganizationScanState = "queued"
+	OrganizationScanStateRunning  OrganizationScanState = "running"
+)
+
+// Valid indicates whether the value is a known member of the OrganizationScanState enum.
+func (e OrganizationScanState) Valid() bool {
+	switch e {
+	case OrganizationScanStateDegraded:
+		return true
+	case OrganizationScanStateDone:
+		return true
+	case OrganizationScanStateFailed:
+		return true
+	case OrganizationScanStateNever:
+		return true
+	case OrganizationScanStateQueued:
+		return true
+	case OrganizationScanStateRunning:
 		return true
 	default:
 		return false
@@ -12568,6 +12613,24 @@ func (e UpdateOrganizationRequestSizeBand) Valid() bool {
 	}
 }
 
+// Defines values for UpdatePersonRequestVisibility.
+const (
+	UpdatePersonRequestVisibilityOwner     UpdatePersonRequestVisibility = "owner"
+	UpdatePersonRequestVisibilityWorkspace UpdatePersonRequestVisibility = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the UpdatePersonRequestVisibility enum.
+func (e UpdatePersonRequestVisibility) Valid() bool {
+	switch e {
+	case UpdatePersonRequestVisibilityOwner:
+		return true
+	case UpdatePersonRequestVisibilityWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateSignalRequestSeverity.
 const (
 	UpdateSignalRequestSeverityInfo   UpdateSignalRequestSeverity = "info"
@@ -16293,34 +16356,34 @@ func (e GetWorklistParamsScope) Valid() bool {
 
 // Defines values for GetWorklistParamsFilter.
 const (
-	All             GetWorklistParamsFilter = "all"
-	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
-	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
-	Decisions       GetWorklistParamsFilter = "decisions"
-	Leads           GetWorklistParamsFilter = "leads"
-	Meetings        GetWorklistParamsFilter = "meetings"
-	System          GetWorklistParamsFilter = "system"
-	Tasks           GetWorklistParamsFilter = "tasks"
+	GetWorklistParamsFilterAll             GetWorklistParamsFilter = "all"
+	GetWorklistParamsFilterCustomerWaiting GetWorklistParamsFilter = "customer_waiting"
+	GetWorklistParamsFilterDealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
+	GetWorklistParamsFilterDecisions       GetWorklistParamsFilter = "decisions"
+	GetWorklistParamsFilterLeads           GetWorklistParamsFilter = "leads"
+	GetWorklistParamsFilterMeetings        GetWorklistParamsFilter = "meetings"
+	GetWorklistParamsFilterSystem          GetWorklistParamsFilter = "system"
+	GetWorklistParamsFilterTasks           GetWorklistParamsFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
 func (e GetWorklistParamsFilter) Valid() bool {
 	switch e {
-	case All:
+	case GetWorklistParamsFilterAll:
 		return true
-	case CustomerWaiting:
+	case GetWorklistParamsFilterCustomerWaiting:
 		return true
-	case DealsAtRisk:
+	case GetWorklistParamsFilterDealsAtRisk:
 		return true
-	case Decisions:
+	case GetWorklistParamsFilterDecisions:
 		return true
-	case Leads:
+	case GetWorklistParamsFilterLeads:
 		return true
-	case Meetings:
+	case GetWorklistParamsFilterMeetings:
 		return true
-	case System:
+	case GetWorklistParamsFilterSystem:
 		return true
-	case Tasks:
+	case GetWorklistParamsFilterTasks:
 		return true
 	default:
 		return false
@@ -18230,6 +18293,20 @@ type AttentionItem struct {
 	// DueAt When this is due (tasks), or when it lapses (approvals).
 	DueAt *time.Time `json:"due_at,omitempty"`
 
+	// HostUserId Whose calendar a meeting came off. Sent by `source: meeting` and
+	// `source: meeting_outcome`.
+	//
+	// It names the row's OWNER, which is what lets a manager's view say whose
+	// appointment each one is rather than presenting a team's calendars as one
+	// undifferentiated day. It is a label and never an authority: what a caller may
+	// read is decided before this field is filled in, and a client must not infer a
+	// permission from it.
+	//
+	// ABSENT where no calendar claims the meeting — one booked in the app, or one
+	// captured before the host was recorded. The row then names nobody rather than
+	// guessing at an owner.
+	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
+
 	// Id The owning record's id, as its own endpoint spells it.
 	Id string `json:"id"`
 
@@ -18302,6 +18379,12 @@ type AttentionItem struct {
 	// three languages, so a duplicate pair sends its `kind` and `confidence`
 	// and the client writes the line in the reader's own.
 	Title *string `json:"title,omitempty"`
+
+	// Version The version of the row this item's own verbs write to, present where it names one — a
+	// task today. Carried for the reason `email_summary` carries one: a lane that offers
+	// `complete` and `snooze` has to name the row those presses condition on, or two people
+	// acting on one task each overwrite the other and neither is told.
+	Version *RowVersion `json:"version,omitempty"`
 
 	// WithPerson Whose record a `meeting` row's brief is read on. Sent only for
 	// `source: meeting`, and only where the meeting names a person this caller may
@@ -19492,11 +19575,18 @@ type CaptureSettings struct {
 	// excluded (cold start reads it). Default is ON (the testing posture).
 	AutoEnrich bool `json:"auto_enrich"`
 
-	// MailSharing The workspace's mail-sharing posture, ON by default: a captured email is readable by
-	// every colleague who can see the contact. Switched OFF, every email captured FROM THEN ON
-	// is held to its participants and the capturing mailbox owner — already-captured mail keeps
-	// the audience it has. Turning it off makes shared pipeline work hard; the setting exists
-	// for installations that accept that cost.
+	// MailSharing The workspace's capture-sharing posture, ON by default: captured correspondence is
+	// readable by every colleague who can see the contact. Switched OFF, everything captured
+	// FROM THEN ON is held to its participants and the capturing member — already-captured
+	// correspondence keeps the audience it has. Turning it off makes shared pipeline work
+	// hard; the setting exists for installations that accept that cost.
+	//
+	// It is named for mail because mail is what it governed first, and it now governs one
+	// more thing: a chat on a transport whose credential belongs to ONE member is that
+	// member's own correspondence and is held by this switch exactly as their mail is. A chat
+	// on a transport the installation SHARES — a bot, an official account — is the company's
+	// own business and is not touched, because there is no member such a message could be
+	// held for.
 	MailSharing bool `json:"mail_sharing"`
 
 	// SharedPostureAllowed Whether a seat may put their mailbox in the `shared` posture at all — colleagues
@@ -26966,6 +27056,11 @@ type Organization360NextStep struct {
 	LinkedPersonId *openapi_types.UUID `json:"linked_person_id,omitempty"`
 	Overdue        bool                `json:"overdue"`
 	Subject        string              `json:"subject"`
+
+	// Version The task's version, carried so the tick and the snooze beside this row can write with
+	// `If-Match`. The same reason `EmailSummary` carries one: a projection a reader can act
+	// from has to name the row it will act on, or every press is last-write-wins.
+	Version *RowVersion `json:"version,omitempty"`
 }
 
 // Organization360Project One body of work on the record page: enough to name it, say where it stands and who holds it. The full row is `GET /projects/{id}`. Shared by the company page and the person page, so a project reads the same on both.
@@ -27178,13 +27273,26 @@ type Organization360Suggestion struct {
 	// suggestions to recognize it, so a value it cannot match stores nothing.
 	Fingerprint string `json:"fingerprint"`
 
-	// Kind `no_reply` — an outbound message on a thread nobody answered.
+	// Kind The four RULE kinds, computed from the account's records with no model:
+	//
+	// `no_reply` — an outbound message on a thread nobody answered.
 	// `stalled_deal` — an open deal idle past the 60-day stall window.
 	// `no_next_step` — an active account with no open task on it.
 	// `lifecycle_conflict` — the account's own correspondence contradicts the stage it is
 	// filed under: a `contract_ended` signal stands while the record still reads as a live
 	// customer or an open opportunity. The page states the conflict rather than resolving
 	// it, because which of the two is wrong is a judgment only the reader can make.
+	//
+	// The four READ kinds, which only the account scan raises — each from words the
+	// model read in the account's own exchanges, quoted on the citation so the reader
+	// checks the claim against them:
+	//
+	// `commitment_unmet` — we said we would do something in an exchange and nothing on
+	// the record says it happened.
+	// `question_unanswered` — they asked something and no later exchange of ours answers it.
+	// `risk_raised` — they wrote something that puts the relationship or a deal at risk:
+	// a budget cut, a competitor, a decision-maker leaving.
+	// `need_raised` — they wrote about a need or a plan nothing on the record has picked up.
 	Kind Organization360SuggestionKind `json:"kind"`
 
 	// Reason The rule that fired, in the words the rep reads. Never a score.
@@ -27201,6 +27309,12 @@ type Organization360Suggestion struct {
 	// It is NOT part of the fingerprint (PO-AC-N-14). Folding it in would resurrect every
 	// suggestion every reader has ever dismissed the moment the wording changed.
 	Title *string `json:"title,omitempty"`
+
+	// WrittenBy Which writer raised this row. Absent on the 360's own rows — every one of those
+	// is a rule — and `model` on a finding the account scan read from the account's
+	// words. Never silently interchangeable: a reader weighing advice needs to know
+	// whether a comparison or a reading stands behind it.
+	WrittenBy *WrittenBy `json:"written_by,omitempty"`
 }
 
 // Organization360SuggestionActionKind `draft_reply` — open the composer on the message that went unanswered.
@@ -27208,13 +27322,26 @@ type Organization360Suggestion struct {
 // `add_task` — write the step named in `task`, through `POST /tasks`.
 type Organization360SuggestionActionKind string
 
-// Organization360SuggestionKind `no_reply` — an outbound message on a thread nobody answered.
+// Organization360SuggestionKind The four RULE kinds, computed from the account's records with no model:
+//
+// `no_reply` — an outbound message on a thread nobody answered.
 // `stalled_deal` — an open deal idle past the 60-day stall window.
 // `no_next_step` — an active account with no open task on it.
 // `lifecycle_conflict` — the account's own correspondence contradicts the stage it is
 // filed under: a `contract_ended` signal stands while the record still reads as a live
 // customer or an open opportunity. The page states the conflict rather than resolving
 // it, because which of the two is wrong is a judgment only the reader can make.
+//
+// The four READ kinds, which only the account scan raises — each from words the
+// model read in the account's own exchanges, quoted on the citation so the reader
+// checks the claim against them:
+//
+// `commitment_unmet` — we said we would do something in an exchange and nothing on
+// the record says it happened.
+// `question_unanswered` — they asked something and no later exchange of ours answers it.
+// `risk_raised` — they wrote something that puts the relationship or a deal at risk:
+// a budget cut, a competitor, a decision-maker leaving.
+// `need_raised` — they wrote about a need or a plan nothing on the record has picked up.
 type Organization360SuggestionKind string
 
 // Organization360SuggestionSubjectType defines model for Organization360Suggestion.SubjectType.
@@ -27325,6 +27452,11 @@ type OrganizationBrief struct {
 
 // OrganizationBriefEvidence One record a brief sentence was written from.
 type OrganizationBriefEvidence struct {
+	// At The instant the evidence is dated — when the message was sent, when
+	// the deal was last worked, when the signal was read. The client
+	// prints it in the reader's own calendar. Absent for a record with no
+	// date of its own.
+	At         *time.Time                          `json:"at,omitempty"`
 	EntityId   openapi_types.UUID                  `json:"entity_id"`
 	EntityType OrganizationBriefEvidenceEntityType `json:"entity_type"`
 
@@ -27335,6 +27467,20 @@ type OrganizationBriefEvidence struct {
 	// leaves this out. Descriptive only — grounding checks type and id,
 	// never the name.
 	Name *string `json:"name,omitempty"`
+
+	// Origin Where the words came from, in the writer's own language and the
+	// reader's terms — "Email you sent", "Open deal, last worked",
+	// "Read from their mail". One short phrase, never a record kind the
+	// client already labels the chip with. Descriptive only, like `name`.
+	Origin *string `json:"origin,omitempty"`
+
+	// Quote The record's own words, verbatim — a message's subject line, a
+	// signal's sentence. Never a paraphrase and never a summary: it is
+	// what a reader checks the claim against without opening the record,
+	// so a writer that has no verbatim words leaves it out. Absent when
+	// the reader may not read the record's content, even where they may
+	// know it exists.
+	Quote *string `json:"quote,omitempty"`
 }
 
 // OrganizationBriefEvidenceEntityType defines model for OrganizationBriefEvidence.EntityType.
@@ -28119,6 +28265,75 @@ type OrganizationProfileFieldListResponse struct {
 // `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.
 // `whats_changed` — what has moved on this account recently.
 type OrganizationQuestion string
+
+// OrganizationScan One reader's scan of one account: the state of the read, and what the account looks
+// like it needs — the model's stored findings and the 360's live rules as ONE list,
+// deduplicated by fingerprint, this reader's dismissals applied, capped and the cap
+// reported. Every finding cites the records it rests on and, where the model read
+// words, quotes them verbatim; a finding that could not be grounded is dropped whole,
+// never shown with its citation stripped.
+type OrganizationScan struct {
+	// DegradeReason Why the read finished below the model — server-authored, in the reader's terms,
+	// never a provider's message. Null when the model wrote the findings.
+	DegradeReason *string `json:"degrade_reason,omitempty"`
+
+	// Findings The merged advice, in priority order: the rules' own rows first in their own
+	// order, then the model's findings by the order it gave them. Dismissed rows are
+	// gone; the cap is applied here and reported in `findings_dropped`.
+	Findings []Organization360Suggestion `json:"findings"`
+
+	// FindingsDropped How many of this reader's undismissed findings the cap left out.
+	FindingsDropped int `json:"findings_dropped"`
+
+	// GeneratedAt When the stored findings were written. Null until a read has settled.
+	GeneratedAt *time.Time `json:"generated_at,omitempty"`
+
+	// GeneratedBy Which writer produced the stored findings. Absent until a read has settled.
+	GeneratedBy    *WrittenBy         `json:"generated_by,omitempty"`
+	OrganizationId openapi_types.UUID `json:"organization_id"`
+
+	// Read What the last settled read took in, so the page can say "read 14 exchanges and
+	// 3 deals" rather than "done". Null until a read has settled.
+	Read *struct {
+		Deals     int `json:"deals"`
+		Exchanges int `json:"exchanges"`
+	} `json:"read,omitempty"`
+
+	// ResumesAt When a read the AI budget deferred will try again. Null unless the scan is in
+	// flight and waiting on budget.
+	ResumesAt *time.Time `json:"resumes_at,omitempty"`
+
+	// Stale The account has changed since the stored findings were written and they have not
+	// been re-read, because the reader's last scan is younger than the rescan floor.
+	// The findings still answer; the flag is said beside them rather than instead of them.
+	Stale *bool `json:"stale,omitempty"`
+
+	// State Where this reader's scan of the account stands. `never` — this reader has not asked
+	// for one. `queued` / `running` — a read is in flight, on the rail. `done` — the
+	// model read the account and its findings are stored. `degraded` — the read finished
+	// on the deterministic floor (no model lane, the AI budget deferred past the job's
+	// patience, or a reply the grounding filter refused whole); the rules' own advice is
+	// what stands. `failed` — the read could not run at all; the rules' advice still
+	// answers, and `degrade_reason` says what stopped it.
+	State OrganizationScanState `json:"state"`
+}
+
+// OrganizationScanRequest What an ensure may ask beyond "make it current".
+type OrganizationScanRequest struct {
+	// Force Read the account again even though the stored findings' fingerprint matches or
+	// the rescan floor has not passed. A scan already in flight is still returned as
+	// it stands rather than started twice.
+	Force *bool `json:"force,omitempty"`
+}
+
+// OrganizationScanState Where this reader's scan of the account stands. `never` — this reader has not asked
+// for one. `queued` / `running` — a read is in flight, on the rail. `done` — the
+// model read the account and its findings are stored. `degraded` — the read finished
+// on the deterministic floor (no model lane, the AI budget deferred past the job's
+// patience, or a reply the grounding filter refused whole); the rules' own advice is
+// what stands. `failed` — the read could not run at all; the rules' advice still
+// answers, and `degrade_reason` says what stopped it.
+type OrganizationScanState string
 
 // OrganizationStrength defines model for OrganizationStrength.
 type OrganizationStrength struct {
@@ -33230,7 +33445,7 @@ type UpdateCaptureSettingsRequest struct {
 	// AutoEnrich Toggle captured-organization auto-enrichment.
 	AutoEnrich *bool `json:"auto_enrich,omitempty"`
 
-	// MailSharing Toggle the workspace mail-sharing posture; affects mail captured from now on.
+	// MailSharing Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.
 	MailSharing *bool `json:"mail_sharing,omitempty"`
 
 	// SharedPostureAllowed Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.
@@ -33578,11 +33793,57 @@ type UpdatePersonRequest struct {
 	// `Person360.dead_addresses` already names which address bounced; until now the
 	// contract's own remedy for that was to visit the person page, because the write
 	// existed on create and nowhere else.
-	Phones               *[]PersonPhoneInput     `json:"phones,omitempty"`
-	Social               *map[string]interface{} `json:"social,omitempty"`
-	Title                *string                 `json:"title,omitempty"`
-	AdditionalProperties map[string]interface{}  `json:"-"`
+	Phones *[]PersonPhoneInput     `json:"phones,omitempty"`
+	Social *map[string]interface{} `json:"social,omitempty"`
+	Title  *string                 `json:"title,omitempty"`
+
+	// Visibility Who may see this contact: `workspace` for everyone in the organization,
+	// `owner` for the person named by `owner_id` alone.
+	//
+	// An ORDINARY field, writable in BOTH directions by anybody the write gate
+	// admits. It used to move one way only, through `POST /people/{id}/publish`,
+	// on the reasoning that a colleague may already have acted on seeing the
+	// contact. That reasoning assumed a human made the disclosure. The sender
+	// classifier publishes a contact it judges a real counterparty without
+	// anybody approving it, so the common case was a machine making a decision
+	// no human could undo — the row's own owner included.
+	//
+	// Narrowing a contact does not retract what was already done with it. Mail,
+	// meetings and deals filed against it keep their own audiences, and a
+	// colleague mid-conversation keeps their thread; what changes is who finds
+	// the contact from here on.
+	//
+	// A contact narrowed to `owner` stays with the owner it already names;
+	// narrowing does not reassign it to whoever pressed the button. A row that
+	// names nobody is not reachable through this field at all — an unowned
+	// record is nobody's to change until somebody claims it, which the write
+	// gate already enforces for every field on this endpoint.
+	Visibility           *UpdatePersonRequestVisibility `json:"visibility,omitempty"`
+	AdditionalProperties map[string]interface{}         `json:"-"`
 }
+
+// UpdatePersonRequestVisibility Who may see this contact: `workspace` for everyone in the organization,
+// `owner` for the person named by `owner_id` alone.
+//
+// An ORDINARY field, writable in BOTH directions by anybody the write gate
+// admits. It used to move one way only, through `POST /people/{id}/publish`,
+// on the reasoning that a colleague may already have acted on seeing the
+// contact. That reasoning assumed a human made the disclosure. The sender
+// classifier publishes a contact it judges a real counterparty without
+// anybody approving it, so the common case was a machine making a decision
+// no human could undo — the row's own owner included.
+//
+// Narrowing a contact does not retract what was already done with it. Mail,
+// meetings and deals filed against it keep their own audiences, and a
+// colleague mid-conversation keeps their thread; what changes is who finds
+// the contact from here on.
+//
+// A contact narrowed to `owner` stays with the owner it already names;
+// narrowing does not reassign it to whoever pressed the button. A row that
+// names nobody is not reachable through this field at all — an unowned
+// record is nobody's to change until somebody claims it, which the write
+// gate already enforces for every field on this endpoint.
+type UpdatePersonRequestVisibility string
 
 // UpdatePipelineRequest defines model for UpdatePipelineRequest.
 type UpdatePipelineRequest struct {
@@ -35419,6 +35680,12 @@ type WorklistItem struct {
 	// a deterministic rule stated as a belief is a lie about where the sentence came
 	// from.
 	Verdict *WorklistDealVerdict `json:"verdict,omitempty"`
+
+	// Version The version of the row this item's own verbs write to, present where it names one — a
+	// task today. Carried for the reason `email_summary` carries one: a lane that offers
+	// `complete` and `snooze` has to name the row those presses condition on, or two people
+	// acting on one task each overwrite the other and neither is told.
+	Version *RowVersion `json:"version,omitempty"`
 
 	// WithPerson Whose record a `meeting` row's brief is read on, carried out from
 	// `AttentionItem.with_person`.
@@ -41130,6 +41397,9 @@ type UpsertPartnerJSONRequestBody = UpsertPartnerRequest
 
 // UpdateOrganizationProfileFieldJSONRequestBody defines body for UpdateOrganizationProfileField for application/json ContentType.
 type UpdateOrganizationProfileFieldJSONRequestBody = UpdateOrganizationProfileFieldRequest
+
+// EnsureOrganizationScanJSONRequestBody defines body for EnsureOrganizationScan for application/json ContentType.
+type EnsureOrganizationScanJSONRequestBody = OrganizationScanRequest
 
 // DismissOrganizationSuggestionJSONRequestBody defines body for DismissOrganizationSuggestion for application/json ContentType.
 type DismissOrganizationSuggestionJSONRequestBody DismissOrganizationSuggestionJSONBody
@@ -48644,6 +48914,14 @@ func (a *UpdatePersonRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "title")
 	}
 
+	if raw, found := object["visibility"]; found {
+		err = json.Unmarshal(raw, &a.Visibility)
+		if err != nil {
+			return fmt.Errorf("error reading 'visibility': %w", err)
+		}
+		delete(object, "visibility")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -48723,6 +49001,13 @@ func (a UpdatePersonRequest) MarshalJSON() ([]byte, error) {
 		object["title"], err = json.Marshal(a.Title)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'title': %w", err)
+		}
+	}
+
+	if a.Visibility != nil {
+		object["visibility"], err = json.Marshal(a.Visibility)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'visibility': %w", err)
 		}
 	}
 
@@ -50325,6 +50610,12 @@ type ServerInterface interface {
 	// Confirm a profile field without changing its value.
 	// (POST /organizations/{id}/profile-fields/{field}/confirm)
 	ConfirmOrganizationProfileField(w http.ResponseWriter, r *http.Request, id Id, field ProfileFieldKey, params ConfirmOrganizationProfileFieldParams)
+	// What this account needs, as the model last read it for this reader.
+	// (GET /organizations/{id}/scan)
+	GetOrganizationScan(w http.ResponseWriter, r *http.Request, id Id)
+	// Make sure this reader's scan of the account is current, reading it again only when the account changed.
+	// (POST /organizations/{id}/scan)
+	EnsureOrganizationScan(w http.ResponseWriter, r *http.Request, id Id)
 	// The newest deep read on this account, so a crawl that failed after the rep navigated away is still visible.
 	// (GET /organizations/{id}/site-reads/latest)
 	GetLatestSiteRead(w http.ResponseWriter, r *http.Request, id Id)
@@ -53253,6 +53544,18 @@ func (_ Unimplemented) UpdateOrganizationProfileField(w http.ResponseWriter, r *
 // Confirm a profile field without changing its value.
 // (POST /organizations/{id}/profile-fields/{field}/confirm)
 func (_ Unimplemented) ConfirmOrganizationProfileField(w http.ResponseWriter, r *http.Request, id Id, field ProfileFieldKey, params ConfirmOrganizationProfileFieldParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What this account needs, as the model last read it for this reader.
+// (GET /organizations/{id}/scan)
+func (_ Unimplemented) GetOrganizationScan(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Make sure this reader's scan of the account is current, reading it again only when the account changed.
+// (POST /organizations/{id}/scan)
+func (_ Unimplemented) EnsureOrganizationScan(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -70295,6 +70598,70 @@ func (siw *ServerInterfaceWrapper) ConfirmOrganizationProfileField(w http.Respon
 	handler.ServeHTTP(w, r)
 }
 
+// GetOrganizationScan operation middleware
+func (siw *ServerInterfaceWrapper) GetOrganizationScan(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetOrganizationScan(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// EnsureOrganizationScan operation middleware
+func (siw *ServerInterfaceWrapper) EnsureOrganizationScan(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EnsureOrganizationScan(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetLatestSiteRead operation middleware
 func (siw *ServerInterfaceWrapper) GetLatestSiteRead(w http.ResponseWriter, r *http.Request) {
 
@@ -81413,6 +81780,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/organizations/{id}/profile-fields/{field}/confirm", wrapper.ConfirmOrganizationProfileField)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/organizations/{id}/scan", wrapper.GetOrganizationScan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/organizations/{id}/scan", wrapper.EnsureOrganizationScan)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/organizations/{id}/site-reads/latest", wrapper.GetLatestSiteRead)

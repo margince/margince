@@ -53,6 +53,9 @@ var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 	"Links": "deliberately absent — a record naming the core rows it attaches to would make the link-visibility probe a per-row existence oracle over the scope the ingest runs under. " +
 		"What a message is about is decided by the core's counterparty resolution",
 	"Participants": "the further parties beyond the two ends. Addresses already carries every party the internal-only gate needs, and a unit reporting attendee structure has no consumer today",
+	"participantsAreProviderAttested": "the attestation that a PROVIDER enumerated the party list, which is what lets capture bind an invited colleague's user_id from it. " +
+		"Deliberately unpublishable rather than merely unpublished: it is the core's answer about the SOURCE, stamped from the registry that ran the connector, and a unit able to assert it could manufacture an interaction edge naming any colleague — the exact forgery the inbound-mail rule refuses. " +
+		"Unexported so it cannot be set by assignment either, which means a unit's record arrives un-attested and keeps the strict mail rule",
 	"Parts": "attachments. The published path EXISTS now (extension.InboundFile plus the " +
 		"published sniff/sanitize pair and the four published inbound bounds), so this is no " +
 		"longer a capability gap — it is a deliberate hold: the field lands in the PR of the " +

@@ -1678,6 +1678,50 @@ describe("CompanyScreen — next-step suggestions", () => {
     expect(screen.getByRole("button", { name: "deal" })).toBeTruthy();
   });
 
+  it("opens the composer on the message a draft-reply action names", async () => {
+    // Through the PAGE: the card only names the action, and the page is
+    // what performs it. A reply composer holds the rail's column while open.
+    const unanswered = {
+      ...stalledSuggestion,
+      kind: "no_reply",
+      fingerprint: "fp-reply-1",
+      reason: "You reached out 15 days ago and nobody has come back.",
+      action: { kind: "draft_reply", activity_id: "a-1" },
+    };
+    stubFetch(companyBackstop, {
+      org360: { ...org360, suggestions: [unanswered] },
+    });
+    const { container } = render(<CompanyScreen id="o-1" />);
+    await screen.findByText("Brandt Automotive GmbH");
+    await waitFor(() =>
+      expect(container.querySelector(".co-rail")).toBeTruthy(),
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Create draft" }),
+    );
+    await waitFor(() => expect(container.querySelector(".co-rail")).toBeNull());
+  });
+
+  it("goes to the deal an open-deal action names", async () => {
+    stubFetch(companyBackstop, {
+      org360: {
+        ...org360,
+        suggestions: [
+          {
+            ...stalledSuggestion,
+            action: { kind: "open_deal", deal_id: "d-7" },
+          },
+        ],
+      },
+    });
+    render(<CompanyScreen id="o-1" />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Open the deal" }),
+    );
+    await waitFor(() => expect(window.location.hash).toContain("d-7"));
+  });
+
   it("names how many suggestions the card left out", async () => {
     const three60 = {
       ...org360,

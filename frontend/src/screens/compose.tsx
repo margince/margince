@@ -2757,13 +2757,33 @@ export function ComposeModal({
     setHtml(paragraphsFrom(drafted));
   };
 
+  // The drafted words, brought back under the reader's eyes.
+  //
+  // A draft does not only fill the body — it raises the disclosure band above
+  // it, and that band (the Art. 50 sentence, what the draft was based on, the
+  // voice version) is several times the height of the bar the rep pressed. The
+  // head below it grows too, because the same answer fills To and the subject.
+  // So the press that asks for words pushes those words down past the fold, and
+  // the rep is left reading a notice about a draft they cannot see.
+  //
+  // `block: "nearest"` rather than "start": when the body already fits, this
+  // moves nothing — which is what a rewrite wants, since the band is already
+  // standing and only the words underneath changed.
+  const revealDraftedBody = () => {
+    // After the paint that raised the band, or the body is still where it was.
+    globalThis.requestAnimationFrame(() => {
+      // jsdom has no scrollIntoView; the browser always does.
+      document.getElementById(bodyId)?.scrollIntoView?.({ block: "nearest" });
+    });
+  };
+
   const draft = useDraftMutation({
     activityId: answering,
     entityType,
     entityId,
     intent,
     onUnavailable: () => setDraftUnavailable(true),
-    onDrafted: (result, ask) =>
+    onDrafted: (result, ask) => {
       fillFromDraft(result, {
         subject,
         body,
@@ -2777,7 +2797,9 @@ export function ComposeModal({
         setProvenance,
         setReasoning: account.setReasoning,
         setScope: account.setScope,
-      }),
+      });
+      revealDraftedBody();
+    },
     resetUnavailable: () => setDraftUnavailable(false),
     t,
   });

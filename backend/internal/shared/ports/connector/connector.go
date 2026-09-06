@@ -223,6 +223,25 @@ type NormalizedRecord struct {
 	// about the meeting.
 	Participants []MessageParticipant
 
+	// participantsAreProviderAttested reports that the provider itself
+	// enumerated Participants, so binding one to a colleague's user_id records
+	// what the provider stated rather than what a sender typed.
+	//
+	// It exists because the mail answer and the calendar answer differ. A
+	// recipient list on inbound MAIL is the sender's own text: nothing
+	// authenticates it, so capture refuses to bind a user_id from one, or an
+	// outsider could mail a synced mailbox with `Cc: ceo@ourcompany.com` and
+	// manufacture an interaction edge. A calendar attendee list is not text on a
+	// message — it is the provider's own record of who was invited, read back
+	// over the authenticated connection of a seat that is on the event.
+	//
+	// Unexported with one setter, like Counterparty's own attestation, so a
+	// caller cannot set it by assignment and a record crossing a serialization
+	// boundary arrives un-attested rather than wrongly attested. The zero value
+	// refuses the binding, so a connector that attests nothing keeps the mail
+	// rule it has today.
+	participantsAreProviderAttested bool
+
 	// Addresses is EVERY address this record names — for mail the union of
 	// From, To, Cc and whatever Bcc survived; for calendar the organizer and
 	// attendees — including the connected owner's own. It is what the
@@ -247,6 +266,31 @@ type NormalizedRecord struct {
 	// distinguishable from a message that had none — silence would report the
 	// two identically, and only one of them means something is missing.
 	PartDrops []PartDrop
+}
+
+// WithProviderAttestedParticipants returns a copy recording that the PROVIDER
+// enumerated this record's participants — a calendar's own attendee list, read
+// back over an authenticated connection, rather than a recipient header some
+// sender wrote.
+//
+// attested is the connector core's answer about the SOURCE, never anything the
+// record itself claimed: a record that names its own kind "meeting" attests
+// nothing by saying so, which is why the extension ingress (which copies a
+// third-party unit's kind straight through) leaves this false and keeps the
+// mail rule.
+//
+// A caller that attests nothing leaves the answer false, which refuses the
+// colleague binding rather than trusting it.
+func (r NormalizedRecord) WithProviderAttestedParticipants(attested bool) NormalizedRecord {
+	r.participantsAreProviderAttested = attested
+	return r
+}
+
+// ParticipantsAreProviderAttested reports whether the provider itself
+// enumerated Participants, which is what lets capture bind a colleague's
+// user_id from the list.
+func (r NormalizedRecord) ParticipantsAreProviderAttested() bool {
+	return r.participantsAreProviderAttested
 }
 
 // NaturalKey is the (source_system, source_id) idempotency key the DB

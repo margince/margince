@@ -55,7 +55,7 @@ ONLY="${SCENARIO:-}"
 E2E_LLM_MODEL="${E2E_LLM_MODEL:-claude-opus-5}"
 KEEP="${E2E_LLM_KEEP:-0}"
 
-if [ "${MARGINCE_E2E_LLM:-0}" != "1" ]; then
+if [[ "${MARGINCE_E2E_LLM:-0}" != "1" ]]; then
   cat >&2 <<'MSG'
 e2e-llm is opt-in: it drives a real model and bills real tokens.
 
@@ -83,11 +83,11 @@ command -v python3 >/dev/null || { echo "python3 is required to read the scenari
 # was on trial. What must not happen either way is a run that silently falls
 # back to whatever the operator's own shell is logged into, because then the
 # lane is measuring a different account's model.
-if [ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
+if [[ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
   CREDENTIAL=ANTHROPIC_AUTH_TOKEN
-elif [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
   CREDENTIAL=ANTHROPIC_API_KEY
-elif [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+elif [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
   CREDENTIAL=CLAUDE_CODE_OAUTH_TOKEN
 else
   echo "no credential is set: CLAUDE_CODE_OAUTH_TOKEN (a subscription token from" >&2
@@ -97,7 +97,7 @@ fi
 
 WORK="$(mktemp -d)"
 cleanup() {
-  if [ "$KEEP" = "1" ]; then
+  if [[ "$KEEP" = "1" ]]; then
     echo "stack left up (DEV_SLUG=$SLUG); stop it with: make dev-stop DEV_SLUG=$SLUG"
   else
     (cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
@@ -180,7 +180,7 @@ mint_passport() {
     "$APP_BASE/v1/passports" | python3 -c 'import json,sys
 try: print(json.load(sys.stdin).get("token",""))
 except Exception: print("")')"
-  [ -n "$PASSPORT" ] || { echo "could not mint a passport" >&2; exit 1; }
+  [[ -n "$PASSPORT" ]] || { echo "could not mint a passport" >&2; exit 1; }
 
   python3 -c 'import json,sys
 cfg = {"mcpServers": {sys.argv[4]: {"type": "http", "url": sys.argv[1] + "/mcp",
@@ -196,7 +196,7 @@ open(sys.argv[3], "w").write(json.dumps(cfg))' \
     -H "Authorization: Bearer $PASSPORT" -H 'Content-Type: application/json' \
     -H 'Accept: application/json, text/event-stream' \
     -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"e2e-llm","version":"1"}}}')"
-  [ "$probe" = "200" ] || {
+  [[ "$probe" = "200" ]] || {
     echo "the freshly minted passport cannot reach $APP_BASE/mcp (HTTP $probe)" >&2
     exit 1
   }
@@ -232,7 +232,7 @@ run_once() {
 
   # An unknown flag produces an empty transcript, which a naive checker reads as
   # a scenario that called nothing — a false failure that looks like a finding.
-  if [ ! -s "$out" ]; then
+  if [[ ! -s "$out" ]]; then
     echo "  the CLI produced no transcript:" >&2
     head -5 "$out.err" >&2
     return 1
@@ -265,7 +265,7 @@ for line in open(sys.argv[1]):
 else:
     print("no-system-line")
 ' "$out" "$MCP_SERVER")"
-  if [ "$status" != "connected" ]; then
+  if [[ "$status" != "connected" ]]; then
     echo "  the $MCP_SERVER MCP server is '$status', not connected — the assistant was offered" >&2
     echo "  no Margince tools at all, so every scenario would fail for a reason that is not the" >&2
     echo "  product's. A 'disabled' here means this CLI has a server of that name turned off for" >&2
@@ -283,7 +283,7 @@ REPORT="$WORK/report.txt"
 
 for scenario in "$SCENARIO_DIR"/*.yaml; do
   name="$(python3 "$ROOT/e2e/llm/check.py" --field name "$scenario")"
-  if [ -n "$ONLY" ] && [ "$ONLY" != "$name" ]; then continue; fi
+  if [[ -n "$ONLY" ]] && [[ "$ONLY" != "$name" ]]; then continue; fi
 
   runs="$(python3 "$ROOT/e2e/llm/check.py" --field runs "$scenario")"
   pass_at="$(python3 "$ROOT/e2e/llm/check.py" --field pass_at "$scenario")"
@@ -299,7 +299,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     # create records; a second run against them is testing a different world.
     case "$name" in
       case1_*|case2_*|case3_*)
-        if [ "$i" -gt 1 ]; then
+        if [[ "$i" -gt 1 ]]; then
           # dev-stop FIRST. dev-fresh refuses to boot over a port its own
           # stack is already holding — "port :18081 already in use" — so
           # calling it on the running stack killed the lane after case 1
@@ -355,7 +355,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     fi
   done
 
-  if [ "$ok" -ge "$pass_at" ]; then
+  if [[ "$ok" -ge "$pass_at" ]]; then
     PASSED=$((PASSED + 1))
     echo "  $name: PASS ($ok/$runs)" | tee -a "$REPORT"
   else
@@ -377,4 +377,4 @@ echo "================ e2e-llm ================"
 cat "$REPORT"
 echo "scenarios: $PASSED passed, $FAILED failed"
 echo "records:   $RECORD_DIR"
-[ "$FAILED" -eq 0 ]
+[[ "$FAILED" -eq 0 ]]

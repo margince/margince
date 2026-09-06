@@ -324,9 +324,8 @@ genuinely ownerless *forces* you to add it to the allow-list. The choice is forc
 
 **Ratified deferred delivery — subscribable but not delivered, on purpose.** Two families are
 catalogued, valid subscription targets, and match `matchingSubscriptions`, yet `entityVisibleTo` returns
-"not visible" for them **unconditionally** — not a bug, a documented gap raised upstream for spec
-reconciliation (`.tmp/webhooks-contract-ui/UPSTREAM-P3.md`), because neither has an ownership model the
-fan-out gate can bound delivery by:
+"not visible" for them **unconditionally** — not a bug, a known gap awaiting spec reconciliation,
+because neither has an ownership model the fan-out gate can bound delivery by:
 
 - **The overlay `mirror.*` family** (`mirror.conflict`, `mirror.budget_degraded`, `mirror.deleted`, the
   reserved `mirror.write_rejected`) — keyed by EVENT type (`deferredDeliveryEvents`). Each emit site
@@ -512,7 +511,6 @@ viewer with read-only access sees the list and deliveries but not the mutating a
 | The payload generator | `backend/tools/gen-payloads/` → `internal/contracts/publicevents_gen.go` |
 | The typed emit seam (compile-time payload↔event binding) | `internal/platform/database/storekit/storekit.go` (`EmitEvent`, `EmitEventForEntity`) |
 | The whole-catalog fitness gate (coverage/no-orphan/version/delivery-resolvability, A15) | `backend/gates/publicevents_test.go` |
-| The upstream-reconciliation note for the two deferred-delivery families | `.tmp/webhooks-contract-ui/UPSTREAM-P3.md` |
 | The Settings → Integrations UI (§9) | `frontend/src/screens/webhooks.tsx` |
 | The generated frontend event-type projection | `frontend/src/api/public-events.ts` |
 

@@ -36,7 +36,7 @@ ADMIN_PASSWORD="${ADMIN_PASSWORD:-demo-password-123}"
 # elsewhere (CI) passes BOOTSTRAP_PASSWORD instead, and the literal is the last
 # resort for a stack booted by hand.
 BOOTSTRAP_PASSWORD_FILE="${BOOTSTRAP_PASSWORD_FILE:-config/margince-admin-password}"
-if [ -z "${BOOTSTRAP_PASSWORD:-}" ] && [ -r "$BOOTSTRAP_PASSWORD_FILE" ]; then
+if [[ -z "${BOOTSTRAP_PASSWORD:-}" ]] && [[ -r "$BOOTSTRAP_PASSWORD_FILE" ]]; then
   BOOTSTRAP_PASSWORD="$(cat "$BOOTSTRAP_PASSWORD_FILE")"
 fi
 BOOTSTRAP_PASSWORD="${BOOTSTRAP_PASSWORD:-operator-supplied-first-password}"
@@ -91,7 +91,7 @@ api_if_match() { # api_if_match <method> <path> <version> <json-body>
 # plain-http localhost — so pull the token out and send it explicitly.
 capture_session() {
   SESSION="$(sed -n 's/^[Ss]et-[Cc]ookie: crm_session=\([^;]*\).*/\1/p' "$workdir/headers" | tr -d '\r')"
-  [ -n "$SESSION" ] || fail "the server answered OK but set no crm_session cookie"
+  [[ -n "$SESSION" ]] || fail "the server answered OK but set no crm_session cookie"
 }
 
 # A configured bootstrap has the OPERATOR choose the first admin's password, and
@@ -114,20 +114,20 @@ sign_in_as_admin() {
   # itself, so there is no direct way to lift the hold in that case. Detour
   # through an intermediate value instead: unconditional, and convergent
   # whichever state the account started in.
-  if [ "$ADMIN_PASSWORD" = "$BOOTSTRAP_PASSWORD" ]; then
+  if [[ "$ADMIN_PASSWORD" = "$BOOTSTRAP_PASSWORD" ]]; then
     rotate_admin_password_via_detour
     return
   fi
 
   status="$(api POST /auth/login "$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e,password:$p}')")"
-  if [ "$status" = "200" ]; then
+  if [[ "$status" = "200" ]]; then
     capture_session
     echo "  OK: logged in as $ADMIN_EMAIL"
     return
   fi
 
   status="$(api POST /auth/login "$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$BOOTSTRAP_PASSWORD" '{email:$e,password:$p}')")"
-  if [ "$status" != "200" ]; then
+  if [[ "$status" != "200" ]]; then
     echo "  response body:" >&2
     cat "$workdir/body" >&2
     fail "login as $ADMIN_EMAIL returned HTTP $status for both the chosen and the operator-supplied password — the api bootstraps the demo organization at boot from its margince.yaml (make dev writes it); if the credentials changed, reset the dev database and restart the stack"
@@ -137,7 +137,7 @@ sign_in_as_admin() {
 
   status="$(api POST /auth/change-password \
     "$(jq -n --arg c "$BOOTSTRAP_PASSWORD" --arg n "$ADMIN_PASSWORD" '{current_password:$c,new_password:$n}')")"
-  if [ "$status" != "204" ]; then
+  if [[ "$status" != "204" ]]; then
     echo "  response body:" >&2
     cat "$workdir/body" >&2
     fail "POST /v1/auth/change-password returned HTTP $status — the admin cannot replace the operator-supplied password, so nothing below can be seeded"
@@ -145,7 +145,7 @@ sign_in_as_admin() {
 
   # The change ends every session, including the one that made it.
   status="$(api POST /auth/login "$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e,password:$p}')")"
-  if [ "$status" != "200" ]; then
+  if [[ "$status" != "200" ]]; then
     echo "  response body:" >&2
     cat "$workdir/body" >&2
     fail "login with the newly chosen password returned HTTP $status"
@@ -169,7 +169,7 @@ rotate_admin_password_via_detour() {
   local detour="${ADMIN_PASSWORD:0:240}-seed-dev-detour" status
 
   status="$(api POST /auth/login "$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e,password:$p}')")"
-  if [ "$status" != "200" ]; then
+  if [[ "$status" != "200" ]]; then
     echo "  response body:" >&2
     cat "$workdir/body" >&2
     fail "login as $ADMIN_EMAIL returned HTTP $status — the api bootstraps the demo organization at boot from its margince.yaml (make dev writes it); if the credentials changed, reset the dev database and restart the stack"
@@ -178,14 +178,14 @@ rotate_admin_password_via_detour() {
 
   status="$(api POST /auth/change-password \
     "$(jq -n --arg c "$ADMIN_PASSWORD" --arg n "$detour" '{current_password:$c,new_password:$n}')")"
-  if [ "$status" != "204" ]; then
+  if [[ "$status" != "204" ]]; then
     echo "  response body:" >&2
     cat "$workdir/body" >&2
     fail "POST /v1/auth/change-password (rotating off the operator-supplied password) returned HTTP $status"
   fi
 
   status="$(api POST /auth/login "$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$detour" '{email:$e,password:$p}')")"
-  if [ "$status" != "200" ]; then
+  if [[ "$status" != "200" ]]; then
     echo "  response body:" >&2
     cat "$workdir/body" >&2
     fail "login with the detour password returned HTTP $status — the account is now on an intermediate password (ADMIN_PASSWORD with the literal suffix '-seed-dev-detour' appended, truncated to 256 characters; see rotate_admin_password_via_detour). Recover by exporting that value as ADMIN_PASSWORD and re-running, then running once more with the original ADMIN_PASSWORD"
@@ -194,14 +194,14 @@ rotate_admin_password_via_detour() {
 
   status="$(api POST /auth/change-password \
     "$(jq -n --arg c "$detour" --arg n "$ADMIN_PASSWORD" '{current_password:$c,new_password:$n}')")"
-  if [ "$status" != "204" ]; then
+  if [[ "$status" != "204" ]]; then
     echo "  response body:" >&2
     cat "$workdir/body" >&2
     fail "POST /v1/auth/change-password (restoring the chosen password) returned HTTP $status — the account is stuck on the detour password (see rotate_admin_password_via_detour for how it's derived from ADMIN_PASSWORD)"
   fi
 
   status="$(api POST /auth/login "$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e,password:$p}')")"
-  if [ "$status" != "200" ]; then
+  if [[ "$status" != "200" ]]; then
     echo "  response body:" >&2
     cat "$workdir/body" >&2
     fail "login with the chosen password returned HTTP $status after restoring it"
@@ -311,7 +311,7 @@ ensure_activity() { # ensure_activity <label> <subject> <source-id> <json-body>
   # carrying the demo dataset plus a real inbox can hold more — so the seeder
   # would miss both its own row and somebody else's, and write a second one.
   mine="$(find_first "$query" '.source_system == "seed" and .source_id == $k' --arg k "$key")"
-  if [ -n "$mine" ]; then
+  if [[ -n "$mine" ]]; then
     echo "  OK: $label already present"
     return
   fi
@@ -321,7 +321,7 @@ ensure_activity() { # ensure_activity <label> <subject> <source-id> <json-body>
   # demo whose result depends on which row a reader or a verification step
   # happens to open, and that is worse than a seed that stops and says so.
   theirs="$(find_first "$query" '.subject == $s' --arg s "$subject")"
-  if [ -n "$theirs" ]; then
+  if [[ -n "$theirs" ]]; then
     fail "an activity titled \"$subject\" is already here without the seed key $key — remove or rename it, because seeding beside it would leave two rows nothing can tell apart"
   fi
   # KEYED, so the write is idempotent at the database: two seed runs overlapping
@@ -416,9 +416,9 @@ find_first() { # find_first <path> <jq-row-filter> [jq-arg...]
   while :; do
     case "$path" in *\?*) sep="&" ;; *) sep="?" ;; esac
     status="$(api GET "$path${sep}limit=100${cursor:+&cursor=$(url_encode "$cursor")}")"
-    [ "$status" = "200" ] || fail "GET /v1${path} returned HTTP $status"
+    [[ "$status" = "200" ]] || fail "GET /v1${path} returned HTTP $status"
     row="$(jq -c --arg today "$TODAY" "$@" "first(.data[] | select($select)) // empty" "$workdir/body")"
-    if [ -n "$row" ]; then
+    if [[ -n "$row" ]]; then
       printf '%s' "$row"
       return
     fi
@@ -427,7 +427,7 @@ find_first() { # find_first <path> <jq-row-filter> [jq-arg...]
     # handles no for itself. A bare `return` here carries the test's own exit
     # status, which is 1 when the cursor is empty — and under `set -e` that
     # killed the whole script the first time a lookup legitimately found nothing.
-    [ -n "$cursor" ] || return 0
+    [[ -n "$cursor" ]] || return 0
   done
 }
 
@@ -446,7 +446,7 @@ person_id() { # person_id <full-name> <email> — prints the id, empty when abse
 }
 
 org_id="$(find_first '/organizations?domain=demo.test' '.display_name == "Demo GmbH"' | jq -r '.id // empty')"
-[ -n "$org_id" ] || fail "Demo GmbH is not in the installation the seed just wrote to"
+[[ -n "$org_id" ]] || fail "Demo GmbH is not in the installation the seed just wrote to"
 
 # The roles are the demo's own: a company page whose three contacts have no
 # titles reads as a page that failed to load them.
@@ -465,19 +465,19 @@ org_id="$(find_first '/organizations?domain=demo.test' '.display_name == "Demo G
 employ() { # employ <full-name> <email> <role>
   local name="$1" email="$2" role="$3" id edges standing rel_id rel_version status
   id="$(person_id "$name" "$email")"
-  [ -n "$id" ] || fail "$name <$email> is not in the installation the seed just wrote to"
+  [[ -n "$id" ]] || fail "$name <$email> is not in the installation the seed just wrote to"
   edges="/relationships?kind=employment&person_id=$id"
-  if [ -n "$(find_first "$edges" ".organization_id == \$org and $CURRENT_PRIMARY_JQ" --arg org "$org_id")" ]; then
+  if [[ -n "$(find_first "$edges" ".organization_id == \$org and $CURRENT_PRIMARY_JQ" --arg org "$org_id")" ]]; then
     echo "  OK: $name already employed at Demo GmbH"
     return
   fi
   standing="$(find_first "$edges" \
     '.organization_id == $org and (.ended_at == null or (.ended_at | tostring) >= $today)' \
     --arg org "$org_id")"
-  if [ -n "$standing" ]; then
+  if [[ -n "$standing" ]]; then
     rel_id="$(printf '%s' "$standing" | jq -r '.id')"
     rel_version="$(printf '%s' "$standing" | jq -r '.version // ""')"
-    [ -n "$rel_version" ] || fail "GET /v1/relationships answered $name's employment without a version to write against"
+    [[ -n "$rel_version" ]] || fail "GET /v1/relationships answered $name's employment without a version to write against"
     status="$(api_if_match PATCH "/relationships/$rel_id" "$rel_version" '{"is_current_primary":true}')"
     case "$status" in
       200) echo "  OK: $name's employment at Demo GmbH is their primary one again" ;;
@@ -503,13 +503,13 @@ employ "Carol Wagner" "carol@demo.test" "Managing Director"
 
 echo "== seed-dev: demo account lifecycle =="
 status="$(api GET "/organizations/$org_id")"
-[ "$status" = "200" ] || fail "GET /v1/organizations/$org_id returned HTTP $status"
+[[ "$status" = "200" ]] || fail "GET /v1/organizations/$org_id returned HTTP $status"
 org_lifecycle="$(jq -r '.lifecycle // ""' "$workdir/body")"
 org_version="$(jq -r '.version // ""' "$workdir/body")"
-if [ "$org_lifecycle" = "customer" ]; then
+if [[ "$org_lifecycle" = "customer" ]]; then
   echo "  OK: Demo GmbH is already a customer"
 else
-  [ -n "$org_version" ] || fail "GET /v1/organizations/$org_id answered without a version to write against"
+  [[ -n "$org_version" ]] || fail "GET /v1/organizations/$org_id answered without a version to write against"
   status="$(api_if_match PATCH "/organizations/$org_id" "$org_version" '{"lifecycle":"customer"}')"
   case "$status" in
     200) echo "  OK: Demo GmbH is a customer" ;;
@@ -526,16 +526,16 @@ echo "== seed-dev: demo deals =="
 # list before creating. Stages come from the bootstrap-seeded default
 # pipeline ("Sales": Qualified → … → Won/Lost).
 status="$(api GET /pipelines)"
-[ "$status" = "200" ] || fail "GET /v1/pipelines returned HTTP $status"
+[[ "$status" = "200" ]] || fail "GET /v1/pipelines returned HTTP $status"
 pipeline_id="$(jq -r '.data[] | select(.is_default) | .id' "$workdir/body")"
-[ -n "$pipeline_id" ] || fail "no default pipeline — the bootstrap seed did not run?"
+[[ -n "$pipeline_id" ]] || fail "no default pipeline — the bootstrap seed did not run?"
 stage_id_qualified="$(jq -r --arg p "$pipeline_id" '.data[] | select(.id == $p) | .stages[] | select(.name == "Qualified") | .id' "$workdir/body")"
 stage_id_proposal="$(jq -r --arg p "$pipeline_id" '.data[] | select(.id == $p) | .stages[] | select(.name == "Proposal") | .id' "$workdir/body")"
-[ -n "$stage_id_qualified" ] && [ -n "$stage_id_proposal" ] \
+[[ -n "$stage_id_qualified" ]] && [[ -n "$stage_id_proposal" ]] \
   || fail "the default pipeline is missing its seeded Qualified/Proposal stages"
 
 status="$(api GET '/deals?limit=100')"
-[ "$status" = "200" ] || fail "GET /v1/deals returned HTTP $status"
+[[ "$status" = "200" ]] || fail "GET /v1/deals returned HTTP $status"
 deals_page="$workdir/deals.json"
 cp "$workdir/body" "$deals_page"
 
@@ -564,7 +564,7 @@ ensure_deal "Globex Renewal" "$stage_id_proposal" 1200000
 echo "== seed-dev: work for the Worklist =="
 
 alice_id="$(person_id "Alice Müller" "alice@demo.test")"
-[ -n "$alice_id" ] || fail "Alice Müller is missing, so there is nobody for the demo mail to be from"
+[[ -n "$alice_id" ]] || fail "Alice Müller is missing, so there is nobody for the demo mail to be from"
 
 # A task the admin wrote themselves and did not assign. It lands on their own
 # queue because the writer stamps the author as assignee — which is the whole
@@ -623,7 +623,7 @@ ensure_conversation() { # ensure_conversation <slug> <subject> <kind> <direction
   # NOBODY SENDS A MEETING. `-` leaves the field off rather than asserting a
   # direction the event does not have; the server then stamps the roles it
   # stamps for an undirected interaction, which is what a meeting is.
-  if [ "$direction" != "-" ]; then
+  if [[ "$direction" != "-" ]]; then
     direction_field="$(jq -n --arg d "$direction" '{direction:$d}')"
   fi
   # A NATURAL KEY, so the write is idempotent at the database rather than only
@@ -643,7 +643,7 @@ ensure_conversation() { # ensure_conversation <slug> <subject> <kind> <direction
 
 bob_id="$(person_id "Bob Schmidt" "bob@demo.test")"
 carol_id="$(person_id "Carol Wagner" "carol@demo.test")"
-[ -n "$bob_id" ] && [ -n "$carol_id" ] \
+[[ -n "$bob_id" ]] && [[ -n "$carol_id" ]] \
   || fail "the demo people this seed just wrote are not readable back — nothing to hang a conversation on"
 
 # Both directions on the same contact, deliberately: the strength score's

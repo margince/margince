@@ -400,3 +400,281 @@ func TestALeadWhoNeverGrantedIsReportedAsAnAbsence(t *testing.T) {
 			d.ReasonCode, commsauthz.ReasonNoMarketingConsent)
 	}
 }
+
+// inboundFromTheLead plants a message the lead SENT us, the way the real writer
+// records one: activity_participant has no lead_id column, so a lead's own mail
+// is stored with person_id NULL and the bare address.
+func (e *leadConsentEnv) inboundFromTheLead(ctx context.Context, t *testing.T) ids.UUID {
+	t.Helper()
+	anchor := ids.NewV7()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO activity (id, kind, direction, thread_key, occurred_at, source, captured_by)
+		VALUES ($1, 'email', 'inbound', $2, now(), 'gmail', 'human:x')`,
+		anchor, "lead-thread-"+e.lead.String()); err != nil {
+		t.Fatalf("planting the lead's inbound message: %v", err)
+	}
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO activity_participant (activity_id, person_id, address, role)
+		VALUES ($1, NULL, $2, 'from')`, anchor, e.leadEmail); err != nil {
+		t.Fatalf("planting the participant: %v", err)
+	}
+	return anchor
+}
+
+// leadActorContext binds the actor recordBasis stamps captured_by from.
+func (e *leadConsentEnv) leadActorContext() context.Context {
+	return principal.WithActor(
+		principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7()),
+		principal.Principal{Type: principal.PrincipalHuman, ID: "human:rep"})
+}
+
+// A LEAD WHO WROTE TO US CAN BE ANSWERED, with no grant on file.
+//
+// This is the shape that was refused in the shipped default: the composer sends
+// no consent_purpose, so the key arrives empty, no purpose row matches, and the
+// lead arm denied with unknown_purpose while every category enforces. A rep
+// answering a lead's own mail got "not granted" — stricter than the rule for the
+// same human one promotion later, and stricter than the law.
+//
+// The participant row carries person_id NULL and the bare address, which is how
+// a lead's inbound mail is actually recorded: activity_participant has no
+// lead_id column at all.
+func TestALeadWhoWroteToUsCanBeAnsweredWithoutAGrant(t *testing.T) {
+	e := setupLeadConsent(t)
+	gate := NewGate(e.store)
+	ctx := e.leadActorContext()
+
+	anchor := e.inboundFromTheLead(ctx, t)
+
+	tx, err := e.store.db.Pool().Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back: %v", err)
+		}
+	}()
+
+	// No LegacyPurposeKey, exactly as the composer sends it.
+	d, err := gate.decideOne(ctx, tx, connector.Recipient{Email: e.leadEmail},
+		commsauthz.Request{AnchorActivityID: anchor}, commsauthz.PhaseStaging)
+	if err != nil {
+		t.Fatalf("deciding about a lead who wrote to us: %v", err)
+	}
+	if d.SubjectKind != entityLead {
+		t.Errorf("subject kind = %q, want lead", d.SubjectKind)
+	}
+	if d.SubjectID != e.lead.UUID {
+		t.Errorf("subject id = %v, want the lead %v", d.SubjectID, e.lead)
+	}
+	if d.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("verdict = %q (%s), want allow: a lead who wrote to us may be answered, "+
+			"and refusing is an inversion — the same human allows once promoted", d.Verdict, d.ReasonCode)
+	}
+	if d.Resolved != commsauthz.CategoryReplyToInbound {
+		t.Errorf("resolved = %q, want reply_to_inbound", d.Resolved)
+	}
+	if d.Basis != commsauthz.BasisSubjectInitiatedCorrespondence {
+		t.Errorf("basis = %q, want subject_initiated_correspondence", d.Basis)
+	}
+
+	// The ground is RECORDED, not merely concluded: an allow that writes no
+	// basis is what made a subject-access export answer "we relied on nothing".
+	var bases int
+	if err := tx.QueryRow(ctx,
+		`SELECT count(*) FROM communication_basis WHERE lead_id = $1`, e.lead).Scan(&bases); err != nil {
+		t.Fatal(err)
+	}
+	if bases != 1 {
+		t.Errorf("communication_basis rows for the lead = %d, want 1: the send stands on a ground "+
+			"nothing wrote down", bases)
+	}
+}
+
+// EVIDENCE OUTRANKS THE PURPOSE KEY, which is the ORDER the fix is about.
+//
+// The previous test passes no purpose key, so it cannot tell "evidence first"
+// apart from "evidence at all": both send the same lead down the same arm. Here
+// a purpose key IS supplied and no grant exists for it, so the old order —
+// purpose row, then grant — denied. Evidence must be consulted first and win.
+func TestALeadsEvidenceOutranksAnUngrantedPurpose(t *testing.T) {
+	e := setupLeadConsent(t)
+	gate := NewGate(e.store)
+	ctx := e.leadActorContext()
+	anchor := e.inboundFromTheLead(ctx, t)
+
+	tx, err := e.store.db.Pool().Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back: %v", err)
+		}
+	}()
+
+	d, err := gate.decideOne(ctx, tx, connector.Recipient{Email: e.leadEmail},
+		commsauthz.Request{AnchorActivityID: anchor, LegacyPurposeKey: "newsletter"},
+		commsauthz.PhaseStaging)
+	if err != nil {
+		t.Fatalf("deciding: %v", err)
+	}
+	if d.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("verdict = %q (%s), want allow: the lead's own message is the ground, and a "+
+			"purpose key nobody granted must not outrank it", d.Verdict, d.ReasonCode)
+	}
+	if d.Resolved != commsauthz.CategoryReplyToInbound {
+		t.Errorf("resolved = %q, want reply_to_inbound — the grant's class answered instead of the evidence", d.Resolved)
+	}
+}
+
+// A LEAD NEVER TAKES AUTHORITY FROM VerdictForPerson.
+//
+// This holds a claim that otherwise lives only in a comment on decideLead.
+// VerdictForPerson's ClassTransactional arm returns an unconditional allow
+// without reading any grant (verdict.go, "the contract itself is the basis").
+// Routing a lead through decideResolved's unsupported fallthrough would hand it
+// that allow from a purpose row never checked against lead grants. There is no
+// evidence here and no lead grant, so the only way this can come back allow is
+// if somebody reroutes the lead arm through the person one.
+func TestALeadTakesNoAuthorityFromATransactionalPurpose(t *testing.T) {
+	e := setupLeadConsent(t)
+	gate := NewGate(e.store)
+	ctx := e.leadActorContext()
+
+	invoices := ids.New[ids.PurposeKind]()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO consent_purpose (id, key, label, class, requires_double_opt_in)
+		VALUES ($1, 'invoices', 'Invoices', 'transactional', false)`, invoices); err != nil {
+		t.Fatalf("seeding the transactional purpose: %v", err)
+	}
+
+	tx, err := e.store.db.Pool().Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back: %v", err)
+		}
+	}()
+
+	d, err := gate.decideOne(ctx, tx, connector.Recipient{Email: e.leadEmail},
+		commsauthz.Request{LegacyPurposeKey: "invoices"}, commsauthz.PhaseStaging)
+	if err != nil {
+		t.Fatalf("deciding: %v", err)
+	}
+	if d.Verdict == commsauthz.VerdictAllow {
+		t.Fatalf("verdict = allow (%s) for a lead with no evidence and no grant: the lead arm is "+
+			"taking VerdictForPerson's unconditional transactional allow, which was never "+
+			"checked against a lead grant", d.ReasonCode)
+	}
+}
+
+// THE SAME REPLY, ONE PHASE LATER. Staging is not where a message is sent.
+//
+// The thread arm is the only supported arm a lead can reach, and staging asks it
+// with the anchor the caller named. Nothing carries that anchor to transmit, so
+// this goes through stagedRequestFor with a real delivery row: if the thread
+// cannot be re-derived there, the message is authorized at staging and parked at
+// transmit, which reads to a rep as the same refusal the fix removed.
+func TestALeadsReplyIsStillAllowedAtTransmit(t *testing.T) {
+	e := setupLeadConsent(t)
+	gate := NewGate(e.store)
+	ctx := e.leadActorContext()
+	anchor := e.inboundFromTheLead(ctx, t)
+	thread := "lead-thread-" + e.lead.String()
+
+	// A real delivery on that thread, the way the send path stages one: the
+	// thread_key is what transmit has instead of the anchor.
+	delivery := ids.NewV7()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO comms_outbound
+		  (id, activity_id, user_id, provider, message_id, recipients, cc, subject,
+		   references_chain, body, consent_purpose, thread_key)
+		VALUES ($1, $2, $3, 'gmail', $5, $6::jsonb, '[]'::jsonb, 'Re: hello',
+		        '[]'::jsonb, 'Thanks for writing.', 'newsletter', $4)`,
+		delivery, anchor, e.user, thread,
+		"<"+delivery.String()+"@margince.test>",
+		`["`+e.leadEmail+`"]`); err != nil {
+		t.Fatalf("staging the delivery: %v", err)
+	}
+
+	tx, err := e.store.db.Pool().Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back: %v", err)
+		}
+	}()
+
+	// Through stagedRequestFor, which is what authorizetransmit.go calls.
+	// Handing decideOne the anchor directly would test a request shape the
+	// transmit phase never builds — and that shape passes even when transmit
+	// cannot see the thread at all.
+	recipient := connector.Recipient{Email: e.leadEmail}
+	threadKey, err := deliveryThreadKey(ctx, tx, delivery)
+	if err != nil {
+		t.Fatalf("reading the delivery's thread: %v", err)
+	}
+	if threadKey != thread {
+		t.Fatalf("delivery thread = %q, want %q — transmit cannot name the conversation", threadKey, thread)
+	}
+	transmitReq := stagedRequestFor(
+		commsauthz.TransmitRequest{DeliveryID: delivery, Recipients: []connector.Recipient{recipient}},
+		recipient, map[string]stagedClaim{}, threadKey)
+
+	d, err := gate.decideOne(ctx, tx, recipient, transmitReq, commsauthz.PhaseTransmit)
+	if err != nil {
+		t.Fatalf("deciding at transmit: %v", err)
+	}
+	if d.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("transmit verdict = %q (%s), want allow: staging authorized this reply and "+
+			"transmit refuses it, so the message parks and the rep sees the old refusal",
+			d.Verdict, d.ReasonCode)
+	}
+	if d.Resolved != commsauthz.CategoryReplyToInbound {
+		t.Errorf("resolved = %q, want reply_to_inbound", d.Resolved)
+	}
+}
+
+// A LEAD WHO WROTE TO US ON ANOTHER THREAD CAN STILL BE WRITTEN TO.
+//
+// The reply arm needs the anchor's own thread. An unprompted follow-up has no
+// anchor and rests on the recent-inbound arm instead — which reads the same
+// authorship spelling and answers about a lead. Until this, validate() bailed
+// on every non-person before that arm could run, so a lead who wrote to us last
+// week was refused for want of a grant.
+func TestALeadWhoWroteRecentlyCanBeFollowedUp(t *testing.T) {
+	e := setupLeadConsent(t)
+	gate := NewGate(e.store)
+	ctx := e.leadActorContext()
+	e.inboundFromTheLead(ctx, t)
+
+	tx, err := e.store.db.Pool().Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back: %v", err)
+		}
+	}()
+
+	// No anchor: this is a fresh message, not a reply to a named one.
+	d, err := gate.decideOne(ctx, tx, connector.Recipient{Email: e.leadEmail},
+		commsauthz.Request{Context: commsauthz.CategoryRequestedFollowup}, commsauthz.PhaseStaging)
+	if err != nil {
+		t.Fatalf("deciding: %v", err)
+	}
+	if d.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("verdict = %q (%s), want allow: the lead wrote to us inside the window, which is "+
+			"the same evidence that answers for a person", d.Verdict, d.ReasonCode)
+	}
+	if d.Basis != commsauthz.BasisSubjectInitiatedCorrespondence {
+		t.Errorf("basis = %q, want subject_initiated_correspondence", d.Basis)
+	}
+}

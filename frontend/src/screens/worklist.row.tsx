@@ -292,7 +292,7 @@ export function WorklistRow({
  * title, reasons, verbs — is already at the complexity the linter allows, and
  * a fourth kind of answer should extend this list rather than that function.
  */
-// The answers that need only the row's own id, keyed by the source that carries
+// The answers the row itself is enough for, keyed by the source that carries
 // them and the verb the server sent. A table rather than a branch each: they
 // differ only in which control to draw, so spelling them as code made RowAnswer
 // grow one arm per source until it hit the complexity ceiling — which its own
@@ -301,27 +301,47 @@ export function WorklistRow({
 // Both halves of the key matter. The SOURCE decides the control, and the VERB
 // is the server's judgement that this particular row may use it: a blocked
 // automation carries no `retry`, so it draws nothing here.
+//
+// `draw` takes the ROW, not its id. A task's completion is pinned to the
+// version the reader decided on, and every other verb here writes too — so the
+// entry that needs a second field next is served without leaving the table for
+// a branch of its own, which is how RowAnswer grew arms the last time.
 const ANSWER_BY_SOURCE: Partial<
   Record<
     WorklistItem["source"],
-    { verb: WorklistItem["actions"][number]; draw: (id: string) => ReactNode }
+    {
+      verb: WorklistItem["actions"][number];
+      draw: (item: WorklistItem) => ReactNode;
+    }
   >
 > = {
-  notice: { verb: "acknowledge", draw: (id) => <NoticeAcknowledge id={id} /> },
-  automation_run: { verb: "retry", draw: (id) => <AutomationRetry id={id} /> },
-  meeting_outcome: { verb: "decide", draw: (id) => <MeetingOutcome id={id} /> },
+  notice: {
+    verb: "acknowledge",
+    draw: (item) => <NoticeAcknowledge id={item.id} />,
+  },
+  automation_run: {
+    verb: "retry",
+    draw: (item) => <AutomationRetry id={item.id} />,
+  },
+  meeting_outcome: {
+    verb: "decide",
+    draw: (item) => <MeetingOutcome id={item.id} version={item.version} />,
+  },
   conversation_claim: {
     verb: "complete",
-    draw: (id) => <PromiseKept id={id} />,
+    draw: (item) => <PromiseKept id={item.id} />,
   },
-  task: { verb: "complete", draw: (id) => <TaskComplete id={id} /> },
+  task: {
+    verb: "complete",
+    draw: (item) => <TaskComplete id={item.id} version={item.version} />,
+  },
   // The row's id IS the person's here, which is what the dismissal endpoint
   // takes — the pairing is why this verb is offered on this lane and nowhere
   // else. `dismiss` also belongs to brief_item, where it means something else
   // and posts somewhere else, which is why this table is keyed by SOURCE.
   relationship_decay: {
     verb: "dismiss",
-    draw: (id) => <NudgeDismiss personId={id} />,
+    draw: (item) => <NudgeDismiss personId={item.id} />,
   },
 };
 
@@ -336,7 +356,7 @@ function RowAnswer({ item }: Readonly<{ item: WorklistItem }>) {
   // every id-keyed answer below would act on the wrong one.
   const keyed = ANSWER_BY_SOURCE[item.source];
   if (keyed && !item.batch && item.actions.includes(keyed.verb)) {
-    return keyed.draw(item.id);
+    return keyed.draw(item);
   }
   // Its own branch, because it is the one answer that needs more than the row's
   // id: the composer files the sent message against a record, so the subject
@@ -729,15 +749,21 @@ function NoticeAcknowledge({ id }: Readonly<{ id: string }>) {
 // control labelled "Done" that opens a page leaves the task open, and the reader
 // believes otherwise. The mutation exists and every other surface already uses
 // it, so the row completes the task rather than renaming the promise down.
-function TaskComplete({ id }: Readonly<{ id: string }>) {
+function TaskComplete({
+  id,
+  version,
+}: Readonly<{ id: string; version: number | undefined }>) {
   const t = useT();
   const toast = useToast();
   const update = useTaskUpdate([worklistKey]);
   // mutateAsync, not mutate: it answers a promise this closure owns, so the
   // rejection is still catchable after the row has gone. `mutate`'s per-call
   // callbacks hang off the component's observer and are dropped with it.
-  const undo = (task: string) =>
-    update.mutateAsync({ id: task, body: { is_done: false } });
+  // The UNDO is pinned on the version the completion produced, not the one the
+  // row was drawn at: ticking the task moved it on, so re-sending the older
+  // number would be refused as skew by the write that has just succeeded.
+  const undo = (task: string, at: number | undefined) =>
+    update.mutateAsync({ id: task, version: at, body: { is_done: false } });
   return (
     <div className="worklist-row-verbs">
       <Button
@@ -746,13 +772,13 @@ function TaskComplete({ id }: Readonly<{ id: string }>) {
         pending={update.isPending}
         onClick={() =>
           update.mutate(
-            { id, body: { is_done: true } },
+            { id, version, body: { is_done: true } },
             {
               // Undoable from the confirmation, the way every disposition
               // beside it is. Done REMOVES the row, so a misclick otherwise
               // costs the reader the only address they had for the task —
               // they must remember what it was to find it again.
-              onSuccess: () =>
+              onSuccess: (completedAt) =>
                 toast.show(t("worklist.verb.completed"), {
                   action: {
                     label: t("worklist.verb.completeUndo"),
@@ -769,7 +795,7 @@ function TaskComplete({ id }: Readonly<{ id: string }>) {
                     // one control that could undo their misclick, it failed,
                     // and the screen said nothing.
                     onAct: () => {
-                      undo(id).catch(() =>
+                      undo(id, completedAt).catch(() =>
                         toast.show(t("worklist.verb.completeUndoFailed"), {
                           mark: false,
                         }),
@@ -1181,13 +1207,16 @@ function refusalMessage(
 // with no outcome. That is also why there is no undo offered here: a corrected
 // outcome is a second answer to the same question, given on the meeting itself
 // where the history of both is visible, rather than a toast that disappears.
-function MeetingOutcome({ id }: Readonly<{ id: string }>) {
+function MeetingOutcome({
+  id,
+  version,
+}: Readonly<{ id: string; version: number | undefined }>) {
   const t = useT();
   const toast = useToast();
   const record = useMeetingOutcome([worklistKey]);
   const answer = (status: "held" | "no_show" | "canceled") => () =>
     record.mutate(
-      { id, status },
+      { id, version, status },
       {
         onSuccess: () => toast.show(t("worklist.verb.meetingOutcomeRecorded")),
         // A refused write leaves the row exactly as it was, which renders

@@ -3,7 +3,7 @@
 
 import { useT } from "../i18n";
 import { useSorMode } from "../screens/common";
-import { useHoldsOperatorSeat } from "./capability";
+import { useVisibleSettingsPages } from "../screens/settingsnav";
 
 // The system-of-record mode chip: in overlay mode the whole installation
 // reads from an incumbent mirror, which changes what every screen can do —
@@ -15,15 +15,26 @@ import { useHoldsOperatorSeat } from "./capability";
 // costs no extra request and it never renders ahead of a real answer. Native
 // mode renders nothing — the chip is a state marker, not a permanent fixture.
 //
-// The MODE is for every seat; the DESTINATION is not. Integrations lives in
-// Admin settings, which only an operator seat reaches, so a link offered to a
-// rep would land them on the Account fallback — a chip that lied about where it
-// went. So the fact keeps its place for everyone and only an operator gets the
-// affordance, which is the same rule the rail's license chip follows.
+// The MODE is for every seat; the DESTINATION is not. A link offered to somebody
+// the page refuses would land them on the access boundary — a chip that lied
+// about where it went. So the fact keeps its place for everyone, and the link
+// is offered exactly to whoever the page opens for.
+//
+// Usually that means whoever may CHANGE the installation's wiring, but not
+// always: a composed workspace unit puts its settings on that page and nowhere
+// else, which opens it without either wiring write. Asking the catalog covers
+// both without this file having to know either rule.
+//
+// It asks the catalog whether this reader may open the page, rather than
+// re-deriving the grants: `admin || ops` matched the seeded roles by
+// coincidence and would have left a custom role holding
+// `overlay_connection:update` looking at a chip that went nowhere. Two writers
+// of one rule drift; the page's own answer cannot.
 export function SorModeChip() {
   const t = useT();
   const mode = useSorMode();
-  const operator = useHoldsOperatorSeat();
+  const pages = useVisibleSettingsPages();
+  const reaches = pages.some((page) => page.id === "integrations");
   if (mode !== "overlay") {
     return null;
   }
@@ -32,7 +43,7 @@ export function SorModeChip() {
   // the mode to a screen reader; what it no longer does is promise a page.
   const label = t("overlay.chipLabel");
   const explanation = t("overlay.chipAria");
-  return operator ? (
+  return reaches ? (
     <a
       // Integrations, not Connections: the mirror that is answering every read is
       // installation-wide wiring, and the personal Connections entry now holds

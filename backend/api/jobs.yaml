@@ -179,6 +179,28 @@ queues:
 # file rather than holding a worker until the rescuer notices. A dispatcher that
 # grows work of its own stops being a dispatcher and takes its own number here.
 kinds:
+  account_scan:
+    role: worker
+    go_type: AccountScanArgs
+    queue: transcript_read
+    timeout: 4m
+    opts_owner: caller
+    registration: {when: [AccountScanBrain], absent: registers_anyway}
+    args:
+      Workspace: id
+      OrganizationID: id
+      ScanID: id
+      ViewerID: id
+    reason: >-
+      One structured model call over the account's recent exchanges and
+      pipeline, three ladder walks at most, plus the reads and the row write
+      around it. Four minutes is the call ceiling with room for the reads; a
+      scan that cannot finish inside it fails the row honestly rather than
+      holding a transcript_read worker. That queue is the right pool for the
+      same reason it exists: a reader is watching the account page for this
+      answer, and a fanned-out capture sweep must not be able to queue ahead
+      of it.
+
   # One job, not a dispatcher and a child (ADR-0103 §1): it keeps the
   # dispatcher's kind and cadence and the child's queue, timeout and attempt
   # cap. opts_owner is `args` so the cap below stays declared — the periodic

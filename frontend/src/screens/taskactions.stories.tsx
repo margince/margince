@@ -39,10 +39,11 @@ function TaskRowBody({ dueAt }: Readonly<{ dueAt?: string | null }>) {
         gap: "var(--space-2)",
       }}
     >
-      <TaskCompleteCheck activityId="a-1" update={update} />
+      <TaskCompleteCheck activityId="a-1" version={3} update={update} />
       <span>Send the renewal paperwork</span>
       <TaskQuickActions
         activityId="a-1"
+        version={3}
         dueAt={dueAt}
         update={update}
         showComplete={false}

@@ -32,6 +32,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/orgscan"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -48,6 +49,7 @@ import (
 var carrierSources = map[string]string{
 	"agent_runner":          runner.ActivitySource,
 	"attachment_extraction": activities.ExtractionActivitySource,
+	"account_scan":          orgscan.ActivitySource,
 }
 
 func TestEveryAITaskNamesTheSourceThatReportsIt(t *testing.T) {

@@ -1,140 +1,152 @@
-# Channel capture and mail capture are not the same product yet
+# Whose correspondence a chat is, and what follows from the answer
 
 A Telegram message and a Gmail message travel the same pipeline — one
 `connector.Sink`, one activity row, one audit + outbox commit, the same RBAC
-gates. They do **not** get the same treatment afterwards. Everything the mail
-work built to answer *who may read this message* is gated to `kind = 'email'`,
-and a channel message inherits none of it.
+gates. What used to differ afterwards was everything about *who may read this
+message*: the whole privacy stack was gated to `kind = 'email'`, and a channel
+message inherited none of it.
 
-This page states where the two paths part, so a change to either side is made
-knowing what the other side does. It describes the tree as it stands; the code
-is the authority, and the two gates below are where to check.
+That gate has gone. The question a captured message is now decided by is not
+what KIND it is but **whose credential carried it**, which the registry has
+recorded since the transport declared it:
+`channel_provider.credential_model`.
 
-## The two gates
+This page states the decision, where it is enforced, and what still differs. It
+describes the tree as it stands; the code is the authority.
 
-Everything downstream follows from these, and neither is a per-feature flag.
+## The rule
 
-**1. The birth ladder refuses a non-mail kind.**
-`capture/birthdecision.go`, first statement of `decideBirthTx`:
+> If the transport spends a **global** credential — a bot, an Official Account,
+> anything an administrator binds once for everybody — the traffic is
+> **workspace** business and every seat reads it. If it spends a credential
+> **bound to one member**, that member's chats are their own correspondence and
+> behave like their mail: the workspace floor, their counterparty holds, a
+> sender's own marker.
 
-```go
-// Non-mail kinds keep the workspace default: a meeting or a channel message
-// is not correspondence a mailbox posture was ever asked about.
-if fields.Kind != "email" {
-    return birthDecision{}, nil
-}
-```
+`workspace_bot` is not merely the conservative answer for a shared credential;
+it is the only sound one. A hold needs somebody to hold the message FOR, and a
+bot's message names no member — its `captured_by` carries no user id, no mailbox
+imported it, and no participant row names one. Holding it would satisfy no arm
+of the audience gate and leave a row that no human can open and nobody can widen
+back. Held by `TestEveryCredentialModelIsBornWithAReader`
+(`capture/credentialmodelcensus_integration_test.go`), which reads its corpus
+from the column's own CHECK so a third model cannot join the ladder untested.
 
-So a channel message is decided by none of the five rungs — the workspace
-mail-sharing floor, a counterparty hold, an explicit `[Vertraulich]` marker, an
-inherited thread verdict, the delivering mailbox's own posture. It is born
-`workspace` unless `limitLinkLessAudience` catches it for filing under no record.
+## What decides a captured message's birth
 
-**2. The import row needs an address.**
+`decideBirthTx` (`capture/birthdecision.go`) runs five rungs, strictest first.
+Which of them a record faces depends on the credential model, not the kind:
+
+| Rung | Keyed on | Mail | Chat on a member-bound credential | Chat on a workspace bot |
+| --- | --- | --- | --- | --- |
+| 1. workspace mail-sharing floor | the workspace | yes | **yes** | no |
+| 2. counterparty hold | the correspondent, stored per seat | yes | **yes** | no |
+| 3. explicit marker on the message | the message's own subject | yes | **yes** | no |
+| 4. inherited thread verdict | the delivering mailbox | yes | no | no |
+| 5. mailbox posture | the delivering mailbox | yes | no | no |
+
+Rungs 4 and 5 read `capture_connection` — one human's own mailbox, its posture,
+the verdicts taken against its threads — and a channel transport has no row in
+it. Whether a member may ask something standing of their own transport is a
+product question, not a gap to fill in with mail's answer.
+
+A transport declaring `per_member` whose capture names no member is a
+**misdeclaration**, and the capture is refused with the transport named. Both
+ways of carrying on are wrong: publishing defies whatever the floor was set to,
+and holding writes the unreadable row.
+
+## The import row, and what it unlocks
+
 `recordThisImport` (`capture/importrow.go`) writes a `capture_import` row only
-once `mailboxWasARecipientTx` finds one of the acting seat's **own email
-addresses** among `rec.Addresses` — the anti-forgery evidence that a provider
-delivered the message rather than that somebody typed its `Message-ID`. A
-channel connector supplies no addresses at all (`capture/telegram/normalize.go`
-sets `Counterparty.ChannelIdentity` and nothing address-shaped), so a channel
-message never gets an import row for any seat.
+for a seat whose own credential delivered the message. Mail proves that with an
+address — one of the seat's own among `rec.Addresses`, the evidence a provider
+delivered it rather than that somebody typed its `Message-ID`. A chat carries
+none of the seat's addresses, so that arm answers no for every channel message
+there has ever been.
 
-That single absence removes the rest, because `capture_import` is the row every
-later decision hangs on: it carries the seat's posture and verdict, it is what
-`activities.RecomputeAudienceTx` derives from, and it is the join in
-`capture.ThreadActivityIDsTx` that the owner's share/hold decision selects
-through.
+For a member-bound transport the **credential is the evidence**, and it is the
+stronger claim. The extension ingress establishes both halves before capture
+runs: the member holds one of the unit's user-scoped secrets — depositing it is
+the act that says "act for me here" — and the unit called `Ingest` for that
+member. Neither fact is in the record, so neither is a unit's to assert.
+
+It is bounded to the seat the row's provenance names. A SECOND member of the
+same unit replaying the same key earns no import row: the core cannot tell a
+colleague whose own credential also carried the message from one who guessed the
+first member's source id, and refusing is the direction that grants nothing.
+That colleague reads the conversation through their own capture of it.
+
+The import row is what every later decision hangs on — it carries the seat's
+posture and reason, `activities.RecomputeAudienceTx` derives from it, and
+`capture.ThreadActivityIDsTx` joins through it — so a member-bound chat now
+reaches all of them, and a workspace bot's message reaches none.
 
 ## What each side gets
 
-| Capability | Mail (`kind = 'email'`) | Channel (`kind = 'message'`) | Why they differ |
+| Capability | Mail | Chat, member-bound credential | Chat, workspace bot |
 | --- | --- | --- | --- |
-| Activity row, links, audit image, `activity.captured` event | yes | yes | one sink, one write shape; the event names `channel_provider` |
-| Per-seat import row (`capture_import`) | yes | **no** | `mailboxWasARecipientTx` matches an address, and a bot has no seat behind it to name anyway |
-| Workspace mail-sharing floor | yes | **no** | `decideBirthTx` returns before reading the setting |
-| Mailbox posture (`shared` / `classified` / `held`) | yes | **no** | posture lives on `capture_connection` and is read per mail connection |
-| Counterparty hold (this seat holds their mail) | yes | **no** | `capture_counterparty_hold` is keyed on address and domain |
-| `[Vertraulich]` / confidentiality marker in the subject | yes | **no** | a channel message has no subject to mark |
-| Thread verdict, inherited by the next message | yes | **no** | `capture_thread_verdict` is opened only for a held import row |
-| Owner shares or re-holds a thread (`ThreadAudienceSetter.Decide`) | yes | **no** — answers 404 | it selects `activity JOIN capture_import`, which finds nothing |
-| `held_by_others` count reported back to the sharer | yes | n/a | derived from the same import rows |
-| Audience recompute across every importing seat | yes | **no** | reached only from inside `recordThisImport` |
-| Held-to-participants when filed under no record | yes | **no** | `limitLinkLessAudience` returns early on `decision.create`, and the channel seam always creates (`sinkchannel.go`), so the hold never fires for a channel record |
-| Auto-create the counterparty | tiered ladder T0–T4, disposition ledger | own seam, always creates, ownerless | a human messaging the workspace's own bot *is* the affirmative intent the ladder hunts for; the ledger is address-keyed |
-| Pending-counterparty question and the verdict engine | yes | **no** | same address-keyed ledger |
-| Attachments | yes | **no** | the connector fetches no media; `recordParts` is transport-agnostic and simply gets nothing |
-| Waiting queue / worklist | yes | yes | `activities/waitingsql.go`: `kind IN ('email','message')`, matched within one `channel_provider` |
-| "Not sales" disposition | yes | yes | `activity_sales_state` is keyed `(thread_key, kind, channel_provider)` |
-| Reader state — snooze, not mine, pin | yes | yes | keyed on the activity and the reader, never on the transport |
-| Replying from the CRM | yes | yes | `capture/channelsend.go` with the outbound staging row |
-| Art. 17 erasure | address suppression | channel-identity suppression | `refuseErasedChannelAccount` takes the account's advisory lock inside the capture transaction, because a channel record with no person link and no address would otherwise be findable by no later sweep |
+| Activity row, links, audit image, `activity.captured` event | yes | yes | yes |
+| Per-seat import row (`capture_import`) | yes | **yes** | no — no member to name |
+| Workspace mail-sharing floor | yes | **yes** | no |
+| Counterparty hold | yes | **yes**, where the record names addresses | no |
+| Confidentiality marker in the subject | yes | **yes**, where the record carries a subject | no |
+| Mailbox posture (`shared` / `classified` / `held`) | yes | no | no |
+| Thread verdict, inherited by the next message | yes | no | no |
+| Owner shares or re-holds a thread | yes | **yes** — the selection joins the seat's import rows | no — answers 404 |
+| Direct per-message audience write | no — refused as captured | **no** — refused, for the same reason | yes |
+| Audience recompute across every importing seat | yes | **yes** | no |
+| Auto-create the counterparty | tiered ladder T0–T4, disposition ledger | own seam, always creates, ownerless | same |
+| Attachments | yes | whatever the transport supplies | no |
+| Waiting queue, "not sales", reader state, replying from the CRM | yes | yes | yes |
+| Art. 17 erasure | address suppression | channel-identity suppression | channel-identity suppression |
 
-## What a channel message is therefore born as
+## What a captured chat is born as
 
-Workspace-readable, always, with a NULL `audience_reason`. Not even the
-link-less hold applies: `limitLinkLessAudience` returns as soon as the
-counterparty decision says a record will be created, and the channel seam
-(`decideChannelCounterparty`) always says so wherever an ensurer is wired, which
-production does. So no rung of the ladder and no limiter ever narrows a channel
-message.
+A message on a workspace bot: `workspace`, with a NULL `audience_reason` —
+unchanged, and now the deliberate answer rather than an omission. The link-less
+limiter still never fires for it, because `limitLinkLessAudience` returns as soon
+as the counterparty decision says a record will be created and the channel seam
+always says so.
 
-What is left is the manual per-message audience write, and it works. The server
-refuses a direct audience set only on a message some mailbox imported
-(`refuseCapturedAudienceWrite`), and no channel message is; the timeline row
-offers the control for every kind but `email`, withholding it only where
-`audience_reason` says the audience was derived — which for a channel row it
-never is. Two things follow, and the second is the sharper one. It is a
-per-message answer on a conversation, so pressing it on one message of a chat
-leaves the rest of the thread where it was. And `EnsureActivityWritableIn`
-admits any content-visible caller holding `activity.update` on a row with no
-links at all, so an unfiled channel message's audience is loosest exactly where
-the least is known about it.
+A message on a member-bound transport: whatever rungs 1 to 3 conclude, recorded
+on the member's import row so every later sync of the conversation derives the
+same answer, and so the message appears wherever a seat's own held mail does.
 
-The same conversation arriving by email is gated by the workspace floor, then by
-that mailbox's posture, and is shareable or re-holdable by its owner at any time.
+Not every hold is then liftable, and the difference is the same one mail has. A
+`counterparty` hold is the seat's own decision, so the widening pass reaches it
+(`capture/widenhistory.go`, which matches a counterparty-ONLY hold). A
+`workspace_floor` hold is an admin's, and raising the floor again does not
+re-open what it caught — already-captured correspondence keeps the audience it
+has, which the contract says of mail and now means of chat too.
 
-## Why closing it is a product decision, not a refactor
+**The manual per-message audience write follows the import row, and so it now
+parts company between the two.** `refuseCapturedAudienceWrite` refuses a direct
+audience set on any row some seat imported, because such a row's audience is
+derived from its importers rather than declared. A member-bound chat has an
+import row, so it is refused: the decision is made about the CONVERSATION,
+through the thread share/hold path, rather than message by message — which was
+D3's complaint and is answered here as a consequence rather than as a rule of
+its own. A workspace bot's message has no import row, so the per-message write
+still reaches it, and what that write can no longer do is erase the message for
+everybody: an audience write leaving no reader is refused
+(`activities.SetAudience`, `auth.ActivityHasAReaderTx`).
 
-The obvious fix — "write a `capture_import` row for a channel message too" — does
-not typecheck against the model. `capture_import` is keyed `(activity_id,
-user_id)`, and a channel message has no seat to name:
+## Still open
 
-- a channel connection is one **workspace-wide bot binding**, not a seat's
-  mailbox. It lives in its own table (`channel_connection`, unique per provider
-  while live) precisely because `capture_connection` models "one human's own
-  mailbox" and a bot is not that. `capture/channelconn.go` says so in its opening
-  comment.
-- `connected_by` on that row is **audit-only, never an owner**, restated in
-  `capture/channelconn.go`, `capture/sinkchannel.go` and
-  `compose/telegramingest.go`.
-- the connector principal the poll builds sets neither `UserID` nor
-  `OnBehalfOf` (`compose/telegramingest.go`), deliberately: reusing the
-  connecting admin would make every captured message look like that admin's own
-  row-scoped activity.
-- there is no chat→seat mapping anywhere. `person_channel_identity` maps a chat
-  identity to a **person** — the outside human — and carries no owner column.
-
-So the mail question — *which of our seats received this, and what does each of
-them ask of it?* — has no answer for a bot. Parity therefore needs a decision
-about **whose privacy a channel conversation is** before any code moves:
-
-- a workspace-level posture on the bot binding (one answer for all of it), or
-- a per-chat owner, which the product does not model today, or
-- a deliberate "channel traffic is workspace business", written down and held by
-  a test rather than left as an omission.
-
-One thing is worth settling whichever answer wins: the manual audience write
-above is a per-message answer on a conversation, and a chat is a conversation.
-Deciding it message by message is how one thread ends up half shared.
-
-Whatever is decided, decide it in one place. Two spellings of "may the workspace
-read this" — one for mail, one for channels — is the shape that drifts until the
-two disagree in front of a customer.
+- **A member's own posture for their own transport** — rungs 4 and 5. It needs a
+  place for a member to say it, which `capture_connection` is not.
+- **The audience and its reason are not rendered on a timeline chat row.** A
+  member-bound chat can now be held, so a reader can meet a message they cannot
+  see and be told nothing about why.
+- **Rows already narrowed before the orphan refusal shipped.** No sweep exists,
+  and the census that would find them has to run as the system principal,
+  because by construction no human can see them.
 
 ## Checking this page against the tree
 
-- `rg 'Kind != "email"' backend/internal/modules/capture` — the birth gate.
-- `rg -n 'capture_import' backend/internal` — every reader of the row the mail
-  path writes and the channel path does not.
-- `backend/internal/compose/threadaudience_integration_test.go` — what the share
-  decision is held to today, all of it mail.
+- `rg 'memberBound' backend/internal/modules/capture` — the axis, at both sites.
+- `rg -n 'credential_model' backend/` — the declaration, the registry, the
+  published contract.
+- `backend/internal/compose/extingressfloor_integration_test.go` — the whole
+  behaviour, driven through the real ingress on two transports that differ only
+  in what they declared.

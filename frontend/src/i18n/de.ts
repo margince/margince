@@ -133,6 +133,7 @@ export const de = {
   "history.field.occurred_at": "Zeitpunkt",
   "history.field.organization_id": "Unternehmen",
   "history.field.owner_id": "Verantwortlich",
+  "history.field.visibility": "Sichtbarkeit",
   "history.field.parent_org_id": "Muttergesellschaft",
   "history.field.partner_attribution": "Partnerzuordnung",
   "history.field.partner_org_id": "Partner",
@@ -1462,8 +1463,13 @@ export const de = {
   "co.suggest.kind.stalled_deal": "Deal steht",
   "co.suggest.kind.no_next_step": "Nichts geplant",
   "co.suggest.kind.lifecycle_conflict": "Widerspruch im Datensatz",
+  "co.suggest.kind.commitment_unmet": "Zusage nicht eingelöst",
+  "co.suggest.kind.question_unanswered": "Frage unbeantwortet",
+  "co.suggest.kind.risk_raised": "Risiko benannt",
+  "co.suggest.kind.need_raised": "Bedarf benannt",
   "co.suggest.more": "{count} weitere hier nicht gezeigt.",
   "co.suggest.basedOn": "Worauf das beruht",
+  "co.cite.open": "Datensatz öffnen",
   "co.suggest.dismiss": "Nicht jetzt",
   "co.suggest.byline": "Margince schlägt vor",
   "co.suggest.dismissFailed":
@@ -3246,6 +3252,9 @@ export const de = {
   "personAccess.organization": "Alle im Unternehmen sehen diese Person.",
   "personAccess.share": "Mit dem Unternehmen teilen",
   "personAccess.published": "Das Unternehmen sieht diese Person jetzt.",
+  "personAccess.makePrivate": "Privat setzen",
+  "personAccess.madePrivate":
+    "Diese Person gehört wieder ihrem Besitzer. Wer den Datensatz ausdrücklich freigegeben bekommen hat, behält den Zugriff.",
   "compose.reply": "Antworten",
   "compose.writeEmail": "E-Mail schreiben",
   "compose.relink": "Neu verknüpfen",
@@ -3769,6 +3778,28 @@ export const de = {
     "Ich bin bei {name} nur teilweise durchgekommen und habe gestoppt.",
   "agent.activity.documentExtractNamed.failed":
     "Ich konnte {name} nicht lesen.",
+  "agent.activity.accountScan.queued":
+    "Das Lesen eines Accounts steht in der Warteschlange.",
+  "agent.activity.accountScan.running":
+    "Ich lese die Korrespondenz und die Deals eines Accounts.",
+  "agent.activity.accountScan.stalled":
+    "Das Lesen eines Accounts dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.accountScan.done": "Was ein Account braucht, ist fertig.",
+  "agent.activity.accountScan.degraded":
+    "Ich habe einen Account so weit gelesen, wie die Datensätze es zuließen, und dann aufgehört.",
+  "agent.activity.accountScan.failed":
+    "Ich konnte das Lesen eines Accounts nicht abschließen.",
+  "agent.activity.accountScanNamed.queued":
+    "Das Lesen von {name} steht in der Warteschlange.",
+  "agent.activity.accountScanNamed.running":
+    "Ich lese die Korrespondenz und die Deals von {name}.",
+  "agent.activity.accountScanNamed.stalled":
+    "Das Lesen von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.accountScanNamed.done": "Was {name} braucht, ist fertig.",
+  "agent.activity.accountScanNamed.degraded":
+    "Ich habe {name} so weit gelesen, wie die Datensätze es zuließen, und dann aufgehört.",
+  "agent.activity.accountScanNamed.failed":
+    "Ich konnte das Lesen von {name} nicht abschließen.",
   "agent.activity.siteRead.queued":
     "Die Firmenwebsite steht zum Lesen in der Warteschlange.",
   "agent.activity.siteRead.running": "Ich lese die Firmenwebsite.",
@@ -6647,18 +6678,18 @@ export const de = {
   "extAccess.nobodyReads":
     "Keine Rolle darf {object} lesen — jedes Mitglied sieht dort eine leere Seite, wo diese Erweiterung stehen sollte. Vergeben Sie unten mindestens einer Rolle das Leserecht.",
   "users.empty": "Noch keine Benutzer.",
-  "users.adminOnly": "Benutzer verwalten können nur Admins.",
+  "users.adminOnly": "Sie haben keine Berechtigung, Benutzer zu verwalten.",
   "users.inviteTitle": "Benutzer einladen",
   "users.teamsLabel": "Teams",
   "users.noTeamsYet": "Noch keine Teams.",
   "users.teamMembersLabel": "Wer in diesem Team ist",
   "users.teamMembersAdminOnly":
-    "Die Mitgliedschaft ist nur für Admins sichtbar.",
+    "Sie haben keine Berechtigung zu sehen, wer in diesem Team ist.",
   "users.teamNobodyToAdd": "Noch keine Benutzer zum Hinzufügen.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
     "Benannte Gruppen, mit denen Sie Datensätze teilen können. Die Mitgliedschaft allein gewährt den meisten Rollen weiterhin keinen Zugriff — Ausnahme ist die Teamleitung: wird sie einem Team hinzugefügt, kann sie dessen Datensätze lesen und bearbeiten, ohne dass eine Freigabe eingerichtet wird.",
-  "users.teamsAdminOnly": "Teams verwalten können nur Admins.",
+  "users.teamsAdminOnly": "Sie haben keine Berechtigung, Teams zu verwalten.",
   "users.deactivated": "{name} deaktiviert",
   "users.reactivated": "{name} reaktiviert",
   "users.roleSaved": "Rolle für {name} geändert",
@@ -7929,6 +7960,18 @@ export const de = {
   // Der Datenanbieter (ADR-0101). Zwei Oberflächen teilen sich diese
   // Begriffe — die Einstellungskarte und die Personenseite —, damit ein
   // Zustand überall gleich heißt.
+  "today.scan.queued": "Margince liest diesen Account gleich.",
+  "today.scan.reading":
+    "Margince liest die Korrespondenz und die Deals dieses Accounts.",
+  "today.scan.read": "{exchanges} und {deals} gelesen",
+  "today.scan.readExchanges_one": "{count} Nachricht",
+  "today.scan.readExchanges_other": "{count} Nachrichten",
+  "today.scan.readDeals_one": "{count} Deal",
+  "today.scan.readDeals_other": "{count} Deals",
+  "today.scan.stale":
+    "Der Account hat sich seitdem verändert. Er wird innerhalb einer Stunde erneut gelesen.",
+  "today.scan.resumes":
+    "Das Lesen wird {when} fortgesetzt; das KI-Budget hat es aufgeschoben.",
   "provider.readOnly":
     "Nur-Lese-Ansicht — einen Anbieter zu verbinden kostet Geld und ist eine Admin- oder Ops-Aktion.",
   "provider.title": "Kontaktdaten",
@@ -8132,6 +8175,13 @@ export const de = {
   "filters.noMatches": "Keine Datens\u00e4tze entsprechen diesem Filter.",
   "filters.loadView": "Gespeicherten Filter laden",
   "filters.pickRecord": "Eintrag wählen",
+  "filters.searchRecords": "Firmen suchen",
+  "filters.typeToSearch": "Zum Suchen tippen",
+  "filters.searching": "Wird gesucht…",
+  "filters.searchFailed": "Suche fehlgeschlagen",
+  "filters.noRecordMatches": "Keine Firmen gefunden",
+  "filters.changeRecord": "Ändern",
+  "filters.removeRecord": "{record} entfernen",
   "filters.loadingRecords": "Auswahl wird geladen…",
   "filters.pickValue": "Wert wählen",
   "filters.exportCsv": "Als CSV exportieren",

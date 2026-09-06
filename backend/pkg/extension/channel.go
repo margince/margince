@@ -40,14 +40,18 @@ const maxProviderLength = 32
 // credential is one person's own account, so their chats are theirs, which is
 // the mailbox model with the same floor, holds and postures.
 //
-// IT DECIDES NOTHING YET, and saying otherwise here would be the false comment
-// that stops the next author looking. decideBirthTx returns early for every kind
-// that is not `email`, so a channel message is born `audience = 'workspace'`
-// whichever model its transport declared. What the declaration does today is
-// reach `channel_provider.credential_model` and the discovery endpoint, so an
-// operator can read whose credential a transport spends. The floor and the holds
-// key on it when they reach channel traffic; the value has to be right BEFORE
-// that, because at that point a wrong one is wrong silently.
+// IT DECIDES WHAT A CAPTURED MESSAGE IS BORN AS. `per_member` puts a chat on the
+// mailbox path: the workspace mail-sharing floor, the seat's own counterparty
+// holds and a sender's confidentiality marker all reach it, and the member gets
+// the import row those holds are recorded on. `workspace_bot` traffic stays
+// workspace-readable, because there is no member such a message could be held
+// FOR and a hold on it would leave a row no human can open.
+//
+// So a wrong value is wrong in one of two directions, and neither announces
+// itself: a shared Official Account declared `per_member` puts a company's
+// customer correspondence under the connecting admin's name, and a member's own
+// account declared `workspace_bot` publishes their chats to every seat whatever
+// the workspace asked for.
 //
 // DECLARED, NEVER DERIVED, and the difference is the reason this type exists.
 // It used to be inferred from whether the transport was a unit or a core

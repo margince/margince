@@ -121,6 +121,13 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
+	// The conversation this delivery belongs to. Staging asked the thread arm
+	// with the anchor the caller named; nothing carries that anchor forward, so
+	// transmit names the same thread from the delivery row instead.
+	threadKey, err := deliveryThreadKey(ctx, tx, req.DeliveryID)
+	if err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
 	// Every address's cap lock, sorted, before the first recipient is counted.
 	// Taking them inside the loop would order them by the caller's To list, and
 	// two messages naming the same pair in opposite orders would deadlock.
@@ -128,7 +135,7 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 		return commsauthz.DecisionSet{}, err
 	}
 	for _, r := range req.Recipients {
-		d, err := g.decideOne(ctx, tx, r, stagedRequestFor(req, r, claims), commsauthz.PhaseTransmit)
+		d, err := g.decideOne(ctx, tx, r, stagedRequestFor(req, r, claims, threadKey), commsauthz.PhaseTransmit)
 		if err != nil {
 			return commsauthz.DecisionSet{}, err
 		}
@@ -178,7 +185,7 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		// the sends the legacy gate allows — an inversion rather than a
 		// tightening, and it would have arrived the day somebody flipped a
 		// mode rather than the day this code was written.
-		return g.decideLead(ctx, tx, r, req, d)
+		return g.decideLead(ctx, tx, r, req, d, phase)
 	}
 	parsed, err := ids.Parse(personID)
 	if err != nil {

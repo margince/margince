@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
@@ -39,6 +40,7 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	addDeclaredWorker[FollowUpReconcileArgs](reg, &followUpReconcileWorker{pool: pool, reconciler: NewFollowUpReconciler(pool, log)})
 	addDeclaredWorker[AssuranceSweepArgs](reg, &assuranceSweepWorker{
 		pool: pool, now: func() time.Time { return time.Now().UTC() }, log: log,
+		activities: activities.NewStore(InstallationDB(pool)),
 	})
 	addDeclaredWorker[ForecastSnapshotSweepArgs](reg, &forecastSnapshotSweepWorker{
 		pool: pool, now: func() time.Time { return time.Now().UTC() }, log: log,

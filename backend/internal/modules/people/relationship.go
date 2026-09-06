@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -333,7 +334,7 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 		}
 		// The incumbent is demoted only when the patched row will actually HOLD
 		// the flag, so this statement asks the SAME question as the UPDATE below
-		// that grants it — one predicate, EmploymentIsCurrentSQL, read against the
+		// that grants it — one predicate, employment.IsCurrentSQL, read against the
 		// database's clock in both. Spell the rule a second time here (a Go-side
 		// `current.EndedAt == nil`, say) and the two answers part company over a
 		// notice period: this row keeps the flag, the incumbent keeps it too, and
@@ -342,11 +343,11 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 			current.Kind == employmentKind && current.PersonID != nil {
 			if _, err := tx.Exec(ctx, `
 				UPDATE relationship SET is_current_primary = false
-				WHERE person_id = $1 AND id <> $2 AND `+CurrentPrimarySlotSQL("")+`
+				WHERE person_id = $1 AND id <> $2 AND `+employment.CurrentPrimarySlotSQL("")+`
 				  AND EXISTS (
 					SELECT 1 FROM relationship patched
 					 WHERE patched.id = $2
-					   AND `+EmploymentIsCurrentSQL("coalesce($3, patched.ended_at)")+`)`,
+					   AND `+employment.IsCurrentSQL("coalesce($3, patched.ended_at)")+`)`,
 				*current.PersonID, id, in.EndedAt); err != nil {
 				return err
 			}
@@ -366,9 +367,9 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 			  -- clears the flag, and setting the flag on a job already over
 			  -- does not take. Written against the row rather than as a Go
 			  -- condition, so the two halves cannot drift apart. LEFT, not
-			  -- "has a date" — see EmploymentIsCurrentSQL.
+			  -- "has a date" — see employment.IsCurrentSQL.
 			  is_current_primary = coalesce($3, is_current_primary)
-			    AND (kind <> 'employment' OR `+EmploymentIsCurrentSQL("coalesce($5, ended_at)")+`),
+			    AND (kind <> 'employment' OR `+employment.IsCurrentSQL("coalesce($5, ended_at)")+`),
 			  started_at = coalesce($4, started_at),
 			  ended_at = coalesce($5, ended_at)
 			WHERE id = $1

@@ -101,7 +101,7 @@ func (s *Service) optionalLanes(
 		{
 			name: "meetings", bound: s.meetings != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				booked, err := s.meetings.Today(ctx, asOf, until, plannedCap)
+				booked, err := s.meetings.Today(ctx, asOf, until, plannedCap, s.taskScope, s.taskOwner)
 				return renderEach(booked, meetingItem), err
 			},
 			into: &out.Meetings, count: &out.Counts.Meetings,
@@ -117,7 +117,7 @@ func (s *Service) optionalLanes(
 				if err != nil {
 					return nil, err
 				}
-				over, err := s.meetingsAwaitingOutcome.Since(ctx, began, asOf, plannedCap)
+				over, err := s.meetingsAwaitingOutcome.Since(ctx, began, asOf, plannedCap, s.taskScope, s.taskOwner)
 				return renderEach(over, meetingAwaitingOutcomeItem), err
 			},
 			into: &out.MeetingsUnreported, count: &out.Counts.MeetingsUnreported,

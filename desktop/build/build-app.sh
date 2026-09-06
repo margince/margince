@@ -19,7 +19,7 @@ build_server_binaries() {
   (cd "$ROOT/backend" && GOWORK="$ROOT/go.work" go run ./tools/gen-composition)
 
   local composition="$ROOT/build/composition/go.work"
-  if [ ! -f "$composition" ]; then
+  if [[ ! -f "$composition" ]]; then
     echo "FAIL: gen-composition did not produce $composition" >&2
     exit 1
   fi
@@ -54,7 +54,7 @@ sign_binary() {
 build_frontend() {
   log "building the frontend (composed)"
   local registry="$ROOT/build/composition/frontend"
-  if [ ! -f "$registry/extensions.gen.ts" ]; then
+  if [[ ! -f "$registry/extensions.gen.ts" ]]; then
     echo "FAIL: gen-composition did not produce $registry/extensions.gen.ts" >&2
     exit 1
   fi
@@ -104,7 +104,7 @@ build_frontend() {
   # --no-frozen-lockfile because that lockfile is generated build output, which
   # is what the Makefile's own invocation says at greater length.
   local composed_ws="$ROOT/build/composition-frontend/workspace"
-  if [ ! -f "$composed_ws/pnpm-workspace.yaml" ]; then
+  if [[ ! -f "$composed_ws/pnpm-workspace.yaml" ]]; then
     echo "FAIL: gen-composition did not produce $composed_ws/pnpm-workspace.yaml, so a unit's frontend dependencies cannot be resolved" >&2
     exit 1
   fi
@@ -127,7 +127,7 @@ build_launcher() {
 
 main() {
   build_server_binaries
-  if [ "${SKIP_FRONTEND:-0}" != "1" ]; then
+  if [[ "${SKIP_FRONTEND:-0}" != "1" ]]; then
     build_frontend
   fi
   build_launcher

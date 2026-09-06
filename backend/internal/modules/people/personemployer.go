@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -26,7 +27,7 @@ import (
 // because a reader asking "who is this and where do they work" is asking one
 // question wherever they ask it.
 //
-// CURRENT PRIMARY employment only, through CurrentPrimaryEmploymentSQL rather
+// CURRENT PRIMARY employment only, through employment.CurrentPrimarySQL rather
 // than the flag alone — a list that trusted the flag would go on naming the
 // company somebody's last day has already passed at. The match is at most one
 // row per person (uq_rel_current_primary_employer), so the join cannot duplicate
@@ -74,7 +75,7 @@ func attachPersonEmployers(ctx context.Context, tx pgx.Tx, idx map[openapi_types
 		 JOIN organization org ON org.id = rel.organization_id
 		 WHERE rel.person_id = ANY($%d)
 		   AND rel.kind = 'employment'
-		   AND `+CurrentPrimaryEmploymentSQL("rel")+`
+		   AND `+employment.CurrentPrimarySQL("rel")+`
 		   AND rel.archived_at IS NULL
 		   AND `+edgeBound+`
 		   AND org.archived_at IS NULL

@@ -18,7 +18,7 @@ root="$(git rev-parse --show-toplevel)"
 
 # Base = merge-base with origin/main. No base (fresh repo / no remote) → skip.
 base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
-if [ -z "$base" ]; then
+if [[ -z "$base" ]]; then
 	echo "craft static: no origin/main base — skipping"
 	exit 0
 fi
@@ -27,7 +27,7 @@ fi
 # check exits early when a push changes no Go at all — and a push that adds only
 # `.sql` is exactly the push this gate is for. It is skipped when the push
 # touches no migration, so an ordinary push pays one `git diff` for it.
-if [ -n "$(git diff --name-only "$base"...HEAD -- backend/migrations)" ]; then
+if [[ -n "$(git diff --name-only "$base"...HEAD -- backend/migrations)" ]]; then
 	"$root/scripts/check-migration-versions.sh"
 fi
 
@@ -37,7 +37,7 @@ fi
 # desktop launcher is a binary that users run.
 files="$(git diff --name-only --diff-filter=d "$base"...HEAD -- backend extensions fixtures desktop \
 	| grep -E '\.go$' | grep -v '_gen\.go$' || true)"
-if [ -z "$files" ]; then
+if [[ -z "$files" ]]; then
 	echo "craft static: no changed Go files — ok"
 	exit 0
 fi
@@ -45,7 +45,7 @@ fi
 # Absolute paths, because `go run -C cli/craft` changes the working directory.
 args=()
 while IFS= read -r f; do
-	[ -n "$f" ] && args+=("$root/$f")
+	[[ -n "$f" ]] && args+=("$root/$f")
 done <<< "$files"
 
 echo "craft static: checking ${#args[@]} changed Go file(s)…"

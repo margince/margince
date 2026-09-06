@@ -74,7 +74,7 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	// reads at it. Without this a day holding twelve unsettled meetings reports
 	// itself complete while the twelfth pushed a thirteenth off the page — the
 	// under-reading a truncation flag exists to prevent.
-	atCap("meeting_outcome", day.MeetingsUnreported, plannedCap)
+	atCap(sourceMeetingOutcome, day.MeetingsUnreported, plannedCap)
 	atCap(sourceAtRisk, day.AtRisk, quietDealBound)
 	atCap("relationship_decay", day.RelationshipDecay, decayBound)
 	atCap("conversation_claim", day.Commitments, doneCap)

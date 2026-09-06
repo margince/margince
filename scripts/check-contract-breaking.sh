@@ -55,14 +55,14 @@ esac
 # changing returns the gate to stable automatically.
 ALLOWLIST="${CONTRACT_BREAKING_ALLOWLIST:-scripts/contract-breaking-allowlist.txt}"
 
-if [ ! -f "$CRM_YAML" ]; then
+if [[ ! -f "$CRM_YAML" ]]; then
   echo "check-contract-breaking: contract not found at $CRM_YAML" >&2
   exit 2
 fi
 if ! git rev-parse --verify -q "$BASE_REF" >/dev/null; then
   # A shallow clone has no base to diff against. CI sets REQUIRE_BASE so a
   # dropped fetch-depth surfaces as a red gate instead of a silent skip.
-  if [ "${CONTRACT_BREAKING_REQUIRE_BASE:-}" = "1" ]; then
+  if [[ "${CONTRACT_BREAKING_REQUIRE_BASE:-}" = "1" ]]; then
     echo "check-contract-breaking: base ref '$BASE_REF' not found and CONTRACT_BREAKING_REQUIRE_BASE=1 — fetch the base ref (checkout fetch-depth)" >&2
     exit 1
   fi
@@ -84,7 +84,7 @@ fi
 # A shallow clone can have both refs and still no common ancestor; keep the tip
 # in that case rather than failing, since the check above has already decided
 # whether a missing base is fatal.
-if MERGE_BASE="$(git merge-base HEAD "$BASE_REF" 2>/dev/null)" && [ -n "$MERGE_BASE" ]; then
+if MERGE_BASE="$(git merge-base HEAD "$BASE_REF" 2>/dev/null)" && [[ -n "$MERGE_BASE" ]]; then
   BASE_REF="$MERGE_BASE"
 fi
 
@@ -94,24 +94,24 @@ if ! git cat-file -e "$BASE_REF:$CRM_YAML" 2>/dev/null; then
 fi
 
 ALLOWLISTED_RESYNC=0
-if [ "$CONTRACT_STABILITY" = stable ] && [ -f "$ALLOWLIST" ]; then
+if [[ "$CONTRACT_STABILITY" = stable ]] && [[ -f "$ALLOWLIST" ]]; then
   BASE_BLOB="$(git rev-parse "$BASE_REF:$CRM_YAML")"
   CURRENT_BLOB="$(git hash-object "$CRM_YAML")"
   while read -r old_blob new_blob reason; do
     case "$old_blob" in ''|'#'*) continue ;; esac
-    if [ "$old_blob" = "$BASE_BLOB" ] && [ "$new_blob" = "$CURRENT_BLOB" ] && [ -n "${reason:-}" ]; then
+    if [[ "$old_blob" = "$BASE_BLOB" ]] && [[ "$new_blob" = "$CURRENT_BLOB" ]] && [[ -n "${reason:-}" ]]; then
       ALLOWLISTED_RESYNC=1
       break
     fi
   done < "$ALLOWLIST"
 fi
 
-if [ "$CONTRACT_STABILITY" = pre-live ] || [ "$ALLOWLISTED_RESYNC" = 1 ]; then
+if [[ "$CONTRACT_STABILITY" = pre-live ]] || [[ "$ALLOWLISTED_RESYNC" = 1 ]]; then
   # Advisory stance: print every change (oasdiff without --fail-on never
   # exits non-zero on findings) so the deliberate breaks stay visible in
   # the log, but do not block.
   "${OASDIFF_CMD[@]}" breaking "$BASE_REF:$CRM_YAML" "$CRM_YAML" -f text
-  if [ "$ALLOWLISTED_RESYNC" = 1 ]; then
+  if [[ "$ALLOWLISTED_RESYNC" = 1 ]]; then
     echo "contract-breaking-check: advisory — this exact pre-live contract resync is ratified; any later contract edit restores the stable gate"
   else
     echo "contract-breaking-check: advisory (CONTRACT_STABILITY=pre-live) — breaking change(s) printed above, if any, are deliberately permitted for this run"

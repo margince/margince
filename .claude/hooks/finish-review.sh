@@ -42,7 +42,7 @@ payload="$(cat)"
 
 # --- locate the repo (hook cwd is the project dir) --------------------------
 root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-if [ -z "$root" ]; then exit 0; fi   # not a git repo → nothing to review
+if [[ -z "$root" ]]; then exit 0; fi   # not a git repo → nothing to review
 
 # Per-worktree state: --absolute-git-dir resolves to .git/ in the main
 # checkout and .git/worktrees/<name>/ in a linked worktree, where $root/.git
@@ -57,7 +57,7 @@ gitdir="$(git -C "$root" rev-parse --absolute-git-dir)"
 # this checkout. Nothing creates it automatically — a human or a session acting
 # on a human's instruction does, and clears it when done.
 review_off="$gitdir/margince-finish-review.off"
-if [ -f "$review_off" ] && [ -n "$(find "$review_off" -mmin -1440 2>/dev/null)" ]; then
+if [[ -f "$review_off" ]] && [[ -n "$(find "$review_off" -mmin -1440 2>/dev/null)" ]]; then
 	echo "finish-review: opt-out flag present (expires 24h after touch) — skipping"
 	exit 0
 fi
@@ -77,7 +77,7 @@ try:
     print(json.load(sys.stdin).get("transcript_path","") or "")
 except Exception:
     print("")')"
-if [ -z "$transcript" ] || [ ! -f "$transcript" ]; then exit 0; fi
+if [[ -z "$transcript" ]] || [[ ! -f "$transcript" ]]; then exit 0; fi
 
 # --- the backend Go files THIS session edited -----------------------------
 # Parse the transcript for Edit/Write/MultiEdit/NotebookEdit tool calls and keep
@@ -135,9 +135,9 @@ PY
 )"
 edited=()
 while IFS= read -r f; do
-	[ -n "$f" ] && edited+=("$f")
+	[[ -n "$f" ]] && edited+=("$f")
 done <<< "$session_edits"
-if [ "${#edited[@]}" -eq 0 ]; then exit 0; fi   # this session issued no backend edits → not our turn
+if [[ "${#edited[@]}" -eq 0 ]]; then exit 0; fi   # this session issued no backend edits → not our turn
 
 # Keep only those with a real NET change still in the tree, measured against
 # the merge-base with origin/main: committed-but-unmerged work stays in
@@ -149,11 +149,11 @@ files=()
 for f in "${edited[@]}"; do
 	if ! git -C "$root" diff --quiet "$base" -- "$f" 2>/dev/null; then
 		files+=("$f")   # changed vs the merge-base — committed or not
-	elif [ -n "$(git -C "$root" ls-files --others --exclude-standard -- "$f")" ]; then
+	elif [[ -n "$(git -C "$root" ls-files --others --exclude-standard -- "$f")" ]]; then
 		files+=("$f")   # new untracked file this session wrote
 	fi
 done
-if [ "${#files[@]}" -eq 0 ]; then exit 0; fi   # no net backend change from this session → nothing to review
+if [[ "${#files[@]}" -eq 0 ]]; then exit 0; fi   # no net backend change from this session → nothing to review
 
 # Identity of the change: content hash of exactly the session-edited files, so
 # any further edit to them yields a fresh hash and restarts the review flow.
@@ -170,9 +170,9 @@ branch="$(git -C "$root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo detache
 # phase/attempts are per CHANGE: the craft gate must re-run on new code, so a
 # single record is enough — it only has to survive to the next stop.
 phase="craft"; attempts=0
-if [ -f "$state_file" ]; then
+if [[ -f "$state_file" ]]; then
 	read -r saved_hash saved_phase saved_attempts < "$state_file" || true
-	if [ "${saved_hash:-}" = "$diff_hash" ]; then
+	if [[ "${saved_hash:-}" = "$diff_hash" ]]; then
 		phase="${saved_phase:-craft}"; attempts="${saved_attempts:-0}"
 	fi
 fi
@@ -185,14 +185,14 @@ fi
 # awk in a command substitution kills the hook outright, and 2>/dev/null hides the
 # message without changing the exit status.
 read_rounds() {
-	if [ ! -f "$rounds_file" ]; then printf '0\n'; return 0; fi
+	if [[ ! -f "$rounds_file" ]]; then printf '0\n'; return 0; fi
 	n="$({ awk -F'\t' -v b="$branch" '$1 == b { print $2 }' "$rounds_file" || true; } | tail -1)"
 	printf '%s\n' "${n:-0}"
 }
 rounds="$(read_rounds)"
 
 # Already fully reviewed this exact set → let the stop through.
-if [ "$phase" = "done" ]; then exit 0; fi
+if [[ "$phase" = "done" ]]; then exit 0; fi
 
 emit_block() {   # $1 = reason text → hold the stop and feed the reason back
 	printf '{"decision":"block","reason":%s}\n' "$(printf '%s' "$1" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')"
@@ -207,11 +207,11 @@ save_state() { printf '%s %s %s\n' "$diff_hash" "$1" "$2" > "$state_file"; }
 rounds_lock="$rounds_file.lock"
 lock_rounds() {
 	i=0
-	while [ "$i" -lt 50 ]; do
+	while [[ "$i" -lt 50 ]]; do
 		if mkdir "$rounds_lock" 2>/dev/null; then return 0; fi
 		# A lock directory older than a minute is a crashed holder, not a live one;
 		# nothing here holds it for more than a few file operations.
-		if [ -n "$(find "$rounds_lock" -maxdepth 0 -mmin +1 2>/dev/null || true)" ]; then
+		if [[ -n "$(find "$rounds_lock" -maxdepth 0 -mmin +1 2>/dev/null || true)" ]]; then
 			rmdir "$rounds_lock" 2>/dev/null || true
 		fi
 		sleep 0.1
@@ -224,7 +224,7 @@ unlock_rounds() { rmdir "$rounds_lock" 2>/dev/null || true; }
 # record_round persists this branch's count, rewriting only its own line.
 record_round() {
 	tmp="$rounds_file.tmp.$$"
-	{ if [ -f "$rounds_file" ]; then awk -F'\t' -v b="$branch" '$1 != b' "$rounds_file" || true; fi
+	{ if [[ -f "$rounds_file" ]]; then awk -F'\t' -v b="$branch" '$1 != b' "$rounds_file" || true; fi
 	  printf '%s\t%s\n' "$branch" "$1"; } > "$tmp" && mv "$tmp" "$rounds_file"
 }
 
@@ -240,7 +240,7 @@ record_round() {
 reviewable() {
 	command -v gh >/dev/null 2>&1 || return 1
 	state="$( (cd "$root" && gh pr view --json state --jq '.state' 2>/dev/null) || true )"
-	[ "$state" = "OPEN" ]
+	[[ "$state" = "OPEN" ]]
 }
 
 # request_review holds the stop and asks for the subagent round, but only when
@@ -262,7 +262,7 @@ request_review() {
 		return 1
 	fi
 	rounds="$(read_rounds)"
-	if [ "$rounds" -ge "$max_review_rounds" ]; then
+	if [[ "$rounds" -ge "$max_review_rounds" ]]; then
 		unlock_rounds
 		save_state "done" 0
 		return 1
@@ -275,8 +275,8 @@ request_review() {
 }
 
 # --- phase 1: the deterministic craft gate --------------------------------
-if [ "$phase" = "craft" ]; then
-	args=(); for f in "${files[@]}"; do [ -n "$f" ] && args+=("$root/$f"); done
+if [[ "$phase" = "craft" ]]; then
+	args=(); for f in "${files[@]}"; do [[ -n "$f" ]] && args+=("$root/$f"); done
 	if craft_out="$(go run -C "$root/cli/craft" . static "${args[@]}" 2>&1)"; then
 		request_review "This branch has an open PR and craft static is green, so the one end-of-work review round for it runs now — scoped to the ${#args[@]} backend file(s) THIS session changed.
 
@@ -292,7 +292,7 @@ This is the ONLY subagent round this branch gets — craft static still re-runs 
 		exit 0
 	else
 		attempts=$((attempts + 1))
-		if [ "$attempts" -gt "$max_craft_attempts" ]; then
+		if [[ "$attempts" -gt "$max_craft_attempts" ]]; then
 			# Do not trap the session on a craft gate it cannot satisfy: stop
 			# gating, but warn loudly. A stuck craft gate is not a reason to hand
 			# out a second review round, or one on a branch with no PR — so this
@@ -318,7 +318,7 @@ fi
 
 # --- phase 2: agents were requested; the agent stopped again on the same set.
 # Treat the review as complete for this set and let the stop through.
-if [ "$phase" = "agents_requested" ]; then
+if [[ "$phase" = "agents_requested" ]]; then
 	save_state "done" 0
 	exit 0
 fi

@@ -62,6 +62,8 @@ const meetingKind = "meeting"
 // must not drift is the NUMBER, and a meeting that reached the cap has stopped
 // being a meeting and become a broadcast, where the attendee list is the record
 // and the filing is not.
+//
+// Held by: TestTheLinkCeilingHasOneValue (backend/gates/linkceilingparity_test.go)
 const maxDerivedMeetingLinks = 25
 
 // linkResolvedMeetingParticipants files a captured meeting under each attendee

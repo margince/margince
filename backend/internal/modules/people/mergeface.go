@@ -27,6 +27,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -231,7 +232,7 @@ func readOrganizationFaces(ctx context.Context, tx pgx.Tx, rowIDs []ids.UUID, in
 		          JOIN person cp ON cp.id = rel.person_id AND cp.archived_at IS NULL
 		         WHERE rel.organization_id = o.id
 		           AND rel.kind = 'employment'
-		           AND ` + CurrentPrimaryEmploymentSQL("rel") + `
+		           AND ` + employment.CurrentPrimarySQL("rel") + `
 		           AND rel.archived_at IS NULL` + edgeBound + scope + `)`
 	}
 	rows, err := tx.Query(ctx, `

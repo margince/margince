@@ -42,7 +42,7 @@ last_green="$(gh run list \
   --jq '.[0].headSha // empty' 2>/dev/null || true)"
 
 range=""
-if [ -n "$last_green" ] && git cat-file -e "$last_green^{commit}" 2>/dev/null; then
+if [[ -n "$last_green" ]] && git cat-file -e "$last_green^{commit}" 2>/dev/null; then
   range="$last_green..HEAD"
   bound="since the last green health check ($(git rev-parse --short "$last_green"))"
 else
@@ -64,7 +64,7 @@ bt="$(printf '\140')"
 # shellcheck disable=SC2086 -- $range is deliberately word-split; see above.
 commits="$(git log $range --no-merges --format='- %h %an — %s' | sed -E "s/^- ([0-9a-f]+) /- ${bt}\1${bt} /" || true)"
 
-if [ -z "$commits" ]; then
+if [[ -z "$commits" ]]; then
   commits="_no commits in the range — the breakage predates it, or the range could not be computed._"
 fi
 

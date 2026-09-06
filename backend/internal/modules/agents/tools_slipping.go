@@ -57,6 +57,19 @@ type SlippingLister func(ctx context.Context) ([]SlippingDeal, error)
 // it as a draft activity on the deal's timeline — a proposal, never a
 // send. Compose implements it over the same deterministic draft voice
 // draft_email uses and the same provider write path every tool rides.
+//
+// IT PERSISTS, where draft_email deliberately does not, and the difference is
+// the act rather than an inconsistency.
+//
+// This tool drafts N for later triage, and the `draft_activity_id` it answers
+// is the whole point of it: a batch that lived only in the transcript would be
+// unusable, because nobody triages ten drafts out of a chat scrollback. The
+// write is what makes it a tool rather than a wall of text.
+//
+// draft_email drafts ONE message meant to be sent now, so it returns text and
+// files nothing — matching the HTTP draft endpoint the web app's own button
+// calls, which is an agreement worth keeping. compose.commsAdapter's
+// DraftAccountEmail carries that half of the reasoning.
 type FollowUpDrafter func(ctx context.Context, deal SlippingDeal) (draftActivityID ids.UUID, summary string, err error)
 
 // RegisterSlippingTools wires the pipeline-risk intents. No lister, no

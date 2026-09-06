@@ -106,3 +106,13 @@ func TestAnUnservableBindingIsTheOnlyFailureAFallbackMayAnswer(t *testing.T) {
 		t.Error("the wrapper hides its cause, so the operator loses the sentence naming what is wrong")
 	}
 }
+
+// A path with no router — the offline fake, or no model at all — rides no
+// binding, so it reports none rather than a version it made up: the scan's
+// fingerprint folds this in, and an invented version would re-read every
+// account on the day the fake was wired.
+func TestAModelPathWithNoRouterReportsNoRoutingVersion(t *testing.T) {
+	if got := (ModelPath{}).RoutingVersion(); got != "" {
+		t.Errorf("RoutingVersion() = %q, want none", got)
+	}
+}

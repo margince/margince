@@ -154,7 +154,7 @@ would report a documentation PR as a broken integration lane.
 |---|---|---|
 | `backend_db` | `backend/**`, `infra/**/!(*.md)`, `go.work`, `go.work.sum`, `Makefile`, `scripts/**`, `extensions/**`, `fixtures/**`, `composition/**`, `.github/workflows/ci.yml`, `.github/workflows/_lane-*.yml` (the caller plus every lane it invokes — globbed so a lane added later is covered the day it lands), `.github/actions/**`, `sonar-project.properties`, `frontend/src/mcp-apps/forbidden.json` | the integration shards and the `integration` fan-in — every lane that opens a database |
 | `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus the agent rulebooks `AGENTS.md` and `CLAUDE.md` | Go build/gate, extension reference, craftsmanship, unit coverage, vuln |
-| `frontend` | `frontend/**`, `backend/api/**` (the contract drives FE types), plus the composition inputs the lane now typechecks against — `extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile` — and the install inputs `pnpm-lock.yaml` and `pnpm-workspace.yaml`, which decide *which* dependency the SPA builds on and which one `openapi-typescript` parses the contract with (`overrides` lives in the workspace file, so it resolves versions the lockfile then merely records) | frontend lane, UAT |
+| `frontend` | `frontend/**`, `backend/api/**` (the contract drives FE types), plus the composition inputs the lane now typechecks against — `extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile` — and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, which decide *which* dependency the SPA builds on and which one `openapi-typescript` parses the contract with (`overrides` lives in the workspace file, so it resolves versions the lockfile then merely records; `packageManager` lives in the manifest and decides which pnpm reads both) | frontend lane, UAT |
 | `e2e` | `backend/**`, `frontend/**`, `infra/**/!(*.md)`, `extensions/**`, `fixtures/**`, `composition/**` | full-stack live-boot |
 | `deps` | `go.work`, `go.work.sum`, `**/go.mod`, `**/go.sum`, `**/package.json`, `**/pnpm-lock.yaml`, `pnpm-workspace.yaml` (`overrides` lives there, so it decides resolved versions the way a manifest does), `.syft.yaml`, `.grant.yaml`, `sbom-schemas/**`, `Makefile`, `.github/workflows/**` (syft catalogs a `uses:` as a package, so any workflow gaining a reference changes what the gate judges — a pinned remote action brings its license, a local reusable workflow brings none), `.github/actions/**` | the license gate |
 
@@ -712,9 +712,11 @@ beside the gate, deliberately outside it:
   the runner is ephemeral: `CACHE=gha` exports the layer cache per role
   (its durable win is the dependency-download layer, which busts only on a
   module-pin change), and buildkit-cache-dance + actions/cache carry the
-  BuildKit cache-mount contents (Go compile cache, pnpm store, Corepack's
-  pnpm download, tsc `.tsbuildinfo`) across runs — mounts are not layers, so no layer cache
-  covers them. Both live in the repo's 10 GB Actions cache, which the CI
+  BuildKit cache-mount contents (Go compile cache, pnpm store, tsc
+  `.tsbuildinfo`) across runs — mounts are not layers, so no layer cache
+  covers them. Corepack's download is deliberately not among them: the image
+  bakes the pinned pnpm into a layer, and a mount over Corepack's home would
+  hide it. Both live in the repo's 10 GB Actions cache, which the CI
   lanes' Go caches keep near the cap, so entries older than a few hours are
   routinely LRU-evicted: the caches bridge releases that land close
   together — the busy-day case where they matter — and a release after a

@@ -7,6 +7,8 @@ package ai
 type Task string
 
 const (
+	// TaskAccountScan is org_scan — what one account needs, read for ONE reader from the account's own exchanges and pipeline: the 360 as that reader sees it plus the recent messages' own words, admitted by their audience. The model raises findings in a closed vocabulary (an unmet commitment of ours, a question of theirs nobody answered, a risk they raised, a need they raised), each citing the records it rests on and quoting the words it read; the server drops whole any finding whose citation it did not supply or whose quote is not in the message it cites. Merged with the 360's own rule advice under one fingerprint vocabulary, so a dismissal holds across both. Runs as a background job the account page ensures on open, cached per reader on a fingerprint of the input and rescanned at most hourly, so a busy inbox does not re-read the account on every message. no_payload because the prompt carries message bodies. With no lane, or a deferral past the job's patience, the rules' advice stands alone and generated_by says so.
+	TaskAccountScan Task = "account_scan"
 	// TaskAgentLoop is The Surface-B reason-act loop: a cumulative, tool-fed message window, not a request factory. ADR-0074 names it the open risk for fixture-driven certification — if it cannot be certified honestly the census needs a `not_certifiable` kind.
 	TaskAgentLoop Task = "agent_loop"
 	// TaskBriefRanking is the one Premium-frontier default (§1.2 RATIFY): genuinely multi-hop reasoning
@@ -69,6 +71,7 @@ const (
 // Generated from the same declaration as the constants, so a task cannot
 // be added without a name and the two cannot drift.
 var taskDisplayNames = map[Task]string{
+	TaskAccountScan:                   "Reading what an account needs",
 	TaskAgentLoop:                     "Agent reasoning loop",
 	TaskBriefRanking:                  "Morning brief ranking",
 	TaskCaptureClassify:               "Message classification",
@@ -129,13 +132,14 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "d28b3058ae5ab30bcd40520648a1a21c37429a0d83cbfa375b64d11d5284c059"
+const TaskContractHash = "9a08f56a7f652148a32d848b9189fc50f0900ad8dee500b2a845deefbe9adfdd"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
 // workload, not just the ones a test author remembered.
 func AllTasks() []Task {
 	return []Task{
+		TaskAccountScan,
 		TaskAgentLoop,
 		TaskBriefRanking,
 		TaskCaptureClassify,
@@ -170,6 +174,7 @@ func AllTasks() []Task {
 // taskLadders is the §1.2 routing table: primary tier first, then the
 // fallback rungs fired on provider error or schema-validation failure.
 var taskLadders = map[Task][]Tier{
+	TaskAccountScan:                   {TierCheapCloud, TierPremium},
 	TaskAgentLoop:                     {TierCheapCloud, TierPremium},
 	TaskBriefRanking:                  {TierPremium, TierCheapCloud},
 	TaskCaptureClassify:               {TierLocalSmall, TierCheapCloud},
@@ -213,6 +218,7 @@ var degradeTo = map[Tier]Tier{
 // taskExecutionModes is the scheduling contract compiled from
 // execution_mode. Every task is present by construction.
 var taskExecutionModes = map[Task]ExecutionMode{
+	TaskAccountScan:                   ExecutionModeBackground,
 	TaskAgentLoop:                     ExecutionModeBackground,
 	TaskBriefRanking:                  ExecutionModeBackground,
 	TaskCaptureClassify:               ExecutionModeBackground,
@@ -263,6 +269,7 @@ const (
 )
 
 var taskStatus = map[Task]string{
+	TaskAccountScan:                   "shipped",
 	TaskAgentLoop:                     "shipped",
 	TaskBriefRanking:                  "shipped",
 	TaskCaptureClassify:               "shipped",
@@ -313,6 +320,9 @@ const (
 )
 
 var taskSites = map[Task][]Site{
+	TaskAccountScan: {
+		{Name: "org_scan", Kind: "one_shot"},
+	},
 	TaskAgentLoop: {
 		{Name: "loop", Kind: "agent_loop"},
 	},
@@ -439,6 +449,7 @@ func AgentsFor(t Task) []Agent { return taskAgents[t] }
 // ai_call_payload, whatever the deployment's capture posture says. The
 // contract pins the prohibition as a hard property, not a default.
 var noPayloadTasks = map[Task]bool{
+	TaskAccountScan:                   true,
 	TaskCaptureClassify:               true,
 	TaskCaptureConfidentialityVerdict: true,
 	TaskCaptureCounterpartyVerdict:    true,
@@ -462,6 +473,7 @@ type CompanyContextPolicy struct {
 }
 
 var taskCompanyContext = map[Task]CompanyContextPolicy{
+	TaskAccountScan:                   {Scopes: []string{"identity"}, TokenBudget: 300, Conditional: true},
 	TaskAgentLoop:                     {Scopes: []string{"identity", "positioning", "sales", "offer"}, TokenBudget: 1200, Conditional: false},
 	TaskBriefRanking:                  {TokenBudget: 0, Conditional: false},
 	TaskCaptureClassify:               {TokenBudget: 0, Conditional: false},

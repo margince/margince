@@ -42,7 +42,7 @@ ADMIN_PASSWORD="${ADMIN_PASSWORD:-demo-password-123}"
 # keeps the file elsewhere passes BOOTSTRAP_PASSWORD; the literal is the last
 # resort for a stack booted by hand.
 BOOTSTRAP_PASSWORD_FILE="${BOOTSTRAP_PASSWORD_FILE:-config/margince-admin-password}"
-if [ -z "${BOOTSTRAP_PASSWORD:-}" ] && [ -r "$BOOTSTRAP_PASSWORD_FILE" ]; then
+if [[ -z "${BOOTSTRAP_PASSWORD:-}" ]] && [[ -r "$BOOTSTRAP_PASSWORD_FILE" ]]; then
   BOOTSTRAP_PASSWORD="$(cat "$BOOTSTRAP_PASSWORD_FILE")"
 fi
 BOOTSTRAP_PASSWORD="${BOOTSTRAP_PASSWORD:-operator-supplied-first-password}"
@@ -52,7 +52,7 @@ trap 'rm -f "$COOKIES"' EXIT
 
 api() {
   local method="$1" path="$2" body="${3:-}"
-  if [ -n "$body" ]; then
+  if [[ -n "$body" ]]; then
     curl -sS -b "$COOKIES" -c "$COOKIES" -X "$method" \
       -H 'Content-Type: application/json' -d "$body" "$API_BASE/v1$path"
   else
@@ -109,7 +109,7 @@ create_or_die() {
   id="$(printf '%s' "$response" | python3 -c 'import json,sys
 try: print(json.load(sys.stdin).get("id",""))
 except Exception: print("")')"
-  if [ -z "$id" ]; then
+  if [[ -z "$id" ]]; then
     echo "could not create $what:" >&2
     printf '  %s\n' "$response" >&2
     exit 1
@@ -126,7 +126,7 @@ status_of() {
   # -d is passed as its own argument rather than through ${body:+...}: an
   # unquoted expansion splits the JSON on its spaces and curl receives
   # fragments, which surfaced as "[: too many arguments" from the caller.
-  if [ -n "$body" ]; then
+  if [[ -n "$body" ]]; then
     curl -sS -o /dev/null -w '%{http_code}' -b "$COOKIES" -c "$COOKIES" \
       -X "$method" -H 'Content-Type: application/json' -d "$body" "$API_BASE/v1$path"
   else
@@ -142,7 +142,7 @@ login_as() {
   local body code
   body="$(printf '{"email":"%s","password":"%s"}' "$ADMIN_EMAIL" "$1")"
   code="$(status_of POST /auth/login "$body")"
-  [ "$code" = "200" ]
+  [[ "$code" = "200" ]]
 }
 
 # THE FIRST-LOGIN HOLD. A bootstrapped installation sets must_change_password
@@ -169,7 +169,7 @@ if ! login_as "$ADMIN_PASSWORD"; then
   echo "  signed in with the operator-supplied password; replacing it"
   first_body="$(printf '{"current_password":"%s","new_password":"%s"}' \
     "$BOOTSTRAP_PASSWORD" "$ADMIN_PASSWORD")"
-  if [ "$(status_of POST /auth/change-password "$first_body")" != "204" ]; then
+  if [[ "$(status_of POST /auth/change-password "$first_body")" != "204" ]]; then
     echo "could not replace the operator-supplied password" >&2; exit 1
   fi
   login_as "$ADMIN_PASSWORD" || {
@@ -179,18 +179,18 @@ fi
 
 # A write the admin is always allowed to attempt. 403 here means the hold, not
 # a permission problem — this account is an admin.
-if [ "$(status_of GET /users)" = "403" ]; then
+if [[ "$(status_of GET /users)" = "403" ]]; then
   echo "  admin is on the first-login hold; replacing the bootstrap password"
   rotate_body="$(printf '{"current_password":"%s","new_password":"%s"}' \
     "$ADMIN_PASSWORD" "$DETOUR_PASSWORD")"
-  if [ "$(status_of POST /auth/change-password "$rotate_body")" != "204" ]; then
+  if [[ "$(status_of POST /auth/change-password "$rotate_body")" != "204" ]]; then
     echo "could not rotate the bootstrap password to the detour value" >&2; exit 1
   fi
   login_as "$DETOUR_PASSWORD" || {
     echo "could not sign in with the detour password" >&2; exit 1; }
   rotate_back_body="$(printf '{"current_password":"%s","new_password":"%s"}' \
     "$DETOUR_PASSWORD" "$ADMIN_PASSWORD")"
-  if [ "$(status_of POST /auth/change-password "$rotate_back_body")" != "204" ]; then
+  if [[ "$(status_of POST /auth/change-password "$rotate_back_body")" != "204" ]]; then
     echo "the admin is stranded on $DETOUR_PASSWORD — rotate it back by hand" >&2; exit 1
   fi
   login_as "$ADMIN_PASSWORD" || {
@@ -206,7 +206,7 @@ fi
 # misleading "could not resolve the colleague seat".
 colleague="$(id_of "$(api POST /users '{
   "email":"sofia.meier@demo.test","display_name":"Sofia Meier","role":"rep"}')")"
-if [ -z "$colleague" ]; then
+if [[ -z "$colleague" ]]; then
   # The list envelope is {"data": [...], "page": {...}} — reading "items" here
   # always found nothing, so a re-run (create answers 409 email_taken) resolved
   # an EMPTY colleague and every fixture below it was skipped in silence.
@@ -214,7 +214,7 @@ if [ -z "$colleague" ]; then
 rows = json.load(sys.stdin).get("data", [])
 print(rows[0]["id"] if rows else "")')"
 fi
-[ -n "$colleague" ] || { echo "could not resolve the colleague seat" >&2; exit 1; }
+[[ -n "$colleague" ]] || { echo "could not resolve the colleague seat" >&2; exit 1; }
 
 # --- CASE 4: companies in and around Köln, owned by the colleague ------------
 #
@@ -242,7 +242,7 @@ else:
 seed_cologne() {
   local name="$1" lat="$2" lon="$3" body existing
   existing="$(org_id_by_name "$name")"
-  if [ -n "$existing" ]; then
+  if [[ -n "$existing" ]]; then
     echo "  $name already present"
     return 0
   fi
@@ -257,13 +257,13 @@ seed_cologne "Vorort Systeme KG"   51.0175 6.9603
 
 # --- CASE 5: the Vietnam partner, with a promise nobody kept -----------------
 vietnam="$(org_id_by_name "Vietnam Partner JSC")"
-if [ -z "$vietnam" ]; then
+if [[ -z "$vietnam" ]]; then
   body="$(printf '{"display_name":"Vietnam Partner JSC","owner_id":"%s"}' "$colleague")"
   vietnam="$(create_or_die "/organizations" "$body" "Vietnam Partner JSC")"
 fi
 
 mai="$(person_id_by_email "Mai Nguyen" "mai.nguyen@vietnampartner.test")"
-if [ -z "$mai" ]; then
+if [[ -z "$mai" ]]; then
   body="$(printf '{"full_name":"Mai Nguyen","owner_id":"%s","emails":[{"email":"mai.nguyen@vietnampartner.test","is_primary":true}]}' "$colleague")"
   mai="$(create_or_die "/people" "$body" "Mai Nguyen")"
   body="$(printf '{"kind":"employment","person_id":"%s","organization_id":"%s"}' "$mai" "$vietnam")"
@@ -285,13 +285,13 @@ fi
 # complaint was raised "im Oktober". The record is right; the prose is wrong.
 # This is the fixture the sharpest assertion in the lane rests on.
 reply="$(org_id_by_name "Reply Deutschland Betreuerwechsel")"
-if [ -z "$reply" ]; then
+if [[ -z "$reply" ]]; then
   body="$(printf '{"display_name":"Reply Deutschland Betreuerwechsel","owner_id":"%s","industry":"Managed Services"}' "$colleague")"
   reply="$(create_or_die "/organizations" "$body" "Reply Deutschland")"
 fi
 
 katrin="$(person_id_by_email "Katrin Sommer" "katrin.sommer@reply.test")"
-if [ -z "$katrin" ]; then
+if [[ -z "$katrin" ]]; then
   body="$(printf '{"full_name":"Katrin Sommer","owner_id":"%s","emails":[{"email":"katrin.sommer@reply.test","is_primary":true}]}' "$colleague")"
   katrin="$(create_or_die "/people" "$body" "Katrin Sommer")"
   body="$(printf '{"kind":"employment","person_id":"%s","organization_id":"%s"}' "$katrin" "$reply")"
@@ -312,7 +312,7 @@ fi
 # the past" has a pattern to find rather than a single case.
 for company in "valantic AG Betreuerwechsel" "Körber Digital Betreuerwechsel"; do
   org="$(org_id_by_name "$company")"
-  [ -n "$org" ] && continue
+  [[ -n "$org" ]] && continue
   body="$(printf '{"display_name":"%s","owner_id":"%s","industry":"Managed Services"}' "$company" "$colleague")"
   org="$(create_or_die "/organizations" "$body" "$company")"
   body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"2025-11-04T08:00:00Z","body":"Nach dem Wechsel des Ansprechpartners kam fünf Tage lang keine Antwort.","links":[{"entity_type":"organization","entity_id":"%s"}]}' "$org")"

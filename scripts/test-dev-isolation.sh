@@ -18,7 +18,7 @@ dev="$root/scripts/dev.sh"
 failures=0
 
 check() { # want got description
-    if [ "$1" = "$2" ]; then
+    if [[ "$1" = "$2" ]]; then
         printf '  ok   %s\n' "$3"
     else
         printf '  FAIL %s\n       want: %s\n       got:  %s\n' "$3" "$1" "$2" >&2
@@ -308,7 +308,7 @@ claimed="$(claim_stack "alpha")"
 read -r alpha_db alpha_port <<<"$claimed"
 check "64" "$alpha_db" "the first stack claims the bottom of the Redis block"
 check "8081" "$alpha_port" "and the bottom of the port range"
-check "1" "$([ -f "$tmp_root/alpha/env" ] && echo 1 || echo 0)" \
+check "1" "$([[ -f "$tmp_root/alpha/env" ]] && echo 1 || echo 0)" \
       "the reservation is on disk BEFORE anything binds — a claim visible only once the stack is up is not a claim"
 check "1" "$(grep -c "^STARTER_PID=$$\$" "$tmp_root/alpha/env")" \
       "and it records who is starting it, which is what stops a losing run deleting a winner's claim"
@@ -399,10 +399,10 @@ fake_server "$theirs_dsn" "localhost:16379/64"; theirs=$REPLY
 # The exec'd argv has to be visible to ps before the matcher reads it. Poll for
 # it rather than sleeping a guessed interval.
 for _ in 1 2 3 4 5 6 7 8 9 10; do
-    [ -n "$(ps -o command= -p "$mine" 2>/dev/null)" ] && break
+    [[ -n "$(ps -o command= -p "$mine" 2>/dev/null)" ]] && break
     sleep 0.1
 done
-check "1" "$([ -n "$(ps -o command= -p "$mine" 2>/dev/null)" ] && echo 1 || echo 0)" \
+check "1" "$([[ -n "$(ps -o command= -p "$mine" 2>/dev/null)" ]] && echo 1 || echo 0)" \
       "the fake worker is running — without this the four checks below would pass on an empty machine"
 
 check "$mine" "$(stack_server_pids "$mine_dsn" "localhost:16379/0" | sort -u)" \
@@ -478,7 +478,7 @@ check "linked" "$(cd "$probe/linked" || exit 1; _testdb_worktree_slug)" \
 git -C "$probe/primary" worktree add -q "$probe/_" --detach
 check "" "$(dev_sanitize_slug "_")" \
       "the sanitiser really does reduce this name to nothing, which is what makes the next check the real case"
-check "1" "$([ -n "$(cd "$probe/_" || exit 1; dev_derive_slug)" ] && echo 1 || echo 0)" \
+check "1" "$([[ -n "$(cd "$probe/_" || exit 1; dev_derive_slug)" ]] && echo 1 || echo 0)" \
       "a name that sanitises to nothing still yields a slug, never the empty answer that means primary"
 
 # Two worktrees whose basenames are identical must not share one slug: that would
@@ -486,7 +486,7 @@ check "1" "$([ -n "$(cd "$probe/_" || exit 1; dev_derive_slug)" ] && echo 1 || e
 mkdir -p "$probe/a" "$probe/b"
 git -C "$probe/primary" worktree add -q "$probe/a/dup" --detach
 git -C "$probe/primary" worktree add -q "$probe/b/dup" --detach
-check "1" "$([ "$(cd "$probe/a/dup" || exit 1; dev_derive_slug)" != "$(cd "$probe/b/dup" || exit 1; dev_derive_slug)" ] && echo 1 || echo 0)" \
+check "1" "$([[ "$(cd "$probe/a/dup" || exit 1; dev_derive_slug)" != "$(cd "$probe/b/dup" || exit 1; dev_derive_slug)" ]] && echo 1 || echo 0)" \
       "two worktrees with the SAME basename get different slugs, so they cannot share a database"
 
 # And two whose names share only their FIRST 24 CHARACTERS. The readable half of a
@@ -498,9 +498,9 @@ git -C "$probe/primary" worktree add -q "$probe/$(printf 'p%.0s' $(seq 1 30))-al
 git -C "$probe/primary" worktree add -q "$probe/$(printf 'p%.0s' $(seq 1 30))-beta" --detach
 long_a="$(cd "$probe/$(printf 'p%.0s' $(seq 1 30))-alpha" || exit 1; dev_derive_slug)"
 long_b="$(cd "$probe/$(printf 'p%.0s' $(seq 1 30))-beta" || exit 1; dev_derive_slug)"
-check "1" "$([ "${long_a:0:24}" = "${long_b:0:24}" ] && echo 1 || echo 0)" \
+check "1" "$([[ "${long_a:0:24}" = "${long_b:0:24}" ]] && echo 1 || echo 0)" \
       "the two names really do share their first 24 characters, which is what makes the next check the real case"
-check "1" "$([ "$long_a" != "$long_b" ] && echo 1 || echo 0)" \
+check "1" "$([[ "$long_a" != "$long_b" ]] && echo 1 || echo 0)" \
       "and they still get different slugs — uniqueness lives in the digest, not the truncated name"
 
 # A slug must be STABLE for as long as a stack runs. An earlier version appended
@@ -524,7 +524,7 @@ check "$slug_before" "$(cd "$probe/linked-moved" || exit 1; dev_derive_slug)" \
 # and margince-dev-<slug> (S3 caps a bucket name at 63), so it has to leave room
 # for both prefixes however long the directory name is.
 long_slug="$(cd "$probe/$(printf 'w%.0s' $(seq 1 60))-one" || exit 1; dev_derive_slug)"
-check "1" "$([ "${#long_slug}" -le 40 ] && echo 1 || echo 0)" \
+check "1" "$([[ "${#long_slug}" -le 40 ]] && echo 1 || echo 0)" \
       "a long directory name still yields a slug short enough for the database and bucket names built from it"
 case "$long_slug" in
     www*) recognisable=1 ;;
@@ -535,13 +535,13 @@ check "1" "$recognisable" \
 
 long_one="margince_test_$(cd "$probe/$(printf 'w%.0s' $(seq 1 60))-one" && _testdb_worktree_slug)"
 long_two="margince_test_$(cd "$probe/$(printf 'w%.0s' $(seq 1 60))-two" && _testdb_worktree_slug)"
-check "1" "$([ "${#long_one}" -le 63 ] && echo 1 || echo 0)" \
+check "1" "$([[ "${#long_one}" -le 63 ]] && echo 1 || echo 0)" \
       "a long worktree name still yields a template name inside Postgres's 63-byte identifier limit"
-check "1" "$([ "$long_one" != "$long_two" ] && echo 1 || echo 0)" \
+check "1" "$([[ "$long_one" != "$long_two" ]] && echo 1 || echo 0)" \
       "two long names sharing a prefix still get different templates, so neither rebuilds the other's schema"
 rm -rf "$probe"
 
-if [ "$failures" -gt 0 ]; then
+if [[ "$failures" -gt 0 ]]; then
     printf 'FAIL: %d check(s) failed\n' "$failures" >&2
     exit 1
 fi

@@ -36,7 +36,7 @@ start)
 	# phase's seconds are already the sum of the inner ones. Refusing at the
 	# point of nesting names the recipe that did it; without this the run dies
 	# much later, at the outer `stop`, pointing at the wrong line.
-	if [ -f "$open" ]; then
+	if [[ -f "$open" ]]; then
 		echo "phase-timer: \"$label\" starts inside \"$(cut -f2- "$open")\", which is still open —" >&2
 		echo "             phases do not nest; a sub-make's own phases replace its caller's, not sit inside it" >&2
 		exit 1
@@ -47,7 +47,7 @@ stop)
 	# No open phase means `start` never ran — a recipe edited into a shape this
 	# script no longer brackets. Say so rather than recording a phase of zero,
 	# which would read as a phase that cost nothing.
-	if [ ! -f "$open" ]; then
+	if [[ ! -f "$open" ]]; then
 		echo "phase-timer: stop with no open phase — a start line is missing from the recipe" >&2
 		exit 1
 	fi
@@ -57,7 +57,7 @@ stop)
 	rm -f "$open"
 	;;
 report)
-	[ -f "$ledger" ] || exit 0
+	[[ -f "$ledger" ]] || exit 0
 	total=$(awk -F'\t' '{s += $1} END {print s+0}' "$ledger")
 	echo ""
 	echo "  where the time went ($(printf '%dm%02ds' $((total / 60)) $((total % 60))) total)"

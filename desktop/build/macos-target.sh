@@ -30,14 +30,14 @@ assert_min_os() {
   local file minos newest
   for file in "$@"; do
     minos="$(vtool -show-build "$file" 2>/dev/null | awk '/^ *minos/ {print $2; exit}')"
-    if [ -z "$minos" ]; then
+    if [[ -z "$minos" ]]; then
       echo "FAIL: $file declares no macOS build version, so the OS it needs cannot be known" >&2
       return 1
     fi
     # sort -V so 9.0 sorts below 12.0 the way a version does, not the way a
     # string does.
     newest="$(printf '%s\n%s\n' "$MACOS_MIN" "$minos" | sort -V | tail -1)"
-    if [ "$newest" != "$MACOS_MIN" ]; then
+    if [[ "$newest" != "$MACOS_MIN" ]]; then
       echo "FAIL: $file requires macOS $minos but this bundle declares $MACOS_MIN" >&2
       echo "      It was built without MACOSX_DEPLOYMENT_TARGET, so it inherited the build machine's OS" >&2
       echo "      and would refuse to launch on any older Mac." >&2

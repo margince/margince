@@ -26,9 +26,9 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -122,7 +122,7 @@ func readAccountContacts(ctx context.Context, tx pgx.Tx, personID ids.PersonID) 
 	// tidy. A window function is evaluated before DISTINCT, so counting the
 	// join's rows over-reports whenever one coworker matches twice — and this
 	// query became able to produce that the moment it started asking
-	// EmploymentIsCurrentSQL instead of `ended_at IS NULL`. The unique index
+	// employment.IsCurrentSQL instead of `ended_at IS NULL`. The unique index
 	// uq_rel_employment covers `(person_id, organization_id) WHERE ended_at IS
 	// NULL`, so the old predicate could not match one person twice; a
 	// future-dated row is outside that index, and a person with both a live row
@@ -139,12 +139,12 @@ func readAccountContacts(ctx context.Context, tx pgx.Tx, personID ids.PersonID) 
 		  JOIN relationship colleague
 		    ON colleague.organization_id = theirs.organization_id
 		   AND colleague.kind = 'employment'
-		   AND `+people.EmploymentIsCurrentSQL("colleague.ended_at")+`
+		   AND `+employment.IsCurrentSQL("colleague.ended_at")+`
 		   AND colleague.archived_at IS NULL
 		  JOIN person p ON p.id = colleague.person_id AND p.archived_at IS NULL
 		 WHERE theirs.person_id = $%d
 		   AND theirs.kind = 'employment'
-		   AND `+people.EmploymentIsCurrentSQL("theirs.ended_at")+`
+		   AND `+employment.IsCurrentSQL("theirs.ended_at")+`
 		   AND theirs.archived_at IS NULL
 		   AND p.id <> $%d
 		   AND (%s)

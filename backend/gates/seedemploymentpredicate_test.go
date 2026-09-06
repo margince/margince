@@ -8,7 +8,7 @@ package gates
 // The dev seeder and the boot proof ask "is this person currently employed?" the
 // way the PRODUCT asks it, and they ask it in the same words.
 //
-// Neither is a Go client, so neither can call people.CurrentPrimaryEmploymentSQL:
+// Neither is a Go client, so neither can call employment.CurrentPrimarySQL:
 // both are shell over the public API, and both therefore hand-spell the rule as
 // a jq predicate. That makes it one invariant with three writers, and the two
 // shell copies are the pair that can drift silently — the seeder deciding a
@@ -33,7 +33,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 )
 
 // The scripts that spell the rule, and the assignment they spell it in.
@@ -82,11 +82,11 @@ func TestTheShellPredicateReadsTheColumnsTheServerReads(t *testing.T) {
 	// The server's spelling, and the reason this is derived: an existence probe
 	// over /v1/relationships names NEITHER column and reads as employed anybody
 	// who ever was.
-	server := people.CurrentPrimaryEmploymentSQL("")
+	server := employment.CurrentPrimarySQL("")
 	predicate := predicateIn(t, currentPrimaryPredicateScripts[0])
 	for _, column := range employmentCurrencyColumns {
 		if !strings.Contains(server, column) {
-			t.Fatalf("people.CurrentPrimaryEmploymentSQL no longer reads %q (%s) — the rule moved, and this gate was about to hold the shell copies to a shape the product has stopped using",
+			t.Fatalf("employment.CurrentPrimarySQL no longer reads %q (%s) — the rule moved, and this gate was about to hold the shell copies to a shape the product has stopped using",
 				column, server)
 		}
 		if !strings.Contains(predicate, column) {

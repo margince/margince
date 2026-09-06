@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -84,7 +85,7 @@ func (s *Store) confirmCardFor(ctx context.Context, personID ids.PersonID) (Conf
 		// any other way would show a company they have left.
 		//
 		// The currency test is a DATE comparison and not a null check, matching
-		// people.EmploymentIsCurrentSQL exactly. Somebody serving three months'
+		// employment.IsCurrentSQL exactly. Somebody serving three months'
 		// notice still works there, and a null check would take their employer
 		// off their own card the day the notice was filed. Spelled here rather
 		// than called because a module may not import a sibling; the copy is
@@ -94,7 +95,7 @@ func (s *Store) confirmCardFor(ctx context.Context, personID ids.PersonID) (Conf
 			       coalesce((SELECT o.display_name FROM relationship r
 			                   JOIN organization o ON o.id = r.organization_id
 			                  WHERE r.person_id = p.id AND r.kind = 'employment'
-			                    AND (r.ended_at IS NULL OR r.ended_at > current_date)
+			                    AND `+employment.IsCurrentSQL("r.ended_at")+`
 			                    AND r.archived_at IS NULL
 			                  ORDER BY r.created_at DESC LIMIT 1), ''),
 			       `+primaryEmailSQL("p.id")+`,

@@ -104,7 +104,7 @@ func TestChannelRecordSkipsEveryMailDomainGate(t *testing.T) {
 		ThreadKey: "telegram:8100:4242",
 	}
 
-	ref, err := sink.Upsert(channelSinkContext(ctx, ws), rec)
+	ref, err := sink.Upsert(channelSinkContext(ctx, ws, "connector:telegram"), rec)
 	if err != nil {
 		t.Fatalf("Upsert: %v", err)
 	}
@@ -209,11 +209,15 @@ func TestChannelRecordSkipsEveryMailDomainGate(t *testing.T) {
 // channelSinkContext binds the workspace-channel connector principal the ingest
 // worker mints: a connector acting for no human, permitted to create the
 // activity it captures, workspace-wide.
-func channelSinkContext(ctx context.Context, ws ids.UUID) context.Context {
+//
+// connectorID names the transport, because the sink refuses a record whose
+// captured_by claims a connector other than the acting one — so a fixture on a
+// second transport needs the principal to move with it.
+func channelSinkContext(ctx context.Context, ws ids.UUID, connectorID string) context.Context {
 	ctx = principal.WithWorkspaceID(ctx, ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector,
-		ID:   "connector:telegram",
+		ID:   connectorID,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"channel"},
 			Objects: map[string]principal.ObjectGrant{

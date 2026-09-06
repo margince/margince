@@ -585,9 +585,13 @@ function BoardLayout<Record extends BoardRecord>({
                   one total means anything" from "nobody has priced these" — a
                   column that has both a real reason and no words for it reads as
                   a column that failed to load. On a board whose stages hold
-                  euros, dollars and dong, five of six columns are this state. */}
+                  euros, dollars and dong, five of six columns are this state.
+
+                  It is a SENTENCE, and it takes the wrapping class rather than
+                  the weighted figure's: sharing that class ellipsised it to
+                  "Loaded only — filter to My deals fo…" in a 240px stage. */}
               {money && column.sumHidden && (
-                <span className="board-col-weighted">
+                <span className="board-col-refusal">
                   {column.sumHiddenReason ?? t("board.mixedCurrencies")}
                 </span>
               )}

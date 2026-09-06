@@ -11,13 +11,23 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "253c873e99809cdb538a3da45bfb8e43db5c16d5c16f72b20fcd05a5d8a56101"
+const JobContractHash = "89832584baed3c704d58409dee3814229e62d2454c4aa9ad714f58c2da1e51cf"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
 // over the kinds it registered and refuses the boot when any is missing,
 // because a kind with no Spec would run at River's one-minute default.
 var specs = map[string]Spec{
+	"account_scan": {
+		Kind:         "account_scan",
+		GoType:       "AccountScanArgs",
+		Role:         Worker,
+		Queue:        "transcript_read",
+		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Registration: Registration{When: []string{"AccountScanBrain"}, AbsentRegistersAnyway: true},
+		Args:         []ArgField{{Name: "OrganizationID"}, {Name: "ScanID"}, {Name: "ViewerID"}, {Name: "Workspace"}},
+	},
 	"agent_scheduler": {
 		Kind:         "agent_scheduler",
 		GoType:       "AgentSchedulerArgs",

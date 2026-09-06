@@ -86,7 +86,14 @@ const outputValidatorSource = "output_validator"
 // catalog floor below left 63 tokens of headroom for a 67-tool catalog — so the
 // next verb anyone added failed a gate that was never meant to ration features
 // (margince/margince#3882). Deriving it is what stops it drifting back.
-const MinimumPromptWindow = 24_576
+//
+// Deriving it did not stop it recurring: at 24,576 the catalog reached 21,517
+// against a 21,504 ceiling, and the next report key published met the same gate
+// 13 tokens over. The derivation held — what moved was the adapter constant it
+// reads, ai.ollamaMaxContext, one bucket up. Headroom is a quantity to keep,
+// not a remainder to spend, and a catalog crowding this floor again is the
+// signal to ration the listing per agent rather than to raise the floor twice.
+const MinimumPromptWindow = 32_768
 
 // roleUser is the wire role every window message carries: the goal, each
 // observation, and the elision notice are all things the runner SAYS to the

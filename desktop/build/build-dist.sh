@@ -35,7 +35,7 @@ log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 
 require() {
   local path="$1" hint="$2"
-  if [ ! -e "$path" ]; then
+  if [[ ! -e "$path" ]]; then
     echo "missing $path — run $hint first" >&2
     exit 1
   fi
@@ -123,7 +123,7 @@ verify_runnable_os() {
   done < <(find "$DIST" -type f)
   # An empty list would pass this check while examining nothing — the way a
   # verification step most often fails.
-  if [ ${#binaries[@]} -eq 0 ]; then
+  if [[ ${#binaries[@]} -eq 0 ]]; then
     echo "FAIL: found no executables in $DIST to check" >&2
     exit 1
   fi

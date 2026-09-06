@@ -2032,6 +2032,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/organizations/{id}/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * What this account needs, as the model last read it for this reader.
+         * @description The account scan is the model's reading of one account for one reader: what the
+         *     exchanges and the pipeline say needs a person, each finding citing the records it
+         *     rests on and quoting the words it read. It is the same advice shape the 360's own
+         *     rules produce, and the answer here MERGES both — the rules run live on every read,
+         *     the model's findings are the stored ones — deduplicated by fingerprint, with this
+         *     reader's dismissals applied and the display cap reported rather than hidden.
+         *
+         *     **Per reader, never shared.** The scan is written from the reader's own composite
+         *     read and the message words their audience admits, so a colleague's scan would
+         *     disclose records this reader cannot open. A scan is therefore keyed
+         *     (reader, account), and this read is `never` for a reader who has not asked yet.
+         *
+         *     **Read-only.** Nothing here starts work: a `never` or a stale answer stays what it
+         *     is until `POST` asks. The state names whether the stored findings are current,
+         *     whether a read is in flight, and — when the AI budget deferred it — when it resumes.
+         */
+        get: operations["getOrganizationScan"];
+        put?: never;
+        /**
+         * Make sure this reader's scan of the account is current, reading it again only when the account changed.
+         * @description Opening an account page calls this once. It compares the account as this reader
+         *     sees it now — a fingerprint over the composite read, the recent message words, the
+         *     prompt and the routing — against the stored scan, and answers in one of three ways:
+         *
+         *     - the stored findings, unchanged, when the fingerprint still matches (no model call,
+         *       no cost);
+         *     - the stored findings marked `stale`, when the account has moved but the reader's
+         *       last scan is younger than the rescan floor — one hour — because a busy inbox
+         *       must not re-read the account on every message;
+         *     - a `queued` scan, when the findings are missing, older than the floor, or `force`
+         *       is set. The read runs as a background job under this reader's own grants and
+         *       reports on the AI activity rail; poll `GET` until it settles.
+         *
+         *     A scan already in flight is returned as it stands rather than started twice.
+         *     `force` skips the floor and the fingerprint, never the in-flight check.
+         */
+        post: operations["ensureOrganizationScan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/organizations/{id}/growth-fit": {
         parameters: {
             query?: never;
@@ -9456,9 +9511,11 @@ export interface paths {
          *     history rather than a name nobody has ever spoken to. Individual messages keep their own
          *     audience: publishing the CONTACT is not publishing the correspondence.
          *
-         *     One direction only. A contact the organization can see is not narrowed back by this door or
-         *     any other, because a colleague may already have written to them on the strength of seeing
-         *     them.
+         *     This door only widens, and it is no longer the only one: `visibility` on
+         *     `PATCH /people/{id}` moves a contact both ways for anybody the write gate admits. This
+         *     endpoint stays because it is the OWNER's verb — it answers 404 rather than 403 for a
+         *     contact that is not theirs, so capture privacy keeps hiding the row's existence, and it
+         *     carries the contact's mail and meetings across with it.
          */
         post: operations["publishCapturedPerson"];
         delete?: never;
@@ -14665,11 +14722,18 @@ export interface components {
          */
         CaptureSettings: {
             /**
-             * @description The workspace's mail-sharing posture, ON by default: a captured email is readable by
-             *     every colleague who can see the contact. Switched OFF, every email captured FROM THEN ON
-             *     is held to its participants and the capturing mailbox owner — already-captured mail keeps
-             *     the audience it has. Turning it off makes shared pipeline work hard; the setting exists
-             *     for installations that accept that cost.
+             * @description The workspace's capture-sharing posture, ON by default: captured correspondence is
+             *     readable by every colleague who can see the contact. Switched OFF, everything captured
+             *     FROM THEN ON is held to its participants and the capturing member — already-captured
+             *     correspondence keeps the audience it has. Turning it off makes shared pipeline work
+             *     hard; the setting exists for installations that accept that cost.
+             *
+             *     It is named for mail because mail is what it governed first, and it now governs one
+             *     more thing: a chat on a transport whose credential belongs to ONE member is that
+             *     member's own correspondence and is held by this switch exactly as their mail is. A chat
+             *     on a transport the installation SHARES — a bot, an official account — is the company's
+             *     own business and is not touched, because there is no member such a message could be
+             *     held for.
              */
             mail_sharing: boolean;
             /**
@@ -14919,7 +14983,7 @@ export interface components {
         UpdateCaptureSettingsRequest: {
             /** @description Toggle captured-organization auto-enrichment. */
             auto_enrich?: boolean;
-            /** @description Toggle the workspace mail-sharing posture; affects mail captured from now on. */
+            /** @description Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member. */
             mail_sharing?: boolean;
             /** @description Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it. */
             signature_enrich?: boolean;
@@ -17427,6 +17491,31 @@ export interface components {
             title?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
+            /**
+             * @description Who may see this contact: `workspace` for everyone in the organization,
+             *     `owner` for the person named by `owner_id` alone.
+             *
+             *     An ORDINARY field, writable in BOTH directions by anybody the write gate
+             *     admits. It used to move one way only, through `POST /people/{id}/publish`,
+             *     on the reasoning that a colleague may already have acted on seeing the
+             *     contact. That reasoning assumed a human made the disclosure. The sender
+             *     classifier publishes a contact it judges a real counterparty without
+             *     anybody approving it, so the common case was a machine making a decision
+             *     no human could undo — the row's own owner included.
+             *
+             *     Narrowing a contact does not retract what was already done with it. Mail,
+             *     meetings and deals filed against it keep their own audiences, and a
+             *     colleague mid-conversation keeps their thread; what changes is who finds
+             *     the contact from here on.
+             *
+             *     A contact narrowed to `owner` stays with the owner it already names;
+             *     narrowing does not reassign it to whoever pressed the button. A row that
+             *     names nobody is not reachable through this field at all — an unowned
+             *     record is nobody's to change until somebody claims it, which the write
+             *     gate already enforces for every field on this endpoint.
+             * @enum {string}
+             */
+            visibility?: "workspace" | "owner";
             social?: {
                 [key: string]: unknown;
             };
@@ -17702,6 +17791,80 @@ export interface components {
             contributor_person_id?: string | null;
             /** @description How many current contacts of this account the caller can see and the score was chosen from. */
             contact_count: number;
+        };
+        /** @description What an ensure may ask beyond "make it current". */
+        OrganizationScanRequest: {
+            /**
+             * @description Read the account again even though the stored findings' fingerprint matches or
+             *     the rescan floor has not passed. A scan already in flight is still returned as
+             *     it stands rather than started twice.
+             * @default false
+             */
+            force: boolean;
+        };
+        /**
+         * @description Where this reader's scan of the account stands. `never` — this reader has not asked
+         *     for one. `queued` / `running` — a read is in flight, on the rail. `done` — the
+         *     model read the account and its findings are stored. `degraded` — the read finished
+         *     on the deterministic floor (no model lane, the AI budget deferred past the job's
+         *     patience, or a reply the grounding filter refused whole); the rules' own advice is
+         *     what stands. `failed` — the read could not run at all; the rules' advice still
+         *     answers, and `degrade_reason` says what stopped it.
+         * @enum {string}
+         */
+        OrganizationScanState: "never" | "queued" | "running" | "done" | "degraded" | "failed";
+        /**
+         * @description One reader's scan of one account: the state of the read, and what the account looks
+         *     like it needs — the model's stored findings and the 360's live rules as ONE list,
+         *     deduplicated by fingerprint, this reader's dismissals applied, capped and the cap
+         *     reported. Every finding cites the records it rests on and, where the model read
+         *     words, quotes them verbatim; a finding that could not be grounded is dropped whole,
+         *     never shown with its citation stripped.
+         */
+        OrganizationScan: {
+            /** Format: uuid */
+            organization_id: string;
+            state: components["schemas"]["OrganizationScanState"];
+            /**
+             * Format: date-time
+             * @description When the stored findings were written. Null until a read has settled.
+             */
+            generated_at?: string | null;
+            /** @description Which writer produced the stored findings. Absent until a read has settled. */
+            generated_by?: components["schemas"]["WrittenBy"];
+            /**
+             * @description The account has changed since the stored findings were written and they have not
+             *     been re-read, because the reader's last scan is younger than the rescan floor.
+             *     The findings still answer; the flag is said beside them rather than instead of them.
+             */
+            stale?: boolean;
+            /**
+             * Format: date-time
+             * @description When a read the AI budget deferred will try again. Null unless the scan is in
+             *     flight and waiting on budget.
+             */
+            resumes_at?: string | null;
+            /**
+             * @description Why the read finished below the model — server-authored, in the reader's terms,
+             *     never a provider's message. Null when the model wrote the findings.
+             */
+            degrade_reason?: string | null;
+            /**
+             * @description What the last settled read took in, so the page can say "read 14 exchanges and
+             *     3 deals" rather than "done". Null until a read has settled.
+             */
+            read?: {
+                exchanges: number;
+                deals: number;
+            } | null;
+            /**
+             * @description The merged advice, in priority order: the rules' own rows first in their own
+             *     order, then the model's findings by the order it gave them. Dismissed rows are
+             *     gone; the cap is applied here and reported in `findings_dropped`.
+             */
+            findings: components["schemas"]["Organization360Suggestion"][];
+            /** @description How many of this reader's undismissed findings the cap left out. */
+            findings_dropped: number;
         };
         /**
          * @description A factual description of one company, assembled from what the READER can see.
@@ -18040,6 +18203,30 @@ export interface components {
              *     never the name.
              */
             name?: string;
+            /**
+             * @description The record's own words, verbatim — a message's subject line, a
+             *     signal's sentence. Never a paraphrase and never a summary: it is
+             *     what a reader checks the claim against without opening the record,
+             *     so a writer that has no verbatim words leaves it out. Absent when
+             *     the reader may not read the record's content, even where they may
+             *     know it exists.
+             */
+            quote?: string;
+            /**
+             * Format: date-time
+             * @description The instant the evidence is dated — when the message was sent, when
+             *     the deal was last worked, when the signal was read. The client
+             *     prints it in the reader's own calendar. Absent for a record with no
+             *     date of its own.
+             */
+            at?: string;
+            /**
+             * @description Where the words came from, in the writer's own language and the
+             *     reader's terms — "Email you sent", "Open deal, last worked",
+             *     "Read from their mail". One short phrase, never a record kind the
+             *     client already labels the chip with. Descriptive only, like `name`.
+             */
+            origin?: string;
         };
         /**
          * @description What the accounting mirror knows about one customer (ADR-0083/A128).
@@ -18443,6 +18630,12 @@ export interface components {
             linked_deal_id?: string | null;
             /** Format: uuid */
             linked_person_id?: string | null;
+            /**
+             * @description The task's version, carried so the tick and the snooze beside this row can write with
+             *     `If-Match`. The same reason `EmailSummary` carries one: a projection a reader can act
+             *     from has to name the row it will act on, or every press is last-write-wins.
+             */
+            version?: components["schemas"]["RowVersion"];
         };
         /**
          * @description The next meeting with this account that has not happened yet, and who is in it.
@@ -18493,16 +18686,29 @@ export interface components {
          */
         Organization360Suggestion: {
             /**
-             * @description `no_reply` — an outbound message on a thread nobody answered.
+             * @description The four RULE kinds, computed from the account's records with no model:
+             *
+             *     `no_reply` — an outbound message on a thread nobody answered.
              *     `stalled_deal` — an open deal idle past the 60-day stall window.
              *     `no_next_step` — an active account with no open task on it.
              *     `lifecycle_conflict` — the account's own correspondence contradicts the stage it is
              *     filed under: a `contract_ended` signal stands while the record still reads as a live
              *     customer or an open opportunity. The page states the conflict rather than resolving
              *     it, because which of the two is wrong is a judgment only the reader can make.
+             *
+             *     The four READ kinds, which only the account scan raises — each from words the
+             *     model read in the account's own exchanges, quoted on the citation so the reader
+             *     checks the claim against them:
+             *
+             *     `commitment_unmet` — we said we would do something in an exchange and nothing on
+             *     the record says it happened.
+             *     `question_unanswered` — they asked something and no later exchange of ours answers it.
+             *     `risk_raised` — they wrote something that puts the relationship or a deal at risk:
+             *     a budget cut, a competitor, a decision-maker leaving.
+             *     `need_raised` — they wrote about a need or a plan nothing on the record has picked up.
              * @enum {string}
              */
-            kind: "no_reply" | "stalled_deal" | "no_next_step" | "lifecycle_conflict";
+            kind: "no_reply" | "stalled_deal" | "no_next_step" | "lifecycle_conflict" | "commitment_unmet" | "question_unanswered" | "risk_raised" | "need_raised";
             /**
              * @description What to do, in the RULE's own words — "Follow up: no reply in 24 days" (PO-AC-N-13).
              *
@@ -18543,6 +18749,13 @@ export interface components {
             subject_type?: null | "deal" | "person" | "organization";
             /** Format: uuid */
             subject_id?: string | null;
+            /**
+             * @description Which writer raised this row. Absent on the 360's own rows — every one of those
+             *     is a rule — and `model` on a finding the account scan read from the account's
+             *     words. Never silently interchangeable: a reader weighing advice needs to know
+             *     whether a comparison or a reading stands behind it.
+             */
+            written_by?: components["schemas"]["WrittenBy"];
             /** @description The records the rule fired on — always ones this reader can open. */
             evidence: components["schemas"]["OrganizationBriefEvidence"][];
             /**
@@ -25900,7 +26113,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "account_scan";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -30248,6 +30461,22 @@ export interface components {
              */
             with_person?: string;
             /**
+             * Format: uuid
+             * @description Whose calendar a meeting came off. Sent by `source: meeting` and
+             *     `source: meeting_outcome`.
+             *
+             *     It names the row's OWNER, which is what lets a manager's view say whose
+             *     appointment each one is rather than presenting a team's calendars as one
+             *     undifferentiated day. It is a label and never an authority: what a caller may
+             *     read is decided before this field is filled in, and a client must not infer a
+             *     permission from it.
+             *
+             *     ABSENT where no calendar claims the meeting — one booked in the app, or one
+             *     captured before the host was recorded. The row then names nobody rather than
+             *     guessing at an owner.
+             */
+            host_user_id?: string;
+            /**
              * @description Which underlying CONDITION this row reports, for a surface that groups repeated
              *     failures of one thing into one row. Two failures of one broken automation carry
              *     the same value; a failure of a different rule carries a different one.
@@ -30304,6 +30533,13 @@ export interface components {
             due_at?: string;
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
+            /**
+             * @description The version of the row this item's own verbs write to, present where it names one — a
+             *     task today. Carried for the reason `email_summary` carries one: a lane that offers
+             *     `complete` and `snooze` has to name the row those presses condition on, or two people
+             *     acting on one task each overwrite the other and neither is told.
+             */
+            version?: components["schemas"]["RowVersion"];
             /**
              * Format: date-time
              * @description When a done_for_you receipt actually happened.
@@ -31374,6 +31610,13 @@ export interface components {
             due_at?: string;
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
+            /**
+             * @description The version of the row this item's own verbs write to, present where it names one — a
+             *     task today. Carried for the reason `email_summary` carries one: a lane that offers
+             *     `complete` and `snooze` has to name the row those presses condition on, or two people
+             *     acting on one task each overwrite the other and neither is told.
+             */
+            version?: components["schemas"]["RowVersion"];
             /**
              * Format: date-time
              * @description When the thing being reported happened.
@@ -35117,6 +35360,64 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ClaimEvidence"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getOrganizationScan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The reader's scan of this account, or `never`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationScan"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ensureOrganizationScan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["OrganizationScanRequest"];
+            };
+        };
+        responses: {
+            /** @description The scan as it now stands — current, stale, or in flight. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationScan"];
                 };
             };
             401: components["responses"]["Unauthorized"];

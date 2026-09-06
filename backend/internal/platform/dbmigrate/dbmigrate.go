@@ -156,6 +156,22 @@ func Load(fsys fs.FS, dir string) ([]Migration, error) {
 // Each migration runs in its own transaction together with its tracking
 // row, so a failure leaves the database at the last good version, never
 // half-applied. Idempotent: a second run is a no-op.
+//
+// ONE FILE IS ONE TRANSACTION, and that is the fact several migration comments
+// have got wrong. Adding a constraint NOT VALID and validating it lower down
+// the SAME file buys nothing: the ACCESS EXCLUSIVE that ADD CONSTRAINT took is
+// held until this transaction commits, so the VALIDATE scan — which would take
+// only SHARE UPDATE EXCLUSIVE on its own — runs entirely underneath it. Writers
+// are blocked for exactly as long as a plain ADD CONSTRAINT would block them,
+// and then for a second pass over the table.
+//
+// The split is real across TWO migrations, because that is two transactions:
+// the file that adds it commits and releases, writers go through, and a later
+// file validates. A migration reaching for the pattern has to be that second
+// file or it is only spelling ADD CONSTRAINT the long way.
+//
+// Held by: TestNoMigrationValidatesAConstraintItAddedInTheSameFile
+// (backend/migrations/notvalidsplit_test.go)
 func Up(ctx context.Context, conn *pgx.Conn, namespaces ...Namespace) (applied int, err error) {
 	if err := lock(ctx, conn); err != nil {
 		return 0, err

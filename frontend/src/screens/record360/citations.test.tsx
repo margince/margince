@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import {
@@ -212,5 +213,124 @@ describe("SentenceList leading claim", () => {
       "co-brief-lead",
     );
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
+  });
+});
+
+// A chip is the reader's receipt, and a receipt that only repeats the chip's
+// kind is no receipt. Where the server sent the record's own words, the date
+// they are dated and where they came from, resting on the chip opens exactly
+// that — and never the kind word again.
+describe("a citation's receipt", () => {
+  const receipted: Cited = {
+    ...cited("activity", "a-1", "Slots for the pilot review"),
+    quote: "Two slots next week would work on our side.",
+    at: "2026-05-01T09:00:00Z",
+    origin: "Email you sent",
+  };
+
+  it("opens the record's own words and where they came from", async () => {
+    const user = userEvent.setup();
+    renderCitations([receipted], false);
+
+    await user.click(
+      screen.getByRole("button", { name: "Slots for the pilot review" }),
+    );
+    expect(
+      screen.getByText("Two slots next week would work on our side."),
+    ).toBeTruthy();
+    // The origin and the date on one line, the date in the record's own
+    // calendar rather than as the wire's instant.
+    expect(screen.getByText("Email you sent · 01/05/2026")).toBeTruthy();
+    // Nowhere to go: an activity has no page of its own, and a receipt that
+    // offered one would be a button that does nothing.
+    expect(
+      screen.queryByRole("button", { name: "Open the record" }),
+    ).toBeNull();
+  });
+
+  it("never folds a receipted citation into a count", () => {
+    // A count cannot quote: a chip for two activities that opened one
+    // message's words would claim the other said the same.
+    renderCitations(
+      [
+        receipted,
+        {
+          ...cited("activity", "a-2", "Contract questions"),
+          origin: "Email you sent",
+        },
+      ],
+      false,
+    );
+    expect(
+      screen.getByRole("button", { name: "Slots for the pilot review" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Contract questions" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("2 activities")).toBeNull();
+  });
+
+  it("offers the record from the receipt when it has a page", async () => {
+    const user = userEvent.setup();
+    const open = vi.fn();
+    render(
+      <LocaleProvider initial="en">
+        <Citations
+          evidence={[
+            {
+              ...cited("deal", "d-1", "Fleet renewal 2027"),
+              at: "2026-03-14T09:00:00Z",
+              origin: "Open deal, last worked",
+            },
+          ]}
+          onOpenRecord={open}
+        />
+      </LocaleProvider>,
+    );
+
+    // The chip's own click opens the receipt, not the deal: a reader who
+    // rested on it to check the claim must not be carried off the page.
+    await user.click(
+      screen.getByRole("button", { name: "Fleet renewal 2027" }),
+    );
+    expect(open).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("Open deal, last worked · 14/03/2026"),
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Open the record" }));
+    expect(open).toHaveBeenCalledWith("deal", "d-1", []);
+  });
+});
+
+// Two receipted records of one kind are two chips — a receipt is never folded
+// into a count — and two chips of one kind with no name to tell them apart
+// are still two: keyed on the record each stands for, never on the kind.
+describe("two nameless receipted records of one kind", () => {
+  it("draw as two chips with keys of their own", () => {
+    const warned = vi.spyOn(console, "error").mockImplementation(() => {});
+    renderCitations(
+      [
+        {
+          ...cited("activity", "a-1"),
+          quote: "Two slots next week would work on our side.",
+          at: "2026-08-03T14:20:00Z",
+          origin: "Email they sent",
+        },
+        {
+          ...cited("activity", "a-2"),
+          quote: "Could you resend the pricing sheet before Friday?",
+          at: "2026-08-04T09:05:00Z",
+          origin: "Email they sent",
+        },
+      ],
+      false,
+    );
+    expect(screen.getAllByRole("button", { name: /activity/ })).toHaveLength(2);
+    const sameKey = warned.mock.calls.some((call) =>
+      String(call[0]).includes("same key"),
+    );
+    warned.mockRestore();
+    expect(sameKey).toBe(false);
   });
 });

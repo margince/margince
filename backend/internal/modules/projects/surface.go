@@ -18,6 +18,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -164,8 +165,8 @@ func (s *Store) ListProjectsForPersonTx(ctx context.Context, tx pgx.Tx, personID
 		                   SELECT 1 FROM relationship c
 		                    WHERE c.kind = 'project_company' AND c.project_id = p.id
 		                      AND c.organization_id = e.organization_id AND c.archived_at IS NULL)
-		               AND e.is_current_primary
-		               AND e.archived_at IS NULL AND e.ended_at IS NULL
+		               AND `+employment.CurrentPrimarySQL("e")+`
+		               AND e.archived_at IS NULL
 		               AND (%[4]s)))
 		 `+projectCardOrder+`
 		 LIMIT %[5]d`, personPos, scope, seatBound, employmentBound, projectSurfaceCap), args...)

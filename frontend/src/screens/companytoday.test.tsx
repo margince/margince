@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import type { AccountScan } from "./accountscan";
 import { TodayOnThisAccount } from "./companytoday";
 
 // The section earns its place by carrying what nothing else on the page says,
@@ -37,6 +38,7 @@ function show(
     failed?: boolean;
     onDraftTo?: (personId: string) => void;
     onPrepareMeeting?: (activityId: string) => void;
+    scan?: AccountScan;
   } = {},
 ) {
   const client = new QueryClient({
@@ -52,6 +54,7 @@ function show(
           failed={opts.failed ?? false}
           onDraftTo={opts.onDraftTo}
           onPrepareMeeting={opts.onPrepareMeeting}
+          scan={opts.scan}
         />
       </LocaleProvider>
     </QueryClientProvider>,
@@ -331,6 +334,45 @@ describe("the day's call, and which record it is read from", () => {
   // "Worth doing next"'s own rows are the OTHER half of the moves section —
   // merged into this one panel rather than a second card repeating the
   // account's own advice.
+  it("quotes the words the moment rests on, never the kind of record twice", () => {
+    show({
+      ...BASE,
+      moment: {
+        claim_key: "moment:open_promise",
+        evidence_fingerprint: "fp-1",
+        rule: "open_promise",
+        headline: "You owe Dana the contract",
+        why_now: "Promised on Monday, and nothing has gone out.",
+        confidence: "observed_fact",
+        evidence: [
+          {
+            type: "activity",
+            id: "a-1",
+            label: "They will send the contract",
+            snippet: "We'll get the contract over to you by Friday.",
+            observed_at: "2026-08-03T09:00:00Z",
+          },
+        ],
+        recommended_action: {
+          kind: "complete_task",
+          label: "Open it from the task list",
+          state: "blocked",
+        },
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /What this rests on/ }));
+    // The verbatim words lead; the claim, the kind of record and the day it
+    // was said sit under them as the origin line.
+    expect(
+      screen.getByText("We'll get the contract over to you by Friday."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "They will send the contract · From an exchange · 03/08/2026",
+      ),
+    ).toBeTruthy();
+  });
+
   it("carries the account's suggestions as moves alongside the context band", () => {
     show({
       ...BASE,
@@ -369,5 +411,138 @@ describe("a page is not the account", () => {
     });
     expect(screen.getByText("1+ overdue")).toBeTruthy();
     expect(screen.queryByText("1 overdue")).toBeNull();
+  });
+});
+
+// The scan on the needs list: the pending row while Margince reads, the
+// merged list once it has answered, and the foot that says who wrote it.
+describe("the account scan on the needs list", () => {
+  const ruleRow = {
+    kind: "no_reply" as const,
+    fingerprint: "f-1",
+    reason: "You reached out 15 days ago and nobody has come back.",
+    evidence: [],
+  };
+  const modelRow = {
+    kind: "question_unanswered" as const,
+    fingerprint: "f-2",
+    title: "Confirm the depot installation",
+    reason: "Dana asked whether installation can happen at their depot.",
+    written_by: "model" as const,
+    evidence: [
+      {
+        entity_type: "activity" as const,
+        entity_id: "a-3",
+        name: "Re: proposal",
+        quote:
+          "can you confirm whether the installation can be done at our depot",
+        at: "2026-08-03T14:20:00Z",
+        origin: "Email they sent",
+      },
+    ],
+  };
+
+  it("draws the pending row above the rules' rows while Margince reads", () => {
+    show(
+      { ...BASE, suggestions: [ruleRow] },
+      {
+        scan: {
+          organization_id: "o-1",
+          state: "running",
+          findings: [ruleRow],
+          findings_dropped: 0,
+        },
+      },
+    );
+    expect(
+      screen.getByText(
+        "Margince is reading this account's exchanges and deals.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(/nobody has come back/)).toBeTruthy();
+  });
+
+  it("draws the merged list once the read has answered, with the read's own foot", () => {
+    show(
+      { ...BASE, suggestions: [ruleRow] },
+      {
+        scan: {
+          organization_id: "o-1",
+          state: "done",
+          generated_at: "2026-08-07T08:58:00Z",
+          generated_by: "model",
+          read: { exchanges: 14, deals: 2 },
+          stale: true,
+          findings: [ruleRow, modelRow],
+          findings_dropped: 0,
+        },
+      },
+    );
+    expect(screen.getByText("Confirm the depot installation")).toBeTruthy();
+    expect(screen.getByText(/nobody has come back/)).toBeTruthy();
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByText("Written by Margince")).toBeTruthy();
+    expect(screen.getByText("Read 14 exchanges and 2 deals")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "The account has moved since. It is read again within the hour.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("says when a read the budget put off resumes", () => {
+    show(
+      { ...BASE, suggestions: [ruleRow] },
+      {
+        scan: {
+          organization_id: "o-1",
+          state: "queued",
+          resumes_at: "2026-08-07T09:30:00Z",
+          findings: [ruleRow],
+          findings_dropped: 0,
+        },
+      },
+    );
+    expect(
+      screen.getByText(/Reading resumes .*the AI budget deferred it/),
+    ).toBeTruthy();
+  });
+
+  it("counts one exchange and one deal in the singular", () => {
+    show(
+      { ...BASE, suggestions: [ruleRow] },
+      {
+        scan: {
+          organization_id: "o-1",
+          state: "done",
+          generated_at: "2026-08-07T08:58:00Z",
+          generated_by: "model",
+          read: { exchanges: 1, deals: 1 },
+          findings: [ruleRow],
+          findings_dropped: 0,
+        },
+      },
+    );
+    expect(screen.getByText("Read 1 exchange and 1 deal")).toBeTruthy();
+  });
+
+  it("says why the model did not write the rows when the read degraded", () => {
+    show(
+      { ...BASE, suggestions: [ruleRow] },
+      {
+        scan: {
+          organization_id: "o-1",
+          state: "degraded",
+          generated_at: "2026-08-07T08:58:00Z",
+          generated_by: "deterministic",
+          degrade_reason:
+            "No model lane is configured, so the rules' own advice stands alone.",
+          findings: [ruleRow],
+          findings_dropped: 0,
+        },
+      },
+    );
+    expect(screen.getByText(/No model lane is configured/)).toBeTruthy();
+    expect(screen.queryByText("Written by Margince")).toBeNull();
   });
 });

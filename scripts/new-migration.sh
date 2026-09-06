@@ -30,7 +30,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CORE_DIR="$ROOT/backend/migrations/core"
 
 NAME="${1:-}"
-if [ -z "$NAME" ]; then
+if [[ -z "$NAME" ]]; then
   echo "new-migration: a name is required, e.g. 'make migrate-create NAME=add_renewal_risk'" >&2
   exit 1
 fi
@@ -62,7 +62,7 @@ VERSION="$(date +%s)"
 # written, rather than in a gate whose advice is to re-stamp — which would
 # reproduce the same refused number.
 HIGHEST="$(find "$CORE_DIR" -maxdepth 1 -name '*.up.sql' -exec basename {} \; | cut -d_ -f1 | sort | tail -n1)"
-if [ -n "$HIGHEST" ] && ! [[ "$VERSION" > "$HIGHEST" ]]; then
+if [[ -n "$HIGHEST" ]] && ! [[ "$VERSION" > "$HIGHEST" ]]; then
   echo "new-migration: this machine's clock reads $VERSION, which does not sort above $HIGHEST, the highest version in backend/migrations/core — either the clock is behind, or a migration already in the tree was stamped by one that runs fast" >&2
   exit 1
 fi
@@ -73,7 +73,7 @@ DOWN="$CORE_DIR/${VERSION}_${NAME}.down.sql"
 # Two invocations inside the same second would otherwise silently overwrite the
 # first pair, which reads as the scaffold having done nothing.
 for f in "$UP" "$DOWN"; do
-  if [ -e "$f" ]; then
+  if [[ -e "$f" ]]; then
     echo "new-migration: $f already exists — wait a second and run again, or pick another name" >&2
     exit 1
   fi

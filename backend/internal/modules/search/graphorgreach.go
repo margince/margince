@@ -3,9 +3,11 @@
 
 package search
 
-// Which activities an ACCOUNT's context walk reads.
+import (
+	"fmt"
 
-import "fmt"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
+)
 
 // orgArms is the three links themselves — the account an activity is filed
 // against, the account its deal belongs to, and the employer of the contact it
@@ -14,10 +16,10 @@ import "fmt"
 // The deal arm deliberately does not exclude archived or lost deals: a set
 // stricter than the predicate would show a message on the timeline whose
 // account never gets a signal about it.
-const orgArms = `FROM activity_link l
+var orgArms = `FROM activity_link l
 		    LEFT JOIN deal d ON d.id = l.deal_id
 		    LEFT JOIN relationship r ON r.person_id = l.person_id AND r.kind = 'employment'
-		      AND r.ended_at IS NULL AND r.archived_at IS NULL`
+		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL`
 
 // participantEmployerArm is the fourth arm: the employer of somebody who is on
 // the event as a participant rather than as a link. Without it a meeting whose
@@ -28,10 +30,10 @@ const orgArms = `FROM activity_link l
 // TestTheAccountReachWalkIsOneAnswer. It is a constant of its own rather than
 // part of orgArms because the two modules also share orgArms with a producer
 // that deliberately stops at three arms (activities.OrgReachSet says why).
-const participantEmployerArm = `EXISTS (
+var participantEmployerArm = `EXISTS (
 		    SELECT 1 FROM activity_participant ap
 		      JOIN relationship emp ON emp.person_id = ap.person_id AND emp.kind = 'employment'
-		        AND emp.ended_at IS NULL AND emp.archived_at IS NULL
+		        AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
 		    WHERE ap.activity_id = a.id AND emp.organization_id = %s)`
 
 // activityReachesOrg is "this activity belongs to the account", for a query

@@ -11,6 +11,7 @@ package org360
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -27,6 +28,12 @@ type signalFacts struct {
 	Readable        bool
 	OpenCommitments int
 	ContractEnded   bool
+	// ContractEndedSaid and ContractEndedAt are the newest open contract_ended
+	// signal's own sentence and when it was read. They are what the
+	// contradiction rule cites, so a reader checks the conflict against the
+	// words that raised it rather than against a rule's paraphrase of them.
+	ContractEndedSaid string
+	ContractEndedAt   time.Time
 	// Worst is the most serious signal standing open, or absent when nothing
 	// is. Severity first, then the newest of that severity — an older warning
 	// that has been sitting there is less news than the one that just arrived.
@@ -73,28 +80,44 @@ func readSignalFacts(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (
 		scope = scopeAll
 	}
 	facts := signalFacts{Readable: true}
-	var kind, severity, summary *string
+	var kind, severity, summary, endedSaid *string
+	var endedAt *time.Time
 	// One read serves three readers: the strip states the worst, the health
 	// section counts the commitments, and the contradiction rule asks whether
-	// the contract ended. Three queries would let them describe three instants.
+	// the contract ended — and what the mail that says so said. Three queries
+	// would let them describe three instants.
 	if err := tx.QueryRow(ctx, fmt.Sprintf(`
 		WITH open_signals AS (
 			SELECT s.id, s.kind, s.severity, s.summary, s.detected_at FROM signal s
 			 WHERE %[1]s AND s.status = 'open' AND s.archived_at IS NULL AND %[2]s
 		)
 		SELECT (SELECT count(*) FROM open_signals WHERE kind = 'commitment_made'),
-		       EXISTS (SELECT 1 FROM open_signals WHERE kind = 'contract_ended'),
+		       ended.summary, ended.detected_at,
 		       worst.kind, worst.severity, worst.summary
 		  FROM (SELECT 1) one
+		  LEFT JOIN LATERAL (
+			SELECT summary, detected_at FROM open_signals
+			 WHERE kind = 'contract_ended'
+			 ORDER BY detected_at DESC, id DESC
+			 LIMIT 1) ended ON true
 		  LEFT JOIN LATERAL (
 			SELECT kind, severity, summary FROM open_signals
 			 ORDER BY CASE severity WHEN 'urgent' THEN 0 WHEN 'warn' THEN 1 ELSE 2 END,
 			          detected_at DESC, id DESC
 			 LIMIT 1) worst ON true`,
 		signals.OfOrganizationWhere(orgPos), scope), args...).
-		Scan(&facts.OpenCommitments, &facts.ContractEnded,
+		Scan(&facts.OpenCommitments, &endedSaid, &endedAt,
 			&kind, &severity, &summary); err != nil {
 		return signalFacts{}, fmt.Errorf("read the account's open signals: %w", err)
+	}
+	// The signal's presence IS the fact; its words and date decorate the
+	// citation. A row with a NULL summary still ends the contract.
+	if endedAt != nil {
+		facts.ContractEnded = true
+		facts.ContractEndedAt = *endedAt
+	}
+	if endedSaid != nil {
+		facts.ContractEndedSaid = *endedSaid
 	}
 	if kind != nil && severity != nil && summary != nil {
 		facts.Worst = signalHeadline{Kind: *kind, Severity: *severity, Summary: *summary}

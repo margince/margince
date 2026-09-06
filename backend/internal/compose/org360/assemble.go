@@ -55,6 +55,9 @@ type Service struct {
 	projects  *projects.Store
 	approvals *approvals.Service
 	now       func() time.Time
+	// scans recognises a dismissal of advice the account scan raised, when a
+	// deployment has one. See RecogniseScanFindings.
+	scans ScanRecogniser
 }
 
 // NewService binds the composite read to the module stores it composes.

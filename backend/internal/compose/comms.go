@@ -132,6 +132,23 @@ func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent st
 // drafter takes text, not records, and reading a company's fields into the
 // opening line would make the draft's content depend on data the approving
 // human is not looking at. They are carried for the SEND to file under.
+//
+// IT PERSISTS NOTHING, and that is deliberate rather than unfinished.
+//
+// It returns text and writes no timeline row, which is the same answer the HTTP
+// draft endpoint gives — the one the web app's own draft button calls. That
+// agreement is the feature: the same act should not mean two different things
+// depending on whether a person did it through the app or through an agent.
+// Drafting proposes words; sending is the separate consent-gated act, and a
+// draft that filed itself would put messages nobody sent on the record a rep
+// goes to for what actually happened with a customer.
+//
+// agents.FollowUpDrafter deliberately does the opposite and says so at its own
+// declaration. It is not the same act: this drafts ONE message meant to be sent
+// now, and that drafts N for later triage — a batch living only in a transcript
+// would be unusable, since nobody triages ten drafts out of a chat scrollback.
+// Two writers of one invariant either share a helper or say why they do not;
+// these legitimately do not, and this is the saying why.
 func (c commsAdapter) DraftAccountEmail(
 	ctx context.Context, links []agents.RecordLink, intent string,
 ) (string, string, error) {

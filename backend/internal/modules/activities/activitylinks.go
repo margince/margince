@@ -44,6 +44,9 @@ const fieldLinks = "links"
 // a call the store would reject — this is the bound that holds for every
 // transport, a human's own send included. insertActivityLinks applies it at
 // the write itself, which is where a booking meets it.
+//
+// Two sibling modules and the trigger that enforces it spell the same number.
+// Held by: TestTheLinkCeilingHasOneValue (backend/gates/linkceilingparity_test.go)
 const maxActivityLinks = 25
 
 // TooManyLinksError refuses an activity filed under more records than the

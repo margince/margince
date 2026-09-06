@@ -86,7 +86,7 @@ func (h Handlers) RequestDealRoomLink(w http.ResponseWriter, r *http.Request) {
 	// to cancel between the reissue committing and the mail going out, which
 	// would retire a credential and deliver nothing. The reissue is attributed
 	// to the installation, the same actor the other anonymous edges write under.
-	w.WriteHeader(http.StatusAccepted)
+	answerAndFlush(w, r, http.StatusAccepted)
 	ctx := principal.WithActor(context.WithoutCancel(r.Context()), linkRequestPrincipal)
 	// The ask is recorded for the seller whether or not a link can go out:
 	// without a relay, the seller handing one over is the only way in.
@@ -112,6 +112,34 @@ func (h Handlers) RequestDealRoomLink(w http.ResponseWriter, r *http.Request) {
 				"participant_id", inv.Participant.Id, "err", sendErr)
 		}
 		h.recordSendOutcome(attributed, inv, sendErr)
+	}
+}
+
+// answerAndFlush writes the status AND pushes it to the caller, before the
+// handler returns.
+//
+// WriteHeader on its own does not reach the network: net/http buffers a
+// response until the handler returns, so a 202 written before the work is
+// still delivered after it. The uniform status, body and headers this edge
+// already takes care over are then undone by the clock — an anonymous caller
+// times a known address against an unknown one and learns which addresses this
+// installation has seats for.
+//
+// Through ResponseController rather than a `w.(http.Flusher)` assertion, and
+// that is the difference between closing the leak and appearing to: the writer
+// a handler sees here is wrapped for access logging and correlation, and a type
+// assertion against the wrapper answers false while the writer underneath
+// flushes perfectly well. The controller unwraps.
+//
+// A writer that genuinely cannot flush is logged rather than refused. The
+// answer is already correct — it is only early — and failing an anonymous
+// request because the timing is imperfect trades a side channel for an outage.
+func answerAndFlush(w http.ResponseWriter, r *http.Request, status int) {
+	w.WriteHeader(status)
+	if err := http.NewResponseController(w).Flush(); err != nil {
+		slog.ErrorContext(r.Context(),
+			"deal room link request could not flush its answer before the work; "+
+				"a caller can time a known address against an unknown one", "err", err)
 	}
 }
 

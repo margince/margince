@@ -443,7 +443,10 @@ describe("useBuiltinCommands", () => {
         jsonResponse(
           meFixture({
             roles: [],
-            allow: { organization: ["read"] },
+            // The write, which is what Company profile asks: the read is held
+            // by every seat and stopped opening the page when the four
+            // configuration pages moved off the reads.
+            allow: { organization: ["read", "update"] },
             settingsAvailability:
               opts.companyContext === null
                 ? null
