@@ -1,9 +1,8 @@
 # CodeRabbit review scope: keep the AI review on hand-written code and skip
 # what we do not hand-write — generated contract types, build config, and the
 # design-system story/UAT fixtures the fe-uat gate renders. Deliberately wider
-# than sonar-project.properties: migrations (hand-written SQL incl. the RLS
-# policies) and the frontend gate scripts stay reviewed here even though Sonar
-# skips them.
+# than sonar-project.properties: migrations and the frontend gate scripts stay
+# reviewed here even though Sonar skips them.
 language: en-US
 reviews:
   # Negated globs exclude; everything else is reviewed as normal.
@@ -18,6 +17,41 @@ reviews:
     - "!frontend/src/**/*.stories.tsx"
     - "!**/pnpm-lock.yaml"
     - "!**/go.sum"
+  # What the reviewer may not conclude about a path, as opposed to which paths
+  # it reads.
+  #
+  # The reviewer twice filed a Major finding on hand-written Go under backend/,
+  # citing a repository rule "backend/**/*.go: Never edit." and asking for the
+  # revert of a correct change. That rule exists in no file here: the glob
+  # appears nowhere in the tree, and the block above carries no instructions at
+  # all — only negated filters.
+  #
+  # Stated here rather than hunted, because it works whichever the cause is. A
+  # rule configured outside the repository is overridden by one inside it, and a
+  # model inferring a prohibition from AGENTS.md's own "Do not touch" section is
+  # given something true to read instead of something to guess from. It also
+  # needs no reproduction, which matters: the finding has not fired in months,
+  # so a fix made elsewhere would have nothing to confirm itself against.
+  #
+  # And it is in the repo, where a public contributor can read it. A rule only
+  # its administrator can see is one the next author cannot check when the bot
+  # tells them to revert correct work — which is the shape of the harm here.
+  # The finding was filed Major, which blocks; and on one of the two occasions
+  # the same reviewer's other finding in that round was genuinely valuable. A
+  # reviewer that is usually right is exactly the one whose wrong advice gets
+  # taken.
+  path_instructions:
+    - path: "backend/**/*.go"
+      instructions: |
+        Hand-written Go under backend/ is the product and is expected to change.
+        Do NOT advise reverting a change merely for touching this path, and do
+        not cite a repository rule forbidding it: no such rule exists.
+
+        The paths that genuinely are off-limits, and the only ones: **/*_gen.go
+        and backend/internal/contracts/** are generated from backend/api/crm.yaml
+        and are never hand-edited; an already-applied migration under
+        backend/migrations/core/ is additive-only, so amending one is a finding
+        while adding a new one is ordinary work.
   auto_review:
     enabled: true
     # Draft PRs get no review — matches the CI path-filter's draft skip (the
