@@ -53,6 +53,13 @@ ONLY="${SCENARIO:-}"
 # Override to measure a different model deliberately — that is a different
 # question, honestly asked.
 E2E_LLM_MODEL="${E2E_LLM_MODEL:-claude-opus-5}"
+
+# The VERDICTS are committed and the transcripts are not, so they do not share a
+# directory. A verdict is filed the way the certification lane files one: under
+# the records tree, in a folder named for the model that produced it, because a
+# pass rate belongs to the model it was measured on and nothing else about a
+# result survives being read as another model's.
+VERDICT_DIR="${E2E_LLM_VERDICTS:-$ROOT/backend/internal/compose/aicert/records/mcp_e2e/$E2E_LLM_MODEL}"
 KEEP="${E2E_LLM_KEEP:-0}"
 
 if [[ "${MARGINCE_E2E_LLM:-0}" != "1" ]]; then
@@ -367,8 +374,12 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   # The record, kept whether it passed or not. Most of the defects fixed this
   # month were found by reading a run that technically passed.
   mkdir -p "$RECORD_DIR"
+  # One file per scenario, not one per day: this verdict is COMMITTED and is
+  # what mcp-tool-coverage.md publishes, so the current answer has to be at a
+  # stable path. Git carries what it replaced.
+  mkdir -p "$VERDICT_DIR"
   python3 "$ROOT/e2e/llm/check.py" --record "$scenario" "$ok" "$runs" \
-    > "$RECORD_DIR/${name}_$(date -u '+%Y-%m-%d').json"
+    > "$VERDICT_DIR/${name}.json"
   cp "$WORK/$name".run*.jsonl "$RECORD_DIR/" 2>/dev/null || true
 done
 

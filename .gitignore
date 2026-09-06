@@ -184,8 +184,13 @@ workspace/
 /seed-demo
 
 # e2e-llm run artifacts. The lane writes a transcript per run (hundreds of KB
-# each) plus a small verdict file. They are evidence for the run that produced
-# them, not repository content — read them locally, do not carry them in git.
+# each) plus a small verdict file. The TRANSCRIPTS are evidence for the run that
+# produced them, not repository content — read them locally.
+#
+# The verdicts are not here: they are committed, beside the certification lane's
+# own records, under backend/internal/compose/aicert/records/mcp_e2e/<model>/.
+# A pass rate nobody can read without paying for a run again is a number the
+# next reader has to take on trust.
 e2e/llm/records/
 
 # The three binaries `make dev` and the build targets produce. Named here for

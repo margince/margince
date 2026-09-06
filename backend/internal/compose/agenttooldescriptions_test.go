@@ -270,8 +270,11 @@ func TestTheOperatorConsoleServesTheTextAnMCPClientIsServed(t *testing.T) {
 // outside two sanctioned ones may build a Job at all.
 //
 // So the fraction now bounds a DECLARED agent's listing, and the arithmetic it
-// was fighting is gone: the whole catalog is ~16,829 tokens, and the fattest
-// agent that actually runs is ~2,190. The bound is ~7.5x the worst real case.
+// was fighting is gone: the fattest agent that actually runs is an order of
+// magnitude inside it. The figures are NOT written here — they moved with every
+// change that touched a description, and two of them sat wrong in this comment
+// for weeks. docs/reference/agent-tool-budget.md is regenerated from the served
+// surface and is the place that carries them.
 //
 // The fraction itself is deliberately UNCHANGED at 17/24. Re-tightening it in
 // the change that creates the room would spend the room before anyone can argue
@@ -319,6 +322,33 @@ const (
 	wholeCatalogBudgetDenominator = 8
 )
 
+// oneToolBudgetNumerator/Denominator bound a SINGLE tool's rendered entry.
+//
+// The two bounds above ration the listing as a whole, and neither of them is
+// what actually moves: between 2026-09-03 and 2026-09-06 the catalog grew 1,809
+// tokens, and 707 of that was existing tools getting fatter — run_report alone
+// took +153 across six changes that each appended one more aggregate to the
+// same sentence. No individual change was worth objecting to and nothing
+// counted them together, which is what a whole-catalog floor 7,000 tokens away
+// cannot see.
+//
+// 1/32 of the window. The fraction is not a judgement about how much a tool
+// deserves — it is set just above the fattest tool the surface ships, so the
+// bound is a ratchet on the ONE tool that is drifting rather than a budget
+// every tool is invited to spend up to.
+//
+// WHEN THIS FIRES, the answer is not a bigger fraction. It is the move this
+// tree has already made twice and measured both times: publish the enumeration
+// as a document and have the description name it. run_report's own vocabulary
+// went that way (reportvocabularydoc.go) and so did the per-record_type write
+// fields, and the second one bought back 18% of the whole listing. A tool that
+// cannot be answered that way is a tool worth splitting, and either is a better
+// conversation than raising this by one thirty-second.
+const (
+	oneToolBudgetNumerator   = 1
+	oneToolBudgetDenominator = 32
+)
+
 // Every written description rides in every step of the window of every agent
 // that attaches its tool, and nothing in the loop notices if they grow. Each
 // declared agent's listing is measured by rendering it — the runner's own
@@ -330,6 +360,58 @@ func TestEachAgentsToolListingLeavesItsRunRoomInTheWindow(t *testing.T) {
 		if over := listingOverBudget(spec.Name, specsNamed(t, spec.Tools)); over != "" {
 			t.Error(over)
 		}
+	}
+}
+
+// oneToolTokens estimates what ONE tool's rendered entry costs, by the same
+// ~4-bytes rule and the same renderer the window itself uses. Shared with the
+// published budget page rather than spelled twice: the page's tool_cost rows
+// and this bound have to be the same number, or the page cannot be read to find
+// out what tripped the gate.
+func oneToolTokens(spec mcp.ToolSpec) int {
+	return len(runner.ToolListing([]mcp.ToolSpec{spec})) / 4
+}
+
+// toolOverBudget names a tool that takes more of the window than any single one
+// may, or "" when nothing is wrong. A function over one spec rather than a loop
+// body so the refusal can be proved against a tool that breaks it.
+func toolOverBudget(spec mcp.ToolSpec) string {
+	budget := runner.MinimumPromptWindow * oneToolBudgetNumerator / oneToolBudgetDenominator
+	tokens := oneToolTokens(spec)
+	if tokens <= budget {
+		return ""
+	}
+	return fmt.Sprintf(
+		"tool %q renders ~%d tokens against the %d one tool may take of a %d-token window — "+
+			"publish the enumeration it recites as a document and name it, the way run_report's "+
+			"own plan vocabulary and the record_type write fields already are",
+		spec.Name, tokens, budget, runner.MinimumPromptWindow)
+}
+
+// A single tool is bounded as well as the listing that carries it. The two
+// bounds above ration a MENU; nothing watched one entry on it grow, which is
+// where the drift actually happened.
+func TestNoSingleToolTakesMoreOfTheWindowThanItsShare(t *testing.T) {
+	for _, spec := range servedSurface(t).Specs() {
+		if over := toolOverBudget(spec); over != "" {
+			t.Error(over)
+		}
+	}
+}
+
+// The bound is only worth having if it fires, and no shipped tool breaks it —
+// so the failing case has to be built rather than borrowed.
+func TestTheOneToolBudgetRefusesADescriptionThatFillsTheWindow(t *testing.T) {
+	fat := mcp.ToolSpec{
+		Name:        "recites_its_whole_vocabulary",
+		Description: strings.Repeat("every filter this report accepts, by name. ", 400),
+	}
+	if toolOverBudget(fat) == "" {
+		t.Error("a tool reciting a whole vocabulary was reported as within budget, so this bound " +
+			"would not stop one description from crowding out the observations a run reasons over")
+	}
+	if over := toolOverBudget(servedSurface(t).Specs()[0]); over != "" {
+		t.Errorf("a shipped tool was reported over budget: %s", over)
 	}
 }
 
@@ -351,9 +433,8 @@ func listingOverBudget(agent string, specs []mcp.ToolSpec) string {
 		agent, tokens, budget, runner.MinimumPromptWindow)
 }
 
-// The bound is only worth having if it fires. The whole catalog is ~16,829
-// tokens and the budget is 17,000, so even every tool at once does not break it
-// — which is the change working, and also why the failing case has to be built
+// The bound is only worth having if it fires. No shipped agent comes near it —
+// which is the change working, and also why the failing case has to be built
 // rather than borrowed.
 func TestTheAgentListingBudgetRefusesAListingThatWouldFillTheWindow(t *testing.T) {
 	all := servedSurface(t).Specs()

@@ -1,0 +1,10 @@
+{
+  "scenario": "case7_ask_for_a_number",
+  "criteria": [
+    1,
+    3
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2
+}

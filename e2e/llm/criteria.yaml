@@ -1,0 +1,57 @@
+# The acceptance criteria the use-case lane scores against.
+#
+# WHY THIS FILE EXISTS: a scenario declares `criteria: [8, 14]`, and until this
+# file those numbers named nothing a reader of this repository could reach. The
+# statements were written down elsewhere, so the lane published grades against
+# criteria a public contributor could not look up — and neither could anyone
+# reading docs/reference/mcp-tool-coverage.md, which is the page a decision gets
+# made from.
+#
+# Each entry is the ONE sentence saying what the criterion asks of the
+# assistant. It is the summary, not the specification: the case that scores it
+# is the specification, and every criterion here names the cases that do.
+#
+# A number a scenario declares and this file does not carry fails
+# TestEveryDeclaredCriterionIsNamed. Add it here in the change that declares it.
+version: 1
+criteria:
+  1:
+    name: A briefing arrives without naming a record
+    statement: >-
+      The request identifies an account by something other than its name, and
+      the assistant finds the record anyway rather than asking which one.
+  2:
+    name: NEEDS A STATEMENT
+    statement: >-
+      Not yet written down in this repository. Declared by case5.
+  3:
+    name: NEEDS A STATEMENT
+    statement: >-
+      Not yet written down in this repository. Declared by case6 and case7.
+  4:
+    name: A possible duplicate is reported, not just filed
+    statement: >-
+      The create's own answer carries the duplicate it queued, and the assistant
+      reads what came back and says so — a queue nobody is told about is a queue
+      nobody reads.
+  5:
+    name: The unkept promise is noticed
+    statement: >-
+      Somebody said they would send something and there is no record it went.
+      Reading across the timeline to spot the gap is the point.
+  6:
+    name: Check with the owner before turning up
+    statement: >-
+      The assistant tells the rep to confirm with the account owner rather than
+      acting on a proximity answer alone.
+  8:
+    name: Promises come back as suggestions
+    statement: >-
+      Only what was actually promised is reported. Listing every topic that was
+      discussed means the reader is reciting what it saw rather than what was
+      committed to.
+  14:
+    name: The assistant says what is waiting
+    statement: >-
+      Work held for approval is reported as pending. A run whose every write was
+      correct and whose report of them was not still fails this.

@@ -1,0 +1,11 @@
+{
+  "scenario": "case6_ask_the_company",
+  "criteria": [
+    1,
+    3,
+    5
+  ],
+  "passed": 0,
+  "runs": 3,
+  "pass_at": 2
+}

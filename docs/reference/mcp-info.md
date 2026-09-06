@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 73 |
 | Resources | 12 |
-| Tool catalog | 203.8 KB |
+| Tool catalog | 204.2 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 53327 |
+| Approx. wire tokens | 53424 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 96.5 KB | 47% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 49.9 KB | 24% | Yes, every step |
-| Input schemas | 42.1 KB | 20% | Yes, every step |
+| Input schemas | 42.4 KB | 20% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.4 KB | 7% | Partly |
-| **Description + input schema** | **91.9 KB** | **45%** | **the recurring cost** |
+| **Description + input schema** | **92.3 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -109,7 +109,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 8.7 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.9 KB |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 4.2 KB |
-| [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.0 KB |
+| [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.4 KB |
 | [`promote_lead`](#promote_lead) | Promote a lead to a person |  |  | 2.4 KB |
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.0 KB |
@@ -8869,6 +8869,21 @@ Move a deal to a new stage and leave a note on its timeline saying why, in one c
     "to_stage_id": {
       "description": "The target stage, by id — obtain it from list_pipelines, since a deal you have read carries only the stage it is already IN. That stage's semantic decides what happens next: open executes immediately, won or lost is staged for a human's approval.",
       "format": "uuid",
+      "type": "string"
+    },
+    "won_without_contract_detail": {
+      "description": "What the reason was, required when it is other",
+      "type": "string"
+    },
+    "won_without_contract_reason": {
+      "description": "Why this win has no contract behind it. Omit when the deal has a signed contract with its paper attached; a win claiming neither is refused.",
+      "enum": [
+        "imported",
+        "purchase_order",
+        "verbal",
+        "renewal_by_email",
+        "other"
+      ],
       "type": "string"
     }
   },

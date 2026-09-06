@@ -18,8 +18,8 @@
   "context_scopes": null,
   "score_p50": 100,
   "score_min": 100,
-  "latency_p50": 1607,
-  "latency_p95": 1821,
+  "latency_p50": 1589,
+  "latency_p95": 1804,
   "mean_tokens": 382,
   "mean_tokens_in": 296,
   "mean_tokens_out": 86,
@@ -29,7 +29,7 @@
   "judge_served_model": "gemini-3.5-flash",
   "self_judged": false,
   "served_identity_source": "echo",
-  "ran_at": "2026-09-03T04:10:08Z",
+  "ran_at": "2026-09-06T16:06:52Z",
   "scenarios": [
     {
       "scenario": "reorder_two_candidates_by_momentum",

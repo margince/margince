@@ -1,0 +1,10 @@
+{
+  "scenario": "case4_use_the_moment",
+  "criteria": [
+    1,
+    6
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2
+}

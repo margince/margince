@@ -115,7 +115,7 @@ func renderAgentToolBudget(t *testing.T) agentToolBudget {
 	cost := make([]toolCostRow, 0, len(specs))
 	sum := 0
 	for _, spec := range specs {
-		tokens := len(runner.ToolListing([]mcp.ToolSpec{spec})) / 4
+		tokens := oneToolTokens(spec)
 		cost = append(cost, toolCostRow{Name: spec.Name, Tokens: tokens})
 		sum += tokens
 	}

@@ -6,9 +6,9 @@
   "catalog": {
     "tools": 73,
     "system_frame_tokens": 353,
-    "tokens": 21594,
+    "tokens": 21691,
     "median_tool_tokens": 263,
-    "mean_tool_tokens": 295
+    "mean_tool_tokens": 296
   },
   "agents": [
     {
@@ -99,6 +99,10 @@
       "tokens": 508
     },
     {
+      "name": "progress_deal",
+      "tokens": 501
+    },
+    {
       "name": "resolve_entities",
       "tokens": 498
     },
@@ -125,10 +129,6 @@
     {
       "name": "annotate_brief",
       "tokens": 418
-    },
-    {
-      "name": "progress_deal",
-      "tokens": 404
     },
     {
       "name": "review_commitments",

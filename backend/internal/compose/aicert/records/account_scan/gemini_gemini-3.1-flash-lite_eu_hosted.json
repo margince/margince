@@ -1,0 +1,61 @@
+{
+  "task": "account_scan",
+  "provider": "gemini",
+  "served_model": "gemini-3.1-flash-lite",
+  "env_class": "eu_hosted",
+  "prompt_version": "pe452612fd31904d15fe270e36a0375ee",
+  "corpus_version": "v1",
+  "verdict": "not_supported",
+  "runs": 6,
+  "passed": 4,
+  "reliability": 0.6666666666666666,
+  "reported_accepted": 4,
+  "reported_wrong_answer": 2,
+  "reported_invalid": 0,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": [
+    "identity"
+  ],
+  "score_p50": 100,
+  "score_min": 100,
+  "latency_p50": 1430,
+  "latency_p95": 2334,
+  "mean_tokens": 1782,
+  "mean_tokens_in": 1660,
+  "mean_tokens_out": 122,
+  "mean_cached_tokens": 0,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 598,
+  "judge_served_model": "mistralai/mistral-large-2512",
+  "self_judged": false,
+  "served_identity_source": "response",
+  "ran_at": "2026-09-06T15:36:28Z",
+  "scenarios": [
+    {
+      "scenario": "scan_finds_the_promise_we_did_not_keep",
+      "site": "org_scan",
+      "stamp": "c1e912acef23381bdf30b568943a1f200d75da09bcc0522ef2328c7927b430d448b9ffe96bc40d164fb994c2e7df001d0e3247146cc0b33aceef194430667fcdf9a75eec6cb584f62a3cd91298ee0efbfaa57d598630834e96702c8200bfabde",
+      "verdict": "not_supported",
+      "runs": 3,
+      "passed": 1,
+      "reported_accepted": 1,
+      "reported_wrong_answer": 2,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "scan_finds_the_question_nobody_answered",
+      "site": "org_scan",
+      "stamp": "eaaf85429d968899453060e4eb8d46a0d64b3b88651cb9ac331862e15c0473bfb464bb81b59b5d1274609c09f0b33ba68dc3782034c180d5f36a1e4af446475f059751fb7ff9b7c0a35bfec16751a98c5f744ebc773cfbaa8d4acda46e014950",
+      "verdict": "certified",
+      "runs": 3,
+      "passed": 3,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}

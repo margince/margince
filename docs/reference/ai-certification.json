@@ -1,12 +1,12 @@
 {
   "totals": {
     "sites": 42,
-    "sites_best_current": 29,
+    "sites_best_current": 42,
     "sites_best_partial": 0,
-    "sites_best_stale": 9,
-    "sites_absent": 4,
-    "scenarios": 142,
-    "records": 59,
+    "sites_best_stale": 0,
+    "sites_absent": 0,
+    "scenarios": 141,
+    "records": 81,
     "bindings": 10
   },
   "bindings": [
@@ -16,18 +16,18 @@
         "model": "gemini-3.1-flash-lite",
         "env": "eu_hosted"
       },
-      "sites": 20,
-      "sites_current": 13,
-      "sites_partial": 1,
-      "sites_stale": 6,
-      "runs": 236,
-      "passed": 215,
-      "reliability": 0.9110169491525424,
-      "slowest_p95_ms": 3370,
+      "sites": 36,
+      "sites_current": 36,
+      "sites_partial": 0,
+      "sites_stale": 0,
+      "runs": 378,
+      "passed": 330,
+      "reliability": 0.873015873015873,
+      "slowest_p95_ms": 4970,
       "bands": {
-        "certified": 13,
-        "supported_degraded": 1,
-        "not_supported": 6
+        "certified": 17,
+        "supported_degraded": 5,
+        "not_supported": 14
       }
     },
     {
@@ -36,18 +36,18 @@
         "model": "gemini-3.1-pro-preview",
         "env": "eu_hosted"
       },
-      "sites": 3,
-      "sites_current": 0,
+      "sites": 6,
+      "sites_current": 6,
       "sites_partial": 0,
-      "sites_stale": 3,
-      "runs": 18,
-      "passed": 18,
+      "sites_stale": 0,
+      "runs": 36,
+      "passed": 36,
       "reliability": 1,
-      "slowest_p95_ms": 44515,
+      "slowest_p95_ms": 46554,
       "bands": {
-        "certified": 2,
+        "certified": 4,
         "supported_degraded": 0,
-        "not_supported": 1
+        "not_supported": 2
       }
     },
     {
@@ -56,18 +56,18 @@
         "model": "gemini-3.5-flash",
         "env": "eu_hosted"
       },
-      "sites": 9,
-      "sites_current": 6,
+      "sites": 13,
+      "sites_current": 13,
       "sites_partial": 0,
-      "sites_stale": 3,
-      "runs": 63,
-      "passed": 59,
-      "reliability": 0.9365079365079365,
-      "slowest_p95_ms": 20319,
+      "sites_stale": 0,
+      "runs": 90,
+      "passed": 86,
+      "reliability": 0.9555555555555556,
+      "slowest_p95_ms": 26168,
       "bands": {
-        "certified": 7,
+        "certified": 9,
         "supported_degraded": 0,
-        "not_supported": 2
+        "not_supported": 4
       }
     },
     {
@@ -157,16 +157,16 @@
         "env": "eu_hosted"
       },
       "sites": 6,
-      "sites_current": 5,
+      "sites_current": 6,
       "sites_partial": 0,
-      "sites_stale": 1,
+      "sites_stale": 0,
       "runs": 42,
-      "passed": 39,
-      "reliability": 0.9285714285714286,
-      "slowest_p95_ms": 4477,
+      "passed": 37,
+      "reliability": 0.8809523809523809,
+      "slowest_p95_ms": 4337,
       "bands": {
-        "certified": 5,
-        "supported_degraded": 0,
+        "certified": 4,
+        "supported_degraded": 1,
         "not_supported": 1
       }
     },
@@ -176,18 +176,18 @@
         "model": "openai/gpt-oss-120b",
         "env": "eu_hosted"
       },
-      "sites": 31,
-      "sites_current": 22,
+      "sites": 35,
+      "sites_current": 35,
       "sites_partial": 0,
-      "sites_stale": 9,
-      "runs": 333,
-      "passed": 269,
-      "reliability": 0.8078078078078078,
-      "slowest_p95_ms": 68516,
+      "sites_stale": 0,
+      "runs": 369,
+      "passed": 289,
+      "reliability": 0.7831978319783198,
+      "slowest_p95_ms": 5546,
       "bands": {
         "certified": 12,
-        "supported_degraded": 7,
-        "not_supported": 12
+        "supported_degraded": 9,
+        "not_supported": 14
       }
     },
     {
@@ -217,9 +217,20 @@
       "site": "org_scan",
       "key": "account_scan/org_scan",
       "scope": "full_invocation",
-      "missing_context_scopes": [],
-      "best_state": "absent",
-      "recommended": null,
+      "missing_context_scopes": [
+        "identity"
+      ],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "supported_degraded",
+        "reliability": 0.6666666666666666,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "scan_finds_the_promise_we_did_not_keep",
@@ -232,7 +243,54 @@
           "file": "backend/internal/compose/aicert/corpus/account_scan/question_left_unanswered_01.yaml"
         }
       ],
-      "records": []
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 4,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 1430,
+          "latency_p95_ms": 2334,
+          "reported": {
+            "accepted": 4,
+            "wrong_answer": 2,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 4,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 1197,
+          "latency_p95_ms": 3988,
+          "reported": {
+            "accepted": 4,
+            "wrong_answer": 2,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
     },
     {
       "task": "agent_loop",
@@ -245,8 +303,17 @@
         "sales",
         "offer"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "not_supported",
+        "reliability": 0.8695652173913043,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_description_is_not_a_name",
@@ -272,11 +339,6 @@
           "name": "a_promise_is_not_a_slipping_deal",
           "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/agent_loop/a_promise_is_not_a_slipping_deal.yaml"
-        },
-        {
-          "name": "a_stepless_deal_is_a_slipping_deal",
-          "expects": "accepted",
-          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_stepless_deal_is_a_slipping_deal.yaml"
         },
         {
           "name": "a_structured_question_is_not_a_text_search",
@@ -376,22 +438,22 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "not_supported",
-          "scenarios_measured": 0,
-          "scenarios_total": 24,
+          "scenarios_measured": 23,
+          "scenarios_total": 23,
           "runs": 69,
-          "passed": 59,
-          "reliability": 0.855072463768116,
-          "latency_p50_ms": 955,
-          "latency_p95_ms": 1314,
+          "passed": 60,
+          "reliability": 0.8695652173913043,
+          "latency_p50_ms": 1219,
+          "latency_p95_ms": 1604,
           "reported": {
-            "accepted": 59,
-            "wrong_answer": 10,
+            "accepted": 60,
+            "wrong_answer": 9,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "23 scenarios it scored have changed since, or the prompts built from them have: a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_structured_question_is_not_a_text_search and 17 more"
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -402,7 +464,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": null,
-          "scenarios_total": 24,
+          "scenarios_total": 23,
           "runs": 115,
           "passed": 74,
           "reliability": 0.6434782608695652,
@@ -422,22 +484,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "not_supported",
-          "scenarios_measured": 0,
-          "scenarios_total": 24,
+          "scenarios_measured": 23,
+          "scenarios_total": 23,
           "runs": 69,
-          "passed": 39,
-          "reliability": 0.5652173913043478,
-          "latency_p50_ms": 7242,
-          "latency_p95_ms": 39483,
+          "passed": 36,
+          "reliability": 0.5217391304347826,
+          "latency_p50_ms": 1603,
+          "latency_p95_ms": 2402,
           "reported": {
-            "accepted": 39,
-            "wrong_answer": 19,
-            "invalid": 11,
+            "accepted": 36,
+            "wrong_answer": 17,
+            "invalid": 16,
             "abstained": 0
           },
-          "stale_reason": "23 scenarios it scored have changed since, or the prompts built from them have: a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_structured_question_is_not_a_text_search and 17 more"
+          "stale_reason": ""
         }
       ]
     },
@@ -474,13 +536,13 @@
           },
           "state": "current",
           "band": "certified",
-          "scenarios_measured": null,
+          "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 2865,
-          "latency_p95_ms": 3003,
+          "latency_p50_ms": 3168,
+          "latency_p95_ms": 3568,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -525,8 +587,8 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 1607,
-          "latency_p95_ms": 1821,
+          "latency_p50_ms": 1589,
+          "latency_p95_ms": 1804,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -566,8 +628,17 @@
       "key": "capture_classify/classify",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_message_that_is_both_is_labelled_commitment",
@@ -602,22 +673,22 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 5,
           "scenarios_total": 5,
           "runs": 15,
           "passed": 15,
           "reliability": 1,
-          "latency_p50_ms": 1094,
-          "latency_p95_ms": 2464,
+          "latency_p50_ms": 1222,
+          "latency_p95_ms": 1632,
           "reported": {
             "accepted": 15,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since, or the prompts built from them have: a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply"
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -648,22 +719,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 5,
           "scenarios_total": 5,
           "runs": 15,
-          "passed": 15,
-          "reliability": 1,
-          "latency_p50_ms": 810,
-          "latency_p95_ms": 1755,
+          "passed": 14,
+          "reliability": 0.9333333333333333,
+          "latency_p50_ms": 778,
+          "latency_p95_ms": 5546,
           "reported": {
-            "accepted": 15,
-            "wrong_answer": 0,
+            "accepted": 14,
+            "wrong_answer": 1,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since, or the prompts built from them have: a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply"
+          "stale_reason": ""
         }
       ]
     },
@@ -737,13 +808,13 @@
           "band": "certified",
           "scenarios_measured": 8,
           "scenarios_total": 8,
-          "runs": 8,
-          "passed": 8,
+          "runs": 24,
+          "passed": 24,
           "reliability": 1,
-          "latency_p50_ms": 1187,
-          "latency_p95_ms": 1646,
+          "latency_p50_ms": 1129,
+          "latency_p95_ms": 1705,
           "reported": {
-            "accepted": 8,
+            "accepted": 24,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -756,22 +827,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 8,
           "scenarios_total": 8,
-          "runs": 21,
-          "passed": 21,
-          "reliability": 1,
-          "latency_p50_ms": 662,
-          "latency_p95_ms": 1376,
+          "runs": 24,
+          "passed": 23,
+          "reliability": 0.9583333333333334,
+          "latency_p50_ms": 700,
+          "latency_p95_ms": 984,
           "reported": {
-            "accepted": 21,
-            "wrong_answer": 0,
+            "accepted": 23,
+            "wrong_answer": 1,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "7 scenarios it scored have changed since, or the prompts built from them have: a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_termination_agreement_stays_private_whatever_the_attachment_note_says, an_nda_marked_thread_is_held_on_its_own_request, an_ordinary_customer_thread_is_opened_for_the_team, an_unpatched_vulnerability_is_held_until_it_is_closed and 1 more"
+          "stale_reason": ""
         }
       ]
     },
@@ -788,9 +859,9 @@
           "model": "gemini-3.1-flash-lite",
           "env": "eu_hosted"
         },
-        "band": "certified",
-        "reliability": 1,
-        "state": "partial"
+        "band": "supported_degraded",
+        "reliability": 0.9791666666666666,
+        "state": "current"
       },
       "scenarios": [
         {
@@ -881,18 +952,18 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "partial",
-          "band": "certified",
-          "scenarios_measured": 13,
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 16,
           "scenarios_total": 16,
-          "runs": 39,
-          "passed": 39,
-          "reliability": 1,
-          "latency_p50_ms": 904,
-          "latency_p95_ms": 1210,
+          "runs": 48,
+          "passed": 47,
+          "reliability": 0.9791666666666666,
+          "latency_p50_ms": 1139,
+          "latency_p95_ms": 1327,
           "reported": {
-            "accepted": 39,
-            "wrong_answer": 0,
+            "accepted": 47,
+            "wrong_answer": 1,
             "invalid": 0,
             "abstained": 0
           },
@@ -932,14 +1003,14 @@
           "scenarios_measured": 16,
           "scenarios_total": 16,
           "runs": 48,
-          "passed": 38,
-          "reliability": 0.7916666666666666,
-          "latency_p50_ms": 710,
-          "latency_p95_ms": 1544,
+          "passed": 40,
+          "reliability": 0.8333333333333334,
+          "latency_p50_ms": 744,
+          "latency_p95_ms": 1184,
           "reported": {
-            "accepted": 38,
-            "wrong_answer": 8,
-            "invalid": 2,
+            "accepted": 40,
+            "wrong_answer": 7,
+            "invalid": 1,
             "abstained": 0
           },
           "stale_reason": ""
@@ -957,7 +1028,7 @@
         "binding": {
           "provider": "openai_compatible",
           "model": "mistralai/mistral-large-2512",
-          "env": "cloud_frontier"
+          "env": "eu_hosted"
         },
         "band": "certified",
         "reliability": 1,
@@ -984,13 +1055,13 @@
           },
           "state": "current",
           "band": "certified",
-          "scenarios_measured": null,
+          "scenarios_measured": 2,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 1906,
-          "latency_p95_ms": 2180,
+          "latency_p50_ms": 2120,
+          "latency_p95_ms": 2770,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -1035,8 +1106,8 @@
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 1380,
-          "latency_p95_ms": 3738,
+          "latency_p50_ms": 1175,
+          "latency_p95_ms": 1964,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -1128,8 +1199,8 @@
           "runs": 15,
           "passed": 15,
           "reliability": 1,
-          "latency_p50_ms": 1098,
-          "latency_p95_ms": 1568,
+          "latency_p50_ms": 1323,
+          "latency_p95_ms": 1684,
           "reported": {
             "accepted": 15,
             "wrong_answer": 0,
@@ -1168,14 +1239,14 @@
             "env": "eu_hosted"
           },
           "state": "current",
-          "band": "not_supported",
+          "band": "supported_degraded",
           "scenarios_measured": 5,
           "scenarios_total": 5,
           "runs": 15,
           "passed": 15,
           "reliability": 1,
-          "latency_p50_ms": 1032,
-          "latency_p95_ms": 3618,
+          "latency_p50_ms": 704,
+          "latency_p95_ms": 1910,
           "reported": {
             "accepted": 15,
             "wrong_answer": 0,
@@ -1224,8 +1295,8 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 1098,
-          "latency_p95_ms": 1568,
+          "latency_p50_ms": 1323,
+          "latency_p95_ms": 1684,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -1264,14 +1335,14 @@
             "env": "eu_hosted"
           },
           "state": "current",
-          "band": "not_supported",
+          "band": "certified",
           "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 1032,
-          "latency_p95_ms": 3618,
+          "latency_p50_ms": 704,
+          "latency_p95_ms": 1910,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -1320,8 +1391,8 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 1098,
-          "latency_p95_ms": 1568,
+          "latency_p50_ms": 1323,
+          "latency_p95_ms": 1684,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -1360,14 +1431,14 @@
             "env": "eu_hosted"
           },
           "state": "current",
-          "band": "supported_degraded",
+          "band": "certified",
           "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 1032,
-          "latency_p95_ms": 3618,
+          "latency_p50_ms": 704,
+          "latency_p95_ms": 1910,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -1391,8 +1462,8 @@
           "model": "openai/gpt-oss-120b",
           "env": "eu_hosted"
         },
-        "band": "supported_degraded",
-        "reliability": 0.8333333333333334,
+        "band": "certified",
+        "reliability": 1,
         "state": "current"
       },
       "scenarios": [
@@ -1421,8 +1492,8 @@
           "runs": 6,
           "passed": 3,
           "reliability": 0.5,
-          "latency_p50_ms": 1098,
-          "latency_p95_ms": 1568,
+          "latency_p50_ms": 1323,
+          "latency_p95_ms": 1684,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -1461,18 +1532,18 @@
             "env": "eu_hosted"
           },
           "state": "current",
-          "band": "supported_degraded",
+          "band": "certified",
           "scenarios_measured": 2,
           "scenarios_total": 2,
           "runs": 6,
-          "passed": 5,
-          "reliability": 0.8333333333333334,
-          "latency_p50_ms": 1032,
-          "latency_p95_ms": 3618,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 704,
+          "latency_p95_ms": 1910,
           "reported": {
-            "accepted": 5,
+            "accepted": 6,
             "wrong_answer": 0,
-            "invalid": 1,
+            "invalid": 0,
             "abstained": 0
           },
           "stale_reason": ""
@@ -1485,8 +1556,17 @@
       "key": "corpus_ask/corpus_ask",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "corpus_ask_answers_only_from_the_passage_that_says_it",
@@ -1511,22 +1591,45 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": null,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 895,
-          "latency_p95_ms": 1457,
+          "latency_p50_ms": 1084,
+          "latency_p95_ms": 1265,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 2423,
+          "latency_p95_ms": 4749,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -1534,22 +1637,22 @@
             "model": "mistralai/mistral-large-2512",
             "env": "eu_hosted"
           },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
-          "passed": 9,
-          "reliability": 1,
-          "latency_p50_ms": 1366,
-          "latency_p95_ms": 4299,
+          "passed": 8,
+          "reliability": 0.8888888888888888,
+          "latency_p50_ms": 1379,
+          "latency_p95_ms": 2903,
           "reported": {
-            "accepted": 9,
+            "accepted": 8,
             "wrong_answer": 0,
-            "invalid": 0,
+            "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since, or the prompts built from them have: corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_do_not_answer"
+          "stale_reason": ""
         }
       ]
     },
@@ -1559,8 +1662,17 @@
       "key": "deal_health/deal_status",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "deal_status_an_overdue_task_is_not_done_work",
@@ -1581,26 +1693,49 @@
       "records": [
         {
           "binding": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
-          "runs": 6,
-          "passed": 6,
+          "runs": 9,
+          "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1139,
-          "latency_p95_ms": 1778,
+          "latency_p50_ms": 2184,
+          "latency_p95_ms": 4970,
           "reported": {
-            "accepted": 6,
+            "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since, or the prompts built from them have: deal_status_offer_left_hanging, deal_status_says_nothing_is_wrong_when_nothing_is"
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 1502,
+          "latency_p95_ms": 2473,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -1652,13 +1787,13 @@
           },
           "state": "current",
           "band": "certified",
-          "scenarios_measured": null,
+          "scenarios_measured": 4,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 12,
           "reliability": 1,
-          "latency_p50_ms": 7387,
-          "latency_p95_ms": 9456,
+          "latency_p50_ms": 7899,
+          "latency_p95_ms": 11924,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
@@ -1712,8 +1847,8 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 1565,
-          "latency_p95_ms": 3014,
+          "latency_p50_ms": 1354,
+          "latency_p95_ms": 3477,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -1728,50 +1863,27 @@
             "model": "gemini-3.1-pro-preview",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": null,
+          "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 20957,
-          "latency_p95_ms": 44515,
+          "latency_p50_ms": 24063,
+          "latency_p95_ms": 46554,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+          "stale_reason": ""
         },
         {
           "binding": {
             "provider": "gemini",
             "model": "gemini-3.5-flash",
-            "env": "eu_hosted"
-          },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": null,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 8077,
-          "latency_p95_ms": 20319,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
           "state": "current",
@@ -1781,8 +1893,31 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 18392,
-          "latency_p95_ms": 68516,
+          "latency_p50_ms": 10016,
+          "latency_p95_ms": 26168,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1223,
+          "latency_p95_ms": 2663,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -1808,10 +1943,10 @@
       "recommended": {
         "binding": {
           "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
+          "model": "gemini-3.5-flash",
           "env": "eu_hosted"
         },
-        "band": "supported_degraded",
+        "band": "certified",
         "reliability": 1,
         "state": "current"
       },
@@ -1830,14 +1965,60 @@
             "env": "eu_hosted"
           },
           "state": "current",
-          "band": "supported_degraded",
+          "band": "not_supported",
           "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 1565,
-          "latency_p95_ms": 3014,
+          "latency_p50_ms": 1354,
+          "latency_p95_ms": 3477,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-pro-preview",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 24063,
+          "latency_p95_ms": 46554,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 10016,
+          "latency_p95_ms": 26168,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -1853,14 +2034,14 @@
             "env": "eu_hosted"
           },
           "state": "current",
-          "band": "not_supported",
+          "band": "supported_degraded",
           "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 18392,
-          "latency_p95_ms": 68516,
+          "latency_p50_ms": 1223,
+          "latency_p95_ms": 2663,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -1886,10 +2067,10 @@
       "recommended": {
         "binding": {
           "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
+          "model": "gemini-3.1-pro-preview",
           "env": "eu_hosted"
         },
-        "band": "not_supported",
+        "band": "certified",
         "reliability": 1,
         "state": "current"
       },
@@ -1913,14 +2094,60 @@
             "env": "eu_hosted"
           },
           "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 1354,
+          "latency_p95_ms": 3477,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-pro-preview",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 24063,
+          "latency_p95_ms": 46554,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted"
+          },
+          "state": "current",
           "band": "not_supported",
           "scenarios_measured": 2,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 1565,
-          "latency_p95_ms": 3014,
+          "latency_p50_ms": 10016,
+          "latency_p95_ms": 26168,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -1936,14 +2163,14 @@
             "env": "eu_hosted"
           },
           "state": "current",
-          "band": "not_supported",
+          "band": "supported_degraded",
           "scenarios_measured": 2,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 18392,
-          "latency_p95_ms": 68516,
+          "latency_p50_ms": 1223,
+          "latency_p95_ms": 2663,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -1965,8 +2192,17 @@
         "proof",
         "market"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "not_supported",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "an_instruction_inside_the_stated_reason_is_data_not_a_command",
@@ -1987,26 +2223,95 @@
       "records": [
         {
           "binding": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "stale",
-          "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 1354,
+          "latency_p95_ms": 3477,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-pro-preview",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 24063,
+          "latency_p95_ms": 46554,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 8,
           "reliability": 0.8888888888888888,
-          "latency_p50_ms": 18392,
-          "latency_p95_ms": 68516,
+          "latency_p50_ms": 10016,
+          "latency_p95_ms": 26168,
           "reported": {
             "accepted": 8,
             "wrong_answer": 0,
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "scenario intro_note_is_written_to_the_customer_not_about_the_request — or the prompt this build now builds from it — has changed since the record scored it"
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 1223,
+          "latency_p95_ms": 2663,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -2028,7 +2333,7 @@
           "model": "openai/gpt-oss-120b",
           "env": "eu_hosted"
         },
-        "band": "supported_degraded",
+        "band": "certified",
         "reliability": 1,
         "state": "current"
       },
@@ -2047,14 +2352,14 @@
             "env": "eu_hosted"
           },
           "state": "current",
-          "band": "not_supported",
+          "band": "supported_degraded",
           "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 1565,
-          "latency_p95_ms": 3014,
+          "latency_p50_ms": 1354,
+          "latency_p95_ms": 3477,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -2069,22 +2374,22 @@
             "model": "gemini-3.1-pro-preview",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": null,
+          "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 20957,
-          "latency_p95_ms": 44515,
+          "latency_p50_ms": 24063,
+          "latency_p95_ms": 46554,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -2092,22 +2397,22 @@
             "model": "gemini-3.5-flash",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": null,
+          "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 8077,
-          "latency_p95_ms": 20319,
+          "latency_p50_ms": 10016,
+          "latency_p95_ms": 26168,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -2116,14 +2421,14 @@
             "env": "eu_hosted"
           },
           "state": "current",
-          "band": "supported_degraded",
+          "band": "certified",
           "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 18392,
-          "latency_p95_ms": 68516,
+          "latency_p50_ms": 1223,
+          "latency_p95_ms": 2663,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -2152,7 +2457,7 @@
           "model": "gemini-3.1-flash-lite",
           "env": "eu_hosted"
         },
-        "band": "certified",
+        "band": "supported_degraded",
         "reliability": 1,
         "state": "current"
       },
@@ -2186,14 +2491,14 @@
             "env": "eu_hosted"
           },
           "state": "current",
-          "band": "certified",
+          "band": "supported_degraded",
           "scenarios_measured": 4,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 12,
           "reliability": 1,
-          "latency_p50_ms": 1565,
-          "latency_p95_ms": 3014,
+          "latency_p50_ms": 1354,
+          "latency_p95_ms": 3477,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
@@ -2208,22 +2513,22 @@
             "model": "gemini-3.1-pro-preview",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "not_supported",
-          "scenarios_measured": null,
+          "scenarios_measured": 4,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 12,
           "reliability": 1,
-          "latency_p50_ms": 20957,
-          "latency_p95_ms": 44515,
+          "latency_p50_ms": 24063,
+          "latency_p95_ms": 46554,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -2231,22 +2536,22 @@
             "model": "gemini-3.5-flash",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "not_supported",
-          "scenarios_measured": null,
+          "scenarios_measured": 4,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 12,
           "reliability": 1,
-          "latency_p50_ms": 8077,
-          "latency_p95_ms": 20319,
+          "latency_p50_ms": 10016,
+          "latency_p95_ms": 26168,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -2284,8 +2589,8 @@
           "runs": 12,
           "passed": 12,
           "reliability": 1,
-          "latency_p50_ms": 18392,
-          "latency_p95_ms": 68516,
+          "latency_p50_ms": 1223,
+          "latency_p95_ms": 2663,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
@@ -2334,8 +2639,8 @@
           "runs": 3,
           "passed": 1,
           "reliability": 0.3333333333333333,
-          "latency_p50_ms": 1350,
-          "latency_p95_ms": 1413,
+          "latency_p50_ms": 1593,
+          "latency_p95_ms": 1661,
           "reported": {
             "accepted": 1,
             "wrong_answer": 2,
@@ -2380,8 +2685,8 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 904,
-          "latency_p95_ms": 904,
+          "latency_p50_ms": 905,
+          "latency_p95_ms": 987,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -2405,12 +2710,12 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "openai_compatible",
-          "model": "openai/gpt-oss-120b",
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
           "env": "eu_hosted"
         },
         "band": "not_supported",
-        "reliability": 0,
+        "reliability": 0.3333333333333333,
         "state": "current"
       },
       "scenarios": [
@@ -2421,6 +2726,29 @@
         }
       ],
       "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "latency_p50_ms": 3799,
+          "latency_p95_ms": 3926,
+          "reported": {
+            "accepted": 1,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 1
+          },
+          "stale_reason": ""
+        },
         {
           "binding": {
             "provider": "openai_compatible",
@@ -2434,8 +2762,8 @@
           "runs": 3,
           "passed": 0,
           "reliability": 0,
-          "latency_p50_ms": 2088,
-          "latency_p95_ms": 2730,
+          "latency_p50_ms": 1538,
+          "latency_p95_ms": 1964,
           "reported": {
             "accepted": 0,
             "wrong_answer": 3,
@@ -2464,7 +2792,7 @@
           "env": "eu_hosted"
         },
         "band": "not_supported",
-        "reliability": 0.8,
+        "reliability": 0.7333333333333333,
         "state": "current"
       },
       "scenarios": [
@@ -2508,13 +2836,13 @@
           "runs": 15,
           "passed": 9,
           "reliability": 0.6,
-          "latency_p50_ms": 850,
-          "latency_p95_ms": 1634,
+          "latency_p50_ms": 1213,
+          "latency_p95_ms": 2254,
           "reported": {
             "accepted": 6,
-            "wrong_answer": 3,
+            "wrong_answer": 4,
             "invalid": 0,
-            "abstained": 6
+            "abstained": 5
           },
           "stale_reason": ""
         },
@@ -2552,14 +2880,14 @@
           "scenarios_measured": 5,
           "scenarios_total": 5,
           "runs": 15,
-          "passed": 12,
-          "reliability": 0.8,
-          "latency_p50_ms": 816,
-          "latency_p95_ms": 1904,
+          "passed": 11,
+          "reliability": 0.7333333333333333,
+          "latency_p50_ms": 1192,
+          "latency_p95_ms": 2019,
           "reported": {
-            "accepted": 9,
+            "accepted": 8,
             "wrong_answer": 2,
-            "invalid": 1,
+            "invalid": 2,
             "abstained": 3
           },
           "stale_reason": ""
@@ -2572,8 +2900,17 @@
       "key": "owed_verdict/owed",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "absent",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_direct_question_asks_us_and_a_report_does_not",
@@ -2591,7 +2928,54 @@
           "file": "backend/internal/compose/aicert/corpus/owed_verdict/envelope_decides_01.yaml"
         }
       ],
-      "records": []
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 1266,
+          "latency_p95_ms": 1422,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 7,
+          "reliability": 0.7777777777777778,
+          "latency_p50_ms": 1170,
+          "latency_p95_ms": 2172,
+          "reported": {
+            "accepted": 7,
+            "wrong_answer": 2,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
     },
     {
       "task": "propose_roles",
@@ -2602,12 +2986,12 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "openai_compatible",
-          "model": "openai/gpt-oss-120b",
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
           "env": "eu_hosted"
         },
-        "band": "not_supported",
-        "reliability": 0.7777777777777778,
+        "band": "certified",
+        "reliability": 1,
         "state": "current"
       },
       "scenarios": [
@@ -2630,6 +3014,29 @@
       "records": [
         {
           "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 1294,
+          "latency_p95_ms": 2194,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
@@ -2641,8 +3048,8 @@
           "runs": 9,
           "passed": 7,
           "reliability": 0.7777777777777778,
-          "latency_p50_ms": 1010,
-          "latency_p95_ms": 2660,
+          "latency_p50_ms": 863,
+          "latency_p95_ms": 3882,
           "reported": {
             "accepted": 7,
             "wrong_answer": 2,
@@ -2664,7 +3071,7 @@
         "binding": {
           "provider": "openai_compatible",
           "model": "mistralai/mistral-large-2512",
-          "env": "eu_hosted"
+          "env": "cloud_frontier"
         },
         "band": "certified",
         "reliability": 1,
@@ -2691,13 +3098,13 @@
           },
           "state": "current",
           "band": "certified",
-          "scenarios_measured": null,
+          "scenarios_measured": 2,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 2598,
-          "latency_p95_ms": 5144,
+          "latency_p50_ms": 3239,
+          "latency_p95_ms": 5369,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -2742,8 +3149,8 @@
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 1757,
-          "latency_p95_ms": 2632,
+          "latency_p50_ms": 2504,
+          "latency_p95_ms": 4337,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -2788,7 +3195,7 @@
         "binding": {
           "provider": "openai_compatible",
           "model": "mistralai/mistral-large-2512",
-          "env": "eu_hosted"
+          "env": "cloud_frontier"
         },
         "band": "certified",
         "reliability": 1,
@@ -2810,13 +3217,13 @@
           },
           "state": "current",
           "band": "certified",
-          "scenarios_measured": null,
+          "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 2598,
-          "latency_p95_ms": 5144,
+          "latency_p50_ms": 3239,
+          "latency_p95_ms": 5369,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -2861,8 +3268,8 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 1757,
-          "latency_p95_ms": 2632,
+          "latency_p50_ms": 2504,
+          "latency_p95_ms": 4337,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -2909,8 +3316,8 @@
           "model": "openai/gpt-oss-120b",
           "env": "eu_hosted"
         },
-        "band": "supported_degraded",
-        "reliability": 0.9166666666666666,
+        "band": "not_supported",
+        "reliability": 0.8333333333333334,
         "state": "current"
       },
       "scenarios": [
@@ -2938,22 +3345,45 @@
       "records": [
         {
           "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 9,
+          "reliability": 0.75,
+          "latency_p50_ms": 1105,
+          "latency_p95_ms": 1802,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
           "state": "current",
-          "band": "supported_degraded",
+          "band": "not_supported",
           "scenarios_measured": 4,
           "scenarios_total": 4,
           "runs": 12,
-          "passed": 11,
-          "reliability": 0.9166666666666666,
-          "latency_p50_ms": 704,
-          "latency_p95_ms": 1513,
+          "passed": 10,
+          "reliability": 0.8333333333333334,
+          "latency_p50_ms": 850,
+          "latency_p95_ms": 1475,
           "reported": {
-            "accepted": 11,
-            "wrong_answer": 1,
+            "accepted": 10,
+            "wrong_answer": 2,
             "invalid": 0,
             "abstained": 0
           },
@@ -2970,8 +3400,8 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "openai_compatible",
-          "model": "mistralai/mistral-large-2512",
+          "provider": "gemini",
+          "model": "gemini-3.5-flash",
           "env": "eu_hosted"
         },
         "band": "not_supported",
@@ -3017,15 +3447,15 @@
           "scenarios_measured": 5,
           "scenarios_total": 5,
           "runs": 15,
-          "passed": 11,
-          "reliability": 0.7333333333333333,
-          "latency_p50_ms": 4492,
-          "latency_p95_ms": 6458,
+          "passed": 12,
+          "reliability": 0.8,
+          "latency_p50_ms": 5154,
+          "latency_p95_ms": 7896,
           "reported": {
-            "accepted": 11,
+            "accepted": 10,
             "wrong_answer": 1,
             "invalid": 0,
-            "abstained": 3
+            "abstained": 4
           },
           "stale_reason": ""
         },
@@ -3086,13 +3516,13 @@
           "scenarios_measured": 5,
           "scenarios_total": 5,
           "runs": 15,
-          "passed": 12,
-          "reliability": 0.8,
-          "latency_p50_ms": 3036,
-          "latency_p95_ms": 4477,
+          "passed": 11,
+          "reliability": 0.7333333333333333,
+          "latency_p50_ms": 3206,
+          "latency_p95_ms": 3979,
           "reported": {
-            "accepted": 9,
-            "wrong_answer": 3,
+            "accepted": 8,
+            "wrong_answer": 4,
             "invalid": 0,
             "abstained": 3
           },
@@ -3129,8 +3559,17 @@
       "key": "site_fact_extract/page_facts",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "customer_story_credits_the_customer_not_the_reader",
@@ -3155,22 +3594,22 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
-          "runs": 15,
-          "passed": 15,
+          "runs": 9,
+          "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1203,
-          "latency_p95_ms": 2380,
+          "latency_p50_ms": 1262,
+          "latency_p95_ms": 1571,
           "reported": {
-            "accepted": 15,
+            "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "scenario customer_story_credits_the_customer_not_the_reader — or the prompt this build now builds from it — has changed since the record scored it"
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -3201,22 +3640,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 839,
-          "latency_p95_ms": 9128,
+          "latency_p50_ms": 875,
+          "latency_p95_ms": 1141,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "scenario customer_story_credits_the_customer_not_the_reader — or the prompt this build now builds from it — has changed since the record scored it"
+          "stale_reason": ""
         }
       ]
     },
@@ -3267,6 +3706,29 @@
       "records": [
         {
           "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 12,
+          "reliability": 0.8,
+          "latency_p50_ms": 1018,
+          "latency_p95_ms": 1975,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
@@ -3278,8 +3740,8 @@
           "runs": 15,
           "passed": 15,
           "reliability": 1,
-          "latency_p50_ms": 591,
-          "latency_p95_ms": 1148,
+          "latency_p50_ms": 633,
+          "latency_p95_ms": 2170,
           "reported": {
             "accepted": 15,
             "wrong_answer": 0,
@@ -3305,8 +3767,8 @@
           "model": "openai/gpt-oss-120b",
           "env": "eu_hosted"
         },
-        "band": "supported_degraded",
-        "reliability": 0.6666666666666666,
+        "band": "certified",
+        "reliability": 1,
         "state": "current"
       },
       "scenarios": [
@@ -3319,22 +3781,45 @@
       "records": [
         {
           "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1889,
+          "latency_p95_ms": 3181,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
           "state": "current",
-          "band": "supported_degraded",
+          "band": "certified",
           "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
-          "latency_p50_ms": 1270,
-          "latency_p95_ms": 1950,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1318,
+          "latency_p95_ms": 2158,
           "reported": {
-            "accepted": 2,
-            "wrong_answer": 1,
+            "accepted": 3,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -3376,6 +3861,29 @@
       "records": [
         {
           "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 5,
+          "reliability": 0.8333333333333334,
+          "latency_p50_ms": 1889,
+          "latency_p95_ms": 3181,
+          "reported": {
+            "accepted": 5,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 1
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
@@ -3387,8 +3895,8 @@
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 1270,
-          "latency_p95_ms": 1950,
+          "latency_p50_ms": 1318,
+          "latency_p95_ms": 2158,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -3433,6 +3941,29 @@
       "records": [
         {
           "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 0,
+          "reliability": 0,
+          "latency_p50_ms": 1889,
+          "latency_p95_ms": 3181,
+          "reported": {
+            "accepted": 0,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 6
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
@@ -3444,8 +3975,8 @@
           "runs": 6,
           "passed": 0,
           "reliability": 0,
-          "latency_p50_ms": 1270,
-          "latency_p95_ms": 1950,
+          "latency_p50_ms": 1318,
+          "latency_p95_ms": 2158,
           "reported": {
             "accepted": 0,
             "wrong_answer": 0,
@@ -3485,6 +4016,29 @@
       "records": [
         {
           "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 1889,
+          "latency_p95_ms": 3181,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
@@ -3496,8 +4050,8 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 1270,
-          "latency_p95_ms": 1950,
+          "latency_p50_ms": 1318,
+          "latency_p95_ms": 2158,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -3513,9 +4067,20 @@
       "site": "person_brief",
       "key": "summarize/person_brief",
       "scope": "full_invocation",
-      "missing_context_scopes": [],
-      "best_state": "absent",
-      "recommended": null,
+      "missing_context_scopes": [
+        "identity"
+      ],
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "not_supported",
+        "reliability": 0.3333333333333333,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "person_brief_reads_what_was_said",
@@ -3528,7 +4093,54 @@
           "file": "backend/internal/compose/aicert/corpus/summarize/person_brief_withheld_and_omitted_01.yaml"
         }
       ],
-      "records": []
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 2,
+          "reliability": 0.3333333333333333,
+          "latency_p50_ms": 1889,
+          "latency_p95_ms": 3181,
+          "reported": {
+            "accepted": 2,
+            "wrong_answer": 4,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 2,
+          "reliability": 0.3333333333333333,
+          "latency_p50_ms": 1318,
+          "latency_p95_ms": 2158,
+          "reported": {
+            "accepted": 2,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 1
+          },
+          "stale_reason": ""
+        }
+      ]
     },
     {
       "task": "transcript_propose",
@@ -3536,8 +4148,17 @@
       "key": "transcript_propose/next_steps",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_meeting_that_promised_nothing",
@@ -3558,26 +4179,49 @@
       "records": [
         {
           "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 1145,
+          "latency_p95_ms": 3782,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "stale",
-          "band": "supported_degraded",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
-          "passed": 8,
-          "reliability": 0.8888888888888888,
-          "latency_p50_ms": 616,
-          "latency_p95_ms": 1128,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 753,
+          "latency_p95_ms": 1658,
           "reported": {
-            "accepted": 8,
-            "wrong_answer": 1,
+            "accepted": 9,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since, or the prompts built from them have: a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, one_side_promises_revised_pricing"
+          "stale_reason": ""
         }
       ]
     },
@@ -3590,8 +4234,8 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "openai_compatible",
-          "model": "openai/gpt-oss-120b",
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
           "env": "eu_hosted"
         },
         "band": "certified",
@@ -3619,8 +4263,8 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 963,
-          "latency_p95_ms": 3370,
+          "latency_p50_ms": 1517,
+          "latency_p95_ms": 3568,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -3659,18 +4303,18 @@
             "env": "eu_hosted"
           },
           "state": "current",
-          "band": "certified",
+          "band": "not_supported",
           "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 848,
-          "latency_p95_ms": 1991,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "latency_p50_ms": 1208,
+          "latency_p95_ms": 1689,
           "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
+            "accepted": 1,
+            "wrong_answer": 1,
+            "invalid": 1,
             "abstained": 0
           },
           "stale_reason": ""
@@ -3683,8 +4327,17 @@
       "key": "voice_build/eval_draft",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "held_out_draft_sits_close_to_the_author",
@@ -3699,22 +4352,22 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 963,
-          "latency_p95_ms": 3370,
+          "latency_p50_ms": 1517,
+          "latency_p95_ms": 3568,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "scenario held_out_draft_sits_close_to_the_author — or the prompt this build now builds from it — has changed since the record scored it"
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -3745,22 +4398,22 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 848,
-          "latency_p95_ms": 1991,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 1208,
+          "latency_p95_ms": 1689,
           "reported": {
-            "accepted": 3,
+            "accepted": 2,
             "wrong_answer": 0,
-            "invalid": 0,
+            "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "scenario held_out_draft_sits_close_to_the_author — or the prompt this build now builds from it — has changed since the record scored it"
+          "stale_reason": ""
         }
       ]
     },
@@ -3795,22 +4448,22 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 1,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 963,
-          "latency_p95_ms": 3370,
+          "latency_p50_ms": 1517,
+          "latency_p95_ms": 3568,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "scenario judge_ranks_the_author_rhythm_above_generic_ai_prose — or the prompt this build now builds from it — has changed since the record scored it"
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -3848,8 +4501,8 @@
           "runs": 3,
           "passed": 3,
           "reliability": 1,
-          "latency_p50_ms": 848,
-          "latency_p95_ms": 1991,
+          "latency_p50_ms": 1208,
+          "latency_p95_ms": 1689,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -3866,8 +4519,17 @@
       "key": "weekly_learnings/learn",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "absent",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "not_supported",
+        "reliability": 0.6666666666666666,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_deal_named_like_an_instruction_teaches_no_lesson",
@@ -3885,7 +4547,54 @@
           "file": "backend/internal/compose/aicert/corpus/weekly_learnings/a_thin_week_yields_no_lesson.yaml"
         }
       ],
-      "records": []
+      "records": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 6,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 1754,
+          "latency_p95_ms": 2462,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 3,
+          "reliability": 0.3333333333333333,
+          "latency_p50_ms": 992,
+          "latency_p95_ms": 2065,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 6,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        }
+      ]
     },
     {
       "task": "weekly_review",
@@ -3893,8 +4602,17 @@
       "key": "weekly_review/narrative",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "eu_hosted"
+        },
+        "band": "not_supported",
+        "reliability": 0.6666666666666666,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_deal_named_like_an_instruction_is_read_as_a_name",
@@ -3915,29 +4633,116 @@
       "records": [
         {
           "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 6,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 997,
+          "latency_p95_ms": 1239,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
             "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "not_supported",
-          "scenarios_measured": 0,
+          "scenarios_measured": 3,
           "scenarios_total": 3,
           "runs": 9,
-          "passed": 4,
-          "reliability": 0.4444444444444444,
-          "latency_p50_ms": 779,
-          "latency_p95_ms": 1315,
+          "passed": 6,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 879,
+          "latency_p95_ms": 1619,
           "reported": {
-            "accepted": 4,
-            "wrong_answer": 5,
+            "accepted": 6,
+            "wrong_answer": 3,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since, or the prompts built from them have: a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, the_sentence_leads_with_what_changed_not_with_a_count"
+          "stale_reason": ""
         }
       ]
     }
   ],
-  "unclaimed_records": []
+  "unclaimed_records": [
+    {
+      "task": "",
+      "binding": {
+        "provider": "",
+        "model": "",
+        "env": ""
+      },
+      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
+    },
+    {
+      "task": "",
+      "binding": {
+        "provider": "",
+        "model": "",
+        "env": ""
+      },
+      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
+    },
+    {
+      "task": "",
+      "binding": {
+        "provider": "",
+        "model": "",
+        "env": ""
+      },
+      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
+    },
+    {
+      "task": "",
+      "binding": {
+        "provider": "",
+        "model": "",
+        "env": ""
+      },
+      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
+    },
+    {
+      "task": "",
+      "binding": {
+        "provider": "",
+        "model": "",
+        "env": ""
+      },
+      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
+    },
+    {
+      "task": "",
+      "binding": {
+        "provider": "",
+        "model": "",
+        "env": ""
+      },
+      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
+    },
+    {
+      "task": "",
+      "binding": {
+        "provider": "",
+        "model": "",
+        "env": ""
+      },
+      "reason": "it names no scenario of any site its task ships, so no row above can attribute it"
+    }
+  ]
 }
