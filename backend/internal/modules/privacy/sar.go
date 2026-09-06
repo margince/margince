@@ -88,6 +88,20 @@ type SARPackage struct {
 	// know not only what they wrote but what we decided it meant, and which
 	// classifier decided it.
 	ReplyJudgements []map[string]any `json:"reply_judgements"`
+	// Handoffs is each time this person was passed from one seat to another as a
+	// prospect, what was decided, and why. Art. 15 owes it twice over: the note
+	// is what one colleague wrote ABOUT them, and the decision is one people
+	// made about whether they were worth working at all.
+	//
+	// That this section exists at all is held by:
+	// TestErasureAndSARReachEveryPIITable (backend/gates/piicoverage_test.go),
+	// which fails when a table registered sarRead has no section here.
+	Handoffs []map[string]any `json:"handoffs"`
+	// HandoffHistory is how each of those handoffs reached where it stands. The
+	// current status conceals a prospect sent back once before somebody took
+	// them, and that round is as much a decision about the subject as the last
+	// one is.
+	HandoffHistory []map[string]any `json:"handoff_history"`
 	// ProviderClaims is what a licensed data provider asserted about the
 	// subject and this installation retained — bought from a third party
 	// rather than given by them, which is precisely the holding Art. 15(1)(g)

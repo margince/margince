@@ -36,8 +36,13 @@ const editOrgName = (page: Page) =>
 
 // Types into the dialog and closes it again, leaving the draft behind on a page
 // with nothing open over it — which is what makes the navigation below possible.
+// The address the product MINTS for this page today. `settingsrouting.ts`
+// resolves the catalog's flat `#/settings/company`, but the screen is still
+// driven by the register in `settingsnav.tsx`, which knows the page as the
+// admin entry `general` — so the flat spelling falls through to the reader's
+// first visible entry and this dialog is on a page nobody navigated to.
 const typeAndCloseDialog = async (page: Page, name: string) => {
-  await page.goto("/#/settings/company");
+  await page.goto("/#/settings/admin/general");
   await editOrgName(page).click();
   await orgName(page).fill(name);
   await page.keyboard.press("Escape");

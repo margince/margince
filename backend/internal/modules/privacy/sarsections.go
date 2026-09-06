@@ -408,6 +408,26 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		   JOIN activity a ON a.id = h.activity_id
 		   WHERE h.activity_id IN (
 		         SELECT l.activity_id FROM activity_link l WHERE l.person_id = $1)`, nil},
+		// Every time this person was handed on as a prospect, and what was
+		// decided. The reason's LABEL travels rather than its id, because an
+		// export naming a uuid tells the subject nothing about why they were
+		// refused — which is the whole of what this section is for.
+		{&pkg.Handoffs, `SELECT h.status, h.submitted_at, h.decided_at, h.note,
+		          r.label AS reason, h.deal_id IS NOT NULL AS became_a_deal
+		   FROM sdr_handoff h
+		   LEFT JOIN sdr_handoff_reason r ON r.id = h.reason_id
+		   WHERE h.person_id = $1
+		      OR h.lead_id IN (SELECT id FROM lead WHERE promoted_person_id = $1)`, nil},
+		// And how each handoff got there. The actor is exported as recorded: it
+		// names the SEAT that decided, which is a fact about this installation's
+		// handling of the subject rather than about a third party.
+		{&pkg.HandoffHistory, `SELECT e.to_status, e.occurred_at, e.note, e.actor,
+		          r.label AS reason
+		   FROM sdr_handoff_event e
+		   JOIN sdr_handoff h ON h.id = e.handoff_id
+		   LEFT JOIN sdr_handoff_reason r ON r.id = e.reason_id
+		   WHERE h.person_id = $1
+		      OR h.lead_id IN (SELECT id FROM lead WHERE promoted_person_id = $1)`, nil},
 		{&pkg.ProviderClaims, `SELECT ppc.provider, ppc.claim_key, ppc.value_json, ppc.confidence,
 		          ppc.source, ppc.captured_by, ppc.retrieved_at
 		   FROM person_provider_claim ppc

@@ -336,6 +336,13 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		err = deleteReplyVerdictHistoryFor(ctx, tx, id)
 	}
 	if err == nil {
+		// The handoffs naming them too. Anonymizing the person row cascades to
+		// nothing here either, so a sweep that skipped it would leave "rejected:
+		// not qualified" standing beside an "Erased Subject" record — a
+		// judgement colleagues made about somebody the row no longer names.
+		err = deleteSubjectHandoffs(ctx, tx, id)
+	}
+	if err == nil {
 		err = purgeSubjectPurchases(ctx, tx, id)
 	}
 	if err == nil {

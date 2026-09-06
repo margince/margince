@@ -71,6 +71,10 @@ func (stageChangeCreateTask) Spec() workflow.Spec {
 		Name:    stageChangeCreateTaskName,
 		Trigger: workflow.Trigger{EventType: eventDealStageChanged},
 		Tier:    mcp.TierAutoExecute,
+		// One claimed create_task and nothing else: applyCreate takes the effect
+		// claim before writing, so a second pass folds instead of minting a
+		// duplicate reminder.
+		RedrivableWithoutDuplicating: true,
 	}
 }
 
@@ -142,6 +146,10 @@ func (routeLeadCreateTask) Spec() workflow.Spec {
 		Name:    routeLeadName,
 		Trigger: workflow.Trigger{EventType: eventLeadCreated},
 		Tier:    mcp.TierAutoExecute,
+		// One claimed create_task and nothing else: applyCreate takes the effect
+		// claim before writing, so a second pass folds instead of minting a
+		// duplicate reminder.
+		RedrivableWithoutDuplicating: true,
 	}
 }
 

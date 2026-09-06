@@ -192,6 +192,10 @@ func (noActivityReminder) Spec() workflow.Spec {
 		Name:    noActivityReminderName,
 		Trigger: workflow.Trigger{Schedule: noActivityScheduleMarker},
 		Tier:    mcp.TierAutoExecute,
+		// One claimed create_task and nothing else: applyCreate takes the effect
+		// claim before writing, so a second pass folds instead of minting a
+		// duplicate reminder.
+		RedrivableWithoutDuplicating: true,
 	}
 }
 
@@ -281,6 +285,10 @@ func (checkInCadence) Spec() workflow.Spec {
 		Name:    checkInCadenceName,
 		Trigger: workflow.Trigger{Schedule: checkInCadenceScheduleMarker},
 		Tier:    mcp.TierAutoExecute,
+		// One claimed create_task and nothing else: applyCreate takes the effect
+		// claim before writing, so a second pass folds instead of minting a
+		// duplicate reminder.
+		RedrivableWithoutDuplicating: true,
 	}
 }
 
@@ -397,6 +405,10 @@ func (renewalReminder) Spec() workflow.Spec {
 		Name:    renewalReminderName,
 		Trigger: workflow.Trigger{Schedule: renewalScheduleMarker},
 		Tier:    mcp.TierAutoExecute,
+		// One claimed create_task and nothing else: applyCreate takes the effect
+		// claim before writing, so a second pass folds instead of minting a
+		// duplicate reminder.
+		RedrivableWithoutDuplicating: true,
 	}
 }
 

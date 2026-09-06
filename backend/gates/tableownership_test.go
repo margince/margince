@@ -119,14 +119,22 @@ var tableOwners = map[string]string{
 	"signal_thread_scan":             "internal/compose",
 	// One reader's frozen walk through their worklist. Owned by the compose
 	// package that writes it, the way compose/weekly owns team_weekly_review.
-	"worklist_snapshot":          "internal/compose/worklistsnap",
-	"relationship":               "internal/modules/people",
-	"partner":                    "internal/modules/people",
-	"lead":                       "internal/modules/people",
-	"lead_score_history":         "internal/modules/people",
-	"lead_manual_signal":         "internal/modules/people",
-	"lead_source":                "internal/modules/people",
-	"lead_disqualify_reason":     "internal/modules/people",
+	"worklist_snapshot":      "internal/compose/worklistsnap",
+	"relationship":           "internal/modules/people",
+	"partner":                "internal/modules/people",
+	"lead":                   "internal/modules/people",
+	"lead_score_history":     "internal/modules/people",
+	"lead_manual_signal":     "internal/modules/people",
+	"lead_source":            "internal/modules/people",
+	"lead_disqualify_reason": "internal/modules/people",
+	// A prospect passed from an SDR to an account executive: the row carrying
+	// its current state, the append-only transitions behind it, and the
+	// administered reason a refusal names. people owns them because the SUBJECT
+	// is a lead or a person; the deal an acceptance produces is an outcome, and
+	// compose wires the caller that does both.
+	"sdr_handoff":                "internal/modules/people",
+	"sdr_handoff_event":          "internal/modules/people",
+	"sdr_handoff_reason":         "internal/modules/people",
 	"organization_profile_field": "internal/modules/people",
 	"organization_vat_check":     "internal/modules/people",
 	"person_profile_field":       "internal/modules/people",
