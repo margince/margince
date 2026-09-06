@@ -435,3 +435,109 @@ type unparseableBrain struct{}
 func (b *unparseableBrain) Complete(context.Context, model.Request) (model.Response, error) {
 	return model.Response{Text: "not json"}, nil
 }
+
+// TWO PASSES DO NOT PAY FOR THE SAME PAGE.
+//
+// The candidate list is a plain read, and three doors can put a pass in flight
+// — the nightly tick, the arrival trigger and a pass's own continuation. The
+// first two dedupe on the queue's uniqueness window; the continuation is
+// enqueued from inside a running job with the same args and deliberately
+// cannot. Without mutual exclusion here, the second pass selects the same
+// people, makes the same model calls, and each one spends for them.
+//
+// The holder is staged as a REAL lock on its own connection rather than as a
+// second goroutine racing this one: what is under test is that a pass finding
+// the lock held stands down, and a race would prove it on the runs where it
+// happened to lose.
+func TestAPassStandsDownWhileAnotherHoldsTheInstallation(t *testing.T) {
+	e := integration.Setup(t)
+	body := "Hi,\n\nsounds good.\n\nBest,\nBob Person\nCTO\nAcme GmbH"
+	seedEnrichPerson(t, e, "contended@acme.example", body)
+
+	holder, err := e.Pool.Acquire(context.Background())
+	if err != nil {
+		t.Fatalf("taking a connection for the holding pass: %v", err)
+	}
+	defer holder.Release()
+	var held bool
+	if err := holder.QueryRow(context.Background(),
+		`SELECT pg_try_advisory_lock(hashtextextended($1, 0))`, enrichPassLock).Scan(&held); err != nil {
+		t.Fatalf("holding the pass lock: %v", err)
+	}
+	if !held {
+		t.Fatal("the fixture could not take the pass lock, so nothing below proves a second pass stands down")
+	}
+	defer func() {
+		if _, err := holder.Exec(context.Background(),
+			`SELECT pg_advisory_unlock(hashtextextended($1, 0))`, enrichPassLock); err != nil {
+			t.Errorf("releasing the pass lock: %v", err)
+		}
+	}()
+
+	brain := &signatureScriptBrain{fields: []map[string]any{
+		{"field": "title", "value": "CTO", "evidence_snippet": "CTO", "confidence": 0.9},
+	}}
+	enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
+	filled, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS))
+	if err != nil {
+		t.Fatalf("the second pass returned an error, and standing down is not one: %v", err)
+	}
+	if filled {
+		t.Error("a pass that did no work asked for a continuation")
+	}
+	// The money assertion. A candidate is sitting there — the admission case
+	// below proves the same fixture is enrichable — and this pass spent nothing
+	// on it.
+	if brain.calls != 0 {
+		t.Errorf("the second pass made %d model call(s) against a page another pass is reading", brain.calls)
+	}
+}
+
+// And it is the LOCK that stood the pass down, not an empty fixture: the same
+// seed, with nobody holding, enriches.
+func TestThePassRunsWhenNobodyHoldsTheInstallation(t *testing.T) {
+	e := integration.Setup(t)
+	body := "Hi,\n\nsounds good.\n\nBest,\nBob Person\nCTO\nAcme GmbH"
+	seedEnrichPerson(t, e, "uncontended@acme.example", body)
+
+	brain := &signatureScriptBrain{fields: []map[string]any{
+		{"field": "title", "value": "CTO", "evidence_snippet": "CTO", "confidence": 0.9},
+	}}
+	enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
+	if _, err := enricher.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if brain.calls != 1 {
+		t.Errorf("the pass made %d model call(s) with nobody holding the lock, want 1", brain.calls)
+	}
+}
+
+// The lock does not outlive the pass. A pass that took it and finished must
+// leave the next one able to run — the failure would be an installation that
+// enriches once and then goes quiet until the worker restarts.
+func TestThePassReleasesWhatItHeld(t *testing.T) {
+	e := integration.Setup(t)
+	body := "Hi,\n\nsounds good.\n\nBest,\nBob Person\nCTO\nAcme GmbH"
+	seedEnrichPerson(t, e, "first@acme.example", body)
+
+	brain := &signatureScriptBrain{fields: []map[string]any{
+		{"field": "title", "value": "CTO", "evidence_snippet": "CTO", "confidence": 0.9},
+	}}
+	enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	if _, err := enricher.RunWorkspace(ctx); err != nil {
+		t.Fatalf("the first pass: %v", err)
+	}
+
+	// A second person, and a second pass. It can only reach them if the first
+	// pass gave the lock back.
+	seedEnrichPerson(t, e, "second@acme.example", body)
+	before := brain.calls
+	if _, err := enricher.RunWorkspace(ctx); err != nil {
+		t.Fatalf("the second pass: %v", err)
+	}
+	if brain.calls == before {
+		t.Error("the second pass read nobody: the first pass never released the lock, so this " +
+			"installation would enrich once and go quiet until the worker restarted")
+	}
+}
