@@ -5,7 +5,7 @@
     "sites_best_partial": 0,
     "sites_best_stale": 9,
     "sites_absent": 4,
-    "scenarios": 141,
+    "scenarios": 142,
     "records": 59,
     "bindings": 10
   },
@@ -274,6 +274,11 @@
           "file": "backend/internal/compose/aicert/corpus/agent_loop/a_promise_is_not_a_slipping_deal.yaml"
         },
         {
+          "name": "a_stepless_deal_is_a_slipping_deal",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/a_stepless_deal_is_a_slipping_deal.yaml"
+        },
+        {
           "name": "a_structured_question_is_not_a_text_search",
           "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/agent_loop/a_structured_question_is_not_a_text_search.yaml"
@@ -374,7 +379,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 23,
+          "scenarios_total": 24,
           "runs": 69,
           "passed": 59,
           "reliability": 0.855072463768116,
@@ -397,7 +402,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": null,
-          "scenarios_total": 23,
+          "scenarios_total": 24,
           "runs": 115,
           "passed": 74,
           "reliability": 0.6434782608695652,
@@ -420,7 +425,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 23,
+          "scenarios_total": 24,
           "runs": 69,
           "passed": 39,
           "reliability": 0.5652173913043478,
