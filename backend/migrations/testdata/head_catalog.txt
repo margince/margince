@@ -96,6 +96,7 @@ public.activity_kind_pkey CREATE UNIQUE INDEX activity_kind_pkey ON public.activ
 public.activity_link acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_link.activity_id uuid NOT NULL gen=- def=-
 public.activity_link.activity_link_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.activity_link.activity_link_ceiling CREATE TRIGGER activity_link_ceiling BEFORE INSERT ON public.activity_link FOR EACH ROW EXECUTE FUNCTION activity_link_refuses_past_the_ceiling()
 public.activity_link.activity_link_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.activity_link.activity_link_entity_type_check CHECK ((entity_type = ANY (ARRAY['person'::text, 'organization'::text, 'deal'::text, 'lead'::text, 'project'::text])))
 public.activity_link.activity_link_last_activity CREATE TRIGGER activity_link_last_activity AFTER INSERT OR DELETE OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION trg_activity_link_last_activity()
@@ -148,6 +149,25 @@ BEGIN
         RAISE EXCEPTION
             'a % is with a person, not with a company: link it to the person who was there, and the company sees it through them',
             activity_kind
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+
+public.activity_link_refuses_past_the_ceiling() secdef=false cfg=- acl=- 
+DECLARE
+    filed integer;
+BEGIN
+    -- Locked before counted, for the reason the sibling trigger gives about
+    -- order: a count taken before the lock is an answer from before whoever
+    -- else is inserting, and waiting afterwards would not change it.
+    PERFORM 1 FROM activity WHERE id = NEW.activity_id FOR NO KEY UPDATE;
+    SELECT count(*) INTO filed FROM activity_link WHERE activity_id = NEW.activity_id;
+
+    IF filed >= 25 THEN
+        RAISE EXCEPTION
+            'an activity may be filed under at most 25 records; this one already names %', filed
             USING ERRCODE = 'check_violation';
     END IF;
 

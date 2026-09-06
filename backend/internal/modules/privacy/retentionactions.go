@@ -377,13 +377,10 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 // reads this FILE's SQL literals to prove every satellite is handled, so a
 // helper elsewhere or a loop over identifiers is invisible to it.
 func deleteIdentifyingSatellites(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	var err error
 	// The anonymize UPDATES the person row rather than deleting it, so none of
 	// these cascades — one skipped leaves the subject readable beside an
 	// "Erased Subject" record.
-	if err == nil {
-		_, err = tx.Exec(ctx, `DELETE FROM person_social WHERE person_id = $1`, id)
-	}
+	_, err := tx.Exec(ctx, `DELETE FROM person_social WHERE person_id = $1`, id)
 	if err == nil {
 		_, err = tx.Exec(ctx, `DELETE FROM person_email WHERE person_id = $1`, id)
 	}
