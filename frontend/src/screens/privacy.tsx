@@ -7,7 +7,7 @@ import {
 import { type ReactNode, useId, useMemo, useRef, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
-import { useHoldsAdminRole, useHoldsConsentAdminRole } from "../app/capability";
+import { useCan, useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -207,7 +207,15 @@ export function ConsentPurposesCard() {
   // while /me is in flight, so branching on `!canAdminister` alone would flash
   // the read-only line at an admin on every load.
   const me = useMe();
-  const canAdminister = useHoldsConsentAdminRole();
+  // `consent_config:create`, which is what consent/store.go's CreatePurpose
+  // asks for. This was a role predicate whose own comment said it was interim —
+  // the object was governed upstream but absent from the shipped vocabulary, so
+  // there was no grant to ask for. There is now.
+  //
+  // `useCanWrite`, not `useCan`: the seat ceiling is enforced BEFORE RBAC
+  // (identity/admission.go), so a read seat holding the grant is still refused
+  // every POST. The control it was shown could only ever 403.
+  const canAdminister = useCanWrite("consent_config", "create");
   const addTitleId = useId();
   const [adding, setAdding] = useState(false);
   const query = useQuery({
@@ -571,6 +579,56 @@ function unofferedAssignee({
 // the facet bar visible while one case is worked, so `expanded` and its
 // toggle arrive as props; useRoster only fetches the workspace roster while
 // THIS row is the open one, not for every row on the page.
+/**
+ * The verbs that move one request through its statuses.
+ *
+ * Its own component because the grant is its own question: consent/dsr.go's
+ * UpdateDSR asks for `privacy_request:update`, a strictly WIDER grant than the
+ * `read` that opened this queue. A reader delegated only the inbox used to be
+ * shown every transition button and refused by each of them.
+ *
+ * `useCanWrite` rather than `useCan` — the seat ceiling refuses a read seat's
+ * mutations above RBAC (identity/admission.go), so the grant alone is not the
+ * answer.
+ */
+function DsrTransitions({
+  status,
+  answered,
+  pending,
+  onTransition,
+}: Readonly<{
+  status: DataSubjectRequest["status"];
+  // Whether this request already carries the answer that closing one needs —
+  // the draft in the field or the one already stored, either satisfies the
+  // server, so the row resolves them to one fact before asking.
+  answered: boolean;
+  pending: boolean;
+  onTransition: (next: DataSubjectRequest["status"]) => void;
+}>) {
+  const t = useT();
+  const canWork = useCanWrite("privacy_request", "update");
+  if (!canWork) {
+    return null;
+  }
+  return (
+    <div className="dsr-actions">
+      {nextStatuses(status).map((next) => (
+        <Button
+          key={next}
+          small
+          disabled={
+            ((next === "fulfilled" || next === "rejected") && !answered) ||
+            pending
+          }
+          onClick={() => onTransition(next)}
+        >
+          {t(transitionLabelKey(next))}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
 function DsrRow({
   dsr,
   expanded,
@@ -785,24 +843,12 @@ function DsrRow({
                     />
                   )}
                 </Field>
-                <div className="dsr-actions">
-                  {nextStatuses(dsr.status).map((next) => {
-                    const closingWithoutAnswer =
-                      (next === "fulfilled" || next === "rejected") &&
-                      !resolution.trim() &&
-                      !dsr.resolution;
-                    return (
-                      <Button
-                        key={next}
-                        small
-                        disabled={closingWithoutAnswer || patch.isPending}
-                        onClick={() => submitTransition(next)}
-                      >
-                        {t(transitionLabelKey(next))}
-                      </Button>
-                    );
-                  })}
-                </div>
+                <DsrTransitions
+                  status={dsr.status}
+                  answered={Boolean(resolution.trim() || dsr.resolution)}
+                  pending={patch.isPending}
+                  onTransition={submitTransition}
+                />
               </>
             )}
           </div>
@@ -999,15 +1045,19 @@ export function PrivacyInboxCard() {
   // request's new status, which is what makes it the right landing place.
   const stagedRowToggle = useRef<string | null>(null);
 
-  // The queue is the admin's: its rows name data subjects who exercised an
-  // Art. 15/17 right, so the read is gated rather than merely rendered. The
-  // fetch is disabled for anyone else, which keeps a non-admin who reaches the
-  // tab for its consent registry from issuing a call that only 403s.
-  const isAdmin = useHoldsAdminRole();
-  // The probe itself, not only its answer. useHoldsAdminRole reads the roles
-  // off the /me cache, so it is false while that read is in flight — and
-  // branching on `!isAdmin` alone flashed "the subject queue is admin only" at
-  // every administrator, on every load of this tab, until the session landed.
+  // `privacy_request:read`, which is what consent/dsr.go asks for.
+  //
+  // The queue's rows name data subjects who exercised an Art. 15/17 right, so
+  // the read is gated rather than merely rendered, and the fetch is disabled
+  // for anyone without it — which keeps a reader who came for the consent
+  // registry beside it from issuing a call that only 403s. It was the literal
+  // admin role until the queue got an object of its own.
+  const canSee = useCan("privacy_request", "read");
+  const canOpenRequest = useCanWrite("person", "update");
+  // The probe itself, not only its answer. Every capability predicate reads off
+  // the /me cache, so it is false while that read is in flight — and branching
+  // on `!canSee` alone flashed "the subject queue is not yours" at every
+  // administrator, on every load, until the session landed.
   const me = useMe();
 
   // The facet is server-side (part of the queryKey and the query param), not
@@ -1016,7 +1066,7 @@ export function PrivacyInboxCard() {
   // (the house rule at history.tsx:258).
   const query = useInfiniteQuery({
     queryKey: ["dsrs", facet],
-    enabled: isAdmin,
+    enabled: canSee,
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
       const { data, error } = await api.GET("/data-subject-requests", {
@@ -1061,7 +1111,7 @@ export function PrivacyInboxCard() {
   // list here; filtering happens server-side so an empty page after a facet
   // change is a real "nothing matches", not a client-side hide.
   let body: ReactNode;
-  if (!isAdmin) {
+  if (!canSee) {
     // Withheld rather than absent: the card keeps its place on a tab an ops
     // seat reaches for the consent registry, and says why it is empty. An
     // absent card there would read as "no requests", which is a different
@@ -1122,10 +1172,17 @@ export function PrivacyInboxCard() {
       // the button's own words repeated. Opening a request is a kind, a subject
       // and a statutory deadline committed together, so the header keeps the
       // verb and the dialog keeps the form.
+      // Opening a request is a POST that asks for `person:update`
+      // (consent/dsr.go CreateDSR) — a DIFFERENT object from the one that
+      // opened this queue, because recording a subject request writes the
+      // person it names. A reader delegated only the inbox was offered the
+      // verb and refused it.
       titleAction={
-        <Button small onClick={() => setCreating(true)}>
-          {t("privacy.newRequest")}
-        </Button>
+        !canOpenRequest ? null : (
+          <Button small onClick={() => setCreating(true)}>
+            {t("privacy.newRequest")}
+          </Button>
+        )
       }
     >
       <PanelBody>

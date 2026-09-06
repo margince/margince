@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // RequiredFieldError maps to 422 on both surfaces.
@@ -24,6 +25,32 @@ func (e *RequiredFieldError) Error() string { return e.Field + " is required" }
 // FieldFault names the missing required field, on every surface.
 func (e *RequiredFieldError) FieldFault() (field, code, message string) {
 	return e.Field, "required", e.Error()
+}
+
+// ReservedMailIdentityError refuses a client write into the mail identity.
+//
+// A mail activity's natural key is (connector.EmailSourceSystem, Message-ID),
+// and the store replays that key rather than inserting a second row. A caller
+// who could spell it would therefore pre-plant a row under a Message-ID and
+// have a real capture of that message hand the planted row back as already
+// existing — the message's own content never landing, and its timeline links
+// resolving to whatever the planter wrote. Only a connector that authenticated
+// as one, or this system's own send, may claim a mail identity.
+//
+// It is refused for EVERY kind, not just `email`: the unique index spans
+// kinds, so a planted `note` under a Message-ID suppresses the mail just as
+// well.
+type ReservedMailIdentityError struct{}
+
+func (e *ReservedMailIdentityError) Error() string {
+	return "source_system " + connector.EmailSourceSystem +
+		" is reserved for captured and sent mail; omit it, or use a value that names your own system"
+}
+
+// FieldFault states the refusal as caller-fixable, reaching the HTTP mapper and
+// the tool surface the same way every other field refusal here does.
+func (e *ReservedMailIdentityError) FieldFault() (field, code, message string) {
+	return "source_system", "reserved_source_system", e.Error()
 }
 
 // fieldBody names the activity body field in a FieldFault, the one spelling
@@ -179,6 +206,9 @@ func LogActivityInputFrom(req crmcontracts.CreateActivityRequest) (LogActivityIn
 	if req.SourceSystem != nil {
 		if err := provenance.Refuse("source_system", *req.SourceSystem); err != nil {
 			return LogActivityInput{}, err
+		}
+		if *req.SourceSystem == connector.EmailSourceSystem {
+			return LogActivityInput{}, &ReservedMailIdentityError{}
 		}
 	}
 	if err := provenance.Refuse("source", req.Source); err != nil {

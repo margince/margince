@@ -25,10 +25,10 @@ import {
 // The head of the message: who it is to, and the two things a rep could not
 // reach from here before — a blind copy, and the paper the mail is about.
 //
-// Both were on the wire already. The backend has carried `bcc` since migration
-// 0188 and `attachment_ids` since ADR-0086/A131, and no surface in the product
-// named either: a rep who wanted to send the offer they were writing about had
-// to leave the drawer, file it on the record, and start the mail again.
+// Both were on the wire already. The backend has long carried `bcc` and
+// `attachment_ids` (ADR-0086/A131), and no surface in the product named
+// either: a rep who wanted to send the offer they were writing about had to
+// leave the drawer, file it on the record, and start the mail again.
 
 type Sent = { key: string; body: unknown };
 

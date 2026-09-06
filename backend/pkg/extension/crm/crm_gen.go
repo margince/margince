@@ -404,7 +404,7 @@ type Activity struct {
 	// SourceId Provider message/event id — idempotency key part.
 	SourceId *string `json:"source_id,omitempty"`
 
-	// SourceSystem gmail/gcal/outlook/transcript — idempotency key part.
+	// SourceSystem Which system this record came from — `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. Idempotency key part.
 	SourceSystem *string `json:"source_system,omitempty"`
 	Subject      *string `json:"subject,omitempty"`
 

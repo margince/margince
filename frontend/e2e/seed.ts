@@ -58,6 +58,16 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   // reporting two more pages covered.
   knowledge_corpus: ["create", "read", "update", "delete"],
   license: ["read"],
+  // Model routing, which the AI settings page gates its whole entry on. Read
+  // alone: the routing writes the sweep passes over are not what it measures,
+  // and a grant this fixture does not need is a grant it should not claim.
+  ai_routing: ["read"],
+  // The audit page asks for BOTH — the trail's own read, and the reset grant
+  // AuditLogCard still stands in for the admin role it checks. Either one alone
+  // leaves the entry invisible and the address falling back to Account, which
+  // is the failure this pair exists to keep out of the sweep.
+  audit_log: ["read"],
+  system_reset: ["delete"],
 };
 
 // The coherent seed (mirrors design/seed-fixtures.md entities: Anna Weber,
@@ -560,6 +570,29 @@ export const aiProviderKeys = {
     { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
     { provider: "anthropic", configured: false, env_var: "ANTHROPIC_API_KEY" },
   ],
+};
+
+// The lane bindings the routing card draws, and the fifth read behind the AI
+// page that the catch-all cannot answer: `tiers` and `embeddings` are required
+// by AiRouting, so `{data,page}` hands the form neither and it renders the
+// unbound callout — the one state that says nothing about the rows the sweeps
+// exist to measure.
+//
+// Two chat tiers and the embedding lane, because the lane row is the widest
+// thing on the page and the embedding binding is the one a reader can miss: a
+// fixture binding only chat would leave the retrieval row unvisited at 390px.
+export const aiRouting = {
+  profile: "eu_hosted",
+  tiers: {
+    cheap_cloud: { provider: "gemini", model: "gemini-2.5-flash" },
+    premium: { provider: "anthropic", model: "claude-sonnet-4-5" },
+  },
+  embeddings: {
+    provider: "ollama",
+    model: "nomic-embed-text",
+    base_url: "http://localhost:11434",
+    dimensions: 768,
+  },
 };
 
 // Whether the model lanes are answering (the AI settings health card). Two
@@ -2591,6 +2624,9 @@ export async function mockApi(
     }
     if (path === "/installation/license") {
       return json(installationLicense);
+    }
+    if (path === "/ai/routing" && method === "GET") {
+      return json(aiRouting);
     }
     if (path === "/ai/health") {
       return json(aiHealth);

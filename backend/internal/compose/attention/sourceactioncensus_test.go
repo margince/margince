@@ -42,14 +42,17 @@ import (
 // this gate exists to catch, so it must not be the shape of the gate.
 var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// Routed to the record the row is about, through VERB_DESTINATION.
-	"customer_waiting":   {"open"},
+	// `reply` opens the composer over the row, through ChannelReplyAction. Sent
+	// only where the wait IS mail (email_summary present) and names a record to
+	// file the answer against.
+	"customer_waiting":   {"open", "reply"},
 	"lead_response":      {"open"},
 	"deal_at_risk":       {"open"},
 	"conversation_claim": {"open"},
 	"meeting":            {"open"},
-	// No verb yet: the row says a meeting owes an answer and the answer is
-	// recorded on the activity, which this queue does not yet reach into.
-	"meeting_outcome": {},
+	// Answered inline, like an approval: `decide` reaches MeetingOutcome, which
+	// writes meeting_status through PATCH /activities/{id}.
+	"meeting_outcome": {"decide"},
 	// The task's own verbs. `complete` acts in place through TaskComplete;
 	// `snooze` opens the record, where the due date lives.
 	"task": {"complete", "snooze", "open"},
@@ -66,10 +69,12 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// Health and delivery rows navigate and nothing more: what fixes them lives
 	// on another screen, and a verb here would promise a repair this queue
 	// cannot make.
-	"sync_health":     {"open"},
-	"capture_health":  {"open"},
-	"ai_work_health":  {"open"},
-	"automation_run":  {"open"},
+	"sync_health":    {"open"},
+	"capture_health": {"open"},
+	"ai_work_health": {"open"},
+	// `retry` reaches AutomationRetry; a failed firing carries it and a blocked
+	// one does not, because blocked is a refusal on purpose.
+	"automation_run":  {"open", "retry"},
 	"bounce":          {"open"},
 	"undelivered":     {"open"},
 	"failed_approval": {"open"},
@@ -98,9 +103,19 @@ func TestNoLaneAdvertisesAVerbTheClientCannotPerform(t *testing.T) {
 	// `relationship_decay` and `notice` ride optional pointer ones. Naming only
 	// the first four left the pointer arm free to break in silence, taking
 	// twelve lanes with it and still passing.
-	mustReach := []string{
-		"task", "brief_item", "approval", "dedupe_candidate",
-		"relationship_decay", "notice",
+	// EVERY declared source must be assembled, derived from the table above
+	// rather than listed by hand. The hand-written list is what let this census
+	// drift: it named six sources, the table declared eighteen, and the four
+	// below were checked by nobody — the census read fourteen lanes and
+	// reported PASS, which is the one direction a census must never fail in.
+	//
+	// A source that cannot be assembled yet is named HERE, so adding one is a
+	// deliberate act somebody has to write down rather than an omission nothing
+	// notices. The map only shrinks.
+	notYetAssembled := map[string]string{
+		"customer_waiting": "the waiting lane is a positional seam Assemble does not read; " +
+			"reaching it needs a stub this fixture has no argument slot for",
+		"lead_response": "the same lane shape as customer_waiting, and unreachable for the same reason",
 	}
 	reached := map[string]bool{}
 	for _, items := range lanes {
@@ -108,12 +123,24 @@ func TestNoLaneAdvertisesAVerbTheClientCannotPerform(t *testing.T) {
 			reached[string(item.Source)] = true
 		}
 	}
-	for _, source := range mustReach {
-		if !reached[source] {
-			t.Fatalf("the assembled day carried no %q row, so this census did not look at the "+
-				"source's verbs at all: either the fixture stopped feeding that lane or the "+
-				"walk stopped reading it, and both leave the census passing over the sources "+
-				"with the most verbs to get wrong", source)
+	for source := range performedBySource {
+		if reached[source] {
+			continue
+		}
+		if _, known := notYetAssembled[source]; known {
+			continue
+		}
+		t.Errorf("the assembled day carried no %q row, so this census did not look at the "+
+			"source's verbs at all: either the fixture stopped feeding that lane or the "+
+			"walk stopped reading it, and both leave the census passing over that source. "+
+			"Feed it, or name it in notYetAssembled with the reason", source)
+	}
+	// And the register describes the tree: a source that CAN now be assembled
+	// must leave, or the exemption outlives the gap and hides the next one.
+	for source := range notYetAssembled {
+		if reached[source] {
+			t.Errorf("%q is named as not-yet-assembled and the fixture assembles it: "+
+				"delete the entry, so the register keeps saying something true", source)
 		}
 	}
 	checked := 0
@@ -260,7 +287,25 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		&stubAutomations{rows: []TroubledAutomationRun{{ID: ids.NewV7(), Name: "a broken rule", Outcome: "failed", OccurredAt: readInstant}}},
 		&stubNotices{rows: []UnreadNotice{{ID: ids.NewV7(), Kind: "automation", Subject: "a notice", CreatedAt: readInstant}}},
 		nil,
-		fixedClock)
+		fixedClock,
+		// An OPTION rather than a positional seam, and so the one a fixture is
+		// likeliest to leave out — which is exactly what happened: the census
+		// declared `meeting_outcome` and never assembled one, so the entry sat
+		// unchecked while the source shipped with no verb at all.
+		WithMeetingsAwaitingOutcome(&stubMeetingsAwaitingOutcome{
+			rows: []MeetingAwaitingOutcome{{
+				ID: ids.NewV7(), Subject: "a meeting that happened", StartedAt: readInstant,
+			}},
+		})).
+		WithUndelivered(&stubUndelivered{rows: []ParkedSend{{
+			ID: ids.NewV7(), Subject: "a send that never left",
+			Reason: "the address bounced twice", ParkedAt: readInstant,
+			PersonID: ids.NewV7(),
+		}}}).
+		WithIntroductions(&stubIntroductions{rows: []PendingIntroduction{{
+			ID: ids.NewV7(), PersonID: ids.NewV7(),
+			Reason: "they know the buyer", RequestedAt: readInstant, DueAt: readInstant,
+		}}})
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling the day: %v", err)

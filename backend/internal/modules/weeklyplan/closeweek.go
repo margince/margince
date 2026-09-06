@@ -73,7 +73,7 @@ func (s *Store) CloseWeek(ctx context.Context, now time.Time) (Outcome, error) {
 		if err != nil {
 			return err
 		}
-		if plan.Status != "open" {
+		if plan.Status != PlanOpen {
 			// The STAMPED answer, not a fresh count. A commitment that moved
 			// after the first close — a late-landing write, a repair — must not
 			// change what the review already froze.

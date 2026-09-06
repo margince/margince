@@ -13,7 +13,7 @@ import {
 import { type ReactNode, useEffect } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanMutate, useHoldsAdminRole } from "../app/capability";
+import { useCan, useCanMutate } from "../app/capability";
 import {
   composedScreens,
   EXTENSION_SCREEN,
@@ -172,6 +172,12 @@ function useSetGrant() {
           existing.key === role.key ? role : existing,
         ),
       );
+      // The matrix is not the only reader of this grant. If the role just
+      // edited is one the OPERATOR holds, every `useCan("ext_…")` affordance in
+      // the app is now answering from a /me snapshot that predates the change —
+      // for up to five minutes, or until a window focus. Re-reading the
+      // snapshot is cheap and is the only way the rest of the app learns.
+      void queryClient.invalidateQueries({ queryKey: ["me"] });
     },
     // A refused write leaves the checkbox showing the state the server holds
     // (nothing was applied locally), but another admin's concurrent change is
@@ -255,21 +261,39 @@ function grantOf(role: ExtensionRole, object: string): ObjectGrant {
 export function ExtensionAccessCard() {
   const t = useT();
   const me = useMe();
-  // Editing role permissions is admin-only server-side, so the whole card is
-  // admin-only here — the same shape UsersAdminCard uses, and for the same
-  // reason: an ops seat in the Admin settings group would otherwise be handed
-  // controls that only ever 403. The seat ceiling ANDs on top, because a read
-  // seat may read this page and may not write anything on it.
+  // `extension_access:read`, which is what `GET /v1/extensions` asks for
+  // (compose/handlers_extensions.go).
   //
-  // There is no `useCan` question to ask instead: a `role` RBAC object was
-  // considered and declined, because object RBAC narrows who among PEERS may
-  // touch a record and no such narrowing exists here — nobody but an admin
-  // should hold it, so the grant would be a constant, and an admin who revoked
-  // their own would have no way back. The role check is the ratified answer,
-  // not a stand-in for one.
-  const isAdmin = useHoldsAdminRole();
-  const canMutate = useCanMutate();
-  const query = useExtensionAccess(isAdmin);
+  // This WAS the literal admin role, and the comment here argued there was no
+  // useCan question to ask — that a `role` object would encode a constant an
+  // admin could revoke and never restore. That reasoning was about the object
+  // it declined, not about this one: `extension_access` names what an installed
+  // unit may reach, ops holds it, and the server answers ops 200. Keeping the
+  // role check meant refusing a reader the authority admits.
+  //
+  // The seat ceiling still ANDs on top, because a read seat may read this page
+  // and may not write anything on it.
+  //
+  // BOTH grants, because the card is two reads behind one flag: the inventory
+  // from `GET /v1/extensions` (extension_access:read) and every role's grant on
+  // every object from `GET /v1/roles`, which asks for role_admin:read
+  // (identity/roles.go ListRoles). On the inventory grant alone the whole card
+  // 403s on its second query — and the matrix it draws is the one surface that
+  // grants an extension's objects at all, so half of it is not a card.
+  // Each predicate on its own line: `a() && b()` short-circuits, and a hook
+  // that stops being called between renders is a hook-order violation, not a
+  // narrower gate.
+  const readsInventory = useCan("extension_access", "read");
+  const readsRoles = useCan("role_admin", "read");
+  const canSee = readsInventory && readsRoles;
+  // The toggles write through PATCH /roles/{key}/objects/{object}, which asks
+  // for role_admin:UPDATE (identity/roles.go SetRoleObjectGrant) — a strictly
+  // wider grant than the read above. Ops holds the read and not the update, so
+  // without this every tick it is shown would 403.
+  const seatMayWrite = useCanMutate();
+  const writesRoles = useCan("role_admin", "update");
+  const canMutate = seatMayWrite && writesRoles;
+  const query = useExtensionAccess(canSee);
   const composed = query.data;
 
   return (
@@ -284,11 +308,11 @@ export function ExtensionAccessCard() {
       <Panel tone="accent" title={t("extAccess.title")}>
         <PanelBody>
           <p className="t-caption ext-lead-sub">{t("extAccess.sub")}</p>
-          {/* Gate on the role probe itself so the admin-only notice appears only
-              once /me has answered — never as a flash while it loads. */}
+          {/* Gate on the /me probe itself so the withheld notice appears only
+              once it has answered — never as a flash while it loads. */}
           <QueryGate query={me} pendingLabel={t("extAccess.title")}>
             {() =>
-              isAdmin ? (
+              canSee ? (
                 <InventoryLead query={query} />
               ) : (
                 <EmptyState>{t("extAccess.adminOnly")}</EmptyState>
@@ -302,10 +326,10 @@ export function ExtensionAccessCard() {
           the heading that names the page, and a unit is a subject in its own
           right. Only reachable with data in hand, which for a non-admin the
           disabled reads never produce. */}
-      {/* Gated on the role as well as on the data: `enabled: false` is about the
-          next request, and a card rendered from a cache the reader may no longer
-          read is the same disclosure the notice above it refuses. */}
-      {isAdmin &&
+      {/* Gated on the grant as well as on the data: `enabled: false` is about
+          the next request, and a card rendered from a cache the reader may no
+          longer read is the same disclosure the notice above it refuses. */}
+      {canSee &&
         composed?.extensions.map((unit) => (
           <UnitCard
             key={unit.name}

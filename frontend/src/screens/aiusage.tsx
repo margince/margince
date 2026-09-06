@@ -335,10 +335,14 @@ export function useAiUsage(month: Month, enabled: boolean) {
 export function AiUsageCard() {
   const t = useT();
   const me = useMe();
-  // The server treats the AI runtime's spend as operator information and gates
-  // this read on automation:update — a write verb guarding a GET, which is why
-  // the seat ceiling stays out of it (capability.ts): a read seat may still read.
-  const canSee = useCan("automation", "update");
+  // `ai_diagnostics:read`, which is what the server asks for (ai/usage.go).
+  //
+  // It asked for `automation:update` once — a write verb guarding a GET,
+  // because the runtime's spend was treated as operator information. That is
+  // why the seat ceiling stays out of this (capability.ts): a read seat may
+  // still read. The object is its own now, so management sees what it spends
+  // without holding the automation editor.
+  const canSee = useCan("ai_diagnostics", "read");
   // Read once, at mount: the reader's month is what this card is about, and
   // recomputing it per render would churn the query key on the one day of the
   // month it could change.

@@ -244,7 +244,11 @@ func TestCapturedCopyOfASentEmailCollapsesOntoTheSameActivity(t *testing.T) {
 	// but the comparison below holds it equal to what the send wrote. Feeding
 	// the send-side value in here would assert the assumption and stay green
 	// while every outbound email landed twice.
+	// The connector NAME still drives the capture below (ToRecord takes it for
+	// provenance); the natural key it writes is the shared mail identity, which
+	// is what makes the echo collapse onto the send whichever adapter reads it.
 	sourceSystem := capturingConnector.Descriptor().Name
+	naturalKeySystem := connector.EmailSourceSystem
 
 	// What the SEND actually resolved, read off the row it wrote.
 	//
@@ -291,7 +295,7 @@ func TestCapturedCopyOfASentEmailCollapsesOntoTheSameActivity(t *testing.T) {
 	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity WHERE source_system = $1 AND source_id = $2`,
-			sourceSystem, messageID).Scan(&rows)
+			naturalKeySystem, messageID).Scan(&rows)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -307,7 +311,7 @@ func TestCapturedCopyOfASentEmailCollapsesOntoTheSameActivity(t *testing.T) {
 	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id, thread_key FROM activity WHERE source_system = $1 AND source_id = $2`,
-			sourceSystem, messageID).Scan(&id, &threadKey)
+			naturalKeySystem, messageID).Scan(&id, &threadKey)
 	}); err != nil {
 		t.Fatal(err)
 	}
