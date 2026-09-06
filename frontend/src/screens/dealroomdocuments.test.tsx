@@ -93,6 +93,15 @@ it("offers the upload that fills an empty Files area, and says where it lands", 
 
   await user.click(screen.getByRole("button", { name: "Upload a file" }));
   expect(await screen.findByRole("dialog")).toBeInTheDocument();
+
+  // And it lets go again. The upload is a detour on the way to the picker, so
+  // a reader who thinks better of it lands back on the form they came from
+  // rather than on a dialog with no way out.
+  await user.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(
+    screen.getByRole("button", { name: "Upload a file" }),
+  ).toBeInTheDocument();
 });
 
 it("a refused room offers no upload, only the sentence saying why", () => {
