@@ -317,7 +317,7 @@ func multipliesByTen(body *ast.BlockStmt) bool {
 
 // anyLiteralTen reports whether either operand is the literal 10. Only ten: a
 // scale is built by repeated multiplication BY TEN, and a `* 100` in the same
-// function is check-money-scale.sh's subject, not this one. Two gates claiming
+// function is the money-scale census's subject, not this one. Two gates claiming
 // one shape is how a finding gets reported twice and fixed neither time.
 func anyLiteralTen(exprs []ast.Expr) bool {
 	for _, expr := range exprs {
