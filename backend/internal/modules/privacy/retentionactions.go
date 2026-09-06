@@ -272,27 +272,7 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		  archived_at = coalesce(archived_at, now())%s
 		WHERE id = $1`, nullColumnAssignments(personCustom)), id, erasedName)
 	if err == nil {
-		// The double-opt-in token goes with the addresses it was sent to. It is
-		// a bearer secret whose only function is to authorise a consent GRANT
-		// for this subject, so one left standing after an anonymization is a
-		// live invitation to record a lawful basis for somebody the row no
-		// longer names. An anonymized subject may lawfully return, which is
-		// what the suppression list is for — but they return by being invited
-		// again, not by an old token in an old mailbox still working.
-		_, err = tx.Exec(ctx, `DELETE FROM consent_doi_token WHERE person_id = $1`, id)
-	}
-	if err == nil {
-		// The confirm-details link goes for the same reason, and a stronger
-		// one: it does not merely authorise a grant, it DISPLAYS the record. A
-		// link left live would show an old mailbox the fields this statement
-		// has just emptied.
-		_, err = tx.Exec(ctx, `DELETE FROM confirm_token WHERE person_id = $1`, id)
-	}
-	if err == nil {
-		// And what came back through it, which is the subject's own name and
-		// address in plaintext — exactly the content the anonymization above
-		// just cleared from the person row.
-		_, err = tx.Exec(ctx, `DELETE FROM person_confirm_submission WHERE person_id = $1`, id)
+		err = deleteConfirmationTrail(ctx, tx, id)
 	}
 	if err == nil {
 		err = clearCommunicationRecord(ctx, tx, id, subjectEmails)
@@ -350,30 +330,7 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		err = redactCommitmentsNaming(ctx, tx, ids.From[ids.PersonKind](id))
 	}
 	if err == nil {
-		// The channel identity is a resolution key on the subject as
-		// much as their address: left behind, it would keep binding
-		// inbound messages to the row this sweep just anonymized.
-		_, err = tx.Exec(ctx,
-			`DELETE FROM person_channel_identity WHERE person_id = $1`, id)
-	}
-	if err == nil {
-		_, err = tx.Exec(ctx,
-			`DELETE FROM embedding WHERE entity_type = 'person' AND entity_id = $1`, id)
-	}
-	if err == nil {
-		// A provenance row names where a field value came from — its source,
-		// who captured it, the evidence it was read out of — and it points at
-		// the fields the statements above just nulled. There is nothing in it
-		// to anonymize: what identifies the subject IS the record of where they
-		// were found. The eraser deletes it for that reason and so does this.
-		_, err = tx.Exec(ctx,
-			`DELETE FROM field_provenance WHERE object_type = 'person' AND object_id = $1`, id)
-	}
-	if err == nil {
-		// Feedback rows name this person as the subject an AI answer was judged
-		// about. The judgement is about them and cannot be held without them.
-		_, err = tx.Exec(ctx,
-			`DELETE FROM ai_feedback WHERE subject_type = 'person' AND subject_id = $1`, id)
+		err = deleteRowsNamingPerson(ctx, tx, id)
 	}
 	if err == nil {
 		// Against the addresses READ AT THE TOP, not a subquery over
@@ -392,6 +349,56 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		err = scrubPersonGraphTraces(ctx, tx, id, subjectEmails, subjectName, linkedInHandles)
 	}
 	return err
+}
+
+// deleteConfirmationTrail removes every live way back INTO the record: the
+// bearer links, and what a subject sent back through one.
+//
+// A double-opt-in token left standing is a live invitation to record a lawful
+// basis for somebody the row no longer names. An anonymized subject may
+// lawfully return — that is what the suppression list is for — but they return
+// by being invited again, not by an old token in an old mailbox still working.
+// The confirm-details link goes for a stronger reason: it does not merely
+// authorise a grant, it DISPLAYS the record, so one left live would show an old
+// mailbox the fields the caller just emptied. What came back through it is the
+// subject's name and address in plaintext, which is that same content again.
+func deleteConfirmationTrail(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	for _, statement := range []string{
+		`DELETE FROM consent_doi_token WHERE person_id = $1`,
+		`DELETE FROM confirm_token WHERE person_id = $1`,
+		`DELETE FROM person_confirm_submission WHERE person_id = $1`,
+	} {
+		if _, err := tx.Exec(ctx, statement, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// deleteRowsNamingPerson removes the rows in other tables that carry the
+// subject's id without a foreign key to it. Nothing cascades to any of them, so
+// each would otherwise outlive the anonymization it describes:
+//
+//   - the channel identity is a resolution key as much as an address, and would
+//     keep binding inbound messages to the row this sweep just anonymized;
+//   - the embedding is the subject's own content in vector form;
+//   - a provenance row points at the fields the caller just nulled, and has
+//     nothing in it to anonymize: what identifies the subject IS the record of
+//     where they were found;
+//   - a feedback row names this person as the subject an AI answer was judged
+//     about, and the judgement cannot be held without them.
+func deleteRowsNamingPerson(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	for _, statement := range []string{
+		`DELETE FROM person_channel_identity WHERE person_id = $1`,
+		`DELETE FROM embedding WHERE entity_type = 'person' AND entity_id = $1`,
+		`DELETE FROM field_provenance WHERE object_type = 'person' AND object_id = $1`,
+		`DELETE FROM ai_feedback WHERE subject_type = 'person' AND subject_id = $1`,
+	} {
+		if _, err := tx.Exec(ctx, statement, id); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // purgeSubjectPurchases removes everything a licensed data provider left on one
