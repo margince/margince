@@ -227,11 +227,11 @@ const (
 	// broadcast list, and every name on it is evidence of a list membership
 	// rather than of a conversation.
 	//
-	// A roster past it is dropped WHOLE by the core, never truncated — half a
-	// broadcast list reads exactly like a small group. A fitness test outside
-	// this package holds it equal to the core's own bound, so a unit that
-	// checks itself against this number and a core that applies its own cannot
-	// answer differently about the same sixty-person group.
+	// Past it Record.Validate refuses the whole record, so a unit is TOLD
+	// rather than left believing a sixty-person group landed as one. A fitness
+	// test outside this package holds the number equal to the core's own bound,
+	// so a unit that checks itself against this and a core that applies its own
+	// cannot answer differently about the same group.
 	MaxParticipants = 50
 )
 
@@ -314,9 +314,10 @@ type Record struct {
 	// remote system's text, and the core keeps the mail rule over it — the same
 	// rule that refuses to bind a colleague from a Cc line a sender typed.
 	//
-	// Optional and bounded. The core drops a roster past its own cap whole
-	// rather than truncating it, because a message naming a hundred people is a
-	// broadcast list and half of one reads like a small conversation.
+	// Optional and bounded by MaxParticipants. Past the cap the RECORD is
+	// refused, not silently trimmed: a message naming a hundred people is a
+	// broadcast list, half of one reads like a small conversation, and a unit
+	// that reads the refusal can decide what its provider actually sent.
 	Participants []Participant
 
 	// Raw is the provider's record as received, kept as evidence.
@@ -360,6 +361,21 @@ const (
 	ParticipantRoleAttendee  = "attendee"
 	ParticipantRoleOrganizer = "organizer"
 )
+
+// ParticipantRoles is the published set as a list, so the validator, a unit's
+// own checks and the fitness test that holds these equal to the core's all read
+// ONE enumeration. A constant added above and left out here is a role the
+// validator would refuse for being spelled correctly.
+//
+// `bcc` is deliberately absent though the core admits it: a bcc line exists
+// only on the SENDER's own copy of a message, and a unit hands over a record it
+// received. Publishing it would offer a position no unit can honestly report.
+var ParticipantRoles = []string{
+	ParticipantRoleTo,
+	ParticipantRoleCC,
+	ParticipantRoleAttendee,
+	ParticipantRoleOrganizer,
+}
 
 // Disposition is what became of an ingested record. It exists because a row is
 // not the only success: the core drops a wholly-internal message on purpose,

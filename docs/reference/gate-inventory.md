@@ -119,6 +119,7 @@ The eight shapes, what each is for, and how each one silently passes:
 
 | Gate | Hardness | What it holds |
 |---|---|---|
+| `activitykindsets_test.go` | H3 | The two activity-kind sets relstrength holds, against the vocabulary the contract actually publishes. |
 | `activityprojectionfields_test.go` | H2 | Every writer of `Activity.AudienceReason` is named here with the test that proves it withholds the reason from a reader who may not see the content. |
 | `agentauthority_test.go` | H2 | An agent principal names the human whose authority it acts under, or says here why there is none. |
 | `agentgrantscopes_test.go` | H2 | A credential that does not fund the tools its agent declares buys a run that starts, discovers it cannot do its job, and stops. |

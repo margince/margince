@@ -196,6 +196,7 @@ func namesSomebody(participants []connector.MessageParticipant) bool {
 // issued it, and the record already names that one. The party is then recorded
 // by account exactly as a mail party is recorded by address — the difference is
 // only which lookup can resolve them to a person.
+//
 // partyListIsAttested is what decides whether a colleague may be bound by
 // user_id, and it has two sources: our own provider attesting that this seat
 // SENT the mail (so the Cc line is what our user typed), or the provider
@@ -226,11 +227,34 @@ func StampFurtherParticipants(
 	// per party: a roster may carry an address as well, and the row records
 	// which of each was actually seen rather than picking a winner.
 	accounts := make([]string, 0, len(participants))
+	// One account is one human, so a roster naming the same one twice
+	// contributes one row. The uniqueness index cannot say that — it separates
+	// two entries that differ by address, which is right for mail and wrong
+	// here, since a party described once with an address and once without is
+	// the same party described twice. Left to the index, the graph would count
+	// them as two people in the room.
+	seen := make(map[string]bool, len(participants))
 	for _, p := range participants {
 		address := strings.ToLower(strings.TrimSpace(p.Email))
 		account := strings.TrimSpace(p.ChannelUserID)
+		// AN ACCOUNT WITHOUT A TRANSPORT IS NOT AN IDENTITY, and storing one
+		// would be worse than dropping it. Every reader of this column pairs it
+		// with activity.channel_provider, and the database forces that column
+		// NULL for every kind but a message — so an account written beside a
+		// call or a meeting matches nothing, including the Art. 17 scrub and
+		// the retention sweep, and the id would stand past both, attributable
+		// to nobody. A unit that names one is told so at the ingress door.
+		if channelProvider == "" {
+			account = ""
+		}
 		if address == "" && account == "" {
 			continue
+		}
+		if account != "" {
+			if seen[account] {
+				continue
+			}
+			seen[account] = true
 		}
 		addresses = append(addresses, address)
 		accounts = append(accounts, account)
@@ -279,6 +303,14 @@ func StampFurtherParticipants(
 	// The person arm is unguarded for both shapes for the same reason it always
 	// was: naming an existing contact on an activity discloses nothing to them
 	// and creates no reader.
+	//
+	// THE ACCOUNT IS TRIED FIRST, which is the core's own precedence rather
+	// than this query's preference: a channel identity NAMES a human and an
+	// address beside it CORROBORATES them (connector.Counterparty says so, and
+	// the counterparty ladder resolves in that order). Reversed, a party
+	// carrying both would file under whoever holds the ADDRESS while the row
+	// kept somebody else's account — one row naming two people, and an erasure
+	// keyed on either of them reaching a record about the other.
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_participant (activity_id, user_id, person_id, address, channel_user_id, role, display_name)
 		SELECT $1, u.id, pe.person_id, NULLIF(inp.address, ''), NULLIF(inp.account, ''), inp.role, inp.display_name
@@ -287,16 +319,16 @@ func StampFurtherParticipants(
 		         ON $4 AND inp.address <> '' AND lower(u.email) = inp.address
 		  LEFT JOIN LATERAL (
 		       SELECT coalesce(
-		           (SELECT p.person_id
-		              FROM person_email p
-		             WHERE inp.address <> '' AND p.email = inp.address AND p.archived_at IS NULL
-		             ORDER BY p.person_id
-		             LIMIT 1),
 		           (SELECT c.person_id
 		              FROM person_channel_identity c
 		             WHERE inp.account <> '' AND c.provider = $7 AND c.channel_user_id = inp.account
 		               AND c.archived_at IS NULL
 		             ORDER BY c.person_id
+		             LIMIT 1),
+		           (SELECT p.person_id
+		              FROM person_email p
+		             WHERE inp.address <> '' AND p.email = inp.address AND p.archived_at IS NULL
+		             ORDER BY p.person_id
 		             LIMIT 1)) AS person_id) pe ON u.id IS NULL
 		ON CONFLICT DO NOTHING`,
 		activityID, addresses, roles, partyListIsAttested, names, accounts, channelProvider); err != nil {

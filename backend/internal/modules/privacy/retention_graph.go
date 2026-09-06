@@ -28,25 +28,35 @@ import (
 // book is not anonymized. This sweep is the path nobody asks for, which is
 // exactly why it must not be the thinner one.
 //
-// subjectEmails and subjectName are the caller's, read before the
-// anonymization overwrote them.
-func scrubPersonGraphTraces(ctx context.Context, tx pgx.Tx, id ids.UUID, subjectEmails []string, subjectName string, linkedInHandles []string) error {
-	// Delete then null, in that order and for the reason the
-	// eraser documents: a participant row must name somebody, so a
-	// row whose only identity is the subject cannot be blanked,
-	// while one that also names a colleague is not the subject's
-	// to remove.
-	_, err := tx.Exec(ctx, `
-		DELETE FROM activity_participant
-		 WHERE user_id IS NULL
-		   AND (person_id = $1 OR (address IS NOT NULL AND address = ANY($2)))`,
-		id, subjectEmails)
+// subjectEmails, subjectAccounts and subjectName are the caller's, read before
+// the anonymization overwrote them.
+func scrubPersonGraphTraces(
+	ctx context.Context, tx pgx.Tx, id ids.UUID,
+	subjectEmails []string, subjectAccounts []channelIdentity,
+	subjectName string, linkedInHandles []string,
+) error {
+	// THE SAME REACH the request-driven eraser uses, by calling its predicate
+	// rather than by restating it — the lesson the LinkedIn arm below already
+	// records, applied before this copy could drift too. It is what carries the
+	// third identity here: a chat roster names a party by account alone, and a
+	// sweep matching only person_id and address would leave that account
+	// standing.
+	//
+	// Delete then null, in that order and for the reason the eraser documents:
+	// a participant row must name somebody, so a row whose only identity is the
+	// subject cannot be blanked, while one that also names a colleague is not
+	// the subject's to remove.
+	providers, accounts := channelIdentityPairs(subjectAccounts)
+	named := subjectNamedOnAParticipantRow()
+	_, err := tx.Exec(ctx,
+		`DELETE FROM activity_participant ap WHERE ap.user_id IS NULL`+named,
+		id, subjectEmails, providers, accounts)
 	if err == nil {
 		_, err = tx.Exec(ctx, `
-			UPDATE activity_participant SET person_id = NULL, address = NULL, display_name = NULL
-			 WHERE user_id IS NOT NULL
-			   AND (person_id = $1 OR (address IS NOT NULL AND address = ANY($2)))`,
-			id, subjectEmails)
+			UPDATE activity_participant ap
+			   SET person_id = NULL, address = NULL, display_name = NULL, channel_user_id = NULL
+			 WHERE ap.user_id IS NOT NULL`+named,
+			id, subjectEmails, providers, accounts)
 	}
 	if err == nil {
 		_, err = tx.Exec(ctx,

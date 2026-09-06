@@ -15,10 +15,14 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// withRoster is the valid record plus a roster, so a refusal below can only be
-// about the roster.
+// withRoster is the valid record plus a roster, as a MESSAGE on a transport:
+// an account is only meaningful against the transport that issued it, so a
+// roster's home is the one kind that names one. A refusal below can then only
+// be about the roster itself.
 func withRoster(parties ...extension.Participant) extension.Record {
 	rec := aValidRecord()
+	rec.Activity.Kind = extension.ActivityKindMessage
+	rec.Activity.ChannelProvider = "dispact"
 	rec.Participants = parties
 	return rec
 }
@@ -65,9 +69,13 @@ func TestABlankIdentityIsNotAnIdentity(t *testing.T) {
 	}
 }
 
-// The role set is closed at the core's own database, so a value outside it is a
-// constraint violation on a message already read off the wire. Refusing it here
-// turns that into a sentence naming the field.
+// A value outside the published set is refused here, where the unit author
+// reads it, rather than at the database CHECK on a message already off the wire.
+//
+// `bcc` is in the list on purpose. The core's own set admits it, and this
+// surface deliberately does not: a bcc line exists only on the SENDER's own copy
+// of a message, and a unit hands over one it RECEIVED — so a unit reporting one
+// is reporting a position it cannot have seen.
 func TestAnUnlistedRoleIsRefused(t *testing.T) {
 	for _, role := range []string{"", "bcc", "guest", "ATTENDEE"} {
 		t.Run(role, func(t *testing.T) {
@@ -84,13 +92,7 @@ func TestAnUnlistedRoleIsRefused(t *testing.T) {
 // have drifted and a unit reading the surface would be refused for spelling it
 // correctly.
 func TestEveryPublishedRoleIsAdmitted(t *testing.T) {
-	roles := []string{
-		extension.ParticipantRoleTo,
-		extension.ParticipantRoleCC,
-		extension.ParticipantRoleAttendee,
-		extension.ParticipantRoleOrganizer,
-	}
-	for _, role := range roles {
+	for _, role := range extension.ParticipantRoles {
 		party := anAttendee("acct-51")
 		party.Role = role
 		if err := withRoster(party).Validate(); err != nil {
@@ -129,5 +131,31 @@ func TestARosterPartyIsHeldToTheTextBounds(t *testing.T) {
 				t.Fatalf("%s was accepted", name)
 			}
 		})
+	}
+}
+
+// An account with no transport to read it against is refused at the door, and
+// this is the refusal that keeps the column erasable. Every reader pairs the
+// account with the record's transport — the subject-access export and the
+// Art. 17 scrub included — and the core's own schema forces that transport
+// NULL for every kind but a message. Stored anyway, the id would stand past
+// both, attributable to nobody.
+func TestAnAccountOnARecordWithNoTransportIsRefused(t *testing.T) {
+	rec := withRoster(anAttendee("acct-51"))
+	rec.Activity.Kind = "note"
+	rec.Activity.ChannelProvider = ""
+
+	err := rec.Validate()
+	if err == nil {
+		t.Fatal("a roster of accounts was accepted on a record naming no channel provider")
+	}
+	if !strings.Contains(err.Error(), "names no channel provider") {
+		t.Errorf("the refusal reads %q, which does not say what is missing", err)
+	}
+	// An ADDRESS-only roster is untouched by that rule: mail has parties and no
+	// transport, and always did.
+	rec.Participants = []extension.Participant{{Email: "cc@example.com", Role: extension.ParticipantRoleCC}}
+	if err := rec.Validate(); err != nil {
+		t.Errorf("an address-only roster on a transport-less record was refused: %v", err)
 	}
 }

@@ -2,11 +2,19 @@ SET LOCAL lock_timeout = '5s';
 
 DROP INDEX uq_activity_participant;
 
--- Every row carrying an account was written by the roster path this migration
--- opened, so removing them restores exactly the state before it. They have to go
--- before the narrower key is rebuilt in either case: two parties that differ
--- only by account are one row under it, and a row identified by nothing else
--- cannot satisfy the CHECK below at all.
+-- A row carrying an account AND another identity is one the old schema holds
+-- perfectly well — the roster path wrote both columns, and the address arm alone
+-- satisfied the old CHECK and the old key. So the account is cleared and the row
+-- stands. Only a party the account was the WHOLE identity of has to go: it
+-- cannot satisfy the narrower CHECK below, and there is nothing left to keep.
+--
+-- Both statements run before the narrower key is rebuilt, so a row that becomes
+-- a duplicate of another under it is impossible to create here and reachable
+-- only from data the old schema could not have held either.
+UPDATE activity_participant SET channel_user_id = NULL
+ WHERE channel_user_id IS NOT NULL
+   AND (user_id IS NOT NULL OR person_id IS NOT NULL OR address IS NOT NULL);
+
 DELETE FROM activity_participant WHERE channel_user_id IS NOT NULL;
 
 CREATE UNIQUE INDEX uq_activity_participant ON activity_participant

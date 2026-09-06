@@ -260,3 +260,79 @@ func TestAPartyWithBothKeepsBoth(t *testing.T) {
 		t.Errorf("the row's address is %v, want the lower-cased address the transport gave", address)
 	}
 }
+
+// A party carrying BOTH is filed under the ACCOUNT's human, not the address's.
+// The two can be different people — an address the installation already knows
+// and an account bound to somebody else — and the core's own precedence says
+// the channel identity NAMES the human while an address beside it only
+// corroborates. Reversed, one row would name two people, and an erasure keyed
+// on either would reach a record about the other.
+func TestAnAccountOutranksAnAddressWhenBothNameSomebody(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	activity := seedChatMessage(t)
+
+	byAddress := e.SeedPerson(t, "Whoever Holds The Address", &e.Rep1)
+	SeedIDRow(t, owner, `INSERT INTO person_email (id, person_id, email, source, captured_by)
+		VALUES ($1, '`+byAddress.String()+`', 'legal@example.net', 'manual', 'human:x')`)
+	byAccount := e.SeedPerson(t, "Whoever Holds The Account", &e.Rep1)
+	SeedIDRow(t, owner, `INSERT INTO person_channel_identity (id, person_id, provider, channel_user_id, source, captured_by)
+		VALUES ($1, '`+byAccount.String()+`', '`+rosterProvider+`', 'acct-77', 'capture', 'connector:telegram')`)
+
+	stampRoster(t, e, activity, false,
+		connector.MessageParticipant{ChannelUserID: "acct-77", Email: "legal@example.net", Role: connector.ParticipantRoleAttendee})
+
+	_, personID, _, found := rosterRow(t, activity, "acct-77")
+	if !found {
+		t.Fatal("the party was not recorded at all")
+	}
+	if personID == nil || *personID != byAccount {
+		t.Fatalf("the row filed under %v, want the account's human %s — an address beside an account corroborates, it does not name", personID, byAccount)
+	}
+}
+
+// One account is one human. A sender who describes the same party twice — once
+// with an address, once without — has named one person, and the uniqueness
+// index cannot say so: it separates the two rows on the address, which is right
+// for mail and wrong for a roster. Left to the index the graph counts two
+// people in a two-person room.
+func TestARosterNamingOneAccountTwiceLeavesOneRow(t *testing.T) {
+	e := Setup(t)
+	activity := seedChatMessage(t)
+
+	stampRoster(t, e, activity, false,
+		connector.MessageParticipant{ChannelUserID: "acct-77", Role: connector.ParticipantRoleAttendee},
+		connector.MessageParticipant{ChannelUserID: "acct-77", Email: "legal@example.net", Role: connector.ParticipantRoleAttendee},
+		connector.MessageParticipant{ChannelUserID: "acct-51", Role: connector.ParticipantRoleAttendee})
+
+	var rows int
+	if err := OwnerConn(t).QueryRow(context.Background(),
+		`SELECT count(*) FROM activity_participant WHERE activity_id = $1`, activity).Scan(&rows); err != nil {
+		t.Fatalf("counting: %v", err)
+	}
+	if rows != 2 {
+		t.Fatalf("a roster naming two accounts (one of them twice) left %d row(s), want 2", rows)
+	}
+}
+
+// Two mail parties on the same address are still one row, which is what says
+// the account dedupe above did not quietly become a general one: an
+// address-only roster keeps exactly the behaviour the uniqueness index has
+// always given the mail path.
+func TestTheAccountDedupeDoesNotReachAnAddressOnlyParty(t *testing.T) {
+	e := Setup(t)
+	activity := seedChatMessage(t)
+
+	stampRoster(t, e, activity, false,
+		connector.MessageParticipant{Email: "legal@example.net", Role: connector.ParticipantRoleAttendee},
+		connector.MessageParticipant{Email: "ops@example.net", Role: connector.ParticipantRoleAttendee})
+
+	var rows int
+	if err := OwnerConn(t).QueryRow(context.Background(),
+		`SELECT count(*) FROM activity_participant WHERE activity_id = $1`, activity).Scan(&rows); err != nil {
+		t.Fatalf("counting: %v", err)
+	}
+	if rows != 2 {
+		t.Fatalf("two address-only parties left %d row(s), want 2", rows)
+	}
+}

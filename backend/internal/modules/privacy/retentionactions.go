@@ -225,6 +225,17 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	if err != nil {
 		return err
 	}
+	// The ACCOUNTS too, and before this sweep's own deletes reach
+	// person_channel_identity. A chat roster names the third human in a
+	// group by the provider's account and by nothing else, so an account is
+	// the third way a graph row holds the subject — the same trap the
+	// address arm above describes, in a second vocabulary. Read through the
+	// eraser's own query rather than a second one, so the two paths cannot
+	// disagree about which accounts are the subject's.
+	subjectAccounts, err := personChannelIdentities(ctx, tx, ids.From[ids.PersonKind](id))
+	if err != nil {
+		return err
+	}
 	// The NAME too, and before the anonymization below overwrites it —
 	// the ghost sweep matches on it, and by then it is the tombstone.
 	var subjectName string
@@ -343,7 +354,7 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 			DELETE FROM capture_pending_counterparty WHERE email = ANY($1)`, subjectEmails)
 	}
 	if err == nil {
-		err = scrubPersonGraphTraces(ctx, tx, id, subjectEmails, subjectName, linkedInHandles)
+		err = scrubPersonGraphTraces(ctx, tx, id, subjectEmails, subjectAccounts, subjectName, linkedInHandles)
 	}
 	return err
 }

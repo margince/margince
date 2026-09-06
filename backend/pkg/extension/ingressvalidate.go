@@ -99,13 +99,29 @@ func (r Record) validateAddresses() error {
 // its mapping lost the field, which is the bug; a silent drop reports a
 // four-person group as a three-person one and nothing fails.
 //
-// Over the cap is a refusal rather than a truncation for the reason the cap
-// exists: half a broadcast list reads like a small conversation, so the record
-// lands with no roster at all and the unit is told why.
+// Over the cap is a refusal of the RECORD rather than a truncation, for the
+// reason the cap exists: half a broadcast list reads like a small conversation,
+// and a unit told which bound it crossed can decide what its provider sent,
+// where a silent trim leaves it believing a sixty-person group landed whole.
 func (r Record) validateParticipants() error {
 	if len(r.Participants) > MaxParticipants {
-		return fmt.Errorf("extension: the record names %d participants, over the cap of %d — past it a roster is a broadcast list rather than a conversation, and the core drops one whole rather than truncating it",
+		return fmt.Errorf("extension: the record names %d participants, over the cap of %d — past it a roster is a broadcast list rather than a conversation, and the record is refused rather than trimmed to look like a small one",
 			len(r.Participants), MaxParticipants)
+	}
+	// An account is only meaningful against the transport that issued it, and
+	// the record names that transport in one place: ActivityFields.
+	// ChannelProvider, which the core admits for a message and for nothing
+	// else. A roster of accounts on any other kind is a set of ids nothing can
+	// ever attribute — including the subject-access export and the erasure
+	// scrub, both of which resolve an account through the transport — so it is
+	// refused here, where the unit author reads which field is missing, rather
+	// than dropped where nothing reports it.
+	if strings.TrimSpace(r.Activity.ChannelProvider) == "" {
+		for _, p := range r.Participants {
+			if strings.TrimSpace(p.Account) != "" {
+				return fmt.Errorf("extension: a participant names account %q on a record that names no channel provider — an account id is only meaningful against the transport that issued it, and nothing could attribute this one afterwards", p.Account)
+			}
+		}
 	}
 	for _, p := range r.Participants {
 		switch {
@@ -124,14 +140,16 @@ func (r Record) validateParticipants() error {
 	return nil
 }
 
-// participantRoles is the closed set validateParticipants admits, spelled from
-// the published constants so adding one there cannot leave this behind.
-var participantRoles = map[string]bool{
-	ParticipantRoleTo:        true,
-	ParticipantRoleCC:        true,
-	ParticipantRoleAttendee:  true,
-	ParticipantRoleOrganizer: true,
-}
+// participantRoles is the closed set validateParticipants admits, built from
+// ParticipantRoles at init so a role a unit reads off this surface is one this
+// validator accepts. TestEveryPublishedRoleIsAdmitted walks the same list.
+var participantRoles = func() map[string]bool {
+	admitted := make(map[string]bool, len(ParticipantRoles))
+	for _, role := range ParticipantRoles {
+		admitted[role] = true
+	}
+	return admitted
+}()
 
 func (c Counterparty) validate() error {
 	if len(c.Email) > MaxAddressLength {

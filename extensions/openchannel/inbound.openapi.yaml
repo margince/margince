@@ -257,9 +257,10 @@ components:
             A party with neither an account nor an email is dropped: there
             is nothing to identify them by, and the message still lands.
             More than 50 parties is a broadcast list rather than a
-            conversation, and the whole roster is dropped rather than
-            truncated — half a broadcast list reads exactly like a small
-            group.
+            conversation, and the whole REQUEST is refused rather than
+            trimmed — half a broadcast list reads exactly like a small
+            group, so a sender is told rather than left believing a
+            sixty-person conversation landed whole.
 
             Addresses named here do NOT join the message's address set. That
             set is what decides whether a message was purely internal, and

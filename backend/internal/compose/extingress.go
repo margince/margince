@@ -226,16 +226,15 @@ func (r *callRuntime) normalized(rec extension.Record, declared extension.Ingres
 	}
 }
 
-// participantsOf maps the published roster onto the core's, capped by the core's
-// own bound rather than by a second copy of it here.
+// participantsOf maps the published roster onto the core's.
 //
-// Held to the core's cap and not the published one for the reason every other
-// rule of this shape is: the published number is what a unit CHECKS itself
-// against, and the core's is what actually decides. A record assembled some
-// other way — a future in-process caller, a test — reaches the same cap.
-//
-// A party with no identity cannot arrive: Record.Validate refuses one at the
-// door, where the unit author reads the refusal.
+// Record.Validate has already refused an over-cap roster and a party with no
+// identity by the time this runs, so CapParticipants here is belt and braces
+// rather than the decision: it is the core's own bound, applied where the core
+// can see it, for a record that reached this function some other way. Said
+// plainly because the alternative is a reader assuming this line is what stops
+// a sixty-person group — it is not, and the refusal a unit reads comes from the
+// door.
 func participantsOf(parties []extension.Participant) []connector.MessageParticipant {
 	if len(parties) == 0 {
 		return nil
