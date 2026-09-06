@@ -20,6 +20,7 @@ package channels
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -87,10 +88,13 @@ func TestNarrowingAChannelMessageToParticipantsIsRefused(t *testing.T) {
 	store := activities.NewStore(c.DB())
 	writer := c.audienceWriterCtx(t)
 
-	if _, err := store.SetAudience(writer, id,
-		activities.SetAudienceInput{Audience: "participants"}); err == nil {
-		t.Fatal("narrowing a captured channel message to participants was accepted — " +
-			"the row now satisfies no arm of the audience gate and no human can read it or widen it back")
+	_, err := store.SetAudience(writer, id,
+		activities.SetAudienceInput{Audience: "participants"})
+	var orphaned *activities.OrphanedAudienceError
+	if !errors.As(err, &orphaned) {
+		t.Fatalf("narrowing a captured channel message to participants answered %v — "+
+			"the refusal has to be the orphan refusal itself, because any other error "+
+			"leaves the row satisfying no arm of the audience gate whenever that other cause goes away", err)
 	}
 
 	// The refusal has to be the WHOLE story: a partial write that narrowed the
