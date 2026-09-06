@@ -5,13 +5,13 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { navigate } from "../app/router";
-import { Badge, Button } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelRow } from "../design-system/panel";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
-import { STATE_LABELS } from "./dealroom";
+import { RoomStateBadge, STATE_LABELS } from "./dealroom";
 import { participantsKey } from "./dealroomaccess";
 
 // The rooms a contact can still enter, on the contact's own page. An admin
@@ -195,7 +195,7 @@ function RevokeSeat({
       onConfirm={() => revoke.mutate({ roomId: room.id, email })}
     >
       <p>
-        {email} <Badge>{t(STATE_LABELS[room.state])}</Badge>
+        {email} <RoomStateBadge state={room.state} />
       </p>
       <p className="t-caption">{t("access.revokeBody")}</p>
     </ConfirmModal>

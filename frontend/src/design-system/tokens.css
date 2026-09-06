@@ -77,6 +77,19 @@
   --paneEdge: rgba(16, 26, 21, 0.08);
   --glowA: rgba(24, 190, 120, 0.06);
   --glowB: rgba(91, 97, 214, 0.1);
+  /* The lit ground itself: the page colour with the two lights painted INTO it,
+   * fixed radii and no repeat, so nothing is stacked, scrolled or measured for
+   * them — and never animated, because atmosphere that moves is a feature.
+   *
+   * It is a token rather than a rule in the shell's sheet because TWO surfaces
+   * stand on it: the app shell, and the buyer's Deal Room, which is a page of
+   * its own outside the shell (screens/buyerroom.css). Spelled twice, the two
+   * would drift, and the one a client sees is the one nobody is looking at. */
+  --groundLit:
+    radial-gradient(900px 620px at 0 0, var(--glowA), transparent 70%) no-repeat,
+    radial-gradient(900px 620px at 100% 100%, var(--glowB), transparent 70%)
+    no-repeat,
+    var(--bgPage);
 
   --accent: #0b7a53;
   /* The accent as TEXT, split from the accent as a FILL, and now diverging from
