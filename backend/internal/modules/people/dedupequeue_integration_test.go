@@ -739,6 +739,66 @@ func TestARefusedMergeLeavesNoMarkAndNoAuditOfOne(t *testing.T) {
 	}
 }
 
+// The queue says whether the caller could actually decide each pair.
+//
+// Capture creates the near-duplicate owned by the mailbox owner while the
+// incumbent belongs to whoever worked it, so a pair whose ends have different
+// owners is the common shape — and deciding one needs write authority over
+// BOTH ends, because dismissing suppresses both records for the whole workspace
+// and merging rewrites one into the other. Neither owner holds that.
+//
+// The pair is still LISTED: the person who can see a duplicate is the person
+// best placed to notice it, and narrowing the list would hide a real duplicate
+// rather than merely leave it stuck. What was missing is the truth about the
+// buttons — they rendered unconditionally and the refusal arrived after the
+// POST.
+func TestTheQueueSaysWhichPairsThisCallerCouldDecide(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	_, second := seedPersonPair(ctx, t, e, "Otto Split", "otto@split.test", "Ottoo Split", "ottoo@split.test", "split.test")
+	c := openCandidates(ctx, t, e, "person")[0]
+
+	// An unbounded reader can decide it, which is the control: a flag that were
+	// false for everybody would pass the assertion below for the wrong reason.
+	if !c.CanDecide {
+		t.Fatal("an unbounded reader cannot decide a pair it can see — can_decide is false for everyone")
+	}
+
+	// Hand ONE end to a colleague. Now neither owner holds both.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE person SET owner_id = $1 WHERE id = $2`, e.otherRep, second)
+		return err
+	}); err != nil {
+		t.Fatalf("handing one end to the colleague: %v", err)
+	}
+
+	colleague := e.asOwnScoped(e.otherRep)
+	listed := openCandidates(colleague, t, e, "person")
+	if len(listed) != 1 {
+		t.Fatalf("the colleague sees %d pair(s), want 1 — a duplicate they can see must stay "+
+			"listed even when they cannot settle it", len(listed))
+	}
+	if listed[0].CanDecide {
+		t.Error("can_decide is true for a caller who owns one end of the pair — the buttons will " +
+			"render and the POST will answer 403, which is the whole defect")
+	}
+
+	// And the flag is not merely pessimistic for a bounded seat: give the
+	// colleague both ends and it turns true.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE person SET owner_id = $1 WHERE id IN ($2, $3)`,
+			e.otherRep, listed[0].LeftID, listed[0].RightID)
+		return err
+	}); err != nil {
+		t.Fatalf("handing both ends to the colleague: %v", err)
+	}
+	both := openCandidates(colleague, t, e, "person")
+	if len(both) != 1 || !both[0].CanDecide {
+		t.Errorf("can_decide = %v for a caller who owns BOTH ends, want true — a flag that is "+
+			"always false hides the buttons from everyone", both)
+	}
+}
+
 func TestDedupeMergeArmKeepsItsOwnRefusal(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()

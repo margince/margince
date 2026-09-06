@@ -22573,6 +22573,20 @@ type DecideCommissionRequestDecision string
 
 // DedupeCandidate One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8).
 type DedupeCandidate struct {
+	// CanDecide Whether THIS caller could dispose of the pair — merge it, dismiss it,
+	// or undo a decision. Deciding needs write authority over BOTH ends:
+	// dismissing suppresses both records as duplicates for the whole
+	// workspace, and merging rewrites one into the other.
+	//
+	// A pair whose ends have different owners is therefore undecidable by
+	// any bounded seat, and it is a common shape — capture creates the
+	// near-duplicate owned by the mailbox owner while the incumbent belongs
+	// to whoever worked it. The pair is still LISTED, because the person
+	// who can see a duplicate is the person best placed to notice it; this
+	// says whether the buttons will work, which the client should gate on
+	// rather than discovering through a 403 after the POST.
+	CanDecide bool `json:"can_decide"`
+
 	// Confidence The PO-F-1/PO-F-2 fuzzy score at detection.
 	Confidence float32             `json:"confidence"`
 	CreatedAt  time.Time           `json:"created_at"`

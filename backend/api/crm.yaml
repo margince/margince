@@ -23112,7 +23112,7 @@ components:
     DedupeCandidate:
       type: object
       description: 'One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8).'
-      required: [id, entity_type, left_id, right_id, confidence, evidence, status, created_at]
+      required: [id, entity_type, left_id, right_id, confidence, evidence, status, created_at, can_decide]
       properties:
         id: { type: string, format: uuid }
         entity_type: { type: string, enum: [person, organization, lead], description: 'A pair is always same-type (ADR-0118/A169 §2): a lead is proposed as a duplicate of a lead or of nothing.' }
@@ -23132,6 +23132,21 @@ components:
               signal: { type: string, description: 'agree | collide | one_sided' }
               score: { type: [number, 'null'], description: 'The field''s contribution where scored (e.g. name_sim).' }
         status: { type: string, enum: [open, merged, not_a_duplicate] }
+        can_decide:
+          type: boolean
+          description: |
+            Whether THIS caller could dispose of the pair — merge it, dismiss it,
+            or undo a decision. Deciding needs write authority over BOTH ends:
+            dismissing suppresses both records as duplicates for the whole
+            workspace, and merging rewrites one into the other.
+
+            A pair whose ends have different owners is therefore undecidable by
+            any bounded seat, and it is a common shape — capture creates the
+            near-duplicate owned by the mailbox owner while the incumbent belongs
+            to whoever worked it. The pair is still LISTED, because the person
+            who can see a duplicate is the person best placed to notice it; this
+            says whether the buttons will work, which the client should gate on
+            rather than discovering through a 403 after the POST.
         disposed_by: { type: [string, 'null'], format: uuid }
         disposed_at: { type: [string, 'null'], format: date-time }
         created_at: { type: string, format: date-time }

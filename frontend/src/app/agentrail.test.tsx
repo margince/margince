@@ -80,6 +80,10 @@ const CANDIDATE = (id: string): Candidate => ({
   right_id: "o-2",
   confidence: 0.91,
   evidence: [],
+  // The rail only counts what is waiting; it renders no decide button, so this
+  // fixture says the caller could decide rather than leaving the count and the
+  // authority tangled in a test about neither.
+  can_decide: true,
   status: "open",
   created_at: "2026-08-01T09:00:00Z",
 });
