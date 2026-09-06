@@ -99,7 +99,7 @@ SEED_STACK = set -e; . scripts/lib-devstate.sh; \
     seed_dsn="postgres://margince_owner:dev@localhost:15432/$$seed_db"; \
   fi;
 
-.PHONY: help install dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-laneorder secret-scan test-secret-scan test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-laneorder secret-scan test-secret-scan test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -188,6 +188,31 @@ check:
 	@bash scripts/phase-timer.sh reset
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-backend
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-fe
+	@bash scripts/phase-timer.sh report
+
+## check-all — `check` plus the integration lane, which is what a change touching
+## backend Go actually has to pass. `check` reaches the integration lane NOT AT
+## ALL: its `test` target is `go test ./...`, and every integration file carries
+## `//go:build integration`, so the lane's packages compile into nothing and a
+## green `check` says nothing about them.
+##
+## Its own target rather than folding the lane into `check`, because `check` is
+## what a docs or frontend change runs and that is most changes: the lane takes
+## minutes and needs Postgres up, so paying it on a README edit would train
+## everybody to skip the gate that also holds the security cases.
+##
+## Not in the pre-push hook either, and the reason is this machine rather than
+## principle: parallel sessions share one test template, so a hook running the
+## lane on every push would have them rebuilding each other's schema mid-run —
+## failures that are schema-shaped and look nothing like their cause. The hook
+## keeps the checks that are fast, need nothing running, and cannot collide.
+check-all:
+	@bash scripts/phase-timer.sh reset
+	@PHASE_TIMER_OWNED=1 $(MAKE) check-backend
+	@PHASE_TIMER_OWNED=1 $(MAKE) check-fe
+	@bash scripts/phase-timer.sh start "backend: integration lane (real Postgres)"
+	@PHASE_TIMER_OWNED=1 $(MAKE) -C backend test-integration
+	@bash scripts/phase-timer.sh stop
 	@bash scripts/phase-timer.sh report
 
 ## check-q — quiet `make check`: the full log lands in .tmp/check.log and only an

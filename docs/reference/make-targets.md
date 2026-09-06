@@ -41,6 +41,7 @@ UAT guides call by name (`docs/target-minimum-setup.md §3`). `check-q`,
 | Target | What it does |
 |---|---|
 | `check` | **The merge gate.** Backend `make check` = build + vet + lint + arch-lint + test + drift. Root `make check` runs that **plus** the craft-doc floor, image pins, contract breaking-change (`oasdiff`), test-lane hygiene, and the file-length ratchet |
+| `check-all` | **What a change touching backend Go has to pass**: `check` plus the integration lane. `check` reaches that lane **not at all** — its `test` target is `go test ./...`, and every integration file carries `//go:build integration`, so those packages compile into nothing and a green `check` says nothing about them. Needs `make db-up`, and takes minutes: `check` stays the target for docs and frontend work, which is most changes. Deliberately not in the pre-push hook — parallel sessions on one machine share the test template, so a hook running the lane on every push would have them rebuilding each other's schema mid-run |
 | `check-backend` / `check-fe` | The two halves of the root gate, runnable alone: `check-backend` = backend `check` + the root script gates below (what CI's deterministic-gates job runs; it needs no frontend toolchain — `contract-frontend-drift` skips loudly without pnpm); `check-fe` = the composed typecheck, `frontend-check`, and the unit screens' own suites (`fe-test-ext`), with a loud fail if `frontend/node_modules` is missing |
 | `build` | `go build ./...` |
 | `vet` | `go vet ./...` |
