@@ -440,6 +440,9 @@ var tableOwners = map[string]string{
 	"weekly_plan":               "internal/modules/weeklyplan",
 	"weekly_plan_commitment":    "internal/modules/weeklyplan",
 	"weekly_review_deal":        "internal/compose/weekly",
+	"weekly_review_outlook":     "internal/compose/weekly",
+	"weekly_review_movement":    "internal/compose/weekly",
+	"weekly_review_driver":      "internal/compose/weekly",
 	// The company view's per-user visit baseline: view state, not a record
 	// fact, so it is written without an audit row — the saved-view ruling.
 	// The person view acknowledges visits into the SAME table (one baseline

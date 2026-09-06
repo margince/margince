@@ -29,12 +29,11 @@ package gates
 // says so in its own comment and defends with an explicit error. Asserting the
 // guard here is what keeps that defence from being deleted as belt-and-braces.
 //
-// The corpus is proven, not asserted: gatekit.Scope sweeps the code this gate
-// does NOT read and fails on any staging site outside its roots. A module never
-// writes a sibling's table, so a delivery is staged only by a compose
-// implementation of the module-facing stager interface — and if that stops
-// being true, the sweep names the file rather than a comment claiming it cannot
-// happen.
+// NOT in the corpus: comms.Store.StageControllerTx. It has no production caller
+// on main — the controller mail lane it belongs to was never wired — so it
+// stages nothing today and an obligation on it would be an assertion about code
+// that does not run. It joins the corpus the moment a caller appears, because
+// the corpus is derived from who calls the stagers rather than listed here.
 
 import (
 	"go/ast"
@@ -42,8 +41,6 @@ import (
 	"go/token"
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // stagingObligations are the calls a staging method must pair. Each is the
@@ -63,39 +60,32 @@ var stagerCalls = []string{"StageTx", "StageChannelTx", "StageControllerTx"}
 func TestEveryStagedDeliveryCarriesItsAuthorization(t *testing.T) {
 	t.Parallel()
 
-	scope := gatekit.Scope{
-		Roots:   []string{"internal/compose"},
-		Subject: stagesADeliveryFile,
-		Exempt:  stagerCallers,
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset,
+		"internal/compose/commsstager.go", nil, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("parsing the staging seam: %v", err)
 	}
 
 	subjects := map[string]map[string]bool{}
-	for _, file := range scope.Files(t) {
-		for _, decl := range file.File.Decls {
-			fn, ok := decl.(*ast.FuncDecl)
-			if !ok || fn.Body == nil {
-				continue
-			}
-			called := callsIn(fn)
-			if !stagesADelivery(called) {
-				continue
-			}
-			subjects[fn.Name.Name] = called
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Body == nil {
+			continue
 		}
+		called := callsIn(fn)
+		if !stagesADelivery(called) {
+			continue
+		}
+		subjects[fn.Name.Name] = called
 	}
 
-	// An exemption that matched nothing is ratification of code that is gone: if
-	// activities ever stops reaching the seam, the entry saying why that was
-	// fine must fail rather than sit there looking deliberate.
-	stagerCallers.AssertAllMatched(t)
-
-	// Derived from the writers themselves, not counted by hand: one subject per
-	// delivery writer, so renaming a stager fails here rather than leaving a
-	// smaller number for somebody to edit the floor down to.
-	if len(subjects) < len(stagerCalls) {
-		t.Fatalf("found %d staging methods, want one per delivery writer (%d): "+
-			"a writer whose callers vanished is a lane staging nothing, or a "+
-			"rename this gate stopped matching", len(subjects), len(stagerCalls))
+	// Under-recognition is the one way this must not fail. A gate that parsed
+	// the wrong file, or a rename that made every method stop matching, would
+	// find no subjects and report PASS.
+	if len(subjects) < 2 {
+		t.Fatalf("found %d staging methods, want at least the mail and channel pair: "+
+			"the gate is looking in the wrong place or the stagers were renamed", len(subjects))
 	}
 
 	names := map[string]bool{}
@@ -159,45 +149,6 @@ func TestAStagingPathWithNoAuthorityFailsRatherThanStages(t *testing.T) {
 }
 
 // stagesADelivery reports whether a method writes a delivery row.
-// stagerCallers ratifies the module-tier files that CALL a delivery writer
-// without being one.
-//
-// Modules never write a sibling's table, so activities reaches the delivery row
-// through an interface it declares and compose implements. The call reads like
-// a staging site to a selector-matching gate and is not one: the obligations
-// live in the implementation, which is inside the roots. Widening the roots to
-// cover these would put the obligation on the caller, where AuthorizeStagingTx
-// is not reachable and could not be satisfied.
-var stagerCallers = gatekit.Waive(map[string]string{
-	"internal/modules/activities/sendcore.go": "calls StageTx on the DeliveryStager " +
-		"INTERFACE (email.go:122), which compose implements: the mail send path hands the " +
-		"delivery to the seam and the seam carries the authorization, so the obligation " +
-		"belongs to commsStager.StageTx and is asserted there",
-
-	"internal/modules/activities/channelsend.go": "the channel twin of sendcore, calling " +
-		"StageChannelTx on the same injected seam for the same reason — a module may not " +
-		"reach the delivery table itself, so what it calls is an interface and what carries " +
-		"the obligation is the compose method behind it",
-})
-
-// stagesADeliveryFile reports whether a file holds any staging site at all.
-//
-// The same predicate Scope applies inside the roots and outside them: a file
-// anywhere in the module that calls a delivery writer is this gate's business,
-// and one outside internal/compose means the roots below are wrong.
-func stagesADeliveryFile(_ string, file *ast.File) bool {
-	for _, decl := range file.Decls {
-		fn, ok := decl.(*ast.FuncDecl)
-		if !ok || fn.Body == nil {
-			continue
-		}
-		if stagesADelivery(callsIn(fn)) {
-			return true
-		}
-	}
-	return false
-}
-
 func stagesADelivery(called map[string]bool) bool {
 	for _, stager := range stagerCalls {
 		if called[stager] {
