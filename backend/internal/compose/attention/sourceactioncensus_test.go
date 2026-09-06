@@ -113,10 +113,9 @@ func TestNoLaneAdvertisesAVerbTheClientCannotPerform(t *testing.T) {
 	// deliberate act somebody has to write down rather than an omission nothing
 	// notices. The map only shrinks.
 	notYetAssembled := map[string]string{
-		"customer_waiting":     "the waiting lane is not an optional seam; the fixture has no stub for it",
-		"lead_response":        "same lane shape as customer_waiting",
-		"undelivered":          "the delivery lane assembles only bounces from stubBounces",
-		"introduction_request": "no stub feeds the introduction lane",
+		"customer_waiting": "the waiting lane is a positional seam Assemble does not read; " +
+			"reaching it needs a stub this fixture has no argument slot for",
+		"lead_response": "the same lane shape as customer_waiting, and unreachable for the same reason",
 	}
 	reached := map[string]bool{}
 	for _, items := range lanes {
@@ -297,7 +296,16 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 			rows: []MeetingAwaitingOutcome{{
 				ID: ids.NewV7(), Subject: "a meeting that happened", StartedAt: readInstant,
 			}},
-		}))
+		})).
+		WithUndelivered(&stubUndelivered{rows: []ParkedSend{{
+			ID: ids.NewV7(), Subject: "a send that never left",
+			Reason: "the address bounced twice", ParkedAt: readInstant,
+			PersonID: ids.NewV7(),
+		}}}).
+		WithIntroductions(&stubIntroductions{rows: []PendingIntroduction{{
+			ID: ids.NewV7(), PersonID: ids.NewV7(),
+			Reason: "they know the buyer", RequestedAt: readInstant, DueAt: readInstant,
+		}}})
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling the day: %v", err)
