@@ -236,6 +236,8 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 // deliberately rather than left for it to notice.
 //
 // Held by: TestErasingAndAnonymizingClearTheSameTables (backend/gates/personscrub_test.go)
+//
+//craft:ignore long-func the length IS the register — one statement per table with the judgement that put it there — and three fitness gates bind these writes to THIS file and THIS function name: TestEveryPackageOnlyWritesTablesItOwns ratifies each cross-module write under a key naming both, TestEveryPersonSatelliteJoinsEveryLifecyclePathThatApplies reads the anonymize path out of this file, and TestErasureAndSARReachEveryPIITable derives the purge set from these statements. Extracting a helper moves writes out from under all three at once, which is a decomposition that costs more coverage than the cap buys
 func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	// The subject's addresses, read BEFORE person_email is deleted
 	// below. The graph structures name them by raw address as well as
