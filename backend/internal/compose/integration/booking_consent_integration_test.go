@@ -71,7 +71,10 @@ func assertConsentRefusalsLeaveNothingBehind(t *testing.T, e *apptest.AppEnv, pe
 
 	// An unknown purpose cannot be recorded.
 	unknownPurpose := bookingAt(slot, personID, AnyMap{
-		"consent": AnyMap{"purpose_id": ids.NewV7().String(), "policy_version": "pp-2026-01"},
+		"consent": AnyMap{
+			"purpose_id": ids.NewV7().String(), "policy_version": "pp-2026-01",
+			"wording": "You agree we may contact you about this meeting.",
+		},
 	})
 	if status := e.Call(t, "POST", "/v1/bookings", unknownPurpose, nil, nil); status != 422 {
 		t.Fatalf("booking with an unknown consent purpose → %d, want 422", status)
@@ -85,10 +88,24 @@ func assertConsentRefusalsLeaveNothingBehind(t *testing.T, e *apptest.AppEnv, pe
 		t.Fatalf("booking consent without policy_version → %d, want 422", status)
 	}
 
+	// And the wording itself. Refused HERE rather than at the consent writer,
+	// because this door creates the person before it records the grant: a
+	// refusal further in would leave that row behind, and this door is
+	// anonymous.
+	noWording := bookingAt(slot, personID, AnyMap{
+		"consent": AnyMap{"purpose_id": purposeID, "policy_version": "pp-2026-01"},
+	})
+	if status := e.Call(t, "POST", "/v1/bookings", noWording, nil, nil); status != 422 {
+		t.Fatalf("booking consent without wording → %d, want 422", status)
+	}
+
 	// Consent is person-keyed: no linked person, nothing to attach to.
 	subjectless := bookingAt(slot, personID, AnyMap{
-		"links":   []AnyMap{},
-		"consent": AnyMap{"purpose_id": purposeID, "policy_version": "pp-2026-01"},
+		"links": []AnyMap{},
+		"consent": AnyMap{
+			"purpose_id": purposeID, "policy_version": "pp-2026-01",
+			"wording": "You agree we may contact you about this meeting.",
+		},
 	})
 	if status := e.Call(t, "POST", "/v1/bookings", subjectless, nil, nil); status != 422 {
 		t.Fatalf("booking consent without a linked person → %d, want 422", status)

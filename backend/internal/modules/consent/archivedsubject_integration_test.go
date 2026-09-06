@@ -145,6 +145,10 @@ func assertConsentSplit(
 
 	grant := in
 	grant.NewState = string(StateGranted)
+	// A grant carries wording or the writer refuses it before it ever reaches
+	// the archived-subject probe — and what this asserts is the probe's answer,
+	// not the wording rule's.
+	grant.PolicyText = &grantWording
 	if _, err := store.Record(ctx, grant); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("granting consent for an archived subject: got %v, want not found", err)
 	}

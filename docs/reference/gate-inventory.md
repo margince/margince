@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (85)
+## Parity (86)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -88,6 +88,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `outboundidentity_test.go` | H1 | A remote operator sees one name for this product and decides about it: blocks it, rate-limits it, allow-lists it, or writes a robots.txt group naming it. |
 | `overdueboundary_test.go` | H1 | "Is this late?" is one question about one record, and a reader can ask it of a list, a card, a brief or an agent tool. |
 | `personalpurgewindow_test.go` | H3 | The page that names a deletion date and the sweep that carries it out must read ONE window, or the product promises a date it does not keep. |
+| `planprosebounds_test.go` | H3 | A plan's prose columns are bounded twice, and the two numbers must agree. |
 | `pollcadenceparity_test.go` | H3 | A connector that POSTPONES a tick on an unreachable provider asks to run again after a fixed delay, and that delay has to EQUAL the cadence its dispatcher already ticks at — and has to survive the seam's ceiling on the way to the queue. |
 | `previewauthority_test.go` | H2 | The authority levels a composer can receive are the ones the engine can send. |
 | `processingrecord_test.go` | H3 | The Art. 30 processing record names the code that enforces each entry, and this fails when that code is not there any more. |
@@ -244,7 +245,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthorityreach_test.go` | H2 | Every write of a shareable record reaches a write-authority probe. |
 | `writeshape_test.go` | H2 | The write-shape obligation as a fitness function: every mutation that writes an audit row commits a paired outbox event on the same static call path (data-model §11, events.md §4.2 — spelled once in storekit), across modules AND the composition layer. |
 
-## Shape (23)
+## Shape (24)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -263,6 +264,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `manifestdigest_test.go` | H2 | Manifest-hash encoding fitness function (ADR-0069 §7): every hash a generated unit manifest publishes says which algorithm produced it. |
 | `positionalrowscan_test.go` | H2 | A positional row mapping may only target a struct its own package declares. |
 | `promptversionderived_test.go` | H2 | A cached answer is keyed by a fingerprint, and the fingerprint has to move when the prompt that produced the answer moves. |
+| `replyverdictvocabulary_test.go` | H1 | The reply verdict is spelled in three places, and they have to agree. |
 | `resetwireshape_test.go` | H2 | The reset-data 200 body as a fitness function. |
 | `rowgatespelling_test.go` | H2 | A module's READ spelling of a row gate is not a licence to write through it. |
 | `subjectlockorder_test.go` | H2 | The subject lock is the FIRST row a transaction takes. |

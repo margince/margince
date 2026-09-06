@@ -1426,6 +1426,7 @@ const (
 	AttentionItemActionsDismiss     AttentionItemActions = "dismiss"
 	AttentionItemActionsMerge       AttentionItemActions = "merge"
 	AttentionItemActionsOpen        AttentionItemActions = "open"
+	AttentionItemActionsRetry       AttentionItemActions = "retry"
 	AttentionItemActionsSetAside    AttentionItemActions = "set_aside"
 	AttentionItemActionsSnooze      AttentionItemActions = "snooze"
 )
@@ -1446,6 +1447,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsMerge:
 		return true
 	case AttentionItemActionsOpen:
+		return true
+	case AttentionItemActionsRetry:
 		return true
 	case AttentionItemActionsSetAside:
 		return true
@@ -1930,6 +1933,27 @@ func (e AutomationCatalogEntryTier) Valid() bool {
 	case AutomationCatalogEntryTierAutoExecute:
 		return true
 	case AutomationCatalogEntryTierConfirmationRequired:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AutomationRetryResultRefusal.
+const (
+	NotFailed               AutomationRetryResultRefusal = "not_failed"
+	RepeatsItsEffect        AutomationRetryResultRefusal = "repeats_its_effect"
+	TriggerEventUnavailable AutomationRetryResultRefusal = "trigger_event_unavailable"
+)
+
+// Valid indicates whether the value is a known member of the AutomationRetryResultRefusal enum.
+func (e AutomationRetryResultRefusal) Valid() bool {
+	switch e {
+	case NotFailed:
+		return true
+	case RepeatsItsEffect:
+		return true
+	case TriggerEventUnavailable:
 		return true
 	default:
 		return false
@@ -13450,6 +13474,78 @@ func (e WeeklyReviewDealOutcome) Valid() bool {
 	}
 }
 
+// Defines values for WeeklyReviewMovementBar.
+const (
+	WeeklyBarAdvanced WeeklyReviewMovementBar = "advanced"
+	WeeklyBarCreated  WeeklyReviewMovementBar = "created"
+	WeeklyBarLost     WeeklyReviewMovementBar = "lost"
+	WeeklyBarOther    WeeklyReviewMovementBar = "other"
+	WeeklyBarSlipped  WeeklyReviewMovementBar = "slipped"
+	WeeklyBarWon      WeeklyReviewMovementBar = "won"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyReviewMovementBar enum.
+func (e WeeklyReviewMovementBar) Valid() bool {
+	switch e {
+	case WeeklyBarAdvanced:
+		return true
+	case WeeklyBarCreated:
+		return true
+	case WeeklyBarLost:
+		return true
+	case WeeklyBarOther:
+		return true
+	case WeeklyBarSlipped:
+		return true
+	case WeeklyBarWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyReviewOutlookForwardMeasure.
+const (
+	WeeklyReviewOutlookForwardMeasureCommitEvidence WeeklyReviewOutlookForwardMeasure = "commit_evidence"
+	WeeklyReviewOutlookForwardMeasureManagerCall    WeeklyReviewOutlookForwardMeasure = "manager_call"
+	WeeklyReviewOutlookForwardMeasureWeighted       WeeklyReviewOutlookForwardMeasure = "weighted"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyReviewOutlookForwardMeasure enum.
+func (e WeeklyReviewOutlookForwardMeasure) Valid() bool {
+	switch e {
+	case WeeklyReviewOutlookForwardMeasureCommitEvidence:
+		return true
+	case WeeklyReviewOutlookForwardMeasureManagerCall:
+		return true
+	case WeeklyReviewOutlookForwardMeasureWeighted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyReviewOutlookPeriodKind.
+const (
+	WeeklyOutlookPeriodMonth   WeeklyReviewOutlookPeriodKind = "month"
+	WeeklyOutlookPeriodQuarter WeeklyReviewOutlookPeriodKind = "quarter"
+	WeeklyOutlookPeriodWeek    WeeklyReviewOutlookPeriodKind = "week"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyReviewOutlookPeriodKind enum.
+func (e WeeklyReviewOutlookPeriodKind) Valid() bool {
+	switch e {
+	case WeeklyOutlookPeriodMonth:
+		return true
+	case WeeklyOutlookPeriodQuarter:
+		return true
+	case WeeklyOutlookPeriodWeek:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistFilter.
 const (
 	WorklistFilterAll             WorklistFilter = "all"
@@ -13711,6 +13807,7 @@ const (
 	WorklistItemActionsDismiss     WorklistItemActions = "dismiss"
 	WorklistItemActionsMerge       WorklistItemActions = "merge"
 	WorklistItemActionsOpen        WorklistItemActions = "open"
+	WorklistItemActionsRetry       WorklistItemActions = "retry"
 	WorklistItemActionsSetAside    WorklistItemActions = "set_aside"
 	WorklistItemActionsSnooze      WorklistItemActions = "snooze"
 )
@@ -13731,6 +13828,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsMerge:
 		return true
 	case WorklistItemActionsOpen:
+		return true
+	case WorklistItemActionsRetry:
 		return true
 	case WorklistItemActionsSetAside:
 		return true
@@ -16059,19 +16158,19 @@ func (e ListSignalsParamsResolutionState) Valid() bool {
 
 // Defines values for SetWeeklyPlanCommitmentStateJSONBodyState.
 const (
-	SetWeeklyPlanCommitmentStateJSONBodyStateDone    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
-	SetWeeklyPlanCommitmentStateJSONBodyStateDropped SetWeeklyPlanCommitmentStateJSONBodyState = "dropped"
-	SetWeeklyPlanCommitmentStateJSONBodyStateOpen    SetWeeklyPlanCommitmentStateJSONBodyState = "open"
+	Done    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
+	Dropped SetWeeklyPlanCommitmentStateJSONBodyState = "dropped"
+	Open    SetWeeklyPlanCommitmentStateJSONBodyState = "open"
 )
 
 // Valid indicates whether the value is a known member of the SetWeeklyPlanCommitmentStateJSONBodyState enum.
 func (e SetWeeklyPlanCommitmentStateJSONBodyState) Valid() bool {
 	switch e {
-	case SetWeeklyPlanCommitmentStateJSONBodyStateDone:
+	case Done:
 		return true
-	case SetWeeklyPlanCommitmentStateJSONBodyStateDropped:
+	case Dropped:
 		return true
-	case SetWeeklyPlanCommitmentStateJSONBodyStateOpen:
+	case Open:
 		return true
 	default:
 		return false
@@ -18544,6 +18643,29 @@ type AutomationPreviewRequest struct {
 	// WindowDays Trailing window for the would-have-fired estimate (default 30).
 	WindowDays *int `json:"window_days,omitempty"`
 }
+
+// AutomationRetryResult What a retry did, or why it did nothing. `refusal` is present exactly when `retried`
+// is false, so a client never has to guess which of the two it received.
+type AutomationRetryResult struct {
+	// Refusal Why the run was not re-dispatched. `not_failed` covers both a run that
+	// succeeded and one the permission gate blocked on purpose. `repeats_its_effect`
+	// means nobody has established that running this handler twice is safe.
+	// `trigger_event_unavailable` means the event cannot be rebuilt, which is
+	// permanent for a scheduled firing rather than a condition that clears.
+	Refusal *AutomationRetryResultRefusal `json:"refusal,omitempty"`
+
+	// Retried True when the firing was re-dispatched. It does NOT promise the firing then
+	// succeeded — a retry of a rule whose cause is still present fails again, and
+	// that failure is recorded as its own run for the same reasons the first was.
+	Retried bool `json:"retried"`
+}
+
+// AutomationRetryResultRefusal Why the run was not re-dispatched. `not_failed` covers both a run that
+// succeeded and one the permission gate blocked on purpose. `repeats_its_effect`
+// means nobody has established that running this handler twice is safe.
+// `trigger_event_unavailable` means the event cannot be rebuilt, which is
+// permanent for a scheduled firing rather than a condition that clears.
+type AutomationRetryResultRefusal string
 
 // AutomationRun One firing of an automation, reconstructed from audit_log/automation_run (data-model §12.5). Runs of
 // EVERY outcome are first-class — including errored/blocked/skipped — so the designer's run history is
@@ -30387,6 +30509,14 @@ type RecordConsentRequest struct {
 	NewState    RecordConsentRequestNewState `json:"new_state"`
 	PurposeId   openapi_types.UUID           `json:"purpose_id"`
 	Source      *string                      `json:"source,omitempty"`
+
+	// Wording The exact wording the subject was shown, stored verbatim as proof. Required with a
+	// grant and refused as a 422 without one: Art. 7(1) asks the controller to demonstrate
+	// what the subject agreed TO, and a grant that cannot say what was shown demonstrates
+	// nothing. A withdrawal needs none — nothing is being demonstrated when somebody takes
+	// consent back, and refusing that would leave a person unable to opt out. The 2000-character
+	// bound matches the confirm-details door, which stores wording on the same proof row.
+	Wording *string `json:"wording,omitempty"`
 }
 
 // RecordConsentRequestNewState defines model for RecordConsentRequest.NewState.
@@ -33928,11 +34058,32 @@ type WebhookSubscriptionListResponse struct {
 // WeeklyPlan One rep's week as they meant it to go — the forward counterpart to the frozen
 // WeeklyReview beside it.
 type WeeklyPlan struct {
-	Commitments []WeeklyPlanCommitment `json:"commitments"`
-	Id          openapi_types.UUID     `json:"id"`
+	// Capacity What next week's calendar already holds, counted rather than authored.
+	//
+	// ABSENT when the installation composed no calendar reader. Absent is NOT zero: a
+	// week nobody has looked at is unknown, and drawing it as "nothing booked" would
+	// tell a rep their week is free on the strength of a missing integration.
+	Capacity *WeeklyPlanCapacity `json:"capacity,omitempty"`
+
+	// CapacityNote What the rep says about the room they have — "two days at the conference" — which
+	// is the half of capacity no query can know. It stands beside `capacity`, which is
+	// counted, and never replaces it.
+	//
+	// Null and empty carry the same distinction as `risks`.
+	CapacityNote *string                `json:"capacity_note,omitempty"`
+	Commitments  []WeeklyPlanCommitment `json:"commitments"`
+	Id           openapi_types.UUID     `json:"id"`
 
 	// LocalWeekStart The Monday of the week planned, in the installation reporting timezone.
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// Risks What the rep expects to get in the way this week, in their own words.
+	//
+	// NULL and the empty string are different answers and a reader must draw them
+	// differently: null is a rep who has written nothing, and "" is one who looked and
+	// says there is nothing to name. Folding the two would report an unconsidered week
+	// as a safe one.
+	Risks *string `json:"risks,omitempty"`
 
 	// Status `closed` once the weekly job has settled the week and frozen its outcome into the
 	// review. A closed plan stops accepting edits, which is what keeps the review's
@@ -33944,6 +34095,17 @@ type WeeklyPlan struct {
 // review. A closed plan stops accepting edits, which is what keeps the review's
 // counts true.
 type WeeklyPlanStatus string
+
+// WeeklyPlanCapacity How much of the coming week is already spoken for.
+type WeeklyPlanCapacity struct {
+	// Meetings Meetings BOOKED in next week's local window. Booked and not held: the week has not
+	// happened, so a meeting there has no outcome yet, and counting `held` would only
+	// find rows somebody backdated.
+	Meetings int `json:"meetings"`
+
+	// Tasks Open tasks assigned to the rep and due inside next week's local window.
+	Tasks int `json:"tasks"`
+}
 
 // WeeklyPlanCommitment One thing a rep said they would do this week.
 type WeeklyPlanCommitment struct {
@@ -34034,6 +34196,18 @@ type WeeklyReview struct {
 	// beside it, which is what makes the whole lane safe to lose.
 	Narrative *string `json:"narrative,omitempty"`
 
+	// Outlook Where the week was landing, one entry per horizon — the week itself, the month, and
+	// the fiscal quarter, because a rep asks three different questions on a Monday.
+	//
+	// EMPTY when no forecast was composed at the time the review was written, which is not
+	// the same as a week that landed on nothing. A reader must say "no forecast" rather
+	// than draw zeros.
+	//
+	// Every figure here is a COPY, not a pointer. The snapshots these were read from are
+	// subject to retention, and a review holding only their ids would read as a blank
+	// outlook the day they age out — indistinguishable from a week nobody measured.
+	Outlook *[]WeeklyReviewOutlook `json:"outlook,omitempty"`
+
 	// Pipeline What the week did to the pipeline, in the installation's base currency at the rate that
 	// applied when the review was written.
 	//
@@ -34052,6 +34226,15 @@ type WeeklyReview struct {
 	// review rather than "last week" — a rep with a gap has a previous week that is not seven
 	// days back.
 	Prior *WeeklyReviewPrior `json:"prior,omitempty"`
+
+	// Scorecard How WELL the week went, as against what happened in it — the counts beside this say
+	// forty leads arrived, this says twelve were answered inside the target.
+	//
+	// ABSENT on a review written before scorecards existed. Each of its two blocks is
+	// independently absent too, and absent is NOT zero: a rep who carried no leads did not
+	// score zero on the funnel, and a reader must draw nothing rather than a row of zeros
+	// that reads as failure at something nobody asked of them.
+	Scorecard *WeeklyReviewScorecard `json:"scorecard,omitempty"`
 }
 
 // WeeklyReviewCounts defines model for WeeklyReviewCounts.
@@ -34137,11 +34320,115 @@ type WeeklyReviewDeal struct {
 // WeeklyReviewDealOutcome defines model for WeeklyReviewDeal.Outcome.
 type WeeklyReviewDealOutcome string
 
+// WeeklyReviewDriver One deal behind a bar, frozen with the name it carried that week.
+type WeeklyReviewDriver struct {
+	// DealId The deal as it was. Carries no guarantee the record still exists: a retrospective is a
+	// record of what a week WAS, so a deal deleted next month leaves this row saying what it
+	// said.
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// DealLabel What the deal was called that week, stored beside the id. A rename later does not
+	// rewrite history and a deletion does not erase it.
+	DealLabel string `json:"deal_label"`
+
+	// DeltaMinor Signed, like its bar.
+	DeltaMinor int64 `json:"delta_minor"`
+}
+
 // WeeklyReviewIndex defines model for WeeklyReviewIndex.
 type WeeklyReviewIndex struct {
 	// Weeks The Monday of each week with a review, newest first.
 	Weeks []openapi_types.Date `json:"weeks"`
 }
+
+// WeeklyReviewMovement One bar of the movement bridge, and the deals behind it.
+type WeeklyReviewMovement struct {
+	// Bar Which move this is. Folded from the forecast engine's twelve movement buckets, whose
+	// grain is right for diagnosing a quarter and too fine for a weekly retrospective.
+	//
+	// `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
+	// reprice, a category move and a stage move each go both ways, and reading the cause
+	// alone would draw a bar of progress out of a week somebody lost money in. `other` is
+	// the machinery — FX, a definition change, a model change — kept apart because nobody
+	// DID it, and crediting it as progress tells a rep they sold what a rate move did.
+	Bar WeeklyReviewMovementBar `json:"bar"`
+
+	// DeltaMinor Signed. A bar takes money out of the window as well as putting it in, and an unsigned
+	// magnitude would make a slip read as an advance.
+	DeltaMinor int64 `json:"delta_minor"`
+
+	// Drivers The deals worth naming under this bar, largest absolute movement first and capped —
+	// the panel asks "which ones?" and a reader wants what moved it, not a ledger.
+	//
+	// A deal the reader may not see is OMITTED rather than named with a placeholder, so a
+	// frozen retrospective never discloses a record its reader was not allowed to open.
+	Drivers *[]WeeklyReviewDriver `json:"drivers,omitempty"`
+}
+
+// WeeklyReviewMovementBar Which move this is. Folded from the forecast engine's twelve movement buckets, whose
+// grain is right for diagnosing a quarter and too fine for a weekly retrospective.
+//
+// `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
+// reprice, a category move and a stage move each go both ways, and reading the cause
+// alone would draw a bar of progress out of a week somebody lost money in. `other` is
+// the machinery — FX, a definition change, a model change — kept apart because nobody
+// DID it, and crediting it as progress tells a rep they sold what a rate move did.
+type WeeklyReviewMovementBar string
+
+// WeeklyReviewOutlook One horizon's landing as the week closed, frozen beside the review.
+type WeeklyReviewOutlook struct {
+	BaseCurrency string `json:"base_currency"`
+
+	// BestCaseMinor Inclusive of commit, which is what the label on the surface must say.
+	BestCaseMinor int64 `json:"best_case_minor"`
+
+	// ClosingLandingMinor What the window was landing on when the week closed.
+	ClosingLandingMinor *int64 `json:"closing_landing_minor,omitempty"`
+	CommitMinor         int64  `json:"commit_minor"`
+
+	// ForwardMeasure Which measure the closing landing was built from, FROZEN. The installation setting can
+	// change, and a past week must keep saying what it was read under rather than silently
+	// re-meaning when somebody changes how the business reads its pipeline.
+	//
+	// No manager call is consulted for a frozen weekly landing: a call is an assertion about
+	// a period somebody is still working, and a retrospective reports what the pipeline
+	// said. Freezing an opinion as a measurement would make the record argue with itself.
+	ForwardMeasure *WeeklyReviewOutlookForwardMeasure `json:"forward_measure,omitempty"`
+
+	// Movement How the window got from its opening landing to its closing one, as signed bars.
+	//
+	// SIX bars at most, and only those that moved. The two landings are the bridge's
+	// ANCHORS and are never bars: a bar for either would be summed as a movement as well as
+	// read as a landing. Empty when there was no opening snapshot to move from.
+	Movement []WeeklyReviewMovement `json:"movement"`
+
+	// OpeningLandingMinor What the window was landing on at the START of the week, from that Monday's snapshot.
+	//
+	// ABSENT when no Monday snapshot exists — an installation in its first week, or one
+	// whose worker was down. Absent is NOT zero: a zero opening draws a week that started
+	// from nothing and made everything, and the movement bars below are then omitted too
+	// because there is no opening to have moved from.
+	OpeningLandingMinor *int64 `json:"opening_landing_minor,omitempty"`
+
+	// PeriodEnd The last day INSIDE the window, not an exclusive bound.
+	PeriodEnd     openapi_types.Date            `json:"period_end"`
+	PeriodKind    WeeklyReviewOutlookPeriodKind `json:"period_kind"`
+	PeriodStart   openapi_types.Date            `json:"period_start"`
+	WeightedMinor int64                         `json:"weighted_minor"`
+	WonMinor      int64                         `json:"won_minor"`
+}
+
+// WeeklyReviewOutlookForwardMeasure Which measure the closing landing was built from, FROZEN. The installation setting can
+// change, and a past week must keep saying what it was read under rather than silently
+// re-meaning when somebody changes how the business reads its pipeline.
+//
+// No manager call is consulted for a frozen weekly landing: a call is an assertion about
+// a period somebody is still working, and a retrospective reports what the pipeline
+// said. Freezing an opinion as a measurement would make the record argue with itself.
+type WeeklyReviewOutlookForwardMeasure string
+
+// WeeklyReviewOutlookPeriodKind defines model for WeeklyReviewOutlook.PeriodKind.
+type WeeklyReviewOutlookPeriodKind string
 
 // WeeklyReviewPipeline Money the week added to and took out of the pipeline, in one currency.
 type WeeklyReviewPipeline struct {
@@ -34169,6 +34456,80 @@ type WeeklyReviewPrior struct {
 
 	// Pipeline Absent under the same rule as the current week's.
 	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
+}
+
+// WeeklyReviewScorecard One week's judgement of one rep's work, frozen with the review. Both blocks are optional
+// and each is absent when the rep had no such work that week.
+type WeeklyReviewScorecard struct {
+	// Deal The pipeline slice. ABSENT when the rep had no open deal and no stage change in the
+	// window — nothing to judge.
+	Deal *WeeklyScorecardDealBlock `json:"deal,omitempty"`
+
+	// Lead The funnel slice. ABSENT when the rep carried no lead at all — which is a different
+	// fact from a rep with forty untouched leads, who gets a present block of zeros.
+	Lead *WeeklyScorecardLeadBlock `json:"lead,omitempty"`
+}
+
+// WeeklyScorecardDealBlock Whether deals moved forward, and whether they are in a state anybody could work.
+type WeeklyScorecardDealBlock struct {
+	// Advances Moves to a LATER stage of the same pipeline, by stage position. A deal that crossed
+	// pipelines has no comparable position and counts as neither direction.
+	Advances int `json:"advances"`
+
+	// CloseDateSound Open deals whose close date is set, not provisional, and not in the past.
+	CloseDateSound int `json:"close_date_sound"`
+	ForecastDown   int `json:"forecast_down"`
+
+	// ForecastUp Deals whose forecast category ended the week higher than it started. Counted ONCE per
+	// deal however many times it was edited — a rep who corrected a typo three times did not
+	// upgrade three times.
+	ForecastUp int `json:"forecast_up"`
+
+	// MedianDaysInStage Median whole days a deal sat in the stage it left this week. NULL when no deal changed
+	// stage: a median of nothing is absent, never zero.
+	MedianDaysInStage *int `json:"median_days_in_stage,omitempty"`
+
+	// MultiThreaded Open deals with at least two distinct people in the last 30 days. Thirty rather than
+	// the review's own week: the risk measured is the single point of failure, and a deal
+	// worked steadily for a month is multi-threaded whether or not the second person
+	// happened to appear in these seven days.
+	MultiThreaded int `json:"multi_threaded"`
+
+	// Open The denominator the three coverage counts are read against. Published so a reader can
+	// judge "3 of 5" rather than trust a percentage that cannot be told from 300 of 500.
+	Open        int `json:"open"`
+	Regressions int `json:"regressions"`
+
+	// WithNextStep Open deals carrying an open task. A count beside `open`, never a rate.
+	WithNextStep int `json:"with_next_step"`
+}
+
+// WeeklyScorecardLeadBlock How the rep's leads moved, and whether the meetings behind them happened.
+type WeeklyScorecardLeadBlock struct {
+	// Advanced Status transitions UP the open ladder inside the week. Counted per transition, so a
+	// lead that went new to contacted to engaged counts twice — the lead's own row records
+	// only where it ended and could report at most one of them.
+	Advanced int `json:"advanced"`
+
+	// AnsweredInTarget Leads that arrived this week and were answered without breaching the SLA.
+	AnsweredInTarget int `json:"answered_in_target"`
+	Breached         int `json:"breached"`
+	Disqualified     int `json:"disqualified"`
+
+	// MeetingsBooked Meetings that BECAME booked this week, read from the meeting's transition history and
+	// never from its current status. A meeting booked Monday and held Friday counts in both
+	// this and `meetings_held`, which is what a funnel means; counting the current column
+	// would report no bookings at all for the week it was booked in.
+	MeetingsBooked int `json:"meetings_booked"`
+	MeetingsHeld   int `json:"meetings_held"`
+	MeetingsNoShow int `json:"meetings_no_show"`
+
+	// MeetingsPartialHistory Meetings whose only history row was invented from their current state when the history
+	// table was introduced. They cannot say when they were booked, so they are reported as
+	// partial coverage rather than counted. A non-zero value means the three counts above
+	// are a floor, and a reader should say so.
+	MeetingsPartialHistory int `json:"meetings_partial_history"`
+	Promoted               int `json:"promoted"`
 }
 
 // Worklist The rep's day, ranked. One list rather than fourteen lanes, because a reader
@@ -39967,6 +40328,12 @@ type SetWeeklyPlanCommitmentStateJSONBody struct {
 // SetWeeklyPlanCommitmentStateJSONBodyState defines parameters for SetWeeklyPlanCommitmentState.
 type SetWeeklyPlanCommitmentStateJSONBodyState string
 
+// SetWeeklyPlanContractJSONBody defines parameters for SetWeeklyPlanContract.
+type SetWeeklyPlanContractJSONBody struct {
+	CapacityNote *string `json:"capacity_note,omitempty"`
+	Risks        *string `json:"risks,omitempty"`
+}
+
 // GetLatestWeeklyReviewParams defines parameters for GetLatestWeeklyReview.
 type GetLatestWeeklyReviewParams struct {
 	// Week The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent.
@@ -40843,6 +41210,9 @@ type AnswerWeeklyPlanCommitmentJSONRequestBody AnswerWeeklyPlanCommitmentJSONBod
 
 // SetWeeklyPlanCommitmentStateJSONRequestBody defines body for SetWeeklyPlanCommitmentState for application/json ContentType.
 type SetWeeklyPlanCommitmentStateJSONRequestBody SetWeeklyPlanCommitmentStateJSONBody
+
+// SetWeeklyPlanContractJSONRequestBody defines body for SetWeeklyPlanContract for application/json ContentType.
+type SetWeeklyPlanContractJSONRequestBody SetWeeklyPlanContractJSONBody
 
 // PinWorklistRowJSONRequestBody defines body for PinWorklistRow for application/json ContentType.
 type PinWorklistRowJSONRequestBody = WorklistPinRequest
@@ -48889,6 +49259,9 @@ type ServerInterface interface {
 	// The closed starter library of automation types the workspace can instantiate.
 	// (GET /automations/catalog)
 	ListAutomationCatalog(w http.ResponseWriter, r *http.Request)
+	// Run one failed firing again, from the event that triggered it.
+	// (POST /automations/runs/{id}/retry)
+	RetryAutomationRun(w http.ResponseWriter, r *http.Request, id Id)
 	// Delete an automation instance.
 	// (DELETE /automations/{id})
 	DeleteAutomation(w http.ResponseWriter, r *http.Request, id Id)
@@ -50410,6 +50783,9 @@ type ServerInterface interface {
 	// Open a plan for this week.
 	// (POST /weekly-plans/current)
 	StartWeeklyPlan(w http.ResponseWriter, r *http.Request)
+	// Say what could go wrong this week, and what room there is for it.
+	// (PUT /weekly-plans/current/contract)
+	SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request)
 	// A teammate's plan for this week, for their lead.
 	// (GET /weekly-plans/{owner_id}/current)
 	GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID)
@@ -50923,6 +51299,12 @@ func (_ Unimplemented) CreateAutomation(w http.ResponseWriter, r *http.Request) 
 // The closed starter library of automation types the workspace can instantiate.
 // (GET /automations/catalog)
 func (_ Unimplemented) ListAutomationCatalog(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Run one failed firing again, from the event that triggered it.
+// (POST /automations/runs/{id}/retry)
+func (_ Unimplemented) RetryAutomationRun(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -53965,6 +54347,12 @@ func (_ Unimplemented) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Reque
 // Open a plan for this week.
 // (POST /weekly-plans/current)
 func (_ Unimplemented) StartWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say what could go wrong this week, and what room there is for it.
+// (PUT /weekly-plans/current/contract)
+func (_ Unimplemented) SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -57174,6 +57562,38 @@ func (siw *ServerInterfaceWrapper) ListAutomationCatalog(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListAutomationCatalog(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RetryAutomationRun operation middleware
+func (siw *ServerInterfaceWrapper) RetryAutomationRun(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RetryAutomationRun(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -79070,6 +79490,28 @@ func (siw *ServerInterfaceWrapper) StartWeeklyPlan(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// SetWeeklyPlanContract operation middleware
+func (siw *ServerInterfaceWrapper) SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetWeeklyPlanContract(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTeammateWeeklyPlan operation middleware
 func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request) {
 
@@ -79864,6 +80306,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/automations/catalog", wrapper.ListAutomationCatalog)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/automations/runs/{id}/retry", wrapper.RetryAutomationRun)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/automations/{id}", wrapper.DeleteAutomation)
@@ -81385,6 +81830,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/weekly-plans/current", wrapper.StartWeeklyPlan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/weekly-plans/current/contract", wrapper.SetWeeklyPlanContract)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/weekly-plans/{owner_id}/current", wrapper.GetTeammateWeeklyPlan)

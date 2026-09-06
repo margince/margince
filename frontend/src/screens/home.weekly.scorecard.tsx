@@ -1,0 +1,153 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { StatCard } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
+import { StatStrip } from "../design-system/statstrip";
+import { formatNumber } from "../format/format";
+import { type Translator, useLocale, useT } from "../i18n";
+import type { WeeklyReview } from "./home.queries";
+
+// How well the week went, beside what happened in it.
+//
+// Two blocks, each drawn only when the server sent it. An ABSENT block is not a
+// block of zeros: a rep who carried no leads did not score zero on the funnel,
+// and drawing them an empty row reads as failure at something nobody asked of
+// them. The server decides; this file never substitutes a default.
+
+type Scorecard = NonNullable<WeeklyReview["scorecard"]>;
+type LeadBlock = NonNullable<Scorecard["lead"]>;
+type DealBlock = NonNullable<Scorecard["deal"]>;
+
+export function ScorecardPanel({
+  scorecard,
+}: Readonly<{ scorecard: Scorecard | undefined }>) {
+  const t = useT();
+  // A review written before scorecards existed carries none. Nothing is drawn
+  // rather than a panel of blanks, which would state a judgement nobody made.
+  if (!scorecard) return null;
+  const { lead, deal } = scorecard;
+  if (!lead && !deal) return null;
+
+  return (
+    <Panel title={t("home.weekly.scorecard.title")}>
+      <PanelBody>
+        {lead && <LeadBlockStrip block={lead} t={t} />}
+        {deal && <DealBlockStrip block={deal} t={t} />}
+      </PanelBody>
+    </Panel>
+  );
+}
+
+function LeadBlockStrip({
+  block,
+  t,
+}: Readonly<{ block: LeadBlock; t: Translator }>) {
+  const { locale } = useLocale();
+  const n = (value: number) => formatNumber(value, locale);
+  return (
+    <StatStrip
+      label={t("home.weekly.scorecard.leadBlock")}
+      testId="scorecard-lead"
+    >
+      <StatCard
+        label={t("home.weekly.scorecard.advanced")}
+        value={n(block.advanced)}
+        numeric
+        detail={t("home.weekly.scorecard.advancedBasis")}
+      />
+      <StatCard
+        label={t("home.weekly.scorecard.answeredInTarget")}
+        value={n(block.answered_in_target)}
+        numeric
+        detail={t("home.weekly.scorecard.breachedDetail", {
+          count: n(block.breached),
+        })}
+      />
+      <StatCard
+        label={t("home.weekly.scorecard.meetingsHeld")}
+        value={n(block.meetings_held)}
+        numeric
+        detail={t("home.weekly.scorecard.meetingsBasis", {
+          booked: n(block.meetings_booked),
+          noShow: n(block.meetings_no_show),
+        })}
+      />
+      {/* The partial figure is drawn ONLY when it is non-zero, and it says the
+          three counts above are a floor. A zero would be a reassurance nobody
+          asked for; a non-zero is a caveat the reader needs. */}
+      {block.meetings_partial_history > 0 && (
+        <StatCard
+          label={t("home.weekly.scorecard.partialHistory")}
+          value={n(block.meetings_partial_history)}
+          numeric
+          detail={t("home.weekly.scorecard.partialHistoryBasis")}
+        />
+      )}
+    </StatStrip>
+  );
+}
+
+function DealBlockStrip({
+  block,
+  t,
+}: Readonly<{ block: DealBlock; t: Translator }>) {
+  const { locale } = useLocale();
+  const n = (value: number) => formatNumber(value, locale);
+  return (
+    <StatStrip
+      label={t("home.weekly.scorecard.dealBlock")}
+      testId="scorecard-deal"
+    >
+      <StatCard
+        label={t("home.weekly.scorecard.advances")}
+        value={n(block.advances)}
+        numeric
+        detail={t("home.weekly.scorecard.regressionsDetail", {
+          count: n(block.regressions),
+        })}
+      />
+      {/* Absent when no deal changed stage. A median of nothing is not zero
+          days, so the card is omitted rather than drawn as 0. */}
+      {block.median_days_in_stage != null && (
+        <StatCard
+          label={t("home.weekly.scorecard.medianDaysInStage")}
+          value={n(block.median_days_in_stage)}
+          numeric
+          detail={t("home.weekly.scorecard.medianBasis")}
+        />
+      )}
+      <StatCard
+        label={t("home.weekly.scorecard.withNextStep")}
+        value={n(block.with_next_step)}
+        numeric
+        meter={{ filled: block.with_next_step, total: block.open }}
+        detail={t("home.weekly.scorecard.ofOpen", { total: n(block.open) })}
+      />
+      <StatCard
+        label={t("home.weekly.scorecard.multiThreaded")}
+        value={n(block.multi_threaded)}
+        numeric
+        meter={{ filled: block.multi_threaded, total: block.open }}
+        detail={t("home.weekly.scorecard.multiThreadedBasis", {
+          total: n(block.open),
+        })}
+      />
+      <StatCard
+        label={t("home.weekly.scorecard.closeDateSound")}
+        value={n(block.close_date_sound)}
+        numeric
+        meter={{ filled: block.close_date_sound, total: block.open }}
+        detail={t("home.weekly.scorecard.ofOpen", { total: n(block.open) })}
+      />
+      <StatCard
+        label={t("home.weekly.scorecard.forecastMoves")}
+        value={n(block.forecast_up)}
+        numeric
+        detail={t("home.weekly.scorecard.forecastMovesBasis", {
+          down: n(block.forecast_down),
+        })}
+      />
+    </StatStrip>
+  );
+}

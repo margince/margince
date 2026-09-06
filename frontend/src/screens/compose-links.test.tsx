@@ -9,6 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { ComposeModal } from "./compose";
@@ -158,8 +159,8 @@ async function pickBy(labelText: string, option: string) {
 async function fillBody() {
   await userEvent.type(screen.getByLabelText("To"), "dieter@acme.test");
   await userEvent.tab();
-  await userEvent.type(screen.getByPlaceholderText("Subject"), "Hello");
-  await userEvent.type(screen.getByPlaceholderText("Body"), "Body content");
+  await userEvent.type(screen.getByLabelText("Subject"), "Hello");
+  writeMessage("Body", "Body content");
 }
 
 function linksOf(sent: Sent[]) {
@@ -405,7 +406,7 @@ describe("what a sent message files under", () => {
       />,
     );
 
-    await screen.findByPlaceholderText("Subject");
+    await screen.findByLabelText("Subject");
     await fillBody();
     await pickBy("Why are you writing?", "About a deal we are working on");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
@@ -478,7 +479,7 @@ describe("what a channel reply says it will be filed under", () => {
 
     // The composer is up and usable — the absent line is the assertion, not an
     // unrendered surface standing in for one.
-    expect(await screen.findByPlaceholderText("Body")).toBeTruthy();
+    expect(await screen.findByRole("textbox", { name: "Body" })).toBeTruthy();
     expect(screen.queryByText(/Will be filed under/)).toBeNull();
   });
 

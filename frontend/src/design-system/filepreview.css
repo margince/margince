@@ -1,0 +1,102 @@
+/* The opened file: a header band of verbs over a stage the document fills.
+   The box itself is `.modal-full` (atoms.css) — this is what stands inside
+   it. */
+.file-preview {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* The band never scrolls away, because the two things a reader must always be
+   able to reach are the way out and the way to keep the file. It is the
+   drawer head's rhythm rather than a second one: a dialog's title bar reads
+   the same wherever it is met. */
+.file-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex: none;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bgElevated);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+/* A scanner's filename can be sixty characters and the verbs are not
+   negotiable, so the name is what gives way. */
+.file-preview-name {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-preview-verbs {
+  display: flex;
+  align-items: center;
+  gap: var(--gapActions);
+  flex: none;
+}
+
+/* The document's ground: recessed, so a page with white margins is tellable
+   from the box holding it. It centres what stands in for the document while
+   the file is opening or after it could not be — a skeleton pinned to the top
+   of a full-height stage reads as a document that rendered wrong. */
+.file-preview-stage {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-4);
+  overflow: auto;
+  background: var(--bgWell);
+}
+
+/* The frame pays no padding: the browser's own viewer draws its own margins,
+   and a second set inside them narrows the page for nothing. */
+.file-preview-stage:has(> .file-preview-frame) {
+  padding: 0;
+}
+
+.file-preview-frame {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border: 0;
+  background: var(--bgWell);
+}
+
+/* An image is drawn by this page rather than by a viewer, which is the whole
+   reason it is not in the frame beside it: a browser fits an image to the
+   window only when the image IS the document, so a scan inside a frame is
+   drawn at its own size and a reader meets an A4 page at 1:1. Contained and
+   centred here, so a signature logo and a full page both arrive whole.
+
+   `margin: auto` rather than the stage's alignment: auto margins win over
+   `stretch` on a flex item, so one declaration centres it on both axes without
+   the stage having to know which of its four children it is holding. */
+.file-preview-image {
+  margin: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Printing a page with the lightbox open prints the DOCUMENT in it — which is
+   the paper the reader pressed Print for, and not the application behind the
+   scrim. The rules that put the box on the sheet are `.modal-full`'s own, in
+   atoms.css; these two are this component's share: the band of verbs is chrome
+   rather than document, and the stage's scroll and ground belong to a screen. */
+@media print {
+  .file-preview-head {
+    display: none;
+  }
+  .file-preview-stage {
+    padding: 0;
+    overflow: visible;
+    background: none;
+  }
+}

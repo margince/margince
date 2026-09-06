@@ -3,11 +3,22 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type GrantSpec, meFixture } from "../app/mefixture";
-import { AiSettingsTab } from "./ai-settings";
+import { ProvidersStat, SpendStat } from "./ai-settings";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// The AI page as one surface: two readings above a strip that chooses between
-// five bodies.
+/** The pair, composed here because no single page carries both any more. */
+const AiReadings = () => (
+  <>
+    <SpendStat />
+    <ProvidersStat />
+  </>
+);
+
+// The two AI readings, side by side.
+//
+// They used to sit in a header above a five-tab strip; each of those tabs is its
+// own page now, so the readings ride the two pages they belong to. The pair is
+// still worth one story because of what follows.
 //
 // The two header readings are the point of the shape and they follow DIFFERENT
 // grants — spend on `automation:update`, the vendor keys on `ai_routing:read` —
@@ -109,18 +120,18 @@ function story(allow: GrantSpec) {
     });
     return (
       <StoryProviders>
-        <AiSettingsTab />
+        <AiReadings />
       </StoryProviders>
     );
   };
 }
 
-const meta: Meta<typeof AiSettingsTab> = {
+const meta: Meta<typeof AiReadings> = {
   title: "Settings/Admin settings/AI/AI page",
-  component: AiSettingsTab,
+  component: AiReadings,
 };
 export default meta;
-type Story = StoryObj<typeof AiSettingsTab>;
+type Story = StoryObj<typeof AiReadings>;
 
 // The shape an operator holding everything sees: both readings answered, the
 // strip open on Routing.

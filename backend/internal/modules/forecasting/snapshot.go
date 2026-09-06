@@ -340,31 +340,44 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 func (s *Store) Movement(ctx context.Context, reading Reading, from, to ids.UUID) (Movement, error) {
 	var out Movement
 	err := s.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		opening, err := s.SnapshotSide(ctx, tx, from)
-		if err != nil {
-			return err
-		}
-		closing, err := s.SnapshotSide(ctx, tx, to)
-		if err != nil {
-			return err
-		}
-		// The two sides must describe the SAME window. Nothing else in this
-		// request checks it: the ids come from the caller, and a week compared
-		// against the quarter containing it would report the window's own
-		// difference as deals that moved — every line of the waterfall a number
-		// that describes no decision anybody made.
-		if !opening.PeriodStart.Equal(closing.PeriodStart) ||
-			!opening.PeriodEnd.Equal(closing.PeriodEnd) {
-			return &values.ParseError{
-				Field: "from", Code: "periods_differ",
-				Message: "a movement compares two readings of the same period",
-			}
-		}
-		out = Classify(reading, opening, closing)
-		return nil
+		var err error
+		out, err = s.MovementTx(ctx, tx, reading, from, to)
+		return err
 	})
 	if err != nil {
 		return Movement{}, err
 	}
 	return out, nil
+}
+
+// MovementTx is Movement inside a transaction the caller already holds.
+//
+// A caller that has just WRITTEN one of the two snapshots needs this: the row
+// is uncommitted, so a comparison opening its own transaction cannot see it and
+// fails on a snapshot that demonstrably exists. Movement above delegates here,
+// so the two doors are one implementation rather than two that can drift.
+func (s *Store) MovementTx(
+	ctx context.Context, tx pgx.Tx, reading Reading, from, to ids.UUID,
+) (Movement, error) {
+	opening, err := s.SnapshotSide(ctx, tx, from)
+	if err != nil {
+		return Movement{}, err
+	}
+	closing, err := s.SnapshotSide(ctx, tx, to)
+	if err != nil {
+		return Movement{}, err
+	}
+	// The two sides must describe the SAME window. Nothing else in this
+	// request checks it: the ids come from the caller, and a week compared
+	// against the quarter containing it would report the window's own
+	// difference as deals that moved — every line of the waterfall a number
+	// that describes no decision anybody made.
+	if !opening.PeriodStart.Equal(closing.PeriodStart) ||
+		!opening.PeriodEnd.Equal(closing.PeriodEnd) {
+		return Movement{}, &values.ParseError{
+			Field: "from", Code: "periods_differ",
+			Message: "a movement compares two readings of the same period",
+		}
+	}
+	return Classify(reading, opening, closing), nil
 }

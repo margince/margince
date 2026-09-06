@@ -105,6 +105,9 @@ func (w followUpAutoResolve) Spec() workflow.Spec {
 		Name:    w.name,
 		Trigger: workflow.Trigger{EventType: w.trigger},
 		Tier:    mcp.TierAutoExecute,
+		// Completion is one-way and the query only sees open tasks: after a
+		// first pass there is nothing left is_done=false to close.
+		RedrivableWithoutDuplicating: true,
 	}
 }
 

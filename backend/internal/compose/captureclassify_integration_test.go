@@ -36,6 +36,8 @@ import (
 type scriptedClassifyBrain struct {
 	confidence   map[string]float64 // by activity id; default 0.9
 	labels       map[string]string  // by activity id; default "noise"
+	replies      map[string]string  // by activity id; omitted when absent
+	sawInbound   map[string]string  // what the prompt SAID each id's direction was
 	calls        int
 	budgetOut    bool
 	budgetOnSolo bool // the budget runs dry exactly on a solo re-ask
@@ -69,13 +71,42 @@ func (s *scriptedClassifyBrain) Complete(_ context.Context, req model.Request) (
 		if len(idPattern) == 1 && conf < classifyConfidenceFloor && !s.soloStaysLow {
 			conf = 0.95
 		}
-		results = append(results, map[string]any{"id": id, "label": label, "confidence": conf})
+		entry := map[string]any{"id": id, "label": label, "confidence": conf}
+		if reply, ok := s.replies[id]; ok {
+			entry["reply"] = reply
+		}
+		results = append(results, entry)
+		if s.sawInbound != nil {
+			s.sawInbound[id] = directionLineFor(req.Messages[0].Content, id)
+		}
 	}
 	payload, err := json.Marshal(map[string]any{"results": results})
 	if err != nil {
 		return model.Response{}, err
 	}
 	return model.Response{Text: string(payload)}, nil
+}
+
+// directionLineFor reads back what the prompt told the model about one message's
+// direction. The line sits OUTSIDE the fenced span and immediately before it, so
+// this walks the prompt rather than the message text — which is the point: a
+// sender who could put "inbound: no" in their own body must not be able to move
+// this answer.
+func directionLineFor(prompt, id string) string {
+	span := strings.Index(prompt, id)
+	if span < 0 {
+		return ""
+	}
+	head := prompt[:span]
+	marker := strings.LastIndex(head, "inbound: ")
+	if marker < 0 {
+		return ""
+	}
+	rest := head[marker+len("inbound: "):]
+	if nl := strings.IndexByte(rest, '\n'); nl >= 0 {
+		return strings.TrimSpace(rest[:nl])
+	}
+	return strings.TrimSpace(rest)
 }
 
 // fencedIDs pulls an attribute off every span the prompt opens with the boundary
@@ -336,4 +367,195 @@ func TestCaptureClassifyPass(t *testing.T) {
 			t.Fatal("the budget-stopped doubtful row must stay unlabeled for the next cycle")
 		}
 	})
+}
+
+// The reply verdict reaches the column THROUGH THE PASS, not through a store
+// method a test called itself.
+//
+// This is the test the store-level ones could not be. Every one of those still
+// passes with recordReply deleted, because they drive the write door directly;
+// only a run of RunWorkspace over a real backlog proves the engine carries the
+// model's answer to the row. The direction assertion is here for the same
+// reason: it reads what the PROMPT said, so a sender writing "inbound: no" into
+// their own message body cannot move it.
+func TestTheClassifyPassCarriesTheReplyVerdictToTheRow(t *testing.T) {
+	e := integration.Setup(t)
+
+	answered := seedInboundEmail(t, e, "yes please, send it over")
+	ourOwn := seedOutboundEmail(t, e, "following up on my last note")
+	brain := &scriptedClassifyBrain{
+		labels:     map[string]string{answered.String(): "commitment"},
+		replies:    map[string]string{answered.String(): "positive"},
+		sawInbound: map[string]string{},
+	}
+	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
+
+	if err := classifier.RunWorkspace(asClassifyPass(e), 0); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	// The verdict landed, and it names the model that reached it.
+	if v := replyVerdictOf(t, e, answered); v == nil || *v != "positive" {
+		t.Errorf("reply verdict = %v, want positive — the pass did not carry the model's answer", v)
+	}
+	// The outbound message was still LABELLED — the pass reads both directions —
+	// and took no verdict, because we wrote it.
+	if l := labelOf(t, e, ourOwn); l == nil {
+		t.Error("the outbound message was not labelled: the label pass reads both directions")
+	}
+	if v := replyVerdictOf(t, e, ourOwn); v != nil {
+		t.Errorf("our own message carries reply verdict %q", *v)
+	}
+
+	// The prompt told the model the truth about each direction, from the record
+	// rather than from the message body.
+	if got := brain.sawInbound[answered.String()]; got != "yes" {
+		t.Errorf("the prompt said inbound: %q for a message sent to us, want yes", got)
+	}
+	if got := brain.sawInbound[ourOwn.String()]; got != "no" {
+		t.Errorf("the prompt said inbound: %q for a message we sent, want no", got)
+	}
+
+	// And the history has the classifier's own entry, so a later human
+	// correction has something to disagree with.
+	if n := replyHistoryCount(t, e, answered); n != 1 {
+		t.Errorf("history rows = %d, want 1 (the classifier's own judgement)", n)
+	}
+}
+
+// A verdict the model offers for a message WE sent is refused, and the whole
+// batch is re-asked rather than the bad entry dropped.
+//
+// Dropping it would be the tempting fix and the wrong one: an answer that
+// judged our own mail is an answer that misread the prompt, and the other nine
+// entries in that call came from the same misreading.
+func TestAVerdictOnOurOwnMailIsRefused(t *testing.T) {
+	e := integration.Setup(t)
+	ourOwn := seedOutboundEmail(t, e, "checking in")
+	brain := &scriptedClassifyBrain{
+		replies: map[string]string{ourOwn.String(): "positive"},
+	}
+	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
+
+	err := classifier.RunWorkspace(asClassifyPass(e), 0)
+
+	if err == nil {
+		t.Fatal("a verdict on outbound mail was accepted — the validator let a judgement of our own words through")
+	}
+	if !strings.Contains(err.Error(), "answers nobody") {
+		t.Errorf("error = %v, want the validator naming an outbound verdict", err)
+	}
+	if v := replyVerdictOf(t, e, ourOwn); v != nil {
+		t.Errorf("a refused batch still wrote verdict %q", *v)
+	}
+}
+
+// asClassifyPass is the context the worker actually builds — the system
+// principal from capturejobs.go. A test that bound a wider one would prove the
+// pass works for a caller production never has.
+func asClassifyPass(e *integration.Env) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:capture_classify",
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+}
+
+func seedInboundEmail(t *testing.T, e *integration.Env, subject string) ids.UUID {
+	t.Helper()
+	return seedDirectedEmail(t, e, subject, "inbound")
+}
+
+func seedOutboundEmail(t *testing.T, e *integration.Env, subject string) ids.UUID {
+	t.Helper()
+	return seedDirectedEmail(t, e, subject, "outbound")
+}
+
+// seedDirectedEmail is seedUnlabeledEmail with the direction the reply verdict
+// turns on. Kept separate rather than folded in: the existing callers assert
+// about labels, which do not care, and giving them a direction they never asked
+// for would make their fixtures say something they do not mean.
+func seedDirectedEmail(t *testing.T, e *integration.Env, subject, direction string) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity (id, kind, direction, subject, body, source_system, source_id, source, captured_by)
+			VALUES ($1, 'email', $2, $3, 'body text', 'gmail', $4, 'gmail:'||$4, 'connector:gmail')`,
+			id, direction, subject, fmt.Sprintf("cls-%s", id))
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+func replyVerdictOf(t *testing.T, e *integration.Env, id ids.UUID) *string {
+	t.Helper()
+	var out *string
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT reply_verdict FROM activity WHERE id = $1`, id).Scan(&out)
+	})
+	if err != nil {
+		t.Fatalf("reading the reply verdict: %v", err)
+	}
+	return out
+}
+
+func replyHistoryCount(t *testing.T, e *integration.Env, id ids.UUID) int {
+	t.Helper()
+	var n int
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT count(*) FROM activity_reply_verdict_history WHERE activity_id = $1`, id).Scan(&n)
+	})
+	if err != nil {
+		t.Fatalf("counting the verdict history: %v", err)
+	}
+	return n
+}
+
+// A message with NO recorded direction does not stop the pass.
+//
+// activity.direction is nullable, and the backlog carries both directions, so a
+// directionless row is a real thing the read will meet. Compared bare,
+// `direction = 'inbound'` yields NULL for that row — which fails the scan and
+// takes the whole batch with it, stopping every message queued behind one bad
+// row. It reads as outbound, which is the safe way round: still labelled, and
+// asked no reply question rather than having its direction guessed.
+func TestAMessageWithNoDirectionStillGetsLabelled(t *testing.T) {
+	e := integration.Setup(t)
+	id := ids.NewV7()
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity (id, kind, subject, body, source_system, source_id, source, captured_by)
+			VALUES ($1, 'email', 'no direction on this one', 'body text', 'gmail', $2, 'gmail:'||$2, 'connector:gmail')`,
+			id, fmt.Sprintf("cls-%s", id))
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	brain := &scriptedClassifyBrain{
+		labels:     map[string]string{id.String(): "commitment"},
+		sawInbound: map[string]string{},
+	}
+	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
+
+	if err := classifier.RunWorkspace(asClassifyPass(e), 0); err != nil {
+		t.Fatalf("a directionless row must not stop the pass: %v", err)
+	}
+
+	if l := labelOf(t, e, id); l == nil || *l != "commitment" {
+		t.Errorf("label = %v, want commitment — the row was skipped or the batch died", l)
+	}
+	if got := brain.sawInbound[id.String()]; got != "no" {
+		t.Errorf("the prompt said inbound: %q for a directionless row, want no", got)
+	}
+	if v := replyVerdictOf(t, e, id); v != nil {
+		t.Errorf("a directionless row took reply verdict %q", *v)
+	}
 }

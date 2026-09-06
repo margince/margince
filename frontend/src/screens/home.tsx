@@ -263,19 +263,24 @@ export function HomeScreen() {
   // six while the deck drew four and its tray sent "4 decisions".
 
   return (
-    <div className="wrap">
-      <BriefDials
-        address={address}
-        offered={teamOffered}
-        onChange={(next) => setParams(paramsFor(next))}
-      />
-      <HomeGlance
-        view={address.view}
-        day={worklistQuery.data}
-        week={weeklyReview.data}
-        firstName={firstNameOf(me.data?.user?.display_name)}
-        now={new Date(nowMs)}
-      />
+    <div className="wrap home-wrap">
+      {/* The greeting and the dials share the page's first line: the dials
+          are how the reader changes what the greeting is about, and on a line
+          of their own above it they read as a toolbar over an empty page. */}
+      <div className="brief-head">
+        <HomeGlance
+          view={address.view}
+          day={worklistQuery.data}
+          week={weeklyReview.data}
+          firstName={firstNameOf(me.data?.user?.display_name)}
+          now={new Date(nowMs)}
+        />
+        <BriefDials
+          address={address}
+          offered={teamOffered}
+          onChange={(next) => setParams(paramsFor(next))}
+        />
+      </div>
       {/* Before the readings, because a strip of numbers a reader cannot trust
           is worse than one they can qualify — and in the MAIN column rather
           than the rail, though the rail is where the Brief plan drew it. This
@@ -342,6 +347,10 @@ export function HomeScreen() {
         aside={
           address.view === "weekly" ? undefined : (
             <>
+              {/* The day's own shape leads the rail: what it is booked with,
+                  then what is owed. Both are cuts of the SAME worklist answer
+                  the work column is drawn from, so the rail cannot name a
+                  meeting the queue has already dropped. */}
               {/* The day's own shape leads the rail: what it is booked with,
                   then what is owed. Both are cuts of the SAME worklist answer
                   the work column is drawn from, so the rail cannot name a

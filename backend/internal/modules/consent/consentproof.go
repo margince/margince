@@ -72,6 +72,15 @@ func (s *Store) resolveDOIConfirmation(ctx context.Context, tx pgx.Tx, in Record
 	}
 }
 
+// policy_text and policy_version are written as they arrive, with NO placeholder.
+//
+// It used to coalesce to the literal 'recorded via API', which made every
+// wordless grant produce a row that reads like proof and demonstrates nothing —
+// and a subject access export would return that sentence as what the person was
+// shown. admitRecord now refuses a grant with no wording (requireWordingForGrant),
+// so a NULL reaching here belongs to a withdrawal, where there is nothing to
+// demonstrate and a placeholder would invent a claim.
+//
 // upsertConsentWithProof writes the state row and appends the immutable
 // proof row — one concept: the current state is always backed by an
 // append-only consent_event that says when, how, and by whom. The upsert
@@ -101,12 +110,20 @@ func upsertConsentWithProof(ctx context.Context, tx pgx.Tx, in RecordInput, sub 
 		named := string(in.MailboxProof)
 		trigger = &named
 	}
+	// The version travels with the text, both-or-neither, held by
+	// consent_event_wording_pairs. Doors that show wording without naming a
+	// version — the preference centre, the confirm link — get the default here
+	// rather than each spelling one, because a version each invented would be a
+	// second answer to "which wording was this". Set HERE and not in admitRecord,
+	// which takes its input by value: a default written there never reaches the
+	// INSERT, and the CHECK would refuse every row that door writes.
+	text, version := wordingFor(ConsentState(in.NewState), in.PolicyText, in.PolicyVersion)
 	_, err := tx.Exec(ctx, `
 		INSERT INTO consent_event (`+sub.column+`, purpose_id, new_state, lawful_basis, source,
 		                           policy_text, policy_version, double_opt_in_confirmed_at, captured_at, captured_by,
 		                           issuance_trigger)
-		VALUES ($1, $2, $3, $4, coalesce($5, 'api'), coalesce($6, 'recorded via API'), coalesce($7, 'v1'), $8, $9, $10, $11)`,
+		VALUES ($1, $2, $3, $4, coalesce($5, 'api'), $6, $7, $8, $9, $10, $11)`,
 		sub.id, in.PurposeID, in.NewState, in.LawfulBasis, in.Source,
-		in.PolicyText, in.PolicyVersion, doiConfirmedAt, capturedAt, actorID, trigger)
+		text, version, doiConfirmedAt, capturedAt, actorID, trigger)
 	return err
 }

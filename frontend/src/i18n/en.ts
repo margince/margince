@@ -608,6 +608,16 @@ export const en = {
   "state.staleAsOf": "Last known values, as of {when}",
   "state.partial": "Showing part of the list",
   "state.partialCount": "{count} more not shown",
+  // The opened file. `FilePreview` is a design-system control every surface
+  // that draws a file card can open, so its words belong to the control rather
+  // than to any one screen â the same three verbs stand over a contract on an
+  // account and over a scan that arrived on a message.
+  "filePreview.download": "Download",
+  "filePreview.print": "Print",
+  "filePreview.close": "Close preview",
+  "filePreview.loading": "Opening this file…",
+  "filePreview.failedTitle": "This file cannot be shown here",
+  "filePreview.failed": "Download it to open it in another application.",
 
   "list.headActions": "More actions",
   "list.search": "Search",
@@ -827,6 +837,13 @@ export const en = {
   "org.filterSizeBandAll": "Any size",
   "person.consent": "Consent",
   "consent.grant": "Grant",
+  // Submitted as the proof row's wording when an operator records a grant
+  // here. It does NOT quote a screen the subject read — this door has none —
+  // so it says what actually happened: a named operator attested to a consent
+  // obtained away from the product. A canned subject-facing sentence would be
+  // the fabricated proof this rule exists to remove.
+  "consent.operatorWording":
+    "Recorded in the CRM by a member of staff, who attested that this person gave their consent for {label} outside the product. No wording was shown to them here.",
   "consent.withdraw": "Withdraw",
   "consent.doiBySubject":
     "This purpose is confirmed by the person themselves, through a link mailed to their own address. Use \u201cAsk them to confirm their details\u201d below.",
@@ -2574,6 +2591,35 @@ export const en = {
   // the work that waits on a person, and this is a view of that same work.
   "home.panel.weekly": "Last week",
   "home.weekly.weekOf": "Week of {day}",
+  // How WELL the week went, beside what happened in it. Each block is drawn only
+  // when the server sent it: a rep who carried no leads did not score zero on
+  // the funnel, and an empty row would read as failure at something nobody
+  // asked of them.
+  "home.weekly.scorecard.title": "How the week went",
+  "home.weekly.scorecard.leadBlock": "Leads and meetings",
+  "home.weekly.scorecard.dealBlock": "Deals",
+  "home.weekly.scorecard.advanced": "Leads moved forward",
+  "home.weekly.scorecard.advancedBasis":
+    "Steps up the ladder, counted per move",
+  "home.weekly.scorecard.answeredInTarget": "Answered in target",
+  "home.weekly.scorecard.breachedDetail": "{count} breached the target",
+  "home.weekly.scorecard.meetingsHeld": "Meetings held",
+  "home.weekly.scorecard.meetingsBasis": "{booked} booked · {noShow} no-show",
+  "home.weekly.scorecard.partialHistory": "Meetings without history",
+  "home.weekly.scorecard.partialHistoryBasis":
+    "These predate the meeting history, so the counts above are a floor",
+  "home.weekly.scorecard.advances": "Stage advances",
+  "home.weekly.scorecard.regressionsDetail": "{count} went backwards",
+  "home.weekly.scorecard.medianDaysInStage": "Median days in stage",
+  "home.weekly.scorecard.medianBasis": "For the stages deals left this week",
+  "home.weekly.scorecard.withNextStep": "With a next step",
+  "home.weekly.scorecard.ofOpen": "of {total} open deals",
+  "home.weekly.scorecard.multiThreaded": "More than one person",
+  "home.weekly.scorecard.multiThreadedBasis":
+    "of {total} open deals, in the last 30 days",
+  "home.weekly.scorecard.closeDateSound": "Close date holds up",
+  "home.weekly.scorecard.forecastMoves": "Forecast upgrades",
+  "home.weekly.scorecard.forecastMovesBasis": "{down} downgraded",
   // The week ahead. The frozen review says what happened; this is the only part
   // of that page anybody can still change.
   "plan.title": "Plan next week",
@@ -2702,6 +2748,25 @@ export const en = {
   "plan.state.missed": "Missed",
   "plan.state.dropped": "Dropped",
   "plan.help.label": "What do you need from your lead?",
+  // What the week is up against, beside what it is for. The two prose fields
+  // draw three states, not two: unwritten, "nothing to name", and text. A lead
+  // who cannot tell the first two apart reads an unconsidered week as a safe one.
+  "plan.contract.title": "What this week is up against",
+  "plan.contract.risks": "What could get in the way",
+  "plan.contract.risksHint": "What you expect to go wrong, in your own words",
+  "plan.contract.capacityNote": "Room you have",
+  "plan.contract.capacityNoteHint":
+    "Anything the calendar does not know — leave, travel, a launch",
+  "plan.contract.unwritten": "Not written yet",
+  "plan.contract.nothingToName": "Nothing to name",
+  "plan.contract.edit": "Edit",
+  "plan.contract.save": "Save",
+  "plan.contract.cancel": "Cancel",
+  "plan.contract.capacityLine":
+    "Next week already holds {meetings} meetings and {tasks} tasks.",
+  "plan.contract.crowded": "Next week is already full",
+  "plan.contract.crowdedBody":
+    "{committed} things are already booked and you have written {commitments} commitments. Something will have to give.",
   "plan.help.ask": "Ask for help",
   "plan.help.edit": "Edit request",
   "plan.help.send": "Send",
@@ -2713,6 +2778,33 @@ export const en = {
   "plan.new.save": "Add",
   "plan.new.cancel": "Cancel",
 
+  "home.weekly.outlook": "Where the week was landing",
+  "home.weekly.outlook.week": "This week",
+  "home.weekly.outlook.month": "This month",
+  "home.weekly.outlook.quarter": "This quarter",
+  "home.weekly.outlook.none":
+    "No forecast was composed when this review was written, so this week records no landing. That is different from a week that landed on nothing.",
+  "home.weekly.outlook.won": "Won",
+  "home.weekly.outlook.commit": "Commit remaining",
+  "home.weekly.outlook.bestCase": "Best case (incl. commit)",
+  "home.weekly.outlook.weighted": "Weighted",
+  "home.weekly.outlook.landing": "Projected landing",
+  "home.weekly.outlook.measure.commit_evidence": "Read from commit evidence",
+  "home.weekly.outlook.measure.weighted": "Read from the weighted pipeline",
+  "home.weekly.outlook.measure.manager_call": "Read from the manager's call",
+  "home.weekly.bridge": "How the week moved it",
+  "home.weekly.bridge.opening": "Monday",
+  "home.weekly.bridge.closing": "Friday",
+  "home.weekly.bridge.noOpening":
+    "No Monday snapshot for this week, so there is no opening figure to have moved from.",
+  "home.weekly.bridge.reconcile":
+    "These bars do not add up to the closing figure. Read the two totals, not the steps.",
+  "home.weekly.bar.created": "Created",
+  "home.weekly.bar.advanced": "Advanced",
+  "home.weekly.bar.slipped": "Slipped",
+  "home.weekly.bar.won": "Won",
+  "home.weekly.bar.lost": "Lost",
+  "home.weekly.bar.other": "Rates and definitions",
   "home.weekly.frozen": "Frozen",
   "home.weekly.written": "written {at}",
   "home.weekly.pickWeek": "Open another week",
@@ -3269,6 +3361,31 @@ export const en = {
   "compose.whyThisDraft": "Why this draft?",
   "compose.body": "Body",
   "compose.bodyHint": "Click into the text to edit it.",
+  "compose.transport": "How to send",
+  "compose.transportEmail": "Email",
+  "compose.intentLabel": "What should it be about?",
+  "compose.recipientHint": "Name or address",
+  "compose.subjectHint": "What it is about",
+  "compose.bodyPlaceholder": "Write the message…",
+  "compose.bcc": "Bcc",
+  "compose.bccHint":
+    "The named recipients cannot see these addresses, and cannot see that anyone else was copied.",
+  "compose.threadGone":
+    "That conversation can no longer be answered, so this opened on the usual way of writing to them. Check the recipient before you send.",
+  "compose.attach": "Attach",
+  "compose.filesOnRecord": "On this record",
+  "compose.filesLoading": "Reading the record's files…",
+  "compose.filesNone": "No files are filed on this record yet.",
+  "compose.filesFull":
+    "{most} files is the most one message can carry. Send the rest as a second message.",
+  "compose.fileRemove": "Do not send {filename}",
+  "compose.fileUpload": "Send a new file",
+  "compose.fileUploadHint":
+    "It is filed on this record first, so the timeline keeps what the message carried.",
+  "compose.fileUploadEmpty": "Drop a file here, or choose one",
+  "compose.fileUploading": "Filing the file…",
+  "compose.fileStoredUnnamed":
+    "The file is on the record, but we could not read back which one it is. Attach it from the list above.",
   "calendar.previousMonth": "Previous month",
   "calendar.nextMonth": "Next month",
   "compose.schedulePick": "Pick date and time",
@@ -3330,7 +3447,6 @@ export const en = {
     "This message cannot be sent, and it is not something a seat here can overrule.",
   "compose.derivedReply":
     "This continues their own message, so it needs no reason from you.",
-  "compose.sendLaterLabel": "Send later (optional)",
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Draft email",
   "compose.threadHeading": "This conversation",
@@ -3390,7 +3506,6 @@ export const en = {
   "compose.missingSubject": "Give this email a subject.",
   "compose.missingBody": "Write the message before sending it.",
   "compose.missingWhy": "Say why you are writing to them.",
-  "compose.removeRecipient": "Remove {recipient}",
   "compose.actionFailed": "The request failed. Please try again.",
 
   "tasks.complete": "Done",
@@ -3932,7 +4047,7 @@ export const en = {
   "settings.jobs": "Background jobs",
   "settings.jobsSub": "What the queue is holding, and whose work failed.",
   "jobs.adminOnly":
-    "Only an admin can see background-job health. It reports work across the whole installation, so it is not shown more widely.",
+    "Seeing background-job health needs permission your seat does not hold. It reports work across the whole installation, so it is not open to everyone.",
   "jobs.empty":
     "Nothing in the background queue — no work waiting, running, retrying or dead.",
   "jobs.workspaceKinds": "This organization",
@@ -3985,7 +4100,7 @@ export const en = {
   "audit.noHumanAuthority": "No human authority recorded",
   "settings.auditSub": "every action, attributed — human, agent, or connector",
   "settings.auditAdminOnly":
-    "Only an admin can read the full trail. It records every actor and every record they touched, so it is not shown more widely.",
+    "Reading the full trail needs permission your seat does not hold. It records every actor and every record they touched, so it is not open to everyone.",
   "settings.auditFilters": "Filters",
   "settings.auditEntries": "Audit log",
   "settings.auditTrailLabel": "Recorded actions",
@@ -4005,7 +4120,7 @@ export const en = {
   "privacy.addPurpose": "Add purpose",
   "privacy.purposesRegistry": "Registered purposes",
   "privacy.purposesReadOnly":
-    "Read-only view — only an admin or ops can add a purpose.",
+    "Read-only view — adding a purpose needs permission your seat does not hold.",
   "privacy.purposeKey": "Key",
   "privacy.purposeLabel": "Label",
   "privacy.purposeDoi": "Requires double opt-in",
@@ -4014,7 +4129,7 @@ export const en = {
     "A purpose cannot be renamed or removed once created — the catalogue is append-only. Choose the key carefully.",
   "privacy.facetAll": "All",
   "privacy.inboxAdminOnly":
-    "Only an admin can see subject requests. They name the people who asked, so the queue is not shown more widely.",
+    "Seeing subject requests needs permission your seat does not hold. They name the people who asked, so the queue is not open to everyone.",
   "privacy.overdue": "Overdue",
   "privacy.closed":
     "Closed — a closed request never reopens. A new concern is a new request.",
@@ -6057,6 +6172,31 @@ export const en = {
   // are: the mailbox and the network a PERSON connected, against the outside
   // systems the INSTALLATION is wired to. One row carried both before, which
   // is why it had to be ungated to keep a rep's own mailbox reachable.
+  "settings.tab.company": "Company profile",
+  "settings.tab.authentication": "Sign-in & apps",
+  "settings.tab.members": "Members",
+  "settings.tab.teams": "Teams",
+  "settings.tab.seats": "Seats & license",
+  "settings.tab.pipelines": "Pipelines",
+  "settings.tab.leads": "Lead handling",
+  "settings.tab.fields": "Fields",
+  "settings.tab.tags": "Tags",
+  "settings.tab.products": "Products & offers",
+  "settings.tab.import": "Data import",
+  "settings.tab.models": "Models & routing",
+  "settings.tab.automations": "Automations",
+  "settings.tab.usage": "AI usage",
+  "settings.tab.model-calls": "Model calls",
+  "settings.tab.audit": "Audit log",
+  "settings.tab.system-health": "System health",
+  "settings.tab.reset": "Reset data",
+  "settings.group.me": "You",
+  "settings.group.company": "Company",
+  "settings.group.people": "People",
+  "settings.group.sales": "Sales",
+  "settings.group.data": "Data",
+  "settings.group.ai": "AI",
+  "settings.group.governance": "Governance",
   "settings.tab.account": "Account",
   "settings.tab.voice": "Writing voice",
   "settings.tab.agents": "Agents",
@@ -6274,6 +6414,8 @@ export const en = {
   "license.refused.title": "This installation's license was refused",
   "license.refused.body":
     "The token in the deployment was presented and rejected. Everything keeps working, uncapped, until it is replaced — check the token and the installation's clock.",
+  "license.seats.capacityOnly":
+    "How many full seats this installation is using. What it is entitled to is not yours to see.",
   "license.seats.title": "Seats",
   "license.seats.used": "Seats in use",
   "license.seats.granted": "Seats granted",
@@ -6499,7 +6641,8 @@ export const en = {
   "extAccess.title": "Extensions & access",
   "extAccess.sub":
     "What each composed extension unit brought into this installation, and which role may use it. Admin-only.",
-  "extAccess.adminOnly": "Extension access is available to admins only.",
+  "extAccess.adminOnly":
+    "This page needs permission to read the installation's extensions and its roles. Your seat holds one or neither.",
   "extAccess.readOnly":
     "Your seat reads this page. Changing a grant needs a full seat.",
   "extAccess.empty": "No extension units are composed into this installation.",
@@ -6959,13 +7102,6 @@ export const en = {
   "firstRun.ai.embedModel": "Embedding model",
   // Which vendor this installation's text is sent to. Admin/ops only, on both
   // verbs â see the ai_routing RBAC object.
-  "aiSettings.sub": "Where this installation's text goes, and what it costs.",
-  "aiSettings.tabs": "Which part of the AI settings is open",
-  "aiSettings.tab.routing": "Routing",
-  "aiSettings.tab.providers": "Providers",
-  "aiSettings.tab.automations": "Automations",
-  "aiSettings.tab.usage": "Usage",
-  "aiSettings.tab.logs": "Logs",
   "aiSettings.withheld": "Not yours to see",
   "aiSettings.unread": "Could not be read",
   "aiSettings.pending": "Reading…",
@@ -6976,10 +7112,6 @@ export const en = {
   "aiSettings.providers.value": "{count} keyed",
   "aiSettings.providers.missing": "{count} bound with no key",
   "aiSettings.providers.lastCall": "last call {elapsed}",
-  "aiSettings.discardTitle": "Leave the routing edits behind?",
-  "aiSettings.discardBody":
-    "The bindings you changed have not been saved. Leaving this tab discards them.",
-  "aiSettings.discard": "Discard",
   "elapsed.justNow": "just now",
   "elapsed.minutes": "{minutes} min ago",
   "elapsed.hours": "{hours} h ago",
@@ -7741,51 +7873,16 @@ export const en = {
   "person.rail.nothingCaptured": "Nothing captured yet.",
   "person.rail.viewAllActivity": "View all activity",
   "person.drawer.close": "Close",
-  "person.composer.title": "Draft follow-up · {name}",
-  "person.composer.to": "To",
-  "person.composer.transport": "How to send",
-  "person.composer.transportEmail": "Email",
-  "person.composer.toConversation": "Continues your {transport} conversation",
-  "person.composer.subject": "Subject",
-  "person.composer.bcc": "Bcc",
-  "person.composer.bccPlaceholder":
-    "One address per line — they receive the message and no other recipient sees them",
-  "person.composer.body": "Message",
   "richtext.bold": "Bold",
   "richtext.italic": "Italic",
   "richtext.bulletList": "Bulleted list",
   "richtext.numberList": "Numbered list",
   "richtext.link": "Link",
   "richtext.linkPrompt": "Web address for this link (leave empty to remove it)",
-  "person.composer.drafting": "Writing a draft…",
-  "person.composer.why": "Why this draft",
-  "person.composer.consentUnknown":
-    "No consent decision is recorded for this channel.",
-  "person.composer.sendNote":
-    "Pressing send delivers this message from your own mailbox.",
-  "person.composer.purpose": "Consent purpose",
-  "person.composer.blockedLead":
-    "This message cannot go out under this purpose.",
-  "person.composer.blockedRewrite":
-    "A message sent under another purpose has to BE that kind of message — relabelling this one does not make it so.",
-  "person.composer.blockedRecordConsent":
-    "If you have a basis for writing, record the consent decision on their record.",
-  "person.composer.consentPickPurpose":
-    "Choose what this message is for — consent is decided per purpose.",
-  "person.composer.intent": "What should it be about?",
-  "person.composer.intentHint":
-    "Optional — e.g. ask for a date in the first week of September",
-  "person.composer.draftWithAi": "Draft with AI",
   "person.composer.intentAgenda": "propose an agenda for the upcoming meeting",
-  "person.composer.threadGone":
-    "The conversation this link named can no longer be answered — the channel or address it was on is gone. This is a new message to them.",
   "person.composer.intentReply": "reply to their last message",
   "person.composer.intentCommitment": "deliver what we promised them",
   "person.composer.intentFollowUp": "follow up — it has gone quiet",
-  "person.composer.send": "Send",
-  "person.composer.sending": "Sending…",
-  "person.composer.sent": "Sent",
-  "person.composer.aiDisclosure": "AI-assisted draft · review every word",
   "person.research.title": "Deep research · {name}",
   "person.research.publicOnly": "Public sources only",
   "person.research.running": "Reading public sources…",
@@ -8627,6 +8724,20 @@ export const en = {
   "worklist.verb.complete": "Open",
   "worklist.verb.snooze": "Open",
   "worklist.verb.acknowledge": "Got it",
+  "worklist.verb.meetingHeld": "It happened",
+  "worklist.verb.meetingNoShow": "They didn't come",
+  "worklist.verb.meetingCanceled": "It was called off",
+  "worklist.verb.meetingOutcomeRecorded": "Recorded how the meeting went.",
+  "worklist.verb.meetingOutcomeFailed": "That could not be recorded.",
+  "worklist.verb.retry": "Run it again",
+  "worklist.verb.retryStarted": "Running the rule again.",
+  "worklist.verb.retryFailed": "That could not be run again.",
+  "worklist.verb.retryRefusedNotFailed":
+    "Nothing to run again \u2014 this firing was stopped on purpose, not by an error.",
+  "worklist.verb.retryRefusedRepeats":
+    "This rule has not been cleared to run twice, so running it again could repeat what it already did.",
+  "worklist.verb.retryRefusedEventGone":
+    "The event behind this firing is gone, so it cannot be repeated. A scheduled rule checks again on its own.",
   "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
   "worklist.verb.completeFailed": "That task could not be completed.",
   "worklist.verb.pin": "Pin",

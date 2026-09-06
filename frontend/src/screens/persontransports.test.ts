@@ -3,8 +3,9 @@
 
 import { describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
+import { translate, type useT } from "../i18n";
 import type { Transport } from "./persontransports";
-import { transportForActivity } from "./persontransports";
+import { transportForActivity, transportsFor } from "./persontransports";
 
 type Person360 = components["schemas"]["Person360"];
 
@@ -80,5 +81,141 @@ describe("transportForActivity", () => {
     const got = transportForActivity(TRANSPORTS, PAGE, "gone-1");
     expect(got.chosen).toBeUndefined();
     expect(got.stale).toBe(true);
+  });
+});
+
+// WHICH WAYS this contact can be written to at all — the answer the composer's
+// dial is built from, and the record verb's label with it.
+//
+// These read the rules directly rather than through a rendered composer, which
+// is where they used to live. Every one of them is a statement about
+// reachability and anchors; asserting them through a drawer meant mounting the
+// whole composer, its queries and its consent gate to find out whether a list
+// had two entries in it.
+
+// Naming a provider is the reader's own language, so the composer passes one in.
+const nameProvider = (provider: string) =>
+  provider === "dispact" ? "Dispact" : provider;
+
+// The REAL catalog, not a stub answering one key by name. A stub keeps passing
+// after the key it names is renamed or retired — which is exactly what happened
+// to the key this used to hold — and it proves nothing about the word a reader
+// sees. No cast: `useT` returns a plain translator, so a function of the same
+// shape simply is one.
+const say: ReturnType<typeof useT> = (key, params) =>
+  translate("en", key, params);
+
+function contact(
+  options: Readonly<{
+    email?: boolean;
+    reachable?: { provider: string; reachable: boolean }[];
+    activities?: {
+      id: string;
+      kind: string;
+      channel_provider?: string;
+      occurred_at: string;
+    }[];
+  }>,
+): Person360 {
+  return {
+    person: {
+      emails: options.email
+        ? [{ email: "dana@brandt.example", is_primary: true }]
+        : [],
+      reachability: options.reachable ?? [],
+    },
+    activities: { data: options.activities ?? [] },
+  } as unknown as Person360;
+}
+
+const aMessage = (provider: string, id: string, at: string) => ({
+  id,
+  kind: "message",
+  channel_provider: provider,
+  occurred_at: at,
+});
+
+describe("transportsFor", () => {
+  it("offers mail alone for a contact with an address and no channel", () => {
+    const got = transportsFor(contact({ email: true }), nameProvider, say);
+    expect(got.map((t) => t.id)).toEqual(["email"]);
+  });
+
+  // Mail leads because it is the one transport that can OPEN a conversation:
+  // `POST /emails` names its addressee, and send-message resolves one from the
+  // conversation it answers.
+  it("leads with mail when both are available", () => {
+    const got = transportsFor(
+      contact({
+        email: true,
+        reachable: [{ provider: "dispact", reachable: true }],
+        activities: [aMessage("dispact", "a-1", "2026-08-15T08:00:00Z")],
+      }),
+      nameProvider,
+      say,
+    );
+    expect(got.map((t) => t.id)).toEqual(["email", "dispact"]);
+    expect(got[1].anchorId).toBe("a-1");
+  });
+
+  // Reachability and an anchor answer different questions and BOTH are
+  // required: a live identity with nothing to continue would be a choice that
+  // fails at the send, since no endpoint opens a channel conversation.
+  it("withholds a channel the contact is reachable on but has no conversation on", () => {
+    const got = transportsFor(
+      contact({
+        email: true,
+        reachable: [{ provider: "dispact", reachable: true }],
+      }),
+      nameProvider,
+      say,
+    );
+    expect(got.map((t) => t.id)).toEqual(["email"]);
+  });
+
+  // The mirror: a conversation exists, but the identity is blocked or archived.
+  it("withholds a channel whose identity is no longer reachable", () => {
+    const got = transportsFor(
+      contact({
+        email: true,
+        reachable: [{ provider: "dispact", reachable: false }],
+        activities: [aMessage("dispact", "a-1", "2026-08-15T08:00:00Z")],
+      }),
+      nameProvider,
+      say,
+    );
+    expect(got.map((t) => t.id)).toEqual(["email"]);
+  });
+
+  // The contact this exists for: no address anywhere, one chat conversation.
+  // Offering mail here would offer a mailbox nobody has.
+  it("offers the channel alone for a contact with no address", () => {
+    const got = transportsFor(
+      contact({
+        reachable: [{ provider: "dispact", reachable: true }],
+        activities: [aMessage("dispact", "a-1", "2026-08-15T08:00:00Z")],
+      }),
+      nameProvider,
+      say,
+    );
+    expect(got.map((t) => t.id)).toEqual(["dispact"]);
+  });
+
+  // One entry per provider, anchored on its NEWEST conversation — which is what
+  // a rep means when they pick that transport from the list.
+  it("anchors a provider on its most recent conversation, once", () => {
+    const got = transportsFor(
+      contact({
+        reachable: [{ provider: "dispact", reachable: true }],
+        activities: [
+          aMessage("dispact", "older", "2026-08-01T08:00:00Z"),
+          aMessage("dispact", "newest", "2026-08-15T08:00:00Z"),
+        ],
+      }),
+      nameProvider,
+      say,
+    );
+    expect(got).toHaveLength(1);
+    expect(got[0].anchorId).toBe("newest");
   });
 });

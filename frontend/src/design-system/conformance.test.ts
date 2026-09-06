@@ -1094,6 +1094,34 @@ describe("the transient confirmation", () => {
   });
 });
 
+describe("the opened file", () => {
+  // `FilePreview` holds the file a reader clicked, and a second provider is a
+  // second answer to "where does a file open". Two of them mounted at once is
+  // two `aria-modal` dialogs and two Escape handlers the first time a reader
+  // opens a file from a surface under the inner one — the failure
+  // `OpenEmailDrawer` exists to prevent, arriving here by a different route.
+  //
+  // The mount is also what makes the chip's click mean anything: `FileChip`
+  // reads the provider through context and falls back to the plain download
+  // when there is none, so a provider that stopped being an ancestor of the
+  // screens would take the whole capability away without failing anything.
+  it("mounts one provider, above the screens", () => {
+    const mounts = files
+      .filter((file) => /\.tsx$/.test(file))
+      .filter((file) => !/\.(test|stories)\.tsx$/.test(file))
+      .filter((file) =>
+        /<FilePreviewProvider[\s/>]/.test(readFileSync(file, "utf8")),
+      )
+      .map((file) => relative(frontendRoot, file))
+      .sort();
+    expect(
+      mounts,
+      "a second provider is a second dialog over the same click; mount the " +
+        "one in main.tsx and open it with `useFilePreview`",
+    ).toEqual(["src/main.tsx"]);
+  });
+});
+
 describe("the phone nav's clearance", scanBudget, () => {
   // The nav bar belongs to the shell, so where it is belongs to the shell too.
   // Three sheets used to keep their own answer — the record action bar at 720px,

@@ -12,7 +12,16 @@
 // partner, lead, lead_score_history, lead_manual_signal, lead_source,
 // lead_disqualify_reason, person_signature_enrich_state,
 // person_provider_claim, provider_applied_field, organization_vat_check,
-// relationship_nudge_dismissal.
+// relationship_nudge_dismissal, sdr_handoff, sdr_handoff_event,
+// sdr_handoff_reason.
+// The sdr_handoff trio is a prospect being passed from an SDR to an account
+// executive: the row carrying its current state, the append-only transitions
+// behind it, and the administered reason list a refusal names. It lives here
+// because the SUBJECT is a lead or a person; the deal an acceptance produces is
+// an outcome, and a module never imports a sibling — compose wires the caller
+// that creates a deal and accepts a handoff in one act. Not the delivery
+// briefing the agent surface calls a handoff, which is about a project already
+// sold.
 // organization_vat_check is what the EU register answered about a company's
 // VAT ID and the consultation number proving we asked: the profile field
 // holds the number a page stated, this holds whether it is real.
