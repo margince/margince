@@ -125,8 +125,8 @@ func computedFieldsVisible(ctx context.Context) bool {
 func openPipelineRollup(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) (roll openPipeline, err error) {
 	err = tx.QueryRow(ctx,
 		`SELECT open_pipeline_minor_base, open_deal_count, priced_deal_count
-		 FROM organization_open_pipeline_rollup WHERE organization_id = $1`,
-		orgID).Scan(&roll.minorBase, &roll.dealCount, &roll.pricedCount)
+		 FROM organization_open_pipeline_rollup($2) WHERE organization_id = $1`,
+		orgID, rollupAsOf()).Scan(&roll.minorBase, &roll.dealCount, &roll.pricedCount)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Scan never ran, so roll is still its zero value — return it, not
 		// literal zeroes: the honest "nothing to sum" case above, not a

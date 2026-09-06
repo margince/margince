@@ -140,8 +140,8 @@ func fillContactCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUI
 func fillOpenDealCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Organization, orgIDs []ids.UUID) error {
 	return fillCount(ctx, tx, idx,
 		`SELECT organization_id, open_deal_count
-		 FROM organization_open_pipeline_rollup
-		 WHERE organization_id = ANY($1)`, []any{orgIDs},
+		 FROM organization_open_pipeline_rollup($2)
+		 WHERE organization_id = ANY($1)`, []any{orgIDs, rollupAsOf()},
 		func(o *crmcontracts.Organization, n int) { o.OpenDealCount = &n })
 }
 

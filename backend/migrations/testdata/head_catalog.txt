@@ -3840,37 +3840,95 @@ BEGIN
   RETURN NEW;
 END;
 
-public.organization_open_pipeline_rollup acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.organization_open_pipeline_rollup opts=security_invoker=true  SELECT d.organization_id,
-        CASE
-            WHEN ((sum(conv.minor_base) >= ('-9223372036854775808'::bigint)::numeric) AND (sum(conv.minor_base) <= ('9223372036854775807'::bigint)::numeric)) THEN sum(conv.minor_base)
-            ELSE NULL::numeric
-        END AS open_pipeline_minor_base,
+public.organization_open_pipeline_rollup(as_of date) secdef=false cfg=- acl==X/margince_owner,margince_owner=X/margince_owner,margince_app=X/margince_owner 
+ SELECT d.organization_id,
+    -- The SUM is bounded too, and separately from its summands. sum(bigint)
+    -- answers in numeric, so a set of individually representable deals can add
+    -- to a figure no bigint holds — and the reader scans this column into an
+    -- int64. Guarding one deal and not the total would have moved the same
+    -- failure one level up: the record unreadable because the deals are large
+    -- rather than because one of them is.
+    --
+    -- Out of range answers NULL, which the caller already knows how to report:
+    -- the deals were priced, the total cannot be stated, and a figure nobody
+    -- can represent is not a figure to publish.
+    CASE
+      WHEN sum(conv.minor_base)
+           BETWEEN -9223372036854775808 AND 9223372036854775807
+        THEN sum(conv.minor_base)
+      ELSE NULL
+    END AS open_pipeline_minor_base,
     count(*) AS open_deal_count,
-    count(*) FILTER (WHERE (conv.minor_base IS NOT NULL)) AS priced_deal_count
-   FROM (((((deal d
-     LEFT JOIN LATERAL ( SELECT (setting.value #>> '{}'::text[]) AS code
-           FROM setting
-          WHERE (setting.key = 'installation.base_currency'::text)) base ON (true))
-     LEFT JOIN LATERAL ( SELECT r.rate
-           FROM fx_rate r
-          WHERE (((d.currency)::text IS DISTINCT FROM base.code) AND (r.from_currency = d.currency) AND ((r.to_currency)::text = base.code) AND (r.rate_date <= CURRENT_DATE))
-          ORDER BY r.rate_date DESC
-         LIMIT 1) live ON (true))
-     LEFT JOIN currency_minor_digits deal_digits ON ((deal_digits.currency = d.currency)))
-     LEFT JOIN currency_minor_digits base_digits ON (((base_digits.currency)::text = base.code)))
-     LEFT JOIN LATERAL ( SELECT
-                CASE
-                    WHEN ((d.currency)::text = base.code) THEN d.amount_minor
-                    WHEN ((live.rate IS NOT NULL) AND ((round(((((d.amount_minor)::numeric * live.rate) * power((10)::numeric, (COALESCE((base_digits.digits)::integer, 2))::numeric)) / power((10)::numeric, (COALESCE((deal_digits.digits)::integer, 2))::numeric))) >= ('-9223372036854775808'::bigint)::numeric) AND (round(((((d.amount_minor)::numeric * live.rate) * power((10)::numeric, (COALESCE((base_digits.digits)::integer, 2))::numeric)) / power((10)::numeric, (COALESCE((deal_digits.digits)::integer, 2))::numeric))) <= ('9223372036854775807'::bigint)::numeric))) THEN (round(((((d.amount_minor)::numeric * live.rate) * power((10)::numeric, (COALESCE((base_digits.digits)::integer, 2))::numeric)) / power((10)::numeric, (COALESCE((deal_digits.digits)::integer, 2))::numeric))))::bigint
-                    ELSE NULL::bigint
-                END AS minor_base) conv ON (true))
+    -- How many deals actually reached the sum. SUM ignores a null summand
+    -- silently, so without this a total covering one of two deals is
+    -- indistinguishable from one covering both — a confident figure that is
+    -- quietly short, which is worse than the "not computable" it replaces.
+    --
+    -- It counts the CONVERSION rather than restating when one is possible: a
+    -- deal with no rate and a deal whose converted amount does not fit are both
+    -- deals the sum did not reach, and one predicate answers for both.
+    count(*) FILTER (WHERE conv.minor_base IS NOT NULL) AS priced_deal_count
+   FROM deal d
+   -- LEFT, not CROSS: an installation whose base-currency row is somehow absent
+   -- must still report its open_deal_count. A cross join would return no row at
+   -- all for the organization, which reads as "no open deals" — the one answer
+   -- that is definitely wrong. With no base currency nothing converts, every
+   -- deal contributes null, and the sum is null: not computable, honestly.
+   LEFT JOIN LATERAL (
+     SELECT (value #>> '{}')::text AS code
+       FROM setting
+      WHERE key = 'installation.base_currency'
+   ) base ON true
+   LEFT JOIN LATERAL (
+     SELECT r.rate
+       FROM fx_rate r
+      WHERE d.currency IS DISTINCT FROM base.code
+        AND r.from_currency = d.currency
+        AND r.to_currency = base.code
+        AND r.rate_date <= as_of
+      ORDER BY r.rate_date DESC
+      LIMIT 1
+   ) live ON true
+   -- Both currencies' minor-unit scales, each absent for an ordinary two-digit
+   -- code and coalesced to ISO's default below. LEFT so a code the table does
+   -- not name still converts, at two digits, rather than dropping the deal out
+   -- of the sum — an unnamed exception renders wrong for that code, where a
+   -- dropped deal silently shortens a total for every code.
+   LEFT JOIN currency_minor_digits deal_digits ON deal_digits.currency = d.currency
+   LEFT JOIN currency_minor_digits base_digits ON base_digits.currency = base.code
+   -- What this deal contributes to the total, or NULL when it contributes
+   -- nothing. Three cases, and the bound is written once here so the count
+   -- predicate below reads the same answer the sum does.
+   LEFT JOIN LATERAL (
+     SELECT CASE
+       -- Already in the installation's own currency: no rate needed, no scale
+       -- to cross, and none should be looked for. This is the ordinary deal.
+       WHEN d.currency = base.code THEN d.amount_minor
+       -- Converted, and only when the result is a number the column can hold.
+       -- The comparison runs in numeric, where the product already is, so it
+       -- decides the question BEFORE a cast can raise it.
+       --
+       -- amount × rate × 10^digits(base) ÷ 10^digits(deal), as ONE expression
+       -- so the single round() is the only rounding. numeric is exact, so the
+       -- intermediate carries no error to accumulate.
+       WHEN live.rate IS NOT NULL
+        AND round(d.amount_minor * live.rate
+                    * power(10::numeric, coalesce(base_digits.digits, 2))
+                    / power(10::numeric, coalesce(deal_digits.digits, 2)))
+            BETWEEN -9223372036854775808 AND 9223372036854775807
+         THEN round(d.amount_minor * live.rate
+                      * power(10::numeric, coalesce(base_digits.digits, 2))
+                      / power(10::numeric, coalesce(deal_digits.digits, 2)))::bigint
+       -- No usable rate, or a result too large to represent. Nothing is ever
+       -- converted at an invented rate of 1 — that would report ¥5,000,000 as
+       -- €5,000,000 — and nothing is ever clamped to the biggest number that
+       -- fits, which is the same lie with more digits.
+       ELSE NULL
+     END AS minor_base
+   ) conv ON true
   WHERE ((d.status = 'open'::text) AND (d.organization_id IS NOT NULL) AND (d.archived_at IS NULL))
   GROUP BY d.organization_id;
-public.organization_open_pipeline_rollup.open_deal_count bigint gen=- def=-
-public.organization_open_pipeline_rollup.open_pipeline_minor_base numeric gen=- def=-
-public.organization_open_pipeline_rollup.organization_id uuid gen=- def=-
-public.organization_open_pipeline_rollup.priced_deal_count bigint gen=- def=-
+
 public.organization_pkey CREATE UNIQUE INDEX organization_pkey ON public.organization USING btree (id)
 public.organization_profile_field acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.organization_profile_field.captured_at timestamp with time zone NOT NULL gen=- def=now()
