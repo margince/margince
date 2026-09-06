@@ -32,6 +32,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
@@ -40,11 +41,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// The outcomes this repair records. `attendees` wrote rows; the other two say
-// why a meeting produced none, and both are UNRESOLVED for the purpose of
-// judging the rollout — a meeting whose original will not parse has not been
-// repaired, it has been given up on, and reporting the two together would let a
-// pass that repaired nothing look finished.
+// The outcomes this repair records.
+//
+// `attendees` is the only one that bound anybody. The other two are both
+// UNRESOLVED for the purpose of judging the rollout: a meeting whose original
+// will not parse has not been repaired but given up on, and `none` covers both a
+// genuinely empty invitation and one the party cap refused — in which case real
+// colleagues are still locked out. Counting either as success would let a pass
+// that repaired nothing report itself finished, which is the one way a privacy
+// rollout must not be wrong.
 const (
 	repairBoundAttendees = "attendees"
 	repairFoundNone      = "none"
@@ -157,6 +162,25 @@ func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate) (string
 		return repairUnreadable, nil //nolint:nilerr // unreadable is the recorded outcome, not a fault
 	}
 	if len(participants) == 0 {
+		// UNRESOLVED, never "this meeting had nobody on it".
+		//
+		// Two different states reach here and this pass cannot tell them apart:
+		// an event that genuinely names no further party, and one the party cap
+		// refused. connector.CapParticipants returns NOTHING rather than a
+		// truncated list once a message names more than MaxParticipants further
+		// parties — deliberately, because a 200-person invitation is a
+		// distribution list and folding its names in would report a relationship
+		// with everyone who got the same mail. That rule is not this change's to
+		// relax.
+		//
+		// What it costs here is real: a capped meeting keeps every attendee
+		// unresolved, so a colleague who was on it still cannot read it. Recording
+		// that as `none` would let a pass that left real people locked out report
+		// itself complete, so both land in the same UNRESOLVED bucket the
+		// rollout check reads — the honest answer while the two are
+		// indistinguishable. Telling them apart needs the pre-cap count, which
+		// lives inside the shared calendar parser and reaches four callers;
+		// filed rather than done here.
 		return repairFoundNone, nil
 	}
 	// True, not c.partyListIsAttested(): the query above admits calendar
@@ -164,6 +188,19 @@ func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate) (string
 	// it back off the candidate would ask the same question twice and let the
 	// two answers drift.
 	if err := capture.StampFurtherParticipants(ctx, tx, c.activityID, c.kind, true, participants); err != nil {
+		return "", err
+	}
+	// The superseded rows, retired now that a resolved one stands beside them.
+	//
+	// StampFurtherParticipants inserts ON CONFLICT DO NOTHING against
+	// uq_activity_participant, and that index keys on (activity_id, role,
+	// user_id, person_id, address) — so a row naming the SAME address with a
+	// resolved user_id is a different key, not a conflict. Without this the
+	// repair leaves two rows describing one attendee: the old unresolved one and
+	// the new bound one. The graph then still reports the colleague as an
+	// unresolved external party, which is the very state this pass exists to
+	// clear, while the marker says the meeting was repaired.
+	if err := activities.RetireSupersededAttendeesTx(ctx, tx, c.activityID); err != nil {
 		return "", err
 	}
 	// The rows just written carry whatever name the original gave, so the people

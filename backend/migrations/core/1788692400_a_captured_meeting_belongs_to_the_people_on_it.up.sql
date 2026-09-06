@@ -53,17 +53,27 @@ ALTER TABLE activity
 -- A meeting several seats imported takes the earliest, which is the seat whose
 -- sync actually created the row. This is a label saying whose calendar the row
 -- came off, not a claim that they organized the invitation.
+--
+-- The captured_by suffix is the FALLBACK, for the rows that have no import row
+-- at all: capture_import was backfilled only where that stamp ends in a uuid
+-- (migration 1788151532), so an older bare `connector:gcal` row has none. Both
+-- sources are written by capture from the authenticated principal, so neither is
+-- a claim a record made about itself. A row that yields neither keeps a NULL
+-- host, which reads honestly as "no calendar claims this meeting".
 UPDATE activity a
-   SET host_user_id = (
-       SELECT ci.user_id
-         FROM capture_import ci
-        WHERE ci.activity_id = a.id
-        ORDER BY ci.imported_at, ci.id
-        LIMIT 1)
+   SET host_user_id = coalesce(
+       (SELECT ci.user_id
+          FROM capture_import ci
+         WHERE ci.activity_id = a.id
+         ORDER BY ci.imported_at, ci.id
+         LIMIT 1),
+       (SELECT u.id
+          FROM app_user u
+         WHERE u.id = substring(a.captured_by from '([0-9a-f-]{36})$')::uuid))
  WHERE a.kind = 'meeting'
    AND a.host_user_id IS NULL
    AND a.restricted_at IS NULL
-   AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id);
+   AND a.captured_by LIKE 'connector:%';
 
 -- 3. A captured meeting that nothing files anywhere is held to its people.
 --
@@ -72,9 +82,19 @@ UPDATE activity a
 -- audience somebody already narrowed carries a reason, and re-stamping it would
 -- overwrite what a person or a verdict decided.
 --
--- The capture_import test keeps hand-logged meetings out, and the activity_link
--- test leaves an already-filed meeting open — it is reachable through a record,
--- which is exactly the condition that lifts the hold.
+-- What keeps a HAND-LOGGED meeting out is the captured_by provenance, read
+-- directly rather than through the presence of a capture_import row.
+--
+-- The import row is the wrong test and would fail short, which is the one way a
+-- privacy migration must not be wrong. capture_import was backfilled only for
+-- rows whose captured_by ENDS IN A UUID (migration 1788151532), so a meeting
+-- carrying the older bare `connector:gcal` stamp has none — and testing for one
+-- would leave exactly those rows workspace-readable while the migration reported
+-- success. A hand-logged meeting carries `human:<uuid>` and is excluded by the
+-- provenance test itself.
+--
+-- The activity_link test leaves an already-filed meeting open: it is reachable
+-- through a record, which is the condition that lifts this hold anyway.
 UPDATE activity a
    SET audience = 'participants',
        audience_reason = 'no_counterparty'
@@ -82,7 +102,7 @@ UPDATE activity a
    AND a.audience = 'workspace'
    AND a.audience_reason IS NULL
    AND a.restricted_at IS NULL
-   AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id)
+   AND a.captured_by LIKE 'connector:%'
    AND NOT EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id);
 
 -- 4. A person an AGENT created is visible to its owner until something widens it.

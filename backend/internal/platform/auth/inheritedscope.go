@@ -91,15 +91,6 @@ func activityDiscoverClause(p principal.Principal, alias string, arg func(any) i
 	// invitation is on their calendar and the row denies them. Membership is
 	// the honest answer to "may this person learn this exists": they were on it.
 	//
-	// MEETINGS ONLY, and the restriction is load-bearing rather than tidy.
-	// Capture stamps the acting seat as a participant of EVERY activity it
-	// writes (sinkactivity.go), so without the kind test this arm would let a
-	// connector's granting human discover every row their own connector ever
-	// captured — including one later filed under a record they may not read,
-	// which is the state capture deliberately refuses to replay onto. A mail
-	// reaches its people through its links and needs nothing here; a meeting is
-	// the case where the links are somebody else's and the attendance is real.
-	//
 	// It admits EXISTENCE only. Content still needs the audience arm, the linked
 	// private person stays unreadable with its own visibility check, and neither
 	// the availability test nor object RBAC is relaxed. Nothing here reads
@@ -108,25 +99,66 @@ func activityDiscoverClause(p principal.Principal, alias string, arg func(any) i
 	// was present.
 	return fmt.Sprintf(`%[3]s AND (coalesce((SELECT bool_or(%[2]s)
 	   FROM activity_link l WHERE l.activity_id = %[1]s.id), true)
-	   OR (%[1]s.kind = 'meeting' AND %[4]s))`,
-		alias, linkTargetVisible(p, "l", arg), available, activityMembershipArm(p, alias, arg))
+	   OR %[4]s)`,
+		alias, linkTargetVisible(p, "l", arg), available, activityAttendanceArm(p, alias, arg))
 }
 
-// activityMembershipArm is the "I was on this" test: the caller's own seat
-// imported the row, or they are stamped as one of its participants.
+// activityAttendanceArm is the discovery half of membership: the caller was on
+// this row on evidence they could not have written themselves.
 //
-// One spelling, two readers. The audience arm composes it to decide CONTENT, and
-// the discover clause composes it to decide EXISTENCE — and they must agree
-// about what membership means, or an attendee reads a meeting they cannot
-// discover, or discovers one they cannot read. Its existential twin, which asks
-// whether ANYBODY matches before a write narrows a row, is ActivityHasAReaderTx
-// in audienceorphan.go; change an arm here and change it there.
+// It is deliberately NARROWER than activityMembershipArm, which decides content.
+// The difference is one column and it is the whole security of this clause.
+//
+// Capture stamps the ACTING SEAT as an activity_participant of every activity it
+// writes (sinkactivity.go stampCaptureParticipants), with no attestation behind
+// it. So "I have a participant row" means only "my connector landed this", and
+// admitting that would let a seat discover every row its own connector ever
+// captured — including one later filed under a record it may not read, which is
+// exactly the state capture refuses to replay onto. Restricting the arm to
+// kind='meeting' does NOT close that: the extension ingress copies a unit's
+// chosen Kind straight through with no vocabulary check (compose/extingress.go),
+// so "meeting" is a word a caller picks.
+//
+// The two evidenced sources, both of which a caller controls neither half of:
+//
+//   - capture_import, written only after mailboxWasARecipientTx found one of the
+//     seat's OWN exact addresses on the message — the provider delivered it;
+//   - a participant row carrying an address, which is written from a party list
+//     only when the provider itself enumerated it (capture's
+//     ParticipantListAttested). The seat-stamp above carries no address, so the
+//     `address IS NOT NULL` test is what tells the two apart.
+//
+// Content is unaffected: activityAudienceArm keeps the wider membership test, so
+// a seat that may already read a row still reads it. This arm only decides who
+// may learn a row EXISTS through attendance rather than through its links.
+func activityAttendanceArm(p principal.Principal, alias string, arg func(any) int) string {
+	me := arg(p.UserID)
+	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id = $%[2]d)
+	   OR EXISTS (SELECT 1 FROM activity_participant ap
+	               WHERE ap.activity_id = %[1]s.id AND ap.user_id = $%[2]d AND ap.address IS NOT NULL))`,
+		alias, me)
+}
+
+// activityMembershipArm is the "I was on this" test for CONTENT: the caller's
+// own seat imported the row, or they are stamped as one of its participants.
+//
+// Its discovery counterpart is activityAttendanceArm above, which is narrower by
+// one column and says why. The two are allowed to differ in exactly that
+// direction — content may be granted to a seat that discovery would not admit,
+// because a seat reading a row it already captured discloses nothing new, while
+// discovery decides whether an UNRELATED row becomes visible at all. They must
+// never differ the other way: a row a caller can read must always be one they
+// can discover, which holds because the content gate composes discovery whole
+// and then ANDs this.
+//
+// Its existential twin, which asks whether ANYBODY matches before a write
+// narrows a row, is ActivityHasAReaderTx in audienceorphan.go; change an arm
+// here and change it there.
 //
 // Deliberately NOT included: the captured_by suffix match and the
 // audience='workspace' arm that the audience test also carries. The first names
 // one seat's provenance and the second is a statement about the audience rather
-// than about who was present, and neither is evidence of membership — putting
-// them here would widen discovery to rows the caller was never on.
+// than about who was present.
 func activityMembershipArm(p principal.Principal, alias string, arg func(any) int) string {
 	me := arg(p.UserID)
 	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id = $%[2]d)
