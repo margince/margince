@@ -128,7 +128,10 @@ func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	if verdict.State != VerdictAllowed {
 		return false, nil
 	}
-	if err := stampDerivedBasis(ctx, tx, personID, verdict); err != nil {
+	// false: this is the legacy gate's own path, which reads person_consent and
+	// never looks at communication_suppression, so it has no suppression to
+	// report. The engine's arms pass their own answer.
+	if err := stampDerivedBasis(ctx, tx, personID, verdict, false); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -140,8 +143,15 @@ func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 // A lawful basis nobody wrote down is an assertion, and the controller carries
 // the burden of showing it. A basis read from a stored row needs nothing: it is
 // already the record.
-func stampDerivedBasis(ctx context.Context, tx pgx.Tx, personID string, verdict Verdict) error {
+func stampDerivedBasis(ctx context.Context, tx pgx.Tx, personID string, verdict Verdict, suppressed bool) error {
 	if !verdict.QualifyingDerived || verdict.Qualifying == nil {
+		return nil
+	}
+	if suppressed {
+		// A stamp asserts we hold a ground to correspond with this person.
+		// Writing one about somebody carrying a live suppression is itself
+		// processing, and it lands in their own Art. 15 export as a claim made
+		// after they said stop. The same reason recordBasis skips.
 		return nil
 	}
 	by, err := storekit.CapturedBy(ctx)

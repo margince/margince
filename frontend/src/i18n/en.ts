@@ -3457,6 +3457,8 @@ export const en = {
     "They took back their permission. Nobody here can lift that, including an administrator.",
   "sendPermission.reason.restricted":
     "Their data is under a processing restriction. Nobody here can lift that, including an administrator.",
+  "sendPermission.reason.askedUsToStop":
+    "They asked us to stop writing to them. Nobody here can lift that, including an administrator.",
   "sendPermission.reason.bounced":
     "That address does not accept mail. Correcting it is the fix, not an override.",
   "sendPermission.reason.tooMany":

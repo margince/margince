@@ -3336,6 +3336,8 @@ export const vi = {
     "Họ đã rút lại sự đồng ý. Không ai ở đây có thể gỡ bỏ điều đó, kể cả quản trị viên.",
   "sendPermission.reason.restricted":
     "Dữ liệu của họ đang bị hạn chế xử lý. Không ai ở đây có thể gỡ bỏ điều đó, kể cả quản trị viên.",
+  "sendPermission.reason.askedUsToStop":
+    "Họ đã yêu cầu chúng ta ngừng gửi thư cho họ. Không ai ở đây có thể gỡ bỏ điều đó, kể cả quản trị viên.",
   "sendPermission.reason.bounced":
     "Địa chỉ đó không nhận được thư. Sửa lại địa chỉ mới là cách giải quyết, không phải bỏ qua.",
   "sendPermission.reason.tooMany":

@@ -9,8 +9,17 @@ package commsauthz
 const (
 	// ReasonObjection is Art. 21 — the subject objected to direct marketing.
 	ReasonObjection = "marketing_objection"
-	// ReasonRestricted is a statutory or subject-requested processing restriction.
+	// ReasonRestricted is a STATUTORY processing restriction (Art. 18).
 	ReasonRestricted = "processing_restricted"
+	// ReasonSubjectRequest is the subject asking us to stop, in their own
+	// words, relayed by whoever took the call.
+	//
+	// Distinct from ReasonRestricted because they are different facts and the
+	// difference decides two things: a statutory restriction is nobody's to
+	// overrule, where a request the subject made can be lifted by the subject;
+	// and a decision row that called one the other misstates a legal fact in a
+	// record the subject can obtain under Art. 15.
+	ReasonSubjectRequest = "subject_request"
 	// ReasonHardBounce is an address that does not accept mail.
 	ReasonHardBounce = "hard_bounce"
 	// ReasonUnconfirmedDOI is a marketing grant whose round trip never happened.
@@ -53,6 +62,7 @@ const (
 var absoluteDenials = map[string]bool{
 	ReasonObjection:      true,
 	ReasonRestricted:     true,
+	ReasonSubjectRequest: true,
 	ReasonHardBounce:     true,
 	ReasonUnconfirmedDOI: true,
 	// A recipient the engine cannot resolve to exactly one subject is the

@@ -33,7 +33,7 @@ import (
 // not, the caller asks its own subject kind's grant, which is the ONLY part
 // that differs: a person's is VerdictForPerson and a lead's is grantedForLead,
 // and each reads a column the other's query does not.
-func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, phase commsauthz.Phase) (resolution, error) {
+func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, phase commsauthz.Phase, suppressed bool) (resolution, error) {
 	res, err := g.resolveCategory(ctx, tx, req, subject)
 	if err != nil {
 		return resolution{}, err
@@ -52,7 +52,13 @@ func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	// UNSCOPED row matching every other unscoped one, collapsing the thread
 	// separation staging established. Transmit still re-checks the
 	// evidence; what it does not do is write a second, weaker record of it.
-	if phase == commsauthz.PhaseStaging {
+	// NOT WHILE A SUPPRESSION STANDS. A basis row asserts we hold a lawful
+	// ground to write to this person; writing one about somebody whose
+	// processing is restricted is itself processing, and it lands in their own
+	// Art. 15 export as a claim made after they said stop. The category is
+	// still resolved — the decision row records what the message was — but the
+	// ground is not written down.
+	if phase == commsauthz.PhaseStaging && !suppressed {
 		w, err := g.store.windowsFor(ctx, tx)
 		if err != nil {
 			return resolution{}, err
@@ -85,8 +91,8 @@ func allowOn(d commsauthz.Decision, res resolution) commsauthz.Decision {
 // engine measurable: a row can say "this is a reply, and the old gate refused
 // it", which is exactly the disagreement a rollout needs to see before anybody
 // flips a mode.
-func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, d commsauthz.Decision, phase commsauthz.Phase) (commsauthz.Decision, error) {
-	res, err := g.resolveAndRecord(ctx, tx, req, subject, phase)
+func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, d commsauthz.Decision, phase commsauthz.Phase, suppressed bool) (commsauthz.Decision, error) {
+	res, err := g.resolveAndRecord(ctx, tx, req, subject, phase, suppressed)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
@@ -116,7 +122,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 	// TestAnUnsupportedClaimIsRecordedButNeverResolvedTo, which is what that
 	// test's own comment records.
 	d.Requested = res.Category
-	return g.legacyVerdictFor(ctx, tx, subject.ID, req.LegacyPurposeKey, res, d)
+	return g.legacyVerdictFor(ctx, tx, subject.ID, req.LegacyPurposeKey, res, d, suppressed)
 }
 
 // legacyVerdictFor answers on the old purpose model when the record supports no
@@ -127,7 +133,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 // answering with one body of code about one person. A second implementation
 // here would be a second answer, and the one that stopped matching would look
 // exactly like the one that still did.
-func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, personID, purposeKey string, res resolution, d commsauthz.Decision) (commsauthz.Decision, error) {
+func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, personID, purposeKey string, res resolution, d commsauthz.Decision, suppressed bool) (commsauthz.Decision, error) {
 	purpose, defined, err := purposeRowFor(ctx, tx, purposeKey)
 	if err != nil {
 		return commsauthz.Decision{}, err
@@ -161,7 +167,10 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, personID, purpos
 		// it (Art. 5(2)). The engine is the only authority now, so it is the
 		// only thing left that can make that record: grantedForRecipient used
 		// to stamp here, and nothing calls it on the send path any more.
-		if err := stampDerivedBasis(ctx, tx, personID, verdict); err != nil {
+		// Not while a suppression stands, for recordBasis's reason: the stamp
+		// writes a consent_qualifying_event asserting a ground to correspond,
+		// and the send is about to be refused anyway.
+		if err := stampDerivedBasis(ctx, tx, personID, verdict, suppressed); err != nil {
 			return commsauthz.Decision{}, err
 		}
 		d.Verdict = commsauthz.VerdictAllow

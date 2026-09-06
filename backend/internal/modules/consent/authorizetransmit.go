@@ -193,19 +193,30 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	}
 	d.SubjectKind, d.SubjectID = entityPerson, parsed
 
-	suppressed, kind, err := liveSuppression(ctx, tx, personID, r)
+	// READ FIRST, APPLY AFTER THE CATEGORY IS KNOWN. What a suppression binds
+	// depends on what the message is, and nothing knows that until the record
+	// has been resolved — see applySuppression.
+	kinds, err := liveSuppression(ctx, tx, personID, r)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
-	if suppressed {
+	if kind, absolute := bindsEveryCategory(kinds); absolute {
+		// Nothing a category could say would change this answer, so the record
+		// is not resolved at all. An objection and a restriction do NOT come
+		// through here — both need the category before they can be applied.
 		d.Verdict = commsauthz.VerdictDeny
 		d.ReasonCode = kind
 		d.Suppression = kind
 		return d, nil
 	}
-	return g.decideResolved(ctx, tx, req, subjectRef{
+	d, err = g.decideResolved(ctx, tx, req, subjectRef{
 		Kind: entityPerson, ID: personID, Address: r.Email,
-	}, d, phase)
+	}, d, phase, len(kinds) > 0)
+	if err != nil {
+		return commsauthz.Decision{}, err
+	}
+	d = applySuppression(d, kinds)
+	return d, nil
 }
 
 // blockedReasonCode translates the verdict's own code into the engine's
@@ -341,47 +352,65 @@ func nullableText(s string) *string {
 // bounce is a fact about a MAILBOX, so it is recorded against the address and
 // keeps applying when the same address later appears on a different record.
 // The person arm carries objections and restrictions, which follow the human.
-func liveSuppression(ctx context.Context, tx pgx.Tx, personID string, r connector.Recipient) (bool, string, error) {
-	var kind string
-	// STRONGEST first, not newest. Ordering by time would let a weaker
-	// suppression recorded later mask an objection recorded earlier, and the
-	// reason code is what decides whether a refusal survives observe mode — so
-	// a masked objection is a message that goes out to somebody who said stop.
-	// This is also the only reader in the tree that applies these rows: the
-	// legacy gate reads person_consent and never looks here.
-	err := tx.QueryRow(ctx, `
-		SELECT kind FROM communication_suppression
+func liveSuppression(ctx context.Context, tx pgx.Tx, personID string, r connector.Recipient) ([]string, error) {
+	// EVERY live kind, not the strongest one.
+	//
+	// An earlier version took one row ordered by a fixed strength, which was
+	// sound while every kind refused everything: whichever won, the answer was
+	// the same. It stopped being sound when reach became category-dependent —
+	// a marketing objection sorts first and binds the LEAST, so a person
+	// carrying both an objection and a hard bounce had the bounce masked and
+	// their invoice sent to a dead mailbox. Strength is no longer a total
+	// order, so the caller is given all of them and applies each.
+	//
+	// Reading the row is not applying it: what a suppression BINDS depends on
+	// the category, which is not known here. applySuppression decides that,
+	// after resolution.
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT kind FROM communication_suppression
 		 WHERE revoked_at IS NULL
 		   AND (person_id = $1
 		        OR lead_id = $1
-		        OR (address IS NOT NULL AND $2 <> '' AND lower(address) = lower($2)))
-		 ORDER BY CASE kind
-		            WHEN 'marketing_objection'    THEN 0
-		            WHEN 'processing_restriction' THEN 1
-		            WHEN 'subject_request'        THEN 2
-		            WHEN 'hard_bounce'            THEN 3
-		            ELSE 4
-		          END, recorded_at DESC
-		 LIMIT 1`, personID, r.Email).Scan(&kind)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, "", nil
-	}
+		        OR (address IS NOT NULL AND $2 <> '' AND lower(address) = lower($2)))`,
+		personID, r.Email)
 	if err != nil {
-		return false, "", fmt.Errorf("consent: read the recipient's suppressions: %w", err)
+		return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
 	}
+	defer rows.Close()
+	var kinds []string
+	for rows.Next() {
+		var kind string
+		if err := rows.Scan(&kind); err != nil {
+			return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
+		}
+		kinds = append(kinds, reasonForSuppressionKind(kind))
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
+	}
+	return kinds, nil
+}
+
+// reasonForSuppressionKind maps a stored kind onto the reason code a decision
+// row carries.
+//
+// A kind this code does not recognise gets its OWN code rather than being
+// folded onto a known one: suppressionBinds refuses an unrecognised code
+// outright, and folding it onto a recognised one would hand it that code's
+// narrower reach. That is exactly how subject_request came to permit five
+// categories of mail while wearing the statutory restriction's name.
+func reasonForSuppressionKind(kind string) string {
 	switch kind {
 	case "marketing_objection":
-		return true, commsauthz.ReasonObjection, nil
+		return commsauthz.ReasonObjection
 	case "processing_restriction":
-		return true, commsauthz.ReasonRestricted, nil
+		return commsauthz.ReasonRestricted
+	case "subject_request":
+		return commsauthz.ReasonSubjectRequest
 	case "hard_bounce":
-		return true, commsauthz.ReasonHardBounce, nil
+		return commsauthz.ReasonHardBounce
 	default:
-		// A kind this code does not recognise still SUPPRESSES, and absolutely.
-		// Somebody added a row shape to the constraint and not to this switch;
-		// treating the unknown case as the weaker one would let the next kind
-		// added to the table be the one that sends.
-		return true, commsauthz.ReasonRestricted, nil
+		return "unrecognised_suppression:" + kind
 	}
 }
 

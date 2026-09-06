@@ -3373,6 +3373,8 @@ export const de = {
     "Diese Person hat ihre Einwilligung zurückgezogen. Das kann hier niemand aufheben, auch keine Administration.",
   "sendPermission.reason.restricted":
     "Die Daten dieser Person sind in der Verarbeitung eingeschränkt. Das kann hier niemand aufheben, auch keine Administration.",
+  "sendPermission.reason.askedUsToStop":
+    "Diese Person hat uns gebeten, ihr nicht mehr zu schreiben. Das kann hier niemand aufheben, auch keine Administration.",
   "sendPermission.reason.bounced":
     "Diese Adresse nimmt keine Mails an. Sie zu korrigieren ist die Lösung, nicht eine Ausnahme.",
   "sendPermission.reason.tooMany":

@@ -112,7 +112,6 @@ func purposeRowFor(ctx context.Context, tx pgx.Tx, purposeKey string) (PurposeRo
 // because no suppression, objection or consent state can be read for a subject
 // nobody identified.
 func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision, phase commsauthz.Phase) (commsauthz.Decision, error) {
-	purposeKey := req.LegacyPurposeKey
 	leadID, found, err := resolveLead(ctx, tx, r)
 	if err != nil {
 		return commsauthz.Decision{}, err
@@ -130,16 +129,36 @@ func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient,
 
 	// A suppression binds a lead exactly as it binds a person: the row may
 	// name a lead_id or bare address, and liveSuppression already reads both.
-	suppressed, kind, err := liveSuppression(ctx, tx, leadID, r)
+	kinds, err := liveSuppression(ctx, tx, leadID, r)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
-	if suppressed {
+	if kind, absolute := bindsEveryCategory(kinds); absolute {
 		d.Verdict = commsauthz.VerdictDeny
 		d.ReasonCode = kind
 		d.Suppression = kind
 		return d, nil
 	}
+
+	// ONE EXIT for the suppression, so the rule is applied in one place rather
+	// than at each arm below. The person arm has the same shape in decideOne;
+	// an earlier version applied it at three separate returns and the third was
+	// a hand-inlined partial copy that set Suppression without consulting the
+	// rule.
+	decided, err := g.decideLeadOnItsRecord(ctx, tx, r, req, d, phase, leadID, len(kinds) > 0)
+	if err != nil {
+		return commsauthz.Decision{}, err
+	}
+	decided = applySuppression(decided, kinds)
+	return decided, nil
+}
+
+// decideLeadOnItsRecord answers about a lead from evidence and grant alone.
+//
+// Suppression is its caller's business: this reaches a verdict as though the
+// recipient had said nothing, and decideLead narrows it once.
+func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision, phase commsauthz.Phase, leadID string, suppressed bool) (commsauthz.Decision, error) {
+	purposeKey := req.LegacyPurposeKey
 
 	// The evidence arms, before any purpose key is consulted, through the same
 	// helper the person arm uses so the basis is recorded the same way.
@@ -151,7 +170,7 @@ func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient,
 	// checked against lead grants.
 	res, err := g.resolveAndRecord(ctx, tx, req, subjectRef{
 		Kind: entityLead, ID: leadID, Address: r.Email,
-	}, phase)
+	}, phase, suppressed)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
@@ -168,6 +187,7 @@ func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient,
 		d.ReasonCode = commsauthz.ReasonUnknownPurpose
 		return d, nil
 	}
+
 	d.Resolved = categoryForClass(purpose.Class)
 	granted, err := grantedForLead(ctx, tx, r, purpose.ID, purpose.RequiresDOI)
 	if err != nil {
