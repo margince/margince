@@ -68,23 +68,27 @@ func visibilityFor(ownerScoped bool) string {
 //
 // A human typing a contact into the UI, the REST API or a CSV import is
 // publishing it on purpose, and that decision stands. An AGENT minting one from
-// a tool call is not that decision: create_record executes without a human
-// seeing the row first, so a contact an agent invented while answering a
-// question about one seat's meeting became readable by every account in the
-// installation. A connector is the same case, and it is what the capture ensurer
-// already decides for itself.
+// a tool call is not that decision: create_record is auto_execute, so it runs
+// without a human seeing the row first — and a contact an agent invented while
+// answering a question about one seat's meeting became readable by every account
+// in the installation.
 //
-// The two automation types are named rather than "anything not human", because
-// the fourth type is the SYSTEM principal — the relay, the privacy engines, the
-// retention passes — which carries no human owner at all. An 'owner' row with a
-// NULL owner_id is readable by nobody, so sweeping those in would strand every
-// contact a maintenance pass creates.
+// AGENTS ONLY, deliberately. The other two non-human types must not be swept in:
+//
+//   - a CONNECTOR path that mints a capture-private contact already says so for
+//     itself, through PersonSpec.Visibility (people's own ensurer takes
+//     OwnerScoped as an argument). Deciding it here as well would overrule the
+//     paths that legitimately create a workspace contact under a connector
+//     principal — public booking mints the person who booked the meeting, and
+//     hiding them would leave a booking nobody but one seat can see.
+//   - the SYSTEM principal carries no human owner at all, so an 'owner' row it
+//     created would have a NULL owner_id and be readable by nobody.
 func bornOwnerScoped(ctx context.Context) bool {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return false
 	}
-	return actor.Type == principal.PrincipalAgent || actor.Type == principal.PrincipalConnector
+	return actor.Type == principal.PrincipalAgent
 }
 
 // ownerFromUUID adapts the storage-level owner id the capture and triage paths

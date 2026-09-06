@@ -6,9 +6,9 @@
   "catalog": {
     "tools": 73,
     "system_frame_tokens": 353,
-    "tokens": 21519,
+    "tokens": 21594,
     "median_tool_tokens": 263,
-    "mean_tool_tokens": 294
+    "mean_tool_tokens": 295
   },
   "agents": [
     {
@@ -107,6 +107,10 @@
       "tokens": 484
     },
     {
+      "name": "create_record",
+      "tokens": 473
+    },
+    {
       "name": "run_analytics_query",
       "tokens": 465
     },
@@ -129,10 +133,6 @@
     {
       "name": "review_commitments",
       "tokens": 401
-    },
-    {
-      "name": "create_record",
-      "tokens": 398
     },
     {
       "name": "book_meeting",

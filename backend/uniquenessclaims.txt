@@ -62,7 +62,7 @@ gates/outboundanonymity_test.go#func isDefaultClient
 gates/preferencecentrewriters_test.go#func TestThePreferenceCentreResolvesOnePrimaryAddress
 gates/replayscope_test.go#var replayScopeConsts
 gates/restrictedreaders_test.go#var activityReaderScope
-gates/tableownership_test.go#var tableOwners
+gates/tableownerregistry_test.go#var tableOwners
 internal/compose/accountdraft/service.go#const aiDisclosure
 internal/compose/agentcommand.go#const block at const opApproveApproval
 internal/compose/agentcommand_integration_test.go#func archivableRecordTypes

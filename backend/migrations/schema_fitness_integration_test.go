@@ -421,6 +421,12 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// predicate, so an edge never discloses a contact the caller cannot open.
 	"graph_interaction_edge.person_id":        "derived projection: folded from participant rows by the graph-edge consumer, never written from a request",
 	"activity_participant_replay.activity_id": "job bookkeeping: written by the system-principal replay pass sweeping every activity in the workspace, never from a request. The row records THAT an original was re-read and what the parse found — it returns no record to any caller and discloses nothing about the activity it names",
+	// The same shape as the replay marker above, asking the other question: not
+	// whether an original was parsed, but whether its attendees were resolved
+	// under the current rule. It needs a marker of its own because the replay's
+	// records a completed PARSE, and every meeting this pass must re-read
+	// already carries one.
+	"activity_meeting_attendee_repair.activity_id": "job bookkeeping: written by the system-principal attendee repair sweeping every captured meeting in the workspace, never from a request. The row records THAT a meeting's attendees were re-resolved and what the parse found — it returns no record to any caller and discloses nothing about the meeting it names",
 	// The LinkedIn ghost's match arms (CG-DDL-2). A ghost is not a record and
 	// carries no client-supplied reference: the matcher resolves both ids from
 	// its own row-scoped lookups, and a human confirming a suggestion

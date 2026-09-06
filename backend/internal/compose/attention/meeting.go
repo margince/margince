@@ -88,11 +88,15 @@ func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 
 // The two meeting lanes' source words, as the wire spells them.
 //
-// Spelled once here and read by scope.go, which has to know that both lanes
-// answer the ownership question in their own query. A second spelling would be
-// silent in the direction that matters: the comparison would simply never match,
-// the scope filter would re-judge rows it must not, and an invited colleague's
-// meetings would vanish from their own page with nothing to say why.
+// Read by scope.go, which has to know that both lanes answer the ownership
+// question in their own query. A second spelling would be silent in the
+// direction that matters: the comparison would simply never match, the scope
+// filter would re-judge rows it must not, and an invited colleague's meetings
+// would vanish from their own page with nothing to say why.
+//
+// Held by: TestTheMeetingSourceWordsAreNotRetyped and
+// TestTheMeetingSourceConstantsMatchTheWire
+// (backend/internal/compose/attention/meetingsourcespelling_test.go)
 const (
 	sourceMeeting        = "meeting"
 	sourceMeetingOutcome = "meeting_outcome"

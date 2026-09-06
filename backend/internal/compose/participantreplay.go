@@ -121,8 +121,44 @@ func (c replayCandidate) partyListIsAttested() bool {
 // many activities it settled — written, empty or refused alike, because every
 // one of them is progress the next pass will not repeat.
 func replayParticipantsBatch(ctx context.Context, pool *pgxpool.Pool, limit int, log *slog.Logger) (int, error) {
+	return drainStoredOriginals(ctx, pool, limit, log, storedOriginalPass{
+		name:   "participant replay",
+		unit:   "activities",
+		offer:  selectReplayCandidates,
+		settle: replayOne,
+		mark:   markReplayed,
+	})
+}
+
+// storedOriginalPass is one sweep over stored provider originals: which rows to
+// offer, what to do with each, and where the outcome is recorded.
+//
+// Two passes share this shape — the participant replay and the meeting attendee
+// repair — and they share the DRAIN rather than each spelling it. The parts they
+// have in common are the parts that are easy to get subtly wrong: one bounded
+// transaction, one correlation id for the whole batch (an audited write is
+// refused without one, which would fail the batch and re-select the same rows
+// forever), and a marker written for every row the pass touched so a settled row
+// is never offered twice.
+type storedOriginalPass struct {
+	// name and unit are what the debug line says: which pass ran, and what its
+	// count is counting.
+	name string
+	unit string
+	// offer answers which rows this pass still owes work on.
+	offer  func(ctx context.Context, tx pgx.Tx, limit int) ([]replayCandidate, error)
+	settle func(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error)
+	mark   func(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, outcome string) error
+}
+
+// drainStoredOriginals runs one bounded batch of a stored-original pass and
+// answers how many rows it settled — written, empty or refused alike, because
+// every one of them is progress the next pass will not repeat.
+func drainStoredOriginals(
+	ctx context.Context, pool *pgxpool.Pool, limit int, log *slog.Logger, pass storedOriginalPass,
+) (int, error) {
 	if limit <= 0 {
-		return 0, fmt.Errorf("compose: the participant replay needs a positive batch limit, got %d", limit)
+		return 0, fmt.Errorf("compose: the %s needs a positive batch limit, got %d", pass.name, limit)
 	}
 	// One correlation id per batch. Naming an attendee is an audited write, and
 	// storekit refuses to emit its event without one — a refusal that would
@@ -130,22 +166,23 @@ func replayParticipantsBatch(ctx context.Context, pool *pgxpool.Pool, limit int,
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	var settled int
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		candidates, err := selectReplayCandidates(ctx, tx, limit)
+		candidates, err := pass.offer(ctx, tx, limit)
 		if err != nil {
 			return err
 		}
 		for _, c := range candidates {
-			outcome, err := replayOne(ctx, tx, c)
+			outcome, err := pass.settle(ctx, tx, c)
 			if err != nil {
 				return err
 			}
-			if err := markReplayed(ctx, tx, c.activityID, outcome); err != nil {
+			if err := pass.mark(ctx, tx, c.activityID, outcome); err != nil {
 				return err
 			}
 			settled++
 		}
 		if settled > 0 {
-			log.DebugContext(ctx, "participant replay: settled a batch of stored originals", "activities", settled)
+			log.DebugContext(ctx, "compose: settled a batch of stored originals",
+				"pass", pass.name, pass.unit, settled)
 		}
 		return nil
 	})

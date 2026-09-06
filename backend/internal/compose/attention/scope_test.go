@@ -380,21 +380,28 @@ func TestNoOwnerAskNarrowsNothing(t *testing.T) {
 
 // A named rep's queue carries THEIR work, not the reader's.
 //
-// The per-user lanes — notices, meetings, a mailbox, a promise — stay bound to
-// the ACTING reader whatever owner is asked for, because that is where the
-// modules that own them bind. So a filter that kept every row it could not
-// judge handed a manager their own day with somebody else's name at the top of
-// it. Nothing crossed a scope boundary; the page simply was not true.
+// Some per-user lanes — a notice, a mailbox, a promise — stay bound to the
+// ACTING reader whatever owner is asked for, because that is where the modules
+// that own them bind. So a filter that kept every row it could not judge handed
+// a manager their own day with somebody else's name at the top of it. Nothing
+// crossed a scope boundary; the page simply was not true.
+//
+// The MEETING lanes are no longer in that group. They take the scope and the
+// owner as arguments now, so what reaches this filter is already the named
+// rep's — which is why the meeting seeded here is HERS and is expected to
+// survive. A meeting the reader hosts would never have been in this day at all.
 func TestOpeningAnothersQueueCarriesTheirWorkAndNotTheReadersOwn(t *testing.T) {
 	lena := ids.MustParse("01a05500-0000-7000-8000-0000000000bb")
 	lenasDeal := item("lenas-deal", "deal_at_risk", withDeal(90_000_00))
 	lenasDeal.Deal.OwnerId = uuidPtr(lena)
+	lenasMeeting := item("lenas-meeting", "meeting", withDue(rankInstant.Add(time.Hour)))
+	lenasMeeting.HostUserId = uuidPtr(lena)
 	day := crmcontracts.Attention{
 		AsOf: rankInstant,
-		// The reader's own: a notice addressed to them, and a meeting they can
-		// see. Neither carries a deal, so neither can be judged by ownership.
+		// The reader's OWN notice: it carries no deal and no host, so ownership
+		// cannot judge it — the row this filter has to drop.
 		Notices:  lane(item("my-notice", "notice")),
-		Meetings: lane(item("my-meeting", "meeting", withDue(rankInstant.Add(time.Hour)))),
+		Meetings: lane(lenasMeeting),
 		AtRisk:   lane(lenasDeal),
 	}
 	reader := &Service{taskOwner: lena, taskScope: TasksOwnedBy}
@@ -405,8 +412,13 @@ func TestOpeningAnothersQueueCarriesTheirWorkAndNotTheReadersOwn(t *testing.T) {
 	for _, row := range out.Queue {
 		ids = append(ids, row.Id)
 	}
-	if len(out.Queue) != 1 || out.Queue[0].Id != "lenas-deal" {
-		t.Fatalf("Lena's queue came back as %v, wanted only the deal she owns", ids)
+	if len(out.Queue) != 2 {
+		t.Fatalf("Lena's queue came back as %v, wanted her deal and her meeting", ids)
+	}
+	for _, row := range out.Queue {
+		if row.Id == "my-notice" {
+			t.Fatalf("Lena's queue carried the READER's own notice: %v", ids)
+		}
 	}
 }
 

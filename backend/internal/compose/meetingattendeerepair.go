@@ -36,9 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/modules/people"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -68,36 +66,13 @@ const meetingAttendeeRepairPerTick = 200
 // nothing and changes no display name. And the marker means a settled meeting is
 // not offered again, so a restart resumes rather than re-reading from the top.
 func repairMeetingAttendeesBatch(ctx context.Context, pool *pgxpool.Pool, limit int, log *slog.Logger) (int, error) {
-	if limit <= 0 {
-		return 0, fmt.Errorf("compose: the meeting attendee repair needs a positive batch limit, got %d", limit)
-	}
-	// One correlation id per batch, for the same reason the participant replay
-	// takes one: naming an attendee is an audited write and storekit refuses to
-	// emit its event without one, which would fail the whole batch and re-select
-	// the same rows forever.
-	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	var settled int
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		candidates, err := selectMeetingRepairCandidates(ctx, tx, limit)
-		if err != nil {
-			return err
-		}
-		for _, c := range candidates {
-			outcome, err := repairOneMeeting(ctx, tx, c)
-			if err != nil {
-				return err
-			}
-			if err := markMeetingRepaired(ctx, tx, c.activityID, outcome); err != nil {
-				return err
-			}
-			settled++
-		}
-		if settled > 0 {
-			log.DebugContext(ctx, "meeting attendee repair: settled a batch of captured meetings", "meetings", settled)
-		}
-		return nil
+	return drainStoredOriginals(ctx, pool, limit, log, storedOriginalPass{
+		name:   "meeting attendee repair",
+		unit:   "meetings",
+		offer:  selectMeetingRepairCandidates,
+		settle: repairOneMeeting,
+		mark:   markMeetingRepaired,
 	})
-	return settled, err
 }
 
 // selectMeetingRepairCandidates finds captured meetings whose stored original is
