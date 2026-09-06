@@ -561,6 +561,12 @@ jobs:
       - name: the dev stack resolves DSNs the way the product does
         working-directory: .
         run: make test-dev-dsn
+      # And the same class again, one lane over: the two integration entry
+      # points have to name ONE Redis, or a run reads as broken when it is only
+      # under-provisioned by its own launcher.
+      - name: both integration entry points resolve one Redis address
+        working-directory: .
+        run: make test-testdb-redis
       # The pin gate rides along here, and only here, because it reads the WHOLE
       # workflow directory while the backend scope names one file: sbom.yml and
       # patch.yml match no scope, so gated on the classifier this check would

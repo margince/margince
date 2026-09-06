@@ -25,6 +25,30 @@
 #     do FLUSHDB between tests — so a shared index is a corruption, not
 #     contention. See REDIS_DBS in scripts/test-integration-parallel.sh.
 
+# resolve_test_redis: settle MARGINCE_TEST_REDIS for a lane launched from a
+# script rather than from make.
+#
+# The Redis-using fixtures fail loudly and never skip, so an unset address is
+# not a thinner run — it is nine failures naming Redis and telling the reader to
+# run `make db-up`, on a machine where Redis is already up. The failure reads as
+# an environment problem and the remedy it names is already done, which costs a
+# detour to disprove.
+#
+# It arrives from backend/Makefile when the lane is reached through `make
+# test-it`, and did not when test-integration-one.sh was run the way its own
+# usage block invites. Resolved HERE because every script entry point sources
+# this file, so both routes now settle it in one place instead of one of them
+# inheriting it by accident.
+#
+# REDIS_PORT is the same knob the Makefile and the compose file turn, read from
+# the environment so an override reaches both routes. The literal default is the
+# Makefile's, and test-testdb-redis.sh compares them rather than a comment
+# promising they agree.
+resolve_test_redis() {
+  export MARGINCE_TEST_REDIS="${MARGINCE_TEST_REDIS:-localhost:${REDIS_PORT:-16379}}"
+  export MARGINCE_TEST_REDIS_DB="${MARGINCE_TEST_REDIS_DB:-15}"
+}
+
 # parse_test_dsn: split MARGINCE_TEST_DSN (owner) and MARGINCE_TEST_APP_DSN (app)
 # into the reusable prefix/suffix each clone DSN is built from. Both DSNs point
 # at the same template db in normal use; we only ever swap the db name segment,
