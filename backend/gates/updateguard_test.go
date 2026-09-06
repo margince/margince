@@ -132,7 +132,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// helper shared by three write paths puts between the call site and
 	// storekit.LockRow.
 	"internal/modules/activities:SetAudience":              "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
-	"internal/modules/activities:UpdateActivity":           "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
+	"internal/modules/activities:updateActivityInTx":       "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
 	"internal/modules/activities:RefuseArchiveActivity":    "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above; this self-touch (SET archived_at = archived_at) never commits, since the trigger it deliberately provokes refuses every write to the held row it runs against",
 	"internal/modules/activities:finalizeRelinkedActivity": "the row is already held FOR UPDATE by relinkActivityRow, its only caller, from before this function runs — the guard is the caller's lock, held across the whole transaction, not a second one taken here; this witness's AST walk sees neither the caller's lockActivityForWrite (a second hop) nor that this function is only ever reached under it",
 	// This IS a compare-and-set write; what this gate cannot see is the shape it

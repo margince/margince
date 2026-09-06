@@ -99,7 +99,6 @@ backend/internal/compose/signalscan.go migration 0047
 backend/internal/modules/activities/activitylinks.go migration 1787032690
 backend/internal/modules/activities/commitments.go core 0008
 backend/internal/modules/activities/lasttouch.go migration 1787032690
-backend/internal/modules/activities/lifecycle.go migration 1787320003
 backend/internal/modules/activities/participantbackfill.go migration 0157
 backend/internal/modules/activities/relinkbatch.go migration 0008
 backend/internal/modules/activities/scheduledsendprovenance.go core 0260
