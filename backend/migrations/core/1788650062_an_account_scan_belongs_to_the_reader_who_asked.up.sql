@@ -38,6 +38,23 @@ CREATE TABLE org_scan (
     CONSTRAINT org_scan_attempt_check CHECK (attempt >= 1),
     CONSTRAINT org_scan_read_exchanges_check CHECK (read_exchanges IS NULL OR read_exchanges >= 0),
     CONSTRAINT org_scan_read_deals_check CHECK (read_deals IS NULL OR read_deals >= 0),
+    -- The rail projects started_at and finished_at beside the status, so a row
+    -- carrying one without the other would draw a read that is running and has
+    -- not begun, or has settled and never finished.
+    --
+    -- The start rule is ONE-WAY on purpose. A read that is running has been
+    -- claimed, so it has a start. The converse is false: with no worker wired,
+    -- the queue writes the floor's own answer straight onto the queued row, so a
+    -- degraded read that nobody ever claimed legitimately has no start. An
+    -- equivalence here would refuse that write and take the account page down on
+    -- every installation without an account-scan runner.
+    CONSTRAINT org_scan_running_has_started
+      CHECK (status <> 'running' OR started_at IS NOT NULL),
+    -- The finish rule IS an equivalence: settle and fail are the only writers of
+    -- a settled status and both stamp finished_at, and both paths back out of a
+    -- settled state (the re-arm and the budget deferral) clear it again.
+    CONSTRAINT org_scan_settled_has_finish
+      CHECK ((status IN ('done', 'degraded', 'failed')) = (finished_at IS NOT NULL)),
     CONSTRAINT org_scan_org_fkey FOREIGN KEY (organization_id) REFERENCES organization(id) ON DELETE CASCADE,
     CONSTRAINT org_scan_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 );

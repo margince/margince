@@ -3520,6 +3520,8 @@ public.org_scan.org_scan_org_fkey FOREIGN KEY (organization_id) REFERENCES organ
 public.org_scan.org_scan_pkey PRIMARY KEY (id)
 public.org_scan.org_scan_read_deals_check CHECK (((read_deals IS NULL) OR (read_deals >= 0)))
 public.org_scan.org_scan_read_exchanges_check CHECK (((read_exchanges IS NULL) OR (read_exchanges >= 0)))
+public.org_scan.org_scan_running_has_started CHECK (((status <> 'running'::text) OR (started_at IS NOT NULL)))
+public.org_scan.org_scan_settled_has_finish CHECK (((status = ANY (ARRAY['done'::text, 'degraded'::text, 'failed'::text])) = (finished_at IS NOT NULL)))
 public.org_scan.org_scan_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'degraded'::text, 'failed'::text])))
 public.org_scan.org_scan_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.org_scan.org_scan_user_id_organization_id_key UNIQUE (user_id, organization_id)
