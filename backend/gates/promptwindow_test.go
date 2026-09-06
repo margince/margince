@@ -221,3 +221,118 @@ func TestTheLocalAdapterReservesWhatOneCompletionMayTake(t *testing.T) {
 			reserved, asked)
 	}
 }
+
+// NO adapter declares a prompt window below the floor the tool catalog is
+// budgeted against.
+//
+// runner.MinimumPromptWindow is the number the agent tool-catalog gates divide,
+// and the listing they ration rides in the system prompt where nothing elides
+// it. An adapter declaring LESS is one whose bindings cannot serve the catalog
+// this build ships: the run would truncate on its tool list before it read a
+// single observation, and nothing else would say so.
+//
+// The corpus is every Caps() in the ai module rather than a list written here,
+// because this gate exists for the adapter somebody adds NEXT — one naming its
+// own subjects would go green on exactly the addition it is meant to catch.
+// vLLM is the live candidate: a local runner that sizes a KV cache the way
+// Ollama does, and today declares nothing.
+//
+// A declaration this cannot parse is a FAILURE and never a skip. An unread line
+// is how this census would quietly measure fewer adapters than the tree holds
+// and still report PASS.
+func TestNoAdapterDeclaresAWindowBelowTheBudgetedFloor(t *testing.T) {
+	t.Parallel()
+	floor := goConstValue(t, runnerWindowSource, "MinimumPromptWindow")
+
+	declarations := adapterPromptWindows(t)
+	if len(declarations) == 0 {
+		t.Fatal("no adapter declares a PromptWindow, so this gate is holding nothing — " +
+			"either the field was removed or the scan stopped seeing its subject")
+	}
+	for file, expr := range declarations {
+		declared := adapterWindowValue(t, aiSource(file), expr)
+		if declared < floor {
+			t.Errorf("%s declares a prompt window of %d (%s), below the %d the tool catalog "+
+				"is budgeted against.\n\n"+
+				"The tool listing rides in the system prompt and is never elided, so a "+
+				"binding on this adapter cannot serve the catalog this build ships. Either "+
+				"lower runner.MinimumPromptWindow to this figure — the catalog gates then "+
+				"ration against it — or raise what this adapter declares.",
+				file, declared, expr, floor)
+		}
+	}
+}
+
+// promptWindowDeclaration matches `PromptWindow: <identifier>,` inside a Caps()
+// literal. An identifier and not a number: the arithmetic belongs beside the
+// adapter's own constants, and a literal here would be a second copy of it.
+var promptWindowDeclaration = regexp.MustCompile(`(?m)^\s*PromptWindow:\s*([A-Za-z_][A-Za-z0-9_]*),`)
+
+// adapterPromptWindows maps each ai-module file declaring a window to the
+// constant it names.
+func adapterPromptWindows(t *testing.T) map[string]string {
+	t.Helper()
+	const aiDir = "internal/modules/ai"
+	entries, err := os.ReadDir(aiDir)
+	if err != nil {
+		t.Fatalf("read %s: %v", aiDir, err)
+	}
+	out := map[string]string{}
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		source, err := os.ReadFile(aiDir + "/" + name)
+		if err != nil {
+			t.Fatalf("read %s: %v", name, err)
+		}
+		if match := promptWindowDeclaration.FindSubmatch(source); match != nil {
+			out[name] = string(match[1])
+		}
+	}
+	return out
+}
+
+// aiSource is one ai-module file, as goConstValue wants its path.
+func aiSource(file string) string { return "internal/modules/ai/" + file }
+
+// adapterWindowValue resolves the constant an adapter declares its window as.
+//
+// A declared window is not a literal — ollamaPromptWindow is `cap - bucket -
+// reserved`, because the arithmetic belongs beside the constants it reads. So
+// this evaluates the one shape those declarations take, `a - b - c` over names
+// in the same file, and falls back to a plain literal for an adapter that has
+// one.
+//
+// A form it cannot evaluate FAILS rather than passing: a window this gate
+// cannot read is one it cannot hold against the floor, and reporting green on
+// it would be the census-fails-short shape stated in the header.
+func adapterWindowValue(t *testing.T, path, name string) int {
+	t.Helper()
+	source, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	pattern := regexp.MustCompile(`(?m)^const ` + regexp.QuoteMeta(name) + ` = (.+)$`)
+	match := pattern.FindSubmatch(source)
+	if match == nil {
+		t.Fatalf("no `const %s = …` line in %s — the gate has stopped seeing its subject, "+
+			"which reads as a pass; repoint it rather than deleting it", name, path)
+	}
+	expr := strings.TrimSpace(string(match[1]))
+	if literal, err := strconv.Atoi(strings.ReplaceAll(expr, "_", "")); err == nil {
+		return literal
+	}
+	terms := strings.Split(expr, " - ")
+	if len(terms) < 2 {
+		t.Fatalf("%s in %s is %q, which this gate cannot evaluate: it reads a literal or a "+
+			"subtraction of named constants. Teach it the new shape rather than dropping "+
+			"the adapter from the census", name, path, expr)
+	}
+	value := goConstValue(t, path, strings.TrimSpace(terms[0]))
+	for _, term := range terms[1:] {
+		value -= goConstValue(t, path, strings.TrimSpace(term))
+	}
+	return value
+}

@@ -3,9 +3,12 @@
 
 package ai
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
-// A task's prompt window is the SMALLEST its ladder might land on.
+// A task's prompt window is the SMALLEST rung it might land on.
 //
 // The same trap AttachmentMIMEs answers with an intersection: a call walks its
 // ladder, the budget guardrail can demote it to a lower rung mid-month, and a
@@ -68,4 +71,56 @@ func TestATasksPromptWindowIsTheSmallestItsLadderMightLandOn(t *testing.T) {
 				got, ollamaPromptWindow)
 		}
 	})
+}
+
+// A rung the call can DEGRADE onto binds the lane, even though the ladder never
+// names it.
+//
+// This is the case the ladder-only walk got wrong, and it is the worst one to
+// get wrong: a mixed deployment with a local model on local_small and cloud
+// above it, under budget pressure. The agent loop's ladder is
+// {cheap_cloud, premium} — both cloud, both declaring no limit — so a window
+// read off the ladder answers "no limit", nothing is elided, and the guardrail
+// then serves the whole transcript to the local rung, whose runner truncates it
+// silently. The reply comes back well-formed and empty, which reads as a bad
+// model rather than a prompt too long.
+//
+// ServableTiers exists for exactly this distinction and its own header says so:
+// a call's ladder is not the set of rungs that can serve it.
+func TestARungTheCallCanDegradeOntoBindsTheLane(t *testing.T) {
+	const task = TaskAgentLoop
+	// The premise, asserted rather than assumed: local_small must be OFF the
+	// ladder and ON the servable set, or this test is about nothing.
+	if slices.Contains(TaskLadder(task), TierLocalSmall) {
+		t.Fatalf("this test needs local_small OFF %s's ladder; it has %v", task, TaskLadder(task))
+	}
+	if !slices.Contains(ServableTiers(task), TierLocalSmall) {
+		t.Fatalf("this test needs local_small servable for %s; ServableTiers = %v",
+			task, ServableTiers(task))
+	}
+
+	router, err := NewRouter(RoutingConfig{
+		Profile: ProfileCloudFrontier,
+		Tiers: map[Tier]ProviderConfig{
+			TierPremium:    {Provider: providerOpenAICompatible, BaseURL: "https://x", Model: "m"},
+			TierCheapCloud: {Provider: providerOpenAICompatible, BaseURL: "https://x", Model: "c"},
+			// The local rung the guardrail demotes onto at 80% utilization.
+			TierLocalSmall: {Provider: providerOllama, BaseURL: "http://localhost:11434", Model: "s"},
+		},
+		Embeddings: EmbeddingsConfig{
+			ProviderConfig: ProviderConfig{Provider: providerOpenAICompatible, BaseURL: "https://x", Model: "e"},
+			Dimensions:     defaultEmbedDimensions,
+		},
+	}.WithKeys(allCloudKeys()), nil, nil, nil, false, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got := router.PromptWindow(task); got != ollamaPromptWindow {
+		t.Errorf("PromptWindow = %d with a local model on an off-ladder rung, want %d.\n\n"+
+			"The budget guardrail degrades cheap_cloud to local_small, so that rung serves "+
+			"this task under pressure. A window read off the ladder alone answers 0, nothing "+
+			"is elided, and the local runner truncates the prompt instead.",
+			got, ollamaPromptWindow)
+	}
 }

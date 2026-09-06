@@ -102,9 +102,20 @@ func (r *Router) AttachmentMIMEs(task Task) []string {
 // zero. Zero means "no limit worth planning around", so a cloud rung sitting
 // beside a local one must not erase the local rung's real constraint; a ladder
 // where every rung says 0 still answers 0, which is the right answer.
+//
+// It walks ServableTiers and NOT taskLadders, which is what separates it from
+// the two functions above. BoundLadder prices the standing configuration and
+// AttachmentMIMEs asks what a caller may hand the task — both questions about
+// how the installation is configured. THIS is a safety bound on what actually
+// goes on the wire, so it has to cover every rung the call might land on, and
+// the ladder is not that set: the budget guardrail degrades cheap_cloud to
+// local_small, and the sovereign profile remaps cloud rungs to local ones.
+// Either can serve an agent-loop call on a tier taskLadders never names, and a
+// window read off the ladder alone then answers "no limit" for a run a local
+// model with a real one is about to serve.
 func (r *Router) PromptWindow(task Task) int {
 	smallest := 0
-	for _, tier := range taskLadders[task] {
+	for _, tier := range ServableTiers(task) {
 		client, bound := r.binding().clients[tier]
 		if !bound {
 			continue
