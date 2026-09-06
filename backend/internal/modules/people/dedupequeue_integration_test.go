@@ -671,6 +671,74 @@ func TestDedupeDispositionAdmitsABoundedOwnerOfBothRecords(t *testing.T) {
 // its own arm. Nothing else in this package would notice: every other merge
 // test acts with RowScopeAll, for which auth.Unbounded waves the whole question
 // through.
+// A refused merge leaves NOTHING behind — not the mark, and not the audit row
+// that says a merge happened.
+//
+// The mark and the merge used to be two transactions with a compensating
+// re-open between them, so a refusal committed 'merged' and its audit row
+// first and then took the mark back with a second write. A re-open that failed,
+// or a process that stopped in the gap, left the candidate claiming a merge
+// that never happened: suppressed for the whole workspace, absent from every
+// queue, with nothing to repair it (#1970).
+//
+// This asserts the POST-CONDITION rather than the interleaving, which is the
+// only thing available: injecting a failure between the mark and the merge
+// needs the two to be separable, and that separability is exactly what the fix
+// removes. What it pins is that a refusal costs the row nothing — and that the
+// audit ledger carries no merge for it, which the old shape wrote and then
+// could not unwrite.
+func TestARefusedMergeLeavesNoMarkAndNoAuditOfOne(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	first, second := seedPersonPair(ctx, t, e, "Nora Atomic", "nora@atomic.test", "Norah Atomic", "norah@atomic.test", "atomic.test")
+	c := openCandidates(ctx, t, e, "person")[0]
+
+	// The colleague owns the loser and not the winner: mergePair's bare
+	// conflict, reached only once the merge is under way.
+	winner, loser := first, second
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE person SET owner_id = $1 WHERE id = $2`, e.otherRep, loser)
+		return err
+	}); err != nil {
+		t.Fatalf("handing the loser to the colleague: %v", err)
+	}
+
+	if _, err := e.store.DisposeDedupeCandidate(e.asOwnScoped(e.otherRep), c.ID, "merge", &winner); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("the refused merge answered %v, want ErrConflict", err)
+	}
+
+	// The row is OPEN, and open because the mark never committed rather than
+	// because a second write put it back.
+	var disposition string
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT disposition FROM dedupe_candidate WHERE id = $1`, c.ID).Scan(&disposition)
+	}); err != nil {
+		t.Fatalf("reading the candidate back: %v", err)
+	}
+	if disposition != "open" {
+		t.Errorf("disposition = %q, want open — a refused merge left the pair claiming one, "+
+			"which suppresses it for the whole workspace with nothing to repair it", disposition)
+	}
+
+	// And the ledger says no merge was decided. This is the half a compensating
+	// re-open could never take back: the audit row for the mark was committed
+	// before the merge was attempted, so it outlived the refusal.
+	var merged int
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT count(*) FROM audit_log
+			 WHERE entity_type = 'dedupe_candidate' AND entity_id = $1
+			   AND after->>'disposition' = 'merged'`, c.ID).Scan(&merged)
+	}); err != nil {
+		t.Fatalf("counting the merge audit rows: %v", err)
+	}
+	if merged != 0 {
+		t.Errorf("%d audit row(s) record a merge that was refused — the ledger is the record "+
+			"a reviewer reads, and it says something happened that did not", merged)
+	}
+}
+
 func TestDedupeMergeArmKeepsItsOwnRefusal(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()

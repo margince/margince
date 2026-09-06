@@ -1,0 +1,37 @@
+name: a_stepless_deal_is_a_slipping_deal
+task: agent_loop
+site: loop
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  goal: Which deals have nobody agreed a next step on?
+  trigger_ref: manual:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e21
+  grounding:
+    - source_id: user:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e0a
+      trust_tier: T1
+      content: acting rep — user_42
+  tools: catalog
+expect:
+  outcome: accepted
+  answer: whats_slipping_this_week
+  rubric: >
+    The goal asks which deals carry no agreed next step, and that is one of the
+    three risk signals whats_slipping_this_week answers — it returns "no open
+    next step on this deal" as evidence beside the momentum reasons. Score high
+    only if the turn calls whats_slipping_this_week; no id is named here and
+    none is needed.
+
+    review_commitments is the near miss, and it is the mirror of the one
+    a_promise_is_not_a_slipping_deal catches. It answers what somebody PROMISED
+    and has not delivered, which is a question about existing open work. This
+    goal asks about deals where no such work exists at all — so a turn taking
+    review_commitments has asked for the very set the goal is defined by the
+    absence of, and would answer confidently with nothing in it.
+
+    The distinction is the point of the pair: one tool reports open promises,
+    the other reports deals with none, and a surface where either answers both
+    is one where a rep cannot tell which they were told.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

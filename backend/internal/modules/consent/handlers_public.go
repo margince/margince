@@ -52,12 +52,7 @@ func (h Handlers) OneClickUnsubscribe(w http.ResponseWriter, r *http.Request, to
 		writeConsentErr(w, r, err)
 		return
 	}
-	wanted, err := h.unsubscribeTargets(r.Context(), ref.PersonID, params)
-	if err != nil {
-		writeConsentErr(w, r, err)
-		return
-	}
-	withdrawn, err := h.store.PublicWithdrawAll(r.Context(), ref.PersonID, wanted)
+	withdrawn, err := h.unsubscribe(r.Context(), ref.PersonID, params)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -68,33 +63,23 @@ func (h Handlers) OneClickUnsubscribe(w http.ResponseWriter, r *http.Request, to
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{"unsubscribed": withdrawn})
 }
 
-// unsubscribeTargets picks which purposes this press should stop.
+// unsubscribe stops what this press asked to stop.
 //
 // A named purpose is taken as given — it is the one the message was sent
 // under, and the mailbox provider naming it must not be second-guessed.
-// Unnamed means "all of it", and that selection reads the recipient's
-// CHOICE, not the raw stored state: a lane running on no-objection has no
-// 'granted' row, so a filter on granted skipped exactly the direct
-// correspondence a reader pressing "unsubscribe from everything" was
-// looking at.
-func (h Handlers) unsubscribeTargets(
+//
+// Unnamed means "all of it", and the store decides WHICH inside the
+// transaction that withdraws them. Choosing here would be a selection made in
+// one transaction and acted on in another, and a purpose granted in that
+// window would survive the press that reported success.
+func (h Handlers) unsubscribe(
 	ctx context.Context, personID ids.PersonID, params crmcontracts.OneClickUnsubscribeParams,
 ) ([]string, error) {
 	if params.Purpose != nil && strings.TrimSpace(*params.Purpose) != "" {
-		return []string{strings.ToLower(strings.TrimSpace(*params.Purpose))}, nil
+		named := strings.ToLower(strings.TrimSpace(*params.Purpose))
+		return h.store.PublicWithdrawAll(ctx, personID, []string{named})
 	}
-	view, err := h.store.PublicPreferenceView(ctx, PreferenceRef{PersonID: personID})
-	if err != nil {
-		return nil, err
-	}
-	var keys []string
-	for _, c := range view.Purposes {
-		if c.Locked || c.Choice == ChoiceOptedOut {
-			continue
-		}
-		keys = append(keys, c.Key)
-	}
-	return keys, nil
+	return h.store.PublicWithdrawEverything(ctx, personID)
 }
 
 // maxPreferenceChoices bounds a single granular save. The consent purpose

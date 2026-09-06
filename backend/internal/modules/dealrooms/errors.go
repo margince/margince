@@ -147,11 +147,16 @@ var errRoomAlreadyOpen = &messageError{
 	msg:  "this deal already has an active Deal Room: archive it before opening another",
 }
 
-// errStewardUnknown refuses a steward nobody can be pointed at.
+// errStewardUnknown refuses a steward nobody can be pointed at — an id no seat
+// carries, and one whose seat cannot act.
+//
+// One refusal for both, because they are one answer to the caller: the person
+// they named cannot be contacted for help. Telling them WHICH would say whether
+// a given id belongs to a colleague, on an input a caller supplies freely.
 var errStewardUnknown = &fieldError{
 	field: "steward_user_id",
 	code:  "unknown_user",
-	msg:   "no live user with that id: the steward is the person a buyer contacts for help",
+	msg:   "no active user with that id: the steward is the person a buyer contacts for help",
 }
 
 // errAlreadyInvited refuses a second live seat for one address. It names

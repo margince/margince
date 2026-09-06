@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -256,5 +257,53 @@ func TestDraftFollowUpsForRefusesANegativeLimit(t *testing.T) {
 	var bad *BadArgsError
 	if _, err := tool.Handle(context.Background(), json.RawMessage(`{"segment":"slipping","limit":-1}`)); !errors.As(err, &bad) {
 		t.Fatalf("negative limit → %v, want BadArgsError", err)
+	}
+}
+
+// A deal nobody has agreed a next step on comes back, and says so.
+//
+// The sweep's goal names three signals and this was the one with no instrument:
+// an agent asked the question its own goal told it to ask and had nothing to
+// ask it with. It was covered by attaching review_commitments, which answers
+// what somebody PROMISED — and says nothing at all about a deal nobody has
+// promised anything about.
+func TestADealWithNoOpenNextStepIsReportedAsSlipping(t *testing.T) {
+	t.Parallel()
+
+	ranked := rankSlipping([]SlippingDeal{{
+		DealID: ids.NewV7(), Name: "Quiet but stepless", NoOpenNextStep: true,
+		CreatedAt: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC),
+	}})
+
+	if len(ranked) != 1 {
+		t.Fatalf("ranked %d deal(s), want 1 — a deal whose only finding is that nothing is "+
+			"agreed on it is exactly the case the goal names and the sweep could not answer",
+			len(ranked))
+	}
+	var said bool
+	for _, e := range ranked[0].evidence {
+		if strings.Contains(e.Snippet, "no open next step") {
+			said = true
+		}
+	}
+	if !said {
+		t.Errorf("the deal came back with evidence %v and never says why — an at-risk answer a "+
+			"reader cannot check is one they have to take on trust", ranked[0].evidence)
+	}
+}
+
+// And the absence does not silently promote a deal that is otherwise fine: a
+// deal WITH an open step and no momentum problem is still dropped.
+func TestADealWithAnOpenNextStepIsNotSlippingOnThatGroundAlone(t *testing.T) {
+	t.Parallel()
+
+	ranked := rankSlipping([]SlippingDeal{{
+		DealID: ids.NewV7(), Name: "Healthy", NoOpenNextStep: false,
+		CreatedAt: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC),
+	}})
+
+	if len(ranked) != 0 {
+		t.Errorf("ranked %d deal(s), want 0 — a deal with a step agreed and no momentum problem "+
+			"is not slipping, and reporting it teaches a reader to ignore the lane", len(ranked))
 	}
 }

@@ -20,6 +20,7 @@ package consent
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -106,6 +107,9 @@ func (s *Store) PublicSaveChoices(
 	}
 	var refused []ChoiceOutcome
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockOneSubjectsConsent(ctx, tx, personID); err != nil {
+			return err
+		}
 		refused = nil
 		for _, pass := range []ConsentState{StateWithdrawn, StateGranted} {
 			for _, c := range choices {
@@ -191,6 +195,34 @@ func subjectTakesAGrantTx(ctx context.Context, tx pgx.Tx, sub subject) (bool, er
 	return false, err
 }
 
+// lockOneSubjectsConsent serializes multi-purpose consent transactions for one
+// person.
+//
+// Three of them write several purposes in one transaction, and each takes the
+// row lock recordAdmittedTx needs in its OWN order: the withdrawal sweeps go by
+// ascending purpose key, and a granular save goes withdrawals-first so a
+// refused grant cannot cost the suppression saved beside it. A save of {grant a,
+// withdraw b} therefore locks b before a while an unsubscribe-everything locks
+// a before b, and two of those at once on one person deadlock — Postgres aborts
+// one, and what the reader sees is a preference change that failed for no
+// reason they can act on.
+//
+// Ordering the writes instead would mean choosing between the two orders, and
+// the save's order is load-bearing. So the serialization is a lock of its own,
+// taken first and held to commit: inside it, the order stops mattering.
+//
+// Advisory rather than a row lock, because a purpose the person holds NO row
+// for is exactly the case a row lock cannot cover — and a first grant is that
+// case. The key is the person, so two DIFFERENT subjects never wait for each
+// other.
+func lockOneSubjectsConsent(ctx context.Context, tx pgx.Tx, personID ids.PersonID) error {
+	if _, err := tx.Exec(ctx,
+		`SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))`, personID); err != nil {
+		return fmt.Errorf("consent: taking the subject's consent lock: %w", err)
+	}
+	return nil
+}
+
 // PublicWithdrawAll stops the named purposes in one transaction and
 // returns ONLY the ones this call actually changed.
 //
@@ -205,42 +237,117 @@ func (s *Store) PublicWithdrawAll(
 ) ([]string, error) {
 	var changed []string
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		changed = nil
-		for _, key := range purposeKeys {
-			key = normalizedPurposeKey(key)
-			if LockedPurpose(key) {
-				return &ValidationError{
-					Field:  "purpose",
-					Reason: "transactional consent is locked and cannot be withdrawn",
-				}
-			}
-			purposeID, err := purposeByKeyTx(ctx, tx, key)
-			if err != nil {
-				return err
-			}
-			source := sourcePreferenceCenter
-			in := RecordInput{
-				PersonID:  personID,
-				PurposeID: purposeID,
-				NewState:  string(StateWithdrawn),
-				Source:    &source,
-			}
-			sub, state, err := admitRecord(ctx, in)
-			if err != nil {
-				return err
-			}
-			out, err := s.recordAdmittedTx(ctx, tx, in, sub, state)
-			if err != nil {
-				return err
-			}
-			if out.Changed {
-				changed = append(changed, key)
-			}
+		if err := lockOneSubjectsConsent(ctx, tx, personID); err != nil {
+			return err
 		}
-		return nil
+		var err error
+		changed, err = s.withdrawPurposesTx(ctx, tx, personID, purposeKeys)
+		return err
 	})
 	if err != nil {
 		return nil, err
+	}
+	return changed, nil
+}
+
+// PublicWithdrawEverything stops every purpose a recipient can be stopped on,
+// choosing them inside the transaction that stops them.
+//
+// The unnamed press used to read the recipient's purposes first and hand the
+// list to PublicWithdrawAll, which is a selection made in one transaction and
+// acted on in another: a purpose granted in that window — a confirmation
+// round-trip landing on the press — was not in the snapshot, survived an
+// "unsubscribe from everything", and the response said it was done.
+//
+// The fix is not a tighter snapshot but no snapshot: the catalog decides, and
+// every live purpose that is not locked is withdrawn whether or not the
+// recipient held it. Record is idempotent, so a purpose they had already
+// stopped costs a read and reports no change — which is what the old filter on
+// their state was buying. What it no longer buys is a stale list.
+//
+// A grant that commits AFTER this transaction still stands, and should: it
+// post-dates the press rather than being missed by it.
+func (s *Store) PublicWithdrawEverything(
+	ctx context.Context, personID ids.PersonID,
+) ([]string, error) {
+	var changed []string
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockOneSubjectsConsent(ctx, tx, personID); err != nil {
+			return err
+		}
+		keys, err := withdrawablePurposeKeysTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		changed, err = s.withdrawPurposesTx(ctx, tx, personID, keys)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return changed, nil
+}
+
+// withdrawablePurposeKeysTx reads the live purposes a recipient may be stopped
+// on. The catalog rather than a constant: an operator may define their own
+// purpose, and a press that only knew the seeded ones would leave it running.
+func withdrawablePurposeKeysTx(ctx context.Context, tx pgx.Tx) ([]string, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT key FROM consent_purpose WHERE archived_at IS NULL ORDER BY key`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var keys []string
+	for rows.Next() {
+		var key string
+		if err := rows.Scan(&key); err != nil {
+			return nil, err
+		}
+		if LockedPurpose(key) {
+			continue
+		}
+		keys = append(keys, key)
+	}
+	return keys, rows.Err()
+}
+
+// withdrawPurposesTx records a withdrawal for each key and answers the ones it
+// actually changed.
+func (s *Store) withdrawPurposesTx(
+	ctx context.Context, tx pgx.Tx, personID ids.PersonID, purposeKeys []string,
+) ([]string, error) {
+	var changed []string
+	for _, key := range purposeKeys {
+		key = normalizedPurposeKey(key)
+		if LockedPurpose(key) {
+			return nil, &ValidationError{
+				Field:  "purpose",
+				Reason: "transactional consent is locked and cannot be withdrawn",
+			}
+		}
+		purposeID, err := purposeByKeyTx(ctx, tx, key)
+		if err != nil {
+			return nil, err
+		}
+		source := sourcePreferenceCenter
+		in := RecordInput{
+			PersonID:  personID,
+			PurposeID: purposeID,
+			NewState:  string(StateWithdrawn),
+			Source:    &source,
+		}
+		sub, state, err := admitRecord(ctx, in)
+		if err != nil {
+			return nil, err
+		}
+		out, err := s.recordAdmittedTx(ctx, tx, in, sub, state)
+		if err != nil {
+			return nil, err
+		}
+		if out.Changed {
+			changed = append(changed, key)
+		}
 	}
 	return changed, nil
 }

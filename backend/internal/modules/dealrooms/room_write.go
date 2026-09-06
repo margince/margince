@@ -127,15 +127,26 @@ func createRoomTx(ctx context.Context, tx pgx.Tx, in CreateRoomInput, by string)
 // failure. The room is still created: a room without a steward is a real state
 // the schema admits (the column is nullable and a deleted user nulls it), and
 // it is repaired by transferring one rather than by refusing to open the room.
+//
+// ELIGIBLE means live AND active, not merely un-archived. A deactivated seat is
+// worse than no steward: the room LOOKS staffed, so a buyer waits on somebody
+// who cannot answer and nobody is prompted to transfer it. Absence is at least
+// visible.
+//
+// The two paths answer a deactivated seat differently, and the difference is
+// whose mistake it is. A steward the caller NAMED is refused — they chose a
+// person who cannot act, and telling them so is what lets them choose again.
+// A deal OWNER who has been deactivated is not a mistake anybody made in this
+// request, so it reads as no steward and the room opens without one; refusing
+// there would block opening a room over a staffing change, which is the outcome
+// this function's own doc rejects.
 func resolveSteward(ctx context.Context, tx pgx.Tx, in CreateRoomInput) (ids.UserID, bool, error) {
 	if in.StewardUserID != nil {
-		var exists bool
-		if err := tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM app_user WHERE id = $1 AND archived_at IS NULL)`,
-			in.StewardUserID).Scan(&exists); err != nil {
-			return ids.UserID{}, false, fmt.Errorf("check steward: %w", err)
+		eligible, err := stewardIsEligible(ctx, tx, *in.StewardUserID)
+		if err != nil {
+			return ids.UserID{}, false, err
 		}
-		if !exists {
+		if !eligible {
 			return ids.UserID{}, false, errStewardUnknown
 		}
 		return *in.StewardUserID, true, nil
@@ -151,7 +162,39 @@ func resolveSteward(ctx context.Context, tx pgx.Tx, in CreateRoomInput) (ids.Use
 	if owner == nil {
 		return ids.UserID{}, false, nil
 	}
-	return ids.From[ids.UserKind](*owner), true, nil
+	ownerID := ids.From[ids.UserKind](*owner)
+	eligible, err := stewardIsEligible(ctx, tx, ownerID)
+	if err != nil {
+		return ids.UserID{}, false, err
+	}
+	if !eligible {
+		return ids.UserID{}, false, nil
+	}
+	return ownerID, true, nil
+}
+
+// stewardIsEligible reports whether a seat can actually be pointed a buyer at.
+//
+// Both halves, and neither implies the other: `archived_at` retires the record,
+// `status` retires the person's access. A seat deactivated but not archived is
+// the ordinary shape of somebody who has left, and it is exactly the one the
+// old existence check admitted.
+//
+// This is identity.LiveMemberSQL's predicate, spelled here character for
+// character because a module never imports a sibling (ADR-0054 §3) and identity
+// owns app_user. The employment-currency gate's twin of this problem was
+// settled by moving the definition to a tier everything can reach; if a second
+// module ever needs this one, that is the move rather than a third copy.
+func stewardIsEligible(ctx context.Context, tx pgx.Tx, user ids.UserID) (bool, error) {
+	var eligible bool
+	if err := tx.QueryRow(ctx,
+		`SELECT EXISTS (
+		     SELECT 1 FROM app_user
+		      WHERE id = $1 AND status = 'active' AND archived_at IS NULL)`,
+		user).Scan(&eligible); err != nil {
+		return false, fmt.Errorf("check steward: %w", err)
+	}
+	return eligible, nil
 }
 
 // UpdateRoom edits the room's title and welcome message — the words a buyer

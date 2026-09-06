@@ -66,7 +66,7 @@
         "whats_slipping_this_week → draft_follow_ups_for",
         "whats_slipping_this_week → run_report"
       ],
-      "temptation_weight": 8
+      "temptation_weight": 9
     }
   ],
   "tool_cost": [
@@ -421,13 +421,17 @@
       "scenarios_naming_it_as_the_wrong_reach": 1
     },
     {
+      "name": "review_commitments",
+      "scenarios_naming_it_as_the_wrong_reach": 1
+    },
+    {
       "name": "send_email",
       "scenarios_naming_it_as_the_wrong_reach": 1
     }
   ],
   "corpus": {
-    "scenarios": 23,
-    "offering_the_whole_catalog": 21,
+    "scenarios": 24,
+    "offering_the_whole_catalog": 22,
     "skipped_by_the_scan": null
   }
 }
