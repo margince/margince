@@ -125,7 +125,8 @@ const resetTables = `
 // A gate derives its corpus from the owner it protects rather than restating
 // it, so the corpus lives here beside the reset that owns it.
 const PreservedReferenceTables = `('activity_kind', 'channel_provider', 'lead_source', ` +
-	`'lead_disqualify_reason', 'field_mask', 'overlay_mode', 'currency_minor_digits')`
+	`'lead_disqualify_reason', 'sdr_handoff_reason', 'field_mask', 'overlay_mode', ` +
+	`'currency_minor_digits')`
 
 // reclaimSlack is how much a table may grow past its empty size before a reset
 // TRUNCATEs it instead of DELETEing it. Growth, not absolute size, is the

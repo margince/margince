@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { type Locale, LocaleProvider } from "../i18n";
+import { recordUnroutedSessionProbe } from "./unrouted-session";
 
 // Shared Storybook rendering harness for the screens/* modules (fe-uat
 // render gate, frontend/scripts/fe-uat.mjs): every screen component reads
@@ -51,6 +52,7 @@ export type RouteMap = Record<
 const SESSION_PROBE = "GET /me";
 
 function unroutedSessionProbe(): Response {
+  recordUnroutedSessionProbe();
   console.error(
     "story fetch stub: a component asked for GET /me and this story did not " +
       "route it. Add '\"GET /me\": () => jsonResponse(meFixture({ allow: … }))' " +
@@ -93,6 +95,30 @@ export function meRoute(
   identity: { roles?: string[]; seat?: "full" | "read" } = {},
 ): () => Response {
   return () => jsonResponse(meFixture({ ...identity, allow }));
+}
+
+/**
+ * `installFetchStub` with the session probe routed — the shape every suite that
+ * mounts capability-aware chrome needs.
+ *
+ * It is a helper rather than a line copied per file because the copies were not
+ * made: three onboarding suites installed a stub that routed everything the
+ * case was about and left `GET /me` to be refused. A refused session reads as a
+ * malformed one, so every grant failed closed and the surface drew its denied
+ * branch — and which branch a case asserted against came down to whether that
+ * query settled first. They passed alone and failed under load on a different
+ * name each run.
+ *
+ * `allow` is still spelled by the caller for the reason `meRoute` gives: the
+ * grants are what the case is ABOUT, and the stub cannot guess them. An empty
+ * one is a real answer — an admin holding no object grants — and not a denial.
+ */
+export function stubWithSession(
+  routes: RouteMap,
+  allow: GrantSpec,
+  identity: { roles?: string[]; seat?: "full" | "read" } = {},
+): void {
+  installFetchStub({ "GET /me": meRoute(allow, identity), ...routes });
 }
 
 // "METHOD /path", with the /v1 prefix stripped so a RouteMap key reads as the

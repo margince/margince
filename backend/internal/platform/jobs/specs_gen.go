@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "3c27788b9c8659aa51e648db4cce293fd8655ca7721c4b1faba697735c95abd3"
+const JobContractHash = "253c873e99809cdb538a3da45bfb8e43db5c16d5c16f72b20fcd05a5d8a56101"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -128,6 +128,17 @@ var specs = map[string]Spec{
 		Registration: Registration{When: []string{"GmailRegistry"}},
 		Fault:        FaultPolicy{NilAfterLogging: "the backfill ROW owns the outcome: RunBackfillStep ends the run and records the fault class on the row against its own give-up cap, on a context detached from the job because the job context dying mid-page is the commonest fault. A River retry would re-page a run the engine already ended."},
 		Args:         []ArgField{{Name: "BackfillID"}, {Name: "Workspace"}},
+	},
+	"capture_backfill_reconcile": {
+		Kind:         "capture_backfill_reconcile",
+		GoType:       "CaptureBackfillReconcileArgs",
+		Role:         Worker,
+		Fleet:        true,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{Fixed: 24 * time.Hour},
+		Registration: Registration{When: []string{"GmailRegistry"}},
 	},
 	"capture_classify": {
 		Kind:         "capture_classify",

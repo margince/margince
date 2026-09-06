@@ -32,8 +32,8 @@ type ProviderLookupSweepArgs struct{}
 // Kind is the stable job identifier River persists in river_job.
 func (ProviderLookupSweepArgs) Kind() string { return "provider_lookup_sweep" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues, and does no
-// tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (ProviderLookupSweepArgs) FleetWide() {}
 
 // providerLookupSweepWorker fans the pass out per workspace.
