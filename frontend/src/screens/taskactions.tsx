@@ -347,3 +347,39 @@ export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
     },
   });
 }
+
+/**
+ * Settling a promise: it was kept, or it no longer stands.
+ *
+ * Its own hook rather than useTaskUpdate's: a claim is not an activity, and the
+ * two settle through different endpoints. `done` and `dismissed` are kept apart
+ * by the server because they answer different questions later — how many
+ * commitments this workspace keeps is a fact about the team, and how many
+ * extracted claims were never real is a fact about the extractor.
+ */
+export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      outcome: "done" | "dismissed";
+    }) => {
+      const { error } = await api.POST("/claims/{id}/settle", {
+        params: { path: { id: input.id } },
+        body: { outcome: input.outcome },
+      });
+      if (error) {
+        throwProblem(error, t);
+      }
+    },
+    onSuccess: () => {
+      for (const queryKey of invalidateKeys) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+      // The person's own card lists the same open claims, so a drawer standing
+      // on them would keep showing a promise that has just been settled.
+      queryClient.invalidateQueries({ queryKey: ["person"] });
+    },
+  });
+}
