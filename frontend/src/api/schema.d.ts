@@ -24144,7 +24144,7 @@ export interface components {
             id: string;
             name: string;
             /** @enum {string|null} */
-            color?: "teal" | "amber" | "rose" | "slate" | null;
+            color?: "teal" | "amber" | "rose" | "slate" | "sky" | "violet" | "lime" | "orange" | null;
             description?: string | null;
             /** Format: int64 */
             version?: number;
@@ -24158,7 +24158,7 @@ export interface components {
         CreateTagRequest: {
             name: string;
             /** @enum {string|null} */
-            color?: "teal" | "amber" | "rose" | "slate" | null;
+            color?: "teal" | "amber" | "rose" | "slate" | "sky" | "violet" | "lime" | "orange" | null;
             description?: string | null;
         };
         /**
@@ -24171,7 +24171,7 @@ export interface components {
             tag_id: string;
             name: string;
             /** @enum {string|null} */
-            color?: "teal" | "amber" | "rose" | "slate" | null;
+            color?: "teal" | "amber" | "rose" | "slate" | "sky" | "violet" | "lime" | "orange" | null;
         };
         /**
          * @description What one record carries. `withheld` says the caller could not read the vocabulary,
@@ -24188,7 +24188,7 @@ export interface components {
             tag_id: string;
             name: string;
             /** @enum {string|null} */
-            color?: "teal" | "amber" | "rose" | "slate" | null;
+            color?: "teal" | "amber" | "rose" | "slate" | "sky" | "violet" | "lime" | "orange" | null;
             description?: string | null;
             archived: boolean;
             /** Format: date-time */
@@ -24209,7 +24209,7 @@ export interface components {
             id: string;
             name: string;
             /** @enum {string|null} */
-            color?: "teal" | "amber" | "rose" | "slate" | null;
+            color?: "teal" | "amber" | "rose" | "slate" | "sky" | "violet" | "lime" | "orange" | null;
             description?: string | null;
             /** Format: int64 */
             version?: number;
@@ -24244,7 +24244,7 @@ export interface components {
         UpdateTagRequest: {
             name?: string;
             /** @enum {string} */
-            color?: "teal" | "amber" | "rose" | "slate" | "none";
+            color?: "teal" | "amber" | "rose" | "slate" | "sky" | "violet" | "lime" | "orange" | "none";
             description?: string;
         };
         MergeTagsRequest: {

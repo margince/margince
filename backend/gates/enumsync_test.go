@@ -46,6 +46,12 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"person_consent.state":             {"internal/modules/consent", "ConsentState"},
 	"offer_line_item.proposal_state":   {"internal/modules/deals", "ProposalState"},
 	"knowledge_document.ingest_status": {"internal/contracts", "KnowledgeDocumentIngestStatus"},
+	// The tag palette is spelled in five places: this CHECK, the contract enum,
+	// the MCP tool schemas, the frontend's TAG_TONES and its dot stylesheet.
+	// Widening four of the five is SILENT — the pill drops a tone it does not
+	// know, so a half-widened palette reaches a reader as a tag with no dot,
+	// which is exactly how an uncoloured tag looks.
+	"tag.color": {"internal/contracts", "TagColor"},
 
 	"activity_link.entity_type": {"internal/shared/ports/datasource", "RecordType"},
 	"list.entity_type":          {"internal/shared/ports/datasource", "RecordType"},

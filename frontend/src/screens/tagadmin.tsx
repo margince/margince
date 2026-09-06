@@ -8,9 +8,9 @@ import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
-import { Select } from "../design-system/select";
+import { Select, type SelectOption } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { TagPill } from "../design-system/tagpill";
+import { isTagTone, TAG_TONES, TagPill } from "../design-system/tagpill";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryGate } from "./common";
@@ -241,8 +241,6 @@ function TagVocabularyRow({
 /** How many close words a warning names before it stops listing them. */
 const NEAR_MATCHES_NAMED = 5;
 
-const PALETTE: readonly TagColor[] = ["teal", "amber", "rose", "slate"];
-
 /**
  * A Select's answer as a colour, or none.
  *
@@ -251,8 +249,27 @@ const PALETTE: readonly TagColor[] = ["teal", "amber", "rose", "slate"];
  * reader cannot act on, for a choice they did not make.
  */
 function asTagColor(value: string): TagColor | "" {
-  const found = PALETTE.find((tone) => tone === value);
-  return found ?? "";
+  return isTagTone(value) ? value : "";
+}
+
+/**
+ * The colour options, each carrying the same dot the tag itself will draw.
+ *
+ * The swatch is what an admin actually picks by — the tone NAMES mean nothing
+ * to them, and a list of words was the whole complaint. It is decorative, so
+ * the label still names the colour for a reader who cannot see it.
+ */
+function colorOptions(t: ReturnType<typeof useT>): readonly SelectOption[] {
+  return [
+    { value: "", label: t("tagAdmin.colorNone") },
+    ...TAG_TONES.map((tone) => ({
+      value: tone,
+      label: t(`tagAdmin.color.${tone}`),
+      adornment: (
+        <span className={`tagpill-dot tagpill-dot-${tone}`} aria-hidden />
+      ),
+    })),
+  ];
 }
 
 /**
@@ -350,10 +367,7 @@ function TagDialog({
             {...control}
             value={color}
             onChange={(next) => setColor(asTagColor(next))}
-            options={[
-              { value: "", label: t("tagAdmin.colorNone") },
-              ...PALETTE.map((tone) => ({ value: tone, label: tone })),
-            ]}
+            options={colorOptions(t)}
           />
         )}
       </Field>

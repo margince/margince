@@ -9,17 +9,32 @@
   flex: none;
 }
 
-/* The four tones map onto tokens the rest of the product already uses, so a
-   theme change carries them rather than leaving tags behind on fixed hues. */
+/* Each tone reads its own --tag* token, which is where both themes' values are
+   stated. They are deliberately NOT the status tokens: a dot on --danger reads
+   as a warning to anyone who has learned the rest of the palette, and retuning
+   the status colours would recolour every tag in the workspace as a side
+   effect. */
 .tagpill-dot-teal {
-  background: var(--accent);
+  background: var(--tagTeal);
 }
 .tagpill-dot-amber {
-  background: var(--warn);
+  background: var(--tagAmber);
 }
 .tagpill-dot-rose {
-  background: var(--danger);
+  background: var(--tagRose);
 }
 .tagpill-dot-slate {
-  background: var(--textMeta);
+  background: var(--tagSlate);
+}
+.tagpill-dot-sky {
+  background: var(--tagSky);
+}
+.tagpill-dot-violet {
+  background: var(--tagViolet);
+}
+.tagpill-dot-lime {
+  background: var(--tagLime);
+}
+.tagpill-dot-orange {
+  background: var(--tagOrange);
 }

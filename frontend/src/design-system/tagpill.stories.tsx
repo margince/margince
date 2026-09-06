@@ -3,12 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { TagPill } from "./tagpill";
+import { TAG_TONES, TagPill } from "./tagpill";
 
-// A tag's colour is not a status. The four tones exist so one word is tellable
-// from another at a glance, which is why they ride as a dot rather than as a
-// fill — a strip of filled pills reads as a stripe of blocks, and the words
-// stop being the thing you read.
+// A tag's colour is not a status. The tones exist so one word is tellable from
+// another at a glance, which is why they ride as a dot rather than as a fill —
+// a strip of filled pills reads as a stripe of blocks, and the words stop being
+// the thing you read.
 
 const meta: Meta<typeof TagPill> = {
   title: "Design System/TagPill",
@@ -19,15 +19,16 @@ export default meta;
 
 type Story = StoryObj<typeof TagPill>;
 
-/** The four tones an admin picks from, side by side, which is how a reader
- * actually meets them: as a strip on one record. */
+/** Every tone an admin picks from, side by side, which is how a reader actually
+ * meets them: as a strip on one record. Driven off TAG_TONES rather than a list
+ * typed out here, so a tone added to the palette cannot go missing from the one
+ * view that exists to prove the tones are tellable apart. */
 export const EveryTone: Story = {
   render: () => (
     <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
-      <TagPill name="Key Account" tone="amber" />
-      <TagPill name="Churn Risk" tone="rose" />
-      <TagPill name="EV programme" tone="teal" />
-      <TagPill name="Parked" tone="slate" />
+      {TAG_TONES.map((tone) => (
+        <TagPill key={tone} name={tone} tone={tone} />
+      ))}
     </div>
   ),
 };
@@ -49,7 +50,7 @@ export const Archived: Story = {
 };
 
 /**
- * A colour outside the four means the server's palette and this one have
+ * A colour outside the palette means the server's list and this one have
  * drifted. The pill draws no dot rather than an unstyled one — a broken swatch
  * beside a name is a defect a reader has to interpret.
  */

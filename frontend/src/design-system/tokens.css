@@ -278,6 +278,27 @@
    * collapses it, exactly as --successText and --textOnAccentControl do. */
   --dangerText: #b91c1c;
 
+  /* ===== Tag tones =====
+   * The eight hues an admin picks from when naming a tag, and the ONLY colours
+   * in the product that carry no meaning: a tag's colour says "not that other
+   * tag", nothing more. Named as their own family rather than borrowed from
+   * --accent/--warn/--danger, which is what the first four did: a tag that
+   * reads --danger looks like a warning to anyone who knows the rest of the
+   * palette, and a retune of the status colours would silently recolour every
+   * tag in the workspace.
+   *
+   * Chosen to stay apart from each other at 7px — the dot is the whole cue —
+   * and to clear 3:1 against both --bgCard and the dark theme's ground, so one
+   * set serves both themes and a tag does not change identity with the toggle. */
+  --tagTeal: #0f766e;
+  --tagAmber: #b45309;
+  --tagRose: #be123c;
+  --tagSlate: #64748b;
+  --tagSky: #0284c7;
+  --tagViolet: #7c3aed;
+  --tagLime: #4d7c0f;
+  --tagOrange: #ea580c;
+
   /* ===== Corners =====
    * One ladder, in fours: 4 / 8 / 12 / 16 / 20, and the pill. Every corner in
    * the tree reads one of these. A raw px radius is a sixth value nobody chose,
@@ -708,6 +729,18 @@
    * 4.22:1 and 3.88:1. --danger itself stays put — it is also a FILL, under
    * white ink, and lightening that would cost the fill its own contrast. */
   --dangerText: #fb9a9a;
+
+  /* The tag tones lift on a dark ground. Each keeps its hue and its distance
+   * from its neighbours — a tag that reads teal in light must not read sky in
+   * dark, because the colour is the only thing telling two tags apart. */
+  --tagTeal: #2dd4bf;
+  --tagAmber: #fbbf24;
+  --tagRose: #fb7185;
+  --tagSlate: #94a3b8;
+  --tagSky: #38bdf8;
+  --tagViolet: #a78bfa;
+  --tagLime: #a3e635;
+  --tagOrange: #fb923c;
 }
 
 /*
@@ -803,6 +836,15 @@
     --danger: #f87171;
     --dangerBg: rgba(248, 113, 113, 0.16);
     --dangerText: #fb9a9a;
+
+    --tagTeal: #2dd4bf;
+    --tagAmber: #fbbf24;
+    --tagRose: #fb7185;
+    --tagSlate: #94a3b8;
+    --tagSky: #38bdf8;
+    --tagViolet: #a78bfa;
+    --tagLime: #a3e635;
+    --tagOrange: #fb923c;
   }
 }
 

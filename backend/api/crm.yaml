@@ -32779,8 +32779,9 @@ components:
         name: { type: string, maxLength: 64 }
         # The palette the design system draws, closed on purpose: a tag is a
         # shared word, and a colour a reader cannot tell from another one is
-        # not a distinction. Mirrors the tag_color_check constraint.
-        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        # not a distinction. Eight is what the token layer keeps apart at dot
+        # size in both themes. Mirrors the tag_color_check constraint.
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null] }
         description: { type: [string, 'null'] }
         # The If-Match precondition a caller sends back when they rename this
         # tag. Without it on the read, a client has nothing to quote and every
@@ -32798,7 +32799,7 @@ components:
         # collapsed before the length is measured, so a name that fits once
         # normalized is accepted even when it was typed longer.
         name: { type: string, maxLength: 64 }
-        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null] }
         description: { type: [string, 'null'] }
 
     RowTag:
@@ -32811,7 +32812,7 @@ components:
       properties:
         tag_id: { type: string, format: uuid }
         name: { type: string }
-        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null] }
 
     RecordTagsResponse:
       type: object
@@ -32831,7 +32832,7 @@ components:
       properties:
         tag_id: { type: string, format: uuid }
         name: { type: string }
-        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null] }
         description: { type: [string, 'null'] }
         # Archived tags stay ON the records that carry them: retiring a word
         # stops it being applied, it does not un-tag a history that was true.
@@ -32858,7 +32859,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         name: { type: string, maxLength: 64 }
-        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, null] }
+        color: { type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null] }
         description: { type: [string, 'null'] }
         version: { type: integer, format: int64 }
         created_at: { type: string, format: date-time }
@@ -32891,7 +32892,7 @@ components:
         The name cannot be cleared. A tag without one cannot be applied or read.
       properties:
         name: { type: string, maxLength: 64 }
-        color: { type: string, enum: [teal, amber, rose, slate, none] }
+        color: { type: string, enum: [teal, amber, rose, slate, sky, violet, lime, orange, none] }
         description: { type: string }
 
     MergeTagsRequest:

@@ -29,6 +29,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* Takes the free space so the chevron stays at the far edge even when an
+     adornment sits before the face — otherwise `space-between` spreads the
+     three children and the swatch drifts off its own label. */
+  flex: 1 1 auto;
 }
 /* A placeholder is not a value, and it must not read like one — but it is text a
    reader has to be able to read, so it stops at --textMeta, the canonical AA
@@ -85,14 +89,26 @@
   color: var(--textPrimary);
   cursor: pointer;
 }
+/* The label takes the free space, so `space-between` pushes the check mark to
+   the far edge and NOT the adornment away from the word it marks: a swatch has
+   to sit against its own label to read as belonging to it. */
 .select-option-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1 1 auto;
 }
 .select-option-check {
   flex: none;
   color: var(--accentText);
+}
+/* The mark before a label — a colour swatch, a provider glyph — in the list and
+   on the closed face alike. It never shrinks and never grows: a swatch that
+   ellipsizes has stopped being a swatch. */
+.select-option-adornment {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
 }
 /* The ACTIVE option — where the keyboard is, and what a pointer is hovering.
    One treatment for both, because they are one state: the popup tracks a single

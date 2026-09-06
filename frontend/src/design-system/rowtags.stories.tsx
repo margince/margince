@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import { RowTags } from "./rowtags";
+import type { TagTone } from "./tagpill";
 
 // The list-row counterpart to the record panel's strip. Two words rather than
 // the panel's four, because this one shares its row with every other column —
@@ -19,9 +20,7 @@ export default meta;
 
 type Story = StoryObj<typeof RowTags>;
 
-type Tone = "teal" | "amber" | "rose" | "slate";
-
-const tag = (id: string, name: string, color?: Tone) => ({
+const tag = (id: string, name: string, color?: TagTone) => ({
   tag_id: id,
   name,
   color: color ?? null,

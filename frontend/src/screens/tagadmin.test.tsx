@@ -14,6 +14,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { TAG_TONES } from "../design-system/tagpill";
 import { en } from "../i18n/en";
 import {
   installFetchStub,
@@ -126,6 +127,38 @@ describe("the tag vocabulary card", () => {
     expect(
       await screen.findByText(/Close to a word this organization already has/),
     ).toBeInTheDocument();
+  });
+
+  // An admin picks a tag's colour BY the colour. A list of tone words is what
+  // the picker used to be, and it made choosing a hue a matter of knowing what
+  // "slate" looks like — so the swatch is the feature and its absence is the
+  // defect. Asserted through the dot class the pill itself draws, which is what
+  // ties the choice made here to the mark that appears on the record.
+  it("offers every tone, each drawn as its own dot", async () => {
+    const user = userEvent.setup();
+    mount([KEY_ACCOUNT]);
+    await user.click(
+      await screen.findByRole("button", { name: en["tagAdmin.add"] }),
+    );
+    await user.click(
+      screen.getByRole("combobox", { name: en["tagAdmin.colorLabel"] }),
+    );
+
+    const listbox = await screen.findByRole("listbox");
+    for (const tone of TAG_TONES) {
+      const option = within(listbox).getByRole("option", {
+        name: en[`tagAdmin.color.${tone}`],
+      });
+      expect(
+        option.querySelector(`.tagpill-dot-${tone}`),
+        `${tone} offers no swatch`,
+      ).toBeInTheDocument();
+    }
+    // Clearing a colour is an option too, and the one that carries no dot.
+    const none = within(listbox).getByRole("option", {
+      name: en["tagAdmin.colorNone"],
+    });
+    expect(none.querySelector("[class*='tagpill-dot']")).toBeNull();
   });
 
   // The count is three row-scoped queries per tag on the server, so drawing it

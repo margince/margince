@@ -4,6 +4,7 @@
 import { Check, ChevronDown } from "lucide-react";
 import {
   type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
   type RefObject,
   useCallback,
   useEffect,
@@ -52,6 +53,17 @@ export type SelectOption = Readonly<{
   value: string;
   label: string;
   disabled?: boolean;
+  /**
+   * A decorative mark drawn before the label, in the list AND on the closed
+   * face — a colour swatch, a provider mark. It is `aria-hidden` by contract:
+   * the label still has to say everything the option means, because a reader
+   * on a screen reader gets only the label, and a swatch that carried meaning
+   * of its own would be a distinction only sighted users could make.
+   *
+   * `label` stays a plain string precisely so this cannot erode it: typeahead
+   * matches it, the trigger falls back to it, and the suite asserts on it.
+   */
+  adornment?: ReactNode;
   /**
    * A BCP 47 tag when this option's LABEL is written in a language other than
    * the document's — a language picker's endonyms, a locale name, a quoted
@@ -502,6 +514,15 @@ function SelectTrigger({
       onClick={listbox.onTriggerClick}
       onKeyDown={listbox.onKeyDown}
     >
+      {/* The closed face repeats the selected option's adornment, so a picker
+          whose options are told apart BY the mark still shows which one is
+          chosen once the list is shut. Hidden from assistive tech for the same
+          reason it is in the list: the label carries the meaning. */}
+      {selected?.adornment && (
+        <span className="select-option-adornment" aria-hidden="true">
+          {selected.adornment}
+        </span>
+      )}
       <span
         className={
           selected ? "select-face" : "select-face select-face-placeholder"
@@ -576,6 +597,11 @@ function SelectPopup({
               option.disabled ? undefined : () => listbox.hover(index)
             }
           >
+            {option.adornment && (
+              <span className="select-option-adornment" aria-hidden="true">
+                {option.adornment}
+              </span>
+            )}
             <span className="select-option-label" lang={option.lang}>
               {option.label}
             </span>

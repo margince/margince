@@ -4632,10 +4632,14 @@ func (e CreateStageRequestSemantic) Valid() bool {
 
 // Defines values for CreateTagRequestColor.
 const (
-	CreateTagRequestColorAmber CreateTagRequestColor = "amber"
-	CreateTagRequestColorRose  CreateTagRequestColor = "rose"
-	CreateTagRequestColorSlate CreateTagRequestColor = "slate"
-	CreateTagRequestColorTeal  CreateTagRequestColor = "teal"
+	CreateTagRequestColorAmber  CreateTagRequestColor = "amber"
+	CreateTagRequestColorLime   CreateTagRequestColor = "lime"
+	CreateTagRequestColorOrange CreateTagRequestColor = "orange"
+	CreateTagRequestColorRose   CreateTagRequestColor = "rose"
+	CreateTagRequestColorSky    CreateTagRequestColor = "sky"
+	CreateTagRequestColorSlate  CreateTagRequestColor = "slate"
+	CreateTagRequestColorTeal   CreateTagRequestColor = "teal"
+	CreateTagRequestColorViolet CreateTagRequestColor = "violet"
 )
 
 // Valid indicates whether the value is a known member of the CreateTagRequestColor enum.
@@ -4643,11 +4647,19 @@ func (e CreateTagRequestColor) Valid() bool {
 	switch e {
 	case CreateTagRequestColorAmber:
 		return true
+	case CreateTagRequestColorLime:
+		return true
+	case CreateTagRequestColorOrange:
+		return true
 	case CreateTagRequestColorRose:
+		return true
+	case CreateTagRequestColorSky:
 		return true
 	case CreateTagRequestColorSlate:
 		return true
 	case CreateTagRequestColorTeal:
+		return true
+	case CreateTagRequestColorViolet:
 		return true
 	default:
 		return false
@@ -10446,10 +10458,14 @@ func (e RecordQualifyingEventRequestKind) Valid() bool {
 
 // Defines values for RecordTagColor.
 const (
-	RecordTagColorAmber RecordTagColor = "amber"
-	RecordTagColorRose  RecordTagColor = "rose"
-	RecordTagColorSlate RecordTagColor = "slate"
-	RecordTagColorTeal  RecordTagColor = "teal"
+	RecordTagColorAmber  RecordTagColor = "amber"
+	RecordTagColorLime   RecordTagColor = "lime"
+	RecordTagColorOrange RecordTagColor = "orange"
+	RecordTagColorRose   RecordTagColor = "rose"
+	RecordTagColorSky    RecordTagColor = "sky"
+	RecordTagColorSlate  RecordTagColor = "slate"
+	RecordTagColorTeal   RecordTagColor = "teal"
+	RecordTagColorViolet RecordTagColor = "violet"
 )
 
 // Valid indicates whether the value is a known member of the RecordTagColor enum.
@@ -10457,11 +10473,19 @@ func (e RecordTagColor) Valid() bool {
 	switch e {
 	case RecordTagColorAmber:
 		return true
+	case RecordTagColorLime:
+		return true
+	case RecordTagColorOrange:
+		return true
 	case RecordTagColorRose:
+		return true
+	case RecordTagColorSky:
 		return true
 	case RecordTagColorSlate:
 		return true
 	case RecordTagColorTeal:
+		return true
+	case RecordTagColorViolet:
 		return true
 	default:
 		return false
@@ -10815,10 +10839,14 @@ func (e RetentionScope) Valid() bool {
 
 // Defines values for RowTagColor.
 const (
-	RowTagColorAmber RowTagColor = "amber"
-	RowTagColorRose  RowTagColor = "rose"
-	RowTagColorSlate RowTagColor = "slate"
-	RowTagColorTeal  RowTagColor = "teal"
+	RowTagColorAmber  RowTagColor = "amber"
+	RowTagColorLime   RowTagColor = "lime"
+	RowTagColorOrange RowTagColor = "orange"
+	RowTagColorRose   RowTagColor = "rose"
+	RowTagColorSky    RowTagColor = "sky"
+	RowTagColorSlate  RowTagColor = "slate"
+	RowTagColorTeal   RowTagColor = "teal"
+	RowTagColorViolet RowTagColor = "violet"
 )
 
 // Valid indicates whether the value is a known member of the RowTagColor enum.
@@ -10826,11 +10854,19 @@ func (e RowTagColor) Valid() bool {
 	switch e {
 	case RowTagColorAmber:
 		return true
+	case RowTagColorLime:
+		return true
+	case RowTagColorOrange:
+		return true
 	case RowTagColorRose:
+		return true
+	case RowTagColorSky:
 		return true
 	case RowTagColorSlate:
 		return true
 	case RowTagColorTeal:
+		return true
+	case RowTagColorViolet:
 		return true
 	default:
 		return false
@@ -11976,10 +12012,14 @@ func (e StartBackfillRequestWindow) Valid() bool {
 
 // Defines values for TagColor.
 const (
-	TagColorAmber TagColor = "amber"
-	TagColorRose  TagColor = "rose"
-	TagColorSlate TagColor = "slate"
-	TagColorTeal  TagColor = "teal"
+	TagColorAmber  TagColor = "amber"
+	TagColorLime   TagColor = "lime"
+	TagColorOrange TagColor = "orange"
+	TagColorRose   TagColor = "rose"
+	TagColorSky    TagColor = "sky"
+	TagColorSlate  TagColor = "slate"
+	TagColorTeal   TagColor = "teal"
+	TagColorViolet TagColor = "violet"
 )
 
 // Valid indicates whether the value is a known member of the TagColor enum.
@@ -11987,11 +12027,19 @@ func (e TagColor) Valid() bool {
 	switch e {
 	case TagColorAmber:
 		return true
+	case TagColorLime:
+		return true
+	case TagColorOrange:
+		return true
 	case TagColorRose:
+		return true
+	case TagColorSky:
 		return true
 	case TagColorSlate:
 		return true
 	case TagColorTeal:
+		return true
+	case TagColorViolet:
 		return true
 	default:
 		return false
@@ -12000,10 +12048,14 @@ func (e TagColor) Valid() bool {
 
 // Defines values for TagDetailColor.
 const (
-	Amber TagDetailColor = "amber"
-	Rose  TagDetailColor = "rose"
-	Slate TagDetailColor = "slate"
-	Teal  TagDetailColor = "teal"
+	Amber  TagDetailColor = "amber"
+	Lime   TagDetailColor = "lime"
+	Orange TagDetailColor = "orange"
+	Rose   TagDetailColor = "rose"
+	Sky    TagDetailColor = "sky"
+	Slate  TagDetailColor = "slate"
+	Teal   TagDetailColor = "teal"
+	Violet TagDetailColor = "violet"
 )
 
 // Valid indicates whether the value is a known member of the TagDetailColor enum.
@@ -12011,11 +12063,19 @@ func (e TagDetailColor) Valid() bool {
 	switch e {
 	case Amber:
 		return true
+	case Lime:
+		return true
+	case Orange:
+		return true
 	case Rose:
+		return true
+	case Sky:
 		return true
 	case Slate:
 		return true
 	case Teal:
+		return true
+	case Violet:
 		return true
 	default:
 		return false
@@ -12699,11 +12759,15 @@ func (e UpdateStageRequestSemantic) Valid() bool {
 
 // Defines values for UpdateTagRequestColor.
 const (
-	UpdateTagRequestColorAmber UpdateTagRequestColor = "amber"
-	UpdateTagRequestColorNone  UpdateTagRequestColor = "none"
-	UpdateTagRequestColorRose  UpdateTagRequestColor = "rose"
-	UpdateTagRequestColorSlate UpdateTagRequestColor = "slate"
-	UpdateTagRequestColorTeal  UpdateTagRequestColor = "teal"
+	UpdateTagRequestColorAmber  UpdateTagRequestColor = "amber"
+	UpdateTagRequestColorLime   UpdateTagRequestColor = "lime"
+	UpdateTagRequestColorNone   UpdateTagRequestColor = "none"
+	UpdateTagRequestColorOrange UpdateTagRequestColor = "orange"
+	UpdateTagRequestColorRose   UpdateTagRequestColor = "rose"
+	UpdateTagRequestColorSky    UpdateTagRequestColor = "sky"
+	UpdateTagRequestColorSlate  UpdateTagRequestColor = "slate"
+	UpdateTagRequestColorTeal   UpdateTagRequestColor = "teal"
+	UpdateTagRequestColorViolet UpdateTagRequestColor = "violet"
 )
 
 // Valid indicates whether the value is a known member of the UpdateTagRequestColor enum.
@@ -12711,13 +12775,21 @@ func (e UpdateTagRequestColor) Valid() bool {
 	switch e {
 	case UpdateTagRequestColorAmber:
 		return true
+	case UpdateTagRequestColorLime:
+		return true
 	case UpdateTagRequestColorNone:
 		return true
+	case UpdateTagRequestColorOrange:
+		return true
 	case UpdateTagRequestColorRose:
+		return true
+	case UpdateTagRequestColorSky:
 		return true
 	case UpdateTagRequestColorSlate:
 		return true
 	case UpdateTagRequestColorTeal:
+		return true
+	case UpdateTagRequestColorViolet:
 		return true
 	default:
 		return false
