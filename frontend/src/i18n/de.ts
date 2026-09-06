@@ -2641,6 +2641,36 @@ export const de = {
   "plan.new.save": "Hinzufügen",
   "plan.new.cancel": "Abbrechen",
 
+  "home.weekly.outlook": "Wohin die Woche lief",
+  "home.weekly.outlook.week": "Diese Woche",
+  "home.weekly.outlook.month": "Dieser Monat",
+  "home.weekly.outlook.quarter": "Dieses Quartal",
+  "home.weekly.outlook.none":
+    "Beim Schreiben dieses Rückblicks war keine Prognose eingebunden, daher hält diese Woche kein Ergebnis fest. Das ist etwas anderes als eine Woche, die bei null landete.",
+  "home.weekly.outlook.won": "Gewonnen",
+  "home.weekly.outlook.commit": "Zusage, noch offen",
+  "home.weekly.outlook.bestCase": "Bester Fall (inkl. Zusage)",
+  "home.weekly.outlook.weighted": "Gewichtet",
+  "home.weekly.outlook.landing": "Prognostizierter Abschluss",
+  "home.weekly.outlook.measure.commit_evidence":
+    "Aus dem Commit-Nachweis gelesen",
+  "home.weekly.outlook.measure.weighted":
+    "Aus der gewichteten Pipeline gelesen",
+  "home.weekly.outlook.measure.manager_call":
+    "Aus der Einschätzung der Führungskraft gelesen",
+  "home.weekly.bridge": "Wie die Woche das bewegt hat",
+  "home.weekly.bridge.opening": "Montag",
+  "home.weekly.bridge.closing": "Freitag",
+  "home.weekly.bridge.noOpening":
+    "Für diese Woche gibt es keinen Montags-Stand, also fehlt der Ausgangswert, von dem aus sich etwas bewegt hätte.",
+  "home.weekly.bridge.reconcile":
+    "Diese Balken ergeben zusammen nicht den Endwert. Lesen Sie die beiden Summen, nicht die Schritte.",
+  "home.weekly.bar.created": "Neu entstanden",
+  "home.weekly.bar.advanced": "Vorangekommen",
+  "home.weekly.bar.slipped": "Zurückgefallen",
+  "home.weekly.bar.won": "Gewonnen",
+  "home.weekly.bar.lost": "Verloren",
+  "home.weekly.bar.other": "Kurse und Definitionen",
   "home.weekly.frozen": "Eingefroren",
   "home.weekly.written": "geschrieben {at}",
   "home.weekly.pickWeek": "Andere Woche öffnen",

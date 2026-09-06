@@ -179,7 +179,8 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// team id arrives from the request, and nothing on the row narrows it
 		// to the reader.
 		weeklyHandlers: weekly.NewHandlers(weekly.NewEngine(pool, newTeammatesSeam(pool)).
-			WithPlan(weeklyPlanOutcome{store: weeklyPlanStore(pool)})),
+			WithPlan(weeklyPlanOutcome{store: weeklyPlanStore(pool)}).
+			WithForecast(NewWeeklyForecast(forecasting.NewStore(InstallationDB(pool))))),
 		// ONE spelling of "which Monday": the plan and the review beside it must
 		// be about the same seven days, and weekly owns that answer. A module
 		// may not import compose, so it takes the function.

@@ -324,12 +324,29 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 	args = []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 
-	scope, content, err := activityAudienceGate(ctx, in, arg)
+	// The timeline is DISCOVER-gated: a row reachable through a record the
+	// caller may read is listed, and whether its content comes with it is
+	// the audience's call, answered per row (content_state). The free text
+	// of a limited conversation is blanked by the scan, never selected into
+	// the response.
+	gate := auth.ActivityDiscoverClause
+	if filtersOnContent(in) {
+		// A filter over the subject, the body or the thread key is a READ
+		// of them: a withheld row that matched would tell the caller what it
+		// says through has_more and the page boundary. Such a list is
+		// content-gated, so a limited row is simply not there.
+		gate = auth.ActivityContentClause
+	}
+	scope, err := gate(ctx, "a", arg)
 	if err != nil {
 		return "", nil, "", nil, err
 	}
 	if scope != "" {
 		where = append(where, scope)
+	}
+	content, err = auth.ActivityAudienceArm(ctx, "a", arg)
+	if err != nil {
+		return "", nil, "", nil, err
 	}
 	if !in.IncludeArchived {
 		where = append(where, activityLive)
@@ -372,6 +389,29 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 	if where, err = appendWaitingReplyClause(ctx, in, arg, where); err != nil {
 		return "", nil, "", nil, err
 	}
+	where = append(where, activityRowClauses(in, arg)...)
+	if in.Cursor != nil && *in.Cursor != "" {
+		if in.OpenAndDueBy != nil {
+			return "", nil, "", nil, errOpenAndDueByWithCursor
+		}
+		c, decodeErr := storekit.DecodeCursor(*in.Cursor)
+		if decodeErr != nil {
+			return "", nil, "", nil, decodeErr
+		}
+		where = append(where, sprintf("(a.occurred_at, a.id) < ($%d, $%d)", arg(c.CreatedAt), arg(c.ID)))
+	}
+	return join, where, content, args, nil
+}
+
+// activityRowClauses narrows on columns of the activity row itself: the
+// thread it belongs to, the words in it, when it happened, whether its
+// outcome is still open.
+//
+// None of them consults the caller's scope, so none can fail — which row is
+// in reach was already decided by the gate its caller picked, and these only
+// shrink that set further.
+func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
+	var where []string
 	if in.ThreadKey != nil && *in.ThreadKey != "" {
 		where = append(where, sprintf("a.thread_key = $%d", arg(*in.ThreadKey)))
 	}
@@ -393,54 +433,7 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 		// and excluding it would empty this question on a connected calendar.
 		where = append(where, "(a.meeting_status IS NULL OR a.meeting_status = 'booked')")
 	}
-	if where, err = appendCursorClause(in, arg, where); err != nil {
-		return "", nil, "", nil, err
-	}
-	return join, where, content, args, nil
-}
-
-// activityAudienceGate answers what this caller may see before the list asks
-// for anything: the row gate, and the per-row test the SELECT projects as
-// content_state.
-//
-// The timeline is DISCOVER-gated: a row reachable through a record the caller
-// may read is listed, and whether its content comes with it is the audience's
-// call, answered per row. The free text of a limited conversation is blanked
-// by the scan, never selected into the response.
-func activityAudienceGate(
-	ctx context.Context, in ListActivitiesInput, arg func(any) int,
-) (scope, content string, err error) {
-	gate := auth.ActivityDiscoverClause
-	if filtersOnContent(in) {
-		// A filter over the subject, the body or the thread key is a READ
-		// of them: a withheld row that matched would tell the caller what it
-		// says through has_more and the page boundary. Such a list is
-		// content-gated, so a limited row is simply not there.
-		gate = auth.ActivityContentClause
-	}
-	if scope, err = gate(ctx, "a", arg); err != nil {
-		return "", "", err
-	}
-	if content, err = auth.ActivityAudienceArm(ctx, "a", arg); err != nil {
-		return "", "", err
-	}
-	return scope, content, nil
-}
-
-// appendCursorClause narrows the page to what follows the caller's cursor,
-// keyed on the same (occurred_at, id) pair the list orders by.
-func appendCursorClause(in ListActivitiesInput, arg func(any) int, where []string) ([]string, error) {
-	if in.Cursor == nil || *in.Cursor == "" {
-		return where, nil
-	}
-	if in.OpenAndDueBy != nil {
-		return nil, errOpenAndDueByWithCursor
-	}
-	c, err := storekit.DecodeCursor(*in.Cursor)
-	if err != nil {
-		return nil, err
-	}
-	return append(where, sprintf("(a.occurred_at, a.id) < ($%d, $%d)", arg(c.CreatedAt), arg(c.ID))), nil
+	return where
 }
 
 // filtersOnContent reports whether the list narrows on fields a withheld row
