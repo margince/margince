@@ -174,16 +174,27 @@ Consequences:
   queue closes it: the docs-only entry is gated against the full tree it is
   merging into.
 - A **Dockerfile-only PR** (the root `Dockerfile`, `.dockerignore`,
-  `docker-bake.hcl`) also matches no scope, and **nothing else builds the role
-  images either**. `ci.yml` dropped its `docker images (api + web + worker)` job
-  on the reasoning that `release.yml` baked the images on every push to `main`,
-  so a break surfaced within a commit. That reasoning expired when `release.yml`
-  became dispatch-only: the images are now built only when somebody cuts a
-  release, so a broken `Dockerfile` can sit on `main` indefinitely and the person
-  who finds it is whoever tries to release next. Stated plainly because it is a
-  real regression in coverage, not a trade that still balances — restoring a
-  build-only, push-nothing image job scoped to those three paths is
-  https://github.com/margince/margince/issues/1965.
+  `docker-bake.hcl`) matches the `images` scope and runs the **`images (build
+  only)`** job: a `docker buildx bake` of the default group — the three roles —
+  that pushes nothing. No registry credentials, no digest, no release side
+  effect. It answers "does it still build", which for a while nothing asked.
+
+  That gap was real and is worth remembering. `ci.yml` dropped its `docker
+  images (api + web + worker)` job on the reasoning that `release.yml` baked on
+  every push to `main`, so a break surfaced within a commit of landing. The
+  reasoning expired when `release.yml` became dispatch-only — right on its own
+  terms, to stop ~400 release runs a week competing for the org-wide runner
+  ceiling, and it removed the net the earlier trade depended on. Between the two
+  changes the first person to notice a broken image was whoever cut the next
+  release, with the offending commit arbitrarily far back.
+
+  **The scope is those three paths and not `backend/**` or `frontend/**`**, and
+  that is a deliberate trade rather than an oversight. The images copy build
+  output, so a source change *can* break one without touching any of the three —
+  but a three-role bake on every backend PR is most of the cost the release
+  cleanup was removing, and the compile that catches nearly all of that class
+  already runs in `deterministic-gates`. What is left uncovered is a source
+  change that builds and then fails to package, which the release still finds.
 - A **backend-only PR** skips the frontend + UAT lanes; a **frontend-only PR**
   skips the Go build/gate + the integration lane — except for
   `frontend/src/mcp-apps/forbidden.json`, which is authored under `frontend/`

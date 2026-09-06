@@ -100,6 +100,14 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend == 'true' || github.event_name == 'merge_group' }}
       e2e: ${{ steps.filter.outputs.e2e == 'true' || github.event_name == 'merge_group' }}
       deps: ${{ steps.filter.outputs.deps == 'true' || github.event_name == 'merge_group' }}
+      # The three paths that decide what the role images ARE. Deliberately not
+      # backend/** or frontend/**: the images copy build output, so a source
+      # change can break one without touching these — but a three-role bake on
+      # every backend PR is most of the cost the release-trigger cleanup was
+      # removing, and the compile that would catch nearly all of it already runs
+      # in deterministic-gates. The trade is written down in infra/ci-pipeline.md
+      # rather than left to be inferred from this filter.
+      images: ${{ steps.filter.outputs.images == 'true' || github.event_name == 'merge_group' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -252,6 +260,10 @@ jobs:
             # /pnpm-lock.yaml now, which `**/` still matches because it matches
             # zero segments, so this keeps firing and needs no edit next time the
             # workspace moves.
+            images:
+              - 'Dockerfile'
+              - '.dockerignore'
+              - 'docker-bake.hcl'
             deps:
               - 'go.work'
               - 'go.work.sum'
@@ -1057,6 +1069,49 @@ jobs:
   # three under a gate that blocks.
   # Promote them once the queue has a measured baseline, as their own change, so a
   # regression has one explanation.
+  # The role images BUILD on a PR that changes what they are.
+  #
+  # Nothing built them between two correct changes. ci.yml's old
+  # `docker images` job was removed because release.yml baked on every push to
+  # main, so that build was the de-facto gate and a break surfaced within a
+  # commit of landing — a Dockerfile-only PR matching no scope was an accepted
+  # trade against that net. release.yml then became dispatch-only, to stop ~400
+  # release runs a week competing for the org-wide runner ceiling. Right on its
+  # own terms, and it removed the net the trade depended on: the first person to
+  # notice a broken image became whoever cut the next release, with the offending
+  # commit arbitrarily far back.
+  #
+  # BUILD ONLY, PUSH NOTHING. No registry credentials, no digest, no release side
+  # effect — this answers "does it still build", which is the question that went
+  # unasked. Through docker-bake.hcl so the PR exercises the same definition the
+  # release does; a second spelling here would be a gate that passes while the
+  # release breaks.
+  #
+  # Gated at the JOB level like every other lane, so a path skip reports as
+  # passing rather than producing no check run — the same trap the license gate
+  # above is written to avoid.
+  images:
+    name: images (build only)
+    timeout-minutes: 30
+    needs: [changes]
+    if: >-
+      needs.changes.outputs.images == 'true'
+      && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The default group is the three roles. No --push and no --set that names
+      # a registry: the images stay in the runner's builder and go nowhere.
+      - name: Build the role images
+        run: docker buildx bake -f docker-bake.hcl default
+
   ci:
     name: ci
     timeout-minutes: 10
@@ -1073,6 +1128,7 @@ jobs:
       - integration
       - frontend
       - license-gate
+      - images
     runs-on: ubuntu-latest
     permissions:
       contents: read
