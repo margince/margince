@@ -13,7 +13,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { installFetchStub, jsonResponse, type RouteMap } from "../story-utils";
+import { jsonResponse, type RouteMap, stubWithSession } from "../story-utils";
 import { CompanyAct } from "./company-act";
 import type { ConversationState } from "./conversation-machine";
 import { initialConversationState } from "./conversation-machine";
@@ -113,12 +113,22 @@ const REVIEW_STATE: ConversationState = {
 };
 
 function renderReview(routes: RouteMap): void {
-  installFetchStub({
-    [`GET /company/site-reads/${READ_ID}`]: () => jsonResponse(READ),
-    "GET /onboarding/company/proposal": () =>
-      jsonResponse(proposal("proposal-1")),
-    ...routes,
-  });
+  // Every stub in this file routes the session probe, because this act mounts
+  // capability-aware chrome and story-utils refuses to guess a session: an
+  // unrouted GET /me answers 501, every grant fails closed, and the surface
+  // draws a branch no assertion here is about — late enough under load to change
+  // the verdict. The grants are empty on purpose: this is onboarding, before any
+  // of them are held.
+
+  stubWithSession(
+    {
+      [`GET /company/site-reads/${READ_ID}`]: () => jsonResponse(READ),
+      "GET /onboarding/company/proposal": () =>
+        jsonResponse(proposal("proposal-1")),
+      ...routes,
+    },
+    {},
+  );
   render(
     <QueryClientProvider
       client={

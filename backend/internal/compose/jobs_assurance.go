@@ -42,12 +42,10 @@ type AssuranceSweepArgs struct{}
 // Kind is the stable job identifier River persists in river_job.
 func (AssuranceSweepArgs) Kind() string { return "assurance_sweep" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues, and does no
-// tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (AssuranceSweepArgs) FleetWide() {}
 
-// assuranceSweepWorker is the dispatcher: it enumerates and enqueues, and
-// touches no tenant data itself.
 // assuranceSweepWorker checks every live tenant's forecast inputs.
 //
 // One worker where there were two (ADR-0103).

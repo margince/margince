@@ -213,10 +213,19 @@ func linkCapturedCohort(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (
 		   AND NOT EXISTS (
 		       SELECT 1 FROM activity_link l
 		        WHERE l.activity_id = a.id AND l.person_id IS NOT NULL)
+		   -- The same ceiling its sibling arm applies, and for the same reason.
+		   -- This arm guarded only on "no person link exists", so a message
+		   -- already filed under twenty-five organizations, deals or projects
+		   -- took a twenty-sixth here: which ceiling held depended on which arm
+		   -- ran. The trigger now refuses the row either way; this keeps the
+		   -- sweep SKIPPING an over-full message rather than aborting its batch
+		   -- on one.
+		   AND (SELECT count(*) FROM activity_link cap
+		         WHERE cap.activity_id = a.id) < $3
 		 ORDER BY a.occurred_at DESC, a.id
 		 LIMIT $2
 		ON CONFLICT DO NOTHING
-		RETURNING activity_id`, personID, cohortRepairBatch)
+		RETURNING activity_id`, personID, cohortRepairBatch, maxMeetingLinksPerActivity)
 	if err != nil {
 		return nil, fmt.Errorf("people: linking a person's captured cohort: %w", err)
 	}
@@ -273,6 +282,12 @@ func (s *Store) PeopleOwedACohortRepair(ctx context.Context, limit int) ([]ids.P
 				   AND NOT EXISTS (
 				       SELECT 1 FROM activity_link l
 				        WHERE l.activity_id = a.id AND l.person_id IS NOT NULL)
+				   -- The write's own ceiling, asked here too. The comment below
+				   -- says why the two must agree: a row the write refuses and
+				   -- the scan keeps offering is a person the sweep returns to
+				   -- forever, reporting a backlog it can never drain.
+				   AND (SELECT count(*) FROM activity_link cap
+				         WHERE cap.activity_id = a.id) < $2
 				UNION
 				-- Meetings this contact attended but is not filed under. A
 				-- separate arm because the one above finds work by

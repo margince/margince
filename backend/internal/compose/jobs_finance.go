@@ -39,8 +39,8 @@ type FinanceSyncSweepArgs struct{}
 // Kind is the stable job identifier River persists in river_job.
 func (FinanceSyncSweepArgs) Kind() string { return "finance_sync_sweep" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues, and does no
-// tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (FinanceSyncSweepArgs) FleetWide() {}
 
 // financeSyncSweepWorker mirrors every live workspace's accounting source.

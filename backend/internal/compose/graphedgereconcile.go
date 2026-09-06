@@ -39,8 +39,8 @@ type GraphEdgeReconcileArgs struct{}
 // Kind is the River job kind for the interaction-projection reconcile.
 func (GraphEdgeReconcileArgs) Kind() string { return "graph_edge_reconcile" }
 
-// FleetWide marks this a dispatcher: it enumerates and enqueues,
-// and does no tenant work of its own (jobs.FleetWide).
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (GraphEdgeReconcileArgs) FleetWide() {}
 
 // graphEdgeReconcileWorker rebuilds the projection for every workspace.

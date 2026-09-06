@@ -72,6 +72,12 @@ type TeamReview struct {
 	// is the claim that every member's week was counted.
 	RepsUnread int
 	Reps       []TeamRep
+
+	// Outlook is where the team's week was landing, per horizon, frozen at
+	// close. EMPTY when no forecast was composed — which is not the same as a
+	// team that landed on nothing, so a reader says "no forecast" rather than
+	// drawing zeros.
+	Outlook []Outlook
 }
 
 // TeamCounts are the team's totals over its member weeks.
@@ -143,7 +149,57 @@ func (e *Engine) AssembleTeamFor(
 			return nil
 		}
 		review.ID = id
-		return insertTeamReps(ctx, tx, id, review.Reps)
+		if err := insertTeamReps(ctx, tx, id, review.Reps); err != nil {
+			return err
+		}
+		// Where the team's week was landing, frozen in the same transaction as
+		// the counts. Split across two, a snapshot could exist with no outlook
+		// and no way to tell that from an installation that forecasts nothing.
+		//
+		// Only on the branch that WROTE the snapshot: the loser of the insert
+		// race returned above, and freezing an outlook onto somebody else's row
+		// would give it two.
+		if e.forecast == nil {
+			// No forecast composed. The team's week stands without one.
+			return nil
+		}
+		start, end, err := localWeekWindow(ctx, tx, week)
+		if err != nil {
+			return err
+		}
+		// A REFUSED LANDING COSTS THE LANDING, NOT THE WEEK.
+		//
+		// forecasting's scope authority refuses ScopeTeam to a caller who is
+		// not in the team, and that refusal arrives here — inside the
+		// transaction that has already written the snapshot, its reps and their
+		// focus lines. Letting it escape rolls all of that back, so a lead
+		// whose row scope is narrower than the team they are snapshotting loses
+		// the whole retrospective rather than just its outlook.
+		//
+		// Held by: TestARefusedTeamOutlookStillLeavesTheWeekWritten
+		// (backend/internal/compose/integration/teamoutlook_integration_test.go)
+		//
+		// Only a REFUSAL is absorbed. A broken query or a dead connection is
+		// not a statement about this caller's reach and still fails the week,
+		// because a snapshot silently missing its landing for a reason nobody
+		// recorded is worse than one that did not get written.
+		outlooks, _, _, err := e.forecast.CloseTeamWeek(ctx, tx, teamID, start, end)
+		switch {
+		case errors.Is(err, apperrors.ErrNotFound),
+			errors.Is(err, apperrors.ErrPermissionDenied):
+			return nil
+		case err != nil:
+			return err
+		}
+		for _, outlook := range outlooks {
+			if err := insertOutlookInto(ctx, tx, teamOutlook, id, outlook); err != nil {
+				return err
+			}
+		}
+		// Carried on the returned value as well as written, so the caller that
+		// just assembled a week reads the same thing a later reader will.
+		review.Outlook = outlooks
+		return nil
 	})
 	if err != nil {
 		return TeamReview{}, false, err
