@@ -215,10 +215,10 @@ func TestTheArt50DisclosureIsWrittenInEachLanguageTheProductSpeaks(t *testing.T)
 	}
 	for _, lang := range []textlang.Lang{textlang.German, textlang.Vietnamese} {
 		got := AIDisclosure(lang)
-		switch {
-		case got == "":
+		switch got {
+		case "":
 			t.Errorf("%s has no disclosure", lang)
-		case got == english:
+		case english:
 			t.Errorf("%s falls through to the English disclosure — a reader owed this sentence "+
 				"under Art. 50 is handed one they may not read", lang)
 		}

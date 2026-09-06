@@ -63,7 +63,6 @@ gates/preferencecentrewriters_test.go#func TestThePreferenceCentreResolvesOnePri
 gates/replayscope_test.go#var replayScopeConsts
 gates/restrictedreaders_test.go#var activityReaderScope
 gates/tableownerregistry_test.go#var tableOwners
-internal/compose/accountdraft/service.go#const aiDisclosure
 internal/compose/agentcommand.go#const block at const opApproveApproval
 internal/compose/agentcommand_integration_test.go#func archivableRecordTypes
 internal/compose/agentgatecanon.go#const keyBindsTheRetry
@@ -221,7 +220,6 @@ internal/compose/person360/sectionstimeline.go#func projectScope
 internal/compose/personbrief/doc.go#package personbrief
 internal/compose/persondraft/deterministic.go#type Draft
 internal/compose/persondraft/fold.go#func ConversationState
-internal/compose/persondraft/service.go#const aiDisclosure
 internal/compose/pipelinetrace/rungs.go#func unavailable
 internal/compose/project360/sectionswork.go#var entityTypeProject
 internal/compose/queryseam.go#func queryRunner
