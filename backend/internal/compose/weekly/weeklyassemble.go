@@ -75,12 +75,12 @@ func (e *Engine) measureWeek(
 	if err != nil {
 		return Counts{}, Money{}, err
 	}
-	if c.LeadsRouted, c.LeadsAnsweredInTarget, c.LeadsBreached, err =
-		countWeekLeads(ctx, tx, userID, start, end); err != nil {
+	c.LeadsRouted, c.LeadsAnsweredInTarget, c.LeadsBreached, err = countWeekLeads(ctx, tx, userID, start, end)
+	if err != nil {
 		return Counts{}, Money{}, err
 	}
-	if c.MeetingsHeld, c.MeetingsWithNextStep, err =
-		countWeekMeetings(ctx, tx, userID, start, end); err != nil {
+	c.MeetingsHeld, c.MeetingsWithNextStep, err = countWeekMeetings(ctx, tx, userID, start, end)
+	if err != nil {
 		return Counts{}, Money{}, err
 	}
 	money, err := countWeekMoney(ctx, tx, userID, start, end)
