@@ -307,6 +307,13 @@ function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
 // change them. A bounced send names the address that refused it and sends the
 // reader here; a form that omitted the field left that reader at a page which
 // reported the failure and could not fix it.
+//
+// Moving the primary marker between two addresses of the SAME type is refused
+// by the server with a bare 409 today. Not a limit of this form and not
+// introduced here — the same PATCH has answered that way since the field
+// existed — but the primary radio is the first control that reaches it, so the
+// conflict is shown rather than swallowed. Correcting an address, adding one
+// and removing one all work.
 function personEditFields(t: ReturnType<typeof useT>): CreateField[] {
   return contactCreateFields(t);
 }
@@ -618,6 +625,17 @@ function PersonActionBadges({
           t("record.saveDone", { name: saved.full_name })
         }
         notice={overlay ? t("overlay.partialWriteBack") : undefined}
+        // An address is unique among LIVE rows across the workspace
+        // (uq_person_email_dedupe), so a correction can now collide with the
+        // contact that already holds it — 409 `duplicate_email`, naming that
+        // record. Create has always offered the way there; edit could not
+        // collide until it carried the address field, and a conflict the
+        // reader cannot follow is a dead end on the one screen that fixes
+        // addresses.
+        resolveExisting={(_code, existingId) => ({
+          screen: "contacts",
+          id: existingId,
+        })}
         fields={[...personEditFields(t), ...cf.formFields]}
         record={{
           id: person.id,

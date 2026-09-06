@@ -578,6 +578,92 @@ describe("PersonScreen — correcting an address that refused a send", () => {
     ]);
   });
 
+  it("offers the way to the contact already holding a corrected address", async () => {
+    // An address names exactly one live record (uq_person_email_dedupe), so a
+    // correction can land on one somebody else already holds. Create has always
+    // offered this route; edit could not collide until it carried the field.
+    stubFetch(async (url, method) => {
+      if (method === "PATCH") {
+        return jsonResponse(
+          {
+            type: "about:blank",
+            title: "Conflict",
+            status: 409,
+            code: "duplicate_email",
+            detail: "a live record with this key already exists",
+            details: { existing_id: "p-2" },
+          },
+          409,
+        );
+      }
+      if (url.includes("/activities")) {
+        return jsonResponse({ data: [] });
+      }
+      return jsonResponse(anna);
+    });
+    render(<PersonScreen id="p-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
+    await userEvent.click(screen.getByTestId("edit-record"));
+    const address = await screen.findByDisplayValue(
+      "anna.weber@brandt.example",
+    );
+    await userEvent.clear(address);
+    await userEvent.type(address, "someone.else@brandt.example");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    // Without the route the reader is told the address is taken and left with
+    // no way to see by whom, on the one screen that exists to fix addresses.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "View existing record" }),
+      ).toBeTruthy(),
+    );
+  });
+
+  it("shows the refusal when the server declines a primary swap", async () => {
+    // Moving the primary marker between two same-type addresses is refused by
+    // the writer today (it promotes before it demotes, and the unique index
+    // sees two live primaries). Not this form's bug and not introduced here,
+    // but the primary radio is the first control that reaches it — so the
+    // reader must be told the save did not land, never left looking at a
+    // dialog that closed as though it had.
+    stubFetch(async (url, method) => {
+      if (method === "PATCH") {
+        return jsonResponse(
+          {
+            type: "about:blank",
+            title: "Conflict",
+            status: 409,
+            code: "conflict",
+            detail: "conflict",
+          },
+          409,
+        );
+      }
+      if (url.includes("/activities")) {
+        return jsonResponse({ data: [] });
+      }
+      return jsonResponse(anna);
+    });
+    render(<PersonScreen id="p-1" />);
+
+    await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
+    await userEvent.click(screen.getByTestId("edit-record"));
+    const address = await screen.findByDisplayValue(
+      "anna.weber@brandt.example",
+    );
+    await userEvent.clear(address);
+    await userEvent.type(address, "anna.weber@brandt.de");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    // The form stays open with the reader's entry in it. A dialog that closed
+    // here would report a correction the record never took.
+    await waitFor(() =>
+      expect(screen.getByDisplayValue("anna.weber@brandt.de")).toBeTruthy(),
+    );
+  });
+
   it("sends an empty set when the reader removes the last address", async () => {
     const sent: Record<string, unknown>[] = [];
     stubFetch(async (url, method, request) => {
