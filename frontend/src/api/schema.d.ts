@@ -29091,6 +29091,89 @@ export interface components {
             focus_label: string;
         };
         /**
+         * @description One week's judgement of one rep's work, frozen with the review. Both blocks are optional
+         *     and each is absent when the rep had no such work that week.
+         */
+        WeeklyReviewScorecard: {
+            /**
+             * @description The funnel slice. ABSENT when the rep carried no lead at all — which is a different
+             *     fact from a rep with forty untouched leads, who gets a present block of zeros.
+             */
+            lead?: components["schemas"]["WeeklyScorecardLeadBlock"];
+            /**
+             * @description The pipeline slice. ABSENT when the rep had no open deal and no stage change in the
+             *     window — nothing to judge.
+             */
+            deal?: components["schemas"]["WeeklyScorecardDealBlock"];
+        };
+        /** @description How the rep's leads moved, and whether the meetings behind them happened. */
+        WeeklyScorecardLeadBlock: {
+            /**
+             * @description Status transitions UP the open ladder inside the week. Counted per transition, so a
+             *     lead that went new to contacted to engaged counts twice — the lead's own row records
+             *     only where it ended and could report at most one of them.
+             */
+            advanced: number;
+            disqualified: number;
+            promoted: number;
+            /** @description Leads that arrived this week and were answered without breaching the SLA. */
+            answered_in_target: number;
+            breached: number;
+            /**
+             * @description Meetings that BECAME booked this week, read from the meeting's transition history and
+             *     never from its current status. A meeting booked Monday and held Friday counts in both
+             *     this and `meetings_held`, which is what a funnel means; counting the current column
+             *     would report no bookings at all for the week it was booked in.
+             */
+            meetings_booked: number;
+            meetings_held: number;
+            meetings_no_show: number;
+            /**
+             * @description Meetings whose only history row was invented from their current state when the history
+             *     table was introduced. They cannot say when they were booked, so they are reported as
+             *     partial coverage rather than counted. A non-zero value means the three counts above
+             *     are a floor, and a reader should say so.
+             */
+            meetings_partial_history: number;
+        };
+        /** @description Whether deals moved forward, and whether they are in a state anybody could work. */
+        WeeklyScorecardDealBlock: {
+            /**
+             * @description Moves to a LATER stage of the same pipeline, by stage position. A deal that crossed
+             *     pipelines has no comparable position and counts as neither direction.
+             */
+            advances: number;
+            regressions: number;
+            /**
+             * @description Median whole days a deal sat in the stage it left this week. NULL when no deal changed
+             *     stage: a median of nothing is absent, never zero.
+             */
+            median_days_in_stage?: number | null;
+            /** @description Open deals carrying an open task. A count beside `open`, never a rate. */
+            with_next_step: number;
+            /**
+             * @description The denominator the three coverage counts are read against. Published so a reader can
+             *     judge "3 of 5" rather than trust a percentage that cannot be told from 300 of 500.
+             */
+            open: number;
+            /**
+             * @description Open deals with at least two distinct people in the last 30 days. Thirty rather than
+             *     the review's own week: the risk measured is the single point of failure, and a deal
+             *     worked steadily for a month is multi-threaded whether or not the second person
+             *     happened to appear in these seven days.
+             */
+            multi_threaded: number;
+            /** @description Open deals whose close date is set, not provisional, and not in the past. */
+            close_date_sound: number;
+            /**
+             * @description Deals whose forecast category ended the week higher than it started. Counted ONCE per
+             *     deal however many times it was edited — a rep who corrected a typo three times did not
+             *     upgrade three times.
+             */
+            forecast_up: number;
+            forecast_down: number;
+        };
+        /**
          * @description One rep's week, as it was measured when the week closed. Every count is as-of `as_of`,
          *     which is why they are stored rather than recomputed.
          */
@@ -29156,6 +29239,16 @@ export interface components {
              *     days back.
              */
             prior?: components["schemas"]["WeeklyReviewPrior"];
+            /**
+             * @description How WELL the week went, as against what happened in it — the counts beside this say
+             *     forty leads arrived, this says twelve were answered inside the target.
+             *
+             *     ABSENT on a review written before scorecards existed. Each of its two blocks is
+             *     independently absent too, and absent is NOT zero: a rep who carried no leads did not
+             *     score zero on the funnel, and a reader must draw nothing rather than a row of zeros
+             *     that reads as failure at something nobody asked of them.
+             */
+            scorecard?: components["schemas"]["WeeklyReviewScorecard"];
             /**
              * @description Where the week was landing, one entry per horizon — the week itself, the month, and
              *     the fiscal quarter, because a rep asks three different questions on a Monday.

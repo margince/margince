@@ -38871,6 +38871,119 @@ components:
             The focus in words, composed from the stored figures — never model-written, so it
             cannot say something the snapshot does not hold.
 
+    WeeklyReviewScorecard:
+      type: object
+      additionalProperties: false
+      description: |
+        One week's judgement of one rep's work, frozen with the review. Both blocks are optional
+        and each is absent when the rep had no such work that week.
+      properties:
+        lead:
+          description: |
+            The funnel slice. ABSENT when the rep carried no lead at all — which is a different
+            fact from a rep with forty untouched leads, who gets a present block of zeros.
+          allOf: [{ $ref: '#/components/schemas/WeeklyScorecardLeadBlock' }]
+        deal:
+          description: |
+            The pipeline slice. ABSENT when the rep had no open deal and no stage change in the
+            window — nothing to judge.
+          allOf: [{ $ref: '#/components/schemas/WeeklyScorecardDealBlock' }]
+
+    WeeklyScorecardLeadBlock:
+      type: object
+      additionalProperties: false
+      description: |
+        How the rep's leads moved, and whether the meetings behind them happened.
+      required:
+        [advanced, disqualified, promoted, answered_in_target, breached,
+         meetings_booked, meetings_held, meetings_no_show, meetings_partial_history]
+      properties:
+        advanced:
+          type: integer
+          minimum: 0
+          description: |
+            Status transitions UP the open ladder inside the week. Counted per transition, so a
+            lead that went new to contacted to engaged counts twice — the lead's own row records
+            only where it ended and could report at most one of them.
+        disqualified: { type: integer, minimum: 0 }
+        promoted: { type: integer, minimum: 0 }
+        answered_in_target:
+          type: integer
+          minimum: 0
+          description: Leads that arrived this week and were answered without breaching the SLA.
+        breached: { type: integer, minimum: 0 }
+        meetings_booked:
+          type: integer
+          minimum: 0
+          description: |
+            Meetings that BECAME booked this week, read from the meeting's transition history and
+            never from its current status. A meeting booked Monday and held Friday counts in both
+            this and `meetings_held`, which is what a funnel means; counting the current column
+            would report no bookings at all for the week it was booked in.
+        meetings_held: { type: integer, minimum: 0 }
+        meetings_no_show: { type: integer, minimum: 0 }
+        meetings_partial_history:
+          type: integer
+          minimum: 0
+          description: |
+            Meetings whose only history row was invented from their current state when the history
+            table was introduced. They cannot say when they were booked, so they are reported as
+            partial coverage rather than counted. A non-zero value means the three counts above
+            are a floor, and a reader should say so.
+
+    WeeklyScorecardDealBlock:
+      type: object
+      additionalProperties: false
+      description: |
+        Whether deals moved forward, and whether they are in a state anybody could work.
+      required:
+        [advances, regressions, with_next_step, open, multi_threaded,
+         close_date_sound, forecast_up, forecast_down]
+      properties:
+        advances:
+          type: integer
+          minimum: 0
+          description: |
+            Moves to a LATER stage of the same pipeline, by stage position. A deal that crossed
+            pipelines has no comparable position and counts as neither direction.
+        regressions: { type: integer, minimum: 0 }
+        median_days_in_stage:
+          type: [integer, 'null']
+          minimum: 0
+          description: |
+            Median whole days a deal sat in the stage it left this week. NULL when no deal changed
+            stage: a median of nothing is absent, never zero.
+        with_next_step:
+          type: integer
+          minimum: 0
+          description: Open deals carrying an open task. A count beside `open`, never a rate.
+        open:
+          type: integer
+          minimum: 0
+          description: |
+            The denominator the three coverage counts are read against. Published so a reader can
+            judge "3 of 5" rather than trust a percentage that cannot be told from 300 of 500.
+        multi_threaded:
+          type: integer
+          minimum: 0
+          description: |
+            Open deals with at least two distinct people in the last 30 days. Thirty rather than
+            the review's own week: the risk measured is the single point of failure, and a deal
+            worked steadily for a month is multi-threaded whether or not the second person
+            happened to appear in these seven days.
+        close_date_sound:
+          type: integer
+          minimum: 0
+          description: Open deals whose close date is set, not provisional, and not in the past.
+        forecast_up:
+          type: integer
+          minimum: 0
+          description: |
+            Deals whose forecast category ended the week higher than it started. Counted ONCE per
+            deal however many times it was edited — a rep who corrected a typo three times did not
+            upgrade three times.
+        forecast_down: { type: integer, minimum: 0 }
+
     WeeklyReview:
       type: object
       additionalProperties: false
@@ -38931,6 +39044,16 @@ components:
             review rather than "last week" — a rep with a gap has a previous week that is not seven
             days back.
           allOf: [{ $ref: '#/components/schemas/WeeklyReviewPrior' }]
+        scorecard:
+          description: |
+            How WELL the week went, as against what happened in it — the counts beside this say
+            forty leads arrived, this says twelve were answered inside the target.
+
+            ABSENT on a review written before scorecards existed. Each of its two blocks is
+            independently absent too, and absent is NOT zero: a rep who carried no leads did not
+            score zero on the funnel, and a reader must draw nothing rather than a row of zeros
+            that reads as failure at something nobody asked of them.
+          allOf: [{ $ref: '#/components/schemas/WeeklyReviewScorecard' }]
         outlook:
           type: array
           items: { $ref: '#/components/schemas/WeeklyReviewOutlook' }

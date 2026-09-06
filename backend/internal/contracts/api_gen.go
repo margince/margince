@@ -34136,6 +34136,15 @@ type WeeklyReview struct {
 	// review rather than "last week" — a rep with a gap has a previous week that is not seven
 	// days back.
 	Prior *WeeklyReviewPrior `json:"prior,omitempty"`
+
+	// Scorecard How WELL the week went, as against what happened in it — the counts beside this say
+	// forty leads arrived, this says twelve were answered inside the target.
+	//
+	// ABSENT on a review written before scorecards existed. Each of its two blocks is
+	// independently absent too, and absent is NOT zero: a rep who carried no leads did not
+	// score zero on the funnel, and a reader must draw nothing rather than a row of zeros
+	// that reads as failure at something nobody asked of them.
+	Scorecard *WeeklyReviewScorecard `json:"scorecard,omitempty"`
 }
 
 // WeeklyReviewCounts defines model for WeeklyReviewCounts.
@@ -34357,6 +34366,80 @@ type WeeklyReviewPrior struct {
 
 	// Pipeline Absent under the same rule as the current week's.
 	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
+}
+
+// WeeklyReviewScorecard One week's judgement of one rep's work, frozen with the review. Both blocks are optional
+// and each is absent when the rep had no such work that week.
+type WeeklyReviewScorecard struct {
+	// Deal The pipeline slice. ABSENT when the rep had no open deal and no stage change in the
+	// window — nothing to judge.
+	Deal *WeeklyScorecardDealBlock `json:"deal,omitempty"`
+
+	// Lead The funnel slice. ABSENT when the rep carried no lead at all — which is a different
+	// fact from a rep with forty untouched leads, who gets a present block of zeros.
+	Lead *WeeklyScorecardLeadBlock `json:"lead,omitempty"`
+}
+
+// WeeklyScorecardDealBlock Whether deals moved forward, and whether they are in a state anybody could work.
+type WeeklyScorecardDealBlock struct {
+	// Advances Moves to a LATER stage of the same pipeline, by stage position. A deal that crossed
+	// pipelines has no comparable position and counts as neither direction.
+	Advances int `json:"advances"`
+
+	// CloseDateSound Open deals whose close date is set, not provisional, and not in the past.
+	CloseDateSound int `json:"close_date_sound"`
+	ForecastDown   int `json:"forecast_down"`
+
+	// ForecastUp Deals whose forecast category ended the week higher than it started. Counted ONCE per
+	// deal however many times it was edited — a rep who corrected a typo three times did not
+	// upgrade three times.
+	ForecastUp int `json:"forecast_up"`
+
+	// MedianDaysInStage Median whole days a deal sat in the stage it left this week. NULL when no deal changed
+	// stage: a median of nothing is absent, never zero.
+	MedianDaysInStage *int `json:"median_days_in_stage,omitempty"`
+
+	// MultiThreaded Open deals with at least two distinct people in the last 30 days. Thirty rather than
+	// the review's own week: the risk measured is the single point of failure, and a deal
+	// worked steadily for a month is multi-threaded whether or not the second person
+	// happened to appear in these seven days.
+	MultiThreaded int `json:"multi_threaded"`
+
+	// Open The denominator the three coverage counts are read against. Published so a reader can
+	// judge "3 of 5" rather than trust a percentage that cannot be told from 300 of 500.
+	Open        int `json:"open"`
+	Regressions int `json:"regressions"`
+
+	// WithNextStep Open deals carrying an open task. A count beside `open`, never a rate.
+	WithNextStep int `json:"with_next_step"`
+}
+
+// WeeklyScorecardLeadBlock How the rep's leads moved, and whether the meetings behind them happened.
+type WeeklyScorecardLeadBlock struct {
+	// Advanced Status transitions UP the open ladder inside the week. Counted per transition, so a
+	// lead that went new to contacted to engaged counts twice — the lead's own row records
+	// only where it ended and could report at most one of them.
+	Advanced int `json:"advanced"`
+
+	// AnsweredInTarget Leads that arrived this week and were answered without breaching the SLA.
+	AnsweredInTarget int `json:"answered_in_target"`
+	Breached         int `json:"breached"`
+	Disqualified     int `json:"disqualified"`
+
+	// MeetingsBooked Meetings that BECAME booked this week, read from the meeting's transition history and
+	// never from its current status. A meeting booked Monday and held Friday counts in both
+	// this and `meetings_held`, which is what a funnel means; counting the current column
+	// would report no bookings at all for the week it was booked in.
+	MeetingsBooked int `json:"meetings_booked"`
+	MeetingsHeld   int `json:"meetings_held"`
+	MeetingsNoShow int `json:"meetings_no_show"`
+
+	// MeetingsPartialHistory Meetings whose only history row was invented from their current state when the history
+	// table was introduced. They cannot say when they were booked, so they are reported as
+	// partial coverage rather than counted. A non-zero value means the three counts above
+	// are a floor, and a reader should say so.
+	MeetingsPartialHistory int `json:"meetings_partial_history"`
+	Promoted               int `json:"promoted"`
 }
 
 // Worklist The rep's day, ranked. One list rather than fourteen lanes, because a reader

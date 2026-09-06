@@ -2478,6 +2478,31 @@ export const vi = {
   "home.pipelineUnavailable": "Không tải được số liệu này.",
   "home.panel.weekly": "Tuần trước",
   "home.weekly.weekOf": "Tuần từ {day}",
+  "home.weekly.scorecard.title": "Tuần vừa qua thế nào",
+  "home.weekly.scorecard.leadBlock": "Khách tiềm năng và cuộc họp",
+  "home.weekly.scorecard.dealBlock": "Cơ hội",
+  "home.weekly.scorecard.advanced": "Khách tiềm năng tiến lên",
+  "home.weekly.scorecard.advancedBasis": "Số bậc tiến lên, đếm theo từng bước",
+  "home.weekly.scorecard.answeredInTarget": "Trả lời đúng hạn",
+  "home.weekly.scorecard.breachedDetail": "{count} quá hạn",
+  "home.weekly.scorecard.meetingsHeld": "Cuộc họp đã diễn ra",
+  "home.weekly.scorecard.meetingsBasis": "{booked} đã đặt · {noShow} không đến",
+  "home.weekly.scorecard.partialHistory": "Cuộc họp không có lịch sử",
+  "home.weekly.scorecard.partialHistoryBasis":
+    "Những cuộc họp này có trước lịch sử cuộc họp, nên các số trên là mức tối thiểu",
+  "home.weekly.scorecard.advances": "Tiến giai đoạn",
+  "home.weekly.scorecard.regressionsDetail": "{count} lùi lại",
+  "home.weekly.scorecard.medianDaysInStage": "Số ngày trung vị trong giai đoạn",
+  "home.weekly.scorecard.medianBasis":
+    "Cho các giai đoạn cơ hội rời khỏi tuần này",
+  "home.weekly.scorecard.withNextStep": "Có bước tiếp theo",
+  "home.weekly.scorecard.ofOpen": "trên {total} cơ hội đang mở",
+  "home.weekly.scorecard.multiThreaded": "Nhiều hơn một người",
+  "home.weekly.scorecard.multiThreadedBasis":
+    "trên {total} cơ hội đang mở, trong 30 ngày qua",
+  "home.weekly.scorecard.closeDateSound": "Ngày chốt đáng tin",
+  "home.weekly.scorecard.forecastMoves": "Nâng dự báo",
+  "home.weekly.scorecard.forecastMovesBasis": "{down} hạ dự báo",
   // Tuần tới. Bản tổng kết đã đóng băng nói điều đã xảy ra; đây là phần duy nhất
   // của trang đó mà vẫn còn ai đó thay đổi được.
   "plan.title": "Lập kế hoạch tuần tới",

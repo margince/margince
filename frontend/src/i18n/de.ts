@@ -2502,6 +2502,32 @@ export const de = {
   "home.pipelineUnavailable": "Diese Zahl konnte nicht geladen werden.",
   "home.panel.weekly": "Letzte Woche",
   "home.weekly.weekOf": "Woche ab {day}",
+  "home.weekly.scorecard.title": "Wie die Woche lief",
+  "home.weekly.scorecard.leadBlock": "Leads und Termine",
+  "home.weekly.scorecard.dealBlock": "Deals",
+  "home.weekly.scorecard.advanced": "Leads weitergekommen",
+  "home.weekly.scorecard.advancedBasis": "Stufen nach oben, je Schritt gezählt",
+  "home.weekly.scorecard.answeredInTarget": "Fristgerecht beantwortet",
+  "home.weekly.scorecard.breachedDetail": "{count} über der Frist",
+  "home.weekly.scorecard.meetingsHeld": "Termine gehalten",
+  "home.weekly.scorecard.meetingsBasis":
+    "{booked} gebucht · {noShow} nicht erschienen",
+  "home.weekly.scorecard.partialHistory": "Termine ohne Verlauf",
+  "home.weekly.scorecard.partialHistoryBasis":
+    "Diese liegen vor dem Terminverlauf, die Zahlen oben sind daher ein Mindestwert",
+  "home.weekly.scorecard.advances": "Phasen vorangekommen",
+  "home.weekly.scorecard.regressionsDetail": "{count} zurückgefallen",
+  "home.weekly.scorecard.medianDaysInStage": "Median Tage in Phase",
+  "home.weekly.scorecard.medianBasis":
+    "Für die Phasen, die Deals diese Woche verlassen haben",
+  "home.weekly.scorecard.withNextStep": "Mit nächstem Schritt",
+  "home.weekly.scorecard.ofOpen": "von {total} offenen Deals",
+  "home.weekly.scorecard.multiThreaded": "Mehr als eine Person",
+  "home.weekly.scorecard.multiThreadedBasis":
+    "von {total} offenen Deals, in den letzten 30 Tagen",
+  "home.weekly.scorecard.closeDateSound": "Abschlussdatum trägt",
+  "home.weekly.scorecard.forecastMoves": "Forecast hochgestuft",
+  "home.weekly.scorecard.forecastMovesBasis": "{down} herabgestuft",
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
   // einzige Teil dieser Seite, den noch jemand ändern kann.
   "plan.title": "Nächste Woche planen",

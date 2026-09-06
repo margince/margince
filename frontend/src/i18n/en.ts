@@ -2574,6 +2574,35 @@ export const en = {
   // the work that waits on a person, and this is a view of that same work.
   "home.panel.weekly": "Last week",
   "home.weekly.weekOf": "Week of {day}",
+  // How WELL the week went, beside what happened in it. Each block is drawn only
+  // when the server sent it: a rep who carried no leads did not score zero on
+  // the funnel, and an empty row would read as failure at something nobody
+  // asked of them.
+  "home.weekly.scorecard.title": "How the week went",
+  "home.weekly.scorecard.leadBlock": "Leads and meetings",
+  "home.weekly.scorecard.dealBlock": "Deals",
+  "home.weekly.scorecard.advanced": "Leads moved forward",
+  "home.weekly.scorecard.advancedBasis":
+    "Steps up the ladder, counted per move",
+  "home.weekly.scorecard.answeredInTarget": "Answered in target",
+  "home.weekly.scorecard.breachedDetail": "{count} breached the target",
+  "home.weekly.scorecard.meetingsHeld": "Meetings held",
+  "home.weekly.scorecard.meetingsBasis": "{booked} booked · {noShow} no-show",
+  "home.weekly.scorecard.partialHistory": "Meetings without history",
+  "home.weekly.scorecard.partialHistoryBasis":
+    "These predate the meeting history, so the counts above are a floor",
+  "home.weekly.scorecard.advances": "Stage advances",
+  "home.weekly.scorecard.regressionsDetail": "{count} went backwards",
+  "home.weekly.scorecard.medianDaysInStage": "Median days in stage",
+  "home.weekly.scorecard.medianBasis": "For the stages deals left this week",
+  "home.weekly.scorecard.withNextStep": "With a next step",
+  "home.weekly.scorecard.ofOpen": "of {total} open deals",
+  "home.weekly.scorecard.multiThreaded": "More than one person",
+  "home.weekly.scorecard.multiThreadedBasis":
+    "of {total} open deals, in the last 30 days",
+  "home.weekly.scorecard.closeDateSound": "Close date holds up",
+  "home.weekly.scorecard.forecastMoves": "Forecast upgrades",
+  "home.weekly.scorecard.forecastMovesBasis": "{down} downgraded",
   // The week ahead. The frozen review says what happened; this is the only part
   // of that page anybody can still change.
   "plan.title": "Plan next week",
