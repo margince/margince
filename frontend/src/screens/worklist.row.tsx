@@ -21,8 +21,10 @@ import { tomorrowMorning } from "./briefqueue";
 import { problemMessageOf } from "./common";
 import { ChannelReplyAction, RELINK_KINDS, type RelinkKind } from "./compose";
 import { type BriefMarkRequest, useBriefItemMark } from "./home.queries";
+import { hasMoveControl, MoveButton } from "./movebutton";
 import {
   useAutomationRetry,
+  useClaimSettle,
   useMeetingOutcome,
   useNoticeRead,
   useTaskUpdate,
@@ -308,6 +310,10 @@ const ANSWER_BY_SOURCE: Partial<
   notice: { verb: "acknowledge", draw: (id) => <NoticeAcknowledge id={id} /> },
   automation_run: { verb: "retry", draw: (id) => <AutomationRetry id={id} /> },
   meeting_outcome: { verb: "decide", draw: (id) => <MeetingOutcome id={id} /> },
+  conversation_claim: {
+    verb: "complete",
+    draw: (id) => <PromiseKept id={id} />,
+  },
   task: { verb: "complete", draw: (id) => <TaskComplete id={id} /> },
   // The row's id IS the person's here, which is what the dismissal endpoint
   // takes — the pairing is why this verb is offered on this lane and nowhere
@@ -343,6 +349,32 @@ function RowAnswer({ item }: Readonly<{ item: WorklistItem }>) {
   // share a surface and the component picks among them.
   if (item.source === "brief_item" && !item.batch) {
     return <BriefVerbs item={item} />;
+  }
+  // The one decided step a link cannot take.
+  //
+  // Every other move the server sends already reaches the reader, as an anchor
+  // through moveHref — draft_reply and draft_email open the composer,
+  // open_task and open_meeting_brief open what they name. `create_task` POSTS a
+  // task body, which is a write and not a destination, so NAVIGABLE_MOVES
+  // excludes it and the row could name the step and offer no way to take it.
+  //
+  // The button is the deal status card's own, mounted a second time rather than
+  // written again: one answer to "what does Add this task do", on the two
+  // surfaces that draw the same move.
+  //
+  // LAST, and after brief_item deliberately. A brief item carries a deal
+  // subject, and the backend attaches a cached move to any deal-subject row
+  // that has none — so an earlier position here would replace Act, Set aside
+  // and Dismiss with a task button on a row whose own verbs are the point.
+  if (item.move?.action === "create_task" && hasMoveControl(item.move)) {
+    return (
+      <div className="worklist-row-verbs">
+        <MoveButton
+          dealId={item.subject?.type === "deal" ? item.subject.id : undefined}
+          move={item.move}
+        />
+      </div>
+    );
   }
   return null;
 }
@@ -1223,6 +1255,45 @@ function WaitingReply({
           queryClient.invalidateQueries({ queryKey: [worklistKey] })
         }
       />
+    </div>
+  );
+}
+
+// Saying a promise was kept, from the row that keeps asking for it.
+//
+// One button and not two. The endpoint settles a claim as `done` or
+// `dismissed`, and they are genuinely different — kept, versus never really
+// promised — but only one of them is a thing a rep does on their morning queue.
+// Dismissing an extraction is a judgement about the extractor, made on the
+// person's own card beside the words it was read from, where the reader can see
+// what it got wrong.
+function PromiseKept({ id }: Readonly<{ id: string }>) {
+  const t = useT();
+  const toast = useToast();
+  const settle = useClaimSettle([worklistKey]);
+  return (
+    <div className="worklist-row-verbs">
+      <Button
+        small
+        variant="primary"
+        pending={settle.isPending}
+        onClick={() =>
+          settle.mutate(
+            { id, outcome: "done" },
+            {
+              onSuccess: () => toast.show(t("worklist.verb.promiseSettled")),
+              // A refused settle leaves the row exactly as it was, which reads
+              // the same as a click that did nothing.
+              onError: () =>
+                toast.show(t("worklist.verb.promiseSettleFailed"), {
+                  mark: false,
+                }),
+            },
+          )
+        }
+      >
+        {t("worklist.verb.promiseKept")}
+      </Button>
     </div>
   );
 }

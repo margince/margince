@@ -284,6 +284,18 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		          occurred_at, captured_at
 		   FROM person_acquisition_evidence
 		   WHERE person_id = $1`, nil},
+		// What the installation owed this person for that acquisition, and
+		// whether it discharged it. Art. 15 asks what we hold about them; a
+		// record saying we were obliged to write to them and did not is
+		// squarely that.
+		//
+		// acquisition_id is withheld for the reason source_entity_id above is:
+		// it points at a row exported in its own section, and a bare id would
+		// invite a reader to join across sections rather than read either.
+		{&pkg.NoticeCases, `SELECT rule, state, due_at, allowed_routes,
+		          attempts, completed_at, blocked_reason, created_at
+		   FROM privacy_notice_case
+		   WHERE person_id = $1`, nil},
 		// Reached two ways, like the erasure purge this mirrors (erasure.go's
 		// purgeDerivedTraces): by email, ILIKE against the stored address, and
 		// by channel identity, a typed JSONB path equality rather than a

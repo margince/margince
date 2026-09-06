@@ -302,7 +302,7 @@ const (
 //
 // No feature is expected to argue with this number, and one that has to is a
 // signal about the CEILING rather than about itself. That happened at a
-// PromptTokenCeiling of 24,000, where this floor left 63 tokens for a 67-tool
+// MinimumPromptWindow of 24,000, where this floor left 63 tokens for a 67-tool
 // catalog and the next verb anyone added failed here (margince/margince#3882).
 // The ceiling is now derived from the local provider's cap rather than picked.
 //
@@ -339,7 +339,7 @@ func TestEachAgentsToolListingLeavesItsRunRoomInTheWindow(t *testing.T) {
 // agent is anywhere near the bound (the fattest is under a seventh of it), so a
 // gate written inline here would never once have been seen to fire.
 func listingOverBudget(agent string, specs []mcp.ToolSpec) string {
-	budget := runner.PromptTokenCeiling * listingBudgetNumerator / listingBudgetDenominator
+	budget := runner.MinimumPromptWindow * listingBudgetNumerator / listingBudgetDenominator
 	tokens := len(runner.ToolListing(specs)) / 4
 	if tokens <= budget {
 		return ""
@@ -348,7 +348,7 @@ func listingOverBudget(agent string, specs []mcp.ToolSpec) string {
 		"agent %q offers a tool listing of ~%d tokens against the %d it may take of a %d-token "+
 			"window — the listing is never elided, so what grows here comes out of the observations "+
 			"this run is reasoning over",
-		agent, tokens, budget, runner.PromptTokenCeiling)
+		agent, tokens, budget, runner.MinimumPromptWindow)
 }
 
 // The bound is only worth having if it fires. The whole catalog is ~16,829
@@ -370,7 +370,7 @@ func TestTheAgentListingBudgetRefusesAListingThatWouldFillTheWindow(t *testing.T
 // and the lane has no other statement of what it costs.
 func TestTheWholeCatalogStillFitsTheCertificationLanesWindow(t *testing.T) {
 	tokens := len(runner.ToolListing(servedSurface(t).Specs())) / 4
-	floor := runner.PromptTokenCeiling * wholeCatalogBudgetNumerator / wholeCatalogBudgetDenominator
+	floor := runner.MinimumPromptWindow * wholeCatalogBudgetNumerator / wholeCatalogBudgetDenominator
 	if tokens > floor {
 		t.Errorf("the whole catalog renders ~%d tokens against the %d this build's window allows it — "+
 			"21 of the agent_loop corpus scenarios offer exactly this surface, and nothing would fail "+
