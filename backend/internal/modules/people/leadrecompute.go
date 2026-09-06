@@ -253,6 +253,11 @@ func (w leadScoreRecompute) Spec() workflow.Spec {
 		Name:    w.name,
 		Trigger: workflow.Trigger{EventType: w.trigger},
 		Tier:    mcp.TierAutoExecute,
+		// The score is recomputed FROM the records this reads, not adjusted by
+		// a delta, so a second pass over unchanged records lands on the same
+		// number. It writes no audit line of its own — RecomputeLeadScore is
+		// the whole effect.
+		RedrivableWithoutDuplicating: true,
 	}
 }
 
