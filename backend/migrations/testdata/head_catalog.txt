@@ -4270,6 +4270,31 @@ public.preference_token.revoked_at timestamp with time zone gen=- def=-
 public.preference_token.token text NOT NULL gen=- def=-
 public.preference_token_pkey CREATE UNIQUE INDEX preference_token_pkey ON public.preference_token USING btree (id)
 public.preference_token_token_key CREATE UNIQUE INDEX preference_token_token_key ON public.preference_token USING btree (token)
+public.privacy_notice_case acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.privacy_notice_case.acquisition_id uuid NOT NULL gen=- def=-
+public.privacy_notice_case.allowed_routes text[] NOT NULL gen=- def='{}'::text[]
+public.privacy_notice_case.attempts integer NOT NULL gen=- def=0
+public.privacy_notice_case.blocked_reason text gen=- def=-
+public.privacy_notice_case.completed_at timestamp with time zone gen=- def=-
+public.privacy_notice_case.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.privacy_notice_case.due_at timestamp with time zone NOT NULL gen=- def=-
+public.privacy_notice_case.id uuid NOT NULL gen=- def=uuidv7()
+public.privacy_notice_case.owner_user_id uuid gen=- def=-
+public.privacy_notice_case.person_id uuid NOT NULL gen=- def=-
+public.privacy_notice_case.privacy_notice_case_acquisition_fkey FOREIGN KEY (acquisition_id) REFERENCES person_acquisition_evidence(id) ON DELETE CASCADE
+public.privacy_notice_case.privacy_notice_case_blocked_shape CHECK (((state = 'blocked'::text) = (blocked_reason IS NOT NULL)))
+public.privacy_notice_case.privacy_notice_case_completion_shape CHECK (((state = ANY (ARRAY['completed'::text, 'not_required'::text])) = (completed_at IS NOT NULL)))
+public.privacy_notice_case.privacy_notice_case_owner_fkey FOREIGN KEY (owner_user_id) REFERENCES app_user(id) ON DELETE SET NULL
+public.privacy_notice_case.privacy_notice_case_person_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
+public.privacy_notice_case.privacy_notice_case_pkey PRIMARY KEY (id)
+public.privacy_notice_case.privacy_notice_case_rule CHECK ((rule = ANY (ARRAY['art13'::text, 'art14'::text])))
+public.privacy_notice_case.privacy_notice_case_state CHECK ((state = ANY (ARRAY['open'::text, 'queued'::text, 'completed'::text, 'blocked'::text, 'not_required'::text])))
+public.privacy_notice_case.rule text NOT NULL gen=- def=-
+public.privacy_notice_case.state text NOT NULL gen=- def='open'::text
+public.privacy_notice_case.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.privacy_notice_case_acquisition CREATE UNIQUE INDEX privacy_notice_case_acquisition ON public.privacy_notice_case USING btree (acquisition_id)
+public.privacy_notice_case_due CREATE INDEX privacy_notice_case_due ON public.privacy_notice_case USING btree (due_at, id) WHERE (state = ANY (ARRAY['open'::text, 'queued'::text]))
+public.privacy_notice_case_pkey CREATE UNIQUE INDEX privacy_notice_case_pkey ON public.privacy_notice_case USING btree (id)
 public.product acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.product.active boolean NOT NULL gen=- def=true
 public.product.archived_at timestamp with time zone gen=- def=-
@@ -5556,6 +5581,7 @@ public.webhook_subscription.webhook_subscription_state_check CHECK ((state = ANY
 public.webhook_subscription.webhook_subscription_target_url_check CHECK ((target_url ~ '^https://'::text))
 public.webhook_subscription_pkey CREATE UNIQUE INDEX webhook_subscription_pkey ON public.webhook_subscription USING btree (id)
 public.weekly_plan acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.weekly_plan.capacity_note text gen=- def=-
 public.weekly_plan.captured_by text NOT NULL gen=- def=-
 public.weekly_plan.commitments_due integer gen=- def=-
 public.weekly_plan.commitments_kept integer gen=- def=-
@@ -5563,14 +5589,17 @@ public.weekly_plan.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.weekly_plan.id uuid NOT NULL gen=- def=uuidv7()
 public.weekly_plan.local_week_start date NOT NULL gen=- def=-
 public.weekly_plan.owner_id uuid NOT NULL gen=- def=-
+public.weekly_plan.risks text gen=- def=-
 public.weekly_plan.status text NOT NULL gen=- def='open'::text
 public.weekly_plan.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.weekly_plan.uq_weekly_plan_owner_week UNIQUE (owner_id, local_week_start)
 public.weekly_plan.version bigint NOT NULL gen=- def=1
+public.weekly_plan.weekly_plan_capacity_note_bounded CHECK (((capacity_note IS NULL) OR (length(capacity_note) <= 2000)))
 public.weekly_plan.weekly_plan_outcome_is_a_tally CHECK (((commitments_due IS NULL) OR ((commitments_due >= 0) AND (commitments_kept >= 0) AND (commitments_kept <= commitments_due))))
 public.weekly_plan.weekly_plan_outcome_matches_status CHECK ((((status = 'closed'::text) = (commitments_due IS NOT NULL)) AND ((commitments_due IS NULL) = (commitments_kept IS NULL))))
 public.weekly_plan.weekly_plan_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.weekly_plan.weekly_plan_pkey PRIMARY KEY (id)
+public.weekly_plan.weekly_plan_risks_bounded CHECK (((risks IS NULL) OR (length(risks) <= 2000)))
 public.weekly_plan.weekly_plan_status_check CHECK ((status = ANY (ARRAY['open'::text, 'closed'::text])))
 public.weekly_plan_commitment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.weekly_plan_commitment.captured_by text NOT NULL gen=- def=-
