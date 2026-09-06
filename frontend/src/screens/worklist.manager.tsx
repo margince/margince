@@ -73,11 +73,11 @@ export function OwnerPicker({
 
 // Who the reader may hand work to, as options.
 //
-// AGENT SEATS ARE EXCLUDED. `PATCH /activities/{id}` accepts any active user id
-// — its check is existence, not seat kind — so an agent seat would take the
-// task and hold it where no person's queue shows it. That is a wider hole than
-// this control (issue on the endpoint), and offering the seat here would be
-// this page walking a reader into it.
+// AGENT SEATS ARE EXCLUDED. An agent seat is an Agent Runner identity, not a
+// person: it opens no Worklist, and the task lane is read per human. The server
+// refuses one — `ensureAssigneeCanHoldWork` in the activities module answers a
+// field fault on `assignee_id` — so offering the seat here would draw a control
+// whose only outcome is a refusal.
 //
 // Everyone else the roster carries is offered. Narrowing to teammates would
 // need a membership read this screen does not have, and the server refuses a
