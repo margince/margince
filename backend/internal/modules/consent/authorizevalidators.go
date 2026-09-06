@@ -39,11 +39,20 @@ import (
 // and the engine going to look.
 func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, category commsauthz.Category, w windows) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
-	if subject.Kind != entityPerson {
-		// Only the person arm has record evidence to read: invoices and
-		// contracts hang off an organization reached through employment, and a
-		// lead holds none of those. A lead's own answers come from the legacy
-		// verdict path, which decideLead reaches without passing through here.
+	if subject.Kind != entityPerson && category != commsauthz.CategoryReplyToInbound &&
+		category != commsauthz.CategoryRequestedFollowup {
+		// A LEAD REACHES ONE ARM AND NO OTHER.
+		//
+		// The correspondence arm asks who wrote to us, and both of its readers
+		// answer about a lead on their own: wroteToUsWithin shares the
+		// authorIsTheSubject spelling, which matches a lead through its bare
+		// address, and askedToBeContacted returns false for a non-person rather
+		// than querying a person-keyed table.
+		//
+		// Every other arm reads a record a lead cannot hold — an invoice or
+		// contract hangs off an organization reached through employment, and a
+		// confirmation link is minted against a person. Those stay unsupported
+		// and fall through to the lead's own grant.
 		return unsupported, nil
 	}
 	// THE NAMED RECORD MUST BE ONE THE CALLER MAY SEE, before it is read.

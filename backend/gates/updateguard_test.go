@@ -216,7 +216,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/privacy:anonymizeLeadTwins":         "terminal absolute write: the same erasure statement as anonymizeSubjectRows, extracted for length — it overwrites the lead twin's PII columns regardless of concurrent state, by design",
 	"internal/modules/privacy:archiveActivity":            "terminal absolute write: the retention sweep archives an over-age activity regardless of concurrent state, by design — a concurrent edit does not make the record younger",
 	"internal/modules/privacy:archiveDeal":                "terminal absolute write: the retention sweep archives an over-age lost/won deal regardless of concurrent state, by design",
-	"internal/modules/privacy:anonymizeLead":              "terminal absolute write: the retention sweep anonymizes an over-age lead regardless of concurrent state, by design, and its selector already excludes an already-anonymized row",
 	"internal/modules/privacy:eraseActivityContent":       "terminal absolute write: the sweep's activity/erase action empties the body and stamps the tombstone subject regardless of concurrent state, by design",
 	"internal/modules/privacy:anonymizePersonRecord":      "terminal absolute write: the sweep's person/anonymize action overwrites the PII columns regardless of concurrent state, by design",
 

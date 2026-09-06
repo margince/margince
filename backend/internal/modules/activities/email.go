@@ -408,13 +408,22 @@ func anchorThreading(ctx context.Context, tx pgx.Tx, id ids.ActivityID, messageI
 	if parent != "" {
 		chain.references = append(chain.references, parent)
 	}
-	if chain.threadKey == "" && len(chain.references) > 0 {
-		chain.threadKey = chain.references[0]
-	}
 	if chain.threadKey == "" {
-		// A message that answers nothing starts the conversation, and a
-		// thread root is its own key — the same key capture derives when it
-		// reads a root message back out of the mailbox.
+		// AN ANCHOR WITH NO STORED THREAD KEY STARTS A CONVERSATION, and this
+		// send's own identity is its root — the same key capture derives when
+		// it reads a root message back out of the mailbox.
+		//
+		// NOT the anchor's source_id, which an earlier version fell back to.
+		// source_id is caller-supplied on the REST activity door and thread_key
+		// is not mapped there at all, so that fallback let anybody name a
+		// stranger's thread as this delivery's: post an email activity whose
+		// source_id is a Message-ID from their conversation, reply to it, and
+		// the delivery carried their thread key. The authorization engine reads
+		// that key at transmit to re-derive the reply evidence staging proved
+		// with the anchor, so a forged key manufactured a
+		// subject_initiated_correspondence basis for someone who never wrote to
+		// us. The thread key a delivery carries must be one the workspace
+		// derived, never one a request body chose.
 		chain.threadKey = messageID
 	}
 	return chain, nil
