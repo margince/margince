@@ -27,13 +27,6 @@ package gates
 // never when it is correspondence with a data subject about the relationship,
 // which is what the consent engine exists to authorize.
 //
-// KNOWN GAP, ratified below rather than hidden: consent's confirm-details link
-// is mailed directly. The eight-PR consent plan's PR 3 was to move it onto the
-// durable lane and never landed, so the message that asks somebody to check
-// what is held about them is itself unrecorded. It is waived because refusing
-// it would delete a working feature, and the waiver names the cost so the debt
-// is legible instead of forgotten.
-
 import (
 	"go/ast"
 	"go/parser"
