@@ -27,7 +27,7 @@ const providerLeak = "sk-live-NEVER-ON-A-SCREEN"
 
 // failingBrain is a provider that refuses the completion the way a real one
 // does: an error whose text is the upstream body, verbatim.
-type failingBrain struct{}
+type failingBrain struct{ flooredWindow }
 
 func (failingBrain) Complete(context.Context, model.Request) (model.Response, Meta, error) {
 	return model.Response{}, Meta{}, errors.New(
@@ -37,7 +37,7 @@ func (failingBrain) Complete(context.Context, model.Request) (model.Response, Me
 
 // leakingOutput is a model that cannot produce a step and names a secret while
 // failing, which the JSON decoder then quotes back in its own error.
-type leakingOutput struct{}
+type leakingOutput struct{ flooredWindow }
 
 func (leakingOutput) Complete(context.Context, model.Request) (model.Response, Meta, error) {
 	return model.Response{Text: `{"` + providerLeak + `": 1}`, OutputTokens: 1}, Meta{}, nil

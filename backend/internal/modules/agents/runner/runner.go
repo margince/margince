@@ -54,6 +54,16 @@ type Meta struct {
 // identity so the trace records what answered without re-calling it.
 type Brain interface {
 	Complete(ctx context.Context, req model.Request) (model.Response, Meta, error)
+	// PromptWindow is the largest prompt the provider currently bound to this
+	// lane will carry, in tokens, or 0 for a binding with no limit worth
+	// eliding a transcript against.
+	//
+	// It belongs on THIS interface because the window is a property of whatever
+	// answers the call, which is exactly what Brain hides. Asked per step and
+	// not once per run: a routing rebind or a budget demotion changes the
+	// answer between two steps of one run, and a prompt sized for a provider no
+	// longer serving it is the case that overflows.
+	PromptWindow() int
 }
 
 type Outcome string
@@ -291,7 +301,8 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 		}
 		acc.StepsUsed++
 
-		resp, meta, err := r.brain.Complete(ctx, win.asRequest(budget.MaxOutputTokens-acc.OutputTokens))
+		resp, meta, err := r.brain.Complete(ctx,
+			win.asRequest(budget.MaxOutputTokens-acc.OutputTokens, r.brain.PromptWindow()))
 		if err != nil {
 			return r.degradeFromCause(acc, job, reasonModelCallFailed, err), nil
 		}

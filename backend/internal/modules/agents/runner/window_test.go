@@ -72,7 +72,7 @@ func TestTheProvenanceRuleOutlivesEveryObservationTheCeilingElides(t *testing.T)
 		win.observe("read_record", strings.Repeat("x", 4000)+fmt.Sprintf("-%d", i))
 	}
 
-	req := win.asRequest(1000)
+	req := win.asRequest(1000, MinimumPromptWindow)
 	if req.Messages[1].Content != elisionMarker {
 		t.Fatalf("this test proves nothing unless the window actually elided: %q", req.Messages[1].Content)
 	}
@@ -118,5 +118,66 @@ func TestAResumedRunIsStillToldWhereARecordIdComesFrom(t *testing.T) {
 	}
 	if !strings.Contains(req.Messages[0].Content, triggerProvenance) {
 		t.Fatalf("the resumed transcript lost the labelled trigger: %q", req.Messages[0].Content)
+	}
+}
+
+// A LARGER window carries the transcript the floor would have cut.
+//
+// This is the change's whole point. The window used to be a constant derived
+// from a local runner's KV-cache cap, so a cloud deployment — whose model
+// carries an order of magnitude more — still elided history it had every right
+// to keep, and the run reasoned over less than it was paying for.
+//
+// The same transcript is bounded twice, and only the number differs.
+func TestALargerProviderWindowKeepsWhatTheFloorWouldElide(t *testing.T) {
+	win := newWindow(Job{Goal: "prep the meeting", TriggerRef: triggerRef}, nil, nil)
+	for i := 0; i < 50; i++ {
+		win.observe("read_record", strings.Repeat("x", 4000)+fmt.Sprintf("-%d", i))
+	}
+
+	atFloor := win.asRequest(1000, MinimumPromptWindow)
+	roomy := win.asRequest(1000, MinimumPromptWindow*8)
+
+	// The floor arm has to actually elide, or the comparison below is between
+	// two untouched transcripts and proves nothing.
+	if atFloor.Messages[1].Content != elisionMarker {
+		t.Fatalf("the floor did not elide, so there is nothing for the larger window to keep: %q",
+			atFloor.Messages[1].Content)
+	}
+	if len(roomy.Messages) <= len(atFloor.Messages) {
+		t.Errorf("a window %d times the floor carried %d messages, no more than the floor's %d — "+
+			"the transcript is still being cut to a limit the provider does not have",
+			8, len(roomy.Messages), len(atFloor.Messages))
+	}
+	for _, m := range roomy.Messages {
+		if m.Content == elisionMarker {
+			t.Error("a window eight times the floor still elided; this transcript fits it whole")
+		}
+	}
+}
+
+// A window of ZERO elides nothing.
+//
+// Zero is what a cloud adapter declares: not "no window" — every model has one
+// — but "no limit worth planning around", because the real one is far above
+// anything this product assembles. Treating it as a limit would elide the
+// entire transcript down to two messages on exactly the bindings that need it
+// least, which is the failure a naive `> 0` check introduces.
+func TestAWindowOfZeroElidesNothing(t *testing.T) {
+	win := newWindow(Job{Goal: "prep the meeting", TriggerRef: triggerRef}, nil, nil)
+	for i := 0; i < 50; i++ {
+		win.observe("read_record", strings.Repeat("x", 4000)+fmt.Sprintf("-%d", i))
+	}
+
+	req := win.asRequest(1000, 0)
+
+	if len(req.Messages) != 51 {
+		t.Errorf("an unlimited window carried %d messages, want all 51 (the goal plus 50 observations)",
+			len(req.Messages))
+	}
+	for _, m := range req.Messages {
+		if m.Content == elisionMarker {
+			t.Fatal("a window of 0 elided; 0 means no limit worth planning around, not a limit of none")
+		}
 	}
 }

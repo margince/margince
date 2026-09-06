@@ -95,6 +95,41 @@ const ollamaMaxContext = 32768
 // the boundary doubles as the headroom the chat template needs.
 const ollamaContextBucket = 4096
 
+// ollamaPromptWindow is what a CALLER may spend on the prompt when this wire
+// serves the call, as against ollamaMaxContext which bounds prompt and
+// completion together.
+//
+// The derivation lives HERE, beside the constants it reads, rather than in the
+// agent runner that consumes it. It sat there for as long as Ollama was the
+// only wire anybody sized against, and the effect was that a limit belonging to
+// one adapter was spelled in a package that speaks to five — so a cloud
+// deployment carrying no local model at all still cut its transcripts to fit a
+// runner it never loads.
+//
+// It leaves ONE BUCKET of slack, and the slack is the point. Two facts eat into
+// it, and neither is visible from the runner:
+//
+//   - ollamaWindowFor rounds a request UP by a whole bucket, so the largest
+//     estimate not clamped back to the cap is 32,767, not 32,768. Subtracting
+//     alone gives a window one token too high.
+//   - contextWindow's estimate is BIGGER than a caller's for the same prompt.
+//     It also counts each message's role, an 8-byte per-message frame, and the
+//     response schema in `Format` — several hundred tokens on a long transcript.
+//
+// Trimming the slack trades a silent truncation — the completion cut inside a
+// reasoning model's thinking, which returns well-formed empty content and reads
+// as a bad model — for a little more room. Held from both sides by
+// backend/gates/promptwindow_test.go.
+const ollamaPromptWindow = ollamaMaxContext - ollamaContextBucket - ollamaMaxOutputTokens
+
+// ollamaMaxOutputTokens is the completion this wire reserves inside num_ctx.
+//
+// It matches the agent runner's own per-call output ceiling, and the gate
+// beside this constant holds the two together: a reservation smaller than what
+// a caller may actually ask for would leave the completion clamped, which is
+// the failure this whole derivation exists to avoid.
+const ollamaMaxOutputTokens = 4096
+
 // ollamaPerMessageOverhead is the role and delimiter scaffolding the template
 // wraps around each turn, which a byte count of the content alone cannot see.
 const ollamaPerMessageOverhead = 8
@@ -287,7 +322,16 @@ func (c *ollamaClient) Caps() model.Capabilities {
 	// AttachmentMIMEs is images and nothing else: the `images` array is the
 	// only attachment shape /api/chat has, and a non-vision model pulled into
 	// this binding fails visibly at the runner rather than silently here.
-	return model.Capabilities{Streaming: true, EmbedDims: 0, LocalOnly: true, AttachmentMIMEs: c.attachmentMIMEs}
+	//
+	// PromptWindow is what a CALLER may spend on the prompt, which is smaller
+	// than the cap: num_ctx bounds prompt and completion together, so the
+	// completion's reservation comes off the top. This is the one wire in the
+	// tree that declares a window — ollamaPromptWindow says why.
+	return model.Capabilities{
+		Streaming: true, EmbedDims: 0, LocalOnly: true,
+		AttachmentMIMEs: c.attachmentMIMEs,
+		PromptWindow:    ollamaPromptWindow,
+	}
 }
 
 // chat sends one non-streaming /api/chat call; chatStream requests the

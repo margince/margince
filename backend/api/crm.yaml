@@ -1493,6 +1493,50 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /claims/{id}/settle:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [People]
+      operationId: settleConversationClaim
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Say a promise was kept, or that it no longer stands.
+      description: |
+        A claim has carried `open`, `done` and `dismissed` since the table existed, and
+        every reader of it filters on `open` — the commitments card, the project rollup,
+        the worklist lane. Nothing could write the other two. A promise could be extracted
+        from a conversation and shown to the rep who made it, and there was no way to say
+        they had kept it: the card asked for the same thing every morning, and the only
+        writes of `done` anywhere in the tree were in test fixtures.
+
+        `done` means the thing promised happened. `dismissed` means it no longer stands —
+        the extractor read a promise into words that were not one, or the customer
+        withdrew the ask. They are kept apart because they answer different questions
+        later: how many commitments this workspace keeps is a fact about the team, and
+        how many extracted claims were never real is a fact about the extractor.
+
+        Settling is not correcting. A claim whose WORDS are wrong is corrected through the
+        claim's own correction path, which keeps the evidence fingerprint and records who
+        disagreed; this says the claim was right and is now finished.
+
+        Idempotent per outcome: settling a claim to the state it already holds is the same
+        success, because the caller's goal state already holds. Settling it to the OTHER
+        state is a 409 — a promise recorded as kept is not re-decidable as never-real
+        without somebody saying which is true.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SettleClaimRequest' }
+      responses:
+        '204': { description: 'Settled, or was already settled that way.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /people/{id}/research:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -37530,6 +37574,20 @@ components:
         action_result: { type: [string, 'null'], description: 'What happened (e.g. "created task", "queued to approval inbox").' }
         reason: { type: [string, 'null'], description: 'For failed/blocked/skipped: why (e.g. "provider error", "approval expired", "Passport no longer permits send") — from automation_run.detail.' }
         audit_id: { type: [string, 'null'], description: 'Link into the audit_log row for this run.' }
+
+    SettleClaimRequest:
+      type: object
+      description: How a claim finished.
+      required: [outcome]
+      properties:
+        outcome:
+          type: string
+          enum: [done, dismissed]
+          description: |
+            `done` says the promised thing happened. `dismissed` says it no longer stands —
+            the extractor read a promise into words that were not one, or the ask was
+            withdrawn. `open` is absent on purpose: this endpoint settles, and re-opening a
+            settled claim is a different act nobody has asked for.
 
     AutomationRetryResult:
       type: object
