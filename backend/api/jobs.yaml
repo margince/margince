@@ -564,6 +564,37 @@ kinds:
       re-arms those rows. Cheap: one indexed read of overdue rows, and on a
       healthy installation it finds nothing.
 
+  comms_controller_payload_sweep:
+    role: worker
+    go_type: ControllerPayloadSweepArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 15m
+    registration: {when: [SendRegistry, SendDelivery], absent: registers_nothing}
+    args: {}
+    fault:
+      nil_after_logging: >-
+        A batch of independent payloads, and one that will not destroy must not
+        strand the others: the pass logs that row and carries on. The retry
+        policy is the CADENCE — this runs every 15 minutes and re-reads what is
+        still expired, so a payload that failed here is picked up by the next
+        pass. Failing the whole job would re-read the rows already retired and
+        leave one permanently unreadable row blocking every other payload behind
+        it forever, which is the opposite of what a cleanup owes.
+    reason: >-
+      The backstop for one-time link material that no terminal outcome ever
+      retired. A controller send destroys its own payload on acceptance and on
+      park (comms.Dispatcher.retireLink), so the healthy paths need nothing from
+      this pass. What they cannot reach is a delivery that reaches NO terminal
+      outcome — a worker killed mid-send, a stack torn down — and the retire
+      itself failing, which is logged and deliberately does not change the
+      delivery's disposition. Both leave a live confirmation link in the key
+      vault past payload_expires_at, and a link that outlives its expiry is a
+      credential to somebody's mailbox that nobody is watching. The index this
+      reads already exists and until now nothing queried it. Cheap: one indexed
+      read, and on a healthy installation it finds nothing.
+
   comms_scheduled_send:
     role: worker
     go_type: ScheduledSendArgs

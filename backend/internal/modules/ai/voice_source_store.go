@@ -59,6 +59,11 @@ func (s *VoiceStore) PreviewSource(ctx context.Context, profileID ids.UUID, form
 }
 
 func (s *VoiceStore) ingestPreparedSource(ctx context.Context, tx pgx.Tx, profileID ids.UUID, prepared preparedSource) (VoiceCorpusSource, CorpusSummary, error) {
+	// Before the source row this is about to write, so every corpus writer
+	// queues here in one order — see lockProfileForCorpusWrite.
+	if err := lockProfileForCorpusWrite(ctx, tx, profileID); err != nil {
+		return VoiceCorpusSource{}, CorpusSummary{}, err
+	}
 	profile, err := s.visibleProfile(ctx, tx, profileID)
 	if err != nil {
 		return VoiceCorpusSource{}, CorpusSummary{}, err

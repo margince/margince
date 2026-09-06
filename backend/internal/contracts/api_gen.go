@@ -13450,6 +13450,78 @@ func (e WeeklyReviewDealOutcome) Valid() bool {
 	}
 }
 
+// Defines values for WeeklyReviewMovementBar.
+const (
+	WeeklyBarAdvanced WeeklyReviewMovementBar = "advanced"
+	WeeklyBarCreated  WeeklyReviewMovementBar = "created"
+	WeeklyBarLost     WeeklyReviewMovementBar = "lost"
+	WeeklyBarOther    WeeklyReviewMovementBar = "other"
+	WeeklyBarSlipped  WeeklyReviewMovementBar = "slipped"
+	WeeklyBarWon      WeeklyReviewMovementBar = "won"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyReviewMovementBar enum.
+func (e WeeklyReviewMovementBar) Valid() bool {
+	switch e {
+	case WeeklyBarAdvanced:
+		return true
+	case WeeklyBarCreated:
+		return true
+	case WeeklyBarLost:
+		return true
+	case WeeklyBarOther:
+		return true
+	case WeeklyBarSlipped:
+		return true
+	case WeeklyBarWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyReviewOutlookForwardMeasure.
+const (
+	WeeklyReviewOutlookForwardMeasureCommitEvidence WeeklyReviewOutlookForwardMeasure = "commit_evidence"
+	WeeklyReviewOutlookForwardMeasureManagerCall    WeeklyReviewOutlookForwardMeasure = "manager_call"
+	WeeklyReviewOutlookForwardMeasureWeighted       WeeklyReviewOutlookForwardMeasure = "weighted"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyReviewOutlookForwardMeasure enum.
+func (e WeeklyReviewOutlookForwardMeasure) Valid() bool {
+	switch e {
+	case WeeklyReviewOutlookForwardMeasureCommitEvidence:
+		return true
+	case WeeklyReviewOutlookForwardMeasureManagerCall:
+		return true
+	case WeeklyReviewOutlookForwardMeasureWeighted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyReviewOutlookPeriodKind.
+const (
+	WeeklyOutlookPeriodMonth   WeeklyReviewOutlookPeriodKind = "month"
+	WeeklyOutlookPeriodQuarter WeeklyReviewOutlookPeriodKind = "quarter"
+	WeeklyOutlookPeriodWeek    WeeklyReviewOutlookPeriodKind = "week"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyReviewOutlookPeriodKind enum.
+func (e WeeklyReviewOutlookPeriodKind) Valid() bool {
+	switch e {
+	case WeeklyOutlookPeriodMonth:
+		return true
+	case WeeklyOutlookPeriodQuarter:
+		return true
+	case WeeklyOutlookPeriodWeek:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistFilter.
 const (
 	WorklistFilterAll             WorklistFilter = "all"
@@ -16059,19 +16131,19 @@ func (e ListSignalsParamsResolutionState) Valid() bool {
 
 // Defines values for SetWeeklyPlanCommitmentStateJSONBodyState.
 const (
-	SetWeeklyPlanCommitmentStateJSONBodyStateDone    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
-	SetWeeklyPlanCommitmentStateJSONBodyStateDropped SetWeeklyPlanCommitmentStateJSONBodyState = "dropped"
-	SetWeeklyPlanCommitmentStateJSONBodyStateOpen    SetWeeklyPlanCommitmentStateJSONBodyState = "open"
+	Done    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
+	Dropped SetWeeklyPlanCommitmentStateJSONBodyState = "dropped"
+	Open    SetWeeklyPlanCommitmentStateJSONBodyState = "open"
 )
 
 // Valid indicates whether the value is a known member of the SetWeeklyPlanCommitmentStateJSONBodyState enum.
 func (e SetWeeklyPlanCommitmentStateJSONBodyState) Valid() bool {
 	switch e {
-	case SetWeeklyPlanCommitmentStateJSONBodyStateDone:
+	case Done:
 		return true
-	case SetWeeklyPlanCommitmentStateJSONBodyStateDropped:
+	case Dropped:
 		return true
-	case SetWeeklyPlanCommitmentStateJSONBodyStateOpen:
+	case Open:
 		return true
 	default:
 		return false
@@ -34034,6 +34106,18 @@ type WeeklyReview struct {
 	// beside it, which is what makes the whole lane safe to lose.
 	Narrative *string `json:"narrative,omitempty"`
 
+	// Outlook Where the week was landing, one entry per horizon — the week itself, the month, and
+	// the fiscal quarter, because a rep asks three different questions on a Monday.
+	//
+	// EMPTY when no forecast was composed at the time the review was written, which is not
+	// the same as a week that landed on nothing. A reader must say "no forecast" rather
+	// than draw zeros.
+	//
+	// Every figure here is a COPY, not a pointer. The snapshots these were read from are
+	// subject to retention, and a review holding only their ids would read as a blank
+	// outlook the day they age out — indistinguishable from a week nobody measured.
+	Outlook *[]WeeklyReviewOutlook `json:"outlook,omitempty"`
+
 	// Pipeline What the week did to the pipeline, in the installation's base currency at the rate that
 	// applied when the review was written.
 	//
@@ -34137,11 +34221,115 @@ type WeeklyReviewDeal struct {
 // WeeklyReviewDealOutcome defines model for WeeklyReviewDeal.Outcome.
 type WeeklyReviewDealOutcome string
 
+// WeeklyReviewDriver One deal behind a bar, frozen with the name it carried that week.
+type WeeklyReviewDriver struct {
+	// DealId The deal as it was. Carries no guarantee the record still exists: a retrospective is a
+	// record of what a week WAS, so a deal deleted next month leaves this row saying what it
+	// said.
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// DealLabel What the deal was called that week, stored beside the id. A rename later does not
+	// rewrite history and a deletion does not erase it.
+	DealLabel string `json:"deal_label"`
+
+	// DeltaMinor Signed, like its bar.
+	DeltaMinor int64 `json:"delta_minor"`
+}
+
 // WeeklyReviewIndex defines model for WeeklyReviewIndex.
 type WeeklyReviewIndex struct {
 	// Weeks The Monday of each week with a review, newest first.
 	Weeks []openapi_types.Date `json:"weeks"`
 }
+
+// WeeklyReviewMovement One bar of the movement bridge, and the deals behind it.
+type WeeklyReviewMovement struct {
+	// Bar Which move this is. Folded from the forecast engine's twelve movement buckets, whose
+	// grain is right for diagnosing a quarter and too fine for a weekly retrospective.
+	//
+	// `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
+	// reprice, a category move and a stage move each go both ways, and reading the cause
+	// alone would draw a bar of progress out of a week somebody lost money in. `other` is
+	// the machinery — FX, a definition change, a model change — kept apart because nobody
+	// DID it, and crediting it as progress tells a rep they sold what a rate move did.
+	Bar WeeklyReviewMovementBar `json:"bar"`
+
+	// DeltaMinor Signed. A bar takes money out of the window as well as putting it in, and an unsigned
+	// magnitude would make a slip read as an advance.
+	DeltaMinor int64 `json:"delta_minor"`
+
+	// Drivers The deals worth naming under this bar, largest absolute movement first and capped —
+	// the panel asks "which ones?" and a reader wants what moved it, not a ledger.
+	//
+	// A deal the reader may not see is OMITTED rather than named with a placeholder, so a
+	// frozen retrospective never discloses a record its reader was not allowed to open.
+	Drivers *[]WeeklyReviewDriver `json:"drivers,omitempty"`
+}
+
+// WeeklyReviewMovementBar Which move this is. Folded from the forecast engine's twelve movement buckets, whose
+// grain is right for diagnosing a quarter and too fine for a weekly retrospective.
+//
+// `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
+// reprice, a category move and a stage move each go both ways, and reading the cause
+// alone would draw a bar of progress out of a week somebody lost money in. `other` is
+// the machinery — FX, a definition change, a model change — kept apart because nobody
+// DID it, and crediting it as progress tells a rep they sold what a rate move did.
+type WeeklyReviewMovementBar string
+
+// WeeklyReviewOutlook One horizon's landing as the week closed, frozen beside the review.
+type WeeklyReviewOutlook struct {
+	BaseCurrency string `json:"base_currency"`
+
+	// BestCaseMinor Inclusive of commit, which is what the label on the surface must say.
+	BestCaseMinor int64 `json:"best_case_minor"`
+
+	// ClosingLandingMinor What the window was landing on when the week closed.
+	ClosingLandingMinor *int64 `json:"closing_landing_minor,omitempty"`
+	CommitMinor         int64  `json:"commit_minor"`
+
+	// ForwardMeasure Which measure the closing landing was built from, FROZEN. The installation setting can
+	// change, and a past week must keep saying what it was read under rather than silently
+	// re-meaning when somebody changes how the business reads its pipeline.
+	//
+	// No manager call is consulted for a frozen weekly landing: a call is an assertion about
+	// a period somebody is still working, and a retrospective reports what the pipeline
+	// said. Freezing an opinion as a measurement would make the record argue with itself.
+	ForwardMeasure *WeeklyReviewOutlookForwardMeasure `json:"forward_measure,omitempty"`
+
+	// Movement How the window got from its opening landing to its closing one, as signed bars.
+	//
+	// SIX bars at most, and only those that moved. The two landings are the bridge's
+	// ANCHORS and are never bars: a bar for either would be summed as a movement as well as
+	// read as a landing. Empty when there was no opening snapshot to move from.
+	Movement []WeeklyReviewMovement `json:"movement"`
+
+	// OpeningLandingMinor What the window was landing on at the START of the week, from that Monday's snapshot.
+	//
+	// ABSENT when no Monday snapshot exists — an installation in its first week, or one
+	// whose worker was down. Absent is NOT zero: a zero opening draws a week that started
+	// from nothing and made everything, and the movement bars below are then omitted too
+	// because there is no opening to have moved from.
+	OpeningLandingMinor *int64 `json:"opening_landing_minor,omitempty"`
+
+	// PeriodEnd The last day INSIDE the window, not an exclusive bound.
+	PeriodEnd     openapi_types.Date            `json:"period_end"`
+	PeriodKind    WeeklyReviewOutlookPeriodKind `json:"period_kind"`
+	PeriodStart   openapi_types.Date            `json:"period_start"`
+	WeightedMinor int64                         `json:"weighted_minor"`
+	WonMinor      int64                         `json:"won_minor"`
+}
+
+// WeeklyReviewOutlookForwardMeasure Which measure the closing landing was built from, FROZEN. The installation setting can
+// change, and a past week must keep saying what it was read under rather than silently
+// re-meaning when somebody changes how the business reads its pipeline.
+//
+// No manager call is consulted for a frozen weekly landing: a call is an assertion about
+// a period somebody is still working, and a retrospective reports what the pipeline
+// said. Freezing an opinion as a measurement would make the record argue with itself.
+type WeeklyReviewOutlookForwardMeasure string
+
+// WeeklyReviewOutlookPeriodKind defines model for WeeklyReviewOutlook.PeriodKind.
+type WeeklyReviewOutlookPeriodKind string
 
 // WeeklyReviewPipeline Money the week added to and took out of the pipeline, in one currency.
 type WeeklyReviewPipeline struct {

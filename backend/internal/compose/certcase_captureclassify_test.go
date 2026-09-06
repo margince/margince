@@ -106,9 +106,13 @@ func classifyAnswer(labels ...string) func(requested []string) string {
 // same token twice.
 func classifyFixtureJSON(t *testing.T) json.RawMessage {
 	t.Helper()
+	// Both are INBOUND — a customer asking and a customer proposing a time —
+	// which is what makes the prompt's reply half reachable at all. A fixture of
+	// outbound mail would certify a prompt that never asks the reply question,
+	// and would stay green through a change that broke it.
 	raw, err := json.Marshal(captureClassifyFixture{
-		{Subject: "quote please", Body: "We need forty seats by March."},
-		{Subject: "lunch thursday", Body: "Shall we say noon at the usual place?"},
+		{Subject: "quote please", Body: "We need forty seats by March.", Inbound: true},
+		{Subject: "lunch thursday", Body: "Shall we say noon at the usual place?", Inbound: true},
 	})
 	if err != nil {
 		t.Fatalf("encoding the fixture: %v", err)
@@ -246,7 +250,11 @@ func TestClassifyFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	if len(messages) == 0 {
 		t.Fatal("the fixture carries no message")
 	}
-	given := map[string]bool{"subject": true, "body": true}
+	// What the backlog row actually hands the engine. `inbound` joined it when
+	// the same call started judging whether a reply was positive: the prompt
+	// asks that question only of mail somebody sent us, so a fixture unable to
+	// say which direction a message went could not reach half the prompt.
+	given := map[string]bool{"subject": true, "body": true, "inbound": true}
 	for i, fields := range messages {
 		for name := range fields {
 			if !given[name] {

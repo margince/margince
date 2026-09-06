@@ -25,9 +25,9 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | | |
 |---|---:|
 | Shipped invocation sites | 40 |
-| … best state `current` | 30 |
+| … best state `current` | 29 |
 | … best state `partial` | 0 |
-| … best state `stale` | 8 |
+| … best state `stale` | 9 |
 | … `absent` on every binding | 2 |
 | Scenarios in the corpus | 136 |
 | Committed records | 59 |
@@ -82,7 +82,7 @@ Which model to run each site on, and what that choice rests on.
 |---|---|---|---:|---|---:|---:|
 | [`agent_loop/loop`](#agent_looploop) | - | - | - | `stale` | 23 | 3 |
 | [`brief_ranking/rank`](#brief_rankingrank) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
-| [`capture_classify/classify`](#capture_classifyclassify) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 5 | 3 |
+| [`capture_classify/classify`](#capture_classifyclassify) | - | - | - | `stale` | 5 | 3 |
 | [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 8 | 2 |
 | [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 16 | 3 |
 | [`cert_judge/judge`](#cert_judgejudge) | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 4 |
@@ -141,7 +141,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 20 | 14 | 1 | 5 | 236 | 215 | 0.91 | 3370ms | 13 | 1 | 6 |
+| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 20 | 13 | 1 | 6 | 236 | 215 | 0.91 | 3370ms | 13 | 1 | 6 |
 | `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 3 | 0 | 0 | 3 | 18 | 18 | 1.00 | 44515ms | 2 | 0 | 1 |
 | `gemini` | `gemini-3.5-flash` | `eu_hosted` | 9 | 6 | 0 | 3 | 63 | 59 | 0.94 | 20319ms | 7 | 0 | 2 |
 | `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 1 | 0 | 0 | 15 | 9 | 0.60 | 3731ms | 0 | 0 | 1 |
@@ -149,7 +149,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 5 | 0 | 1 | 42 | 39 | 0.93 | 4477ms | 5 | 0 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 31 | 23 | 0 | 8 | 333 | 269 | 0.81 | 68516ms | 12 | 7 | 12 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 31 | 22 | 0 | 9 | 333 | 269 | 0.81 | 68516ms | 12 | 7 | 12 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 4 | 0 | 1 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 
 ## Stale records, and why
@@ -172,7 +172,9 @@ model, real network).
 | `agent_loop/loop` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 23 scenarios it scored have changed since, or the prompts built from them have: a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_structured_question_is_not_a_text_search and 17 more |
 | `agent_loop/loop` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `agent_loop/loop` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 23 scenarios it scored have changed since, or the prompts built from them have: a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_structured_question_is_not_a_text_search and 17 more |
+| `capture_classify/classify` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 5 scenarios it scored have changed since, or the prompts built from them have: a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
 | `capture_classify/classify` | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
+| `capture_classify/classify` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 5 scenarios it scored have changed since, or the prompts built from them have: a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply |
 | `capture_confidentiality_verdict/thread` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 7 scenarios it scored have changed since, or the prompts built from them have: a_live_dispute_with_counsel_stays_private, a_medical_appointment_in_the_owners_mailbox_is_not_the_companys_business, a_termination_agreement_stays_private_whatever_the_attachment_note_says, an_nda_marked_thread_is_held_on_its_own_request, an_ordinary_customer_thread_is_opened_for_the_team, an_unpatched_vulnerability_is_held_until_it_is_closed and 1 more |
 | `capture_counterparty_verdict/verdict` | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `cold_start/acts` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
@@ -297,9 +299,9 @@ Records (3):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1094ms | 2464ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1094ms | 2464ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | `stale` | - | `supported_degraded` | 3 | 2 | 0.67 | 1407ms | 1467ms | 2 | 0 | 1 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 810ms | 1755ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 810ms | 1755ms | 15 | 0 | 0 | 0 |
 
 ### `capture_confidentiality_verdict`
 

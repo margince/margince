@@ -38931,6 +38931,136 @@ components:
             review rather than "last week" — a rep with a gap has a previous week that is not seven
             days back.
           allOf: [{ $ref: '#/components/schemas/WeeklyReviewPrior' }]
+        outlook:
+          type: array
+          items: { $ref: '#/components/schemas/WeeklyReviewOutlook' }
+          description: |
+            Where the week was landing, one entry per horizon — the week itself, the month, and
+            the fiscal quarter, because a rep asks three different questions on a Monday.
+
+            EMPTY when no forecast was composed at the time the review was written, which is not
+            the same as a week that landed on nothing. A reader must say "no forecast" rather
+            than draw zeros.
+
+            Every figure here is a COPY, not a pointer. The snapshots these were read from are
+            subject to retention, and a review holding only their ids would read as a blank
+            outlook the day they age out — indistinguishable from a week nobody measured.
+
+    WeeklyReviewOutlook:
+      type: object
+      additionalProperties: false
+      description: |
+        One horizon's landing as the week closed, frozen beside the review.
+      required: [period_kind, period_start, period_end, base_currency, won_minor,
+                 commit_minor, best_case_minor, weighted_minor, movement]
+      properties:
+        period_kind:
+          type: string
+          enum: [week, month, quarter]
+          x-enum-varnames: [WeeklyOutlookPeriodWeek, WeeklyOutlookPeriodMonth, WeeklyOutlookPeriodQuarter]
+        period_start: { type: string, format: date }
+        period_end:
+          type: string
+          format: date
+          description: The last day INSIDE the window, not an exclusive bound.
+        opening_landing_minor:
+          type: integer
+          format: int64
+          description: |
+            What the window was landing on at the START of the week, from that Monday's snapshot.
+
+            ABSENT when no Monday snapshot exists — an installation in its first week, or one
+            whose worker was down. Absent is NOT zero: a zero opening draws a week that started
+            from nothing and made everything, and the movement bars below are then omitted too
+            because there is no opening to have moved from.
+        closing_landing_minor:
+          type: integer
+          format: int64
+          description: What the window was landing on when the week closed.
+        forward_measure:
+          type: string
+          enum: [commit_evidence, weighted, manager_call]
+          description: |
+            Which measure the closing landing was built from, FROZEN. The installation setting can
+            change, and a past week must keep saying what it was read under rather than silently
+            re-meaning when somebody changes how the business reads its pipeline.
+
+            No manager call is consulted for a frozen weekly landing: a call is an assertion about
+            a period somebody is still working, and a retrospective reports what the pipeline
+            said. Freezing an opinion as a measurement would make the record argue with itself.
+        won_minor: { type: integer, format: int64 }
+        commit_minor: { type: integer, format: int64 }
+        best_case_minor:
+          type: integer
+          format: int64
+          description: Inclusive of commit, which is what the label on the surface must say.
+        weighted_minor: { type: integer, format: int64 }
+        base_currency: { type: string }
+        movement:
+          type: array
+          items: { $ref: '#/components/schemas/WeeklyReviewMovement' }
+          description: |
+            How the window got from its opening landing to its closing one, as signed bars.
+
+            SIX bars at most, and only those that moved. The two landings are the bridge's
+            ANCHORS and are never bars: a bar for either would be summed as a movement as well as
+            read as a landing. Empty when there was no opening snapshot to move from.
+
+    WeeklyReviewMovement:
+      type: object
+      additionalProperties: false
+      description: One bar of the movement bridge, and the deals behind it.
+      required: [bar, delta_minor]
+      properties:
+        bar:
+          type: string
+          enum: [created, advanced, slipped, won, lost, other]
+          x-enum-varnames: [WeeklyBarCreated, WeeklyBarAdvanced, WeeklyBarSlipped,
+                            WeeklyBarWon, WeeklyBarLost, WeeklyBarOther]
+          description: |
+            Which move this is. Folded from the forecast engine's twelve movement buckets, whose
+            grain is right for diagnosing a quarter and too fine for a weekly retrospective.
+
+            `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
+            reprice, a category move and a stage move each go both ways, and reading the cause
+            alone would draw a bar of progress out of a week somebody lost money in. `other` is
+            the machinery — FX, a definition change, a model change — kept apart because nobody
+            DID it, and crediting it as progress tells a rep they sold what a rate move did.
+        delta_minor:
+          type: integer
+          format: int64
+          description: |
+            Signed. A bar takes money out of the window as well as putting it in, and an unsigned
+            magnitude would make a slip read as an advance.
+        drivers:
+          type: array
+          items: { $ref: '#/components/schemas/WeeklyReviewDriver' }
+          description: |
+            The deals worth naming under this bar, largest absolute movement first and capped —
+            the panel asks "which ones?" and a reader wants what moved it, not a ledger.
+
+            A deal the reader may not see is OMITTED rather than named with a placeholder, so a
+            frozen retrospective never discloses a record its reader was not allowed to open.
+
+    WeeklyReviewDriver:
+      type: object
+      additionalProperties: false
+      description: One deal behind a bar, frozen with the name it carried that week.
+      required: [deal_id, deal_label, delta_minor]
+      properties:
+        deal_id:
+          type: string
+          format: uuid
+          description: |
+            The deal as it was. Carries no guarantee the record still exists: a retrospective is a
+            record of what a week WAS, so a deal deleted next month leaves this row saying what it
+            said.
+        deal_label:
+          type: string
+          description: |
+            What the deal was called that week, stored beside the id. A rename later does not
+            rewrite history and a deletion does not erase it.
+        delta_minor: { type: integer, format: int64, description: 'Signed, like its bar.' }
 
     WeeklyReviewPipeline:
       type: object

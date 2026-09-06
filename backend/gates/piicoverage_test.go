@@ -235,6 +235,17 @@ var piiTables = map[string]piiHandling{
 	// is not a verdict, and suppressions about a person nobody may now assert
 	// anything about have nothing left to suppress.
 	"ai_feedback": {erasureWrite: true, sarRead: true},
+	// How a reply verdict came to be what it is. Every row is a judgement about
+	// what a subject's own message MEANT — the classifier's and every human
+	// correction after it — which is the same kind of derived claim ai_feedback
+	// above carries, and it is deleted for the same reason: a verdict about
+	// somebody nobody may now assert anything about has nothing left to say.
+	// Its foreign key cascades on DELETE and erasure UPDATES the activity in
+	// place, so the cascade never fires for an Art. 17 request and the delete
+	// here is what actually reaches these rows. Art. 15 hands them back because
+	// a subject asking what we concluded about their mail is asking for exactly
+	// this.
+	"activity_reply_verdict_history": {erasureWrite: true, sarRead: true},
 	// The capture disposition ledger keys on the subject's own address and
 	// keeps the display name their mail arrived with (CAP-DDL-8).
 	"capture_pending_counterparty": {erasureWrite: true, sarRead: true},
