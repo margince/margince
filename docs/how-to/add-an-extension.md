@@ -575,20 +575,21 @@ when one credential serves the whole installation — a bot, an official account
 administrator binds once for everybody. Omit it and generation refuses the unit, naming both
 choices.
 
-**It is recorded and published, and it does not yet decide anything.** Declaring
-`CredentialPerMember` today does NOT make a captured message private to that member: `decideBirthTx`
-returns early for every kind that is not `email`, so a message on your transport is born
-`audience = 'workspace'` — readable by every colleague — whichever model you declare. What the
-declaration currently does is land the right value in `channel_provider.credential_model` and
-publish it on `GET /v1/channel-providers`, so an operator can see whose credential a transport
-spends.
+**It decides what a captured message is born as.** Declaring
+`CredentialPerMember` puts a chat on the mailbox path: the workspace mail-sharing floor, the seat's
+own counterparty holds and a sender's confidentiality marker all reach it, and the member gets the
+`capture_import` row those holds are recorded on. `CredentialWorkspaceBot` traffic stays
+workspace-readable, because there is no member such a message could be held for and a hold on it
+would leave a row no human can open.
 
-Declare it correctly anyway, and declare it now. It is the axis the workspace mail-sharing floor and
-the per-seat holds will key on when they reach channel traffic, and a wrong value becomes wrong
-silently at that point: a per-member account read as the company's publishes one person's private
-chats to their colleagues, and a company account read as per-member hands a shared inbox to whoever
-connected it. Neither shows up as an error, because both produce a row that reads perfectly well to
-whoever it wrongly belongs to.
+So a wrong value is wrong in one of two directions, and neither announces itself: a per-member
+account read as the company's publishes one person's private chats to their colleagues, and a
+company account read as per-member hands a shared inbox to whoever connected it. Both produce a row
+that reads perfectly well to whoever it wrongly belongs to.
+
+A unit that declares `CredentialPerMember` must always ingest FOR a member — which the ingress
+already requires, since a member with no deposited credential is refused. A capture that reaches the
+sink naming a member-bound transport and no member is refused, naming the transport.
 
 ```go
 func send(ctx context.Context, rt extension.Runtime, msg extension.OutboundMessage) (extension.Receipt, error)

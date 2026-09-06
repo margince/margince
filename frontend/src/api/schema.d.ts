@@ -14720,11 +14720,18 @@ export interface components {
          */
         CaptureSettings: {
             /**
-             * @description The workspace's mail-sharing posture, ON by default: a captured email is readable by
-             *     every colleague who can see the contact. Switched OFF, every email captured FROM THEN ON
-             *     is held to its participants and the capturing mailbox owner — already-captured mail keeps
-             *     the audience it has. Turning it off makes shared pipeline work hard; the setting exists
-             *     for installations that accept that cost.
+             * @description The workspace's capture-sharing posture, ON by default: captured correspondence is
+             *     readable by every colleague who can see the contact. Switched OFF, everything captured
+             *     FROM THEN ON is held to its participants and the capturing member — already-captured
+             *     correspondence keeps the audience it has. Turning it off makes shared pipeline work
+             *     hard; the setting exists for installations that accept that cost.
+             *
+             *     It is named for mail because mail is what it governed first, and it now governs one
+             *     more thing: a chat on a transport whose credential belongs to ONE member is that
+             *     member's own correspondence and is held by this switch exactly as their mail is. A chat
+             *     on a transport the installation SHARES — a bot, an official account — is the company's
+             *     own business and is not touched, because there is no member such a message could be
+             *     held for.
              */
             mail_sharing: boolean;
             /**
@@ -14974,7 +14981,7 @@ export interface components {
         UpdateCaptureSettingsRequest: {
             /** @description Toggle captured-organization auto-enrichment. */
             auto_enrich?: boolean;
-            /** @description Toggle the workspace mail-sharing posture; affects mail captured from now on. */
+            /** @description Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member. */
             mail_sharing?: boolean;
             /** @description Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it. */
             signature_enrich?: boolean;

@@ -67,7 +67,8 @@ func (d birthDecision) hold(reason string) birthDecision {
 	return d
 }
 
-// decideBirthTx answers what this mailbox asks of this message.
+// decideBirthTx answers what this workspace, this correspondent and this seat
+// ask of this message.
 //
 // Five steps, strictest first:
 //
@@ -97,19 +98,62 @@ func (d birthDecision) hold(reason string) birthDecision {
 // hold. Skipping either would let a widening keyed on "counterparty was the
 // only reason" publish mail the thread's verdict, or the mailbox itself, had
 // already held.
+//
+// memberBound says the record arrived on a transport that spends ONE member's
+// credential, and it is what lets a chat message reach steps 1 to 3. Which is
+// the whole of the change these five steps were once opted out of by a kind
+// check: the workspace floor asks about the workspace, a counterparty hold asks
+// about the correspondent, and a marker asks about the message — none of the
+// three ever asked what carried it.
 func decideBirthTx(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
+	memberBound bool,
 ) (birthDecision, error) {
-	// Non-mail kinds keep the workspace default: a meeting or a channel message
-	// is not correspondence a mailbox posture was ever asked about.
+	// THE MISDECLARATION FIRST, and asked of the credential rather than of what
+	// it is carrying. A transport declaring a member-bound credential whose
+	// capture names no member is wrong about itself, and it is wrong that way
+	// whether the record is a chat, a note or an appointment — so this cannot sit
+	// behind the kind narrowing below, or a `per_member` transport would be held
+	// to its own declaration on messages and excused on everything else.
 	//
-	// A captured MEETING is still held — by limitLinkLessAudience, which writes
-	// the hold onto the ROW and leaves the import posture empty. It must not be
-	// held here instead: this decision welds its reason to posture_at_import, so
-	// the import contribution would re-pin the row to `participants` after any
-	// later widening (activities' contributionOf), and a meeting that got filed
-	// against a workspace record would never actually open.
-	if fields.Kind != "email" {
+	// Both ways of carrying on are wrong: publishing defies whatever the floor
+	// was set to, and holding writes a row no arm of the audience gate admits.
+	// Refused instead, naming the transport an operator has to correct.
+	if memberBound && actorUserID(ctx) == ids.Nil {
+		return birthDecision{}, fmt.Errorf(
+			"capture: %q declares a member-bound credential but this capture names no member",
+			fields.ChannelProvider)
+	}
+	// Whose correspondence this is, which decides whether any of the five steps
+	// below has anything to say about it.
+	//
+	// Mail always. A chat that arrived on one member's own credential is that
+	// member's correspondence in the same sense — the mailbox model exactly, and
+	// a seat to hold it for.
+	//
+	// memberBound already means a MESSAGE, and there is no kind test here on
+	// purpose. `activity_message_has_provider` is a biconditional — a row is a
+	// message if and only if it names a transport — so a meeting or a note
+	// carrying a provider is refused by the very insert this decision precedes.
+	// A kind test would be a second, weaker spelling of that constraint, sitting
+	// where it could never change an outcome — which is also why this package
+	// carries no `kindMessage` constant beside kindEmail: nothing here decides
+	// anything on that word. Held by TestANonMessageMayNotNameATransportAtAll.
+	//
+	// Everything else keeps the workspace default, for two different reasons.
+	//
+	// A message on a transport the INSTALLATION shares is the company's own
+	// business, and that is not a preference: there is no member a bot's message
+	// could be held for, so a hold on it satisfies no arm of the audience gate
+	// and leaves a row every human is locked out of.
+	//
+	// A captured MEETING is still held, but not here — limitLinkLessAudience
+	// writes that hold onto the ROW and leaves the import posture empty. It must
+	// not be held here instead: this decision welds its reason to
+	// posture_at_import, so the import contribution would re-pin the row to
+	// `participants` after any later widening (activities' contributionOf), and a
+	// meeting that got filed against a workspace record would never open.
+	if fields.Kind != kindEmail && !memberBound {
 		return birthDecision{}, nil
 	}
 
@@ -149,6 +193,15 @@ func decideBirthTx(
 			return birthDecision{}, err
 		}
 		decision = decision.hold(audienceReasonConfidentialMarker)
+	}
+
+	// Steps 4 and 5 and no further for a chat. Both read capture_connection —
+	// the mailbox that delivered the message, its posture and the verdicts taken
+	// against its threads — and a channel transport has no row in it. Giving one
+	// a posture of its own is a product question about what a member may ask of
+	// their own transport, not a gap to fill in with mail's answer.
+	if fields.Kind != kindEmail {
+		return decision, nil
 	}
 
 	inherited, err := inheritedVerdictTx(ctx, tx, rec)

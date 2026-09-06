@@ -39,12 +39,19 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	// event then claims to describe an activity it disagrees with. fields is a
 	// value copy, so settling it here settles it for every one of them.
 	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
+	// Whose credential carried this record, asked ONCE and carried to both the
+	// birth decision and this seat's import row — the two readers of it, and the
+	// same argument the birth decision makes for itself below.
+	memberBound, err := memberBoundCredentialTx(ctx, tx, fields.ChannelProvider)
+	if err != nil {
+		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
 	// ONE decision per capture, taken before the row exists and carried to both
 	// the insert and this seat's import row. Asking twice would not merely cost
 	// two reads: the marker step RE-OPENS a settled thread verdict as it
 	// decides, and running that write a second time is a second claim on a row
 	// the first pass already moved.
-	birth, err := decideBirthTx(ctx, tx, rec, fields)
+	birth, err := decideBirthTx(ctx, tx, rec, fields, memberBound)
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
@@ -67,7 +74,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		// recompute that ran before this seat's import row landed would derive
 		// an audience from a contributor set missing exactly the seat whose
 		// sync it is.
-		if err := s.recordThisImport(ctx, tx, id, rec, fields, birth); err != nil {
+		if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
 		return ref, false, counterpartyDecision{}, nil
@@ -76,7 +83,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	// audit and event, and the ladder's decision about who it is with. Split out
 	// so this function reads as the three answers a capture can have — the row
 	// was already here, the row is new, or the capture failed.
-	decision, err := s.finishNewActivity(ctx, tx, id, rec, fields, birth)
+	decision, err := s.finishNewActivity(ctx, tx, id, rec, fields, birth, memberBound)
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
@@ -89,6 +96,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 func (s *Sink) finishNewActivity(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 	rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision,
+	memberBound bool,
 ) (counterpartyDecision, error) {
 	if err := s.linkActivity(ctx, tx, id, rec.Links); err != nil {
 		return counterpartyDecision{}, err
@@ -204,7 +212,7 @@ func (s *Sink) finishNewActivity(
 	// audience a link-less message is BORN with and the recompute must derive
 	// from the state the capture actually settled on rather than from the one it
 	// held mid-transaction.
-	if err := s.recordThisImport(ctx, tx, id, rec, fields, birth); err != nil {
+	if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// The trace runs LAST, so it can carry the reason the ladder just settled on:

@@ -19557,11 +19557,18 @@ type CaptureSettings struct {
 	// excluded (cold start reads it). Default is ON (the testing posture).
 	AutoEnrich bool `json:"auto_enrich"`
 
-	// MailSharing The workspace's mail-sharing posture, ON by default: a captured email is readable by
-	// every colleague who can see the contact. Switched OFF, every email captured FROM THEN ON
-	// is held to its participants and the capturing mailbox owner — already-captured mail keeps
-	// the audience it has. Turning it off makes shared pipeline work hard; the setting exists
-	// for installations that accept that cost.
+	// MailSharing The workspace's capture-sharing posture, ON by default: captured correspondence is
+	// readable by every colleague who can see the contact. Switched OFF, everything captured
+	// FROM THEN ON is held to its participants and the capturing member — already-captured
+	// correspondence keeps the audience it has. Turning it off makes shared pipeline work
+	// hard; the setting exists for installations that accept that cost.
+	//
+	// It is named for mail because mail is what it governed first, and it now governs one
+	// more thing: a chat on a transport whose credential belongs to ONE member is that
+	// member's own correspondence and is held by this switch exactly as their mail is. A chat
+	// on a transport the installation SHARES — a bot, an official account — is the company's
+	// own business and is not touched, because there is no member such a message could be
+	// held for.
 	MailSharing bool `json:"mail_sharing"`
 
 	// SharedPostureAllowed Whether a seat may put their mailbox in the `shared` posture at all — colleagues
@@ -33420,7 +33427,7 @@ type UpdateCaptureSettingsRequest struct {
 	// AutoEnrich Toggle captured-organization auto-enrichment.
 	AutoEnrich *bool `json:"auto_enrich,omitempty"`
 
-	// MailSharing Toggle the workspace mail-sharing posture; affects mail captured from now on.
+	// MailSharing Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.
 	MailSharing *bool `json:"mail_sharing,omitempty"`
 
 	// SharedPostureAllowed Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.

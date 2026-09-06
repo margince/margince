@@ -21629,11 +21629,18 @@ components:
         mail_sharing:
           type: boolean
           description: |
-            The workspace's mail-sharing posture, ON by default: a captured email is readable by
-            every colleague who can see the contact. Switched OFF, every email captured FROM THEN ON
-            is held to its participants and the capturing mailbox owner — already-captured mail keeps
-            the audience it has. Turning it off makes shared pipeline work hard; the setting exists
-            for installations that accept that cost.
+            The workspace's capture-sharing posture, ON by default: captured correspondence is
+            readable by every colleague who can see the contact. Switched OFF, everything captured
+            FROM THEN ON is held to its participants and the capturing member — already-captured
+            correspondence keeps the audience it has. Turning it off makes shared pipeline work
+            hard; the setting exists for installations that accept that cost.
+
+            It is named for mail because mail is what it governed first, and it now governs one
+            more thing: a chat on a transport whose credential belongs to ONE member is that
+            member's own correspondence and is held by this switch exactly as their mail is. A chat
+            on a transport the installation SHARES — a bot, an official account — is the company's
+            own business and is not touched, because there is no member such a message could be
+            held for.
         shared_posture_allowed:
           type: boolean
           description: |
@@ -22064,7 +22071,7 @@ components:
       description: A sparse capture-settings patch (admin/ops).
       properties:
         auto_enrich: { type: boolean, description: Toggle captured-organization auto-enrichment. }
-        mail_sharing: { type: boolean, description: 'Toggle the workspace mail-sharing posture; affects mail captured from now on.' }
+        mail_sharing: { type: boolean, description: 'Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.' }
         signature_enrich: { type: boolean, description: 'Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it.' }
         shared_posture_allowed: { type: boolean, description: 'Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.' }
 

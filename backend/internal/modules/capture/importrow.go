@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -106,6 +107,7 @@ func (s *Sink) WithParticipantNamer(name ParticipantNamer) *Sink {
 func (s *Sink) recordThisImport(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 	rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision,
+	memberBound bool,
 ) error {
 	// actor.UserID, the same seat captured_by names and stampCaptureParticipants
 	// stamps — NOT capturePrincipal's OnBehalfOf fallback. Every connector
@@ -113,29 +115,13 @@ func (s *Sink) recordThisImport(
 	// a future principal that sets only one cannot write an import row naming a
 	// different seat than the one the content gate below just checked.
 	owner := actorUserID(ctx)
-	// This seat's mailbox must actually have DELIVERED the message before they
-	// are recorded as having imported it.
-	//
-	// A message's identity is (source_system, source_id), source_id is the
-	// RFC822 Message-ID, and a Message-ID is a header the sender types: any seat
-	// can mint a mail carrying somebody else's Message-ID and sync it. Without a
-	// check that capture hits the incumbent, writes an import row and a
-	// participant row against a colleague's held thread, and the audience arm
-	// reads both as GRANTS — so a forged header would buy the content of
-	// correspondence the forger was never on.
-	//
-	// The evidence is one of the SEAT'S OWN addresses appearing on the message.
-	// A forger controls every header they write, but not which mailbox a message
-	// was delivered to: they cannot put their own connected address on a message
-	// nobody sent them, and an address they merely claim is not in their identity
-	// set unless they declared it, which is a claim about themselves.
-	//
-	// Not "can this seat already read it": on an INBOUND message the first
-	// capture deliberately refuses to bind a colleague's user_id from a Cc line
-	// the sender wrote (participant.go says why), so a genuine second recipient
-	// has no participant row yet and cannot read a held message — which is
-	// exactly the case this path exists to serve.
-	delivered, err := mailboxWasARecipientTx(ctx, tx, rec)
+	// This seat's own credential must actually have DELIVERED the message before
+	// they are recorded as having imported it: the import row and the participant
+	// row below are both GRANTS to the audience gate, so a seat that could claim
+	// somebody else's message would buy the content of correspondence they were
+	// never on. What counts as evidence differs by transport, and seatDeliveredTx
+	// is where that is argued.
+	delivered, err := seatDeliveredTx(ctx, tx, id, rec, memberBound)
 	if err != nil {
 		return err
 	}
@@ -169,6 +155,59 @@ func (s *Sink) recordThisImport(
 		return nil
 	}
 	return s.recomputeAudience(ctx, tx, id)
+}
+
+// seatDeliveredTx answers the question the import row is owed: did THIS seat's
+// own credential deliver this message, or are they merely claiming it did?
+//
+// Mail answers it with an address (mailboxWasARecipientTx). A chat carries none
+// of the seat's addresses, so that arm answers no for every channel message
+// there has ever been — which is why a chat has never produced an import row,
+// and why a hold on one would have nowhere to be recorded.
+//
+// For a MEMBER-BOUND transport the credential is the evidence, and it is a
+// stronger claim than a header. The extension ingress established both halves
+// before capture ran: this member holds one of the unit's user-scoped secrets —
+// depositing it is the act that says "act for me here" — and the unit called
+// Ingest for that member. Neither fact is in the record.
+//
+// It is bounded to the seat the row's PROVENANCE names, which on a first capture
+// is this seat by construction and on a replay is whoever landed the message
+// first. A second member of the same unit is therefore refused, and refusing is
+// the safe direction: the core cannot tell a colleague whose own credential also
+// delivered the message from one who guessed the first member's source id, and
+// the mail path's answer — an address the provider attested delivery to — has no
+// channel analogue. When a transport can attest a second delivery, this is the
+// arm that learns it; until then a genuine second member reads the conversation
+// through their own capture of it, not through this row.
+func seatDeliveredTx(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID,
+	rec connector.NormalizedRecord, memberBound bool,
+) (bool, error) {
+	if !memberBound {
+		return mailboxWasARecipientTx(ctx, tx, rec)
+	}
+	// The zero principal is not special-cased: connectorProvenance renders it as
+	// the empty string, which equals no captured_by any capture has written. It
+	// cannot arrive here anyway — decideBirthTx refused a member-bound capture
+	// naming no member two calls ago, which is where that refusal is spelled and
+	// where its message belongs.
+	actor, _ := principal.Actor(ctx)
+	// restricted_at IS NULL for the reason every other reader of this table
+	// carries it: a row under a statutory obligation is out of every ordinary
+	// path, and writing an import row against one would hand a seat a grant on a
+	// message the obligation has already taken away from them. It answers false
+	// rather than an error — the message is on the timeline, held by the
+	// obligation, and there is nothing for this capture to add to it.
+	var mine bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM activity
+			 WHERE id = $1 AND restricted_at IS NULL AND captured_by = $2)`,
+		id, connectorProvenance(actor)).Scan(&mine); err != nil {
+		return false, fmt.Errorf("capture: reading whose credential landed %s: %w", id, err)
+	}
+	return mine, nil
 }
 
 // mailboxWasARecipientTx answers whether one of the acting seat's own addresses
