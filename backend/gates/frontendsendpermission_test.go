@@ -52,12 +52,7 @@ const (
 
 // silentSendSurfaces ratifies each surface that posts to a send door without
 // asking the engine first, with what the omission costs.
-var silentSendSurfaces = gatekit.Waive(map[string]string{
-	"screens/persondrawers.tsx": "the person page's composer leads with the person's purpose-keyed " +
-		"consent guard, read off the 360; drawing the engine's answer beside it would put two " +
-		"verdicts about one message on one drawer, so adopting the component there means " +
-		"retiring that guard first, which is its own change",
-})
+var silentSendSurfaces = gatekit.Waive(map[string]string{})
 
 // contractPathLine matches a path entry under `paths:`.
 var contractPathLine = regexp.MustCompile(`^  (/[^\s:]+):\s*$`)
@@ -225,10 +220,16 @@ func TestEverySurfaceThatSendsAsksTheEngineFirst(t *testing.T) {
 	if walkErr != nil {
 		t.Fatalf("walking the frontend: %v", walkErr)
 	}
-	// The composer and the person page's composer both post to a door today.
-	// Fewer means the walk has stopped seeing the surfaces it exists to hold.
-	if surfaces < 2 {
-		t.Fatalf("found %d frontend file(s) posting to a send door, want at least the two composers: "+
+	// ONE composer posts to a door today, and it is one on purpose: the person
+	// page's drawer used to carry a second — waived here, because it led with its
+	// own consent guard — and #4553 gave every record the same mail drawer, so
+	// the surface and its waiver went together.
+	//
+	// The floor stays because the failure it guards is the walk finding NOTHING:
+	// a census that stops seeing its subject reports a pass, and this one holds
+	// the surface where a rep learns a refusal by pressing Send.
+	if surfaces < 1 {
+		t.Fatalf("found %d frontend file(s) posting to a send door, want at least the composer: "+
 			"the census has stopped seeing its subject", surfaces)
 	}
 }
