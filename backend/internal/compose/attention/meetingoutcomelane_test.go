@@ -99,3 +99,27 @@ func TestAMeetingOwedAnAnswerOffersAWayToGiveIt(t *testing.T) {
 			"way an approval's is", item.Actions)
 	}
 }
+
+// The verb writes the activity, so the row has to name the version it is
+// answered against — the client cannot make the write conditional otherwise,
+// and two readers answering one meeting both succeed with the later one
+// winning silently.
+//
+// Asserted on the ITEM rather than trusted from the lane type: a version that
+// never reaches the wire is a version the browser cannot send, and the
+// frontend's If-Match census can only see that the call spells `ifMatch`, not
+// that the number arrives.
+func TestAMeetingOwedAnAnswerNamesTheVersionItIsAnsweredAgainst(t *testing.T) {
+	t.Parallel()
+	version := int64(7)
+	item := meetingAwaitingOutcomeItem(MeetingAwaitingOutcome{
+		ID: ids.NewV7(), Subject: "Discovery call", Version: &version,
+	})
+	if item.Version == nil {
+		t.Fatal("the row carries no version: the answer cannot be made conditional, so two " +
+			"readers deciding one meeting overwrite each other and the second is told nothing")
+	}
+	if *item.Version != version {
+		t.Errorf("version = %d, want %d", *item.Version, version)
+	}
+}

@@ -325,7 +325,7 @@ const ANSWER_BY_SOURCE: Partial<
   },
   meeting_outcome: {
     verb: "decide",
-    draw: (item) => <MeetingOutcome id={item.id} />,
+    draw: (item) => <MeetingOutcome id={item.id} version={item.version} />,
   },
   conversation_claim: {
     verb: "complete",
@@ -1207,13 +1207,16 @@ function refusalMessage(
 // with no outcome. That is also why there is no undo offered here: a corrected
 // outcome is a second answer to the same question, given on the meeting itself
 // where the history of both is visible, rather than a toast that disappears.
-function MeetingOutcome({ id }: Readonly<{ id: string }>) {
+function MeetingOutcome({
+  id,
+  version,
+}: Readonly<{ id: string; version: number | undefined }>) {
   const t = useT();
   const toast = useToast();
   const record = useMeetingOutcome([worklistKey]);
   const answer = (status: "held" | "no_show" | "canceled") => () =>
     record.mutate(
-      { id, status },
+      { id, version, status },
       {
         onSuccess: () => toast.show(t("worklist.verb.meetingOutcomeRecorded")),
         // A refused write leaves the row exactly as it was, which renders

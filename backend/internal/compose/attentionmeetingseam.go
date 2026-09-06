@@ -163,6 +163,7 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 	for _, row := range rows {
 		over = append(over, attention.MeetingAwaitingOutcome{
 			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartedAt: row.OccurredAt,
+			Version: row.Version,
 		})
 	}
 	// Longest unanswered first: the store returns activities newest-first, and

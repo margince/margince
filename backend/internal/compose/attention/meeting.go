@@ -172,6 +172,7 @@ func meetingAwaitingOutcomeItem(meeting MeetingAwaitingOutcome) crmcontracts.Att
 		Actions: []crmcontracts.AttentionItemActions{
 			crmcontracts.AttentionItemActionsDecide,
 		},
+		Version: meeting.Version,
 	}
 }
 

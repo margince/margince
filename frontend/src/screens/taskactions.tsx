@@ -348,10 +348,17 @@ export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
   return useMutation({
     mutationFn: async (input: {
       id: string;
+      // The version the answer was decided against, for the reason the task
+      // verb beside it carries one: two readers answering the same meeting
+      // would otherwise both succeed and the later one would win silently.
+      version: number | undefined;
       status: "held" | "no_show" | "canceled";
     }) => {
       const { error } = await api.PATCH("/activities/{id}", {
-        params: { path: { id: input.id } },
+        params: {
+          path: { id: input.id },
+          ...ifMatch(requireVersion(input.version)),
+        },
         body: { meeting_status: input.status },
       });
       if (error) {
