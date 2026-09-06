@@ -201,6 +201,16 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		occurredAt = in.OccurredAt.UTC()
 	}
 	assignee := taskAssignee(ctx, in)
+	// Asked at the CREATE door too, not only at the patch. A task minted onto an
+	// agent seat is one that never reaches a queue, and it used to be refused
+	// only if somebody later tried to move it — which is after it has been sat
+	// in nobody's list for however long it took to notice.
+	//
+	// Checked against the resolved assignee rather than the input, so the
+	// self-assignment above is covered by the same question.
+	if err := ensureAssigneeCanHoldWork(ctx, tx, assignee); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
 
 	replay, err := replayedActivity(ctx, tx, in)
 	if err != nil {
