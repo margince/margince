@@ -59,6 +59,7 @@ import { basename, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { filesUnder, scriptKindFor } from "../../scripts/lib/source-tree";
+import { storyTitle } from "../../scripts/lib/story-title";
 
 const frontendRoot = resolve(__dirname, "..", "..");
 const srcDir = join(frontendRoot, "src");
@@ -205,83 +206,6 @@ function rendersMarkup(node: ts.Node): boolean {
   };
   visit(node);
   return markup;
-}
-
-// storyTitle returns the sidebar path a story file claims, or null.
-//
-// It resolves the DEFAULT EXPORT rather than reading the first `title:` in the
-// file, because a story's fixture data carries titles of its own —
-// dealroomthreads.stories.tsx opens with `title: "Commercial terms v4"`, the
-// name of a document in the fixture, and a scanner reading the first match
-// would file that story under a root called "Commercial terms v4".
-function storyTitle(path: string, text: string): string | null {
-  const source = ts.createSourceFile(
-    path,
-    text,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
-  const exported = source.statements.find(ts.isExportAssignment);
-  if (!exported) return null;
-  const named = unwrap(exported.expression);
-  const meta = ts.isIdentifier(named)
-    ? metaObjectNamed(source, named.text)
-    : named;
-  if (!meta || !ts.isObjectLiteralExpression(meta)) return null;
-  for (const property of meta.properties) {
-    if (!ts.isPropertyAssignment(property)) continue;
-    if (propertyKey(property.name) !== "title") continue;
-    const value = unwrap(property.initializer);
-    if (ts.isStringLiteralLike(value)) return value.text;
-  }
-  return null;
-}
-
-// The key, whichever way it is written. `{ title: … }` and `{ "title": … }` are
-// the same property, but reading the name's SOURCE TEXT compares the quotes
-// too, so the quoted spelling matched nothing and the story fell out of the
-// root check — skipped rather than reported, the one direction this gate must
-// not be wrong in. A computed key is deliberately not resolved: what it
-// evaluates to is not a question the parser can answer, and guessing would be
-// worse than the honest null.
-function propertyKey(name: ts.PropertyName): string | null {
-  if (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) return name.text;
-  return null;
-}
-
-function metaObjectNamed(
-  source: ts.SourceFile,
-  name: string,
-): ts.Expression | undefined {
-  for (const statement of source.statements) {
-    if (!ts.isVariableStatement(statement)) continue;
-    for (const declaration of statement.declarationList.declarations) {
-      if (ts.isIdentifier(declaration.name) && declaration.name.text === name) {
-        return declaration.initializer && unwrap(declaration.initializer);
-      }
-    }
-  }
-  return undefined;
-}
-
-// The type-only wrappers a story's metadata may be written through. They change
-// nothing about the object underneath, so a scanner that stops at them reads no
-// title — and an absent title is SKIPPED by the root check rather than
-// reported, which is the one direction this gate must not be wrong in. This
-// tree already writes `as const satisfies` elsewhere, so the form is one edit
-// away from appearing here.
-function unwrap(expression: ts.Expression): ts.Expression {
-  let node = expression;
-  while (
-    ts.isParenthesizedExpression(node) ||
-    ts.isAsExpression(node) ||
-    ts.isSatisfiesExpression(node) ||
-    ts.isTypeAssertionExpression(node)
-  ) {
-    node = node.expression;
-  }
-  return node;
 }
 
 const catalogTable = catalogSection(CATALOG_HEADING);

@@ -271,6 +271,12 @@ describe("the kinds the rail asks for", () => {
       // a rep reads a handful of companies in a day, not ten.
       "site_read",
       "summarize",
+      // What the week TAUGHT, on the same terms as the sentence above it: one
+      // occurrence per rep per week, scoped to that rep by ResolveActor. It
+      // earns real copy rather than the system-sweep line for the same reason —
+      // a rep waiting on their own week should be told what is being done to
+      // it, and "lessons" is a different promise from "a summary".
+      "weekly_learnings",
       // The weekly retrospective's sentence. It reaches one person's feed —
       // the pass runs under that rep's own principal over their own week, so
       // ResolveActor scopes the occurrence to them rather than to the

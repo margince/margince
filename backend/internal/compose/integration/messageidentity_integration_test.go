@@ -60,7 +60,7 @@ func (p *preflightEnv) activityOnTheStampedIdentity(t *testing.T) ids.UUID {
 	var found []ids.UUID
 	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
-			`SELECT id FROM activity WHERE source_system = 'gmail' AND source_id = $1`, gmailStamped)
+			`SELECT id FROM activity WHERE source_system = 'email' AND source_id = $1`, gmailStamped)
 		if err != nil {
 			return err
 		}

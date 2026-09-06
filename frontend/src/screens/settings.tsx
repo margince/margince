@@ -130,6 +130,7 @@ import "./settings.css";
 
 import { ProvidersStat, SpendStat } from "./ai-settings";
 import type { SettingsPageId } from "./settingscatalog";
+import { SettingsBoundary, SettingsHome } from "./settingshome";
 // The catalog, the addresses and the visibility predicate moved to
 // ./settingsnav so `src/app/**` can read them without pulling in every card.
 // Re-exported here because this module's own consumers — the tests, the stories,
@@ -465,18 +466,33 @@ function IntegrationsTab() {
 export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   const target = settingsRouteTarget(route);
   const visible = useVisibleSettingsPages();
-  // The page the address names, if this reader may open it. An address they may
-  // not — or one nothing answers — falls back to the first page they can see,
-  // which is Account for everybody: the personal pages carry no grant.
-  //
-  // A boundary that named the page instead is the better answer and is s2e's;
-  // until it exists, landing somewhere real beats a blank screen.
+  // The page the address names, if this reader may open it.
   const named =
     target.kind === "page"
       ? visible.find((page) => page.id === target.page)
       : undefined;
+  // An address this reader may not open, or one nothing answers, is a BOUNDARY
+  // — not a redirect to Account.
+  //
+  // The fallback it replaces was silent in the worst way: it rewrote the URL to
+  // the page it had chosen, so a reader who followed a colleague's link saw
+  // Account, saw an address saying Account, and had no way to tell that the
+  // link had gone somewhere else. They would report the link as broken, and the
+  // sender would open it and find it worked.
+  //
+  // The URL is left EXACTLY as typed. That is the whole affordance: the reader
+  // can read what they asked for, copy it, and ask the person who has it.
+  const boundary =
+    target.kind === "unknown"
+      ? "unknown"
+      : target.kind === "page" && named === undefined
+        ? "denied"
+        : undefined;
   const active = named ?? visible[0];
-  const legacy = target.kind === "page" && target.legacy;
+  // Only a page this reader actually reached can be rewritten to. A legacy
+  // address they may not open is a boundary, and rewriting it would replace the
+  // address they need to quote with one that is not theirs either.
+  const legacy = target.kind === "page" && target.legacy && named !== undefined;
   // A legacy admin address is answered AND rewritten: the reader gets the page
   // they asked for, and the URL bar then says where that page lives, so the
   // link they copy from it is the current one. Replaced rather than pushed, or
@@ -503,6 +519,22 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   // it once is the difference between every page spacing correctly and every
   // page having to remember to. Width is owned the same way and is the same for
   // all of them, so there is nothing here to branch on.
+  if (target.kind === "home") {
+    return (
+      <div className="wrap">
+        <SettingsHome pages={visible} />
+      </div>
+    );
+  }
+
+  if (boundary) {
+    return (
+      <div className="wrap">
+        <SettingsBoundary kind={boundary} />
+      </div>
+    );
+  }
+
   return (
     <div className="wrap">
       {/* Unsaved drafts in here are held by the guard above the routed screen

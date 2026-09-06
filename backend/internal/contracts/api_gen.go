@@ -586,6 +586,7 @@ const (
 	AiActivityKindTranscript                    AiActivityKind = "transcript"
 	AiActivityKindTranscriptPropose             AiActivityKind = "transcript_propose"
 	AiActivityKindVoiceBuild                    AiActivityKind = "voice_build"
+	AiActivityKindWeeklyLearnings               AiActivityKind = "weekly_learnings"
 	AiActivityKindWeeklyReview                  AiActivityKind = "weekly_review"
 )
 
@@ -647,6 +648,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindTranscriptPropose:
 		return true
 	case AiActivityKindVoiceBuild:
+		return true
+	case AiActivityKindWeeklyLearnings:
 		return true
 	case AiActivityKindWeeklyReview:
 		return true
@@ -1426,6 +1429,7 @@ const (
 	AttentionItemActionsDismiss     AttentionItemActions = "dismiss"
 	AttentionItemActionsMerge       AttentionItemActions = "merge"
 	AttentionItemActionsOpen        AttentionItemActions = "open"
+	AttentionItemActionsReply       AttentionItemActions = "reply"
 	AttentionItemActionsRetry       AttentionItemActions = "retry"
 	AttentionItemActionsSetAside    AttentionItemActions = "set_aside"
 	AttentionItemActionsSnooze      AttentionItemActions = "snooze"
@@ -1447,6 +1451,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsMerge:
 		return true
 	case AttentionItemActionsOpen:
+		return true
+	case AttentionItemActionsReply:
 		return true
 	case AttentionItemActionsRetry:
 		return true
@@ -13411,6 +13417,24 @@ func (e WebhookSubscriptionState) Valid() bool {
 	}
 }
 
+// Defines values for WeeklyLearningCitationSubjectType.
+const (
+	WeeklyLearningCitationSubjectTypeCommitment WeeklyLearningCitationSubjectType = "commitment"
+	WeeklyLearningCitationSubjectTypeDeal       WeeklyLearningCitationSubjectType = "deal"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyLearningCitationSubjectType enum.
+func (e WeeklyLearningCitationSubjectType) Valid() bool {
+	switch e {
+	case WeeklyLearningCitationSubjectTypeCommitment:
+		return true
+	case WeeklyLearningCitationSubjectTypeDeal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WeeklyPlanStatus.
 const (
 	WeeklyPlanStatusClosed WeeklyPlanStatus = "closed"
@@ -13495,6 +13519,51 @@ func (e WeeklyReviewDealOutcome) Valid() bool {
 	case WeeklyReviewDealOutcomeMoved:
 		return true
 	case WeeklyReviewDealOutcomeWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyReviewLearningKind.
+const (
+	DidNotWork WeeklyReviewLearningKind = "did_not_work"
+	Experiment WeeklyReviewLearningKind = "experiment"
+	Pattern    WeeklyReviewLearningKind = "pattern"
+	Worked     WeeklyReviewLearningKind = "worked"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyReviewLearningKind enum.
+func (e WeeklyReviewLearningKind) Valid() bool {
+	switch e {
+	case DidNotWork:
+		return true
+	case Experiment:
+		return true
+	case Pattern:
+		return true
+	case Worked:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyReviewLearningsState.
+const (
+	InsufficientEvidence WeeklyReviewLearningsState = "insufficient_evidence"
+	NotRun               WeeklyReviewLearningsState = "not_run"
+	Synthesized          WeeklyReviewLearningsState = "synthesized"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyReviewLearningsState enum.
+func (e WeeklyReviewLearningsState) Valid() bool {
+	switch e {
+	case InsufficientEvidence:
+		return true
+	case NotRun:
+		return true
+	case Synthesized:
 		return true
 	default:
 		return false
@@ -13834,6 +13903,7 @@ const (
 	WorklistItemActionsDismiss     WorklistItemActions = "dismiss"
 	WorklistItemActionsMerge       WorklistItemActions = "merge"
 	WorklistItemActionsOpen        WorklistItemActions = "open"
+	WorklistItemActionsReply       WorklistItemActions = "reply"
 	WorklistItemActionsRetry       WorklistItemActions = "retry"
 	WorklistItemActionsSetAside    WorklistItemActions = "set_aside"
 	WorklistItemActionsSnooze      WorklistItemActions = "snooze"
@@ -13855,6 +13925,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsMerge:
 		return true
 	case WorklistItemActionsOpen:
+		return true
+	case WorklistItemActionsReply:
 		return true
 	case WorklistItemActionsRetry:
 		return true
@@ -16529,7 +16601,7 @@ type Activity struct {
 	// SourceId Provider message/event id — idempotency key part.
 	SourceId *string `json:"source_id,omitempty"`
 
-	// SourceSystem gmail/gcal/outlook/transcript — idempotency key part.
+	// SourceSystem Which system this record came from — `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. Idempotency key part.
 	SourceSystem *string `json:"source_system,omitempty"`
 	Subject      *string `json:"subject,omitempty"`
 
@@ -34111,14 +34183,50 @@ type WebhookSubscriptionListResponse struct {
 	Page            PageInfo `json:"page"`
 }
 
+// WeeklyLearningCitation One row a learning was drawn from, by the name it carried that week.
+type WeeklyLearningCitation struct {
+	// Label What the row was CALLED when the learning was written, so a citation still reads after a rename.
+	Label string `json:"label"`
+
+	// SubjectId The row cited. It may no longer exist — a citation outlives the deal it names, as
+	// the review's own frozen deal lines do — so a client resolves it or draws the label
+	// alone rather than treating absence as an error.
+	SubjectId   openapi_types.UUID                `json:"subject_id"`
+	SubjectType WeeklyLearningCitationSubjectType `json:"subject_type"`
+}
+
+// WeeklyLearningCitationSubjectType defines model for WeeklyLearningCitation.SubjectType.
+type WeeklyLearningCitationSubjectType string
+
 // WeeklyPlan One rep's week as they meant it to go — the forward counterpart to the frozen
 // WeeklyReview beside it.
 type WeeklyPlan struct {
-	Commitments []WeeklyPlanCommitment `json:"commitments"`
-	Id          openapi_types.UUID     `json:"id"`
+	// Capacity What next week's calendar already holds, counted rather than authored.
+	//
+	// ABSENT when the installation composed no calendar reader. Absent is NOT zero: a
+	// week nobody has looked at is unknown, and drawing it as "nothing booked" would
+	// tell a rep their week is free on the strength of a missing integration.
+	Capacity *WeeklyPlanCapacity `json:"capacity,omitempty"`
+
+	// CapacityNote What the rep says about the room they have — "two days at the conference" — which
+	// is the half of capacity no query can know. It stands beside `capacity`, which is
+	// counted, and never replaces it.
+	//
+	// Null and empty carry the same distinction as `risks`.
+	CapacityNote *string                `json:"capacity_note,omitempty"`
+	Commitments  []WeeklyPlanCommitment `json:"commitments"`
+	Id           openapi_types.UUID     `json:"id"`
 
 	// LocalWeekStart The Monday of the week planned, in the installation reporting timezone.
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// Risks What the rep expects to get in the way this week, in their own words.
+	//
+	// NULL and the empty string are different answers and a reader must draw them
+	// differently: null is a rep who has written nothing, and "" is one who looked and
+	// says there is nothing to name. Folding the two would report an unconsidered week
+	// as a safe one.
+	Risks *string `json:"risks,omitempty"`
 
 	// Status `closed` once the weekly job has settled the week and frozen its outcome into the
 	// review. A closed plan stops accepting edits, which is what keeps the review's
@@ -34130,6 +34238,17 @@ type WeeklyPlan struct {
 // review. A closed plan stops accepting edits, which is what keeps the review's
 // counts true.
 type WeeklyPlanStatus string
+
+// WeeklyPlanCapacity How much of the coming week is already spoken for.
+type WeeklyPlanCapacity struct {
+	// Meetings Meetings BOOKED in next week's local window. Booked and not held: the week has not
+	// happened, so a meeting there has no outcome yet, and counting `held` would only
+	// find rows somebody backdated.
+	Meetings int `json:"meetings"`
+
+	// Tasks Open tasks assigned to the rep and due inside next week's local window.
+	Tasks int `json:"tasks"`
+}
 
 // WeeklyPlanCommitment One thing a rep said they would do this week.
 type WeeklyPlanCommitment struct {
@@ -34203,6 +34322,15 @@ type WeeklyReview struct {
 	// GeneratedAt When the review was written.
 	GeneratedAt time.Time          `json:"generated_at"`
 	Id          openapi_types.UUID `json:"id"`
+
+	// Learnings What the week TAUGHT, as against what it was.
+	//
+	// `state` is load-bearing beside `items`: `not_run` means no pass has looked at this
+	// week — the lane may be unbound, the budget exhausted, the provider down — and
+	// `insufficient_evidence` means a pass ran, read the week and had too little it could
+	// ground. Both carry an empty list, and a reader that draws them the same way tells a
+	// rep "nothing to learn" about a week nobody examined.
+	Learnings *WeeklyReviewLearnings `json:"learnings,omitempty"`
 
 	// LocalWeekStart The Monday of the week under review, in the installation reporting timezone.
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
@@ -34364,6 +34492,41 @@ type WeeklyReviewIndex struct {
 	// Weeks The Monday of each week with a review, newest first.
 	Weeks []openapi_types.Date `json:"weeks"`
 }
+
+// WeeklyReviewLearning One thing the week taught, with what it was drawn from.
+type WeeklyReviewLearning struct {
+	// Citations The rows this claim rests on. NEVER empty: a learning is advice a reader cannot
+	// check against anything in front of them, so one that points at nothing is refused
+	// before it is stored rather than shown unsourced.
+	Citations []WeeklyLearningCitation `json:"citations"`
+
+	// Kind What sort of claim this is. A closed vocabulary because the surface draws each
+	// differently and a reader learns the four shapes.
+	Kind WeeklyReviewLearningKind `json:"kind"`
+
+	// Text One sentence, in the reader's own language.
+	Text string `json:"text"`
+}
+
+// WeeklyReviewLearningKind What sort of claim this is. A closed vocabulary because the surface draws each
+// differently and a reader learns the four shapes.
+type WeeklyReviewLearningKind string
+
+// WeeklyReviewLearnings A week's lessons and whether anybody looked for them.
+type WeeklyReviewLearnings struct {
+	// Items In the order the pass produced, because the first is the one a rep reads. At most
+	// four: a retrospective is read in a few minutes, and a longer list is a report
+	// nobody finishes.
+	Items []WeeklyReviewLearning `json:"items"`
+
+	// State Whether a pass ran, and what it found. `not_run` and `insufficient_evidence` both
+	// carry no items and mean different things — see the parent's description.
+	State WeeklyReviewLearningsState `json:"state"`
+}
+
+// WeeklyReviewLearningsState Whether a pass ran, and what it found. `not_run` and `insufficient_evidence` both
+// carry no items and mean different things — see the parent's description.
+type WeeklyReviewLearningsState string
 
 // WeeklyReviewMovement One bar of the movement bridge, and the deals behind it.
 type WeeklyReviewMovement struct {
@@ -40352,6 +40515,12 @@ type SetWeeklyPlanCommitmentStateJSONBody struct {
 // SetWeeklyPlanCommitmentStateJSONBodyState defines parameters for SetWeeklyPlanCommitmentState.
 type SetWeeklyPlanCommitmentStateJSONBodyState string
 
+// SetWeeklyPlanContractJSONBody defines parameters for SetWeeklyPlanContract.
+type SetWeeklyPlanContractJSONBody struct {
+	CapacityNote *string `json:"capacity_note,omitempty"`
+	Risks        *string `json:"risks,omitempty"`
+}
+
 // GetLatestWeeklyReviewParams defines parameters for GetLatestWeeklyReview.
 type GetLatestWeeklyReviewParams struct {
 	// Week The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent.
@@ -41228,6 +41397,9 @@ type AnswerWeeklyPlanCommitmentJSONRequestBody AnswerWeeklyPlanCommitmentJSONBod
 
 // SetWeeklyPlanCommitmentStateJSONRequestBody defines body for SetWeeklyPlanCommitmentState for application/json ContentType.
 type SetWeeklyPlanCommitmentStateJSONRequestBody SetWeeklyPlanCommitmentStateJSONBody
+
+// SetWeeklyPlanContractJSONRequestBody defines body for SetWeeklyPlanContract for application/json ContentType.
+type SetWeeklyPlanContractJSONRequestBody SetWeeklyPlanContractJSONBody
 
 // PinWorklistRowJSONRequestBody defines body for PinWorklistRow for application/json ContentType.
 type PinWorklistRowJSONRequestBody = WorklistPinRequest
@@ -50798,6 +50970,9 @@ type ServerInterface interface {
 	// Open a plan for this week.
 	// (POST /weekly-plans/current)
 	StartWeeklyPlan(w http.ResponseWriter, r *http.Request)
+	// Say what could go wrong this week, and what room there is for it.
+	// (PUT /weekly-plans/current/contract)
+	SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request)
 	// A teammate's plan for this week, for their lead.
 	// (GET /weekly-plans/{owner_id}/current)
 	GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID)
@@ -54359,6 +54534,12 @@ func (_ Unimplemented) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Reque
 // Open a plan for this week.
 // (POST /weekly-plans/current)
 func (_ Unimplemented) StartWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say what could go wrong this week, and what room there is for it.
+// (PUT /weekly-plans/current/contract)
+func (_ Unimplemented) SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -79496,6 +79677,28 @@ func (siw *ServerInterfaceWrapper) StartWeeklyPlan(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// SetWeeklyPlanContract operation middleware
+func (siw *ServerInterfaceWrapper) SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetWeeklyPlanContract(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTeammateWeeklyPlan operation middleware
 func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request) {
 
@@ -81814,6 +82017,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/weekly-plans/current", wrapper.StartWeeklyPlan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/weekly-plans/current/contract", wrapper.SetWeeklyPlanContract)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/weekly-plans/{owner_id}/current", wrapper.GetTeammateWeeklyPlan)

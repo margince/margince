@@ -56,6 +56,7 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	oneShot(ai.TaskProposeRoles, "committee", proposeRolesCases{})
 	oneShot(ai.TaskBriefRanking, "rank", briefRankingCases{})
 	oneShot(ai.TaskWeeklyReview, "narrative", weeklyNarrativeCases{})
+	oneShot(ai.TaskWeeklyLearnings, "learn", weeklyLearningsCases{})
 	oneShot(ai.TaskOfferDraft, "draft", offerDraftCases{})
 	oneShot(ai.TaskSignalExtract, "thread_events", signalExtractCases{})
 	oneShot(ai.TaskSiteExtract, "profile", siteProfileCases{})

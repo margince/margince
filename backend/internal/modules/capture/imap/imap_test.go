@@ -48,8 +48,11 @@ func TestNormalizeMapsInboundEmailToActivity(t *testing.T) {
 	if rec.EntityType != datasource.EntityActivity {
 		t.Errorf("EntityType = %q, want activity", rec.EntityType)
 	}
-	if rec.NaturalKey.SourceSystem != "imap" || rec.NaturalKey.SourceID != "abc123@acme.com" {
-		t.Errorf("NaturalKey = %+v, want {imap, abc123@acme.com}", rec.NaturalKey)
+	// The mail identity, not "imap": the same message pulled by another adapter
+	// must land on this key rather than beside it. The transport is asserted
+	// just below, on Source and CapturedBy, where it belongs.
+	if rec.NaturalKey.SourceSystem != connector.EmailSourceSystem || rec.NaturalKey.SourceID != "abc123@acme.com" {
+		t.Errorf("NaturalKey = %+v, want {%s, abc123@acme.com}", rec.NaturalKey, connector.EmailSourceSystem)
 	}
 	if rec.Source != "imap:abc123@acme.com" {
 		t.Errorf("Source = %q, want imap:abc123@acme.com", rec.Source)

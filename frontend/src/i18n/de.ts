@@ -2511,6 +2511,14 @@ export const de = {
   "home.pipelineUnavailable": "Diese Zahl konnte nicht geladen werden.",
   "home.panel.weekly": "Letzte Woche",
   "home.weekly.weekOf": "Woche ab {day}",
+  "home.weekly.learnings.title": "Was diese Woche gelehrt hat",
+  "home.weekly.learnings.worked": "Was funktioniert hat",
+  "home.weekly.learnings.didNotWork": "Was nicht",
+  "home.weekly.learnings.pattern": "Ein Muster",
+  "home.weekly.learnings.experiment": "Einen Versuch wert",
+  "home.weekly.learnings.notRun": "Diese Woche wurde noch nicht gelesen.",
+  "home.weekly.learnings.insufficient":
+    "In dieser Woche ist zu wenig passiert, um daraus zu lernen.",
   "home.weekly.scorecard.title": "Wie die Woche lief",
   "home.weekly.scorecard.leadBlock": "Leads und Termine",
   "home.weekly.scorecard.dealBlock": "Deals",
@@ -2665,6 +2673,23 @@ export const de = {
   "plan.state.missed": "Verpasst",
   "plan.state.dropped": "Verworfen",
   "plan.help.label": "Was brauchst du von deiner Führungskraft?",
+  "plan.contract.title": "Wogegen diese Woche antritt",
+  "plan.contract.risks": "Was dazwischenkommen könnte",
+  "plan.contract.risksHint":
+    "Was Sie erwarten, das schiefgeht — in eigenen Worten",
+  "plan.contract.capacityNote": "Ihr Spielraum",
+  "plan.contract.capacityNoteHint":
+    "Was der Kalender nicht weiß — Urlaub, Reisen, ein Launch",
+  "plan.contract.unwritten": "Noch nichts geschrieben",
+  "plan.contract.nothingToName": "Nichts zu nennen",
+  "plan.contract.edit": "Bearbeiten",
+  "plan.contract.save": "Speichern",
+  "plan.contract.cancel": "Abbrechen",
+  "plan.contract.capacityLine":
+    "Nächste Woche hält bereits {meetings} Termine und {tasks} Aufgaben.",
+  "plan.contract.crowded": "Nächste Woche ist schon voll",
+  "plan.contract.crowdedBody":
+    "{committed} Dinge sind bereits gebucht und Sie haben {commitments} Vorhaben notiert. Etwas wird weichen müssen.",
   "plan.help.ask": "Um Hilfe bitten",
   "plan.help.edit": "Anfrage bearbeiten",
   "plan.help.send": "Senden",
@@ -3691,6 +3716,17 @@ export const de = {
     "Deine Woche ist ausgewertet, ohne Zusammenfassung — die Zahlen sind vollständig.",
   "agent.activity.weeklyReview.failed":
     "Diesmal keine Zusammenfassung deiner Woche. Die Zahlen sind trotzdem die der Woche.",
+  "agent.activity.weeklyLearnings.queued":
+    "Ihre Woche wartet darauf, auf Erkenntnisse gelesen zu werden.",
+  "agent.activity.weeklyLearnings.running":
+    "Ich lese Ihre Woche auf Erkenntnisse…",
+  "agent.activity.weeklyLearnings.stalled":
+    "Das Lesen Ihrer Woche dauert länger als erwartet.",
+  "agent.activity.weeklyLearnings.done": "Ihre Woche hat ihre Erkenntnisse.",
+  "agent.activity.weeklyLearnings.degraded":
+    "Ihre Woche ist gemessen, ohne Erkenntnisse — die Zahlen sind vollständig.",
+  "agent.activity.weeklyLearnings.failed":
+    "Diesmal keine Erkenntnisse aus Ihrer Woche. Die Zahlen bleiben die der Woche.",
   "agent.activity.morningBrief.queued": "Dein Morgenbriefing ist eingereiht.",
   "agent.activity.morningBrief.running":
     "Ich stelle dein Morgenbriefing zusammen.",
@@ -6022,6 +6058,77 @@ export const de = {
   // "Allgemein" statt "Organisation" für den ersten Eintrag: die Gruppen-
   // überschrift darüber sagt das Wort schon, und eine Zeile, die ihre eigene
   // Überschrift wiederholt, benennt nichts.
+  "settings.home": "Einstellungen-Start",
+  "settings.home.yours": "Ihre Einstellungen",
+  "settings.home.access": "Ihr Zugriff",
+  "settings.boundary.deniedTitle":
+    "Diese Einstellungsseite steht Ihnen nicht offen",
+  "settings.boundary.deniedBody":
+    "Die Adresse in der Leiste ist eine echte Seite \u2014 Ihr Sitzplatz erreicht sie nicht. Sie bleibt stehen, damit Sie sie kopieren und jemanden fragen k\u00f6nnen, der sie erreicht.",
+  "settings.boundary.unknownTitle": "Keine Einstellungsseite hat diese Adresse",
+  "settings.boundary.unknownBody":
+    "Der Link stammt vielleicht aus einer \u00e4lteren Version oder ist vertippt. Der Einstellungen-Start listet jede Seite auf, die Ihr Sitzplatz \u00f6ffnen kann.",
+  "settings.boundary.back": "Einstellungen-Start",
+  "settings.page.account.sub":
+    "Wie Sie erscheinen und sich anmelden \u2014 nur f\u00fcr Sie.",
+  "settings.page.voice.sub":
+    "Die Worte, die Entw\u00fcrfe verwenden, wenn sie in Ihrem Namen schreiben.",
+  "settings.page.agents.sub":
+    "Was ein Agent unbeaufsichtigt tun darf und welche Clients Ihre Zugangsdaten halten.",
+  "settings.page.connections.sub":
+    "Die Postf\u00e4cher und Adressen, aus denen dieser Sitzplatz liest.",
+  "settings.page.capture-activity.sub":
+    "Was die Erfassung mit Ihrer Post getan hat, und warum.",
+  "settings.page.company.sub":
+    "Name, W\u00e4hrung und Kontext, vor deren Hintergrund jeder Datensatz gelesen wird.",
+  "settings.page.authentication.sub":
+    "Wie sich Personen an dieser Installation anmelden und welche Apps f\u00fcr sie handeln d\u00fcrfen.",
+  "settings.page.members.sub":
+    "Alle mit einem Sitzplatz und was jeder erreichen darf.",
+  "settings.page.teams.sub":
+    "Wer zusammenarbeitet \u2014 daran orientiert sich der Zeilenzugriff.",
+  "settings.page.seats.sub":
+    "Wie viele Sitzpl\u00e4tze belegt sind, gemessen an dem, was dieser Installation zusteht.",
+  "settings.page.pipelines.sub":
+    "Die Phasen, die ein Gesch\u00e4ft durchl\u00e4uft \u2014 f\u00fcr das ganze Unternehmen.",
+  "settings.page.leads.sub":
+    "Die Worte, mit denen dieses Unternehmen beschreibt, woher ein Lead kam.",
+  "settings.page.fields.sub":
+    "Die Felder, die dieses Unternehmen zus\u00e4tzlich zu denen jeder Installation f\u00fchrt.",
+  "settings.page.tags.sub":
+    "Das gemeinsame Vokabular \u2014 hier umbenannt, ist es auf jedem Datensatz umbenannt.",
+  "settings.page.products.sub":
+    "Was dieses Unternehmen verkauft und die Vorlagen, aus denen ein Angebot entsteht.",
+  "settings.page.capture.sub":
+    "Welche Post zu einem Datensatz wird und welche unber\u00fchrt bleibt.",
+  "settings.page.integrations.sub":
+    "Die Systeme, mit denen diese Installation Datens\u00e4tze austauscht.",
+  "settings.page.knowledge.sub":
+    "Die Dokumente, aus denen Entw\u00fcrfe und Antworten lesen d\u00fcrfen.",
+  "settings.page.import.sub":
+    "Datens\u00e4tze aus einer Datei \u00fcbernehmen \u2014 ein Lauf nach dem anderen.",
+  "settings.page.models.sub":
+    "Welcher Anbieter welche Art von Arbeit beantwortet \u2014 und ob er es kann.",
+  "settings.page.automations.sub":
+    "Die Regeln, die laufen, ohne dass jemand etwas dr\u00fcckt.",
+  "settings.page.usage.sub":
+    "Was die KI-Laufzeit diesen Monat verbraucht hat, gemessen an ihrer Obergrenze.",
+  "settings.page.model-calls.sub":
+    "Was jeder Aufruf ein Modell gefragt hat \u2014 und wie es geantwortet hat.",
+  "settings.page.privacy.sub":
+    "Betroffenenanfragen, die Zwecke, zu denen Einwilligung erfasst wird, und wie lange Datens\u00e4tze bleiben.",
+  "settings.page.audit.sub":
+    "Jeder Akteur und jeder Datensatz, den er ber\u00fchrt hat.",
+  "settings.page.system-health.sub":
+    "Ob die Arbeit hinter den Bildschirmen mitkommt.",
+  "settings.page.extensions.sub":
+    "Die Einheiten, die dieser Build zusammengesetzt hat, und welche Rollen sie erreichen.",
+  "settings.page.reset.sub":
+    "Diese Installation leeren. Es gibt kein Zur\u00fcck.",
+  "settings.search.label": "Einstellungen durchsuchen",
+  "settings.search.placeholder": "Einstellungen suchen",
+  "settings.search.none": "Keine Einstellungsseite passt dazu.",
+  "settings.search.count": "{n} Einstellungsseiten passen.",
   "settings.tab.company": "Unternehmensprofil",
   "settings.tab.authentication": "Anmeldung & Apps",
   "settings.tab.members": "Mitglieder",

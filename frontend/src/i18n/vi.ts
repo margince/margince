@@ -2486,6 +2486,14 @@ export const vi = {
   "home.pipelineUnavailable": "Không tải được số liệu này.",
   "home.panel.weekly": "Tuần trước",
   "home.weekly.weekOf": "Tuần từ {day}",
+  "home.weekly.learnings.title": "Tuần này dạy điều gì",
+  "home.weekly.learnings.worked": "Điều đã hiệu quả",
+  "home.weekly.learnings.didNotWork": "Điều chưa hiệu quả",
+  "home.weekly.learnings.pattern": "Một quy luật",
+  "home.weekly.learnings.experiment": "Đáng thử",
+  "home.weekly.learnings.notRun": "Chưa ai đọc tuần này.",
+  "home.weekly.learnings.insufficient":
+    "Tuần này có quá ít điều xảy ra để rút ra bài học.",
   "home.weekly.scorecard.title": "Tuần vừa qua thế nào",
   "home.weekly.scorecard.leadBlock": "Khách tiềm năng và cuộc họp",
   "home.weekly.scorecard.dealBlock": "Cơ hội",
@@ -2638,6 +2646,22 @@ export const vi = {
   "plan.state.missed": "Bỏ lỡ",
   "plan.state.dropped": "Đã bỏ",
   "plan.help.label": "Bạn cần gì từ quản lý của mình?",
+  "plan.contract.title": "Tuần này đối mặt với điều gì",
+  "plan.contract.risks": "Điều gì có thể cản trở",
+  "plan.contract.risksHint": "Điều bạn dự đoán sẽ trục trặc, theo lời của bạn",
+  "plan.contract.capacityNote": "Khoảng trống bạn có",
+  "plan.contract.capacityNoteHint":
+    "Điều lịch không biết — nghỉ phép, đi công tác, một đợt ra mắt",
+  "plan.contract.unwritten": "Chưa viết",
+  "plan.contract.nothingToName": "Không có gì để nêu",
+  "plan.contract.edit": "Sửa",
+  "plan.contract.save": "Lưu",
+  "plan.contract.cancel": "Hủy",
+  "plan.contract.capacityLine":
+    "Tuần tới đã có {meetings} cuộc họp và {tasks} công việc.",
+  "plan.contract.crowded": "Tuần tới đã kín",
+  "plan.contract.crowdedBody":
+    "{committed} việc đã được đặt và bạn đã ghi {commitments} cam kết. Sẽ phải bỏ bớt điều gì đó.",
   "plan.help.ask": "Nhờ giúp đỡ",
   "plan.help.edit": "Sửa yêu cầu",
   "plan.help.send": "Gửi",
@@ -3647,6 +3671,17 @@ export const vi = {
     "Tuần của bạn đã được đo, không có tóm tắt — các số liệu vẫn đầy đủ.",
   "agent.activity.weeklyReview.failed":
     "Lần này không có tóm tắt tuần của bạn. Các số liệu vẫn là của tuần đó.",
+  "agent.activity.weeklyLearnings.queued":
+    "Tuần của bạn đang chờ được đọc để rút ra bài học.",
+  "agent.activity.weeklyLearnings.running":
+    "Đang đọc tuần của bạn để rút ra bài học…",
+  "agent.activity.weeklyLearnings.stalled":
+    "Việc đọc tuần của bạn mất nhiều thời gian hơn dự kiến.",
+  "agent.activity.weeklyLearnings.done": "Tuần của bạn đã có bài học.",
+  "agent.activity.weeklyLearnings.degraded":
+    "Tuần của bạn đã được đo, nhưng không có bài học — các số liệu vẫn đầy đủ.",
+  "agent.activity.weeklyLearnings.failed":
+    "Lần này không có bài học từ tuần của bạn. Các số liệu vẫn là của tuần.",
   "agent.activity.morningBrief.queued":
     "Bản tóm tắt buổi sáng của bạn đã xếp hàng.",
   "agent.activity.morningBrief.running":
@@ -5958,6 +5993,79 @@ export const vi = {
   "cf.retired": "Đã ngừng dùng",
   // "Chung" thay vì "Tổ chức" cho mục đầu tiên: tiêu đề nhóm phía trên đã nói
   // từ đó, và một dòng lặp lại tiêu đề của chính nó thì không gọi tên được gì.
+  "settings.home": "Trang ch\u00ednh c\u00e0i \u0111\u1eb7t",
+  "settings.home.yours": "C\u00e0i \u0111\u1eb7t c\u1ee7a b\u1ea1n",
+  "settings.home.access": "Quy\u1ec1n truy c\u1eadp c\u1ee7a b\u1ea1n",
+  "settings.boundary.deniedTitle":
+    "Trang c\u00e0i \u0111\u1eb7t n\u00e0y kh\u00f4ng m\u1edf cho b\u1ea1n",
+  "settings.boundary.deniedBody":
+    "\u0110\u1ecba ch\u1ec9 tr\u00ean thanh l\u00e0 m\u1ed9t trang c\u00f3 th\u1eadt \u2014 gh\u1ebf c\u1ee7a b\u1ea1n kh\u00f4ng t\u1edbi \u0111\u01b0\u1ee3c. N\u00f3 v\u1eabn \u1edf \u0111\u00f3 \u0111\u1ec3 b\u1ea1n sao ch\u00e9p v\u00e0 h\u1ecfi ng\u01b0\u1eddi c\u00f3 quy\u1ec1n.",
+  "settings.boundary.unknownTitle":
+    "Kh\u00f4ng c\u00f3 trang c\u00e0i \u0111\u1eb7t n\u00e0o \u1edf \u0111\u1ecba ch\u1ec9 n\u00e0y",
+  "settings.boundary.unknownBody":
+    "Li\u00ean k\u1ebft c\u00f3 th\u1ec3 t\u1eeb phi\u00ean b\u1ea3n c\u0169 ho\u1eb7c g\u00f5 sai. Trang ch\u00ednh c\u00e0i \u0111\u1eb7t li\u1ec7t k\u00ea m\u1ecdi trang gh\u1ebf c\u1ee7a b\u1ea1n m\u1edf \u0111\u01b0\u1ee3c.",
+  "settings.boundary.back": "Trang ch\u00ednh c\u00e0i \u0111\u1eb7t",
+  "settings.page.account.sub":
+    "C\u00e1ch b\u1ea1n hi\u1ec3n th\u1ecb v\u00e0 \u0111\u0103ng nh\u1eadp \u2014 ch\u1ec9 c\u1ee7a ri\u00eang b\u1ea1n.",
+  "settings.page.voice.sub":
+    "T\u1eeb ng\u1eef b\u1ea3n nh\u00e1p d\u00f9ng khi vi\u1ebft thay b\u1ea1n.",
+  "settings.page.agents.sub":
+    "T\u00e1c nh\u00e2n \u0111\u01b0\u1ee3c l\u00e0m g\u00ec khi kh\u00f4ng c\u00f3 b\u1ea1n, v\u00e0 client n\u00e0o gi\u1eef th\u00f4ng tin \u0111\u0103ng nh\u1eadp c\u1ee7a b\u1ea1n.",
+  "settings.page.connections.sub":
+    "H\u1ed9p th\u01b0 v\u00e0 \u0111\u1ecba ch\u1ec9 m\u00e0 gh\u1ebf n\u00e0y \u0111\u1ecdc.",
+  "settings.page.capture-activity.sub":
+    "Vi\u1ec7c thu th\u1eadp \u0111\u00e3 l\u00e0m g\u00ec v\u1edbi th\u01b0 c\u1ee7a b\u1ea1n, v\u00e0 t\u1ea1i sao.",
+  "settings.page.company.sub":
+    "T\u00ean, ti\u1ec1n t\u1ec7 v\u00e0 b\u1ed1i c\u1ea3nh m\u00e0 m\u1ecdi b\u1ea3n ghi \u0111\u01b0\u1ee3c \u0111\u1ecdc theo.",
+  "settings.page.authentication.sub":
+    "C\u00e1ch m\u1ecdi ng\u01b0\u1eddi \u0111\u0103ng nh\u1eadp v\u00e0o b\u1ea3n tri\u1ec3n khai n\u00e0y, v\u00e0 \u1ee9ng d\u1ee5ng n\u00e0o \u0111\u01b0\u1ee3c thay m\u1eb7t n\u00f3.",
+  "settings.page.members.sub":
+    "M\u1ecdi ng\u01b0\u1eddi c\u00f3 gh\u1ebf, v\u00e0 m\u1ed7i ng\u01b0\u1eddi t\u1edbi \u0111\u01b0\u1ee3c \u0111\u00e2u.",
+  "settings.page.teams.sub":
+    "Ai l\u00e0m vi\u1ec7c c\u00f9ng nhau \u2014 \u0111\u00f3 l\u00e0 c\u0103n c\u1ee9 c\u1ee7a ph\u1ea1m vi h\u00e0ng.",
+  "settings.page.seats.sub":
+    "Bao nhi\u00eau gh\u1ebf \u0111ang d\u00f9ng so v\u1edbi quy\u1ec1n c\u1ee7a b\u1ea3n tri\u1ec3n khai n\u00e0y.",
+  "settings.page.pipelines.sub":
+    "C\u00e1c giai \u0111o\u1ea1n m\u1ed9t th\u01b0\u01a1ng v\u1ee5 \u0111i qua, cho to\u00e0n c\u00f4ng ty.",
+  "settings.page.leads.sub":
+    "T\u1eeb ng\u1eef c\u00f4ng ty n\u00e0y d\u00f9ng \u0111\u1ec3 m\u00f4 t\u1ea3 m\u1ed9t lead \u0111\u1ebfn t\u1eeb \u0111\u00e2u.",
+  "settings.page.fields.sub":
+    "C\u00e1c c\u1ed9t c\u00f4ng ty n\u00e0y gi\u1eef th\u00eam ngo\u00e0i nh\u1eefng c\u1ed9t m\u1ecdi b\u1ea3n tri\u1ec3n khai \u0111\u1ec1u c\u00f3.",
+  "settings.page.tags.sub":
+    "T\u1eeb v\u1ef1ng d\u00f9ng chung \u2014 \u0111\u1ed5i t\u00ean \u1edf \u0111\u00e2y l\u00e0 \u0111\u1ed5i tr\u00ean m\u1ecdi b\u1ea3n ghi.",
+  "settings.page.products.sub":
+    "C\u00f4ng ty n\u00e0y b\u00e1n g\u00ec, v\u00e0 m\u1eabu m\u00e0 m\u1ed9t \u0111\u1ec1 ngh\u1ecb b\u1eaft \u0111\u1ea7u t\u1eeb \u0111\u00f3.",
+  "settings.page.capture.sub":
+    "Th\u01b0 n\u00e0o th\u00e0nh b\u1ea3n ghi, v\u00e0 th\u01b0 n\u00e0o \u0111\u1ec3 y\u00ean.",
+  "settings.page.integrations.sub":
+    "C\u00e1c h\u1ec7 th\u1ed1ng m\u00e0 b\u1ea3n tri\u1ec3n khai n\u00e0y trao \u0111\u1ed5i b\u1ea3n ghi c\u00f9ng.",
+  "settings.page.knowledge.sub":
+    "T\u00e0i li\u1ec7u m\u00e0 b\u1ea3n nh\u00e1p v\u00e0 c\u00e2u tr\u1ea3 l\u1eddi \u0111\u01b0\u1ee3c ph\u00e9p \u0111\u1ecdc.",
+  "settings.page.import.sub":
+    "\u0110\u01b0a b\u1ea3n ghi v\u00e0o t\u1eeb t\u1ec7p, m\u1ed7i l\u1ea7n m\u1ed9t l\u01b0\u1ee3t ch\u1ea1y.",
+  "settings.page.models.sub":
+    "Nh\u00e0 cung c\u1ea5p n\u00e0o tr\u1ea3 l\u1eddi t\u1eebng lo\u1ea1i c\u00f4ng vi\u1ec7c, v\u00e0 c\u00f3 l\u00e0m \u0111\u01b0\u1ee3c kh\u00f4ng.",
+  "settings.page.automations.sub":
+    "C\u00e1c quy t\u1eafc ch\u1ea1y m\u00e0 kh\u00f4ng ai b\u1ea5m g\u00ec.",
+  "settings.page.usage.sub":
+    "AI \u0111\u00e3 d\u00f9ng h\u1ebft bao nhi\u00eau trong th\u00e1ng n\u00e0y, so v\u1edbi tr\u1ea7n c\u1ee7a n\u00f3.",
+  "settings.page.model-calls.sub":
+    "M\u1ed7i l\u1ec7nh g\u1ecdi \u0111\u00e3 h\u1ecfi m\u00f4 h\u00ecnh \u0111i\u1ec1u g\u00ec, v\u00e0 n\u00f3 tr\u1ea3 l\u1eddi ra sao.",
+  "settings.page.privacy.sub":
+    "Y\u00eau c\u1ea7u c\u1ee7a ch\u1ee7 th\u1ec3, c\u00e1c m\u1ee5c \u0111\u00edch m\u00e0 s\u1ef1 \u0111\u1ed3ng \u00fd \u0111\u01b0\u1ee3c ghi theo, v\u00e0 b\u1ea3n ghi \u0111\u01b0\u1ee3c gi\u1eef bao l\u00e2u.",
+  "settings.page.audit.sub":
+    "M\u1ecdi t\u00e1c nh\u00e2n v\u00e0 m\u1ecdi b\u1ea3n ghi h\u1ecd ch\u1ea1m t\u1edbi.",
+  "settings.page.system-health.sub":
+    "C\u00f4ng vi\u1ec7c ph\u00eda sau m\u00e0n h\u00ecnh c\u00f3 theo k\u1ecbp kh\u00f4ng.",
+  "settings.page.extensions.sub":
+    "C\u00e1c \u0111\u01a1n v\u1ecb b\u1ea3n d\u1ef1ng n\u00e0y \u0111\u00e3 k\u1ebft h\u1ee3p, v\u00e0 vai tr\u00f2 n\u00e0o t\u1edbi \u0111\u01b0\u1ee3c.",
+  "settings.page.reset.sub":
+    "L\u00e0m r\u1ed7ng b\u1ea3n tri\u1ec3n khai n\u00e0y. Kh\u00f4ng th\u1ec3 ho\u00e0n t\u00e1c.",
+  "settings.search.label": "T\u00ecm trong c\u00e0i \u0111\u1eb7t",
+  "settings.search.placeholder": "T\u00ecm c\u00e0i \u0111\u1eb7t",
+  "settings.search.none":
+    "Kh\u00f4ng c\u00f3 trang c\u00e0i \u0111\u1eb7t n\u00e0o kh\u1edbp.",
+  "settings.search.count": "{n} trang c\u00e0i \u0111\u1eb7t kh\u1edbp.",
   "settings.tab.company": "Hồ sơ công ty",
   "settings.tab.authentication": "Đăng nhập & ứng dụng",
   "settings.tab.members": "Thành viên",

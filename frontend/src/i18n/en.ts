@@ -2591,6 +2591,19 @@ export const en = {
   // the work that waits on a person, and this is a view of that same work.
   "home.panel.weekly": "Last week",
   "home.weekly.weekOf": "Week of {day}",
+  // What the week TAUGHT, as against what it was. Every learning shows what it
+  // rests on, because a claim about cause is one the reader cannot check
+  // against anything else on the page.
+  "home.weekly.learnings.title": "What this week taught",
+  "home.weekly.learnings.worked": "What worked",
+  "home.weekly.learnings.didNotWork": "What did not",
+  "home.weekly.learnings.pattern": "A pattern",
+  "home.weekly.learnings.experiment": "Worth trying",
+  // Two empty states, never one: a week nobody read and a week that held no
+  // lesson are different facts, and only one of them is about the week.
+  "home.weekly.learnings.notRun": "Nobody has read this week yet.",
+  "home.weekly.learnings.insufficient":
+    "Not enough happened this week to draw a lesson from.",
   // How WELL the week went, beside what happened in it. Each block is drawn only
   // when the server sent it: a rep who carried no leads did not score zero on
   // the funnel, and an empty row would read as failure at something nobody
@@ -2748,6 +2761,25 @@ export const en = {
   "plan.state.missed": "Missed",
   "plan.state.dropped": "Dropped",
   "plan.help.label": "What do you need from your lead?",
+  // What the week is up against, beside what it is for. The two prose fields
+  // draw three states, not two: unwritten, "nothing to name", and text. A lead
+  // who cannot tell the first two apart reads an unconsidered week as a safe one.
+  "plan.contract.title": "What this week is up against",
+  "plan.contract.risks": "What could get in the way",
+  "plan.contract.risksHint": "What you expect to go wrong, in your own words",
+  "plan.contract.capacityNote": "Room you have",
+  "plan.contract.capacityNoteHint":
+    "Anything the calendar does not know — leave, travel, a launch",
+  "plan.contract.unwritten": "Not written yet",
+  "plan.contract.nothingToName": "Nothing to name",
+  "plan.contract.edit": "Edit",
+  "plan.contract.save": "Save",
+  "plan.contract.cancel": "Cancel",
+  "plan.contract.capacityLine":
+    "Next week already holds {meetings} meetings and {tasks} tasks.",
+  "plan.contract.crowded": "Next week is already full",
+  "plan.contract.crowdedBody":
+    "{committed} things are already booked and you have written {commitments} commitments. Something will have to give.",
   "plan.help.ask": "Ask for help",
   "plan.help.edit": "Edit request",
   "plan.help.send": "Send",
@@ -3774,6 +3806,19 @@ export const en = {
     "Your week is measured, without a summary — the numbers are all there.",
   "agent.activity.weeklyReview.failed":
     "No summary of your week this time. The numbers are still the week's own.",
+  // What the week TAUGHT, which is a different promise from the summary above:
+  // a learning is advice, so the failed and degraded lines say the numbers
+  // still stand rather than implying the week went unmeasured.
+  "agent.activity.weeklyLearnings.queued":
+    "Your week is queued to be read for lessons.",
+  "agent.activity.weeklyLearnings.running": "Reading your week for lessons…",
+  "agent.activity.weeklyLearnings.stalled":
+    "Reading your week for lessons is taking longer than expected.",
+  "agent.activity.weeklyLearnings.done": "Your week has its lessons.",
+  "agent.activity.weeklyLearnings.degraded":
+    "Your week is measured, without lessons — the numbers are all there.",
+  "agent.activity.weeklyLearnings.failed":
+    "No lessons from your week this time. The numbers are still the week's own.",
   "agent.activity.morningBrief.queued": "Your morning brief is queued.",
   "agent.activity.morningBrief.running":
     "I'm putting your morning brief together.",
@@ -6153,6 +6198,72 @@ export const en = {
   // are: the mailbox and the network a PERSON connected, against the outside
   // systems the INSTALLATION is wired to. One row carried both before, which
   // is why it had to be ungated to keep a rep's own mailbox reachable.
+  "settings.home": "Settings home",
+  "settings.home.yours": "Your settings",
+  "settings.home.access": "Your access",
+  "settings.boundary.deniedTitle": "This settings page is not yours to open",
+  "settings.boundary.deniedBody":
+    "The address in the bar is a real page \u2014 your seat does not reach it. It is still there to copy if you need to ask somebody who does.",
+  "settings.boundary.unknownTitle": "No settings page has this address",
+  "settings.boundary.unknownBody":
+    "The link may be from an older version, or mistyped. Settings home lists every page your seat can open.",
+  "settings.boundary.back": "Settings home",
+  "settings.page.account.sub": "How you appear and sign in \u2014 yours alone.",
+  "settings.page.voice.sub": "The words drafts use when they write as you.",
+  "settings.page.agents.sub":
+    "What an agent may do unattended, and which clients hold your credentials.",
+  "settings.page.connections.sub":
+    "The mailboxes and addresses this seat reads from.",
+  "settings.page.capture-activity.sub":
+    "What capture did with your mail, and why.",
+  "settings.page.company.sub":
+    "The name, currency and context every record is read against.",
+  "settings.page.authentication.sub":
+    "How people sign in to this installation, and which apps may act for it.",
+  "settings.page.members.sub":
+    "Everyone with a seat, and what each one may reach.",
+  "settings.page.teams.sub":
+    "Who works together, which is what row scope reads.",
+  "settings.page.seats.sub":
+    "How many seats are in use against what this installation is entitled to.",
+  "settings.page.pipelines.sub":
+    "The stages a deal moves through, for the whole company.",
+  "settings.page.leads.sub":
+    "The words this company uses to describe where a lead came from.",
+  "settings.page.fields.sub":
+    "The columns this company keeps beyond the ones every installation has.",
+  "settings.page.tags.sub":
+    "The shared vocabulary \u2014 renaming one here renames it on every record.",
+  "settings.page.products.sub":
+    "What this company sells, and the templates an offer starts from.",
+  "settings.page.capture.sub":
+    "Which mail becomes a record, and which is left alone.",
+  "settings.page.integrations.sub":
+    "The systems this installation exchanges records with.",
+  "settings.page.knowledge.sub":
+    "The documents drafts and answers are allowed to read from.",
+  "settings.page.import.sub":
+    "Bringing records in from a file, one run at a time.",
+  "settings.page.models.sub":
+    "Which vendor answers each kind of work, and whether it can.",
+  "settings.page.automations.sub":
+    "The rules that run without anyone pressing anything.",
+  "settings.page.usage.sub":
+    "What the AI runtime spent this month, against its ceiling.",
+  "settings.page.model-calls.sub":
+    "What each call asked a model, and how it answered.",
+  "settings.page.privacy.sub":
+    "Subject requests, the purposes consent is recorded against, and how long records are kept.",
+  "settings.page.audit.sub": "Every actor and every record they touched.",
+  "settings.page.system-health.sub":
+    "Whether the work behind the screens is keeping up.",
+  "settings.page.extensions.sub":
+    "The units this build composed, and which roles reach them.",
+  "settings.page.reset.sub": "Emptying this installation. There is no undo.",
+  "settings.search.label": "Search settings",
+  "settings.search.placeholder": "Search settings",
+  "settings.search.none": "No settings page matches that.",
+  "settings.search.count": "{n} settings pages match.",
   "settings.tab.company": "Company profile",
   "settings.tab.authentication": "Sign-in & apps",
   "settings.tab.members": "Members",

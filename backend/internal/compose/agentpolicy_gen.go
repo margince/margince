@@ -636,5 +636,6 @@ var agentPolicies = map[string]agentPolicy{
 	"PUT /v1/weekly-plans/commitments/{id}/help":                         {Op: "askForWeeklyPlanHelp", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/weekly-plans/commitments/{id}/response":                     {Op: "answerWeeklyPlanCommitment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/weekly-plans/commitments/{id}/state":                        {Op: "setWeeklyPlanCommitmentState", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/weekly-plans/current/contract":                              {Op: "setWeeklyPlanContract", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/worklist/pins":                                              {Op: "pinWorklistRow", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 }

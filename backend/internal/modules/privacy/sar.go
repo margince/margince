@@ -56,6 +56,7 @@ type SARPackage struct {
 	ConsentQualifyingEvents []map[string]any `json:"consent_qualifying_events"`
 	// Why this contact exists: the answer to Art. 15(1)(g).
 	AcquisitionEvidence []map[string]any `json:"acquisition_evidence"`
+	NoticeCases         []map[string]any `json:"notice_cases"`
 	// What the subject themselves sent through their confirm link — a
 	// correction they typed, or a request to be removed. The one part of this
 	// package the subject authored rather than the workspace, which is exactly

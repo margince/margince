@@ -182,7 +182,7 @@ function card(
 }
 
 const meta: Meta<typeof MirrorUserMapCard> = {
-  title: "Settings/Admin settings/Integrations/Mirror user map",
+  title: "Settings/Data/Integrations/Mirror user map",
   component: MirrorUserMapCard,
 };
 export default meta;

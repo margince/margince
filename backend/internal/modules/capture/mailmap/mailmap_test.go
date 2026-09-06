@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -31,9 +32,12 @@ func inboundFixture() []byte {
 	)
 }
 
-// ToRecord is parameterised by connector name — the same mapping serves both
-// the imap and gmail connectors, stamping provenance with whichever read it.
-func TestToRecordStampsConnectorName(t *testing.T) {
+// ToRecord is parameterised by connector name, but the natural key is NOT:
+// the same message read by imap and by gmail is one message, so both records
+// carry the one mail identity while their provenance still names whichever
+// adapter read it. Keying the identity on the connector name is what put the
+// same mail on the timeline twice.
+func TestToRecordSharesOneMailIdentityAcrossConnectors(t *testing.T) {
 	msg, err := Parse(inboundFixture(), "me@myco.com")
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
@@ -44,8 +48,9 @@ func TestToRecordStampsConnectorName(t *testing.T) {
 		if rec.EntityType != datasource.EntityActivity {
 			t.Errorf("[%s] EntityType = %q, want activity", name, rec.EntityType)
 		}
-		if rec.NaturalKey.SourceSystem != name || rec.NaturalKey.SourceID != "abc123@acme.com" {
-			t.Errorf("[%s] NaturalKey = %+v, want {%s, abc123@acme.com}", name, rec.NaturalKey, name)
+		if rec.NaturalKey.SourceSystem != connector.EmailSourceSystem || rec.NaturalKey.SourceID != "abc123@acme.com" {
+			t.Errorf("[%s] NaturalKey = %+v, want {%s, abc123@acme.com} — a mail identity that names its adapter forks the message per connector",
+				name, rec.NaturalKey, connector.EmailSourceSystem)
 		}
 		if rec.Source != name+":abc123@acme.com" {
 			t.Errorf("[%s] Source = %q, want %s:abc123@acme.com", name, rec.Source, name)

@@ -112,7 +112,7 @@ function story(
 }
 
 const meta: Meta<typeof UsersAdminCard> = {
-  title: "Settings/Admin settings/People & access/Members",
+  title: "Settings/People/Members/Members",
   component: UsersAdminCard,
 };
 export default meta;

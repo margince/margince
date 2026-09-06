@@ -53,7 +53,7 @@ const task = {
   tokens_out: 240,
 };
 const meta: Meta<typeof AiUsageCard> = {
-  title: "Settings/Admin settings/AI/Usage",
+  title: "Settings/AI/AI usage/Usage",
   component: AiUsageCard,
 };
 export default meta;

@@ -378,3 +378,132 @@ func TestTheOwnerOfACapturedPartnerStillSeesItNamed(t *testing.T) {
 		t.Error("the capturing user's own partner was blanked from them; capture privacy is theirs, not a mask on everyone")
 	}
 }
+
+// A JOINED ATTRIBUTE inherits the row scope of the id it hangs off.
+//
+// size_band is a column of the ORGANIZATION, not of the deal, so it reaches the
+// query over win-loss's join and its expression is `org.size_band`.
+// referenceScopes renders `ref.id = <column>` and a size band is not an id, so
+// it matched no entry and the dimension carried no row scope at all: a seat
+// excluded from an account could group by that account's size and read its win
+// count off the row. spec.scopeVia names the id column the dimension inherits
+// from, and this is what proves the clause reaches it.
+//
+// Both arms, because a refusal that excluded EVERY company would satisfy the
+// first assertion and break the report: the readable company's band must still
+// carry its own deal.
+func TestGroupingByAJoinedAttributeIsScopedLikeTheIdItHangsOff(t *testing.T) {
+	e := setupForecast(t)
+	// Capture-private to Rep3, exactly as seedHiddenPartner's is: readable to
+	// its owner and invisible to every other seat.
+	hidden := e.seedID(t, `INSERT INTO organization (id, owner_id, display_name, size_band, visibility, source, captured_by)
+		VALUES ($1, $2, 'Hidden Enterprise', '1001-5000', 'owner', 'manual', 'human:x')`, e.Rep3)
+	open := e.seedID(t, `INSERT INTO organization (id, display_name, size_band, source, captured_by)
+		VALUES ($1, 'Open Startup', '11-50', 'manual', 'human:x')`)
+	// Won deals, because win-loss reads none that are still open. The amounts
+	// differ by an order of magnitude so no subset's total collides with
+	// another's.
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, organization_id, status, closed_at, amount_minor, currency, fx_rate_to_base, expected_close_date, source, captured_by)
+		VALUES ($1, 'Won at the hidden company', $2, $3, $4, 'won', now() - interval '2 days', 90000, 'EUR', 1.0, (now() - interval '2 days')::date, 'manual', 'human:x')`,
+		e.pipeline, e.stages[60], hidden)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, organization_id, status, closed_at, amount_minor, currency, fx_rate_to_base, expected_close_date, source, captured_by)
+		VALUES ($1, 'Won at the open company', $2, $3, $4, 'won', now() - interval '2 days', 10000, 'EUR', 1.0, (now() - interval '2 days')::date, 'manual', 'human:x')`,
+		e.pipeline, e.stages[60], open)
+
+	blind := e.dealReadCtx(ids.NewV7(), nil, principal.RowScopeAll)
+	result := e.runReport(blind, t, "win-loss",
+		`{"group_by":["size_band","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}]}`)
+
+	var sawOpenBand bool
+	for _, row := range result.Rows {
+		band, ok := row["size_band"].(string)
+		if !ok {
+			continue
+		}
+		if band == "1001-5000" {
+			t.Errorf("the report grouped a win under band %q, which belongs to a company "+
+				"this caller's own read masks: the joined attribute carried no row scope", band)
+		}
+		if band == "11-50" {
+			sawOpenBand = true
+			if got := wireInt(t, row, "amount_minor_sum"); got != 10000 {
+				t.Errorf("the readable company's band totals %d, want 10000", got)
+			}
+		}
+	}
+	if !sawOpenBand {
+		t.Error("the readable company's band vanished too; the clause excluded more than it should")
+	}
+
+	// The DRILL-THROUGH half, on the handle shape the product does not mint.
+	//
+	// A handle carrying `by=` is covered by namedByDerivation's groupBy loop.
+	// A hand-built one that pins size_band as a BARE PREDICATE carries it as an
+	// EXPRESSION — `org.size_band` — which matches no referenceScopes key, so
+	// only the walk-back from spec.scopeVia names the id column and narrows the
+	// rows. Without that loop this URL opens the hidden company's deal.
+	bare := e.explainReport(blind, t, "win-loss",
+		"/v1/reports/win-loss/derivation?agg=count%3A%3Adeals&size_band=1001-5000")
+	if bare.TotalRows != 0 {
+		t.Errorf("a drill-through pinning the hidden company's band opened %d row(s), want 0: "+
+			"the predicate reached the query without activating the company's row scope",
+			bare.TotalRows)
+	}
+}
+
+// The ANALYTICS surface honours scopeVia too.
+//
+// The typed grammar derives its vocabulary from the same reportSpecs, so
+// publishing size_band for win-loss published it on POST /analytics/query and
+// the run_analytics_query tool at the same moment. That surface builds its own
+// referencedColumns (namedByAnalyticsQuery), and a fix applied to the report
+// builder alone leaves the identical leak one surface over: group by size_band
+// and the hidden company's win count comes back, or filter on a band and get a
+// yes/no oracle for whether a company that size closed anything.
+//
+// Six deals per company, so the answer clears analyticsquery.DefaultFloor and a
+// small-group refusal can never stand in for the row scope and pass this for
+// the wrong reason.
+func TestTheAnalyticsSurfaceScopesAJoinedAttributeToo(t *testing.T) {
+	e := setupForecast(t)
+	hidden := e.seedID(t, `INSERT INTO organization (id, owner_id, display_name, size_band, visibility, source, captured_by)
+		VALUES ($1, $2, 'Hidden Enterprise', '1001-5000', 'owner', 'manual', 'human:x')`, e.Rep3)
+	open := e.seedID(t, `INSERT INTO organization (id, display_name, size_band, source, captured_by)
+		VALUES ($1, 'Open Startup', '11-50', 'manual', 'human:x')`)
+	for i := 0; i < 6; i++ {
+		for _, org := range []ids.UUID{hidden, open} {
+			e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, organization_id, status, closed_at, amount_minor, currency, fx_rate_to_base, expected_close_date, source, captured_by)
+				VALUES ($1, 'Won deal', $2, $3, $4, 'won', now() - interval '2 days', 50000, 'EUR', 1.0, (now() - interval '2 days')::date, 'manual', 'human:x')`,
+				e.pipeline, e.stages[60], org)
+		}
+	}
+
+	grouped, err := e.askAnalytics(e.reportReaderCtx(), t, analyticsquery.Query{
+		Entity:   "win-loss",
+		GroupBy:  []string{"size_band"},
+		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "n"}},
+	})
+	if err != nil {
+		t.Fatalf("analytics group by size_band: %v", err)
+	}
+
+	var sawOpenBand bool
+	for _, row := range grouped.Rows {
+		band, ok := row["size_band"].(string)
+		if !ok {
+			continue
+		}
+		if band == "1001-5000" {
+			t.Errorf("the analytics surface grouped %v win(s) under the hidden company's "+
+				"band: namedByAnalyticsQuery did not activate the company's row scope", row["n"])
+		}
+		if band == "11-50" {
+			sawOpenBand = true
+		}
+	}
+	// The readable company's band still answers, or the arm above proves only
+	// that this surface refuses everybody.
+	if !sawOpenBand {
+		t.Error("the readable company's band answered nothing; the refusal above would be vacuous")
+	}
+}

@@ -21,6 +21,13 @@ import (
 // carrying different bytes for the same natural key keeps the original —
 // silently replacing provenance would gut lineage and forensic replay. A
 // record that arrived with no original stores nothing.
+//
+// For mail that key is transport-independent, so the FIRST connector to deliver
+// a message supplies the bytes on file and a second connector's copy of the
+// same message is not stored. That is the append-once rule meeting one
+// identity, not a new policy — but it does mean the stored original is one
+// provider's rendering. Equal Message-IDs do not promise equal bytes: delivery
+// headers differ per mailbox, and a Bcc survives only on the sender's copy.
 func storeRawCapture(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) error {
 	if len(rec.Raw) == 0 {
 		return nil
