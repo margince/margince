@@ -7,7 +7,8 @@ package main
 //
 // A channel is a governed capability in the sense that matters to an operator:
 // it says this unit can transmit messages out of the installation, on a
-// transport it names, under a member's own credential. That belongs in the
+// transport it names, under whichever credential it declares — one the whole
+// installation shares, or each member's own. That belongs in the
 // manifest for the same reason a tool's requested tier does — an operator has to
 // be able to see it before the unit ever runs.
 //
@@ -73,6 +74,15 @@ func (r *unitReader) readChannel(elt ast.Expr, ext string) (declaredChannel, err
 		switch k.Name {
 		case "Provider":
 			ch.Provider, err = r.stringLit(kv.Value, "Channel.Provider")
+		case "CredentialModel":
+			// constValue, not a reader of its own: it already resolves a
+			// published extension constant through the vocabulary derived from
+			// pkg/extension's own source — which carries the two credential
+			// models — and it already refuses a constant from another package.
+			// Validate below refuses a value outside the two, naming both.
+			var model string
+			model, err = r.constValue(kv.Value, ext)
+			ch.CredentialModel = extension.CredentialModel(model)
 		case "Send":
 			ch.SuppliesTransport = !isNilIdent(kv.Value)
 		case "Live":
@@ -91,8 +101,11 @@ func (r *unitReader) readChannel(elt ast.Expr, ext string) (declaredChannel, err
 			"channel %q declares Send without Live — a transport that can send must be able to say whether it still may", ch.Provider)
 	}
 	// Validated through the PUBLISHED rule, exactly as an ingress source is, so
-	// generation-time acceptance cannot diverge from boot-time.
-	if err := (extension.Channel{Provider: ch.Provider}).Validate(); err != nil {
+	// generation-time acceptance cannot diverge from boot-time. The read values
+	// are carried in rather than a bare Provider: Validate now asks about the
+	// credential model too, and a probe that left it zero would refuse every
+	// unit here for a field the unit actually declared.
+	if err := (extension.Channel{Provider: ch.Provider, CredentialModel: ch.CredentialModel}).Validate(); err != nil {
 		return declaredChannel{}, r.errPos(lit, "%v", err)
 	}
 	return ch, nil

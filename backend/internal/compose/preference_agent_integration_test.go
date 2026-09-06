@@ -57,6 +57,7 @@ func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
 	}
 	if _, err := consentStore.Record(admin, consent.RecordInput{
 		PersonID: ids.From[ids.PersonKind](personID), PurposeID: purpose.ID, NewState: "granted",
+		PolicyText: &grantedWording,
 	}); err != nil {
 		t.Fatalf("grant: %v", err)
 	}
@@ -146,3 +147,11 @@ func addPersonEmail(t *testing.T, e *integration.Env, personID ids.UUID, email s
 		t.Fatalf("add email: %v", err)
 	}
 }
+
+// grantedWording is what these fixtures record as shown to the subject.
+//
+// A grant carries real wording or the writer refuses it (#4583), and these
+// tests are about what a SEND does once consent is on record — so the wording
+// has to be there and has to be plainly a fixture's, not a placeholder that
+// would read like evidence in an export.
+var grantedWording = "Fixture: the subject was shown this sentence and agreed to it."

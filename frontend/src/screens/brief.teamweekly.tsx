@@ -13,6 +13,7 @@ import { formatDate, formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AgendaPanel, AgendaSummary } from "./brief.teamweeklyagenda";
+import { OutlookPanel } from "./home.waterfall";
 import {
   type TeamWeeklyReview,
   useTeams,
@@ -172,8 +173,33 @@ export function TeamWeeklySection({
           )}
         </SurfaceState>
       </Panel>
+      {/* Where the team's week was landing, before the agenda: a lead reads
+          the outcome first and the conversation it implies second. The SAME
+          panel the rep's retrospective draws — a second one would be two
+          answers to "what does a landing look like". */}
+      {review && <TeamOutlook review={review} />}
       {review && <AgendaPanel review={review} />}
     </section>
+  );
+}
+
+// The team's landing, drawn through the rep panel's own component.
+//
+// Its own horizon state, held here rather than lifted: the team page and the
+// rep page are different surfaces a person reads at different moments, and a
+// shared dial would move one when they turned the other.
+function TeamOutlook({
+  review,
+}: Readonly<{ review: NonNullable<TeamWeeklyReview> }>) {
+  const { locale } = useLocale();
+  const [horizon, setHorizon] = useState("quarter");
+  return (
+    <OutlookPanel
+      outlook={review.outlook ?? []}
+      locale={locale}
+      horizon={horizon}
+      onHorizon={setHorizon}
+    />
   );
 }
 

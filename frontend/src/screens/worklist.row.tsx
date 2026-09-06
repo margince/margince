@@ -24,6 +24,7 @@ import { type BriefMarkRequest, useBriefItemMark } from "./home.queries";
 import { hasMoveControl, MoveButton } from "./movebutton";
 import {
   useAutomationRetry,
+  useClaimSettle,
   useMeetingOutcome,
   useNoticeRead,
   useTaskUpdate,
@@ -309,6 +310,10 @@ const ANSWER_BY_SOURCE: Partial<
   notice: { verb: "acknowledge", draw: (id) => <NoticeAcknowledge id={id} /> },
   automation_run: { verb: "retry", draw: (id) => <AutomationRetry id={id} /> },
   meeting_outcome: { verb: "decide", draw: (id) => <MeetingOutcome id={id} /> },
+  conversation_claim: {
+    verb: "complete",
+    draw: (id) => <PromiseKept id={id} />,
+  },
   task: { verb: "complete", draw: (id) => <TaskComplete id={id} /> },
   // The row's id IS the person's here, which is what the dismissal endpoint
   // takes — the pairing is why this verb is offered on this lane and nowhere
@@ -1250,6 +1255,45 @@ function WaitingReply({
           queryClient.invalidateQueries({ queryKey: [worklistKey] })
         }
       />
+    </div>
+  );
+}
+
+// Saying a promise was kept, from the row that keeps asking for it.
+//
+// One button and not two. The endpoint settles a claim as `done` or
+// `dismissed`, and they are genuinely different — kept, versus never really
+// promised — but only one of them is a thing a rep does on their morning queue.
+// Dismissing an extraction is a judgement about the extractor, made on the
+// person's own card beside the words it was read from, where the reader can see
+// what it got wrong.
+function PromiseKept({ id }: Readonly<{ id: string }>) {
+  const t = useT();
+  const toast = useToast();
+  const settle = useClaimSettle([worklistKey]);
+  return (
+    <div className="worklist-row-verbs">
+      <Button
+        small
+        variant="primary"
+        pending={settle.isPending}
+        onClick={() =>
+          settle.mutate(
+            { id, outcome: "done" },
+            {
+              onSuccess: () => toast.show(t("worklist.verb.promiseSettled")),
+              // A refused settle leaves the row exactly as it was, which reads
+              // the same as a click that did nothing.
+              onError: () =>
+                toast.show(t("worklist.verb.promiseSettleFailed"), {
+                  mark: false,
+                }),
+            },
+          )
+        }
+      >
+        {t("worklist.verb.promiseKept")}
+      </Button>
     </div>
   );
 }

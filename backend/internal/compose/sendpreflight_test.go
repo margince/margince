@@ -209,20 +209,20 @@ func TestSendCapableAsksTheUnitRatherThanTheWorkspaceBotTable(t *testing.T) {
 		wantErr error
 	}{
 		"a live connection can send": {
-			channel: extension.Channel{Provider: "mine_chat", Send: (&capturedSend{}).send, Live: answersLive(true, nil)},
+			channel: extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil)},
 			want:    true,
 		},
 		"a member who disconnected cannot": {
-			channel: extension.Channel{Provider: "mine_chat", Send: (&capturedSend{}).send, Live: answersLive(false, nil)},
+			channel: extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(false, nil)},
 		},
 		"a capture-only transport cannot": {
-			channel: extension.Channel{Provider: "mine_chat"},
+			channel: extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember},
 		},
 		// A pre-flight that cannot ask must not answer — the mail arm's own
 		// rule, applied here so a rep is never told at the composer something
 		// the transmission will contradict.
 		"a unit that could not answer reports the fault": {
-			channel: extension.Channel{Provider: "mine_chat", Send: (&capturedSend{}).send, Live: answersLive(false, unreachable)},
+			channel: extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(false, unreachable)},
 			wantErr: unreachable,
 		},
 	} {

@@ -9,7 +9,10 @@ package weekly
 // nothing else — no database, no clock. What it defends is that EVERY rep gets
 // a row, and that a request already made outranks any metric.
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestARepWhoAskedForHelpIsRaisedFirst(t *testing.T) {
 	// A week with something to raise on every other rung too, so this asserts
@@ -104,5 +107,39 @@ func TestOneReadsAsOne(t *testing.T) {
 	}
 	if got := plural(3, "lead"); got != "3 leads" {
 		t.Errorf("plural(3) = %q, want %q", got, "3 leads")
+	}
+}
+
+// THE TEAM'S LANDING REACHES THE WIRE, rendered by the SAME function the rep's
+// outlook uses. A landing mapped to the wrong field, or not mapped at all,
+// reads to the frontend as a team that forecasts nothing.
+func TestTheTeamOutlookTravelsOnTheWire(t *testing.T) {
+	review := TeamReview{
+		TeamName: "Team One",
+		Outlook: []Outlook{{
+			PeriodKind:     "quarter",
+			PeriodStart:    time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
+			PeriodEnd:      time.Date(2026, 6, 30, 0, 0, 0, 0, time.UTC),
+			BaseCurrency:   "EUR",
+			WonMinor:       180_000_00,
+			ForwardMeasure: "commit_evidence",
+		}},
+	}
+	wire := teamReviewToWire(review)
+	if wire.Outlook == nil || len(*wire.Outlook) != 1 {
+		t.Fatal("a team week with a landing must carry it on the wire")
+	}
+	if (*wire.Outlook)[0].WonMinor != 180_000_00 {
+		t.Fatalf("the figure must survive the mapping, got %d", (*wire.Outlook)[0].WonMinor)
+	}
+}
+
+// A team week with NO landing sends no outlook at all, rather than an empty
+// array: absent says "no forecast was composed", and a reader draws nothing
+// instead of zeros.
+func TestATeamWeekWithoutAForecastSendsNoOutlook(t *testing.T) {
+	wire := teamReviewToWire(TeamReview{TeamName: "Team One"})
+	if wire.Outlook != nil {
+		t.Fatalf("no forecast means no outlook on the wire, got %d horizons", len(*wire.Outlook))
 	}
 }
