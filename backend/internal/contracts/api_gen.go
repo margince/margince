@@ -586,6 +586,7 @@ const (
 	AiActivityKindTranscript                    AiActivityKind = "transcript"
 	AiActivityKindTranscriptPropose             AiActivityKind = "transcript_propose"
 	AiActivityKindVoiceBuild                    AiActivityKind = "voice_build"
+	AiActivityKindWeeklyLearnings               AiActivityKind = "weekly_learnings"
 	AiActivityKindWeeklyReview                  AiActivityKind = "weekly_review"
 )
 
@@ -647,6 +648,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindTranscriptPropose:
 		return true
 	case AiActivityKindVoiceBuild:
+		return true
+	case AiActivityKindWeeklyLearnings:
 		return true
 	case AiActivityKindWeeklyReview:
 		return true
@@ -11383,6 +11386,24 @@ func (e SetProjectStakeholderRequestRole) Valid() bool {
 	}
 }
 
+// Defines values for SettleClaimRequestOutcome.
+const (
+	SettleClaimRequestOutcomeDismissed SettleClaimRequestOutcome = "dismissed"
+	SettleClaimRequestOutcomeDone      SettleClaimRequestOutcome = "done"
+)
+
+// Valid indicates whether the value is a known member of the SettleClaimRequestOutcome enum.
+func (e SettleClaimRequestOutcome) Valid() bool {
+	switch e {
+	case SettleClaimRequestOutcomeDismissed:
+		return true
+	case SettleClaimRequestOutcomeDone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SharedForecastViewKind.
 const (
 	SharedForecastViewKindLive     SharedForecastViewKind = "live"
@@ -13387,6 +13408,24 @@ func (e WebhookSubscriptionState) Valid() bool {
 	}
 }
 
+// Defines values for WeeklyLearningCitationSubjectType.
+const (
+	WeeklyLearningCitationSubjectTypeCommitment WeeklyLearningCitationSubjectType = "commitment"
+	WeeklyLearningCitationSubjectTypeDeal       WeeklyLearningCitationSubjectType = "deal"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyLearningCitationSubjectType enum.
+func (e WeeklyLearningCitationSubjectType) Valid() bool {
+	switch e {
+	case WeeklyLearningCitationSubjectTypeCommitment:
+		return true
+	case WeeklyLearningCitationSubjectTypeDeal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WeeklyPlanStatus.
 const (
 	WeeklyPlanStatusClosed WeeklyPlanStatus = "closed"
@@ -13471,6 +13510,51 @@ func (e WeeklyReviewDealOutcome) Valid() bool {
 	case WeeklyReviewDealOutcomeMoved:
 		return true
 	case WeeklyReviewDealOutcomeWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyReviewLearningKind.
+const (
+	DidNotWork WeeklyReviewLearningKind = "did_not_work"
+	Experiment WeeklyReviewLearningKind = "experiment"
+	Pattern    WeeklyReviewLearningKind = "pattern"
+	Worked     WeeklyReviewLearningKind = "worked"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyReviewLearningKind enum.
+func (e WeeklyReviewLearningKind) Valid() bool {
+	switch e {
+	case DidNotWork:
+		return true
+	case Experiment:
+		return true
+	case Pattern:
+		return true
+	case Worked:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyReviewLearningsState.
+const (
+	InsufficientEvidence WeeklyReviewLearningsState = "insufficient_evidence"
+	NotRun               WeeklyReviewLearningsState = "not_run"
+	Synthesized          WeeklyReviewLearningsState = "synthesized"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyReviewLearningsState enum.
+func (e WeeklyReviewLearningsState) Valid() bool {
+	switch e {
+	case InsufficientEvidence:
+		return true
+	case NotRun:
+		return true
+	case Synthesized:
 		return true
 	default:
 		return false
@@ -15666,22 +15750,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	Current    ListOrganizationDocumentsParamsDocState = "current"
-	Draft      ListOrganizationDocumentsParamsDocState = "draft"
-	Final      ListOrganizationDocumentsParamsDocState = "final"
-	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
+	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
+	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
+	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
+	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case Current:
+	case ListOrganizationDocumentsParamsDocStateCurrent:
 		return true
-	case Draft:
+	case ListOrganizationDocumentsParamsDocStateDraft:
 		return true
-	case Final:
+	case ListOrganizationDocumentsParamsDocStateFinal:
 		return true
-	case Superseded:
+	case ListOrganizationDocumentsParamsDocStateSuperseded:
 		return true
 	default:
 		return false
@@ -32198,6 +32282,21 @@ type SettingsAvailability struct {
 	CompanyContext bool `json:"company_context"`
 }
 
+// SettleClaimRequest How a claim finished.
+type SettleClaimRequest struct {
+	// Outcome `done` says the promised thing happened. `dismissed` says it no longer stands —
+	// the extractor read a promise into words that were not one, or the ask was
+	// withdrawn. `open` is absent on purpose: this endpoint settles, and re-opening a
+	// settled claim is a different act nobody has asked for.
+	Outcome SettleClaimRequestOutcome `json:"outcome"`
+}
+
+// SettleClaimRequestOutcome `done` says the promised thing happened. `dismissed` says it no longer stands —
+// the extractor read a promise into words that were not one, or the ask was
+// withdrawn. `open` is absent on purpose: this endpoint settles, and re-opening a
+// settled claim is a different act nobody has asked for.
+type SettleClaimRequestOutcome string
+
 // ShareCaptureHoldHistoryResponse defines model for ShareCaptureHoldHistoryResponse.
 type ShareCaptureHoldHistoryResponse struct {
 	// Released How many of the caller's own imports stopped being held for this reason. Not the same
@@ -34061,6 +34160,21 @@ type WebhookSubscriptionListResponse struct {
 	Page            PageInfo `json:"page"`
 }
 
+// WeeklyLearningCitation One row a learning was drawn from, by the name it carried that week.
+type WeeklyLearningCitation struct {
+	// Label What the row was CALLED when the learning was written, so a citation still reads after a rename.
+	Label string `json:"label"`
+
+	// SubjectId The row cited. It may no longer exist — a citation outlives the deal it names, as
+	// the review's own frozen deal lines do — so a client resolves it or draws the label
+	// alone rather than treating absence as an error.
+	SubjectId   openapi_types.UUID                `json:"subject_id"`
+	SubjectType WeeklyLearningCitationSubjectType `json:"subject_type"`
+}
+
+// WeeklyLearningCitationSubjectType defines model for WeeklyLearningCitation.SubjectType.
+type WeeklyLearningCitationSubjectType string
+
 // WeeklyPlan One rep's week as they meant it to go — the forward counterpart to the frozen
 // WeeklyReview beside it.
 type WeeklyPlan struct {
@@ -34185,6 +34299,15 @@ type WeeklyReview struct {
 	// GeneratedAt When the review was written.
 	GeneratedAt time.Time          `json:"generated_at"`
 	Id          openapi_types.UUID `json:"id"`
+
+	// Learnings What the week TAUGHT, as against what it was.
+	//
+	// `state` is load-bearing beside `items`: `not_run` means no pass has looked at this
+	// week — the lane may be unbound, the budget exhausted, the provider down — and
+	// `insufficient_evidence` means a pass ran, read the week and had too little it could
+	// ground. Both carry an empty list, and a reader that draws them the same way tells a
+	// rep "nothing to learn" about a week nobody examined.
+	Learnings *WeeklyReviewLearnings `json:"learnings,omitempty"`
 
 	// LocalWeekStart The Monday of the week under review, in the installation reporting timezone.
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
@@ -34346,6 +34469,41 @@ type WeeklyReviewIndex struct {
 	// Weeks The Monday of each week with a review, newest first.
 	Weeks []openapi_types.Date `json:"weeks"`
 }
+
+// WeeklyReviewLearning One thing the week taught, with what it was drawn from.
+type WeeklyReviewLearning struct {
+	// Citations The rows this claim rests on. NEVER empty: a learning is advice a reader cannot
+	// check against anything in front of them, so one that points at nothing is refused
+	// before it is stored rather than shown unsourced.
+	Citations []WeeklyLearningCitation `json:"citations"`
+
+	// Kind What sort of claim this is. A closed vocabulary because the surface draws each
+	// differently and a reader learns the four shapes.
+	Kind WeeklyReviewLearningKind `json:"kind"`
+
+	// Text One sentence, in the reader's own language.
+	Text string `json:"text"`
+}
+
+// WeeklyReviewLearningKind What sort of claim this is. A closed vocabulary because the surface draws each
+// differently and a reader learns the four shapes.
+type WeeklyReviewLearningKind string
+
+// WeeklyReviewLearnings A week's lessons and whether anybody looked for them.
+type WeeklyReviewLearnings struct {
+	// Items In the order the pass produced, because the first is the one a rep reads. At most
+	// four: a retrospective is read in a few minutes, and a longer list is a report
+	// nobody finishes.
+	Items []WeeklyReviewLearning `json:"items"`
+
+	// State Whether a pass ran, and what it found. `not_run` and `insufficient_evidence` both
+	// carry no items and mean different things — see the parent's description.
+	State WeeklyReviewLearningsState `json:"state"`
+}
+
+// WeeklyReviewLearningsState Whether a pass ran, and what it found. `not_run` and `insufficient_evidence` both
+// carry no items and mean different things — see the parent's description.
+type WeeklyReviewLearningsState string
 
 // WeeklyReviewMovement One bar of the movement bridge, and the deals behind it.
 type WeeklyReviewMovement struct {
@@ -40655,6 +40813,9 @@ type ConnectChannelJSONRequestBody = ConnectChannelRequest
 
 // ReplaceChannelTokenJSONRequestBody defines body for ReplaceChannelToken for application/json ContentType.
 type ReplaceChannelTokenJSONRequestBody = ReplaceChannelTokenRequest
+
+// SettleConversationClaimJSONRequestBody defines body for SettleConversationClaim for application/json ContentType.
+type SettleConversationClaimJSONRequestBody = SettleClaimRequest
 
 // ColdStartReadbackJSONRequestBody defines body for ColdStartReadback for application/json ContentType.
 type ColdStartReadbackJSONRequestBody = ColdStartRequest
@@ -49415,6 +49576,9 @@ type ServerInterface interface {
 	// Which messaging transports THIS installation has registered.
 	// (GET /channel-providers)
 	ListChannelProviders(w http.ResponseWriter, r *http.Request)
+	// Say a promise was kept, or that it no longer stands.
+	// (POST /claims/{id}/settle)
+	SettleConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
 	// Website cold-start read-back — returns a staged proposal with evidence.
 	// (POST /coldstart)
 	ColdStartReadback(w http.ResponseWriter, r *http.Request)
@@ -51605,6 +51769,12 @@ func (_ Unimplemented) ReplaceChannelToken(w http.ResponseWriter, r *http.Reques
 // Which messaging transports THIS installation has registered.
 // (GET /channel-providers)
 func (_ Unimplemented) ListChannelProviders(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say a promise was kept, or that it no longer stands.
+// (POST /claims/{id}/settle)
+func (_ Unimplemented) SettleConversationClaim(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -59097,6 +59267,38 @@ func (siw *ServerInterfaceWrapper) ListChannelProviders(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListChannelProviders(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SettleConversationClaim operation middleware
+func (siw *ServerInterfaceWrapper) SettleConversationClaim(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SettleConversationClaim(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -80462,6 +80664,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/channel-providers", wrapper.ListChannelProviders)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/claims/{id}/settle", wrapper.SettleConversationClaim)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/coldstart", wrapper.ColdStartReadback)

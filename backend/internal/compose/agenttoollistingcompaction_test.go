@@ -312,7 +312,7 @@ const (
 // pinning the number would make every wording change a test edit.
 func TestTheSystemFrameStaysWithinItsShareOfTheWindow(t *testing.T) {
 	frame := runner.SystemFrameTokens()
-	budget := runner.PromptTokenCeiling * systemFrameBudgetNumerator / systemFrameBudgetDenominator
+	budget := runner.MinimumPromptWindow * systemFrameBudgetNumerator / systemFrameBudgetDenominator
 	if frame > budget {
 		t.Errorf("the system frame costs ~%d tokens against the %d this build allows it (%d/%d of "+
 			"the window). It is paid on EVERY step of EVERY run and the catalog floor does not "+

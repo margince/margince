@@ -131,7 +131,7 @@ func renderAgentToolBudget(t *testing.T) agentToolBudget {
 	}
 	sort.Ints(ordered)
 
-	budget := runner.PromptTokenCeiling * listingBudgetNumerator / listingBudgetDenominator
+	budget := runner.MinimumPromptWindow * listingBudgetNumerator / listingBudgetDenominator
 	var rows []agentBudgetRow
 	for _, spec := range mustScheduledAgents() {
 		// specsNamed rather than an inline lookup: it REFUSES a name with no
@@ -145,7 +145,7 @@ func renderAgentToolBudget(t *testing.T) agentToolBudget {
 			Goal:       spec.Goal,
 			Tools:      spec.Tools,
 			Tokens:     tokens,
-			PercentOf:  tokens * 100 / runner.PromptTokenCeiling,
+			PercentOf:  tokens * 100 / runner.MinimumPromptWindow,
 			Headroom:   budget - tokens,
 			Dangling:   danglingReferences(spec.Tools, graph),
 			Temptation: temptationWeight(spec.Tools, census),
@@ -165,9 +165,9 @@ func renderAgentToolBudget(t *testing.T) agentToolBudget {
 
 	return agentToolBudget{
 		Note:          agentToolBudgetNote,
-		PromptCeiling: runner.PromptTokenCeiling,
+		PromptCeiling: runner.MinimumPromptWindow,
 		AgentBudget:   budget,
-		CatalogFloor:  runner.PromptTokenCeiling * wholeCatalogBudgetNumerator / wholeCatalogBudgetDenominator,
+		CatalogFloor:  runner.MinimumPromptWindow * wholeCatalogBudgetNumerator / wholeCatalogBudgetDenominator,
 		Catalog: catalogTotals{
 			Tools:  len(specs),
 			Frame:  runner.SystemFrameTokens(),

@@ -297,13 +297,27 @@ func seedConsent(ctx context.Context, tx pgx.Tx, configured []deployconfig.Conse
 		if err := consent.SeedDefaultPurposesTx(ctx, tx); err != nil {
 			return err
 		}
-		return consent.SeedDefaultRetentionTx(ctx, tx)
+		return seedConsentText(ctx, tx)
 	}
 	purposes := make([]consent.PurposeSeed, len(configured))
 	for i, p := range configured {
 		purposes[i] = consent.PurposeSeed{Key: p.Key, Label: p.Label, DoubleOptIn: p.DoubleOptIn}
 	}
 	if err := consent.SeedPurposesTx(ctx, tx, purposes); err != nil {
+		return err
+	}
+	return seedConsentText(ctx, tx)
+}
+
+// seedConsentText publishes the installation's own wording beside the purpose
+// catalog and the retention defaults, in the same transaction.
+//
+// Here rather than at a later door because a proof row may name a version from
+// the first grant onwards: wording published after the fact would leave the
+// earliest proofs pointing at nothing, and those are exactly the rows nobody
+// can reconstruct later.
+func seedConsentText(ctx context.Context, tx pgx.Tx) error {
+	if err := consent.PublishControllerTemplatesTx(ctx, tx, time.Now()); err != nil {
 		return err
 	}
 	return consent.SeedDefaultRetentionTx(ctx, tx)

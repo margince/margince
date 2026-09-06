@@ -329,6 +329,7 @@ var piiTables = map[string]piiHandling{
 	// and disclosed, because a subject told their consent state and not how
 	// they were acquired has been answered halfway.
 	"person_acquisition_evidence": {erasureWrite: true, sarRead: true},
+	"privacy_notice_case":         {erasureWrite: true, sarRead: true},
 	"communication_decision":      {erasureWrite: true, sarRead: true},
 	// The non-consent basis a message stood on — the thing that happened, its
 	// scope and its window. Same reasoning: erased with the subject, and

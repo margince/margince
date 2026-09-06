@@ -69,10 +69,44 @@ func TestWinLossVocabularyMatchesItsPinnedShape(t *testing.T) {
 	if len(spec.measures) == 0 {
 		t.Error("win-loss offers no measures, so it can answer no question about size or duration")
 	}
-	// The grain is one row per deal: no join may widen it.
+	// The grain is one row per deal, and every join must keep it that way.
+	//
+	// This asked for the BARE table until size_band arrived, which is a
+	// stronger claim than the grain needs and the wrong one to hold: it forbids
+	// a to-one lookup, which cannot multiply anything, while saying nothing
+	// about the to-many join that would. What matters is that each join matches
+	// at most one row per deal — `org.id` is a primary key — and that it is
+	// LEFT, so a deal with no company stays in the totals instead of vanishing
+	// from them.
 	if got := spec.fromClause(); got != "deal t" {
-		t.Errorf("fromClause = %q, want the bare deal table — a join would multiply rows", got)
+		for _, join := range spec.joins {
+			if !strings.HasPrefix(join, "LEFT JOIN ") {
+				t.Errorf("win-loss join %q is not LEFT: an inner join drops the deals "+
+					"whose side is missing, and a report that quietly stops counting "+
+					"some of the business is worse than one that refuses", join)
+			}
+			if !isToOneJoin(join) {
+				t.Errorf("win-loss join %q does not match a single row per deal, so an "+
+					"aggregate over it double-counts: join on the joined table's PRIMARY "+
+					"KEY, or the grain is no longer one row per deal", join)
+			}
+		}
 	}
+}
+
+// toOneJoin captures a join's own alias and the alias whose `id` the ON
+// compares. isToOneJoin holds that they are the SAME alias, which is what makes
+// the join to-one: `id` is the joined table's primary key, so at most one row
+// matches per left row and the grain survives.
+//
+// Two groups compared in code rather than a backreference, because Go's RE2 has
+// none — and a `\1` here compiles to a pattern that panics at init, which is how
+// this was first written.
+var toOneJoin = regexp.MustCompile(`JOIN\s+\w+\s+(\w+)\s+ON\s+(\w+)\.id\s*=`)
+
+func isToOneJoin(join string) bool {
+	m := toOneJoin.FindStringSubmatch(join)
+	return m != nil && m[1] == m[2]
 }
 
 // The three grains are the closed set (REPORT-PARAM-4), and each is anchored on

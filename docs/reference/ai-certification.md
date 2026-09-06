@@ -24,12 +24,12 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 
 | | |
 |---|---:|
-| Shipped invocation sites | 40 |
+| Shipped invocation sites | 41 |
 | … best state `current` | 29 |
 | … best state `partial` | 0 |
 | … best state `stale` | 9 |
-| … `absent` on every binding | 2 |
-| Scenarios in the corpus | 136 |
+| … `absent` on every binding | 3 |
+| Scenarios in the corpus | 139 |
 | Committed records | 59 |
 | Bindings measured | 10 |
 
@@ -74,7 +74,7 @@ today. It says nothing about how well the model did — that is the band.
 
 ## Index
 
-### Sites (40)
+### Sites (41)
 
 Which model to run each site on, and what that choice rests on.
 
@@ -119,6 +119,7 @@ Which model to run each site on, and what that choice rests on.
 | [`voice_build/derive`](#voice_buildderive) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 1 | 3 |
 | [`voice_build/eval_draft`](#voice_buildeval_draft) | - | - | - | `stale` | 1 | 3 |
 | [`voice_build/eval_scores`](#voice_buildeval_scores) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 1 | 3 |
+| [`weekly_learnings/learn`](#weekly_learningslearn) | - | - | - | `absent` | 3 | 0 |
 | [`weekly_review/narrative`](#weekly_reviewnarrative) | - | - | - | `stale` | 3 | 1 |
 
 **Best model tested** is the strongest result that still describes what ships.
@@ -1037,6 +1038,22 @@ Records (3):
 | `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/1 | `certified` | 3 | 3 | 1.00 | 963ms | 3370ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 1358ms | 20620ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 848ms | 1991ms | 3 | 0 | 0 | 0 |
+
+### `weekly_learnings`
+
+#### `weekly_learnings/learn`
+
+Scope a run of it can claim: `full_invocation`.
+
+Scenarios (3):
+
+| Scenario | Expects | Case |
+|---|---|---|
+| `a_deal_named_like_an_instruction_teaches_no_lesson` | `accepted` | [a_deal_name_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/weekly_learnings/a_deal_name_is_not_an_instruction.yaml) |
+| `a_pattern_across_three_deals_is_drawn_and_cited` | `accepted` | [a_repeated_pattern_is_cited.yaml](../../backend/internal/compose/aicert/corpus/weekly_learnings/a_repeated_pattern_is_cited.yaml) |
+| `a_week_that_invites_a_lesson_it_cannot_support_yields_none` | `accepted` | [a_thin_week_yields_no_lesson.yaml](../../backend/internal/compose/aicert/corpus/weekly_learnings/a_thin_week_yields_no_lesson.yaml) |
+
+No record: this site has never been certified on any binding.
 
 ### `weekly_review`
 
