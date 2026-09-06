@@ -2591,6 +2591,19 @@ export const en = {
   // the work that waits on a person, and this is a view of that same work.
   "home.panel.weekly": "Last week",
   "home.weekly.weekOf": "Week of {day}",
+  // What the week TAUGHT, as against what it was. Every learning shows what it
+  // rests on, because a claim about cause is one the reader cannot check
+  // against anything else on the page.
+  "home.weekly.learnings.title": "What this week taught",
+  "home.weekly.learnings.worked": "What worked",
+  "home.weekly.learnings.didNotWork": "What did not",
+  "home.weekly.learnings.pattern": "A pattern",
+  "home.weekly.learnings.experiment": "Worth trying",
+  // Two empty states, never one: a week nobody read and a week that held no
+  // lesson are different facts, and only one of them is about the week.
+  "home.weekly.learnings.notRun": "Nobody has read this week yet.",
+  "home.weekly.learnings.insufficient":
+    "Not enough happened this week to draw a lesson from.",
   // How WELL the week went, beside what happened in it. Each block is drawn only
   // when the server sent it: a rep who carried no leads did not score zero on
   // the funnel, and an empty row would read as failure at something nobody
@@ -3793,6 +3806,19 @@ export const en = {
     "Your week is measured, without a summary — the numbers are all there.",
   "agent.activity.weeklyReview.failed":
     "No summary of your week this time. The numbers are still the week's own.",
+  // What the week TAUGHT, which is a different promise from the summary above:
+  // a learning is advice, so the failed and degraded lines say the numbers
+  // still stand rather than implying the week went unmeasured.
+  "agent.activity.weeklyLearnings.queued":
+    "Your week is queued to be read for lessons.",
+  "agent.activity.weeklyLearnings.running": "Reading your week for lessons…",
+  "agent.activity.weeklyLearnings.stalled":
+    "Reading your week for lessons is taking longer than expected.",
+  "agent.activity.weeklyLearnings.done": "Your week has its lessons.",
+  "agent.activity.weeklyLearnings.degraded":
+    "Your week is measured, without lessons — the numbers are all there.",
+  "agent.activity.weeklyLearnings.failed":
+    "No lessons from your week this time. The numbers are still the week's own.",
   "agent.activity.morningBrief.queued": "Your morning brief is queued.",
   "agent.activity.morningBrief.running":
     "I'm putting your morning brief together.",

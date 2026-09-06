@@ -2511,6 +2511,14 @@ export const de = {
   "home.pipelineUnavailable": "Diese Zahl konnte nicht geladen werden.",
   "home.panel.weekly": "Letzte Woche",
   "home.weekly.weekOf": "Woche ab {day}",
+  "home.weekly.learnings.title": "Was diese Woche gelehrt hat",
+  "home.weekly.learnings.worked": "Was funktioniert hat",
+  "home.weekly.learnings.didNotWork": "Was nicht",
+  "home.weekly.learnings.pattern": "Ein Muster",
+  "home.weekly.learnings.experiment": "Einen Versuch wert",
+  "home.weekly.learnings.notRun": "Diese Woche wurde noch nicht gelesen.",
+  "home.weekly.learnings.insufficient":
+    "In dieser Woche ist zu wenig passiert, um daraus zu lernen.",
   "home.weekly.scorecard.title": "Wie die Woche lief",
   "home.weekly.scorecard.leadBlock": "Leads und Termine",
   "home.weekly.scorecard.dealBlock": "Deals",
@@ -3708,6 +3716,17 @@ export const de = {
     "Deine Woche ist ausgewertet, ohne Zusammenfassung — die Zahlen sind vollständig.",
   "agent.activity.weeklyReview.failed":
     "Diesmal keine Zusammenfassung deiner Woche. Die Zahlen sind trotzdem die der Woche.",
+  "agent.activity.weeklyLearnings.queued":
+    "Ihre Woche wartet darauf, auf Erkenntnisse gelesen zu werden.",
+  "agent.activity.weeklyLearnings.running":
+    "Ich lese Ihre Woche auf Erkenntnisse…",
+  "agent.activity.weeklyLearnings.stalled":
+    "Das Lesen Ihrer Woche dauert länger als erwartet.",
+  "agent.activity.weeklyLearnings.done": "Ihre Woche hat ihre Erkenntnisse.",
+  "agent.activity.weeklyLearnings.degraded":
+    "Ihre Woche ist gemessen, ohne Erkenntnisse — die Zahlen sind vollständig.",
+  "agent.activity.weeklyLearnings.failed":
+    "Diesmal keine Erkenntnisse aus Ihrer Woche. Die Zahlen bleiben die der Woche.",
   "agent.activity.morningBrief.queued": "Dein Morgenbriefing ist eingereiht.",
   "agent.activity.morningBrief.running":
     "Ich stelle dein Morgenbriefing zusammen.",

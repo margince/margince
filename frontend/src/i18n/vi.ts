@@ -2486,6 +2486,14 @@ export const vi = {
   "home.pipelineUnavailable": "Không tải được số liệu này.",
   "home.panel.weekly": "Tuần trước",
   "home.weekly.weekOf": "Tuần từ {day}",
+  "home.weekly.learnings.title": "Tuần này dạy điều gì",
+  "home.weekly.learnings.worked": "Điều đã hiệu quả",
+  "home.weekly.learnings.didNotWork": "Điều chưa hiệu quả",
+  "home.weekly.learnings.pattern": "Một quy luật",
+  "home.weekly.learnings.experiment": "Đáng thử",
+  "home.weekly.learnings.notRun": "Chưa ai đọc tuần này.",
+  "home.weekly.learnings.insufficient":
+    "Tuần này có quá ít điều xảy ra để rút ra bài học.",
   "home.weekly.scorecard.title": "Tuần vừa qua thế nào",
   "home.weekly.scorecard.leadBlock": "Khách tiềm năng và cuộc họp",
   "home.weekly.scorecard.dealBlock": "Cơ hội",
@@ -3663,6 +3671,17 @@ export const vi = {
     "Tuần của bạn đã được đo, không có tóm tắt — các số liệu vẫn đầy đủ.",
   "agent.activity.weeklyReview.failed":
     "Lần này không có tóm tắt tuần của bạn. Các số liệu vẫn là của tuần đó.",
+  "agent.activity.weeklyLearnings.queued":
+    "Tuần của bạn đang chờ được đọc để rút ra bài học.",
+  "agent.activity.weeklyLearnings.running":
+    "Đang đọc tuần của bạn để rút ra bài học…",
+  "agent.activity.weeklyLearnings.stalled":
+    "Việc đọc tuần của bạn mất nhiều thời gian hơn dự kiến.",
+  "agent.activity.weeklyLearnings.done": "Tuần của bạn đã có bài học.",
+  "agent.activity.weeklyLearnings.degraded":
+    "Tuần của bạn đã được đo, nhưng không có bài học — các số liệu vẫn đầy đủ.",
+  "agent.activity.weeklyLearnings.failed":
+    "Lần này không có bài học từ tuần của bạn. Các số liệu vẫn là của tuần.",
   "agent.activity.morningBrief.queued":
     "Bản tóm tắt buổi sáng của bạn đã xếp hàng.",
   "agent.activity.morningBrief.running":
