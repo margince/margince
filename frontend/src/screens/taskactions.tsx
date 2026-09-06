@@ -203,6 +203,7 @@ export function TaskQuickActions({
       {showDuePicker && (
         <TaskDueDatePick
           activityId={activityId}
+          version={version}
           dueAt={dueAt}
           update={update}
         />
@@ -226,10 +227,12 @@ export function TaskQuickActions({
 // one day after nothing is nothing.
 function TaskDueDatePick({
   activityId,
+  version,
   dueAt,
   update,
 }: Readonly<{
   activityId: string;
+  version: number | undefined;
   dueAt?: string | null;
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
@@ -270,6 +273,7 @@ function TaskDueDatePick({
             }
             update.mutate({
               id: activityId,
+              version,
               body: { due_at: dueInstant(day) },
             });
           }}

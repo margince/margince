@@ -59,12 +59,16 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// The version the row was drawn at, which every write on it is pinned to.
+const TASK_VERSION = 3;
+
 function renderVerbs(dueAt?: string | null) {
   function Harness() {
     const update = useTaskUpdate([["tasks"]]);
     return (
       <TaskQuickActions
         activityId={TASK}
+        version={TASK_VERSION}
         dueAt={dueAt}
         update={update}
         showDuePicker
@@ -88,7 +92,14 @@ function renderVerbs(dueAt?: string | null) {
 function renderDefaults(dueAt?: string | null) {
   function Harness() {
     const update = useTaskUpdate([["tasks"]]);
-    return <TaskQuickActions activityId={TASK} dueAt={dueAt} update={update} />;
+    return (
+      <TaskQuickActions
+        activityId={TASK}
+        version={TASK_VERSION}
+        dueAt={dueAt}
+        update={update}
+      />
+    );
   }
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
