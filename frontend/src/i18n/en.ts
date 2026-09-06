@@ -6172,6 +6172,16 @@ export const en = {
   // are: the mailbox and the network a PERSON connected, against the outside
   // systems the INSTALLATION is wired to. One row carried both before, which
   // is why it had to be ungated to keep a rep's own mailbox reachable.
+  "settings.home": "Settings home",
+  "settings.home.yours": "Your settings",
+  "settings.home.access": "Your access",
+  "settings.boundary.deniedTitle": "This settings page is not yours to open",
+  "settings.boundary.deniedBody":
+    "The address in the bar is a real page \u2014 your seat does not reach it. It is still there to copy if you need to ask somebody who does.",
+  "settings.boundary.unknownTitle": "No settings page has this address",
+  "settings.boundary.unknownBody":
+    "The link may be from an older version, or mistyped. Settings home lists every page your seat can open.",
+  "settings.boundary.back": "Settings home",
   "settings.tab.company": "Company profile",
   "settings.tab.authentication": "Sign-in & apps",
   "settings.tab.members": "Members",

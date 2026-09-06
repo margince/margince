@@ -6039,6 +6039,17 @@ export const de = {
   // "Allgemein" statt "Organisation" für den ersten Eintrag: die Gruppen-
   // überschrift darüber sagt das Wort schon, und eine Zeile, die ihre eigene
   // Überschrift wiederholt, benennt nichts.
+  "settings.home": "Einstellungen-Start",
+  "settings.home.yours": "Ihre Einstellungen",
+  "settings.home.access": "Ihr Zugriff",
+  "settings.boundary.deniedTitle":
+    "Diese Einstellungsseite steht Ihnen nicht offen",
+  "settings.boundary.deniedBody":
+    "Die Adresse in der Leiste ist eine echte Seite \u2014 Ihr Sitzplatz erreicht sie nicht. Sie bleibt stehen, damit Sie sie kopieren und jemanden fragen k\u00f6nnen, der sie erreicht.",
+  "settings.boundary.unknownTitle": "Keine Einstellungsseite hat diese Adresse",
+  "settings.boundary.unknownBody":
+    "Der Link stammt vielleicht aus einer \u00e4lteren Version oder ist vertippt. Der Einstellungen-Start listet jede Seite auf, die Ihr Sitzplatz \u00f6ffnen kann.",
+  "settings.boundary.back": "Einstellungen-Start",
   "settings.tab.company": "Unternehmensprofil",
   "settings.tab.authentication": "Anmeldung & Apps",
   "settings.tab.members": "Mitglieder",

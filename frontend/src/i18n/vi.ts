@@ -5974,6 +5974,18 @@ export const vi = {
   "cf.retired": "Đã ngừng dùng",
   // "Chung" thay vì "Tổ chức" cho mục đầu tiên: tiêu đề nhóm phía trên đã nói
   // từ đó, và một dòng lặp lại tiêu đề của chính nó thì không gọi tên được gì.
+  "settings.home": "Trang ch\u00ednh c\u00e0i \u0111\u1eb7t",
+  "settings.home.yours": "C\u00e0i \u0111\u1eb7t c\u1ee7a b\u1ea1n",
+  "settings.home.access": "Quy\u1ec1n truy c\u1eadp c\u1ee7a b\u1ea1n",
+  "settings.boundary.deniedTitle":
+    "Trang c\u00e0i \u0111\u1eb7t n\u00e0y kh\u00f4ng m\u1edf cho b\u1ea1n",
+  "settings.boundary.deniedBody":
+    "\u0110\u1ecba ch\u1ec9 tr\u00ean thanh l\u00e0 m\u1ed9t trang c\u00f3 th\u1eadt \u2014 gh\u1ebf c\u1ee7a b\u1ea1n kh\u00f4ng t\u1edbi \u0111\u01b0\u1ee3c. N\u00f3 v\u1eabn \u1edf \u0111\u00f3 \u0111\u1ec3 b\u1ea1n sao ch\u00e9p v\u00e0 h\u1ecfi ng\u01b0\u1eddi c\u00f3 quy\u1ec1n.",
+  "settings.boundary.unknownTitle":
+    "Kh\u00f4ng c\u00f3 trang c\u00e0i \u0111\u1eb7t n\u00e0o \u1edf \u0111\u1ecba ch\u1ec9 n\u00e0y",
+  "settings.boundary.unknownBody":
+    "Li\u00ean k\u1ebft c\u00f3 th\u1ec3 t\u1eeb phi\u00ean b\u1ea3n c\u0169 ho\u1eb7c g\u00f5 sai. Trang ch\u00ednh c\u00e0i \u0111\u1eb7t li\u1ec7t k\u00ea m\u1ecdi trang gh\u1ebf c\u1ee7a b\u1ea1n m\u1edf \u0111\u01b0\u1ee3c.",
+  "settings.boundary.back": "Trang ch\u00ednh c\u00e0i \u0111\u1eb7t",
   "settings.tab.company": "Hồ sơ công ty",
   "settings.tab.authentication": "Đăng nhập & ứng dụng",
   "settings.tab.members": "Thành viên",

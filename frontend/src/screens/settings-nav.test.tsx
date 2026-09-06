@@ -3,6 +3,9 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RbacObject } from "../app/capability";
 import { type GrantSpec, meFixture } from "../app/mefixture";
+import type { Route } from "../app/router";
+import * as router from "../app/router";
+import { SettingsRail } from "../app/shell";
 import { translate } from "../i18n";
 import { SettingsScreen } from "./settings";
 import {
@@ -18,6 +21,7 @@ import {
   type SettingsGroupId,
   type SettingsPageId,
 } from "./settingscatalog";
+import { SETTINGS_HOME_ID } from "./settingsnav";
 import { settingsHref } from "./settingsrouting";
 
 // WHICH settings pages a principal is offered at all, and which group holds each
@@ -94,7 +98,7 @@ describe("SettingsScreen page layout", () => {
   });
 
   it("renders only the active page's cards — the passport is off the Account page", async () => {
-    render(<SettingsScreen route={settingsHref()} />);
+    render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
     // Scout lives on Agents; the default Account page must not render it.
     expect(screen.queryByText("Scout")).toBeNull();
@@ -196,9 +200,14 @@ function settingsNavBackend(opts: {
 function navPages(): string[] {
   return screen
     .getAllByRole("link")
-    .filter((link) =>
-      (link.getAttribute("href") ?? "").startsWith("#/settings/"),
-    )
+    .filter((link) => {
+      const href = link.getAttribute("href") ?? "";
+      // `#/settings` exactly is Settings home — a row of this level whose
+      // address is the level itself. The trailing slash alone would drop it,
+      // which is how a helper quietly stops seeing the row it was meant to
+      // prove is there.
+      return href === "#/settings" || href.startsWith("#/settings/");
+    })
     .map((link) => link.textContent ?? "");
 }
 
@@ -230,11 +239,19 @@ const groupLabelOf = (group: SettingsGroupId) =>
 // The pages a caller reaches by naming a set of page ids, in CATALOG order —
 // so a case states which pages a grant opens and the order comes from the one
 // table that decides it, never from the order the case happened to list them.
-const pagesNamed = (...ids: readonly SettingsPageId[]) =>
-  SETTINGS_PAGES.filter((page) => ids.includes(page.id)).map((page) =>
+// Settings home leads every list, for every reader. It is not a page and no
+// grant reaches it — it is the address with no page segment — so it belongs in
+// the shared expectation rather than in each case that would otherwise have to
+// remember it.
+const pagesNamed = (...ids: readonly SettingsPageId[]) => [
+  translate("en", "settings.home"),
+  ...SETTINGS_PAGES.filter((page) => ids.includes(page.id)).map((page) =>
     labelOf(page.id),
-  );
+  ),
+];
 
+// Without the home row: a claim about ONE group's rows is not a claim about the
+// headingless row above all of them.
 const pagesIn = (group: SettingsGroupId) =>
   SETTINGS_PAGES.filter((page) => page.group === group).map((page) =>
     labelOf(page.id),
@@ -305,7 +322,12 @@ const EVERY_PAGE_GRANTED: GrantSpec = {
   role_admin: ["read"],
   system_reset: ["delete"],
 };
-const EVERY_PAGE = SETTINGS_PAGES.map((page) => labelOf(page.id));
+// Home leads this list too, for the same reason it leads pagesNamed: it is a
+// row of the nav, and this is the nav's every row.
+const EVERY_PAGE = [
+  translate("en", "settings.home"),
+  ...SETTINGS_PAGES.map((page) => labelOf(page.id)),
+];
 
 // The five reads the old Data model entry unioned, now spread across five pages
 // of their own. Each still has to open its page ALONE: a page wired to one
@@ -1095,5 +1117,98 @@ describe("SettingsScreen page visibility", () => {
 
     await waitFor(() => expect(navPages()).toEqual(floorPlus("privacy")));
     expect(screen.queryByRole("link", { name: labelOf("company") })).toBeNull();
+  });
+});
+
+// The access boundary, which replaced a silent fallback.
+//
+// The fallback was wrong in a way the reader could not see: a denied address
+// rendered Account AND rewrote the URL to say Account, so somebody following a
+// colleague's link had no evidence the link had gone anywhere else. They would
+// report it broken; the sender would open it and find it worked.
+// The home ROW's id is not a page id, and must never become one. If a page
+// were ever added called `home`, its row and the home row would collide on
+// `activeId` and one of them would go current on the other's address — and
+// `#/settings/home` would stop being an unknown address and start being that
+// page, silently.
+//
+// Derived from the catalog rather than restated: a list that named the ids by
+// hand would agree with itself while the catalog moved underneath it.
+it("keeps the home row's id out of the page vocabulary", () => {
+  expect(SETTINGS_PAGES.map((page) => page.id)).not.toContain(SETTINGS_HOME_ID);
+});
+
+describe("the settings access boundary", () => {
+  it("tells a reader the page is not theirs, and leaves the address alone", async () => {
+    const replaced: Route[] = [];
+    vi.spyOn(router, "navigateReplacing").mockImplementation((route) => {
+      replaced.push(route);
+    });
+    vi.stubGlobal("fetch", settingsNavBackend({ roles: ["rep"], allow: {} }));
+    // Both halves, because the claim spans them: the SCREEN says the page is
+    // not theirs, and the RAIL must not go on marking a page current beside it.
+    render(
+      <>
+        <SettingsRail route={settingsHref("audit")} />
+        <SettingsScreen route={settingsHref("audit")} />
+      </>,
+    );
+
+    // The boundary is ALSO what renders while /me is in flight — every
+    // capability predicate reads false until the snapshot lands — so finding it
+    // proves nothing on its own. Waited on a row only a RESOLVED snapshot can
+    // draw, and only then asserted the denial, which is what makes it a claim
+    // about the grant rather than about the load.
+    expect(
+      await screen.findByRole("link", { name: labelOf("account") }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/this settings page is not yours to open/i),
+    ).toBeTruthy();
+    // Account's own content is what the fallback used to show here.
+    expect(screen.queryByText("test@example.test")).toBeNull();
+    // And the address is untouched, which is the whole affordance: the reader
+    // can read what they asked for and quote it to somebody who holds it.
+    expect(replaced).toEqual([]);
+    // Nor does the CHROME claim a page. The sidebar used to mark Account
+    // current beside a body saying "not yours" — half the false fallback,
+    // living on in the rail.
+    expect(
+      screen
+        .getByRole("link", { name: labelOf("account") })
+        .getAttribute("aria-current"),
+    ).toBeNull();
+  });
+
+  it("tells a reader an address names no page, which is a different fact", async () => {
+    vi.stubGlobal("fetch", settingsNavBackend({ roles: ["admin"], allow: {} }));
+    render(
+      <SettingsScreen route={{ screen: "settings", id: "no-such-page" }} />,
+    );
+
+    expect(
+      await screen.findByText(/no settings page has this address/i),
+    ).toBeTruthy();
+    // Not the denial: an admin holding every grant is refused nothing, and
+    // telling them the page is "not theirs" would send them asking for a grant
+    // that would not help.
+    expect(screen.queryByText(/not yours to open/i)).toBeNull();
+  });
+
+  it("opens the page for a reader who does hold the grant", async () => {
+    // The control: the same address, one grant apart. Without it the two cases
+    // above would pass against a page nobody can ever open.
+    vi.stubGlobal(
+      "fetch",
+      settingsNavBackend({ roles: ["admin"], allow: readOn("audit_log") }),
+    );
+    render(<SettingsScreen route={settingsHref("audit")} />);
+
+    await waitFor(() =>
+      expect(screen.queryByText(/not yours to open/i)).toBeNull(),
+    );
+    expect(
+      screen.getByText(translate("en", "settings.tab.audit")),
+    ).toBeTruthy();
   });
 });

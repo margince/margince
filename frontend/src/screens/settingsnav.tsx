@@ -17,6 +17,7 @@ import {
   BookOpen,
   Building2,
   Database,
+  House,
   KeyRound,
   type LucideIcon,
   Mail,
@@ -507,6 +508,15 @@ export function useVisibleSettingsTabs(tab?: string) {
 }
 
 /**
+ * The row id of Settings home.
+ *
+ * Deliberately not a `SettingsPageId`: home is the settings address with NO
+ * page segment, so no page can be current there and no page id may name it.
+ * Exported because the screen and the sidebar have to agree which row that is.
+ */
+export const SETTINGS_HOME_ID = "home";
+
+/**
  * The settings level, as data the sidebar can render.
  *
  * The shell asks for this and renders it as the second navigation level; it
@@ -524,7 +534,6 @@ export function useSettingsSection(route: Route): NavSection {
     target.kind === "page"
       ? pages.find((page) => page.id === target.page)
       : undefined;
-  const active = named ?? pages[0];
   // Both message keys are composed from the ids, and both annotations are what
   // make them KEYS: a template literal narrows to the catalog's union only where
   // something expects one, and unannotated it would compile as any old string —
@@ -550,6 +559,24 @@ export function useSettingsSection(route: Route): NavSection {
         ),
     }),
   ).filter((group) => group.items.length > 0);
+  // Settings home, above the seven groups and in a headingless group of its
+  // own. Not a member of one: it belongs to no topic, and a group that owned it
+  // would take it away on the day that group had no other visible page.
+  //
+  // `SETTINGS_HOME_ID` rather than a page id, because home is not a page — it
+  // is the address with no page segment, and `settingsHref()` with no argument
+  // is exactly that. A row keyed on a page id would go current on that page.
+  const home: NavLevelGroup = {
+    items: [
+      {
+        id: SETTINGS_HOME_ID,
+        labelKey: "settings.home",
+        icon: House,
+        // Addresses the LEVEL — `#/settings`, not `#/settings/home`.
+        level: true,
+      },
+    ],
+  };
   return {
     screen: SETTINGS_SCREEN,
     titleKey: "nav.settings",
@@ -558,8 +585,22 @@ export function useSettingsSection(route: Route): NavSection {
     // its trail says so — but it is not a settings tab, and `settingsRouteTab`
     // answers with the default one for any address it cannot read. Marking
     // Account current there would point at a page the reader is not on.
-    activeId: route.screen === SETTINGS_SCREEN ? active.id : "",
-    groups,
+    // Exactly three answers, and the third is the one that was missing: home on
+    // the home address, the page on a page this reader resolved, and NOTHING on
+    // a boundary.
+    //
+    // A boundary used to publish `pages[0]` as current, so while the content
+    // said "not yours" the sidebar, the breadcrumb, the mobile switcher and the
+    // page heading all said Account — which is half of the false fallback this
+    // change exists to remove, kept alive in the chrome. An id no row carries
+    // marks nothing, which is the honest answer: the reader is on no page.
+    activeId:
+      route.screen !== SETTINGS_SCREEN
+        ? ""
+        : target.kind === "home"
+          ? SETTINGS_HOME_ID
+          : (named?.id ?? ""),
+    groups: [home, ...groups],
   };
 }
 
