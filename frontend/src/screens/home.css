@@ -19,26 +19,18 @@
 /* ── Atmosphere ────────────────────────────────────────────────────────────
  * The Brief carries a light of its own over the shell's two corner glows: an
  * indigo pool behind the top of the page, where the readings sit, so the glass
- * panes there have something to be glass OVER. Painted on the page rather than
- * on a pane, never animated, and faint enough that the eye does not find it —
- * the same rule the shell's own lights keep (app/shell.css). It sits under the
- * content, so nothing is stacked, scrolled or measured for it. */
+ * panes there have something to be glass OVER. Faint enough that the eye does
+ * not find it, and never animated — the rule the shell's own lights keep.
+ *
+ * A BACKGROUND, the way the shell paints its two (app/shell.css), and not a
+ * positioned box bleeding past the page's edge. A background cannot widen the
+ * page; that box could and did — its 10% bleed pushed the shell's content
+ * scroller 39px past a 390px viewport, which is the page scrolling sideways on
+ * a phone. The centre sits outside the box on the same reasoning, so the pool
+ * is cut by the edge rather than reaching past it. */
 .home-wrap {
-  position: relative;
-  isolation: isolate;
-}
-.home-wrap::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset-inline-end: -10%;
-  inset-block-start: -8%;
-  inline-size: 46%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  corner-shape: round;
-  background: radial-gradient(closest-side, var(--glowB), transparent);
-  pointer-events: none;
+  background: radial-gradient(46% 32% at 104% 1%, var(--glowB), transparent 70%)
+    no-repeat;
 }
 
 /* ── Arrival ───────────────────────────────────────────────────────────────
