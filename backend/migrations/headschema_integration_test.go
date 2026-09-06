@@ -292,15 +292,23 @@ var schemaMoves = []struct {
 			 WHERE n.nspname = 'public' AND NOT t.tgisinternal
 			 ORDER BY t.tgname LIMIT 1`)
 	}},
-	{"a view stops being security_invoker", func(t *testing.T, conn *pgx.Conn) string {
+	// A relation that reads across records, quietly gaining the DEFINER's
+	// privileges. It was spelled against a VIEW's security_invoker option until
+	// the one such view became a function to take its as-of date; a probe whose
+	// subject has left the schema plants nothing and proves nothing, which is
+	// the shape a census must not have.
+	//
+	// The invariant did not move — a cross-record read still runs as the caller
+	// — so the probe follows it to where Postgres now records it.
+	{"a function stops running as the caller", func(t *testing.T, conn *pgx.Conn) string {
 		return scanOne(t, conn, `
-			SELECT 'ALTER VIEW ' || quote_ident(n.nspname) || '.' || quote_ident(c.relname) ||
-			       ' SET (security_invoker = false)'
-			  FROM pg_class c
-			  JOIN pg_namespace n ON n.oid = c.relnamespace
-			 WHERE n.nspname = 'public' AND c.relkind = 'v'
-			   AND array_to_string(c.reloptions, ',') LIKE '%security_invoker=true%'
-			 ORDER BY c.relname LIMIT 1`)
+			SELECT 'ALTER FUNCTION ' || quote_ident(n.nspname) || '.' || quote_ident(p.proname) ||
+			       '(' || pg_get_function_identity_arguments(p.oid) || ') SECURITY DEFINER'
+			  FROM pg_proc p
+			  JOIN pg_namespace n ON n.oid = p.pronamespace
+			 WHERE n.nspname = 'public' AND NOT p.prosecdef
+			   AND p.proname = 'organization_open_pipeline_rollup'
+			 ORDER BY p.proname LIMIT 1`)
 	}},
 	{"a trigger function's body is replaced", func(t *testing.T, conn *pgx.Conn) string {
 		// The class a dropped trigger CANNOT stand in for: the trigger

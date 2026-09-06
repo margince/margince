@@ -122,33 +122,37 @@ func TestSchema_amountMinorBaseHasOneWriter(t *testing.T) {
 }
 
 // TestSchema_organizationOpenPipelineRollupIsSecurityInvoker closes the
-// RD-AC-N-1 half of the same boundary proof: the cross-record roll-up MUST
-// run as security_invoker (inheriting the caller's own RLS), never as the
-// view owner's elevated privilege — a view created without the option, or
-// with it later stripped by a careless CREATE OR REPLACE, would silently
-// leak every workspace's pipeline total to every other workspace.
+// RD-AC-N-1 half of the same boundary proof: the cross-record roll-up MUST run
+// with the CALLER's own privileges, never the definer's — one created or
+// redefined the other way would silently hand every workspace's pipeline total
+// to every other workspace.
+//
+// It asks pg_proc now rather than pg_class.reloptions, because the rollup is a
+// FUNCTION taking its as-of date (a view cannot take a parameter). The
+// invariant is unchanged; where Postgres records it moved. Asked of the
+// catalogue rather than of the migration text, so a later CREATE OR REPLACE
+// that quietly drops the property is caught by what the database ended up
+// with — which is the failure this test exists for.
 func TestSchema_organizationOpenPipelineRollupIsSecurityInvoker(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)
 	ctx := context.Background()
 
-	var reloptions []string
+	var definerRights bool
 	if err := owner.QueryRow(
 		ctx, `
-		SELECT COALESCE(reloptions, '{}') FROM pg_class
-		WHERE relname = 'organization_open_pipeline_rollup' AND relnamespace = 'public'::regnamespace`,
-	).Scan(&reloptions); err != nil {
-		t.Fatalf("querying pg_class.reloptions for organization_open_pipeline_rollup: %v", err)
+		SELECT prosecdef FROM pg_proc
+		WHERE proname = 'organization_open_pipeline_rollup'
+		  AND pronamespace = 'public'::regnamespace`,
+	).Scan(&definerRights); err != nil {
+		t.Fatalf("querying pg_proc.prosecdef for organization_open_pipeline_rollup: %v — a rollup "+
+			"the catalogue does not carry is one this proof cannot make at all", err)
 	}
-	found := false
-	for _, opt := range reloptions {
-		if opt == "security_invoker=true" {
-			found = true
-		}
-	}
-	if !found {
-		t.Errorf("organization_open_pipeline_rollup view reloptions %v do not include security_invoker=true", reloptions)
+	if definerRights {
+		t.Error("organization_open_pipeline_rollup runs with DEFINER rights: it reads deals across " +
+			"records, so the caller's own privileges are the only thing standing between one " +
+			"workspace's pipeline total and every other workspace")
 	}
 }
 
