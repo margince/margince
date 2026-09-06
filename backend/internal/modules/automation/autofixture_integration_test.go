@@ -175,12 +175,22 @@ type scriptedWorkflow struct {
 	match func(ev workflow.Event) (bool, error)
 	plan  func(ev workflow.Event) (workflow.Effect, error)
 	apply func(ev workflow.Event) (workflow.RunResult, error)
+	// redrivable is what the retry gate reads off the spec. The zero value is
+	// the real default — a handler nobody audited refuses to be re-driven — so
+	// a case that wants a retry to proceed has to say so, exactly as a real
+	// handler does.
+	redrivable bool
 }
 
 const scriptedTrigger = "history.test_event"
 
 func (s scriptedWorkflow) Spec() workflow.Spec {
-	return workflow.Spec{Name: s.name, Trigger: workflow.Trigger{EventType: scriptedTrigger}, Tier: mcp.TierAutoExecute}
+	return workflow.Spec{
+		Name:                         s.name,
+		Trigger:                      workflow.Trigger{EventType: scriptedTrigger},
+		Tier:                         mcp.TierAutoExecute,
+		RedrivableWithoutDuplicating: s.redrivable,
+	}
 }
 
 func (s scriptedWorkflow) Match(_ context.Context, ev workflow.Event) (bool, error) {
