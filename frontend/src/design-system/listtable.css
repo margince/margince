@@ -1172,18 +1172,13 @@
   overflow-y: auto;
 }
 
-/* A phone swipes between stages rather than showing them all: one stage takes
- * most of the width and the next one peeks, which is what says "there is more
- * to the right" without a scrollbar. Snapping stops a swipe leaving the reader
- * between two columns. */
+/* On a phone the stages are worth more than the margin around them: the swipe
+ * itself (stage width and snapping) belongs to the board and is stated in
+ * composed.css, so a board outside this surface behaves the same. What is this
+ * surface's to say is how much of the phone's width it keeps for itself. */
 @media (max-width: 720px) {
   .lt > .board {
-    grid-auto-columns: 85%;
-    scroll-snap-type: x mandatory;
     padding: var(--space-3);
-  }
-  .lt > .board .board-col {
-    scroll-snap-align: start;
   }
 }
 

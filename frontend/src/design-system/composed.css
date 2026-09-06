@@ -1,13 +1,22 @@
 /* Composed surfaces (B-EP09.3b) — consume the trust primitives; staged vs
  * real vs human-typed carries through unchanged (§5c). */
 
-/* FLEX, not grid tracks. Every column used to be an implicit
- * `minmax(220px, 1fr)` track, and a track is sized by the board rather than by
- * the item in it — so a collapsed column still reserved its 220px and the fold
- * bought nothing. Flex lets one column opt out of the shared basis while the
- * rest keep it: `1 1 220px` is the same "at least 220, share what is left"
- * the track gave them. */
+/* FLEX, not grid tracks. A grid track is sized by the board rather than by the
+ * item in it, so a collapsed column still reserved a full track and folding it
+ * bought the other stages nothing. Flex lets one column opt out of the shared
+ * width while the rest keep it. */
 .board {
+  /* ONE stage width, at every window width and on every board. A column that
+     grows into whatever room is left is a different size on each screen, so two
+     readers looking at the same pipeline see a different number of stages and
+     neither can say how many there are. 240px is what puts four and a half
+     stages in the 1142px a list surface leaves inside a 1440px window with the
+     rail out: (1142 - 4 * 16) / 4.5 = 239.6. The half stage is the part that
+     matters — it is what says the board carries on past the edge.
+
+     Local to this sheet rather than a token: it is one component's measurement,
+     not a step on the scale every surface shares. */
+  --board-col-w: 240px;
   display: flex;
   gap: var(--space-4);
   align-items: flex-start;
@@ -23,8 +32,19 @@
      scroll, and dragged the shell's content scroller 807px past a 390px
      viewport. */
   position: relative;
-  flex: 1 1 220px;
-  min-width: 220px;
+  /* Neither grow nor shrink. The width above is the width at 1440 and at 768;
+     what a narrower window changes is how many stages are on screen, not how
+     wide one is. The BOARD scrolls, a stage holds still. */
+  flex: 0 0 var(--board-col-w);
+  min-width: var(--board-col-w);
+  width: var(--board-col-w);
+  /* A STAGE NEVER SCROLLS SIDEWAYS. Everything in a column — the head, the
+     totals, the cards — is bounded by the width above, so overflow on this axis
+     is a child that refused to shrink, and the scrollbar it paints under every
+     stage reveals nothing a reader can use. Stated rather than left implicit:
+     the list surface gives a column `overflow-y: auto` for long stages, and a
+     `visible` other axis computes to `auto` alongside it. */
+  overflow-x: hidden;
   /* A RECESS in the surface, not a card on it. --bgCard is a card's ground and
      read as one — five of them in a row made the board a grid of grey slabs
      with the deals inside them, and the cards had to fight their own
@@ -47,14 +67,17 @@
  *
  * It keeps its min-height: a target a reader has to hit with a dragged card
  * must stay a target, and a strip the height of one line is one a drop misses.
- * grid-column sizing is overridden per column rather than on `.board`, so a
- * board can hold both shapes at once — which is exactly the lead board, three
- * open stages beside two folded terminal ones. */
+ * Width is set per column rather than on `.board`, so one board holds both
+ * shapes at once — which is exactly the lead board, three open stages beside
+ * two folded terminal ones. */
 .board-col-collapsed {
-  /* Out of the shared basis: it takes the width its name and count need and
-     gives the rest back to the columns a reader is working out of. */
+  /* Out of the shared width: it takes what its name and count need and gives
+     the rest back to the columns a reader is working out of. All three of the
+     sizing declarations above are overridden, or the fixed width would win and
+     the fold would give nothing back. */
   flex: 0 0 auto;
   min-width: 0;
+  width: auto;
   min-height: 120px;
 }
 .board-col-collapsed .board-col-head {
@@ -67,11 +90,10 @@
  *
  * It carries the column's own ground, or the cards would slide visibly behind a
  * transparent strip. NO negative margin to bleed that ground to the column's
- * edges: a flex item wider than its container contributes that extra width to
- * the container's max-content size, and the board is a grid of `1fr` tracks
- * inside a scroller — so a 20px bleed per column widened the whole board past
- * the viewport and the page scrolled sideways at 390px. The 10px of column
- * padding either side of the band is the price of the page not panning. */
+ * edges: the column clips this axis, so a band 20px wider than its column is
+ * not bled, it is cut off — the ground would stop short of the very edges the
+ * bleed was for. The 10px of column padding either side of the band is the
+ * price of the band staying whole. */
 .board-col-head {
   position: sticky;
   top: 0;
@@ -91,9 +113,9 @@
   flex: 1;
   /* A STAGE NAME IS DATA of unbounded length, and it shares this line with the
      count. Without `min-width: 0` a flex item cannot shrink below its longest
-     word, so the name set the column's min-content width, the column set the
-     board's, and the board — a flex item with no floor of its own — pushed the
-     whole page sideways rather than scrolling. The NAME is what gives way. */
+     word, so a name longer than the stage is wide overflowed the head — and
+     the column clips, so the count at the end of the line was what got cut.
+     The NAME is what gives way. */
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -123,20 +145,52 @@
   color: var(--textMeta);
   padding: 0 4px 4px;
 }
+/* Both figures are `nowrap`, because a money amount broken across lines is
+   unreadable — so each one has to be told what to do when it does not fit, or
+   it simply paints past the stage it belongs to. It ELLIPSISES: a total the
+   reader can see is cut is a total they know to open the stage for, where a
+   figure running under the next column is one they may read as complete. */
 .board-col-total {
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
   white-space: nowrap;
+  overflow: hidden;
 }
 .board-col-money {
   font-weight: 600;
   color: var(--textContent);
   font-variant-numeric: tabular-nums;
+  /* A flex item's floor is its own min-content width unless it is told
+     otherwise, and a `nowrap` amount has no shrink in it at all. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .board-col-weighted {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A phone SWIPES between stages rather than showing them all at once. One stage
+ * and the gap after it take four fifths of the board, which leaves about a
+ * quarter of the next one on screen — that peek is what says there is more to
+ * the right, and it says it without a scrollbar. Snapping stops a swipe leaving
+ * the reader parked between two stages.
+ *
+ * Sizing lives with the board rather than with the list surface, so a board
+ * standing on its own — the lead presentation, a company's seats — swipes the
+ * same way as the pipeline. */
+@media (max-width: 720px) {
+  .board {
+    --board-col-w: calc(80% - var(--space-4));
+    scroll-snap-type: x mandatory;
+  }
+  .board-col {
+    scroll-snap-align: start;
+  }
 }
 
 .deal-card {

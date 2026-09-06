@@ -538,6 +538,100 @@ test("AC-pipeline-7: board↔table swaps views preserving the deal set", async (
   ).toBeVisible();
 });
 
+/**
+ * The stage geometry a reader is actually handed, read off the rendered board.
+ *
+ * `inner` is the width the stages are laid out in — the board's own padding is
+ * not board a reader can see — and it is what the phone proportion below is
+ * measured against. The spills are NAMED rather than counted: a bare number
+ * says a stage is 51px too wide and nothing about which one, and every column
+ * on this board carries the stage it draws.
+ */
+async function boardGeometry(page: Page) {
+  return page.evaluate(() => {
+    const board = document.querySelector(".board");
+    if (!board) {
+      return null;
+    }
+    const style = getComputedStyle(board);
+    const columns = Array.from(board.querySelectorAll(".board-col"));
+    return {
+      inner:
+        board.clientWidth -
+        Number.parseFloat(style.paddingLeft) -
+        Number.parseFloat(style.paddingRight),
+      gap: Number.parseFloat(style.columnGap),
+      snap: style.scrollSnapType,
+      scrollsSideways: board.scrollWidth > board.clientWidth,
+      firstColumnWidth: columns[0]?.getBoundingClientRect().width ?? 0,
+      spilling: columns
+        .map((column) => ({
+          stage: column.getAttribute("data-stage") ?? "an unnamed stage",
+          past: column.scrollWidth - column.clientWidth,
+        }))
+        .filter(({ past }) => past > 0)
+        .map(({ stage, past }) => `${stage}: ${past}px past its column`),
+    };
+  });
+}
+
+// A stage is ONE width, and the window decides how many of them are on screen
+// rather than how wide one is. A column that grows into leftover room shows the
+// same pipeline as four stages to one reader and six to another, and neither
+// can say how many there are or compare a stage against the same stage on
+// somebody else's screen.
+//
+// The other half is that a stage never scrolls sideways ITSELF. Its totals are
+// `nowrap` money, and a column that scrolls its cards vertically resolves the
+// other axis to `auto` alongside it — so a figure that does not ellipsise puts
+// a scrollbar under every stage on the board, which reveals nothing a reader
+// can use and costs each of them a line.
+test("AC-pipeline-8: one stage width at every window, and no stage scrolls sideways", async ({
+  page,
+}) => {
+  await page.goto("/#/deals");
+  await expect(page.locator(".board-col").first()).toBeVisible();
+
+  // 768 is inside the fold and 1440 is a wide desktop: the point is that the
+  // stage does not care. Read as a list so a failure prints every width at
+  // once rather than stopping at the first one that disagreed.
+  const widths: number[] = [];
+  for (const width of [1440, 1280, 1024, 768]) {
+    await page.setViewportSize({ width, height: 900 });
+    const geometry = await boardGeometry(page);
+    expect(geometry, "the deals screen drew no board").not.toBeNull();
+    expect(geometry?.spilling).toEqual([]);
+    widths.push(geometry?.firstColumnWidth ?? 0);
+  }
+  expect(widths).toEqual([240, 240, 240, 240]);
+
+  // The board itself is what scrolls, and the shell around it never does.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const desktop = await boardGeometry(page);
+  expect(
+    desktop?.scrollsSideways,
+    "six stages at 240px do not fit 1280px, so the board has to scroll",
+  ).toBe(true);
+  expect(await pageOverflow(page)).toEqual([]);
+
+  // On a phone the reader swipes: one stage and the gap after it take four
+  // fifths of the board, which leaves about a quarter of the next stage on
+  // screen. That peek is the only thing saying the pipeline carries on.
+  await page.setViewportSize({ width: 390, height: 844 });
+  const phone = await boardGeometry(page);
+  expect(phone?.spilling).toEqual([]);
+  expect(await pageOverflow(page)).toEqual([]);
+  const stageAndGap = (phone?.firstColumnWidth ?? 0) + (phone?.gap ?? 0);
+  expect(Math.abs(stageAndGap - (phone?.inner ?? 0) * 0.8)).toBeLessThanOrEqual(
+    2,
+  );
+  const peek = (phone?.inner ?? 0) - stageAndGap;
+  expect(peek / (phone?.firstColumnWidth ?? 1)).toBeGreaterThan(0.2);
+  expect(peek / (phone?.firstColumnWidth ?? 1)).toBeLessThan(0.35);
+  // Snapping is what stops a swipe parking the reader between two stages.
+  expect(phone?.snap).toBe("x mandatory");
+});
+
 test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before Confirm", async ({
   page,
 }) => {

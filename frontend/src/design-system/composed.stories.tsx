@@ -455,3 +455,29 @@ export const BoardWithALongStageName: StoryObj = {
     />
   ),
 };
+
+/**
+ * The same board on a phone, where a reader swipes between stages instead of
+ * seeing them side by side.
+ *
+ * One stage and the gap after it take four fifths of the board's width, so the
+ * next stage shows about a quarter of itself — the peek is the only thing that
+ * says the pipeline carries on, and the board snaps so a swipe cannot leave the
+ * reader parked between two stages. The frame reuses the deal board above
+ * unchanged: the phone shape is the stylesheet's, not a second component's, and
+ * a story that built its own columns could agree with the CSS while the real
+ * board did not.
+ *
+ * `uat-phone` is what makes the capture gate drive the browser to 390px —
+ * Storybook's own viewport is applied by the manager, which the gate's bare
+ * `iframe.html` never runs, so without the tag this would be captured at
+ * desktop width and would picture the very layout it exists to rule out.
+ * `fullscreen` keeps the catalog's 2rem frame off it: 390px less two frames is
+ * not a width any reader has.
+ */
+export const BoardAtPhoneWidth: StoryObj = {
+  ...BoardInSurface,
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
