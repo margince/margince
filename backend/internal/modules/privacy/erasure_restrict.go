@@ -201,9 +201,10 @@ func redactDeliveryAddressing(ctx context.Context, tx pgx.Tx, activityIDs []ids.
 	if _, err := tx.Exec(ctx, `
 		UPDATE comms_outbound
 		   SET recipients = '[]'::jsonb, cc = '[]'::jsonb, bcc = '[]'::jsonb,
-		       list_unsubscribe = NULL, bounce_recipient = NULL,
+		       list_unsubscribe = NULL, bounce_recipient = NULL, bounce_reason = NULL,
 		       redacted_fields = redacted_fields || ARRAY(SELECT c FROM unnest(ARRAY[
 		           CASE WHEN bounce_recipient IS NOT NULL THEN 'bounce_recipient' END,
+		           CASE WHEN bounce_reason IS NOT NULL THEN 'bounce_reason' END,
 		           CASE WHEN recipients <> '[]'::jsonb THEN 'recipients' END,
 		           CASE WHEN cc <> '[]'::jsonb THEN 'cc' END,
 		           CASE WHEN coalesce(bcc, '[]'::jsonb) <> '[]'::jsonb THEN 'bcc' END,

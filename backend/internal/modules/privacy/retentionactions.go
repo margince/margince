@@ -84,8 +84,8 @@ func (*RetentionService) erasePayload(ctx context.Context, tx pgx.Tx, id ids.UUI
 func (*RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	if _, err := tx.Exec(ctx, `
 		UPDATE lead SET full_name = 'Anonymized Lead', email = NULL, title = NULL,
-		  company_name = NULL, candidate_org_key = NULL, raw = NULL,
-		  archived_at = coalesce(archived_at, now())
+		  company_name = NULL, candidate_org_key = NULL, raw = NULL, linkedin_url = NULL,
+		  disqualify_note = NULL, score_override_reason = NULL, archived_at = coalesce(archived_at, now())
 		WHERE id = $1`, id); err != nil {
 		return err
 	}
@@ -266,7 +266,7 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	}
 	_, err = tx.Exec(ctx, fmt.Sprintf(`
 		UPDATE person SET first_name = NULL, last_name = NULL, full_name = $2,
-		  title = NULL, raw = NULL,
+		  title = NULL, raw = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
 		  archived_at = coalesce(archived_at, now())%s
@@ -377,13 +377,10 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 // reads this FILE's SQL literals to prove every satellite is handled, so a
 // helper elsewhere or a loop over identifiers is invisible to it.
 func deleteIdentifyingSatellites(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	var err error
 	// The anonymize UPDATES the person row rather than deleting it, so none of
 	// these cascades — one skipped leaves the subject readable beside an
 	// "Erased Subject" record.
-	if err == nil {
-		_, err = tx.Exec(ctx, `DELETE FROM person_social WHERE person_id = $1`, id)
-	}
+	_, err := tx.Exec(ctx, `DELETE FROM person_social WHERE person_id = $1`, id)
 	if err == nil {
 		_, err = tx.Exec(ctx, `DELETE FROM person_email WHERE person_id = $1`, id)
 	}
