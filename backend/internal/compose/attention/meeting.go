@@ -126,16 +126,20 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		occurredAt: occurredOf(item, asOf),
-		// NOT the reader's, and the obvious claim here is false. The lane lists
-		// meeting activities under the caller's ROW SCOPE — no owner or attendee
-		// predicate — so a team-scoped reader receives their team's meetings and
-		// naming the reader would make every one of them look like the reader's
-		// own appointment.
+		// The READER's, because the lane now asks for their meetings alone.
 		//
-		// The activity carries no owner this lane reads, so nobody is named. A
-		// meeting's real owner is its organiser, which arrives with the attendee
-		// read that does not exist yet.
-		ownerRef: unassigned(),
+		// This used to be unassigned(), with a comment saying a meeting's real
+		// owner "arrives with the attendee read that does not exist yet", and
+		// naming nobody was not neutral: keepReadersOwn keeps a row it cannot
+		// judge, so every meeting the lane returned landed on every reader's
+		// own queue. That is how a rep read "a meeting with Lucy" about
+		// somebody she had never met.
+		//
+		// The lane's query carries host_user_id now (attentionmeetingseam.go),
+		// so every row here came from this reader's own calendar and the honest
+		// answer is the reader. Saying so through the same helper the per-user
+		// lanes use keeps one spelling of "this row is yours".
+		ownerRef: ownedByWhoeverIsReading(),
 	}
 }
 

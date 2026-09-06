@@ -219,8 +219,10 @@ func dayOfEveryLane() crmcontracts.Attention {
 // `ownedByWhoeverIsReading` asserts something specific about the LANE: its
 // query takes the acting user, so no other person's row could have come back.
 // That is checkable, and four of the lanes that first carried the claim failed
-// it — decisions, meetings, DSR and three of the five system sources are read
-// under the caller's ROW SCOPE instead, which is a different thing. A
+// it — decisions, meetings, DSR and three of the five system sources were read
+// under the caller's ROW SCOPE instead, which is a different thing. Meetings
+// have since EARNED the claim: the lane's query carries host_user_id, so a row
+// it returns came from the reader's own calendar. A
 // team-scoped reader receives their team's rows there, and naming the reader
 // would have made a colleague's duplicate pair look like the reader's own work.
 //
@@ -237,6 +239,7 @@ func TestOnlyAReaderBoundLaneNamesTheReader(t *testing.T) {
 		"undelivered":          "the same per-user read as the bounce beside it",
 		"notice":               "a notice is addressed to one person",
 		"capture_health":       "a mailbox belongs to one person",
+		"meeting":              "Today passes HostUserID, so the lane reads this reader's calendar alone",
 	}
 	rows := classifyDay(dayOfEveryLane(), rankInstant, dayMoney{})
 	for _, row := range rows {

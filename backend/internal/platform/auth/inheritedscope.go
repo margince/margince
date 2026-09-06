@@ -83,9 +83,32 @@ func activityDiscoverClause(p principal.Principal, alias string, arg func(any) i
 	// caller has been paying it; it only surfaced as a budget failure when
 	// capture privacy stopped exempting the all-scope reader the perf
 	// fixture happens to run as.
+	// The link-less answer is NOT the same for every kind, and this is the
+	// half that used to be missing.
+	//
+	// For a note, coalesce-to-true is right: somebody wrote it down for the
+	// workspace and attached it to nothing on purpose. For a MEETING it is the
+	// exact opposite — a calendar event arrives from one seat's connector
+	// without anybody choosing to share it, and it links no record until
+	// something files it. Read as a workspace-shared note, one seat's private
+	// diary became readable by every account in the installation: 465 of 468
+	// meetings on the staging installation, to its most restricted reader.
+	//
+	// So a link-less meeting falls back to its HOST — the seat whose calendar
+	// it came from — rather than to everybody. A meeting that links something
+	// is unaffected: the bool_or arm answers first and the whole disjunction
+	// is unchanged for every other kind.
+	//
+	// host_user_id IS NULL keeps the old answer, deliberately. Rows captured
+	// before the host was stamped cannot be attributed, and turning them all
+	// dark would hide meetings that predate the fix from the people who own
+	// them; the captured_by backfill in
+	// 1788686725_a_captured_meeting_names_whose_calendar_it_came_from is what
+	// removes that case.
 	return fmt.Sprintf(`%[3]s AND coalesce((SELECT bool_or(%[2]s)
-	   FROM activity_link l WHERE l.activity_id = %[1]s.id), true)`,
-		alias, linkTargetVisible(p, "l", arg), available)
+	   FROM activity_link l WHERE l.activity_id = %[1]s.id),
+	   %[1]s.kind <> 'meeting' OR %[1]s.host_user_id IS NULL OR %[1]s.host_user_id = $%[4]d)`,
+		alias, linkTargetVisible(p, "l", arg), available, arg(p.UserID))
 }
 
 // ActivityContentClause is the stronger activity gate: discoverable AND the

@@ -73,6 +73,14 @@ type ListActivitiesInput struct {
 	// that question rather than a second dial — see openTaskAssigneeClause.
 	AssigneeID *ids.UserID
 
+	// HostUserID narrows to the meetings captured from one person's calendar.
+	//
+	// Whose appointment it IS, which is a different question from who is
+	// assigned to it: a meeting has no assignee, and before this dial existed
+	// the morning brief listed every seat's meetings to every reader because
+	// the lane had no way to ask for one person's.
+	HostUserID *ids.UserID
+
 	// OwnQueueOf narrows to the open work one person is answerable for.
 	// Distinct from AssigneeID, which means exact assignment on any kind and is
 	// what the task screen filters by; this one is the day's queue and carries

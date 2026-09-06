@@ -100,8 +100,25 @@ func (d birthDecision) hold(reason string) birthDecision {
 func decideBirthTx(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
 ) (birthDecision, error) {
-	// Non-mail kinds keep the workspace default: a meeting or a channel message
-	// is not correspondence a mailbox posture was ever asked about.
+	// A MEETING runs its own ladder, not this one and not none.
+	//
+	// This used to read `if fields.Kind != "email" { return birthDecision{}, nil }`
+	// — every non-mail kind kept the workspace default. That is right about
+	// mailbox POSTURE, which was never asked of a calendar, and wrong about
+	// everything else on the ladder: a counterparty hold and a [Vertraulich]
+	// marker say nothing about which transport carried the thing they judge.
+	//
+	// What it cost: an unlinked calendar event was born audience=workspace, and
+	// ActivityDiscoverClause reads an unlinked activity as a workspace-shared
+	// note every seat may read. On the staging installation that made 465 of
+	// 468 meetings — private dinners and a partner negotiation among them —
+	// discoverable by the most restricted account on it.
+	if fields.Kind == "meeting" {
+		return decideMeetingBirthTx(ctx, tx, rec, fields)
+	}
+	// The other non-mail kinds keep the workspace default: a channel message is
+	// not correspondence a mailbox posture was ever asked about, and a note is
+	// somebody writing something down FOR the workspace.
 	if fields.Kind != "email" {
 		return birthDecision{}, nil
 	}

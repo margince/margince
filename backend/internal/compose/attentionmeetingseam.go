@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // attentionMeetings reads today's remaining meetings through the activities
@@ -38,9 +39,25 @@ func (m attentionMeetings) Today(
 	ctx context.Context, from, until time.Time, limit int,
 ) ([]attention.Meeting, error) {
 	kind := string(crmcontracts.ActivityKindMeeting)
-	rows, _, err := m.store.ListActivities(ctx, activities.ListActivitiesInput{
+	// WHOSE meetings, asked in SQL rather than assumed.
+	//
+	// Without this the lane read every meeting the caller's row scope reached
+	// and the queue named nobody as their owner, so the "mine" filter — which
+	// keeps a row it cannot judge — put every colleague's appointments on
+	// every reader's morning. A rep with the narrowest scope in the
+	// installation read a meeting with a person she had never met.
+	//
+	// A caller with no user behind it (an engine-internal read) gets no host
+	// predicate and the lane behaves as before: those callers have no calendar
+	// of their own to narrow to.
+	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until, Limit: &limit,
-	})
+	}
+	if actor, ok := principal.Actor(ctx); ok && !actor.UserID.IsZero() {
+		host := ids.From[ids.UserKind](actor.UserID)
+		in.HostUserID = &host
+	}
+	rows, _, err := m.store.ListActivities(ctx, in)
 	if err != nil {
 		return nil, err
 	}

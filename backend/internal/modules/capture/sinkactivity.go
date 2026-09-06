@@ -243,8 +243,8 @@ func (s *Sink) upsertActivity(
 	audience, audienceReason := birth.bornAudience()
 	var id ids.ActivityID
 	err := tx.QueryRow(ctx, `
-		INSERT INTO activity (kind, channel_provider, subject, body, occurred_at, direction, source_system, source_id, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested, bulk_mail_attested, audience, audience_reason, has_calendar_part)
-		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), $5, NULLIF($6, ''), $7, $8, $9, $10, NULLIF($11, ''), NULLIF($12, ''), $13, $14, $15, NULLIF($16, ''), $17)
+		INSERT INTO activity (kind, channel_provider, subject, body, occurred_at, direction, source_system, source_id, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested, bulk_mail_attested, audience, audience_reason, host_user_id, has_calendar_part)
+		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), $5, NULLIF($6, ''), $7, $8, $9, $10, NULLIF($11, ''), NULLIF($12, ''), $13, $14, $15, NULLIF($16, ''), $17, $18)
 		ON CONFLICT (source_system, source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL
 		DO NOTHING
 		RETURNING id`,
@@ -269,6 +269,19 @@ func (s *Sink) upsertActivity(
 		// from the same address is only ever hidden.
 		rec.Counterparty.ListUnsubscribe,
 		audience, audienceReason,
+		// WHOSE calendar this came from, for a meeting.
+		//
+		// The seat is already in the context — the sync loop mints a connector
+		// principal per seat — so this reads the identity the write is already
+		// running as rather than trusting anything in the record. The write
+		// path has always used it (writescope.go admits an activity's own host
+		// as a writer); the READ path had no owner to attribute a meeting to,
+		// so every reader's brief listed every colleague's appointments.
+		//
+		// Meetings alone. A mail's host is not its capturer — a message
+		// belongs to the correspondence, not to whoever's mailbox syncs it —
+		// and stamping one would put every captured email on one seat's queue.
+		meetingHostUserID(ctx, fields.Kind),
 		// What the parser read, stored as read. A record that carried no
 		// calendar part stores false rather than NULL: NULL is reserved for the
 		// rows captured before this column existed, so the two stay tellable

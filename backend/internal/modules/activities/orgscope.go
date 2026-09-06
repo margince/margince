@@ -366,6 +366,9 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 	if clause := openTaskAssigneeClause(in.AssigneeID, arg); clause != "" {
 		where = append(where, clause)
 	}
+	if in.HostUserID != nil {
+		where = append(where, sprintf("a.host_user_id = $%d", arg(*in.HostUserID)))
+	}
 	if in.OpenAndDueBy != nil {
 		// Strictly before the instant, which is what deadline.Passed means and
 		// what this clause replaced. The bound the caller passes is the END of
