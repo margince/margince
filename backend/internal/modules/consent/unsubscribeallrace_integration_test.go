@@ -75,7 +75,7 @@ func TestUnsubscribeAllStopsAPurposeGrantedWhileItWasRunning(t *testing.T) {
 		pressed <- pressUnsubscribe(t, e, token, nil, "")
 	}()
 
-	waitForLockWait(t, e)
+	waitUntilBlockedBy(t, e.owner)
 	if err := granting.Commit(ctx); err != nil {
 		t.Fatalf("committing the grant: %v", err)
 	}
@@ -101,30 +101,49 @@ func TestUnsubscribeAllStopsAPurposeGrantedWhileItWasRunning(t *testing.T) {
 	}
 }
 
-// waitForLockWait blocks until some other session is waiting on a lock.
+// waitUntilBlockedBy blocks until some session is waiting on a lock THIS
+// connection holds.
+//
+// Asked as "who is blocking whom" rather than "is anyone waiting", and the
+// difference decides whether the case tests anything: a count of every session
+// with wait_event_type = 'Lock' returns for a wait belonging to some other test
+// in the same database, the holder then commits before the press has reached
+// the row, and the case passes having interleaved nothing — which is exactly
+// what its own failure message warns about.
+//
+// pg_blocking_pids answers precisely, and covers both shapes this file needs:
+// the row lock a held transaction takes, and the advisory lock a session takes.
 //
 // Asked of the DATABASE rather than timed: what the test needs to know is that
-// the press has reached the row and stopped there, and Postgres reports exactly
-// that. A sleep would either be too short — committing before the press arrives,
-// so nothing was interleaved and the case proves nothing — or slow for
-// everybody.
-func waitForLockWait(t *testing.T, e *channelConsentEnv) {
+// the press has reached the lock and stopped there, and Postgres reports
+// exactly that. A sleep would either be too short — committing before the press
+// arrives, so nothing was interleaved — or slow for everybody. The small pause
+// between asks is not the wait itself; it stops the poll competing with the
+// press for a pool connection.
+func waitUntilBlockedBy(t *testing.T, holder *pgx.Conn) {
 	t.Helper()
+	ctx := context.Background()
+	var holderPID int
+	if err := holder.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&holderPID); err != nil {
+		t.Fatalf("reading the holding connection's pid: %v", err)
+	}
 	deadline := time.Now().Add(30 * time.Second)
 	for {
 		var waiting int
-		if err := e.owner.QueryRow(context.Background(),
-			`SELECT count(*) FROM pg_stat_activity
-			  WHERE datname = current_database() AND wait_event_type = 'Lock'`).Scan(&waiting); err != nil {
-			t.Fatalf("reading the lock waits: %v", err)
+		if err := holder.QueryRow(ctx,
+			`SELECT count(*) FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))`,
+			holderPID).Scan(&waiting); err != nil {
+			t.Fatalf("reading who this connection is blocking: %v", err)
 		}
 		if waiting > 0 {
 			return
 		}
 		if time.Now().After(deadline) {
-			t.Fatal("no session ever waited on a lock: the press did not reach the granted row, " +
-				"so this case interleaved nothing and would pass over the defect it is named for")
+			t.Fatal("nothing ever waited on the lock this connection holds: the press did not " +
+				"reach it, so this case interleaved nothing and would pass over the defect it " +
+				"is named for")
 		}
+		time.Sleep(20 * time.Millisecond)
 	}
 }
 
@@ -167,7 +186,7 @@ func TestOnePersonsConsentWritesDoNotInterleave(t *testing.T) {
 		pressed <- err
 	}()
 
-	waitForLockWait(t, e)
+	waitUntilBlockedBy(t, holder)
 	if _, err := holder.Exec(ctx,
 		`SELECT pg_advisory_unlock(hashtextextended($1::text, 0))`, e.person); err != nil {
 		t.Fatalf("releasing the person's lock: %v", err)
