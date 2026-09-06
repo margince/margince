@@ -43,6 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
@@ -127,7 +128,22 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		dealroomsHandlers:   dealrooms.NewHandlers(InstallationDB(pool)),
 		commissionsHandlers: commissions.NewHandlers(InstallationDB(pool)),
 		activitiesHandlers:  newActivitiesHandlers(pool).WithUploadLimit(limits.Attachment),
-		searchHandlers:      search.NewHandlers(InstallationDB(pool), collections.CountTagReachBatch, activities.EmailSummariesByIDBatch),
+		// The ranking lane is the one read a page limit does not bound.
+		// search_tsv is built with the 'simple' configuration and keeps
+		// stopwords, so a high-frequency token matches nearly every row of
+		// every admitted branch, and the score ORDER BY cannot be served by
+		// the GIN index — Postgres ranks the whole corpus per branch, and the
+		// limit bounds the rows RETURNED rather than the rows visited.
+		//
+		// CallerPredicateBudget because the shape of the SQL is ours and its
+		// selectivity is the reader's, and because somebody is watching a box:
+		// a glance that takes five seconds has already failed at being a
+		// glance. The background stores built from the same module — the graph
+		// reconcile, the drift sweep, the reindex pass — answer nobody and are
+		// deliberately left unbounded here.
+		searchHandlers: search.NewHandlers(
+			InstallationDB(pool).Bounded(database.CallerPredicateBudget),
+			collections.CountTagReachBatch, activities.EmailSummariesByIDBatch),
 		// Constructed, not merely embedded: the handler carries no nil-pool
 		// branch, so the zero value would panic on the first authenticated
 		// read rather than answer anything at all.

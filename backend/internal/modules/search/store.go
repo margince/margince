@@ -188,7 +188,7 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 
 		rows, err := tx.Query(ctx, sql, args...)
 		if err != nil {
-			return fmt.Errorf("search: query: %w", err)
+			return rankingFault(ctx, err)
 		}
 		defer rows.Close()
 		if page, err = scanRankedPage(rows, limit); err != nil {
@@ -292,6 +292,56 @@ func (e *BadQueryError) Error() string { return "search: " + e.Reason }
 // FieldFault names the query input that was actually wrong.
 func (e *BadQueryError) FieldFault() (field, code, message string) {
 	return e.Field, "invalid_query", e.Reason
+}
+
+// rankingFault tells a spent ceiling apart from every other reason the ranking
+// statement stopped before answering.
+//
+// Postgres raises the same 57014 for a spent statement_timeout, an operator
+// cancelling the backend, and the client going away, so the SQLSTATE alone
+// cannot carry the judgement. The one that must not be misread is the CALLER:
+// a cancelled request is not a too-broad query, and reporting their own
+// vanished deadline as a property of their words would send them rewriting a
+// query that was fine — with nobody left to read the answer anyway. The live
+// context is what separates that case, which is why this takes one.
+//
+// An operator cancelling the backend under a live request reads as a spent
+// ceiling, and is left that way: both mean the statement was stopped before it
+// answered, and narrowing the search is the reader's move either way. The same
+// call the agent query surface makes, for the same reason.
+//
+// Only a handle the caller BOUNDED can reach this — compose bounds the request
+// path's (server.go) and leaves the background stores alone — so on a
+// background reader the raw fault is the honest one and this returns it.
+func rankingFault(ctx context.Context, err error) error {
+	if storekit.IsQueryCanceled(err) && ctx.Err() == nil {
+		return &QueryTooBroadError{}
+	}
+	return fmt.Errorf("search: query: %w", err)
+}
+
+// QueryTooBroadError is a search that could not be RANKED inside the ceiling
+// its handle carries.
+//
+// A 422 naming `q`, not a 5xx: the server is not broken, and retrying the same
+// words will not help. The corpus and the query together are what did not fit,
+// and narrowing the query is the reader's move — which is what an actionable
+// fault is supposed to say.
+//
+// Not a partial page either. This operation has no member to carry "these hits
+// are what fitted" — unlike the agent query surface, whose Coverage says so —
+// and returning the rows that happened to rank before the ceiling would present
+// an arbitrary prefix of a ranking as the ranking.
+type QueryTooBroadError struct{}
+
+func (e *QueryTooBroadError) Error() string {
+	return "search: the query could not be ranked within this surface's budget"
+}
+
+// FieldFault names `q`, because `q` is what the reader can change.
+func (e *QueryTooBroadError) FieldFault() (field, code, message string) {
+	return "q", "query_too_broad", "this search matched too much of the workspace to rank in time — " +
+		"add another word, or narrow it with types"
 }
 
 // rankedCursor is the (score, type, id) keyset position. Encoding keeps
