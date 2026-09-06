@@ -421,9 +421,20 @@ func (s *Store) recordAdmittedTx(
 	if err != nil {
 		return State{}, err
 	}
+	// FOR UPDATE, because what follows is a read-modify-write on this row and
+	// the decision it makes is "nothing to do". Without the lock a concurrent
+	// write to the same (subject, purpose) that commits after this SELECT is
+	// invisible: the idempotence check below sees the state this transaction
+	// started with, answers no-op, and the other write stands. An
+	// "unsubscribe from everything" pressed while a confirmation round-trip
+	// lands is exactly that shape, and it reported success while leaving the
+	// lane running.
+	//
+	// A missing row locks nothing and needs to: the INSERT ... ON CONFLICT
+	// below blocks on the conflicting insert instead, and updates.
 	var current string
 	err = tx.QueryRow(ctx,
-		`SELECT state FROM person_consent WHERE `+sub.column+` = $1 AND purpose_id = $2`,
+		`SELECT state FROM person_consent WHERE `+sub.column+` = $1 AND purpose_id = $2 FOR UPDATE`,
 		sub.id, in.PurposeID).Scan(&current)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return State{}, err
