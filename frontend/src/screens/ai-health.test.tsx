@@ -38,10 +38,13 @@ const DEAD: RungHealth = {
   last_call_at: "2026-09-01T09:10:00Z",
 };
 
-// The grant `GET /ai/health` is gated on server-side. Named rather than
-// implied: a fixture that grants nothing renders the withheld state, and every
-// claim below about what the table says would then pass against an empty panel.
-const OPERATOR: GrantSpec = { automation: ["read", "update"] };
+// What `GET /ai/health` is gated on server-side: `ai_diagnostics:read`. Named
+// rather than implied — a fixture that grants nothing renders the withheld
+// state, and every claim below about what the table says would then pass against
+// an empty panel.
+//
+// The card asked `automation:update` before this read got an object of its own.
+const OPERATOR: GrantSpec = { ai_diagnostics: ["read"] };
 
 function renderCard(
   rungs: RungHealth[],
@@ -115,12 +118,12 @@ describe("model lane health", () => {
   });
 
   it("withholds the lanes from a reader whose role cannot read them", async () => {
-    // The AI page opens on `automation:read`, which every seeded role holds,
-    // while this card's endpoint demands `automation:update`, which manager,
-    // rep and read_only do not. Without the card's own gate the refusal
-    // arrives as a red failure telling that reader the installation is
-    // broken, and the poll re-issues the doomed call every minute.
-    renderCard([ANSWERING], 1, { automation: ["read"] });
+    // The Automations page opens on `automation:read`, which every seeded role
+    // holds, while this card's endpoint demands `ai_diagnostics:read`, which
+    // they do not. Without the card's own gate the refusal arrives as a red
+    // failure telling that reader the installation is broken, and the poll
+    // re-issues the doomed call every minute.
+    renderCard([ANSWERING], 1, { automation: ["read", "update"] });
     expect(
       await screen.findByText(/only an operator can read whether/i),
     ).toBeInTheDocument();
@@ -133,7 +136,7 @@ describe("model lane health", () => {
     // The half a rendered EmptyState cannot show: `enabled` is what keeps a
     // withheld reader from a 403 they cannot act on, and a refetchInterval
     // left standing would resume the call the moment a grant changed.
-    renderCard([ANSWERING], 1, { automation: ["read"] });
+    renderCard([ANSWERING], 1, { automation: ["read", "update"] });
     await screen.findByText(/only an operator can read whether/i);
     const calls = (
       globalThis.fetch as unknown as { mock: { calls: unknown[][] } }

@@ -125,6 +125,13 @@ func scanReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (Review, error) {
 		return Review{}, err
 	}
 	review.Outlook = outlook
+	// A review written before the scorecard existed has none, and readScorecard
+	// answers nil rather than failing: the panel draws nothing.
+	card, err := readScorecard(ctx, tx, review.ID)
+	if err != nil {
+		return Review{}, err
+	}
+	review.Scorecard = card
 	return review, nil
 }
 

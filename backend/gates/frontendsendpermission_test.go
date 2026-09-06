@@ -52,12 +52,12 @@ const (
 
 // silentSendSurfaces ratifies each surface that posts to a send door without
 // asking the engine first, with what the omission costs.
-var silentSendSurfaces = gatekit.Waive(map[string]string{
-	"screens/persondrawers.tsx": "the person page's composer leads with the person's purpose-keyed " +
-		"consent guard, read off the 360; drawing the engine's answer beside it would put two " +
-		"verdicts about one message on one drawer, so adopting the component there means " +
-		"retiring that guard first, which is its own change",
-})
+//
+// Empty today. It held screens/persondrawers.tsx until the person page's
+// composer was consolidated into the one mail drawer every record now shares:
+// that file posts to no send door any more, so there is nothing left to ratify.
+// The remaining composer asks the engine, which is why nothing takes its place.
+var silentSendSurfaces = gatekit.Waive(map[string]string{})
 
 // contractPathLine matches a path entry under `paths:`.
 var contractPathLine = regexp.MustCompile(`^  (/[^\s:]+):\s*$`)
@@ -225,10 +225,13 @@ func TestEverySurfaceThatSendsAsksTheEngineFirst(t *testing.T) {
 	if walkErr != nil {
 		t.Fatalf("walking the frontend: %v", walkErr)
 	}
-	// The composer and the person page's composer both post to a door today.
-	// Fewer means the walk has stopped seeing the surfaces it exists to hold.
-	if surfaces < 2 {
-		t.Fatalf("found %d frontend file(s) posting to a send door, want at least the two composers: "+
+	// ONE composer posts to a door today: the single mail drawer every record
+	// shares. It was two until the person page's own composer was consolidated
+	// into it, and the floor moved down with the consolidation rather than being
+	// deleted — a census that cannot fail short reports PASS over a tree it has
+	// stopped reading, and there is no failing assertion to notice.
+	if surfaces < 1 {
+		t.Fatalf("found %d frontend file(s) posting to a send door, want at least the mail drawer: "+
 			"the census has stopped seeing its subject", surfaces)
 	}
 }

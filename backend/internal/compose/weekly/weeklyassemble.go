@@ -154,6 +154,18 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 		if err := insertDealLines(ctx, tx, id, review.Deals); err != nil {
 			return err
 		}
+		// How well the week went, frozen in the same transaction as what
+		// happened in it. Both blocks may be absent — a rep with no leads and
+		// no deals gets a scorecard that says so, which is what lets a reader
+		// tell an empty week from an unmeasured one.
+		card, err := scoreWeek(ctx, tx, userID, start, end)
+		if err != nil {
+			return err
+		}
+		if err := insertScorecard(ctx, tx, id, card); err != nil {
+			return err
+		}
+		review.Scorecard = &card
 		// Where the week was landing, frozen into the same transaction as the
 		// counts. Split across two, a review could exist with no outlook and no
 		// way to tell that from an installation that forecasts nothing.

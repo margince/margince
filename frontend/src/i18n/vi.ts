@@ -773,6 +773,8 @@ export const vi = {
   "org.filterSizeBandAll": "Mọi quy mô",
   "person.consent": "Chấp thuận",
   "consent.grant": "Cấp chấp thuận",
+  "consent.operatorWording":
+    "Được nhân viên ghi nhận trong CRM, xác nhận rằng người này đã đồng ý cho {label} bên ngoài sản phẩm. Không có nội dung nào được hiển thị cho họ tại đây.",
   "consent.withdraw": "Rút lại",
   "consent.doiBySubject":
     "M\u1ee5c \u0111\u00edch n\u00e0y do ch\u00ednh ng\u01b0\u1eddi \u0111\u00f3 x\u00e1c nh\u1eadn, qua li\u00ean k\u1ebft g\u1eedi t\u1edbi \u0111\u1ecba ch\u1ec9 c\u1ee7a h\u1ecd. H\u00e3y d\u00f9ng \u201c\u0110\u1ec1 ngh\u1ecb h\u1ecd x\u00e1c nh\u1eadn th\u00f4ng tin\u201d b\u00ean d\u01b0\u1edbi.",
@@ -2484,6 +2486,31 @@ export const vi = {
   "home.pipelineUnavailable": "Không tải được số liệu này.",
   "home.panel.weekly": "Tuần trước",
   "home.weekly.weekOf": "Tuần từ {day}",
+  "home.weekly.scorecard.title": "Tuần vừa qua thế nào",
+  "home.weekly.scorecard.leadBlock": "Khách tiềm năng và cuộc họp",
+  "home.weekly.scorecard.dealBlock": "Cơ hội",
+  "home.weekly.scorecard.advanced": "Khách tiềm năng tiến lên",
+  "home.weekly.scorecard.advancedBasis": "Số bậc tiến lên, đếm theo từng bước",
+  "home.weekly.scorecard.answeredInTarget": "Trả lời đúng hạn",
+  "home.weekly.scorecard.breachedDetail": "{count} quá hạn",
+  "home.weekly.scorecard.meetingsHeld": "Cuộc họp đã diễn ra",
+  "home.weekly.scorecard.meetingsBasis": "{booked} đã đặt · {noShow} không đến",
+  "home.weekly.scorecard.partialHistory": "Cuộc họp không có lịch sử",
+  "home.weekly.scorecard.partialHistoryBasis":
+    "Những cuộc họp này có trước lịch sử cuộc họp, nên các số trên là mức tối thiểu",
+  "home.weekly.scorecard.advances": "Tiến giai đoạn",
+  "home.weekly.scorecard.regressionsDetail": "{count} lùi lại",
+  "home.weekly.scorecard.medianDaysInStage": "Số ngày trung vị trong giai đoạn",
+  "home.weekly.scorecard.medianBasis":
+    "Cho các giai đoạn cơ hội rời khỏi tuần này",
+  "home.weekly.scorecard.withNextStep": "Có bước tiếp theo",
+  "home.weekly.scorecard.ofOpen": "trên {total} cơ hội đang mở",
+  "home.weekly.scorecard.multiThreaded": "Nhiều hơn một người",
+  "home.weekly.scorecard.multiThreadedBasis":
+    "trên {total} cơ hội đang mở, trong 30 ngày qua",
+  "home.weekly.scorecard.closeDateSound": "Ngày chốt đáng tin",
+  "home.weekly.scorecard.forecastMoves": "Nâng dự báo",
+  "home.weekly.scorecard.forecastMovesBasis": "{down} hạ dự báo",
   // Tuần tới. Bản tổng kết đã đóng băng nói điều đã xảy ra; đây là phần duy nhất
   // của trang đó mà vẫn còn ai đó thay đổi được.
   "plan.title": "Lập kế hoạch tuần tới",
@@ -3855,7 +3882,7 @@ export const vi = {
   "settings.jobs": "Tác vụ nền",
   "settings.jobsSub": "Hàng đợi đang giữ gì, và công việc của ai đã thất bại.",
   "jobs.adminOnly":
-    "Chỉ quản trị viên xem được tình trạng tác vụ nền. Báo cáo này bao trùm công việc của toàn bộ bản triển khai, nên không hiển thị rộng hơn.",
+    "Xem tình trạng tác vụ nền cần quyền mà ghế của bạn không có. Báo cáo này bao trùm công việc của toàn bộ bản triển khai, nên không mở cho tất cả mọi người.",
   "jobs.empty":
     "Không có gì trong hàng đợi nền — không có việc đang chờ, đang chạy, đang thử lại hay đã chết.",
   "jobs.workspaceKinds": "Tổ chức này",
@@ -3909,7 +3936,7 @@ export const vi = {
   "settings.auditSub":
     "mọi hành động đều được quy trách — người, Agent hay connector",
   "settings.auditAdminOnly":
-    "Chỉ quản trị viên đọc được toàn bộ dấu vết. Nó ghi lại mọi người thực hiện và mọi bản ghi họ chạm tới, nên không mở rộng hơn.",
+    "Đọc toàn bộ dấu vết cần quyền mà ghế của bạn không có. Nó ghi lại mọi người thực hiện và mọi bản ghi họ chạm tới, nên không mở cho tất cả mọi người.",
   "settings.auditFilters": "Bộ lọc",
   "settings.auditEntries": "Nhật ký kiểm toán",
   "settings.auditTrailLabel": "Các hành động đã ghi",
@@ -3927,7 +3954,7 @@ export const vi = {
   "settings.due": "hạn {date}",
 
   "privacy.purposesReadOnly":
-    "Chế độ chỉ đọc — chỉ quản trị viên hoặc ops mới thêm được mục đích.",
+    "Chế độ chỉ đọc — thêm mục đích cần quyền mà ghế của bạn không có.",
   "privacy.addPurpose": "Thêm mục đích",
   "privacy.purposesRegistry": "Mục đích đã đăng ký",
   "privacy.purposeKey": "Khoá",
@@ -3938,7 +3965,7 @@ export const vi = {
     "Một mục đích đã tạo thì không đổi tên hay xoá được — danh mục chỉ thêm mới. Hãy chọn khoá thật cẩn thận.",
   "privacy.facetAll": "Tất cả",
   "privacy.inboxAdminOnly":
-    "Chỉ quản trị viên xem được yêu cầu của chủ thể dữ liệu. Danh sách nêu tên người đã yêu cầu, nên không mở rộng hơn.",
+    "Xem yêu cầu của chủ thể dữ liệu cần quyền mà ghế của bạn không có. Danh sách nêu tên người đã yêu cầu, nên không mở cho tất cả mọi người.",
   "privacy.overdue": "Quá hạn",
   "privacy.closed":
     "Đã đóng — một yêu cầu đã đóng không bao giờ mở lại. Mối lo mới là một yêu cầu mới.",
@@ -6177,6 +6204,8 @@ export const vi = {
   "license.refused.title": "Giấy phép của bản cài đặt này bị từ chối",
   "license.refused.body":
     "Token trong deployment đã được xuất trình và bị từ chối. Mọi thứ vẫn hoạt động, không giới hạn, cho đến khi token được thay — hãy kiểm tra token và đồng hồ của bản cài đặt.",
+  "license.seats.capacityOnly":
+    "Số chỗ đầy đủ mà bản cài đặt này đang dùng. Quyền hạn được cấp không thuộc phạm vi bạn xem.",
   "license.seats.title": "Số chỗ",
   "license.seats.used": "Chỗ đang dùng",
   "license.seats.granted": "Chỗ được cấp",
@@ -6404,7 +6433,7 @@ export const vi = {
   "extAccess.sub":
     "Mỗi đơn vị tiện ích đã ghép vào bản cài đặt này mang theo những gì, và vai trò nào được dùng. Chỉ dành cho quản trị viên.",
   "extAccess.adminOnly":
-    "Chỉ quản trị viên mới truy cập được phần tiện ích mở rộng.",
+    "Trang này cần quyền đọc các tiện ích mở rộng của bản triển khai và các vai trò của nó. Ghế của bạn chỉ có một hoặc không có quyền nào.",
   "extAccess.readOnly":
     "Chỗ ngồi của bạn chỉ đọc được trang này. Muốn đổi quyền cần chỗ ngồi đầy đủ.",
   "extAccess.empty":
@@ -8431,6 +8460,20 @@ export const vi = {
   "worklist.verb.complete": "Mở",
   "worklist.verb.snooze": "Mở",
   "worklist.verb.acknowledge": "Đã hiểu",
+  "worklist.verb.meetingHeld": "Đã diễn ra",
+  "worklist.verb.meetingNoShow": "Không ai đến",
+  "worklist.verb.meetingCanceled": "Đã bị hủy",
+  "worklist.verb.meetingOutcomeRecorded": "Đã ghi lại kết quả cuộc họp.",
+  "worklist.verb.meetingOutcomeFailed": "Không thể ghi lại.",
+  "worklist.verb.retry": "Chạy lại",
+  "worklist.verb.retryStarted": "Quy tắc đang chạy lại.",
+  "worklist.verb.retryFailed": "Không thể chạy lại.",
+  "worklist.verb.retryRefusedNotFailed":
+    "Không có gì để chạy lại — lần chạy này bị dừng có chủ đích, không phải do lỗi.",
+  "worklist.verb.retryRefusedRepeats":
+    "Quy tắc này chưa được xác nhận an toàn khi chạy hai lần, nên chạy lại có thể lặp lại việc nó đã làm.",
+  "worklist.verb.retryRefusedEventGone":
+    "Sự kiện kích hoạt lần chạy này không còn nữa. Quy tắc theo lịch sẽ tự kiểm tra lại.",
   "worklist.verb.acknowledgeFailed": "Không thể đánh dấu là đã xem.",
   "worklist.verb.completeFailed": "Không thể hoàn thành nhiệm vụ này.",
   "worklist.verb.pin": "Ghim",

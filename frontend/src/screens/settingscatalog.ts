@@ -235,12 +235,11 @@ export const SETTINGS_PAGES = [
     id: "seats",
     group: "people",
     scope: "installation",
-    // `license` alone, because `LicenseCard` calls `/installation/license` and
-    // nothing else. The `seat_usage` endpoint shipped for exactly this reader —
-    // management, capacity without commercial standing — and the card does not
-    // call it yet, so admitting a `seat_usage` holder here lands them on an
-    // error rather than on the count the split was built to give them.
-    requires: reads("license"),
+    // Either grant, and they show different things: `LicenseCard` reads the
+    // entitlement for a `license` holder and falls back to the capacity
+    // endpoint for a `seat_usage` one — management sees how full the
+    // installation is without seeing what it pays.
+    requires: anyOf(reads("seat_usage"), reads("license")),
   },
 
   {
@@ -310,7 +309,12 @@ export const SETTINGS_PAGES = [
     id: "models",
     group: "ai",
     scope: "workspace",
-    requires: reads("ai_routing"),
+    // Two cards, two grants. The routing and provider-key cards read on
+    // `ai_routing`; `AiHealthCard` reads on `ai_diagnostics` (ai/health.go),
+    // and Models is the ONLY page that renders it. Management is seeded
+    // diagnostics WITHOUT routing, so on the routing grant alone this page was
+    // shut to the one role the health card was widened for.
+    requires: anyOf(reads("ai_routing"), reads("ai_diagnostics")),
   },
   {
     id: "automations",
@@ -322,26 +326,16 @@ export const SETTINGS_PAGES = [
     id: "usage",
     group: "ai",
     scope: "workspace",
-    // `automation:update`, which is what the cards on this page actually ask
-    // for. The AI runtime's spend is treated as operator information, so seeing
-    // it takes the automation WRITE grant rather than any AI-named object — a
-    // read-shaped question answered by a write grant, which is exactly why the
-    // page cannot simply ask for `ai_diagnostics` and hope.
-    //
-    // `ai_diagnostics` is the object the SERVER moved these reads to; the cards
-    // have not followed yet. When they do, this becomes that grant and the two
-    // move together.
-    requires: anyOf(
-      { kind: "grant", object: "automation", action: "update" },
-      reads("ai_model_rate"),
-    ),
+    // The diagnostics read, or the price grant that authors the table beside it.
+    // Both cards on this page ask `ai_diagnostics:read` now; `ai_model_rate`
+    // stays in the union because its holder authors the rate sheet here.
+    requires: anyOf(reads("ai_diagnostics"), reads("ai_model_rate")),
   },
   {
     id: "model-calls",
     group: "ai",
     scope: "workspace",
-    // Same as usage: `AiCallsCard` checks `automation:update`.
-    requires: { kind: "grant", object: "automation", action: "update" },
+    requires: reads("ai_diagnostics"),
   },
 
   {
@@ -349,12 +343,18 @@ export const SETTINGS_PAGES = [
     group: "governance",
     scope: "workspace",
     requires: anyOf(
-      reads("consent_config"),
       reads("retention_policy"),
       reads("privacy_request"),
       // The purposes list is gated on person.read server-side, which is not a
       // role and not "any member" — moving it would 403 the Person 360 for
       // every rep, so the page follows the gate the endpoint actually applies.
+      //
+      // `consent_config` is deliberately NOT here, though the purposes card is
+      // what that object administers. It buys no READ: the list stays on
+      // `person` (consent/store.go ListPurposes) and only the writes moved. On
+      // the consent grant alone a reader would open a page whose every card is
+      // withheld — every seeded holder of it also holds `person:read`, so this
+      // only ever bit a custom role, silently.
       reads("person"),
     ),
   },
@@ -362,46 +362,31 @@ export const SETTINGS_PAGES = [
     id: "audit",
     group: "governance",
     scope: "workspace",
-    // `AuditLogCard` still gates itself on the literal admin role, so a
-    // delegated holder of `audit_log:read` admitted here would open a page that
-    // then refuses them. The server moved this read onto the object; the card
-    // has not followed, and the page waits for it rather than promising first.
-    requires: allOf(reads("audit_log"), {
-      kind: "grant",
-      object: "system_reset",
-      action: "delete",
-    }),
+    // The trail's own object, which the card now asks for too. A role edited to
+    // carry `audit_log:read` reaches it and one that lost it does not — which
+    // the admin role name could not say either way.
+    requires: reads("audit_log"),
   },
   {
     id: "system-health",
     group: "governance",
     scope: "installation",
-    // Narrower than the grants the SERVER now accepts, and deliberately so
-    // until the cards catch up: `JobHealthCard` still refuses a non-admin with
-    // `useHoldsAdminRole`, so admitting an ops holder of `job_health:read` here
-    // would offer them a page that then says "admin only". The page opens on
-    // what its cards actually honour; widening it is the same change that
-    // rewrites those gates.
-    requires: reads("embedding_reindex"),
+    // Either card's grant. `JobHealthCard` asks `job_health:read` and the
+    // reindex card asks its own, so a reader holding one finds that card and
+    // the other withheld — which is the union being a union rather than one
+    // object with a decorative term.
+    requires: anyOf(reads("job_health"), reads("embedding_reindex")),
   },
   {
     id: "extensions",
     group: "governance",
     scope: "installation",
-    // `ExtensionAccessCard` still gates itself on the literal admin role, so an
-    // ops holder of `extension_access:read` admitted here would find the card
-    // refusing them — a page that opens and then says "admin only".
-    //
-    // There is no role arm in this vocabulary and there should not be: a role
-    // arm encodes the seeded matrix into the client, which is the inference the
-    // whole redesign removes. So the page keeps the grant it always had —
-    // `system_reset:delete`, which only admin holds — until the card is
-    // rewritten to honour `extension_access`. That rewrite widens both together.
-    requires: allOf(reads("extension_access"), {
-      kind: "grant",
-      object: "system_reset",
-      action: "delete",
-    }),
+    // BOTH reads the card makes, because it makes them behind ONE flag: the
+    // unit inventory from `GET /v1/extensions` and every role's grant on every
+    // object from `GET /v1/roles`. On the inventory grant alone the page opens
+    // and the card 403s on its second query, which is an unreadable page rather
+    // than a narrower one.
+    requires: allOf(reads("extension_access"), reads("role_admin")),
   },
   {
     id: "reset",

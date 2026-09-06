@@ -53,7 +53,11 @@ import "./ai-settings.css";
 export function SpendStat() {
   const t = useT();
   const { locale } = useLocale();
-  const canSee = useCan("automation", "update");
+  // The same gate the endpoint behind `useAiUsage` asks for
+  // (ai/usage.go: ai_diagnostics.read). Asking `automation.update` here read
+  // the header as withheld for a holder the server would have answered, and
+  // rendered the number for an automation editor it would have refused.
+  const canSee = useCan("ai_diagnostics", "read");
   // The current month, fixed: the header reads "this month" while the Usage tab
   // below it lets a reader step back through earlier ones, and a header that
   // followed the stepper would stop answering the question it asks.

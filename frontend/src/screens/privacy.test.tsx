@@ -100,11 +100,25 @@ function stubRoutes(
           data: [],
           page: { next_cursor: null, has_more: false },
         });
-      // The subject-request queue is admin-gated (its rows name the people who
-      // filed), so the default principal here holds the role that may read it.
-      // A test asserting the refusal overrides this key.
+      // The FOUR grants this screen's cards ask for, because they are four
+      // different questions and the server asks each separately:
+      //   privacy_request:read   — the subject queue (consent/dsr.go)
+      //   privacy_request:update — moving a request through its statuses
+      //   person:update          — OPENING one, which writes the person named
+      //   consent_config:create  — appending to the consent registry
+      // The default principal holds all four. A test asserting any one refusal
+      // overrides this key with the narrower set.
       if (key === "GET /me")
-        return jsonResponse(meFixture({ roles: ["admin"] }));
+        return jsonResponse(
+          meFixture({
+            roles: ["admin"],
+            allow: {
+              privacy_request: ["read", "update"],
+              person: ["update"],
+              consent_config: ["create"],
+            },
+          }),
+        );
       return jsonResponse({});
     }),
   );
@@ -218,16 +232,17 @@ describe("ConsentPurposesCard", () => {
     expect(screen.getByLabelText(/key/i)).toHaveValue("transactional");
   });
 
-  // Appending to the registry is admin/ops, so a rep's card carries no write
-  // control at all. Withheld, not absent: the card keeps its place and says
-  // which of the two it is, or the missing button reads as a broken one.
+  // Appending to the registry asks `consent_config:create`, which a rep does
+  // not hold, so their card carries no write control at all. Withheld, not
+  // absent: the card keeps its place and says which of the two it is, or the
+  // missing button reads as a broken one.
   it("states its read-only posture to a seat that cannot add a purpose", async () => {
     stubRoutes({
       "GET /me": () => jsonResponse(meFixture({ roles: ["rep"] })),
     });
     render(<ConsentPurposesCard />);
     const posture = await screen.findByText(
-      /only an admin or ops can add a purpose/i,
+      /adding a purpose needs permission/i,
     );
     // On the registry ROW rather than as a paragraph of its own between the
     // card's description and the list: the posture is about the registry, and a
@@ -246,18 +261,25 @@ describe("ConsentPurposesCard", () => {
   });
 
   // The other direction, without which the assertion above passes on a card
-  // that shows the line to everybody: an ops seat holds the grant, so the
-  // posture is not its posture and the sentence would be a false statement.
+  // that shows the line to everybody: this seat holds `consent_config:create`,
+  // so the posture is not its posture and the sentence would be a false
+  // statement.
   it("withholds the read-only line from a seat that can add a purpose", async () => {
     stubRoutes({
-      "GET /me": () => jsonResponse(meFixture({ roles: ["ops"] })),
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({
+            roles: ["ops"],
+            allow: { consent_config: ["create"] },
+          }),
+        ),
     });
     render(<ConsentPurposesCard />);
     expect(
       await screen.findByRole("button", { name: /add purpose/i }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(/only an admin or ops can add a purpose/i),
+      screen.queryByText(/adding a purpose needs permission/i),
     ).not.toBeInTheDocument();
   });
 });
@@ -306,21 +328,92 @@ async function findDsrRow(subjectRef: string) {
 }
 
 describe("PrivacyInboxCard", () => {
-  it("withholds the queue from a non-admin instead of asking for it", async () => {
+  it("withholds the queue from a reader without the grant instead of asking for it", async () => {
     // The rows name the people who exercised an Art. 15/17 right, so the read
-    // is the admin's. An ops seat reaches this tab for the consent registry
-    // beside it, and must find the card in its place saying why it is empty —
-    // an absent card would read as "no requests", a different claim entirely.
+    // asks `privacy_request:read`. A seat reaching this page for the consent
+    // registry beside it must find the card in its place saying why it is empty
+    // — an absent card would read as "no requests", a different claim entirely.
     const sent = stubRoutes({
       "GET /me": () => jsonResponse(meFixture({ roles: ["ops"] })),
     });
     render(<PrivacyInboxCard />);
-    await screen.findByText(/only an admin can see subject requests/i);
+    await screen.findByText(/subject requests needs permission/i);
     expect(screen.queryByText(/anna@acme.test/)).not.toBeInTheDocument();
     // And it never issued the call the server would only refuse.
     expect(
       sent.some((entry) => entry.key === "GET /data-subject-requests"),
     ).toBe(false);
+  });
+
+  // Reading the queue and WORKING it are different grants, and the server asks
+  // them separately: consent/dsr.go's UpdateDSR wants `privacy_request:update`
+  // where the list wants `read`. A delegated reader used to be shown every
+  // transition button and refused by each one.
+  it("offers no transition to a reader who may see the queue but not work it", async () => {
+    stubRoutes({
+      "GET /data-subject-requests": () => jsonResponse(DSRS),
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({
+            roles: ["ops"],
+            allow: { privacy_request: ["read"], person: ["update"] },
+          }),
+        ),
+    });
+    render(<PrivacyInboxCard />);
+
+    // The OPEN request, not the fulfilled one: a terminal request offers no
+    // transition to anybody, so asserting their absence on it would pass
+    // whatever the grant said.
+    const row = await findDsrRow("8f3a-person-uuid");
+    await userEvent.click(within(row).getByRole("button"));
+
+    // …and carries no verb that would 403. Scoped to `.dsr-actions`, the
+    // container the transitions live in: a row's summary TOGGLE carries the
+    // same status words as badges, so a name-only query matches four buttons
+    // that were never verbs.
+    expect(document.querySelectorAll(".dsr-actions button")).toHaveLength(0);
+  });
+
+  // Opening a request is a THIRD grant: the POST writes the person it names, so
+  // consent/dsr.go's CreateDSR asks `person:update` rather than anything on the
+  // privacy object at all.
+  it("offers no New request to a reader who may work the queue but not write a person", async () => {
+    stubRoutes({
+      "GET /data-subject-requests": () => jsonResponse(DSRS),
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({
+            roles: ["ops"],
+            allow: { privacy_request: ["read", "update"] },
+          }),
+        ),
+    });
+    render(<PrivacyInboxCard />);
+
+    // The queue answered, so this is about the missing grant and not about a
+    // card that never rendered.
+    expect(await screen.findByText(/anna@acme.test/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /new request/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  // The mirror of both: the full set of grants offers both verbs, so the two
+  // refusals above are about what is missing rather than about controls nobody
+  // is ever shown.
+  it("offers the verbs to a reader holding every grant behind them", async () => {
+    stubRoutes({ "GET /data-subject-requests": () => jsonResponse(DSRS) });
+    render(<PrivacyInboxCard />);
+
+    expect(
+      await screen.findByRole("button", { name: /new request/i }),
+    ).toBeInTheDocument();
+    const row = await findDsrRow("8f3a-person-uuid");
+    await userEvent.click(within(row).getByRole("button"));
+    expect(
+      document.querySelectorAll(".dsr-actions button").length,
+    ).toBeGreaterThan(0);
   });
 
   it("binds the status filter server-side, never a client re-slice", async () => {

@@ -837,6 +837,13 @@ export const en = {
   "org.filterSizeBandAll": "Any size",
   "person.consent": "Consent",
   "consent.grant": "Grant",
+  // Submitted as the proof row's wording when an operator records a grant
+  // here. It does NOT quote a screen the subject read — this door has none —
+  // so it says what actually happened: a named operator attested to a consent
+  // obtained away from the product. A canned subject-facing sentence would be
+  // the fabricated proof this rule exists to remove.
+  "consent.operatorWording":
+    "Recorded in the CRM by a member of staff, who attested that this person gave their consent for {label} outside the product. No wording was shown to them here.",
   "consent.withdraw": "Withdraw",
   "consent.doiBySubject":
     "This purpose is confirmed by the person themselves, through a link mailed to their own address. Use \u201cAsk them to confirm their details\u201d below.",
@@ -2584,6 +2591,35 @@ export const en = {
   // the work that waits on a person, and this is a view of that same work.
   "home.panel.weekly": "Last week",
   "home.weekly.weekOf": "Week of {day}",
+  // How WELL the week went, beside what happened in it. Each block is drawn only
+  // when the server sent it: a rep who carried no leads did not score zero on
+  // the funnel, and an empty row would read as failure at something nobody
+  // asked of them.
+  "home.weekly.scorecard.title": "How the week went",
+  "home.weekly.scorecard.leadBlock": "Leads and meetings",
+  "home.weekly.scorecard.dealBlock": "Deals",
+  "home.weekly.scorecard.advanced": "Leads moved forward",
+  "home.weekly.scorecard.advancedBasis":
+    "Steps up the ladder, counted per move",
+  "home.weekly.scorecard.answeredInTarget": "Answered in target",
+  "home.weekly.scorecard.breachedDetail": "{count} breached the target",
+  "home.weekly.scorecard.meetingsHeld": "Meetings held",
+  "home.weekly.scorecard.meetingsBasis": "{booked} booked · {noShow} no-show",
+  "home.weekly.scorecard.partialHistory": "Meetings without history",
+  "home.weekly.scorecard.partialHistoryBasis":
+    "These predate the meeting history, so the counts above are a floor",
+  "home.weekly.scorecard.advances": "Stage advances",
+  "home.weekly.scorecard.regressionsDetail": "{count} went backwards",
+  "home.weekly.scorecard.medianDaysInStage": "Median days in stage",
+  "home.weekly.scorecard.medianBasis": "For the stages deals left this week",
+  "home.weekly.scorecard.withNextStep": "With a next step",
+  "home.weekly.scorecard.ofOpen": "of {total} open deals",
+  "home.weekly.scorecard.multiThreaded": "More than one person",
+  "home.weekly.scorecard.multiThreadedBasis":
+    "of {total} open deals, in the last 30 days",
+  "home.weekly.scorecard.closeDateSound": "Close date holds up",
+  "home.weekly.scorecard.forecastMoves": "Forecast upgrades",
+  "home.weekly.scorecard.forecastMovesBasis": "{down} downgraded",
   // The week ahead. The frozen review says what happened; this is the only part
   // of that page anybody can still change.
   "plan.title": "Plan next week",
@@ -3992,7 +4028,7 @@ export const en = {
   "settings.jobs": "Background jobs",
   "settings.jobsSub": "What the queue is holding, and whose work failed.",
   "jobs.adminOnly":
-    "Only an admin can see background-job health. It reports work across the whole installation, so it is not shown more widely.",
+    "Seeing background-job health needs permission your seat does not hold. It reports work across the whole installation, so it is not open to everyone.",
   "jobs.empty":
     "Nothing in the background queue — no work waiting, running, retrying or dead.",
   "jobs.workspaceKinds": "This organization",
@@ -4045,7 +4081,7 @@ export const en = {
   "audit.noHumanAuthority": "No human authority recorded",
   "settings.auditSub": "every action, attributed — human, agent, or connector",
   "settings.auditAdminOnly":
-    "Only an admin can read the full trail. It records every actor and every record they touched, so it is not shown more widely.",
+    "Reading the full trail needs permission your seat does not hold. It records every actor and every record they touched, so it is not open to everyone.",
   "settings.auditFilters": "Filters",
   "settings.auditEntries": "Audit log",
   "settings.auditTrailLabel": "Recorded actions",
@@ -4065,7 +4101,7 @@ export const en = {
   "privacy.addPurpose": "Add purpose",
   "privacy.purposesRegistry": "Registered purposes",
   "privacy.purposesReadOnly":
-    "Read-only view — only an admin or ops can add a purpose.",
+    "Read-only view — adding a purpose needs permission your seat does not hold.",
   "privacy.purposeKey": "Key",
   "privacy.purposeLabel": "Label",
   "privacy.purposeDoi": "Requires double opt-in",
@@ -4074,7 +4110,7 @@ export const en = {
     "A purpose cannot be renamed or removed once created — the catalogue is append-only. Choose the key carefully.",
   "privacy.facetAll": "All",
   "privacy.inboxAdminOnly":
-    "Only an admin can see subject requests. They name the people who asked, so the queue is not shown more widely.",
+    "Seeing subject requests needs permission your seat does not hold. They name the people who asked, so the queue is not open to everyone.",
   "privacy.overdue": "Overdue",
   "privacy.closed":
     "Closed — a closed request never reopens. A new concern is a new request.",
@@ -6359,6 +6395,8 @@ export const en = {
   "license.refused.title": "This installation's license was refused",
   "license.refused.body":
     "The token in the deployment was presented and rejected. Everything keeps working, uncapped, until it is replaced — check the token and the installation's clock.",
+  "license.seats.capacityOnly":
+    "How many full seats this installation is using. What it is entitled to is not yours to see.",
   "license.seats.title": "Seats",
   "license.seats.used": "Seats in use",
   "license.seats.granted": "Seats granted",
@@ -6584,7 +6622,8 @@ export const en = {
   "extAccess.title": "Extensions & access",
   "extAccess.sub":
     "What each composed extension unit brought into this installation, and which role may use it. Admin-only.",
-  "extAccess.adminOnly": "Extension access is available to admins only.",
+  "extAccess.adminOnly":
+    "This page needs permission to read the installation's extensions and its roles. Your seat holds one or neither.",
   "extAccess.readOnly":
     "Your seat reads this page. Changing a grant needs a full seat.",
   "extAccess.empty": "No extension units are composed into this installation.",
@@ -8666,6 +8705,20 @@ export const en = {
   "worklist.verb.complete": "Open",
   "worklist.verb.snooze": "Open",
   "worklist.verb.acknowledge": "Got it",
+  "worklist.verb.meetingHeld": "It happened",
+  "worklist.verb.meetingNoShow": "They didn't come",
+  "worklist.verb.meetingCanceled": "It was called off",
+  "worklist.verb.meetingOutcomeRecorded": "Recorded how the meeting went.",
+  "worklist.verb.meetingOutcomeFailed": "That could not be recorded.",
+  "worklist.verb.retry": "Run it again",
+  "worklist.verb.retryStarted": "Running the rule again.",
+  "worklist.verb.retryFailed": "That could not be run again.",
+  "worklist.verb.retryRefusedNotFailed":
+    "Nothing to run again \u2014 this firing was stopped on purpose, not by an error.",
+  "worklist.verb.retryRefusedRepeats":
+    "This rule has not been cleared to run twice, so running it again could repeat what it already did.",
+  "worklist.verb.retryRefusedEventGone":
+    "The event behind this firing is gone, so it cannot be repeated. A scheduled rule checks again on its own.",
   "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
   "worklist.verb.completeFailed": "That task could not be completed.",
   "worklist.verb.pin": "Pin",

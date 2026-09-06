@@ -9,9 +9,10 @@ import { IDLE_JOB_HEALTH, jsonResponse, render } from "./settings.testkit";
 import { settingsHref } from "./settingsrouting";
 
 // The danger zone on the Maintenance entry. Reset data is the one control on
-// this screen that destroys an installation's data, so it is gated twice — the
-// literal admin role AND the switch a deployment arms — and it owes the admin
-// who ran it a report of what it actually cleared.
+// this screen that destroys an installation's data, so it is gated twice —
+// `system_reset:delete`, which `POST /admin/reset-data` asks for, AND the
+// `data_reset_available` switch a deployment arms — and it owes the reader who
+// ran it a report of what it actually cleared.
 
 // No shared fetch stub: the backend a claim needs is installed beside the claim,
 // so what answered it is readable where it is asserted.
@@ -25,11 +26,11 @@ afterEach(() => {
   globalThis.localStorage.clear();
 });
 
-// The danger-zone Reset data action: server-driven, gated on the literal admin
-// role AND me.data_reset_available — the switch a deployment arms, not the
-// posture it happens to run under. A dedicated backend per test so the
-// role/capability combination is explicit rather than layered on the shared
-// default.
+// The danger-zone Reset data action: server-driven, gated on
+// `system_reset:delete` AND me.data_reset_available — the switch a deployment
+// arms, not the posture it happens to run under. A dedicated backend per test
+// so the grant/capability combination is explicit rather than layered on the
+// shared default.
 //
 // `allow` defaults to `system_reset:delete`, the grant that opens the page this
 // card now has to itself — a test about the card should not also have to argue
@@ -61,8 +62,8 @@ function resetDataBackend(opts: {
         data_reset_available: opts.dataResetAvailable,
       });
     }
-    // The job report is the danger zone's neighbour on this entry, and an admin
-    // fetches it on arrival — so it answers with the shape the endpoint serves.
+    // The job report is the danger zone's neighbour on this entry, and a
+    // `job_health:read` holder fetches it on arrival — so it answers with the shape the endpoint serves.
     // A generic `{data: []}` here would crash the card that reads it, and every
     // assertion below would fail describing the wrong thing.
     if (url.includes("/admin/job-health")) {
@@ -128,15 +129,12 @@ describe("ResetDataCard (danger zone)", () => {
     expect(screen.queryByText(/reset data/i)).toBeNull();
   });
 
-  // Admin-ONLY, and narrower than the grant that opens the page: the server's
-  // auth.RequireAdmin on /admin/reset-data admits only the literal "admin"
-  // role, so an ops user holding `system_reset:delete` through an edited role
-  // must never see a button that could only 403 on confirm.
-  //
-  // The page renders for them — they hold what it asks for — and the card
-  // inside it withholds itself. That is the pair worth keeping: the page's
-  // grant and the card's role are two different questions.
-  it("opens the page for ops but never shows the control", async () => {
+  // `system_reset:delete` is the whole gate, on the page AND on the card inside
+  // it: `POST /admin/reset-data` asks for that grant (compose/datareset.go),
+  // and `ResetDataCard` asks the same object where it used to ask whether the
+  // reader WAS an admin. So a role EDITED to carry the verb reaches the
+  // control — which the role name could not express either way.
+  it("shows the control to an ops role edited to carry the delete verb", async () => {
     vi.stubGlobal(
       "fetch",
       resetDataBackend({
@@ -146,10 +144,28 @@ describe("ResetDataCard (danger zone)", () => {
       }),
     );
     render(<SettingsScreen route={settingsHref("reset")} />);
-    // The page is theirs — they hold its grant — so it renders rather than
-    // falling back. Waiting on the identity would prove the opposite, so this
-    // waits on /me settling and then asserts the control's absence.
-    await waitFor(() => expect(screen.queryByText("Reading…")).toBeNull());
+    expect(
+      await screen.findByRole("button", { name: /reset data/i }),
+    ).toBeTruthy();
+  });
+
+  // The other half, or the case above would pass against a card that showed the
+  // control to everyone: an ops seat WITHOUT the verb reaches nothing, however
+  // armed the installation is.
+  it("withholds the control from an ops seat without the delete verb", async () => {
+    vi.stubGlobal(
+      "fetch",
+      resetDataBackend({
+        roles: ["ops"],
+        dataResetAvailable: true,
+        allow: { person: ["read"] },
+      }),
+    );
+    render(<SettingsScreen route={settingsHref("reset")} />);
+    // The catalog gives this reader no reset page at all, so the address falls
+    // back — asserted through the identity card, which is what the fallback
+    // renders, rather than through an absence that is also true mid-load.
+    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
     expect(screen.queryByText(/reset data/i)).toBeNull();
   });
 

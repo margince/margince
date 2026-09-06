@@ -173,7 +173,7 @@ function useCallTrace(task: string, enabled: boolean) {
  * over every page the reader had loaded.
  */
 export function useLastCallAt(): number | null {
-  const canSee = useCan("automation", "update");
+  const canSee = useCan("ai_diagnostics", "read");
   const query = useQuery({
     enabled: canSee,
     queryKey: ["ai-call-latest"],
@@ -200,10 +200,10 @@ export function AiCallsCard() {
   const t = useT();
   const { locale } = useLocale();
   const me = useMe();
-  // Same seam as the spend card beside it: the server gates this read on
-  // automation:update, a write verb guarding a GET, so the seat ceiling stays out
-  // of the question (capability.ts) — a read seat may still read it.
-  const canSee = useCan("automation", "update");
+  // Same seam as the spend card: `ai_diagnostics:read` (ai/callread.go). The
+  // seat ceiling stays out of the question either way (capability.ts) — a read
+  // seat may still read a diagnostic.
+  const canSee = useCan("ai_diagnostics", "read");
   const zone = viewerZone();
   const [task, setTask] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);

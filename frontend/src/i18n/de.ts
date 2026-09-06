@@ -785,6 +785,8 @@ export const de = {
   "org.filterSizeBandAll": "Alle Größen",
   "person.consent": "Einwilligung",
   "consent.grant": "Erteilen",
+  "consent.operatorWording":
+    "Von einem Mitarbeiter im CRM erfasst, der bestätigt hat, dass diese Person ihre Einwilligung für {label} außerhalb des Produkts erteilt hat. Ihr wurde hier kein Text angezeigt.",
   "consent.withdraw": "Widerrufen",
   "consent.doiBySubject":
     "Diesen Zweck best\u00e4tigt die Person selbst \u2013 \u00fcber einen Link an ihre eigene Adresse. Nutzen Sie unten \u201eUm Best\u00e4tigung der Daten bitten\u201c.",
@@ -2509,6 +2511,32 @@ export const de = {
   "home.pipelineUnavailable": "Diese Zahl konnte nicht geladen werden.",
   "home.panel.weekly": "Letzte Woche",
   "home.weekly.weekOf": "Woche ab {day}",
+  "home.weekly.scorecard.title": "Wie die Woche lief",
+  "home.weekly.scorecard.leadBlock": "Leads und Termine",
+  "home.weekly.scorecard.dealBlock": "Deals",
+  "home.weekly.scorecard.advanced": "Leads weitergekommen",
+  "home.weekly.scorecard.advancedBasis": "Stufen nach oben, je Schritt gezählt",
+  "home.weekly.scorecard.answeredInTarget": "Fristgerecht beantwortet",
+  "home.weekly.scorecard.breachedDetail": "{count} über der Frist",
+  "home.weekly.scorecard.meetingsHeld": "Termine gehalten",
+  "home.weekly.scorecard.meetingsBasis":
+    "{booked} gebucht · {noShow} nicht erschienen",
+  "home.weekly.scorecard.partialHistory": "Termine ohne Verlauf",
+  "home.weekly.scorecard.partialHistoryBasis":
+    "Diese liegen vor dem Terminverlauf, die Zahlen oben sind daher ein Mindestwert",
+  "home.weekly.scorecard.advances": "Phasen vorangekommen",
+  "home.weekly.scorecard.regressionsDetail": "{count} zurückgefallen",
+  "home.weekly.scorecard.medianDaysInStage": "Median Tage in Phase",
+  "home.weekly.scorecard.medianBasis":
+    "Für die Phasen, die Deals diese Woche verlassen haben",
+  "home.weekly.scorecard.withNextStep": "Mit nächstem Schritt",
+  "home.weekly.scorecard.ofOpen": "von {total} offenen Deals",
+  "home.weekly.scorecard.multiThreaded": "Mehr als eine Person",
+  "home.weekly.scorecard.multiThreadedBasis":
+    "von {total} offenen Deals, in den letzten 30 Tagen",
+  "home.weekly.scorecard.closeDateSound": "Abschlussdatum trägt",
+  "home.weekly.scorecard.forecastMoves": "Forecast hochgestuft",
+  "home.weekly.scorecard.forecastMovesBasis": "{down} herabgestuft",
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
   // einzige Teil dieser Seite, den noch jemand ändern kann.
   "plan.title": "Nächste Woche planen",
@@ -3909,7 +3937,7 @@ export const de = {
   "settings.jobsSub":
     "Was in der Warteschlange hängt und wessen Arbeit gescheitert ist.",
   "jobs.adminOnly":
-    "Nur ein Admin sieht den Zustand der Hintergrund-Jobs. Der Bericht umfasst die Arbeit der ganzen Installation und wird deshalb nicht breiter gezeigt.",
+    "Für den Zustand der Hintergrund-Jobs fehlt Ihrem Sitzplatz die Berechtigung. Der Bericht umfasst die Arbeit der ganzen Installation und steht deshalb nicht allen offen.",
   "jobs.empty":
     "Nichts in der Hintergrund-Warteschlange — nichts wartet, läuft, wiederholt sich oder ist tot.",
   "jobs.workspaceKinds": "Diese Organisation",
@@ -3962,7 +3990,7 @@ export const de = {
   "audit.noHumanAuthority": "Keine menschliche Autorisierung erfasst",
   "settings.auditSub": "jede Aktion, zugeordnet — Mensch, Agent oder Connector",
   "settings.auditAdminOnly":
-    "Nur Admins lesen den vollständigen Verlauf. Er hält jede handelnde Person und jeden berührten Datensatz fest — deshalb ist er nicht weiter zugänglich.",
+    "Zum Lesen des vollständigen Verlaufs fehlt Ihrem Sitzplatz die Berechtigung. Er hält jede handelnde Person und jeden berührten Datensatz fest — deshalb steht er nicht allen offen.",
   "settings.auditFilters": "Filter",
   "settings.auditEntries": "Audit-Log",
   "settings.auditTrailLabel": "Aufgezeichnete Aktionen",
@@ -3980,7 +4008,7 @@ export const de = {
   "settings.due": "fällig {date}",
 
   "privacy.purposesReadOnly":
-    "Nur-Lese-Ansicht — nur ein Admin oder Ops kann einen Zweck anlegen.",
+    "Nur-Lese-Ansicht — zum Anlegen eines Zwecks fehlt Ihrem Sitzplatz die Berechtigung.",
   "privacy.addPurpose": "Zweck hinzufügen",
   "privacy.purposesRegistry": "Erfasste Zwecke",
   "privacy.purposeKey": "Schlüssel",
@@ -3991,7 +4019,7 @@ export const de = {
     "Ein Zweck kann nach dem Anlegen nicht umbenannt oder entfernt werden — der Katalog ist append-only. Wähle den Schlüssel sorgfältig.",
   "privacy.facetAll": "Alle",
   "privacy.inboxAdminOnly":
-    "Nur Admins sehen Betroffenenanfragen. Sie nennen die Personen, die angefragt haben — deshalb ist die Liste nicht weiter zugänglich.",
+    "Für Betroffenenanfragen fehlt Ihrem Sitzplatz die Berechtigung. Sie nennen die Personen, die angefragt haben — deshalb steht die Liste nicht allen offen.",
   "privacy.overdue": "Überfällig",
   "privacy.closed":
     "Abgeschlossen — eine abgeschlossene Anfrage wird nie wieder geöffnet. Ein neues Anliegen ist eine neue Anfrage.",
@@ -6245,6 +6273,8 @@ export const de = {
   "license.refused.title": "Die Lizenz dieser Installation wurde abgelehnt",
   "license.refused.body":
     "Das Token im Deployment wurde vorgelegt und abgelehnt. Alles funktioniert weiter und unbegrenzt, bis es ersetzt wird — prüfe das Token und die Uhr der Installation.",
+  "license.seats.capacityOnly":
+    "Wie viele Vollplätze diese Installation nutzt. Was ihr zusteht, dürfen Sie nicht einsehen.",
   "license.seats.title": "Plätze",
   "license.seats.used": "Belegte Sitzplätze",
   "license.seats.granted": "Gewährte Sitzplätze",
@@ -6478,7 +6508,8 @@ export const de = {
   "extAccess.title": "Erweiterungen & Zugriff",
   "extAccess.sub":
     "Was jede zusammengesetzte Erweiterungseinheit in diese Installation eingebracht hat und welche Rolle sie nutzen darf. Nur für Admins.",
-  "extAccess.adminOnly": "Der Erweiterungszugriff steht nur Admins offen.",
+  "extAccess.adminOnly":
+    "Diese Seite braucht die Berechtigung, die Erweiterungen der Installation und ihre Rollen zu lesen. Ihr Sitzplatz hat nur eine davon oder keine.",
   "extAccess.readOnly":
     "Ihr Sitzplatz liest diese Seite. Eine Berechtigung zu ändern erfordert einen vollen Sitzplatz.",
   "extAccess.empty":
@@ -8543,6 +8574,22 @@ export const de = {
   "worklist.verb.complete": "Öffnen",
   "worklist.verb.snooze": "Öffnen",
   "worklist.verb.acknowledge": "Verstanden",
+  "worklist.verb.meetingHeld": "Hat stattgefunden",
+  "worklist.verb.meetingNoShow": "Niemand kam",
+  "worklist.verb.meetingCanceled": "Wurde abgesagt",
+  "worklist.verb.meetingOutcomeRecorded":
+    "Der Verlauf des Termins wurde festgehalten.",
+  "worklist.verb.meetingOutcomeFailed": "Das konnte nicht festgehalten werden.",
+  "worklist.verb.retry": "Erneut ausf\u00fchren",
+  "worklist.verb.retryStarted": "Die Regel l\u00e4uft erneut.",
+  "worklist.verb.retryFailed":
+    "Das konnte nicht erneut ausgef\u00fchrt werden.",
+  "worklist.verb.retryRefusedNotFailed":
+    "Nichts zu wiederholen \u2014 dieser Lauf wurde absichtlich gestoppt, nicht durch einen Fehler.",
+  "worklist.verb.retryRefusedRepeats":
+    "Diese Regel ist nicht daf\u00fcr freigegeben, zweimal zu laufen \u2014 ein zweiter Lauf k\u00f6nnte wiederholen, was sie schon getan hat.",
+  "worklist.verb.retryRefusedEventGone":
+    "Das ausl\u00f6sende Ereignis ist nicht mehr vorhanden. Eine zeitgesteuerte Regel pr\u00fcft von selbst erneut.",
   "worklist.verb.acknowledgeFailed":
     "Das konnte nicht als gelesen markiert werden.",
   "worklist.verb.completeFailed":
