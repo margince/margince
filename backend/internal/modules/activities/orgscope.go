@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -76,10 +77,10 @@ func OrgLinkedActivityExistsAny(orgsPos int) string {
 // The deal arm deliberately does not exclude archived or lost deals: a set
 // stricter than the predicate would show a message on the timeline whose
 // account never gets a signal about it.
-const orgArms = `FROM activity_link l
+var orgArms = `FROM activity_link l
 		    LEFT JOIN deal d ON d.id = l.deal_id
 		    LEFT JOIN relationship r ON r.person_id = l.person_id AND r.kind = 'employment'
-		      AND r.ended_at IS NULL AND r.archived_at IS NULL`
+		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL`
 
 // participantEmployerArm is the READER's fourth arm: the employer of somebody
 // who is on the event as a participant rather than as a link.
@@ -102,10 +103,10 @@ const orgArms = `FROM activity_link l
 // The alias is emp rather than r: the row-scope clause a caller composes
 // alongside this one is recognized by its "r." tokens, and a second
 // relationship in scope under that name reads as the first.
-const participantEmployerArm = `EXISTS (
+var participantEmployerArm = `EXISTS (
 		    SELECT 1 FROM activity_participant ap
 		      JOIN relationship emp ON emp.person_id = ap.person_id AND emp.kind = 'employment'
-		        AND emp.ended_at IS NULL AND emp.archived_at IS NULL
+		        AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
 		    WHERE ap.activity_id = a.id AND emp.organization_id = %s)`
 
 // activityReachesOrg is the walk as a PREDICATE, for a query that aliases

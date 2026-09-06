@@ -1,16 +1,34 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package people
+// Package employment is what "this job is still theirs" means, in one place
+// every module can reach.
+//
+// It sat in `modules/people` and answered for that module only. A module never
+// imports a sibling, so eight statements in five other modules — activities,
+// projects, signals, consent and search — hand-spelled the question instead,
+// and each hand-spelling was the notice-period defect the helper exists to
+// stop. The gate that holds "one definition" had to ratify all eight by name.
+//
+// Tier 0 rather than storekit, which was the other candidate. storekit is
+// documented as owning no domain and "is this employment current" is a domain
+// rule, so putting it there would have bought reach by bending a stated
+// boundary. shared/kernel already holds domain rules of exactly this kind —
+// values' money scales, elapsed's calendar-day counting, draftfloor's copy —
+// so this joins a category rather than opening one.
+//
+// stdlib only, which the tier requires. The one thing it took from storekit
+// was SQLf, and SQLf is fmt.Sprintf under a name that says the string is SQL;
+// that name is worth keeping and the dependency is not.
+//
+// One concept with two kinds of reach: the write paths in people/relationship.go
+// decide the flag with it, and the reads derive currency with it rather than
+// trusting a flag written months earlier.
+package employment
 
-// What "currently employed" means, in one place. Its own file because it is one
-// concept with two readers' worth of reach: the write paths in relationship.go
-// decide the flag with it, and four separate READS derive currency with it
-// rather than trusting a flag written months earlier.
+import "fmt"
 
-import "github.com/margince/margince/backend/internal/platform/database/storekit"
-
-// EmploymentIsCurrentSQL is the ONE spelling of "this job is still theirs".
+// IsCurrentSQL is the ONE spelling of "this job is still theirs".
 //
 // Held by: TestEveryEmploymentCurrencyTestUsesTheOneDefinition (backend/gates/employmentcurrency_test.go)
 // — it reads every hand-written Go source outside this file for a hand-spelled
@@ -58,11 +76,11 @@ import "github.com/margince/margince/backend/internal/platform/database/storekit
 // module never imports a sibling (ADR-0054 §3), so those cannot call this at
 // all until the predicate moves tier. They are ratified by name in the gate,
 // with that reason, rather than left looking clean.
-func EmploymentIsCurrentSQL(date string) string {
-	return storekit.SQLf("(%s IS NULL OR %s > current_date)", date, date)
+func IsCurrentSQL(date string) string {
+	return sqlf("(%s IS NULL OR %s > current_date)", date, date)
 }
 
-// CurrentPrimaryEmploymentSQL is what a READER of `is_current_primary` means:
+// CurrentPrimarySQL is what a READER of `is_current_primary` means:
 // the flag AND the employment still being theirs. Spelled once so a new reader
 // cannot trust the flag alone, which is what let somebody go on counting at a
 // company after their last day had passed.
@@ -77,39 +95,39 @@ func EmploymentIsCurrentSQL(date string) string {
 // used this helper would think the slot was free while the index still held
 // it, and answer 409 instead of skipping. Two different questions about one
 // column; this one is "who works there now".
-func CurrentPrimaryEmploymentSQL(alias string) string {
+func CurrentPrimarySQL(alias string) string {
 	prefix := ""
 	if alias != "" {
 		prefix = alias + "."
 	}
-	return storekit.SQLf("%sis_current_primary AND %s", prefix, EmploymentIsCurrentSQL(prefix+"ended_at"))
+	return sqlf("%sis_current_primary AND %s", prefix, IsCurrentSQL(prefix+"ended_at"))
 }
 
-// LiveEmploymentSlotSQL is the THIRD question, and the one uq_rel_employment
+// LiveSlotSQL is the THIRD question, and the one uq_rel_employment
 // answers: does this person already hold a live employment edge to this company
 // at all, primary or not.
 //
 // It is the index's own predicate and so, like CurrentPrimarySlotSQL, it is
-// date-BLIND. Asking it with EmploymentIsCurrentSQL would read somebody serving
+// date-BLIND. Asking it with IsCurrentSQL would read somebody serving
 // notice as having no edge while the index still holds one, and the write that
 // followed would be silently dropped by ON CONFLICT rather than skipped — which
 // is exactly how a sweep comes to offer the same work on every pass for ever.
 //
 // `alias` is the relationship table's alias at the call site, or "" when the
 // statement does not alias it.
-func LiveEmploymentSlotSQL(alias string) string {
+func LiveSlotSQL(alias string) string {
 	prefix := ""
 	if alias != "" {
 		prefix = alias + "."
 	}
-	return storekit.SQLf("%skind = 'employment' AND %sended_at IS NULL AND %sarchived_at IS NULL",
+	return sqlf("%skind = 'employment' AND %sended_at IS NULL AND %sarchived_at IS NULL",
 		prefix, prefix, prefix)
 }
 
 // CurrentPrimarySlotSQL is the other question about `is_current_primary`:
 // WHICH ROW HOLDS THE SLOT that uq_rel_current_primary_employer keeps unique
 // per person. It is the index's own predicate, and so it is date-BLIND —
-// asking it with EmploymentIsCurrentSQL would read a person serving notice as
+// asking it with IsCurrentSQL would read a person serving notice as
 // having freed the slot while the index still held it, and the write that
 // followed would 409 instead of skipping.
 //
@@ -131,5 +149,14 @@ func CurrentPrimarySlotSQL(alias string) string {
 	if alias != "" {
 		prefix = alias + "."
 	}
-	return storekit.SQLf("%skind = 'employment' AND %sis_current_primary AND %sarchived_at IS NULL", prefix, prefix, prefix)
+	return sqlf("%skind = 'employment' AND %sis_current_primary AND %sarchived_at IS NULL", prefix, prefix, prefix)
 }
+
+// sqlf renders a SQL fragment. Named rather than calling fmt.Sprintf inline,
+// for the reason storekit.SQLf is: a formatted string that reaches a database
+// should say so at the call site, so a reader checks it for what a formatted
+// SQL string is checked for.
+//
+// Only identifiers and other fragments are ever formatted in here — never a
+// value, which is what the placeholders are for.
+func sqlf(format string, a ...any) string { return fmt.Sprintf(format, a...) }

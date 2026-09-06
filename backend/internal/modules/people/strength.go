@@ -22,6 +22,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -227,7 +228,7 @@ func StrengthForOrgContacts(ctx context.Context, tx pgx.Tx, orgID ids.Organizati
 		SELECT p.id FROM person p
 		JOIN relationship r ON r.person_id = p.id
 		WHERE r.kind = 'employment' AND r.organization_id = $%d
-		  AND `+EmploymentIsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
+		  AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
 		  AND p.archived_at IS NULL AND (%s) AND (%s)
 		ORDER BY p.id`, orgPos, edgeBound, scope), args...)
 	if err != nil {

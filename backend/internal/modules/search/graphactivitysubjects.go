@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -327,7 +328,7 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 			  JOIN relationship r ON r.person_id = p.id
 			  JOIN organization o ON o.id = r.organization_id
 			 WHERE p.archived_at IS NULL
-			   AND r.kind = 'employment' AND r.ended_at IS NULL AND r.archived_at IS NULL
+			   AND r.kind = 'employment' AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
 			   AND o.archived_at IS NULL
 			   AND %[3]s
 			 ORDER BY o.id, onEvent.role_rank, r.is_current_primary DESC

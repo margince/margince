@@ -44,6 +44,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -227,7 +228,7 @@ func (g *PersonAutoEnrich) employerOf(ctx context.Context, tx pgx.Tx, personID i
 	var orgID ids.OrganizationID
 	err := tx.QueryRow(ctx, `
 		SELECT organization_id FROM relationship
-		WHERE person_id = $1 AND kind = 'employment' AND `+people.CurrentPrimaryEmploymentSQL("")+`
+		WHERE person_id = $1 AND kind = 'employment' AND `+employment.CurrentPrimarySQL("")+`
 		  AND archived_at IS NULL AND organization_id IS NOT NULL
 		LIMIT 1`, personID).Scan(&orgID)
 	if err != nil {

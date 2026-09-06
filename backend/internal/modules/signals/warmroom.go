@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -189,9 +190,10 @@ func RouteInEdges(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) ([]R
 		SELECT p.id, p.full_name, r.kind, r.role
 		FROM relationship r
 		JOIN person p ON p.id = r.person_id AND p.archived_at IS NULL
-		WHERE r.archived_at IS NULL AND r.ended_at IS NULL AND r.person_id IS NOT NULL
-		  AND ((r.kind = 'employment' AND r.organization_id = $%[1]d)
-		    OR (r.kind = 'deal_stakeholder' AND r.deal_id IN (
+		WHERE r.archived_at IS NULL AND r.person_id IS NOT NULL
+		  AND ((r.kind = 'employment' AND r.organization_id = $%[1]d
+		        AND `+employment.IsCurrentSQL("r.ended_at")+`)
+		    OR (r.kind = 'deal_stakeholder' AND r.ended_at IS NULL AND r.deal_id IN (
 		          SELECT d.id FROM deal d WHERE d.organization_id = $%[1]d AND d.archived_at IS NULL)))%s%s
 		ORDER BY p.id, r.kind`, orgPos, edgeBound, visible), args...)
 	if err != nil {

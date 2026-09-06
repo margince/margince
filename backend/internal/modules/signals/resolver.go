@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -310,7 +311,7 @@ func matchCandidates(ctx context.Context, tx pgx.Tx, a rawAttribution) ([]candid
 			SELECT DISTINCT r.organization_id
 			FROM person_email pe
 			JOIN relationship r ON r.person_id = pe.person_id
-			 AND r.kind = 'employment' AND r.ended_at IS NULL AND r.archived_at IS NULL
+			 AND r.kind = 'employment' AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
 			JOIN organization o ON o.id = r.organization_id
 			WHERE pe.email = $1 AND NOT o.is_anchor`, a.Email)
 		if err != nil {
@@ -411,7 +412,7 @@ func consentedPerson(ctx context.Context, tx pgx.Tx, email string, orgID ids.Org
 		FROM person_email pe
 		JOIN relationship r ON r.person_id = pe.person_id
 		 AND r.kind = 'employment' AND r.organization_id = $2
-		 AND r.ended_at IS NULL AND r.archived_at IS NULL
+		 AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
 		WHERE pe.email = $1
 		  AND EXISTS (SELECT 1 FROM person_consent pc
 		              WHERE pc.person_id = pe.person_id AND pc.state = 'granted')

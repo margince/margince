@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -171,8 +172,8 @@ func writeRelationshipInTx(
 		in.PersonID != nil {
 		if _, err := tx.Exec(ctx, `
 				UPDATE relationship SET is_current_primary = false
-				WHERE person_id = $1 AND `+CurrentPrimarySlotSQL("")+`
-				  AND `+EmploymentIsCurrentSQL("$2::date"),
+				WHERE person_id = $1 AND `+employment.CurrentPrimarySlotSQL("")+`
+				  AND `+employment.IsCurrentSQL("$2::date"),
 			*in.PersonID, in.EndedAt); err != nil {
 			return out, err
 		}
@@ -202,8 +203,8 @@ func writeRelationshipInTx(
 			        coalesce($9, $1 = 'employment' AND NOT EXISTS (
 			          SELECT 1 FROM relationship
 			           WHERE kind = 'employment' AND person_id = $2 AND archived_at IS NULL
-			             AND (`+EmploymentIsCurrentSQL("ended_at")+` OR is_current_primary)))
-			          AND ($1 <> 'employment' OR `+EmploymentIsCurrentSQL("$11::date")+`),
+			             AND (`+employment.IsCurrentSQL("ended_at")+` OR is_current_primary)))
+			          AND ($1 <> 'employment' OR `+employment.IsCurrentSQL("$11::date")+`),
 			        $10, $11, $12, $13)
 			RETURNING `+relationshipColumns,
 		in.Kind, in.PersonID, in.OrganizationID, in.CounterpartyOrgID, in.CounterpartyPersonID, in.DealID, in.ProjectID,

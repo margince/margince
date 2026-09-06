@@ -28,8 +28,8 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
+	"go/printer"
 	"go/token"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -84,13 +84,17 @@ func TestTheAccountReachWalkIsOneAnswer(t *testing.T) {
 // constText answers the string literal a named package-level constant holds.
 func constText(t *testing.T, file, name string) (string, bool) {
 	t.Helper()
-	parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, 0)
+	fset := token.NewFileSet()
+	parsed, err := parser.ParseFile(fset, file, nil, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", file, err)
 	}
 	for _, decl := range parsed.Decls {
 		gen, isGen := decl.(*ast.GenDecl)
-		if !isGen || gen.Tok != token.CONST {
+		// VAR as well as CONST: an arm that calls the shared employment
+		// predicate cannot be a constant, and reading only constants would
+		// leave this gate comparing nothing on the day the arms adopted it.
+		if !isGen || (gen.Tok != token.CONST && gen.Tok != token.VAR) {
 			continue
 		}
 		for _, spec := range gen.Specs {
@@ -109,15 +113,24 @@ func constText(t *testing.T, file, name string) (string, bool) {
 				if ident.Name != name {
 					continue
 				}
-				lit, isLit := value.Values[i].(*ast.BasicLit)
-				if !isLit || lit.Kind != token.STRING {
-					return "", false
+				// The expression AS WRITTEN, not the string it resolves to.
+				//
+				// An arm that calls the shared employment predicate is a
+				// concatenation rather than a literal, and a reader that folded
+				// it would have to put something in the call's place — every
+				// fold available renders two DIFFERENT calls as the same
+				// placeholder, so the gate would stop being able to tell
+				// `IsCurrentSQL("r.ended_at")` from `IsCurrentSQL("emp.ended_at")`.
+				// That distinction is this gate's whole subject.
+				//
+				// Source text keeps it: two declarations that are identical
+				// character for character are identical however they are built,
+				// which is the claim being made.
+				var written strings.Builder
+				if err := printer.Fprint(&written, fset, value.Values[i]); err != nil {
+					t.Fatalf("printing %s in %s: %v", name, file, err)
 				}
-				text, err := strconv.Unquote(lit.Value)
-				if err != nil {
-					return "", false
-				}
-				return text, true
+				return written.String(), true
 			}
 		}
 	}

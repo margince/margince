@@ -8,7 +8,7 @@ package gates
 // text it builds, and how a call to THE definition is told from a lookalike.
 //
 // It lives on its own because there are two ports of it now — employment
-// currency (people.EmploymentIsCurrentSQL) and workforce liveness
+// currency (employment.IsCurrentSQL) and workforce liveness
 // (identity.LiveMemberSQL) — and a walk copied for the second port drifts from
 // the first. The narrower copy then reads a smaller tree and says PASS, which
 // is the failure mode a census cannot report about itself.
@@ -122,7 +122,7 @@ type helperScope struct {
 //
 // The name alone was not enough, and the gap is the one this gate exists to
 // close: a helper call's whole subtree is claimed, so `other.
-// EmploymentIsCurrentSQL(…)` would have been treated as canonical and its
+// employment.IsCurrentSQL(…)` would have been treated as canonical and its
 // arguments hidden, letting a hand-written currency test ride inside a
 // lookalike.
 func (h helperScope) isOneDefinition(call *ast.CallExpr) bool {

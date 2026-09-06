@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -125,7 +126,7 @@ func fillContactCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUI
 		 JOIN person p ON p.id = rel.person_id AND p.archived_at IS NULL
 		 WHERE rel.organization_id = ANY($1)
 		   AND rel.kind = 'employment'
-		   AND `+CurrentPrimaryEmploymentSQL("rel")+`
+		   AND `+employment.CurrentPrimarySQL("rel")+`
 		   AND rel.archived_at IS NULL`+edgeBound+scope+`
 		 GROUP BY rel.organization_id`, args,
 		func(o *crmcontracts.Organization, n int) { o.ContactCount = &n })
