@@ -25645,6 +25645,18 @@ export interface components {
             actor_type: "human" | "agent" | "system" | "connector" | "buyer";
             actor_id: string;
             /**
+             * @description The actor's display name, resolved from `app_user` on the read path
+             *     (PD-002) — the same resolution `/audit-log` and the record history
+             *     do, so two rails on one screen name the same person the same way.
+             *     Present only for a human actor: agent, connector and system ids name
+             *     a machine, and their human authority is `on_behalf_of_name`. Null
+             *     when no user row resolves — a deactivated or deleted member still has
+             *     audit rows, and an honest identifier is better than an invented name.
+             */
+            actor_name?: string | null;
+            /** @description Resolved display name for the human whose authority a machine acted under. */
+            on_behalf_of_name?: string | null;
+            /**
              * Format: uuid
              * @description Agent Seat Passport that authorized the change; present for agent actors only.
              */

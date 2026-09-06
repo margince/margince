@@ -73,9 +73,15 @@ type auditDiffRow struct {
 	// image itself surfaces for agent actors only and the link must surface for
 	// every actor — a restore's actor is a human.
 	undidAuditLogID *ids.UUID
-	occurredAt      time.Time
-	before          map[string]any
-	after           map[string]any
+	// actorName and onBehalfOfName are the two display names every audit read
+	// in this package owes its reader: the human who acted, and the human whose
+	// authority a machine acted under. Nil where the actor is not a human, or
+	// the member is gone — no name is honest where an invented one would not be.
+	actorName      *string
+	onBehalfOfName *string
+	occurredAt     time.Time
+	before         map[string]any
+	after          map[string]any
 }
 
 // diffAuditRowFields projects one audit row into per-field entries:
@@ -149,6 +155,8 @@ func makeFieldHistoryEntry(row auditDiffRow, field string, oldValue, newValue *s
 		ChangedAt:       row.occurredAt,
 		ActorType:       row.actorType,
 		ActorID:         row.actorID,
+		ActorName:       row.actorName,
+		OnBehalfOfName:  row.onBehalfOfName,
 		PassportID:      passportID,
 		Evidence:        evidence,
 		UndidAuditLogID: row.undidAuditLogID,

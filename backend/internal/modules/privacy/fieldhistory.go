@@ -48,8 +48,14 @@ type FieldHistoryEntry struct {
 	ChangedAt  time.Time
 	ActorType  string
 	ActorID    string
-	PassportID *ids.UUID
-	Evidence   map[string]any
+	// ActorName and OnBehalfOfName are the resolved humans behind the row
+	// (PD-002): who acted, and whose authority a machine acted under. Nil where
+	// no user row resolves — a deactivated or deleted member still has audit
+	// rows, and an honest identifier beats an invented name.
+	ActorName      *string
+	OnBehalfOfName *string
+	PassportID     *ids.UUID
+	Evidence       map[string]any
 	// UndidAuditLogID is the entry this one REVERSES — the same link the record
 	// spine carries, because this projection is interleaved into the same
 	// chronology and a reversal reads as a fresh change on either of them.
@@ -327,10 +333,15 @@ func latestScrubTombstone(ctx context.Context, tx pgx.Tx, entityType string, ent
 // and the has-more probe build on it, so the two can never disagree on
 // which rows are projectable.
 func fieldHistorySpineWhere(f FieldHistoryFilter, boundary scrubBoundary, args []any) ([]string, []any) {
-	conds := []string{"entity_type = $1", "entity_id = $2", "action = ANY($3)"}
+	// QUALIFIED with the audit row's alias, because the batch read below joins
+	// app_user twice to resolve the actor's name and `id` is a column on both.
+	// Unqualified it is ambiguous, and Postgres refuses the statement rather
+	// than guessing — which is the good outcome, but only if the qualification
+	// is here where both readers share it.
+	conds := []string{"a.entity_type = $1", "a.entity_id = $2", "a.action = ANY($3)"}
 	args = append(args, f.EntityType, f.EntityID, fieldHistoryProjectedActionList)
 	if boundary.exists() {
-		conds = append(conds, fmt.Sprintf("(occurred_at, id) > ($%d, $%d)", len(args)+1, len(args)+2))
+		conds = append(conds, fmt.Sprintf("(a.occurred_at, a.id) > ($%d, $%d)", len(args)+1, len(args)+2))
 		args = append(args, boundary.occurredAt, boundary.id)
 	}
 	return conds, args
@@ -344,15 +355,21 @@ func queryFieldHistoryBatch(ctx context.Context, tx pgx.Tx, f FieldHistoryFilter
 ) ([]auditDiffRow, int, error) {
 	conds, args := fieldHistorySpineWhere(f, boundary, nil)
 	if useCursor {
-		conds = append(conds, fmt.Sprintf("(occurred_at, id) < ($%d, $%d)", len(args)+1, len(args)+2))
+		conds = append(conds, fmt.Sprintf("(a.occurred_at, a.id) < ($%d, $%d)", len(args)+1, len(args)+2))
 		args = append(args, cursorTime, cursorID)
 	}
 	args = append(args, fieldHistoryScanBatch)
+	// auditActorNameJoins, the SAME spelling the compliance log and the record
+	// timeline resolve attribution through. Two rails on one screen answering
+	// "who did this" differently is how a reader comes to trust one and doubt
+	// the other, and this was the rail that named nobody.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT id, action, actor_type, actor_id, passport_id, evidence, occurred_at, before, after
-		FROM audit_log
+		SELECT a.id, a.action, a.actor_type, a.actor_id, a.passport_id, a.evidence,
+		       a.occurred_at, a.before, a.after,
+		       actor_user.display_name, obo.display_name
+		FROM audit_log a`+auditActorNameJoins+`
 		WHERE %s
-		ORDER BY occurred_at DESC, id DESC
+		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT $%d`, strings.Join(conds, " AND "), len(args)), args...)
 	if err != nil {
 		return nil, 0, err
@@ -364,7 +381,8 @@ func queryFieldHistoryBatch(ctx context.Context, tx pgx.Tx, f FieldHistoryFilter
 		var r auditDiffRow
 		var evidenceJSON, beforeJSON, afterJSON []byte
 		if err := rows.Scan(&r.id, &r.action, &r.actorType, &r.actorID, &r.passportID,
-			&evidenceJSON, &r.occurredAt, &beforeJSON, &afterJSON); err != nil {
+			&evidenceJSON, &r.occurredAt, &beforeJSON, &afterJSON,
+			&r.actorName, &r.onBehalfOfName); err != nil {
 			return nil, 0, err
 		}
 		r.entityType, r.entityID = f.EntityType, f.EntityID
@@ -414,11 +432,13 @@ func hasFollowingAuditRow(ctx context.Context, tx pgx.Tx, f FieldHistoryFilter,
 	cursorTime time.Time, cursorID ids.UUID, boundary scrubBoundary,
 ) (bool, error) {
 	conds, args := fieldHistorySpineWhere(f, boundary, nil)
-	conds = append(conds, fmt.Sprintf("(occurred_at, id) < ($%d, $%d)", len(args)+1, len(args)+2))
+	conds = append(conds, fmt.Sprintf("(a.occurred_at, a.id) < ($%d, $%d)", len(args)+1, len(args)+2))
 	args = append(args, cursorTime, cursorID)
 	var exists bool
+	// Aliased to match the shared WHERE above; this read joins nothing, so the
+	// alias costs it only the two letters.
 	err := tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT EXISTS(SELECT 1 FROM audit_log WHERE %s)`,
+		SELECT EXISTS(SELECT 1 FROM audit_log a WHERE %s)`,
 		strings.Join(conds, " AND ")), args...).Scan(&exists)
 	return exists, err
 }

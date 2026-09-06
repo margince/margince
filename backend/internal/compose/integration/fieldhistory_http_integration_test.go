@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -41,6 +42,8 @@ type fieldHistoryEntryWire struct {
 	ChangedAt  string         `json:"changed_at"`
 	ActorType  string         `json:"actor_type"`
 	ActorID    string         `json:"actor_id"`
+	ActorName  *string        `json:"actor_name"`
+	OnBehalfOf *string        `json:"on_behalf_of_name"`
 	PassportID *string        `json:"passport_id"`
 	Evidence   map[string]any `json:"evidence"`
 }
@@ -103,6 +106,43 @@ func fieldHistoryHTTPEnv(t *testing.T, e *apptest.AppEnv) *Env {
 	return &Env{Pool: pool, WS: ws}
 }
 
+// seedHumanFieldHistoryRow seeds a human-actor diff against a REAL seat.
+//
+// The shared seeder writes a placeholder actor id, which is fine where the
+// actor is only a discriminator. It is not fine here: the name resolution this
+// rail now does joins app_user on the 'human:' || id key the writer actually
+// produces, so a made-up id would exercise the join against a shape no write
+// makes and report a null name as correct.
+func seedHumanFieldHistoryRow(t *testing.T, app *apptest.AppEnv, e *Env, entityID ids.UUID,
+	before, after map[string]any, occurredAt time.Time,
+) {
+	t.Helper()
+	var seat ids.UUID
+	// identity.LiveMemberSQL rather than the pair spelled out here. Both halves
+	// matter — deactivating sets status and leaves archived_at NULL, so either
+	// alone picks a seat the workspace does not have — and identity owns what
+	// "still works here" means. A fixture attributing an audit row to a departed
+	// colleague would test the name resolution against a state no write produces.
+	if err := app.Owner.QueryRow(context.Background(),
+		`SELECT id FROM app_user WHERE `+identity.LiveMemberSQL("")+
+			` ORDER BY created_at LIMIT 1`).
+		Scan(&seat); err != nil {
+		t.Fatalf("reading the workspace's own seat: %v", err)
+	}
+	beforeJSON, afterJSON := auditImageJSON(t, before), auditImageJSON(t, after)
+	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx,
+			`INSERT INTO audit_log (id, actor_type, actor_id, action,
+			                        entity_type, entity_id, before, after, occurred_at)
+			 VALUES ($1, 'human', $2, 'update', 'person', $3, $4, $5, $6)`,
+			ids.NewV7(), "human:"+seat.String(), entityID, beforeJSON, afterJSON, occurredAt)
+		return err
+	}); err != nil {
+		t.Fatalf("seed human audit row: %v", err)
+	}
+}
+
 // seedAgentFieldHistoryRow seeds an agent-actor audit diff row carrying a
 // passport id and evidence — the one shape seedAuditDiffRow cannot
 // produce (it never binds those two columns) and the only shape that
@@ -162,7 +202,7 @@ func seedFieldHistoryHTTPFixture(t *testing.T, e *apptest.AppEnv, dbEnv *Env) fi
 	// (fieldhistory_integration_test.go's own convention).
 	humanAt := time.Now().Add(1 * time.Hour).UTC().Truncate(time.Microsecond)
 	agentAt := time.Now().Add(2 * time.Hour).UTC().Truncate(time.Microsecond)
-	seedAuditDiffRow(t, dbEnv, "person", personID, "human",
+	seedHumanFieldHistoryRow(t, e, dbEnv, personID,
 		map[string]any{"title": "VP"}, map[string]any{"title": "CTO"}, humanAt)
 
 	passportID := ids.NewV7()
@@ -205,12 +245,30 @@ func assertFieldHistoryHappyPath(t *testing.T, e *apptest.AppEnv, fx fieldHistor
 		t.Errorf("agent entry evidence = %v, want the seeded evidence map", newest.Evidence)
 	}
 
+	// A MACHINE ACTOR NAMES NO HUMAN, which is the honest half: the id is a
+	// passport, not a person, and the human behind it rides on_behalf_of_name.
+	if newest.ActorName != nil {
+		t.Errorf("agent entry actor_name = %q, want null — the actor is a machine "+
+			"and naming it as a person is the confusion PD-002 is about", *newest.ActorName)
+	}
+
 	var sawHumanTitle bool
 	for _, en := range page.Data {
 		if en.Field == "title" && en.ActorType == "human" {
 			sawHumanTitle = true
 			if en.PassportID != nil || en.Evidence != nil {
 				t.Errorf("human entry carries passport/evidence, want both absent: %+v", en)
+			}
+			// THE POINT OF THIS CHANGE. This rail renders beside the record
+			// timeline on one screen, and until now it resolved no name at all
+			// — so two adjacent rails disagreed about whether attribution names
+			// anybody. The id was accurate and unreadable.
+			if en.ActorName == nil {
+				t.Errorf("human entry actor_name is null — the rail still shows a raw id "+
+					"beside a record-history row that names the person: %+v", en)
+			} else if *en.ActorName == "" {
+				t.Errorf("human entry actor_name is empty — absent and blank are different " +
+					"answers, and a blank one renders as a person with no name")
 			}
 		}
 	}

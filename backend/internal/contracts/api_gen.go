@@ -23047,7 +23047,16 @@ type ExtractedFieldConfidence string
 // the same mutation share it. `old_value`/`new_value` are display-form strings; null means
 // the empty/created origin.
 type FieldHistoryEntry struct {
-	ActorId    string                      `json:"actor_id"`
+	ActorId string `json:"actor_id"`
+
+	// ActorName The actor's display name, resolved from `app_user` on the read path
+	// (PD-002) — the same resolution `/audit-log` and the record history
+	// do, so two rails on one screen name the same person the same way.
+	// Present only for a human actor: agent, connector and system ids name
+	// a machine, and their human authority is `on_behalf_of_name`. Null
+	// when no user row resolves — a deactivated or deleted member still has
+	// audit rows, and an honest identifier is better than an invented name.
+	ActorName  *string                     `json:"actor_name,omitempty"`
 	ActorType  FieldHistoryEntryActorType  `json:"actor_type"`
 	ChangedAt  time.Time                   `json:"changed_at"`
 	EntityId   openapi_types.UUID          `json:"entity_id"`
@@ -23059,6 +23068,9 @@ type FieldHistoryEntry struct {
 	Id       openapi_types.UUID      `json:"id"`
 	NewValue *string                 `json:"new_value,omitempty"`
 	OldValue *string                 `json:"old_value,omitempty"`
+
+	// OnBehalfOfName Resolved display name for the human whose authority a machine acted under.
+	OnBehalfOfName *string `json:"on_behalf_of_name,omitempty"`
 
 	// PassportId Agent Seat Passport that authorized the change; present for agent actors only.
 	PassportId *openapi_types.UUID `json:"passport_id,omitempty"`
