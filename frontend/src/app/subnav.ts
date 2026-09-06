@@ -39,6 +39,11 @@ export type NavLevelEntry = {
   // Settings home is the only one today: it is the settings address with no
   // page segment, so its id names a row and never a destination.
   level?: true;
+  // One line under the page's heading, when the entry's own name does not say
+  // enough. On the ENTRY rather than in a screen-keyed table, because a section
+  // is many pages behind one screen — `PAGE_SUB_KEYS[route.screen]` can only
+  // describe all of them at once, which is no description of any of them.
+  subKey?: MessageKey;
   icon: LucideIcon;
   // The level this entry opens. Grouping is possible at every depth, so the
   // children are a flat list only until one needs headings.

@@ -6050,6 +6050,62 @@ export const de = {
   "settings.boundary.unknownBody":
     "Der Link stammt vielleicht aus einer \u00e4lteren Version oder ist vertippt. Der Einstellungen-Start listet jede Seite auf, die Ihr Sitzplatz \u00f6ffnen kann.",
   "settings.boundary.back": "Einstellungen-Start",
+  "settings.page.account.sub":
+    "Wie Sie erscheinen und sich anmelden \u2014 nur f\u00fcr Sie.",
+  "settings.page.voice.sub":
+    "Die Worte, die Entw\u00fcrfe verwenden, wenn sie in Ihrem Namen schreiben.",
+  "settings.page.agents.sub":
+    "Was ein Agent unbeaufsichtigt tun darf und welche Clients Ihre Zugangsdaten halten.",
+  "settings.page.connections.sub":
+    "Die Postf\u00e4cher und Adressen, aus denen dieser Sitzplatz liest.",
+  "settings.page.capture-activity.sub":
+    "Was die Erfassung mit Ihrer Post getan hat, und warum.",
+  "settings.page.company.sub":
+    "Name, W\u00e4hrung und Kontext, vor deren Hintergrund jeder Datensatz gelesen wird.",
+  "settings.page.authentication.sub":
+    "Wie sich Personen an dieser Installation anmelden und welche Apps f\u00fcr sie handeln d\u00fcrfen.",
+  "settings.page.members.sub":
+    "Alle mit einem Sitzplatz und was jeder erreichen darf.",
+  "settings.page.teams.sub":
+    "Wer zusammenarbeitet \u2014 daran orientiert sich der Zeilenzugriff.",
+  "settings.page.seats.sub":
+    "Wie viele Sitzpl\u00e4tze belegt sind, gemessen an dem, was dieser Installation zusteht.",
+  "settings.page.pipelines.sub":
+    "Die Phasen, die ein Gesch\u00e4ft durchl\u00e4uft \u2014 f\u00fcr das ganze Unternehmen.",
+  "settings.page.leads.sub":
+    "Die Worte, mit denen dieses Unternehmen beschreibt, woher ein Lead kam.",
+  "settings.page.fields.sub":
+    "Die Felder, die dieses Unternehmen zus\u00e4tzlich zu denen jeder Installation f\u00fchrt.",
+  "settings.page.tags.sub":
+    "Das gemeinsame Vokabular \u2014 hier umbenannt, ist es auf jedem Datensatz umbenannt.",
+  "settings.page.products.sub":
+    "Was dieses Unternehmen verkauft und die Vorlagen, aus denen ein Angebot entsteht.",
+  "settings.page.capture.sub":
+    "Welche Post zu einem Datensatz wird und welche unber\u00fchrt bleibt.",
+  "settings.page.integrations.sub":
+    "Die Systeme, mit denen diese Installation Datens\u00e4tze austauscht.",
+  "settings.page.knowledge.sub":
+    "Die Dokumente, aus denen Entw\u00fcrfe und Antworten lesen d\u00fcrfen.",
+  "settings.page.import.sub":
+    "Datens\u00e4tze aus einer Datei \u00fcbernehmen \u2014 ein Lauf nach dem anderen.",
+  "settings.page.models.sub":
+    "Welcher Anbieter welche Art von Arbeit beantwortet \u2014 und ob er es kann.",
+  "settings.page.automations.sub":
+    "Die Regeln, die laufen, ohne dass jemand etwas dr\u00fcckt.",
+  "settings.page.usage.sub":
+    "Was die KI-Laufzeit diesen Monat verbraucht hat, gemessen an ihrer Obergrenze.",
+  "settings.page.model-calls.sub":
+    "Was jeder Aufruf ein Modell gefragt hat \u2014 und wie es geantwortet hat.",
+  "settings.page.privacy.sub":
+    "Betroffenenanfragen, die Zwecke, zu denen Einwilligung erfasst wird, und wie lange Datens\u00e4tze bleiben.",
+  "settings.page.audit.sub":
+    "Jeder Akteur und jeder Datensatz, den er ber\u00fchrt hat.",
+  "settings.page.system-health.sub":
+    "Ob die Arbeit hinter den Bildschirmen mitkommt.",
+  "settings.page.extensions.sub":
+    "Die Einheiten, die dieser Build zusammengesetzt hat, und welche Rollen sie erreichen.",
+  "settings.page.reset.sub":
+    "Diese Installation leeren. Es gibt kein Zur\u00fcck.",
   "settings.tab.company": "Unternehmensprofil",
   "settings.tab.authentication": "Anmeldung & Apps",
   "settings.tab.members": "Mitglieder",
