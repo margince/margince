@@ -13,6 +13,7 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -234,9 +235,17 @@ func recordAgreesWithIncumbentTx(
 ) (bool, error) {
 	var storedSender string
 	var storedOccurredAt time.Time
+	// restricted_at IS NULL: a HELD row corroborates nothing. A restriction is
+	// the workspace withholding a message, and letting a claim be measured
+	// against one would answer questions about its contents through the side
+	// door this function exists to shut (A165/ADR-0114 §2). No row back means no
+	// corroboration, which is the refusing direction.
 	if err := tx.QueryRow(ctx, `
 		SELECT coalesce(counterparty_email, ''), occurred_at
-		  FROM activity WHERE id = $1`, id).Scan(&storedSender, &storedOccurredAt); err != nil {
+		  FROM activity WHERE id = $1 AND restricted_at IS NULL`, id).Scan(&storedSender, &storedOccurredAt); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
 		return false, fmt.Errorf("capture: reading the incumbent to corroborate a mailbox claim: %w", err)
 	}
 	// An incumbent that names nobody cannot corroborate anything, so the claim
