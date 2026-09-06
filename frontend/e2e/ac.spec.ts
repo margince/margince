@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
+import { SETTINGS_PAGES } from "../src/screens/settingscatalog";
 import { mockApi } from "./seed";
 import { textsOf } from "./waits";
 
@@ -75,6 +76,22 @@ test.beforeEach(async ({ page }) => {
   await mockApi(page);
 });
 
+/**
+ * Every settings page, with no exclusion.
+ *
+ * There was one — `reset`, whose page needs the deployment to arm
+ * `data_reset_available`. That is a fixture fact rather than a product one:
+ * `seed.ts` mocks `/me` and can say the deployment arms it, and RENDERING the
+ * danger zone resets nothing (the POST waits for a reader to type the workspace
+ * name). Excluding it left the one settings page carrying an irreversible verb
+ * out of the 390px sweep, both axe passes and the heading check.
+ *
+ * A page this principal cannot open is now a BUG in the grants above, and
+ * `expectSettingsViewLanded` turns it into a failure rather than a silently
+ * shorter census.
+ */
+const SWEPT_SETTINGS_PAGES = SETTINGS_PAGES.map((page) => page.id);
+
 const CORE_SCREENS = [
   "home",
   "contacts",
@@ -109,46 +126,19 @@ const CORE_SCREENS = [
   // installation-wide cards, `members` a roster of rows that each end in two
   // buttons. These are where a narrow viewport actually breaks.
   //
-  // Every id below is a CANONICAL page id. A renamed spelling still resolves —
-  // `settingsrouting.ts` keeps the old addresses working — but it resolves by
-  // redirecting, so sweeping one measures the page it lands on while reporting
-  // the name it was asked for. expectSettingsViewLanded below is what makes
-  // that visible rather than silently counting the same page twice.
+  // DERIVED from the catalog, not written out. The list that stood here went
+  // stale twice — once claiming twelve while three pages were in neither sweep,
+  // and again when the catalog was split and six of its ids were renamed under
+  // it. A census that can fall short reports PASS on the smaller tree, which is
+  // the one failure mode a sweep must not have.
   //
-  // The list is written out rather than derived, and that is the weakness to
-  // know about: it went stale twice — once claiming twelve while three pages
-  // were in neither sweep, and again when the catalog was split into its
-  // current shape and six of these ids were renamed under it. A census that can
-  // fall short reports PASS on the smaller tree.
-  //
-  // The blocker named here — that reading the ids would pull the screen's whole
-  // module graph through Playwright's transform — is GONE: `settingscatalog.ts`
-  // is pure data and imports like `../src/i18n/de` above it already does. What
-  // still blocks deriving it is the mock's grants: E2E_ADMIN_GRANTS in seed.ts
-  // predates the settings objects, so a derived sweep would name pages this
-  // principal cannot open, each of them landing on the fallback and reporting a
-  // page the run never read — the same short census in a new shape. Extend the
-  // grants first, then derive; doing it in that order is the whole point.
-  "settings/models",
-  // Automations and the audit trail each used to be one body of a page already
-  // in this list. They are pages of their own now, so they are named here — a
-  // split surface that keeps only its old address is a surface that quietly
-  // left the sweep.
-  "settings/automations",
-  "settings/audit",
-  "settings/fields",
-  "settings/integrations",
-  "settings/members",
-  "settings/voice",
-  "settings/agents",
-  "settings/connections",
-  "settings/company",
-  "settings/capture",
-  "settings/privacy",
-  "settings/system-health",
-  "settings/capture-activity",
-  "settings/knowledge",
-  "settings/seats",
+  // The blocker that kept it hand-written is gone in both halves.
+  // `settingscatalog.ts` is pure data and imports like `../src/i18n/de` above,
+  // so reading the ids pulls no screen module through Playwright's transform.
+  // And E2E_ADMIN_GRANTS now carries the thirteen settings objects, so this
+  // principal opens every page named below — without that, each ungranted page
+  // would land on the access boundary and report a page the run never read.
+  ...SWEPT_SETTINGS_PAGES.map((page) => `settings/${page}`),
 ];
 
 /**
