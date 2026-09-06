@@ -143,6 +143,7 @@ func waitUntilBlockedBy(t *testing.T, holder *pgx.Conn) {
 				"reach it, so this case interleaved nothing and would pass over the defect it " +
 				"is named for")
 		}
+		//craft:ignore test-sleep the wait IS on the condition — pg_blocking_pids, asked in the loop above. This paces the asking so the poll does not compete with the press for a pool connection, which CodeRabbit raised on #4631; removing it makes the test flakier, not less.
 		time.Sleep(20 * time.Millisecond)
 	}
 }
