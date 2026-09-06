@@ -46,9 +46,15 @@ export type DebouncedSearch = Readonly<{
  *
  * A query in flight KEEPS the previous results: clearing them would empty the
  * menu under the reader on every keystroke, and an empty menu is the one thing
- * that reads as a confident "no matches". They are dropped only when the box
- * goes back to empty, where they would be hits from a query nobody can see any
- * more.
+ * that reads as a confident "no matches". `pending` is reported alongside them
+ * so a caller can say a newer answer is coming rather than leave the older one
+ * standing as the settled one.
+ *
+ * A FAILED query drops them, which is the opposite call made for the opposite
+ * reason: there is no newer answer coming, so hits from a query no longer on
+ * screen would sit under an error line contradicting them. The box going back
+ * to empty drops them too, where they would be results for a query nobody can
+ * see any more.
  *
  * An in-flight answer that arrives after the query moved on is discarded rather
  * than shown — otherwise a slow response for "acme" lands on top of the results
@@ -88,6 +94,7 @@ export function useDebouncedSearch(
           if (cancelled) {
             return;
           }
+          setResults([]);
           setFailed(true);
           setPending(false);
         });

@@ -8177,6 +8177,7 @@ export const de = {
   "filters.searchFailed": "Suche fehlgeschlagen",
   "filters.noRecordMatches": "Keine Firmen gefunden",
   "filters.changeRecord": "Ändern",
+  "filters.removeRecord": "{record} entfernen",
   "filters.loadingRecords": "Auswahl wird geladen…",
   "filters.pickValue": "Wert wählen",
   "filters.exportCsv": "Als CSV exportieren",

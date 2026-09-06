@@ -289,6 +289,70 @@ describe("an id clause names a record, not a uuid", () => {
     expect(await screen.findByText("No companies match")).toBeTruthy();
   });
 
+  it("names records one at a time for a list clause, and never as free text", async () => {
+    resetIDsForTest();
+    stubSeats();
+    const user = userEvent.setup();
+    render(
+      <Harness start={newGroup("and", [newLeaf("owner_id", "in", [])])} />,
+    );
+
+    // `in` used to win over the reference and hand back a token box, so every
+    // id field's LIST was free text — a uuid typed wrong there compiles,
+    // matches nothing, and reads as a settled "no rows" exactly as the single
+    // case did. The operator changes how many records are named, not whether
+    // they are chosen.
+    expect(screen.queryByRole("textbox", { name: "Values" })).toBeNull();
+
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: "Value" }),
+      "Ann Lee",
+    );
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: "Value" }),
+      "Bruno Sá",
+    );
+
+    expect(wire()).toEqual({
+      and: [{ field: "owner_id", op: "in", value: ["u-1", "u-2"] }],
+    });
+
+    // And a record already named can be dropped, or a list is a one-way door.
+    await user.click(screen.getByRole("button", { name: "Remove Ann Lee" }));
+    expect(wire()).toEqual({
+      and: [{ field: "owner_id", op: "in", value: ["u-2"] }],
+    });
+  });
+
+  it("searches for each company a list clause names", async () => {
+    resetIDsForTest();
+    stubOrganizations();
+    const user = userEvent.setup();
+    render(
+      <Harness
+        start={newGroup("and", [newLeaf("organization_id", "in", [])])}
+      />,
+    );
+
+    // The unbounded target takes the same rule through its own control: the
+    // search box stays open under what the clause already holds, because the
+    // next pick is the point.
+    await user.type(
+      await screen.findByRole("textbox", { name: "Search companies" }),
+      "north",
+    );
+    await user.click(await screen.findByRole("button", { name: "Northgate" }));
+
+    expect(wire()).toEqual({
+      and: [{ field: "organization_id", op: "in", value: ["org-1"] }],
+    });
+    expect(
+      screen.getByRole("textbox", { name: "Search companies" }),
+    ).toBeTruthy();
+  });
+
   it("asks nothing of a reader when the operator already answered", async () => {
     resetIDsForTest();
     stubSeats();

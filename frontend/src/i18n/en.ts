@@ -8305,6 +8305,7 @@ export const en = {
   "filters.searchFailed": "Could not search",
   "filters.noRecordMatches": "No companies match",
   "filters.changeRecord": "Change",
+  "filters.removeRecord": "Remove {record}",
   "filters.loadingRecords": "Loading choices…",
   "filters.pickValue": "Choose a value",
   "filters.exportCsv": "Export CSV",

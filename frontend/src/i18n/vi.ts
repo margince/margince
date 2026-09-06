@@ -8070,6 +8070,7 @@ export const vi = {
   "filters.searchFailed": "Không thể tìm kiếm",
   "filters.noRecordMatches": "Không có công ty nào khớp",
   "filters.changeRecord": "Thay đổi",
+  "filters.removeRecord": "Xóa {record}",
   "filters.loadingRecords": "\u0110ang t\u1ea3i l\u1ef1a ch\u1ecdn\u2026",
   "filters.pickValue": "Ch\u1ecdn gi\u00e1 tr\u1ecb",
   "filters.exportCsv": "Xu\u1ea5t CSV",
