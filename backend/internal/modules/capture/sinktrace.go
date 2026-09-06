@@ -16,11 +16,13 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -85,7 +87,7 @@ func (s *Sink) traceInvisibleIncumbent(ctx context.Context, rec connector.Normal
 func (s *Sink) traceEntry(ctx context.Context, rec connector.NormalizedRecord,
 	stage pipelinetrace.Stage, outcome TraceOutcome, reason string,
 ) TraceEntry {
-	_, owner := capturePrincipal(ctx)
+	actor, owner := capturePrincipal(ctx)
 	// Read from the KEY, because the question is about the key: does SourceID
 	// embed a person's provider account id, and so have to be hashed before the
 	// trace stores it.
@@ -98,7 +100,7 @@ func (s *Sink) traceEntry(ctx context.Context, rec connector.NormalizedRecord,
 	return TraceEntry{
 		Stage:                stage,
 		UserID:               owner,
-		Connector:            traceConnector(rec),
+		Connector:            traceConnector(rec, actor),
 		SourceSystem:         rec.NaturalKey.SourceSystem,
 		SourceID:             rec.NaturalKey.SourceID,
 		Outcome:              outcome,
@@ -120,8 +122,15 @@ func (s *Sink) traceEntry(ctx context.Context, rec connector.NormalizedRecord,
 //
 // A channel record answers with its provider (`telegram`), the same spelling
 // activity.channel_provider carries and the key /v1/channel-providers resolves
-// to a label. Everything else answers with the natural key's SOURCE SYSTEM
-// (`gmail`, `imap`, `ext:<unit>:<system>`).
+// to a label. A MAIL record answers with the connector that actually read it,
+// taken from the authenticated principal (`connector:gmail` → `gmail`): its
+// natural key cannot answer any more, because every mail adapter now shares one
+// identity and the key would label every mailbox `email`, collapsing a list
+// that exists to tell them apart. The principal is also the honest source — it
+// is what the registry authenticated rather than what a record claimed.
+// Everything else answers with the natural key's SOURCE SYSTEM
+// (`ext:<unit>:<system>`, `offline_demo`), which for those still names the
+// transport.
 //
 // The provider is read from the RECORD's own fields — the value that becomes
 // activity.channel_provider — and not from the counterparty's channel identity.
@@ -141,9 +150,12 @@ func (s *Sink) traceEntry(ctx context.Context, rec connector.NormalizedRecord,
 // or compiled into the composition root, so it is a property of the running
 // binary, and two deploys' traces would disagree about the same transport with
 // no row having changed.
-func traceConnector(rec connector.NormalizedRecord) string {
+func traceConnector(rec connector.NormalizedRecord, actor principal.Principal) string {
 	if fields, ok := rec.Fields.(ActivityFields); ok && fields.ChannelProvider != "" {
 		return fields.ChannelProvider
+	}
+	if rec.NaturalKey.SourceSystem == connector.EmailSourceSystem {
+		return strings.TrimPrefix(actor.ID, "connector:")
 	}
 	return rec.NaturalKey.SourceSystem
 }

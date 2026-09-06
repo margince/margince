@@ -2748,6 +2748,25 @@ export const en = {
   "plan.state.missed": "Missed",
   "plan.state.dropped": "Dropped",
   "plan.help.label": "What do you need from your lead?",
+  // What the week is up against, beside what it is for. The two prose fields
+  // draw three states, not two: unwritten, "nothing to name", and text. A lead
+  // who cannot tell the first two apart reads an unconsidered week as a safe one.
+  "plan.contract.title": "What this week is up against",
+  "plan.contract.risks": "What could get in the way",
+  "plan.contract.risksHint": "What you expect to go wrong, in your own words",
+  "plan.contract.capacityNote": "Room you have",
+  "plan.contract.capacityNoteHint":
+    "Anything the calendar does not know — leave, travel, a launch",
+  "plan.contract.unwritten": "Not written yet",
+  "plan.contract.nothingToName": "Nothing to name",
+  "plan.contract.edit": "Edit",
+  "plan.contract.save": "Save",
+  "plan.contract.cancel": "Cancel",
+  "plan.contract.capacityLine":
+    "Next week already holds {meetings} meetings and {tasks} tasks.",
+  "plan.contract.crowded": "Next week is already full",
+  "plan.contract.crowdedBody":
+    "{committed} things are already booked and you have written {commitments} commitments. Something will have to give.",
   "plan.help.ask": "Ask for help",
   "plan.help.edit": "Edit request",
   "plan.help.send": "Send",
@@ -4028,7 +4047,7 @@ export const en = {
   "settings.jobs": "Background jobs",
   "settings.jobsSub": "What the queue is holding, and whose work failed.",
   "jobs.adminOnly":
-    "Only an admin can see background-job health. It reports work across the whole installation, so it is not shown more widely.",
+    "Seeing background-job health needs permission your seat does not hold. It reports work across the whole installation, so it is not open to everyone.",
   "jobs.empty":
     "Nothing in the background queue — no work waiting, running, retrying or dead.",
   "jobs.workspaceKinds": "This organization",
@@ -4081,7 +4100,7 @@ export const en = {
   "audit.noHumanAuthority": "No human authority recorded",
   "settings.auditSub": "every action, attributed — human, agent, or connector",
   "settings.auditAdminOnly":
-    "Only an admin can read the full trail. It records every actor and every record they touched, so it is not shown more widely.",
+    "Reading the full trail needs permission your seat does not hold. It records every actor and every record they touched, so it is not open to everyone.",
   "settings.auditFilters": "Filters",
   "settings.auditEntries": "Audit log",
   "settings.auditTrailLabel": "Recorded actions",
@@ -4101,7 +4120,7 @@ export const en = {
   "privacy.addPurpose": "Add purpose",
   "privacy.purposesRegistry": "Registered purposes",
   "privacy.purposesReadOnly":
-    "Read-only view — only an admin or ops can add a purpose.",
+    "Read-only view — adding a purpose needs permission your seat does not hold.",
   "privacy.purposeKey": "Key",
   "privacy.purposeLabel": "Label",
   "privacy.purposeDoi": "Requires double opt-in",
@@ -4110,7 +4129,7 @@ export const en = {
     "A purpose cannot be renamed or removed once created — the catalogue is append-only. Choose the key carefully.",
   "privacy.facetAll": "All",
   "privacy.inboxAdminOnly":
-    "Only an admin can see subject requests. They name the people who asked, so the queue is not shown more widely.",
+    "Seeing subject requests needs permission your seat does not hold. They name the people who asked, so the queue is not open to everyone.",
   "privacy.overdue": "Overdue",
   "privacy.closed":
     "Closed — a closed request never reopens. A new concern is a new request.",
@@ -6153,6 +6172,16 @@ export const en = {
   // are: the mailbox and the network a PERSON connected, against the outside
   // systems the INSTALLATION is wired to. One row carried both before, which
   // is why it had to be ungated to keep a rep's own mailbox reachable.
+  "settings.home": "Settings home",
+  "settings.home.yours": "Your settings",
+  "settings.home.access": "Your access",
+  "settings.boundary.deniedTitle": "This settings page is not yours to open",
+  "settings.boundary.deniedBody":
+    "The address in the bar is a real page \u2014 your seat does not reach it. It is still there to copy if you need to ask somebody who does.",
+  "settings.boundary.unknownTitle": "No settings page has this address",
+  "settings.boundary.unknownBody":
+    "The link may be from an older version, or mistyped. Settings home lists every page your seat can open.",
+  "settings.boundary.back": "Settings home",
   "settings.tab.company": "Company profile",
   "settings.tab.authentication": "Sign-in & apps",
   "settings.tab.members": "Members",
@@ -6395,6 +6424,8 @@ export const en = {
   "license.refused.title": "This installation's license was refused",
   "license.refused.body":
     "The token in the deployment was presented and rejected. Everything keeps working, uncapped, until it is replaced — check the token and the installation's clock.",
+  "license.seats.capacityOnly":
+    "How many full seats this installation is using. What it is entitled to is not yours to see.",
   "license.seats.title": "Seats",
   "license.seats.used": "Seats in use",
   "license.seats.granted": "Seats granted",
@@ -6620,7 +6651,8 @@ export const en = {
   "extAccess.title": "Extensions & access",
   "extAccess.sub":
     "What each composed extension unit brought into this installation, and which role may use it. Admin-only.",
-  "extAccess.adminOnly": "Extension access is available to admins only.",
+  "extAccess.adminOnly":
+    "This page needs permission to read the installation's extensions and its roles. Your seat holds one or neither.",
   "extAccess.readOnly":
     "Your seat reads this page. Changing a grant needs a full seat.",
   "extAccess.empty": "No extension units are composed into this installation.",
@@ -8702,6 +8734,20 @@ export const en = {
   "worklist.verb.complete": "Open",
   "worklist.verb.snooze": "Open",
   "worklist.verb.acknowledge": "Got it",
+  "worklist.verb.meetingHeld": "It happened",
+  "worklist.verb.meetingNoShow": "They didn't come",
+  "worklist.verb.meetingCanceled": "It was called off",
+  "worklist.verb.meetingOutcomeRecorded": "Recorded how the meeting went.",
+  "worklist.verb.meetingOutcomeFailed": "That could not be recorded.",
+  "worklist.verb.retry": "Run it again",
+  "worklist.verb.retryStarted": "Running the rule again.",
+  "worklist.verb.retryFailed": "That could not be run again.",
+  "worklist.verb.retryRefusedNotFailed":
+    "Nothing to run again \u2014 this firing was stopped on purpose, not by an error.",
+  "worklist.verb.retryRefusedRepeats":
+    "This rule has not been cleared to run twice, so running it again could repeat what it already did.",
+  "worklist.verb.retryRefusedEventGone":
+    "The event behind this firing is gone, so it cannot be repeated. A scheduled rule checks again on its own.",
   "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
   "worklist.verb.completeFailed": "That task could not be completed.",
   "worklist.verb.pin": "Pin",

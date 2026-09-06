@@ -351,7 +351,7 @@ func TestAForgedThreadKeyCannotReplyIntoAnotherMediumsConversation(t *testing.T)
 	// a lie, so what the assertion below reads is the match, not a refusal.
 	mail := connector.NormalizedRecord{
 		EntityType: datasource.EntityActivity,
-		NaturalKey: connector.NaturalKey{SourceSystem: "gmail", SourceID: "forged-1@stranger.example"},
+		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: "forged-1@stranger.example"},
 		Fields: capture.ActivityFields{
 			Kind: "email", Subject: "Re: your conversation", Body: "let us talk",
 			Direction: connector.DirectionInbound, OccurredAt: time.Now().UTC(),

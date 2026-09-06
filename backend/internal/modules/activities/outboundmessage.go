@@ -49,9 +49,11 @@ type outboundMessage struct {
 	to              []string
 	links           []ActivityLinkInput
 	// provider is the mailbox this send goes out through, resolved once per
-	// send. It is used twice below — the activity's source_system and the
-	// delivery's provider — and the two must be the same value or the captured
-	// echo keys onto nothing and lands as a second timeline row.
+	// send. It names the DELIVERY only: the timeline row's natural key is the
+	// transport-independent mail identity (connector.EmailSourceSystem), so the
+	// provider's echo collapses onto this row whichever connector reads it back
+	// — including a colleague's IMAP when we sent over Gmail, which used to be
+	// a second timeline row nothing could fold.
 	provider string
 }
 
@@ -63,7 +65,10 @@ const htmlAlternativeNote = "This message was also sent as HTML."
 
 // activity is the timeline row the send commits.
 func (m outboundMessage) activity(chain threading) LogActivityInput {
-	direction, sourceSystem := "outbound", m.provider
+	// The mail identity, not the sending provider: this row and every captured
+	// copy of the same message must land on ONE key or the echo forks the
+	// timeline (connector.EmailSourceSystem says why).
+	direction, sourceSystem := "outbound", connector.EmailSourceSystem
 	recorded := m.recordedBody
 	if m.htmlBody != "" {
 		// The timeline keeps the PLAIN alternative, and says so when a markup

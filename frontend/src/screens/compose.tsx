@@ -3508,6 +3508,7 @@ export function ChannelReplyAction({
   entityId,
   personId,
   contentWithheld,
+  onSent,
 }: Readonly<{
   activityId: string;
   kind: Activity["kind"];
@@ -3515,6 +3516,12 @@ export function ChannelReplyAction({
   entityType: RelinkKind;
   entityId: string;
   personId?: string;
+  // Told when the message actually went, for a caller whose own view the send
+  // changes. ComposeModal invalidates the RECORD timelines it knows about; a
+  // surface listing the unanswered — the worklist's waiting lane — is not one
+  // of them, so without this its row keeps saying nobody has replied and keeps
+  // offering to reply again.
+  onSent?: () => void;
   // The row's content is not this reader's to see. The verb still works —
   // writing to the contact is not reading their mail — but it is not a REPLY,
   // and calling it one claims access to the message being answered.
@@ -3562,6 +3569,7 @@ export function ChannelReplyAction({
           kind={contentWithheld ? "email" : kind}
           open={reply}
           onClose={() => setReply(false)}
+          onSent={onSent}
         />
       )}
     </>

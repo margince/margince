@@ -164,8 +164,15 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// draft/stored (object, date_field) pair against the workspace's own
 		// live custom-field catalog before ever building SQL around it — the
 		// same edge dealsH wires above.
-		automationHandlers: automation.NewHandlers(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)),
-		voiceHandlers:      ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)),
+		// The retry engine is the SAME registry the worker dispatches off
+		// (NewWorkflowEngine), built here because retrying is an HTTP call and
+		// the API server holds no engine otherwise. It carries no background
+		// loop — nothing here starts dispatching; the handler drives one run
+		// through it on demand, exactly as the time scan drives one on a tick.
+		automationHandlers: automation.NewHandlers(InstallationDB(pool)).
+			WithFieldCatalog(customfields.NewService(pool, nil)).
+			WithRetryEngine(NewWorkflowEngine(InstallationDB(pool))),
+		voiceHandlers: ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)),
 		// The names seam is the WEB surface's: a person reading "explain this
 		// number" meets the deals by name, while the MCP provider leaves it
 		// unwired because a tool answers in ids.

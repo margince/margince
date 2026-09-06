@@ -127,7 +127,7 @@ func TestCaptureSkipsAnActivityReplayWhoseIncumbentLeftTheGrantingHumansScope(t 
 
 	fake := &scopeFake{records: []connector.NormalizedRecord{{
 		EntityType: datasource.EntityActivity,
-		NaturalKey: connector.NaturalKey{SourceSystem: "graph", SourceID: "msg-9"},
+		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: "msg-9"},
 		Fields:     capturemod.ActivityFields{Kind: "email", Subject: "Quote", OccurredAt: fixedCaptureTime, Direction: "inbound"},
 		Source:     "graph", CapturedBy: "connector:graph",
 	}}}
@@ -145,7 +145,7 @@ func TestCaptureSkipsAnActivityReplayWhoseIncumbentLeftTheGrantingHumansScope(t 
 	// which takes the activity itself out of their scope (the link walk).
 	var activityID ids.UUID
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT id FROM activity WHERE source_system = 'graph' AND source_id = 'msg-9'`).Scan(&activityID); err != nil {
+		`SELECT id FROM activity WHERE source_system = 'email' AND source_id = 'msg-9'`).Scan(&activityID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.Owner.Exec(context.Background(), `
@@ -161,7 +161,7 @@ func TestCaptureSkipsAnActivityReplayWhoseIncumbentLeftTheGrantingHumansScope(t 
 	if strings.Contains(err.Error(), activityID.String()) {
 		t.Errorf("the skip message discloses the invisible incumbent's id: %q", err)
 	}
-	if n := countRows(t, e, `SELECT count(*) FROM activity WHERE source_system = 'graph'`); n != 1 {
+	if n := countRows(t, e, `SELECT count(*) FROM activity WHERE source_system = 'email'`); n != 1 {
 		t.Errorf("the refused replay left %d activity rows, want the single original", n)
 	}
 }
