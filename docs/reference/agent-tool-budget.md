@@ -16,8 +16,8 @@ exists, and what it displaces is the observations the run is reasoning over.
 Each agent declares its tools in [`backend/api/ai-tasks.yaml`](../../backend/api/ai-tasks.yaml)
 under `agent_loop`'s `agents:`. Read the numbers below **before** adding one.
 
-The window is 24576 tokens. An agent's listing may take 17408 of them (17/24). The whole
-served catalog is held to 21504 — a floor for the certification lane, not a budget any
+The window is 32768 tokens. An agent's listing may take 23210 of them (17/24). The whole
+served catalog is held to 28672 — a floor for the certification lane, not a budget any
 feature is expected to argue with.
 
 Before any tool is listed the frame itself costs **353 tokens** — the output contract,
@@ -30,15 +30,15 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 1634 | 6% | 15774 | 6 | 5 |
-| `overnight_at_risk_sweep` | 7 | 2467 | 10% | 14941 | 15 | 8 |
-| _whole served catalog, for scale_ | 73 | 21497 | 87% | — | — | — |
+| `morning_brief` | 5 | 1634 | 4% | 21576 | 6 | 5 |
+| `overnight_at_risk_sweep` | 7 | 2467 | 7% | 20743 | 15 | 8 |
+| _whole served catalog, for scale_ | 73 | 21519 | 65% | — | — | — |
 
 ### `morning_brief`
 
 > Prepare the acting person's existing Morning Brief. First call read_brief. Its items are the queue already ranked for this person; do not assemble a workspace-wide list. Read the evidence for those items, then call annotate_brief with one concise narrative and grounded findings: why each item matters, what changed and the next move. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.
 
-Attaches 5 tools for 1634 tokens, leaving 15774 of its budget and 22942 tokens of the
+Attaches 5 tools for 1634 tokens, leaving 21576 of its budget and 31134 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -61,7 +61,7 @@ cannot call, so a run may spend a step discovering the refusal:
 
 > Sweep this workspace's open deals for risk: find deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. Log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.
 
-Attaches 7 tools for 2467 tokens, leaving 14941 of its budget and 22109 tokens of the
+Attaches 7 tools for 2467 tokens, leaving 20743 of its budget and 30301 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -138,7 +138,7 @@ a term in an addition.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_report` | 917 | 3 scenarios |
+| `run_report` | 939 | 3 scenarios |
 | `preview_import` | 677 | — |
 | `send_account_email` | 655 | — |
 | `log_activity` | 635 | 1 scenario |

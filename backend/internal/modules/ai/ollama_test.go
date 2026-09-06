@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"math"
@@ -431,7 +432,8 @@ func TestOllamaSaysWhenAnEmbedInputOverrunsTheWindowAndIsSilentWhenItDoesNot(t *
 		return logged.String()
 	}
 
-	// 4 MiB is ~1M tokens against a 32k ceiling: the vector covers about 3% of it.
+	// 4 MiB is ~1M tokens against the adapter's ceiling: the vector covers a few
+	// percent of it.
 	line := embed(t, strings.Repeat("a", 4<<20))
 	if !strings.Contains(line, "computed from the head of the text") {
 		t.Errorf("a truncated embedding was logged as %q, want the truncation named", line)
@@ -440,7 +442,15 @@ func TestOllamaSaysWhenAnEmbedInputOverrunsTheWindowAndIsSilentWhenItDoesNot(t *
 	// slightly overruns from one embedded almost entirely from its opening
 	// sentence. Without the estimate beside it the operator reading this line
 	// knows that something was dropped and nothing about how much.
-	for _, want := range []string{"model=gemma3", "estimated_tokens=1048576", "window_tokens=32768"} {
+	//
+	// The expected window is FORMATTED FROM the constant rather than written
+	// out. A literal is a second copy of the adapter's cap, and it fails for the
+	// one edit that is not a defect — moving the cap itself.
+	for _, want := range []string{
+		"model=gemma3",
+		"estimated_tokens=1048576",
+		fmt.Sprintf("window_tokens=%d", ollamaMaxContext),
+	} {
 		if !strings.Contains(line, want) {
 			t.Errorf("the truncation warning does not carry %s: %q", want, line)
 		}
