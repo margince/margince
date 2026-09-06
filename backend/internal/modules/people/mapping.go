@@ -146,6 +146,20 @@ func personPhoneInputs(phones *[]crmcontracts.PersonPhoneInput) []PersonPhoneInp
 // has one; if the patch ever gains the field, read it instead of this.
 const manualSource = "manual"
 
+// personVisibilityArg renders the wire's visibility enum as the store's
+// string, or nothing where the caller did not ask.
+//
+// A typed enum on the wire and a text column underneath: the contract's own
+// values are the CHECK constraint's, so there is nothing to translate and a
+// mapping table here would be a second place for them to disagree.
+func personVisibilityArg(v *crmcontracts.UpdatePersonRequestVisibility) *string {
+	if v == nil {
+		return nil
+	}
+	s := string(*v)
+	return &s
+}
+
 func personUpdateInput(req crmcontracts.UpdatePersonRequest, ifVersion *int64) UpdatePersonInput {
 	in := UpdatePersonInput{
 		FullName:     req.FullName,
@@ -153,6 +167,7 @@ func personUpdateInput(req crmcontracts.UpdatePersonRequest, ifVersion *int64) U
 		LastName:     req.LastName,
 		Title:        req.Title,
 		OwnerID:      idArg[ids.UserKind](req.OwnerId),
+		Visibility:   personVisibilityArg(req.Visibility),
 		IfVersion:    ifVersion,
 		CustomFields: req.AdditionalProperties,
 	}

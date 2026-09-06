@@ -9511,9 +9511,11 @@ export interface paths {
          *     history rather than a name nobody has ever spoken to. Individual messages keep their own
          *     audience: publishing the CONTACT is not publishing the correspondence.
          *
-         *     One direction only. A contact the organization can see is not narrowed back by this door or
-         *     any other, because a colleague may already have written to them on the strength of seeing
-         *     them.
+         *     This door only widens, and it is no longer the only one: `visibility` on
+         *     `PATCH /people/{id}` moves a contact both ways for anybody the write gate admits. This
+         *     endpoint stays because it is the OWNER's verb — it answers 404 rather than 403 for a
+         *     contact that is not theirs, so capture privacy keeps hiding the row's existence, and it
+         *     carries the contact's mail and meetings across with it.
          */
         post: operations["publishCapturedPerson"];
         delete?: never;
@@ -17482,6 +17484,31 @@ export interface components {
             title?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
+            /**
+             * @description Who may see this contact: `workspace` for everyone in the organization,
+             *     `owner` for the person named by `owner_id` alone.
+             *
+             *     An ORDINARY field, writable in BOTH directions by anybody the write gate
+             *     admits. It used to move one way only, through `POST /people/{id}/publish`,
+             *     on the reasoning that a colleague may already have acted on seeing the
+             *     contact. That reasoning assumed a human made the disclosure. The sender
+             *     classifier publishes a contact it judges a real counterparty without
+             *     anybody approving it, so the common case was a machine making a decision
+             *     no human could undo — the row's own owner included.
+             *
+             *     Narrowing a contact does not retract what was already done with it. Mail,
+             *     meetings and deals filed against it keep their own audiences, and a
+             *     colleague mid-conversation keeps their thread; what changes is who finds
+             *     the contact from here on.
+             *
+             *     A contact narrowed to `owner` stays with the owner it already names;
+             *     narrowing does not reassign it to whoever pressed the button. A row that
+             *     names nobody is not reachable through this field at all — an unowned
+             *     record is nobody's to change until somebody claims it, which the write
+             *     gate already enforces for every field on this endpoint.
+             * @enum {string}
+             */
+            visibility?: "workspace" | "owner";
             social?: {
                 [key: string]: unknown;
             };

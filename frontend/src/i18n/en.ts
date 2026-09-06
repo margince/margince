@@ -3328,11 +3328,13 @@ export const en = {
 
   "personAccess.title": "Who can see this person",
   "personAccess.privateToYou":
-    "Private to you. Your mailbox created this person, and nobody else in the organization can see them — not your team, and not an admin.",
+    "Private to its owner. Nobody else in the organization can see this person — not the team, and not an admin.",
   "personAccess.organization":
     "Everyone in the organization can see this person.",
   "personAccess.share": "Share with the organization",
   "personAccess.published": "The organization can see this person now.",
+  "personAccess.makePrivate": "Make private",
+  "personAccess.madePrivate": "Only the owner can see this person now.",
   "compose.reply": "Reply",
   "compose.writeEmail": "Write email",
   "compose.relink": "Relink",

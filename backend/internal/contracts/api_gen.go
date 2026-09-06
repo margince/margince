@@ -12613,6 +12613,24 @@ func (e UpdateOrganizationRequestSizeBand) Valid() bool {
 	}
 }
 
+// Defines values for UpdatePersonRequestVisibility.
+const (
+	UpdatePersonRequestVisibilityOwner     UpdatePersonRequestVisibility = "owner"
+	UpdatePersonRequestVisibilityWorkspace UpdatePersonRequestVisibility = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the UpdatePersonRequestVisibility enum.
+func (e UpdatePersonRequestVisibility) Valid() bool {
+	switch e {
+	case UpdatePersonRequestVisibilityOwner:
+		return true
+	case UpdatePersonRequestVisibilityWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateSignalRequestSeverity.
 const (
 	UpdateSignalRequestSeverityInfo   UpdateSignalRequestSeverity = "info"
@@ -16338,34 +16356,34 @@ func (e GetWorklistParamsScope) Valid() bool {
 
 // Defines values for GetWorklistParamsFilter.
 const (
-	All             GetWorklistParamsFilter = "all"
-	CustomerWaiting GetWorklistParamsFilter = "customer_waiting"
-	DealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
-	Decisions       GetWorklistParamsFilter = "decisions"
-	Leads           GetWorklistParamsFilter = "leads"
-	Meetings        GetWorklistParamsFilter = "meetings"
-	System          GetWorklistParamsFilter = "system"
-	Tasks           GetWorklistParamsFilter = "tasks"
+	GetWorklistParamsFilterAll             GetWorklistParamsFilter = "all"
+	GetWorklistParamsFilterCustomerWaiting GetWorklistParamsFilter = "customer_waiting"
+	GetWorklistParamsFilterDealsAtRisk     GetWorklistParamsFilter = "deals_at_risk"
+	GetWorklistParamsFilterDecisions       GetWorklistParamsFilter = "decisions"
+	GetWorklistParamsFilterLeads           GetWorklistParamsFilter = "leads"
+	GetWorklistParamsFilterMeetings        GetWorklistParamsFilter = "meetings"
+	GetWorklistParamsFilterSystem          GetWorklistParamsFilter = "system"
+	GetWorklistParamsFilterTasks           GetWorklistParamsFilter = "tasks"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
 func (e GetWorklistParamsFilter) Valid() bool {
 	switch e {
-	case All:
+	case GetWorklistParamsFilterAll:
 		return true
-	case CustomerWaiting:
+	case GetWorklistParamsFilterCustomerWaiting:
 		return true
-	case DealsAtRisk:
+	case GetWorklistParamsFilterDealsAtRisk:
 		return true
-	case Decisions:
+	case GetWorklistParamsFilterDecisions:
 		return true
-	case Leads:
+	case GetWorklistParamsFilterLeads:
 		return true
-	case Meetings:
+	case GetWorklistParamsFilterMeetings:
 		return true
-	case System:
+	case GetWorklistParamsFilterSystem:
 		return true
-	case Tasks:
+	case GetWorklistParamsFilterTasks:
 		return true
 	default:
 		return false
@@ -33743,11 +33761,57 @@ type UpdatePersonRequest struct {
 	// `Person360.dead_addresses` already names which address bounced; until now the
 	// contract's own remedy for that was to visit the person page, because the write
 	// existed on create and nowhere else.
-	Phones               *[]PersonPhoneInput     `json:"phones,omitempty"`
-	Social               *map[string]interface{} `json:"social,omitempty"`
-	Title                *string                 `json:"title,omitempty"`
-	AdditionalProperties map[string]interface{}  `json:"-"`
+	Phones *[]PersonPhoneInput     `json:"phones,omitempty"`
+	Social *map[string]interface{} `json:"social,omitempty"`
+	Title  *string                 `json:"title,omitempty"`
+
+	// Visibility Who may see this contact: `workspace` for everyone in the organization,
+	// `owner` for the person named by `owner_id` alone.
+	//
+	// An ORDINARY field, writable in BOTH directions by anybody the write gate
+	// admits. It used to move one way only, through `POST /people/{id}/publish`,
+	// on the reasoning that a colleague may already have acted on seeing the
+	// contact. That reasoning assumed a human made the disclosure. The sender
+	// classifier publishes a contact it judges a real counterparty without
+	// anybody approving it, so the common case was a machine making a decision
+	// no human could undo — the row's own owner included.
+	//
+	// Narrowing a contact does not retract what was already done with it. Mail,
+	// meetings and deals filed against it keep their own audiences, and a
+	// colleague mid-conversation keeps their thread; what changes is who finds
+	// the contact from here on.
+	//
+	// A contact narrowed to `owner` stays with the owner it already names;
+	// narrowing does not reassign it to whoever pressed the button. A row that
+	// names nobody is not reachable through this field at all — an unowned
+	// record is nobody's to change until somebody claims it, which the write
+	// gate already enforces for every field on this endpoint.
+	Visibility           *UpdatePersonRequestVisibility `json:"visibility,omitempty"`
+	AdditionalProperties map[string]interface{}         `json:"-"`
 }
+
+// UpdatePersonRequestVisibility Who may see this contact: `workspace` for everyone in the organization,
+// `owner` for the person named by `owner_id` alone.
+//
+// An ORDINARY field, writable in BOTH directions by anybody the write gate
+// admits. It used to move one way only, through `POST /people/{id}/publish`,
+// on the reasoning that a colleague may already have acted on seeing the
+// contact. That reasoning assumed a human made the disclosure. The sender
+// classifier publishes a contact it judges a real counterparty without
+// anybody approving it, so the common case was a machine making a decision
+// no human could undo — the row's own owner included.
+//
+// Narrowing a contact does not retract what was already done with it. Mail,
+// meetings and deals filed against it keep their own audiences, and a
+// colleague mid-conversation keeps their thread; what changes is who finds
+// the contact from here on.
+//
+// A contact narrowed to `owner` stays with the owner it already names;
+// narrowing does not reassign it to whoever pressed the button. A row that
+// names nobody is not reachable through this field at all — an unowned
+// record is nobody's to change until somebody claims it, which the write
+// gate already enforces for every field on this endpoint.
+type UpdatePersonRequestVisibility string
 
 // UpdatePipelineRequest defines model for UpdatePipelineRequest.
 type UpdatePipelineRequest struct {
@@ -48812,6 +48876,14 @@ func (a *UpdatePersonRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "title")
 	}
 
+	if raw, found := object["visibility"]; found {
+		err = json.Unmarshal(raw, &a.Visibility)
+		if err != nil {
+			return fmt.Errorf("error reading 'visibility': %w", err)
+		}
+		delete(object, "visibility")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -48891,6 +48963,13 @@ func (a UpdatePersonRequest) MarshalJSON() ([]byte, error) {
 		object["title"], err = json.Marshal(a.Title)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'title': %w", err)
+		}
+	}
+
+	if a.Visibility != nil {
+		object["visibility"], err = json.Marshal(a.Visibility)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'visibility': %w", err)
 		}
 	}
 

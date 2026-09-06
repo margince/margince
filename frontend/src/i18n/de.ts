@@ -3251,6 +3251,8 @@ export const de = {
   "personAccess.organization": "Alle im Unternehmen sehen diese Person.",
   "personAccess.share": "Mit dem Unternehmen teilen",
   "personAccess.published": "Das Unternehmen sieht diese Person jetzt.",
+  "personAccess.makePrivate": "Privat setzen",
+  "personAccess.madePrivate": "Diese Person sieht jetzt nur noch ihr Besitzer.",
   "compose.reply": "Antworten",
   "compose.writeEmail": "E-Mail schreiben",
   "compose.relink": "Neu verknüpfen",

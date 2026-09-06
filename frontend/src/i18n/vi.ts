@@ -3214,6 +3214,8 @@ export const vi = {
     "Mọi người trong tổ chức đều xem được người này.",
   "personAccess.share": "Chia sẻ với tổ chức",
   "personAccess.published": "Tổ chức đã xem được người này.",
+  "personAccess.makePrivate": "Đặt ở chế độ riêng tư",
+  "personAccess.madePrivate": "Bây giờ chỉ chủ sở hữu xem được người này.",
   "compose.reply": "Trả lời",
   "compose.writeEmail": "Viết email",
   "compose.relink": "Liên kết lại",

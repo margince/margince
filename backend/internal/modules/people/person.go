@@ -250,8 +250,18 @@ type UpdatePersonInput struct {
 	LastName  *string
 	Title     *string
 	OwnerID   *ids.UserID
-	Social    map[string]any
-	Address   *crmcontracts.Address
+	// Visibility moves a contact between 'workspace' and 'owner', in either
+	// direction, for anybody the write gate admits.
+	//
+	// It was one-way until now — POST /people/{id}/publish only widened — on
+	// the reasoning that a colleague may already have acted on seeing the
+	// contact. That reasoning assumed a human made the disclosure, and the
+	// common case is not a human: the sender classifier publishes a contact it
+	// judges a real counterparty with nobody approving it, so a machine made a
+	// decision no human could undo, the row's own owner included.
+	Visibility *string
+	Social     map[string]any
+	Address    *crmcontracts.Address
 	// Emails replaces the person's live addresses when non-nil. nil is "not
 	// supplied" and leaves the stored rows standing, exactly as Social is —
 	// the distinction matters for an import whose file carried no email
@@ -316,6 +326,24 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 				return err
 			}
 		}
+		// A contact this patch has just published takes its history with it,
+		// the same way POST /people/{id}/publish does.
+		//
+		// Without this the two doors to one field disagree about what the field
+		// MEANS: the owner's verb carries the mail and meetings across, so a
+		// colleague opening the record finds the correspondence, while a patch
+		// setting the same column left them a contact nobody has ever spoken
+		// to. Same fact, two answers, decided by which door the caller used.
+		//
+		// Widening only. Narrowing does not run it — the cohort pass links and
+		// re-derives, which is how a record OPENS, and asking it to close one
+		// would be reading it backwards.
+		if current.Visibility != nil && *current.Visibility == visibilityOwner &&
+			in.Visibility != nil && *in.Visibility == visibilityWorkspace {
+			if _, err := s.PromotePersonCohortTx(ctx, tx, id); err != nil {
+				return err
+			}
+		}
 		if in.Emails != nil || in.Phones != nil {
 			by, err := storekit.CapturedBy(ctx)
 			if err != nil {
@@ -375,6 +403,9 @@ func buildPersonPatch(current crmcontracts.Person, in UpdatePersonInput) (*store
 	}
 	if in.OwnerID != nil {
 		p.Set(ownerIDColumn, current.OwnerId, *in.OwnerID)
+	}
+	if in.Visibility != nil {
+		p.Set("visibility", current.Visibility, *in.Visibility)
 	}
 	if err := storekit.ApplyClears(p, in.Clear, clearablePersonColumns(current)); err != nil {
 		return nil, err
