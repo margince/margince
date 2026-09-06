@@ -254,6 +254,11 @@ Google's, so bookkeeping keyed on the id we *requested* loses the receipt: the e
 captured copy of our own sent mail folding onto the same activity instead of duplicating it), the reply
 join and the threading headers all key on a string the wire never carried.
 
+The sent row carries the one mail identity (`connector.EmailSourceSystem`) rather than the mailbox it
+left through, so an echo read back by a *different* connector than the one that sent — a Gmail send
+seen again over a colleague's IMAP — folds onto the send instead of landing beside it. The rewrite
+below is still needed: it is about the id changing, not about which adapter observed it.
+
 `Store.RecordSent` therefore does two things in **two transactions**, and which fact is in which is the
 safety property:
 

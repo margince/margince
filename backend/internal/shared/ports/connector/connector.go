@@ -275,6 +275,39 @@ type NaturalKey struct {
 	SourceIDNamesAPerson bool
 }
 
+// EmailSourceSystem is the natural-key SOURCE SYSTEM every transport that
+// carries an RFC822 message writes: one message is one activity whether it
+// arrived over Gmail, Graph or IMAP, and whether we sent it or received it.
+//
+// The transport is NOT lost, it just stops being part of the identity. It
+// stays in `source` (`gmail:<message-id>`) and in `captured_by`
+// (`connector:gmail:<user>`), which is where every provenance reader already
+// looks, and it stays in capture_connection.provider, which is what actually
+// names a mailbox. What the transport must never be again is part of the
+// answer to "is this the same message", because the same RFC822 message
+// reaching one workspace over two connectors is one message and used to be two
+// timeline rows.
+//
+// Identity here is exactly equality of the parsed Message-ID, which the mail
+// parser has already required — a message without one is skipped before any
+// write. Nothing is fuzzy-matched: two different Message-IDs stay two
+// activities however alike they read, and a sender who reuses or forges one
+// gets the collision this key has always had, now spanning the mail providers
+// rather than sitting inside each.
+//
+// A caller-facing create path may not write it (activities' create mapper
+// refuses it): only a connector that authenticated as one, or our own send,
+// may claim a mail identity.
+const EmailSourceSystem = "email"
+
+// ExtensionSourceSystemPrefix namespaces the natural key of every record an
+// extension unit lands, so a unit can never spell a core connector's identity
+// — including the shared mail one above. Spelled here because two callers need
+// the same string for opposite reasons: compose WRITES it onto a unit's
+// records, and capture's admit check READS it to tell a unit's mail apart from
+// a core connector's.
+const ExtensionSourceSystemPrefix = "ext:"
+
 type (
 	Cursor    []byte // opaque incremental-sync watermark
 	Auth      []byte // opaque persisted credential bundle

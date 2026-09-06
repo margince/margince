@@ -116,7 +116,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
   // on a blank screen. The wiring reads are granted so Integrations is genuinely
   // open — a fallback that happens because an entry is hidden proves nothing
   // about a route id that no longer exists.
-  it("falls back to Account when the route names a retired entry", async () => {
+  it("shows the boundary when the route names a retired entry", async () => {
     vi.stubGlobal(
       "fetch",
       overlaySettingsBackend({
@@ -126,18 +126,13 @@ describe("SettingsScreen connections and integrations tabs", () => {
       }),
     );
     renderSettings("audit");
-    await waitFor(() =>
-      expect(
-        screen
-          .getByRole("link", { name: "Account" })
-          .getAttribute("aria-current"),
-      ).toBe("page"),
-    );
-    // The Account tab's own content, not merely its nav entry: the fallback has
-    // to render a page, and the sidebar carries the viewer's email either way.
+    // A page this reader may not open says so, and the address stays as typed.
+    // It used to render Account and rewrite the URL to match, which left a
+    // reader with no way to tell a shared link had gone somewhere else.
     expect(
-      await screen.findByRole("heading", { name: "Your account" }),
+      await screen.findByText(/this settings page is not yours to open/i),
     ).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Your account" })).toBeNull();
     expect(
       screen.queryByRole("heading", { name: "HubSpot mirror" }),
     ).toBeNull();

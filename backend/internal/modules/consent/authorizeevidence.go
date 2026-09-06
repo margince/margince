@@ -14,7 +14,6 @@ package consent
 import (
 	"context"
 	"fmt"
-
 	"time"
 
 	"github.com/jackc/pgx/v5"

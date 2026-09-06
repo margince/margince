@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -244,11 +245,11 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 // admitRecord is what a record must be before ANY of it is written, and it
 // answers with the acting connector so the caller does not resolve it twice.
 //
-// All four refusals are about the record's own shape rather than its content:
-// who is presenting it, whether it can be written idempotently at all, whether
-// it claims a provenance other than the presenter's, and whether the
-// counterparty it names is one the resolver can act on. None needs a
-// transaction, so none should hold one.
+// Every refusal is about the record's own shape rather than its content: who
+// is presenting it, whether it can be written idempotently at all, whether it
+// claims a provenance other than the presenter's, whether a mail record uses
+// the one mail identity, and whether the counterparty it names is one the
+// resolver can act on. None needs a transaction, so none should hold one.
 func admitRecord(ctx context.Context, rec connector.NormalizedRecord) (principal.Principal, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalConnector {
@@ -262,6 +263,9 @@ func admitRecord(ctx context.Context, rec connector.NormalizedRecord) (principal
 		// cannot claim to be another one.
 		return principal.Principal{}, fmt.Errorf("capture: captured_by %q does not match the acting connector %q", rec.CapturedBy, actor.ID)
 	}
+	if err := admitMailIdentity(rec); err != nil {
+		return principal.Principal{}, err
+	}
 	if err := admitCounterpartyShape(counterpartyShapeOf(rec.Counterparty)); err != nil {
 		return principal.Principal{}, err
 	}
@@ -269,6 +273,37 @@ func admitRecord(ctx context.Context, rec connector.NormalizedRecord) (principal
 		return principal.Principal{}, err
 	}
 	return actor, nil
+}
+
+// admitMailIdentity holds the rule that makes one message one activity: a mail
+// record keys on connector.EmailSourceSystem, never on the name of the adapter
+// that happened to read it.
+//
+// It is checked HERE, at the sink door, rather than trusted to the mapper every
+// core adapter shares. Gmail, Graph and IMAP all reach the database through
+// this one function, so a future adapter that builds its own record — or an
+// edit that reverts the mapper — fails at the write instead of quietly filing a
+// second copy of mail somebody already has. A comment could not have caught
+// either; the tree carried a comment claiming cross-transport dedupe while the
+// code keyed on the transport.
+//
+// An extension unit is exempt because its namespace is assigned by the
+// extension ingress, not chosen by the unit: its records are deliberately
+// isolated from every core identity, which is a different guarantee rather than
+// a weaker one. A channel message (Telegram) is not mail and keys on its own
+// provider, so it is not asked.
+func admitMailIdentity(rec connector.NormalizedRecord) error {
+	fields, ok := rec.Fields.(ActivityFields)
+	if !ok || fields.Kind != kindEmail || fields.ChannelProvider != "" {
+		return nil
+	}
+	system := rec.NaturalKey.SourceSystem
+	if system == connector.EmailSourceSystem || strings.HasPrefix(system, connector.ExtensionSourceSystemPrefix) {
+		return nil
+	}
+	return fmt.Errorf(
+		"capture: an email keyed on %q cannot be idempotent across mailboxes — a mail record carries the shared mail identity, and its transport belongs on source and captured_by",
+		system)
 }
 
 // skipInvisibleIncumbent refuses a record whose incumbent row — the lead an

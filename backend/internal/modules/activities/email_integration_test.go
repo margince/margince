@@ -318,8 +318,9 @@ func TestSendEmailStampsTheUnbracketedMessageIDAsTheSourceKey(t *testing.T) {
 		t.Fatalf("SendEmail: %v", err)
 	}
 
-	if sent.SourceSystem == nil || *sent.SourceSystem != "gmail" {
-		t.Fatalf("activity source_system = %v, want gmail (the system whose echo must collapse onto this row)", sent.SourceSystem)
+	if sent.SourceSystem == nil || *sent.SourceSystem != connector.EmailSourceSystem {
+		t.Fatalf("activity source_system = %v, want %q — the echo must collapse onto this row whichever connector reads it back, not only the one that sent",
+			sent.SourceSystem, connector.EmailSourceSystem)
 	}
 	if sent.SourceId == nil {
 		t.Fatal("activity carries no source_id; the captured sent copy would create a second timeline row")

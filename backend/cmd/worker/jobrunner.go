@@ -272,6 +272,7 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		EnrichBrain:          modelPath.Enrich,
 		SignalExtractBrain:   modelPath.SignalExtract,
 		WeeklyReviewBrain:    modelPath.WeeklyReview,
+		WeeklyLearningsBrain: modelPath.WeeklyLearnings,
 		// The retrospective's outbound channel, resolved in main from the same
 		// deployment file cmd/api reads. Zero mails nothing.
 		WeeklyMail: weeklyMail,
