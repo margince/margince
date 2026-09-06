@@ -492,3 +492,66 @@ func TestAcceptingAQueueHandoffClaimsIt(t *testing.T) {
 		t.Errorf("assigned_to = %v, want the seat that accepted it (%v)", assigned, e.user)
 	}
 }
+
+// A handoff cannot be filed against a record the submitter cannot open.
+//
+// The three prospect references arrive from the request body, so each is a read
+// of what it names. The FK alone would accept an archived lead — the row is
+// still there and the constraint is still satisfied — which is exactly why this
+// archives one rather than inventing an id: a missing id proves only that the
+// database refused, and it would refuse with or without the probe.
+//
+// What it costs to skip: the outcome tells the submitter whether the id exists,
+// and the handoff they wrote points at a prospect they have no scope for, so
+// every later read of that lead answers about somebody they could not open.
+func TestAHandoffRefusesASubjectTheSubmitterCannotOpen(t *testing.T) {
+	e := setupPromoteConsent(t)
+	lead := e.seedLead(t, "handoff-out-of-scope@example.test")
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE lead SET archived_at = now() WHERE id = $1`, lead); err != nil {
+		t.Fatalf("archiving the lead: %v", err)
+	}
+
+	_, err := e.store.SubmitHandoff(e.ctx, NewSDRHandoff{LeadID: leadPtr(lead)})
+
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound — a lead the submitter cannot open must "+
+			"answer like one that is not there, or the refusal itself says the id exists", err)
+	}
+	var wrote int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM sdr_handoff WHERE lead_id = $1`, lead).Scan(&wrote); err != nil {
+		t.Fatalf("counting the handoffs: %v", err)
+	}
+	if wrote != 0 {
+		t.Errorf("%d handoff(s) landed on a lead out of scope, want 0", wrote)
+	}
+}
+
+// An acceptance cannot anchor to a deal the decider cannot open.
+//
+// deal_id is what the held-meeting conversion reads, so an ungated one lets
+// that conversion follow a link its own author had no scope for.
+func TestAnAcceptanceRefusesADealTheDeciderCannotOpen(t *testing.T) {
+	e := setupPromoteConsent(t)
+	lead := e.seedLead(t, "handoff-deal-out-of-scope@example.test")
+	deal := e.seedDealForHandoff(t)
+	id, err := e.store.SubmitHandoff(e.ctx, NewSDRHandoff{LeadID: leadPtr(lead)})
+	if err != nil {
+		t.Fatalf("submitting the handoff: %v", err)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE deal SET archived_at = now() WHERE id = $1`, deal); err != nil {
+		t.Fatalf("archiving the deal: %v", err)
+	}
+
+	err = e.store.DecideHandoff(e.ctx, id, HandoffDecision{Status: HandoffAccepted, DealID: &deal})
+
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound for a deal the decider cannot open", err)
+	}
+	if got := e.readHandoff(t, id); got.status != HandoffSubmitted {
+		t.Errorf("status = %q, want the handoff still submitted — the refused "+
+			"acceptance must not have decided it", got.status)
+	}
+}
