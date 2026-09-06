@@ -127,7 +127,7 @@ func TestCaptureSkipsAnActivityReplayWhoseIncumbentLeftTheGrantingHumansScope(t 
 
 	fake := &scopeFake{records: []connector.NormalizedRecord{{
 		EntityType: datasource.EntityActivity,
-		NaturalKey: connector.NaturalKey{SourceSystem: "graph", SourceID: "msg-9"},
+		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: "msg-9"},
 		Fields:     capturemod.ActivityFields{Kind: "email", Subject: "Quote", OccurredAt: fixedCaptureTime, Direction: "inbound"},
 		Source:     "graph", CapturedBy: "connector:graph",
 	}}}

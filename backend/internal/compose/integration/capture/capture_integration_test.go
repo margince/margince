@@ -79,7 +79,7 @@ func (m *mailFake) Sync(ctx context.Context, _ connector.Auth, cursor connector.
 	records := []connector.NormalizedRecord{
 		{
 			EntityType: datasource.EntityActivity,
-			NaturalKey: connector.NaturalKey{SourceSystem: "graph", SourceID: "msg-1"},
+			NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: "msg-1"},
 			Fields:     capturemod.ActivityFields{Kind: "email", Subject: "Quote request", Body: "please send pricing", OccurredAt: fixedCaptureTime, Direction: "inbound"},
 			Links:      []datasource.EntityRef{{Type: datasource.EntityPerson, ID: m.linkTo}},
 			Source:     "graph", CapturedBy: "connector:graph",
@@ -95,7 +95,7 @@ func (m *mailFake) Sync(ctx context.Context, _ connector.Auth, cursor connector.
 	if m.emitSecondMessage {
 		records = append(records, connector.NormalizedRecord{
 			EntityType: datasource.EntityActivity,
-			NaturalKey: connector.NaturalKey{SourceSystem: "graph", SourceID: "msg-2"},
+			NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: "msg-2"},
 			Fields:     capturemod.ActivityFields{Kind: "email", Subject: "Second thoughts", Body: "one more question", OccurredAt: fixedCaptureTime, Direction: "inbound"},
 			Links:      []datasource.EntityRef{{Type: datasource.EntityPerson, ID: m.linkTo}},
 			Source:     "graph", CapturedBy: "connector:graph",

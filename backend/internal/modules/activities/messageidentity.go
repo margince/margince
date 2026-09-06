@@ -34,6 +34,16 @@ import (
 // two permanent timeline rows. Every OTHER predicate below is unchanged and
 // still does the proving — sharing an identity namespace is not evidence that
 // two rows are the same transmission.
+//
+// One case the absorb still declines, stated because it is now reachable by a
+// second route: a colleague CC'd on our send, whose own mailbox captures the
+// message as INBOUND, can land the stamped identity first when the provider
+// rewrites it. The `direction = 'outbound'` predicate refuses that row, and it
+// must — `stamped` is parsed out of a remote provider's response, so widening
+// this to inbound would let a hostile answer nominate somebody's received mail
+// to be archived. The send degrades to "receipt recorded, one duplicate row"
+// with a comms_identity_reconcile_failed breadcrumb, which is the same outcome
+// this path already had whenever the collision was not provably our echo.
 const uqActivitySource = "uq_activity_source"
 
 // sourceIDImage names the audit image field both writes below move. Spelled

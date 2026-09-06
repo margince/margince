@@ -114,7 +114,7 @@ func mailRecord(sourceID string) connector.NormalizedRecord {
 	const counterparty = "her@example.com"
 	return connector.NormalizedRecord{
 		EntityType: "activity",
-		NaturalKey: connector.NaturalKey{SourceSystem: "imap", SourceID: sourceID},
+		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: sourceID},
 		Fields: capture.ActivityFields{
 			Kind:      "email",
 			Subject:   "The signed contract",

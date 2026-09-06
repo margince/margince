@@ -153,8 +153,15 @@ func replayParticipantsBatch(ctx context.Context, pool *pgxpool.Pool, limit int,
 // a participant of their own conversation.
 func selectReplayCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replayCandidate, error) {
 	// split_part on a `connector:<name>:<user>` stamp: field 2 is the connector,
-	// field 3 the seat. A stamp of any other shape yields '' for one of them and
-	// matches no connection, which is the no-owner verdict rather than a guess.
+	// field 3 the seat.
+	//
+	// The seat is missing on rows captured before provenance carried one, whose
+	// stamp is the bare `connector:gmail`. Those fall back to the rule this
+	// query used to apply to every row -- the provider's connection, when it has
+	// exactly one -- so an old row still replays, and still declines rather than
+	// guessing when two mailboxes share a provider. A stamp naming a seat never
+	// reaches the fallback, so a workspace with two Gmail mailboxes resolves both
+	// of its NEW rows, which the single-connection rule alone could not do.
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, a.kind, split_part(a.captured_by, ':', 2), rc.payload,
 		       coalesce(a.counterparty_outbound_attested, false),
@@ -162,7 +169,11 @@ func selectReplayCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replay
 		         SELECT c.account_label
 		           FROM capture_connection c
 		          WHERE c.provider = split_part(a.captured_by, ':', 2)
-		            AND c.user_id::text = split_part(a.captured_by, ':', 3)
+		            AND (
+		              c.user_id::text = split_part(a.captured_by, ':', 3)
+		              OR (split_part(a.captured_by, ':', 3) = '' AND NOT EXISTS (
+		                  SELECT 1 FROM capture_connection other
+		                   WHERE other.provider = c.provider AND other.id <> c.id)))
 		          LIMIT 1), '')
 		  FROM activity a
 		  JOIN raw_capture rc
