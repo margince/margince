@@ -59,19 +59,25 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 	setID := ids.NewV7()
 	ticket := commsauthz.TransmitTicket{DeliveryID: req.DeliveryID, Attempt: req.Attempt, DecisionSetID: setID}
 
-	// The legacy gate still rules while the engine is in observe mode, so its
-	// answer is taken first and carried onto every row. A disagreement is then
-	// readable in the record rather than only in a counter that dies with the
-	// process.
+	// The legacy gate's answer, recorded beside the engine's on every row so a
+	// disagreement is readable in the record rather than only in a counter that
+	// dies with the process.
+	//
+	// IT NO LONGER DECIDES, with one exception the rollback lever depends on:
+	// Effective consults it only when NO recipient's category is enforced,
+	// which the shipped posture never produces but an operator moving a
+	// category back to observe deliberately does. The dispatcher used to ask it
+	// a second time after the ticket already said yes; that call is gone.
 	legacyErr := g.RequireGrantedForRecipients(ctx, req.Recipients, req.PurposeKey)
 	switch {
 	case legacyErr == nil:
 	case errors.Is(legacyErr, apperrors.ErrConsentNotGranted):
 	default:
-		// NOT an answer. The question could not be asked, so nothing has been
-		// learned and nothing is recorded — the dispatcher retries.
-		return commsauthz.TransmitTicket{}, legacyErr
+		// NOT an answer. Whether that matters depends on the posture, and the
+		// posture is not known until the modes are read inside the transaction
+		// below — so the error is carried there rather than decided here.
 	}
+	legacyUnanswerable := legacyErr != nil && !errors.Is(legacyErr, apperrors.ErrConsentNotGranted)
 	legacyAllowed := legacyErr == nil
 
 	err := g.store.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -91,6 +97,21 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 		}
 		if err := g.recordDecisions(ctx, tx, req, setID, set); err != nil {
 			return err
+		}
+		// AN UNANSWERABLE LEGACY GATE IS ONLY FATAL WHERE ITS ANSWER IS USED.
+		//
+		// Effective consults legacyAllowed only when no recipient's category is
+		// enforced, which the shipped posture never produces. Where it IS
+		// consulted — an operator has moved a category back to observe — a gate
+		// that failed to answer must retry rather than refuse: a refusal parks
+		// with a reason a human can act on, and a failure to LEARN the answer
+		// is not one. Treating the outage as a refusal would destroy every
+		// in-flight delivery in the window instead of deferring them.
+		// An absolute denial needs no second opinion: it refuses in every mode,
+		// so an unanswerable legacy gate changes nothing and retrying would
+		// hold a message the subject already stopped.
+		if legacyUnanswerable && !set.HasAbsoluteDenial() && !set.HasEnforcedRecipient(modeFor) {
+			return legacyErr
 		}
 		ticket.Allowed = set.Effective(modeFor, legacyAllowed)
 		ticket.Reason = refusalReason(set, legacyAllowed)

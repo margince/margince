@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -141,14 +141,19 @@ func TestDispatchParksWhenTheProviderCannotSendAtAll(t *testing.T) {
 
 // THE load-bearing one: consent can be withdrawn between staging and transmit.
 //
-// The stub returns apperrors.ErrConsentNotGranted specifically, NOT a bare
-// error — because only that sentinel is an ANSWER. A generic error means the
-// check failed to run, which must retry, and the test below pins that apart.
+// Armed on the ENGINE's answer, because the engine is the authority the
+// dispatcher asks. The legacy gate used to be asked a second time here and is
+// not any more, so a case that armed only s.err would now pass while proving
+// nothing about what stops a send.
 func TestDispatchParksWhenConsentWasWithdrawnAfterStaging(t *testing.T) {
 	sender := &fakeSender{}
 	store := &fakeStore{delivery: liveDelivery()}
 	d := newTestDispatcher(store, fakeResolver{sender: sender, granted: []string{sendScope}},
-		&stubConsent{err: apperrors.ErrConsentNotGranted})
+		&stubConsent{armed: true, ticket: commsauthz.TransmitTicket{
+			DeliveryID: store.delivery.ID, Attempt: store.delivery.Attempts,
+			DecisionSetID: ids.NewV7(), Allowed: false,
+			Reason: "consent was withdrawn after staging",
+		}})
 
 	got, _ := dispatch(context.Background(), d, store.delivery.ID)
 	if got != OutcomeParked || sender.calls != 0 {
@@ -162,7 +167,7 @@ func TestDispatchRetriesWhenTheConsentCheckFailsTransiently(t *testing.T) {
 	sender := &fakeSender{}
 	store := &fakeStore{delivery: liveDelivery()}
 	d := newTestDispatcher(store, fakeResolver{sender: sender, granted: []string{sendScope}},
-		&stubConsent{err: errors.New("consent store timeout")})
+		&stubConsent{authzErr: errors.New("consent store timeout")})
 
 	got, _ := dispatch(context.Background(), d, store.delivery.ID)
 	if got != OutcomeRetry {
@@ -223,8 +228,8 @@ func TestDispatchAsksConsentAboutEveryAddresseeIncludingCc(t *testing.T) {
 	// The cc'd address is the assertion; the duplicate proves an addressee
 	// listed twice is asked about once, the way a mail server reads it.
 	want := []string{"buyer@example.com", "second@example.com", "cc@example.com"}
-	if !slices.Equal(consent.asked, want) {
-		t.Errorf("consent was asked about %v, want every addressee %v", consent.asked, want)
+	if !slices.Equal(consent.authzAsked, want) {
+		t.Errorf("consent was asked about %v, want every addressee %v", consent.authzAsked, want)
 	}
 }
 
@@ -244,8 +249,8 @@ func TestDispatchAsksConsentAboutTheNormalizedAddressItDedupedOn(t *testing.T) {
 	if err != nil || got != OutcomeSent {
 		t.Fatalf("outcome=%v err=%v, want OutcomeSent", got, err)
 	}
-	if !slices.Equal(consent.asked, []string{"buyer@example.com"}) {
-		t.Errorf("consent was asked about %v, want the normalized address the dedupe keyed on", consent.asked)
+	if !slices.Equal(consent.authzAsked, []string{"buyer@example.com"}) {
+		t.Errorf("consent was asked about %v, want the normalized address the dedupe keyed on", consent.authzAsked)
 	}
 }
 
@@ -254,17 +259,20 @@ func TestDispatchAsksConsentAboutTheNormalizedAddressItDedupedOn(t *testing.T) {
 func TestDispatchParksWhenOnlyACcRecipientWithdrewConsent(t *testing.T) {
 	sender := &fakeSender{}
 	store := &fakeStore{delivery: liveDelivery()}
-	// The gate refuses the list it is handed; handing it the To line alone
+	// The engine refuses the list it is handed; handing it the To line alone
 	// would never surface the cc'd withdrawal at all.
-	consent := &stubConsent{err: apperrors.ErrConsentNotGranted}
+	consent := &stubConsent{armed: true, ticket: commsauthz.TransmitTicket{
+		DeliveryID: store.delivery.ID, Attempt: store.delivery.Attempts,
+		DecisionSetID: ids.NewV7(), Allowed: false, Reason: "a cc'd recipient withdrew",
+	}}
 	d := newTestDispatcher(store, fakeResolver{sender: sender, granted: []string{sendScope}}, consent)
 
 	got, _ := dispatch(context.Background(), d, store.delivery.ID)
 	if got != OutcomeParked || sender.calls != 0 {
 		t.Errorf("outcome=%v calls=%d — a withdrawn cc recipient must stop the send", got, sender.calls)
 	}
-	if !slices.Contains(consent.asked, "cc@example.com") {
-		t.Errorf("consent was asked about %v — the cc'd addressee was never put to the gate", consent.asked)
+	if !slices.Contains(consent.authzAsked, "cc@example.com") {
+		t.Errorf("consent was asked about %v — the cc'd addressee was never put to the engine", consent.authzAsked)
 	}
 }
 
@@ -291,8 +299,8 @@ func TestDispatchParksWhenTheSenderIsNoLongerALiveSeat(t *testing.T) {
 	}
 	// Authority-class, so it refuses before consent answers — the same
 	// ordering the mailbox grant keeps.
-	if consent.asked != nil {
-		t.Errorf("consent was consulted about %v despite a dead seat", consent.asked)
+	if consent.authzAsked != nil {
+		t.Errorf("consent was consulted about %v despite a dead seat", consent.authzAsked)
 	}
 }
 

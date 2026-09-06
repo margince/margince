@@ -15,8 +15,8 @@ package consent
 // Resolution is separate from authorization on purpose. This file answers "what
 // kind of message is this", and the validators answer "is there evidence for
 // that kind". Keeping them apart is what lets a decision row record a claim the
-// engine disagreed with, which is the disagreement observe mode exists to make
-// visible.
+// engine disagreed with, which is the disagreement the decision record exists to
+// make visible.
 
 import (
 	"context"
@@ -163,7 +163,8 @@ func (g *Gate) resolveFromClaimAndPurpose(ctx context.Context, tx pgx.Tx, req co
 // account notice that is NOT supported: an operational claim with no invoice,
 // contract or account event behind it is precisely the shape the old model
 // could not tell from a cold sales mail. Marking it unsupported records the
-// disagreement without refusing anything while the engine is observed.
+// disagreement AND refuses under the shipped posture, which is the point: an
+// unproven claim must not select a category.
 func resolutionForClass(class Class) resolution {
 	switch class {
 	case ClassBusinessCorrespondence:

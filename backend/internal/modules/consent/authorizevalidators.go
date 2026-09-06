@@ -14,7 +14,7 @@ package consent
 // refusal is the failure mode that makes reps distrust the product and route
 // around it, and it costs more than the permission it was protecting. So a
 // validator that cannot find its evidence answers "review, and here is what to
-// link" rather than "no" — the send still goes while the engine is observed,
+// link" rather than "no" — the send parks under the shipped posture, and goes only where a category has been moved back to observe,
 // and a human is told what the record is missing.
 
 import (

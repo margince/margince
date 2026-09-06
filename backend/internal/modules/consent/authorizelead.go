@@ -175,6 +175,20 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 		return commsauthz.Decision{}, err
 	}
 	if res.Supported {
+		// The same question the person arm asks: the evidence arms never read
+		// person_consent, so a lead who withdrew would be sent the very message
+		// they stopped.
+		stopped, err := withdrawalCovers(ctx, tx,
+			subjectRef{Kind: entityLead, ID: leadID, Address: r.Email}, res.Category)
+		if err != nil {
+			return commsauthz.Decision{}, err
+		}
+		if stopped {
+			d.Resolved = res.Category
+			d.Verdict = commsauthz.VerdictDeny
+			d.ReasonCode = commsauthz.ReasonConsentWithdrawn
+			return d, nil
+		}
 		return allowOn(d, res), nil
 	}
 

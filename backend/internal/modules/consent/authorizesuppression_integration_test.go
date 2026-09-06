@@ -179,3 +179,62 @@ func TestAnObjectionDoesNotMaskAHardBounce(t *testing.T) {
 			d.ReasonCode, commsauthz.ReasonHardBounce)
 	}
 }
+
+// A WITHDRAWAL STOPS A THREAD-EVIDENCED SEND.
+//
+// The evidence arms allow on the record's own ground and never read
+// person_consent — that is what makes a reply to a thread the subject started
+// work without a consent row. But a subject who presses one-click unsubscribe
+// writes a WITHDRAWAL, not a suppression row, so liveSuppression is blind to it
+// and the thread arm would allow the very message they just stopped.
+func TestAWithdrawalStopsAThreadEvidencedSend(t *testing.T) {
+	e := setupResolve(t)
+	e.seedPurpose(t, "business_correspondence", "business_correspondence")
+	anchor := e.inboundFrom(t, "thread-withdrawn", e.address, time.Now().Add(-24*time.Hour))
+
+	// They wrote to us, then took their permission back.
+	if _, err := e.owner.Exec(e.ctx, `
+		INSERT INTO person_consent (person_id, purpose_id, state, lawful_basis, captured_at, source)
+		SELECT $1, id, 'withdrawn', 'consent', now(), 'preference_centre'
+		  FROM consent_purpose WHERE key = 'business_correspondence'`, e.person); err != nil {
+		t.Fatalf("recording the withdrawal: %v", err)
+	}
+
+	d := e.decide(t, commsauthz.Request{
+		AnchorActivityID: anchor, LegacyPurposeKey: "business_correspondence",
+	})
+	if d.Verdict == commsauthz.VerdictAllow {
+		t.Fatalf("verdict = allow (%s, resolved %s): they took their permission back and the "+
+			"thread arm sent anyway — the evidence arms never read person_consent",
+			d.ReasonCode, d.Resolved)
+	}
+}
+
+// ARCHIVING A PURPOSE DOES NOT REACTIVATE THE PEOPLE WHO STOPPED IT.
+//
+// A withdrawal is a thing the subject did; archiving the purpose is a thing the
+// installation did. If the withdrawal read skipped archived purposes, retiring
+// one would silently make everybody who had unsubscribed from it contactable
+// again — on the evidence arms, which never read person_consent otherwise.
+func TestArchivingAPurposeKeepsItsWithdrawals(t *testing.T) {
+	e := setupResolve(t)
+	e.seedPurpose(t, "business_correspondence", "business_correspondence")
+	anchor := e.inboundFrom(t, "thread-archived", e.address, time.Now().Add(-24*time.Hour))
+
+	if _, err := e.owner.Exec(e.ctx, `
+		INSERT INTO person_consent (person_id, purpose_id, state, lawful_basis, captured_at, source)
+		SELECT $1, id, 'withdrawn', 'consent', now(), 'preference_centre'
+		  FROM consent_purpose WHERE key = 'business_correspondence'`, e.person); err != nil {
+		t.Fatalf("recording the withdrawal: %v", err)
+	}
+	if _, err := e.owner.Exec(e.ctx,
+		`UPDATE consent_purpose SET archived_at = now() WHERE key = 'business_correspondence'`); err != nil {
+		t.Fatalf("archiving the purpose: %v", err)
+	}
+
+	d := e.decide(t, commsauthz.Request{AnchorActivityID: anchor})
+	if d.Verdict == commsauthz.VerdictAllow {
+		t.Fatalf("verdict = allow (%s): retiring the purpose reactivated somebody who had "+
+			"stopped it", d.ReasonCode)
+	}
+}

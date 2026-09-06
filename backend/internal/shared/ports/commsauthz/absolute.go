@@ -127,16 +127,15 @@ func (s DecisionSet) Effective(modeFor func(Category) Mode, legacyAllowed bool) 
 		// recipient is not a message that may go out.
 		return false
 	}
-	enforced := false
 	for _, d := range s.Decisions {
 		if modeFor(d.Resolved) != ModeEnforce {
 			continue
 		}
-		enforced = true
 		if d.Verdict != VerdictAllow {
 			return false
 		}
 	}
+	enforced := s.HasEnforcedRecipient(modeFor)
 	// THE ENGINE ALONE DECIDES A RECIPIENT IT ENFORCES.
 	//
 	// While every category observed, this returned legacyAllowed and the old
@@ -149,9 +148,11 @@ func (s DecisionSet) Effective(modeFor func(Category) Mode, legacyAllowed bool) 
 	// a message can have, and being overruled by a weaker authority is the
 	// regression this rollout exists to end.
 	//
-	// A set with NO enforced recipient still defers. That is not a fallback: it
-	// is a category still being observed, and the old gate is what decides
-	// there until it is not.
+	// A set with NO enforced recipient still defers, and under the shipped
+	// posture that never happens: enforceEveryCategory puts all fourteen at
+	// enforce. It is reachable only when an operator has deliberately moved a
+	// category back to observe, which is the rollback lever — so the old gate
+	// decides exactly where somebody asked it to and nowhere else.
 	if enforced {
 		return true
 	}
@@ -197,4 +198,19 @@ func (d Decision) CanBeOverruled() bool {
 		return false
 	}
 	return LevelForReason(d.ReasonCode) == LevelMachine && !Absolute(d.ReasonCode)
+}
+
+// HasEnforcedRecipient reports whether any recipient's resolved category is at
+// enforce, and so whether the engine's own answer is the one that decides.
+//
+// Extracted rather than recomputed by a caller: Effective's deferral to the old
+// gate turns on exactly this question, and a second spelling of it would let
+// the two disagree about which authority is live.
+func (s DecisionSet) HasEnforcedRecipient(modeFor func(Category) Mode) bool {
+	for _, d := range s.Decisions {
+		if modeFor(d.Resolved) == ModeEnforce {
+			return true
+		}
+	}
+	return false
 }

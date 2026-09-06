@@ -97,6 +97,19 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 		return commsauthz.Decision{}, err
 	}
 	if res.Supported {
+		// The record bears the category out — and the subject may still have
+		// said stop. The evidence arms never read person_consent, so this is
+		// the only place a withdrawal is put to them.
+		stopped, err := withdrawalCovers(ctx, tx, subject, res.Category)
+		if err != nil {
+			return commsauthz.Decision{}, err
+		}
+		if stopped {
+			d.Resolved = res.Category
+			d.Verdict = commsauthz.VerdictDeny
+			d.ReasonCode = commsauthz.ReasonConsentWithdrawn
+			return d, nil
+		}
 		return allowOn(d, res), nil
 	}
 	// AN UNSUPPORTED CLAIM IS RECORDED, NEVER RESOLVED TO.

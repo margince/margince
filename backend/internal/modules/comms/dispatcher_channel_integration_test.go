@@ -149,10 +149,10 @@ func TestDispatcherRoutesAChannelDeliveryToMessageSender(t *testing.T) {
 	if got.Attempt != 0 {
 		t.Errorf("first transmission reported Attempt = %d, want 0", got.Attempt)
 	}
-	// The consent gate is asked about the CHANNEL recipient, not an empty mail
-	// address list: a default-deny gate asked about nobody refuses nobody.
-	if len(consent.asked) != 1 || consent.asked[0] != "telegram:"+channelRecipient {
-		t.Errorf("consent was asked about %v, want the one channel recipient", consent.asked)
+	// The engine is asked about the CHANNEL recipient, not an empty mail
+	// address list: a default-deny authority asked about nobody refuses nobody.
+	if len(consent.authzAsked) != 1 || consent.authzAsked[0] != "telegram:"+channelRecipient {
+		t.Errorf("consent was asked about %v, want the one channel recipient", consent.authzAsked)
 	}
 
 	status, attempts, _ := e.deliveryRow(t, id)
