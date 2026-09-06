@@ -188,9 +188,21 @@ export function ProvidersStat() {
 // alike. The embedding lane is in here on purpose: retrieval binds separately
 // and can be the only thing pointing at an unkeyed vendor, which is exactly the
 // case a reader would otherwise find out about from a failed reindex.
+//
+// `null` for a body that is not the routing document. `tiers` and `embeddings`
+// are both REQUIRED of the response, so the type above says they are there —
+// but the type is a promise the WIRE does not keep: nothing validates a 200,
+// and reading `Object.values(undefined)` threw, which the error boundary turned
+// into the whole settings page saying "this view no longer works". A server too
+// old, a projection that lost a field or a proxy answering something else are
+// all real ways to get such a body, and none of them should cost a reader the
+// page. The caller already draws an unanswered read; this is one.
 function boundProviders(
   routing: NonNullable<ReturnType<typeof useRouting>["data"]>,
-): Set<string> {
+): Set<string> | null {
+  if (routing.tiers === undefined || routing.embeddings === undefined) {
+    return null;
+  }
   const named = new Set<string>();
   for (const binding of Object.values(routing.tiers)) {
     named.add(binding.provider);

@@ -2748,6 +2748,25 @@ export const en = {
   "plan.state.missed": "Missed",
   "plan.state.dropped": "Dropped",
   "plan.help.label": "What do you need from your lead?",
+  // What the week is up against, beside what it is for. The two prose fields
+  // draw three states, not two: unwritten, "nothing to name", and text. A lead
+  // who cannot tell the first two apart reads an unconsidered week as a safe one.
+  "plan.contract.title": "What this week is up against",
+  "plan.contract.risks": "What could get in the way",
+  "plan.contract.risksHint": "What you expect to go wrong, in your own words",
+  "plan.contract.capacityNote": "Room you have",
+  "plan.contract.capacityNoteHint":
+    "Anything the calendar does not know — leave, travel, a launch",
+  "plan.contract.unwritten": "Not written yet",
+  "plan.contract.nothingToName": "Nothing to name",
+  "plan.contract.edit": "Edit",
+  "plan.contract.save": "Save",
+  "plan.contract.cancel": "Cancel",
+  "plan.contract.capacityLine":
+    "Next week already holds {meetings} meetings and {tasks} tasks.",
+  "plan.contract.crowded": "Next week is already full",
+  "plan.contract.crowdedBody":
+    "{committed} things are already booked and you have written {commitments} commitments. Something will have to give.",
   "plan.help.ask": "Ask for help",
   "plan.help.edit": "Edit request",
   "plan.help.send": "Send",

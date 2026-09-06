@@ -2638,6 +2638,22 @@ export const vi = {
   "plan.state.missed": "Bỏ lỡ",
   "plan.state.dropped": "Đã bỏ",
   "plan.help.label": "Bạn cần gì từ quản lý của mình?",
+  "plan.contract.title": "Tuần này đối mặt với điều gì",
+  "plan.contract.risks": "Điều gì có thể cản trở",
+  "plan.contract.risksHint": "Điều bạn dự đoán sẽ trục trặc, theo lời của bạn",
+  "plan.contract.capacityNote": "Khoảng trống bạn có",
+  "plan.contract.capacityNoteHint":
+    "Điều lịch không biết — nghỉ phép, đi công tác, một đợt ra mắt",
+  "plan.contract.unwritten": "Chưa viết",
+  "plan.contract.nothingToName": "Không có gì để nêu",
+  "plan.contract.edit": "Sửa",
+  "plan.contract.save": "Lưu",
+  "plan.contract.cancel": "Hủy",
+  "plan.contract.capacityLine":
+    "Tuần tới đã có {meetings} cuộc họp và {tasks} công việc.",
+  "plan.contract.crowded": "Tuần tới đã kín",
+  "plan.contract.crowdedBody":
+    "{committed} việc đã được đặt và bạn đã ghi {commitments} cam kết. Sẽ phải bỏ bớt điều gì đó.",
   "plan.help.ask": "Nhờ giúp đỡ",
   "plan.help.edit": "Sửa yêu cầu",
   "plan.help.send": "Gửi",

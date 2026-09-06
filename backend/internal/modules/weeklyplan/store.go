@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -49,6 +50,15 @@ const (
 	planCap = 50
 )
 
+// The two states a PLAN moves through — distinct from the commitment states
+// below, which happen to share a spelling for "open" and mean something else:
+// this is whether the week still accepts edits, that is whether one thing on it
+// is still to do.
+const (
+	PlanOpen   = "open"
+	PlanClosed = "closed"
+)
+
 // The states a commitment moves through.
 const (
 	StateOpen    = "open"
@@ -78,6 +88,10 @@ type Store struct {
 	db        *database.DB
 	weekStart WeekStartFunc
 	teammates Teammates
+	// capacity reads what next week already holds. Nil is a real state — an
+	// installation that composed no calendar — and capacityFor is the one
+	// place that turns it into "unknown" rather than zero.
+	capacity Capacity
 }
 
 // NewStore binds the store to db.
@@ -96,6 +110,22 @@ type Plan struct {
 	// Outcome is what the week came to, stamped at close. Nil while the week
 	// is open: there is no outcome yet, and a zero would claim one.
 	Outcome *Outcome
+
+	// What the rep expects to get in the way, and what they say about the room
+	// they have. Both nil until the rep writes them.
+	//
+	// Nil is NOT the empty string: a rep who has written nothing has said
+	// nothing, and one who cleared the field has said there are no risks. A
+	// lead reading "no risks named" against "the rep says there are none" is
+	// reading two different weeks, so the two stay tellable apart all the way
+	// to the surface.
+	Risks        *string
+	CapacityNote *string
+
+	// Capacity is what next week's calendar already holds, counted through the
+	// seam. Nil when no calendar reader is composed — UNKNOWN, not zero, which
+	// is the difference between "nothing is booked" and "nothing has looked".
+	Capacity *Committed
 }
 
 // Commitment is one thing a rep said they would do.
@@ -211,6 +241,17 @@ func (s *Store) planForOwner(ctx context.Context, owner ids.UUID, now time.Time)
 	if err != nil {
 		return Plan{}, err
 	}
+	// Filled HERE because both readers — the rep's own Current and the lead's
+	// PlanFor — come through this one function. Filled at either call site
+	// instead, one surface would draw a capacity line and the other would not.
+	//
+	// Outside the transaction above: the seam reads other modules' tables and
+	// opens its own, and holding this one open across it would make a read of
+	// the plan wait on a read of the calendar.
+	plan.Capacity, err = s.capacityFor(ctx, owner, now)
+	if err != nil {
+		return Plan{}, err
+	}
 	return plan, nil
 }
 
@@ -219,10 +260,12 @@ func readPlan(ctx context.Context, tx pgx.Tx, owner ids.UUID, week time.Time) (P
 	plan := Plan{OwnerID: owner, LocalWeekStart: week}
 	var due, kept *int
 	err := tx.QueryRow(ctx, `
-		SELECT id, local_week_start, status, version, commitments_due, commitments_kept
+		SELECT id, local_week_start, status, version, commitments_due, commitments_kept,
+		       risks, capacity_note
 		  FROM weekly_plan
 		 WHERE owner_id = $1 AND local_week_start = $2`, owner, week).
-		Scan(&plan.ID, &plan.LocalWeekStart, &plan.Status, &plan.Version, &due, &kept)
+		Scan(&plan.ID, &plan.LocalWeekStart, &plan.Status, &plan.Version, &due, &kept,
+			&plan.Risks, &plan.CapacityNote)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Plan{}, apperrors.ErrNotFound
 	}
@@ -272,7 +315,12 @@ func readCommitments(ctx context.Context, tx pgx.Tx, planID ids.UUID) ([]Commitm
 // bounded trims and checks one field a caller supplied.
 func bounded(field, value string, limit int) (string, error) {
 	trimmed := strings.TrimSpace(value)
-	if len(trimmed) > limit {
+	// RUNES, not bytes. The message below promises characters and the column's
+	// CHECK counts characters (Postgres length() does), so len() refused text
+	// both of them accept: 1500 accented characters are 3000 bytes, and a
+	// German or Vietnamese note hit a ceiling an English one of the same length
+	// did not.
+	if utf8.RuneCountInString(trimmed) > limit {
 		return "", &values.ParseError{
 			Field: field, Code: "too_long",
 			Message: fmt.Sprintf("%s is at most %d characters", field, limit),

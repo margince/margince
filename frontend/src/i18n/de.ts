@@ -2665,6 +2665,23 @@ export const de = {
   "plan.state.missed": "Verpasst",
   "plan.state.dropped": "Verworfen",
   "plan.help.label": "Was brauchst du von deiner Führungskraft?",
+  "plan.contract.title": "Wogegen diese Woche antritt",
+  "plan.contract.risks": "Was dazwischenkommen könnte",
+  "plan.contract.risksHint":
+    "Was Sie erwarten, das schiefgeht — in eigenen Worten",
+  "plan.contract.capacityNote": "Ihr Spielraum",
+  "plan.contract.capacityNoteHint":
+    "Was der Kalender nicht weiß — Urlaub, Reisen, ein Launch",
+  "plan.contract.unwritten": "Noch nichts geschrieben",
+  "plan.contract.nothingToName": "Nichts zu nennen",
+  "plan.contract.edit": "Bearbeiten",
+  "plan.contract.save": "Speichern",
+  "plan.contract.cancel": "Abbrechen",
+  "plan.contract.capacityLine":
+    "Nächste Woche hält bereits {meetings} Termine und {tasks} Aufgaben.",
+  "plan.contract.crowded": "Nächste Woche ist schon voll",
+  "plan.contract.crowdedBody":
+    "{committed} Dinge sind bereits gebucht und Sie haben {commitments} Vorhaben notiert. Etwas wird weichen müssen.",
   "plan.help.ask": "Um Hilfe bitten",
   "plan.help.edit": "Anfrage bearbeiten",
   "plan.help.send": "Senden",

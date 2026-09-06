@@ -18,6 +18,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { PlanContract } from "./brief.plan.contract";
 import { useMe } from "./common";
 import { EntityRef } from "./entityref";
 import {
@@ -269,6 +270,10 @@ export function PlanSection() {
           )}
         </SurfaceState>
       </Panel>
+      {/* What the week is up against, after what it is for. Its own panel
+          because it is the half a lead reads first and a reader should be able
+          to find it without walking the commitment list. */}
+      <PlanContract plan={plan.data} editable={editable} />
     </section>
   );
 }
