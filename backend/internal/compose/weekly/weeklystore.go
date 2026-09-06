@@ -74,6 +74,12 @@ type Review struct {
 	// rather than drawing zeros, because a week nobody forecast and a week that
 	// landed on nothing are different facts.
 	Outlook []Outlook
+
+	// How well the week went, as against what happened in it. Nil when the
+	// review predates the scorecard; each of its two blocks is independently
+	// absent when the rep had no such work, which is a different fact from
+	// every count in it being zero.
+	Scorecard *Scorecard
 }
 
 // PriorWeek is the earlier review a week is compared against.

@@ -43,8 +43,11 @@ export function RichText({
   label,
   labels,
   placeholder,
+  hint,
+  actions,
   rows = 12,
   id,
+  disabled = false,
 }: Readonly<{
   /**
    * The markup to show. Read on mount and when it changes from OUTSIDE — an
@@ -67,11 +70,43 @@ export function RichText({
     linkPrompt: string;
   }>;
   placeholder?: string;
+  /**
+   * One line about the control, shown beside the toolbar rather than above or
+   * below it. Copy never lives in a primitive: the words arrive translated.
+   *
+   * It shares the footer with the formatting buttons because the two are the
+   * same sentence read twice — this is a box you write in, and here is what you
+   * can do to what you wrote. On their own lines they were two claims stacked
+   * under one field.
+   */
+  hint?: string;
+  /**
+   * Further verbs for the same message, drawn in the footer beside the
+   * formatting marks — the composer's paperclip is the one today.
+   *
+   * A slot rather than a prop per verb: what else you can do to a message is the
+   * CALLER's list and grows on their side, and a primitive that enumerated it
+   * would have to be edited every time it did.
+   */
+  actions?: React.ReactNode;
   rows?: number;
   id?: string;
+  /**
+   * Not now — the surface and its toolbar both refuse.
+   *
+   * `contentEditable` has no `disabled`, so an editor left editable while a
+   * write about its own words is in flight is one a reader can keep typing
+   * into: the composer freezes the body while a draft rejection is being
+   * recorded, and text typed into that window would be text the returning
+   * reference claims to name and never saw. The toolbar goes with it, because a
+   * live Bold over a frozen surface is a control that reports success and
+   * changes nothing.
+   */
+  disabled?: boolean;
 }>) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
+  const hintId = `${fieldId}-hint`;
   const editor = useRef<HTMLDivElement>(null);
   // What we last handed the caller, or last wrote into the node. Comparing
   // against it tells an outside change (a draft arriving) from the echo of our
@@ -107,6 +142,9 @@ export function RichText({
   };
 
   const apply = (command: string) => {
+    if (disabled) {
+      return;
+    }
     editor.current?.focus();
     // execCommand is deprecated and still the only cross-browser way to apply
     // formatting to a selection without a document model. The alternative is
@@ -117,6 +155,9 @@ export function RichText({
   };
 
   const addLink = () => {
+    if (disabled) {
+      return;
+    }
     const href = window.prompt(labels.linkPrompt);
     if (href === null) {
       return;
@@ -133,30 +174,7 @@ export function RichText({
   };
 
   return (
-    <div className="richtext">
-      <div className="richtext-bar" role="toolbar" aria-label={label}>
-        <RichTextButton onClick={() => apply("bold")} title={labels.bold}>
-          <Bold size={15} aria-hidden="true" />
-        </RichTextButton>
-        <RichTextButton onClick={() => apply("italic")} title={labels.italic}>
-          <Italic size={15} aria-hidden="true" />
-        </RichTextButton>
-        <RichTextButton
-          onClick={() => apply("insertUnorderedList")}
-          title={labels.bulletList}
-        >
-          <List size={15} aria-hidden="true" />
-        </RichTextButton>
-        <RichTextButton
-          onClick={() => apply("insertOrderedList")}
-          title={labels.numberList}
-        >
-          <ListOrdered size={15} aria-hidden="true" />
-        </RichTextButton>
-        <RichTextButton onClick={addLink} title={labels.link}>
-          <Link2 size={15} aria-hidden="true" />
-        </RichTextButton>
-      </div>
+    <div className={`richtext${disabled ? " is-disabled" : ""}`}>
       {/* biome-ignore lint/a11y/useSemanticElements: a textarea cannot carry formatting; this is the editable surface the toolbar acts on */}
       <div
         ref={editor}
@@ -164,8 +182,14 @@ export function RichText({
         role="textbox"
         aria-multiline="true"
         aria-label={label}
-        contentEditable
+        aria-describedby={hint ? hintId : undefined}
+        contentEditable={!disabled}
         suppressContentEditableWarning
+        // `contentEditable` carries no `disabled`, so the refusal is stated the
+        // way a role="textbox" states it — which is also what a checker and a
+        // screen reader read.
+        aria-disabled={disabled || undefined}
+        aria-readonly={disabled || undefined}
         // contentEditable is focusable in every engine, but stating it is what
         // makes the role and the behaviour agree for a checker and a reader.
         tabIndex={0}
@@ -175,6 +199,60 @@ export function RichText({
         onInput={report}
         onBlur={report}
       />
+      {/* UNDER the words, and quiet. The toolbar led the control for a while —
+          a filled band above the box, before a reader had written anything to
+          format — which made four glyphs the first thing on a surface whose
+          subject is the message. Bold and italic are marks everybody already
+          knows; they do not need to announce themselves, and putting them at the
+          end of the line the hint occupies costs the field no height at all.
+
+          The buttons keep their names for a screen reader and their tooltips
+          for a pointer: quieter is about ink, never about who can use it. */}
+      <div className="richtext-foot">
+        {hint && (
+          <p id={hintId} className="t-caption richtext-hint">
+            {hint}
+          </p>
+        )}
+        <div className="richtext-bar" role="toolbar" aria-label={label}>
+          <RichTextButton
+            onClick={() => apply("bold")}
+            title={labels.bold}
+            disabled={disabled}
+          >
+            <Bold size={14} aria-hidden="true" />
+          </RichTextButton>
+          <RichTextButton
+            onClick={() => apply("italic")}
+            title={labels.italic}
+            disabled={disabled}
+          >
+            <Italic size={14} aria-hidden="true" />
+          </RichTextButton>
+          <RichTextButton
+            onClick={() => apply("insertUnorderedList")}
+            title={labels.bulletList}
+            disabled={disabled}
+          >
+            <List size={14} aria-hidden="true" />
+          </RichTextButton>
+          <RichTextButton
+            onClick={() => apply("insertOrderedList")}
+            title={labels.numberList}
+            disabled={disabled}
+          >
+            <ListOrdered size={14} aria-hidden="true" />
+          </RichTextButton>
+          <RichTextButton
+            onClick={addLink}
+            title={labels.link}
+            disabled={disabled}
+          >
+            <Link2 size={14} aria-hidden="true" />
+          </RichTextButton>
+        </div>
+        {actions}
+      </div>
     </div>
   );
 }
@@ -182,16 +260,19 @@ export function RichText({
 function RichTextButton({
   onClick,
   title,
+  disabled,
   children,
 }: Readonly<{
   onClick: () => void;
   title: string;
+  disabled?: boolean;
   children: React.ReactNode;
 }>) {
   return (
     <button
       type="button"
       className="richtext-btn"
+      disabled={disabled}
       // The pointer-down default is what steals the selection the command is
       // about to act on, so the button never takes focus from the text.
       onMouseDown={(event) => event.preventDefault()}
@@ -401,4 +482,35 @@ function escapeText(text: string): string {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+}
+
+/**
+ * Plain text as the markup this editor round-trips — the inverse of
+ * {@link plainTextOf}, and the way a machine-written draft arrives in a field a
+ * human formats from.
+ *
+ * The drafting endpoints answer in PLAIN text by contract. Handed to the editor
+ * unchanged, a three-paragraph mail renders as one run-on block that the rep
+ * then has to break up by hand before they can read what was written for them;
+ * handed through here it arrives shaped the way the model wrote it. Nothing is
+ * INVENTED on the rep's behalf — a blank line is a paragraph and a single
+ * newline is a line break, which is what those two characters already mean in
+ * the text being converted.
+ *
+ * It escapes before it wraps. A draft is model output and can carry the three
+ * characters that would otherwise close a tag; escaping after wrapping would
+ * escape our own markup instead of the words inside it.
+ */
+export function paragraphsFrom(text: string): string {
+  const escaped = (line: string) =>
+    line
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+  return text
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter((block) => block !== "")
+    .map((block) => `<p>${escaped(block).replaceAll("\n", "<br>")}</p>`)
+    .join("");
 }

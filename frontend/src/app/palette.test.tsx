@@ -458,9 +458,14 @@ describe("useBuiltinCommands", () => {
   it("offers the company shortcut when the installation has that surface", async () => {
     const user = userEvent.setup();
     renderProbeWithCompany({ companyContext: true });
+    // Typed by its OLD name, which the palette keeps as a keyword: the page is
+    // "Company profile" now, and a reader who learnt "General" should still
+    // find it rather than concluding it was removed.
     await user.type(screen.getByRole("searchbox"), "general");
     await waitFor(() => {
-      expect(screen.getAllByRole("button")[0].textContent).toContain("General");
+      expect(screen.getAllByRole("button")[0].textContent).toContain(
+        "Company profile",
+      );
     });
   });
 
@@ -472,7 +477,7 @@ describe("useBuiltinCommands", () => {
     // beside it and offered a page this installation may not have.
     await user.type(screen.getByRole("searchbox"), "general");
     await waitFor(() => {
-      expect(screen.queryByText("General")).toBeNull();
+      expect(screen.queryByText("Company profile")).toBeNull();
     });
   });
 
@@ -481,7 +486,7 @@ describe("useBuiltinCommands", () => {
     renderProbeWithCompany({ companyContext: null });
     await user.type(screen.getByRole("searchbox"), "general");
     await waitFor(() => {
-      expect(screen.queryByText("General")).toBeNull();
+      expect(screen.queryByText("Company profile")).toBeNull();
     });
   });
 

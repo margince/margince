@@ -19,7 +19,12 @@ import { ApprovalRow } from "./approvalrow";
 import { tomorrowMorning } from "./briefqueue";
 import { problemMessageOf } from "./common";
 import { type BriefMarkRequest, useBriefItemMark } from "./home.queries";
-import { useNoticeRead, useTaskUpdate } from "./taskactions";
+import {
+  useAutomationRetry,
+  useMeetingOutcome,
+  useNoticeRead,
+  useTaskUpdate,
+} from "./taskactions";
 import {
   comparisonText,
   consequenceText,
@@ -151,6 +156,20 @@ export function WorklistRow({
           selected={selected}
           onSelect={onSelect}
         />
+        {/* WHAT KIND of work, in its own column, so a reader running down the
+            queue reads the kinds as a list without reading a title first — and
+            in the warn tone on the rows the day put first, where the kind is
+            also why it is first. The title line keeps the states that are
+            about this row alone: overdue, unprepared. */}
+        <span
+          className={
+            item.band === "now"
+              ? "t-eyebrow worklist-row-kind worklist-row-kind-now"
+              : "t-eyebrow worklist-row-kind"
+          }
+        >
+          {t(`worklist.category.${item.category}` as const)}
+        </span>
         <div className="worklist-row-text">
           {/* A waiting EMAIL names itself with the canonical row — the same one
             the timeline draws — so the queue shows the message rather than a
@@ -166,7 +185,6 @@ export function WorklistRow({
             ) : (
               title
             )}
-            <Badge>{t(`worklist.category.${item.category}` as const)}</Badge>
             {item.overdue && (
               <Badge tone="danger">{t("worklist.overdue")}</Badge>
             )}
@@ -217,21 +235,28 @@ export function WorklistRow({
             above={above}
           />
         </div>
-        {item.batch && onReview ? (
-          <BatchVerb onReview={onReview} />
-        ) : (
-          <RowVerbs item={item} href={href} move={moveHref(item)} />
-        )}
-        {/* The ways this row can be PUT DOWN, as the server declares them. Drawn
+        {/* EVERY VERB ON ONE LINE UNDER THE WORK, not beside it. Beside it, seven
+            controls took the width and left the subject, the snippet and the
+            reasons a 160px column that wrapped every line; under it the work
+            has the whole row and the verbs read as what can be done about it,
+            in the order they were drawn: the move, then the ways to put the
+            row down, then the reader's own pin. */}
+        <div className="worklist-row-acts">
+          {item.batch && onReview ? (
+            <BatchVerb onReview={onReview} />
+          ) : (
+            <RowVerbs item={item} href={href} move={moveHref(item)} />
+          )}
+          {/* The ways this row can be PUT DOWN, as the server declares them. Drawn
           from `dispositions` rather than inferred from `source`: which rows a
           rep may judge is a server rule, and a client keeping its own copy
           draws a verb that 404s or hides one the rep is entitled to. */}
-        <DispositionVerbs item={item} />
-        {/* The reader's own override, on every row that can carry one. It is not
+          <DispositionVerbs item={item} />
+          {/* The reader's own override, on every row that can carry one. It is not
           a disposition — those put a row DOWN, and this lifts one up — so it is
           drawn beside them rather than among them. */}
-        <PinVerb item={item} />
-        {/* Only a task carries an assignee, so only a task can be handed on. A
+          <PinVerb item={item} />
+          {/* Only a task carries an assignee, so only a task can be handed on. A
           group row stands for a pile and names no single activity to move.
 
           Offered on the reader's OWN queue too: handing work on is not a
@@ -240,9 +265,10 @@ export function WorklistRow({
           excluded from the destinations follows the queue rather than this
           condition — ReassignControl falls back to the reader when no rep is
           selected, so the current holder is never offered as the new one. */}
-        {item.source === "task" && !item.batch && (
-          <ReassignControl item={item} owner={owner} />
-        )}
+          {item.source === "task" && !item.batch && (
+            <ReassignControl item={item} owner={owner} />
+          )}
+        </div>
         <RowAnswer item={item} />
       </PutDownByThumb>
     </PanelRow>
@@ -271,6 +297,18 @@ function RowAnswer({ item }: Readonly<{ item: WorklistItem }>) {
   }
   if (item.source === "notice" && item.actions.includes("acknowledge")) {
     return <NoticeAcknowledge id={item.id} />;
+  }
+  // A failed rule, run again from here. The server decides which firings carry
+  // the verb — a blocked one does not, because that was a refusal on purpose —
+  // so the row asks what it was sent rather than re-deriving the rule.
+  if (item.source === "automation_run" && item.actions.includes("retry")) {
+    return <AutomationRetry id={item.id} />;
+  }
+  // How a meeting that already happened went, answered here. `decide` is the
+  // same verb an approval carries and means the same thing — the answer is
+  // given ON the row — but the answers differ, so the control is its own.
+  if (item.source === "meeting_outcome" && item.actions.includes("decide")) {
+    return <MeetingOutcome id={item.id} />;
   }
   // A task the server says can be finished, finished HERE. Not a batch: a group
   // row stands for a pile and names no single activity to complete.
@@ -966,6 +1004,10 @@ const VERB_LABEL: Record<
   act: (t) => t("worklist.verb.open"),
   dismiss: (t) => t("worklist.verb.open"),
   set_aside: (t) => t("worklist.verb.open"),
+  // Named for the same reason: the map is total. `retry` is drawn by
+  // AutomationRetry, which acts in place, so VERB_DESTINATION routes it
+  // nowhere and this label is never the one a reader sees.
+  retry: (t) => t("worklist.verb.retry"),
 };
 
 // The day's figures, and the dials that narrow them.
@@ -1021,6 +1063,105 @@ function PinVerb({ item }: Readonly<{ item: WorklistItem }>) {
         }
       >
         {t(pinned ? "worklist.verb.unpin" : "worklist.verb.pin")}
+      </Button>
+    </div>
+  );
+}
+
+// Running a failed rule again, from the row that reported it.
+//
+// The answer is not simply success or failure. The server may REFUSE with a
+// reason — the firing was stopped on purpose, the rule is not cleared to repeat
+// itself, or the event behind it is gone — and each of those is something the
+// reader needs said in words. A refusal arrives as a normal response, so it is
+// read from the resolved value rather than from an error path that would have
+// to guess which refusal it was.
+function AutomationRetry({ id }: Readonly<{ id: string }>) {
+  const t = useT();
+  const toast = useToast();
+  const retry = useAutomationRetry([worklistKey]);
+  return (
+    <div className="worklist-row-verbs">
+      <Button
+        small
+        pending={retry.isPending}
+        onClick={() =>
+          retry.mutate(id, {
+            onSuccess: (result) =>
+              toast.show(
+                result?.retried === true
+                  ? t("worklist.verb.retryStarted")
+                  : t(refusalMessage(result?.refusal)),
+                { mark: result?.retried === true },
+              ),
+            // A rejected retry leaves the button idle with nothing on screen to
+            // say so, which renders exactly like a click that did nothing.
+            onError: () =>
+              toast.show(t("worklist.verb.retryFailed"), { mark: false }),
+          })
+        }
+      >
+        {t("worklist.verb.retry")}
+      </Button>
+    </div>
+  );
+}
+
+// The reason a retry was declined, in the reader's words. An unrecognised
+// refusal falls back to the generic failure rather than rendering a raw enum:
+// a value this build has no wording for is still a thing that did not happen.
+function refusalMessage(
+  refusal: string | undefined,
+): Parameters<ReturnType<typeof useT>>[0] {
+  switch (refusal) {
+    case "not_failed":
+      return "worklist.verb.retryRefusedNotFailed";
+    case "repeats_its_effect":
+      return "worklist.verb.retryRefusedRepeats";
+    case "trigger_event_unavailable":
+      return "worklist.verb.retryRefusedEventGone";
+    default:
+      return "worklist.verb.retryFailed";
+  }
+}
+
+// How a meeting went, recorded from the row that asked.
+//
+// Three buttons rather than one primary and a menu: the answers are equally
+// likely and equally short, and hiding two of three behind a chevron would make
+// the common case a second click. None is emerald — an outcome is a record of
+// what already happened, not the day's next move, and the queue's one filled
+// primary belongs to the selected row's own action.
+//
+// The row leaves the queue on success because the lane asks only for meetings
+// with no outcome. That is also why there is no undo offered here: a corrected
+// outcome is a second answer to the same question, given on the meeting itself
+// where the history of both is visible, rather than a toast that disappears.
+function MeetingOutcome({ id }: Readonly<{ id: string }>) {
+  const t = useT();
+  const toast = useToast();
+  const record = useMeetingOutcome([worklistKey]);
+  const answer = (status: "held" | "no_show" | "canceled") => () =>
+    record.mutate(
+      { id, status },
+      {
+        onSuccess: () => toast.show(t("worklist.verb.meetingOutcomeRecorded")),
+        // A refused write leaves the row exactly as it was, which renders
+        // identically to a click that did nothing.
+        onError: () =>
+          toast.show(t("worklist.verb.meetingOutcomeFailed"), { mark: false }),
+      },
+    );
+  return (
+    <div className="worklist-row-verbs">
+      <Button small pending={record.isPending} onClick={answer("held")}>
+        {t("worklist.verb.meetingHeld")}
+      </Button>
+      <Button small pending={record.isPending} onClick={answer("no_show")}>
+        {t("worklist.verb.meetingNoShow")}
+      </Button>
+      <Button small pending={record.isPending} onClick={answer("canceled")}>
+        {t("worklist.verb.meetingCanceled")}
       </Button>
     </div>
   );

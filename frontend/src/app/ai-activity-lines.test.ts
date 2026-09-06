@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -334,22 +334,45 @@ describe("the ticker and the rail never narrate one action twice", () => {
 // Read from source rather than imported: a mutationKey is a literal inside a
 // hook, exported by nothing.
 describe("the email mutation keys stay split", () => {
-  const SITES = ["../screens/compose.tsx", "../screens/persondrawers.tsx"];
+  // DERIVED from the tree, never listed. The list was two named files, and one
+  // of them stopped writing mail at all when the person page's second composer
+  // was retired — so the gate failed on a file that had become innocent, and
+  // would have gone on passing for any NEW screen that took up the old key. A
+  // census that can fail short has already failed: what this protects is the
+  // split itself, so its corpus is every screen that spells either key.
+  const sites = mailMutationSites();
 
-  it.each(SITES)("keeps drafts off the send key in %s", async (rel) => {
-    const src = await readSource(rel);
-    // One draft and one send per screen: the draft is the AI call the rail
-    // narrates, the send is the write the ticker narrates.
-    expect(count(src, '["email-draft",')).toBe(1);
-    expect(count(src, '["email",')).toBe(1);
+  it("finds the screens that write mail at all", () => {
+    // Fail-closed. A miswired scan reads an empty tree, reports PASS, and there
+    // is no failing assertion to notice.
+    expect(sites.length).toBeGreaterThan(0);
+  });
+
+  it.each(sites)("keeps drafts off the send key in %s", (file) => {
+    const src = readFileSync(join(screensDir(), file), "utf8");
+    // At most one of each per screen: the draft is the AI call the rail
+    // narrates, the send is the write the ticker narrates, and a screen that
+    // spelled either twice would narrate one action under two vocabularies.
+    expect(count(src, '["email-draft",')).toBeLessThanOrEqual(1);
+    expect(count(src, '["email",')).toBeLessThanOrEqual(1);
   });
 });
 
-function count(haystack: string, needle: string): number {
-  return haystack.split(needle).length - 1;
+function screensDir(): string {
+  return join(dirname(fileURLToPath(import.meta.url)), "..", "screens");
 }
 
-async function readSource(rel: string): Promise<string> {
-  const here = dirname(fileURLToPath(import.meta.url));
-  return readFile(join(here, rel), "utf8");
+/** Every screen that spells an email mutation key, in a stable order. */
+function mailMutationSites(): string[] {
+  return readdirSync(screensDir())
+    .filter((file) => file.endsWith(".tsx") && !file.includes(".test."))
+    .filter((file) => {
+      const src = readFileSync(join(screensDir(), file), "utf8");
+      return src.includes('["email-draft",') || src.includes('["email",');
+    })
+    .sort();
+}
+
+function count(haystack: string, needle: string): number {
+  return haystack.split(needle).length - 1;
 }

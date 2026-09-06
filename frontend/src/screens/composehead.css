@@ -1,0 +1,69 @@
+/* The mail head: the rows above the body, and the two controls that only exist
+ * up here. Everything else the head draws — the field frame, the tokens, the
+ * select trigger — comes from the design system. */
+
+/* One line of the head. A fixed label column so short names cannot each wrap
+   into a two-word paragraph, and an optional trailing column that keeps its
+   place whether or not a row has a control in it — so the value column's right
+   edge is one margin down the whole block rather than a ragged one. */
+.mailrow {
+  display: grid;
+  /* Wide enough for the longest name the head carries in any language — "How
+     to send", "Versandweg" — because a label that wraps to two lines makes its
+     own row taller than the field it names. */
+  grid-template-columns: minmax(0, 6rem) minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  border-block-end: 1px solid var(--borderSubtle);
+}
+.mailrow-label {
+  color: var(--textMeta);
+  /* The name sits on the field's own line rather than on the top of a box that
+     grows: a To row holding three recipients is two lines tall, and a label
+     aligned to its top drifts away from the row it names. */
+  padding-block-start: var(--space-2);
+}
+.mailrow-value {
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+/* A control that acts on the row it sits in — the Bcc reveal. Its own column,
+   so the value column's right edge is one margin down the whole block whether a
+   row has one or not; and the gap is the field's, not the head's, because it
+   reads as an extension of the field beside it rather than as a verb for the
+   drawer. */
+.mailrow-trailing {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The transport dial, with the mark for the one it is on in front of it: a rep
+   glancing at the head should be able to tell mail from a chat channel without
+   reading the dial's face. */
+.compose-transport {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--textMeta);
+}
+.compose-transport > :last-child {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+/* What a pressed Send is still waiting for, under the field it waits on. The
+   danger tone is the same one a send-time refusal gets, and it sits tight to the
+   control so the message and the thing to fix are read as one.
+
+   BOTH classes, not one: `.t-caption` carries the size and sets its own colour at
+   the same specificity, so a single class left the message grey whenever the
+   bundler put the base sheet last. The pairing states the override rather than
+   depending on file order. */
+.t-caption.compose-need {
+  color: var(--danger);
+  margin-top: var(--space-1);
+}

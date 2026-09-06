@@ -105,6 +105,36 @@ func reviewToWire(review Review) crmcontracts.WeeklyReview {
 		}
 		out.Outlook = &outlook
 	}
+	if review.Scorecard != nil {
+		out.Scorecard = scorecardToWire(*review.Scorecard)
+	}
+	return out
+}
+
+// scorecardToWire renders the week's judgement.
+//
+// Each block travels only when it is present. An absent block is omitted rather
+// than sent as zeros, because a reader that received zeros would draw a rep who
+// carried no leads as having failed at the funnel.
+func scorecardToWire(card Scorecard) *crmcontracts.WeeklyReviewScorecard {
+	out := &crmcontracts.WeeklyReviewScorecard{}
+	if l := card.Lead; l != nil {
+		out.Lead = &crmcontracts.WeeklyScorecardLeadBlock{
+			Advanced: l.Advanced, Disqualified: l.Disqualified, Promoted: l.Promoted,
+			AnsweredInTarget: l.AnsweredInTarget, Breached: l.Breached,
+			MeetingsBooked: l.Booked, MeetingsHeld: l.Held, MeetingsNoShow: l.NoShow,
+			MeetingsPartialHistory: l.PartialHistory,
+		}
+	}
+	if d := card.Deal; d != nil {
+		out.Deal = &crmcontracts.WeeklyScorecardDealBlock{
+			Advances: d.Advances, Regressions: d.Regressions,
+			MedianDaysInStage: d.MedianDaysInStage,
+			WithNextStep:      d.WithNextStep, Open: d.Open,
+			MultiThreaded: d.MultiThreaded, CloseDateSound: d.CloseDateSound,
+			ForecastUp: d.ForecastUp, ForecastDown: d.ForecastDown,
+		}
+	}
 	return out
 }
 

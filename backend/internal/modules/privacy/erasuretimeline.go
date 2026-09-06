@@ -160,6 +160,10 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 	if err := deleteReplyVerdictHistoryFor(ctx, tx, personID); err != nil {
 		return nil, err
 	}
+	// And the handoffs naming them, for the same reason and on the same act.
+	if err := deleteSubjectHandoffs(ctx, tx, personID); err != nil {
+		return nil, err
+	}
 	return redacted, nil
 }
 
@@ -264,6 +268,44 @@ func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, personID ids.PersonID, d
 		}
 	}
 	return rawPurged, aiPayloadsPurged, nil
+}
+
+// deleteSubjectHandoffs drops every SDR handoff naming the subject, and with it
+// the transitions that cascade from each one.
+//
+// A handoff carries the subject's id, a free-text note one seat wrote about
+// them, and a judgement — accepted, or refused for this reason — that people
+// made about this person. Erasure UPDATEs the person in place and never removes
+// the row, so the ON DELETE CASCADE on lead_id and person_id never fires for an
+// Art. 17 request: this statement is what actually reaches them.
+//
+// DELETED rather than nulled, on the ground ai_feedback records: a decision
+// about somebody nobody may now assert anything about has nothing left to say.
+// sdr_handoff_event goes with it through its own cascade, which DOES fire here
+// because this is a real delete.
+func deleteSubjectHandoffs[ID ids.UUID | ids.PersonID](ctx context.Context, tx pgx.Tx, personID ID) error {
+	// The transitions first, by name. sdr_handoff_event cascades from the delete
+	// below and would go anyway — but a cascade is invisible to the census that
+	// asks whether Art. 17 reaches a table, and invisible to the next reader
+	// auditing what this erasure destroys. Naming it costs one statement and
+	// makes both able to see it.
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM sdr_handoff_event
+		WHERE handoff_id IN (
+		      SELECT id FROM sdr_handoff
+		       WHERE person_id = $1
+		          OR lead_id IN (SELECT id FROM lead WHERE promoted_person_id = $1))`,
+		personID); err != nil {
+		return fmt.Errorf("privacy: clearing the subject's handoff transitions: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM sdr_handoff
+		WHERE person_id = $1
+		   OR lead_id IN (SELECT id FROM lead WHERE promoted_person_id = $1)`,
+		personID); err != nil {
+		return fmt.Errorf("privacy: clearing the subject's handoffs: %w", err)
+	}
+	return nil
 }
 
 // deleteReplyVerdictHistoryFor drops every judgement this installation recorded

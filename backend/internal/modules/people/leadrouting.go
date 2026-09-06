@@ -317,6 +317,11 @@ func (leadRouting) Spec() workflow.Spec {
 		Name:    assignLeadOwnerName,
 		Trigger: workflow.Trigger{EventType: "lead.created"},
 		Tier:    mcp.TierAutoExecute,
+		// Re-driving this costs nothing: RouteLead reads owner_id under the
+		// lead's row lock and returns already_owned without writing once
+		// anybody holds it, so a repeat cannot take a lead off the human who
+		// claimed it in between.
+		RedrivableWithoutDuplicating: true,
 	}
 }
 

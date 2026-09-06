@@ -402,9 +402,15 @@ describe("ConsentSection", () => {
       ).toHaveLength(1),
     );
     const posts = sent.filter((s) => s.key === "POST /people/person-1/consent");
+    // An exact match, so a token key reappearing in this body fails here — the
+    // point of this test. The wording rides along because the server refuses a
+    // grant that cannot say what the subject agreed to; this door has no screen
+    // the subject read, so it attests to a consent taken elsewhere rather than
+    // quoting one.
     expect(posts.at(-1)?.body).toEqual({
       purpose_id: "p1",
       new_state: "granted",
+      wording: expect.stringContaining("outside the product"),
     });
   });
 

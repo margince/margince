@@ -198,6 +198,11 @@ function MutationError({ error }: Readonly<{ error: unknown }>) {
 // RecordConsentRequest and this control has no field for it yet. Errors
 // surface verbatim (a DOI-required purpose 422s here rather than silently
 // no-opping) so the human sees exactly why the toggle didn't take.
+//
+// A grant carries wording, because the server refuses one that cannot say what
+// the subject agreed to. This door has no screen the subject read — an operator
+// is recording a consent obtained elsewhere — so it submits an attestation
+// naming that, rather than quoting a sentence nobody was shown.
 function ConsentRow({
   mayWrite,
   personId,
@@ -224,6 +229,15 @@ function ConsentRow({
         body: {
           purpose_id: entry.purpose_id,
           new_state: newState,
+          // Only a grant needs it: a withdrawal demonstrates nothing, and the
+          // server stores no wording for one.
+          ...(newState === "granted"
+            ? {
+                wording: t("consent.operatorWording", {
+                  label: purpose?.label ?? entry.purpose_key ?? "",
+                }),
+              }
+            : {}),
         },
       });
       if (error) {

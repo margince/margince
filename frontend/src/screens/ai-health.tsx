@@ -31,7 +31,7 @@ export function AiHealthCard() {
   // with a Retry that cannot succeed, and `refetchInterval` re-issues the
   // doomed call every minute for as long as the tab is open. The keys and calls
   // cards beside it answer the same question the same way.
-  const canSee = useCan("automation", "update");
+  const canSee = useCan("ai_diagnostics", "read");
   const me = useMe();
   const query = useQuery({
     queryKey: ["ai-health"],

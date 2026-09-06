@@ -26,6 +26,7 @@ import {
   type WeeklyReview,
 } from "./home.queries";
 import { OutlookPanel } from "./home.waterfall";
+import { ScorecardPanel } from "./home.weekly.scorecard";
 
 import "./home.weekly.css";
 
@@ -362,6 +363,10 @@ function WeeklyBody({
         horizon={horizon}
         onHorizon={setHorizon}
       />
+      {/* How well the week went, after where it was landing and before the
+          outcome strip's tallies. Absent blocks draw nothing at all — the
+          panel never substitutes zeros for work the rep did not have. */}
+      <ScorecardPanel scorecard={review.scorecard} />
       {/* FIVE slots, because a strip is read ACROSS as one comparison and ten
           is a table wearing a strip's clothes — at 1280 the row folded to two
           ranks of five and stopped being one reading at all (#3709).

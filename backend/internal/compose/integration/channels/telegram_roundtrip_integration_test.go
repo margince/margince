@@ -79,6 +79,7 @@ func (c *telegramEnv) grantConsent(t *testing.T, personID, purposeKey string) {
 	}
 	if status := c.Call(t, "POST", "/v1/people/"+personID+"/consent", integration.AnyMap{
 		"purpose_id": purposeID, "new_state": "granted", "lawful_basis": "consent",
+		"wording": "Yes, you may contact me about this.",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("record consent → %d", status)
 	}

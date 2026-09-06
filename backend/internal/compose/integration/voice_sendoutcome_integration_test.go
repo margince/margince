@@ -87,6 +87,7 @@ func setupVoiceSend(t *testing.T) *voiceSendEnv {
 	}
 	if status := e.Call(t, "POST", "/v1/people/"+person.ID+"/consent", AnyMap{
 		"purpose_id": purpose.ID, "new_state": "granted", "lawful_basis": "consent",
+		"wording": "Yes, you may contact me about this.",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("record consent → %d", status)
 	}

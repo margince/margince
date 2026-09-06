@@ -12,7 +12,7 @@ import {
   PersonCommitmentsCard,
   PersonMattersCard,
 } from "./personcards";
-import { PersonComposer, PersonResearchDrawer } from "./persondrawers";
+import { PersonResearchDrawer } from "./persondrawers";
 import { PersonMemory } from "./personmemory";
 import { PersonPageV2 } from "./personpage";
 import {
@@ -1573,60 +1573,15 @@ export const OverviewGaps: Story = {
   },
 };
 
-// --- Drawers: the three surfaces the page opens over itself -----------------
+// --- Drawers: the surfaces the page opens over itself ------------------------
 //
-// Each renders `open`, since a closed drawer paints nothing and would capture
-// as a blank frame — the point of these stories is the drawer itself.
-
-const consentGuardAllowed: components["schemas"]["PersonConsentGuard"] = {
-  person_id: "p-1",
-  entries: [
-    {
-      purpose_key: "business_correspondence",
-      purpose_label: "Business correspondence",
-      purpose_class: "business_correspondence",
-      channel: "email",
-      verdict: "allowed",
-      reason: "She wrote to you on 1 Aug 2026.",
-    },
-  ],
-};
-
-export const Composer: Story = {
-  render: () => {
-    installFetchStub({
-      "POST /people/p-1/draft-email": () =>
-        jsonResponse({
-          subject: "Re: retrofit timeline",
-          body: "Hi Dana,\n\nHappy to push the review back a week — does the 20th work?\n\nBest,",
-          to: ["dana@brandt.example"],
-          reasoning: [
-            {
-              kind: "commitment",
-              label: "You owe her the updated retrofit quote.",
-            },
-            {
-              kind: "conversation",
-              label: "She asked to push the review back a week.",
-            },
-          ],
-          generated_by: "deterministic",
-          ai_generated: false,
-        }),
-    });
-    return (
-      <StoryProviders>
-        <PersonComposer
-          personId="p-1"
-          view={populated}
-          guard={consentGuardAllowed}
-          open
-          onClose={() => {}}
-        />
-      </StoryProviders>
-    );
-  },
-};
+// Each renders `open`, since a closed drawer paints nothing and would capture as
+// a blank frame — the point of these stories is the drawer itself.
+//
+// Writing to the contact is NOT among them: it is the one composer every record
+// in the product opens, and its stories live with it in compose.stories.tsx.
+// There were two for a while, and the page picking between them by transport is
+// what this retired.
 
 // The research drawer under ADR-0096 D4's supported configuration: no
 // provider is registered. `providerProfile` is PRESENT with state

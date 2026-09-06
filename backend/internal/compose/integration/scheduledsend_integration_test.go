@@ -84,6 +84,7 @@ func (p *preflightEnv) seedConsentedRecipient(t *testing.T, name, email string) 
 	}
 	if status := p.Call(t, "POST", "/v1/people/"+person.ID+"/consent", AnyMap{
 		"purpose_id": transactional, "new_state": "granted", "lawful_basis": "contract",
+		"wording": "Yes, you may contact me about this.",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("grant consent for %s → %d", email, status)
 	}
@@ -253,9 +254,14 @@ func (p *preflightEnv) setTransactionalConsent(t *testing.T, state string) {
 	if transactional == "" {
 		t.Fatalf("bootstrap seeded no transactional purpose: %+v", purposes.Data)
 	}
-	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent", AnyMap{
-		"purpose_id": transactional, "new_state": state, "lawful_basis": "consent",
-	}, nil, nil); status != http.StatusOK {
+	body := AnyMap{"purpose_id": transactional, "new_state": state, "lawful_basis": "consent"}
+	// Only a grant carries it: a grant that cannot say what the subject agreed
+	// to is refused, and a withdrawal demonstrates nothing, so sending it for
+	// one would describe a request this helper never makes.
+	if state == "granted" {
+		body["wording"] = "Yes, you may contact me about this."
+	}
+	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent", body, nil, nil); status != http.StatusOK {
 		t.Fatalf("setting consent to %s → %d", state, status)
 	}
 }

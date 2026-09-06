@@ -201,6 +201,9 @@ function InviteAction({ canIssueLink }: Readonly<{ canIssueLink: boolean }>) {
             // admin typed them.
             setOpen(false);
             qc.invalidateQueries({ queryKey: ["users-admin"] });
+            // An invite spends a seat, so the capacity readings move with it.
+            qc.invalidateQueries({ queryKey: ["installation-seat-usage"] });
+            qc.invalidateQueries({ queryKey: ["installation-license"] });
             if (canIssueLink) {
               setInvited(member);
               void passwordLink.mint(member.id);
@@ -404,7 +407,16 @@ function MemberRow({
   // successful change.
   const refresh = () => {
     setError(null);
-    return qc.invalidateQueries({ queryKey: ["users-admin"] });
+    return Promise.all([
+      qc.invalidateQueries({ queryKey: ["users-admin"] }),
+      // The seat COUNT moves with the roster: deactivating a member frees a
+      // seat and reactivating one spends it, and Settings → Seats reads that
+      // number from its own endpoint with a five-minute staleTime. Left alone
+      // it kept reporting the pre-change count to whoever had the page open —
+      // the same roster change, two caches.
+      qc.invalidateQueries({ queryKey: ["installation-seat-usage"] }),
+      qc.invalidateQueries({ queryKey: ["installation-license"] }),
+    ]);
   };
   const onError = (e: Error) => setError(problemMessageOf(e, t));
   const toast = useToast();

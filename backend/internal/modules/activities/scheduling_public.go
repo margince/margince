@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -162,6 +163,15 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 	// recordable consent to.
 	if req.Consent.PolicyVersion == "" {
 		httperr.Write(w, r, httperr.Validation("consent.policy_version", "required", "the consent wording version shown to the booker is required"))
+		return
+	}
+	// Checked HERE, not left to the consent writer, for the reason the comment
+	// above gives: EnsurePersonByEmail below commits a person row before the
+	// grant is attempted, so a refusal down there would leave one behind — and
+	// this door is unauthenticated, so a caller omitting the field in a loop
+	// grows the person table one rejected request at a time.
+	if req.Consent.Wording == nil || strings.TrimSpace(*req.Consent.Wording) == "" {
+		httperr.Write(w, r, httperr.Validation("consent.wording", "required", "the consent wording shown to the booker is required"))
 		return
 	}
 	purposeID := ids.UUID(req.Consent.PurposeId)

@@ -7,6 +7,7 @@ import { AttentionProvider } from "./app/attention";
 import { AppErrorBoundary } from "./app/errorboundary";
 import { createQueryClient } from "./app/queryclient";
 import { startTheme } from "./app/theme";
+import { FilePreviewProvider } from "./design-system/filepreview";
 import { ToastProvider, ToastRegion } from "./design-system/toast";
 import { LocaleProvider } from "./i18n";
 import "./app.css";
@@ -78,7 +79,14 @@ createRoot(root).render(
                 makes "exactly one region exists" a fact about this file rather
                 than a habit each screen has to keep. */}
             <ToastProvider>
-              <App />
+              {/* Around App rather than beside it, because what it gives the
+                  tree is a context every file card reads: a chip under a
+                  provider that was not an ancestor is a chip that quietly
+                  stays a download. It draws its own dialog, portalled like
+                  every other overlay here. */}
+              <FilePreviewProvider>
+                <App />
+              </FilePreviewProvider>
               <ToastRegion />
             </ToastProvider>
           </AttentionProvider>
