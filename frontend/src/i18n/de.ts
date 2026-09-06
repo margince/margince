@@ -133,6 +133,7 @@ export const de = {
   "history.field.occurred_at": "Zeitpunkt",
   "history.field.organization_id": "Unternehmen",
   "history.field.owner_id": "Verantwortlich",
+  "history.field.visibility": "Sichtbarkeit",
   "history.field.parent_org_id": "Muttergesellschaft",
   "history.field.partner_attribution": "Partnerzuordnung",
   "history.field.partner_org_id": "Partner",

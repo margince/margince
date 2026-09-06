@@ -139,6 +139,7 @@ export const vi = {
   "history.field.occurred_at": "Thời điểm",
   "history.field.organization_id": "Công ty",
   "history.field.owner_id": "Người sở hữu",
+  "history.field.visibility": "Phạm vi hiển thị",
   "history.field.parent_org_id": "Công ty mẹ",
   "history.field.partner_attribution": "Ghi nhận đối tác",
   "history.field.partner_org_id": "Đối tác",

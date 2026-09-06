@@ -17,6 +17,9 @@ const base: Person = {
   captured_by: "connector:gmail",
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-08-01T08:00:00Z",
+  // The write pins the row it overwrites, so a fixture with no version is a
+  // row this panel refuses to write — see the last test in this file.
+  version: 7,
 };
 
 const seatMayWrite = {
@@ -154,6 +157,25 @@ describe("PersonAccess", () => {
       await screen.findByText(/everyone in the organization/i),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: /make private/i })).toBeNull();
+  });
+
+  it("refuses to write a row it read back without a version", async () => {
+    // Unpinned is last-write-wins, and this write moves the column that
+    // decides who may read the record. The refusal surfaces through the
+    // mutation's error path rather than sending an unconditional PATCH.
+    const sent: string[] = [];
+    stub(sent);
+    draw({
+      ...base,
+      version: undefined,
+      visibility: "workspace",
+      writable: true,
+      owner_id: "u1",
+    });
+    await userEvent.click(
+      await screen.findByRole("button", { name: /make private/i }),
+    );
+    expect(sent).not.toContain("PATCH /people/p-1");
   });
 
   it("draws nothing at all when the server sent no visibility", () => {

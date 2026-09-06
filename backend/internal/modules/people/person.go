@@ -326,23 +326,8 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 				return err
 			}
 		}
-		// A contact this patch has just published takes its history with it,
-		// the same way POST /people/{id}/publish does.
-		//
-		// Without this the two doors to one field disagree about what the field
-		// MEANS: the owner's verb carries the mail and meetings across, so a
-		// colleague opening the record finds the correspondence, while a patch
-		// setting the same column left them a contact nobody has ever spoken
-		// to. Same fact, two answers, decided by which door the caller used.
-		//
-		// Widening only. Narrowing does not run it — the cohort pass links and
-		// re-derives, which is how a record OPENS, and asking it to close one
-		// would be reading it backwards.
-		if current.Visibility != nil && *current.Visibility == visibilityOwner &&
-			in.Visibility != nil && *in.Visibility == visibilityWorkspace {
-			if _, err := s.PromotePersonCohortTx(ctx, tx, id); err != nil {
-				return err
-			}
+		if err := s.carryHistoryIfPublished(ctx, tx, id, current, in); err != nil {
+			return err
 		}
 		if in.Emails != nil || in.Phones != nil {
 			by, err := storekit.CapturedBy(ctx)
@@ -387,6 +372,34 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 // buildPersonPatch stages only the fields the caller supplied, each
 // diffed against the current row so the audit before/after captures the
 // real change and an unchanged field is left out of the UPDATE.
+// carryHistoryIfPublished takes a contact's mail and meetings with it when this
+// patch is what published the contact.
+//
+// The same thing POST /people/{id}/publish does at the end of its own write.
+// Without it the two doors to one field disagree about what the field MEANS:
+// the owner's verb carries the correspondence across, so a colleague opening
+// the record finds the history, while a patch setting the same column left them
+// a contact nobody has ever spoken to. Same fact, two answers, decided by which
+// door the caller happened to use.
+//
+// WIDENING ONLY. The cohort pass links and re-derives — it is how a record
+// OPENS — so running it on a narrowing would be reading it backwards. Making a
+// contact private does not re-hold what was already shared; the activities keep
+// their own audiences, which is what the contract says.
+func (s *Store) carryHistoryIfPublished(
+	ctx context.Context, tx pgx.Tx, id ids.PersonID,
+	current crmcontracts.Person, in UpdatePersonInput,
+) error {
+	if in.Visibility == nil || *in.Visibility != visibilityWorkspace {
+		return nil
+	}
+	if current.Visibility == nil || *current.Visibility != visibilityOwner {
+		return nil
+	}
+	_, err := s.PromotePersonCohortTx(ctx, tx, id)
+	return err
+}
+
 func buildPersonPatch(current crmcontracts.Person, in UpdatePersonInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
 	if in.FullName != nil {

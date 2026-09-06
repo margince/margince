@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ifMatch, requireVersion } from "../api/version";
 import { Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
@@ -39,7 +40,14 @@ export function PersonAccess({ person }: Readonly<{ person: Person }>) {
   const setVisibility = useMutation({
     mutationFn: async (visibility: "workspace" | "owner") => {
       const { error } = await api.PATCH("/people/{id}", {
-        params: { path: { id: person.id } },
+        params: {
+          path: { id: person.id },
+          // The row this panel drew, pinned. Unpinned is last-write-wins, and
+          // the column this write moves is the one that decides who may read
+          // the record — a save built on a stale render would silently undo
+          // somebody else's answer to that question.
+          ...ifMatch(requireVersion(person.version)),
+        },
         body: { visibility },
       });
       if (error) {

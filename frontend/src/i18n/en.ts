@@ -133,6 +133,7 @@ export const en = {
   "history.field.occurred_at": "Occurred",
   "history.field.organization_id": "Company",
   "history.field.owner_id": "Owner",
+  "history.field.visibility": "Visibility",
   "history.field.parent_org_id": "Parent company",
   "history.field.partner_attribution": "Partner attribution",
   "history.field.partner_org_id": "Partner",
