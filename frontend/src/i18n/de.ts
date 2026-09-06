@@ -6160,6 +6160,13 @@ export const de = {
     "Die Einheiten, die dieser Build zusammengesetzt hat, und welche Rollen sie erreichen.",
   "settings.page.reset.sub":
     "Diese Installation leeren. Es gibt kein Zur\u00fcck.",
+  "settings.scope.self": "Nur Sie",
+  "settings.scope.mixed": "Gemischt",
+  "settings.scope.workspace": "Unternehmen",
+  "settings.scope.installation": "Installation",
+  "settings.scopeAria": "Wen diese Seite betrifft: {scope}",
+  "settings.scopeAriaMixed":
+    "Diese Seite enth\u00e4lt Einstellungen, die unterschiedliche Personen betreffen \u2014 jede sagt es selbst.",
   "settings.search.label": "Einstellungen durchsuchen",
   "settings.search.placeholder": "Einstellungen suchen",
   "settings.search.none": "Keine Einstellungsseite passt dazu.",

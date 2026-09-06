@@ -45,6 +45,14 @@ export type NavLevelEntry = {
   // is many pages behind one screen — `PAGE_SUB_KEYS[route.screen]` can only
   // describe all of them at once, which is no description of any of them.
   subKey?: MessageKey;
+  // Whose state this page changes, in the reader's own words — "Only you",
+  // "Company", "Installation". A settings page is the one place a person cannot
+  // tell that from the controls: a toggle that changes your signature and a
+  // toggle that changes everybody's mail routing look identical.
+  //
+  // On the ENTRY for the same reason `subKey` is: the section knows which page
+  // this is, and a screen-keyed table would have to answer for all of them.
+  scopeKey?: MessageKey;
   icon: LucideIcon;
   // The level this entry opens. Grouping is possible at every depth, so the
   // children are a flat list only until one needs headings.

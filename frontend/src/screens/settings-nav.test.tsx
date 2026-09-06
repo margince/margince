@@ -6,7 +6,7 @@ import type { RbacObject } from "../app/capability";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import type { Route } from "../app/router";
 import * as router from "../app/router";
-import { SettingsRail } from "../app/shell";
+import { PageTitle, SettingsRail } from "../app/shell";
 import { translate } from "../i18n";
 import { SettingsScreen } from "./settings";
 import {
@@ -23,7 +23,7 @@ import {
   type SettingsPageId,
   visibleSettingsPages,
 } from "./settingscatalog";
-import { SETTINGS_HOME_ID } from "./settingsnav";
+import { SETTINGS_HOME_ID, useSettingsSection } from "./settingsnav";
 import { settingsHref } from "./settingsrouting";
 
 // WHICH settings pages a principal is offered at all, and which group holds each
@@ -1282,6 +1282,41 @@ it("keeps the home row's id out of the page vocabulary", () => {
 // list the rail passes — a wiring that handed it SETTINGS_PAGES would offer a
 // rep the audit log, and every one of those tests would still pass. This is the
 // case that fails when that happens.
+// The catalog has declared a `scope` for every page since it was written, and
+// nothing read it until now. Asserted through the REAL section rather than a
+// hand-built one: `shell.test.tsx` proves PageTitle renders a scope it is
+// handed — building the entry itself, since `fixtureSection` carries none — and
+// this proves the settings level actually hands it one.
+describe("the scope a settings page publishes", () => {
+  function RealTitle({ hash }: Readonly<{ hash: string }>) {
+    const route = router.parseHash(hash);
+    return <PageTitle route={route} section={useSettingsSection(route)} />;
+  }
+
+  // `company` is deliberately not among these: its requirement ANDs the
+  // organization write with the `company_context` deployment flag, which the
+  // default fixture leaves off, so the page is shut and has no heading to carry
+  // a scope. The installation scope is covered by the pure catalog test instead.
+  // `account` and `connections` are deliberately NOT here. Both open on
+  // `always`, so their heading and badge render while `/me` is still in flight
+  // — `findByText` would resolve on the loading paint, and a regression that
+  // showed the badge during loading and dropped it once the snapshot arrived
+  // would still pass. Their scope values are held by the pure catalog cases
+  // instead, where there is no in-flight state to race.
+  //
+  // `pipelines` is safe for the opposite reason: it opens on a GRANT, every
+  // grant predicate reads false against an unresolved snapshot, so its row
+  // cannot appear until /me has answered.
+  it.each([["pipelines", "settings.scope.workspace"]] as const)(
+    "says whose state %s changes",
+    async (page, key) => {
+      vi.stubGlobal("fetch", settingsBackend());
+      render(<RealTitle hash={`#/settings/${page}`} />);
+      expect(await screen.findByText(translate("en", key))).toBeTruthy();
+    },
+  );
+});
+
 describe("the settings search in the rail", () => {
   it("offers a rep no page their own sidebar does not draw", async () => {
     const user = userEvent.setup();

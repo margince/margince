@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Avatar, Button, Modal } from "../design-system/atoms";
+import { Avatar, Badge, Button, Modal } from "../design-system/atoms";
 import { CompanyLogo } from "../design-system/companylogo";
 import { Logomark } from "../design-system/logomark";
 import { useLocale, useT } from "../i18n";
@@ -701,6 +701,9 @@ export function PageTitle({
   // the screen-keyed table can only carry a sentence true of all of them. The
   // table remains for screens that ARE one page.
   const subKey = inSection?.entry.subKey ?? PAGE_SUB_KEYS[route.screen];
+  // Whose state the page changes. Only a settings entry carries one, and only
+  // then: on every other screen the answer is the record in front of you.
+  const scopeKey = inSection?.entry.scopeKey;
 
   if (recordNamesPage || unitNamesPage || selfHeaded) {
     return null;
@@ -723,12 +726,38 @@ export function PageTitle({
             own `aria-label` — "Privacy & audit — change section" — and put an
             instruction in the document's heading list. The control keeps that
             name; the heading states the page. */}
-        <h1
-          className={switcher ? "t-display pageswitchhead" : "t-display"}
-          aria-label={switcher ? title : undefined}
-        >
-          {switcher || title}
-        </h1>
+        {/* The heading and the scope share one ROW: `.pagetitle-text` stacks its
+            children, so a badge placed as a sibling would sit under the heading
+            at full width and read as a second line of the title. */}
+        <div className="pagetitle-head">
+          <h1
+            className={switcher ? "t-display pageswitchhead" : "t-display"}
+            aria-label={switcher ? title : undefined}
+          >
+            {switcher || title}
+          </h1>
+          {/* Beside the heading rather than inside it: the scope is about the
+              page, not part of its name, and a heading carrying it would read
+              "Capture rules Company" in every document outline and screen
+              reader. `quiet` because it states a fact rather than flagging one
+              — a page being company-wide is the ordinary case, not a warning.
+              `quiet` keeps the vocabulary and drops the fill (design-system
+              README, Badge); it still draws the status dot. */}
+          {scopeKey && (
+            <Badge quiet>
+              {/* The mixed page says something different from the others: not
+                  WHO it affects, but that it has no single answer and each
+                  setting states its own. "Who this page affects: Mixed" would
+                  be a non-sentence. */}
+              <span className="sr-only">
+                {scopeKey === "settings.scope.mixed"
+                  ? t("settings.scopeAriaMixed")
+                  : t("settings.scopeAria", { scope: t(scopeKey) })}
+              </span>
+              <span aria-hidden="true">{t(scopeKey)}</span>
+            </Badge>
+          )}
+        </div>
         {subKey && <p className="pagesub">{t(subKey)}</p>}
       </div>
     </div>

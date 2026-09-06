@@ -6094,6 +6094,14 @@ export const vi = {
     "C\u00e1c \u0111\u01a1n v\u1ecb b\u1ea3n d\u1ef1ng n\u00e0y \u0111\u00e3 k\u1ebft h\u1ee3p, v\u00e0 vai tr\u00f2 n\u00e0o t\u1edbi \u0111\u01b0\u1ee3c.",
   "settings.page.reset.sub":
     "L\u00e0m r\u1ed7ng b\u1ea3n tri\u1ec3n khai n\u00e0y. Kh\u00f4ng th\u1ec3 ho\u00e0n t\u00e1c.",
+  "settings.scope.self": "Ch\u1ec9 m\u00ecnh b\u1ea1n",
+  "settings.scope.mixed": "H\u1ed7n h\u1ee3p",
+  "settings.scope.workspace": "C\u00f4ng ty",
+  "settings.scope.installation": "B\u1ea3n c\u00e0i \u0111\u1eb7t",
+  "settings.scopeAria":
+    "Trang n\u00e0y \u1ea3nh h\u01b0\u1edfng \u0111\u1ebfn ai: {scope}",
+  "settings.scopeAriaMixed":
+    "Trang n\u00e0y c\u00f3 c\u00e1c c\u00e0i \u0111\u1eb7t \u1ea3nh h\u01b0\u1edfng \u0111\u1ebfn nh\u1eefng ng\u01b0\u1eddi kh\u00e1c nhau \u2014 m\u1ed7i c\u00e0i \u0111\u1eb7t t\u1ef1 n\u00f3i r\u00f5.",
   "settings.search.label": "T\u00ecm trong c\u00e0i \u0111\u1eb7t",
   "settings.search.placeholder": "T\u00ecm c\u00e0i \u0111\u1eb7t",
   "settings.search.none":

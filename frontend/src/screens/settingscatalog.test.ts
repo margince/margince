@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { RbacAction, RbacObject } from "../app/capability";
 import { type GrantSpec, meFixture } from "../app/mefixture";
+import { translate } from "../i18n";
 import {
   holds,
   SETTINGS_GROUPS,
   SETTINGS_PAGES,
   type SettingsPageId,
+  type SettingsScope,
   visibleSettingsPages,
 } from "./settingscatalog";
 
@@ -30,6 +32,102 @@ describe("the catalog's shape", () => {
     for (const group of SETTINGS_GROUPS) {
       expect(SETTINGS_PAGES.some((page) => page.group === group)).toBe(true);
     }
+  });
+});
+
+// Every page declares whose state it changes, and the nav turns that into a
+// label beside the heading (`scopeKey`, settingsnav.tsx). A page whose scope is
+// wrong tells a reader a company-wide switch is theirs alone, which is the one
+// mistake this field exists to prevent — so the values are checked here rather
+// than only where they render.
+describe("the scope each page declares", () => {
+  it("gives every page a scope the catalogs can label", () => {
+    for (const page of SETTINGS_PAGES) {
+      expect(translate("en", `settings.scope.${page.scope}`)).toBeTruthy();
+    }
+  });
+
+  // A CENSUS, not a sample. The earlier version of this suite named a few
+  // pages per scope and let the rest ride, and four pages were wrong under it:
+  // `integrations`, `models` and `privacy` each said "Company" over a card
+  // writing the whole installation, and `extensions` said "Installation" over a
+  // card writing one workspace's role grants. Every one of them passed.
+  //
+  // So every page is named here with the reason, and the two directions are
+  // checked below: a new page with no entry fails, and an entry for a page that
+  // no longer exists fails too. A census that can fail SHORT has already failed.
+  //
+  // The rule being applied: scope names whose state the page CHANGES, read off
+  // the endpoints its cards write, not the heading the page sits under and not
+  // what it merely reads. A read-only page describes what it shows.
+  const DECLARED_SCOPE: Record<SettingsPageId, SettingsScope> = {
+    // Wholly the reader's own.
+    account: "self",
+    voice: "self",
+    agents: "self",
+
+    // Pages whose cards genuinely split across two scopes. `integrations`
+    // is one: PATCH /integrations/settings is "the installation's
+    // provider-lookup posture" by its own contract summary, while webhooks,
+    // the overlay mapping and the workspace extension units on the same page
+    // stay inside one workspace.
+    integrations: "mixed",
+
+    // Personal pages carrying one shared card each. A badge reading "Only you"
+    // over either would tell a reader a company-wide switch is private to them.
+    // MailSharingCard PATCHes /capture/settings — whether captured mail is
+    // shared with colleagues; CaptureExclusionsCard's workspace rules keep a
+    // correspondent out of the CRM for everybody.
+    connections: "mixed",
+    "capture-activity": "mixed",
+
+    // The installation's own facts, by their contract summaries.
+    company: "installation",
+    authentication: "installation",
+    seats: "installation",
+    // PUT /ai/routing re-points which vendor processes the installation's text;
+    // /ai/provider-keys writes the installation key vault.
+    models: "installation",
+    // Both retention endpoints are installation-wide. What this page destroys,
+    // it destroys everywhere.
+    privacy: "installation",
+    // POST /embeddings/reindex rebuilds the installation's embed store.
+    "system-health": "installation",
+    reset: "installation",
+
+    // One workspace's state.
+    members: "workspace",
+    teams: "workspace",
+    pipelines: "workspace",
+    leads: "workspace",
+    fields: "workspace",
+    tags: "workspace",
+    products: "workspace",
+    capture: "workspace",
+    knowledge: "workspace",
+    import: "workspace",
+    automations: "workspace",
+    // Read-only pages: no write at all, so the scope describes what they SHOW.
+    usage: "workspace",
+    "model-calls": "workspace",
+    audit: "workspace",
+    // Reads the installation's unit inventory, but its only write is
+    // PATCH /roles/{key}/objects/{object} — one workspace's role grants.
+    extensions: "workspace",
+  };
+
+  it("declares the scope this census names, for every page", () => {
+    for (const page of SETTINGS_PAGES) {
+      expect(page.scope).toBe(DECLARED_SCOPE[page.id]);
+    }
+  });
+
+  // The other direction. Without this, deleting a page leaves a stale entry
+  // that nothing reads, and the census quietly describes a catalog that moved.
+  it("names every page in the catalog and nothing else", () => {
+    expect(Object.keys(DECLARED_SCOPE).sort()).toEqual(
+      SETTINGS_PAGES.map((page) => page.id).sort(),
+    );
   });
 });
 

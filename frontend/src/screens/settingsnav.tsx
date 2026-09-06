@@ -562,6 +562,12 @@ export function useSettingsSection(route: Route): NavSection {
             // missing from the catalogs is a compile error rather than a
             // subtitle that silently translates to nothing.
             subKey: `settings.page.${page.id}.sub`,
+            // Whose state the page changes, from the catalog's own `scope`
+            // rather than a second table: the catalog already declares it for
+            // every page, and it had no reader until now. Same MessageKey
+            // narrowing as the subtitle above — a missing scope label is a
+            // compile error, not a silent blank.
+            scopeKey: `settings.scope.${page.scope}`,
             icon: PAGE_ICONS[page.id],
           }),
         ),

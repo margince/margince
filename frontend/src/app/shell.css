@@ -1011,6 +1011,22 @@
   flex: 1;
   min-width: 0;
 }
+/* The heading and its scope badge on one line, the badge baseline-aligned with
+   the heading's text rather than centred on its box — a display-size heading is
+   tall enough that centring reads as floating.
+   `flex-wrap` is the last resort, not the usual behaviour. At phone width the
+   heading holds the SectionSwitcher, which takes `flex: 1` and absorbs the
+   remaining width, so its own label ellipsizes and the badge stays beside it.
+   The badge only drops to its own line when even the ellipsized name plus the
+   badge cannot fit. */
+.pagetitle-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
 .pagetitle h1 {
   margin: 0;
   font-family: var(--f-display);
@@ -1038,6 +1054,13 @@
 .pageswitchhead {
   display: flex;
   min-width: 0;
+  /* The switcher takes the row, which is what the comment above asks for. It
+     used to be the title's only child and got the width for free; inside
+     `.pagetitle-head` it is a flex ITEM beside the scope badge, and without this
+     it would size to its own text — a short page name would leave the switcher
+     stranded mid-row, and a long one would push the badge to a line of its
+     own while the label ellipsized. */
+  flex: 1;
 }
 .pageswitchhead > .pageswitch {
   flex: 1;

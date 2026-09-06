@@ -6293,6 +6293,13 @@ export const en = {
   "settings.page.extensions.sub":
     "The units this build composed, and which roles reach them.",
   "settings.page.reset.sub": "Emptying this installation. There is no undo.",
+  "settings.scope.self": "Only you",
+  "settings.scope.mixed": "Mixed",
+  "settings.scope.workspace": "Company",
+  "settings.scope.installation": "Installation",
+  "settings.scopeAria": "Who this page affects: {scope}",
+  "settings.scopeAriaMixed":
+    "This page holds settings that affect different people \u2014 each one says which.",
   "settings.search.label": "Search settings",
   "settings.search.placeholder": "Search settings",
   "settings.search.none": "No settings page matches that.",

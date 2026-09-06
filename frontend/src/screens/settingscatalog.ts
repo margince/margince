@@ -201,7 +201,22 @@ export type SettingsGroupId = (typeof SETTINGS_GROUPS)[number];
  * `workspace` is the internal enum's name for it and is deliberately not shown:
  * a person reading a settings page knows "Company", not the tenancy model.
  */
-export type SettingsScope = "self" | "team" | "workspace" | "installation";
+export type SettingsScope =
+  | "self"
+  | "team"
+  | "workspace"
+  | "installation"
+  // A page whose surfaces do not agree. My connections is the case: most of its
+  // nine cards are the reader's own mailboxes and network, and two are not —
+  // MailSharingCard writes `capture_settings`, the whole installation's
+  // mail-sharing rule, and ConnectorsCard carries the workspace's Telegram bot
+  // beside the reader's own mailboxes.
+  //
+  // Its own value rather than picking the wider of the two, because "Company"
+  // over a page that is mostly personal is as wrong as "Only you" over a
+  // page carrying a company switch. The head says the page is mixed and stops
+  // claiming to answer for every card on it.
+  | "mixed";
 
 /**
  * Every settings page, its group, its scope and what it takes to open it.
@@ -223,8 +238,17 @@ export const SETTINGS_PAGES = [
   { id: "account", group: "me", scope: "self", requires: always },
   { id: "voice", group: "me", scope: "self", requires: always },
   { id: "agents", group: "me", scope: "self", requires: always },
-  { id: "connections", group: "me", scope: "self", requires: always },
-  { id: "capture-activity", group: "me", scope: "self", requires: always },
+  // MIXED, not self: six of its cards are the reader's own, and MailSharingCard
+  // writes `capture_settings` — the installation's rule about whether captured
+  // mail is shared with colleagues. A page-level "Only you" over that switch
+  // would tell a reader a company-wide setting is private to them.
+  { id: "connections", group: "me", scope: "mixed", requires: always },
+  // MIXED for the same reason as `connections`, one page along:
+  // CaptureExclusionsCard carries BOTH scopes by design — its own comment says
+  // so — and its workspace rules keep a correspondent out of the CRM for
+  // everybody. The workspace activity view behind `capture_trace:read` is the
+  // installation's too.
+  { id: "capture-activity", group: "me", scope: "mixed", requires: always },
 
   {
     id: "company",
@@ -366,7 +390,11 @@ export const SETTINGS_PAGES = [
   {
     id: "integrations",
     group: "data",
-    scope: "workspace",
+    // Mixed, and the provider card is why: `PATCH /integrations/settings` is
+    // "the installation's provider-lookup posture" in its own contract summary,
+    // while webhooks, the overlay mapping and the workspace extension units
+    // stay inside one workspace. One badge cannot name both.
+    scope: "mixed",
     // The writes, not the reads: every seeded role reads both objects, because
     // "is capture working?" is everyone's question and the answer shows up on
     // the records they already open. Connecting an overlay or pointing a
@@ -396,7 +424,10 @@ export const SETTINGS_PAGES = [
   {
     id: "models",
     group: "ai",
-    scope: "workspace",
+    // Installation, not workspace: `PUT /ai/routing` re-points which vendor
+    // processes the installation's text, and `/ai/provider-keys` writes the
+    // installation key vault. Both contract summaries say "installation".
+    scope: "installation",
     // Two cards, two grants. The routing and provider-key cards read on
     // `ai_routing`; `AiHealthCard` reads on `ai_diagnostics` (ai/health.go),
     // and Models is the ONLY page that renders it. Management is seeded
@@ -433,7 +464,11 @@ export const SETTINGS_PAGES = [
   {
     id: "privacy",
     group: "governance",
-    scope: "workspace",
+    // Installation: retention is installation-wide on both endpoints the card
+    // writes — `/retention/settings` is "the installation's retention posture"
+    // and `/retention-policies` lists "the installation's retention policies".
+    // What this page destroys, it destroys everywhere.
+    scope: "installation",
     // `person` is deliberately NOT an arm, though the purposes card reads
     // through it. `person:read` is held by every seeded role, so that arm put
     // the governance page in front of the whole workspace — the retention
@@ -482,7 +517,10 @@ export const SETTINGS_PAGES = [
   {
     id: "extensions",
     group: "governance",
-    scope: "installation",
+    // Workspace, though the page READS the installation's unit inventory. Scope
+    // names whose state a page CHANGES, and the only write here is
+    // `PATCH /roles/{key}/objects/{object}` — one workspace's role grants.
+    scope: "workspace",
     // BOTH reads the card makes, because it makes them behind ONE flag: the
     // unit inventory from `GET /v1/extensions` and every role's grant on every
     // object from `GET /v1/roles`. On the inventory grant alone the page opens

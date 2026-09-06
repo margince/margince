@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
+import { en } from "../i18n/en";
 import { memoryStorage } from "../testing/appharness";
 import { parseHash, type Route } from "./router";
 import { PageTitle, Shell } from "./shell";
@@ -94,6 +95,86 @@ describe("PageTitle", () => {
     expect(screen.queryByRole("link", { name: "Analytics" })).toBeNull();
   });
 
+  // Whose state the page changes, beside its heading. Only a settings entry
+  // carries a scope, and every settings page declares one in the catalog — the
+  // field had no reader at all until this, so a person could not tell a toggle
+  // that changes their own signature from one that changes everybody's mail
+  // routing.
+  it("names whose state a settings page changes, beside its heading", () => {
+    const scoped = fixtureSection("account");
+    const you = scoped.groups[0]?.items[0];
+    if (!you) {
+      throw new Error("the fixture published no account entry");
+    }
+    render(
+      <PageTitle
+        route={parseHash("#/settings/account")}
+        section={{
+          ...scoped,
+          groups: [
+            {
+              ...scoped.groups[0],
+              items: [{ ...you, scopeKey: "settings.scope.self" }],
+            },
+            ...scoped.groups.slice(1),
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText(en["settings.scope.self"])).toBeTruthy();
+    // Beside the heading, never inside it: a heading carrying the scope would
+    // read "Account Only you" in every document outline and screen reader.
+    expect(screen.getByRole("heading", { level: 1 }).textContent).not.toContain(
+      en["settings.scope.self"],
+    );
+  });
+
+  // The mixed page says something DIFFERENT to a screen reader: not who it
+  // affects, but that it has no single answer. "Who this page affects: Mixed"
+  // would be a non-sentence, and a reader relying on that line would be told
+  // less than a sighted one.
+  it("explains a mixed page rather than naming a non-answer", () => {
+    const scoped = fixtureSection("account");
+    const you = scoped.groups[0]?.items[0];
+    if (!you) {
+      throw new Error("the fixture published no account entry");
+    }
+    render(
+      <PageTitle
+        route={parseHash("#/settings/connections")}
+        section={{
+          ...scoped,
+          groups: [
+            {
+              ...scoped.groups[0],
+              items: [{ ...you, scopeKey: "settings.scope.mixed" }],
+            },
+            ...scoped.groups.slice(1),
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText(en["settings.scope.mixed"])).toBeTruthy();
+    expect(screen.getByText(en["settings.scopeAriaMixed"])).toBeTruthy();
+    // And NOT the who-sentence, which is the one this replaces.
+    expect(document.body.textContent).not.toContain("Who this page affects");
+  });
+
+  // An entry with no scope draws no badge, which is every screen outside
+  // settings: there the answer is the record in front of you.
+  it("draws no scope where the entry declares none", () => {
+    render(
+      <PageTitle
+        route={parseHash("#/settings/account")}
+        section={fixtureSection("account")}
+      />,
+    );
+    // No BADGE, not "none of the two labels I happened to list": enumerating
+    // them would pass against a mutation that defaulted an absent scope to a
+    // third label.
+    expect(document.querySelector(".badge")).toBeNull();
+  });
+
   // AC-shell-1k: every authenticated route resolves to real copy. This bites on
   // a new off-rail route landing in the router without a title key — the old
   // fallback rendered the raw screen slug.
@@ -144,8 +225,10 @@ describe("PageTitle", () => {
       "bring your own agent — governed by the two-tier contract",
     );
     // Directly under the name it explains, inside the title's own text column —
-    // not beside the actions, where it would read as product chrome.
-    expect(heading.nextElementSibling).toBe(sub);
+    // not beside the actions, where it would read as product chrome. The
+    // heading's own parent is the row it shares with the scope badge, so the
+    // subtitle follows THAT rather than the heading itself.
+    expect(heading.closest(".pagetitle-head")?.nextElementSibling).toBe(sub);
     expect(container.querySelector(".pagetitle-text")?.contains(sub)).toBe(
       true,
     );
