@@ -57,9 +57,28 @@ export const render = (ui: ReactNode): SettingsRender => {
 // publishes (useSettingsSection). So a claim about which tabs a principal is
 // offered renders the real rail — the production wiring, not a copy of it — and
 // a claim about a tab's content renders the screen.
-const railFor = (tab?: string) => <SettingsRail route={settingsAddress(tab)} />;
+// The bare settings address is Settings HOME now, not the first page — so a
+// suite that means "the default page" has to say which page that is. `account`
+// is what the fallback used to land on, and every case here that omitted a tab
+// meant exactly that.
+const DEFAULT_TAB = "account";
+
+const railFor = (tab?: string) => (
+  <SettingsRail route={settingsAddress(tab ?? DEFAULT_TAB)} />
+);
 
 export const renderNav = (tab?: string): SettingsRender => render(railFor(tab));
+
+// Settings home, which no `tab` can name: it is the address with NO page
+// segment. Its own helper rather than a magic argument, so a case about home
+// reads as one.
+export const renderHome = (): SettingsRender =>
+  render(
+    <>
+      <SettingsRail route={settingsAddress()} />
+      <SettingsScreen route={settingsAddress()} />
+    </>,
+  );
 
 // Both halves, for a claim that spans them: the tab is in the nav AND its cards
 // are on the page.
@@ -67,7 +86,7 @@ export const renderSettings = (tab?: string): SettingsRender =>
   render(
     <>
       {railFor(tab)}
-      <SettingsScreen route={settingsAddress(tab)} />
+      <SettingsScreen route={settingsAddress(tab ?? DEFAULT_TAB)} />
     </>,
   );
 

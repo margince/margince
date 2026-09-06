@@ -8,7 +8,8 @@
 // decides how one piece of work reads and where each of its verbs goes, and
 // that is the half a reader of either question does not need the other for.
 
-import { useId, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { type ReactNode, useId, useRef, useState } from "react";
 import { Badge, Button, Modal } from "../design-system/atoms";
 import { PanelRow } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
@@ -18,9 +19,11 @@ import { translatePlural, useLocale, useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
 import { tomorrowMorning } from "./briefqueue";
 import { problemMessageOf } from "./common";
+import { ChannelReplyAction, RELINK_KINDS, type RelinkKind } from "./compose";
 import { type BriefMarkRequest, useBriefItemMark } from "./home.queries";
 import {
   useAutomationRetry,
+  useMeetingOutcome,
   useNoticeRead,
   useTaskUpdate,
 } from "./taskactions";
@@ -287,6 +290,35 @@ export function WorklistRow({
  * title, reasons, verbs — is already at the complexity the linter allows, and
  * a fourth kind of answer should extend this list rather than that function.
  */
+// The answers that need only the row's own id, keyed by the source that carries
+// them and the verb the server sent. A table rather than a branch each: they
+// differ only in which control to draw, so spelling them as code made RowAnswer
+// grow one arm per source until it hit the complexity ceiling — which its own
+// doc predicted.
+//
+// Both halves of the key matter. The SOURCE decides the control, and the VERB
+// is the server's judgement that this particular row may use it: a blocked
+// automation carries no `retry`, so it draws nothing here.
+const ANSWER_BY_SOURCE: Partial<
+  Record<
+    WorklistItem["source"],
+    { verb: WorklistItem["actions"][number]; draw: (id: string) => ReactNode }
+  >
+> = {
+  notice: { verb: "acknowledge", draw: (id) => <NoticeAcknowledge id={id} /> },
+  automation_run: { verb: "retry", draw: (id) => <AutomationRetry id={id} /> },
+  meeting_outcome: { verb: "decide", draw: (id) => <MeetingOutcome id={id} /> },
+  task: { verb: "complete", draw: (id) => <TaskComplete id={id} /> },
+  // The row's id IS the person's here, which is what the dismissal endpoint
+  // takes — the pairing is why this verb is offered on this lane and nowhere
+  // else. `dismiss` also belongs to brief_item, where it means something else
+  // and posts somewhere else, which is why this table is keyed by SOURCE.
+  relationship_decay: {
+    verb: "dismiss",
+    draw: (id) => <NudgeDismiss personId={id} />,
+  },
+};
+
 function RowAnswer({ item }: Readonly<{ item: WorklistItem }>) {
   if (decidable(item)) {
     return <RowDecision item={item} />;
@@ -294,37 +326,21 @@ function RowAnswer({ item }: Readonly<{ item: WorklistItem }>) {
   if (item.source === "dedupe_candidate" && item.pair) {
     return <PairDecision item={item} />;
   }
-  if (item.source === "notice" && item.actions.includes("acknowledge")) {
-    return <NoticeAcknowledge id={item.id} />;
+  // Never a BATCH: a group row stands for a pile and names no single record, so
+  // every id-keyed answer below would act on the wrong one.
+  const keyed = ANSWER_BY_SOURCE[item.source];
+  if (keyed && !item.batch && item.actions.includes(keyed.verb)) {
+    return keyed.draw(item.id);
   }
-  // A failed rule, run again from here. The server decides which firings carry
-  // the verb — a blocked one does not, because that was a refusal on purpose —
-  // so the row asks what it was sent rather than re-deriving the rule.
-  if (item.source === "automation_run" && item.actions.includes("retry")) {
-    return <AutomationRetry id={item.id} />;
+  // Its own branch, because it is the one answer that needs more than the row's
+  // id: the composer files the sent message against a record, so the subject
+  // travels with it.
+  const replyTo = replyTarget(item);
+  if (replyTo) {
+    return <WaitingReply id={item.id} to={replyTo} />;
   }
-  // A task the server says can be finished, finished HERE. Not a batch: a group
-  // row stands for a pile and names no single activity to complete.
-  if (
-    item.source === "task" &&
-    !item.batch &&
-    item.actions.includes("complete")
-  ) {
-    return <TaskComplete id={item.id} />;
-  }
-  // A quiet contact the reader has decided not to chase. The row's id IS the
-  // person's, which is what the dismissal endpoint takes — the pairing is why
-  // this verb is offered on this lane and nowhere else.
-  if (
-    item.source === "relationship_decay" &&
-    !item.batch &&
-    item.actions.includes("dismiss")
-  ) {
-    return <NudgeDismiss personId={item.id} />;
-  }
-  // A brief item's three verbs. Source-checked rather than verb-checked:
-  // `dismiss` also belongs to relationship_decay above, where it means
-  // something else entirely and posts somewhere else.
+  // A brief item's three verbs, drawn together rather than one per entry: they
+  // share a surface and the component picks among them.
   if (item.source === "brief_item" && !item.batch) {
     return <BriefVerbs item={item} />;
   }
@@ -1001,6 +1017,9 @@ const VERB_LABEL: Record<
   // AutomationRetry, which acts in place, so VERB_DESTINATION routes it
   // nowhere and this label is never the one a reader sees.
   retry: (t) => t("worklist.verb.retry"),
+  // The composer's own word, not a second one: ChannelReplyAction draws the
+  // button this labels, and two spellings of one act would read as two acts.
+  reply: (t) => t("compose.reply"),
 };
 
 // The day's figures, and the dials that narrow them.
@@ -1116,4 +1135,94 @@ function refusalMessage(
     default:
       return "worklist.verb.retryFailed";
   }
+}
+
+// How a meeting went, recorded from the row that asked.
+//
+// Three buttons rather than one primary and a menu: the answers are equally
+// likely and equally short, and hiding two of three behind a chevron would make
+// the common case a second click. None is emerald — an outcome is a record of
+// what already happened, not the day's next move, and the queue's one filled
+// primary belongs to the selected row's own action.
+//
+// The row leaves the queue on success because the lane asks only for meetings
+// with no outcome. That is also why there is no undo offered here: a corrected
+// outcome is a second answer to the same question, given on the meeting itself
+// where the history of both is visible, rather than a toast that disappears.
+function MeetingOutcome({ id }: Readonly<{ id: string }>) {
+  const t = useT();
+  const toast = useToast();
+  const record = useMeetingOutcome([worklistKey]);
+  const answer = (status: "held" | "no_show" | "canceled") => () =>
+    record.mutate(
+      { id, status },
+      {
+        onSuccess: () => toast.show(t("worklist.verb.meetingOutcomeRecorded")),
+        // A refused write leaves the row exactly as it was, which renders
+        // identically to a click that did nothing.
+        onError: () =>
+          toast.show(t("worklist.verb.meetingOutcomeFailed"), { mark: false }),
+      },
+    );
+  return (
+    <div className="worklist-row-verbs">
+      <Button small pending={record.isPending} onClick={answer("held")}>
+        {t("worklist.verb.meetingHeld")}
+      </Button>
+      <Button small pending={record.isPending} onClick={answer("no_show")}>
+        {t("worklist.verb.meetingNoShow")}
+      </Button>
+      <Button small pending={record.isPending} onClick={answer("canceled")}>
+        {t("worklist.verb.meetingCanceled")}
+      </Button>
+    </div>
+  );
+}
+
+// The record a reply would be filed against, or nothing.
+//
+// Both halves must hold. The verb says the server judged this wait answerable —
+// it is mail, not a channel message the mail composer would answer in the wrong
+// place. The subject says WHICH record the sent message links to, and its type
+// has to be one the composer can file against: the row's own vocabulary is
+// wider than RELINK_KINDS, so an `activity` subject would type-check as a
+// string and fail at the composer.
+function replyTarget(
+  item: WorklistItem,
+): { type: RelinkKind; id: string } | undefined {
+  if (!item.actions.includes("reply") || !item.subject) {
+    return undefined;
+  }
+  const type = item.subject.type;
+  if (!RELINK_KINDS.includes(type as RelinkKind)) {
+    return undefined;
+  }
+  return { type: type as RelinkKind, id: item.subject.id };
+}
+
+// Answering the buyer, over the row that named the wait.
+//
+// Its own component so it can hold the hook that refreshes the queue. The
+// composer invalidates the RECORD timelines it knows about, and the worklist is
+// not one of them — nor does the queue poll — so without the callback the row
+// keeps saying nobody has replied, and keeps offering to reply again, over a
+// message the reader has already answered.
+function WaitingReply({
+  id,
+  to,
+}: Readonly<{ id: string; to: { type: RelinkKind; id: string } }>) {
+  const queryClient = useQueryClient();
+  return (
+    <div className="worklist-row-verbs">
+      <ChannelReplyAction
+        activityId={id}
+        kind="email"
+        entityType={to.type}
+        entityId={to.id}
+        onSent={() =>
+          queryClient.invalidateQueries({ queryKey: [worklistKey] })
+        }
+      />
+    </div>
+  );
 }

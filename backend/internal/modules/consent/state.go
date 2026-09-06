@@ -29,8 +29,10 @@ func ParseRecordableState(raw string) (ConsentState, error) {
 	case StateGranted, StateWithdrawn:
 		return s, nil
 	}
-	return "", &values.ParseError{Field: "state", Code: "invalid_consent_state",
-		Message: "state is granted or withdrawn"}
+	return "", &values.ParseError{
+		Field: fieldState, Code: "invalid_consent_state",
+		Message: "state is granted or withdrawn",
+	}
 }
 
 // normalizedPurposeKey is the ONE spelling of how a purpose key off the wire is

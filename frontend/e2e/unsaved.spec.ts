@@ -36,13 +36,12 @@ const editOrgName = (page: Page) =>
 
 // Types into the dialog and closes it again, leaving the draft behind on a page
 // with nothing open over it — which is what makes the navigation below possible.
-// The address the product MINTS for this page today. `settingsrouting.ts`
-// resolves the catalog's flat `#/settings/company`, but the screen is still
-// driven by the register in `settingsnav.tsx`, which knows the page as the
-// admin entry `general` — so the flat spelling falls through to the reader's
-// first visible entry and this dialog is on a page nobody navigated to.
+// The address the product MINTS for this page. The old `#/settings/admin/general`
+// still resolves, but it resolves by REDIRECTING to this one, so a test that
+// navigated by the old spelling would be asserting the guard against an address
+// the app rewrites out from under it.
 const typeAndCloseDialog = async (page: Page, name: string) => {
-  await page.goto("/#/settings/admin/general");
+  await page.goto("/#/settings/company");
   await editOrgName(page).click();
   await orgName(page).fill(name);
   await page.keyboard.press("Escape");
@@ -71,7 +70,7 @@ test("a settings draft holds the page when the reader leaves for another screen"
   // address back, so the reader is where their work is.
   await page.keyboard.press("Escape");
   await expect(asking).toBeHidden();
-  await expect(page).toHaveURL(/#\/settings\/admin\/general$/);
+  await expect(page).toHaveURL(/#\/settings\/company$/);
   // The draft survived the question: reopening the dialog shows what was typed
   // rather than the value the server still holds.
   await editOrgName(page).click();
