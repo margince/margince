@@ -126,7 +126,9 @@ func readCaptureCounts(t *testing.T, e *integration.SearchEnv) captureCounts {
 	t.Helper()
 	var got captureCounts
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(context.Background(), `SELECT count(*) FROM activity WHERE source_system = 'graph'`).Scan(&got.activities); err != nil {
+		// Mail keys on the shared identity; the LEAD below still keys on the
+		// connector, which is why these two counts read different columns.
+		if err := tx.QueryRow(context.Background(), `SELECT count(*) FROM activity WHERE source_system = 'email'`).Scan(&got.activities); err != nil {
 			return err
 		}
 		if err := tx.QueryRow(context.Background(), `SELECT count(*) FROM lead WHERE source_system = 'graph'`).Scan(&got.leads); err != nil {
@@ -194,7 +196,7 @@ func TestCaptureSyncIsIdempotentAndProvenanced(t *testing.T) {
 	var capturedBy string
 	var links int
 	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(context.Background(), `SELECT captured_by FROM activity WHERE source_system = 'graph'`).Scan(&capturedBy); err != nil {
+		if err := tx.QueryRow(context.Background(), `SELECT captured_by FROM activity WHERE source_system = 'email'`).Scan(&capturedBy); err != nil {
 			return err
 		}
 		return tx.QueryRow(context.Background(), `SELECT count(*) FROM activity_link WHERE person_id = $1`, personID).Scan(&links)

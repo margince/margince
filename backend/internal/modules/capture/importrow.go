@@ -13,10 +13,7 @@ package capture
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -142,31 +139,6 @@ func (s *Sink) recordThisImport(
 	if err != nil {
 		return err
 	}
-	if delivered {
-		// ...AND the message this seat is presenting must be the message already
-		// on file, not merely one that shares its Message-ID.
-		//
-		// The check above proves only that the PRESENTED bytes reached this
-		// seat's mailbox, and the presenter wrote those bytes. A seat who learns
-		// a Message-ID -- it is disclosed by the discover scope, which is
-		// deliberately wider than the content scope -- can compose a lookalike,
-		// mail it to their own connected address, and sync it: their own copy is
-		// genuinely delivered to them, so the address test passes, and the
-		// import row it buys is read as a CONTENT GRANT over the incumbent
-		// (auth.ActivityScopeClause). That would hand them a colleague's
-		// correspondence.
-		//
-		// Corroborating against the incumbent closes it: a real second delivery
-		// of one message agrees with the row already stored, because both sides
-		// are the same message. A forgery does not, because the forger is
-		// guessing at content they cannot read -- which is the whole reason they
-		// are forging.
-		agrees, err := recordAgreesWithIncumbentTx(ctx, tx, id, rec, fields)
-		if err != nil {
-			return err
-		}
-		delivered = agrees
-	}
 	if !delivered {
 		// Not this seat's message to claim. The capture already stored nothing
 		// (the natural key collided), so there is nothing to undo and nothing to
@@ -210,59 +182,6 @@ func (s *Sink) recordThisImport(
 // round. An exact address is different in kind: it is either the mailbox the
 // provider attested at grant, or one the seat declared about themselves, and
 // neither names a colleague.
-// recordAgreesWithIncumbentTx asks whether the message a seat is presenting is
-// the one already stored under this identity, rather than a different message
-// wearing its Message-ID.
-//
-// It compares the two facts a genuine second delivery always shares with the
-// first and a forger cannot supply: WHO sent it and WHEN they sent it. Both come
-// from the message itself -- the From address and the Date header -- so every
-// mailbox that received one message reports the same pair, while somebody
-// composing a lookalike has to guess them from content they cannot read. Guessing
-// the sender alone is not enough, and the timestamp is compared to the second.
-//
-// It deliberately does NOT compare subject or body. Those legitimately differ
-// between two mailboxes' copies of one message -- a provider appends footers,
-// rewrites links, or hands a different MIME alternative -- so requiring them to
-// match would refuse real colleagues, which is the case this whole path exists
-// to serve. The pair below is the strongest evidence that is also stable.
-//
-// A mismatch is not an error: it is one seat failing to prove a claim, and the
-// message stays on the timeline for the people it does belong to.
-func recordAgreesWithIncumbentTx(
-	ctx context.Context, tx pgx.Tx, id ids.ActivityID,
-	rec connector.NormalizedRecord, fields ActivityFields,
-) (bool, error) {
-	var storedSender string
-	var storedOccurredAt time.Time
-	// restricted_at IS NULL: a HELD row corroborates nothing. A restriction is
-	// the workspace withholding a message, and letting a claim be measured
-	// against one would answer questions about its contents through the side
-	// door this function exists to shut (A165/ADR-0114 §2). No row back means no
-	// corroboration, which is the refusing direction.
-	if err := tx.QueryRow(ctx, `
-		SELECT coalesce(counterparty_email, ''), occurred_at
-		  FROM activity WHERE id = $1 AND restricted_at IS NULL`, id).Scan(&storedSender, &storedOccurredAt); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return false, nil
-		}
-		return false, fmt.Errorf("capture: reading the incumbent to corroborate a mailbox claim: %w", err)
-	}
-	// An incumbent that names nobody cannot corroborate anything, so the claim
-	// is refused rather than admitted on a blank. That costs a contribution row
-	// on a message with no counterparty on file; it does not cost the message.
-	if storedSender == "" {
-		return false, nil
-	}
-	// The same normalization the activity write applies, so a provider's header
-	// casing is not read as disagreement.
-	presented := strings.ToLower(strings.TrimSpace(rec.Counterparty.Email))
-	if presented != storedSender {
-		return false, nil
-	}
-	return fields.OccurredAt.Equal(storedOccurredAt), nil
-}
-
 func mailboxWasARecipientTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {
 	self, err := ownerIdentitiesTx(ctx, tx)
 	if err != nil {
