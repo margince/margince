@@ -173,6 +173,24 @@ func (s *Store) BundleException(ctx context.Context, in BundleInput) (applied bo
 		return false, err
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// THE TASK IS PROBED, because naming one is reading it.
+		//
+		// `auth.Require` above answers whether this principal may bundle at all,
+		// which is a different question from whether it may file a finding under
+		// THIS task. The id is caller-supplied, and an ungated reference would
+		// let a caller learn from the outcome that an activity it cannot open
+		// exists — and leave a cycle's task pointing at one its own filer could
+		// not read.
+		//
+		// The activity probe rather than auth.EnsureLinkTarget: an activity's
+		// scope is INHERITED from the records it is linked to rather than
+		// carried on the row, so the row-scope helper refuses the table outright
+		// ("activity" is not a row-scoped table). Live, because the task is a
+		// record this row is about to point at — an archived one is as absent as
+		// a missing one. Out of scope answers ErrNotFound either way.
+		if err := auth.EnsureActivityVisibleLive(ctx, tx, in.TaskActivityID); err != nil {
+			return err
+		}
 		// THE SUBJECT IS READ OFF THE EXCEPTION, never taken from the caller.
 		//
 		// It is what the exclusion constraint compares, so a caller-supplied
