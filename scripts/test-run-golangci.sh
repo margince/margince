@@ -48,7 +48,7 @@ expect() {
 
 	case "$out" in *"STALE CACHE"*) stale=yes ;; esac
 
-	if [ "$status" -ne "$want_exit" ] || [ "$stale" != "$want_stale" ]; then
+	if [[ "$status" -ne "$want_exit" ]] || [[ "$stale" != "$want_stale" ]]; then
 		echo "FAIL: $name"
 		echo "  exit  want $want_exit got $status"
 		echo "  stale want $want_stale got $stale"
@@ -154,7 +154,7 @@ for needle in "margince-next-erase/cli/craft/main.go" "cache clean" "go env GOPA
 	esac
 done
 
-if [ "$failures" -ne 0 ]; then
+if [[ "$failures" -ne 0 ]]; then
 	echo "FAIL: $failures case(s) — run-golangci.sh does not separate a stale-cache run from a real one"
 	exit 1
 fi

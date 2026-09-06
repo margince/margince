@@ -125,6 +125,7 @@ budget rather than keeping its own list of which pages are generated.
 - [ai-egress.md](reference/ai-egress.md) — every declared AI task, and whether the text it reads can leave the installation. Generated from `backend/api/ai-tasks.yaml`, never hand-edited.
 - [issue-labels.md](reference/issue-labels.md) — the full issue-label taxonomy. The binding short form is in `AGENTS.md`.
 - [license-release-rule.md](reference/license-release-rule.md) — the BUSL Change-Date release-stamping rule. (The per-file SPDX license *header* rule is described in [backend-onboarding.md](explanation/backend-onboarding.md) and `AGENTS.md`.)
+- [sonarcloud-deviations.md](reference/sonarcloud-deviations.md) — the SonarCloud findings that stay open on purpose, one entry each saying what would break if somebody applied the rule. Everything not listed there is a finding to fix.
 
 ### Explanation — understand the why
 

@@ -26,15 +26,15 @@ declare_lane_budget 1
 
 DIR="${1:-}"
 RUN="${2:-}"
-if [ -z "$DIR" ]; then
+if [[ -z "$DIR" ]]; then
   echo "usage: $0 DIR [RUN]   (DIR e.g. backend/internal/compose/integration; RUN e.g. TestFoo)" >&2
   exit 2
 fi
 # Every integration package lives in the backend module; map the repo-root dir to
 # a module-relative package path.
-if [ "$DIR" = "backend" ]; then
+if [[ "$DIR" = "backend" ]]; then
   rel="."
-elif [ "${DIR#backend/}" != "$DIR" ]; then
+elif [[ "${DIR#backend/}" != "$DIR" ]]; then
   rel="./${DIR#backend/}"
 else
   echo "FAIL: '$DIR' is not under the backend module" >&2
@@ -50,7 +50,7 @@ make_clone "$db"
 trap 'st=$?; if ! drop_clone "$db"; then echo "FAIL: clone db $db was not dropped — leaked on the test cluster" >&2; if [[ "$st" -eq 0 ]]; then st=1; fi; fi; exit "$st"' EXIT
 
 run_flag=()
-[ -n "$RUN" ] && run_flag=(-run "$RUN")
+[[ -n "$RUN" ]] && run_flag=(-run "$RUN")
 echo "test-integration-one: backend $rel ${RUN:+(-run $RUN) }(db=$db)"
 
 ( cd backend \

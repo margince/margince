@@ -49,10 +49,10 @@ login_status="$(curl -sS --max-time 15 -o "$workdir/login.json" -D "$workdir/hea
   -X POST "$API_BASE/v1/auth/login" \
   -H 'Content-Type: application/json' \
   --data "$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e,password:$p}')" || true)"
-if [ -z "$login_status" ] || [ "$login_status" = "000" ]; then
+if [[ -z "$login_status" ]] || [[ "$login_status" = "000" ]]; then
   fail "could not reach $API_BASE — is the stack up? (make dev)"
 fi
-if [ "$login_status" != "200" ]; then
+if [[ "$login_status" != "200" ]]; then
   echo "  response body:" >&2
   cat "$workdir/login.json" >&2
   fail "POST /v1/auth/login returned HTTP $login_status (expected 200). Is the stack up and seeded? (make dev, then make seed-dev)"
@@ -60,7 +60,7 @@ fi
 # The cookie is Secure, which curl's jar refuses to replay over plain-http
 # localhost — extract the token and send it explicitly.
 session="$(sed -n 's/^[Ss]et-[Cc]ookie: crm_session=\([^;]*\).*/\1/p' "$workdir/headers" | tr -d '\r')"
-[ -n "$session" ] || fail "login answered 200 but set no crm_session cookie"
+[[ -n "$session" ]] || fail "login answered 200 but set no crm_session cookie"
 echo "  OK: logged in as $ADMIN_EMAIL, session captured"
 
 echo "== verify-boot 2/6: the installation describes itself =="
@@ -78,19 +78,19 @@ echo "== verify-boot 2/6: the installation describes itself =="
 # somebody adds a record above it.
 seeded_company="$(awk '/^describe_company\(\) \{/,/^\}/' "$REPO_DIR/scripts/seed-dev.sh" \
   | sed -n 's/.*"display_name":"\([^"]*\)".*/\1/p' | head -1)"
-[ -n "$seeded_company" ] || fail "found no {\"display_name\":\"…\"} in $REPO_DIR/scripts/seed-dev.sh — this step would pass by reading nothing"
+[[ -n "$seeded_company" ]] || fail "found no {\"display_name\":\"…\"} in $REPO_DIR/scripts/seed-dev.sh — this step would pass by reading nothing"
 company_status="$(curl -sS --max-time 15 -o "$workdir/company.json" -w '%{http_code}' \
   "$API_BASE/v1/company" --cookie "crm_session=$session" || true)"
-if [ "$company_status" = "404" ]; then
+if [[ "$company_status" = "404" ]]; then
   fail "GET /v1/company answers 404 — the installation has not described itself, so every login redirects into onboarding and no browser spec that signs in can render the shell (make seed-dev)"
 fi
-if [ "$company_status" != "200" ]; then
+if [[ "$company_status" != "200" ]]; then
   echo "  response body:" >&2
   cat "$workdir/company.json" >&2
   fail "GET /v1/company returned HTTP $company_status (expected 200)"
 fi
 company_name="$(jq -r '.display_name // empty' "$workdir/company.json")"
-[ "$company_name" = "$seeded_company" ] \
+[[ "$company_name" = "$seeded_company" ]] \
   || fail "the installation calls itself '$company_name' where scripts/seed-dev.sh describes '$seeded_company' — the stack was seeded by something else, or the seed is stale (make seed-dev)"
 echo "  OK: the installation describes itself as $company_name"
 
@@ -120,13 +120,13 @@ find_first() { # find_first <path> <jq-row-filter> [jq-arg...]
       --get --data-urlencode "limit=100" ${cursor:+--data-urlencode "cursor=$cursor"} \
       "$API_BASE/v1$path" \
       --cookie "crm_session=$session" || true)"
-    if [ "$status" != "200" ]; then
+    if [[ "$status" != "200" ]]; then
       echo "  response body:" >&2
       cat "$workdir/page.json" >&2
       fail "GET /v1$path returned HTTP $status (expected 200)"
     fi
     row="$(jq -c --arg today "$TODAY" "$@" "first(.data[] | select($select)) // empty" "$workdir/page.json")"
-    if [ -n "$row" ]; then
+    if [[ -n "$row" ]]; then
       printf '%s' "$row"
       return
     fi
@@ -135,7 +135,7 @@ find_first() { # find_first <path> <jq-row-filter> [jq-arg...]
     # handles no for itself. A bare `return` here carries the test's own exit
     # status, which is 1 when the cursor is empty — and under `set -e` that
     # killed the whole script the first time a lookup legitimately found nothing.
-    [ -n "$cursor" ] || return 0
+    [[ -n "$cursor" ]] || return 0
   done
 }
 
@@ -166,14 +166,14 @@ seeded_payloads() { # seeded_payloads <resource> — one JSON body per line
 }
 
 seeded_people="$(seeded_payloads person)"
-[ -n "$seeded_people" ] || fail "found no 'ensure \"person …\"' payloads in scripts/seed-dev.sh — this step would pass by reading nothing"
+[[ -n "$seeded_people" ]] || fail "found no 'ensure \"person …\"' payloads in scripts/seed-dev.sh — this step would pass by reading nothing"
 
 while IFS= read -r body; do
   name="$(printf '%s' "$body" | jq -r '.full_name')"
   email="$(printf '%s' "$body" | jq -r 'first(.emails[]?.email) // empty')"
-  [ -n "$email" ] || fail "the seeder creates '$name' with no email, so this check cannot tell them from a namesake"
+  [[ -n "$email" ]] || fail "the seeder creates '$name' with no email, so this check cannot tell them from a namesake"
   person="$(find_person "$name" "$email")"
-  if [ -z "$person" ]; then
+  if [[ -z "$person" ]]; then
     fail "seeded person '$name' <$email> missing from GET /v1/people — seed absent or stale (make seed-dev)"
   fi
   # And employed somewhere, on the edge the PRODUCT reads. A person who works
@@ -188,7 +188,7 @@ while IFS= read -r body; do
   # company page, so a boot proof that accepted one would be proving something
   # nobody can see.
   person_id="$(printf '%s' "$person" | jq -r '.id')"
-  if [ -z "$(find_first "/relationships?kind=employment&person_id=$person_id" "$CURRENT_PRIMARY_JQ")" ]; then
+  if [[ -z "$(find_first "/relationships?kind=employment&person_id=$person_id" "$CURRENT_PRIMARY_JQ")" ]]; then
     echo "  their employment rows:" >&2
     cat "$workdir/page.json" >&2
     fail "seeded person '$name' has no current primary employment — they show on no company page, and the demo dataset's verify pass refuses the installation for it"
@@ -205,25 +205,25 @@ done <<< "$seeded_people"
 # and a check that reads the first hundred of them is a check that stops finding
 # what it is looking for the day the dataset grows.
 seeded_org_bodies="$(seeded_payloads organization)"
-[ -n "$seeded_org_bodies" ] || fail "found no 'ensure \"organization …\"' payloads in scripts/seed-dev.sh — this step would pass by reading nothing"
+[[ -n "$seeded_org_bodies" ]] || fail "found no 'ensure \"organization …\"' payloads in scripts/seed-dev.sh — this step would pass by reading nothing"
 
 # The stage the seeder actually writes, read from the seeder. "Anything but the
 # default" would accept a stage nobody wrote — a boot proof reads the state the
 # seed produces, not a range of states it might have.
 seeded_lifecycle="$(sed -n 's/.*{"lifecycle":"\([a-z_]*\)"}.*/\1/p' "$REPO_DIR/scripts/seed-dev.sh" | head -1)"
-[ -n "$seeded_lifecycle" ] || fail "scripts/seed-dev.sh writes no {\"lifecycle\":\"…\"} body — this check has no stage to hold the account to"
+[[ -n "$seeded_lifecycle" ]] || fail "scripts/seed-dev.sh writes no {\"lifecycle\":\"…\"} body — this check has no stage to hold the account to"
 
 while IFS= read -r body; do
   org_name="$(printf '%s' "$body" | jq -r '.display_name')"
   org_domain="$(printf '%s' "$body" | jq -r 'first(.domains[]?.domain) // empty')"
-  [ -n "$org_domain" ] || fail "the seeder creates '$org_name' with no domain, so this check has no way to find it"
+  [[ -n "$org_domain" ]] || fail "the seeder creates '$org_name' with no domain, so this check has no way to find it"
   org="$(find_first "/organizations?domain=$(jq -rn --arg v "$org_domain" '$v|@uri')" \
     '.display_name == $name' --arg name "$org_name")"
-  if [ -z "$org" ]; then
+  if [[ -z "$org" ]]; then
     fail "seeded account '$org_name' missing from GET /v1/organizations — seed absent or stale (make seed-dev)"
   fi
   lifecycle="$(printf '%s' "$org" | jq -r '.lifecycle // "unknown"')"
-  [ "$lifecycle" = "$seeded_lifecycle" ] || fail "seeded account '$org_name' stands at '$lifecycle' where the seed writes '$seeded_lifecycle' — an account off the stage it was seeded to answers the wrong question about who the customers are, and the demo dataset's verify pass refuses a default lifecycle outright"
+  [[ "$lifecycle" = "$seeded_lifecycle" ]] || fail "seeded account '$org_name' stands at '$lifecycle' where the seed writes '$seeded_lifecycle' — an account off the stage it was seeded to answers the wrong question about who the customers are, and the demo dataset's verify pass refuses a default lifecycle outright"
   echo "  OK: '$org_name' stands at '$lifecycle'"
 done <<< "$seeded_org_bodies"
 
@@ -260,13 +260,13 @@ echo "== verify-boot 4/6: the seeded conversations are conversations =="
 # would stop seeing it without saying so.
 seeded_conversations="$(awk -F'"' '/^[[:space:]]*ensure_conversation[[:space:]]+"/ { print $2 "\t" $4 }' \
     "$REPO_DIR/scripts/seed-dev.sh")"
-[ -n "$seeded_conversations" ] \
+[[ -n "$seeded_conversations" ]] \
   || fail "found no 'ensure_conversation \"…\"' calls in scripts/seed-dev.sh — this step would pass by reading nothing"
 
 # The closed set the server stamps participants for, spelled once here and once
 # in relstrength.interactionKinds because neither can call the other.
 while IFS="$(printf '\t')" read -r slug subject; do
-  [ -n "$slug" ] || continue
+  [[ -n "$slug" ]] || continue
   # NARROWED BY THE SUBJECT, SELECTED BY THE KEY, and the two halves are doing
   # different jobs.
   #
@@ -283,7 +283,7 @@ while IFS="$(printf '\t')" read -r slug subject; do
   # skip would agree on a demo stack whose network surfaces are empty.
   logged="$(find_first "/activities?q=$(jq -rn --arg v "$subject" '$v|@uri')" \
       '.source_system == "seed" and .source_id == $k' --arg k "$slug")"
-  [ -n "$logged" ] \
+  [[ -n "$logged" ]] \
     || fail "no activity titled '$subject' carries the seed key '$slug' in GET /v1/activities — the seed is absent or stale (make seed-dev), or something else is holding that title and the seeder seeded beside it"
   kind="$(printf '%s' "$logged" | jq -r '.kind')"
   case "$kind" in
@@ -309,12 +309,12 @@ expected_transports="$(jq -r '.channels // [] | .[].provider' "$REPO_DIR"/extens
 providers_status="$(curl -sS --max-time 15 -o "$workdir/providers.json" -w '%{http_code}' \
   "$API_BASE/v1/channel-providers" \
   --cookie "crm_session=$session" || true)"
-if [ "$providers_status" != "200" ]; then
+if [[ "$providers_status" != "200" ]]; then
   echo "  response body:" >&2
   cat "$workdir/providers.json" >&2
   fail "GET /v1/channel-providers returned HTTP $providers_status (expected 200)"
 fi
-if [ -z "$expected_transports" ]; then
+if [[ -z "$expected_transports" ]]; then
   echo "  OK: no composed unit declares a channel, nothing to register"
 else
   while read -r provider; do

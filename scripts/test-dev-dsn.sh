@@ -21,7 +21,7 @@ dev="$root/scripts/dev.sh"
 failures=0
 
 check() { # want got description
-    if [ "$1" = "$2" ]; then
+    if [[ "$1" = "$2" ]]; then
         printf '  ok   %s\n' "$3"
     else
         printf '  FAIL %s\n       want: %s\n       got:  %s\n' "$3" "$1" "$2" >&2
@@ -62,7 +62,7 @@ check "postgresql://u:p@h:5432/margince_dev_x" \
 for bad in "host=h port=5432 dbname=prod user=u" "mysql://u:p@h:3306/prod"; do
     status=0
     out="$(with_database "$bad" margince_dev_x 2>&1)" || status=$?
-    check nonzero "$([ "$status" -ne 0 ] && echo nonzero || echo zero)" \
+    check nonzero "$([[ "$status" -ne 0 ]] && echo nonzero || echo zero)" \
           "refused rather than rewritten: ${bad%%:*}…"
     check yes "$(grep -q "must be a postgres:// or postgresql:// URL" <<<"$out" && echo yes || echo no)" \
           "and says what shape it needs: ${bad%%:*}…"
@@ -105,7 +105,7 @@ check yes "$(grep -q 'exec docker exec -i "$container" psql' "$root/scripts/dev-
 leaks="$(grep -nE '^[^#]*(echo|printf)[^|]*\$(dev_owner_url|dev_app_url|OWNER_DSN|APP_DSN|MARGINCE_DSN|MARGINCE_OWNER_DSN)' "$dev" || true)"
 check "" "$leaks" "no DSN is ever echoed"
 
-if [ "$failures" -ne 0 ]; then
+if [[ "$failures" -ne 0 ]]; then
     echo "FAIL: $failures dev-stack DSN expectation(s) not met" >&2
     exit 1
 fi

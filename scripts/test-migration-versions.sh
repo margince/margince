@@ -46,7 +46,7 @@ fixture() {
   hooks_path="$(git -C "$dir" config core.hooksPath 2>/dev/null)"
   hooks_status=$?
   case "$hooks_status" in
-    0) [ -z "$hooks_path" ] || return 1 ;;
+    0) [[ -z "$hooks_path" ]] || return 1 ;;
     1) : ;;
     *) return 1 ;;
   esac
@@ -62,8 +62,8 @@ fixture() {
   # Assert the repository is the one we meant to build. Without this, a git that
   # resolved somewhere else leaves an empty $dir and a green case: the gate finds
   # no namespace, skips, and exits 0, which is what four of the ten cases want.
-  [ -d "$dir/.git" ] || return 1
-  [ -f "$dir/backend/migrations/core/0001_alpha.up.sql" ] || return 1
+  [[ -d "$dir/.git" ]] || return 1
+  [[ -f "$dir/backend/migrations/core/0001_alpha.up.sql" ]] || return 1
 }
 
 # HERMETIC — and stated as the enumeration below plus a CHECK, not as a promise.
@@ -144,14 +144,14 @@ expect() {
   fi
 
   local out rc=0
-  if [ "$declared" = "declared" ]; then
+  if [[ "$declared" = "declared" ]]; then
     out="$(cd "$dir" && MIGRATION_VERSIONS_BASELINE_RESET=1 ./scripts/check-migration-versions.sh base 2>&1)" || rc=$?
   else
     out="$(cd "$dir" && ./scripts/check-migration-versions.sh base 2>&1)" || rc=$?
   fi
   rm -rf "$dir"
 
-  if [ "$rc" -ne "$want" ]; then
+  if [[ "$rc" -ne "$want" ]]; then
     printf 'FAIL  %s\n      exit %s, want %s\n' "$name" "$rc" "$want" >&2
     printf '%s\n' "$out" | sed 's/^/      | /' >&2
     fails=$((fails + 1))
@@ -371,12 +371,12 @@ expect "a declared reset does not excuse a real collision" \
 expected_cases=16
 
 declared_cases="$(grep -c '^expect "' "$SELF")"
-if [ "$ran" -ne "$declared_cases" ]; then
+if [[ "$ran" -ne "$declared_cases" ]]; then
   printf 'FAIL  ran %s case(s) but %s are declared — a case stopped running\n' \
     "$ran" "$declared_cases" >&2
   fails=$((fails + 1))
 fi
-if [ "$declared_cases" -ne "$expected_cases" ]; then
+if [[ "$declared_cases" -ne "$expected_cases" ]]; then
   printf 'FAIL  %s case(s) declared, %s expected — a case was added or removed.\n' \
     "$declared_cases" "$expected_cases" >&2
   printf '      Update expected_cases in the same change, so a deletion cannot pass as a smaller green run.\n' >&2
@@ -386,11 +386,11 @@ fi
 # case_fails and fails are counted apart, because a census failure is not a case
 # failure: reporting "1 of 10 case(s) failed" when all ten passed sends the
 # reader looking through the cases for a defect that is in the accounting.
-if [ "$fails" -ne 0 ]; then
-  if [ "$case_fails" -ne 0 ]; then
+if [[ "$fails" -ne 0 ]]; then
+  if [[ "$case_fails" -ne 0 ]]; then
     printf 'FAIL: test-migration-versions — %s of %s case(s) failed\n' "$case_fails" "$ran" >&2
   fi
-  if [ "$fails" -ne "$case_fails" ]; then
+  if [[ "$fails" -ne "$case_fails" ]]; then
     printf 'FAIL: test-migration-versions — the case census above did not add up\n' >&2
   fi
   exit 1

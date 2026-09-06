@@ -46,7 +46,7 @@ expect() {
 	set -e
 	deleted="$(paste -sd, - <"$DELETED_LOG")"
 
-	if [ "$status" -ne "$want_exit" ] || [ "$deleted" != "$want_deleted" ]; then
+	if [[ "$status" -ne "$want_exit" ]] || [[ "$deleted" != "$want_deleted" ]]; then
 		echo "FAIL: $name"
 		echo "  exit    want $want_exit got $status"
 		echo "  deleted want '$want_deleted' got '$deleted'"
@@ -89,7 +89,7 @@ expect "a key shape change fails loudly" 1 "" $'2026-08-12T04:00:00Z\t101\tgo-bu
 # A listing with caches but no build caches means the prefix moved.
 expect "a missing build-cache prefix fails loudly" 1 "" "$unrelated"
 
-if [ "$failures" -ne 0 ]; then
+if [[ "$failures" -ne 0 ]]; then
 	echo "FAIL: $failures case(s)" >&2
 	exit 1
 fi

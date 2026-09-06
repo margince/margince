@@ -21,11 +21,11 @@ cd "$(dirname "$0")/.."
 
 units=()
 for layer in extensions/*/migrations; do
-  [ -d "$layer" ] || continue
+  [[ -d "$layer" ]] || continue
   units+=("$(basename "$(dirname "$layer")")")
 done
 
-if [ "${#units[@]}" -eq 0 ]; then
+if [[ "${#units[@]}" -eq 0 ]]; then
   echo "OK: check-ext-migrations — no extension declares a migrations/ layer"
   exit 0
 fi

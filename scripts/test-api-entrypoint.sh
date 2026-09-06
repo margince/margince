@@ -42,7 +42,7 @@ failures=0
 run() {
     local probe="$1"; shift
     local password="" have_password=0 existing="" have_existing=0
-    while [ $# -gt 0 ]; do
+    while [[ $# -gt 0 ]]; do
         case "$1" in
             --password) password="$2"; have_password=1; shift 2 ;;
             --existing) existing="$2"; have_existing=1; shift 2 ;;
@@ -64,7 +64,7 @@ STUB
 
     # An EMPTY pre-existing file is a real state — a spent credential truncated
     # rather than removed — so this is gated on the flag, not on the contents.
-    if [ "$have_existing" -eq 1 ]; then
+    if [[ "$have_existing" -eq 1 ]]; then
         printf '%s' "$existing" >"$work/app/secrets/admin-password"
     fi
 
@@ -74,7 +74,7 @@ STUB
     chmod +x "$work/entrypoint.sh"
 
     local status=0
-    if [ "$have_password" -eq 1 ]; then
+    if [[ "$have_password" -eq 1 ]]; then
         out="$(
             PATH="$work/bin:$PATH" \
             MARGINCE_OWNER_DSN="postgres://owner@localhost/x" \
@@ -95,7 +95,7 @@ STUB
 }
 
 check() { # description condition-already-evaluated
-    if [ "$1" = "pass" ]; then
+    if [[ "$1" = "pass" ]]; then
         printf '  ok   %s\n' "$2"
     else
         printf '  FAIL %s\n' "$2" >&2
@@ -104,7 +104,7 @@ check() { # description condition-already-evaluated
 }
 
 verdict() { # want-true actual description
-    if [ "$1" = "$2" ]; then check pass "$3"; else check fail "$3 (got: $2)"; fi
+    if [[ "$1" = "$2" ]]; then check pass "$3"; else check fail "$3 (got: $2)"; fi
 }
 
 echo "api-entrypoint: the credential is written only onto an unprovisioned installation"
@@ -123,7 +123,7 @@ served() { # status description
 status=0
 run true --password "s3cret-passw0rd" || status=$?
 served "$status" "provisioned"
-verdict absent "$([ -e "$pwfile" ] && echo present || echo absent)" \
+verdict absent "$([[ -e "$pwfile" ]] && echo present || echo absent)" \
     "a provisioned installation is never handed the supplied credential"
 verdict yes "$(grep -q "already has an organization" <<<"$out" && echo yes || echo no)" \
     "and says so, because an ignored credential must not look like an applied one"
@@ -133,7 +133,7 @@ verdict yes "$(grep -q "already has an organization" <<<"$out" && echo yes || ec
 status=0
 run true --existing "left-by-an-earlier-boot" || status=$?
 served "$status" "provisioned with a stale file"
-verdict absent "$([ -e "$pwfile" ] && echo present || echo absent)" \
+verdict absent "$([[ -e "$pwfile" ]] && echo present || echo absent)" \
     "a credential left by an earlier boot is retired once the organization exists"
 
 # An empty spent file is the same defect wearing a different shape: something
@@ -141,14 +141,14 @@ verdict absent "$([ -e "$pwfile" ] && echo present || echo absent)" \
 status=0
 run true --existing "" || status=$?
 served "$status" "provisioned with an emptied file"
-verdict absent "$([ -e "$pwfile" ] && echo present || echo absent)" \
+verdict absent "$([[ -e "$pwfile" ]] && echo present || echo absent)" \
     "an emptied credential file is retired too, not left behind because it holds nothing"
 
 # --- a fresh installation ----------------------------------------------------
 status=0
 run false --password "s3cret-passw0rd" || status=$?
 served "$status" "unprovisioned"
-verdict present "$([ -e "$pwfile" ] && echo present || echo absent)" \
+verdict present "$([[ -e "$pwfile" ]] && echo present || echo absent)" \
     "an unprovisioned installation gets the credential it was given"
 verdict s3cret-passw0rd "$(cat "$pwfile" 2>/dev/null || echo '')" \
     "written verbatim, with no trailing newline a password would absorb"
@@ -165,7 +165,7 @@ verdict 600 "$(stat -c '%a' "$pwfile" 2>/dev/null || stat -f '%OLp' "$pwfile" 2>
 status=0
 run false || status=$?
 served "$status" "unprovisioned with no variable"
-verdict absent "$([ -e "$pwfile" ] && echo present || echo absent)" \
+verdict absent "$([[ -e "$pwfile" ]] && echo present || echo absent)" \
     "no variable, no file"
 
 # --- the probe cannot answer -------------------------------------------------
@@ -174,16 +174,16 @@ verdict absent "$([ -e "$pwfile" ] && echo present || echo absent)" \
 # outcome this whole block exists to prevent.
 status=0
 run fail --password "s3cret-passw0rd" || status=$?
-verdict nonzero "$([ "$status" -ne 0 ] && echo nonzero || echo zero)" \
+verdict nonzero "$([[ "$status" -ne 0 ]] && echo nonzero || echo zero)" \
     "a probe that cannot answer refuses to start"
 verdict no "$(grep -q "stub: api started" <<<"$out" && echo yes || echo no)" \
     "and the api is never reached"
-verdict absent "$([ -e "$pwfile" ] && echo present || echo absent)" \
+verdict absent "$([[ -e "$pwfile" ]] && echo present || echo absent)" \
     "and writes nothing — a failed probe is not an unprovisioned installation"
 verdict yes "$(grep -q "could not determine" <<<"$out" && echo yes || echo no)" \
     "naming what could not be determined rather than failing opaquely"
 
-if [ "$failures" -ne 0 ]; then
+if [[ "$failures" -ne 0 ]]; then
     echo "FAIL: $failures entrypoint expectation(s) not met" >&2
     exit 1
 fi

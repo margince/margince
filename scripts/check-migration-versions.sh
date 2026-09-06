@@ -92,7 +92,7 @@ migrations_at() {
 # broken checkout fails loudly there instead of quietly disarming the gate,
 # which is the contract-breaking gate's convention and the same hazard.
 if ! git rev-parse --verify -q "$BASE_REF" >/dev/null; then
-  if [ "${MIGRATION_VERSIONS_REQUIRE_BASE:-}" = "1" ]; then
+  if [[ "${MIGRATION_VERSIONS_REQUIRE_BASE:-}" = "1" ]]; then
     echo "check-migration-versions: base ref '$BASE_REF' not found and MIGRATION_VERSIONS_REQUIRE_BASE=1 — fetch the base ref (checkout fetch-depth: 0)" >&2
     exit 1
   fi
@@ -112,7 +112,7 @@ fi
 # the fork falls back to the tip, which is the stricter reading this gate
 # always applied.
 FORK_REF="$(git merge-base HEAD "$BASE_REF" 2>/dev/null || true)"
-if [ -z "$FORK_REF" ]; then
+if [[ -z "$FORK_REF" ]]; then
   FORK_REF="$BASE_REF"
 fi
 
@@ -158,13 +158,13 @@ baseline_reset="${MIGRATION_VERSIONS_BASELINE_RESET:-}"
 # namespace? Only when it collapses AND shares no "<version> <name>" line.
 reset_admitted() {
   local ns="$1" tree_rows="$2" base_rows="$3" shared
-  [ "$baseline_reset" = "1" ] || return 1
+  [[ "$baseline_reset" = "1" ]] || return 1
 
   # FAIL CLOSED from here down. Admitting is what disarms the gate, so anything
   # this function is not sure of has to be "no". An empty row set or a comparison
   # that did not run would otherwise yield zero shared migrations — which is
   # exactly the shape of a true consolidation.
-  if [ -z "$tree_rows" ] || [ -z "$base_rows" ]; then
+  if [[ -z "$tree_rows" ]] || [[ -z "$base_rows" ]]; then
     echo "note: $ns declares a baseline reset but one side has no migrations to compare — refusing the declaration rather than reading that as 'nothing in common'" >&2
     return 1
   fi
@@ -177,7 +177,7 @@ reset_admitted() {
   local tree_n base_n
   tree_n="$(echo "$tree_rows" | grep -c . || true)"
   base_n="$(echo "$base_rows" | grep -c . || true)"
-  if [ "${tree_n:-0}" -ge "${base_n:-0}" ]; then
+  if [[ "${tree_n:-0}" -ge "${base_n:-0}" ]]; then
     echo "note: $ns declares a baseline reset but does not collapse ($tree_n migration(s) here, $base_n on $BASE_REF) — a consolidation ends with fewer, so the findings below are enforced" >&2
     return 1
   fi
@@ -190,7 +190,7 @@ reset_admitted() {
       echo "note: $ns declares a baseline reset but the comparison produced '$shared' instead of a count — refusing the declaration" >&2
       return 1 ;;
   esac
-  if [ "$shared" -ne 0 ]; then
+  if [[ "$shared" -ne 0 ]]; then
     echo "note: $ns declares a baseline reset but keeps $shared migration(s) at the version AND name the base has — that is not a consolidation, so the findings below are enforced" >&2
     return 1
   fi
@@ -201,7 +201,7 @@ reset_admitted() {
 # fail MESSAGE — report a finding, and fail unless this namespace is an admitted
 # baseline reset.
 fail() {
-  if [ "$ns_reset" = "1" ]; then
+  if [[ "$ns_reset" = "1" ]]; then
     echo "baseline-reset (would FAIL): $1" >&2
     return
   fi
@@ -232,7 +232,7 @@ for ns in $all_namespaces; do
 
   # A namespace is a directory holding migrations, not merely a directory:
   # `testdata/` sits beside core/ and custom/ and is neither, on either side.
-  if [ -z "$tree_rows" ] && [ -z "$base_rows" ]; then
+  if [[ -z "$tree_rows" ]] && [[ -z "$base_rows" ]]; then
     continue
   fi
   checked=$((checked + 1))
@@ -241,7 +241,7 @@ for ns in $all_namespaces; do
   # gives the same answer without booting Postgres, and keeps this gate honest
   # when there is no base ref to compare against.
   dupes="$(echo "$tree_rows" | cut -d' ' -f1 | uniq -d)"
-  if [ -n "$dupes" ]; then
+  if [[ -n "$dupes" ]]; then
     echo "FAIL: $ns declares one version twice — the namespace will not load:" >&2
     for v in $dupes; do
       echo "  $v: $(echo "$tree_rows" | awk -v v="$v" '$1==v {print $2}' | tr '\n' ' ')" >&2
@@ -250,7 +250,7 @@ for ns in $all_namespaces; do
     continue
   fi
 
-  if [ -z "$base_rows" ]; then
+  if [[ -z "$base_rows" ]]; then
     continue # a namespace this branch introduces has nothing to sort after
   fi
   base_max="$(echo "$base_rows" | cut -d' ' -f1 | tail -n1)"
@@ -287,7 +287,7 @@ for ns in $all_namespaces; do
   # absence from the tree is staleness, not a rename — see FORK_REF above.
   vanished="$(comm -23 <(echo "$base_rows" | cut -d' ' -f1 | sort -u) <(echo "$tree_rows" | cut -d' ' -f1 | sort -u) |
     comm -12 - <(echo "$fork_rows" | cut -d' ' -f1 | sort -u))"
-  if [ -n "$vanished" ]; then
+  if [[ -n "$vanished" ]]; then
     for v in $vanished; do
       vname="$(echo "$base_rows" | awk -v v="$v" '$1==v {print $2}' | head -n1)"
       fail "$ns/$v ('$vname') is on $BASE_REF but this branch no longer has it — a migration a deployed database may already have applied cannot be renamed or removed; add a new one instead of renumbering it. MIGRATION_VERSIONS_BASELINE_RESET=1 will not admit this on its own: the namespace must also end with FEWER migrations than $BASE_REF has, which a rename alone never does — see reset_admitted"
@@ -295,7 +295,7 @@ for ns in $all_namespaces; do
   fi
 
   while read -r version name; do
-    [ -n "$version" ] || continue
+    [[ -n "$version" ]] || continue
     base_name="$(echo "$base_rows" | awk -v v="$version" '$1==v {print $2}')"
 
     # The base already carries this version. Same file: a migration this branch
@@ -303,7 +303,7 @@ for ns in $all_namespaces; do
     # migrations claiming one version — the outage, and the case a per-tree
     # loader test cannot see, because in this branch's tree the version is
     # unique and the conflict exists only against the base.
-    if [ -n "$base_name" ]; then
+    if [[ -n "$base_name" ]]; then
       # The base carries this version MORE THAN ONCE, so the base is the thing
       # that is broken and this branch is the repair. A repair leaves one of the
       # colliding migrations at the version and renumbers the other, so the
@@ -311,11 +311,11 @@ for ns in $all_namespaces; do
       # of a new collision. Without this the gate refuses every repair of the
       # outage it exists to report, and the only way back to a loadable
       # namespace is to bypass the gate.
-      if [ "$(echo "$base_name" | wc -l)" -gt 1 ] && grep -qxF "$name" <<<"$base_name"; then
+      if [[ "$(echo "$base_name" | wc -l)" -gt 1 ]] && grep -qxF "$name" <<<"$base_name"; then
         echo "note: $ns/$version is claimed twice on $BASE_REF ($(echo "$base_name" | tr '\n' ' ')); this branch keeps '$name' at it — repairing, not colliding"
         continue
       fi
-      if [ "$base_name" != "$name" ]; then
+      if [[ "$base_name" != "$name" ]]; then
         fail "$ns/$version is claimed by two different migrations — '$name' here, '$base_name' on $BASE_REF. Rename this one above $base_max and rebase (in core, re-stamp it with 'make migrate-create'). If this branch is a baseline consolidation, set MIGRATION_VERSIONS_BASELINE_RESET=1"
       fi
       continue
@@ -331,11 +331,11 @@ for ns in $all_namespaces; do
   done <<<"$tree_rows"
 done
 
-if [ "$failed" -ne 0 ]; then
+if [[ "$failed" -ne 0 ]]; then
   exit 1
 fi
 
-if [ "$baseline_reset" = "1" ]; then
+if [[ "$baseline_reset" = "1" ]]; then
   # Which namespaces the declaration actually covered is in the per-namespace
   # notes above. Saying only "a reset was declared" here would read as though it
   # applied everywhere, including to a namespace that refused it.

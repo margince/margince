@@ -27,7 +27,7 @@ set -euo pipefail
 BASE="https://api.hubapi.com"
 # Token from HUBSPOT_TOKEN (then the subcommand is $1), or as the first arg
 # (then the subcommand is $2): `HUBSPOT_TOKEN=pat- script seed` or `script pat- seed`.
-if [ -n "${HUBSPOT_TOKEN:-}" ]; then
+if [[ -n "${HUBSPOT_TOKEN:-}" ]]; then
   TOKEN="${HUBSPOT_TOKEN}"; SUBCMD="${1:-}"
 else
   TOKEN="${1:-}"; SUBCMD="${2:-}"
@@ -37,7 +37,7 @@ EMAIL_DOMAIN="overlay-fixture.example.com"  # contact emails end here; a valid T
                                         # (HubSpot rejects the reserved .test TLD as INVALID_EMAIL)
 NAME_PREFIX="[fixture] "                # company/deal/lead names start with this
 
-if [ -z "${TOKEN}" ]; then
+if [[ -z "${TOKEN}" ]]; then
   echo "error: set HUBSPOT_TOKEN=pat-... (a HubSpot private-app token)" >&2
   exit 2
 fi
@@ -55,7 +55,7 @@ hs() {
     ${body:+-d "$body"})"
   status="${out##*$'\n'}"
   out="${out%$'\n'*}"
-  if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+  if [[ "$status" -lt 200 ]] || [[ "$status" -ge 300 ]]; then
     echo "HubSpot ${method} ${path} -> HTTP ${status}" >&2
     echo "$out" | jq . >&2 2>/dev/null || echo "$out" >&2
     return 1
@@ -70,7 +70,7 @@ resolve_owner() {
   owners="$(hs GET "/crm/v3/owners?limit=1")"
   OWNER_ID="$(printf '%s' "$owners" | jq -r '.results[0].id // empty')"
   OWNER_EMAIL="$(printf '%s' "$owners" | jq -r '.results[0].email // empty')"
-  if [ -z "$OWNER_ID" ]; then
+  if [[ -z "$OWNER_ID" ]]; then
     echo "error: no CRM owner found — the token needs crm.objects.owners.read and the account needs at least one user" >&2
     exit 1
   fi
@@ -84,7 +84,7 @@ resolve_pipeline() {
   pipelines="$(hs GET "/crm/v3/pipelines/deals")"
   DEAL_PIPELINE="$(printf '%s' "$pipelines" | jq -r '.results[0].id // empty')"
   DEAL_STAGE="$(printf '%s' "$pipelines" | jq -r '.results[0].stages[0].id // empty')"
-  if [ -z "$DEAL_PIPELINE" ] || [ -z "$DEAL_STAGE" ]; then
+  if [[ -z "$DEAL_PIPELINE" ]] || [[ -z "$DEAL_STAGE" ]]; then
     echo "error: could not resolve a deals pipeline/stage (crm.objects.deals.read / crm.schemas.deals.read)" >&2
     exit 1
   fi
@@ -109,14 +109,14 @@ archive_marked() {
   while :; do
     resp="$(hs POST "/crm/v3/objects/${object}/search" "$(printf '%s' "$search" | jq --arg a "${after:-}" '. + (if $a=="" then {} else {after:$a} end)')")" || return 1
     count="$(printf '%s' "$resp" | jq -r '.results | length')"
-    if [ "${count:-0}" -gt 0 ]; then
+    if [[ "${count:-0}" -gt 0 ]]; then
       ids="$(printf '%s' "$resp" | jq -c '[.results[].id]')"
       hs POST "/crm/v3/objects/${object}/batch/archive" \
         "$(printf '%s' "$ids" | jq '{inputs: [ .[] | {id: .} ]}')" >/dev/null || return 1
       echo "  archived ${count} ${object}"
     fi
     after="$(printf '%s' "$resp" | jq -r '.paging.next.after // empty')"
-    [ -n "$after" ] || break
+    [[ -n "$after" ]] || break
   done
 }
 

@@ -42,13 +42,13 @@ api() { # api <method> <path> [json-body] — prints the HTTP status, body in $w
 # plain-http localhost — so pull the token out and send it explicitly.
 capture_session() {
   SESSION="$(sed -n 's/^[Ss]et-[Cc]ookie: crm_session=\([^;]*\).*/\1/p' "$workdir/headers" | tr -d '\r')"
-  [ -n "$SESSION" ] || fail "the server answered OK but set no crm_session cookie"
+  [[ -n "$SESSION" ]] || fail "the server answered OK but set no crm_session cookie"
 }
 
 echo "== seed-person-page: sign in =="
 status="$(api POST /auth/login "$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" \
   '{email:$e,password:$p}')")"
-[ "$status" = "200" ] || fail "login as $ADMIN_EMAIL returned HTTP $status (is the stack up? make dev)"
+[[ "$status" = "200" ]] || fail "login as $ADMIN_EMAIL returned HTTP $status (is the stack up? make dev)"
 capture_session
 
 # ---------------------------------------------------------------------------
@@ -58,11 +58,11 @@ capture_session
 echo "== seed-person-page: the account =="
 org_id=""
 status="$(api GET '/organizations?q=Glazed%20Frog&limit=10')"
-[ "$status" = "200" ] || fail "GET /v1/organizations returned HTTP $status"
+[[ "$status" = "200" ]] || fail "GET /v1/organizations returned HTTP $status"
 org_id="$(jq -r '.data[] | select(.display_name == "Glazed Frog") | .id' "$workdir/body" | head -1)"
-if [ -z "$org_id" ]; then
+if [[ -z "$org_id" ]]; then
   status="$(api POST /organizations '{"display_name":"Glazed Frog","domains":[{"domain":"glazedfrog.com","is_primary":true}],"source":"seed"}')"
-  [ "$status" = "201" ] || { cat "$workdir/body" >&2; fail "create organization returned HTTP $status"; }
+  [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "create organization returned HTTP $status"; }
   org_id="$(jq -r .id "$workdir/body")"
   echo "  OK: created Glazed Frog"
 else
@@ -77,15 +77,15 @@ fi
 ensure_person() { # ensure_person <full_name> <title> <email> — prints the id
   local name="$1" title="$2" email="$3" id status
   status="$(api GET "/people?q=$(printf '%s' "$name" | jq -sRr @uri)&limit=10")"
-  [ "$status" = "200" ] || fail "GET /v1/people returned HTTP $status"
+  [[ "$status" = "200" ]] || fail "GET /v1/people returned HTTP $status"
   id="$(jq -r --arg n "$name" '.data[] | select(.full_name == $n) | .id' "$workdir/body" | head -1)"
-  if [ -n "$id" ]; then
+  if [[ -n "$id" ]]; then
     echo "$id"
     return
   fi
   status="$(api POST /people "$(jq -n --arg n "$name" --arg t "$title" --arg e "$email" \
     '{full_name:$n,title:$t,emails:[{email:$e,is_primary:true}],source:"seed"}')")"
-  [ "$status" = "201" ] || { cat "$workdir/body" >&2; fail "create person $name returned HTTP $status"; }
+  [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "create person $name returned HTTP $status"; }
   jq -r .id "$workdir/body"
 }
 
@@ -127,28 +127,28 @@ employ "$mark_id" "Director of Operations"
 
 echo "== seed-person-page: the deal =="
 status="$(api GET /pipelines)"
-[ "$status" = "200" ] || fail "GET /v1/pipelines returned HTTP $status"
+[[ "$status" = "200" ]] || fail "GET /v1/pipelines returned HTTP $status"
 pipeline_id="$(jq -r '.data[] | select(.is_default) | .id' "$workdir/body")"
 stage_proposal="$(jq -r --arg p "$pipeline_id" \
   '.data[] | select(.id == $p) | .stages[] | select(.name == "Proposal") | .id' "$workdir/body")"
-[ -n "$stage_proposal" ] || fail "the default pipeline has no Proposal stage"
+[[ -n "$stage_proposal" ]] || fail "the default pipeline has no Proposal stage"
 
 # The mockups show "closes 30 Jun", but an open deal may not claim a close date
 # in the past and this seed has to keep working as time passes. The nearest
 # 30 June that is still ahead of today carries the mockup's figure honestly.
 close_date="$(date -u '+%Y')-06-30"
-if [ "$close_date" \< "$(date -u '+%Y-%m-%d')" ]; then
+if [[ "$close_date" < "$(date -u '+%Y-%m-%d')" ]]; then
   close_date="$(( $(date -u '+%Y') + 1 ))-06-30"
 fi
 
 status="$(api GET '/deals?limit=100')"
-[ "$status" = "200" ] || fail "GET /v1/deals returned HTTP $status"
+[[ "$status" = "200" ]] || fail "GET /v1/deals returned HTTP $status"
 deal_id="$(jq -r '.data[] | select(.name == "Expansion — Phase 2") | .id' "$workdir/body" | head -1)"
-if [ -z "$deal_id" ]; then
+if [[ -z "$deal_id" ]]; then
   status="$(api POST /deals "$(jq -n --arg p "$pipeline_id" --arg s "$stage_proposal" --arg o "$org_id" --arg c "$close_date" \
     '{name:"Expansion — Phase 2",pipeline_id:$p,stage_id:$s,organization_id:$o,
       amount_minor:9500000,currency:"EUR",expected_close_date:$c,source:"seed"}')")"
-  [ "$status" = "201" ] || { cat "$workdir/body" >&2; fail "create deal returned HTTP $status"; }
+  [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "create deal returned HTTP $status"; }
   deal_id="$(jq -r .id "$workdir/body")"
   echo "  OK: created Expansion — Phase 2 (€95k, Proposal, closes $close_date)"
 else
@@ -188,7 +188,7 @@ ahead() { date -u -v+"$1"H '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d "+$1 
 log_activity() { # log_activity <person-id> <kind> <direction|""> <subject> <body> <when> <label>
   local person="$1" kind="$2" direction="$3" subject="$4" body="$5" when="$6" label="$7" status
   status="$(api GET "/activities?entity_type=person&entity_id=$person&limit=50")"
-  [ "$status" = "200" ] || fail "GET /v1/activities returned HTTP $status"
+  [[ "$status" = "200" ]] || fail "GET /v1/activities returned HTTP $status"
   if jq -e --arg s "$subject" '.data[] | select(.subject == $s)' "$workdir/body" >/dev/null; then
     echo "  OK: \"$label\" already captured"
     return
@@ -198,7 +198,7 @@ log_activity() { # log_activity <person-id> <kind> <direction|""> <subject> <bod
     '{kind:$k,subject:$s,body:$b,occurred_at:$o,
       links:[{entity_type:"person",entity_id:$p}],source:"seed"}
      + (if $d == "" then {} else {direction:$d} end)')")"
-  [ "$status" = "201" ] || { cat "$workdir/body" >&2; fail "capture \"$label\" returned HTTP $status"; }
+  [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "capture \"$label\" returned HTTP $status"; }
   echo "  OK: captured \"$label\""
 }
 
@@ -244,17 +244,17 @@ echo "== seed-person-page: what was said =="
 activity_id() { # activity_id <person-id> <subject> — prints the id, empty if absent
   local person="$1" subject="$2" status
   status="$(api GET "/activities?entity_type=person&entity_id=$person&limit=50")"
-  [ "$status" = "200" ] || fail "GET /v1/activities returned HTTP $status"
+  [[ "$status" = "200" ]] || fail "GET /v1/activities returned HTTP $status"
   jq -r --arg s "$subject" '.data[] | select(.subject == $s) | .id' "$workdir/body" | head -1
 }
 
 claim() { # claim <person-id> <kind> <body> <source-subject> <quote> [due-at]
   local person="$1" kind="$2" body="$3" subject="$4" quote="$5" due="${6:-}" source status
   source="$(activity_id "$person" "$subject")"
-  [ -n "$source" ] || fail "no captured activity titled \"$subject\" to ground this claim on"
+  [[ -n "$source" ]] || fail "no captured activity titled \"$subject\" to ground this claim on"
 
   status="$(api GET "/people/$person/360")"
-  [ "$status" = "200" ] || fail "GET /v1/people/$person/360 returned HTTP $status"
+  [[ "$status" = "200" ]] || fail "GET /v1/people/$person/360 returned HTTP $status"
   if jq -e --arg b "$body" '(.claims // [])[] | select(.body == $b)' "$workdir/body" >/dev/null; then
     echo "  OK: \"$body\" already recorded"
     return
@@ -264,7 +264,7 @@ claim() { # claim <person-id> <kind> <body> <source-subject> <quote> [due-at]
     --arg a "$source" --arg q "$quote" --arg d "$due" \
     '{kind:$k,body:$b,source_activity_id:$a,source_quote:$q}
      + (if $d == "" then {} else {due_at:$d} end)')")"
-  [ "$status" = "201" ] || { cat "$workdir/body" >&2; fail "record claim returned HTTP $status"; }
+  [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "record claim returned HTTP $status"; }
   echo "  OK: recorded \"$body\""
 }
 
