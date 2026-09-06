@@ -31,7 +31,7 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1634 | 4% | 21576 | 6 | 5 |
-| `overnight_at_risk_sweep` | 7 | 2467 | 7% | 20743 | 15 | 8 |
+| `overnight_at_risk_sweep` | 7 | 2467 | 7% | 20743 | 15 | 9 |
 | _whole served catalog, for scale_ | 73 | 21594 | 65% | — | — | — |
 
 ### `morning_brief`
@@ -106,8 +106,8 @@ times the menu. And lowering it is not always an improvement — adding
 `review_commitments` to the sweep *raises* this count while cutting that agent's
 temptation weight almost in half.
 
-**Temptation weight** sums, over an agent's tools, how many of the 23 certification
-scenarios name that tool as the WRONG reach. 21 of those scenarios offer the model the
+**Temptation weight** sums, over an agent's tools, how many of the 24 certification
+scenarios name that tool as the WRONG reach. 22 of those scenarios offer the model the
 whole catalog and score which tool it picks, so the confusions it names were chosen
 against the real surface rather than guessed.
 
@@ -153,7 +153,7 @@ a term in an addition.
 | `send_message` | 431 | — |
 | `annotate_brief` | 418 | — |
 | `progress_deal` | 404 | 3 scenarios |
-| `review_commitments` | 401 | — |
+| `review_commitments` | 401 | 1 scenario |
 | `book_meeting` | 393 | — |
 | `enrich` | 393 | — |
 | `compose_analytics_report` | 390 | — |

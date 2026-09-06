@@ -29,7 +29,7 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | … best state `partial` | 0 |
 | … best state `stale` | 9 |
 | … `absent` on every binding | 4 |
-| Scenarios in the corpus | 141 |
+| Scenarios in the corpus | 142 |
 | Committed records | 59 |
 | Bindings measured | 10 |
 
@@ -81,7 +81,7 @@ Which model to run each site on, and what that choice rests on.
 | Site | Best model tested | Band | Reliability | State | Scenarios | Records |
 |---|---|---|---:|---|---:|---:|
 | [`account_scan/org_scan`](#account_scanorg_scan) | - | - | - | `absent` | 2 | 0 |
-| [`agent_loop/loop`](#agent_looploop) | - | - | - | `stale` | 23 | 3 |
+| [`agent_loop/loop`](#agent_looploop) | - | - | - | `stale` | 24 | 3 |
 | [`brief_ranking/rank`](#brief_rankingrank) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
 | [`capture_classify/classify`](#capture_classifyclassify) | - | - | - | `stale` | 5 | 3 |
 | [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 8 | 2 |
@@ -239,7 +239,7 @@ Certified without the company context production prepends (`identity`, `position
 
 Scope a run of it can claim: `single_turn`.
 
-Scenarios (23):
+Scenarios (24):
 
 | Scenario | Expects | Case |
 |---|---|---|
@@ -248,6 +248,7 @@ Scenarios (23):
 | `a_goal_no_tool_can_serve_ends_the_turn` | `accepted` | [a_goal_no_tool_can_serve_ends_the_turn.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_goal_no_tool_can_serve_ends_the_turn.yaml) |
 | `a_name_alone_is_still_a_search` | `accepted` | [a_name_alone_is_still_a_search.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_name_alone_is_still_a_search.yaml) |
 | `a_promise_is_not_a_slipping_deal` | `accepted` | [a_promise_is_not_a_slipping_deal.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_promise_is_not_a_slipping_deal.yaml) |
+| `a_stepless_deal_is_a_slipping_deal` | `accepted` | [a_stepless_deal_is_a_slipping_deal.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_stepless_deal_is_a_slipping_deal.yaml) |
 | `a_structured_question_is_not_a_text_search` | `accepted` | [a_structured_question_is_not_a_text_search.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_structured_question_is_not_a_text_search.yaml) |
 | `a_thin_relationship_is_not_a_slipping_deal` | `accepted` | [a_thin_relationship_is_not_a_slipping_deal.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_thin_relationship_is_not_a_slipping_deal.yaml) |
 | `a_total_is_still_a_report` | `accepted` | [a_total_is_still_a_report.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/a_total_is_still_a_report.yaml) |
@@ -271,9 +272,9 @@ Records (3):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/23 | `not_supported` | 69 | 59 | 0.86 | 955ms | 1314ms | 59 | 10 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/24 | `not_supported` | 69 | 59 | 0.86 | 955ms | 1314ms | 59 | 10 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `not_supported` | 115 | 74 | 0.64 | 1804ms | 2954ms | 74 | 40 | 1 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/23 | `not_supported` | 69 | 39 | 0.57 | 7242ms | 39483ms | 39 | 19 | 11 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/24 | `not_supported` | 69 | 39 | 0.57 | 7242ms | 39483ms | 39 | 19 | 11 | 0 |
 
 ### `brief_ranking`
 

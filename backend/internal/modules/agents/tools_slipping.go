@@ -39,10 +39,16 @@ type SlippingDeal struct {
 	// second read per deal, and nothing here widens what the list already
 	// showed the caller. Nil where the row carries none (an overlay-mirror
 	// deal has no native stage; a deal can be ownerless).
-	StageID           *ids.UUID
-	OwnerID           *ids.UUID
-	Stalled           bool
-	CloseOverdue      bool
+	StageID      *ids.UUID
+	OwnerID      *ids.UUID
+	Stalled      bool
+	CloseOverdue bool
+	// NoOpenNextStep says the deal carries no open, unarchived task of its
+	// own. It is the sweep's third named signal, and the only one that is an
+	// ABSENCE: what the deal list carries is what a deal has, so this is
+	// answered by its own read (compose.dealsWithNoOpenNextStep, which states
+	// what counts).
+	NoOpenNextStep    bool
 	LastActivityAt    *time.Time
 	CreatedAt         time.Time
 	ExpectedCloseDate *time.Time
@@ -274,6 +280,17 @@ func rankSlipping(candidates []SlippingDeal) []slippingItem {
 			it.evidence = append(it.evidence, SlippingEvidence{
 				Source:  "deal.expected_close_date",
 				Snippet: "expected close " + d.ExpectedCloseDate.UTC().Format("2006-01-02") + " is past due",
+			})
+		}
+		// The one claim grounded in an ABSENCE, so the source names the read
+		// rather than a field: there is no column whose value evidences that
+		// nothing is there. The no-guess gate below still applies — a deal
+		// reaches the answer on this flag alone only because the flag IS the
+		// finding, which the two above are not.
+		if d.NoOpenNextStep {
+			it.evidence = append(it.evidence, SlippingEvidence{
+				Source:  "activity.task",
+				Snippet: "no open next step on this deal",
 			})
 		}
 		if len(it.evidence) == 0 {

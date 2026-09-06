@@ -51,78 +51,94 @@ func (s *Store) MergeOrganization(ctx context.Context, sourceID, targetID ids.Or
 
 	var out crmcontracts.Organization
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		// A merge fills the survivor's legal_name from the record it retires
-		// (fillOrgSurvivorship), so it is a name writer like any other and owes
-		// the same two things: the name lock BEFORE any organization row lock,
-		// and a re-check afterwards. Taking it here rather than beside the fill
-		// is what keeps the order — LockPair is next.
-		if err := lockOrgNameWrites(ctx, tx); err != nil {
-			return err
-		}
-		// The pair lock keeps BOTH endpoints held to commit: without it a
-		// concurrent merge(target→elsewhere) archives the survivor
-		// mid-merge and the relinked children point at a dead record.
-		_, tgtLock, err := storekit.LockPair(ctx, tx, "organization", sourceID.UUID, targetID.UUID)
-		if err != nil {
-			return err
-		}
-		src, tgt, err := mergePair(ctx, tx, "organization", sourceID, targetID, readOrgMergeState)
-		if err != nil {
-			return err
-		}
-		// AFTER the pair lock, so the answer cannot change under the merge, and
-		// before anything is relinked. Either endpoint: merging the anchor away
-		// retires it, and merging a customer INTO it folds their people, deals
-		// and history onto the installation's own company with no way to tell
-		// them apart afterwards.
-		// Neither direction is open when one side is the anchor, so neither
-		// message may point at the other direction as the way out: archiving the
-		// duplicate is the only move that actually works.
-		if err := refuseIfAnchor(ctx, tx, sourceID, "id", "it cannot be merged into another company. Archive the duplicate instead, and edit this one on the company page"); err != nil {
-			return err
-		}
-		if err := refuseIfAnchor(ctx, tx, targetID, "target_id", "nothing can be merged into it. Archive the duplicate instead, and edit this one on the company page"); err != nil {
-			return err
-		}
-		if err := refuseWhenBothCarryProjects(ctx, tx, sourceID, targetID); err != nil {
-			return err
-		}
-		targetIsPartner, err := relinkOrgAssociations(ctx, tx, sourceID, targetID)
-		if err != nil {
-			return err
-		}
-		filled, err := fillOrgSurvivorship(ctx, tx, src, tgt, targetIsPartner, tgtLock)
-		if err != nil {
-			return err
-		}
-		out, err = finalizeOrgMerge(ctx, tx, sourceID, targetID, filled, active)
-		if err != nil {
-			return err
-		}
-		// A survivor that just inherited the retired record's legal name can now
-		// be the twin of a THIRD organization, and resolving one duplicate is no
-		// reason to leave that one unfiled. Only when the name actually moved: a
-		// merge that filled nothing renames nobody.
-		//
-		// It runs after finalizeOrgMerge, which retires the source. Before it,
-		// the source still reads as live AND holds the very name it has just
-		// donated, so it scores 1.0, wins the ranked list, and the pair filed
-		// names a row archived one statement later — a pair no human can ever
-		// dispose of, because merging it answers AlreadyMerged and that reopens
-		// it. The genuine third record is never reached, since the walk stops at
-		// the first unfiled rival.
-		if _, renamed := filled[fieldLegalName]; renamed {
-			by, err := storekit.CapturedBy(ctx)
-			if err != nil {
-				return err
-			}
-			if err := recheckOrgNameForDuplicates(ctx, tx, targetID, by); err != nil {
-				return err
-			}
-		}
-		return nil
+		var err error
+		out, err = mergeOrganizationTx(ctx, tx, sourceID, targetID, active)
+		return err
 	})
 	return out, err
+}
+
+// mergeOrganizationTx takes the name lock and the pair lock, refuses the
+// anchor in either direction, relinks every association, fills the survivor's
+// gaps and retires the source — all inside the CALLER's transaction.
+//
+// Split out so a caller that has already written something can commit that
+// write and this merge together. The dedupe queue is the one that needs it: it
+// marks a candidate 'merged' and then merges, and two transactions there leave
+// a candidate claiming a merge that never happened (#1970).
+func mergeOrganizationTx(
+	ctx context.Context, tx pgx.Tx, sourceID, targetID ids.OrganizationID, active []fieldcatalog.Column,
+) (crmcontracts.Organization, error) {
+	// A merge fills the survivor's legal_name from the record it retires
+	// (fillOrgSurvivorship), so it is a name writer like any other and owes
+	// the same two things: the name lock BEFORE any organization row lock,
+	// and a re-check afterwards. Taking it here rather than beside the fill
+	// is what keeps the order — LockPair is next.
+	if err := lockOrgNameWrites(ctx, tx); err != nil {
+		return crmcontracts.Organization{}, err
+	}
+	// The pair lock keeps BOTH endpoints held to commit: without it a
+	// concurrent merge(target→elsewhere) archives the survivor
+	// mid-merge and the relinked children point at a dead record.
+	_, tgtLock, err := storekit.LockPair(ctx, tx, "organization", sourceID.UUID, targetID.UUID)
+	if err != nil {
+		return crmcontracts.Organization{}, err
+	}
+	src, tgt, err := mergePair(ctx, tx, "organization", sourceID, targetID, readOrgMergeState)
+	if err != nil {
+		return crmcontracts.Organization{}, err
+	}
+	// AFTER the pair lock, so the answer cannot change under the merge, and
+	// before anything is relinked. Either endpoint: merging the anchor away
+	// retires it, and merging a customer INTO it folds their people, deals
+	// and history onto the installation's own company with no way to tell
+	// them apart afterwards.
+	// Neither direction is open when one side is the anchor, so neither
+	// message may point at the other direction as the way out: archiving the
+	// duplicate is the only move that actually works.
+	if err := refuseIfAnchor(ctx, tx, sourceID, "id", "it cannot be merged into another company. Archive the duplicate instead, and edit this one on the company page"); err != nil {
+		return crmcontracts.Organization{}, err
+	}
+	if err := refuseIfAnchor(ctx, tx, targetID, "target_id", "nothing can be merged into it. Archive the duplicate instead, and edit this one on the company page"); err != nil {
+		return crmcontracts.Organization{}, err
+	}
+	if err := refuseWhenBothCarryProjects(ctx, tx, sourceID, targetID); err != nil {
+		return crmcontracts.Organization{}, err
+	}
+	targetIsPartner, err := relinkOrgAssociations(ctx, tx, sourceID, targetID)
+	if err != nil {
+		return crmcontracts.Organization{}, err
+	}
+	filled, err := fillOrgSurvivorship(ctx, tx, src, tgt, targetIsPartner, tgtLock)
+	if err != nil {
+		return crmcontracts.Organization{}, err
+	}
+	out, err := finalizeOrgMerge(ctx, tx, sourceID, targetID, filled, active)
+	if err != nil {
+		return crmcontracts.Organization{}, err
+	}
+	// A survivor that just inherited the retired record's legal name can now
+	// be the twin of a THIRD organization, and resolving one duplicate is no
+	// reason to leave that one unfiled. Only when the name actually moved: a
+	// merge that filled nothing renames nobody.
+	//
+	// It runs after finalizeOrgMerge, which retires the source. Before it,
+	// the source still reads as live AND holds the very name it has just
+	// donated, so it scores 1.0, wins the ranked list, and the pair filed
+	// names a row archived one statement later — a pair no human can ever
+	// dispose of, because merging it answers AlreadyMerged and that reopens
+	// it. The genuine third record is never reached, since the walk stops at
+	// the first unfiled rival.
+	if _, renamed := filled[fieldLegalName]; renamed {
+		by, err := storekit.CapturedBy(ctx)
+		if err != nil {
+			return crmcontracts.Organization{}, err
+		}
+		if err := recheckOrgNameForDuplicates(ctx, tx, targetID, by); err != nil {
+			return crmcontracts.Organization{}, err
+		}
+	}
+	return out, nil
 }
 
 // relinkOrgAssociations moves every association off the merged-away org

@@ -127,6 +127,21 @@ func quietDealScan(
 			seen[candidate.DealID] = true
 			out = append(out, candidate)
 		}
+		// Asked once, of the survivors. The sweep's third named signal is an
+		// absence, so it cannot come off the deal rows the two sweeps above
+		// read — and asking it before the filter would pay for deals that are
+		// about to be dropped.
+		ids := make([]ids.UUID, 0, len(out))
+		for _, d := range out {
+			ids = append(ids, d.DealID)
+		}
+		stepless, err := dealsWithNoOpenNextStep(ctx, pool, ids)
+		if err != nil {
+			return nil, false, err
+		}
+		for i := range out {
+			out[i].NoOpenNextStep = stepless[out[i].DealID]
+		}
 		return out, cut, nil
 	}
 }
