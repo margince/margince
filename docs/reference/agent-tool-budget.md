@@ -32,7 +32,7 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1634 | 4% | 21576 | 6 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2467 | 7% | 20743 | 15 | 9 |
-| _whole served catalog, for scale_ | 73 | 21691 | 66% | — | — | — |
+| _whole served catalog, for scale_ | 73 | 21707 | 66% | — | — | — |
 
 ### `morning_brief`
 
@@ -129,7 +129,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 263 tokens, mean 296, across 73 served tools.
+Median 263 tokens, mean 297, across 73 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -188,14 +188,14 @@ a term in an addition.
 | `at_risk_relationships` | 208 | — |
 | `read_brief` | 206 | — |
 | `relink_activities` | 206 | — |
+| `update_tag` | 205 | — |
 | `merge_tags` | 198 | — |
 | `relink_thread` | 197 | — |
-| `update_tag` | 197 | — |
 | `who_knows` | 194 | — |
 | `list_pipelines` | 191 | — |
 | `disqualify_lead` | 190 | — |
 | `intro_path_to` | 190 | 2 scenarios |
-| `create_tag` | 175 | — |
+| `create_tag` | 183 | — |
 | `list_channel_providers` | 174 | — |
 | `remove_tag` | 167 | — |
 | `check_location_support` | 156 | — |

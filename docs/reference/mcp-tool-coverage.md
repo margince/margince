@@ -29,7 +29,7 @@ This page does not grade single steps or name a best model per site — that is
 | … some case requires | 7 |
 | … **no case requires** | 66 |
 | … of those, permitted somewhere but never required | 13 |
-| Prompt tokens spent on tools no case requires | 17729 |
+| Prompt tokens spent on tools no case requires | 17745 |
 | Use cases | 7 |
 | … with a committed run | 7 |
 | Acceptance criteria covered | 1, 2, 3, 4, 5, 6, 8, 14 |
@@ -132,14 +132,14 @@ stopped being able to call it. A tool in the `permitted` column is worse than on
 | `at_risk_relationships` | 208 | — | `overnight_at_risk_sweep` |
 | `read_brief` | 206 | — | `morning_brief` |
 | `relink_activities` | 206 | — | — |
+| `update_tag` | 205 | — | — |
 | `merge_tags` | 198 | — | — |
 | `relink_thread` | 197 | — | — |
-| `update_tag` | 197 | — | — |
 | `who_knows` | 194 | `case5_before_the_meeting` | — |
 | `list_pipelines` | 191 | `case1_log_it` | — |
 | `disqualify_lead` | 190 | — | — |
 | `intro_path_to` | 190 | — | — |
-| `create_tag` | 175 | — | — |
+| `create_tag` | 183 | — | — |
 | `list_channel_providers` | 174 | — | — |
 | `remove_tag` | 167 | — | — |
 | `check_location_support` | 156 | — | — |

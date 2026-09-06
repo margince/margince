@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 42,
-    "sites_best_current": 42,
+    "sites_best_current": 41,
     "sites_best_partial": 0,
-    "sites_best_stale": 0,
+    "sites_best_stale": 1,
     "sites_absent": 0,
     "scenarios": 142,
     "records": 74,
@@ -17,9 +17,9 @@
         "env": "eu_hosted"
       },
       "sites": 36,
-      "sites_current": 36,
+      "sites_current": 35,
       "sites_partial": 0,
-      "sites_stale": 0,
+      "sites_stale": 1,
       "runs": 381,
       "passed": 330,
       "reliability": 0.8661417322834646,
@@ -177,9 +177,9 @@
         "env": "eu_hosted"
       },
       "sites": 35,
-      "sites_current": 35,
+      "sites_current": 34,
       "sites_partial": 0,
-      "sites_stale": 0,
+      "sites_stale": 1,
       "runs": 372,
       "passed": 298,
       "reliability": 0.8010752688172043,
@@ -303,17 +303,8 @@
         "sales",
         "offer"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "eu_hosted"
-        },
-        "band": "not_supported",
-        "reliability": 0.8333333333333334,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "a_description_is_not_a_name",
@@ -443,9 +434,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 24,
+          "scenarios_measured": 2,
           "scenarios_total": 24,
           "runs": 72,
           "passed": 60,
@@ -458,7 +449,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "22 scenarios it scored have changed since, or the prompts built from them have: a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 16 more"
         },
         {
           "binding": {
@@ -489,9 +480,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 24,
+          "scenarios_measured": 2,
           "scenarios_total": 24,
           "runs": 72,
           "passed": 45,
@@ -504,7 +495,7 @@
             "invalid": 11,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "22 scenarios it scored have changed since, or the prompts built from them have: a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 16 more"
         }
       ]
     },

@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 12 |
 | Tool catalog | 204.3 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 53443 |
+| Approx. wire tokens | 53458 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 96.6 KB | 47% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 49.9 KB | 24% | Yes, every step |
-| Input schemas | 42.4 KB | 20% | Yes, every step |
+| Input schemas | 42.5 KB | 20% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.4 KB | 7% | Partly |
-| **Description + input schema** | **92.3 KB** | **45%** | **the recurring cost** |
+| **Description + input schema** | **92.4 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -2834,7 +2834,11 @@ Coin a new word in the workspace vocabulary, so records can be grouped by it. li
         "teal",
         "amber",
         "rose",
-        "slate"
+        "slate",
+        "sky",
+        "violet",
+        "lime",
+        "orange"
       ],
       "type": "string"
     },
@@ -14012,6 +14016,10 @@ Rename, recolour or describe a word that already exists. Fields left out are unc
         "amber",
         "rose",
         "slate",
+        "sky",
+        "violet",
+        "lime",
+        "orange",
         "none"
       ],
       "type": "string"

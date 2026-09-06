@@ -1,3 +1,5 @@
+SET LOCAL lock_timeout = '3s';
+
 ALTER TABLE tag DROP CONSTRAINT IF EXISTS tag_color_check;
 
 -- The narrow constraint cannot be re-added over a row that already carries one

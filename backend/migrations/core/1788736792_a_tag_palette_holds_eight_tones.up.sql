@@ -3,6 +3,8 @@
 --
 -- Widening only: every colour the old constraint admitted the new one admits,
 -- so no row needs rewriting and no tag loses the colour somebody chose for it.
+SET LOCAL lock_timeout = '3s';
+
 ALTER TABLE tag DROP CONSTRAINT IF EXISTS tag_color_check;
 
 ALTER TABLE tag

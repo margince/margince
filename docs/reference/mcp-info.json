@@ -10,16 +10,16 @@
   "totals": {
     "tools": 73,
     "resources": 12,
-    "tool_catalog_bytes": 209189,
+    "tool_catalog_bytes": 209251,
     "resource_catalog_bytes": 4584,
-    "approx_wire_tokens_total": 53443,
+    "approx_wire_tokens_total": 53458,
     "largest_tool_bytes": 8980,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 51079,
-      "input_schema_bytes": 43457,
+      "input_schema_bytes": 43519,
       "output_schema_bytes": 98901,
-      "description_plus_input_schema_bytes": 94536
+      "description_plus_input_schema_bytes": 94598
     }
   },
   "tools": {
@@ -2378,7 +2378,11 @@
                 "teal",
                 "amber",
                 "rose",
-                "slate"
+                "slate",
+                "sky",
+                "violet",
+                "lime",
+                "orange"
               ],
               "type": "string"
             },
@@ -13027,6 +13031,10 @@
                 "amber",
                 "rose",
                 "slate",
+                "sky",
+                "violet",
+                "lime",
+                "orange",
                 "none"
               ],
               "type": "string"

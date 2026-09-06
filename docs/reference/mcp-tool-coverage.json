@@ -5,7 +5,7 @@
     "driven": 7,
     "never_driven": 66,
     "permitted_but_never_required": 13,
-    "tokens_served_but_never_driven": 17729,
+    "tokens_served_but_never_driven": 17745,
     "use_case_cases": 7,
     "cases_with_a_committed_run": 7,
     "acceptance_criteria_covered": [
@@ -638,6 +638,15 @@
       "measured": null
     },
     {
+      "name": "update_tag",
+      "tokens": 205,
+      "agents": [],
+      "required_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": false,
+      "measured": null
+    },
+    {
       "name": "merge_tags",
       "tokens": 198,
       "agents": [],
@@ -648,15 +657,6 @@
     },
     {
       "name": "relink_thread",
-      "tokens": 197,
-      "agents": [],
-      "required_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": false,
-      "measured": null
-    },
-    {
-      "name": "update_tag",
       "tokens": 197,
       "agents": [],
       "required_by_cases": [],
@@ -706,7 +706,7 @@
     },
     {
       "name": "create_tag",
-      "tokens": 175,
+      "tokens": 183,
       "agents": [],
       "required_by_cases": [],
       "permitted_in_cases": [],

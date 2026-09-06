@@ -6,9 +6,9 @@
   "catalog": {
     "tools": 73,
     "system_frame_tokens": 353,
-    "tokens": 21691,
+    "tokens": 21707,
     "median_tool_tokens": 263,
-    "mean_tool_tokens": 296
+    "mean_tool_tokens": 297
   },
   "agents": [
     {
@@ -271,15 +271,15 @@
       "tokens": 206
     },
     {
+      "name": "update_tag",
+      "tokens": 205
+    },
+    {
       "name": "merge_tags",
       "tokens": 198
     },
     {
       "name": "relink_thread",
-      "tokens": 197
-    },
-    {
-      "name": "update_tag",
       "tokens": 197
     },
     {
@@ -300,7 +300,7 @@
     },
     {
       "name": "create_tag",
-      "tokens": 175
+      "tokens": 183
     },
     {
       "name": "list_channel_providers",
