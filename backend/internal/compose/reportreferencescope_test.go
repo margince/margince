@@ -12,10 +12,14 @@ package compose
 // keeping a second list of which ones were remembered.
 
 import (
+	"context"
 	"maps"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
 // referenceColumns are the row-scoped records a report's rows can point AT,
@@ -226,4 +230,106 @@ func TestEveryScopedReferenceIsReachableThroughTheVocabulary(t *testing.T) {
 	if judged == 0 {
 		t.Fatal("no reference scopes were read; this gate proves nothing about the specs it means to cover")
 	}
+}
+
+// A dimension or filter read over a JOIN declares where its row scope comes
+// from.
+//
+// referenceColumns above is a list of id expressions, all `t.`-prefixed, and it
+// answers only for columns on the report's own table. A joined attribute —
+// `org.size_band`, and whatever `org.industry` somebody adds next — is not an
+// id and appears in no such list, so both gates above skip it and it can ship
+// carrying no row scope at all. That is the exact defect scopeVia was added to
+// fix, and a point fix without a gate invites its second instance.
+//
+// Derived from the spec's own joins rather than a list beside them: the alias
+// each join introduces is what marks an expression as coming from another
+// table, so a spec that adds a join is covered the moment it does.
+//
+// Only a join onto a ROW-SCOPED table is asked for a scopeVia. The forecast
+// joins `stage` for win_probability, and a stage is pipeline configuration
+// every seat may read — there is no row scope for it to inherit, and demanding
+// one would be a false positive the next author has to argue with. Which
+// tables those are is read from auth.ScopeClauseFor rather than listed here,
+// so a table gaining or losing its row scope moves this gate with it.
+func TestEveryJoinedVocabularyDeclaresWhereItsScopeComesFrom(t *testing.T) {
+	t.Parallel()
+	checked := 0
+	for _, report := range slices.Sorted(maps.Keys(prebuiltReports)) {
+		spec := prebuiltReports[report]
+		aliases := joinAliases(spec)
+		if len(aliases) == 0 {
+			continue
+		}
+		for _, vocabulary := range []map[string]string{spec.dimensions, spec.filters} {
+			for _, field := range slices.Sorted(maps.Keys(vocabulary)) {
+				expr := vocabulary[field]
+				alias, joined := joinedAlias(expr, aliases)
+				if !joined || !rowScopedTable(t, aliases[alias]) {
+					continue
+				}
+				checked++
+				if _, declared := spec.scopeVia[field]; declared {
+					continue
+				}
+				t.Errorf("report %q offers %q, which reads row-scoped %q over a join, and "+
+					"declares no scopeVia.\n\n"+
+					"referenceScopes renders `ref.id = <column>` and reaches only a column "+
+					"that IS an id, so a joined attribute matches nothing and carries NO "+
+					"row scope: a seat excluded from the joined record can group by its "+
+					"attributes and read the counts off the rows. Name the id column this "+
+					"inherits from in scopeVia.", report, field, aliases[alias])
+			}
+		}
+	}
+	// A census that can fail short has already failed. If no spec joins a
+	// row-scoped table any more, or the alias parse stops matching, this walks
+	// nothing and says so rather than reporting a green it did not earn.
+	if checked == 0 {
+		t.Fatal("no report exposes a vocabulary entry read over a join onto a row-scoped " +
+			"table — either the catalog changed shape or joinAliases stopped parsing, " +
+			"and this gate is holding nothing")
+	}
+}
+
+// rowScopedTable asks the row-scope machinery itself whether a table has a
+// scope, rather than keeping a second copy of its registry.
+//
+// ScopeClauseFor refuses a table it does not scope with a distinct error and
+// answers every other question about the CALLER, so a background context is
+// enough to tell the two apart: a non-scoped table errors, and a scoped one
+// gets as far as needing an actor.
+func rowScopedTable(t *testing.T, table string) bool {
+	t.Helper()
+	_, err := auth.ScopeClauseFor(context.Background(), table, "ref", func(any) int { return 1 })
+	return err == nil || !strings.Contains(err.Error(), "not a row-scoped table")
+}
+
+// joinAliases maps every alias a spec's joins introduce to the table it names.
+//
+// `[LEFT ]JOIN <table> <alias> ON …` is the one shape reportSpec.joins carries;
+// TestWinLossVocabularyMatchesItsPinnedShape holds the ON side of it.
+func joinAliases(spec reportSpec) map[string]string {
+	aliases := map[string]string{}
+	for _, join := range spec.joins {
+		if m := joinAlias.FindStringSubmatch(join); m != nil {
+			aliases[m[2]] = m[1]
+		}
+	}
+	return aliases
+}
+
+var joinAlias = regexp.MustCompile(`JOIN\s+(\w+)\s+(\w+)\s+ON\b`)
+
+// joinedAlias reports which joined alias an expression reads, if any.
+//
+// Matches on `alias.`, so `org.size_band` reads the `org` join and
+// `t.organization_id` matches nothing — the base table is not a join.
+func joinedAlias(expr string, aliases map[string]string) (string, bool) {
+	for alias := range aliases {
+		if strings.Contains(expr, alias+".") {
+			return alias, true
+		}
+	}
+	return "", false
 }

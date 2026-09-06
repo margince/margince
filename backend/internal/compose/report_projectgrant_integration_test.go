@@ -79,12 +79,16 @@ func TestActivityDrillThroughTakesTheProjectGrant(t *testing.T) {
 //
 // project_id is defended twice over: by filterScopes, which refuses the VALUE
 // (auth.EnsureVisibleLive — an unreadable id is 404 before a row is counted),
-// and now by the vocabulary gate, which refuses the NAME. The engine checked
-// only the group-by and the measures, so the second defence was absent and
-// filterScopes was carrying the rule alone on every spec that offers the
-// filter. TestEveryGrantedFilterIsDefended (reportgrants_test.go) is what holds
-// the pairing across the catalog; this proves the behaviour end to end on the
-// one report where a reader can watch it happen.
+// and now by the vocabulary gate, which refuses the NAME.
+//
+// SO THIS TEST STILL PASSES WITH THE VOCABULARY GATE REVERTED, and that is
+// stated here rather than left for somebody to discover: filterScopes alone
+// refuses this request, so what is proved below is the BEHAVIOUR a caller sees,
+// not the new gate. Every granted filter in the catalog today carries
+// filterScopes, so no shipped report can present the failing case at all.
+// TestTheVocabularyGateReadsTheCallersFilterKeys (reportgrants_test.go) is what
+// fails when the fix is removed, and it says why it is written against the call
+// site instead.
 func TestFilteringByAGrantedFieldTakesItsGrant(t *testing.T) {
 	e := setupForecast(t)
 	org := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by)
