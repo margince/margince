@@ -8,7 +8,8 @@
 // decides how one piece of work reads and where each of its verbs goes, and
 // that is the half a reader of either question does not need the other for.
 
-import { useId, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { type ReactNode, useId, useRef, useState } from "react";
 import { Badge, Button, Modal } from "../design-system/atoms";
 import { PanelRow } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
@@ -18,9 +19,12 @@ import { translatePlural, useLocale, useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
 import { tomorrowMorning } from "./briefqueue";
 import { problemMessageOf } from "./common";
+import { ChannelReplyAction, RELINK_KINDS, type RelinkKind } from "./compose";
 import { type BriefMarkRequest, useBriefItemMark } from "./home.queries";
+import { hasMoveControl, MoveButton } from "./movebutton";
 import {
   useAutomationRetry,
+  useClaimSettle,
   useMeetingOutcome,
   useNoticeRead,
   useTaskUpdate,
@@ -288,6 +292,59 @@ export function WorklistRow({
  * title, reasons, verbs — is already at the complexity the linter allows, and
  * a fourth kind of answer should extend this list rather than that function.
  */
+// The answers the row itself is enough for, keyed by the source that carries
+// them and the verb the server sent. A table rather than a branch each: they
+// differ only in which control to draw, so spelling them as code made RowAnswer
+// grow one arm per source until it hit the complexity ceiling — which its own
+// doc predicted.
+//
+// Both halves of the key matter. The SOURCE decides the control, and the VERB
+// is the server's judgement that this particular row may use it: a blocked
+// automation carries no `retry`, so it draws nothing here.
+//
+// `draw` takes the ROW, not its id. A task's completion is pinned to the
+// version the reader decided on, and every other verb here writes too — so the
+// entry that needs a second field next is served without leaving the table for
+// a branch of its own, which is how RowAnswer grew arms the last time.
+const ANSWER_BY_SOURCE: Partial<
+  Record<
+    WorklistItem["source"],
+    {
+      verb: WorklistItem["actions"][number];
+      draw: (item: WorklistItem) => ReactNode;
+    }
+  >
+> = {
+  notice: {
+    verb: "acknowledge",
+    draw: (item) => <NoticeAcknowledge id={item.id} />,
+  },
+  automation_run: {
+    verb: "retry",
+    draw: (item) => <AutomationRetry id={item.id} />,
+  },
+  meeting_outcome: {
+    verb: "decide",
+    draw: (item) => <MeetingOutcome id={item.id} />,
+  },
+  conversation_claim: {
+    verb: "complete",
+    draw: (item) => <PromiseKept id={item.id} />,
+  },
+  task: {
+    verb: "complete",
+    draw: (item) => <TaskComplete id={item.id} version={item.version} />,
+  },
+  // The row's id IS the person's here, which is what the dismissal endpoint
+  // takes — the pairing is why this verb is offered on this lane and nowhere
+  // else. `dismiss` also belongs to brief_item, where it means something else
+  // and posts somewhere else, which is why this table is keyed by SOURCE.
+  relationship_decay: {
+    verb: "dismiss",
+    draw: (item) => <NudgeDismiss personId={item.id} />,
+  },
+};
+
 function RowAnswer({ item }: Readonly<{ item: WorklistItem }>) {
   if (decidable(item)) {
     return <RowDecision item={item} />;
@@ -295,45 +352,49 @@ function RowAnswer({ item }: Readonly<{ item: WorklistItem }>) {
   if (item.source === "dedupe_candidate" && item.pair) {
     return <PairDecision item={item} />;
   }
-  if (item.source === "notice" && item.actions.includes("acknowledge")) {
-    return <NoticeAcknowledge id={item.id} />;
+  // Never a BATCH: a group row stands for a pile and names no single record, so
+  // every id-keyed answer below would act on the wrong one.
+  const keyed = ANSWER_BY_SOURCE[item.source];
+  if (keyed && !item.batch && item.actions.includes(keyed.verb)) {
+    return keyed.draw(item);
   }
-  // A failed rule, run again from here. The server decides which firings carry
-  // the verb — a blocked one does not, because that was a refusal on purpose —
-  // so the row asks what it was sent rather than re-deriving the rule.
-  if (item.source === "automation_run" && item.actions.includes("retry")) {
-    return <AutomationRetry id={item.id} />;
+  // Its own branch, because it is the one answer that needs more than the row's
+  // id: the composer files the sent message against a record, so the subject
+  // travels with it.
+  const replyTo = replyTarget(item);
+  if (replyTo) {
+    return <WaitingReply id={item.id} to={replyTo} />;
   }
-  // How a meeting that already happened went, answered here. `decide` is the
-  // same verb an approval carries and means the same thing — the answer is
-  // given ON the row — but the answers differ, so the control is its own.
-  if (item.source === "meeting_outcome" && item.actions.includes("decide")) {
-    return <MeetingOutcome id={item.id} />;
-  }
-  // A task the server says can be finished, finished HERE. Not a batch: a group
-  // row stands for a pile and names no single activity to complete.
-  if (
-    item.source === "task" &&
-    !item.batch &&
-    item.actions.includes("complete")
-  ) {
-    return <TaskComplete id={item.id} version={item.version} />;
-  }
-  // A quiet contact the reader has decided not to chase. The row's id IS the
-  // person's, which is what the dismissal endpoint takes — the pairing is why
-  // this verb is offered on this lane and nowhere else.
-  if (
-    item.source === "relationship_decay" &&
-    !item.batch &&
-    item.actions.includes("dismiss")
-  ) {
-    return <NudgeDismiss personId={item.id} />;
-  }
-  // A brief item's three verbs. Source-checked rather than verb-checked:
-  // `dismiss` also belongs to relationship_decay above, where it means
-  // something else entirely and posts somewhere else.
+  // A brief item's three verbs, drawn together rather than one per entry: they
+  // share a surface and the component picks among them.
   if (item.source === "brief_item" && !item.batch) {
     return <BriefVerbs item={item} />;
+  }
+  // The one decided step a link cannot take.
+  //
+  // Every other move the server sends already reaches the reader, as an anchor
+  // through moveHref — draft_reply and draft_email open the composer,
+  // open_task and open_meeting_brief open what they name. `create_task` POSTS a
+  // task body, which is a write and not a destination, so NAVIGABLE_MOVES
+  // excludes it and the row could name the step and offer no way to take it.
+  //
+  // The button is the deal status card's own, mounted a second time rather than
+  // written again: one answer to "what does Add this task do", on the two
+  // surfaces that draw the same move.
+  //
+  // LAST, and after brief_item deliberately. A brief item carries a deal
+  // subject, and the backend attaches a cached move to any deal-subject row
+  // that has none — so an earlier position here would replace Act, Set aside
+  // and Dismiss with a task button on a row whose own verbs are the point.
+  if (item.move?.action === "create_task" && hasMoveControl(item.move)) {
+    return (
+      <div className="worklist-row-verbs">
+        <MoveButton
+          dealId={item.subject?.type === "deal" ? item.subject.id : undefined}
+          move={item.move}
+        />
+      </div>
+    );
   }
   return null;
 }
@@ -1014,6 +1075,9 @@ const VERB_LABEL: Record<
   // AutomationRetry, which acts in place, so VERB_DESTINATION routes it
   // nowhere and this label is never the one a reader sees.
   retry: (t) => t("worklist.verb.retry"),
+  // The composer's own word, not a second one: ChannelReplyAction draws the
+  // button this labels, and two spellings of one act would read as two acts.
+  reply: (t) => t("compose.reply"),
 };
 
 // The day's figures, and the dials that narrow them.
@@ -1168,6 +1232,93 @@ function MeetingOutcome({ id }: Readonly<{ id: string }>) {
       </Button>
       <Button small pending={record.isPending} onClick={answer("canceled")}>
         {t("worklist.verb.meetingCanceled")}
+      </Button>
+    </div>
+  );
+}
+
+// The record a reply would be filed against, or nothing.
+//
+// Both halves must hold. The verb says the server judged this wait answerable —
+// it is mail, not a channel message the mail composer would answer in the wrong
+// place. The subject says WHICH record the sent message links to, and its type
+// has to be one the composer can file against: the row's own vocabulary is
+// wider than RELINK_KINDS, so an `activity` subject would type-check as a
+// string and fail at the composer.
+function replyTarget(
+  item: WorklistItem,
+): { type: RelinkKind; id: string } | undefined {
+  if (!item.actions.includes("reply") || !item.subject) {
+    return undefined;
+  }
+  const type = item.subject.type;
+  if (!RELINK_KINDS.includes(type as RelinkKind)) {
+    return undefined;
+  }
+  return { type: type as RelinkKind, id: item.subject.id };
+}
+
+// Answering the buyer, over the row that named the wait.
+//
+// Its own component so it can hold the hook that refreshes the queue. The
+// composer invalidates the RECORD timelines it knows about, and the worklist is
+// not one of them — nor does the queue poll — so without the callback the row
+// keeps saying nobody has replied, and keeps offering to reply again, over a
+// message the reader has already answered.
+function WaitingReply({
+  id,
+  to,
+}: Readonly<{ id: string; to: { type: RelinkKind; id: string } }>) {
+  const queryClient = useQueryClient();
+  return (
+    <div className="worklist-row-verbs">
+      <ChannelReplyAction
+        activityId={id}
+        kind="email"
+        entityType={to.type}
+        entityId={to.id}
+        onSent={() =>
+          queryClient.invalidateQueries({ queryKey: [worklistKey] })
+        }
+      />
+    </div>
+  );
+}
+
+// Saying a promise was kept, from the row that keeps asking for it.
+//
+// One button and not two. The endpoint settles a claim as `done` or
+// `dismissed`, and they are genuinely different — kept, versus never really
+// promised — but only one of them is a thing a rep does on their morning queue.
+// Dismissing an extraction is a judgement about the extractor, made on the
+// person's own card beside the words it was read from, where the reader can see
+// what it got wrong.
+function PromiseKept({ id }: Readonly<{ id: string }>) {
+  const t = useT();
+  const toast = useToast();
+  const settle = useClaimSettle([worklistKey]);
+  return (
+    <div className="worklist-row-verbs">
+      <Button
+        small
+        variant="primary"
+        pending={settle.isPending}
+        onClick={() =>
+          settle.mutate(
+            { id, outcome: "done" },
+            {
+              onSuccess: () => toast.show(t("worklist.verb.promiseSettled")),
+              // A refused settle leaves the row exactly as it was, which reads
+              // the same as a click that did nothing.
+              onError: () =>
+                toast.show(t("worklist.verb.promiseSettleFailed"), {
+                  mark: false,
+                }),
+            },
+          )
+        }
+      >
+        {t("worklist.verb.promiseKept")}
       </Button>
     </div>
   );

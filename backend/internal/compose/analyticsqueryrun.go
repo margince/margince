@@ -185,6 +185,12 @@ func namedByAnalyticsQuery(spec reportSpec, q analyticsquery.Query) referencedCo
 	named := make(referencedColumns, len(q.GroupBy)+len(q.Filters)+len(q.Measures))
 	// The compiler resolves a field name through the schema, which is built
 	// from these two maps and nothing else.
+	//
+	// scopeVia is asked here for the same reason the report builder asks it:
+	// this grammar derives its vocabulary from the SAME specs, so a dimension
+	// published for a report is published here too. A joined attribute that
+	// does not name the id it hangs off carries no row scope on this surface
+	// either — which is the identical leak, one surface over.
 	name := func(field string) {
 		if expr, ok := spec.dimensions[field]; ok {
 			named[expr] = true
@@ -192,6 +198,7 @@ func namedByAnalyticsQuery(spec reportSpec, q analyticsquery.Query) referencedCo
 		if expr, ok := spec.measures[field]; ok {
 			named[expr] = true
 		}
+		nameScopeVia(spec, field, named)
 	}
 	for _, field := range q.GroupBy {
 		name(field)

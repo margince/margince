@@ -110,7 +110,7 @@ function story(allow: Parameters<typeof meRoute>[0], slaOn: boolean) {
 }
 
 const meta: Meta<typeof LeadSourcesCard> = {
-  title: "Settings/Admin settings/Data model/Lead vocabularies",
+  title: "Settings/Sales/Lead handling/Lead vocabularies",
   component: LeadSourcesCard,
 };
 export default meta;

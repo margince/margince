@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 40,
+    "sites": 41,
     "sites_best_current": 29,
     "sites_best_partial": 0,
     "sites_best_stale": 9,
-    "sites_absent": 2,
-    "scenarios": 136,
+    "sites_absent": 3,
+    "scenarios": 139,
     "records": 59,
     "bindings": 10
   },
@@ -3832,6 +3832,33 @@
           "stale_reason": ""
         }
       ]
+    },
+    {
+      "task": "weekly_learnings",
+      "site": "learn",
+      "key": "weekly_learnings/learn",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "a_deal_named_like_an_instruction_teaches_no_lesson",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/weekly_learnings/a_deal_name_is_not_an_instruction.yaml"
+        },
+        {
+          "name": "a_pattern_across_three_deals_is_drawn_and_cited",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/weekly_learnings/a_repeated_pattern_is_cited.yaml"
+        },
+        {
+          "name": "a_week_that_invites_a_lesson_it_cannot_support_yields_none",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/weekly_learnings/a_thin_week_yields_no_lesson.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "weekly_review",

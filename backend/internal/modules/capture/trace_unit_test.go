@@ -14,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -139,21 +140,29 @@ func TestOneTransportIsSpelledOneWay(t *testing.T) {
 		ChannelIdentity: connector.ChannelIdentity{Provider: "dispact", ChannelUserID: "u-1"},
 	})
 	mentioned := channelRecord(connector.Counterparty{Email: "someone@client.io"})
-	if got, want := traceConnector(named), "dispact"; got != want {
+	if got, want := traceConnector(named, principal.Principal{ID: "connector:dispact"}), "dispact"; got != want {
 		t.Errorf("a direct message names connector %q, want %q", got, want)
 	}
-	if got, want := traceConnector(mentioned), "dispact"; got != want {
+	if got, want := traceConnector(mentioned, principal.Principal{ID: "connector:dispact"}), "dispact"; got != want {
 		t.Errorf("a mention names connector %q, want %q — the transport carried both", got, want)
 	}
 
-	// Mail arrived on no channel, so its source system IS the transport.
+	// Mail arrived on no channel, and its source system is the ONE mail identity
+	// every adapter shares — so the key cannot name the transport and the
+	// authenticated principal does. Two connectors reading the very same message
+	// must still label their own traces, or the screen shows one mailbox where
+	// there are two.
 	mail := connector.NormalizedRecord{
-		NaturalKey:   connector.NaturalKey{SourceSystem: "gmail", SourceID: "m-2"},
+		NaturalKey:   connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: "m-2"},
 		Counterparty: connector.Counterparty{Email: "someone@client.io"},
 		Fields:       ActivityFields{Kind: "email"},
 	}
-	if got, want := traceConnector(mail), "gmail"; got != want {
+	if got, want := traceConnector(mail, principal.Principal{ID: "connector:gmail"}), "gmail"; got != want {
 		t.Errorf("mail names connector %q, want %q", got, want)
+	}
+	if got, want := traceConnector(mail, principal.Principal{ID: "connector:imap"}), "imap"; got != want {
+		t.Errorf("the same message read over IMAP names connector %q, want %q — one identity must not collapse two mailboxes into one label",
+			got, want)
 	}
 }
 

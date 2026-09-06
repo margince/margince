@@ -338,6 +338,22 @@ type Capabilities struct {
 	// leaves no failed attempt behind for a configuration that is merely
 	// text-only.
 	AttachmentMIMEs []string
+	// PromptWindow is the largest prompt this client will carry, in tokens, or
+	// 0 for a wire whose window is not a limit worth planning around.
+	//
+	// DECLARED per adapter rather than read from the vendor, for the reason
+	// model.Info's own comment gives for dropping context length: the vendors
+	// disagree about what they publish and change it without notice, so a
+	// number taken from a list endpoint is one that can quietly stop describing
+	// the model actually serving the call.
+	//
+	// ZERO IS THE ORDINARY ANSWER for a cloud wire, and it does not mean "no
+	// window" — every model has one. It means the window is far larger than
+	// anything this product assembles, so eliding a transcript against it would
+	// be arithmetic with no decision behind it. A local runner is the opposite:
+	// it sizes a KV cache from the number it is handed, so the limit is real,
+	// small, and worth cutting a transcript to respect.
+	PromptWindow int
 }
 
 // Lister is implemented by an adapter whose vendor publishes what it

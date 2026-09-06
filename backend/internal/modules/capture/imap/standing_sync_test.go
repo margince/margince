@@ -212,7 +212,7 @@ func TestStandingSyncAnchorsThenIncrements(t *testing.T) {
 		t.Fatalf("cursor = %+v, want a planted watermark carrying the mailbox identity", parsed)
 	}
 	for _, rec := range sink.records {
-		if rec.EntityType != datasource.EntityActivity || rec.NaturalKey.SourceSystem != "imap" {
+		if rec.EntityType != datasource.EntityActivity || rec.NaturalKey.SourceSystem != connector.EmailSourceSystem {
 			t.Fatalf("record shape wrong: %+v", rec)
 		}
 	}

@@ -90,7 +90,7 @@ function aiRateReaderBackend() {
 
 describe("SettingsScreen RBAC surfaces", () => {
   it("renders the session roles as localized badges on the default Account tab; a custom key stays its raw self", async () => {
-    render(<SettingsScreen route={settingsHref()} />);
+    render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
     expect(screen.getByText("Admin")).toBeTruthy();
     expect(screen.getByText("field_marketing")).toBeTruthy();
@@ -105,7 +105,7 @@ describe("SettingsScreen RBAC surfaces", () => {
   // rendered page, because an import that no longer exists is not evidence
   // about what a reader sees.
   it("offers no theme control on the Account tab", async () => {
-    render(<SettingsScreen route={settingsHref()} />);
+    render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     expect(screen.getByRole("heading", { name: "Your account" })).toBeTruthy();
@@ -127,7 +127,7 @@ describe("SettingsScreen RBAC surfaces", () => {
   // one, so the count below asks how many headings this card carries rather
   // than how many the tab does.
   it("carries the identity, the password, the signature and the language in ONE card", async () => {
-    render(<SettingsScreen route={settingsHref()} />);
+    render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     const card = screen
@@ -154,7 +154,7 @@ describe("SettingsScreen RBAC surfaces", () => {
 
   it("switches the language from the Account tab, through the design-system select", async () => {
     const user = userEvent.setup();
-    render(<SettingsScreen route={settingsHref()} />);
+    render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     await pickOption(
@@ -175,7 +175,7 @@ describe("SettingsScreen RBAC surfaces", () => {
   // language is added without one.
   it("declares each language name's own language, on the options and on the face", async () => {
     const user = userEvent.setup();
-    render(<SettingsScreen route={settingsHref()} />);
+    render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
     const trigger = screen.getByRole("combobox", { name: "Language" });
 
@@ -236,16 +236,29 @@ describe("SettingsScreen RBAC surfaces", () => {
     // and reading it are one grant.
     //
     // So the honest assertion is absence rather than a withheld card: the
-    // address falls back, and nothing about the trace appears. If the page and
-    // the card ever diverge again this fails, which is the right alarm.
+    // address reaches the access BOUNDARY, and nothing about the trace appears.
+    // If the page and the card ever diverge again this fails, which is the
+    // right alarm.
     vi.stubGlobal("fetch", aiRateReaderBackend());
     render(<SettingsScreen route={settingsHref("model-calls")} />);
-    // Waited on the FALLBACK's own content rather than on an absence: the trace
+    // Waited on the BOUNDARY's own words rather than on an absence: the trace
     // is missing before /me resolves too, so an absence alone would pass
     // against a page that goes on to render it.
+    //
+    // It used to wait on Account's content, because a denied address silently
+    // landed there. It does not any more — the reader is told, and the address
+    // they were given is left in the bar for them to quote.
+    // Waited on content only a RESOLVED /me draws — the AI rate card this
+    // principal DOES hold — before asserting the denial beside it. The boundary
+    // is also what renders while the snapshot is in flight, so asserting it
+    // alone would pass against a page that goes on to render the trace.
     await waitFor(() =>
-      expect(screen.getByText("test@example.test")).toBeTruthy(),
+      expect(
+        screen.getByText(/this settings page is not yours to open/i),
+      ).toBeTruthy(),
     );
+    // The chrome agrees: no page is current, where the fallback used to mark
+    // Account.
     expect(screen.queryByText("AI call trace")).toBeNull();
   });
 });

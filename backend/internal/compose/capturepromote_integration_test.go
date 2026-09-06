@@ -81,7 +81,7 @@ func captureInboundThroughRealSink(
 	sink := newCaptureSink(e.Pool, CaptureConfig{})
 	_, err := sink.Upsert(mailboxOwnerCtx(e, owner), connector.NormalizedRecord{
 		EntityType: "activity",
-		NaturalKey: connector.NaturalKey{SourceSystem: "gmail", SourceID: sourceID},
+		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: sourceID},
 		Counterparty: connector.Counterparty{
 			Email: counterparty, DisplayName: "Pat Counterparty",
 			Domain: domain, Direction: connector.DirectionInbound,

@@ -414,6 +414,10 @@ export function NavLevelView({
       {levelTitle(level, t) && (
         <h2 className="navtitle">{levelTitle(level, t)}</h2>
       )}
+      {/* Above the rows and below the level's own name: a reader looking for a
+          page reaches for the search before they start reading a list of
+          twenty-eight. */}
+      {level.lead && <div className="navlead">{level.lead}</div>}
       {level.groups.map((group, index) => (
         <NavLevelGroupView
           key={group.headingKey ?? `group-${index}`}

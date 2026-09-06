@@ -839,6 +839,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/claims/{id}/settle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say a promise was kept, or that it no longer stands.
+         * @description A claim has carried `open`, `done` and `dismissed` since the table existed, and
+         *     every reader of it filters on `open` — the commitments card, the project rollup,
+         *     the worklist lane. Nothing could write the other two. A promise could be extracted
+         *     from a conversation and shown to the rep who made it, and there was no way to say
+         *     they had kept it: the card asked for the same thing every morning, and the only
+         *     writes of `done` anywhere in the tree were in test fixtures.
+         *
+         *     `done` means the thing promised happened. `dismissed` means it no longer stands —
+         *     the extractor read a promise into words that were not one, or the customer
+         *     withdrew the ask. They are kept apart because they answer different questions
+         *     later: how many commitments this workspace keeps is a fact about the team, and
+         *     how many extracted claims were never real is a fact about the extractor.
+         *
+         *     Settling is not correcting. A claim whose WORDS are wrong is corrected through the
+         *     claim's own correction path, which keeps the evidence fingerprint and records who
+         *     disagreed; this says the claim was right and is now finished.
+         *
+         *     Idempotent per outcome: settling a claim to the state it already holds is the same
+         *     success, because the caller's goal state already holds. Settling it to the OTHER
+         *     state is a 409 — a promise recorded as kept is not re-decidable as never-real
+         *     without somebody saying which is true.
+         */
+        post: operations["settleConversationClaim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{id}/research": {
         parameters: {
             query?: never;
@@ -3255,7 +3298,11 @@ export interface paths {
         /**
          * Log an activity (the `log_activity` MCP verb).
          * @description Captured activities carry `source_system` + `source_id`; re-running capture with the
-         *     same pair is idempotent (no duplicate). An activity may link to >1 entity
+         *     same pair is idempotent (no duplicate). Captured and sent MAIL is keyed
+         *     `source_system: email` + the RFC822 Message-ID, one identity shared by every mail
+         *     transport, so the same message reaching two connected mailboxes is one activity —
+         *     and that reserved value is refused here (422): only a connector, or this system's
+         *     own send, may claim a mail identity. An activity may link to >1 entity
          *     (person and deal). `log_activity` is 🟢 (reversible).
          */
         post: operations["logActivity"];
@@ -21711,7 +21758,7 @@ export interface components {
              * @enum {string|null}
              */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
-            /** @description gmail/gcal/outlook/transcript — idempotency key part. */
+            /** @description Which system this record came from — `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. Idempotency key part. */
             source_system?: string | null;
             /** @description Provider message/event id — idempotency key part. */
             source_id?: string | null;
@@ -25858,7 +25905,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "propose_roles" | "owed_verdict";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -27769,6 +27816,17 @@ export interface components {
             /** @description Link into the audit_log row for this run. */
             audit_id?: string | null;
         };
+        /** @description How a claim finished. */
+        SettleClaimRequest: {
+            /**
+             * @description `done` says the promised thing happened. `dismissed` says it no longer stands —
+             *     the extractor read a promise into words that were not one, or the ask was
+             *     withdrawn. `open` is absent on purpose: this endpoint settles, and re-opening a
+             *     settled claim is a different act nobody has asked for.
+             * @enum {string}
+             */
+            outcome: "done" | "dismissed";
+        };
         /**
          * @description What a retry did, or why it did nothing. `refusal` is present exactly when `retried`
          *     is false, so a client never has to guess which of the two it received.
@@ -29241,6 +29299,52 @@ export interface components {
              */
             focus_label: string;
         };
+        /** @description A week's lessons and whether anybody looked for them. */
+        WeeklyReviewLearnings: {
+            /**
+             * @description Whether a pass ran, and what it found. `not_run` and `insufficient_evidence` both
+             *     carry no items and mean different things — see the parent's description.
+             * @enum {string}
+             */
+            state: "not_run" | "insufficient_evidence" | "synthesized";
+            /**
+             * @description In the order the pass produced, because the first is the one a rep reads. At most
+             *     four: a retrospective is read in a few minutes, and a longer list is a report
+             *     nobody finishes.
+             */
+            items: components["schemas"]["WeeklyReviewLearning"][];
+        };
+        /** @description One thing the week taught, with what it was drawn from. */
+        WeeklyReviewLearning: {
+            /**
+             * @description What sort of claim this is. A closed vocabulary because the surface draws each
+             *     differently and a reader learns the four shapes.
+             * @enum {string}
+             */
+            kind: "worked" | "did_not_work" | "pattern" | "experiment";
+            /** @description One sentence, in the reader's own language. */
+            text: string;
+            /**
+             * @description The rows this claim rests on. NEVER empty: a learning is advice a reader cannot
+             *     check against anything in front of them, so one that points at nothing is refused
+             *     before it is stored rather than shown unsourced.
+             */
+            citations: components["schemas"]["WeeklyLearningCitation"][];
+        };
+        /** @description One row a learning was drawn from, by the name it carried that week. */
+        WeeklyLearningCitation: {
+            /** @enum {string} */
+            subject_type: "deal" | "commitment";
+            /**
+             * Format: uuid
+             * @description The row cited. It may no longer exist — a citation outlives the deal it names, as
+             *     the review's own frozen deal lines do — so a client resolves it or draws the label
+             *     alone rather than treating absence as an error.
+             */
+            subject_id: string;
+            /** @description What the row was CALLED when the learning was written, so a citation still reads after a rename. */
+            label: string;
+        };
         /**
          * @description One week's judgement of one rep's work, frozen with the review. Both blocks are optional
          *     and each is absent when the rep had no such work that week.
@@ -29390,6 +29494,16 @@ export interface components {
              *     days back.
              */
             prior?: components["schemas"]["WeeklyReviewPrior"];
+            /**
+             * @description What the week TAUGHT, as against what it was.
+             *
+             *     `state` is load-bearing beside `items`: `not_run` means no pass has looked at this
+             *     week — the lane may be unbound, the budget exhausted, the provider down — and
+             *     `insufficient_evidence` means a pass ran, read the week and had too little it could
+             *     ground. Both carry an empty list, and a reader that draws them the same way tells a
+             *     rep "nothing to learn" about a week nobody examined.
+             */
+            learnings?: components["schemas"]["WeeklyReviewLearnings"];
             /**
              * @description How WELL the week went, as against what happened in it — the counts beside this say
              *     forty leads arrived, this says twelve were answered inside the target.
@@ -30205,7 +30319,7 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -31270,7 +31384,7 @@ export interface components {
              */
             occurred_at?: string;
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *
@@ -33472,6 +33586,36 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    settleConversationClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettleClaimRequest"];
+            };
+        };
+        responses: {
+            /** @description Settled, or was already settled that way. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

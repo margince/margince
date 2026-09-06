@@ -52,6 +52,11 @@ const ANSWERED_BY = {
   // would open the automations page, which is where the RULE is fixed — a
   // different act from re-running the firing that broke.
   retry: { how: "inline", file: "worklist.row.tsx" },
+  // Answering the buyer opens the composer over the row, through the same
+  // ChannelReplyAction the 360 timelines mount. Routing it would send the
+  // reader to the record to press reply there, which is the hand-off the queue
+  // exists to remove.
+  reply: { how: "inline", file: "worklist.row.tsx" },
 } as const satisfies Record<
   Verb,
   { how: "routed" } | { how: "inline"; file: string }
@@ -112,16 +117,23 @@ describe("a row claims no verb it cannot perform", () => {
         return !routed.has(verb);
       }
       // GUARDED, not merely mentioned. The named file has to ASK whether the
-      // row offers this verb, in one of the two spellings the call sites use —
-      // `offered("x")` through the helper, or `includes("x")` direct. A file
-      // that merely contains the word satisfies nothing: deleting a control's
-      // condition leaves the verb's name behind in the click handler, in
-      // VERB_LABEL and in the prose, so a mention test stays green over a row
+      // row offers this verb, in one of the three spellings the call sites use.
+      // A file that merely contains the word satisfies nothing: deleting a
+      // control's condition leaves the verb's name behind in the click handler,
+      // in VERB_LABEL and in the prose, so a mention test stays green over a row
       // that draws nothing.
+      //
+      // The third spelling is the dispatch table's. ANSWER_BY_SOURCE pairs a
+      // source with the verb that unlocks it and RowAnswer asks
+      // `includes(keyed.verb)` once for all of them — so the guard is real and
+      // the verb's name is a `verb:` field rather than a literal argument. The
+      // pattern anchors on that field name, not on the bare word, so a verb
+      // mentioned in a comment beside the table still fails.
       const source = readFileSync(join(SCREENS, where.file), "utf8");
       return !(
         source.includes(`offered("${verb}")`) ||
-        source.includes(`includes("${verb}")`)
+        source.includes(`includes("${verb}")`) ||
+        source.includes(`verb: "${verb}"`)
       );
     });
 

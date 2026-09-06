@@ -49,6 +49,7 @@ it can be answered for.
 | `transcript` | `cheap_cloud` → `premium` | no | no | planned |
 | `transcript_propose` | `cheap_cloud` → `premium` | no | no | shipped |
 | `voice_build` | `cheap_cloud` → `premium` | no | no | shipped |
+| `weekly_learnings` | `cheap_cloud` → `premium` | no | no | shipped |
 | `weekly_review` | `cheap_cloud` → `premium` | no | no | shipped |
 
 ## Reading this against a data-protection question

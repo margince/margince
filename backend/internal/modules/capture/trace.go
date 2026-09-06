@@ -245,6 +245,12 @@ func Trace(ctx context.Context, tx pgx.Tx, in TraceEntry, payloads bool) error {
 		-- bare column list does not match an expression index, and Postgres
 		-- answers that with an error on every insert -- which, on the capture
 		-- transaction, would fail every capture in the deployment.
+		--
+		-- Mail keys on one transport-independent identity, so one seat syncing
+		-- the same mailbox over two connectors records the FIRST connector's
+		-- decision for a given stage and outcome; the second is a no-op. A
+		-- different stage or outcome still writes its own row, so this is not a
+		-- promise of one row per message.
 		ON CONFLICT (COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid),
 		             source_system, source_id, stage, outcome) DO NOTHING`,
 		nullableID(in.UserID), in.Connector, in.SourceSystem,

@@ -155,6 +155,16 @@ export const ACTIVITY_LINE: Readonly<
     degraded: "agent.activity.weeklyReview.degraded",
     failed: "agent.activity.weeklyReview.failed",
   },
+  // Same ground as weekly_review above: the rep's own week under their own
+  // principal, so it says what it is doing rather than the system-sweep line.
+  weekly_learnings: {
+    queued: "agent.activity.weeklyLearnings.queued",
+    running: "agent.activity.weeklyLearnings.running",
+    stalled: "agent.activity.weeklyLearnings.stalled",
+    done: "agent.activity.weeklyLearnings.done",
+    degraded: "agent.activity.weeklyLearnings.degraded",
+    failed: "agent.activity.weeklyLearnings.failed",
+  },
   brief_ranking: SYSTEM_SWEEP,
   capture_classify: SYSTEM_SWEEP,
   owed_verdict: SYSTEM_SWEEP,

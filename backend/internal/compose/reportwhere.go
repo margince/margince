@@ -230,13 +230,28 @@ func namedByReport(spec reportSpec, req reportRequest) referencedColumns {
 		if expr, ok := spec.dimensions[field]; ok {
 			named[expr] = true
 		}
+		nameScopeVia(spec, field, named)
 	}
 	for field := range req.Filters {
 		if expr, ok := spec.filters[field]; ok {
 			named[expr] = true
 		}
+		nameScopeVia(spec, field, named)
 	}
 	return named
+}
+
+// nameScopeVia marks the id column a joined attribute inherits its row scope
+// from.
+//
+// The attribute's own expression is named above and matches no referenceScopes
+// entry, because that map renders `ref.id = <column>` and an attribute is not
+// an id. This names the column that IS one, so grouping by a company's size
+// band narrows exactly as grouping by the company itself would.
+func nameScopeVia(spec reportSpec, field string, named referencedColumns) {
+	if column, ok := spec.scopeVia[field]; ok {
+		named[column] = true
+	}
 }
 
 // namedByDerivation is what a drill-through SELECTS ON: the predicates the
@@ -266,6 +281,20 @@ func namedByDerivation(spec reportSpec, plan derivationPlan) referencedColumns {
 	for _, field := range plan.groupBy {
 		if expr, ok := spec.dimensions[field]; ok {
 			named[expr] = true
+		}
+		nameScopeVia(spec, field, named)
+	}
+	// A predicate is carried as an EXPRESSION, so a joined attribute pinned by
+	// the handle arrives here as the attribute and never as the id it hangs
+	// off. The vocabulary is walked back to find which name that expression
+	// belongs to, so the drill-through narrows on the same column the headline
+	// did — without it the cell opens rows the count above it never counted.
+	for name, column := range spec.scopeVia {
+		if expr, ok := spec.dimensions[name]; ok && named[expr] {
+			named[column] = true
+		}
+		if expr, ok := spec.filters[name]; ok && named[expr] {
+			named[column] = true
 		}
 	}
 	return named

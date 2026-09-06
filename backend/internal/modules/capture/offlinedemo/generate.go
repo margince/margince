@@ -107,7 +107,7 @@ func (m message) record() connector.NormalizedRecord {
 
 	rec := connector.NormalizedRecord{
 		EntityType: datasource.EntityActivity,
-		NaturalKey: connector.NaturalKey{SourceSystem: Name, SourceID: m.MessageID},
+		NaturalKey: connector.NaturalKey{SourceSystem: demoSourceSystem(m.Kind), SourceID: m.MessageID},
 		Fields: capture.ActivityFields{
 			Kind:       m.Kind,
 			Subject:    m.Subject,
@@ -401,4 +401,20 @@ func hashIndex(key string, n int) int {
 		bucket = (bucket*2 + int((sum>>(31-i))&1)) % n
 	}
 	return bucket
+}
+
+// demoSourceSystem keys a demo record the way the real connectors key theirs:
+// a demo EMAIL shares the one mail identity, so the demo mailbox behaves like a
+// mailbox — replaying it lands one activity rather than a second copy beside a
+// real one. Everything else the generator makes (the meetings) keeps the demo's
+// own system, because those never carried an RFC822 identity to share.
+//
+// Source and CapturedBy still say offline_demo either way, which is what keeps
+// the demo's rows recognisable as demo data and, for the historical participant
+// replay, what keeps its JSON payloads away from the RFC822 parser.
+func demoSourceSystem(kind string) string {
+	if kind == "email" {
+		return connector.EmailSourceSystem
+	}
+	return Name
 }
