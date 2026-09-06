@@ -21,6 +21,7 @@ import { tomorrowMorning } from "./briefqueue";
 import { problemMessageOf } from "./common";
 import { ChannelReplyAction, RELINK_KINDS, type RelinkKind } from "./compose";
 import { type BriefMarkRequest, useBriefItemMark } from "./home.queries";
+import { hasMoveControl, MoveButton } from "./movebutton";
 import {
   useAutomationRetry,
   useMeetingOutcome,
@@ -343,6 +344,32 @@ function RowAnswer({ item }: Readonly<{ item: WorklistItem }>) {
   // share a surface and the component picks among them.
   if (item.source === "brief_item" && !item.batch) {
     return <BriefVerbs item={item} />;
+  }
+  // The one decided step a link cannot take.
+  //
+  // Every other move the server sends already reaches the reader, as an anchor
+  // through moveHref — draft_reply and draft_email open the composer,
+  // open_task and open_meeting_brief open what they name. `create_task` POSTS a
+  // task body, which is a write and not a destination, so NAVIGABLE_MOVES
+  // excludes it and the row could name the step and offer no way to take it.
+  //
+  // The button is the deal status card's own, mounted a second time rather than
+  // written again: one answer to "what does Add this task do", on the two
+  // surfaces that draw the same move.
+  //
+  // LAST, and after brief_item deliberately. A brief item carries a deal
+  // subject, and the backend attaches a cached move to any deal-subject row
+  // that has none — so an earlier position here would replace Act, Set aside
+  // and Dismiss with a task button on a row whose own verbs are the point.
+  if (item.move?.action === "create_task" && hasMoveControl(item.move)) {
+    return (
+      <div className="worklist-row-verbs">
+        <MoveButton
+          dealId={item.subject?.type === "deal" ? item.subject.id : undefined}
+          move={item.move}
+        />
+      </div>
+    );
   }
   return null;
 }

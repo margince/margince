@@ -1,17 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ListChecks, RefreshCw, Sparkles } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { RefreshCw } from "lucide-react";
+import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
 import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { QueryStates, throwProblem } from "./common";
 import { useDealSignals } from "./dealsignals";
-import { PersonMeetingBrief } from "./meetingbrief";
+import { hasMoveControl, MoveButton } from "./movebutton";
 import {
   CallCard,
   FoundMove,
@@ -21,7 +20,6 @@ import {
   TodayPanel,
   WrittenBy,
 } from "./record360";
-import { TaskDetailModal, useTaskUpdate } from "./taskactions";
 import "./dealstatus.css";
 
 // Deal360 — the deal page's written briefing, read before a call, in the
@@ -339,31 +337,6 @@ function verdictLabel(
   return key ? t(key) : standing;
 }
 
-// activityIdOf reads the one operand the meeting-brief verb takes. The
-// arguments object is typed open on the wire; a missing id renders no button
-// rather than a button that would 404.
-function activityIdOf(move: DealStatusCardMove): string | null {
-  const raw = move.arguments?.activity_id;
-  return typeof raw === "string" && raw !== "" ? raw : null;
-}
-
-// Whether the verb has what it needs to be drawn, decided BEFORE the slot is:
-// a slot handed a control that renders nothing still draws the slot, and an
-// empty action region reads as a verb that failed to load. MoveButton keeps
-// its own null returns for the narrowing the cases need; this is what decides
-// whether the row has a verb at all.
-function hasMoveControl(move: DealStatusCardMove): boolean {
-  switch (move.action) {
-    case "create_task":
-      return Boolean(move.arguments);
-    case "open_task":
-    case "open_meeting_brief":
-      return activityIdOf(move) !== null;
-    default:
-      return false;
-  }
-}
-
 // The move the briefing names, as the one row the agent is asking for: the
 // reason is the ask, the evidence under it is what it rests on, and the verb
 // at the row's end performs it.
@@ -390,110 +363,4 @@ function Move({
       }
     />
   );
-}
-
-function MoveButton({
-  dealId,
-  move,
-}: Readonly<{ dealId: string; move: DealStatusCardMove }>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const [briefOpen, setBriefOpen] = useState(false);
-  const [taskOpen, setTaskOpen] = useState(false);
-  const canUpdateTask = useCan("activity", "update");
-  const taskUpdate = useTaskUpdate([
-    ["deal-status", dealId],
-    ["tasks"],
-    ["worklist"],
-  ]);
-  const activityId = activityIdOf(move);
-  const createTask = useMutation({
-    mutationKey: ["deal-status-create-task"],
-    // The arguments ARE the task body the server prepared; the click sends
-    // them as they came rather than re-deriving them from render state.
-    mutationFn: async (body: Record<string, unknown>) => {
-      const { data, error } = await api.POST("/tasks", {
-        body: body as components["schemas"]["CreateTaskRequest"],
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["deal-status", dealId] });
-      queryClient.invalidateQueries({ queryKey: ["activities"] });
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-    },
-  });
-
-  const taskBody = move.arguments;
-  switch (move.action) {
-    case "open_task":
-      if (!activityId) return null;
-      return (
-        <>
-          <Button small onClick={() => setTaskOpen(true)}>
-            {t("deal360.openTask")}
-          </Button>
-          {taskOpen && (
-            <TaskDetailModal
-              activityId={activityId}
-              readOnly={!canUpdateTask}
-              onClose={() => setTaskOpen(false)}
-              update={taskUpdate}
-            />
-          )}
-        </>
-      );
-    case "create_task":
-      // No body, no button: a click that sent {} would only be refused.
-      if (!taskBody) {
-        return null;
-      }
-      return (
-        <>
-          <Button
-            variant="primary"
-            small
-            pending={createTask.isPending}
-            onClick={() => createTask.mutate(taskBody)}
-          >
-            <ListChecks aria-hidden />
-            {t("deal360.createTask")}
-          </Button>
-          {createTask.isError ? (
-            <p className="t-caption t-danger">
-              {problemMessageOf(createTask.error, t)}
-            </p>
-          ) : null}
-        </>
-      );
-    case "draft_email":
-      // No button here. Writing to the buyer is the email box's job, in the
-      // right-hand column under the Deal Room — one place a rep goes to send
-      // mail, whether or not this move happens to rank first. Deal360 still
-      // says WHY the mail is the move; it just does not carry a second door
-      // to the same composer.
-      return null;
-    case "open_meeting_brief":
-      if (!activityId) {
-        return null;
-      }
-      return (
-        <>
-          <Button variant="primary" small onClick={() => setBriefOpen(true)}>
-            <Sparkles aria-hidden />
-            {t("deal360.openBrief")}
-          </Button>
-          <PersonMeetingBrief
-            activityId={activityId}
-            open={briefOpen}
-            onClose={() => setBriefOpen(false)}
-          />
-        </>
-      );
-    default:
-      return null;
-  }
 }
