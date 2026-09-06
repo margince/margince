@@ -1,9 +1,11 @@
-/* RichText — the editable surface and its toolbar.
+/* RichText — the editable surface, and the quiet footer under it.
  *
  * It borrows .textarea's box exactly: same font, same border, same focus ring.
  * A rep moving between the subject field and the message must not feel two
- * different products, and the only visible difference should be the toolbar
- * that sits above it. */
+ * different products, so the writing surface leads and the formatting sits at
+ * the end of the line below it — the marks are ones everybody already knows,
+ * and a filled band of them above an empty box made four glyphs the first thing
+ * on a surface whose subject is the message. */
 
 .richtext {
   border: 1px solid var(--borderSubtle);
@@ -25,30 +27,59 @@
   box-shadow: var(--focus-glow);
 }
 
+/* The line under the writing surface: what the control is on the left, what you
+   can do to what you wrote on the right. `space-between` with the hint absent
+   still parks the toolbar at the end, so a caller that passes no hint gets the
+   same right margin. */
+.richtext-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 2px var(--space-2) var(--space-2); /* ds:ignore the footer's own tight rhythm against the surface it sits under */
+}
+.richtext-hint {
+  margin: 0;
+  min-inline-size: 0;
+  color: var(--textMeta);
+}
+
 .richtext-bar {
   display: flex;
   gap: 2px;
-  padding: 4px 6px;
-  border-bottom: 1px solid var(--borderSubtle);
-  background: var(--bgCard);
+  /* Never squeezed by a long hint: the words wrap, the controls do not. */
+  flex: none;
+  margin-inline-start: auto;
 }
 
+/* Meta ink and no resting fill — the marks read as available rather than as
+   five filled controls competing with the message. The BOX stays at the 24px
+   floor WCAG 2.2 AA 2.5.8 asks for; only the glyph and the ink got quieter. */
 .richtext-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  min-inline-size: var(--space-6);
+  min-block-size: var(--space-6);
   border: none;
   border-radius: var(--r-sm);
   background: transparent;
-  color: var(--textSecondary);
+  color: var(--textMeta);
   cursor: pointer;
   transition:
     border-color var(--dur-state) var(--ease-out),
     box-shadow var(--dur-state) var(--ease-out),
     background-color var(--dur-state) var(--ease-out),
     color var(--dur-state) var(--ease-out);
+}
+
+/* A caller's own verb in this footer takes the same box (compose's paperclip
+   opens a popover, so its trigger is not a `.richtext-btn` by birth). Stated
+   here rather than in the caller: what a mark in this row looks like is this
+   control's answer, not each caller's. */
+.richtext-foot > .richtext-btn {
+  flex: none;
+  margin-inline-start: 2px;
 }
 
 .richtext-btn:hover {
@@ -118,4 +149,15 @@
   padding-left: 10px;
   border-left: 2px solid var(--borderSubtle);
   color: var(--textSecondary);
+}
+
+/* Not now. `contentEditable` has no disabled state of its own, so the refusal is
+   drawn here and stated in ARIA beside it — the composer freezes the body while
+   a verdict about those very words is being recorded, and a surface that still
+   looked live would invite text the returning reference never saw. */
+.richtext.is-disabled .richtext-input,
+.richtext.is-disabled .richtext-foot {
+  color: var(--textTertiary);
+  background: var(--bgCard);
+  cursor: not-allowed;
 }

@@ -19,7 +19,7 @@ import { dotTier } from "../app/autonomy";
 import { useCanWrite, useHoldsAdminRole } from "../app/capability";
 import { isEntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
-import { navigateReplacing, type Route } from "../app/router";
+import { navigate, navigateReplacing, type Route } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
 import {
   Avatar,
@@ -58,8 +58,13 @@ import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { AiSettingsTab } from "./ai-settings";
+import { AiHealthCard } from "./ai-health";
+import { AiProviderKeysCard } from "./ai-provider-keys";
+import { AiRoutingCard } from "./ai-routing";
+import { AiCallsCard } from "./aicalls";
+import { AiUsageCard } from "./aiusage";
 import { ActorTag } from "./audit";
+import { AutomationsAdmin } from "./automations";
 import { AutonomySettingsCard } from "./autonomy-settings";
 import { BlockedDomainsCard } from "./blocked-domains";
 import { BriefDeliveryRows } from "./briefdelivery";
@@ -112,7 +117,7 @@ import { OwnDomainsCard } from "./own-domains";
 import { PasswordSettingRow } from "./passwordcard";
 import { ConsentPurposesCard, PrivacyInboxCard } from "./privacy";
 import { ProductsAdmin } from "./products";
-import { FxRatesCard } from "./rates";
+import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RestrictedRecordsCard } from "./restrictedrecords";
 import { RetentionCard } from "./retention";
 import { SignInMethodsCard } from "./sign-in-methods";
@@ -123,6 +128,8 @@ import { VoiceDnaCard } from "./voice-dna";
 import { WebhooksCard } from "./webhooks";
 import "./settings.css";
 
+import { ProvidersStat, SpendStat } from "./ai-settings";
+import type { SettingsPageId } from "./settingscatalog";
 // The catalog, the addresses and the visibility predicate moved to
 // ./settingsnav so `src/app/**` can read them without pulling in every card.
 // Re-exported here because this module's own consumers — the tests, the stories,
@@ -132,13 +139,13 @@ import {
   ADMIN_SEGMENT,
   SETTINGS_SCREEN,
   SETTINGS_TABS,
-  type SettingsTabId,
   settingsAddress,
   settingsRouteTab,
   useSettingsEntryVisibility,
   useSettingsSection,
-  useVisibleSettingsTabs,
+  useVisibleSettingsPages,
 } from "./settingsnav";
+import { settingsHref, settingsRouteTarget } from "./settingsrouting";
 
 // Re-exported so this module's own consumers — the tests, the stories, the
 // testkit — keep asking one module for both halves. Splitting their imports
@@ -148,7 +155,6 @@ export {
   ADMIN_SEGMENT,
   SETTINGS_SCREEN,
   SETTINGS_TABS,
-  type SettingsTabId,
   settingsAddress,
   settingsRouteTab,
   useSettingsEntryVisibility,
@@ -163,15 +169,16 @@ export {
 // and the automations the installation runs unattended. EP09 renders
 // governance; it never authors policy.
 
-export function tabContent(id: SettingsTabId): ReactNode {
+export function tabContent(id: SettingsPageId): ReactNode {
   switch (id) {
+    // ---- me ----
     case "account":
       return (
         <>
           <AccountCard />
           {/* Under the identity because it is a statement about this reader
               rather than about the workspace: which kinds of proposal stop
-              asking them. No admin card belongs on this tab, and this one is
+              asking them. No admin card belongs on this page, and this one is
               not an exception — nobody else sets it. */}
           <AutonomySettingsCard />
         </>
@@ -180,90 +187,149 @@ export function tabContent(id: SettingsTabId): ReactNode {
       return <VoiceDnaCard />;
     case "agents":
       return <AgentsTab />;
-    case "general":
+    case "connections":
+      return <ConnectionsTab />;
+    // Beside `connections` and after it on purpose: that page says what you are
+    // connected to, this one says what those connections did with your mail.
+    case "capture-activity":
+      return <CaptureActivityTab />;
+
+    // ---- company ----
+    case "company":
       // The installation's own facts, then the money, then the company profile
       // the AI reads. The currency pair stays ADJACENT and nothing is allowed
       // between them: the base currency is declared in the second card of
       // InstallationSettingsCard and every rate below converts to it, and
-      // before they were merged the lock reason was explained on one tab while
+      // before they were merged the lock reason was explained on one page while
       // the consequence landed on another.
-      //
-      // The vendor OAuth apps go LAST for that reason, not because it matters least.
-      // It is here at all because the same OAuth client now serves sign-in as
-      // well as mailbox connection, so filing it under Capture said it belonged
-      // to one of the two.
       return (
         <>
           <InstallationSettingsCard />
           <FxRatesCard />
           <CompanyContextCard />
+        </>
+      );
+    case "authentication":
+      // Split from the company profile, which is a different question with a
+      // different reader: what the organization IS, versus who may sign in to
+      // it. The vendor OAuth apps sit with the sign-in methods because the same
+      // OAuth client now serves sign-in as well as mailbox connection — filing
+      // them under Capture said they belonged to one of the two.
+      return (
+        <>
           <SignInMethodsCard />
           <OAuthAppCard provider="google" />
           <OAuthAppCard provider="microsoft" />
         </>
       );
-    case "extensions":
-      // Its own entry rather than a third card under Users & teams: that page
-      // answers who holds which role, and this one answers what an installed
-      // unit may reach — a question about the installation's software, not
-      // about its people. They shared a page while the extension tier had one
-      // unit and no page of its own.
-      return <ExtensionAccessCard />;
-    case "users":
+
+    // ---- people ----
+    case "members":
+      return <UsersAdminCard />;
+    case "teams":
+      // Its own page rather than a second card under members. Teams are share
+      // targets and a way to address a group, but Team Lead is team-scoped
+      // (RowScopeTeam) — so this is also where an admin decides whose records a
+      // Team Lead's membership hands over, which is not the roster's question.
+      return <TeamsCard />;
+    case "seats":
+      return <LicenseCard />;
+
+    // ---- sales ----
+    case "pipelines":
+      return <PipelinesCard />;
+    case "leads":
       return (
         <>
-          <UsersAdminCard />
-          {/* Teams are share targets and a way to address a group of users.
-              Membership alone still grants nothing to most roles, but Team
-              Lead is team-scoped (RowScopeTeam) — so this card is also where
-              an admin decides whose records a Team Lead's membership hands
-              over, not merely a way to address a group. */}
-          <TeamsCard />
+          <LeadSourcesCard />
+          <LeadDisqualifyReasonsCard />
+          <LeadHandlingCard />
         </>
       );
-    case "connections":
-      return <ConnectionsTab />;
-    // Beside `connections` and after it on purpose: that tab says what you are
-    // connected to, this one says what those connections did with your mail.
-    case "capture-activity":
-      return <CaptureActivityTab />;
-    case "integrations":
-      return <IntegrationsTab />;
+    case "fields":
+      return <CustomFieldsAdmin />;
+    case "tags":
+      return <TagVocabularyCard />;
+    case "products":
+      return (
+        <>
+          <ProductsAdmin />
+          <OfferTemplatesAdmin />
+        </>
+      );
+
+    // ---- data ----
     case "capture":
       return (
         <>
           {/* Which domains are OURS, then what to do with mail from the rest,
               then which of the rest are consumer mailboxes — the posture, then
-              the two judgements that read it. Before this they sat on two
-              different tabs that shared the word "Capture" and neither said
-              which one the other meant. */}
+              the two judgements that read it. */}
           <OwnDomainsCard />
           <CaptureSettingsCard />
           <ConsumerMailDomainsCard />
           {/* Last, because it is the OUTCOME of the three above rather than a
               fourth rule: which domains ended up refused a company, and whether
-              a machine or a person decided it. An operator hunting a company
-              that never arrived reads down the page and finishes here. */}
+              a machine or a person decided it. */}
           <BlockedDomainsCard />
         </>
       );
-    case "data-model":
-      return <DataModelTab />;
+    case "integrations":
+      return <IntegrationsTab />;
     case "knowledge":
       return <KnowledgeCard />;
-    case "ai":
-      return <AiSettingsTab />;
+    case "import":
+      return <ImportCard />;
+
+    // ---- ai ----
+    // The five-tab strip that used to hold these is gone. Its tabs shared ONE
+    // address, which is why the routing card had to report its draft up to a
+    // page that owned a confirm dialog: the app's unsaved guard watches
+    // addresses and could not see a move between them. Each is an address now,
+    // so the card claims the guard itself and the dialog is deleted.
+    case "models":
+      return (
+        <>
+          {/* Which vendors are answering, above the bindings that name them.
+              It was a header reading on the old combined page and belongs with
+              the lanes it qualifies: a binding to a vendor holding no key is
+              the thing an operator came here to fix. */}
+          <ProvidersStat />
+          {/* The price sheet lives on Usage, so the routing card links there
+              rather than restating it. Dropping the callback silently removes
+              that link — the lane rows then name a model with no way to see
+              what it costs. */}
+          <AiRoutingCard onPriceSheet={() => navigate(settingsHref("usage"))} />
+          <AiProviderKeysCard />
+          {/* Whether the vendors above are actually ANSWERING. It belongs with
+              the credentials rather than with the bindings, because the three
+              readings are one story told in order — which vendor a lane names,
+              whether we hold a key for it, whether it replied. */}
+          <AiHealthCard />
+        </>
+      );
+    case "automations":
+      return <AutomationsAdmin />;
+    case "usage":
+      return (
+        <>
+          {/* What the month has cost, above the breakdown that explains it. */}
+          <SpendStat />
+          <AiUsageCard />
+          <ModelCostsCard />
+        </>
+      );
+    case "model-calls":
+      return <AiCallsCard />;
+
+    // ---- governance ----
     case "privacy":
       return (
         <>
           <ConsentPurposesCard />
           {/* The retention ladder sits under the purpose catalogue and above
               the DSR inbox: what the installation keeps by default, before the
-              requests that override it case by case. Admin/ops in substance, and
-              it says so without the grant rather than vanishing — every card on
-              this page now behaves the same way, which is the point: three
-              different answers to one denial on one page is what made it
-              unreadable. */}
+              requests that override it case by case. */}
           <RetentionCard />
           {/* What the ladder's statutory floor is holding right now, under the
               ladder that explains why: an erasure that met a Handelsbrief
@@ -271,29 +337,33 @@ export function tabContent(id: SettingsTabId): ReactNode {
               to be able to see that without opening the audit trail. */}
           <RestrictedRecordsCard />
           <PrivacyInboxCard />
-          {/* Last, and on the same page: the trail is what proves the three
-              surfaces above it were honoured. It gates itself on the admin
-              role, which the purpose registry above does not. */}
-          <AuditLogCard />
         </>
       );
-    case "license":
-      return <LicenseCard />;
-    case "maintenance":
+    case "audit":
+      // Split from the privacy page it used to end. The trail proves the
+      // surfaces there were honoured, but it answers to `audit_log` where they
+      // answer to the consent registry and the retention policy — so a reader
+      // could hold the audit grant and be refused the page carrying it.
+      return <AuditLogCard />;
+    case "system-health":
       return (
         <>
-          {/* Three operational verbs, in ascending order of consequence: a
-              reindex that costs tokens, a read of what the background system is
-              holding, and a reset that empties the installation. They hid beside
-              the custom-field editor before, which put "define a field" and
-              "delete everything" on one page. Job health had no surface at all —
-              an operator watching a stalled queue had nothing to look at. */}
-          <ImportCard />
+          {/* A reindex that costs tokens, then a read of what the background
+              system is holding. They hid beside the custom-field editor before,
+              which put "define a field" and "watch a stalled queue" on one
+              page. */}
           <EmbedReindexCard />
           <JobHealthCard />
-          <ResetDataCard />
         </>
       );
+    case "extensions":
+      return <ExtensionAccessCard />;
+    case "reset":
+      // Its own page, and the reason is the ordering the old Maintenance page
+      // could not express: a reindex, a queue reading and "empty the
+      // installation" were three verbs on one screen, ascending in consequence
+      // and separated by nothing.
+      return <ResetDataCard />;
   }
 }
 
@@ -383,39 +453,30 @@ function IntegrationsTab() {
 // through, and the priced things that go on an offer. Four surfaces that were
 // three separate screens behind door-cards and one editor inline — a door is
 // not a section, and the doors are gone.
-function DataModelTab() {
-  return (
-    <>
-      <CustomFieldsAdmin />
-      <TagVocabularyCard />
-      <PipelinesCard />
-      <LeadSourcesCard />
-      <LeadDisqualifyReasonsCard />
-      <LeadHandlingCard />
-      <ProductsAdmin />
-      <OfferTemplatesAdmin />
-    </>
-  );
-}
-
 /**
- * The route segment every Admin settings entry sits under.
+ * The settings screen: one page of the catalog, chosen by the address.
  *
- * `#/settings/admin/privacy` rather than `#/settings/privacy`, so the address
- * says which half of settings a reader is in — the same thing the panel heading
- * says, and the thing a link pasted into a channel could not say before. The
- * personal entries keep their own bare addresses: they are what a reader who
- * types `#/settings/voice` means, and moving them too would break every
- * bookmark to buy symmetry nobody reads.
- *
- * A legacy `#/settings/privacy` still resolves — see `settingsRouteTab` — and
- * is rewritten to the address above, so nothing that exists today lands
- * nowhere.
+ * Flat addresses now — `#/settings/audit`, not `#/settings/admin/audit`. The
+ * group segment said which HALF of settings a reader was in, which was a fact
+ * about who the page was for rather than about the page, so moving one between
+ * groups moved its bookmark too. `settingsRouteTarget` still answers every
+ * address the product minted, rewriting it once on arrival.
  */
-
 export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
-  const { tab, legacy } = settingsRouteTab(route);
-  const { active } = useVisibleSettingsTabs(tab);
+  const target = settingsRouteTarget(route);
+  const visible = useVisibleSettingsPages();
+  // The page the address names, if this reader may open it. An address they may
+  // not — or one nothing answers — falls back to the first page they can see,
+  // which is Account for everybody: the personal pages carry no grant.
+  //
+  // A boundary that named the page instead is the better answer and is s2e's;
+  // until it exists, landing somewhere real beats a blank screen.
+  const named =
+    target.kind === "page"
+      ? visible.find((page) => page.id === target.page)
+      : undefined;
+  const active = named ?? visible[0];
+  const legacy = target.kind === "page" && target.legacy;
   // A legacy admin address is answered AND rewritten: the reader gets the page
   // they asked for, and the URL bar then says where that page lives, so the
   // link they copy from it is the current one. Replaced rather than pushed, or
@@ -427,7 +488,7 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   // THAT, which is where they actually are.
   useEffect(() => {
     if (legacy) {
-      navigateReplacing(settingsAddress(active.id));
+      navigateReplacing(settingsHref(active.id));
     }
   }, [legacy, active]);
   // No nav column and no heading of its own: the entries are the sidebar's second

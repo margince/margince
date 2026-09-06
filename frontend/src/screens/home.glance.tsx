@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Eyebrow } from "../design-system/eyebrow";
-import { formatTimeOfDay, hourInZone } from "../format/format";
+import { formatDayLong, formatTimeOfDay, hourInZone } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -136,6 +136,14 @@ export function HomeGlance({ firstName, now, day, week, view }: GlanceProps) {
         {eyebrowText(view, day, t, locale)}
       </Eyebrow>
       <h1 className="glance-greeting t-display">{greeting}</h1>
+      {/* The day, under the greeting and before the sentence about it — the
+          morning's only. The weekly is about a week that closed, and today's
+          date over it would date the reading rather than the week. */}
+      {view === "morning" && (
+        <p className="glance-date t-sub">
+          {formatDayLong(now.toISOString(), locale, viewerZone())}
+        </p>
+      )}
       {sentence ? (
         <p className="glance-sentence" data-testid="glance-sentence">
           {t(sentence.key, sentence.values)}

@@ -608,6 +608,16 @@ export const en = {
   "state.staleAsOf": "Last known values, as of {when}",
   "state.partial": "Showing part of the list",
   "state.partialCount": "{count} more not shown",
+  // The opened file. `FilePreview` is a design-system control every surface
+  // that draws a file card can open, so its words belong to the control rather
+  // than to any one screen â the same three verbs stand over a contract on an
+  // account and over a scan that arrived on a message.
+  "filePreview.download": "Download",
+  "filePreview.print": "Print",
+  "filePreview.close": "Close preview",
+  "filePreview.loading": "Opening this file…",
+  "filePreview.failedTitle": "This file cannot be shown here",
+  "filePreview.failed": "Download it to open it in another application.",
 
   "list.headActions": "More actions",
   "list.search": "Search",
@@ -2579,6 +2589,35 @@ export const en = {
   // the work that waits on a person, and this is a view of that same work.
   "home.panel.weekly": "Last week",
   "home.weekly.weekOf": "Week of {day}",
+  // How WELL the week went, beside what happened in it. Each block is drawn only
+  // when the server sent it: a rep who carried no leads did not score zero on
+  // the funnel, and an empty row would read as failure at something nobody
+  // asked of them.
+  "home.weekly.scorecard.title": "How the week went",
+  "home.weekly.scorecard.leadBlock": "Leads and meetings",
+  "home.weekly.scorecard.dealBlock": "Deals",
+  "home.weekly.scorecard.advanced": "Leads moved forward",
+  "home.weekly.scorecard.advancedBasis":
+    "Steps up the ladder, counted per move",
+  "home.weekly.scorecard.answeredInTarget": "Answered in target",
+  "home.weekly.scorecard.breachedDetail": "{count} breached the target",
+  "home.weekly.scorecard.meetingsHeld": "Meetings held",
+  "home.weekly.scorecard.meetingsBasis": "{booked} booked · {noShow} no-show",
+  "home.weekly.scorecard.partialHistory": "Meetings without history",
+  "home.weekly.scorecard.partialHistoryBasis":
+    "These predate the meeting history, so the counts above are a floor",
+  "home.weekly.scorecard.advances": "Stage advances",
+  "home.weekly.scorecard.regressionsDetail": "{count} went backwards",
+  "home.weekly.scorecard.medianDaysInStage": "Median days in stage",
+  "home.weekly.scorecard.medianBasis": "For the stages deals left this week",
+  "home.weekly.scorecard.withNextStep": "With a next step",
+  "home.weekly.scorecard.ofOpen": "of {total} open deals",
+  "home.weekly.scorecard.multiThreaded": "More than one person",
+  "home.weekly.scorecard.multiThreadedBasis":
+    "of {total} open deals, in the last 30 days",
+  "home.weekly.scorecard.closeDateSound": "Close date holds up",
+  "home.weekly.scorecard.forecastMoves": "Forecast upgrades",
+  "home.weekly.scorecard.forecastMovesBasis": "{down} downgraded",
   // The week ahead. The frozen review says what happened; this is the only part
   // of that page anybody can still change.
   "plan.title": "Plan next week",
@@ -3301,6 +3340,31 @@ export const en = {
   "compose.whyThisDraft": "Why this draft?",
   "compose.body": "Body",
   "compose.bodyHint": "Click into the text to edit it.",
+  "compose.transport": "How to send",
+  "compose.transportEmail": "Email",
+  "compose.intentLabel": "What should it be about?",
+  "compose.recipientHint": "Name or address",
+  "compose.subjectHint": "What it is about",
+  "compose.bodyPlaceholder": "Write the message…",
+  "compose.bcc": "Bcc",
+  "compose.bccHint":
+    "The named recipients cannot see these addresses, and cannot see that anyone else was copied.",
+  "compose.threadGone":
+    "That conversation can no longer be answered, so this opened on the usual way of writing to them. Check the recipient before you send.",
+  "compose.attach": "Attach",
+  "compose.filesOnRecord": "On this record",
+  "compose.filesLoading": "Reading the record's files…",
+  "compose.filesNone": "No files are filed on this record yet.",
+  "compose.filesFull":
+    "{most} files is the most one message can carry. Send the rest as a second message.",
+  "compose.fileRemove": "Do not send {filename}",
+  "compose.fileUpload": "Send a new file",
+  "compose.fileUploadHint":
+    "It is filed on this record first, so the timeline keeps what the message carried.",
+  "compose.fileUploadEmpty": "Drop a file here, or choose one",
+  "compose.fileUploading": "Filing the file…",
+  "compose.fileStoredUnnamed":
+    "The file is on the record, but we could not read back which one it is. Attach it from the list above.",
   "calendar.previousMonth": "Previous month",
   "calendar.nextMonth": "Next month",
   "compose.schedulePick": "Pick date and time",
@@ -3362,7 +3426,6 @@ export const en = {
     "This message cannot be sent, and it is not something a seat here can overrule.",
   "compose.derivedReply":
     "This continues their own message, so it needs no reason from you.",
-  "compose.sendLaterLabel": "Send later (optional)",
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Draft email",
   "compose.threadHeading": "This conversation",
@@ -3422,7 +3485,6 @@ export const en = {
   "compose.missingSubject": "Give this email a subject.",
   "compose.missingBody": "Write the message before sending it.",
   "compose.missingWhy": "Say why you are writing to them.",
-  "compose.removeRecipient": "Remove {recipient}",
   "compose.actionFailed": "The request failed. Please try again.",
 
   "tasks.complete": "Done",
@@ -6109,6 +6171,31 @@ export const en = {
   // are: the mailbox and the network a PERSON connected, against the outside
   // systems the INSTALLATION is wired to. One row carried both before, which
   // is why it had to be ungated to keep a rep's own mailbox reachable.
+  "settings.tab.company": "Company profile",
+  "settings.tab.authentication": "Sign-in & apps",
+  "settings.tab.members": "Members",
+  "settings.tab.teams": "Teams",
+  "settings.tab.seats": "Seats & license",
+  "settings.tab.pipelines": "Pipelines",
+  "settings.tab.leads": "Lead handling",
+  "settings.tab.fields": "Fields",
+  "settings.tab.tags": "Tags",
+  "settings.tab.products": "Products & offers",
+  "settings.tab.import": "Data import",
+  "settings.tab.models": "Models & routing",
+  "settings.tab.automations": "Automations",
+  "settings.tab.usage": "AI usage",
+  "settings.tab.model-calls": "Model calls",
+  "settings.tab.audit": "Audit log",
+  "settings.tab.system-health": "System health",
+  "settings.tab.reset": "Reset data",
+  "settings.group.me": "You",
+  "settings.group.company": "Company",
+  "settings.group.people": "People",
+  "settings.group.sales": "Sales",
+  "settings.group.data": "Data",
+  "settings.group.ai": "AI",
+  "settings.group.governance": "Governance",
   "settings.tab.account": "Account",
   "settings.tab.voice": "Writing voice",
   "settings.tab.agents": "Agents",
@@ -7011,13 +7098,6 @@ export const en = {
   "firstRun.ai.embedModel": "Embedding model",
   // Which vendor this installation's text is sent to. Admin/ops only, on both
   // verbs â see the ai_routing RBAC object.
-  "aiSettings.sub": "Where this installation's text goes, and what it costs.",
-  "aiSettings.tabs": "Which part of the AI settings is open",
-  "aiSettings.tab.routing": "Routing",
-  "aiSettings.tab.providers": "Providers",
-  "aiSettings.tab.automations": "Automations",
-  "aiSettings.tab.usage": "Usage",
-  "aiSettings.tab.logs": "Logs",
   "aiSettings.withheld": "Not yours to see",
   "aiSettings.unread": "Could not be read",
   "aiSettings.pending": "Reading…",
@@ -7028,10 +7108,6 @@ export const en = {
   "aiSettings.providers.value": "{count} keyed",
   "aiSettings.providers.missing": "{count} bound with no key",
   "aiSettings.providers.lastCall": "last call {elapsed}",
-  "aiSettings.discardTitle": "Leave the routing edits behind?",
-  "aiSettings.discardBody":
-    "The bindings you changed have not been saved. Leaving this tab discards them.",
-  "aiSettings.discard": "Discard",
   "elapsed.justNow": "just now",
   "elapsed.minutes": "{minutes} min ago",
   "elapsed.hours": "{hours} h ago",
@@ -7793,51 +7869,16 @@ export const en = {
   "person.rail.nothingCaptured": "Nothing captured yet.",
   "person.rail.viewAllActivity": "View all activity",
   "person.drawer.close": "Close",
-  "person.composer.title": "Draft follow-up · {name}",
-  "person.composer.to": "To",
-  "person.composer.transport": "How to send",
-  "person.composer.transportEmail": "Email",
-  "person.composer.toConversation": "Continues your {transport} conversation",
-  "person.composer.subject": "Subject",
-  "person.composer.bcc": "Bcc",
-  "person.composer.bccPlaceholder":
-    "One address per line — they receive the message and no other recipient sees them",
-  "person.composer.body": "Message",
   "richtext.bold": "Bold",
   "richtext.italic": "Italic",
   "richtext.bulletList": "Bulleted list",
   "richtext.numberList": "Numbered list",
   "richtext.link": "Link",
   "richtext.linkPrompt": "Web address for this link (leave empty to remove it)",
-  "person.composer.drafting": "Writing a draft…",
-  "person.composer.why": "Why this draft",
-  "person.composer.consentUnknown":
-    "No consent decision is recorded for this channel.",
-  "person.composer.sendNote":
-    "Pressing send delivers this message from your own mailbox.",
-  "person.composer.purpose": "Consent purpose",
-  "person.composer.blockedLead":
-    "This message cannot go out under this purpose.",
-  "person.composer.blockedRewrite":
-    "A message sent under another purpose has to BE that kind of message — relabelling this one does not make it so.",
-  "person.composer.blockedRecordConsent":
-    "If you have a basis for writing, record the consent decision on their record.",
-  "person.composer.consentPickPurpose":
-    "Choose what this message is for — consent is decided per purpose.",
-  "person.composer.intent": "What should it be about?",
-  "person.composer.intentHint":
-    "Optional — e.g. ask for a date in the first week of September",
-  "person.composer.draftWithAi": "Draft with AI",
   "person.composer.intentAgenda": "propose an agenda for the upcoming meeting",
-  "person.composer.threadGone":
-    "The conversation this link named can no longer be answered — the channel or address it was on is gone. This is a new message to them.",
   "person.composer.intentReply": "reply to their last message",
   "person.composer.intentCommitment": "deliver what we promised them",
   "person.composer.intentFollowUp": "follow up — it has gone quiet",
-  "person.composer.send": "Send",
-  "person.composer.sending": "Sending…",
-  "person.composer.sent": "Sent",
-  "person.composer.aiDisclosure": "AI-assisted draft · review every word",
   "person.research.title": "Deep research · {name}",
   "person.research.publicOnly": "Public sources only",
   "person.research.running": "Reading public sources…",

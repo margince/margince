@@ -105,6 +105,18 @@ type Event struct {
 	// behind it at all): the match-time owner-permission gate reads this
 	// to decide whose live authority a firing must still hold.
 	OwnerID ids.UUID
+
+	// RetryAttempt distinguishes a re-driven firing from the one it retries.
+	// Zero for an ordinary firing, and the engine's own retry path sets it
+	// (automation's RetryRun) — a handler never reads it and never sets it.
+	//
+	// It exists because the run claim is UNIQUE on (handler, idempotency_key):
+	// re-dispatching under the original key finds the failed run's own row,
+	// takes no claim, and returns having applied nothing. The marker rides the
+	// EVENT rather than being spliced into the key at one call site, because
+	// runKey is read by seven recorders inside one run and they must all agree
+	// on which row this firing is writing.
+	RetryAttempt int
 }
 
 // Effect is the typed, enumerable set of actions a run may take. No

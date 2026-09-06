@@ -6,23 +6,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LOCALES, localeNameKey, translate } from "../i18n";
-import {
-  SETTINGS_TABS,
-  SettingsScreen,
-  type SettingsTabId,
-  settingsAddress,
-  tabContent,
-} from "./settings";
+import { SettingsScreen, tabContent } from "./settings";
 import {
   auditEntry,
   IDLE_JOB_HEALTH,
   jsonResponse,
   keyedEnvelope,
-  readOn,
   render,
   renderSettings,
   settingsBackend,
 } from "./settings.testkit";
+import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
+import { settingsHref } from "./settingsrouting";
 
 // What a principal is SERVED once an entry opens: the identity and locale
 // surfaces on Account, the rows that read as WITHHELD rather than absent, and
@@ -51,9 +46,49 @@ afterEach(() => {
   globalThis.localStorage.clear();
 });
 
+// A principal holding the model-price grants and NOTHING else: enough to reach
+// the two AI diagnostics pages and author the price table, and not enough for
+// the cards whose endpoints ask for the automation grant. Shared by the two
+// cases below, which are one claim asserted on the two addresses it now spans.
+function aiRateReaderBackend() {
+  return vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.endsWith("/v1/me")) {
+      return jsonResponse(
+        meFixture({
+          roles: ["ops"],
+          allow: {
+            // What opens both pages. The price grant authors the table on one
+            // of them but reaches neither on its own, so a fixture without this
+            // would be testing the fallback to Account.
+            //
+            // NOT the automation write grant, which is what the cards check —
+            // that is the whole fixture: reach the page, be refused the card.
+            //
+            // Usage opens on `ai_model_rate` alone, so this reader gets there
+            // and finds the spend withheld. Model calls asks for the same grant
+            // its card does, so there is no such state on that page any more:
+            // a reader who reaches it can read it. The case below therefore
+            // asserts the page is UNREACHABLE rather than reachable-and-empty.
+            ai_model_rate: ["read", "update"],
+          },
+        }),
+      );
+    }
+    const keyed = keyedEnvelope(url);
+    if (keyed) {
+      return keyed;
+    }
+    return jsonResponse({
+      data: [],
+      page: { next_cursor: null, has_more: false },
+    });
+  });
+}
+
 describe("SettingsScreen RBAC surfaces", () => {
   it("renders the session roles as localized badges on the default Account tab; a custom key stays its raw self", async () => {
-    render(<SettingsScreen route={settingsAddress()} />);
+    render(<SettingsScreen route={settingsHref()} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
     expect(screen.getByText("Admin")).toBeTruthy();
     expect(screen.getByText("field_marketing")).toBeTruthy();
@@ -68,7 +103,7 @@ describe("SettingsScreen RBAC surfaces", () => {
   // rendered page, because an import that no longer exists is not evidence
   // about what a reader sees.
   it("offers no theme control on the Account tab", async () => {
-    render(<SettingsScreen route={settingsAddress()} />);
+    render(<SettingsScreen route={settingsHref()} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     expect(screen.getByRole("heading", { name: "Your account" })).toBeTruthy();
@@ -90,7 +125,7 @@ describe("SettingsScreen RBAC surfaces", () => {
   // one, so the count below asks how many headings this card carries rather
   // than how many the tab does.
   it("carries the identity, the password, the signature and the language in ONE card", async () => {
-    render(<SettingsScreen route={settingsAddress()} />);
+    render(<SettingsScreen route={settingsHref()} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     const card = screen
@@ -117,7 +152,7 @@ describe("SettingsScreen RBAC surfaces", () => {
 
   it("switches the language from the Account tab, through the design-system select", async () => {
     const user = userEvent.setup();
-    render(<SettingsScreen route={settingsAddress()} />);
+    render(<SettingsScreen route={settingsHref()} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     await pickOption(
@@ -138,7 +173,7 @@ describe("SettingsScreen RBAC surfaces", () => {
   // language is added without one.
   it("declares each language name's own language, on the options and on the face", async () => {
     const user = userEvent.setup();
-    render(<SettingsScreen route={settingsAddress()} />);
+    render(<SettingsScreen route={settingsHref()} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
     const trigger = screen.getByRole("combobox", { name: "Language" });
 
@@ -157,72 +192,54 @@ describe("SettingsScreen RBAC surfaces", () => {
   });
 
   it("the passport row's token reads as withheld — masked, never re-disclosed — on the Agents tab", async () => {
-    render(<SettingsScreen route={settingsAddress("agents")} />);
+    render(<SettingsScreen route={settingsHref("agents")} />);
     await waitFor(() => expect(screen.getByText("Scout")).toBeTruthy());
     expect(screen.getByRole("img", { name: "Masked value" })).toBeTruthy();
     expect(screen.queryByText(/mgp_/)).toBeNull();
   });
 
   // The spend cards follow `automation:update` rather than any AI-named object,
-  // so the principal here holds the model-price grants that open the AI entry and
+  // so the principal here holds the model-price grants that open AI usage and
   // nothing else: the read reaches the page, the write authors the price table on
-  // it, and the two cards whose endpoints would 403 stay off it.
+  // it, and the card whose endpoint would 403 keeps its place and says why.
   //
-  // An OPERATOR seat, because the AI entry is in the admin group and nobody
-  // outside that seat reaches it at all — the claim under test is about the
-  // automation grant, so the seat is the floor it stands on.
-  it("withholds the AI spend and call trace from a principal without the automation grant", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = String(input instanceof Request ? input.url : input);
-        if (url.endsWith("/v1/me")) {
-          return jsonResponse(
-            meFixture({
-              roles: ["ops"],
-              allow: { ai_model_rate: ["read", "update"] },
-            }),
-          );
-        }
-        const keyed = keyedEnvelope(url);
-        if (keyed) {
-          return keyed;
-        }
-        return jsonResponse({
-          data: [],
-          page: { next_cursor: null, has_more: false },
-        });
-      }),
-    );
-    const user = userEvent.setup();
-    render(<SettingsScreen route={settingsAddress("ai")} />);
-    // The page header answers first, before any tab is chosen: BOTH readings —
-    // the month's spend and which vendors are keyed — say they are not this
-    // seat's rather than showing a blank figure it could read as zero.
-    expect(await screen.findAllByText("Not yours to see")).toHaveLength(2);
+  // The five-tab strip that used to carry these is gone — each card is its own
+  // address now — so the two withheld readings are asserted on the two pages
+  // that hold them rather than one page's tabs.
+  it("withholds the AI spend from a principal without the automation grant", async () => {
+    vi.stubGlobal("fetch", aiRateReaderBackend());
+    render(<SettingsScreen route={settingsHref("usage")} />);
 
     // The model prices this grant authors are on screen...
-    await user.click(screen.getByRole("button", { name: "Usage" }));
     await waitFor(() =>
       expect(screen.getByText("AI model costs")).toBeTruthy(),
     );
-    // ...and the two cards whose endpoints require the automation grant KEEP
-    // their place and say they are withheld. Absent, they would claim the
-    // installation had spent nothing and made no model calls — a statement about
-    // the data, where the truth is only about who may read it. No request is made
-    // for either, so a rep never hits a 403 error box (GET /ai/usage, /ai/calls).
+    // ...and the card whose endpoint requires the automation grant KEEPS its
+    // place and says it is withheld. Absent, it would claim the installation had
+    // spent nothing — a statement about the data, where the truth is only about
+    // who may read it. No request is made for it, so a rep never hits a 403
+    // error box (GET /ai/usage).
     expect(await screen.findByText("AI usage & budget")).toBeTruthy();
     expect(
       await screen.findByText(
         /only an operator can see what the AI runtime spent/i,
       ),
     ).toBeTruthy();
+  });
 
-    await user.click(screen.getByRole("button", { name: "Logs" }));
-    expect(await screen.findByText("AI call trace")).toBeTruthy();
-    expect(
-      screen.getByText(/only an operator can read the per-call trace/i),
-    ).toBeTruthy();
+  it("does not offer the AI call trace to that same principal at all", async () => {
+    // The trace split onto an address of its own, and the page asks for exactly
+    // what its card asks for — so unlike Usage beside it, there is no state
+    // where a reader reaches this page and finds the card withheld. Reaching it
+    // and reading it are one grant.
+    //
+    // So the honest assertion is absence rather than a withheld card: the
+    // address falls back, and nothing about the trace appears. If the page and
+    // the card ever diverge again this fails, which is the right alarm.
+    vi.stubGlobal("fetch", aiRateReaderBackend());
+    render(<SettingsScreen route={settingsHref("model-calls")} />);
+    await waitFor(() => expect(screen.queryByText("Reading…")).toBeNull());
+    expect(screen.queryByText("AI call trace")).toBeNull();
   });
 });
 
@@ -238,9 +255,9 @@ const REINDEX_STATUS = {
   per_workspace: [{ entities_pending: 42 }],
 };
 
-// Every read the three restructured entries make, answered honestly in one
-// place: the passports Agents lists, the consent registry and audit trail
-// Privacy & audit now share, and the two operational reports on Maintenance.
+// Every read the restructured pages make, answered honestly in one place: the
+// passports Agents lists, the consent registry on Privacy, the trail on the
+// audit page beside it, and the two operational reports on System health.
 function mergedEntryBackend(opts: {
   roles: string[];
   seat?: "full" | "read";
@@ -299,10 +316,11 @@ function mergedEntryBackend(opts: {
   });
 }
 
-// The entries the restructure created or merged into, read as CONTENT: a merged
-// page has to carry the surfaces its parts brought, and the personal one has to
-// open for a seat no grant would have admitted.
-describe("SettingsScreen restructured entries", () => {
+// The pages the restructure created or merged into, read as CONTENT: a merged
+// page has to carry the surfaces its parts brought, a split one has to answer to
+// its own grant, and the personal one has to open for a seat no grant would have
+// admitted.
+describe("SettingsScreen restructured pages", () => {
   it("opens Agents for a read-only seat, passports and all", async () => {
     vi.stubGlobal(
       "fetch",
@@ -331,10 +349,26 @@ describe("SettingsScreen restructured entries", () => {
     ).toBeTruthy();
   });
 
-  it("renders the audit trail beside the consent registry on Privacy & audit", async () => {
+  it("renders the consent registry on Privacy, and the trail on its own page", async () => {
+    // The two used to share one page. They are split now because they answer to
+    // DIFFERENT grants — the registry to the consent gate, the trail to
+    // `audit_log` — so this reader holds both and each page carries its own
+    // half. A page still holding the other's card would show up here as a
+    // heading on the wrong address.
     vi.stubGlobal(
       "fetch",
-      mergedEntryBackend({ roles: ["admin"], allow: readOn("person") }),
+      mergedEntryBackend({
+        roles: ["admin"],
+        allow: {
+          person: ["read"],
+          audit_log: ["read"],
+          // Audit asks for this too, because `AuditLogCard` still gates itself
+          // on the literal admin role: `system_reset:delete` is the grant only
+          // admin holds, and it stands in for that until the card honours
+          // `audit_log`. Dropping it here would test the fallback, not the page.
+          system_reset: ["delete"],
+        },
+      }),
     );
     renderSettings("privacy");
     await waitFor(() =>
@@ -344,82 +378,85 @@ describe("SettingsScreen restructured entries", () => {
           .getAttribute("aria-current"),
       ).toBe("page"),
     );
-    // The purpose registry the entry has always carried...
     expect(
       await screen.findByRole("heading", { name: "Consent purposes" }),
     ).toBeTruthy();
-    // ...and the trail that proves those purposes were honoured, which had a
-    // tab of its own before: its filters — in a disclosure now, closed on
-    // arrival — and an entry answering them.
+    expect(screen.queryByRole("heading", { name: "Audit log" })).toBeNull();
+    cleanup();
+
+    // ...and the trail, on the address it moved to: its filters — in a
+    // disclosure now, closed on arrival — and an entry answering them.
+    vi.stubGlobal(
+      "fetch",
+      mergedEntryBackend({
+        roles: ["admin"],
+        allow: {
+          person: ["read"],
+          audit_log: ["read"],
+          // Audit asks for this too, because `AuditLogCard` still gates itself
+          // on the literal admin role: `system_reset:delete` is the grant only
+          // admin holds, and it stands in for that until the card honours
+          // `audit_log`. Dropping it here would test the fallback, not the page.
+          system_reset: ["delete"],
+        },
+      }),
+    );
+    renderSettings("audit");
     expect(
       await screen.findByRole("heading", { name: "Audit log" }),
     ).toBeTruthy();
     expect(screen.getByLabelText("Actor").closest("details")).not.toBeNull();
-    expect(screen.getByText("update")).toBeTruthy();
+    expect(await screen.findByText("update")).toBeTruthy();
   });
 
   // The READ alone opens it, editor included. Before this page absorbed it the
   // automations editor was a route of its own that nothing gated, so gating the
-  // merged entry on the WRITE grant would be the merge inheriting the spend
-  // cards' authority and dropping the door's — an operator who may read the
-  // automations would reach a page they cannot open.
-  it("opens AI for an operator on the automations read alone, editor and all", async () => {
+  // page on the WRITE grant would be the merge inheriting the spend cards'
+  // authority and dropping the door's — an operator who may read the automations
+  // would reach a page they cannot open.
+  it("opens Automations for an operator on the automations read alone, editor and all", async () => {
     vi.stubGlobal(
       "fetch",
       mergedEntryBackend({ roles: ["ops"], allow: { automation: ["read"] } }),
     );
-    renderSettings("ai");
+    renderSettings("automations");
     await waitFor(() =>
       expect(
-        screen.getByRole("link", { name: "AI" }).getAttribute("aria-current"),
+        screen
+          .getByRole("link", { name: "Automations" })
+          .getAttribute("aria-current"),
       ).toBe("page"),
     );
-    // The surface they came for, one tab along.
-    const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", { name: "Automations" }),
-    );
+    // The surface they came for, which is now the whole page rather than one tab
+    // of five sharing an address.
     expect(
       await screen.findByRole("heading", { name: "Automations" }),
     ).toBeTruthy();
-    // The spend card follows the automation WRITE grant, so this seat is not
-    // handed the operator's bill — but it is told that, rather than left to read
-    // an absent card as "nothing was spent".
-    await user.click(screen.getByRole("button", { name: "Usage" }));
-    expect(
-      await screen.findByRole("heading", { name: "AI usage & budget" }),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(/only an operator can see what the AI runtime spent/i),
-    ).toBeTruthy();
   });
 
-  // The trail is the admin's alone, and this page opens for OPS — the consent
-  // registry above it is theirs. Before the merge the audit log was an entry of
-  // its own, gated on the admin role by the nav; merging it onto a page ops
-  // reaches moved that gate's job into the card, and nothing was doing it.
-  it("withholds the audit trail from an ops seat, and asks the server for nothing", async () => {
+  // The trail is the admin's alone, and the page carrying it opens on
+  // `audit_log:read` — a grant ops can hold. So the withholding still has to
+  // happen INSIDE the card: the page's own gate is not the card's gate, and a
+  // reader who reaches the page for the read still may not see the trail.
+  it("does not offer the audit trail to an ops seat, and asks the server for nothing", async () => {
+    // Ops holds `audit_log:read` and the server admits it — but `AuditLogCard`
+    // still gates itself on the literal admin role, so the page asks for admin
+    // too rather than opening and then refusing. That makes this absence rather
+    // than a withheld card, and it is the weaker of the two answers: a card that
+    // says "only an admin can read the full trail" tells a reader something,
+    // where a missing page tells them nothing.
+    //
+    // It is still the right answer while the card refuses, and it stops being
+    // the answer in the change that rewrites the card — at which point this
+    // fails and goes back to asserting the withheld body.
     const backend = mergedEntryBackend({
       roles: ["ops"],
-      allow: readOn("person"),
+      allow: { audit_log: ["read"] },
     });
     vi.stubGlobal("fetch", backend);
-    renderSettings("privacy");
-    // Ops reaches the page for the registry, which renders.
-    expect(
-      await screen.findByRole("heading", { name: "Consent purposes" }),
-    ).toBeTruthy();
-    // The trail keeps its place and says why it is empty — absent, it would read
-    // as "nothing has happened here", a different claim entirely.
-    expect(
-      await screen.findByRole("heading", { name: "Audit log" }),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(/only an admin can read the full trail/i),
-    ).toBeTruthy();
-    // Six inputs that narrow a list you cannot see are a control with nothing
-    // behind it, so the filter disclosure is absent rather than withheld.
-    expect(screen.queryByLabelText("Actor")).toBeNull();
+    renderSettings("audit");
+    await waitFor(() => expect(screen.queryByText("Reading…")).toBeNull());
+    expect(screen.queryByRole("heading", { name: "Audit log" })).toBeNull();
     // And the request is never issued: it could only ever come back 403, and a
     // red failure with a futile Retry is what the withheld body replaces.
     const asked = backend.mock.calls.map((call) =>
@@ -428,27 +465,23 @@ describe("SettingsScreen restructured entries", () => {
     expect(asked.some((url) => url.includes("/audit-log"))).toBe(false);
   });
 
-  // The two admin-ONLY surfaces inside Maintenance, from an ops seat that reaches
-  // the page. The seat gate admits the whole admin group for ops, so this is what
-  // proves it did not also hand over what the server spells with RequireAdmin:
-  // job health and the danger zone are withheld INSIDE the page the reindex read
-  // opened.
-  it("renders the reindex on Maintenance for an operator holding only that grant, and withholds job health and the danger zone", async () => {
+  // The admin-ONLY surface inside System health, from an ops seat that reaches
+  // the page on the reindex read. The page's own gate is not the card's, so this
+  // is what proves opening the page did not also hand over what the server
+  // spells with RequireAdmin.
+  it("renders the reindex on System health for an operator holding only that grant, and withholds job health", async () => {
     vi.stubGlobal(
       "fetch",
       mergedEntryBackend({
         roles: ["ops"],
         allow: { embedding_reindex: ["read", "update"] },
-        // The switch the danger zone's second gate asks for, so the ROLE is
-        // the only thing left holding it back below.
-        dataResetAvailable: true,
       }),
     );
-    renderSettings("maintenance");
+    renderSettings("system-health");
     await waitFor(() =>
       expect(
         screen
-          .getByRole("link", { name: "Maintenance" })
+          .getByRole("link", { name: "System health" })
           .getAttribute("aria-current"),
       ).toBe("page"),
     );
@@ -464,29 +497,54 @@ describe("SettingsScreen restructured entries", () => {
     expect(
       screen.getByText(/Only an admin can see background-job health/),
     ).toBeTruthy();
+  });
+
+  // The danger zone moved OFF this page onto an address of its own, and the
+  // catalog gates that address on `system_reset:delete` — the one requirement in
+  // the table that is not a read. So an operator holding the reindex read no
+  // longer reaches it by being on the same page: the nav never offers it, and
+  // the address falls back rather than rendering the verb.
+  it("keeps the danger zone off System health, and off the nav, for that operator", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mergedEntryBackend({
+        roles: ["ops"],
+        allow: { embedding_reindex: ["read", "update"] },
+        // The installation switch the reset page's second gate asks for, so the
+        // missing GRANT is the only thing holding it back below.
+        dataResetAvailable: true,
+      }),
+    );
+    renderSettings("system-health");
+    expect(
+      await screen.findByRole("heading", { name: "Search index" }),
+    ).toBeTruthy();
     expect(screen.queryByText(/reset data/i)).toBeNull();
+    expect(screen.queryByRole("link", { name: "Reset data" })).toBeNull();
   });
 });
 
-// Where a settings card LIVES is a claim about whose setting it is, and the two
-// groups mean different things: "you" is a credential or connection the reader
-// personally holds, "admin" is the installation's posture.
+// Where a settings card LIVES is a claim about WHOSE setting it is, and the
+// catalog says that in two fields: the group names the subject, and `scope` says
+// whose state the page changes — `self` for a credential or connection the
+// reader personally holds, `workspace` or `installation` for the organization's
+// posture.
 //
 // The Google app is one app per installation, supplied by whoever operates it,
 // and every rep's mailbox is connected through it. It shipped on `connections`
-// — a personal entry — which put installation configuration on a page the
-// register describes as holding "their own mailbox and their own LinkedIn
-// network". The server gates the read on capture_settings, so a rep saw a
-// refused card rather than the operator's client id; the defect was that the
-// page offered them a setting that was never theirs.
+// — a `self` page — which put installation configuration on a page holding a
+// person's own mailbox and their own LinkedIn network. The server gates the read
+// on capture_settings, so a rep saw a refused card rather than the operator's
+// client id; the defect was that the page offered them a setting that was never
+// theirs.
 //
-// Walked from the register rather than asserted against a hard-coded tab name:
-// the rule is "admin group", so a future move to any other admin entry passes
-// and a move back to a personal one fails.
-describe("installation-wide cards live under the admin group", () => {
+// Walked from the catalog rather than asserted against a hard-coded page id: the
+// rule is "not a personal page", so a future move to any other installation page
+// passes and a move back onto a personal one fails.
+describe("installation-wide cards live off the personal pages", () => {
   // The card names itself; searching the returned tree for that name avoids
-  // rendering fourteen tabs and their API calls.
-  function tabRenders(id: SettingsTabId, componentName: string): boolean {
+  // rendering twenty-nine pages and their API calls.
+  function pageRenders(id: SettingsPageId, componentName: string): boolean {
     const seen = new Set<unknown>();
     const walk = (node: ReactNode): boolean => {
       if (!node || typeof node !== "object") {
@@ -504,7 +562,7 @@ describe("installation-wide cards live under the admin group", () => {
       if (!isValidElement<{ children?: ReactNode }>(node)) {
         return false;
       }
-      // A function component's `name` is what the register renders it under.
+      // A function component's `name` is what the catalog renders it under.
       if (typeof node.type === "function" && node.type.name === componentName) {
         return true;
       }
@@ -513,11 +571,15 @@ describe("installation-wide cards live under the admin group", () => {
     return walk(tabContent(id));
   }
 
-  it("puts the vendor OAuth apps on an admin entry, not beside a person's own connections", () => {
-    const hosts = SETTINGS_TABS.filter((tab) =>
-      tabRenders(tab.id, "OAuthAppCard"),
+  it("puts the vendor OAuth apps on an installation page, not beside a person's own connections", () => {
+    const hosts = SETTINGS_PAGES.filter((page) =>
+      pageRenders(page.id, "OAuthAppCard"),
     );
     expect(hosts).toHaveLength(1);
-    expect(hosts[0]?.group).toBe("admin");
+    expect(hosts[0]?.scope).toBe("installation");
+    // And the group with it: `scope` alone would be satisfied by any page the
+    // organization owns, while the claim is that this card belongs beside the
+    // sign-in policy the same OAuth client now serves.
+    expect(hosts[0]?.group).toBe("company");
   });
 });

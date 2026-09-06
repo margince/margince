@@ -34,6 +34,13 @@ import { unitsForSecretScope } from "../app/extensions";
 import type { NavLevelEntry, NavLevelGroup, NavSection } from "../app/nav";
 import type { Route } from "../app/router";
 import { useMe } from "./common";
+import {
+  SETTINGS_GROUPS as CATALOG_GROUPS,
+  type SettingsPage,
+  type SettingsPageId,
+  visibleSettingsPages,
+} from "./settingscatalog";
+import { settingsRouteTarget } from "./settingsrouting";
 
 // The entry register: one section nav entry per settings SUBJECT. Only surfaces
 // this app actually renders get one — the mockup's Booking / Flow /
@@ -109,7 +116,45 @@ import { useMe } from "./common";
 // the file, including the two that claim to check the whole level.
 // The two audience groups the rail renders, in order. Beside the register they
 // group, so a group added to one is visible from the other.
-const SETTINGS_GROUPS = ["you", "admin"] as const;
+
+/**
+ * A lucide glyph per catalog page.
+ *
+ * Here rather than in the catalog because the catalog is React-free by
+ * construction — it is imported by a node test and a plain script, and one
+ * lucide import would end that. A page missing from this map is a TypeScript
+ * error, so the table cannot fall behind the catalog silently.
+ */
+const PAGE_ICONS: Readonly<Record<SettingsPageId, LucideIcon>> = {
+  account: UserRound,
+  voice: Mic,
+  agents: KeyRound,
+  connections: Plug,
+  "capture-activity": Activity,
+  company: Building2,
+  authentication: ShieldCheck,
+  members: UsersRound,
+  teams: UsersRound,
+  seats: BadgeCheck,
+  pipelines: Database,
+  leads: Database,
+  fields: Database,
+  tags: Database,
+  products: Database,
+  capture: Mail,
+  integrations: Webhook,
+  knowledge: BookOpen,
+  import: Database,
+  models: Sparkles,
+  automations: Sparkles,
+  usage: Sparkles,
+  "model-calls": Sparkles,
+  privacy: ShieldCheck,
+  audit: ShieldCheck,
+  "system-health": Wrench,
+  extensions: Blocks,
+  reset: Wrench,
+};
 
 export const SETTINGS_TABS = [
   { id: "account", icon: UserRound, group: "you" },
@@ -473,25 +518,34 @@ export function useVisibleSettingsTabs(tab?: string) {
  * 200px column.
  */
 export function useSettingsSection(route: Route): NavSection {
-  const { tabs, active } = useVisibleSettingsTabs(settingsRouteTab(route).tab);
+  const pages = useVisibleSettingsPages();
+  const target = settingsRouteTarget(route);
+  const named =
+    target.kind === "page"
+      ? pages.find((page) => page.id === target.page)
+      : undefined;
+  const active = named ?? pages[0];
   // Both message keys are composed from the ids, and both annotations are what
   // make them KEYS: a template literal narrows to the catalog's union only where
   // something expects one, and unannotated it would compile as any old string —
   // an unknown key has to stay a compile error.
-  const groups = SETTINGS_GROUPS.map(
+  // Seven headings from the catalog, in its order. No `prefix`: every page
+  // addresses flat now, so a row's depth is no longer a property of the group
+  // it happens to sit under.
+  //
+  // An empty group is dropped rather than rendered as a heading with nothing
+  // beneath it — which is what a reader holding one grant in a group of five
+  // would otherwise see.
+  const groups = CATALOG_GROUPS.map(
     (group): NavLevelGroup => ({
       headingKey: `settings.group.${group}`,
-      items: tabs
-        .filter((entry) => entry.group === group)
+      items: pages
+        .filter((page) => page.group === group)
         .map(
-          (entry): NavLevelEntry => ({
-            id: entry.id,
-            // Where the row actually points. The admin group sits a segment
-            // deeper than the personal one, and the panel shows both under one
-            // pair of headings — so the depth is the ENTRY's, not the level's.
-            prefix: entry.group === "admin" ? [ADMIN_SEGMENT] : undefined,
-            labelKey: `settings.tab.${entry.id}`,
-            icon: entry.icon,
+          (page): NavLevelEntry => ({
+            id: page.id,
+            labelKey: `settings.tab.${page.id}`,
+            icon: PAGE_ICONS[page.id],
           }),
         ),
     }),
@@ -507,4 +561,24 @@ export function useSettingsSection(route: Route): NavSection {
     activeId: route.screen === SETTINGS_SCREEN ? active.id : "",
     groups,
   };
+}
+
+/**
+ * The catalog pages this reader may open, in declaration order.
+ *
+ * The hook half of `visibleSettingsPages`: it supplies the two facts the pure
+ * function takes — the access snapshot off /me, and which extension units this
+ * build composed — so navigation, the palette, search and the screen all resolve
+ * one table through one evaluator and cannot disagree about which pages exist.
+ */
+export function useVisibleSettingsPages(): readonly SettingsPage[] {
+  const snapshot = useMe().data;
+  return visibleSettingsPages(snapshot, {
+    // Read HERE rather than inside the catalog: the extensions registry reaches
+    // `@composition/screens`, and importing it there would drag React and a
+    // build alias into a module whose whole purpose is being importable from
+    // anywhere. The catalog takes the answer instead of fetching it.
+    composedUnitScopes:
+      unitsForSecretScope("workspace").length > 0 ? ["workspace"] : [],
+  });
 }
