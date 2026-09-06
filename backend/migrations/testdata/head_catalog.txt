@@ -1660,6 +1660,7 @@ public.consent_event.captured_at timestamp with time zone NOT NULL gen=- def=-
 public.consent_event.captured_by text NOT NULL gen=- def=-
 public.consent_event.confirm_ip text gen=- def=-
 public.consent_event.confirm_user_agent text gen=- def=-
+public.consent_event.consent_event_consent_text_version_id_fkey FOREIGN KEY (consent_text_version_id) REFERENCES consent_text_version(id)
 public.consent_event.consent_event_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id)
 public.consent_event.consent_event_new_state_check CHECK ((new_state = ANY (ARRAY['granted'::text, 'withdrawn'::text])))
 public.consent_event.consent_event_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
@@ -1667,6 +1668,7 @@ public.consent_event.consent_event_pkey PRIMARY KEY (id)
 public.consent_event.consent_event_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
 public.consent_event.consent_event_subject CHECK (((person_id IS NOT NULL) OR (lead_id IS NOT NULL)))
 public.consent_event.consent_event_wording_pairs CHECK (((policy_text IS NULL) = (policy_version IS NULL)))
+public.consent_event.consent_text_version_id uuid gen=- def=-
 public.consent_event.double_opt_in_confirmed_at timestamp with time zone gen=- def=-
 public.consent_event.id uuid NOT NULL gen=- def=uuidv7()
 public.consent_event.issuance_trigger text gen=- def=-
@@ -1726,6 +1728,58 @@ public.consent_qualifying_event.source_entity_type text gen=- def=-
 public.consent_qualifying_event_person_ix CREATE INDEX consent_qualifying_event_person_ix ON public.consent_qualifying_event USING btree (person_id, occurred_at DESC)
 public.consent_qualifying_event_pkey CREATE UNIQUE INDEX consent_qualifying_event_pkey ON public.consent_qualifying_event USING btree (id)
 public.consent_qualifying_event_source_unique CREATE UNIQUE INDEX consent_qualifying_event_source_unique ON public.consent_qualifying_event USING btree (person_id, source_entity_type, source_entity_id) WHERE (source_entity_id IS NOT NULL)
+public.consent_text_version acl=margince_owner=arwdDxt/margince_owner,margince_app=ar/margince_owner rls=false force=false
+public.consent_text_version.body text NOT NULL gen=- def=-
+public.consent_text_version.channel text gen=- def=-
+public.consent_text_version.consent_text_version_no_edit_after_publish CREATE TRIGGER consent_text_version_no_edit_after_publish BEFORE UPDATE ON public.consent_text_version FOR EACH ROW EXECUTE FUNCTION consent_text_version_is_immutable()
+public.consent_text_version.consent_text_version_pkey PRIMARY KEY (id)
+public.consent_text_version.consent_text_version_published_shape CHECK (((published_at IS NULL) OR (content_hash IS NOT NULL)))
+public.consent_text_version.consent_text_version_purpose_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
+public.consent_text_version.consent_text_version_window CHECK (((effective_until IS NULL) OR (effective_from IS NULL) OR (effective_until > effective_from)))
+public.consent_text_version.content_hash text gen=- def=-
+public.consent_text_version.disclosures jsonb NOT NULL gen=- def='{}'::jsonb
+public.consent_text_version.effective_from timestamp with time zone gen=- def=-
+public.consent_text_version.effective_until timestamp with time zone gen=- def=-
+public.consent_text_version.id uuid NOT NULL gen=- def=uuidv7()
+public.consent_text_version.jurisdiction text gen=- def=-
+public.consent_text_version.key text NOT NULL gen=- def=-
+public.consent_text_version.locale text gen=- def=-
+public.consent_text_version.published_at timestamp with time zone gen=- def=-
+public.consent_text_version.purpose_id uuid gen=- def=-
+public.consent_text_version.subject_line text gen=- def=-
+public.consent_text_version.version text NOT NULL gen=- def=-
+public.consent_text_version_is_immutable() secdef=false cfg=- acl=- 
+BEGIN
+    IF OLD.published_at IS NULL THEN
+        RETURN NEW;
+    END IF;
+    IF NEW.key IS DISTINCT FROM OLD.key
+       OR NEW.version IS DISTINCT FROM OLD.version
+       OR NEW.subject_line IS DISTINCT FROM OLD.subject_line
+       OR NEW.body IS DISTINCT FROM OLD.body
+       OR NEW.disclosures IS DISTINCT FROM OLD.disclosures
+       OR NEW.content_hash IS DISTINCT FROM OLD.content_hash
+       OR NEW.published_at IS DISTINCT FROM OLD.published_at
+       -- Not only the words: what the version APPLIED TO is evidence too.
+       -- Backdating effective_from makes a version claim it was live on a day
+       -- it was not, which is how a proof row from March is made to resolve
+       -- against wording published in June — retroactive fabrication of the
+       -- evidentiary window, and unlike an edited body it leaves no trace.
+       -- jurisdiction, locale and channel say who it applied to; purpose_id
+       -- says what it is evidence OF.
+       OR NEW.effective_from IS DISTINCT FROM OLD.effective_from
+       OR NEW.jurisdiction IS DISTINCT FROM OLD.jurisdiction
+       OR NEW.locale IS DISTINCT FROM OLD.locale
+       OR NEW.channel IS DISTINCT FROM OLD.channel
+       OR NEW.purpose_id IS DISTINCT FROM OLD.purpose_id THEN
+        RAISE EXCEPTION 'consent_text_version % is published and its wording cannot change; publish a new version instead', OLD.id
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    RETURN NEW;
+END;
+
+public.consent_text_version_pkey CREATE UNIQUE INDEX consent_text_version_pkey ON public.consent_text_version USING btree (id)
+public.consent_text_version_published CREATE UNIQUE INDEX consent_text_version_published ON public.consent_text_version USING btree (key, version) WHERE (published_at IS NOT NULL)
 public.contract acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contract.archived_at timestamp with time zone gen=- def=-
 public.contract.auto_renew boolean NOT NULL gen=- def=false
