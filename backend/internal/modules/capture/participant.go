@@ -233,10 +233,24 @@ func StampFurtherParticipants(
 	// here, since a party described once with an address and once without is
 	// the same party described twice. Left to the index, the graph would count
 	// them as two people in the room.
-	seen := make(map[string]bool, len(participants))
+	// Where a party is named twice, the second description FILLS IN the first
+	// rather than being dropped. Skipping it would make the row depend on
+	// roster order — a party listed by account and then by account with an
+	// address would keep the address, and the same two entries the other way
+	// round would lose it, along with every reader that resolves through it.
+	rowOf := make(map[string]int, len(participants))
+	// The same collapse by ADDRESS, for the party a roster describes once with
+	// an account and once without. One address is one human just as surely, and
+	// the uniqueness index cannot say so here either — the two rows differ on
+	// the account column, so it keeps both and the graph counts one person
+	// twice. Only an entry carrying NO account of its own folds this way: an
+	// account is the stronger identity, and two accounts sharing an address are
+	// two rows on purpose.
+	rowOfAddress := make(map[string]int, len(participants))
 	for _, p := range participants {
 		address := strings.ToLower(strings.TrimSpace(p.Email))
 		account := strings.TrimSpace(p.ChannelUserID)
+		name := strings.TrimSpace(p.DisplayName)
 		// AN ACCOUNT WITHOUT A TRANSPORT IS NOT AN IDENTITY, and storing one
 		// would be worse than dropping it. Every reader of this column pairs it
 		// with activity.channel_provider, and the database forces that column
@@ -244,24 +258,49 @@ func StampFurtherParticipants(
 		// call or a meeting matches nothing, including the Art. 17 scrub and
 		// the retention sweep, and the id would stand past both, attributable
 		// to nobody. A unit that names one is told so at the ingress door.
-		if channelProvider == "" {
+		if strings.TrimSpace(channelProvider) == "" {
 			account = ""
 		}
 		if address == "" && account == "" {
 			continue
 		}
+		// Which row already speaks for this party, if any. An account names one
+		// first; an entry carrying none falls back to its address, because a
+		// party described once with an account and once without is still one
+		// human.
+		at, already := -1, false
 		if account != "" {
-			if seen[account] {
-				continue
+			at, already = rowOf[account]
+		} else if address != "" {
+			at, already = rowOfAddress[address]
+		}
+		if already {
+			// Only an EMPTY field is filled: the first description of a party
+			// stands, and a second spelling of something they already gave is
+			// not a correction.
+			if addresses[at] == "" {
+				addresses[at] = address
 			}
-			seen[account] = true
+			if names[at] == "" {
+				names[at] = name
+			}
+			continue
+		}
+		if account != "" {
+			rowOf[account] = len(accounts)
+		}
+		if _, named := rowOfAddress[address]; address != "" && !named {
+			rowOfAddress[address] = len(accounts)
 		}
 		addresses = append(addresses, address)
 		accounts = append(accounts, account)
 		roles = append(roles, p.Role)
-		names = append(names, strings.TrimSpace(p.DisplayName))
+		names = append(names, name)
 	}
-	if len(addresses) == 0 {
+	// Nobody recordable, which is not the same as no parties offered: a roster
+	// of accounts on a record naming no transport arrives here and leaves
+	// nothing behind.
+	if len(roles) == 0 {
 		return nil
 	}
 

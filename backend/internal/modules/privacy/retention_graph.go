@@ -20,6 +20,27 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// The sweep's two participant statements, package-level for the reason the
+// eraser's twins are: legalholdarms_test.go enumerates them BY NAME, and a
+// statement assembled inside a function is one that census cannot see — a hold
+// arm it stops checking reads exactly like a hold arm that passes.
+//
+// They carry the transitive hold exclusion the eraser's carry, which this sweep
+// did NOT have before. A legal hold on a linked deal, organization, lead or
+// project freezes the evidence about it, and a clock has less claim on that
+// evidence than a subject's own Art. 17 request does — so the path nobody asks
+// for may not be the one that deletes what the requested path refuses to.
+var sweptParticipantsDelete = `
+		DELETE FROM activity_participant ap
+		 WHERE ap.user_id IS NULL` + subjectNamedOnAParticipantRow() +
+	notTransitivelyHeld("ap.activity_id")
+
+var sweptParticipantsBlank = `
+		UPDATE activity_participant ap
+		   SET person_id = NULL, address = NULL, display_name = NULL, channel_user_id = NULL
+		 WHERE ap.user_id IS NOT NULL` + subjectNamedOnAParticipantRow() +
+	notTransitivelyHeld("ap.activity_id")
+
 // subjectGraphIdentifiers reads the two identifiers the graph holds the subject
 // by, and it is called before the anonymization destroys either.
 //
@@ -31,17 +52,32 @@ import (
 // which is how the third human in a group is identified and the only way they
 // are. Both source tables are deleted further down the same act.
 //
-// The accounts come from the request-driven eraser's own query rather than from
-// a second one written here, which is the lesson the LinkedIn arm below already
-// records: a copy of that predicate drifted, and the comment beside it claimed
-// the two reaches were identical the whole time.
+// LIVE bindings only, which is where this path parts from the eraser's
+// personChannelIdentities — and the difference is a precondition rather than a
+// preference. The eraser reads archived bindings too, because it is DELETING
+// them and because refuseRivalIdentifierHolders has already refused the whole
+// request if another live person holds one of the same identifiers. This sweep
+// has no such refusal: nobody asked for it, so there is nobody to refuse to.
+//
+// Archiving a Person archives their bindings, so an account that was theirs can
+// be a LIVE binding of somebody else by the time a clock reaches the archived
+// record — the same customer writing in again and resolving to a second person.
+// Matching it here would delete that live third party's rows on a request that
+// never named them. uq_person_channel_identity is unique among live rows, so a
+// live binding names exactly one person and the case cannot arise.
 func subjectGraphIdentifiers(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]string, []channelIdentity, error) {
 	emails, err := collectStrings(ctx, tx,
 		`SELECT lower(email) FROM person_email WHERE person_id = $1`, id)
 	if err != nil {
 		return nil, nil, err
 	}
-	accounts, err := personChannelIdentities(ctx, tx, ids.From[ids.PersonKind](id))
+	rows, err := tx.Query(ctx,
+		`SELECT provider, channel_user_id FROM person_channel_identity
+		  WHERE person_id = $1 AND archived_at IS NULL`, id)
+	if err != nil {
+		return nil, nil, err
+	}
+	accounts, err := pgx.CollectRows(rows, pgx.RowToStructByPos[channelIdentity])
 	if err != nil {
 		return nil, nil, err
 	}
@@ -63,28 +99,20 @@ func scrubPersonGraphTraces(
 	subjectEmails []string, subjectAccounts []channelIdentity,
 	subjectName string, linkedInHandles []string,
 ) error {
-	// THE SAME REACH the request-driven eraser uses, by calling its predicate
-	// rather than by restating it — the lesson the LinkedIn arm below already
-	// records, applied before this copy could drift too. It is what carries the
-	// third identity here: a chat roster names a party by account alone, and a
-	// sweep matching only person_id and address would leave that account
-	// standing.
+	// The eraser's own identity predicate, called rather than restated — the
+	// lesson the LinkedIn arm below already records, applied before this copy
+	// could drift too. It is what carries the third identity here: a chat
+	// roster names a party by account alone, and a sweep matching only
+	// person_id and address would leave that account standing.
 	//
 	// Delete then null, in that order and for the reason the eraser documents:
 	// a participant row must name somebody, so a row whose only identity is the
 	// subject cannot be blanked, while one that also names a colleague is not
 	// the subject's to remove.
 	providers, accounts := channelIdentityPairs(subjectAccounts)
-	named := subjectNamedOnAParticipantRow()
-	_, err := tx.Exec(ctx,
-		`DELETE FROM activity_participant ap WHERE ap.user_id IS NULL`+named,
-		id, subjectEmails, providers, accounts)
+	_, err := tx.Exec(ctx, sweptParticipantsDelete, id, subjectEmails, providers, accounts)
 	if err == nil {
-		_, err = tx.Exec(ctx, `
-			UPDATE activity_participant ap
-			   SET person_id = NULL, address = NULL, display_name = NULL, channel_user_id = NULL
-			 WHERE ap.user_id IS NOT NULL`+named,
-			id, subjectEmails, providers, accounts)
+		_, err = tx.Exec(ctx, sweptParticipantsBlank, id, subjectEmails, providers, accounts)
 	}
 	if err == nil {
 		_, err = tx.Exec(ctx,

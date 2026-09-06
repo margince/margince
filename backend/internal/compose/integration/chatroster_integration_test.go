@@ -300,9 +300,12 @@ func TestARosterNamingOneAccountTwiceLeavesOneRow(t *testing.T) {
 	e := Setup(t)
 	activity := seedChatMessage(t)
 
+	// The account-only entry FIRST, which is the losing order for a dedupe that
+	// keeps whichever arrived first and drops the rest: the address would be
+	// lost, and with it every reader that resolves a party through one.
 	stampRoster(t, e, activity, false,
 		connector.MessageParticipant{ChannelUserID: "acct-77", Role: connector.ParticipantRoleAttendee},
-		connector.MessageParticipant{ChannelUserID: "acct-77", Email: "legal@example.net", Role: connector.ParticipantRoleAttendee},
+		connector.MessageParticipant{ChannelUserID: "acct-77", Email: "legal@example.net", DisplayName: "Priya Raman", Role: connector.ParticipantRoleAttendee},
 		connector.MessageParticipant{ChannelUserID: "acct-51", Role: connector.ParticipantRoleAttendee})
 
 	var rows int
@@ -312,6 +315,20 @@ func TestARosterNamingOneAccountTwiceLeavesOneRow(t *testing.T) {
 	}
 	if rows != 2 {
 		t.Fatalf("a roster naming two accounts (one of them twice) left %d row(s), want 2", rows)
+	}
+	// And the one row is the UNION of the two descriptions, not the first of
+	// them — which is the half a row count cannot see.
+	var address, name *string
+	if err := OwnerConn(t).QueryRow(context.Background(), `
+		SELECT address, display_name FROM activity_participant
+		 WHERE activity_id = $1 AND channel_user_id = 'acct-77'`, activity).Scan(&address, &name); err != nil {
+		t.Fatalf("reading the collapsed row: %v", err)
+	}
+	if address == nil || *address != "legal@example.net" {
+		t.Errorf("the collapsed row's address is %v — the second description was dropped, so which identity survives depends on roster order", address)
+	}
+	if name == nil || *name != "Priya Raman" {
+		t.Errorf("the collapsed row's name is %v — the second description was dropped", name)
 	}
 }
 
@@ -323,7 +340,11 @@ func TestTheAccountDedupeDoesNotReachAnAddressOnlyParty(t *testing.T) {
 	e := Setup(t)
 	activity := seedChatMessage(t)
 
+	// The SAME address twice, which is the case the claim is about: the account
+	// dedupe must not have quietly become a general one, and the uniqueness
+	// index is what collapses these — as it always did for mail.
 	stampRoster(t, e, activity, false,
+		connector.MessageParticipant{Email: "legal@example.net", Role: connector.ParticipantRoleAttendee},
 		connector.MessageParticipant{Email: "legal@example.net", Role: connector.ParticipantRoleAttendee},
 		connector.MessageParticipant{Email: "ops@example.net", Role: connector.ParticipantRoleAttendee})
 
@@ -333,6 +354,42 @@ func TestTheAccountDedupeDoesNotReachAnAddressOnlyParty(t *testing.T) {
 		t.Fatalf("counting: %v", err)
 	}
 	if rows != 2 {
-		t.Fatalf("two address-only parties left %d row(s), want 2", rows)
+		t.Fatalf("two distinct addresses (one named twice) left %d row(s), want 2", rows)
+	}
+}
+
+// One human described once WITH an account and once without is one row. The
+// uniqueness index cannot collapse them — the two differ on the account column,
+// so it keeps both — and the graph would then count one person as two people in
+// the room. An entry carrying no account of its own folds into the one that
+// does; two entries carrying DIFFERENT accounts never fold, whatever address
+// they share.
+func TestAPartyDescribedWithAndWithoutTheirAccountIsOneRow(t *testing.T) {
+	e := Setup(t)
+	activity := seedChatMessage(t)
+
+	stampRoster(t, e, activity, false,
+		connector.MessageParticipant{ChannelUserID: "acct-77", Email: "legal@example.net", Role: connector.ParticipantRoleAttendee},
+		connector.MessageParticipant{Email: "legal@example.net", DisplayName: "Priya Raman", Role: connector.ParticipantRoleAttendee},
+		connector.MessageParticipant{ChannelUserID: "acct-51", Email: "legal@example.net", Role: connector.ParticipantRoleAttendee})
+
+	var rows int
+	if err := OwnerConn(t).QueryRow(context.Background(),
+		`SELECT count(*) FROM activity_participant WHERE activity_id = $1`, activity).Scan(&rows); err != nil {
+		t.Fatalf("counting: %v", err)
+	}
+	// Two: the account-less entry folded into acct-77, and acct-51 stands on
+	// its own despite sharing the address — a second account is a second human.
+	if rows != 2 {
+		t.Fatalf("the roster left %d row(s), want 2", rows)
+	}
+	var name *string
+	if err := OwnerConn(t).QueryRow(context.Background(), `
+		SELECT display_name FROM activity_participant
+		 WHERE activity_id = $1 AND channel_user_id = 'acct-77'`, activity).Scan(&name); err != nil {
+		t.Fatalf("reading the folded row: %v", err)
+	}
+	if name == nil || *name != "Priya Raman" {
+		t.Errorf("the folded row's name is %v — the account-less description was dropped rather than folded in", name)
 	}
 }
