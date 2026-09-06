@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { meFixture } from "../app/mefixture";
+import type { RbacAction, RbacObject } from "../app/capability";
+import { type GrantSpec, meFixture } from "../app/mefixture";
 import {
   holds,
   SETTINGS_GROUPS,
@@ -53,6 +54,24 @@ describe("who may open what", () => {
     return visibleSettingsPages(snapshot).map((page) => page.id);
   }
 
+  // A reader holding exactly one object, at exactly one verb. `readOn` in the
+  // testkit carries a floor of its own, which is right for a case about one
+  // page and wrong for a case about one GRANT — the floor would supply the
+  // very read under test.
+  //
+  // Built by assignment rather than as an object literal with a computed key:
+  // a computed key widens the spec to `{ [x: string]: string[] }`, which does
+  // not satisfy GrantSpec and only fails in `tsc -b` — where test files are
+  // typechecked — rather than under vitest, which transpiles without checking.
+  function grantOf(object: RbacObject, actions: RbacAction[]) {
+    const allow: GrantSpec = {};
+    allow[object] = actions;
+    return meFixture({ roles: ["rep"], allow });
+  }
+  const readsOnly = (object: RbacObject) => grantOf(object, ["read"]);
+  const writes = (object: RbacObject) =>
+    grantOf(object, ["read", "create", "update"]);
+
   it("shows the personal pages to everyone, including before /me resolves", () => {
     // These carry no grant because they are about the reader themselves. They
     // must survive the loading window too, or the rail flashes empty on every
@@ -80,7 +99,6 @@ describe("who may open what", () => {
       "products",
       "capture",
       "knowledge",
-      "automations",
     ] satisfies SettingsPageId[]) {
       expect(seen).toContain(id);
     }
@@ -100,21 +118,83 @@ describe("who may open what", () => {
     }
   });
 
-  it("opens privacy to a rep, because its purposes list is gated on person.read", () => {
-    // Not a widening: consent/store.go's ListPurposes calls Require(person,
-    // read), so a rep already reads it. A page that refused them here would
-    // disagree with the endpoint behind it.
-    expect(visibleIds(rep)).toContain("privacy");
+  // The four pages whose subject is the installation's own configuration. Each
+  // was reachable by a rep because the grant that opened it is a READ every
+  // seeded role holds — the base currency, what an automation ran, whether
+  // capture is working, the person record behind the purposes list.
+  //
+  // Every absence below is paired with the presence that proves the case is not
+  // vacuous: an authority that refused everyone would pass the first half
+  // alone, and that is exactly how a permission test goes green while saying
+  // nothing.
+  it.each([
+    ["company", "installation_settings"],
+    ["integrations", "overlay_connection"],
+    ["automations", "automation"],
+  ] as const)(
+    "withholds %s from a rep who only reads %s, and opens it to its writer",
+    (page, object) => {
+      expect(visibleIds(readsOnly(object))).not.toContain(page);
+      expect(visibleIds(writes(object))).toContain(page);
+    },
+  );
+
+  // Privacy is the fourth page but not the same shape: its arms stay READS,
+  // because `retention_policy` and `privacy_request` are held by nobody below
+  // admin and ops — the read already says whose page it is. What was wrong was
+  // the third arm, `person:read`, which every seeded role holds and which is
+  // why a rep opened the governance page at all.
+  //
+  // The purposes card still reads through `person` server-side and must keep
+  // doing so; it feeds the Person 360. A card narrower than its page withholds
+  // itself, which is the safe direction.
+  // Management is seeded `consent_config:read` and NOTHING else on this page —
+  // no retention, no request queue. Dropping the `person` arm without this pair
+  // locked the one role deliberately granted the consent vocabulary out of the
+  // only page that renders it. The pair is what keeps them in without letting a
+  // rep back: a rep holds `person` and no consent grant at all.
+  it("opens privacy to the consent vocabulary's own reader, and to nobody else holding person", () => {
+    const management = meFixture({
+      roles: ["management"],
+      allow: { person: ["read"], consent_config: ["read"] },
+    });
+    expect(visibleSettingsPages(management).map((page) => page.id)).toContain(
+      "privacy",
+    );
+    // The same reader without the consent grant is a rep, and stays out.
+    expect(visibleIds(readsOnly("person"))).not.toContain("privacy");
+    // And the consent grant alone does not do it either: the purposes list is
+    // read through `person`, so a holder without that read would open a page
+    // whose only card is withheld.
+    expect(visibleIds(readsOnly("consent_config"))).not.toContain("privacy");
+  });
+
+  it("withholds privacy from a rep holding person, and opens it to a retention reader", () => {
+    expect(visibleIds(readsOnly("person"))).not.toContain("privacy");
+    expect(visibleIds(readsOnly("retention_policy"))).toContain("privacy");
+    expect(visibleIds(readsOnly("privacy_request"))).toContain("privacy");
+  });
+
+  // Management and manager read `automation` — they see what ran, on the
+  // records it touched. Neither may change one, and the page that DEFINES
+  // automations is therefore not theirs. This is the deliberate half of the
+  // narrowing: it is not only reps who lose a page here.
+  it("withholds automations from management, which reads automation but cannot write", () => {
+    expect(
+      visibleIds(
+        meFixture({ roles: ["management"], allow: { automation: ["read"] } }),
+      ),
+    ).not.toContain("automations");
   });
 });
 
 describe("requirements that are not permissions", () => {
   it("withholds the company page when the installation lacks the surface", () => {
-    // organization.read alone. The company profile ANDs its grant with a
+    // organization.update alone. The company profile ANDs its grant with a
     // deployment flag, so a reader holding only that grant sees nothing when
     // the flag is off — the surface may genuinely not exist here.
     const holder = meFixture({
-      allow: { organization: ["read"] },
+      allow: { organization: ["read", "update"] },
       settingsAvailability: { company_context: false },
     });
     expect(visibleSettingsPages(holder).map((p) => p.id)).not.toContain(
@@ -124,7 +204,7 @@ describe("requirements that are not permissions", () => {
 
   it("shows it once the installation has it", () => {
     const holder = meFixture({
-      allow: { organization: ["read"] },
+      allow: { organization: ["read", "update"] },
       settingsAvailability: { company_context: true },
     });
     expect(visibleSettingsPages(holder).map((p) => p.id)).toContain("company");
@@ -134,7 +214,7 @@ describe("requirements that are not permissions", () => {
     // A server older than the field, or a snapshot cached before it shipped.
     // Absent is not permission: it has to read as "no such surface here".
     const holder = meFixture({
-      allow: { organization: ["read"] },
+      allow: { organization: ["read", "update"] },
       settingsAvailability: null,
     });
     expect(visibleSettingsPages(holder).map((p) => p.id)).not.toContain(
@@ -143,11 +223,11 @@ describe("requirements that are not permissions", () => {
   });
 
   it("still shows it to a reader whose OTHER grant carries the page", () => {
-    // The flag gates one card, not the page: installation_settings.read opens
+    // The flag gates one card, not the page: installation_settings.update opens
     // the company page regardless, and treating the flag as a page-level
     // condition would hide a surface the reader may use.
     const admin = meFixture({
-      allow: { installation_settings: ["read"] },
+      allow: { installation_settings: ["read", "update"] },
       settingsAvailability: { company_context: false },
     });
     expect(visibleSettingsPages(admin).map((p) => p.id)).toContain("company");
@@ -356,9 +436,18 @@ describe("a page and its cards ask the same question", () => {
         allow: { consent_config: ["read", "create"] },
       }),
     ).toBe(false);
-    // The grant that actually reads the purposes list does open it.
+    // Nor on `person`, which every seeded role holds: the purposes card reads
+    // through it, but a page that opened on it was the whole workspace's
+    // governance page. The arms that DO open it are the two objects nobody
+    // below admin and ops holds at all.
     expect(
       opens("privacy", { roles: ["rep"], allow: { person: ["read"] } }),
+    ).toBe(false);
+    expect(
+      opens("privacy", {
+        roles: ["custom"],
+        allow: { retention_policy: ["read"] },
+      }),
     ).toBe(true);
   });
 
@@ -402,18 +491,32 @@ describe("requirements that are not permissions — the composed units", () => {
     ).toBe(false);
   });
 
-  it("opens integrations to an overlay or webhook reader", () => {
+  it("opens integrations to whoever may CONNECT one, and not to the readers", () => {
     // Spelled out rather than looped over a computed key: a computed key widens
     // `allow` to a string index and loses the object/action checking that makes
     // a misspelling here a compile error rather than a silently denied grant.
+    //
+    // The read is the same everyone-holds-it grant as `integrations` above —
+    // every seeded role reads both, because "is capture working?" shows up on
+    // the records they already open. Connecting an overlay is admin and ops work.
     expect(
       visibleSettingsPages(
         meFixture({ allow: { overlay_connection: ["read"] } }),
+      ).some((p) => p.id === "integrations"),
+    ).toBe(false);
+    expect(
+      visibleSettingsPages(
+        meFixture({ allow: { overlay_connection: ["read", "update"] } }),
       ).some((p) => p.id === "integrations"),
     ).toBe(true);
     expect(
       visibleSettingsPages(
         meFixture({ allow: { webhook_subscription: ["read"] } }),
+      ).some((p) => p.id === "integrations"),
+    ).toBe(false);
+    expect(
+      visibleSettingsPages(
+        meFixture({ allow: { webhook_subscription: ["read", "create"] } }),
       ).some((p) => p.id === "integrations"),
     ).toBe(true);
   });

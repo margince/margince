@@ -41,10 +41,14 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   // that card's draft is the one that OUTLIVES its dialog, so it is the only
   // settings edit a reader can still be holding while they navigate away.
   installation_settings: ["read", "update"],
-  // The consent registry's own gate, and so the Privacy & audit ENTRY's: the
-  // server reads purposes under `person:read` (consent/store.go), not under a
-  // role. Read alone, because no spec exercises a person write from here and a
-  // grant this fixture does not need is a grant it should not claim.
+  // The consent registry's own gate: the server reads purposes under
+  // `person:read` (consent/store.go), not under a role. Read alone, because no
+  // spec exercises a person write from here and a grant this fixture does not
+  // need is a grant it should not claim.
+  //
+  // It no longer opens the Privacy & audit ENTRY — every seeded role holds this
+  // read, so the page moved to `privacy_request`, which this fixture holds
+  // below. The card still needs `person`, which is why it stays.
   person: ["read"],
   // Filters & views reads the vocabulary and previews a tree under `list:read`
   // (collections/handlers.go), and saving a filter as a dynamic list is a

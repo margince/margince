@@ -67,6 +67,37 @@ export const reads = (object: RbacObject): CapabilityExpression => ({
   object,
   action: "read",
 });
+/**
+ * A page whose subject is the installation's own configuration asks for the
+ * verb that changes it, not the one that displays it.
+ *
+ * The seeded roles read far more than they may change — every seat reads
+ * `installation_settings` for the base currency, `automation` to see what ran,
+ * and the integration objects to see whether capture is working. Gating those
+ * pages on the read put six administration destinations in a rep's navigation
+ * that she could only look at. `writes` is how a page says its subject is
+ * somebody's job rather than everybody's reference.
+ *
+ * Either write verb counts. A custom role holding `create` without `update` may
+ * still add a webhook or an automation, and adding one is the whole reason to
+ * open the page; the seeded roles hold both together, so a stricter spelling
+ * would only ever strand a hand-built role — quietly, which is the bad way.
+ *
+ * Not a replacement for `reads`: a page a reader genuinely consults, like the
+ * sales vocabulary she works in every day, still opens on the read.
+ */
+export const writes = (
+  object: RbacObject,
+  // Which write verbs the object's own endpoints actually offer. Defaults to
+  // both, which is the common case; pass `["update"]` for an object that has no
+  // create operation, so a custom role granted a verb the API does not expose
+  // cannot open a page on it. `installation_settings` is the worked example:
+  // `/installation/settings` is GET and PATCH, and nothing else.
+  actions: readonly ("create" | "update")[] = ["update", "create"],
+): CapabilityExpression => ({
+  kind: "any",
+  of: actions.map((action) => ({ kind: "grant", object, action })),
+});
 export const available = (
   key: SettingsAvailabilityKey,
 ): CapabilityExpression => ({ kind: "availability", key });
@@ -175,11 +206,18 @@ export type SettingsScope = "self" | "team" | "workspace" | "installation";
 /**
  * Every settings page, its group, its scope and what it takes to open it.
  *
- * `requires` is a READ requirement — it says who may see the page, never who
- * may change what is on it. Each card asks its own write question, because a
- * page is routinely readable and only partly writable, and a page-level write
- * flag would either hide a page somebody may read or promise controls they
- * cannot use.
+ * `requires` says who may SEE the page. It is not automatically the read grant:
+ * a page whose subject is the installation's own configuration asks for the
+ * verb that changes it, because every seeded role reads far more than it may
+ * change and the read arm handed a rep six destinations she could only look at.
+ * A page she genuinely consults — the sales vocabulary, her own settings —
+ * still opens on the read.
+ *
+ * It never decides what a card may DO. Each card asks its own write question,
+ * because a page is routinely readable and only partly writable, and a
+ * page-level write flag would either hide a page somebody may read or promise
+ * controls they cannot use. A card narrower than its page is the safe
+ * direction: the card withholds itself.
  */
 export const SETTINGS_PAGES = [
   { id: "account", group: "me", scope: "self", requires: always },
@@ -192,13 +230,22 @@ export const SETTINGS_PAGES = [
     id: "company",
     group: "company",
     scope: "installation",
-    // The union of what the three cards on it ask for. The company profile
-    // carries a second condition that is a deployment FLAG rather than a
-    // permission, so its grant ANDs with it: the surface may simply not exist
-    // on this installation.
+    // The union of what the three cards on it ask for, and each arm is the verb
+    // that card's controls perform.
+    //
+    // `installation_settings` is asked as the UPDATE, not the read. Every
+    // seeded role reads it — a rep needs the base currency to render a deal —
+    // so the read arm opened the installation's own facts to the whole
+    // workspace. Only admin and ops may change them.
+    //
+    // The company profile is different and stays a write a rep really holds:
+    // `organization:update` is hers, and the profile the AI reads is a thing
+    // she legitimately edits. Its second condition is a deployment FLAG rather
+    // than a permission, so the grant ANDs with it — the surface may simply not
+    // exist on this installation.
     requires: anyOf(
-      reads("installation_settings"),
-      allOf(reads("organization"), available("company_context")),
+      writes("installation_settings", ["update"]),
+      allOf(writes("organization"), available("company_context")),
       reads("fx_rate"),
     ),
   },
@@ -289,9 +336,13 @@ export const SETTINGS_PAGES = [
     id: "integrations",
     group: "data",
     scope: "workspace",
+    // The writes, not the reads: every seeded role reads both objects, because
+    // "is capture working?" is everyone's question and the answer shows up on
+    // the records they already open. Connecting an overlay or pointing a
+    // webhook somewhere is admin and ops work.
     requires: anyOf(
-      reads("overlay_connection"),
-      reads("webhook_subscription"),
+      writes("overlay_connection"),
+      writes("webhook_subscription"),
       // A composed workspace-scoped unit puts its settings on this page and
       // nowhere else, so the page has to open for it even when the reader holds
       // none of the grants above.
@@ -326,7 +377,11 @@ export const SETTINGS_PAGES = [
     id: "automations",
     group: "ai",
     scope: "workspace",
-    requires: reads("automation"),
+    // The write, which admin and ops alone hold. Management and manager read
+    // `automation` — they see what ran, on the records it touched — but a role
+    // that cannot change an automation has nothing to do on the page that
+    // defines them.
+    requires: writes("automation"),
   },
   {
     id: "usage",
@@ -348,20 +403,30 @@ export const SETTINGS_PAGES = [
     id: "privacy",
     group: "governance",
     scope: "workspace",
+    // `person` is deliberately NOT an arm, though the purposes card reads
+    // through it. `person:read` is held by every seeded role, so that arm put
+    // the governance page in front of the whole workspace — the retention
+    // ladder, the subject-request queue and the restricted-record list, none of
+    // which a rep can act on.
+    //
+    // The purposes LIST stays gated on `person` server-side and must not move:
+    // that endpoint feeds the Person 360, and narrowing it would 403 every rep
+    // on a screen they use all day. A card narrower than its page is the safe
+    // direction — the card withholds itself.
+    //
+    // `consent_config` buys no read either (consent/store.go ListPurposes is on
+    // `person`), so it is not an arm; its holders all hold retention or the
+    // request queue anyway.
     requires: anyOf(
       reads("retention_policy"),
       reads("privacy_request"),
-      // The purposes list is gated on person.read server-side, which is not a
-      // role and not "any member" — moving it would 403 the Person 360 for
-      // every rep, so the page follows the gate the endpoint actually applies.
-      //
-      // `consent_config` is deliberately NOT here, though the purposes card is
-      // what that object administers. It buys no READ: the list stays on
-      // `person` (consent/store.go ListPurposes) and only the writes moved. On
-      // the consent grant alone a reader would open a page whose every card is
-      // withheld — every seeded holder of it also holds `person:read`, so this
-      // only ever bit a custom role, silently.
-      reads("person"),
+      // The consent vocabulary, as a PAIR. `person:read` is what the purposes
+      // endpoint asks (consent/store.go ListPurposes) and every seeded role
+      // holds it, so it cannot open the page alone. `consent_config` is who the
+      // vocabulary belongs to — management is seeded its read and nothing else
+      // on this page, so without this arm the one role deliberately granted the
+      // vocabulary could not reach the only page that renders it.
+      allOf(reads("person"), reads("consent_config")),
     ),
   },
   {

@@ -102,10 +102,17 @@ export const PIPELINE_ADMIN: GrantSpec = {
 const ADMIN_GRANTS: GrantSpec = {
   ...PIPELINE_ADMIN,
   custom_field: ["read", "create", "update"],
-  // The consent registry's own gate (consent/store.go demands person:read), which
-  // every seeded role holds — so a fixture standing in for a real principal has to
-  // carry it or Privacy & audit disappears for reasons the test is not about.
+  // The consent registry's own gate (consent/store.go demands person:read),
+  // which every seeded role holds. It is the floor a fixture standing in for a
+  // real principal carries — but it no longer OPENS Privacy: that page asks
+  // `retention_policy` or `privacy_request`, neither of which anybody below
+  // admin and ops holds.
   person: ["read"],
+  // What actually opens Privacy & audit for this admin fixture. Named here
+  // rather than left to `person`, because the page moved off the read every
+  // seat holds and a fixture that did not follow would quietly stop rendering
+  // the page its cases are about.
+  retention_policy: ["read", "create", "update"],
 };
 
 // The read grant on ONE object, as a GrantSpec.
@@ -115,10 +122,14 @@ const ADMIN_GRANTS: GrantSpec = {
 // not satisfy GrantSpec, and only fails in `tsc -b`, where test files are
 // typechecked, rather than under the app project alone.
 export function readOn(object: RbacObject): GrantSpec {
-  // `person:read` rides along because Privacy asks for it, and every seeded role
-  // holds it — so a case about ONE object's entry is not also a case about losing
-  // the consent registry. Isolating the object under test means holding the floor
-  // steady, not stripping it.
+  // `person:read` rides along because every seeded role holds it and the consent
+  // registry's own endpoint demands it — so a case about ONE object's entry is
+  // not also a case about losing that read. Isolating the object under test
+  // means holding the floor steady, not stripping it.
+  //
+  // The floor no longer reaches a PAGE. Privacy used to open on it, which made
+  // every `readOn` case also a case about Privacy; the page asks the two
+  // governance objects now, and the expectations lost their trailing "privacy".
   const spec: GrantSpec = { person: ["read"] };
   spec[object] = ["read"];
   return spec;
