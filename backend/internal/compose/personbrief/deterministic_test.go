@@ -25,7 +25,7 @@ func TestTheFloorCitesOnlyRecordsTheInputCarried(t *testing.T) {
 			continue
 		}
 		for _, cited := range sentence.Evidence {
-			if !known[Evidence{EntityType: cited.EntityType, EntityID: cited.EntityID}] {
+			if _, ok := known[Evidence{EntityType: cited.EntityType, EntityID: cited.EntityID}]; !ok {
 				t.Errorf("the floor cited %s/%s, which this input never held", cited.EntityType, cited.EntityID)
 			}
 		}

@@ -344,21 +344,34 @@ func keepGroundedSentences(sentences []Sentence, orgID string, in Input) []Sente
 // passes, and the card then routes the reader to the wrong screen — or to a
 // record of a kind they were never shown. The pair is the reference, so the
 // pair is what is checked.
-func knownRecords(orgID string, in Input) map[Evidence]bool {
-	known := map[Evidence]bool{{EntityType: citeOrganization, EntityID: orgID}: true}
+// The VALUE is what that record said, as the model was shown it, so a sentence
+// can be held to the rows it points at rather than only to their existence.
+func knownRecords(orgID string, in Input) map[Evidence]string {
+	known := map[Evidence]string{{EntityType: citeOrganization, EntityID: orgID}: accountItself(in)}
 	for _, deal := range in.OpenDeals {
-		known[Evidence{EntityType: citeDeal, EntityID: deal.ID}] = true
+		known[Evidence{EntityType: citeDeal, EntityID: deal.ID}] = claims.Source(deal)
 	}
 	for _, act := range in.Recent {
-		known[Evidence{EntityType: citeActivity, EntityID: act.ID}] = true
+		known[Evidence{EntityType: citeActivity, EntityID: act.ID}] = claims.Source(act)
 	}
 	for _, contact := range in.Contacts {
-		known[Evidence{EntityType: citePerson, EntityID: contact.ID}] = true
+		known[Evidence{EntityType: citePerson, EntityID: contact.ID}] = claims.Source(contact)
 	}
 	for _, task := range in.OpenTasks {
-		known[Evidence{EntityType: citeActivity, EntityID: task.ID}] = true
+		known[Evidence{EntityType: citeActivity, EntityID: task.ID}] = claims.Source(task)
 	}
 	return known
+}
+
+// accountItself is the account's OWN facts: the input with its lists emptied.
+//
+// The whole input would make a citation of the organization a skeleton key —
+// most sentences cite it, and every figure anywhere in the payload would answer
+// for them. What a sentence about the account may state is what the account
+// row says: its industry, its size, its lifetime won.
+func accountItself(in Input) string {
+	in.Contacts, in.OpenDeals, in.Recent, in.OpenTasks = nil, nil, nil, nil
+	return claims.Source(in)
 }
 
 // recordKey is knownRecords' pair without the citation's descriptive Name, so

@@ -207,7 +207,7 @@ func TestAWithheldConversationIsNotACitableRecord(t *testing.T) {
 	hidden := mail(dealID, 3, "", "inbound")
 	hidden.Withheld = true
 	in.History = []HistoryIn{hidden}
-	if knownRecords(in)[Evidence{EntityType: citeActivity, EntityID: dealID}] {
+	if _, citable := knownRecords(in)[Evidence{EntityType: citeActivity, EntityID: dealID}]; citable {
 		t.Error("a withheld conversation is citable; a reader would be sent to a record they cannot open")
 	}
 }

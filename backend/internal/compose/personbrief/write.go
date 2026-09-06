@@ -249,21 +249,36 @@ func Prose(sentences []Sentence) string {
 // A timeline row, a claim's source and a moment's evidence all name ACTIVITIES,
 // and the same activity legitimately reaches this map by more than one of those
 // routes.
-func knownRecords(personID string, in Input) map[Evidence]bool {
-	known := map[Evidence]bool{{EntityType: citePerson, EntityID: personID}: true}
+// The VALUE is what that record said, as the model was shown it, so a sentence
+// can be held to the rows it points at rather than only to their existence.
+func knownRecords(personID string, in Input) map[Evidence]string {
+	known := map[Evidence]string{{EntityType: citePerson, EntityID: personID}: personThemselves(in)}
 	if in.OpenDeal != nil {
-		known[Evidence{EntityType: citeDeal, EntityID: in.OpenDeal.ID}] = true
+		known[Evidence{EntityType: citeDeal, EntityID: in.OpenDeal.ID}] = claims.Source(in.OpenDeal)
 	}
 	for _, act := range in.Recent {
-		known[Evidence{EntityType: citeActivity, EntityID: act.ID}] = true
+		known[Evidence{EntityType: citeActivity, EntityID: act.ID}] = claims.Source(act)
 	}
 	for _, claim := range in.Claims {
-		known[Evidence{EntityType: citeActivity, EntityID: claim.SourceID}] = true
+		// An activity reached by more than one route carries what each route
+		// said about it: a claim's source row and the same row on the timeline
+		// are one record, and a sentence citing it may state either.
+		known[Evidence{EntityType: citeActivity, EntityID: claim.SourceID}] += claims.Source(claim)
 	}
 	if in.Moment != nil {
 		for _, source := range in.Moment.Sources {
-			known[Evidence{EntityType: citeActivity, EntityID: source}] = true
+			known[Evidence{EntityType: citeActivity, EntityID: source}] += claims.Source(in.Moment)
 		}
 	}
 	return known
+}
+
+// personThemselves is the person's OWN facts: the input with its lists emptied.
+//
+// The whole input would make a citation of the person a skeleton key — most
+// sentences cite them, and every figure anywhere in the payload would answer
+// for it.
+func personThemselves(in Input) string {
+	in.Recent, in.Claims, in.Moment, in.OpenDeal = nil, nil, nil, nil
+	return claims.Source(in)
 }

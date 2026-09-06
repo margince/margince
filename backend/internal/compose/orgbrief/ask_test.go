@@ -83,7 +83,7 @@ func TestEveryPreparedQuestionAnswersFromItsOwnRecords(t *testing.T) {
 					t.Errorf("sentence %q carries no citation — the reader cannot check it", sentence.Text)
 				}
 				for _, cited := range sentence.Evidence {
-					if !known[cited] {
+					if _, ok := known[cited]; !ok {
 						t.Errorf("sentence %q cites %+v, which this input never carried", sentence.Text, cited)
 					}
 				}

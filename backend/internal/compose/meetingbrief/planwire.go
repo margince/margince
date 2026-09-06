@@ -92,7 +92,7 @@ func wireReadiness(out crmcontracts.MeetingPlan) crmcontracts.MeetingPlanReadine
 // for a record in another workspace passes the second, and the first cannot run
 // on a string the wire layer will later reject.
 func groundedSentence(
-	sentence Sentence, known map[Evidence]bool,
+	sentence Sentence, known map[Evidence]string,
 ) (crmcontracts.OrganizationBriefSentence, bool) {
 	if !claims.Grounded(sentence, known) {
 		return crmcontracts.OrganizationBriefSentence{}, false
@@ -107,17 +107,17 @@ func groundedSentence(
 // groundedEvidence is the same rule for a field that carries citations without
 // prose of its own.
 func groundedEvidence(
-	cited []Evidence, known map[Evidence]bool,
+	cited []Evidence, known map[Evidence]string,
 ) ([]crmcontracts.OrganizationBriefEvidence, bool) {
 	for _, one := range cited {
-		if !known[Evidence{EntityType: one.EntityType, EntityID: one.EntityID}] {
+		if _, ok := known[Evidence{EntityType: one.EntityType, EntityID: one.EntityID}]; !ok {
 			return nil, false
 		}
 	}
 	return wireEvidence(cited)
 }
 
-func wireAsks(asks []Ask, known map[Evidence]bool) []crmcontracts.MeetingPlanAsk {
+func wireAsks(asks []Ask, known map[Evidence]string) []crmcontracts.MeetingPlanAsk {
 	out := make([]crmcontracts.MeetingPlanAsk, 0, len(asks))
 	for _, ask := range asks {
 		basis, ok := groundedSentence(ask.Basis, known)
@@ -134,7 +134,7 @@ func wireAsks(asks []Ask, known map[Evidence]bool) []crmcontracts.MeetingPlanAsk
 	return out
 }
 
-func wireQuestions(questions []Question, known map[Evidence]bool) []crmcontracts.MeetingPlanQuestion {
+func wireQuestions(questions []Question, known map[Evidence]string) []crmcontracts.MeetingPlanQuestion {
 	out := make([]crmcontracts.MeetingPlanQuestion, 0, len(questions))
 	for _, question := range questions {
 		evidence, ok := groundedEvidence(question.Evidence, known)
@@ -151,7 +151,7 @@ func wireQuestions(questions []Question, known map[Evidence]bool) []crmcontracts
 	return out
 }
 
-func wireScenarios(scenarios []Scenario, known map[Evidence]bool) []crmcontracts.MeetingPlanScenario {
+func wireScenarios(scenarios []Scenario, known map[Evidence]string) []crmcontracts.MeetingPlanScenario {
 	out := make([]crmcontracts.MeetingPlanScenario, 0, len(scenarios))
 	for _, scenario := range scenarios {
 		evidence, ok := groundedEvidence(scenario.Evidence, known)
@@ -165,7 +165,7 @@ func wireScenarios(scenarios []Scenario, known map[Evidence]bool) []crmcontracts
 	return out
 }
 
-func wireArc(arc []ArcSentence, known map[Evidence]bool) []crmcontracts.MeetingPlanArcMoment {
+func wireArc(arc []ArcSentence, known map[Evidence]string) []crmcontracts.MeetingPlanArcMoment {
 	out := make([]crmcontracts.MeetingPlanArcMoment, 0, len(arc))
 	for _, moment := range arc {
 		summary, ok := groundedSentence(moment.Summary, known)
@@ -188,7 +188,7 @@ func wireArc(arc []ArcSentence, known map[Evidence]bool) []crmcontracts.MeetingP
 // replacement cites the meeting — a move whose only support is that this
 // meeting is happening, which is true of every advance and is why the floor
 // legs cite it in the first place.
-func wireAdvance(advance Advance, in Input, known map[Evidence]bool) crmcontracts.MeetingPlanAdvance {
+func wireAdvance(advance Advance, in Input, known map[Evidence]string) crmcontracts.MeetingPlanAdvance {
 	return crmcontracts.MeetingPlanAdvance{
 		Minimum:  advanceLeg(advance.Minimum, in, known, "Leave with one named next step, owned and dated."),
 		Best:     advanceLeg(advance.Best, in, known, "Leave with the next meeting booked and its purpose agreed."),
@@ -197,7 +197,7 @@ func wireAdvance(advance Advance, in Input, known map[Evidence]bool) crmcontract
 }
 
 func advanceLeg(
-	leg Sentence, in Input, known map[Evidence]bool, floor string,
+	leg Sentence, in Input, known map[Evidence]string, floor string,
 ) crmcontracts.OrganizationBriefSentence {
 	if wired, ok := groundedSentence(leg, known); ok {
 		return wired

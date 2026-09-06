@@ -20,8 +20,11 @@
 package claims
 
 import (
+	"encoding/json"
 	"regexp"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/specifics"
 )
 
 // Evidence points at one record a sentence rests on. It names a record the
@@ -80,23 +83,44 @@ func SpellsRecordID(text string) bool {
 // else the sentence says, and cutting the id out mid-clause leaves broken
 // grammar the reader has to decode — every id the sentence needed is already in
 // its evidence.
-func Grounded(sentence Sentence, known map[Evidence]bool) bool {
+func Grounded(sentence Sentence, known map[Evidence]string) bool {
+	return Ungrounded(sentence, known) == ""
+}
+
+// Ungrounded is Grounded with its reason, which is what a caller logging a drop
+// needs and what a test asserting one reads. Empty means the sentence stands.
+//
+// The reason is a sentence a person can act on — "names 14 August, which the
+// records it cites do not" — because a silent drop is indistinguishable from a
+// model that had nothing to say, and the two want opposite responses.
+func Ungrounded(sentence Sentence, known map[Evidence]string) string {
 	if strings.TrimSpace(sentence.Text) == "" || len(sentence.Evidence) == 0 {
-		return false
+		return "the sentence is empty or cites nothing"
 	}
 	if idInProse.MatchString(sentence.Text) {
-		return false
+		return "the prose spells a record id"
 	}
-	for _, cited := range sentence.Evidence {
+	var cited strings.Builder
+	for _, reference := range sentence.Evidence {
 		// Keyed on the (kind, identity) PAIR, so a valid identity of the wrong
 		// kind is still dropped. Stripped to identity() first: known is built
 		// with no Name set, and comparing the full struct would fail a
 		// name-bearing citation against a record it correctly cites.
-		if !known[identity(cited)] {
-			return false
+		source, ok := known[identity(reference)]
+		if !ok {
+			return "it cites a record this answer was not written from"
 		}
+		cited.WriteString(source)
+		cited.WriteString("\n")
 	}
-	return true
+	// A citation is a POINTER: it proves the model named a real row, never that
+	// the sentence says what the row says. So every date, amount and percentage
+	// the sentence states has to be in the rows it points at — the connective
+	// prose, which is the reading, stays free.
+	if missing := specifics.Missing(sentence.Text, cited.String()); len(missing) > 0 {
+		return "it names " + specifics.Texts(missing) + ", which the records it cites do not"
+	}
+	return ""
 }
 
 // Keep filters a batch to the sentences that survive Grounded, normalises any
@@ -110,7 +134,7 @@ func Grounded(sentence Sentence, known map[Evidence]bool) bool {
 // knownNature is passed in rather than fixed here because each surface derives
 // it from its own contract enum — deriving beats re-spelling, and a rename
 // upstream should fail to compile rather than launder a hand-typed string.
-func Keep(sentences []Sentence, known map[Evidence]bool, knownNature map[string]bool, fact string) []Sentence {
+func Keep(sentences []Sentence, known map[Evidence]string, knownNature map[string]bool, fact string) []Sentence {
 	kept := make([]Sentence, 0, len(sentences))
 	for _, sentence := range sentences {
 		if !Grounded(sentence, known) {
@@ -205,3 +229,27 @@ func Quoted(text, quote string) bool {
 // normalisation Quoted compares under and what a caller locating a quote in
 // its text compares under too.
 func CollapseSpace(s string) string { return strings.Join(strings.Fields(s), " ") }
+
+// Source renders one record as the text a sentence citing it is held against.
+//
+// The assemblers hand their inputs to the model as JSON, so the JSON is what
+// the model actually saw — including every field's rendering choice, which is
+// the point: a deal's amount reaches the prompt as major units, and a check
+// reading the minor-unit integer beside it would admit the figure a hundred
+// times too large that the rendering exists to prevent.
+//
+//craft:ignore naked-any every assembler's record types are its own, and this renders whatever it is handed exactly as the prompt did
+func Source(record any) string {
+	rendered, err := json.Marshal(record)
+	if err != nil {
+		// A record that cannot be rendered is a record no sentence can be
+		// checked against, so it contributes NOTHING rather than everything:
+		// sentences citing it lose their source and are dropped, which is the
+		// safe direction for a filter whose failure mode is admitting an
+		// invention. Unreachable for the inputs here — they are plain structs
+		// of strings, numbers and slices — and left as a value rather than an
+		// error so one unrenderable record cannot cost a reader the whole brief.
+		return ""
+	}
+	return string(rendered)
+}

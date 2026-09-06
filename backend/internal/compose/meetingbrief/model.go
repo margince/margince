@@ -262,7 +262,7 @@ func keptSentence(
 			EntityID   string `json:"entity_id"`
 		} `json:"evidence"`
 	},
-	allowed map[string]bool, known map[Evidence]bool, recommendations *int,
+	allowed map[string]bool, known map[Evidence]string, recommendations *int,
 ) (Sentence, bool) {
 	nature := raw.Nature
 	if nature == "" {
@@ -307,22 +307,25 @@ func orderedSections(byKind map[crmcontracts.MeetingBriefSectionKind][]Sentence)
 // knownRecords is every record this input carried, as the (type, id) pairs a
 // citation must match. A sentence pointing anywhere else is either invented or
 // points somewhere the reader cannot go, and neither is worth showing.
-func knownRecords(in Input) map[Evidence]bool {
-	known := map[Evidence]bool{{EntityType: citeActivity, EntityID: in.ActivityID}: true}
+//
+// The VALUE is what that record said, as the model was shown it, so a sentence
+// can be held to the rows it points at rather than only to their existence.
+func knownRecords(in Input) map[Evidence]string {
+	known := map[Evidence]string{{EntityType: citeActivity, EntityID: in.ActivityID}: meetingItself(in)}
 	if in.Deal != nil {
-		known[Evidence{EntityType: citeDeal, EntityID: in.Deal.ID}] = true
+		known[Evidence{EntityType: citeDeal, EntityID: in.Deal.ID}] = claims.Source(in.Deal)
 	}
 	for _, attendee := range in.Attendees {
-		known[Evidence{EntityType: citePerson, EntityID: attendee.PersonID}] = true
+		known[Evidence{EntityType: citePerson, EntityID: attendee.PersonID}] = claims.Source(attendee)
 	}
 	for _, claim := range in.Commitments {
-		known[Evidence{EntityType: citeActivity, EntityID: claim.SourceID}] = true
+		known[Evidence{EntityType: citeActivity, EntityID: claim.SourceID}] += claims.Source(claim)
 	}
 	for _, act := range in.Recent {
-		known[Evidence{EntityType: citeActivity, EntityID: act.ID}] = true
+		known[Evidence{EntityType: citeActivity, EntityID: act.ID}] += claims.Source(act)
 	}
 	for _, earlier := range in.PriorMeetings {
-		known[Evidence{EntityType: citeActivity, EntityID: earlier.ID}] = true
+		known[Evidence{EntityType: citeActivity, EntityID: earlier.ID}] += claims.Source(earlier)
 	}
 	// The account history the arc is built from. A conversation this caller may
 	// not READ is deliberately absent: it reached the input as a date and a
@@ -332,7 +335,18 @@ func knownRecords(in Input) map[Evidence]bool {
 		if row.Withheld {
 			continue
 		}
-		known[Evidence{EntityType: citeActivity, EntityID: row.ID}] = true
+		known[Evidence{EntityType: citeActivity, EntityID: row.ID}] += claims.Source(row)
 	}
 	return known
+}
+
+// meetingItself is the meeting's OWN facts: the input with its lists emptied.
+//
+// The whole input would make a citation of the meeting a skeleton key — nearly
+// every line cites it, and every figure anywhere in the payload would answer
+// for them.
+func meetingItself(in Input) string {
+	in.Deal, in.Attendees, in.Commitments = nil, nil, nil
+	in.Recent, in.PriorMeetings, in.History = nil, nil, nil
+	return claims.Source(in)
 }
