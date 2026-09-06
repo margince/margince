@@ -1426,6 +1426,7 @@ const (
 	AttentionItemActionsDismiss     AttentionItemActions = "dismiss"
 	AttentionItemActionsMerge       AttentionItemActions = "merge"
 	AttentionItemActionsOpen        AttentionItemActions = "open"
+	AttentionItemActionsRetry       AttentionItemActions = "retry"
 	AttentionItemActionsSetAside    AttentionItemActions = "set_aside"
 	AttentionItemActionsSnooze      AttentionItemActions = "snooze"
 )
@@ -1446,6 +1447,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsMerge:
 		return true
 	case AttentionItemActionsOpen:
+		return true
+	case AttentionItemActionsRetry:
 		return true
 	case AttentionItemActionsSetAside:
 		return true
@@ -1930,6 +1933,27 @@ func (e AutomationCatalogEntryTier) Valid() bool {
 	case AutomationCatalogEntryTierAutoExecute:
 		return true
 	case AutomationCatalogEntryTierConfirmationRequired:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AutomationRetryResultRefusal.
+const (
+	NotFailed               AutomationRetryResultRefusal = "not_failed"
+	RepeatsItsEffect        AutomationRetryResultRefusal = "repeats_its_effect"
+	TriggerEventUnavailable AutomationRetryResultRefusal = "trigger_event_unavailable"
+)
+
+// Valid indicates whether the value is a known member of the AutomationRetryResultRefusal enum.
+func (e AutomationRetryResultRefusal) Valid() bool {
+	switch e {
+	case NotFailed:
+		return true
+	case RepeatsItsEffect:
+		return true
+	case TriggerEventUnavailable:
 		return true
 	default:
 		return false
@@ -13783,6 +13807,7 @@ const (
 	WorklistItemActionsDismiss     WorklistItemActions = "dismiss"
 	WorklistItemActionsMerge       WorklistItemActions = "merge"
 	WorklistItemActionsOpen        WorklistItemActions = "open"
+	WorklistItemActionsRetry       WorklistItemActions = "retry"
 	WorklistItemActionsSetAside    WorklistItemActions = "set_aside"
 	WorklistItemActionsSnooze      WorklistItemActions = "snooze"
 )
@@ -13803,6 +13828,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsMerge:
 		return true
 	case WorklistItemActionsOpen:
+		return true
+	case WorklistItemActionsRetry:
 		return true
 	case WorklistItemActionsSetAside:
 		return true
@@ -18616,6 +18643,29 @@ type AutomationPreviewRequest struct {
 	// WindowDays Trailing window for the would-have-fired estimate (default 30).
 	WindowDays *int `json:"window_days,omitempty"`
 }
+
+// AutomationRetryResult What a retry did, or why it did nothing. `refusal` is present exactly when `retried`
+// is false, so a client never has to guess which of the two it received.
+type AutomationRetryResult struct {
+	// Refusal Why the run was not re-dispatched. `not_failed` covers both a run that
+	// succeeded and one the permission gate blocked on purpose. `repeats_its_effect`
+	// means nobody has established that running this handler twice is safe.
+	// `trigger_event_unavailable` means the event cannot be rebuilt, which is
+	// permanent for a scheduled firing rather than a condition that clears.
+	Refusal *AutomationRetryResultRefusal `json:"refusal,omitempty"`
+
+	// Retried True when the firing was re-dispatched. It does NOT promise the firing then
+	// succeeded — a retry of a rule whose cause is still present fails again, and
+	// that failure is recorded as its own run for the same reasons the first was.
+	Retried bool `json:"retried"`
+}
+
+// AutomationRetryResultRefusal Why the run was not re-dispatched. `not_failed` covers both a run that
+// succeeded and one the permission gate blocked on purpose. `repeats_its_effect`
+// means nobody has established that running this handler twice is safe.
+// `trigger_event_unavailable` means the event cannot be rebuilt, which is
+// permanent for a scheduled firing rather than a condition that clears.
+type AutomationRetryResultRefusal string
 
 // AutomationRun One firing of an automation, reconstructed from audit_log/automation_run (data-model §12.5). Runs of
 // EVERY outcome are first-class — including errored/blocked/skipped — so the designer's run history is
@@ -49168,6 +49218,9 @@ type ServerInterface interface {
 	// The closed starter library of automation types the workspace can instantiate.
 	// (GET /automations/catalog)
 	ListAutomationCatalog(w http.ResponseWriter, r *http.Request)
+	// Run one failed firing again, from the event that triggered it.
+	// (POST /automations/runs/{id}/retry)
+	RetryAutomationRun(w http.ResponseWriter, r *http.Request, id Id)
 	// Delete an automation instance.
 	// (DELETE /automations/{id})
 	DeleteAutomation(w http.ResponseWriter, r *http.Request, id Id)
@@ -51202,6 +51255,12 @@ func (_ Unimplemented) CreateAutomation(w http.ResponseWriter, r *http.Request) 
 // The closed starter library of automation types the workspace can instantiate.
 // (GET /automations/catalog)
 func (_ Unimplemented) ListAutomationCatalog(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Run one failed firing again, from the event that triggered it.
+// (POST /automations/runs/{id}/retry)
+func (_ Unimplemented) RetryAutomationRun(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -57453,6 +57512,38 @@ func (siw *ServerInterfaceWrapper) ListAutomationCatalog(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListAutomationCatalog(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RetryAutomationRun operation middleware
+func (siw *ServerInterfaceWrapper) RetryAutomationRun(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RetryAutomationRun(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -80143,6 +80234,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/automations/catalog", wrapper.ListAutomationCatalog)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/automations/runs/{id}/retry", wrapper.RetryAutomationRun)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/automations/{id}", wrapper.DeleteAutomation)

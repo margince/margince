@@ -66,10 +66,12 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// Health and delivery rows navigate and nothing more: what fixes them lives
 	// on another screen, and a verb here would promise a repair this queue
 	// cannot make.
-	"sync_health":     {"open"},
-	"capture_health":  {"open"},
-	"ai_work_health":  {"open"},
-	"automation_run":  {"open"},
+	"sync_health":    {"open"},
+	"capture_health": {"open"},
+	"ai_work_health": {"open"},
+	// `retry` reaches AutomationRetry; a failed firing carries it and a blocked
+	// one does not, because blocked is a refusal on purpose.
+	"automation_run":  {"open", "retry"},
 	"bounce":          {"open"},
 	"undelivered":     {"open"},
 	"failed_approval": {"open"},

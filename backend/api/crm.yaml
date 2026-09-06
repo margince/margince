@@ -6814,6 +6814,54 @@ paths:
                   page: { $ref: '#/components/schemas/PageInfo' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /automations/runs/{id}/retry:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Automations]
+      operationId: retryAutomationRun
+      security: [ { cookieAuth: [] } ]   # human session only — see the deviation note above
+      x-agent-access: human-only
+      summary: Run one failed firing again, from the event that triggered it.
+      description: |
+        A rule that failed used to leave a reader with nowhere to go: the queue named what
+        broke and the only moves were to fix it by hand or wait for the next trigger.
+
+        This re-dispatches the ORIGINAL event down the ordinary engine path, so every gate
+        the first firing passed it passes again — the owner's live permissions, the audience
+        check, the run claim, the effect claim. It never replays the stored plan: that plan
+        was computed against a database which has since moved, and re-applying it would
+        write yesterday's answer over today's records.
+
+        Three states refuse, and each says which in `refusal` rather than failing:
+
+        - `not_failed` — the run did not fail. An applied or skipped run has nothing to
+          retry, and a `blocked` one is the permission gate having already refused it on
+          purpose; retrying a refusal asks the same question expecting a different answer.
+        - `repeats_its_effect` — the handler has not been established safe to run twice.
+          Every handler registered today has been, so this refuses nothing now; it is the
+          answer for the next handler somebody adds, whose default is to refuse until
+          somebody looks.
+        - `trigger_event_unavailable` — the event cannot be rebuilt. A scheduled firing
+          synthesizes its trigger id per evaluation pass and never stages it, so those are
+          unreplayable by construction. Nothing is lost: the schedule re-examines the same
+          condition on its own next pass.
+
+        A retry is a NEW firing with its own run record, so the history shows both the
+        failure and what followed it. Retrying a run whose retry also failed is allowed and
+        counts as its own attempt.
+      responses:
+        '200':
+          description: |
+            The attempt was made, or it was refused for one of the three stated reasons.
+            A refusal is an answer about the run's state, not a fault, so it is 200 with
+            `retried: false` rather than an error a client has to decode.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AutomationRetryResult' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   # ------------------------------ /leads ------------------------------------
   /leads:
     get:
@@ -37392,6 +37440,29 @@ components:
         reason: { type: [string, 'null'], description: 'For failed/blocked/skipped: why (e.g. "provider error", "approval expired", "Passport no longer permits send") — from automation_run.detail.' }
         audit_id: { type: [string, 'null'], description: 'Link into the audit_log row for this run.' }
 
+    AutomationRetryResult:
+      type: object
+      description: |
+        What a retry did, or why it did nothing. `refusal` is present exactly when `retried`
+        is false, so a client never has to guess which of the two it received.
+      required: [retried]
+      properties:
+        retried:
+          type: boolean
+          description: |
+            True when the firing was re-dispatched. It does NOT promise the firing then
+            succeeded — a retry of a rule whose cause is still present fails again, and
+            that failure is recorded as its own run for the same reasons the first was.
+        refusal:
+          type: string
+          enum: [not_failed, repeats_its_effect, trigger_event_unavailable]
+          description: |
+            Why the run was not re-dispatched. `not_failed` covers both a run that
+            succeeded and one the permission gate blocked on purpose. `repeats_its_effect`
+            means nobody has established that running this handler twice is safe.
+            `trigger_event_unavailable` means the event cannot be rebuilt, which is
+            permanent for a scheduled firing rather than a condition that clears.
+
     # ---- Voice DNA ----
     VoiceProfile:
       type: object
@@ -39983,7 +40054,7 @@ components:
         occurred_at: { type: string, format: date-time, description: "When a done_for_you receipt actually happened." }
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry] }
           description: |
             What this item offers. `decide` and `merge` mean the verb is irreversible and a
             person must choose; `complete` and `snooze` are a task's own verbs; `open` is
@@ -41097,7 +41168,7 @@ components:
         occurred_at: { type: string, format: date-time, description: 'When the thing being reported happened.' }
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry] }
           description: 'What this item offers, routed to the endpoint that owns the verb.'
         band:
           type: string
