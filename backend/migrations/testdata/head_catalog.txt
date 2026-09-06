@@ -205,12 +205,13 @@ public.activity_meeting_no_overlap CREATE INDEX activity_meeting_no_overlap ON p
 public.activity_participant acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_participant.activity_id uuid NOT NULL gen=- def=-
 public.activity_participant.activity_participant_activity_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
-public.activity_participant.activity_participant_identity CHECK (((user_id IS NOT NULL) OR (person_id IS NOT NULL) OR (address IS NOT NULL)))
+public.activity_participant.activity_participant_identity CHECK (((user_id IS NOT NULL) OR (person_id IS NOT NULL) OR (address IS NOT NULL) OR (channel_user_id IS NOT NULL)))
 public.activity_participant.activity_participant_person_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.activity_participant.activity_participant_pkey PRIMARY KEY (id)
 public.activity_participant.activity_participant_role_check CHECK ((role = ANY (ARRAY['from'::text, 'to'::text, 'cc'::text, 'bcc'::text, 'attendee'::text, 'organizer'::text])))
 public.activity_participant.activity_participant_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.activity_participant.address text gen=- def=-
+public.activity_participant.channel_user_id text gen=- def=-
 public.activity_participant.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_participant.display_name text gen=- def=-
 public.activity_participant.id uuid NOT NULL gen=- def=uuidv7()
@@ -5474,7 +5475,7 @@ END;
 
 public.uq_activity_link CREATE UNIQUE INDEX uq_activity_link ON public.activity_link USING btree (activity_id, entity_type, COALESCE(person_id, organization_id, deal_id, lead_id, project_id))
 public.uq_activity_link_project CREATE UNIQUE INDEX uq_activity_link_project ON public.activity_link USING btree (activity_id) WHERE (entity_type = 'project'::text)
-public.uq_activity_participant CREATE UNIQUE INDEX uq_activity_participant ON public.activity_participant USING btree (activity_id, role, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(person_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(address, ''::text))
+public.uq_activity_participant CREATE UNIQUE INDEX uq_activity_participant ON public.activity_participant USING btree (activity_id, role, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(person_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(address, ''::text), COALESCE(channel_user_id, ''::text))
 public.uq_activity_retention_evidence CREATE UNIQUE INDEX uq_activity_retention_evidence ON public.activity_retention_evidence USING btree (activity_id, deal_id, deal_name, project_id, project_name, basis) NULLS NOT DISTINCT WHERE (basis <> 'controller_pin'::text)
 public.uq_activity_source CREATE UNIQUE INDEX uq_activity_source ON public.activity USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_agent_standing_grant_user_spec CREATE UNIQUE INDEX uq_agent_standing_grant_user_spec ON public.agent_standing_grant USING btree (user_id, agent_spec)

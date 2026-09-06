@@ -274,7 +274,7 @@ func replayOne(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error
 	// the header names, so parsing it and recording `participants` would file
 	// the one verdict nobody ever revisits against an activity that produced
 	// nothing.
-	if !relstrength.IsInteractionKind(c.kind) {
+	if !relstrength.IsParticipantKind(c.kind) {
 		return replayFoundNone, nil
 	}
 	// A payload this parser cannot decompose is a VERDICT the pass records and
@@ -310,7 +310,10 @@ func replayOne(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error
 	if len(participants) == 0 {
 		return replayFoundNone, nil
 	}
-	if err := capture.StampFurtherParticipants(ctx, tx, c.activityID, c.kind,
+	// No transport: this pass re-reads stored MAIL and CALENDAR originals, whose
+	// parties are addresses. A party named by a channel account arrives from a
+	// live record and has no stored original to replay.
+	if err := capture.StampFurtherParticipants(ctx, tx, c.activityID, c.kind, "",
 		c.partyListIsAttested(), participants); err != nil {
 		return "", err
 	}

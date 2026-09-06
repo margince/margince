@@ -38,7 +38,10 @@ import (
 // alone leaves the other keeping what the first was built to remove.
 var subjectRowWriters = map[string]func(context.Context, pgx.Tx, ids.PersonID, []string) error{
 	"an Art. 17 request": func(ctx context.Context, tx pgx.Tx, person ids.PersonID, emails []string) error {
-		_, err := anonymizeSubjectRows(ctx, tx, person, emails)
+		// No channel accounts: this suite drives the subject's own TEXT
+		// columns, and the account list reaches only the participant scrub —
+		// a graph structure, covered by its own erasure test.
+		_, err := anonymizeSubjectRows(ctx, tx, person, emails, nil)
 		return err
 	},
 	"the retention sweep": func(ctx context.Context, tx pgx.Tx, person ids.PersonID, emails []string) error {

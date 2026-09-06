@@ -187,7 +187,9 @@ func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate) (string
 	// connectors alone, so the attestation is what selected these rows. Reading
 	// it back off the candidate would ask the same question twice and let the
 	// two answers drift.
-	if err := capture.StampFurtherParticipants(ctx, tx, c.activityID, c.kind, true, participants); err != nil {
+	// No transport, for the reason the kind already gives: a calendar invitation
+	// names its attendees by address, and a meeting rode no channel.
+	if err := capture.StampFurtherParticipants(ctx, tx, c.activityID, c.kind, "", true, participants); err != nil {
 		return "", err
 	}
 	// The superseded rows, retired now that a resolved one stands beside them.

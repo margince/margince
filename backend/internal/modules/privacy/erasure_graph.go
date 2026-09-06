@@ -33,9 +33,9 @@ import (
 // them.
 func scrubSubjectFromGraph(
 	ctx context.Context, tx pgx.Tx, personID ids.PersonID,
-	emails []string, subjectName string, linkedInHandles []string,
+	emails []string, identities []channelIdentity, subjectName string, linkedInHandles []string,
 ) error {
-	if err := scrubSubjectFromParticipants(ctx, tx, personID, emails); err != nil {
+	if err := scrubSubjectFromParticipants(ctx, tx, personID, emails, identities); err != nil {
 		return err
 	}
 	if err := deleteSubjectLinkedInGhosts(ctx, tx, personID, emails, subjectName, linkedInHandles); err != nil {
@@ -45,22 +45,55 @@ func scrubSubjectFromGraph(
 }
 
 // scrubSubjectFromParticipants clears the subject off the interaction
-// participants (ACT-DDL-3), which name them twice over: by person_id, and by
-// the raw ADDRESS a message carried — a row that exists precisely for the
-// party who never became a record, so it survives the person_email purge and
-// would keep the erased subject's address readable and re-matchable.
-func scrubSubjectFromParticipants(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string) error {
+// participants (ACT-DDL-3), which name them three times over: by person_id, by
+// the raw ADDRESS a message carried, and by the ACCOUNT a chat roster named
+// them with. The last two exist precisely for the party who never became a
+// record, so they survive the person_email purge and would keep the erased
+// subject readable and re-matchable.
+//
+// The account arm is paired with the TRANSPORT, read off the activity the row
+// hangs from, because an account id is only the subject's against the provider
+// that issued it — a bare numeric id matched across every provider is the
+// untyped over-deletion this module refuses everywhere else. The participant
+// row carries no provider of its own, so the transport a scrub matches on is
+// the transport the message actually rode.
+func scrubSubjectFromParticipants(
+	ctx context.Context, tx pgx.Tx, personID ids.PersonID,
+	emails []string, identities []channelIdentity,
+) error {
+	providers, accounts := channelIdentityPairs(identities)
 	// Delete first, then null. A participant row must name SOMEBODY (the
 	// ACT-DDL-3 identity CHECK), so a row whose only identity is the subject
 	// cannot be blanked — it has to go. A row that also names one of our
 	// users is a different matter: the colleague was in that conversation and
 	// that is not the subject's data to erase, so the subject's arms are
 	// nulled and the row stands.
-	if _, err := tx.Exec(ctx, subjectParticipantsDelete, personID, emails); err != nil {
+	if _, err := tx.Exec(ctx, subjectParticipantsDelete, personID, emails, providers, accounts); err != nil {
 		return err
 	}
-	_, err := tx.Exec(ctx, subjectParticipantsBlank, personID, emails)
+	_, err := tx.Exec(ctx, subjectParticipantsBlank, personID, emails, providers, accounts)
 	return err
+}
+
+// subjectNamedOnAParticipantRow is the three ways one row can name the subject,
+// shared by the delete and the blank below so both reach the same rows: a row
+// either goes or is stripped, and a key one statement recognised while the
+// other did not would leave the subject on the row that stayed.
+//
+// The statements it builds stay package-level VARS because
+// legalholdarms_test.go enumerates them by name — a statement assembled inside
+// a function is one that census cannot see, and a hold arm it stops checking
+// reads exactly like a hold arm that passes.
+func subjectNamedOnAParticipantRow() string {
+	return `
+		   AND (ap.person_id = $1
+		     OR (ap.address IS NOT NULL AND ap.address = ANY($2))
+		     OR (ap.channel_user_id IS NOT NULL AND EXISTS (
+		           SELECT 1 FROM activity a
+		            WHERE a.id = ap.activity_id
+		              AND (a.channel_provider, ap.channel_user_id) IN (
+		                    SELECT provider, account
+		                      FROM unnest($3::text[], $4::text[]) AS t(provider, account)))))`
 }
 
 // Both participant statements carry the transitive hold exclusion: a
@@ -69,14 +102,13 @@ func scrubSubjectFromParticipants(ctx context.Context, tx pgx.Tx, personID ids.P
 // not a hold.
 var subjectParticipantsDelete = `
 		DELETE FROM activity_participant ap
-		 WHERE ap.user_id IS NULL
-		   AND (ap.person_id = $1 OR (ap.address IS NOT NULL AND ap.address = ANY($2)))` +
+		 WHERE ap.user_id IS NULL` + subjectNamedOnAParticipantRow() +
 	notTransitivelyHeld("ap.activity_id")
 
 var subjectParticipantsBlank = `
-		UPDATE activity_participant ap SET person_id = NULL, address = NULL, display_name = NULL
-		 WHERE ap.user_id IS NOT NULL
-		   AND (ap.person_id = $1 OR (ap.address IS NOT NULL AND ap.address = ANY($2)))` +
+		UPDATE activity_participant ap
+		   SET person_id = NULL, address = NULL, display_name = NULL, channel_user_id = NULL
+		 WHERE ap.user_id IS NOT NULL` + subjectNamedOnAParticipantRow() +
 	notTransitivelyHeld("ap.activity_id")
 
 // deleteSubjectLinkedInGhosts drops the subject's LinkedIn ghosts (CG-DDL-2).

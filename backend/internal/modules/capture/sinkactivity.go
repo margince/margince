@@ -137,7 +137,7 @@ func (s *Sink) finishNewActivity(
 	// The party list is OURS to trust only when the PROVIDER stated it — our own
 	// mailbox owner attested as the sender, or a calendar enumerating its
 	// attendees. On anything inbound it is the sender's text.
-	if err := StampFurtherParticipants(ctx, tx, id, fields.Kind,
+	if err := StampFurtherParticipants(ctx, tx, id, fields.Kind, fields.ChannelProvider,
 		ParticipantListAttested(rec), rec.Participants); err != nil {
 		return counterpartyDecision{}, err
 	}

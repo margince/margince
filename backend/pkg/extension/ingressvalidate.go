@@ -33,6 +33,9 @@ func (r Record) Validate() error {
 	if err := r.Counterparty.validate(); err != nil {
 		return err
 	}
+	if err := r.validateParticipants(); err != nil {
+		return err
+	}
 	if len(r.ThreadKey) > MaxThreadKeyLength {
 		return fmt.Errorf("extension: the thread key is %d bytes, over the %d-byte cap", len(r.ThreadKey), MaxThreadKeyLength)
 	}
@@ -85,6 +88,49 @@ func (r Record) validateAddresses() error {
 		}
 	}
 	return nil
+}
+
+// validateParticipants holds the roster to its cap and refuses a party with no
+// identity at all.
+//
+// A party naming neither an account nor an address is not a small loss the core
+// can absorb — it is a row that would say somebody unnameable was present, and
+// the core drops it silently. A unit reading its own refusal here learns that
+// its mapping lost the field, which is the bug; a silent drop reports a
+// four-person group as a three-person one and nothing fails.
+//
+// Over the cap is a refusal rather than a truncation for the reason the cap
+// exists: half a broadcast list reads like a small conversation, so the record
+// lands with no roster at all and the unit is told why.
+func (r Record) validateParticipants() error {
+	if len(r.Participants) > MaxParticipants {
+		return fmt.Errorf("extension: the record names %d participants, over the cap of %d — past it a roster is a broadcast list rather than a conversation, and the core drops one whole rather than truncating it",
+			len(r.Participants), MaxParticipants)
+	}
+	for _, p := range r.Participants {
+		switch {
+		case strings.TrimSpace(p.Account) == "" && strings.TrimSpace(p.Email) == "":
+			return errors.New("extension: a participant names neither an account nor an address — a party with no identity would be recorded as somebody unnameable having been present, so it is refused here rather than dropped where nothing reports it")
+		case len(p.Account) > MaxChannelUserIDLength:
+			return fmt.Errorf("extension: a participant account is %d bytes, over the %d-byte cap", len(p.Account), MaxChannelUserIDLength)
+		case len(p.Email) > MaxAddressLength:
+			return fmt.Errorf("extension: a participant address is %d bytes, over the %d-byte cap", len(p.Email), MaxAddressLength)
+		case utf8.RuneCountInString(p.Name) > MaxDisplayNameRunes:
+			return fmt.Errorf("extension: a participant display name is over the %d-rune cap", MaxDisplayNameRunes)
+		case !participantRoles[p.Role]:
+			return fmt.Errorf("extension: %q is not a participant role — the set is closed at the core's own database, so an unlisted value is a refused record rather than a stored surprise", p.Role)
+		}
+	}
+	return nil
+}
+
+// participantRoles is the closed set validateParticipants admits, spelled from
+// the published constants so adding one there cannot leave this behind.
+var participantRoles = map[string]bool{
+	ParticipantRoleTo:        true,
+	ParticipantRoleCC:        true,
+	ParticipantRoleAttendee:  true,
+	ParticipantRoleOrganizer: true,
 }
 
 func (c Counterparty) validate() error {

@@ -66,6 +66,29 @@ func channelActivityKeys(identities []channelIdentity) []string {
 	return keys
 }
 
+// channelIdentityPairs splits the subject's accounts into the two parallel
+// arrays every (provider, account) match travels as, re-paired by unnest at the
+// far end.
+//
+// Two arrays rather than the composite key above, and the difference is not
+// style: a composite string matches a column that HOLDS one, and these callers
+// match two separate columns. Re-pairing is what stops a subject with accounts
+// on two providers matching a row that holds one provider's name beside the
+// other provider's account id.
+//
+// One splitter because two matchers need it — the rival probe and the
+// participant scrub — and a second spelling is how one of them comes to pair
+// them by position while the other pairs them by set.
+func channelIdentityPairs(identities []channelIdentity) (providers, accounts []string) {
+	providers = make([]string, 0, len(identities))
+	accounts = make([]string, 0, len(identities))
+	for _, identity := range identities {
+		providers = append(providers, identity.Provider)
+		accounts = append(accounts, identity.ChannelUserID)
+	}
+	return providers, accounts
+}
+
 // channelIdentityLockKeys renders the subject's accounts as the lock keys the
 // ingest side takes on the very same accounts. It is a translation and not a
 // second spelling of the identity: storekit owns the key, both callers hand it

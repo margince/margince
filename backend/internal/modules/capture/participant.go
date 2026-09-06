@@ -60,10 +60,10 @@ func stampCaptureParticipants(
 	direction string,
 	counterpartyEmail string,
 ) error {
-	// The same kinds the hand-logged path accepts. Without this a captured
-	// note or channel message becomes an interaction while an identical
-	// hand-logged one does not, and the backfill disagrees with both.
-	if !relstrength.IsInteractionKind(kind) {
+	// The same kinds the hand-logged path accepts. Without this a captured note
+	// becomes a conversation while an identical hand-logged one does not, and
+	// the backfill disagrees with both.
+	if !relstrength.IsParticipantKind(kind) {
 		return nil
 	}
 	ourRole, theirRole := roleFrom, roleTo
@@ -189,6 +189,13 @@ func namesSomebody(participants []connector.MessageParticipant) bool {
 // A party who resolves to neither a colleague nor a known contact is still
 // recorded by address. An attendee nobody has a record for is a fact about the
 // meeting, and dropping them is what the body-text fold already does badly.
+//
+// A CHAT NAMES THE SAME FACT DIFFERENTLY. The third human in a group has an
+// account at the provider and no address anywhere, so channelProvider is taken
+// alongside the parties: an account id means nothing without the transport that
+// issued it, and the record already names that one. The party is then recorded
+// by account exactly as a mail party is recorded by address — the difference is
+// only which lookup can resolve them to a person.
 // partyListIsAttested is what decides whether a colleague may be bound by
 // user_id, and it has two sources: our own provider attesting that this seat
 // SENT the mail (so the Cc line is what our user typed), or the provider
@@ -200,10 +207,11 @@ func StampFurtherParticipants(
 	tx pgx.Tx,
 	activityID ids.ActivityID,
 	kind string,
+	channelProvider string,
 	partyListIsAttested bool,
 	participants []connector.MessageParticipant,
 ) error {
-	if !relstrength.IsInteractionKind(kind) || len(participants) == 0 {
+	if !relstrength.IsParticipantKind(kind) || len(participants) == 0 {
 		return nil
 	}
 	addresses := make([]string, 0, len(participants))
@@ -212,12 +220,20 @@ func StampFurtherParticipants(
 	// and this transport named nobody, while NULL is reserved for rows written
 	// before the column existed, which is what the recovery pass selects on.
 	names := make([]string, 0, len(participants))
+	// A chat names the third human in a group by the provider's account id and
+	// by nothing else, so an address is not what makes a party recordable — an
+	// identity is, and there are now two shapes of one. Both columns are kept
+	// per party: a roster may carry an address as well, and the row records
+	// which of each was actually seen rather than picking a winner.
+	accounts := make([]string, 0, len(participants))
 	for _, p := range participants {
 		address := strings.ToLower(strings.TrimSpace(p.Email))
-		if address == "" {
+		account := strings.TrimSpace(p.ChannelUserID)
+		if address == "" && account == "" {
 			continue
 		}
 		addresses = append(addresses, address)
+		accounts = append(accounts, account)
 		roles = append(roles, p.Role)
 		names = append(names, strings.TrimSpace(p.DisplayName))
 	}
@@ -250,20 +266,40 @@ func StampFurtherParticipants(
 	// The address is kept alongside whichever id resolved, matching what the
 	// counterparty promotion does — the row records which address was actually
 	// written to, and a person may hold several.
+	//
+	// THE ACCOUNT ARM IS NOT UNDER THAT GATE, because it never reaches a seat.
+	// A chat roster resolves a party to a PERSON record through the binding
+	// person_channel_identity already holds, and to nothing else — no fact in
+	// this system attests that a channel account belongs to a member, so there
+	// is no colleague arm for the attestation to guard. That is what keeps a
+	// roster a statement about who was in the room rather than a grant: the
+	// discovery gate reads `address IS NOT NULL` as its evidence, and a party
+	// known only by account carries neither that nor a user_id.
+	//
+	// The person arm is unguarded for both shapes for the same reason it always
+	// was: naming an existing contact on an activity discloses nothing to them
+	// and creates no reader.
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, person_id, address, role, display_name)
-		SELECT $1, u.id, pe.person_id, inp.address, inp.role, inp.display_name
-		  FROM unnest($2::text[], $3::text[], $5::text[]) AS inp(address, role, display_name)
+		INSERT INTO activity_participant (activity_id, user_id, person_id, address, channel_user_id, role, display_name)
+		SELECT $1, u.id, pe.person_id, NULLIF(inp.address, ''), NULLIF(inp.account, ''), inp.role, inp.display_name
+		  FROM unnest($2::text[], $3::text[], $5::text[], $6::text[]) AS inp(address, role, display_name, account)
 		  LEFT JOIN app_user u
-		         ON $4 AND lower(u.email) = inp.address
+		         ON $4 AND inp.address <> '' AND lower(u.email) = inp.address
 		  LEFT JOIN LATERAL (
-		       SELECT p.person_id
-		         FROM person_email p
-		        WHERE p.email = inp.address AND p.archived_at IS NULL
-		        ORDER BY p.person_id
-		        LIMIT 1) pe ON u.id IS NULL
+		       SELECT coalesce(
+		           (SELECT p.person_id
+		              FROM person_email p
+		             WHERE inp.address <> '' AND p.email = inp.address AND p.archived_at IS NULL
+		             ORDER BY p.person_id
+		             LIMIT 1),
+		           (SELECT c.person_id
+		              FROM person_channel_identity c
+		             WHERE inp.account <> '' AND c.provider = $7 AND c.channel_user_id = inp.account
+		               AND c.archived_at IS NULL
+		             ORDER BY c.person_id
+		             LIMIT 1)) AS person_id) pe ON u.id IS NULL
 		ON CONFLICT DO NOTHING`,
-		activityID, addresses, roles, partyListIsAttested, names); err != nil {
+		activityID, addresses, roles, partyListIsAttested, names, accounts, channelProvider); err != nil {
 		return fmt.Errorf("capture: stamping the further participants of an interaction: %w", err)
 	}
 	return nil
