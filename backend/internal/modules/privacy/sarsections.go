@@ -389,6 +389,25 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		// INSIDE value_json, which this exports whole. A column exported as
 		// null on every row would tell the subject their address was never
 		// validated, which is not what the platform knows.
+		// What we concluded the subject's replies MEANT, and who concluded it.
+		// The history is exported rather than the activity's current column
+		// alone, because the corrections are the half a subject cannot see any
+		// other way: a rate that was moved by a rep re-judging their message is
+		// a decision made about them, and the standing verdict conceals that it
+		// ever happened.
+		//
+		// The verdict itself is NOT withheld for a limited message, where the
+		// subject line beside it is. The rule those CASE arms implement is that
+		// one seat's private mail must not be republished to the workspace
+		// through an export; this export goes to the SUBJECT, who wrote the
+		// message being judged, so withholding our conclusion about their own
+		// words would hide the very holding Art. 15 asks about.
+		{&pkg.ReplyJudgements, `SELECT h.verdict, h.decided_by, h.is_human, h.decided_at,
+		          h.activity_id, a.occurred_at
+		   FROM activity_reply_verdict_history h
+		   JOIN activity a ON a.id = h.activity_id
+		   WHERE h.activity_id IN (
+		         SELECT l.activity_id FROM activity_link l WHERE l.person_id = $1)`, nil},
 		{&pkg.ProviderClaims, `SELECT ppc.provider, ppc.claim_key, ppc.value_json, ppc.confidence,
 		          ppc.source, ppc.captured_by, ppc.retrieved_at
 		   FROM person_provider_claim ppc
