@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { type CustomLabel, resolveCustomLabel } from "./custom";
@@ -39,6 +40,11 @@ export type NavLevelEntry = {
   // Settings home is the only one today: it is the settings address with no
   // page segment, so its id names a row and never a destination.
   level?: true;
+  // One line under the page's heading, when the entry's own name does not say
+  // enough. On the ENTRY rather than in a screen-keyed table, because a section
+  // is many pages behind one screen — `PAGE_SUB_KEYS[route.screen]` can only
+  // describe all of them at once, which is no description of any of them.
+  subKey?: MessageKey;
   icon: LucideIcon;
   // The level this entry opens. Grouping is possible at every depth, so the
   // children are a flat list only until one needs headings.
@@ -89,6 +95,11 @@ export type NavSection = {
   titleKey: MessageKey;
   groups: readonly NavLevelGroup[];
   activeId?: string;
+  // Something that stands ABOVE the level's rows without being one of them —
+  // settings puts its search box here. On the section AND on NavTrailLevel
+  // below, because the trail is what the rail actually renders: a slot added to
+  // one alone is a field nothing draws.
+  lead?: ReactNode;
 };
 
 // The attention counts the rail badges. They ride the level rather than being
@@ -100,6 +111,9 @@ export type NavCounts = Partial<Record<string, number>>;
 // level does not know its own depth: `path` is the route prefix its entries hang
 // off, which is the only thing depth changes.
 export type NavTrailLevel = {
+  // See NavSection.lead. Carried down by navTrail, which is the only path from
+  // a section to a rendered level.
+  lead?: ReactNode;
   // Absent on the primary level, which the navigation landmark already names.
   // Present, it prints the level's own heading and pushes the group labels a
   // heading level down.
@@ -232,6 +246,7 @@ export function navTrail(
   let level: NavTrailLevel = {
     titleKey: section.titleKey,
     groups: section.groups,
+    lead: section.lead,
     activeId: section.activeId ?? route.id,
     // The SECTION's screen, which every row in it points under. Identical to the
     // route's for a route of that screen, and the only correct one for a unit

@@ -26,6 +26,7 @@ import {
   type WeeklyReview,
 } from "./home.queries";
 import { OutlookPanel } from "./home.waterfall";
+import { LearningsPanel } from "./home.weekly.learnings";
 import { ScorecardPanel } from "./home.weekly.scorecard";
 
 import "./home.weekly.css";
@@ -367,6 +368,11 @@ function WeeklyBody({
           outcome strip's tallies. Absent blocks draw nothing at all — the
           panel never substitutes zeros for work the rep did not have. */}
       <ScorecardPanel scorecard={review.scorecard} />
+      {/* What the week TAUGHT, after how well it went. Last because it is the
+          only part of the retrospective that is a claim rather than a count,
+          and a reader should meet the numbers before the lessons drawn from
+          them. */}
+      <LearningsPanel learnings={review.learnings} />
       {/* FIVE slots, because a strip is read ACROSS as one comparison and ten
           is a table wearing a strip's clothes — at 1280 the row folded to two
           ranks of five and stopped being one reading at all (#3709).

@@ -22,7 +22,7 @@ function aWaitingBuyer(over = {}) {
     source: "customer_waiting",
     category: "customer_waiting",
     title: "can you resend the quote?",
-    band: "answer_people",
+    band: "now",
     destination: "today",
     actions: ["open", "reply"],
     subject: { type: "person", id: "01a05500-0000-7000-8000-0000000000c2" },

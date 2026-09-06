@@ -41,6 +41,11 @@ import (
 //   - the job runtime, which is River's to manage and not ours to truncate
 //     underneath a running worker.
 var preservedResetTables = map[string]bool{
+	// The installation's own published wording. Not tenant data: it is the
+	// controller's text, shared across every subject who saw it, and a proof row
+	// surviving the reset would otherwise point at a version the sweep removed.
+	// The migration revokes DELETE on it, so a sweep would abort here anyway.
+	"consent_text_version": true,
 	// identity and auth
 	objectWorkspace: true, "app_user": true, "role": true, "role_assignment": true,
 	"team": true, "team_membership": true,

@@ -167,7 +167,7 @@ const showDocuments = async ({
 };
 
 const meta: Meta<typeof KnowledgeCard> = {
-  title: "Settings/Admin settings/Knowledge/Document sets",
+  title: "Settings/Data/Knowledge/Document sets",
   component: KnowledgeCard,
 };
 export default meta;

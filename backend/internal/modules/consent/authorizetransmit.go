@@ -16,7 +16,6 @@ package consent
 
 import (
 	"context"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 
@@ -278,7 +277,7 @@ func refusalReason(set commsauthz.DecisionSet, legacyAllowed bool) string {
 // message that was authorized, and storing the words themselves would make the
 // decision a second copy of the mail.
 func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, setID ids.UUID, set commsauthz.DecisionSet) error {
-	sum := sha256.Sum256([]byte(req.Subject + "\x00" + req.Body))
+	sum := WordingDigest(req.Subject, req.Body)
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err

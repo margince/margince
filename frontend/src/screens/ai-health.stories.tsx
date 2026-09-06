@@ -68,7 +68,7 @@ function story(rungs: RungHealth[]) {
 }
 
 const meta: Meta<typeof AiHealthCard> = {
-  title: "Settings/Admin/Model lanes",
+  title: "Settings/AI/Models & routing/Model lanes",
   component: AiHealthCard,
 };
 export default meta;

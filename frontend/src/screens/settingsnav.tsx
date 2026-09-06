@@ -42,6 +42,7 @@ import {
   visibleSettingsPages,
 } from "./settingscatalog";
 import { settingsRouteTarget } from "./settingsrouting";
+import { SettingsSearchBox } from "./settingssearchbox";
 
 // The entry register: one section nav entry per settings SUBJECT. Only surfaces
 // this app actually renders get one — the mockup's Booking / Flow /
@@ -554,6 +555,13 @@ export function useSettingsSection(route: Route): NavSection {
           (page): NavLevelEntry => ({
             id: page.id,
             labelKey: `settings.tab.${page.id}`,
+            // One line under the page's heading, saying what the label cannot:
+            // which state it changes and whose. Composed from the id like the
+            // label above it, and NOT cast — the field's own MessageKey type is
+            // what narrows the template literal, so a page whose `.sub` key is
+            // missing from the catalogs is a compile error rather than a
+            // subtitle that silently translates to nothing.
+            subKey: `settings.page.${page.id}.sub`,
             icon: PAGE_ICONS[page.id],
           }),
         ),
@@ -580,6 +588,10 @@ export function useSettingsSection(route: Route): NavSection {
   return {
     screen: SETTINGS_SCREEN,
     titleKey: "nav.settings",
+    // The search stands above the rows and searches exactly the pages below it
+    // — the same `pages` this function grouped, so a hit can never name a page
+    // the rail did not draw.
+    lead: <SettingsSearchBox pages={pages} />,
     // No row is current on a route that is not one of the tabs. An extension
     // unit's page keeps this level in the sidebar — it is reached from here and
     // its trail says so — but it is not a settings tab, and `settingsRouteTab`

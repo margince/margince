@@ -336,6 +336,13 @@ func anonymizeSubjectRows(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 	if _, err := tx.Exec(ctx, `DELETE FROM person_acquisition_evidence WHERE person_id = $1`, personID); err != nil {
 		return nil, fmt.Errorf("privacy: destroying the subject's acquisition evidence: %w", err)
 	}
+	// The duty owed for that acquisition goes with it. A notice case is a
+	// statement ABOUT how this contact was obtained — once the evidence is
+	// destroyed the case names nothing, and a duty to tell somebody about data
+	// we no longer hold is not a duty anybody can discharge.
+	if _, err := tx.Exec(ctx, `DELETE FROM privacy_notice_case WHERE person_id = $1`, personID); err != nil {
+		return nil, fmt.Errorf("privacy: destroying the subject's notice cases: %w", err)
+	}
 	wiped, err := anonymizeLeadTwins(ctx, tx, personID, emails)
 	if err != nil {
 		return nil, err

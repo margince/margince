@@ -119,7 +119,7 @@ func (h Handlers) GetPersonConsent(w http.ResponseWriter, r *http.Request, id cr
 	for _, ev := range events {
 		wireEvents = append(wireEvents, wireEvent(ev))
 	}
-	httperr.WriteJSON(w, http.StatusOK, map[string]any{"state": wireStates, "events": wireEvents})
+	httperr.WriteJSON(w, http.StatusOK, map[string]any{fieldState: wireStates, "events": wireEvents})
 }
 
 func (h Handlers) RecordConsent(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.RecordConsentParams) {

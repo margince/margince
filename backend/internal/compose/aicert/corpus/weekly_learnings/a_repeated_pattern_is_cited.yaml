@@ -1,0 +1,54 @@
+name: a_pattern_across_three_deals_is_drawn_and_cited
+task: weekly_learnings
+site: learn
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The ADMIT case, and it is as necessary as the abstention above it: a lane that
+# refused every week would pass that case and be worthless. Here three deals
+# share a recorded shape — each was lost after a single contact — and a claim
+# about that is grounded in rows the reader can open.
+fixture:
+  week_start: "2026-07-13"
+  counts:
+    tasks_due: 6
+    tasks_done: 4
+    tasks_carried_over: 2
+    deals_moved: 4
+    deals_won: 0
+    deals_lost: 3
+    commitments_due: 2
+    commitments_kept: 1
+    meetings_held: 3
+    leads_routed: 5
+  deals:
+    - type: deal
+      id: "01a05500-0000-7000-8000-0000000000e1"
+      label: "Aurora single-contact"
+      outcome: "lost"
+    - type: deal
+      id: "01a05500-0000-7000-8000-0000000000e2"
+      label: "Borealis single-contact"
+      outcome: "lost"
+    - type: deal
+      id: "01a05500-0000-7000-8000-0000000000e3"
+      label: "Cascade single-contact"
+      outcome: "lost"
+  commitments:
+    - type: commitment
+      id: "01a05500-0000-7000-8000-0000000000c2"
+      label: "Add a second contact to every open deal"
+expect:
+  outcome: accepted
+  answer:
+    # A claim about these losses must rest on the rows themselves, not float
+    # above them. Any one of the three is enough to ground the pattern.
+    must_cite: ["Aurora single-contact"]
+    # Reaching past the week: a company nobody supplied, or a comparison to a
+    # week the model cannot see.
+    must_not_mention: ["last week", "last month", "Siemens", "typically"]
+  bands: { certified_min: 70, degraded_min: 50, floor: 40 }
+  rubric: >
+    Three deals lost, all named for the same recorded shape, supports a claim
+    about that shape. The learning must cite at least one of them. Naming a
+    company the summary does not carry, or comparing to a week that is not in
+    front of it, is wrong.

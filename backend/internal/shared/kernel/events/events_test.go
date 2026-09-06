@@ -263,7 +263,8 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// contact in a transaction AFTER the one that wrote the message — so a
 		// reply captured before its sender was a person names nobody the
 		// activity arm can act on.
-		"cg:intro-advance": {"gw:events:crm:activity", "gw:events:crm:person"},
+		"cg:intro-advance":    {"gw:events:crm:activity", "gw:events:crm:person"},
+		"cg:notice-case-open": {"gw:events:crm:person"},
 		// What happened in a Deal Room, written onto the deal's timeline. Its
 		// own group because a room's traffic is live: a projection backlog must
 		// not delay the note saying the buyer just asked something.
