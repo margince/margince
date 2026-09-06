@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Info, TriangleAlert } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCan } from "../app/capability";
 import { StatCard } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -11,7 +12,7 @@ import { StatStrip } from "../design-system/statstrip";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem, useMe } from "./common";
 import { LicenseHolderCard } from "./licenseholder";
 
 // The entitlement surface: what the license grants, and how many seats are using
@@ -69,9 +70,81 @@ export function useLicenseEntitlement(enabled = true) {
   });
 }
 
+/**
+ * How many seats are in use, without what the installation is entitled to.
+ *
+ * The capacity half on its own grant. `GET /installation/license` answers both
+ * questions together and takes `license:read`, so a reader who may plan
+ * headcount but may not see what the installation pays could not read either —
+ * which is what `seat_usage` and this endpoint were split out for.
+ *
+ * It is the SAME meter: both surfaces run one statement server-side, and that
+ * statement is also the ceiling that refuses the next full seat.
+ */
+function useSeatUsage(enabled: boolean) {
+  return useQuery({
+    queryKey: ["installation-seat-usage"],
+    enabled,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data, error, response } = await api.GET(
+        "/installation/seat-usage",
+      );
+      if (error || !response.ok) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+}
+
 export function LicenseCard() {
   const t = useT();
-  const query = useLicenseEntitlement();
+  // Which half this reader may have. Asking the entitlement without the grant
+  // would 403 on every load and hand them a red failure with a futile Retry;
+  // asking capacity as well would spend a second request on a question the
+  // entitlement already answers.
+  const canReadLicense = useCan("license", "read");
+  // The probe itself, not only its answer. Every capability predicate reads
+  // false while /me is in flight, so `!canReadLicense` is true for EVERYBODY
+  // during that window — and a fallback keyed on it alone fires the capacity
+  // request for a licence holder on every load, before the grant resolves.
+  //
+  // Neither query runs until the snapshot lands, so exactly one of them runs.
+  //
+  // ANSWERED, not merely settled: a failed /me leaves `isPending` false with no
+  // grants to read, and `!canReadLicense` is then true for a licence holder
+  // exactly as it is for someone who may not read one. Keying the fallback on
+  // that alone picked the capacity branch permanently, and its retry retried
+  // the wrong request — seats, never the snapshot that failed. An unanswered
+  // /me is not a narrower reader; it is no reader yet.
+  const me = useMe();
+  const answered = !me.isPending && !me.isError;
+  const query = useLicenseEntitlement(answered && canReadLicense);
+  const seats = useSeatUsage(answered && !canReadLicense);
+
+  // Nothing is known about this reader, so neither branch may claim to be
+  // their answer. The gate below renders the /me failure and its retry.
+  if (me.isError) {
+    return (
+      <QueryGate query={me} pendingLabel={t("license.seats.title")}>
+        {() => null}
+      </QueryGate>
+    );
+  }
+
+  if (answered && !canReadLicense) {
+    // Capacity alone. The commercial standing is deliberately absent rather
+    // than shown empty: an unreadable entitlement is a fact about who is
+    // reading, and rendering it as "no license" would say something false
+    // about the installation.
+    return (
+      <QueryGate query={seats} pendingLabel={t("license.seats.title")}>
+        {(usage) => <SeatUsageReading seatsUsed={usage.seats_used} />}
+      </QueryGate>
+    );
+  }
+
   return (
     <QueryGate query={query} pendingLabel={t("license.seats.title")}>
       {(entitlement) => (
@@ -111,6 +184,34 @@ function stateKey(
 
 // Exported for its story: the states worth looking at are states of the READING,
 // and a story that had to stub a query to reach them would be testing the fetch.
+/**
+ * The seat count alone, for a reader holding capacity and not entitlement.
+ *
+ * Deliberately says NOTHING about a licence: not "no license configured", not
+ * an empty grant, not an uncapped meter. Those are claims about the
+ * installation, and what is actually true here is a fact about the reader —
+ * they may not see it. A card that filled the gap with "unlicensed" would tell
+ * a manager something false about the company they work for.
+ */
+function SeatUsageReading({ seatsUsed }: Readonly<{ seatsUsed: number }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <Panel title={t("license.card.title")}>
+      <PanelBody>
+        <p className="settings-panel-sub">{t("license.seats.capacityOnly")}</p>
+        <SettingList>
+          <SettingRow
+            label={t("license.seats.title")}
+            description={t("license.counting")}
+            control={formatNumber(seatsUsed, locale)}
+          />
+        </SettingList>
+      </PanelBody>
+    </Panel>
+  );
+}
+
 export function LicenseReading({
   entitlement,
 }: Readonly<{ entitlement: LicenseEntitlement }>) {

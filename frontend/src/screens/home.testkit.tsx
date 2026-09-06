@@ -78,6 +78,26 @@ const DEFAULTS: Routes = {
   // empty page carries no `readings` and no `counts`, and a screen reading a
   // required field off it fails in a way no server could produce.
   "GET /worklist": () => jsonResponse(readingsDay({}, [])),
+  // The plan panel reads `commitments` off this, which the contract marks
+  // required. The generic empty page carries none, so an unrouted read would
+  // fail the panel in a way no server could produce — the same reason
+  // /worklist is answered above. 404 is the honest default: most screens under
+  // test have not started a week.
+  // The plan panel reads `commitments` off this, which the contract marks
+  // required, so an unrouted read fails it in a way no server could produce —
+  // the same reason /worklist is answered above.
+  //
+  // A STARTED-BUT-EMPTY week rather than a 404: the shape is what the panel
+  // needs, and a 404 puts every screen that merely mounts the panel through an
+  // error path, which moved the timing of nine tests in screens with nothing to
+  // do with planning.
+  "GET /weekly-plans/current": () =>
+    jsonResponse({
+      id: "00000000-0000-0000-0000-000000000001",
+      local_week_start: "2026-06-08",
+      status: "open",
+      commitments: [],
+    }),
 };
 
 /**

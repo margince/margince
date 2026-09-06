@@ -199,3 +199,37 @@ export function useAnswerCommitment(ownerId: string | undefined) {
     },
   });
 }
+
+/**
+ * What the rep says about the week ahead.
+ *
+ * Both halves travel in one request because the server writes them together in
+ * one transaction; sending them separately would put two audit rows and two
+ * events behind what a rep experiences as saving one form.
+ *
+ * A field set to `null` CLEARS it back to unwritten; a field omitted is left
+ * alone. Those are different states all the way down — null is a rep who has
+ * said nothing, "" is a rep who says there is nothing to say — so this hook
+ * passes them through rather than normalising either away.
+ */
+export function useSetPlanContract() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      contract: Readonly<{
+        risks?: string | null;
+        capacity_note?: string | null;
+      }>,
+    ) => {
+      const { error } = await api.PUT("/weekly-plans/current/contract", {
+        body: contract,
+      });
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: weeklyPlanKey });
+    },
+  });
+}

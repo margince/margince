@@ -15,9 +15,12 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -32,6 +35,10 @@ func pathID[K ids.EntityKind](id crmcontracts.Id) ids.ID[K] {
 // Handlers is the agents module's HTTP surface.
 type Handlers struct {
 	automations *AutomationStore
+	// retries is the engine a failed run is re-dispatched through, injected by
+	// compose (WithRetryEngine). Nil in a composition that registers no
+	// workflows, where no run exists to retry in the first place.
+	retries *WorkflowEngine
 }
 
 // NewHandlers wires the transport over the installation-bound pool.
@@ -363,4 +370,45 @@ func wireAutomation(a Automation) (crmcontracts.Automation, error) {
 		CreatedAt: a.CreatedAt,
 		UpdatedAt: a.UpdatedAt,
 	}, nil
+}
+
+// WithRetryEngine wires the engine a failed run is re-dispatched through.
+// Absent — a composition that registers no workflows — retry answers 404,
+// which is the honest reply from an installation where no run can exist.
+func (h Handlers) WithRetryEngine(engine *WorkflowEngine) Handlers {
+	h.retries = engine
+	return h
+}
+
+// RetryAutomationRun implements (POST /automations/runs/{id}/retry).
+//
+// The permission check lives HERE and not in the engine. RetryRun re-dispatches
+// through runOne, which acts as the system principal by construction — object
+// RBAC does not confine that principal, so a check placed inside the engine
+// would be asking about the system's authority and would admit everybody. This
+// is the last point at which a real reader still exists to ask about.
+//
+// `automation` UPDATE rather than READ: running a rule again is acting as the
+// rule, and a reader who may watch the health lane has not thereby been given
+// the authority to fire what they are watching.
+func (h Handlers) RetryAutomationRun(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if err := auth.Require(r.Context(), "automation", principal.ActionUpdate); err != nil {
+		writeAutomationErr(w, r, err)
+		return
+	}
+	if h.retries == nil {
+		writeAutomationErr(w, r, apperrors.ErrNotFound)
+		return
+	}
+	outcome, err := h.retries.RetryRun(r.Context(), ids.UUID(id))
+	if err != nil {
+		writeAutomationErr(w, r, err)
+		return
+	}
+	result := crmcontracts.AutomationRetryResult{Retried: outcome.Retried}
+	if !outcome.Retried {
+		refusal := crmcontracts.AutomationRetryResultRefusal(outcome.Refusal)
+		result.Refusal = &refusal
+	}
+	httperr.WriteJSON(w, http.StatusOK, result)
 }

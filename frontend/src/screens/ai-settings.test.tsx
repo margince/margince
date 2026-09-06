@@ -17,7 +17,7 @@ import { ProvidersStat, SpendStat } from "./ai-settings";
 // five bodies.
 //
 // The readings are what this file is mostly about. They follow DIFFERENT grants
-// — spend on `automation:update`, the vendor keys on `ai_routing:read` — and
+// — spend on `ai_diagnostics:read`, the vendor keys on `ai_routing:read` — and
 // each has three states a reader must be able to tell apart: answered, not
 // theirs, and could not be read. The third is the one that used to say
 // "Reading…" for ever.
@@ -31,10 +31,20 @@ function jsonResponse(body: unknown, status = 200) {
 
 const OPERATOR: GrantSpec = {
   ai_routing: ["read", "update"],
+  ai_diagnostics: ["read"],
   automation: ["read", "update"],
 };
 // Reaches the page on the automations read alone: no spend, no vendor keys.
-const NO_READINGS: GrantSpec = { automation: ["read"] };
+// `automation:update` is deliberately held here and buys NEITHER reading — it
+// is the grant the spend stat used to ask for, so this fixture fails the moment
+// that gate comes back.
+const NO_READINGS: GrantSpec = { automation: ["read", "update"] };
+// The two grants the readings actually ride, and nothing else — the mirror of
+// NO_READINGS, so the pair differs by exactly what is under test.
+const BOTH_READINGS: GrantSpec = {
+  ai_diagnostics: ["read"],
+  ai_routing: ["read"],
+};
 
 const ROUTING = {
   profile: "eu_hosted",
@@ -168,11 +178,30 @@ describe("the AI readings", () => {
   // Withheld, not absent. An absent spend reading would claim this installation
   // had spent nothing, which is a statement about the DATA where the truth is
   // only about who may read it.
+  //
+  // The withheld text is ALSO what both stats say while /me is still in flight
+  // — every capability predicate reads false until the snapshot lands — so
+  // finding it proves nothing on its own. The grant has to be observed being
+  // read, which is what the paired ANSWERED case below is for: the same two
+  // stats, the same wiring, one grant apart. Assert both from one fixture pair
+  // or the refusal is vacuous.
   it("says a reading is withheld rather than dropping it", async () => {
     vi.stubGlobal("fetch", backendFor(NO_READINGS));
-    render(<BothStats />);
+    const { unmount } = render(<BothStats />);
 
     expect(await screen.findAllByText("Not yours to see")).toHaveLength(2);
+    unmount();
+    cleanup();
+
+    // The positive control, and the whole proof: swap ONLY the grants and the
+    // same two stats answer. A gate asking for the wrong object leaves this
+    // half showing "Not yours to see" and fails here.
+    vi.stubGlobal("fetch", backendFor(BOTH_READINGS));
+    render(<BothStats />);
+
+    expect(await screen.findByText(/214,000 of 1,000,000 tokens/)).toBeTruthy();
+    expect(await screen.findByText("1 keyed")).toBeTruthy();
+    expect(screen.queryByText("Not yours to see")).toBeNull();
   });
 
   // A read that FAILED and a read that has not arrived are different facts, and

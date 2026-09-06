@@ -58,10 +58,13 @@ function stubRoutes(overrides: Record<string, () => Response> = {}) {
       const override = overrides[key];
       if (override) return override();
       if (key === "GET /admin/job-health") return jsonResponse(HEALTH);
-      // The endpoint gates on the admin ROLE server-side, so the default
-      // principal here holds it. A test asserting the refusal overrides this.
+      // `GET /admin/job-health` gates on `job_health:read`, so the default
+      // principal here holds that grant. A test asserting the refusal overrides
+      // this with a principal who does not.
       if (key === "GET /me")
-        return jsonResponse(meFixture({ roles: ["admin"] }));
+        return jsonResponse(
+          meFixture({ roles: ["admin"], allow: { job_health: ["read"] } }),
+        );
       return jsonResponse({});
     }),
   );
@@ -312,12 +315,12 @@ describe("JobHealthCard", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("withholds the report from a non-admin instead of asking for it", async () => {
+  it("withholds the report from a reader without the grant instead of asking for it", async () => {
     const sent = stubRoutes({
       "GET /me": () => jsonResponse(meFixture({ roles: ["ops"] })),
     });
     render(<JobHealthCard />);
-    await screen.findByText(/only an admin can see background-job health/i);
+    await screen.findByText(/background-job health needs permission/i);
     expect(screen.queryByText("capture_classify")).not.toBeInTheDocument();
     // And it never issued the call the server would only refuse. An ops seat
     // reaching this page for its other sections must not generate a 403.
@@ -382,7 +385,7 @@ describe("JobHealthCard", () => {
       "GET /me": () => jsonResponse(meFixture({ roles: ["ops"] })),
     });
     render(<JobHealthCard />);
-    await screen.findByText(/only an admin can see background-job health/i);
+    await screen.findByText(/background-job health needs permission/i);
     // No report, no stamp: a time under a withheld body would date a reading
     // this card is not showing.
     expect(screen.queryByText(/read at/i)).not.toBeInTheDocument();

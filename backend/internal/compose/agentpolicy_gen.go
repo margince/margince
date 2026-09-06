@@ -418,6 +418,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/auth/logout":                                               {Op: "logout", Access: "auth-bootstrap", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/auth/reset-password":                                       {Op: "resetPassword", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/automations":                                               {Op: "createAutomation", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/automations/runs/{id}/retry":                               {Op: "retryAutomationRun", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/automations/{id}/preview":                                  {Op: "previewAutomation", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/bookings":                                                  {Op: "bookMeeting", Access: "tool", Tool: "book_meeting", RecordType: "activity", Tier: "auto_execute", Scope: "send"},
 	"POST /v1/brief":                                                     {Op: "generateMorningBrief", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -635,5 +636,6 @@ var agentPolicies = map[string]agentPolicy{
 	"PUT /v1/weekly-plans/commitments/{id}/help":                         {Op: "askForWeeklyPlanHelp", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/weekly-plans/commitments/{id}/response":                     {Op: "answerWeeklyPlanCommitment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/weekly-plans/commitments/{id}/state":                        {Op: "setWeeklyPlanCommitmentState", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/weekly-plans/current/contract":                              {Op: "setWeeklyPlanContract", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/worklist/pins":                                              {Op: "pinWorklistRow", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 }

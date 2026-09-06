@@ -4542,6 +4542,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/automations/runs/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run one failed firing again, from the event that triggered it.
+         * @description A rule that failed used to leave a reader with nowhere to go: the queue named what
+         *     broke and the only moves were to fix it by hand or wait for the next trigger.
+         *
+         *     This re-dispatches the ORIGINAL event down the ordinary engine path, so every gate
+         *     the first firing passed it passes again — the owner's live permissions, the audience
+         *     check, the run claim, the effect claim. It never replays the stored plan: that plan
+         *     was computed against a database which has since moved, and re-applying it would
+         *     write yesterday's answer over today's records.
+         *
+         *     Three states refuse, and each says which in `refusal` rather than failing:
+         *
+         *     - `not_failed` — the run did not fail. An applied or skipped run has nothing to
+         *       retry, and a `blocked` one is the permission gate having already refused it on
+         *       purpose; retrying a refusal asks the same question expecting a different answer.
+         *     - `repeats_its_effect` — the handler has not been established safe to run twice.
+         *       Every handler registered today has been, so this refuses nothing now; it is the
+         *       answer for the next handler somebody adds, whose default is to refuse until
+         *       somebody looks.
+         *     - `trigger_event_unavailable` — the event cannot be rebuilt. A scheduled firing
+         *       synthesizes its trigger id per evaluation pass and never stages it, so those are
+         *       unreplayable by construction. Nothing is lost: the schedule re-examines the same
+         *       condition on its own next pass.
+         *
+         *     A retry is a NEW firing with its own run record, so the history shows both the
+         *     failure and what followed it. Retrying a run whose retry also failed is allowed and
+         *     counts as its own attempt.
+         */
+        post: operations["retryAutomationRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/leads": {
         parameters: {
             query?: never;
@@ -12222,6 +12270,37 @@ export interface paths {
          *     a lead a second time.
          */
         put: operations["askForWeeklyPlanHelp"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/weekly-plans/current/contract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Say what could go wrong this week, and what room there is for it.
+         * @description Both fields are written together and either may be omitted to leave that half alone.
+         *     Sending an explicit `null` CLEARS a field back to unwritten, which is a different
+         *     state from an empty string: cleared means nobody has said, empty means the rep says
+         *     there is nothing to name.
+         *
+         *     Opens the week if the rep has not started one — writing your risks is starting to
+         *     plan, and a rep whose first sentence could not be saved would have to invent a
+         *     commitment before they were allowed to record a worry.
+         *
+         *     A closed week is refused with `week_closed`: its counts are already frozen into the
+         *     review, and a plan that kept accepting prose would let a rep rewrite what their lead
+         *     has read.
+         */
+        put: operations["setWeeklyPlanContract"];
         post?: never;
         delete?: never;
         options?: never;
@@ -24900,6 +24979,42 @@ export interface components {
              */
             status: "open" | "closed";
             commitments: components["schemas"]["WeeklyPlanCommitment"][];
+            /**
+             * @description What the rep expects to get in the way this week, in their own words.
+             *
+             *     NULL and the empty string are different answers and a reader must draw them
+             *     differently: null is a rep who has written nothing, and "" is one who looked and
+             *     says there is nothing to name. Folding the two would report an unconsidered week
+             *     as a safe one.
+             */
+            risks?: string | null;
+            /**
+             * @description What the rep says about the room they have — "two days at the conference" — which
+             *     is the half of capacity no query can know. It stands beside `capacity`, which is
+             *     counted, and never replaces it.
+             *
+             *     Null and empty carry the same distinction as `risks`.
+             */
+            capacity_note?: string | null;
+            /**
+             * @description What next week's calendar already holds, counted rather than authored.
+             *
+             *     ABSENT when the installation composed no calendar reader. Absent is NOT zero: a
+             *     week nobody has looked at is unknown, and drawing it as "nothing booked" would
+             *     tell a rep their week is free on the strength of a missing integration.
+             */
+            capacity?: components["schemas"]["WeeklyPlanCapacity"];
+        };
+        /** @description How much of the coming week is already spoken for. */
+        WeeklyPlanCapacity: {
+            /**
+             * @description Meetings BOOKED in next week's local window. Booked and not held: the week has not
+             *     happened, so a meeting there has no outcome yet, and counting `held` would only
+             *     find rows somebody backdated.
+             */
+            meetings: number;
+            /** @description Open tasks assigned to the rep and due inside next week's local window. */
+            tasks: number;
         };
         /** @description One thing a rep said they would do this week. */
         WeeklyPlanCommitment: {
@@ -27648,6 +27763,27 @@ export interface components {
             /** @description Link into the audit_log row for this run. */
             audit_id?: string | null;
         };
+        /**
+         * @description What a retry did, or why it did nothing. `refusal` is present exactly when `retried`
+         *     is false, so a client never has to guess which of the two it received.
+         */
+        AutomationRetryResult: {
+            /**
+             * @description True when the firing was re-dispatched. It does NOT promise the firing then
+             *     succeeded — a retry of a rule whose cause is still present fails again, and
+             *     that failure is recorded as its own run for the same reasons the first was.
+             */
+            retried: boolean;
+            /**
+             * @description Why the run was not re-dispatched. `not_failed` covers both a run that
+             *     succeeded and one the permission gate blocked on purpose. `repeats_its_effect`
+             *     means nobody has established that running this handler twice is safe.
+             *     `trigger_event_unavailable` means the event cannot be rebuilt, which is
+             *     permanent for a scheduled firing rather than a condition that clears.
+             * @enum {string}
+             */
+            refusal?: "not_failed" | "repeats_its_effect" | "trigger_event_unavailable";
+        };
         /** @description The calling owner's live personal Voice DNA control record and active derived artifact. */
         VoiceProfile: {
             /** Format: uuid */
@@ -30056,7 +30192,7 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -31114,7 +31250,7 @@ export interface components {
              */
             occurred_at?: string;
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *
@@ -39331,6 +39467,35 @@ export interface operations {
                     };
                 };
             };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    retryAutomationRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description The attempt was made, or it was refused for one of the three stated reasons.
+             *     A refusal is an answer about the run's state, not a fault, so it is 200 with
+             *     `retried: false` rather than an error a client has to decode.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomationRetryResult"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -50757,6 +50922,36 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    setWeeklyPlanContract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    risks?: string | null;
+                    capacity_note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description The plan as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyPlan"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

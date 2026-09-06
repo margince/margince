@@ -19,7 +19,12 @@ import { ApprovalRow } from "./approvalrow";
 import { tomorrowMorning } from "./briefqueue";
 import { problemMessageOf } from "./common";
 import { type BriefMarkRequest, useBriefItemMark } from "./home.queries";
-import { useNoticeRead, useTaskUpdate } from "./taskactions";
+import {
+  useAutomationRetry,
+  useMeetingOutcome,
+  useNoticeRead,
+  useTaskUpdate,
+} from "./taskactions";
 import {
   comparisonText,
   consequenceText,
@@ -292,6 +297,18 @@ function RowAnswer({ item }: Readonly<{ item: WorklistItem }>) {
   }
   if (item.source === "notice" && item.actions.includes("acknowledge")) {
     return <NoticeAcknowledge id={item.id} />;
+  }
+  // A failed rule, run again from here. The server decides which firings carry
+  // the verb — a blocked one does not, because that was a refusal on purpose —
+  // so the row asks what it was sent rather than re-deriving the rule.
+  if (item.source === "automation_run" && item.actions.includes("retry")) {
+    return <AutomationRetry id={item.id} />;
+  }
+  // How a meeting that already happened went, answered here. `decide` is the
+  // same verb an approval carries and means the same thing — the answer is
+  // given ON the row — but the answers differ, so the control is its own.
+  if (item.source === "meeting_outcome" && item.actions.includes("decide")) {
+    return <MeetingOutcome id={item.id} />;
   }
   // A task the server says can be finished, finished HERE. Not a batch: a group
   // row stands for a pile and names no single activity to complete.
@@ -987,6 +1004,10 @@ const VERB_LABEL: Record<
   act: (t) => t("worklist.verb.open"),
   dismiss: (t) => t("worklist.verb.open"),
   set_aside: (t) => t("worklist.verb.open"),
+  // Named for the same reason: the map is total. `retry` is drawn by
+  // AutomationRetry, which acts in place, so VERB_DESTINATION routes it
+  // nowhere and this label is never the one a reader sees.
+  retry: (t) => t("worklist.verb.retry"),
 };
 
 // The day's figures, and the dials that narrow them.
@@ -1042,6 +1063,105 @@ function PinVerb({ item }: Readonly<{ item: WorklistItem }>) {
         }
       >
         {t(pinned ? "worklist.verb.unpin" : "worklist.verb.pin")}
+      </Button>
+    </div>
+  );
+}
+
+// Running a failed rule again, from the row that reported it.
+//
+// The answer is not simply success or failure. The server may REFUSE with a
+// reason — the firing was stopped on purpose, the rule is not cleared to repeat
+// itself, or the event behind it is gone — and each of those is something the
+// reader needs said in words. A refusal arrives as a normal response, so it is
+// read from the resolved value rather than from an error path that would have
+// to guess which refusal it was.
+function AutomationRetry({ id }: Readonly<{ id: string }>) {
+  const t = useT();
+  const toast = useToast();
+  const retry = useAutomationRetry([worklistKey]);
+  return (
+    <div className="worklist-row-verbs">
+      <Button
+        small
+        pending={retry.isPending}
+        onClick={() =>
+          retry.mutate(id, {
+            onSuccess: (result) =>
+              toast.show(
+                result?.retried === true
+                  ? t("worklist.verb.retryStarted")
+                  : t(refusalMessage(result?.refusal)),
+                { mark: result?.retried === true },
+              ),
+            // A rejected retry leaves the button idle with nothing on screen to
+            // say so, which renders exactly like a click that did nothing.
+            onError: () =>
+              toast.show(t("worklist.verb.retryFailed"), { mark: false }),
+          })
+        }
+      >
+        {t("worklist.verb.retry")}
+      </Button>
+    </div>
+  );
+}
+
+// The reason a retry was declined, in the reader's words. An unrecognised
+// refusal falls back to the generic failure rather than rendering a raw enum:
+// a value this build has no wording for is still a thing that did not happen.
+function refusalMessage(
+  refusal: string | undefined,
+): Parameters<ReturnType<typeof useT>>[0] {
+  switch (refusal) {
+    case "not_failed":
+      return "worklist.verb.retryRefusedNotFailed";
+    case "repeats_its_effect":
+      return "worklist.verb.retryRefusedRepeats";
+    case "trigger_event_unavailable":
+      return "worklist.verb.retryRefusedEventGone";
+    default:
+      return "worklist.verb.retryFailed";
+  }
+}
+
+// How a meeting went, recorded from the row that asked.
+//
+// Three buttons rather than one primary and a menu: the answers are equally
+// likely and equally short, and hiding two of three behind a chevron would make
+// the common case a second click. None is emerald — an outcome is a record of
+// what already happened, not the day's next move, and the queue's one filled
+// primary belongs to the selected row's own action.
+//
+// The row leaves the queue on success because the lane asks only for meetings
+// with no outcome. That is also why there is no undo offered here: a corrected
+// outcome is a second answer to the same question, given on the meeting itself
+// where the history of both is visible, rather than a toast that disappears.
+function MeetingOutcome({ id }: Readonly<{ id: string }>) {
+  const t = useT();
+  const toast = useToast();
+  const record = useMeetingOutcome([worklistKey]);
+  const answer = (status: "held" | "no_show" | "canceled") => () =>
+    record.mutate(
+      { id, status },
+      {
+        onSuccess: () => toast.show(t("worklist.verb.meetingOutcomeRecorded")),
+        // A refused write leaves the row exactly as it was, which renders
+        // identically to a click that did nothing.
+        onError: () =>
+          toast.show(t("worklist.verb.meetingOutcomeFailed"), { mark: false }),
+      },
+    );
+  return (
+    <div className="worklist-row-verbs">
+      <Button small pending={record.isPending} onClick={answer("held")}>
+        {t("worklist.verb.meetingHeld")}
+      </Button>
+      <Button small pending={record.isPending} onClick={answer("no_show")}>
+        {t("worklist.verb.meetingNoShow")}
+      </Button>
+      <Button small pending={record.isPending} onClick={answer("canceled")}>
+        {t("worklist.verb.meetingCanceled")}
       </Button>
     </div>
   );

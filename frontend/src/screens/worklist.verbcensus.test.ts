@@ -48,6 +48,10 @@ const ANSWERED_BY = {
   set_aside: { how: "inline", file: "worklist.row.tsx" },
   dismiss: { how: "inline", file: "worklist.row.tsx" },
   acknowledge: { how: "inline", file: "worklist.row.tsx" },
+  // Running a failed rule again acts where the reader is standing. Routing it
+  // would open the automations page, which is where the RULE is fixed — a
+  // different act from re-running the firing that broke.
+  retry: { how: "inline", file: "worklist.row.tsx" },
 } as const satisfies Record<
   Verb,
   { how: "routed" } | { how: "inline"; file: string }
