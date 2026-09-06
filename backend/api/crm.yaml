@@ -17832,6 +17832,44 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /weekly-plans/current/contract:
+    put:
+      tags: [Brief]
+      operationId: setWeeklyPlanContract
+      summary: Say what could go wrong this week, and what room there is for it.
+      description: |
+        Both fields are written together and either may be omitted to leave that half alone.
+        Sending an explicit `null` CLEARS a field back to unwritten, which is a different
+        state from an empty string: cleared means nobody has said, empty means the rep says
+        there is nothing to name.
+
+        Opens the week if the rep has not started one — writing your risks is starting to
+        plan, and a rep whose first sentence could not be saved would have to invent a
+        commitment before they were allowed to record a worry.
+
+        A closed week is refused with `week_closed`: its counts are already frozen into the
+        review, and a plan that kept accepting prose would let a rep rewrite what their lead
+        has read.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                risks: { type: [string, 'null'], maxLength: 2000 }
+                capacity_note: { type: [string, 'null'], maxLength: 2000 }
+      responses:
+        '200':
+          description: The plan as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WeeklyPlan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /weekly-plans/commitments/{id}/response:
     put:
       tags: [Brief]
@@ -34089,6 +34127,51 @@ components:
         commitments:
           type: array
           items: { $ref: '#/components/schemas/WeeklyPlanCommitment' }
+        risks:
+          type: [string, 'null']
+          maxLength: 2000
+          description: |
+            What the rep expects to get in the way this week, in their own words.
+
+            NULL and the empty string are different answers and a reader must draw them
+            differently: null is a rep who has written nothing, and "" is one who looked and
+            says there is nothing to name. Folding the two would report an unconsidered week
+            as a safe one.
+        capacity_note:
+          type: [string, 'null']
+          maxLength: 2000
+          description: |
+            What the rep says about the room they have — "two days at the conference" — which
+            is the half of capacity no query can know. It stands beside `capacity`, which is
+            counted, and never replaces it.
+
+            Null and empty carry the same distinction as `risks`.
+        capacity:
+          description: |
+            What next week's calendar already holds, counted rather than authored.
+
+            ABSENT when the installation composed no calendar reader. Absent is NOT zero: a
+            week nobody has looked at is unknown, and drawing it as "nothing booked" would
+            tell a rep their week is free on the strength of a missing integration.
+          allOf: [{ $ref: '#/components/schemas/WeeklyPlanCapacity' }]
+    WeeklyPlanCapacity:
+      type: object
+      additionalProperties: false
+      description: |
+        How much of the coming week is already spoken for.
+      required: [meetings, tasks]
+      properties:
+        meetings:
+          type: integer
+          minimum: 0
+          description: |
+            Meetings BOOKED in next week's local window. Booked and not held: the week has not
+            happened, so a meeting there has no outcome yet, and counting `held` would only
+            find rows somebody backdated.
+        tasks:
+          type: integer
+          minimum: 0
+          description: Open tasks assigned to the rep and due inside next week's local window.
     WeeklyPlanCommitment:
       type: object
       additionalProperties: false

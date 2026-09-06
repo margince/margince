@@ -34058,11 +34058,32 @@ type WebhookSubscriptionListResponse struct {
 // WeeklyPlan One rep's week as they meant it to go — the forward counterpart to the frozen
 // WeeklyReview beside it.
 type WeeklyPlan struct {
-	Commitments []WeeklyPlanCommitment `json:"commitments"`
-	Id          openapi_types.UUID     `json:"id"`
+	// Capacity What next week's calendar already holds, counted rather than authored.
+	//
+	// ABSENT when the installation composed no calendar reader. Absent is NOT zero: a
+	// week nobody has looked at is unknown, and drawing it as "nothing booked" would
+	// tell a rep their week is free on the strength of a missing integration.
+	Capacity *WeeklyPlanCapacity `json:"capacity,omitempty"`
+
+	// CapacityNote What the rep says about the room they have — "two days at the conference" — which
+	// is the half of capacity no query can know. It stands beside `capacity`, which is
+	// counted, and never replaces it.
+	//
+	// Null and empty carry the same distinction as `risks`.
+	CapacityNote *string                `json:"capacity_note,omitempty"`
+	Commitments  []WeeklyPlanCommitment `json:"commitments"`
+	Id           openapi_types.UUID     `json:"id"`
 
 	// LocalWeekStart The Monday of the week planned, in the installation reporting timezone.
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// Risks What the rep expects to get in the way this week, in their own words.
+	//
+	// NULL and the empty string are different answers and a reader must draw them
+	// differently: null is a rep who has written nothing, and "" is one who looked and
+	// says there is nothing to name. Folding the two would report an unconsidered week
+	// as a safe one.
+	Risks *string `json:"risks,omitempty"`
 
 	// Status `closed` once the weekly job has settled the week and frozen its outcome into the
 	// review. A closed plan stops accepting edits, which is what keeps the review's
@@ -34074,6 +34095,17 @@ type WeeklyPlan struct {
 // review. A closed plan stops accepting edits, which is what keeps the review's
 // counts true.
 type WeeklyPlanStatus string
+
+// WeeklyPlanCapacity How much of the coming week is already spoken for.
+type WeeklyPlanCapacity struct {
+	// Meetings Meetings BOOKED in next week's local window. Booked and not held: the week has not
+	// happened, so a meeting there has no outcome yet, and counting `held` would only
+	// find rows somebody backdated.
+	Meetings int `json:"meetings"`
+
+	// Tasks Open tasks assigned to the rep and due inside next week's local window.
+	Tasks int `json:"tasks"`
+}
 
 // WeeklyPlanCommitment One thing a rep said they would do this week.
 type WeeklyPlanCommitment struct {
@@ -40296,6 +40328,12 @@ type SetWeeklyPlanCommitmentStateJSONBody struct {
 // SetWeeklyPlanCommitmentStateJSONBodyState defines parameters for SetWeeklyPlanCommitmentState.
 type SetWeeklyPlanCommitmentStateJSONBodyState string
 
+// SetWeeklyPlanContractJSONBody defines parameters for SetWeeklyPlanContract.
+type SetWeeklyPlanContractJSONBody struct {
+	CapacityNote *string `json:"capacity_note,omitempty"`
+	Risks        *string `json:"risks,omitempty"`
+}
+
 // GetLatestWeeklyReviewParams defines parameters for GetLatestWeeklyReview.
 type GetLatestWeeklyReviewParams struct {
 	// Week The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent.
@@ -41172,6 +41210,9 @@ type AnswerWeeklyPlanCommitmentJSONRequestBody AnswerWeeklyPlanCommitmentJSONBod
 
 // SetWeeklyPlanCommitmentStateJSONRequestBody defines body for SetWeeklyPlanCommitmentState for application/json ContentType.
 type SetWeeklyPlanCommitmentStateJSONRequestBody SetWeeklyPlanCommitmentStateJSONBody
+
+// SetWeeklyPlanContractJSONRequestBody defines body for SetWeeklyPlanContract for application/json ContentType.
+type SetWeeklyPlanContractJSONRequestBody SetWeeklyPlanContractJSONBody
 
 // PinWorklistRowJSONRequestBody defines body for PinWorklistRow for application/json ContentType.
 type PinWorklistRowJSONRequestBody = WorklistPinRequest
@@ -50742,6 +50783,9 @@ type ServerInterface interface {
 	// Open a plan for this week.
 	// (POST /weekly-plans/current)
 	StartWeeklyPlan(w http.ResponseWriter, r *http.Request)
+	// Say what could go wrong this week, and what room there is for it.
+	// (PUT /weekly-plans/current/contract)
+	SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request)
 	// A teammate's plan for this week, for their lead.
 	// (GET /weekly-plans/{owner_id}/current)
 	GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID)
@@ -54303,6 +54347,12 @@ func (_ Unimplemented) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Reque
 // Open a plan for this week.
 // (POST /weekly-plans/current)
 func (_ Unimplemented) StartWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say what could go wrong this week, and what room there is for it.
+// (PUT /weekly-plans/current/contract)
+func (_ Unimplemented) SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -79440,6 +79490,28 @@ func (siw *ServerInterfaceWrapper) StartWeeklyPlan(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// SetWeeklyPlanContract operation middleware
+func (siw *ServerInterfaceWrapper) SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetWeeklyPlanContract(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTeammateWeeklyPlan operation middleware
 func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request) {
 
@@ -81758,6 +81830,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/weekly-plans/current", wrapper.StartWeeklyPlan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/weekly-plans/current/contract", wrapper.SetWeeklyPlanContract)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/weekly-plans/{owner_id}/current", wrapper.GetTeammateWeeklyPlan)

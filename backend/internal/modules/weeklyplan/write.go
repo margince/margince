@@ -74,7 +74,7 @@ func (s *Store) StartWeek(ctx context.Context, now time.Time) (Plan, error) {
 		}); err != nil {
 			return err
 		}
-		plan = Plan{ID: id, OwnerID: owner, LocalWeekStart: week, Status: "open", Version: 1}
+		plan = Plan{ID: id, OwnerID: owner, LocalWeekStart: week, Status: PlanOpen, Version: 1}
 		return nil
 	})
 	if err != nil {
@@ -195,13 +195,13 @@ func (s *Store) openPlanTx(
 			VALUES ($1, $2, $3) RETURNING id`, owner, week, capturedBy).Scan(&id); err != nil {
 			return Plan{}, fmt.Errorf("weeklyplan: opening the week: %w", err)
 		}
-		return Plan{ID: id, OwnerID: owner, LocalWeekStart: week, Status: "open", Version: 1}, nil
+		return Plan{ID: id, OwnerID: owner, LocalWeekStart: week, Status: PlanOpen, Version: 1}, nil
 	case err != nil:
 		return Plan{}, err
 	}
 	// A closed week is history. Editing it would move counts the review has
 	// already frozen, so the two would disagree about a week that is over.
-	if plan.Status != "open" {
+	if plan.Status != PlanOpen {
 		return Plan{}, &values.ParseError{
 			Field: fieldWeek, Code: codeWeekClosed,
 			Message: "that week is closed; plan the current one",

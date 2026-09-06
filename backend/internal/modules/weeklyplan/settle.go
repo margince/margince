@@ -231,7 +231,7 @@ func ownCommitmentTx(
 		return ids.Nil, Commitment{}, fmt.Errorf("weeklyplan: reading the commitment: %w", err)
 	}
 	// A closed week is frozen into a review that has already been counted.
-	if status != "open" {
+	if status != PlanOpen {
 		return ids.Nil, Commitment{}, &values.ParseError{
 			Field: fieldWeek, Code: codeWeekClosed,
 			Message: "that week is closed and its outcome is recorded",

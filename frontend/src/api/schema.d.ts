@@ -12277,6 +12277,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/weekly-plans/current/contract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Say what could go wrong this week, and what room there is for it.
+         * @description Both fields are written together and either may be omitted to leave that half alone.
+         *     Sending an explicit `null` CLEARS a field back to unwritten, which is a different
+         *     state from an empty string: cleared means nobody has said, empty means the rep says
+         *     there is nothing to name.
+         *
+         *     Opens the week if the rep has not started one — writing your risks is starting to
+         *     plan, and a rep whose first sentence could not be saved would have to invent a
+         *     commitment before they were allowed to record a worry.
+         *
+         *     A closed week is refused with `week_closed`: its counts are already frozen into the
+         *     review, and a plan that kept accepting prose would let a rep rewrite what their lead
+         *     has read.
+         */
+        put: operations["setWeeklyPlanContract"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/weekly-plans/commitments/{id}/response": {
         parameters: {
             query?: never;
@@ -24948,6 +24979,42 @@ export interface components {
              */
             status: "open" | "closed";
             commitments: components["schemas"]["WeeklyPlanCommitment"][];
+            /**
+             * @description What the rep expects to get in the way this week, in their own words.
+             *
+             *     NULL and the empty string are different answers and a reader must draw them
+             *     differently: null is a rep who has written nothing, and "" is one who looked and
+             *     says there is nothing to name. Folding the two would report an unconsidered week
+             *     as a safe one.
+             */
+            risks?: string | null;
+            /**
+             * @description What the rep says about the room they have — "two days at the conference" — which
+             *     is the half of capacity no query can know. It stands beside `capacity`, which is
+             *     counted, and never replaces it.
+             *
+             *     Null and empty carry the same distinction as `risks`.
+             */
+            capacity_note?: string | null;
+            /**
+             * @description What next week's calendar already holds, counted rather than authored.
+             *
+             *     ABSENT when the installation composed no calendar reader. Absent is NOT zero: a
+             *     week nobody has looked at is unknown, and drawing it as "nothing booked" would
+             *     tell a rep their week is free on the strength of a missing integration.
+             */
+            capacity?: components["schemas"]["WeeklyPlanCapacity"];
+        };
+        /** @description How much of the coming week is already spoken for. */
+        WeeklyPlanCapacity: {
+            /**
+             * @description Meetings BOOKED in next week's local window. Booked and not held: the week has not
+             *     happened, so a meeting there has no outcome yet, and counting `held` would only
+             *     find rows somebody backdated.
+             */
+            meetings: number;
+            /** @description Open tasks assigned to the rep and due inside next week's local window. */
+            tasks: number;
         };
         /** @description One thing a rep said they would do this week. */
         WeeklyPlanCommitment: {
@@ -50855,6 +50922,36 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    setWeeklyPlanContract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    risks?: string | null;
+                    capacity_note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description The plan as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyPlan"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };
