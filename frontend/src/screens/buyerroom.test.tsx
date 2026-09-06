@@ -348,6 +348,40 @@ describe("BuyerRoomScreen", () => {
 // `comment` was handed a working composer while the page told it a preview
 // cannot write. Only the server minting every preview seat read-only kept
 // that off the screen.
+describe("the hero the buyer lands on", () => {
+  it("marks a live room as live, and says who is on the other end", async () => {
+    stubRoom();
+    globalThis.location.hash = "#/room?c=cred-hero";
+    render(<BuyerRoomScreen />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Acme rollout" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Welcome, Laura.")).toBeInTheDocument();
+    expect(screen.getByText("Your contact: Ada Admin.")).toBeInTheDocument();
+    const pill = screen.getByText("Live").closest(".badge");
+    expect(pill).toHaveClass("badge-success");
+    expect(pill?.querySelector(".badge-live-dot")).toBeInTheDocument();
+  });
+
+  // A pill is a claim about the room, and a build that has never heard of the
+  // state it was handed has no claim to make. The room still reads.
+  it("makes no claim about a state this build does not know", async () => {
+    stubRoom({
+      "GET /public/rooms/me": () =>
+        jsonResponse({ ...LIVE, access: "quiesced" }),
+    });
+    globalThis.location.hash = "#/room?c=cred-unknown";
+    render(<BuyerRoomScreen />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Acme rollout" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Live")).toBeNull();
+    expect(screen.queryByText("Closed")).toBeNull();
+  });
+});
+
 describe("a preview never gets a working composer", () => {
   it("refuses the write even when the seat itself says comment", async () => {
     stubRoom({

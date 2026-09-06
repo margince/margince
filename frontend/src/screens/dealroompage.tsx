@@ -8,7 +8,6 @@ import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import {
-  Badge,
   Button,
   Field,
   OverflowMenu,
@@ -17,17 +16,18 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
-import { formatDateAbbrev } from "../format/format";
+import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import {
   FINISHED_STATES,
+  RoomStateBadge,
   refusalFor,
-  STATE_LABELS,
   useDealRoom,
 } from "./dealroom";
-import { buyerLink, DealRoomAccess } from "./dealroomaccess";
+import { buyerLink, DealRoomAccess, useRoomAttendance } from "./dealroomaccess";
 import { DealRoomConversation } from "./dealroomconversation";
 import "./dealroompage.css";
 
@@ -77,7 +77,7 @@ function RoomPage({
   return (
     <div className="roompage">
       <header className="roompage-head">
-        <div>
+        <div className="roompage-id">
           <p className="t-caption">
             <button
               type="button"
@@ -87,10 +87,19 @@ function RoomPage({
               {t("roompage.backToDeal")}
             </button>
           </p>
-          <h1>{room.title}</h1>
+          <Eyebrow as="span">{t("room.card.title")}</Eyebrow>
+          {/* The room's standing reads on the same line as its name, the way a
+              record's does: what this is, then how it stands, before anything
+              a reader could do to it. It sat among the verbs at the far end of
+              the row, where a reader looking for the state found three
+              buttons. */}
+          <div className="roompage-title-row">
+            <h1 className="t-display">{room.title}</h1>
+            <RoomStateBadge state={room.state} />
+          </div>
+          <RoomFacts room={room} />
         </div>
         <div className="roompage-verbs">
-          <Badge>{t(STATE_LABELS[room.state])}</Badge>
           {mayWrite ? <ViewAsBuyerButton room={room} /> : null}
           {mayWrite ? <LifecycleMenu room={room} /> : null}
         </div>
@@ -106,6 +115,35 @@ function RoomPage({
         </div>
       </div>
     </div>
+  );
+}
+
+// Who is in the room, under its name: how many were invited, how many have
+// been through the door, and when a buyer last looked. The counts come from
+// the same participants read the Access panel on this page already makes, so
+// this is a second READING of one request rather than a second request.
+//
+// It is a summary and the panel is the register: the line says how many, the
+// panel says who — which is why the two are not one fact said twice.
+function RoomFacts({ room }: Readonly<{ room: DealRoom }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const { invited, active, lastSeen, counted } = useRoomAttendance(room.id);
+  if (!counted) {
+    return null;
+  }
+  return (
+    <p className="t-caption roompage-facts">
+      <span>
+        {t("room.card.people", {
+          invited: formatNumber(invited, locale),
+          active: formatNumber(active, locale),
+        })}
+      </span>
+      {lastSeen ? (
+        <span>{t("room.card.lastSeen", { when: lastSeen.slice(0, 10) })}</span>
+      ) : null}
+    </p>
   );
 }
 

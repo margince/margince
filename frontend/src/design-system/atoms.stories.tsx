@@ -291,6 +291,14 @@ export const Badges: Story = {
       <Badge tone="success" quiet>
         Paid 22 days late
       </Badge>
+      {/* The live spelling: a status that is true as the page is read, marked
+          by a dot that breathes. Filled and quiet both carry it. */}
+      <Badge tone="success" live>
+        Live
+      </Badge>
+      <Badge tone="accent" quiet live>
+        Publishing
+      </Badge>
     </div>
   ),
 };

@@ -80,6 +80,36 @@ export function useParticipants(roomId: string) {
   });
 }
 
+/**
+ * Attendance, counted once: how many seats stand, how many have been through
+ * the door, and when a buyer last looked.
+ *
+ * Two surfaces state it — the deal's Deal Room card and the head of the room's
+ * own page — and before this each counted for itself. Two counters over one
+ * list is two answers to one question, and the question is whether anybody has
+ * actually walked in: a room that reads "2 signed in" in the deal's margin and
+ * "3 signed in" on its own page has told a rep something false on one of them.
+ *
+ * Revoked seats are not invited any more, which is why the filter is on both
+ * counts rather than on the second alone.
+ */
+export function useRoomAttendance(roomId: string) {
+  const participants = useParticipants(roomId);
+  const rows = (participants.data?.data ?? []).filter((p) => !p.revoked_at);
+  return {
+    invited: rows.length,
+    active: rows.filter((p) => p.has_signed_in).length,
+    lastSeen: rows
+      .map((p) => p.last_seen_at)
+      .filter((v): v is string => typeof v === "string")
+      .sort()
+      .at(-1),
+    // Whether the count is a fact yet. A "0 invited" drawn while the read is in
+    // flight is a wrong statement rather than a loading one.
+    counted: participants.isSuccess,
+  };
+}
+
 /** The link a buyer opens: the public screen with the credential in the fragment. */
 export function buyerLink(credential: string): string {
   return `${window.location.origin}/#/room?c=${encodeURIComponent(credential)}`;
