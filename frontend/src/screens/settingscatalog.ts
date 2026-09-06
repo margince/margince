@@ -268,12 +268,43 @@ export const SETTINGS_PAGES = [
     requires: reads("authentication_policy"),
   },
 
-  // `GET /users` answers 200 to any authenticated principal and the roster is
-  // not an admin's private question — the handler decides what the answer
-  // CONTAINS, and role keys are the privileged part. So the page opens for
-  // everyone and its controls withhold themselves.
-  { id: "members", group: "people", scope: "workspace", requires: always },
-  { id: "teams", group: "people", scope: "workspace", requires: always },
+  // `GET /users` answers 200 to any authenticated principal, and that is right:
+  // the share and assignee pickers every seat uses read this roster. But a
+  // DIRECTORY is not an administration page. A reader who may not invite, change
+  // a role or switch a seat off has nothing to do here — they look a colleague
+  // up in the app, where the answer is already beside the record.
+  //
+  // So the settings ENTRY follows the verbs, and the safe roster stays open
+  // underneath it: `user_admin` gates Members, `team_admin` gates Teams, and
+  // both pages' cards still withhold their own controls verb by verb.
+  {
+    id: "members",
+    group: "people",
+    scope: "workspace",
+    // The READ, and only the read. Every write verb needs what it carries, so a
+    // holder without it has no usable page:
+    //
+    //   - `include_inactive` is honoured only for a caller who passes the read
+    //     (handlers_roster.go), so a `delete` holder without it never sees a
+    //     deactivated member to reactivate.
+    //   - the roster omits `roles` without it, and `ChangeUserRole` REPLACES
+    //     the whole set — so an `update` holder would pick a role against a
+    //     list they cannot see.
+    //
+    // Opening the page on a write alone would offer exactly those two broken
+    // affordances. The card ANDs the same way, so the page and its controls
+    // agree.
+    requires: reads("user_admin"),
+  },
+  {
+    id: "teams",
+    group: "people",
+    scope: "workspace",
+    // The team verbs, or the roster read that carries `team_ids` — a holder of
+    // `user_admin:read` alone sees who is in which team, which is the page's
+    // whole content even when they may change none of it.
+    requires: anyOf(writes("team_admin"), reads("user_admin")),
+  },
   // `roles` is NOT here, and its absence is the point.
   //
   // The plan gives it a full page — role definitions, row scope, field masks,

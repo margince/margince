@@ -21,6 +21,7 @@ import {
   SETTINGS_PAGES,
   type SettingsGroupId,
   type SettingsPageId,
+  visibleSettingsPages,
 } from "./settingscatalog";
 import { SETTINGS_HOME_ID } from "./settingsnav";
 import { settingsHref } from "./settingsrouting";
@@ -265,19 +266,16 @@ const pagesIn = (group: SettingsGroupId) =>
 // PERSON's: gating `agents` would regress passport minting for every seat that
 // is not an admin, and a mailbox and a LinkedIn network nobody else can see are
 // not the installation's configuration.
+// The pages that ask for nothing: a reader's own five, and nothing else.
 //
-// `members` and `teams` are the floor beside them for a different reason:
-// `GET /users` answers 200 to any authenticated principal and "who is on my
-// team" is not an admin's private question, so the pages open for everyone and
-// their controls withhold themselves.
-const UNGATED_IDS = [
-  ...SETTINGS_PAGES.filter((page) => page.group === "me").map(
-    (page) => page.id,
-  ),
-  "members",
-  "teams",
-] as const satisfies readonly SettingsPageId[];
-const UNGATED_PAGES = pagesNamed(...UNGATED_IDS);
+// `members` and `teams` used to sit here. The roster endpoint still answers any
+// authenticated caller — the share and assignee pickers depend on it — but a
+// directory is not an administration page, so the settings ENTRY follows the
+// `user_admin` and `team_admin` verbs while the safe roster stays open
+// underneath it.
+const UNGATED_IDS = SETTINGS_PAGES.filter((page) => page.group === "me").map(
+  (page) => page.id,
+) as readonly SettingsPageId[];
 
 // The floor plus the pages a grant opens, in CATALOG order. Concatenating the
 // two lists instead would assert an order the catalog does not have: `company`
@@ -351,6 +349,10 @@ const EVERY_PAGE_GRANTED: GrantSpec = {
   // role's grant on every object on `role_admin` (identity/roles.go ListRoles).
   // The card fires both behind one flag, so the page needs both.
   role_admin: ["read"],
+  // The roster and team pages, which follow their own objects now rather than
+  // opening for every authenticated reader.
+  user_admin: ["read", "create", "update", "delete"],
+  team_admin: ["read", "create", "update"],
   system_reset: ["delete"],
 };
 // Home leads this list too, for the same reason it leads pagesNamed: it is a
@@ -455,8 +457,9 @@ const SEEDED_READ_PAGES = pagesNamed(
   // `company` is NOT here: its requirement ANDs the organization write with the
   // `company_context` deployment flag, and this fixture leaves that flag off.
   // The page's own availability cases are the ones that turn it on.
-  "members",
-  "teams",
+  //
+  // Nor `members`/`teams`: only the `admin` role is seeded `user_admin` or
+  // `team_admin`, so no seeded role below it reaches either page.
   "pipelines",
   "leads",
   "fields",
@@ -472,8 +475,9 @@ const SEEDED_OPS_PAGES = pagesNamed(
   "connections",
   "capture-activity",
   "company",
-  "members",
-  "teams",
+  // Not `members`/`teams`: ops holds neither `user_admin` nor `team_admin` in
+  // the seeded matrix. Administering colleagues is the admin's, and the roster
+  // ops reads for pickers is answered by the endpoint, not by this page.
   "seats",
   "pipelines",
   "leads",
@@ -532,37 +536,41 @@ describe("SettingsScreen page visibility", () => {
     }
   });
 
-  it("gives a principal holding no grant at all the pages that ask for none", async () => {
-    // The floor, and the reason removing the seat gate is not "everyone gets
-    // everything". A principal holding NOTHING reaches the five personal pages
-    // plus the member roster and the team list, which `GET /users` serves to
-    // anyone signed in and which the same handler narrows by role — a rep's page
-    // carries no role keys and no inactive members. Every other page is absent
-    // because its requirement says so, which is the same sentence for this
-    // principal as for an admin.
-    //
-    // Privacy is NOT on the floor with them: the consent registry's server gate
-    // is `person:read`, and a principal holding nothing does not hold it.
-    vi.stubGlobal("fetch", settingsNavBackend({ roles: ["rep"], allow: {} }));
-    renderNav();
-    // /me has to have SETTLED before this claim means anything: a nav read
-    // mid-flight is empty for every principal. Waiting on the rows themselves is
-    // what proves it settled — the sidebar no longer prints the signed-in
-    // address, which is what this used to wait for, because the account block
-    // moved to the top bar.
-    await waitFor(() => expect(navPages()).toEqual(UNGATED_PAGES));
+  // The floor, and the reason removing the seat gate is not "everyone gets
+  // everything". A principal holding NOTHING reaches the five personal pages and
+  // no others: members and teams follow `user_admin`/`team_admin` now, and every
+  // remaining page is absent because its requirement says so.
+  //
+  // ASSERTED THROUGH THE EVALUATOR, NOT THE RAIL, and that is not a shortcut.
+  // For a grantless snapshot the rendered rail is byte-identical before and
+  // after `/me` resolves — measured, not assumed — so no wait on the DOM can
+  // tell the two apart, and any `waitFor` here passes on its first tick whatever
+  // the requirements say. Granting every `user_admin` verb to this case and
+  // keeping the expectation still passed while it went through the rail.
+  //
+  // `visibleSettingsPages` takes the snapshot as an argument, so there is no
+  // in-flight state to race. The rail's own wiring is held by every other case
+  // in this file, each of which asserts a page only a resolved snapshot draws.
+  it("gives a principal holding no grant at all the pages that ask for none", () => {
+    expect(
+      visibleSettingsPages(meFixture({ roles: ["rep"], allow: {} })).map(
+        (page) => page.id,
+      ),
+    ).toEqual(UNGATED_IDS);
   });
 
-  it("gives an admin holding no grant at all exactly the same floor", async () => {
+  it("gives an admin holding no grant at all exactly the same floor", () => {
     // The role is not a gate in either direction. It used to open three pages on
     // its own — extensions, the job report and the danger zone — and each of
     // those now follows a grant an edited role can hold or lose, so an admin
     // stripped of every grant reaches what anyone else stripped of every grant
     // reaches. A role that could not lose a page is a role that cannot be
     // edited.
-    vi.stubGlobal("fetch", settingsNavBackend({ roles: ["admin"], allow: {} }));
-    renderNav();
-    await waitFor(() => expect(navPages()).toEqual(UNGATED_PAGES));
+    expect(
+      visibleSettingsPages(meFixture({ roles: ["admin"], allow: {} })).map(
+        (page) => page.id,
+      ),
+    ).toEqual(UNGATED_IDS);
   });
 
   // The grant, not the role name. These principals hold every read the seeded
@@ -590,11 +598,14 @@ describe("SettingsScreen page visibility", () => {
       "fetch",
       settingsNavBackend({
         roles: ["ops"],
-        allow: { custom_field: ["create", "update"] },
+        // The witness rides along: `pipeline:read` opens Pipelines and nothing
+        // else, so its row proves /me resolved before this asserts that the
+        // WRITES bought no page.
+        allow: { custom_field: ["create", "update"], pipeline: ["read"] },
       }),
     );
     renderNav();
-    await waitFor(() => expect(navPages()).toEqual(UNGATED_PAGES));
+    await expectNavSettlesTo(floorPlus("pipelines"));
   });
 
   it.each(SALES_READS)(
@@ -872,12 +883,12 @@ describe("SettingsScreen page visibility", () => {
       "fetch",
       settingsNavBackend({
         roles: ["admin"],
-        allow: readOn("system_reset"),
+        allow: { ...readOn("system_reset"), pipeline: ["read"] },
         dataResetAvailable: true,
       }),
     );
     renderNav();
-    await waitFor(() => expect(navPages()).toEqual(UNGATED_PAGES));
+    await expectNavSettlesTo(floorPlus("pipelines"));
     cleanup();
 
     vi.stubGlobal(
@@ -1074,10 +1085,15 @@ describe("SettingsScreen page visibility", () => {
     // assertion above would pass against a page that opened for everybody.
     vi.stubGlobal(
       "fetch",
-      settingsNavBackend({ roles: ["management"], allow: {} }),
+      settingsNavBackend({
+        roles: ["management"],
+        // The witness: this case asserts audit is ABSENT, and a grantless
+        // fixture would assert it against the loading render.
+        allow: { pipeline: ["read"] },
+      }),
     );
     renderNav();
-    await waitFor(() => expect(navPages()).toEqual(UNGATED_PAGES));
+    await expectNavSettlesTo(floorPlus("pipelines"));
   });
 
   // THE LICENSING SEAT, which is a THIRD axis and gates none of this: the server

@@ -6678,18 +6678,18 @@ export const de = {
   "extAccess.nobodyReads":
     "Keine Rolle darf {object} lesen — jedes Mitglied sieht dort eine leere Seite, wo diese Erweiterung stehen sollte. Vergeben Sie unten mindestens einer Rolle das Leserecht.",
   "users.empty": "Noch keine Benutzer.",
-  "users.adminOnly": "Benutzer verwalten können nur Admins.",
+  "users.adminOnly": "Sie haben keine Berechtigung, Benutzer zu verwalten.",
   "users.inviteTitle": "Benutzer einladen",
   "users.teamsLabel": "Teams",
   "users.noTeamsYet": "Noch keine Teams.",
   "users.teamMembersLabel": "Wer in diesem Team ist",
   "users.teamMembersAdminOnly":
-    "Die Mitgliedschaft ist nur für Admins sichtbar.",
+    "Sie haben keine Berechtigung zu sehen, wer in diesem Team ist.",
   "users.teamNobodyToAdd": "Noch keine Benutzer zum Hinzufügen.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
     "Benannte Gruppen, mit denen Sie Datensätze teilen können. Die Mitgliedschaft allein gewährt den meisten Rollen weiterhin keinen Zugriff — Ausnahme ist die Teamleitung: wird sie einem Team hinzugefügt, kann sie dessen Datensätze lesen und bearbeiten, ohne dass eine Freigabe eingerichtet wird.",
-  "users.teamsAdminOnly": "Teams verwalten können nur Admins.",
+  "users.teamsAdminOnly": "Sie haben keine Berechtigung, Teams zu verwalten.",
   "users.deactivated": "{name} deaktiviert",
   "users.reactivated": "{name} reaktiviert",
   "users.roleSaved": "Rolle für {name} geändert",

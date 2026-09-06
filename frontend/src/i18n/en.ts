@@ -6793,17 +6793,18 @@ export const en = {
   "extAccess.nobodyReads":
     "No role holds read on {object}, so every member sees an empty screen where this extension should be. Grant read to at least one role below.",
   "users.empty": "No users yet.",
-  "users.adminOnly": "Managing users is available to admins only.",
+  "users.adminOnly": "You do not have permission to manage users.",
   "users.inviteTitle": "Invite a user",
   "users.teamsLabel": "Teams",
   "users.noTeamsYet": "No teams yet.",
   "users.teamMembersLabel": "Who is in this team",
-  "users.teamMembersAdminOnly": "Membership is visible to admins only.",
+  "users.teamMembersAdminOnly":
+    "You do not have permission to see who is in this team.",
   "users.teamNobodyToAdd": "No users to add yet.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
     "Named groups you can share records with. Membership alone still grants no access for most roles — the exception is Team Lead: adding one to a team gives them that team's records to read and work, without a share being arranged.",
-  "users.teamsAdminOnly": "Managing teams is available to admins only.",
+  "users.teamsAdminOnly": "You do not have permission to manage teams.",
   "users.deactivated": "{name} deactivated",
   "users.reactivated": "{name} reactivated",
   "users.roleSaved": "Role changed for {name}",

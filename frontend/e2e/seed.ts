@@ -86,16 +86,21 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   // some card or catalog entry reads TODAY, verified against the source rather
   // than against the object vocabulary.
   //
-  // THREE OF THE THIRTEEN ARE ABSENT because no client code reads them yet, and
+  // ONE OF THE THIRTEEN IS STILL ABSENT because no client code reads it, and
   // that is a real gap rather than a fixture decision:
-  //   user_admin        — `UsersAdminCard` still calls useHoldsAdminRole
-  //   team_admin        — `TeamsCard` still calls useHoldsAdminRole
   //   oauth_application — `OAuthAppCard` still asks capture_settings:update,
   //                       which an ordinary sales role holds
-  // Each object exists in the contract and is seeded server-side; the card that
-  // should ask for it was never repointed. Adding them here would paper over
-  // that — the sweep would pass either way, and the day somebody repoints those
-  // cards the fixture would already agree.
+  // The object exists in the contract and is seeded server-side; the card that
+  // should ask for it was never repointed. Adding it here would paper over that
+  // — the sweep would pass either way, and the day somebody repoints that card
+  // the fixture would already agree.
+  //
+  // `user_admin` and `team_admin` were on that list and are below now: the
+  // roster and team cards ask them verb by verb, and the Members and Teams
+  // ENTRIES follow them too, so a fixture without them would sweep two pages
+  // the mock cannot open.
+  user_admin: ["read", "create", "update", "delete"],
+  team_admin: ["read", "create", "update"],
   //
   // Extensions is TWO reads behind one flag — the unit inventory and every
   // role's grant on every object — and its toggles write through the update.

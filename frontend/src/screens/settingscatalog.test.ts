@@ -82,9 +82,59 @@ describe("who may open what", () => {
       "agents",
       "connections",
       "capture-activity",
-      "members",
-      "teams",
     ]);
+  });
+
+  // Members and Teams used to be on that list. `GET /users` still answers any
+  // authenticated caller and must — the share and assignee pickers read it —
+  // but a directory is not an administration page, and a reader who may not
+  // invite, change a role or switch a seat off has nothing to do on either.
+  it("withholds members from a reader holding no user_admin", () => {
+    expect(visibleIds(readsOnly("person"))).not.toContain("members");
+    // Any authority over the roster opens it, and the READ is one of them —
+    // it is what carries the role keys and the widened status view.
+    expect(visibleIds(readsOnly("user_admin"))).toContain("members");
+  });
+
+  it("withholds teams from a reader holding neither team verb nor the roster read", () => {
+    expect(visibleIds(readsOnly("person"))).not.toContain("teams");
+    // The team object's READ is not one of its arms: teams.go takes create and
+    // update, and nothing on the page answers to a `team_admin:read`.
+    expect(visibleIds(readsOnly("team_admin"))).not.toContain("teams");
+    expect(visibleIds(writes("team_admin"))).toContain("teams");
+  });
+
+  // The roster's privileged projection is what Teams RENDERS: `team_ids` rides
+  // `user_admin:read` (handlers_roster.go), not the team object. So a reader
+  // holding that read alone still opens Teams — they see who is in which team
+  // and may change none of it — and the checkboxes are disabled rather than
+  // absent, because the list IS the answer they came for.
+  it("opens teams to the roster read that carries membership", () => {
+    expect(visibleIds(readsOnly("user_admin"))).toContain("teams");
+  });
+
+  // The seat switch WITHOUT the read does not open it, and that is the fix
+  // rather than an omission. `include_inactive` is honoured only for a caller
+  // who passes `user_admin:read` (handlers_roster.go), so this holder would
+  // reach a roster that never shows them a deactivated member to reactivate —
+  // a page offering two affordances that cannot work.
+  it("does not open members for the deactivate verb without the roster read", () => {
+    const seatSwitch = meFixture({
+      roles: ["custom"],
+      allow: { user_admin: ["delete"] },
+    });
+    expect(visibleSettingsPages(seatSwitch).map((p) => p.id)).not.toContain(
+      "members",
+    );
+    // With the read beside it, the same holder gets the page.
+    expect(
+      visibleSettingsPages(
+        meFixture({
+          roles: ["custom"],
+          allow: { user_admin: ["read", "delete"] },
+        }),
+      ).map((p) => p.id),
+    ).toContain("members");
   });
 
   it("opens the sales pages a rep's own grants already carry", () => {

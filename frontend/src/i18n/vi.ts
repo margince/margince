@@ -6601,17 +6601,18 @@ export const vi = {
   "extAccess.nobodyReads":
     "Không vai trò nào được đọc {object}, nên mọi thành viên chỉ thấy màn hình trống ở nơi lẽ ra là tiện ích này. Hãy cấp quyền đọc cho ít nhất một vai trò bên dưới.",
   "users.empty": "Chưa có người dùng nào.",
-  "users.adminOnly": "Chỉ quản trị viên mới quản lý được người dùng.",
+  "users.adminOnly": "Bạn không có quyền quản lý người dùng.",
   "users.inviteTitle": "Mời một người dùng",
   "users.teamsLabel": "Nhóm",
   "users.noTeamsYet": "Chưa có nhóm.",
   "users.teamNobodyToAdd": "Chưa có người dùng nào để thêm.",
   "users.teamMembersLabel": "Ai ở trong nhóm này",
-  "users.teamMembersAdminOnly": "Chỉ quản trị viên mới xem được thành viên.",
+  "users.teamMembersAdminOnly":
+    "Bạn không có quyền xem thành viên của nhóm này.",
   "users.teamsTitle": "Nhóm",
   "users.teamsSub":
     "Nhóm có tên để bạn chia sẻ bản ghi. Chỉ thuộc một nhóm thì hầu hết vai trò vẫn chưa có quyền gì thêm — ngoại lệ là Trưởng nhóm: thêm họ vào một nhóm sẽ cho họ đọc và xử lý bản ghi của nhóm đó mà không cần thiết lập chia sẻ.",
-  "users.teamsAdminOnly": "Chỉ quản trị viên mới có thể quản lý nhóm.",
+  "users.teamsAdminOnly": "Bạn không có quyền quản lý nhóm.",
   "users.deactivated": "Đã vô hiệu hóa {name}",
   "users.reactivated": "Đã kích hoạt lại {name}",
   "users.roleSaved": "Đã đổi vai trò cho {name}",

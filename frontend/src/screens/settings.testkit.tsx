@@ -113,6 +113,11 @@ const ADMIN_GRANTS: GrantSpec = {
   // seat holds and a fixture that did not follow would quietly stop rendering
   // the page its cases are about.
   retention_policy: ["read", "create", "update"],
+  // The roster and team pages. They used to open for every authenticated
+  // reader; they follow `user_admin` and `team_admin` now, and the layout cases
+  // that render this fixture expect both present.
+  user_admin: ["read", "create", "update", "delete"],
+  team_admin: ["read", "create", "update"],
 };
 
 // The read grant on ONE object, as a GrantSpec.
