@@ -358,17 +358,13 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	return err
 }
 
-// deleteConfirmationTrail removes every live way back INTO the record: the
-// bearer links, and what a subject sent back through one.
+// deleteConfirmationTrail removes every live way back INTO the record.
 //
-// A double-opt-in token left standing is a live invitation to record a lawful
-// basis for somebody the row no longer names. An anonymized subject may
-// lawfully return — that is what the suppression list is for — but they return
-// by being invited again, not by an old token in an old mailbox still working.
-// The confirm-details link goes for a stronger reason: it does not merely
-// authorise a grant, it DISPLAYS the record, so one left live would show an old
-// mailbox the fields the caller just emptied. What came back through it is the
-// subject's name and address in plaintext, which is that same content again.
+// A standing opt-in token is a live invitation to record a lawful basis for
+// somebody the row no longer names: an anonymized subject may lawfully return,
+// but by being invited again, not by an old token in an old mailbox. The
+// confirm-details link goes for a stronger reason — it DISPLAYS the record — and
+// what came back through it is the subject's name and address in plaintext.
 func deleteConfirmationTrail(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	for _, statement := range []string{
 		`DELETE FROM consent_doi_token WHERE person_id = $1`,
@@ -382,18 +378,14 @@ func deleteConfirmationTrail(ctx context.Context, tx pgx.Tx, id ids.UUID) error 
 	return nil
 }
 
-// deleteRowsNamingPerson removes the rows in other tables that carry the
-// subject's id without a foreign key to it. Nothing cascades to any of them, so
-// each would otherwise outlive the anonymization it describes:
-//
-//   - the channel identity is a resolution key as much as an address, and would
-//     keep binding inbound messages to the row this sweep just anonymized;
-//   - the embedding is the subject's own content in vector form;
-//   - a provenance row points at the fields the caller just nulled, and has
-//     nothing in it to anonymize: what identifies the subject IS the record of
-//     where they were found;
-//   - a feedback row names this person as the subject an AI answer was judged
-//     about, and the judgement cannot be held without them.
+// deleteRowsNamingPerson removes the rows in other tables carrying the subject's
+// id without a foreign key to it. Nothing cascades to any of them, so each would
+// otherwise outlive the anonymization it describes: the channel identity would
+// keep binding inbound messages to the row just anonymized; the embedding is the
+// subject's own content in vector form; a provenance row points at the fields
+// just nulled and has nothing IN it to anonymize, since what identifies the
+// subject is the record of where they were found; and a feedback row holds a
+// judgement about them that cannot be held without them.
 func deleteRowsNamingPerson(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	for _, statement := range []string{
 		`DELETE FROM person_channel_identity WHERE person_id = $1`,
