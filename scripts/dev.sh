@@ -219,6 +219,69 @@ stack_already_up() {
   return 1
 }
 
+# stack_victims prints every pid belonging to THIS slug's stack, from the three
+# places one can be hiding: the record it left, the ports it holds, and its own
+# command lines.
+#
+# All three, because each misses something the others catch. The RECORD holds one
+# pid per role and every `make dev` overwrites it, so an earlier run's processes
+# are reachable by nothing else. The PORTS reap what a pid does not name — vite
+# runs under pnpm, and the pid recorded is the parent's. And the COMMAND LINES
+# are the only way to reach the worker: it binds no port, so the port backstop
+# misses it, which is exactly how a worker came to outlive the `make dev` that
+# started it and go on draining a queue nobody could name.
+#
+# Read in a SUBSHELL: the state file sets BACKEND_PID, API_PORT, DB and the rest,
+# and a caller that is about to boot must not have them landed on it.
+stack_victims() {
+  (
+    BACKEND_PID=''
+    FE_PID=''
+    WORKER_PID=''
+    API_PORT=''
+    FE_PORT=''
+    REDIS_DB=''
+    # shellcheck disable=SC1090
+    [[ -f "$state" ]] && . "$state"
+    local p q
+    for p in "${BACKEND_PID:-}" "${FE_PID:-}" "${WORKER_PID:-}"; do
+      [[ -n "$p" ]] && echo "$p"
+    done
+    for p in "${API_PORT:-}" "${FE_PORT:-}"; do
+      [[ -n "$p" ]] || continue
+      for q in $(port_listeners "$p"); do echo "$q"; done
+    done
+    stack_server_pids "$(with_database "$APP_DSN" "${DB:-$db}")" \
+                      "localhost:${REDIS_PORT}/${REDIS_DB:-0}"
+  ) | grep -E '^[0-9]+$' | sort -u || true
+}
+
+# take_down_running_stack stops what is already up under this slug, on the way
+# to booting over it.
+#
+# `make dev` on a live stack used to boot BESIDE it: the new processes wrote
+# their pids into the same record, and the old api, vite and worker became
+# nameless — `make dev-stop` would then stop the new stack and leave the old one
+# running against a database the next run is about to migrate.
+#
+# Restart rather than refuse, because the reflex of re-running `make dev` after a
+# change is worth keeping and because the orphan is the failure that actually
+# costs somebody an afternoon. It SAYS SO on the way past: a command that
+# silently kills a worker whose logs somebody is watching is a surprise even when
+# it is the right behaviour.
+#
+# The RECORD is left alone. This run is taking the claim over, not releasing it —
+# the ports and the Redis database stay reserved to this slug, and claim_stack
+# rewrites the file a moment later.
+take_down_running_stack() {
+  local victims
+  victims=$(stack_victims)
+  [[ -n "$victims" ]] || return 0
+  echo "restarting $label — stopping $(printf '%s\n' $victims | wc -l | tr -d ' ') process(es) already running under this slug"
+  # shellcheck disable=SC2086
+  kill_pids $victims
+}
+
 # release_unconfirmed_stack — take down whatever this run started, and give back
 # the record it was going to be found by. Called from the EXIT trap while
 # stack_recorded is 0, which is every path that does not reach a stack answering
@@ -482,7 +545,16 @@ if [[ -z "$slug" ]]; then
   # alone, or `make dev-stop` has nothing left to stop it by.
   STACK_CLAIM_PREEXISTING=0
   if [[ "$cmd" == "up" ]] && stack_already_up; then
-    STACK_CLAIM_PREEXISTING=1
+    take_down_running_stack
+    # ASKED AGAIN, because the answer changed: what the takedown removed is no
+    # longer a stack this run did not start, and the record is now this run's to
+    # release if the boot fails. Anything that SURVIVED it still is, and the flag
+    # keeps its own job for exactly that residue — a process wedged past TERM and
+    # KILL is rare and is precisely when the failed-boot cleanup must not delete
+    # the record naming it.
+    if stack_already_up; then
+      STACK_CLAIM_PREEXISTING=1
+    fi
   fi
 elif [[ "$cmd" == "up" ]]; then
   # Assign first, THEN read: `read … <<<"$(claim_stack)"` reports read's status,
@@ -499,7 +571,11 @@ elif [[ "$cmd" == "up" ]]; then
   # the pids of a stack that was still running.
   STACK_CLAIM_PREEXISTING=0
   if stack_already_up; then
-    STACK_CLAIM_PREEXISTING=1
+    take_down_running_stack
+    # The same second ask as the primary path above, for the same residue.
+    if stack_already_up; then
+      STACK_CLAIM_PREEXISTING=1
+    fi
   fi
   export STACK_STARTER_PID=$$
   claimed="$(claim_stack "$slug")" || exit 1
@@ -1332,26 +1408,13 @@ stop)
   if [[ -f "$state" ]]; then
     # shellcheck disable=SC1090
     . "$state"
-    victims=()
-    for p in "${BACKEND_PID:-}" "${FE_PID:-}" "${WORKER_PID:-}"; do
-      [[ -n "$p" ]] && victims+=("$p")
-    done
-    # Backstop: free the recorded ports by listener (reaps vite, pnpm's child).
-    for p in "${API_PORT:-}" "${FE_PORT:-}"; do
-      [[ -n "$p" ]] || continue
-      for q in $(port_listeners "$p"); do victims+=("$q"); done
-    done
-    # And this stack's servers whatever their pid — the state file holds ONE
-    # worker and every `make dev` overwrites it, so an earlier run's worker is
-    # reachable by nothing else. It binds no port, so the port backstop above
-    # misses it too; stack_server_pids says what that cost.
-    for q in $(stack_server_pids "$(with_database "$APP_DSN" "${DB:-$db}")" \
-                                 "localhost:${REDIS_PORT}/${REDIS_DB:-0}"); do
-      victims+=("$q")
-    done
+    # The same three places a restart looks in — stack_victims says why each one
+    # is needed. One collector for both, so a hiding place found on one path is
+    # never missing from the other.
+    #
     # kill_pids, not a bare `kill`: TERM alone leaves a server that ignores it
     # standing after its record is gone, which is the orphan this is for.
-    stopped=$(printf '%s\n' "${victims[@]+"${victims[@]}"}" | grep -E '^[0-9]+$' | sort -u || true)
+    stopped=$(stack_victims)
     # shellcheck disable=SC2086
     [[ -n "$stopped" ]] && kill_pids $stopped
     rm -rf "$rundir"
