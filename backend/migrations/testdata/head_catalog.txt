@@ -5162,6 +5162,31 @@ public.team_weekly_review.team_weekly_review_name_present CHECK ((btrim(team_nam
 public.team_weekly_review.team_weekly_review_pkey PRIMARY KEY (id)
 public.team_weekly_review.team_weekly_review_subsets CHECK (((meetings_with_next_step <= meetings_held) AND (commitments_kept <= commitments_due) AND ((leads_answered_in_target + leads_breached) <= leads_routed)))
 public.team_weekly_review.uq_team_weekly_review_team_week UNIQUE (team_id, local_week_start)
+public.team_weekly_review_outlook acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.team_weekly_review_outlook.base_currency text NOT NULL gen=- def=-
+public.team_weekly_review_outlook.best_case_minor bigint gen=- def=-
+public.team_weekly_review_outlook.closing_landing_minor bigint gen=- def=-
+public.team_weekly_review_outlook.closing_snapshot_id uuid gen=- def=-
+public.team_weekly_review_outlook.commit_minor bigint gen=- def=-
+public.team_weekly_review_outlook.forward_measure text gen=- def=-
+public.team_weekly_review_outlook.id uuid NOT NULL gen=- def=uuidv7()
+public.team_weekly_review_outlook.opening_landing_minor bigint gen=- def=-
+public.team_weekly_review_outlook.opening_snapshot_id uuid gen=- def=-
+public.team_weekly_review_outlook.period_end date NOT NULL gen=- def=-
+public.team_weekly_review_outlook.period_kind text NOT NULL gen=- def=-
+public.team_weekly_review_outlook.period_start date NOT NULL gen=- def=-
+public.team_weekly_review_outlook.team_weekly_review_id uuid NOT NULL gen=- def=-
+public.team_weekly_review_outlook.team_weekly_review_outlook_currency_present CHECK ((btrim(base_currency) <> ''::text))
+public.team_weekly_review_outlook.team_weekly_review_outlook_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence'::text, 'weighted'::text, 'manager_call'::text]))))
+public.team_weekly_review_outlook.team_weekly_review_outlook_measure_with_landing CHECK ((NOT ((forward_measure IS NULL) IS DISTINCT FROM (closing_landing_minor IS NULL))))
+public.team_weekly_review_outlook.team_weekly_review_outlook_opening_whole CHECK ((NOT ((opening_snapshot_id IS NULL) IS DISTINCT FROM (opening_landing_minor IS NULL))))
+public.team_weekly_review_outlook.team_weekly_review_outlook_period_kind_check CHECK ((period_kind = ANY (ARRAY['week'::text, 'month'::text, 'quarter'::text])))
+public.team_weekly_review_outlook.team_weekly_review_outlook_pkey PRIMARY KEY (id)
+public.team_weekly_review_outlook.team_weekly_review_outlook_review_fkey FOREIGN KEY (team_weekly_review_id) REFERENCES team_weekly_review(id) ON DELETE CASCADE
+public.team_weekly_review_outlook.team_weekly_review_outlook_window_ordered CHECK ((period_end >= period_start))
+public.team_weekly_review_outlook.weighted_minor bigint gen=- def=-
+public.team_weekly_review_outlook.won_minor bigint gen=- def=-
+public.team_weekly_review_outlook_pkey CREATE UNIQUE INDEX team_weekly_review_outlook_pkey ON public.team_weekly_review_outlook USING btree (id)
 public.team_weekly_review_pkey CREATE UNIQUE INDEX team_weekly_review_pkey ON public.team_weekly_review USING btree (id)
 public.team_weekly_review_rep acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.team_weekly_review_rep.commitments_due integer NOT NULL gen=- def=0
@@ -5353,6 +5378,7 @@ public.uq_site_read_triage_inflight CREATE UNIQUE INDEX uq_site_read_triage_infl
 public.uq_site_read_ws_id CREATE UNIQUE INDEX uq_site_read_ws_id ON public.site_read USING btree (id)
 public.uq_stage_position CREATE UNIQUE INDEX uq_stage_position ON public.stage USING btree (pipeline_id, "position") WHERE (archived_at IS NULL)
 public.uq_tag_name CREATE UNIQUE INDEX uq_tag_name ON public.tag USING btree (lower(name)) WHERE (archived_at IS NULL)
+public.uq_team_weekly_review_outlook_period CREATE UNIQUE INDEX uq_team_weekly_review_outlook_period ON public.team_weekly_review_outlook USING btree (team_weekly_review_id, period_kind)
 public.uq_team_weekly_review_rep CREATE UNIQUE INDEX uq_team_weekly_review_rep ON public.team_weekly_review_rep USING btree (team_weekly_review_id, user_id)
 public.uq_team_weekly_review_team_week CREATE UNIQUE INDEX uq_team_weekly_review_team_week ON public.team_weekly_review USING btree (team_id, local_week_start)
 public.uq_transcript_read_inflight CREATE UNIQUE INDEX uq_transcript_read_inflight ON public.transcript_read USING btree (activity_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))
