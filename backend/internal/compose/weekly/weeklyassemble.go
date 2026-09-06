@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -52,6 +53,49 @@ func WeekStartOf(ctx context.Context, tx pgx.Tx, now time.Time) (time.Time, erro
 	// and weekday-1 otherwise.
 	back := (int(day.Weekday()) + 6) % 7
 	return day.AddDate(0, 0, -back), nil
+}
+
+// measureWeek fills in everything the week came to, from the five reads that
+// answer it.
+//
+// Split out of AssembleFor because the reads are ONE concern — what happened —
+// while the function around them is another: which week, whose, and whether it
+// has been written already. Each read is separate because the tables and the
+// scope clauses are, and each is dated by a rule that takes a paragraph to
+// justify; they fold onto one Counts because a reader of a week wants one set of
+// figures.
+func (e *Engine) measureWeek(
+	ctx context.Context, tx pgx.Tx, review *Review, userID ids.UUID, start, end, now time.Time,
+) error {
+	var err error
+	if review.Counts, err = countWeek(ctx, tx, userID, start, end); err != nil {
+		return err
+	}
+	c := &review.Counts
+	c.LeadsRouted, c.LeadsAnsweredInTarget, c.LeadsBreached, err = countWeekLeads(ctx, tx, userID, start, end)
+	if err != nil {
+		return err
+	}
+	c.MeetingsHeld, c.MeetingsWithNextStep, err = countWeekMeetings(ctx, tx, userID, start, end)
+	if err != nil {
+		return err
+	}
+	if review.Money, err = countWeekMoney(ctx, tx, userID, start, end); err != nil {
+		return err
+	}
+	// The plan's outcome, settled once and then frozen alongside the rest.
+	//
+	// Settled BEFORE the counts are written, so the review records what the week
+	// actually came to rather than what was still open when the job happened to
+	// run. CloseWeek is idempotent, so the dispatcher's extra ticks inside a week
+	// do not re-settle a commitment the rep completed after the first pass.
+	if e.plan != nil {
+		if c.CommitmentsDue, c.CommitmentsKept, err = e.plan.CloseWeek(ctx, now); err != nil {
+			return err
+		}
+	}
+	review.Deals, err = readWeekDeals(ctx, tx, userID, start, end)
+	return err
 }
 
 // AssembleFor measures the week that just closed for the acting rep and writes
@@ -94,39 +138,7 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 		}
 
 		review = Review{UserID: userID, LocalWeekStart: weekStart, AsOf: now.UTC()}
-		if review.Counts, err = countWeek(ctx, tx, userID, start, end); err != nil {
-			return err
-		}
-		// Leads and meetings read separately from the tallies above: different
-		// tables, different scope clauses, and each dated by a rule that takes
-		// a paragraph to justify. They fold onto the same Counts because a
-		// reader of a week wants one set of figures.
-		c := &review.Counts
-		if c.LeadsRouted, c.LeadsAnsweredInTarget, c.LeadsBreached, err =
-			countWeekLeads(ctx, tx, userID, start, end); err != nil {
-			return err
-		}
-		if c.MeetingsHeld, c.MeetingsWithNextStep, err =
-			countWeekMeetings(ctx, tx, userID, start, end); err != nil {
-			return err
-		}
-		if review.Money, err = countWeekMoney(ctx, tx, userID, start, end); err != nil {
-			return err
-		}
-		// The plan's outcome, settled once and then frozen alongside the rest.
-		//
-		// Settled BEFORE the counts are written, so the review records what the
-		// week actually came to rather than what was still open when the job
-		// happened to run. CloseWeek is idempotent, so the dispatcher's extra
-		// ticks inside a week do not re-settle a commitment the rep completed
-		// after the first pass.
-		if e.plan != nil {
-			c := &review.Counts
-			if c.CommitmentsDue, c.CommitmentsKept, err = e.plan.CloseWeek(ctx, now); err != nil {
-				return err
-			}
-		}
-		if review.Deals, err = readWeekDeals(ctx, tx, userID, start, end); err != nil {
+		if err := e.measureWeek(ctx, tx, &review, userID, start, end, now); err != nil {
 			return err
 		}
 		// The week this one is measured against: the rep's most recent EARLIER
