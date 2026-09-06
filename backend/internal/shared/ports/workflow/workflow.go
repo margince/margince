@@ -48,6 +48,24 @@ type Spec struct {
 	Name    string // stable id: "flag_idle_deals", "route_lead", …
 	Trigger Trigger
 	Tier    mcp.RiskTier
+	// RedrivableWithoutDuplicating says whether applying this handler's effect a
+	// SECOND time repeats a side effect nobody asked for.
+	//
+	// Apply is documented idempotent on IdempotencyKey(ev), and nothing enforces
+	// that: no Apply in the tree reads the key. The promise costs nothing while
+	// every run happens once, and becomes load-bearing the moment anything
+	// re-drives one — a retry then means "the row lands where it already was"
+	// for one handler and "the customer is told a second time" for another.
+	//
+	// The answer belongs HERE rather than on the action kind, because the kind
+	// does not decide what runs: leadRouting plans assign_owner and applies it
+	// through RouteLead, while the engine's own handlers plan the same kind and
+	// apply it through applyAssignOwner. One vocabulary, two writes.
+	//
+	// FALSE IS THE ZERO VALUE, so a handler that has not considered the question
+	// answers no. A caller re-driving reads this; a false answer means the run
+	// needs a human rather than a button.
+	RedrivableWithoutDuplicating bool
 }
 
 // Trigger binds to the event bus or a schedule: EventType for bus events,
