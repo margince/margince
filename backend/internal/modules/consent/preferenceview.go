@@ -19,6 +19,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"unicode/utf8"
 
@@ -52,10 +53,14 @@ const (
 
 // PreferenceView is the whole public read.
 type PreferenceView struct {
-	// MaskedEmail is the person's primary address, masked. NOT necessarily
-	// the mailbox that received the link: preference_token resolves to a
-	// person, and the delivered address is not recorded. The page shows it
-	// as account context and its copy never claims "this address".
+	// MaskedEmail is the address the link was delivered to, masked — the token
+	// records which one it was minted for, so a person holding several sees the
+	// mailbox that actually received the message.
+	//
+	// A token minted before that was recorded, or one whose address the subject
+	// has since erased, falls back to the person's primary. That is the older
+	// behaviour and the reason the page's copy still presents this as account
+	// context rather than claiming "this address".
 	MaskedEmail string
 	// WorkspaceName can be empty on an unnamed installation; every string
 	// that interpolates it needs an omission variant.
@@ -64,7 +69,12 @@ type PreferenceView struct {
 }
 
 // PublicPreferenceView reads everything the page needs in one transaction.
-func (s *Store) PublicPreferenceView(ctx context.Context, personID ids.PersonID) (PreferenceView, error) {
+//
+// Takes the token's whole resolution rather than the person id: which address
+// the link went to is part of what the page reports, and a signature carrying
+// only the person is one a caller cannot answer that from.
+func (s *Store) PublicPreferenceView(ctx context.Context, ref PreferenceRef) (PreferenceView, error) {
+	personID := ref.PersonID
 	if err := auth.Require(ctx, entityPerson, principal.ActionRead); err != nil {
 		return PreferenceView{}, err
 	}
@@ -86,7 +96,7 @@ func (s *Store) PublicPreferenceView(ctx context.Context, personID ids.PersonID)
 		if err != nil {
 			return err
 		}
-		email, err := primaryEmailTx(ctx, tx, personID)
+		email, err := deliveredEmailTx(ctx, tx, personID, ref.EmailID)
 		if err != nil {
 			return err
 		}
@@ -117,6 +127,34 @@ func primaryEmailSQL(ref string) string {
 	return `coalesce((SELECT pe.email FROM person_email pe
 	                    WHERE pe.person_id = ` + ref + ` AND pe.archived_at IS NULL
 	                    ORDER BY pe.is_primary DESC, pe.created_at LIMIT 1), '')`
+}
+
+// deliveredEmailTx reads the address the link was sent to, falling back to the
+// person's primary when the token does not name one.
+//
+// The named address is still checked against the person and against
+// archived_at: the token is a bearer credential thirty days long, and a row
+// that has since moved to another person or been erased must not be read back
+// out of it. A named address that no longer qualifies falls back the same way a
+// missing one does, which keeps the page working rather than failing a reader
+// who did nothing wrong.
+func deliveredEmailTx(
+	ctx context.Context, tx pgx.Tx, personID ids.PersonID, emailID *ids.UUID,
+) (string, error) {
+	if emailID != nil {
+		var email string
+		err := tx.QueryRow(ctx, `
+			SELECT email FROM person_email
+			 WHERE id = $1 AND person_id = $2 AND archived_at IS NULL`,
+			*emailID, personID).Scan(&email)
+		if err == nil {
+			return email, nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return "", err
+		}
+	}
+	return primaryEmailTx(ctx, tx, personID)
 }
 
 // primaryEmailTx reads the address on its own, for the preference centre.

@@ -49,9 +49,15 @@ func LockedPurpose(key string) bool {
 	return normalizedPurposeKey(key) == PurposeTransactional
 }
 
-// PreferenceRef is a token's resolution: whose consent.
+// PreferenceRef is a token's resolution: whose consent, and at which address.
+//
+// EmailID is nil for a token minted before the address was recorded, and for
+// one whose address the subject has since erased. The page falls back to the
+// person's primary address there, which is what it always did — a NULL is the
+// honest record of "not known" rather than a guess that would read like a fact.
 type PreferenceRef struct {
 	PersonID ids.PersonID
+	EmailID  *ids.UUID
 }
 
 // PurposeChoice is one row of the preference center: the purpose, the
@@ -110,9 +116,9 @@ func (s *Store) ResolvePreferenceToken(ctx context.Context, token string) (Prefe
 	var ref PreferenceRef
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
-			SELECT person_id FROM preference_token
+			SELECT person_id, person_email_id FROM preference_token
 			 WHERE token = $1 AND revoked_at IS NULL AND expires_at > now()`,
-			token).Scan(&ref.PersonID)
+			token).Scan(&ref.PersonID, &ref.EmailID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -122,6 +128,16 @@ func (s *Store) ResolvePreferenceToken(ctx context.Context, token string) (Prefe
 		return PreferenceRef{}, err
 	}
 	return ref, nil
+}
+
+// addressedPerson is one live address and the person who holds it — the pair a
+// preference token is minted for. The ADDRESS is half of it: a token that
+// remembered only the person would open a page naming whichever address the
+// record happens to call primary, which for a person holding several is one the
+// link's holder was never written at.
+type addressedPerson struct {
+	PersonID ids.PersonID
+	EmailID  ids.UUID
 }
 
 // PreferenceTokenForEmail resolves a recipient address to their live
@@ -154,7 +170,7 @@ func (s *Store) PreferenceTokenForEmail(ctx context.Context, email string) (toke
 		// impossible; this refuses anyway rather than trusting an invariant it
 		// does not check.
 		rows, err := tx.Query(ctx, `
-			SELECT DISTINCT pe.person_id
+			SELECT DISTINCT pe.person_id, pe.id
 			FROM person_email pe
 			JOIN person p ON p.id = pe.person_id AND p.archived_at IS NULL
 			WHERE lower(pe.email) = $1 AND pe.archived_at IS NULL
@@ -162,7 +178,7 @@ func (s *Store) PreferenceTokenForEmail(ctx context.Context, email string) (toke
 		if err != nil {
 			return err
 		}
-		matches, err := pgx.CollectRows(rows, pgx.RowTo[ids.PersonID])
+		matches, err := pgx.CollectRows(rows, pgx.RowToStructByPos[addressedPerson])
 		if err != nil {
 			return err
 		}
@@ -173,7 +189,7 @@ func (s *Store) PreferenceTokenForEmail(ctx context.Context, email string) (toke
 			return fmt.Errorf("consent: the recipient address is live on more than one person, so no unsubscribe link can name which: %w",
 				apperrors.ErrConflict)
 		}
-		personID := matches[0]
+		personID := matches[0].PersonID
 		// The token this mints is a bearer credential over the recipient's
 		// consent record — it reads their per-purpose state, withdraws, and
 		// grants, all with no session. So the mint carries the SAME row-scope
@@ -199,7 +215,7 @@ func (s *Store) PreferenceTokenForEmail(ctx context.Context, email string) (toke
 			return err
 		}
 		found = true
-		token, err = ensurePreferenceTokenTx(ctx, tx, personID)
+		token, err = ensurePreferenceTokenTx(ctx, tx, personID, matches[0].EmailID)
 		return err
 	})
 	if err != nil {
@@ -220,15 +236,18 @@ func (s *Store) PreferenceTokenForEmail(ctx context.Context, email string) (toke
 // accident — it falls through to rotation. Reuse is deliberate (the
 // preference centre is revisitable, and one message's link must keep working
 // after the next one goes out); what 0144 ends is reuse without a bound.
-func ensurePreferenceTokenTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID) (string, error) {
+func ensurePreferenceTokenTx(
+	ctx context.Context, tx pgx.Tx, personID ids.PersonID, emailID ids.UUID,
+) (string, error) {
 	var token string
 	err := tx.QueryRow(ctx, `
 		UPDATE preference_token
 		   SET expires_at = now() + make_interval(days => $2)
-		 WHERE person_id = $1 AND revoked_at IS NULL
+		 WHERE person_id = $1 AND person_email_id = $4 AND revoked_at IS NULL
 		   AND expires_at > now()
 		   AND created_at > now() - make_interval(days => $3)
-		RETURNING token`, personID, preferenceTokenTTLDays, preferenceTokenMaxAgeDays).Scan(&token)
+		RETURNING token`,
+		personID, preferenceTokenTTLDays, preferenceTokenMaxAgeDays, emailID).Scan(&token)
 	if err == nil {
 		return token, nil
 	}
@@ -243,7 +262,8 @@ func ensurePreferenceTokenTx(ctx context.Context, tx pgx.Tx, personID ids.Person
 	// declared for in 0048 and never had.
 	if _, err := tx.Exec(ctx, `
 		UPDATE preference_token SET revoked_at = now()
-		 WHERE person_id = $1 AND revoked_at IS NULL`, personID); err != nil {
+		 WHERE person_id = $1 AND person_email_id = $2 AND revoked_at IS NULL`,
+		personID, emailID); err != nil {
 		return "", err
 	}
 	fresh, err := newPreferenceToken()
@@ -251,17 +271,18 @@ func ensurePreferenceTokenTx(ctx context.Context, tx pgx.Tx, personID ids.Person
 		return "", err
 	}
 	err = tx.QueryRow(ctx, `
-		INSERT INTO preference_token (person_id, token, expires_at)
-		VALUES ($1, $2, now() + make_interval(days => $3))
-		ON CONFLICT (person_id) WHERE revoked_at IS NULL DO NOTHING
-		RETURNING token`, personID, fresh, preferenceTokenTTLDays).Scan(&token)
+		INSERT INTO preference_token (person_id, person_email_id, token, expires_at)
+		VALUES ($1, $4, $2, now() + make_interval(days => $3))
+		ON CONFLICT (person_id, person_email_id) WHERE revoked_at IS NULL DO NOTHING
+		RETURNING token`, personID, fresh, preferenceTokenTTLDays, emailID).Scan(&token)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// A concurrent send won the INSERT — read the winner. Scanned into
 		// token and returned only after, so the caller receives the winning
 		// value rather than the zero one this scan is about to overwrite.
 		if err := tx.QueryRow(ctx, `
 			SELECT token FROM preference_token
-			 WHERE person_id = $1 AND revoked_at IS NULL`, personID).Scan(&token); err != nil {
+			 WHERE person_id = $1 AND person_email_id = $2 AND revoked_at IS NULL`,
+			personID, emailID).Scan(&token); err != nil {
 			return "", err
 		}
 		return token, nil

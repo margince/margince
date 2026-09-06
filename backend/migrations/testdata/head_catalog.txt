@@ -4337,7 +4337,9 @@ public.preference_token acl=margince_owner=arwdDxt/margince_owner,margince_app=a
 public.preference_token.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.preference_token.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.preference_token.id uuid NOT NULL gen=- def=uuidv7()
+public.preference_token.person_email_id uuid gen=- def=-
 public.preference_token.person_id uuid NOT NULL gen=- def=-
+public.preference_token.preference_token_person_email_id_fkey FOREIGN KEY (person_email_id) REFERENCES person_email(id) ON DELETE SET NULL
 public.preference_token.preference_token_person_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.preference_token.preference_token_pkey PRIMARY KEY (id)
 public.preference_token.preference_token_token_key UNIQUE (token)
@@ -5379,7 +5381,7 @@ public.uq_person_email_primary CREATE UNIQUE INDEX uq_person_email_primary ON pu
 public.uq_person_phone_primary CREATE UNIQUE INDEX uq_person_phone_primary ON public.person_phone USING btree (person_id, phone_type) WHERE (is_primary AND (archived_at IS NULL))
 public.uq_person_profile_field CREATE UNIQUE INDEX uq_person_profile_field ON public.person_profile_field USING btree (person_id, field)
 public.uq_pipeline_default CREATE UNIQUE INDEX uq_pipeline_default ON public.pipeline USING btree ((true)) WHERE (is_default AND (archived_at IS NULL))
-public.uq_preference_token_person CREATE UNIQUE INDEX uq_preference_token_person ON public.preference_token USING btree (person_id) WHERE (revoked_at IS NULL)
+public.uq_preference_token_person_address CREATE UNIQUE INDEX uq_preference_token_person_address ON public.preference_token USING btree (person_id, person_email_id) NULLS NOT DISTINCT WHERE (revoked_at IS NULL)
 public.uq_product_sku CREATE UNIQUE INDEX uq_product_sku ON public.product USING btree (sku) WHERE ((sku IS NOT NULL) AND (archived_at IS NULL))
 public.uq_product_ws_id CREATE UNIQUE INDEX uq_product_ws_id ON public.product USING btree (id)
 public.uq_project_key CREATE UNIQUE INDEX uq_project_key ON public.project USING btree (lower(key)) WHERE ((key IS NOT NULL) AND (archived_at IS NULL))
