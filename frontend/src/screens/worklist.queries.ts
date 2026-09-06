@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ifMatch, requireVersion } from "../api/version";
 import { throwProblem } from "./common";
 
 export type Worklist = components["schemas"]["Worklist"];
@@ -216,9 +217,20 @@ export function useHiddenBacklog(enabled: boolean) {
 export function useReassignTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { activityId: string; assigneeId: string }) => {
+    mutationFn: async (input: {
+      activityId: string;
+      // The version the reassigning lead was looking at. Unpinned, two leads
+      // hand the same task to different people, the second press overwrites the
+      // first, and neither is told: the row then sits on one person's queue
+      // while the other believes they delegated it.
+      version: number | undefined;
+      assigneeId: string;
+    }) => {
       const { error } = await api.PATCH("/activities/{id}", {
-        params: { path: { id: input.activityId } },
+        params: {
+          path: { id: input.activityId },
+          ...ifMatch(requireVersion(input.version)),
+        },
         body: { assignee_id: input.assigneeId },
       });
       if (error) {

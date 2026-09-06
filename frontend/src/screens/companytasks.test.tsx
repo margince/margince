@@ -71,11 +71,15 @@ const openTask = {
   assignee_id: null,
   linked_deal_id: null,
   linked_person_id: null,
+  // The version the row's tick writes with. The 360 sends one for every task it
+  // lists, and a fixture without it describes a payload the read cannot produce
+  // — the write under test would refuse rather than run.
+  version: 1,
 };
 
 // The same task as the ACTIVITY read the detail modal fires when a row is
-// expanded — the composite's summary shape carries no version or done flag, so
-// the modal reads the record itself.
+// expanded — the composite's summary carries no done flag, so the modal reads
+// the record itself.
 const openTaskActivity = {
   id: openTask.activity_id,
   organization_id: "o-1",

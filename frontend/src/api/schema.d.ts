@@ -18316,6 +18316,12 @@ export interface components {
             linked_deal_id?: string | null;
             /** Format: uuid */
             linked_person_id?: string | null;
+            /**
+             * @description The task's version, carried so the tick and the snooze beside this row can write with
+             *     `If-Match`. The same reason `EmailSummary` carries one: a projection a reader can act
+             *     from has to name the row it will act on, or every press is last-write-wins.
+             */
+            version?: components["schemas"]["RowVersion"];
         };
         /**
          * @description The next meeting with this account that has not happened yet, and who is in it.
@@ -29938,6 +29944,13 @@ export interface components {
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
+             * @description The version of the row this item's own verbs write to, present where it names one — a
+             *     task today. Carried for the reason `email_summary` carries one: a lane that offers
+             *     `complete` and `snooze` has to name the row those presses condition on, or two people
+             *     acting on one task each overwrite the other and neither is told.
+             */
+            version?: components["schemas"]["RowVersion"];
+            /**
              * Format: date-time
              * @description When a done_for_you receipt actually happened.
              */
@@ -31006,6 +31019,13 @@ export interface components {
             due_at?: string;
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
+            /**
+             * @description The version of the row this item's own verbs write to, present where it names one — a
+             *     task today. Carried for the reason `email_summary` carries one: a lane that offers
+             *     `complete` and `snooze` has to name the row those presses condition on, or two people
+             *     acting on one task each overwrite the other and neither is told.
+             */
+            version?: components["schemas"]["RowVersion"];
             /**
              * Format: date-time
              * @description When the thing being reported happened.

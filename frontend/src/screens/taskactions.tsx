@@ -7,6 +7,7 @@ import {
 import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ifMatch, requireVersion } from "../api/version";
 import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
@@ -32,6 +33,10 @@ import { EntityRef } from "./entityref";
 type Activity = components["schemas"]["Activity"];
 type TaskPatch = {
   id: string;
+  // The version the press was decided against. Every verb on a task goes
+  // through this one mutation, so pinning it here pins all four at once — and
+  // an unpinned tick is a task two people can complete, each told it worked.
+  version: number | undefined;
   body: { is_done?: boolean; due_at?: string; remind_at?: string | null };
 };
 
@@ -42,13 +47,20 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: TaskPatch) => {
-      const { error } = await api.PATCH("/activities/{id}", {
-        params: { path: { id: input.id } },
+      const { data, error } = await api.PATCH("/activities/{id}", {
+        params: {
+          path: { id: input.id },
+          ...ifMatch(requireVersion(input.version)),
+        },
         body: input.body,
       });
       if (error) {
         throwProblem(error, t);
       }
+      // The version the write PRODUCED, answered so a follow-on press has one.
+      // An undo re-sending the version the row was drawn at would be refused as
+      // skew by the very write it is undoing.
+      return data?.version;
     },
     onSuccess: (_data, input) => {
       for (const queryKey of invalidateKeys) {
@@ -81,9 +93,11 @@ export function snoozedDueAt(dueAt: string | null | undefined): string | null {
  */
 export function TaskCompleteCheck({
   activityId,
+  version,
   update,
 }: Readonly<{
   activityId: string;
+  version: number | undefined;
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
@@ -103,7 +117,7 @@ export function TaskCompleteCheck({
         checked={false}
         disabled={pending}
         onChange={() =>
-          update.mutate({ id: activityId, body: { is_done: true } })
+          update.mutate({ id: activityId, version, body: { is_done: true } })
         }
       />
       {failed && (
@@ -124,11 +138,13 @@ export function TaskCompleteCheck({
  */
 export function TaskQuickActions({
   activityId,
+  version,
   dueAt,
   update,
   showComplete = true,
 }: Readonly<{
   activityId: string;
+  version: number | undefined;
   dueAt?: string | null;
   update: ReturnType<typeof useTaskUpdate>;
   showComplete?: boolean;
@@ -144,7 +160,7 @@ export function TaskQuickActions({
           variant="primary"
           disabled={pending}
           onClick={() =>
-            update.mutate({ id: activityId, body: { is_done: true } })
+            update.mutate({ id: activityId, version, body: { is_done: true } })
           }
         >
           {t("tasks.complete")}
@@ -155,7 +171,11 @@ export function TaskQuickActions({
           small
           disabled={pending}
           onClick={() =>
-            update.mutate({ id: activityId, body: { due_at: nextDue } })
+            update.mutate({
+              id: activityId,
+              version,
+              body: { due_at: nextDue },
+            })
           }
         >
           {t("tasks.snooze")}
@@ -247,6 +267,7 @@ export function TaskDetailModal({
             <div className="form-actions">
               <TaskQuickActions
                 activityId={task.id}
+                version={task.version}
                 dueAt={task.due_at}
                 update={update}
               />

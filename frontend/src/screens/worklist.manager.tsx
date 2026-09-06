@@ -147,7 +147,11 @@ export function ReassignControl({
         disabled={assignee === "" || reassign.isPending}
         onClick={() => {
           reassign.mutate(
-            { activityId: item.id, assigneeId: assignee },
+            {
+              activityId: item.id,
+              version: item.version,
+              assigneeId: assignee,
+            },
             {
               onSuccess: () => {
                 setOpen(false);

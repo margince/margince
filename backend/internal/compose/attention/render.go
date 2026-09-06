@@ -312,6 +312,14 @@ func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
 		assignee := openapi_types.UUID(*task.AssigneeID)
 		item.AssigneeId = &assignee
 	}
+	// The row this item's verbs write to. `complete` and `snooze` both PATCH the
+	// task, and a client that cannot name the version cannot make either
+	// conditional — so two people acting on one task overwrite each other and
+	// the second is told nothing.
+	if task.Version != nil {
+		version := *task.Version
+		item.Version = &version
+	}
 	return item
 }
 

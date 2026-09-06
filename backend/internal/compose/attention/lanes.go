@@ -174,6 +174,11 @@ type Task struct {
 	// on the page that are not theirs. Without this the rows read identically,
 	// and the one nobody owns — the whole point of that scope — cannot say so.
 	AssigneeID *ids.UUID
+	// Version is the task row's version, for the If-Match the lane's own verbs
+	// send. The lane offers `complete` and `snooze`, so a row that arrived
+	// without it can be acted on and cannot be acted on SAFELY: two people
+	// ticking one task each overwrite the other, and neither is told.
+	Version *int64
 }
 
 // Receipts is what the system did on its own, most recent first.

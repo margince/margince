@@ -300,7 +300,7 @@ function RowAnswer({ item }: Readonly<{ item: WorklistItem }>) {
     !item.batch &&
     item.actions.includes("complete")
   ) {
-    return <TaskComplete id={item.id} />;
+    return <TaskComplete id={item.id} version={item.version} />;
   }
   // A quiet contact the reader has decided not to chase. The row's id IS the
   // person's, which is what the dismissal endpoint takes — the pairing is why
@@ -671,15 +671,21 @@ function NoticeAcknowledge({ id }: Readonly<{ id: string }>) {
 // control labelled "Done" that opens a page leaves the task open, and the reader
 // believes otherwise. The mutation exists and every other surface already uses
 // it, so the row completes the task rather than renaming the promise down.
-function TaskComplete({ id }: Readonly<{ id: string }>) {
+function TaskComplete({
+  id,
+  version,
+}: Readonly<{ id: string; version: number | undefined }>) {
   const t = useT();
   const toast = useToast();
   const update = useTaskUpdate([worklistKey]);
   // mutateAsync, not mutate: it answers a promise this closure owns, so the
   // rejection is still catchable after the row has gone. `mutate`'s per-call
   // callbacks hang off the component's observer and are dropped with it.
-  const undo = (task: string) =>
-    update.mutateAsync({ id: task, body: { is_done: false } });
+  // The UNDO is pinned on the version the completion produced, not the one the
+  // row was drawn at: ticking the task moved it on, so re-sending the older
+  // number would be refused as skew by the write that has just succeeded.
+  const undo = (task: string, at: number | undefined) =>
+    update.mutateAsync({ id: task, version: at, body: { is_done: false } });
   return (
     <div className="worklist-row-verbs">
       <Button
@@ -688,13 +694,13 @@ function TaskComplete({ id }: Readonly<{ id: string }>) {
         pending={update.isPending}
         onClick={() =>
           update.mutate(
-            { id, body: { is_done: true } },
+            { id, version, body: { is_done: true } },
             {
               // Undoable from the confirmation, the way every disposition
               // beside it is. Done REMOVES the row, so a misclick otherwise
               // costs the reader the only address they had for the task —
               // they must remember what it was to find it again.
-              onSuccess: () =>
+              onSuccess: (completedAt) =>
                 toast.show(t("worklist.verb.completed"), {
                   action: {
                     label: t("worklist.verb.completeUndo"),
@@ -711,7 +717,7 @@ function TaskComplete({ id }: Readonly<{ id: string }>) {
                     // one control that could undo their misclick, it failed,
                     // and the screen said nothing.
                     onAct: () => {
-                      undo(id).catch(() =>
+                      undo(id, completedAt).catch(() =>
                         toast.show(t("worklist.verb.completeUndoFailed"), {
                           mark: false,
                         }),

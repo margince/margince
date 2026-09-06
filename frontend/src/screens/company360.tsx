@@ -564,6 +564,7 @@ export function NextSteps({
             {update && (
               <TaskCompleteCheck
                 activityId={step.activity_id}
+                version={step.version}
                 update={update}
               />
             )}

@@ -18186,6 +18186,12 @@ type AttentionItem struct {
 	// and the client writes the line in the reader's own.
 	Title *string `json:"title,omitempty"`
 
+	// Version The version of the row this item's own verbs write to, present where it names one — a
+	// task today. Carried for the reason `email_summary` carries one: a lane that offers
+	// `complete` and `snooze` has to name the row those presses condition on, or two people
+	// acting on one task each overwrite the other and neither is told.
+	Version *RowVersion `json:"version,omitempty"`
+
 	// WithPerson Whose record a `meeting` row's brief is read on. Sent only for
 	// `source: meeting`, and only where the meeting names a person this caller may
 	// see.
@@ -26825,6 +26831,11 @@ type Organization360NextStep struct {
 	LinkedPersonId *openapi_types.UUID `json:"linked_person_id,omitempty"`
 	Overdue        bool                `json:"overdue"`
 	Subject        string              `json:"subject"`
+
+	// Version The task's version, carried so the tick and the snooze beside this row can write with
+	// `If-Match`. The same reason `EmailSummary` carries one: a projection a reader can act
+	// from has to name the row it will act on, or every press is last-write-wins.
+	Version *RowVersion `json:"version,omitempty"`
 }
 
 // Organization360Project One body of work on the record page: enough to name it, say where it stands and who holds it. The full row is `GET /projects/{id}`. Shared by the company page and the person page, so a project reads the same on both.
@@ -35068,6 +35079,12 @@ type WorklistItem struct {
 	// a deterministic rule stated as a belief is a lie about where the sentence came
 	// from.
 	Verdict *WorklistDealVerdict `json:"verdict,omitempty"`
+
+	// Version The version of the row this item's own verbs write to, present where it names one — a
+	// task today. Carried for the reason `email_summary` carries one: a lane that offers
+	// `complete` and `snooze` has to name the row those presses condition on, or two people
+	// acting on one task each overwrite the other and neither is told.
+	Version *RowVersion `json:"version,omitempty"`
 
 	// WithPerson Whose record a `meeting` row's brief is read on, carried out from
 	// `AttentionItem.with_person`.
