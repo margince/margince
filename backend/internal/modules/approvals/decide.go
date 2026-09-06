@@ -13,6 +13,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -373,11 +374,18 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	if err := countIfAPersonDecided(ctx, tx, p.UserID, a.Kind, approve, edited, by); err != nil {
 		return row{}, err
 	}
-	auditID, err := s.audit(ctx, tx, p, action, id.UUID, auditEvidence)
+	// An approval's whole content is a state transition, so the images are the
+	// transition — not decoration. Without them the audit row says a decision
+	// happened and not what it decided, which is the one thing a reader of an
+	// approval's history is looking for.
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, action, entityApproval, id.UUID,
+		map[string]any{approvalKeyStatus: StatusPending},
+		map[string]any{approvalKeyStatus: statusAfter(approve)},
+		auditEvidence)
 	if err != nil {
 		return row{}, err
 	}
-	if err := s.emit(ctx, tx, p, auditID, id.UUID, decidedPayload); err != nil {
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, decidedPayload); err != nil {
 		return row{}, err
 	}
 	if err := s.emitKindDecided(ctx, tx, p, auditID, id.UUID, a.Kind, approve); err != nil {
@@ -454,7 +462,7 @@ func (s *Service) emitKindDecided(ctx context.Context, tx pgx.Tx, p principal.Pr
 	if approve {
 		build = echo.approved
 	}
-	return s.emit(ctx, tx, p, auditID, id, build(openapi_types.UUID(id), openapi_types.UUID(p.UserID)))
+	return storekit.EmitEvent(ctx, tx, auditID, id, build(openapi_types.UUID(id), openapi_types.UUID(p.UserID)))
 }
 
 // ApplyUnderPolicy approves a proposal because the rep it belongs to has put
@@ -479,4 +487,13 @@ func (s *Service) emitKindDecided(ctx context.Context, tx pgx.Tx, p principal.Pr
 // context about whose policy was consulted.
 func (s *Service) ApplyUnderPolicy(ctx context.Context, id ids.ApprovalID) (row, error) {
 	return s.recordDecision(ctx, id, true, nil, nil, decidedBySystem)
+}
+
+// statusAfter is the state a decision leaves the approval in, which is what the
+// audit row's after image records.
+func statusAfter(approve bool) string {
+	if approve {
+		return StatusApproved
+	}
+	return StatusRejected
 }

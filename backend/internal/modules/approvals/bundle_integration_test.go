@@ -316,9 +316,14 @@ func TestARestagedProposalMovesOntoTheFreshBundle(t *testing.T) {
 	if bundle != second {
 		t.Errorf("the joined row is still in bundle %s, want the fresh act's %s", bundle, second)
 	}
+	// The audit row says where it moved FROM as well as to. A row recording
+	// only the destination cannot answer which act's decision the proposal was
+	// taken out of, which is the question somebody reading a half-empty bundle
+	// afterwards actually has.
 	if n := e.count(t, `SELECT count(*) FROM audit_log
-		WHERE entity_id = $1 AND evidence->>'rebundled' = 'true'`, original.UUID); n != 1 {
-		t.Errorf("rebundle audit rows = %d, want exactly one for the move", n)
+		WHERE entity_id = $1 AND before->>'bundle_id' = $2 AND after->>'bundle_id' = $3`,
+		original.UUID, first.String(), second.String()); n != 1 {
+		t.Errorf("audit rows recording the move from %s to %s = %d, want exactly one", first, second, n)
 	}
 	// The fresh bundle now answers for the whole act; the emptied one holds
 	// nothing, so it cannot be decided at all.
@@ -614,7 +619,7 @@ func TestARestagedProposalKeepsItsBundleWhenTheActHasNoneOrTheSameOne(t *testing
 
 	e.stageInto(ctx, t, bundle, org, kindSiteLead, "lead-anna")
 	if n := e.count(t, `SELECT count(*) FROM audit_log
-		WHERE entity_id = $1 AND evidence->>'rebundled' = 'true'`, member.UUID); n != 0 {
+		WHERE entity_id = $1 AND after->>'bundle_id' IS NOT NULL`, member.UUID); n != 0 {
 		t.Errorf("re-proposing into the same bundle wrote %d rebundle audit rows, want none — nothing moved", n)
 	}
 }

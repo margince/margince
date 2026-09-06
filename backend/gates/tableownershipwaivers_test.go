@@ -206,8 +206,6 @@ var crossStoreWrites = gatekit.Waive(map[string]string{
 	"internal/modules/privacy:comms_outbound:erasure_restrict.go:redactDeliveryAddressing":                             "the send log stores a second copy of an outbound message's recipients, subject and body, so Art. 17 erasure and the retention erase action scrub it in the SAME transaction that scrubs the activity it belongs to — routing it through comms would let the timeline row commit as a tombstone while the delivery still served the whole message",
 	// direct audit_log/event_outbox writers: these paths need columns
 	// storekit's writer does not carry.
-	"internal/modules/approvals:audit_log:service.go:Service.audit":   "approval evidence stamps passport_id/on_behalf_of, columns storekit's writer does not carry; same append-only table, this module's own writer",
-	"internal/modules/approvals:event_outbox:service.go:Service.emit": "approvals stages its events with the full envelope (passport actor fields) storekit.Emit does not carry; still outbox-only publishing",
 	// the non-production admin data-reset orchestration (compose, cross-module
 	// by nature — it sweeps every module's workspace_id tables in one
 	// transaction) must clear the workspace's staged events alongside the

@@ -132,7 +132,6 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	"internal/platform/extsecrets": "extension_secret is written with storekit.LogSystem rather than storekit.Audit, and the package says why in-source: a secret changing hands moves no domain row, so there is no audit_log entry to attach it to. It belongs in system_log, the non-entity operational ledger, which is the same posture the boot's extension inventory takes. This gate deliberately does not count LogSystem, so the module appears here — it is recorded, in the ledger that fits it",
 
 	// NOT a waiver of the obligation — a different defect, filed.
-	"internal/modules/approvals": "TRUE OF ONE OF ITS TWO TABLES, and the entry says so rather than rounding up. `approval` has history: approvals writes audit_log by HAND at service.go:218, bypassing storekit.Audit, so this gate cannot see it — filed as #1946 with what that writer omits. `signing_key` has NONE: the INSERT at token_jws.go:172 mints an Ed25519 private key with no audit row, no hand-rolled row and no system_log row, and the hand-rolled writer could not describe it anyway because it hardcodes entity_type to the literal 'approval'. That is a real gap this waiver does not excuse; it is recorded here so the next reader finds it instead of trusting the module-granular verdict. Which brings out this gate's own limit: it is module-granular, so `owns five tables, audits one` passes it, and approvals is the live instance",
 })
 
 // auditWriters are the storekit calls that put a row in audit_log.

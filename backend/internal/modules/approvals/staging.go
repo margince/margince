@@ -16,6 +16,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -227,22 +228,30 @@ func (s *Service) rebundleJoinedInTx(ctx context.Context, tx pgx.Tx, in StageInp
 	if in.BundleID.IsZero() {
 		return nil
 	}
-	p, ok := principal.Actor(ctx)
-	if !ok {
-		return errors.New("crmapprovals: no actor bound to context")
+	// The bundle it is LEAVING comes back with the write, read in the same
+	// statement's snapshot: a proposal that moves between two acts moves from a
+	// real bundle, and an audit row that recorded the move as though it came
+	// from nowhere would lose the one thing the move is about. No second read
+	// and no second lock — a SELECT beside the UPDATE could observe a bundle
+	// the UPDATE then did not move from.
+	var was *ids.UUID
+	err := tx.QueryRow(ctx, `
+		WITH prior AS (SELECT bundle_id FROM approval WHERE id = $1)
+		UPDATE approval SET bundle_id = $2
+		  FROM prior
+		 WHERE approval.id = $1 AND approval.bundle_id IS DISTINCT FROM $2
+		RETURNING prior.bundle_id`,
+		joined, in.BundleID).Scan(&was)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil // already this act's bundle — the re-proposal changed nothing
 	}
-	tag, err := tx.Exec(ctx,
-		`UPDATE approval SET bundle_id = $2 WHERE id = $1 AND bundle_id IS DISTINCT FROM $2`,
-		joined, in.BundleID)
 	if err != nil {
 		return fmt.Errorf("rebundle joined approval: %w", err)
 	}
-	if tag.RowsAffected() == 0 {
-		return nil // already this act's bundle — the re-proposal changed nothing
-	}
-	if _, err := s.audit(ctx, tx, p, "update", joined.UUID, map[string]any{
-		approvalKeyKind: in.Kind, "rebundled": true, "bundle_id": in.BundleID,
-	}); err != nil {
+	if _, err := storekit.AuditWithEvidence(ctx, tx, "update", entityApproval, joined.UUID,
+		map[string]any{approvalKeyBundle: was},
+		map[string]any{approvalKeyBundle: in.BundleID},
+		map[string]any{approvalKeyKind: in.Kind}); err != nil {
 		return fmt.Errorf("audit rebundled approval: %w", err)
 	}
 	return nil
@@ -291,9 +300,10 @@ func (s *Service) supersedePendingInTx(ctx context.Context, tx pgx.Tx, in StageI
 		return fmt.Errorf("supersede pending approvals: %w", err)
 	}
 	for _, old := range superseded {
-		if _, err := s.audit(ctx, tx, p, "update", old, map[string]any{
-			approvalKeyKind: in.Kind, "superseded": true, "superseded_by": survivor.UUID,
-		}); err != nil {
+		if _, err := storekit.AuditWithEvidence(ctx, tx, "update", entityApproval, old,
+			map[string]any{approvalKeyStatus: StatusPending},
+			map[string]any{approvalKeyStatus: StatusExpired},
+			map[string]any{approvalKeyKind: in.Kind, "superseded_by": survivor.UUID}); err != nil {
 			return fmt.Errorf("audit superseded approval: %w", err)
 		}
 	}
@@ -415,9 +425,10 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 		return ids.ApprovalID{}, err
 	}
 	expiresAt = expiresAt.UTC()
-	auditID, err := s.audit(ctx, tx, p, "create", id.UUID, map[string]any{
-		approvalKeyKind: in.Kind, "summary": in.Summary, "diff_hash": in.DiffHash,
-	})
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "create", entityApproval, id.UUID,
+		nil,
+		map[string]any{approvalKeyStatus: StatusPending},
+		map[string]any{approvalKeyKind: in.Kind, "summary": in.Summary, "diff_hash": in.DiffHash})
 	if err != nil {
 		return ids.ApprovalID{}, err
 	}
@@ -428,21 +439,24 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 		TargetEntityId:   optionalTargetID(in.TargetID),
 		ExpiresAt:        expiresAt,
 	}
-	if err := s.emit(ctx, tx, p, auditID, id.UUID, requested); err != nil {
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, requested); err != nil {
 		return ids.ApprovalID{}, err
 	}
 	for _, announce := range in.Announce {
-		// emit() forces the entity type to "approval" (an announced event is
-		// an approval-scoped echo). A nil payload would panic on EventType(),
-		// and a non-approval payload would be mislabeled and misrouted at
+		// An announced event is an approval-scoped echo, so its payload must
+		// already be about an approval. A nil payload would panic on
+		// EventType(), and one about anything else would be misrouted at
 		// fan-out — so refuse both rather than emit an unroutable envelope.
+		// The subject is the payload's own; nothing here overrides it, which is
+		// why an announced event lands under the same entity type a subscriber
+		// filtering on approvals already asks for.
 		if announce.Payload == nil {
 			return ids.ApprovalID{}, errors.New("crmapprovals: announced event has no payload")
 		}
-		if entityType := announce.Payload.EntityType(); entityType != "approval" {
+		if entityType := announce.Payload.EntityType(); entityType != entityApproval {
 			return ids.ApprovalID{}, fmt.Errorf("crmapprovals: announced event payload has entity type %q, want approval", entityType)
 		}
-		if err := s.emit(ctx, tx, p, auditID, id.UUID, announce.Payload); err != nil {
+		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, announce.Payload); err != nil {
 			return ids.ApprovalID{}, err
 		}
 	}

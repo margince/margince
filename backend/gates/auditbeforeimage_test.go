@@ -198,6 +198,7 @@ var unresolvableAuditActions = gatekit.Waive(map[string]string{
 	"internal/modules/ai/ratewrite.go:writeModelRate":                                 "an upsert resolves to create or update, and the replaced rate is read and passed in either way",
 	"internal/modules/deals/fxrate_store.go:writeFxRate":                              "the same upsert shape as the model rate, carrying the rate row it superseded",
 	"internal/modules/capture/freemaildomain.go:Add":                                  "a fresh carve-out and an amended one take different verbs, and the amended one carries the rule it replaced",
+	"internal/modules/approvals/decide.go:decideInTx":                                 "approve and reject are the two verbs, chosen from one boolean, and the same boolean names the status the decision left — so both branches carry the identical image pair: the pending status the row was locked in against the verdict it now holds",
 	"internal/modules/commissions/decide.go:decideTx":                                 "the verb names the decision and the images are the patch's own, so what the decision moved is recorded with it",
 	"internal/modules/commissions/decide.go:voidOne":                                  "a void is spelled as its own verb and carries the patch images for the row it retired",
 	"internal/modules/consent/recordadmitted.go:recordAdmittedTx":                     "a grant and a withdrawal are separate verbs, and both record the consent state they moved from",
@@ -218,7 +219,6 @@ var unresolvableAuditActions = gatekit.Waive(map[string]string{
 // storekit itself is absent on purpose: it IS the doors, and its own statement
 // is what they reach.
 var directAuditLogWriters = gatekit.Waive(map[string]string{
-	"internal/modules/approvals/service.go":       "the approval row's own lifecycle, which is not a record whose fields move: the statement writes no before or after column at all, so there is no image for the door's rule to be about",
 	"internal/compose/integration/harnessseed.go": "the integration harness's scrub-tombstone fixture, and the only writer here that is not product code. Its rows are erase tombstones — no before or after column, so there is no image for the door's rule to be about — and there is no door to reach: every product path that stamps one also archives its subject, and a tombstone on a LIVE record is the one seed that isolates an erasure boundary from that cascade",
 })
 

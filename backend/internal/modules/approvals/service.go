@@ -16,7 +16,6 @@ package approvals
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"sort"
 	"time"
@@ -24,9 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type Service struct {
@@ -85,8 +82,21 @@ type Service struct {
 const (
 	approvalStatusApproved = "approved"
 	approvalStatusRejected = "rejected"
-	approvalKeyKind        = "kind"
-	approvalKeyReason      = "reason"
+	// approvalKeyStatus names the field the before/after images carry. An
+	// approval's whole content is a state transition, so its images are one
+	// field — which is why they are worth writing rather than a formality the
+	// signature demands.
+	approvalKeyStatus = "status"
+	// entityApproval is what almost every row and event from this module is
+	// about: the staged approval itself, never the record it proposes changing.
+	entityApproval = "approval"
+	// entitySigningKey is the exception — the key the tokens are signed with,
+	// which is a subject of its own and not an approval.
+	entitySigningKey    = "signing_key"
+	approvalKeyRedeemed = "redeemed"
+	approvalKeyBundle   = "bundle_id"
+	approvalKeyKind     = "kind"
+	approvalKeyReason   = "reason"
 )
 
 // ApprovedEffect executes what an approved staging of its kind proposed.
@@ -221,69 +231,6 @@ func (s *Service) EffectKinds() []string {
 	}
 	sort.Strings(kinds)
 	return kinds
-}
-
-// audit appends this module's audit rows — same append-only table, this
-// module's own writer (modules do not share store internals).
-func (s *Service) audit(ctx context.Context, tx pgx.Tx, p principal.Principal, action string, entityID ids.UUID, evidence map[string]any) (ids.UUID, error) {
-	raw, err := json.Marshal(evidence)
-	if err != nil {
-		return ids.Nil, err
-	}
-	id := ids.NewV7()
-	_, err = tx.Exec(ctx,
-		`INSERT INTO audit_log (id, actor_type, actor_id, passport_id, on_behalf_of, action, entity_type, entity_id, evidence)
-		 VALUES ($1, $2, $3, $4, $5, $6, 'approval', $7, $8)`,
-		id, string(p.Type), p.ID, nullUUID(p.PassportID), nullUUID(p.OnBehalfOf),
-		action, entityID, raw)
-	return id, err
-}
-
-// emit stages one approval.* / coldstart.* event in the transactional
-// outbox, complete envelope, exactly like every other module's writes:
-// unlike storekit.EmitEvent, this module's entity is always "approval"
-// (the staged row itself), so
-// that mapping stays hardcoded here rather than sourced from the
-// payload's EntityType(). eventType is sourced from payload.EventType()
-// instead of a separate string parameter — a caller cannot stage the
-// wrong payload for an event type without failing to compile, the same
-// guarantee storekit.EmitEvent gives every other module.
-func (s *Service) emit(ctx context.Context, tx pgx.Tx, p principal.Principal, auditID ids.UUID, entityID ids.UUID, payload events.Payload) error {
-	correlationID, ok := principal.CorrelationID(ctx)
-	if !ok {
-		return errors.New("crmapprovals: no correlation id bound to context")
-	}
-	eventType := payload.EventType()
-	env := events.Envelope{
-		EventID:    ids.NewV7(),
-		Type:       eventType,
-		Version:    events.VersionOf(eventType),
-		OccurredAt: s.now().UTC(),
-		Actor: events.Actor{
-			Type: string(p.Type), ID: p.ID,
-			PassportID: nullUUID(p.PassportID), OnBehalfOf: nullUUID(p.OnBehalfOf),
-		},
-		Entity: events.EntityRef{Type: "approval", ID: entityID},
-		Trace:  events.Trace{CorrelationID: correlationID, AuditLogID: auditID},
-	}
-	raw, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-	env.Payload = raw
-	stream, err := events.StreamFor(eventType)
-	if err != nil {
-		return err
-	}
-	if err := env.Validate(); err != nil {
-		return err
-	}
-	body, err := json.Marshal(env)
-	if err != nil {
-		return err
-	}
-	_, err = tx.Exec(ctx, `INSERT INTO event_outbox (stream, envelope) VALUES ($1, $2)`, stream, body)
-	return err
 }
 
 func nullUUID(id ids.UUID) *ids.UUID {

@@ -32,6 +32,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -190,12 +191,17 @@ func (s *Service) expireOne(ctx context.Context, id ids.ApprovalID) (bool, error
 		// decided_by stays NULL and the actor is the system: nobody decided
 		// this, and naming a person would put a human's name on a refusal they
 		// never made. That is the whole difference between this and Decide.
-		p := principal.Principal{Type: principal.PrincipalSystem, ID: ExpiryActor}
-		auditID, err := s.audit(ctx, tx, p, "expire", id.UUID, map[string]any{
-			approvalKeyKind:   a.Kind,
-			"verdict":         StatusExpired,
-			approvalKeyReason: "unactioned: the approval window closed",
-		})
+		// The actor reaches the audit row from the CONTEXT, which the sweep
+		// binds — storekit reads it there rather than taking it as a parameter,
+		// so every module's rows name their actor the same way.
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "expire", entityApproval, id.UUID,
+			map[string]any{approvalKeyStatus: StatusPending},
+			map[string]any{approvalKeyStatus: StatusExpired},
+			map[string]any{
+				approvalKeyKind:   a.Kind,
+				"verdict":         StatusExpired,
+				approvalKeyReason: "unactioned: the approval window closed",
+			})
 		if err != nil {
 			return err
 		}
@@ -206,7 +212,7 @@ func (s *Service) expireOne(ctx context.Context, id ids.ApprovalID) (bool, error
 		// DecidedBy is left unset, and the contract makes that expressible: an
 		// expiry has no deciding human, and a zero uuid here would attribute a
 		// refusal to a user id that resolves to nobody.
-		if err := s.emit(ctx, tx, p, auditID, id.UUID, crmcontracts.PublicEventApprovalDecided{
+		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventApprovalDecided{
 			Kind: a.Kind, Verdict: crmcontracts.Expired,
 		}); err != nil {
 			return err
