@@ -37,11 +37,12 @@ type scenarioForRender struct {
 }
 
 type expectForRender struct {
-	Outcome string `yaml:"outcome"`
-	Answer  any    `yaml:"answer,omitempty"`
-	Rubric  string `yaml:"rubric,omitempty"`
-	Bands   Bands  `yaml:"bands"`
-	Caps    Caps   `yaml:"caps,omitempty"`
+	Outcome    string   `yaml:"outcome"`
+	Answer     any      `yaml:"answer,omitempty"`
+	Rubric     string   `yaml:"rubric,omitempty"`
+	NearMisses []string `yaml:"near_misses,omitempty"`
+	Bands      Bands    `yaml:"bands"`
+	Caps       Caps     `yaml:"caps,omitempty"`
 }
 
 // RenderScenario emits a scenario as the YAML the corpus format uses, suitable
@@ -53,7 +54,8 @@ func RenderScenario(sc Scenario) ([]byte, error) {
 		Source: sc.Source, SanitizedBy: sc.SanitizedBy,
 		Expect: expectForRender{
 			Outcome: sc.Expect.Outcome, Rubric: sc.Expect.Rubric,
-			Bands: sc.Expect.Bands, Caps: sc.Expect.Caps,
+			NearMisses: sc.Expect.NearMisses,
+			Bands:      sc.Expect.Bands, Caps: sc.Expect.Caps,
 		},
 	}
 	fixture, err := decodePreservingNumbers(sc.Fixture)

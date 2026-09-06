@@ -20,6 +20,8 @@ expect:
     on. Score high only if the turn calls whats_slipping_this_week. run_report
     could return a list of deals, but nothing in it says which are slipping, so a
     turn that reaches for it has to invent the judgement the product already owns.
+  near_misses:
+    - run_report
   bands:
     certified_min: 70
     degraded_min: 50

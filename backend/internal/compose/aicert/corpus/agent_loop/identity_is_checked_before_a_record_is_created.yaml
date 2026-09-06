@@ -24,6 +24,9 @@ expect:
     a duplicate that a person then has to merge. search_records matches text and
     would answer nothing about the address, so a miss there reads as "she is
     not here" when the record may be filed under a different spelling.
+  near_misses:
+    - create_record
+    - search_records
   bands:
     certified_min: 70
     degraded_min: 50

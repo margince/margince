@@ -118,8 +118,21 @@ type Expectations struct {
 	Outcome string    `yaml:"outcome"`
 	Answer  JSONValue `yaml:"answer,omitempty"`
 	Rubric  string    `yaml:"rubric,omitempty"`
-	Bands   Bands     `yaml:"bands"`
-	Caps    Caps      `yaml:"caps,omitempty"`
+	// NearMisses names the tools this scenario's goal makes TEMPTING and its
+	// answer does not want — the wrong reaches the rubric argues against.
+	//
+	// Structured because the alternative was reading them out of the rubric's
+	// prose, and that over-counts: a rubric quotes the right tool's copy, and
+	// that copy names its neighbours. The published temptation weight was
+	// inflated by exactly that, and the page had to admit it.
+	//
+	// A scenario may legitimately carry none — a goal with no plausible wrong
+	// reach is a goal the surface answers unambiguously — so an empty list and
+	// an absent one are the same thing here, and the census names which
+	// scenarios it is still reading by heuristic rather than assuming.
+	NearMisses []string `yaml:"near_misses,omitempty"`
+	Bands      Bands    `yaml:"bands"`
+	Caps       Caps     `yaml:"caps,omitempty"`
 }
 
 // Scenario is one certification test case, parsed from

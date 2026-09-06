@@ -23,6 +23,9 @@ expect:
     calls it on the deal the grounding identifies. intro_path_to finds a way in
     to an account nobody knows, which is the opposite situation; catch_me_up_on
     would narrate the deal without ever saying who is missing from it.
+  near_misses:
+    - intro_path_to
+    - catch_me_up_on
   bands:
     certified_min: 70
     degraded_min: 50

@@ -90,6 +90,10 @@ type corpusProvenance struct {
 	Scenarios       int      `json:"scenarios"`
 	OfferingCatalog int      `json:"offering_the_whole_catalog"`
 	Skipped         []string `json:"skipped_by_the_scan"`
+	// ReadByProse names the scenarios that declare no near misses, so theirs
+	// are still read by the prose fallback. Published because a fallback that
+	// is silent about where it still applies hides the error it is shrinking.
+	ReadByProse []string `json:"read_by_prose"`
 }
 
 func TestTheAgentToolBudgetIsPublished(t *testing.T) {
@@ -182,6 +186,7 @@ func renderAgentToolBudget(t *testing.T) agentToolBudget {
 			Scenarios:       census.Scenarios,
 			OfferingCatalog: census.Catalog,
 			Skipped:         census.Skipped,
+			ReadByProse:     census.Heuristic,
 		},
 	}
 }
@@ -284,5 +289,32 @@ func TestTheWrongReachCensusIsReadFromTheCorpusAndNamesWhatItSkipped(t *testing.
 	if census.Scenarios < census.Catalog {
 		t.Errorf("the census counted %d scenarios offering the catalog out of %d total",
 			census.Catalog, census.Scenarios)
+	}
+}
+
+// The census counts what the scenarios DECLARE, and says which ones it still
+// reads by prose.
+//
+// The two halves fail in opposite directions and both matter. If the declared
+// list stops being read — the yaml key renamed, the mirror in
+// declaredNearMisses left behind — every scenario silently falls back to the
+// prose scan, and the published number goes back to the over-count the page had
+// to admit to. If the fallback stops being NAMED, a corpus that has drifted
+// back to prose looks measured.
+func TestTheWrongReachCensusReadsWhatTheScenariosDeclare(t *testing.T) {
+	specs := servedSurface(t).Specs()
+	census, err := readWrongReachCensus(agentLoopCorpusDir, specs)
+	if err != nil {
+		t.Fatalf("reading the corpus: %v", err)
+	}
+	if len(census.Heuristic) > 0 {
+		t.Errorf("%d scenario(s) still have their near misses read out of rubric prose: %s.\n"+
+			"Declare them with a `near_misses:` list under `expect:` — an empty list is a "+
+			"legitimate claim that the goal has no plausible wrong reach, and is not the same "+
+			"as leaving the key out", len(census.Heuristic), strings.Join(census.Heuristic, ", "))
+	}
+	if len(census.Counts) == 0 {
+		t.Error("no near miss was counted at all, so the census is measuring nothing — which is " +
+			"what a renamed key looks like from here")
 	}
 }

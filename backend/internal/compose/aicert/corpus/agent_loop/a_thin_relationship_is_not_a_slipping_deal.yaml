@@ -33,6 +33,9 @@ expect:
     ONE deal — the goal asks it of all of them, and the window carries no
     deal_id, so a turn calling it both narrowed the question and invented the
     id it narrowed by.
+  near_misses:
+    - whats_slipping_this_week
+    - account_coverage
   bands:
     certified_min: 70
     degraded_min: 50

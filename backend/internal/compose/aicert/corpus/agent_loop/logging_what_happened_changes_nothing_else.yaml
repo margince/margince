@@ -23,6 +23,9 @@ expect:
     for update_record or progress_deal has read a request to remember a
     conversation as a licence to change the deal it was about, which is a
     different act with a different consequence.
+  near_misses:
+    - update_record
+    - progress_deal
   bands:
     certified_min: 70
     degraded_min: 50
