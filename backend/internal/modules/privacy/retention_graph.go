@@ -20,6 +20,34 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// subjectGraphIdentifiers reads the two identifiers the graph holds the subject
+// by, and it is called before the anonymization destroys either.
+//
+// The graph structures exist precisely to hold a party who never became a
+// record, so a sweep matching person_id alone leaves the subject named,
+// readable and re-matchable. There are two such identifiers and they arrive
+// from different tables: the raw ADDRESS a message carried — what the address
+// arm of a participant row IS — and the ACCOUNT a chat roster named them with,
+// which is how the third human in a group is identified and the only way they
+// are. Both source tables are deleted further down the same act.
+//
+// The accounts come from the request-driven eraser's own query rather than from
+// a second one written here, which is the lesson the LinkedIn arm below already
+// records: a copy of that predicate drifted, and the comment beside it claimed
+// the two reaches were identical the whole time.
+func subjectGraphIdentifiers(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]string, []channelIdentity, error) {
+	emails, err := collectStrings(ctx, tx,
+		`SELECT lower(email) FROM person_email WHERE person_id = $1`, id)
+	if err != nil {
+		return nil, nil, err
+	}
+	accounts, err := personChannelIdentities(ctx, tx, ids.From[ids.PersonKind](id))
+	if err != nil {
+		return nil, nil, err
+	}
+	return emails, accounts, nil
+}
+
 // scrubPersonGraphTraces removes the anonymized subject from the relationship
 // graph. Those structures hold the subject as surely as the person columns do,
 // and the time-based sweep reaches them for the same reason the request-driven
