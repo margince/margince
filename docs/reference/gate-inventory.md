@@ -92,7 +92,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `pollcadenceparity_test.go` | H3 | A connector that POSTPONES a tick on an unreachable provider asks to run again after a fixed delay, and that delay has to EQUAL the cadence its dispatcher already ticks at — and has to survive the seam's ceiling on the way to the queue. |
 | `previewauthority_test.go` | H2 | The authority levels a composer can receive are the ones the engine can send. |
 | `processingrecord_test.go` | H3 | The Art. 30 processing record names the code that enforces each entry, and this fails when that code is not there any more. |
-| `prompt_ceiling_test.go` | H1 | The runner's prompt ceiling is DERIVED from the tightest provider it speaks to, and this holds the derivation it claims. |
+| `promptwindow_test.go` | H1 | runner.MinimumPromptWindow is the SUPPORTED FLOOR — the smallest prompt window any provider this build binds will carry — and this holds it equal to the adapter that owns the figure. |
 | `providername_test.go` | H2 | The rule a REGISTERED NAME must satisfy is the contract's, on both surfaces that have one. |
 | `publicevents_test.go` | H3 | The public-events contract as a cross-cutting fitness function (A15): the outbound-webhook surface has three moving parts that must stay in lock-step, and nothing in the build forces them to. |
 | `rbacvocabulary_test.go` | H3 | The RBAC vocabulary is DECLARED in the contract and restated in Go, and the two must not drift. |
