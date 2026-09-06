@@ -361,6 +361,7 @@ export function Badge({
   tone,
   children,
   quiet,
+  live,
 }: Readonly<{
   tone?: "success" | "warn" | "danger" | "ai" | "accent";
   children: ReactNode;
@@ -371,6 +372,14 @@ export function Badge({
   // text. Same vocabulary, so a status cannot be worded one way in a list and
   // another on the record the list opens.
   quiet?: boolean;
+  // A status that is true AT THIS MOMENT rather than one recorded earlier: a
+  // Deal Room an invited buyer can walk into as the page is read. It draws a
+  // breathing dot in the tone's own ink, which is the one place in this
+  // vocabulary where motion is a FACT — "this is happening now" — rather than
+  // decoration, so it belongs to a handful of states and not to a palette.
+  // Under `prefers-reduced-motion` the dot stays and stops moving: the mark is
+  // the claim, and removing it would take the claim with it.
+  live?: boolean;
 }>) {
   const classes = ["badge"];
   if (quiet) {
@@ -379,7 +388,15 @@ export function Badge({
   if (tone) {
     classes.push(`badge-${tone}`);
   }
-  return <span className={classes.join(" ")}>{children}</span>;
+  if (live) {
+    classes.push("badge-live");
+  }
+  return (
+    <span className={classes.join(" ")}>
+      {live && <span className="badge-live-dot" aria-hidden />}
+      {children}
+    </span>
+  );
 }
 
 // AVATAR_TONES are the monogram backgrounds, all token-driven. The colour

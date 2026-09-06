@@ -7,11 +7,50 @@
   gap: var(--space-4);
 }
 
+/* The room's identity band: what this is, what it is called, how it stands and
+ * who is in it — closed by a hairline, the way every section in this language
+ * is separated from the next. The verbs keep the far end of the first row. */
 .roompage-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+.roompage-id {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* The name and the standing on one line, the name giving way when there is not
+   enough width: the badge is three states wide whatever the room is called. */
+.roompage-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* The type is `.t-display` on the element itself — the ramp's own spelling of a
+   record's name — so what is left here is only how it BEHAVES in the row. */
+.roompage-title-row h1 {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Two short facts on one line, separated by the interval rather than by a
+   punctuation mark this file would then own the spelling of. */
+.roompage-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: var(--space-1) 0 0;
 }
 
 .roompage-verbs {

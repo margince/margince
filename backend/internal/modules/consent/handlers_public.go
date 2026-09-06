@@ -29,7 +29,7 @@ func (h Handlers) GetPreferenceCenter(w http.ResponseWriter, r *http.Request, to
 		writeConsentErr(w, r, err)
 		return
 	}
-	view, err := h.store.PublicPreferenceView(r.Context(), ref.PersonID)
+	view, err := h.store.PublicPreferenceView(r.Context(), ref)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -83,7 +83,7 @@ func (h Handlers) unsubscribeTargets(
 	if params.Purpose != nil && strings.TrimSpace(*params.Purpose) != "" {
 		return []string{strings.ToLower(strings.TrimSpace(*params.Purpose))}, nil
 	}
-	view, err := h.store.PublicPreferenceView(ctx, personID)
+	view, err := h.store.PublicPreferenceView(ctx, PreferenceRef{PersonID: personID})
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (h Handlers) UpdatePreferences(w http.ResponseWriter, r *http.Request, toke
 		writeConsentErr(w, r, err)
 		return
 	}
-	view, err := h.store.PublicPreferenceView(r.Context(), ref.PersonID)
+	view, err := h.store.PublicPreferenceView(r.Context(), ref)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return

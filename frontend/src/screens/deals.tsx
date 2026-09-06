@@ -4234,14 +4234,14 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               }
               zone={recordZone}
               actionsInline
-              badges={
-                <>
-                  <Badge tone={dealStatusTone(deal.status)}>
-                    {deal.status}
-                  </Badge>
-                  <DealProjectChip deal={deal} />
-                </>
+              // The deal's standing reads beside its name, not at the far
+              // end of the header among the verbs: a reader asking "is this
+              // still open?" was looking at the name and finding the answer
+              // across the page, above the buttons that act on it.
+              nameBadge={
+                <Badge tone={dealStatusTone(deal.status)}>{deal.status}</Badge>
               }
+              badges={<DealProjectChip deal={deal} />}
               actions={
                 <DealActions
                   deal={deal}

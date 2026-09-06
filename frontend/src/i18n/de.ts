@@ -5758,11 +5758,12 @@ export const de = {
   "room.docs.empty": "Noch keine Dokumente im Raum.",
   "room.docs.fileLabel": "Datei aus diesem Deal",
   "room.docs.fileHint":
-    "Alles aus dem Dateibereich des Deals kann hinein: Uploads und die Dateien seiner E-Mails.",
+    "Alles aus dem Dateibereich des Deals kann hinein: Uploads und die Dateien seiner E-Mails. Mit „Datei hochladen“ kommt eine neue dorthin.",
   "room.docs.pickFile": "Datei wählen",
   "room.docs.noFiles": "Der Dateibereich des Deals ist leer",
   "room.docs.groupLabel": "Gruppe",
   "room.docs.add": "In den Raum legen",
+  "room.docs.upload": "Datei hochladen",
   "room.docs.remove": "{title} aus dem Raum entfernen",
   "room.docs.group.commercial": "Kommerziell",
   "room.docs.group.legal": "Rechtliches",

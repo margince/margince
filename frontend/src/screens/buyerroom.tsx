@@ -4,7 +4,14 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { forgetHashCredential, takeHashCredential } from "../app/router";
-import { Button, EmptyState, Field, TextInput } from "../design-system/atoms";
+import {
+  Avatar,
+  Badge,
+  Button,
+  EmptyState,
+  Field,
+  TextInput,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -681,6 +688,78 @@ function conversationRefusal(
   return undefined;
 }
 
+// The two access states this page draws a hero for, and what the pill says
+// about each. `BuyerRoomAccess` is a plain string on the wire rather than a
+// closed union, so this names the states it can speak for and stays silent
+// about anything else — a pill is a claim, and a build that has not heard of
+// the state it is describing has no claim to make. `paused` and `expired`
+// never reach here: RoomView answers each with its own screen first.
+const ACCESS_PILL: Record<
+  string,
+  { label: MessageKey; tone?: "success"; live?: boolean }
+> = {
+  live: { label: "room.state.live", tone: "success", live: true },
+  closed: { label: "room.state.closed" },
+};
+
+// The buyer's first screenful, and the only part of this page that is the
+// SELLER's rather than the product's: what the room is called, what they wrote
+// to open it, whether it is still taking answers, and who is on the other end.
+// It is a hero rather than a header because this page is the one thing a client
+// ever sees of Margince — a form with a heading on it would be the wrong first
+// impression of the deal it carries.
+function BuyerHero({
+  title,
+  welcome,
+  access,
+  stewardName,
+}: Readonly<{
+  title: string;
+  welcome: string;
+  access: string;
+  stewardName: string | null | undefined;
+}>) {
+  const t = useT();
+  const pill = ACCESS_PILL[access];
+  return (
+    <header className="buyer-hero">
+      <div className="buyer-hero-top">
+        <Eyebrow as="span">{t("buyer.eyebrow")}</Eyebrow>
+        {pill ? (
+          <Badge tone={pill.tone} live={pill.live}>
+            {t(pill.label)}
+          </Badge>
+        ) : null}
+      </div>
+      <h1 className="t-display">{title}</h1>
+      {welcome ? <p className="buyer-welcome">{welcome}</p> : null}
+      <div className="buyer-contact">
+        {/* The mark is the steward's own, drawn from their name the way every
+            person in the product is drawn — the one face on a page that is
+            otherwise documents. A room whose steward's seat is gone gets no
+            mark: a monogram of the words "your contact" draws a person who
+            does not exist. */}
+        {stewardName ? <Avatar name={stewardName} size="sm" /> : null}
+        <p className="t-caption buyer-meta">
+          {t("buyer.contact", { steward: stewardLabel(stewardName, t) })}
+          {access === "closed" ? ` ${t("buyer.closedNote")}` : ""}
+        </p>
+      </div>
+    </header>
+  );
+}
+
+// Whom to ask, as a buyer reads it: the seller's own name while their seat
+// stands, and the product's word for "somebody there" when it is gone. Both
+// screens that name a steward say it through this, so a room cannot address a
+// buyer to a person on one screen and to nobody on the next.
+function stewardLabel(
+  name: string | null | undefined,
+  t: ReturnType<typeof useT>,
+): string {
+  return name ?? t("buyer.stewardUnknown");
+}
+
 function RoomView({
   view,
   token,
@@ -691,7 +770,7 @@ function RoomView({
   onSessionLost: () => void;
 }>) {
   const t = useT();
-  const steward = view.steward_name ?? t("buyer.stewardUnknown");
+  const steward = stewardLabel(view.steward_name, t);
   // Whether this reader may write is the ANSWER to `conversationRefusal`, not
   // a second opinion sitting beside it: a reader who was given a reason may
   // not write, and one who may write has no reason to show. Spelled apart the
@@ -743,15 +822,12 @@ function RoomView({
       {view.preview ? (
         <Callout tone="info">{t("buyer.previewBanner")}</Callout>
       ) : null}
-      <header className="buyer-header">
-        <Eyebrow as="span">{t("buyer.eyebrow")}</Eyebrow>
-        <h1>{view.room.title}</h1>
-        {view.room.welcome_message ? <p>{view.room.welcome_message}</p> : null}
-        <p className="t-caption buyer-meta">
-          {t("buyer.contact", { steward })}
-          {view.access === "closed" ? ` ${t("buyer.closedNote")}` : ""}
-        </p>
-      </header>
+      <BuyerHero
+        title={view.room.title}
+        welcome={view.room.welcome_message ?? ""}
+        access={view.access}
+        stewardName={view.steward_name}
+      />
       <BuyerBoard
         token={token}
         onSessionLost={onSessionLost}
