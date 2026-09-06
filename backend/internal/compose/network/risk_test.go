@@ -167,7 +167,7 @@ func TestTheEngagementRulesWaitForTheFirstTouch(t *testing.T) {
 func TestALongSilentDealStillReportsItsEngagementFindings(t *testing.T) {
 	old := DealCoverage{
 		DealID: ids.NewV7(), EverTouched: true, LastTouchAt: daysAgo(120),
-		Status: dealStatusOpen,
+		TouchedAsOf: testNow, Status: dealStatusOpen,
 		Stakeholders: []deals.DealStakeholder{
 			seat(false, roleChampion), seat(false, "user"),
 		},
@@ -191,12 +191,64 @@ func TestADealWithNoSeatsAtAllRaisesNoCoverageGap(t *testing.T) {
 	}
 }
 
+// The day count comes from the DATABASE's clock and does not move with the
+// caller's.
+//
+// last_activity_at is stamped by the database on the capture path, so measuring
+// it against the service's clock subtracts across two clocks that a real
+// deployment does not keep in step — an app container and a database container
+// on different hosts, a VM that drifts, Docker Desktop on macOS. Across a day
+// boundary the count came out one short, and a deal dropped out of the 30/60-day
+// view a day late.
+//
+// The caller's clock is handed a whole day of skew here, in both directions,
+// because a small one would pass on a coincidence.
+func TestGoingColdMeasuresAgainstTheClockThatStampedTheTouch(t *testing.T) {
+	cover := DealCoverage{
+		DealID: ids.NewV7(), Status: dealStatusOpen,
+		LastTouchAt: daysAgo(goingColdDays), TouchedAsOf: testNow,
+		Stakeholders: []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
+	}
+
+	for _, skew := range []time.Duration{-24 * time.Hour, 0, 24 * time.Hour} {
+		days := 0
+		for _, r := range foldRisks(cover, testNow.Add(skew)) {
+			if r.Kind == RiskGoingCold {
+				days = r.DaysSinceTouch
+			}
+		}
+		if days != goingColdDays {
+			t.Errorf("with the caller's clock %v out, going-cold reports %d days, want %d — "+
+				"the count moved with a clock that did not write the touch",
+				skew, days, goingColdDays)
+		}
+	}
+}
+
+// A coverage that never described a clock has not described a silence either.
+//
+// The same reading a zero LastTouchAt gets, and for the same reason: a
+// hand-built fixture must not be able to assert a cold deal by omission. It
+// matters more here, because the zero value of a time is 0001-01-01 — measured
+// against it every deal in every fixture is silent by two thousand years.
+func TestGoingColdJudgesNothingWithoutTheDatabaseClock(t *testing.T) {
+	cover := DealCoverage{
+		DealID: ids.NewV7(), Status: dealStatusOpen,
+		LastTouchAt:  daysAgo(goingColdDays * 4),
+		Stakeholders: []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
+	}
+
+	if kinds(foldRisks(cover, testNow))[RiskGoingCold] {
+		t.Error("a coverage carrying no database clock was judged going cold anyway")
+	}
+}
+
 func TestGoingColdFiresOnTheReportingWindowAndOnlyWhileTheDealIsOpen(t *testing.T) {
 	base := []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")}
 	cover := func(status string, touched int) DealCoverage {
 		return DealCoverage{
 			DealID: ids.NewV7(), Status: status,
-			LastTouchAt: daysAgo(touched), Stakeholders: base,
+			LastTouchAt: daysAgo(touched), TouchedAsOf: testNow, Stakeholders: base,
 		}
 	}
 
@@ -248,6 +300,7 @@ func TestGoingColdCountsTheCalendarSoTheChipAndTheCardAgree(t *testing.T) {
 	lateEvening := time.Date(2026, 5, 16, 23, 0, 0, 0, time.UTC)
 	cover := DealCoverage{
 		DealID: ids.NewV7(), Status: dealStatusOpen, LastTouchAt: lateEvening,
+		TouchedAsOf:  testNow,
 		Stakeholders: []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
 	}
 	risks := foldRisks(cover, testNow)
