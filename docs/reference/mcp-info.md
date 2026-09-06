@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 73 |
 | Resources | 12 |
-| Tool catalog | 204.2 KB |
+| Tool catalog | 204.3 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 53424 |
+| Approx. wire tokens | 53443 |
 | Largest tool | `prep_for_meeting` (8.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,7 +29,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 96.5 KB | 47% | **No** — a result's shape, never listed to a model |
+| Output schemas | 96.6 KB | 47% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 49.9 KB | 24% | Yes, every step |
 | Input schemas | 42.4 KB | 20% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.4 KB | 7% | Partly |
@@ -9913,6 +9913,9 @@ Renders its result in [`ui://margince/account-brief.html`](#account_brief_view),
                 ],
                 "type": "object"
               },
+              "previous_rank": {
+                "type": "integer"
+              },
               "rank": {
                 "type": "integer"
               },
@@ -9947,6 +9950,9 @@ Renders its result in [`ui://margince/account-brief.html`](#account_brief_view),
           "type": "array"
         },
         "local_day": {
+          "type": "string"
+        },
+        "previous_local_day": {
           "type": "string"
         }
       },

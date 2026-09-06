@@ -71,8 +71,9 @@ func briefRunToTool(run briefs.BriefRun) agents.ReadBriefResult {
 	for _, item := range run.Items {
 		items = append(items, agents.BriefItem{
 			ItemID: item.ID, DealID: item.DealID, Rank: item.Rank,
-			Lineage:   lineageForTool(item.Lineage),
-			Composite: item.Composite, Factors: agents.BriefFactors{
+			PreviousRank: item.PreviousRank,
+			Lineage:      lineageForTool(item.Lineage),
+			Composite:    item.Composite, Factors: agents.BriefFactors{
 				Winnability: item.Features.Winnability, Revenue: item.Features.Revenue,
 				Timing: item.Features.Timing, Momentum: item.Features.Momentum,
 				Warmth: item.Features.Warmth,
@@ -90,8 +91,12 @@ func briefRunToTool(run briefs.BriefRun) agents.ReadBriefResult {
 	}
 	return agents.ReadBriefResult{
 		BriefID: run.ID, GeneratedAt: run.GeneratedAt, AsOf: run.AsOf,
-		LocalDay:       run.LocalDay.Format(time.DateOnly),
-		CandidateCount: run.CandidateCount, Items: items,
+		LocalDay: run.LocalDay.Format(time.DateOnly),
+		// Omitted rather than zero-formatted when there was no earlier run: a
+		// date on the wire says a comparison exists, and "0001-01-01" would say
+		// it in a shape a model would read as a real morning.
+		PreviousLocalDay: previousDayForTool(run.PreviousDay),
+		CandidateCount:   run.CandidateCount, Items: items,
 	}
 }
 
@@ -105,4 +110,13 @@ func lineageForTool(lineage *briefs.ItemLineage) *agents.BriefItemLineage {
 		DismissedOn:  lineage.DismissedOn.Format(time.DateOnly),
 		ReturnedWith: lineage.ReturnedWith,
 	}
+}
+
+// previousDayForTool is the morning a run is compared against, empty when there
+// is none to compare it against.
+func previousDayForTool(day time.Time) string {
+	if day.IsZero() {
+		return ""
+	}
+	return day.Format(time.DateOnly)
 }

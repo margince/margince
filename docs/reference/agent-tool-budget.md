@@ -36,7 +36,7 @@ alone. A frame that grows a paragraph spends it on every run of every agent.
 
 ### `morning_brief`
 
-> Prepare the acting person's existing Morning Brief. First call read_brief. Its items are the queue already ranked for this person; do not assemble a workspace-wide list. Read the evidence for those items, then call annotate_brief with one concise narrative and grounded findings: why each item matters, what changed and the next move. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.
+> Prepare the acting person's existing Morning Brief. First call read_brief. Its items are the queue already ranked for this person; do not assemble a workspace-wide list. Read the evidence for those items, then call annotate_brief with one concise narrative and grounded findings: why each item matters, what changed and the next move. An item with a previous_rank was already on this queue on the run's previous_local_day: say what has changed since then rather than reporting it as new. An item without one may simply not have ranked that day, so do not call it new either. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.
 
 Attaches 5 tools for 1634 tokens, leaving 21576 of its budget and 31134 tokens of the
 window for the goal, the grounding and everything it reads.

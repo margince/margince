@@ -87,6 +87,12 @@ type ReadBriefResult struct {
 	// on, and it is the one number on the run that describes the workspace
 	// rather than this rep's queue.
 	CandidateCount int `json:"candidate_count"`
+	// PreviousLocalDay is the morning of the run before this one, absent when
+	// there was none. It is what makes an item's previous_rank readable — a
+	// position is meaningless without the day it was held on — and it is also
+	// the difference between a rep's first morning and a morning where nothing
+	// moved, which an agent must not report as the same thing.
+	PreviousLocalDay string `json:"previous_local_day,omitempty"`
 	// Items is never null on the wire. An agent reading `null` has to decide
 	// whether it means "nothing is queued" or "the queue was not read".
 	Items []BriefItem `json:"items"`
@@ -139,6 +145,16 @@ type BriefItem struct {
 	// finding that ignores "you already waved this away once" is a finding that
 	// repeats an argument the reader has already rejected.
 	Lineage *BriefItemLineage `json:"lineage,omitempty"`
+	// PreviousRank is where this deal stood in the run PreviousLocalDay names,
+	// so a finding can say what has happened since rather than reporting a deal
+	// the person has been looking at all week as though it were news. It is
+	// SERVED for the reason Lineage is: a rank persisted before anything read
+	// it is a fact about the queue, not something an agent wrote.
+	//
+	// Absent means it did not appear in that run. That is NOT "new": a deal
+	// that has existed for months is absent from a queue it did not make, and a
+	// finding calling it new would be wrong about the one thing it claimed.
+	PreviousRank *int `json:"previous_rank,omitempty"`
 }
 
 // BriefItemLineage is why a dismissed deal came back.

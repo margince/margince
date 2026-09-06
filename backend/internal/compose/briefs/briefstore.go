@@ -60,6 +60,10 @@ type BriefRun struct {
 	// pass that ran and had nothing to say.
 	Narrative   string
 	AnnotatedAt *time.Time
+	// PreviousDay is the local day of the last run before this one, zero when
+	// there was none. See briefcontinuity.go: a first morning and a morning
+	// where nothing moved are different answers.
+	PreviousDay time.Time
 	Items       []BriefRunItem
 }
 
@@ -84,6 +88,10 @@ type BriefRunItem struct {
 	// Lineage is set when this deal is back after the rep dismissed it. Nil is
 	// the ordinary case.
 	Lineage *ItemLineage
+	// PreviousRank is where this deal stood in the run PreviousDay names. Nil
+	// when it did not appear there, which is NOT the same as the deal being
+	// new — see briefcontinuity.go.
+	PreviousRank *int
 }
 
 // SnapshotRun ranks and persists one brief run for the acting rep at the
@@ -286,6 +294,16 @@ func (e *BriefEngine) LatestRun(ctx context.Context, now time.Time) (BriefRun, e
 		if err != nil {
 			return err
 		}
+		// Read here rather than by the caller, and in this transaction: the
+		// comparison is part of what the run SAYS, and a second read outside
+		// the transaction could straddle the night's next assembly and compare
+		// today against itself.
+		previousDay, previousRanks, err := previousRanking(ctx, tx, userID, day)
+		if err != nil {
+			return err
+		}
+		run.PreviousDay = previousDay
+		carryPreviousRanks(run.Items, previousRanks)
 		// The open is recorded here and not in the handler, so it rides the
 		// same transaction as the read and counts what the rep is actually
 		// about to see (briefopened.go).
