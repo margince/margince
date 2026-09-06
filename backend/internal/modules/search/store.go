@@ -191,8 +191,14 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			return rankingFault(ctx, err)
 		}
 		defer rows.Close()
+		// Through the SAME judgement, because this is where the cancellation
+		// usually lands. pgx returns from Query before the rows are read, so a
+		// statement stopped mid-result reports through the iteration — the
+		// ceiling would otherwise surface as a raw fault from the scan and the
+		// arm above would only ever catch a statement killed before it started
+		// returning.
 		if page, err = scanRankedPage(rows, limit); err != nil {
-			return err
+			return rankingFault(ctx, err)
 		}
 		if err := s.countTagReach(ctx, tx, page.Hits); err != nil {
 			return err
@@ -315,7 +321,7 @@ func (e *BadQueryError) FieldFault() (field, code, message string) {
 // background reader the raw fault is the honest one and this returns it.
 func rankingFault(ctx context.Context, err error) error {
 	if storekit.IsQueryCanceled(err) && ctx.Err() == nil {
-		return &QueryTooBroadError{}
+		return &QueryTooBroadError{Err: err}
 	}
 	return fmt.Errorf("search: query: %w", err)
 }
@@ -332,11 +338,22 @@ func rankingFault(ctx context.Context, err error) error {
 // are what fitted" — unlike the agent query surface, whose Coverage says so —
 // and returning the rows that happened to rank before the ceiling would present
 // an arbitrary prefix of a ranking as the ranking.
-type QueryTooBroadError struct{}
+// It WRAPS the database error rather than replacing it, and that is what keeps
+// the other reader of this statement working. The agent query surface wants the
+// same spent ceiling as a DEGRADED ANSWER — rows dropped, a note, a coverage
+// verdict saying the plan was abandoned — and it recognises one by asking
+// storekit.IsQueryCanceled. A fault that hid the SQLSTATE would turn that
+// surface's honest partial answer into an error, which is the opposite of what
+// #1847 built it for.
+type QueryTooBroadError struct{ Err error }
 
 func (e *QueryTooBroadError) Error() string {
-	return "search: the query could not be ranked within this surface's budget"
+	return "search: the query could not be ranked within this surface's budget: " + e.Err.Error()
 }
+
+// Unwrap is what lets both readers see the same stopped statement: this
+// surface as an actionable 422, the query executor as a plan to abandon.
+func (e *QueryTooBroadError) Unwrap() error { return e.Err }
 
 // FieldFault names `q`, because `q` is what the reader can change.
 func (e *QueryTooBroadError) FieldFault() (field, code, message string) {

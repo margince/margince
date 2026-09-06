@@ -45,6 +45,13 @@ func TestASpentCeilingIsReportedAsATooBroadQuery(t *testing.T) {
 	if field != "q" || code != "query_too_broad" {
 		t.Errorf("fault = (%q, %q), want (q, query_too_broad)", field, code)
 	}
+	// It still WRAPS the database error, so the query executor — which wants the
+	// same stopped statement as a degraded plan rather than a fault — can still
+	// recognise it.
+	if !errors.Is(err, tooBroad.Err) {
+		t.Error("the fault does not carry the database error, so the executor that reads the " +
+			"SQLSTATE would see a plain error where it expects a cancellation")
+	}
 	if message == "" {
 		t.Error("the fault carries no message, so the reader is told the query is wrong and not what to do")
 	}
