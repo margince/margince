@@ -3523,6 +3523,7 @@ export const en = {
 
   "tasks.complete": "Done",
   "tasks.snooze": "Snooze 1d",
+  "tasks.moveTo": "Move to",
   "tasks.detail": "Task",
   "tasks.detailLoading": "Reading this task…",
   "tasks.isDone": "Completed",
@@ -8828,6 +8829,9 @@ export const en = {
   "worklist.verb.complete": "Open",
   "worklist.verb.snooze": "Open",
   "worklist.verb.acknowledge": "Got it",
+  "worklist.verb.promiseKept": "Done",
+  "worklist.verb.promiseSettled": "Marked as kept.",
+  "worklist.verb.promiseSettleFailed": "That could not be marked as kept.",
   "worklist.verb.meetingHeld": "It happened",
   "worklist.verb.meetingNoShow": "They didn't come",
   "worklist.verb.meetingCanceled": "It was called off",

@@ -283,6 +283,15 @@ func scanTeamReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (TeamReview, er
 		return TeamReview{}, err
 	}
 	review.Reps = reps
+	// Filled here because BOTH readers — TeamReview and LatestTeamReview — come
+	// through this scan. Filled at either call site instead, one surface would
+	// draw the team's landing and the other would not.
+	//
+	// A snapshot written before the outlook existed simply has no rows, which
+	// reads as an empty list and draws "no forecast" rather than failing.
+	if review.Outlook, err = readOutlookFrom(ctx, tx, teamOutlook, review.ID); err != nil {
+		return TeamReview{}, err
+	}
 	return review, nil
 }
 

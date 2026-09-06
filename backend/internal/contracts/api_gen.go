@@ -11413,6 +11413,24 @@ func (e SetProjectStakeholderRequestRole) Valid() bool {
 	}
 }
 
+// Defines values for SettleClaimRequestOutcome.
+const (
+	SettleClaimRequestOutcomeDismissed SettleClaimRequestOutcome = "dismissed"
+	SettleClaimRequestOutcomeDone      SettleClaimRequestOutcome = "done"
+)
+
+// Valid indicates whether the value is a known member of the SettleClaimRequestOutcome enum.
+func (e SettleClaimRequestOutcome) Valid() bool {
+	switch e {
+	case SettleClaimRequestOutcomeDismissed:
+		return true
+	case SettleClaimRequestOutcomeDone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SharedForecastViewKind.
 const (
 	SharedForecastViewKindLive     SharedForecastViewKind = "live"
@@ -32320,6 +32338,21 @@ type SettingsAvailability struct {
 	CompanyContext bool `json:"company_context"`
 }
 
+// SettleClaimRequest How a claim finished.
+type SettleClaimRequest struct {
+	// Outcome `done` says the promised thing happened. `dismissed` says it no longer stands —
+	// the extractor read a promise into words that were not one, or the ask was
+	// withdrawn. `open` is absent on purpose: this endpoint settles, and re-opening a
+	// settled claim is a different act nobody has asked for.
+	Outcome SettleClaimRequestOutcome `json:"outcome"`
+}
+
+// SettleClaimRequestOutcome `done` says the promised thing happened. `dismissed` says it no longer stands —
+// the extractor read a promise into words that were not one, or the ask was
+// withdrawn. `open` is absent on purpose: this endpoint settles, and re-opening a
+// settled claim is a different act nobody has asked for.
+type SettleClaimRequestOutcome string
+
 // ShareCaptureHoldHistoryResponse defines model for ShareCaptureHoldHistoryResponse.
 type ShareCaptureHoldHistoryResponse struct {
 	// Released How many of the caller's own imports stopped being held for this reason. Not the same
@@ -32975,6 +33008,19 @@ type TeamWeeklyReview struct {
 	GeneratedAt    time.Time            `json:"generated_at"`
 	Id             openapi_types.UUID   `json:"id"`
 	LocalWeekStart openapi_types.Date   `json:"local_week_start"`
+
+	// Outlook Where the TEAM's week was landing, one entry per horizon — the week, the month and
+	// the fiscal quarter.
+	//
+	// NOT the sum of its members' outlooks. A deal owned by nobody on the team is in
+	// neither, and one the team works but a member owns is in both, so adding six personal
+	// landings would answer a question nobody asked. This is read over the team's own book.
+	//
+	// EMPTY when no forecast was composed when the snapshot was written, which is not the
+	// same as a team that landed on nothing — a reader says "no forecast" rather than
+	// drawing zeros. Every figure is a COPY, so it still reads after the snapshots it came
+	// from age out under retention.
+	Outlook *[]WeeklyReviewOutlook `json:"outlook,omitempty"`
 
 	// Pipeline What the team's week did to the pipeline. ABSENT when any member's week could not
 	// be converted — summing only the ones that did would be a confident number quietly
@@ -40836,6 +40882,9 @@ type ConnectChannelJSONRequestBody = ConnectChannelRequest
 
 // ReplaceChannelTokenJSONRequestBody defines body for ReplaceChannelToken for application/json ContentType.
 type ReplaceChannelTokenJSONRequestBody = ReplaceChannelTokenRequest
+
+// SettleConversationClaimJSONRequestBody defines body for SettleConversationClaim for application/json ContentType.
+type SettleConversationClaimJSONRequestBody = SettleClaimRequest
 
 // ColdStartReadbackJSONRequestBody defines body for ColdStartReadback for application/json ContentType.
 type ColdStartReadbackJSONRequestBody = ColdStartRequest
@@ -49596,6 +49645,9 @@ type ServerInterface interface {
 	// Which messaging transports THIS installation has registered.
 	// (GET /channel-providers)
 	ListChannelProviders(w http.ResponseWriter, r *http.Request)
+	// Say a promise was kept, or that it no longer stands.
+	// (POST /claims/{id}/settle)
+	SettleConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
 	// Website cold-start read-back — returns a staged proposal with evidence.
 	// (POST /coldstart)
 	ColdStartReadback(w http.ResponseWriter, r *http.Request)
@@ -51786,6 +51838,12 @@ func (_ Unimplemented) ReplaceChannelToken(w http.ResponseWriter, r *http.Reques
 // Which messaging transports THIS installation has registered.
 // (GET /channel-providers)
 func (_ Unimplemented) ListChannelProviders(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say a promise was kept, or that it no longer stands.
+// (POST /claims/{id}/settle)
+func (_ Unimplemented) SettleConversationClaim(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -59278,6 +59336,38 @@ func (siw *ServerInterfaceWrapper) ListChannelProviders(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListChannelProviders(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SettleConversationClaim operation middleware
+func (siw *ServerInterfaceWrapper) SettleConversationClaim(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SettleConversationClaim(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -80643,6 +80733,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/channel-providers", wrapper.ListChannelProviders)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/claims/{id}/settle", wrapper.SettleConversationClaim)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/coldstart", wrapper.ColdStartReadback)

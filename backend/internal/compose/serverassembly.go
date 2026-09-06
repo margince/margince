@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/org360"
 	"github.com/margince/margince/backend/internal/compose/orgbrief"
 	"github.com/margince/margince/backend/internal/compose/orgdossier"
@@ -31,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -127,6 +129,36 @@ func newCollectionsHandlers(pool *pgxpool.Pool) collectionsHandlers {
 
 // wireCaptureSettingsSurface binds the workspace's own capture posture
 // controls.
+// wireAnalyticsSurface wires the four handler sets that read the numbers:
+// the forecast and the three analytics surfaces built on the same store.
+//
+// After the literal like the rest of the assembly, and together because they
+// are one seam — the share routes run in the FORECAST store's transaction,
+// whose InTx gates on forecast:read, so the whole surface (issuing included)
+// sits behind the grant that reads the thing being shared. Splitting them
+// across the literal and here would put half of that seam out of sight of the
+// other half.
+func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
+	s.forecastHandlers = forecasting.NewHandlers(
+		forecasting.NewStore(InstallationDB(pool)),
+		ForecastDeals, ForecastPeriodAt, ForecastWritableScope,
+		ForecastConversionHistory, ForecastForwardMeasure,
+		func() time.Time { return time.Now().UTC() },
+	)
+	// The floor comes from the constant rather than a setting for now: one
+	// number, and moving it to installation settings is a migration plus a
+	// reader, which is its own change.
+	s.analyticsQueryHandlers = newAnalyticsQueryHandlers(
+		InstallationDB(pool), analyticsquery.DefaultFloor)
+	s.analyticsContextHandlers = newAnalyticsContextHandlers(
+		InstallationDB(pool), func() time.Time { return time.Now().UTC() })
+	s.analyticsShareHandlers = newAnalyticsShareHandlers(
+		NewAnalyticsShareStore(func() time.Time { return time.Now().UTC() }),
+		forecasting.NewStore(InstallationDB(pool)),
+		func() time.Time { return time.Now().UTC() },
+	)
+}
+
 func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool) {
 	// The workspace capture-settings surface (CAP-WIRE-7, ADR-0072):
 	// read the auto-enrich posture (all roles), toggle it (admin/ops).

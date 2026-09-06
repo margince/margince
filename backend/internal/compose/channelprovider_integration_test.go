@@ -153,7 +153,7 @@ func TestReconcileChannelProvidersRegistersAUnitsDeclaredTransport(t *testing.T)
 	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
 	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
 	declaresTransport(t, "mine", extension.Channel{
-		Provider: "mine_chat", Send: (&capturedSend{}).send, Live: answersLive(true, nil),
+		Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
 	t.Cleanup(func() {
 		if _, err := owner.Exec(context.Background(), `DELETE FROM channel_provider WHERE provider = 'mine_chat'`); err != nil {
@@ -199,6 +199,51 @@ func TestReconcileChannelProvidersRegistersAUnitsDeclaredTransport(t *testing.T)
 	}
 }
 
+// A unit supplying a COMPANY-WIDE account registers as workspace_bot, because
+// it declared so — not per_member, which is what "it is a unit" alone would say.
+//
+// This is the case the derivation got wrong. A Zalo Official Account, a shared
+// support inbox, any account an administrator binds once for everybody: it ships
+// as a unit and it is not one member's correspondence. Inferring per_member for
+// it puts a company's customer messages on the mailbox path with the connecting
+// admin as their "owner", and nothing downstream can tell — the row has exactly
+// one reader, so every audience invariant reads green while the whole company
+// has lost its own inbox.
+func TestReconcileChannelProvidersHonoursAUnitsDeclaredWorkspaceBotCredential(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := context.Background()
+	owner := integration.OwnerConn(t)
+	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
+	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
+	declaresTransport(t, "official", extension.Channel{
+		Provider: "official_account", CredentialModel: extension.CredentialWorkspaceBot,
+		Send: (&capturedSend{}).send, Live: answersLive(true, nil),
+	})
+	t.Cleanup(func() {
+		if _, err := owner.Exec(context.Background(), `DELETE FROM channel_provider WHERE provider = 'official_account'`); err != nil {
+			t.Errorf("cleaning up channel_provider: %v", err)
+		}
+	})
+
+	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}); err != nil {
+		t.Fatalf("reconcileChannelProviders: %v", err)
+	}
+
+	var transport, credentialModel string
+	if err := owner.QueryRow(ctx,
+		`SELECT transport, credential_model FROM channel_provider WHERE provider = 'official_account'`).
+		Scan(&transport, &credentialModel); err != nil {
+		t.Fatalf("querying the unit's row: %v", err)
+	}
+	if transport != "unit" {
+		t.Errorf("transport = %q, want unit — who SUPPLIES it is still the unit", transport)
+	}
+	if credentialModel != "workspace_bot" {
+		t.Errorf("credential_model = %q, want workspace_bot — the unit declared it, and a declaration "+
+			"the registry overrides is a declaration that does nothing", credentialModel)
+	}
+}
+
 // A capture-only unit registers its provider and is NOT sendable. The two are
 // separate columns because the difference is real and a rep sees it: the
 // timeline can name what carried a message on a transport nothing can answer on.
@@ -208,7 +253,7 @@ func TestReconcileChannelProvidersRegistersACaptureOnlyUnitTransportAsUnsendable
 	owner := integration.OwnerConn(t)
 	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
 	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
-	declaresTransport(t, "mine", extension.Channel{Provider: "mine_chat"})
+	declaresTransport(t, "mine", extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember})
 	t.Cleanup(func() {
 		if _, err := owner.Exec(context.Background(), `DELETE FROM channel_provider WHERE provider = 'mine_chat'`); err != nil {
 			t.Errorf("cleaning up channel_provider: %v", err)
@@ -248,7 +293,7 @@ func TestReconcileChannelProvidersRefusesAUnitThatShadowsACoreConnector(t *testi
 	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
 	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
 	declaresTransport(t, "impostor", extension.Channel{
-		Provider: capture.ProviderTelegram, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
+		Provider: capture.ProviderTelegram, CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
 
 	err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram})
@@ -290,7 +335,7 @@ func TestReconcileChannelProvidersRefusesAUnitThatSeizesARegisteredCoreTransport
 	// whatsapp is deliberately NOT in the composed set below, which is the
 	// truth about this binary: nothing composes a WhatsApp connector.
 	declaresTransport(t, "impostor", extension.Channel{
-		Provider: "whatsapp", Send: (&capturedSend{}).send, Live: answersLive(true, nil),
+		Provider: "whatsapp", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
 
 	err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram})
@@ -337,7 +382,7 @@ func TestTheBootStepRegistersAComposedUnitTransportWithNoCaptureRegistry(t *test
 	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
 	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
 	declaresTransport(t, "boot", extension.Channel{
-		Provider: "boot_chat", Send: (&capturedSend{}).send, Live: answersLive(true, nil),
+		Provider: "boot_chat", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
 	t.Cleanup(func() {
 		if _, err := owner.Exec(context.Background(),
@@ -392,7 +437,7 @@ func TestTheBootStepReconcilesBeforeTheInstallationIsBootstrapped(t *testing.T) 
 	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
 	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
 	declaresTransport(t, "prebootstrap", extension.Channel{
-		Provider: "prebootstrap_chat", Send: (&capturedSend{}).send, Live: answersLive(true, nil),
+		Provider: "prebootstrap_chat", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
 	t.Cleanup(func() {
 		if _, err := owner.Exec(context.Background(),
@@ -430,7 +475,7 @@ func TestRecordingTheCompositionFailsTheBootWhenAUnitShadowsACoreTransport(t *te
 	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
 	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
 	declaresTransport(t, "impostor", extension.Channel{
-		Provider: capture.ProviderTelegram, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
+		Provider: capture.ProviderTelegram, CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
 
 	err := RecordComposition(ctx, e.Pool, discardLog(), ComposedExtensions())

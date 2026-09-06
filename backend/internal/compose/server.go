@@ -15,7 +15,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/weekly"
@@ -204,27 +203,6 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 			AssuranceExceptions,
 			func() time.Time { return time.Now().UTC() },
 		),
-		forecastHandlers: forecasting.NewHandlers(
-			forecasting.NewStore(InstallationDB(pool)),
-			ForecastDeals, ForecastPeriodAt, ForecastWritableScope,
-			ForecastConversionHistory, ForecastForwardMeasure,
-			func() time.Time { return time.Now().UTC() },
-		),
-		// The floor comes from the constant rather than a setting for now:
-		// one number, and moving it to installation settings is a migration
-		// plus a reader, which is its own change.
-		analyticsQueryHandlers: newAnalyticsQueryHandlers(
-			InstallationDB(pool), analyticsquery.DefaultFloor),
-		analyticsContextHandlers: newAnalyticsContextHandlers(
-			InstallationDB(pool), func() time.Time { return time.Now().UTC() }),
-		// The share routes run in the FORECAST store's transaction, whose InTx
-		// gates on forecast:read — so the whole surface, issuing included, is
-		// behind the grant that reads the thing being shared.
-		analyticsShareHandlers: newAnalyticsShareHandlers(
-			NewAnalyticsShareStore(func() time.Time { return time.Now().UTC() }),
-			forecasting.NewStore(InstallationDB(pool)),
-			func() time.Time { return time.Now().UTC() },
-		),
 		// One assembler, shared with the test that drives this handler: the
 		// tab greys out a route the duplicate guard would refuse, so the rep
 		// learns the door is taken before writing the ask rather than from the
@@ -284,6 +262,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// the reader last looked. It reads the same clock the rest of the surface
 	// does, so "since your brief" means the same instant everywhere.
 	srv.magicHandlers = magic.NewHandlers(newMagicService(pool, time.Now))
+	srv.wireAnalyticsSurface(pool)
 	srv.wireCaptureSettingsSurface(pool)
 	srv.wireExportSurface(pool, log)
 	srv.wireOnboardingSurface(pool)

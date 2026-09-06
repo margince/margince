@@ -76,9 +76,8 @@ type EmbedReindexArgs struct {
 // Kind is the stable job identifier River persists in river_job.
 func (EmbedReindexArgs) Kind() string { return "embed_reindex" }
 
-// FleetWide marks this as owning no tenant of its own (jobs.FleetWide): since
-// ADR-0091 §8 phase D no embeddable entity carries a workspace, so the corpus
-// this rebuilds is the installation's.
+// FleetWide marks this as answering for the whole installation: it owns no
+// workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (EmbedReindexArgs) FleetWide() {}
 
 // embedReindexWorker rebuilds the installation's corpus under the run's target

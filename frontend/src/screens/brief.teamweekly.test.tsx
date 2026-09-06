@@ -364,3 +364,62 @@ describe("the team picker", () => {
     expect(screen.queryByLabelText(en["teamweekly.pickTeam"])).toBeNull();
   });
 });
+
+// The team's landing, drawn through the SAME panel the rep's retrospective
+// uses. What matters here is not the arithmetic — that is the server's — but
+// that a team which forecast nothing and one that landed on nothing are drawn
+// differently.
+describe("the team's landing", () => {
+  const horizon = {
+    period_kind: "quarter",
+    period_start: "2026-04-01",
+    period_end: "2026-06-30",
+    base_currency: "EUR",
+    won_minor: 180_000_00,
+    commit_minor: 120_000_00,
+    best_case_minor: 390_000_00,
+    weighted_minor: 260_000_00,
+    forward_measure: "commit_evidence",
+  };
+
+  it("says no forecast rather than drawing zeros when none was composed", async () => {
+    stubApi({
+      "GET /teams": () =>
+        jsonResponse({
+          data: [{ id: "t1", name: "Nord" }],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "GET /weekly-reviews/team": () => jsonResponse(review()),
+    });
+    render(<TeamWeeklyPanel offered />);
+
+    // Said in WORDS, not drawn as an absence: a team nobody forecast and a
+    // team that landed on nothing are different facts, and only the panel can
+    // tell the reader which this is.
+    await screen.findByText(en["home.weekly.outlook.none"]);
+  });
+
+  it("draws the frozen landing when the snapshot carries one", async () => {
+    stubApi({
+      "GET /teams": () =>
+        jsonResponse({
+          data: [{ id: "t1", name: "Nord" }],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "GET /weekly-reviews/team": () =>
+        jsonResponse(
+          review({}, { outlook: [horizon] } as Partial<TeamWeeklyReview>),
+        ),
+    });
+    render(<TeamWeeklyPanel offered />);
+
+    // The panel is the rep's own, so finding its heading proves the team page
+    // reuses it rather than having grown a second one.
+    // The horizon control is the rep panel's own, so finding it by its
+    // accessible name proves the team page reuses that component rather than
+    // having grown a second one.
+    await screen.findByRole("group", { name: en["home.weekly.outlook"] });
+    // And the "no forecast" line is gone, so the two states are really distinct.
+    expect(screen.queryByText(en["home.weekly.outlook.none"])).toBeNull();
+  });
+});
