@@ -37,11 +37,15 @@ const (
 	// ceilingOwner is the declaration the others mirror.
 	ceilingOwner     = "backend/internal/modules/activities/activitylinks.go"
 	ceilingOwnerName = "maxActivityLinks"
-	// ceilingTrigger carries the number in SQL, where it is enforced for every
-	// writer at once. Read from the migration rather than the head catalog: the
-	// catalog records that the trigger exists, never what it says.
-	ceilingTrigger = "backend/migrations/core/" +
-		"1788662190_a_link_ceiling_that_two_writers_cannot_exceed.up.sql"
+	// ceilingTriggerFunction is the SQL that enforces the number for every
+	// writer at once. Named by the FUNCTION rather than by its file: a
+	// migration is stamped with the unix second it was written, and rebasing
+	// past a newer one on main renames it — which would leave this gate reading
+	// a path that no longer exists and reporting that as its own breakage.
+	//
+	// Read from the migration rather than from the head catalog: the catalog
+	// records that the trigger exists, never what it says.
+	ceilingTriggerFunction = "activity_link_refuses_past_the_ceiling"
 	// ceilingMirrors is how many sibling modules carry a copy today. A floor,
 	// not a target: fewer means the search stopped finding them.
 	ceilingMirrors = 2
@@ -110,18 +114,15 @@ func TestTheLinkCeilingHasOneValue(t *testing.T) {
 			mirrors, ceilingMirrors, ceilingOwnerName)
 	}
 
-	sql, err := os.ReadFile(filepath.Join(repoRoot, ceilingTrigger))
-	if err != nil {
-		t.Fatalf("reading the ceiling trigger: %v", err)
-	}
-	match := triggerCeiling.FindStringSubmatch(string(sql))
+	triggerPath, sql := migrationDeclaring(t, ceilingTriggerFunction)
+	match := triggerCeiling.FindStringSubmatch(sql)
 	if match == nil {
 		t.Fatalf("%s no longer refuses past a number this gate can read — the SQL is where the "+
-			"ceiling actually holds, and an unread one is the copy nothing checks", ceilingTrigger)
+			"ceiling actually holds, and an unread one is the copy nothing checks", triggerPath)
 	}
 	inSQL, convErr := strconv.Atoi(match[1])
 	if convErr != nil {
-		t.Fatalf("%s: %q is not a count", ceilingTrigger, match[1])
+		t.Fatalf("%s: %q is not a count", triggerPath, match[1])
 	}
 	if inSQL != want {
 		t.Errorf("the trigger refuses past %d and %s owns %d — the database and the callers "+
@@ -172,4 +173,44 @@ func mustRel(t *testing.T, path string) string {
 		t.Fatalf("relativising %s: %v", path, err)
 	}
 	return rel
+}
+
+// migrationDeclaring answers the core migration that creates the named
+// function, and its text.
+//
+// Searched rather than named: the version stamp in a migration's filename is
+// the unix second it was written, and rebasing past a newer one on main
+// renames the file. A gate holding the old path would then fail for a reason
+// that has nothing to do with its subject.
+func migrationDeclaring(t *testing.T, function string) (string, string) {
+	t.Helper()
+	dir := filepath.Join(repoRoot, "backend", "migrations", "core")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading the core migrations: %v", err)
+	}
+	declaration := "FUNCTION " + function
+	var found, text string
+	for _, entry := range entries {
+		if !strings.HasSuffix(entry.Name(), ".up.sql") {
+			continue
+		}
+		raw, readErr := os.ReadFile(filepath.Join(dir, entry.Name()))
+		if readErr != nil {
+			t.Fatalf("reading %s: %v", entry.Name(), readErr)
+		}
+		if !strings.Contains(string(raw), declaration) {
+			continue
+		}
+		if found != "" {
+			t.Fatalf("both %s and %s declare %s — two migrations creating one function is a "+
+				"schema whose shape depends on which ran last", found, entry.Name(), function)
+		}
+		found, text = entry.Name(), string(raw)
+	}
+	if found == "" {
+		t.Fatalf("no core migration declares %s — the ceiling is no longer enforced in SQL, or it "+
+			"is enforced under another name this gate cannot see", function)
+	}
+	return "backend/migrations/core/" + found, text
 }
