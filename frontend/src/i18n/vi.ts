@@ -8458,6 +8458,15 @@ export const vi = {
   "worklist.verb.complete": "Mở",
   "worklist.verb.snooze": "Mở",
   "worklist.verb.acknowledge": "Đã hiểu",
+  "worklist.verb.retry": "Chạy lại",
+  "worklist.verb.retryStarted": "Quy tắc đang chạy lại.",
+  "worklist.verb.retryFailed": "Không thể chạy lại.",
+  "worklist.verb.retryRefusedNotFailed":
+    "Không có gì để chạy lại — lần chạy này bị dừng có chủ đích, không phải do lỗi.",
+  "worklist.verb.retryRefusedRepeats":
+    "Quy tắc này chưa được xác nhận an toàn khi chạy hai lần, nên chạy lại có thể lặp lại việc nó đã làm.",
+  "worklist.verb.retryRefusedEventGone":
+    "Sự kiện kích hoạt lần chạy này không còn nữa. Quy tắc theo lịch sẽ tự kiểm tra lại.",
   "worklist.verb.acknowledgeFailed": "Không thể đánh dấu là đã xem.",
   "worklist.verb.completeFailed": "Không thể hoàn thành nhiệm vụ này.",
   "worklist.verb.pin": "Ghim",

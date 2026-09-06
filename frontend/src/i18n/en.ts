@@ -8702,6 +8702,15 @@ export const en = {
   "worklist.verb.complete": "Open",
   "worklist.verb.snooze": "Open",
   "worklist.verb.acknowledge": "Got it",
+  "worklist.verb.retry": "Run it again",
+  "worklist.verb.retryStarted": "Running the rule again.",
+  "worklist.verb.retryFailed": "That could not be run again.",
+  "worklist.verb.retryRefusedNotFailed":
+    "Nothing to run again \u2014 this firing was stopped on purpose, not by an error.",
+  "worklist.verb.retryRefusedRepeats":
+    "This rule has not been cleared to run twice, so running it again could repeat what it already did.",
+  "worklist.verb.retryRefusedEventGone":
+    "The event behind this firing is gone, so it cannot be repeated. A scheduled rule checks again on its own.",
   "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
   "worklist.verb.completeFailed": "That task could not be completed.",
   "worklist.verb.pin": "Pin",

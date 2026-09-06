@@ -4542,6 +4542,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/automations/runs/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run one failed firing again, from the event that triggered it.
+         * @description A rule that failed used to leave a reader with nowhere to go: the queue named what
+         *     broke and the only moves were to fix it by hand or wait for the next trigger.
+         *
+         *     This re-dispatches the ORIGINAL event down the ordinary engine path, so every gate
+         *     the first firing passed it passes again — the owner's live permissions, the audience
+         *     check, the run claim, the effect claim. It never replays the stored plan: that plan
+         *     was computed against a database which has since moved, and re-applying it would
+         *     write yesterday's answer over today's records.
+         *
+         *     Three states refuse, and each says which in `refusal` rather than failing:
+         *
+         *     - `not_failed` — the run did not fail. An applied or skipped run has nothing to
+         *       retry, and a `blocked` one is the permission gate having already refused it on
+         *       purpose; retrying a refusal asks the same question expecting a different answer.
+         *     - `repeats_its_effect` — the handler has not been established safe to run twice.
+         *       Every handler registered today has been, so this refuses nothing now; it is the
+         *       answer for the next handler somebody adds, whose default is to refuse until
+         *       somebody looks.
+         *     - `trigger_event_unavailable` — the event cannot be rebuilt. A scheduled firing
+         *       synthesizes its trigger id per evaluation pass and never stages it, so those are
+         *       unreplayable by construction. Nothing is lost: the schedule re-examines the same
+         *       condition on its own next pass.
+         *
+         *     A retry is a NEW firing with its own run record, so the history shows both the
+         *     failure and what followed it. Retrying a run whose retry also failed is allowed and
+         *     counts as its own attempt.
+         */
+        post: operations["retryAutomationRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/leads": {
         parameters: {
             query?: never;
@@ -27648,6 +27696,27 @@ export interface components {
             /** @description Link into the audit_log row for this run. */
             audit_id?: string | null;
         };
+        /**
+         * @description What a retry did, or why it did nothing. `refusal` is present exactly when `retried`
+         *     is false, so a client never has to guess which of the two it received.
+         */
+        AutomationRetryResult: {
+            /**
+             * @description True when the firing was re-dispatched. It does NOT promise the firing then
+             *     succeeded — a retry of a rule whose cause is still present fails again, and
+             *     that failure is recorded as its own run for the same reasons the first was.
+             */
+            retried: boolean;
+            /**
+             * @description Why the run was not re-dispatched. `not_failed` covers both a run that
+             *     succeeded and one the permission gate blocked on purpose. `repeats_its_effect`
+             *     means nobody has established that running this handler twice is safe.
+             *     `trigger_event_unavailable` means the event cannot be rebuilt, which is
+             *     permanent for a scheduled firing rather than a condition that clears.
+             * @enum {string}
+             */
+            refusal?: "not_failed" | "repeats_its_effect" | "trigger_event_unavailable";
+        };
         /** @description The calling owner's live personal Voice DNA control record and active derived artifact. */
         VoiceProfile: {
             /** Format: uuid */
@@ -30056,7 +30125,7 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -31114,7 +31183,7 @@ export interface components {
              */
             occurred_at?: string;
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *
@@ -39331,6 +39400,35 @@ export interface operations {
                     };
                 };
             };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    retryAutomationRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description The attempt was made, or it was refused for one of the three stated reasons.
+             *     A refusal is an answer about the run's state, not a fault, so it is 200 with
+             *     `retried: false` rather than an error a client has to decode.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomationRetryResult"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };

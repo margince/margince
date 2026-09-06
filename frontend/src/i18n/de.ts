@@ -8571,6 +8571,16 @@ export const de = {
   "worklist.verb.complete": "Öffnen",
   "worklist.verb.snooze": "Öffnen",
   "worklist.verb.acknowledge": "Verstanden",
+  "worklist.verb.retry": "Erneut ausf\u00fchren",
+  "worklist.verb.retryStarted": "Die Regel l\u00e4uft erneut.",
+  "worklist.verb.retryFailed":
+    "Das konnte nicht erneut ausgef\u00fchrt werden.",
+  "worklist.verb.retryRefusedNotFailed":
+    "Nichts zu wiederholen \u2014 dieser Lauf wurde absichtlich gestoppt, nicht durch einen Fehler.",
+  "worklist.verb.retryRefusedRepeats":
+    "Diese Regel ist nicht daf\u00fcr freigegeben, zweimal zu laufen \u2014 ein zweiter Lauf k\u00f6nnte wiederholen, was sie schon getan hat.",
+  "worklist.verb.retryRefusedEventGone":
+    "Das ausl\u00f6sende Ereignis ist nicht mehr vorhanden. Eine zeitgesteuerte Regel pr\u00fcft von selbst erneut.",
   "worklist.verb.acknowledgeFailed":
     "Das konnte nicht als gelesen markiert werden.",
   "worklist.verb.completeFailed":
