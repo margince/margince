@@ -101,9 +101,15 @@ function stub(dsr: DataSubjectRequest, roster: RosterServer) {
         "https://test.local",
       );
       if (url.pathname.endsWith("/me")) {
-        // The queue is admin-gated: its rows name the people who exercised an
-        // Art. 15/17 right.
-        return json(meFixture({ roles: ["admin"] }));
+        // The queue reads on `privacy_request:read`: its rows name the people
+        // who exercised an Art. 15/17 right, so a reader needs that grant to
+        // reach any of the rows this file is about.
+        return json(
+          meFixture({
+            roles: ["admin"],
+            allow: { privacy_request: ["read"] },
+          }),
+        );
       }
       if (url.pathname.endsWith("/data-subject-requests")) {
         return json({ data: [dsr], page: PAGE });

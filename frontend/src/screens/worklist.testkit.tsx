@@ -72,7 +72,7 @@ function isTeamBoardRead(url: string): boolean {
  * sentence; deciding needs the payload, the stager and the evidence, so the row
  * being decided reads the approval it is showing.
  */
-export function stub(day: Worklist, approval?: unknown) {
+export function stub(day: Worklist, answer?: unknown) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -80,8 +80,17 @@ export function stub(day: Worklist, approval?: unknown) {
       if (isWorklistRead(url)) {
         return jsonResponse(day);
       }
-      if (approval && /\/approvals\/[^/]+$/.test(url.split("?")[0])) {
-        return jsonResponse(approval);
+      // One optional answer, served to whichever of the two single-record
+      // endpoints a test drives. They cannot both be in play in one test: an
+      // approval read and a retry write sit on different rows.
+      if (
+        answer &&
+        /\/automations\/runs\/[^/]+\/retry$/.test(url.split("?")[0])
+      ) {
+        return jsonResponse(answer);
+      }
+      if (answer && /\/approvals\/[^/]+$/.test(url.split("?")[0])) {
+        return jsonResponse(answer);
       }
       if (isTeamBoardRead(url)) {
         return jsonResponse(QUIET_BOARD);

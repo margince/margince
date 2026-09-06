@@ -6815,6 +6815,54 @@ paths:
                   page: { $ref: '#/components/schemas/PageInfo' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /automations/runs/{id}/retry:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Automations]
+      operationId: retryAutomationRun
+      security: [ { cookieAuth: [] } ]   # human session only — see the deviation note above
+      x-agent-access: human-only
+      summary: Run one failed firing again, from the event that triggered it.
+      description: |
+        A rule that failed used to leave a reader with nowhere to go: the queue named what
+        broke and the only moves were to fix it by hand or wait for the next trigger.
+
+        This re-dispatches the ORIGINAL event down the ordinary engine path, so every gate
+        the first firing passed it passes again — the owner's live permissions, the audience
+        check, the run claim, the effect claim. It never replays the stored plan: that plan
+        was computed against a database which has since moved, and re-applying it would
+        write yesterday's answer over today's records.
+
+        Three states refuse, and each says which in `refusal` rather than failing:
+
+        - `not_failed` — the run did not fail. An applied or skipped run has nothing to
+          retry, and a `blocked` one is the permission gate having already refused it on
+          purpose; retrying a refusal asks the same question expecting a different answer.
+        - `repeats_its_effect` — the handler has not been established safe to run twice.
+          Every handler registered today has been, so this refuses nothing now; it is the
+          answer for the next handler somebody adds, whose default is to refuse until
+          somebody looks.
+        - `trigger_event_unavailable` — the event cannot be rebuilt. A scheduled firing
+          synthesizes its trigger id per evaluation pass and never stages it, so those are
+          unreplayable by construction. Nothing is lost: the schedule re-examines the same
+          condition on its own next pass.
+
+        A retry is a NEW firing with its own run record, so the history shows both the
+        failure and what followed it. Retrying a run whose retry also failed is allowed and
+        counts as its own attempt.
+      responses:
+        '200':
+          description: |
+            The attempt was made, or it was refused for one of the three stated reasons.
+            A refusal is an answer about the run's state, not a fault, so it is 200 with
+            `retried: false` rather than an error a client has to decode.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AutomationRetryResult' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   # ------------------------------ /leads ------------------------------------
   /leads:
     get:
@@ -37102,6 +37150,16 @@ components:
         new_state: { type: string, enum: [granted, withdrawn] }
         lawful_basis: { type: [string, 'null'] }
         source: { type: [string, 'null'] }
+        wording:
+          type: string
+          maxLength: 2000
+          description: |
+            The exact wording the subject was shown, stored verbatim as proof. Required with a
+            grant and refused as a 422 without one: Art. 7(1) asks the controller to demonstrate
+            what the subject agreed TO, and a grant that cannot say what was shown demonstrates
+            nothing. A withdrawal needs none — nothing is being demonstrated when somebody takes
+            consent back, and refusing that would leave a person unable to opt out. The 2000-character
+            bound matches the confirm-details door, which stores wording on the same proof row.
 
     RecordClaim:
       type: object
@@ -37202,8 +37260,8 @@ components:
       required: [purpose_id, policy_version]
       properties:
         purpose_id: { type: string, format: uuid }
-        policy_version: { type: string, description: Version id of the consent wording shown to the subject. }
-        wording: { type: [string, 'null'], description: 'The exact wording shown, stored with the consent event for demonstrability.' }
+        policy_version: { type: string, maxLength: 200, description: Version id of the consent wording shown to the subject. }
+        wording: { type: [string, 'null'], maxLength: 2000, description: 'The exact wording shown, stored with the consent event for demonstrability.' }
 
     PreferenceCenter:
       type: object
@@ -37382,6 +37440,29 @@ components:
         action_result: { type: [string, 'null'], description: 'What happened (e.g. "created task", "queued to approval inbox").' }
         reason: { type: [string, 'null'], description: 'For failed/blocked/skipped: why (e.g. "provider error", "approval expired", "Passport no longer permits send") — from automation_run.detail.' }
         audit_id: { type: [string, 'null'], description: 'Link into the audit_log row for this run.' }
+
+    AutomationRetryResult:
+      type: object
+      description: |
+        What a retry did, or why it did nothing. `refusal` is present exactly when `retried`
+        is false, so a client never has to guess which of the two it received.
+      required: [retried]
+      properties:
+        retried:
+          type: boolean
+          description: |
+            True when the firing was re-dispatched. It does NOT promise the firing then
+            succeeded — a retry of a rule whose cause is still present fails again, and
+            that failure is recorded as its own run for the same reasons the first was.
+        refusal:
+          type: string
+          enum: [not_failed, repeats_its_effect, trigger_event_unavailable]
+          description: |
+            Why the run was not re-dispatched. `not_failed` covers both a run that
+            succeeded and one the permission gate blocked on purpose. `repeats_its_effect`
+            means nobody has established that running this handler twice is safe.
+            `trigger_event_unavailable` means the event cannot be rebuilt, which is
+            permanent for a scheduled firing rather than a condition that clears.
 
     # ---- Voice DNA ----
     VoiceProfile:
@@ -38872,6 +38953,119 @@ components:
             The focus in words, composed from the stored figures — never model-written, so it
             cannot say something the snapshot does not hold.
 
+    WeeklyReviewScorecard:
+      type: object
+      additionalProperties: false
+      description: |
+        One week's judgement of one rep's work, frozen with the review. Both blocks are optional
+        and each is absent when the rep had no such work that week.
+      properties:
+        lead:
+          description: |
+            The funnel slice. ABSENT when the rep carried no lead at all — which is a different
+            fact from a rep with forty untouched leads, who gets a present block of zeros.
+          allOf: [{ $ref: '#/components/schemas/WeeklyScorecardLeadBlock' }]
+        deal:
+          description: |
+            The pipeline slice. ABSENT when the rep had no open deal and no stage change in the
+            window — nothing to judge.
+          allOf: [{ $ref: '#/components/schemas/WeeklyScorecardDealBlock' }]
+
+    WeeklyScorecardLeadBlock:
+      type: object
+      additionalProperties: false
+      description: |
+        How the rep's leads moved, and whether the meetings behind them happened.
+      required:
+        [advanced, disqualified, promoted, answered_in_target, breached,
+         meetings_booked, meetings_held, meetings_no_show, meetings_partial_history]
+      properties:
+        advanced:
+          type: integer
+          minimum: 0
+          description: |
+            Status transitions UP the open ladder inside the week. Counted per transition, so a
+            lead that went new to contacted to engaged counts twice — the lead's own row records
+            only where it ended and could report at most one of them.
+        disqualified: { type: integer, minimum: 0 }
+        promoted: { type: integer, minimum: 0 }
+        answered_in_target:
+          type: integer
+          minimum: 0
+          description: Leads that arrived this week and were answered without breaching the SLA.
+        breached: { type: integer, minimum: 0 }
+        meetings_booked:
+          type: integer
+          minimum: 0
+          description: |
+            Meetings that BECAME booked this week, read from the meeting's transition history and
+            never from its current status. A meeting booked Monday and held Friday counts in both
+            this and `meetings_held`, which is what a funnel means; counting the current column
+            would report no bookings at all for the week it was booked in.
+        meetings_held: { type: integer, minimum: 0 }
+        meetings_no_show: { type: integer, minimum: 0 }
+        meetings_partial_history:
+          type: integer
+          minimum: 0
+          description: |
+            Meetings whose only history row was invented from their current state when the history
+            table was introduced. They cannot say when they were booked, so they are reported as
+            partial coverage rather than counted. A non-zero value means the three counts above
+            are a floor, and a reader should say so.
+
+    WeeklyScorecardDealBlock:
+      type: object
+      additionalProperties: false
+      description: |
+        Whether deals moved forward, and whether they are in a state anybody could work.
+      required:
+        [advances, regressions, with_next_step, open, multi_threaded,
+         close_date_sound, forecast_up, forecast_down]
+      properties:
+        advances:
+          type: integer
+          minimum: 0
+          description: |
+            Moves to a LATER stage of the same pipeline, by stage position. A deal that crossed
+            pipelines has no comparable position and counts as neither direction.
+        regressions: { type: integer, minimum: 0 }
+        median_days_in_stage:
+          type: [integer, 'null']
+          minimum: 0
+          description: |
+            Median whole days a deal sat in the stage it left this week. NULL when no deal changed
+            stage: a median of nothing is absent, never zero.
+        with_next_step:
+          type: integer
+          minimum: 0
+          description: Open deals carrying an open task. A count beside `open`, never a rate.
+        open:
+          type: integer
+          minimum: 0
+          description: |
+            The denominator the three coverage counts are read against. Published so a reader can
+            judge "3 of 5" rather than trust a percentage that cannot be told from 300 of 500.
+        multi_threaded:
+          type: integer
+          minimum: 0
+          description: |
+            Open deals with at least two distinct people in the last 30 days. Thirty rather than
+            the review's own week: the risk measured is the single point of failure, and a deal
+            worked steadily for a month is multi-threaded whether or not the second person
+            happened to appear in these seven days.
+        close_date_sound:
+          type: integer
+          minimum: 0
+          description: Open deals whose close date is set, not provisional, and not in the past.
+        forecast_up:
+          type: integer
+          minimum: 0
+          description: |
+            Deals whose forecast category ended the week higher than it started. Counted ONCE per
+            deal however many times it was edited — a rep who corrected a typo three times did not
+            upgrade three times.
+        forecast_down: { type: integer, minimum: 0 }
+
     WeeklyReview:
       type: object
       additionalProperties: false
@@ -38932,6 +39126,146 @@ components:
             review rather than "last week" — a rep with a gap has a previous week that is not seven
             days back.
           allOf: [{ $ref: '#/components/schemas/WeeklyReviewPrior' }]
+        scorecard:
+          description: |
+            How WELL the week went, as against what happened in it — the counts beside this say
+            forty leads arrived, this says twelve were answered inside the target.
+
+            ABSENT on a review written before scorecards existed. Each of its two blocks is
+            independently absent too, and absent is NOT zero: a rep who carried no leads did not
+            score zero on the funnel, and a reader must draw nothing rather than a row of zeros
+            that reads as failure at something nobody asked of them.
+          allOf: [{ $ref: '#/components/schemas/WeeklyReviewScorecard' }]
+        outlook:
+          type: array
+          items: { $ref: '#/components/schemas/WeeklyReviewOutlook' }
+          description: |
+            Where the week was landing, one entry per horizon — the week itself, the month, and
+            the fiscal quarter, because a rep asks three different questions on a Monday.
+
+            EMPTY when no forecast was composed at the time the review was written, which is not
+            the same as a week that landed on nothing. A reader must say "no forecast" rather
+            than draw zeros.
+
+            Every figure here is a COPY, not a pointer. The snapshots these were read from are
+            subject to retention, and a review holding only their ids would read as a blank
+            outlook the day they age out — indistinguishable from a week nobody measured.
+
+    WeeklyReviewOutlook:
+      type: object
+      additionalProperties: false
+      description: |
+        One horizon's landing as the week closed, frozen beside the review.
+      required: [period_kind, period_start, period_end, base_currency, won_minor,
+                 commit_minor, best_case_minor, weighted_minor, movement]
+      properties:
+        period_kind:
+          type: string
+          enum: [week, month, quarter]
+          x-enum-varnames: [WeeklyOutlookPeriodWeek, WeeklyOutlookPeriodMonth, WeeklyOutlookPeriodQuarter]
+        period_start: { type: string, format: date }
+        period_end:
+          type: string
+          format: date
+          description: The last day INSIDE the window, not an exclusive bound.
+        opening_landing_minor:
+          type: integer
+          format: int64
+          description: |
+            What the window was landing on at the START of the week, from that Monday's snapshot.
+
+            ABSENT when no Monday snapshot exists — an installation in its first week, or one
+            whose worker was down. Absent is NOT zero: a zero opening draws a week that started
+            from nothing and made everything, and the movement bars below are then omitted too
+            because there is no opening to have moved from.
+        closing_landing_minor:
+          type: integer
+          format: int64
+          description: What the window was landing on when the week closed.
+        forward_measure:
+          type: string
+          enum: [commit_evidence, weighted, manager_call]
+          description: |
+            Which measure the closing landing was built from, FROZEN. The installation setting can
+            change, and a past week must keep saying what it was read under rather than silently
+            re-meaning when somebody changes how the business reads its pipeline.
+
+            No manager call is consulted for a frozen weekly landing: a call is an assertion about
+            a period somebody is still working, and a retrospective reports what the pipeline
+            said. Freezing an opinion as a measurement would make the record argue with itself.
+        won_minor: { type: integer, format: int64 }
+        commit_minor: { type: integer, format: int64 }
+        best_case_minor:
+          type: integer
+          format: int64
+          description: Inclusive of commit, which is what the label on the surface must say.
+        weighted_minor: { type: integer, format: int64 }
+        base_currency: { type: string }
+        movement:
+          type: array
+          items: { $ref: '#/components/schemas/WeeklyReviewMovement' }
+          description: |
+            How the window got from its opening landing to its closing one, as signed bars.
+
+            SIX bars at most, and only those that moved. The two landings are the bridge's
+            ANCHORS and are never bars: a bar for either would be summed as a movement as well as
+            read as a landing. Empty when there was no opening snapshot to move from.
+
+    WeeklyReviewMovement:
+      type: object
+      additionalProperties: false
+      description: One bar of the movement bridge, and the deals behind it.
+      required: [bar, delta_minor]
+      properties:
+        bar:
+          type: string
+          enum: [created, advanced, slipped, won, lost, other]
+          x-enum-varnames: [WeeklyBarCreated, WeeklyBarAdvanced, WeeklyBarSlipped,
+                            WeeklyBarWon, WeeklyBarLost, WeeklyBarOther]
+          description: |
+            Which move this is. Folded from the forecast engine's twelve movement buckets, whose
+            grain is right for diagnosing a quarter and too fine for a weekly retrospective.
+
+            `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
+            reprice, a category move and a stage move each go both ways, and reading the cause
+            alone would draw a bar of progress out of a week somebody lost money in. `other` is
+            the machinery — FX, a definition change, a model change — kept apart because nobody
+            DID it, and crediting it as progress tells a rep they sold what a rate move did.
+        delta_minor:
+          type: integer
+          format: int64
+          description: |
+            Signed. A bar takes money out of the window as well as putting it in, and an unsigned
+            magnitude would make a slip read as an advance.
+        drivers:
+          type: array
+          items: { $ref: '#/components/schemas/WeeklyReviewDriver' }
+          description: |
+            The deals worth naming under this bar, largest absolute movement first and capped —
+            the panel asks "which ones?" and a reader wants what moved it, not a ledger.
+
+            A deal the reader may not see is OMITTED rather than named with a placeholder, so a
+            frozen retrospective never discloses a record its reader was not allowed to open.
+
+    WeeklyReviewDriver:
+      type: object
+      additionalProperties: false
+      description: One deal behind a bar, frozen with the name it carried that week.
+      required: [deal_id, deal_label, delta_minor]
+      properties:
+        deal_id:
+          type: string
+          format: uuid
+          description: |
+            The deal as it was. Carries no guarantee the record still exists: a retrospective is a
+            record of what a week WAS, so a deal deleted next month leaves this row saying what it
+            said.
+        deal_label:
+          type: string
+          description: |
+            What the deal was called that week, stored beside the id. A rename later does not
+            rewrite history and a deletion does not erase it.
+        delta_minor: { type: integer, format: int64, description: 'Signed, like its bar.' }
 
     WeeklyReviewPipeline:
       type: object
@@ -39721,7 +40055,7 @@ components:
         occurred_at: { type: string, format: date-time, description: "When a done_for_you receipt actually happened." }
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry] }
           description: |
             What this item offers. `decide` and `merge` mean the verb is irreversible and a
             person must choose; `complete` and `snooze` are a task's own verbs; `open` is
@@ -40836,7 +41170,7 @@ components:
         occurred_at: { type: string, format: date-time, description: 'When the thing being reported happened.' }
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry] }
           description: 'What this item offers, routed to the endpoint that owns the verb.'
         band:
           type: string

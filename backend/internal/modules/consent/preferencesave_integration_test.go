@@ -84,7 +84,7 @@ func TestASaveRecordsItsWithdrawalsEvenWhenAGrantIsRefused(t *testing.T) {
 	// The grant is listed FIRST on purpose: in request order it refuses before
 	// the withdrawal is ever reached.
 	rec := preferenceSave(t, e, token, `{"choices":[
-		{"purpose_key":"doi_newsletter","state":"granted"},
+		{"purpose_key":"doi_newsletter","state":"granted","wording":"Yes, send me the newsletter."},
 		{"purpose_key":"newsletter","state":"withdrawn"}]}`)
 
 	// 200 with the refusal NAMED, not a 4xx: the withdrawal beside it did
@@ -130,7 +130,7 @@ func TestAPurposeNamedTwiceInOneSaveSettlesOnTheWithdrawal(t *testing.T) {
 	// withdrawals-first pass, the grant would be the one left standing.
 	rec := preferenceSave(t, e, token, `{"choices":[
 		{"purpose_key":"newsletter","state":"withdrawn"},
-		{"purpose_key":"NEWSLETTER ","state":"granted"}]}`)
+		{"purpose_key":"NEWSLETTER ","state":"granted","wording":"Yes, send me the newsletter."}]}`)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, body %s", rec.Code, rec.Body.String())
@@ -147,7 +147,7 @@ func TestASaveRecordsEveryDistinctChoice(t *testing.T) {
 	token := seedPreferenceToken(t, e)
 
 	rec := preferenceSave(t, e, token, `{"choices":[
-		{"purpose_key":"newsletter","state":"granted"},
+		{"purpose_key":"newsletter","state":"granted","wording":"Yes, send me the newsletter."},
 		{"purpose_key":"doi_newsletter","state":"withdrawn"}]}`)
 
 	if rec.Code != http.StatusOK {

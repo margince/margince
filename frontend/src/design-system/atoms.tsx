@@ -1428,7 +1428,14 @@ export function Modal({
   // stays visible as context rather than being covered by a centred box.
   // With size="wide" it takes the roomier clamp and a sticky header/footer,
   // for the surfaces a rep works IN rather than glances at.
-  placement?: "center" | "right";
+  //
+  // "full" is the lightbox: the box takes the screen it is on, inset far
+  // enough that the darkened page still frames it, for content READ rather
+  // than answered — a contract, a scan. It is a placement rather than a
+  // `size` because what it decides is where the dialog sits, and it decides
+  // that completely: `size` names widths for a centred box and there is
+  // nothing left for one to vary here.
+  placement?: "center" | "right" | "full";
   // Where focus should land instead of the opener, for a dialog whose OWN
   // mutation removes the control that opened it — a Deactivate button that
   // becomes Reactivate, a row the delete drops from the list.
@@ -1489,8 +1496,14 @@ export function Modal({
 // variants — which exist to widen a centred box — do not apply to it.
 function modalClass(
   size: "default" | "wide" | "split",
-  placement: "center" | "right",
+  placement: "center" | "right" | "full",
 ) {
+  // The lightbox answers before either branch below, because neither has
+  // anything to say about it: it is as wide as the screen allows, so no width
+  // varies it, and it is centred, so no edge anchors it.
+  if (placement === "full") {
+    return "modal modal-full";
+  }
   if (placement === "right") {
     // A drawer's width normally comes from the viewport, but a surface a rep
     // WORKS in — a numbered claim list, a message being written — wraps into an

@@ -101,47 +101,54 @@ const CORE_SCREENS = [
   "partners",
   "analytics",
   "settings",
-  // The automations editor is configuration on the AI settings page now, not a
-  // destination of its own. Sweeping `#/automations` after the route retired
-  // would measure the fallback screen and report it as coverage, so the sweeps
-  // follow the surface to where it actually lives.
-  "settings/ai",
-  // Settings is FIFTEEN pages behind one route (SETTINGS_TABS in
-  // screens/settings.tsx), and a bare `settings` resolves to Account — the
-  // shortest of them. Sweeping that alone and calling settings covered is how
-  // the widest page in the product went unmeasured: `data-model` carries two
+  // Settings is many pages behind one route (SETTINGS_PAGES in
+  // screens/settingscatalog.ts), and a bare `settings` resolves to Account —
+  // the shortest of them. Sweeping that alone and calling settings covered is
+  // how the widest page in the product went unmeasured: `fields` carries two
   // full list surfaces with their own toolbars, `integrations` four
-  // installation-wide cards, `people` a roster of rows that each end in two
+  // installation-wide cards, `members` a roster of rows that each end in two
   // buttons. These are where a narrow viewport actually breaks.
   //
-  // ALL fifteen. The list below is written out rather than derived, and that is
-  // the weakness to know about: it went stale once already, claiming twelve
-  // while three pages — capture-activity, knowledge, license — were in neither
-  // sweep and nothing failed to say so. A census that can fall short reports
-  // PASS on the smaller tree.
+  // Every id below is a CANONICAL page id. A renamed spelling still resolves —
+  // `settingsrouting.ts` keeps the old addresses working — but it resolves by
+  // redirecting, so sweeping one measures the page it lands on while reporting
+  // the name it was asked for. expectSettingsViewLanded below is what makes
+  // that visible rather than silently counting the same page twice.
+  //
+  // The list is written out rather than derived, and that is the weakness to
+  // know about: it went stale twice — once claiming twelve while three pages
+  // were in neither sweep, and again when the catalog was split into its
+  // current shape and six of these ids were renamed under it. A census that can
+  // fall short reports PASS on the smaller tree.
   //
   // The blocker named here — that reading the ids would pull the screen's whole
   // module graph through Playwright's transform — is GONE: `settingscatalog.ts`
   // is pure data and imports like `../src/i18n/de` above it already does. What
   // still blocks deriving it is the mock's grants: E2E_ADMIN_GRANTS in seed.ts
-  // predates the thirteen settings objects, so a derived sweep would name pages
-  // this principal cannot open, each of them landing on the fallback and
-  // reporting a page the run never read — the same short census in a new shape.
-  // Extend the grants first, then derive; doing it in that order is the whole
-  // point.
-  "settings/data-model",
+  // predates the settings objects, so a derived sweep would name pages this
+  // principal cannot open, each of them landing on the fallback and reporting a
+  // page the run never read — the same short census in a new shape. Extend the
+  // grants first, then derive; doing it in that order is the whole point.
+  "settings/models",
+  // Automations and the audit trail each used to be one body of a page already
+  // in this list. They are pages of their own now, so they are named here — a
+  // split surface that keeps only its old address is a surface that quietly
+  // left the sweep.
+  "settings/automations",
+  "settings/audit",
+  "settings/fields",
   "settings/integrations",
-  "settings/users",
+  "settings/members",
   "settings/voice",
   "settings/agents",
   "settings/connections",
-  "settings/general",
+  "settings/company",
   "settings/capture",
   "settings/privacy",
-  "settings/maintenance",
+  "settings/system-health",
   "settings/capture-activity",
   "settings/knowledge",
-  "settings/license",
+  "settings/seats",
 ];
 
 /**
@@ -602,12 +609,9 @@ test("AC-book: the booking page renders rail-less with live slots", async ({
 test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enable is the deliberate second step", async ({
   page,
 }) => {
-  // Automations are configuration, not a destination: the editor is one BODY of
-  // the AI settings page, reached by its tab, so every assertion below is scoped
-  // to that section rather than to a page that also carries routing, provider
-  // credentials, spend and the call trace.
-  await page.goto("/#/settings/ai");
-  await page.getByRole("button", { name: "Automatisierungen" }).click();
+  // Scoped to the editor's own region rather than to the page, so the criterion
+  // still reads what it names if the page ever carries a second card.
+  await page.goto("/#/settings/automations");
   const automations = page.locator("[data-automations-admin]");
   await expect(automations.getByText("Stillstands-Erinnerung")).toBeVisible();
   await automations
@@ -640,12 +644,11 @@ test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enab
 test("AC-automations-2 (features/10 §1): anti-DSL — no free-form rule body, no user-defined trigger", async ({
   page,
 }) => {
-  // The anti-DSL claim is about the automations surface, so it is asserted over
-  // that surface: the editor is one tab of a settings page whose other bodies
-  // carry inputs with nothing to do with rule authoring, and counting those in
-  // would say something else entirely.
-  await page.goto("/#/settings/ai");
-  await page.getByRole("button", { name: "Automatisierungen" }).click();
+  // The anti-DSL claim is about the automations surface, so it is counted over
+  // that surface's region rather than over the page: an input elsewhere on the
+  // page has nothing to do with rule authoring, and counting it in would say
+  // something else entirely.
+  await page.goto("/#/settings/automations");
   const automations = page.locator("[data-automations-admin]");
   await expect(automations.getByText("Stillstands-Erinnerung")).toBeVisible();
   await automations
@@ -667,14 +670,15 @@ test("AC-automations-2 (features/10 §1): anti-DSL — no free-form rule body, n
 test("AC-settings-16: the audit log renders attributed entries, filters live, and loads more", async ({
   page,
 }) => {
-  // The audit log is the last card on the Privacy & audit entry — the trail
-  // that proves the consent, retention and DSR surfaces above it were honoured
-  // — and it names the PERSON behind each entry (AuditEntryLine, PD-002): the
+  // The audit log is the trail that proves the consent, retention and DSR
+  // surfaces were honoured, on its own page because it answers to `audit_log`
+  // where those answer to the consent registry and the retention policy. It
+  // names the PERSON behind each entry (AuditEntryLine, PD-002): the
   // signed-in human reads "Du", and a machine acting under someone's authority
   // reads as THAT PERSON with the tool as a qualifier. An agent's own id is
   // never the label — attribution exists so somebody can be asked about a
   // change, and an identifier cannot be asked anything.
-  await page.goto("/#/settings/privacy");
+  await page.goto("/#/settings/audit");
   await expect(page.getByText("Du", { exact: true })).toBeVisible();
   await expect(page.getByText("Marcus Brandt", { exact: true })).toBeVisible();
   await expect(page.getByText("über einen Agenten")).toBeVisible();

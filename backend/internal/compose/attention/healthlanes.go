@@ -142,6 +142,14 @@ type BouncedSend struct {
 	// PersonID is the person the send's activity is filed under, zero when it
 	// is filed under none — the card then offers no open.
 	PersonID ids.UUID
+	// Recipient is the address that refused the send.
+	//
+	// Without it the card names a person and a subject, and a rep opening a
+	// contact who carries three addresses cannot tell which one is dead — the
+	// row reports a failure and leaves the reader to guess at the fix. Empty
+	// when the send carries none, and the card then says nothing about where it
+	// was aimed rather than guessing.
+	Recipient string
 }
 
 // AutomationHealth is the automations whose recent firings failed or were
@@ -154,6 +162,12 @@ type BouncedSend struct {
 type AutomationHealth interface {
 	TroubledRuns(ctx context.Context, since time.Time, limit int) ([]TroubledAutomationRun, error)
 }
+
+// outcomeFailed is the one troubled outcome a retry acts on. `blocked` is the
+// permission gate having refused a firing on purpose, and re-running it asks
+// the same question of the same authority — the retry endpoint declines it, so
+// a row must not offer the verb.
+const outcomeFailed = "failed"
 
 // TroubledAutomationRun is one firing that did not do its work.
 type TroubledAutomationRun struct {

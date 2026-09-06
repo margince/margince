@@ -136,7 +136,7 @@ func assertAnonymousAvailability(t *testing.T, e *apptest.AppEnv, base, window s
 // assertBookingRequiresValidConsent checks consent is validated before
 // any write: no consent and a bogus purpose are both 422s that leave
 // zero person rows behind.
-func assertBookingRequiresValidConsent(t *testing.T, e *apptest.AppEnv, base string, monday time.Time) {
+func assertBookingRequiresValidConsent(t *testing.T, e *apptest.AppEnv, base, purposeID string, monday time.Time) {
 	t.Helper()
 	// A booking without consent is refused before any write.
 	noConsent := AnyMap{
@@ -149,11 +149,30 @@ func assertBookingRequiresValidConsent(t *testing.T, e *apptest.AppEnv, base str
 	// A bogus purpose is refused before any write too.
 	badPurpose := AnyMap{
 		"start": monday.Add(1 * time.Hour), "end": monday.Add(90 * time.Minute),
-		"booker":  AnyMap{"name": "Anna Anonymous", "email": "anna@visitor.example"},
-		"consent": AnyMap{"purpose_id": "018f0000-0000-7000-8000-000000000000", "policy_version": "pp-2026-01"},
+		"booker": AnyMap{"name": "Anna Anonymous", "email": "anna@visitor.example"},
+		"consent": AnyMap{
+			"purpose_id": "018f0000-0000-7000-8000-000000000000", "policy_version": "pp-2026-01",
+			"wording": "You agree we may contact you about this meeting.",
+		},
 	}
 	if status := publicCall(t, e, "POST", base, badPurpose, nil, nil); status != 422 {
 		t.Fatalf("booking with unknown purpose → %d, want 422", status)
+	}
+	// A grant that cannot say what was shown is refused the same way, and for
+	// the same reason it is checked at this door: the person is created before
+	// the consent is recorded, so a refusal further in would leave the row
+	// behind. This endpoint is anonymous, which makes that a way to grow the
+	// person table one rejected request at a time.
+	// A REAL purpose, so the missing wording is the only thing wrong with this
+	// request. With the bogus id above it would be refused by the purpose check
+	// and pass whether or not the wording rule exists at all.
+	noWording := AnyMap{
+		"start": monday.Add(1 * time.Hour), "end": monday.Add(90 * time.Minute),
+		"booker":  AnyMap{"name": "Anna Anonymous", "email": "anna@visitor.example"},
+		"consent": AnyMap{"purpose_id": purposeID, "policy_version": "pp-2026-01"},
+	}
+	if status := publicCall(t, e, "POST", base, noWording, nil, nil); status != 422 {
+		t.Fatalf("booking consent without wording → %d, want 422", status)
 	}
 	var persons int
 	if err := e.Owner.QueryRow(context.Background(), `SELECT count(*) FROM person`).Scan(&persons); err != nil {
@@ -312,7 +331,7 @@ func TestPublicBookingEndToEnd(t *testing.T) {
 	window := fmt.Sprintf("?from=%s&to=%s", monday.Format(time.RFC3339), monday.Add(8*time.Hour).Format(time.RFC3339))
 
 	assertAnonymousAvailability(t, e, base, window)
-	assertBookingRequiresValidConsent(t, e, base, monday)
+	assertBookingRequiresValidConsent(t, e, base, purposeID, monday)
 
 	consent := AnyMap{"purpose_id": purposeID, "policy_version": "pp-2026-01", "wording": "You agree we may contact you about this meeting."}
 	booking := bookHappyPathSlot(t, e, base, monday, consent)

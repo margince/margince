@@ -1,16 +1,16 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { useCanWrite } from "../app/capability";
-import {
-  INSTALLATION_SETTINGS_KEY,
-  useInstallationSettings,
-} from "../app/uploadlimit";
+import { INSTALLATION_SETTINGS_KEY } from "../app/uploadlimit";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
+
+/** The narrow sign-in read, keyed apart from the installation aggregate. */
+const AUTHENTICATION_POLICY_KEY = ["authentication-policy"] as const;
 
 /**
  * Which ways people may sign in to this installation.
@@ -46,9 +46,39 @@ function useSetEnabledProviders() {
       }
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: INSTALLATION_SETTINGS_KEY,
-      });
+      // BOTH caches. The write goes through the installation PATCH, so the
+      // aggregate holds a copy of these providers — but the card now reads the
+      // narrow projection, and invalidating only the aggregate would leave the
+      // switch showing what it showed before the save.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: INSTALLATION_SETTINGS_KEY }),
+        queryClient.invalidateQueries({ queryKey: AUTHENTICATION_POLICY_KEY }),
+      ]);
+    },
+  });
+}
+
+/**
+ * Which providers this installation offers, read on its own.
+ *
+ * NOT the installation aggregate this card used to read. That aggregate is
+ * gated on `installation_settings`, which every seeded role holds — a rep reads
+ * it for the base currency — so a page opening on it would put the sign-in
+ * policy in front of the whole workspace. This endpoint answers the same values
+ * behind `authentication_policy`, which is what makes the page a Management+
+ * surface rather than everybody's.
+ */
+function useAuthenticationPolicy() {
+  return useQuery({
+    queryKey: AUTHENTICATION_POLICY_KEY,
+    queryFn: async () => {
+      const { data, error, response } = await api.GET(
+        "/installation/authentication-policy",
+      );
+      if (error || !response.ok) {
+        throwProblem(error);
+      }
+      return data;
     },
   });
 }
@@ -56,7 +86,7 @@ function useSetEnabledProviders() {
 export function SignInMethodsCard() {
   const t = useT();
   const canManage = useCanWrite("installation_settings", "update");
-  const settings = useInstallationSettings();
+  const settings = useAuthenticationPolicy();
   const save = useSetEnabledProviders();
 
   return (

@@ -27,8 +27,18 @@ export function StatStrip({
   testId,
   label,
   floor,
+  hero,
 }: Readonly<{
   children: ReactNode;
+  /**
+   * The row at the size of a page it OPENS. On a record a reading is one of
+   * five beside the work and takes the strip's one shared size; on the Brief
+   * the five are the page's first answer, under a greeting set at display
+   * size, and a strip sized for a record column read as a footnote there.
+   * The figure takes the display rung and the tile grows to hold it; label
+   * and basis keep their type.
+   */
+  hero?: boolean;
   // How the strip SITS in the layout around it — it lands on the strip's
   // outer box, which is the element the parent lays out. Not for restyling
   // the row of slots itself: the row's grid, gaps and fold are this
@@ -66,7 +76,7 @@ export function StatStrip({
   };
   const row = (
     <section
-      className="stat-strip"
+      className={hero ? "stat-strip stat-strip-hero" : "stat-strip"}
       style={vars}
       aria-label={label}
       data-testid={testId}

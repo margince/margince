@@ -7,10 +7,10 @@ import { LocaleProvider } from "../i18n";
 import { EconomyBanner } from "./economybanner";
 import { type GrantSpec, meFixture } from "./mefixture";
 
-// The banner reads GET /ai/usage, which the server gates on automation:update
-// — a read behind another object's write grant. The fixtures name that grant
-// directly rather than a role, so a rebinding to a more intuitive AI object
-// fails here instead of 403-ing in a browser.
+// The banner reads GET /ai/usage, which the server gates on ai_diagnostics:read
+// (ai/usage.go). The fixtures name that grant directly rather than a role, so a
+// rebinding fails here instead of 403-ing in a browser — which is what happened
+// when the server moved off automation:update and three client gates stayed.
 function mount(allow: GrantSpec, readBand: string | (() => string)) {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const path = new URL(
@@ -46,7 +46,7 @@ function mount(allow: GrantSpec, readBand: string | (() => string)) {
 }
 
 // The one grant this surface needs, named once.
-const AI_RUNTIME_READER: GrantSpec = { automation: ["update"] };
+const AI_RUNTIME_READER: GrantSpec = { ai_diagnostics: ["read"] };
 
 afterEach(() => {
   cleanup();

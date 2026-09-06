@@ -111,7 +111,7 @@ const AI_CALL: AiCallSummary = {
   has_payload: false,
 };
 
-const OPERATOR: GrantSpec = { automation: ["update"], license: ["read"] };
+const OPERATOR: GrantSpec = { ai_diagnostics: ["read"], license: ["read"] };
 
 /** A month with one priced line and one the server could not price. */
 const PRICED_USAGE = {
@@ -513,7 +513,8 @@ describe("AgentRail", () => {
   it("gives neither a warning nor a licence row when the seat may not read the licence", async () => {
     const user = userEvent.setup();
     stubAgentRailApi({
-      me: () => jsonResponse(meFixture({ allow: { automation: ["update"] } })),
+      me: () =>
+        jsonResponse(meFixture({ allow: { ai_diagnostics: ["read"] } })),
       license: () => jsonResponse(LICENSE("absent")),
     });
     const { container } = render(ROUTE);
@@ -786,7 +787,7 @@ describe("AgentRail", () => {
     expect(container.querySelector(".arblock")).toBeNull();
   });
 
-  it("says the runtime row is not readable on a seat without automation:update", async () => {
+  it("says the runtime row is not readable without ai_diagnostics:read", async () => {
     const user = userEvent.setup();
     stubAgentRailApi({
       me: () => jsonResponse(meFixture({ allow: { license: ["read"] } })),
@@ -861,7 +862,7 @@ describe("AgentRail", () => {
     );
   });
 
-  // The server serves the figure on `automation:update`, which the ops seat
+  // The server serves the figure on `ai_diagnostics:read`, which the ops seat
   // holds and an edited role may hold; the cost is the administrator's figure
   // regardless, so a seat with the grant and without the role gets the runtime
   // row and no money — on the rail, in the panel head and in the meta row.

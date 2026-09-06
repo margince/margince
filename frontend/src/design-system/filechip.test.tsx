@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { FileChip } from "./filechip";
+import { FileChip, previewMediaType } from "./filechip";
 
 // The card IS the download, and its name is the filename — the name the saved
 // copy carries, and the only thing that tells two files on one row apart.
@@ -31,6 +31,26 @@ describe("FileChip", () => {
     expect(asImage).toBeTruthy();
     expect(new Set([other, asPdf, asImage]).size).toBe(3);
     expect(glyph("photo.png")).toBe(asImage);
+  });
+
+  it("offers to draw only what a browser can show, read from the extension", () => {
+    // Case-insensitively, because a scanner writes .PDF as readily as .pdf.
+    expect(previewMediaType("signed.PDF")).toBe("application/pdf");
+    expect(previewMediaType("~WRD0005.JPG")).toBe("image/jpeg");
+    // A picture to a reader, and to no browser: it keeps the picture mark on
+    // the card and stays a download.
+    expect(previewMediaType("from-the-phone.heic")).toBeNull();
+    expect(previewMediaType("terms-redline.docx")).toBeNull();
+    expect(previewMediaType("README")).toBeNull();
+  });
+
+  it("never offers to draw a kind that can carry script", () => {
+    // The preview draws from a blob under this origin, so a document the
+    // browser would execute is one running as our own page with our own
+    // cookies. SVG is the one that looks like a picture and is not.
+    for (const carrier of ["logo.svg", "notes.html", "page.htm", "feed.xml"]) {
+      expect(previewMediaType(carrier)).toBeNull();
+    }
   });
 
   it("stamps the kind on the card without adding it to the name", () => {

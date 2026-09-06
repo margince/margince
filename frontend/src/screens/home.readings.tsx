@@ -81,6 +81,7 @@ export function HomeReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
     <section className="home-readings" aria-label={t("home.readings.label")}>
       <StatStrip
         testId="home-readings"
+        hero
         floor={
           readings.more_available ? t("home.readings.truncated") : undefined
         }

@@ -64,8 +64,15 @@ func TestATroubledFiringNamesItsRuleAndItsReason(t *testing.T) {
 	if blocked.Detail != nil {
 		t.Errorf("a firing with no recorded reason invented one: %q", *blocked.Detail)
 	}
-	if len(failed.Actions)+len(blocked.Actions) != 0 {
-		t.Error("a rule-health card promises no verbs")
+	// The failed firing offers to run again; the blocked one does not, because
+	// blocked is the permission gate having refused it on purpose and a retry
+	// would ask the same question of the same authority. Neither card offers a
+	// verb that FIXES the rule — that lives on the automation screens.
+	if !slices.Contains(failed.Actions, crmcontracts.AttentionItemActionsRetry) {
+		t.Errorf("a failed firing offers %v, want retry among them", failed.Actions)
+	}
+	if len(blocked.Actions) != 0 {
+		t.Errorf("a blocked firing offers %v, want nothing: it was refused on purpose", blocked.Actions)
 	}
 }
 

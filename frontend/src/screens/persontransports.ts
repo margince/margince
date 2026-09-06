@@ -49,7 +49,7 @@ export function transportsFor(
 ): Transport[] {
   const out: Transport[] = [];
   if (view.person.emails?.[0]?.email) {
-    out.push({ id: "email", label: t("person.composer.transportEmail") });
+    out.push({ id: "email", label: t("compose.transportEmail") });
   }
   const reachable = new Set(
     (view.person.reachability ?? [])

@@ -46,6 +46,10 @@ const maxProposedValueRunes = 500
 // its disclosures, and shorter than anything that could be used as storage.
 const maxWordingRunes = 2000
 
+// maxVersionRunes bounds the version id that names the wording above. It is an
+// identifier, not prose, so it is bounded far shorter.
+const maxVersionRunes = 200
+
 // ConfirmSubmission is what the subject sent: their corrections, whether they
 // asked to be removed, and their answer to the marketing question.
 type ConfirmSubmission struct {

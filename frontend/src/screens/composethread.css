@@ -27,8 +27,18 @@
   overflow-y: auto;
   margin-bottom: 0;
 }
-.compose-split > .compose-fields > .compose-body {
+/* The editor is the one child that grows. `.richtext` is the RichText's own
+   frame — the body stopped being a textarea when formatting moved into the
+   shared drawer — and its editable surface fills it. */
+.compose-split > .compose-fields > .richtext {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
+  min-block-size: 0;
+}
+.compose-split > .compose-fields > .richtext > .richtext-input {
+  flex: 1 1 auto;
+  overflow-y: auto;
 }
 
 .compose-thread {

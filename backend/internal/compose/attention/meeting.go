@@ -149,6 +149,17 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 // carry a deadline; a meeting that already began cannot be late, and stamping
 // one would put an overdue mark on a row whose whole point is that the meeting
 // is over.
+//
+// It offers `decide`, the same verb an approval carries and for the same
+// reason: the answer is given ON the row rather than somewhere else. What the
+// row asks is how the meeting went, and the three answers — held, no-show,
+// cancelled — are the meeting_status vocabulary the activity has always
+// contracted. PATCH /activities/{id} has accepted them since the field existed;
+// what was missing was anywhere to say so at the one moment a human knows.
+//
+// Not `open`: this row's subject is the ACTIVITY, a timeline entry with no page
+// of its own, so a verb promising to open it would advertise a destination that
+// does not exist — the same reason meetingItem above offers none.
 func meetingAwaitingOutcomeItem(meeting MeetingAwaitingOutcome) crmcontracts.AttentionItem {
 	subject := meeting.Subject
 	started := meeting.StartedAt
@@ -158,7 +169,9 @@ func meetingAwaitingOutcomeItem(meeting MeetingAwaitingOutcome) crmcontracts.Att
 		Title:      &subject,
 		OccurredAt: &started,
 		Subject:    subjectOf("activity", meeting.ID),
-		Actions:    []crmcontracts.AttentionItemActions{},
+		Actions: []crmcontracts.AttentionItemActions{
+			crmcontracts.AttentionItemActionsDecide,
+		},
 	}
 }
 

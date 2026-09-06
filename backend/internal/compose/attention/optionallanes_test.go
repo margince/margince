@@ -237,6 +237,17 @@ func stringOr(v *string) string {
 	return *v
 }
 
+// stubMeetingsAwaitingOutcome feeds the counterpart lane: meetings that already
+// happened and owe an answer.
+type stubMeetingsAwaitingOutcome struct {
+	rows []MeetingAwaitingOutcome
+	err  error
+}
+
+func (s *stubMeetingsAwaitingOutcome) Since(_ context.Context, _, _ time.Time, _ int) ([]MeetingAwaitingOutcome, error) {
+	return s.rows, s.err
+}
+
 type stubMeetings struct {
 	rows  []Meeting
 	err   error

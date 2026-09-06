@@ -10,7 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { ExtensionAccessCard } from "./extension-access";
@@ -156,6 +156,10 @@ function backend(
   opts: {
     roles?: string[];
     seat?: "full" | "read";
+    // Defaults to `extension_access:read`, the grant the card and its endpoint
+    // both ask for — a case about the inventory should not also have to argue
+    // its way past the gate, and one that wants it REFUSED says so with `{}`.
+    allow?: GrantSpec;
     extensions?: unknown;
     // A function so a test can change what the second read answers — the
     // concurrent-edit case needs the re-read to bring back someone else's
@@ -169,10 +173,19 @@ function backend(
     const req =
       input instanceof Request ? input : new Request(String(input), init);
     if (req.url.endsWith("/v1/me")) {
+      // The card makes TWO reads: `GET /v1/extensions` on `extension_access:read`
+      // and `GET /v1/roles` on `role_admin:read`. The default principal holds
+      // both, plus the `role_admin:update` the toggles write through, because
+      // that is the only principal the server answers this whole card for. A
+      // case asserting a refusal passes a narrower `allow`.
       return jsonResponse(
         meFixture({
           roles: opts.roles ?? ["admin"],
           seat: opts.seat ?? "full",
+          allow: opts.allow ?? {
+            extension_access: ["read"],
+            role_admin: ["read", "update"],
+          },
         }),
       );
     }
@@ -180,6 +193,19 @@ function backend(
       return jsonResponse(opts.extensions ?? EXTENSIONS);
     }
     if (req.url.endsWith("/v1/roles") && req.method === "GET") {
+      // The gate the SERVER holds (identity/roles.go ListRoles), enforced here
+      // rather than assumed: a mock that answered 200 to a principal without
+      // `role_admin:read` described a world the API cannot produce, and it hid
+      // a card that opened on `extension_access:read` alone and then 403'd on
+      // this very request. A stub that admits everyone proves nothing about a
+      // gate.
+      const allow = opts.allow ?? {
+        extension_access: ["read"],
+        role_admin: ["read", "update"],
+      };
+      if (!allow.role_admin?.includes("read")) {
+        return jsonResponse({ title: "forbidden" }, 403);
+      }
       const body =
         typeof opts.rolesBody === "function"
           ? (opts.rolesBody as () => unknown)()
@@ -575,8 +601,65 @@ describe("ExtensionAccessCard", () => {
     );
     render(<ExtensionAccessCard />);
 
-    await waitFor(() => expect(screen.getByText(/admins only/i)).toBeTruthy());
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          /needs permission to read the installation's extensions/i,
+        ),
+      ).toBeTruthy(),
+    );
     expect(screen.queryByText("notes")).toBeNull();
+  });
+
+  // The inventory grant ALONE is not this card. `GET /v1/roles` asks for
+  // role_admin:read (identity/roles.go), and the card reads both behind one
+  // flag — so a reader holding only `extension_access:read` used to open the
+  // page, fire both requests, and take a 403 on the second. It is refused
+  // before either request now, which is the same answer the server gives.
+  it("fetches nothing for a reader who may see units but not roles", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.url.endsWith("/v1/me")) {
+          return jsonResponse(
+            meFixture({
+              roles: ["ops"],
+              allow: { extension_access: ["read"] },
+            }),
+          );
+        }
+        throw new Error(`unexpected request: ${req.method} ${req.url}`);
+      }),
+    );
+    render(<ExtensionAccessCard />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          /needs permission to read the installation's extensions/i,
+        ),
+      ).toBeTruthy(),
+    );
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  // And the mirror: holding both reads OPENS it, so the refusal above is about
+  // the missing grant rather than about a card nobody can open.
+  it("opens for a reader holding both the inventory and the role reads", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backend([], {
+        allow: { extension_access: ["read"], role_admin: ["read"] },
+      }),
+    );
+    render(<ExtensionAccessCard />);
+
+    // The matrix itself, by a row only it draws — `findByRole("table")` is
+    // ambiguous here because the card renders one per unit.
+    expect(await screen.findAllByRole("table")).not.toHaveLength(0);
+    expect(screen.getAllByText("Admin").length).toBeGreaterThan(0);
   });
 
   // `enabled: false` stops the next request; it does not forget the last one. A
@@ -606,7 +689,13 @@ describe("ExtensionAccessCard", () => {
     );
     renderWith(client, <ExtensionAccessCard />);
 
-    await waitFor(() => expect(screen.getByText(/admins only/i)).toBeTruthy());
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          /needs permission to read the installation's extensions/i,
+        ),
+      ).toBeTruthy(),
+    );
     expect(screen.queryByRole("heading", { name: "notes" })).toBeNull();
     expect(screen.queryByText("ext_notes_note")).toBeNull();
     // And the cache itself is emptied, so a later render cannot resurrect it.
@@ -652,7 +741,15 @@ describe("ExtensionAccessCard", () => {
         const req =
           input instanceof Request ? input : new Request(String(input), init);
         if (req.url.endsWith("/v1/me")) {
-          return jsonResponse(meFixture({ roles: ["admin"] }));
+          return jsonResponse(
+            meFixture({
+              roles: ["admin"],
+              allow: {
+                extension_access: ["read"],
+                role_admin: ["read", "update"],
+              },
+            }),
+          );
         }
         return new Promise<Response>(() => {});
       }),

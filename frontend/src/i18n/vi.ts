@@ -556,6 +556,12 @@ export const vi = {
   "state.staleAsOf": "Giá trị biết đến gần nhất, tính đến {when}",
   "state.partial": "Chỉ hiển thị một phần danh sách",
   "state.partialCount": "Còn {count} mục chưa hiển thị",
+  "filePreview.download": "Tải xuống",
+  "filePreview.print": "In",
+  "filePreview.close": "Đóng bản xem trước",
+  "filePreview.loading": "Đang mở tệp này…",
+  "filePreview.failedTitle": "Không thể hiển thị tệp này ở đây",
+  "filePreview.failed": "Hãy tải xuống để mở bằng ứng dụng khác.",
 
   "list.headActions": "Thao tác khác",
   "list.search": "Tìm kiếm",
@@ -767,6 +773,8 @@ export const vi = {
   "org.filterSizeBandAll": "Mọi quy mô",
   "person.consent": "Chấp thuận",
   "consent.grant": "Cấp chấp thuận",
+  "consent.operatorWording":
+    "Được nhân viên ghi nhận trong CRM, xác nhận rằng người này đã đồng ý cho {label} bên ngoài sản phẩm. Không có nội dung nào được hiển thị cho họ tại đây.",
   "consent.withdraw": "Rút lại",
   "consent.doiBySubject":
     "M\u1ee5c \u0111\u00edch n\u00e0y do ch\u00ednh ng\u01b0\u1eddi \u0111\u00f3 x\u00e1c nh\u1eadn, qua li\u00ean k\u1ebft g\u1eedi t\u1edbi \u0111\u1ecba ch\u1ec9 c\u1ee7a h\u1ecd. H\u00e3y d\u00f9ng \u201c\u0110\u1ec1 ngh\u1ecb h\u1ecd x\u00e1c nh\u1eadn th\u00f4ng tin\u201d b\u00ean d\u01b0\u1edbi.",
@@ -2478,6 +2486,31 @@ export const vi = {
   "home.pipelineUnavailable": "Không tải được số liệu này.",
   "home.panel.weekly": "Tuần trước",
   "home.weekly.weekOf": "Tuần từ {day}",
+  "home.weekly.scorecard.title": "Tuần vừa qua thế nào",
+  "home.weekly.scorecard.leadBlock": "Khách tiềm năng và cuộc họp",
+  "home.weekly.scorecard.dealBlock": "Cơ hội",
+  "home.weekly.scorecard.advanced": "Khách tiềm năng tiến lên",
+  "home.weekly.scorecard.advancedBasis": "Số bậc tiến lên, đếm theo từng bước",
+  "home.weekly.scorecard.answeredInTarget": "Trả lời đúng hạn",
+  "home.weekly.scorecard.breachedDetail": "{count} quá hạn",
+  "home.weekly.scorecard.meetingsHeld": "Cuộc họp đã diễn ra",
+  "home.weekly.scorecard.meetingsBasis": "{booked} đã đặt · {noShow} không đến",
+  "home.weekly.scorecard.partialHistory": "Cuộc họp không có lịch sử",
+  "home.weekly.scorecard.partialHistoryBasis":
+    "Những cuộc họp này có trước lịch sử cuộc họp, nên các số trên là mức tối thiểu",
+  "home.weekly.scorecard.advances": "Tiến giai đoạn",
+  "home.weekly.scorecard.regressionsDetail": "{count} lùi lại",
+  "home.weekly.scorecard.medianDaysInStage": "Số ngày trung vị trong giai đoạn",
+  "home.weekly.scorecard.medianBasis":
+    "Cho các giai đoạn cơ hội rời khỏi tuần này",
+  "home.weekly.scorecard.withNextStep": "Có bước tiếp theo",
+  "home.weekly.scorecard.ofOpen": "trên {total} cơ hội đang mở",
+  "home.weekly.scorecard.multiThreaded": "Nhiều hơn một người",
+  "home.weekly.scorecard.multiThreadedBasis":
+    "trên {total} cơ hội đang mở, trong 30 ngày qua",
+  "home.weekly.scorecard.closeDateSound": "Ngày chốt đáng tin",
+  "home.weekly.scorecard.forecastMoves": "Nâng dự báo",
+  "home.weekly.scorecard.forecastMovesBasis": "{down} hạ dự báo",
   // Tuần tới. Bản tổng kết đã đóng băng nói điều đã xảy ra; đây là phần duy nhất
   // của trang đó mà vẫn còn ai đó thay đổi được.
   "plan.title": "Lập kế hoạch tuần tới",
@@ -2616,6 +2649,33 @@ export const vi = {
   "plan.new.save": "Thêm",
   "plan.new.cancel": "Huỷ",
 
+  "home.weekly.outlook": "Tuần này đang hướng tới đâu",
+  "home.weekly.outlook.week": "Tuần này",
+  "home.weekly.outlook.month": "Tháng này",
+  "home.weekly.outlook.quarter": "Quý này",
+  "home.weekly.outlook.none":
+    "Khi bản tổng kết này được ghi, chưa có dự báo nào được gắn vào, nên tuần này không lưu kết quả hướng tới. Điều đó khác với một tuần kết thúc ở con số không.",
+  "home.weekly.outlook.won": "Đã thắng",
+  "home.weekly.outlook.commit": "Cam kết còn lại",
+  "home.weekly.outlook.bestCase": "Trường hợp tốt nhất (gồm cam kết)",
+  "home.weekly.outlook.weighted": "Có trọng số",
+  "home.weekly.outlook.landing": "Dự phóng kết quả kỳ",
+  "home.weekly.outlook.measure.commit_evidence": "Đọc từ bằng chứng cam kết",
+  "home.weekly.outlook.measure.weighted": "Đọc từ pipeline có trọng số",
+  "home.weekly.outlook.measure.manager_call": "Đọc từ đánh giá của quản lý",
+  "home.weekly.bridge": "Tuần này đã dịch chuyển ra sao",
+  "home.weekly.bridge.opening": "Thứ Hai",
+  "home.weekly.bridge.closing": "Thứ Sáu",
+  "home.weekly.bridge.noOpening":
+    "Tuần này không có ảnh chụp hôm thứ Hai, nên không có con số khởi đầu để đối chiếu dịch chuyển.",
+  "home.weekly.bridge.reconcile":
+    "Các cột này cộng lại không khớp con số cuối kỳ. Hãy đọc hai tổng số, đừng đọc từng bước.",
+  "home.weekly.bar.created": "Mới tạo",
+  "home.weekly.bar.advanced": "Tiến triển",
+  "home.weekly.bar.slipped": "Tụt lại",
+  "home.weekly.bar.won": "Đã thắng",
+  "home.weekly.bar.lost": "Đã mất",
+  "home.weekly.bar.other": "Tỷ giá và định nghĩa",
   "home.weekly.frozen": "Đã chốt",
   "home.weekly.written": "ghi lúc {at}",
   "home.weekly.pickWeek": "Mở tuần khác",
@@ -3169,6 +3229,31 @@ export const vi = {
   "compose.whyThisDraft": "Vì sao có bản nháp này?",
   "compose.body": "Nội dung",
   "compose.bodyHint": "Nhấp vào văn bản để chỉnh sửa.",
+  "compose.transport": "Cách gửi",
+  "compose.transportEmail": "Email",
+  "compose.intentLabel": "Nội dung nên nói về điều gì?",
+  "compose.recipientHint": "Tên hoặc địa chỉ",
+  "compose.subjectHint": "Nội dung chính",
+  "compose.bodyPlaceholder": "Viết tin nhắn…",
+  "compose.bcc": "Bcc",
+  "compose.bccHint":
+    "Những người nhận được nêu tên không thấy các địa chỉ này, và cũng không thấy rằng có ai khác được gửi kèm.",
+  "compose.threadGone":
+    "Không thể trả lời cuộc trò chuyện đó nữa, nên cửa sổ này mở theo cách viết thông thường. Hãy kiểm tra người nhận trước khi gửi.",
+  "compose.attach": "Đính kèm",
+  "compose.filesOnRecord": "Trên hồ sơ này",
+  "compose.filesLoading": "Đang đọc tệp của hồ sơ…",
+  "compose.filesNone": "Hồ sơ này chưa có tệp nào.",
+  "compose.filesFull":
+    "Một tin nhắn chỉ mang được tối đa {most} tệp. Hãy gửi phần còn lại trong tin nhắn thứ hai.",
+  "compose.fileRemove": "Không gửi {filename}",
+  "compose.fileUpload": "Gửi kèm tệp mới",
+  "compose.fileUploadHint":
+    "Tệp được lưu vào hồ sơ trước, để dòng thời gian giữ đúng những gì tin nhắn đã mang.",
+  "compose.fileUploadEmpty": "Kéo tệp vào đây, hoặc chọn một tệp",
+  "compose.fileUploading": "Đang lưu tệp…",
+  "compose.fileStoredUnnamed":
+    "Tệp đã ở trên hồ sơ, nhưng chúng tôi không đọc lại được đó là tệp nào. Hãy đính kèm nó từ danh sách phía trên.",
   "calendar.previousMonth": "Tháng trước",
   "calendar.nextMonth": "Tháng sau",
   "compose.schedulePick": "Chọn ngày và giờ",
@@ -3230,7 +3315,6 @@ export const vi = {
     "Tin nhắn này không thể gửi, và không vai trò nào ở đây có thể bỏ qua điều đó.",
   "compose.derivedReply":
     "Đây là trả lời tin nhắn của chính họ, nên bạn không cần nêu lý do.",
-  "compose.sendLaterLabel": "Gửi sau (tùy chọn)",
   "compose.send": "Gửi",
   "compose.sendConfirmTitle": "Soạn email",
   "compose.threadHeading": "Cuộc trao đổi này",
@@ -3284,7 +3368,6 @@ export const vi = {
   "compose.missingSubject": "Hãy đặt tiêu đề cho email này.",
   "compose.missingBody": "Hãy viết nội dung trước khi gửi.",
   "compose.missingWhy": "Hãy cho biết vì sao bạn viết cho họ.",
-  "compose.removeRecipient": "Gỡ {recipient}",
   "compose.actionFailed": "Yêu cầu thất bại. Hãy thử lại.",
 
   "tasks.complete": "Đánh dấu xong",
@@ -3799,7 +3882,7 @@ export const vi = {
   "settings.jobs": "Tác vụ nền",
   "settings.jobsSub": "Hàng đợi đang giữ gì, và công việc của ai đã thất bại.",
   "jobs.adminOnly":
-    "Chỉ quản trị viên xem được tình trạng tác vụ nền. Báo cáo này bao trùm công việc của toàn bộ bản triển khai, nên không hiển thị rộng hơn.",
+    "Xem tình trạng tác vụ nền cần quyền mà ghế của bạn không có. Báo cáo này bao trùm công việc của toàn bộ bản triển khai, nên không mở cho tất cả mọi người.",
   "jobs.empty":
     "Không có gì trong hàng đợi nền — không có việc đang chờ, đang chạy, đang thử lại hay đã chết.",
   "jobs.workspaceKinds": "Tổ chức này",
@@ -3853,7 +3936,7 @@ export const vi = {
   "settings.auditSub":
     "mọi hành động đều được quy trách — người, Agent hay connector",
   "settings.auditAdminOnly":
-    "Chỉ quản trị viên đọc được toàn bộ dấu vết. Nó ghi lại mọi người thực hiện và mọi bản ghi họ chạm tới, nên không mở rộng hơn.",
+    "Đọc toàn bộ dấu vết cần quyền mà ghế của bạn không có. Nó ghi lại mọi người thực hiện và mọi bản ghi họ chạm tới, nên không mở cho tất cả mọi người.",
   "settings.auditFilters": "Bộ lọc",
   "settings.auditEntries": "Nhật ký kiểm toán",
   "settings.auditTrailLabel": "Các hành động đã ghi",
@@ -3871,7 +3954,7 @@ export const vi = {
   "settings.due": "hạn {date}",
 
   "privacy.purposesReadOnly":
-    "Chế độ chỉ đọc — chỉ quản trị viên hoặc ops mới thêm được mục đích.",
+    "Chế độ chỉ đọc — thêm mục đích cần quyền mà ghế của bạn không có.",
   "privacy.addPurpose": "Thêm mục đích",
   "privacy.purposesRegistry": "Mục đích đã đăng ký",
   "privacy.purposeKey": "Khoá",
@@ -3882,7 +3965,7 @@ export const vi = {
     "Một mục đích đã tạo thì không đổi tên hay xoá được — danh mục chỉ thêm mới. Hãy chọn khoá thật cẩn thận.",
   "privacy.facetAll": "Tất cả",
   "privacy.inboxAdminOnly":
-    "Chỉ quản trị viên xem được yêu cầu của chủ thể dữ liệu. Danh sách nêu tên người đã yêu cầu, nên không mở rộng hơn.",
+    "Xem yêu cầu của chủ thể dữ liệu cần quyền mà ghế của bạn không có. Danh sách nêu tên người đã yêu cầu, nên không mở cho tất cả mọi người.",
   "privacy.overdue": "Quá hạn",
   "privacy.closed":
     "Đã đóng — một yêu cầu đã đóng không bao giờ mở lại. Mối lo mới là một yêu cầu mới.",
@@ -5875,6 +5958,31 @@ export const vi = {
   "cf.retired": "Đã ngừng dùng",
   // "Chung" thay vì "Tổ chức" cho mục đầu tiên: tiêu đề nhóm phía trên đã nói
   // từ đó, và một dòng lặp lại tiêu đề của chính nó thì không gọi tên được gì.
+  "settings.tab.company": "Hồ sơ công ty",
+  "settings.tab.authentication": "Đăng nhập & ứng dụng",
+  "settings.tab.members": "Thành viên",
+  "settings.tab.teams": "Nhóm",
+  "settings.tab.seats": "Giấy phép & chỗ ngồi",
+  "settings.tab.pipelines": "Quy trình",
+  "settings.tab.leads": "Xử lý khách tiềm năng",
+  "settings.tab.fields": "Trường",
+  "settings.tab.tags": "Thẻ",
+  "settings.tab.products": "Sản phẩm & báo giá",
+  "settings.tab.import": "Nhập dữ liệu",
+  "settings.tab.models": "Mô hình & định tuyến",
+  "settings.tab.automations": "Tự động hoá",
+  "settings.tab.usage": "Mức dùng AI",
+  "settings.tab.model-calls": "Lượt gọi mô hình",
+  "settings.tab.audit": "Nhật ký kiểm toán",
+  "settings.tab.system-health": "Tình trạng hệ thống",
+  "settings.tab.reset": "Đặt lại dữ liệu",
+  "settings.group.me": "Bạn",
+  "settings.group.company": "Công ty",
+  "settings.group.people": "Nhân sự",
+  "settings.group.sales": "Bán hàng",
+  "settings.group.data": "Dữ liệu",
+  "settings.group.ai": "AI",
+  "settings.group.governance": "Quản trị",
   "settings.tab.account": "Tài khoản",
   "settings.tab.voice": "Giọng viết",
   "settings.tab.agents": "Tác nhân",
@@ -6096,6 +6204,8 @@ export const vi = {
   "license.refused.title": "Giấy phép của bản cài đặt này bị từ chối",
   "license.refused.body":
     "Token trong deployment đã được xuất trình và bị từ chối. Mọi thứ vẫn hoạt động, không giới hạn, cho đến khi token được thay — hãy kiểm tra token và đồng hồ của bản cài đặt.",
+  "license.seats.capacityOnly":
+    "Số chỗ đầy đủ mà bản cài đặt này đang dùng. Quyền hạn được cấp không thuộc phạm vi bạn xem.",
   "license.seats.title": "Số chỗ",
   "license.seats.used": "Chỗ đang dùng",
   "license.seats.granted": "Chỗ được cấp",
@@ -6323,7 +6433,7 @@ export const vi = {
   "extAccess.sub":
     "Mỗi đơn vị tiện ích đã ghép vào bản cài đặt này mang theo những gì, và vai trò nào được dùng. Chỉ dành cho quản trị viên.",
   "extAccess.adminOnly":
-    "Chỉ quản trị viên mới truy cập được phần tiện ích mở rộng.",
+    "Trang này cần quyền đọc các tiện ích mở rộng của bản triển khai và các vai trò của nó. Ghế của bạn chỉ có một hoặc không có quyền nào.",
   "extAccess.readOnly":
     "Chỗ ngồi của bạn chỉ đọc được trang này. Muốn đổi quyền cần chỗ ngồi đầy đủ.",
   "extAccess.empty":
@@ -6784,13 +6894,6 @@ export const vi = {
   "firstRun.ai.modelHint":
     "Chỉ là điểm khởi đầu. Bất kỳ mô hình nào nhà cung cấp phục vụ đều dùng được.",
   "firstRun.ai.embedModel": "Mô hình embedding",
-  "aiSettings.sub": "Văn bản của bản cài đặt này đi đâu, và tốn bao nhiêu.",
-  "aiSettings.tabs": "Phần nào của cài đặt AI đang mở",
-  "aiSettings.tab.routing": "Định tuyến",
-  "aiSettings.tab.providers": "Nhà cung cấp",
-  "aiSettings.tab.automations": "Tự động hoá",
-  "aiSettings.tab.usage": "Mức dùng",
-  "aiSettings.tab.logs": "Nhật ký",
   "aiSettings.withheld": "Không thuộc quyền xem của bạn",
   "aiSettings.unread": "Không đọc được",
   "aiSettings.pending": "Đang đọc…",
@@ -6801,10 +6904,6 @@ export const vi = {
   "aiSettings.providers.value": "{count} đã có khoá",
   "aiSettings.providers.missing": "{count} đã gán nhưng chưa có khoá",
   "aiSettings.providers.lastCall": "lần gọi cuối {elapsed}",
-  "aiSettings.discardTitle": "Bỏ các thay đổi định tuyến?",
-  "aiSettings.discardBody":
-    "Các ràng buộc bạn đổi chưa được lưu. Rời tab này sẽ bỏ chúng.",
-  "aiSettings.discard": "Bỏ",
   "elapsed.justNow": "vừa xong",
   "elapsed.minutes": "{minutes} phút trước",
   "elapsed.hours": "{hours} giờ trước",
@@ -7538,51 +7637,16 @@ export const vi = {
   "person.rail.nothingCaptured": "Chưa ghi nhận gì.",
   "person.rail.viewAllActivity": "Xem tất cả hoạt động",
   "person.drawer.close": "Đóng",
-  "person.composer.title": "Soạn thư tiếp theo · {name}",
-  "person.composer.to": "Đến",
-  "person.composer.transport": "Cách gửi",
-  "person.composer.transportEmail": "Email",
-  "person.composer.toConversation":
-    "Tiếp tục cuộc trò chuyện {transport} của bạn",
-  "person.composer.subject": "Chủ đề",
-  "person.composer.bcc": "Bcc",
-  "person.composer.bccPlaceholder":
-    "Mỗi dòng một địa chỉ — họ nhận được thư và không người nhận nào khác thấy họ",
-  "person.composer.body": "Nội dung",
   "richtext.bold": "Đậm",
   "richtext.italic": "Nghiêng",
   "richtext.bulletList": "Danh sách dấu đầu dòng",
   "richtext.numberList": "Danh sách đánh số",
   "richtext.link": "Liên kết",
   "richtext.linkPrompt": "Địa chỉ web cho liên kết này (để trống để gỡ bỏ)",
-  "person.composer.drafting": "Đang soạn bản nháp…",
-  "person.composer.why": "Vì sao có bản nháp này",
-  "person.composer.consentUnknown":
-    "Chưa có quyết định về sự đồng ý cho kênh này.",
-  "person.composer.sendNote":
-    "Khi bấm gửi, thư sẽ đi từ hộp thư của chính bạn.",
-  "person.composer.purpose": "Mục đích đồng ý",
-  "person.composer.blockedLead": "Thư này không thể gửi với mục đích đã chọn.",
-  "person.composer.blockedRewrite":
-    "Thư gửi với mục đích khác thì phải THỰC SỰ là loại thư đó — đổi nhãn không làm nó thành như vậy.",
-  "person.composer.blockedRecordConsent":
-    "Nếu bạn có cơ sở để viết, hãy ghi nhận quyết định đồng ý trên hồ sơ của họ.",
-  "person.composer.consentPickPurpose":
-    "Hãy chọn mục đích của thư này — sự đồng ý được xét theo từng mục đích.",
-  "person.composer.intent": "Nội dung nên nói về điều gì?",
-  "person.composer.intentHint":
-    "Tùy chọn — ví dụ: xin một buổi hẹn trong tuần đầu tháng 9",
-  "person.composer.draftWithAi": "Soạn bằng AI",
   "person.composer.intentAgenda": "đề xuất chương trình cho buổi hẹn sắp tới",
-  "person.composer.threadGone":
-    "Cuộc trò chuyện mà liên kết này trỏ tới không còn trả lời được nữa — kênh hoặc địa chỉ của nó đã không còn. Đây là một tin nhắn mới.",
   "person.composer.intentReply": "trả lời tin nhắn gần nhất của họ",
   "person.composer.intentCommitment": "thực hiện điều chúng ta đã hứa",
   "person.composer.intentFollowUp": "nhắc lại — đã lâu không có phản hồi",
-  "person.composer.send": "Gửi",
-  "person.composer.sending": "Đang gửi…",
-  "person.composer.sent": "Đã gửi",
-  "person.composer.aiDisclosure": "Bản nháp có hỗ trợ AI · hãy đọc kỹ từng từ",
   "person.research.title": "Nghiên cứu sâu · {name}",
   "person.research.publicOnly": "Chỉ nguồn công khai",
   "person.research.running": "Đang đọc các nguồn công khai…",
@@ -8396,6 +8460,20 @@ export const vi = {
   "worklist.verb.complete": "Mở",
   "worklist.verb.snooze": "Mở",
   "worklist.verb.acknowledge": "Đã hiểu",
+  "worklist.verb.meetingHeld": "Đã diễn ra",
+  "worklist.verb.meetingNoShow": "Không ai đến",
+  "worklist.verb.meetingCanceled": "Đã bị hủy",
+  "worklist.verb.meetingOutcomeRecorded": "Đã ghi lại kết quả cuộc họp.",
+  "worklist.verb.meetingOutcomeFailed": "Không thể ghi lại.",
+  "worklist.verb.retry": "Chạy lại",
+  "worklist.verb.retryStarted": "Quy tắc đang chạy lại.",
+  "worklist.verb.retryFailed": "Không thể chạy lại.",
+  "worklist.verb.retryRefusedNotFailed":
+    "Không có gì để chạy lại — lần chạy này bị dừng có chủ đích, không phải do lỗi.",
+  "worklist.verb.retryRefusedRepeats":
+    "Quy tắc này chưa được xác nhận an toàn khi chạy hai lần, nên chạy lại có thể lặp lại việc nó đã làm.",
+  "worklist.verb.retryRefusedEventGone":
+    "Sự kiện kích hoạt lần chạy này không còn nữa. Quy tắc theo lịch sẽ tự kiểm tra lại.",
   "worklist.verb.acknowledgeFailed": "Không thể đánh dấu là đã xem.",
   "worklist.verb.completeFailed": "Không thể hoàn thành nhiệm vụ này.",
   "worklist.verb.pin": "Ghim",

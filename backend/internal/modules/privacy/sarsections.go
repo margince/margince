@@ -389,6 +389,45 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		// INSIDE value_json, which this exports whole. A column exported as
 		// null on every row would tell the subject their address was never
 		// validated, which is not what the platform knows.
+		// What we concluded the subject's replies MEANT, and who concluded it.
+		// The history is exported rather than the activity's current column
+		// alone, because the corrections are the half a subject cannot see any
+		// other way: a rate that was moved by a rep re-judging their message is
+		// a decision made about them, and the standing verdict conceals that it
+		// ever happened.
+		//
+		// The verdict itself is NOT withheld for a limited message, where the
+		// subject line beside it is. The rule those CASE arms implement is that
+		// one seat's private mail must not be republished to the workspace
+		// through an export; this export goes to the SUBJECT, who wrote the
+		// message being judged, so withholding our conclusion about their own
+		// words would hide the very holding Art. 15 asks about.
+		{&pkg.ReplyJudgements, `SELECT h.verdict, h.decided_by, h.is_human, h.decided_at,
+		          h.activity_id, a.occurred_at
+		   FROM activity_reply_verdict_history h
+		   JOIN activity a ON a.id = h.activity_id
+		   WHERE h.activity_id IN (
+		         SELECT l.activity_id FROM activity_link l WHERE l.person_id = $1)`, nil},
+		// Every time this person was handed on as a prospect, and what was
+		// decided. The reason's LABEL travels rather than its id, because an
+		// export naming a uuid tells the subject nothing about why they were
+		// refused — which is the whole of what this section is for.
+		{&pkg.Handoffs, `SELECT h.status, h.submitted_at, h.decided_at, h.note,
+		          r.label AS reason, h.deal_id IS NOT NULL AS became_a_deal
+		   FROM sdr_handoff h
+		   LEFT JOIN sdr_handoff_reason r ON r.id = h.reason_id
+		   WHERE h.person_id = $1
+		      OR h.lead_id IN (SELECT id FROM lead WHERE promoted_person_id = $1)`, nil},
+		// And how each handoff got there. The actor is exported as recorded: it
+		// names the SEAT that decided, which is a fact about this installation's
+		// handling of the subject rather than about a third party.
+		{&pkg.HandoffHistory, `SELECT e.to_status, e.occurred_at, e.note, e.actor,
+		          r.label AS reason
+		   FROM sdr_handoff_event e
+		   JOIN sdr_handoff h ON h.id = e.handoff_id
+		   LEFT JOIN sdr_handoff_reason r ON r.id = e.reason_id
+		   WHERE h.person_id = $1
+		      OR h.lead_id IN (SELECT id FROM lead WHERE promoted_person_id = $1)`, nil},
 		{&pkg.ProviderClaims, `SELECT ppc.provider, ppc.claim_key, ppc.value_json, ppc.confidence,
 		          ppc.source, ppc.captured_by, ppc.retrieved_at
 		   FROM person_provider_claim ppc

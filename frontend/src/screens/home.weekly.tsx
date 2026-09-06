@@ -25,6 +25,8 @@ import {
   useWeeklyReviewIndex,
   type WeeklyReview,
 } from "./home.queries";
+import { OutlookPanel } from "./home.waterfall";
+import { ScorecardPanel } from "./home.weekly.scorecard";
 
 import "./home.weekly.css";
 
@@ -299,6 +301,9 @@ function WeeklyBody({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
+  // Which horizon the outlook strip is showing. Per-reader and not persisted:
+  // it is a way of looking at one review, not a setting about the account.
+  const [horizon, setHorizon] = useState<string>("quarter");
 
   if (state !== "ready") {
     return (
@@ -349,6 +354,19 @@ function WeeklyBody({
   return (
     <>
       <WeeklyNarrative review={review} />
+      {/* Where the week was landing, before what the rep did about it: a
+          retrospective is read outcome-first, and the counts below answer
+          "what did I do" against the figure this answers "about what". */}
+      <OutlookPanel
+        outlook={review.outlook ?? []}
+        locale={locale}
+        horizon={horizon}
+        onHorizon={setHorizon}
+      />
+      {/* How well the week went, after where it was landing and before the
+          outcome strip's tallies. Absent blocks draw nothing at all — the
+          panel never substitutes zeros for work the rep did not have. */}
+      <ScorecardPanel scorecard={review.scorecard} />
       {/* FIVE slots, because a strip is read ACROSS as one comparison and ten
           is a table wearing a strip's clothes — at 1280 the row folded to two
           ranks of five and stopped being one reading at all (#3709).

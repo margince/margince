@@ -408,9 +408,18 @@ export function DecisionDeck({
   chips,
 }: DecisionDeckProps) {
   const reduced = usePrefersReducedMotion();
-  // The list is the default for a reader who asked for less motion: a deck IS
-  // its motion, and one without it is a list drawn the expensive way.
-  const [view, setView] = useState<DeckView>(reduced ? "list" : "deck");
+  // THE LIST IS THE DEFAULT, for every reader.
+  //
+  // A deck answers one decision at a time and hides the rest behind it, which
+  // is the right shape for working through a pile and the wrong one for
+  // arriving at a page: a reader opening their morning wants to see what is
+  // waiting before they start answering it, and a deck tells them a count and
+  // shows them one. The deck is a step away, on the switch beside the heading.
+  //
+  // It was already the default for a reader who asked for less motion, on the
+  // reasoning that a deck IS its motion and one without it is a list drawn the
+  // expensive way. That argument was never really about motion.
+  const [view, setView] = useState<DeckView>("list");
   const [staged, setStaged] = useState<readonly StagedDecision[]>([]);
   const [drag, setDrag] = useState<Drag | null>(null);
   // The card flying off, kept only until its animation ends. It carries no text
