@@ -89,12 +89,30 @@ func PassFor(ctx context.Context, pool *pgxpool.Pool, kind string) (Pass, error)
 	if err := pool.QueryRow(ctx, q, kind).Scan(&out.Running, &out.Queued, &scheduled, &ranAt); err != nil {
 		return Pass{}, fmt.Errorf("jobs: reading when %q next runs: %w", kind, err)
 	}
-	switch {
-	case scheduled != nil:
-		out.NextAt = scheduled
-	case ranAt != nil && out.Every > 0:
-		next := ranAt.Add(out.Every)
-		out.NextAt = &next
-	}
+	out.NextAt = nextPass(scheduled, ranAt, out.Every)
 	return out, nil
+}
+
+// nextPass answers when the next tick lands: the row River has already
+// scheduled where there is one, else the last completed run's OWN moment plus
+// the cadence, else nothing.
+//
+// A pure function because it is the whole decision, and the decision is the
+// part that can be wrong in a way nobody sees — a screen that exists to say
+// when will print whatever this returns, and a plausible-looking time is
+// indistinguishable from a right one.
+//
+// Projecting from the completed run's scheduled_at rather than from when it
+// FINISHED: River's ticks are an interval apart from each other, not from the
+// end of the work, so projecting off the finish runs late by however long the
+// pass took.
+func nextPass(scheduled, ranAt *time.Time, every time.Duration) *time.Time {
+	if scheduled != nil {
+		return scheduled
+	}
+	if ranAt == nil || every <= 0 {
+		return nil
+	}
+	next := ranAt.Add(every)
+	return &next
 }
