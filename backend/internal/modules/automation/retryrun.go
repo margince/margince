@@ -86,16 +86,27 @@ type RetryOutcome struct {
 // LEFT, because a missing envelope is an ANSWER here (refusal 3) rather than a
 // reason to report the run as absent.
 const retryCandidateSQL = `
-SELECT r.status, r.handler, a.id, a.params, a.owner_id, o.envelope,
+WITH target AS (
+  SELECT id, status, handler, trigger_event, idempotency_key,
+         -- The BASE key: this run's own attempt marker stripped. Retrying a
+         -- RETRY must count the attempts the original firing has already had,
+         -- so both cases ask the same question. Counting against the unstripped
+         -- key restarts at zero on a second retry, which re-mints the first
+         -- retry's key, loses the run claim, and returns having applied nothing
+         -- while reporting success.
+         regexp_replace(idempotency_key, '^retry[0-9]+:', '') AS base_key
+    FROM workflow_run WHERE id = $1
+)
+SELECT t.status, t.handler, a.id, a.params, a.owner_id, o.envelope,
        (SELECT count(*) FROM workflow_run prior
-         WHERE prior.handler = r.handler
-           AND prior.idempotency_key LIKE 'retry%:' || r.idempotency_key)
-  FROM workflow_run r
+         WHERE prior.handler = t.handler
+           AND prior.idempotency_key <> t.base_key
+           AND regexp_replace(prior.idempotency_key, '^retry[0-9]+:', '') = t.base_key)
+  FROM target t
   JOIN automation a ON a.archived_at IS NULL AND a.enabled
-   AND r.handler = a.key
-   AND r.idempotency_key LIKE '%@' || a.id
-  LEFT JOIN event_outbox o ON o.id = r.trigger_event
- WHERE r.id = $1`
+   AND t.handler = a.key
+   AND t.idempotency_key LIKE '%@' || a.id
+  LEFT JOIN event_outbox o ON o.id = t.trigger_event`
 
 // retryCandidate is one recovered firing, ready to re-dispatch.
 type retryCandidate struct {
@@ -140,6 +151,19 @@ func (e *WorkflowEngine) retryCandidateFor(ctx context.Context, runID ids.UUID) 
 	var found retryCandidate
 	var outcome RetryOutcome
 	err = e.db.Tx(ctx, func(tx pgx.Tx) error {
+		// One retry decision at a time per run. The attempt count and the run
+		// claim it feeds are two transactions — this one reads the count, and
+		// runOne's claimRun writes the row — so without serializing them two
+		// concurrent retries of one failed run can read different counts,
+		// compute different keys, and BOTH dispatch: one failed firing becomes
+		// two live ones, and the unique key each claims does not collide, so
+		// nothing refuses either. The lock is transaction-scoped and released
+		// when this read commits; the loser then reads the winner's count.
+		if _, lockErr := tx.Exec(ctx,
+			`SELECT pg_advisory_xact_lock(hashtextextended('workflow_run_retry:' || $1::text, 0))`,
+			runID); lockErr != nil {
+			return lockErr
+		}
 		var status, handlerName string
 		var automationID ids.UUID
 		var params json.RawMessage

@@ -251,3 +251,48 @@ func TestARetriedRunStaysVisibleToTheHealthLane(t *testing.T) {
 			"that offered the retry, silently", both)
 	}
 }
+
+func TestRetryingARetryIsItsOwnAttempt(t *testing.T) {
+	fx := setupAutomationDB(t)
+	const handler = "twice_broken"
+	fx.seedAutomation(t, handler)
+
+	applies := 0
+	engine := engineOverScripted(fx, scriptedWorkflow{
+		name:       handler,
+		redrivable: true,
+		apply: func(workflow.Event) (workflow.RunResult, error) {
+			applies++
+			return workflow.RunResult{}, errors.New("the downstream service was unreachable")
+		},
+	})
+	if err := engine.HandleEvent(context.Background(), fx.stagedEvent(t, ids.NewV7())); err == nil {
+		t.Fatal("the scripted Apply failed, so HandleEvent must surface it")
+	}
+
+	// Retry twice. The SECOND retry is a retry OF A RETRY, whose own run key
+	// already carries an attempt marker. An attempt count that cannot see
+	// through that marker restarts at zero, re-mints the first retry's key,
+	// loses the claim, and returns having applied nothing — while reporting
+	// success, which is the worst shape a failure can take.
+	for attempt := range 2 {
+		var failed ids.UUID
+		if err := fx.owner.QueryRow(context.Background(),
+			`SELECT id FROM workflow_run WHERE handler = $1 AND status = 'failed'
+			  ORDER BY created_at DESC, id DESC LIMIT 1`, handler).Scan(&failed); err != nil {
+			t.Fatalf("reading the newest failed run: %v", err)
+		}
+		if _, err := engine.RetryRun(context.Background(), failed); err == nil {
+			t.Fatalf("retry %d: the scripted Apply fails every time, so the retry must surface it", attempt+1)
+		}
+	}
+
+	if applies != 3 {
+		t.Fatalf("Apply ran %d times, want 3 — the original firing and two retries. "+
+			"A retry that reports success without re-entering Apply is a false green", applies)
+	}
+	runs := fx.count(t, `SELECT count(*) FROM workflow_run WHERE handler = $1`, handler)
+	if runs != 3 {
+		t.Fatalf("recorded %d runs, want 3 — each attempt claims its own row", runs)
+	}
+}
