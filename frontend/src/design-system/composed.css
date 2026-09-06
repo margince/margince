@@ -17,6 +17,7 @@
      Local to this sheet rather than a token: it is one component's measurement,
      not a step on the scale every surface shares. */
   --board-col-w: 240px;
+
   display: flex;
   gap: var(--space-4);
   align-items: flex-start;
@@ -70,7 +71,11 @@
      containers to look like the subject. */
   background: var(--bgWell);
   border-radius: var(--r-md);
-  padding: var(--space-3);
+  /* NO INSET ABOVE THE HEAD: the head carries it (below), so the band it draws
+     reaches the column's top edge. An inset here is a strip of the scrollport
+     above a sticky child, and the cards scroll up through it in plain sight.
+     The other three sides stay the column's own. */
+  padding: 0 var(--space-3) var(--space-3);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -98,20 +103,27 @@
   min-width: 0;
   min-height: 120px;
 }
+/* A folded column is as wide as its head, and the head's bleed leaves that
+ * untouched: the negative inline margin comes straight back as the head's own
+ * inline padding, so the name and the count still decide the width. */
 .board-col-collapsed .board-col-head {
   writing-mode: horizontal-tb;
   white-space: nowrap;
 }
-/* STUCK TO THE TOP OF ITS COLUMN. A stage is the only thing that says which
- * pile a card belongs to, and a reader scrolled halfway down a long stage had
- * lost it, because each column scrolls on its own.
+/* STUCK TO THE TOP OF ITS COLUMN, AND IT SEALS IT. A stage is the only thing
+ * that says which pile a card belongs to, and a reader scrolled halfway down a
+ * long stage had lost it, because each column scrolls on its own.
  *
- * It carries the column's own ground, or the cards would slide visibly behind a
- * transparent strip. NO negative margin to bleed that ground to the column's
- * edges: the column clips this axis, so a band 20px wider than its column is
- * not bled, it is cut off — the ground would stop short of the very edges the
- * bleed was for. The 10px of column padding either side of the band is the
- * price of the band staying whole. */
+ * The head OWNS THE COLUMN'S TOP INSET and bleeds to the column's edges: the
+ * column keeps no padding above it, and the negative inline margin carries the
+ * band out to the padding box either side. A card scrolling up a stage passes
+ * BEHIND the band and nowhere else — not through a strip above it, not down a
+ * gutter beside it. The inline padding is the column's inset plus the head's
+ * own, so the name sits where it sat before the bleed.
+ *
+ * The bleed costs nothing: the column's width is a fixed basis and it clips
+ * this axis, so a child wider than the column widens neither the column nor the
+ * board. */
 .board-col-head {
   position: sticky;
   top: 0;
@@ -119,7 +131,8 @@
   display: flex;
   align-items: baseline;
   gap: 6px;
-  padding: 2px 4px 4px;
+  padding: var(--space-3) calc(var(--space-3) + 4px) 4px;
+  margin-inline: calc(-1 * var(--space-3));
   /* The column's own ground, or the cards slide visibly behind a transparent
      strip. */
   background: var(--bgWell);
@@ -227,6 +240,7 @@
 @media (max-width: 700px) {
   .board {
     --board-col-w: calc(80% - var(--space-4));
+
     scroll-snap-type: x mandatory;
     /* NO BAR UNDER THE SWIPE. The peek and the snap already say the pipeline
        carries on, and a hairline bar is a control for a pointer that is not on

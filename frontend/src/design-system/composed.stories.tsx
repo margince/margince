@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useLayoutEffect, useRef } from "react";
 import { Button, SegmentedControl } from "./atoms";
 import {
   type BoardDeal,
@@ -514,6 +515,92 @@ export const BoardWithAFoldedStage: StoryObj = {
       onToggleColumn={() => undefined}
     />
   ),
+};
+
+// A STAGE MID-SCROLL, which is the one state that shows what its head is for.
+//
+// At rest the head is indistinguishable from the column behind it: they carry
+// one ground, so whether the band reaches the column's edges or leaves a strip
+// of scrollport above and beside it looks identical until something scrolls
+// through that strip. A card passing under the head is what tells them apart —
+// it goes BEHIND the band and is visible nowhere above or beside it.
+//
+// Deep enough to overflow, in a frame short enough to overflow it: a column
+// takes its `overflow-y: auto` from the list surface (listtable.css) and only
+// scrolls when the surface has a bounded height to scroll inside. The second
+// stage holds one deal, so the same head reads beside it at rest.
+const scrollingStageColumns: BoardMoneyColumn[] = [
+  {
+    stage: "discovery",
+    label: "Discovery",
+    probabilityPct: 10,
+    rawMinor: 197_000,
+    weightedMinor: 19_700,
+    currency: "EUR",
+    deals: [
+      boardDeal("s1", "Contoso renewal", 12_000, 3),
+      boardDeal("s2", "Fabrikam expansion", 33_000, 9),
+      boardDeal("s3", "Globex onboarding", 28_000, 14),
+      boardDeal("s4", "Initech upgrade", 54_000, 21),
+      boardDeal("s5", "Umbrella Corp", 61_000, 2),
+      boardDeal("s6", "Northwind pilot", 9_000, 6),
+    ],
+  },
+  {
+    stage: "qualified",
+    label: "Qualified",
+    probabilityPct: 30,
+    rawMinor: 28_000,
+    weightedMinor: 8_400,
+    currency: "EUR",
+    deals: [boardDeal("s7", "Tailspin rollout", 28_000, 11)],
+  },
+];
+
+// Short enough that six deals do not fit, which is what makes the stage a
+// scroller at all; the offset is three cards deep, which catches one of them
+// halfway under the band rather than a seam between two.
+const FRAME_H_PX = 440;
+const SCROLLED_PAST_PX = 340;
+
+function StageMidScroll() {
+  const frame = useRef<HTMLDivElement>(null);
+
+  // Scrolled, not passed: the board has no prop for a stage's offset, and the
+  // same reasoning the sort-menu story presses its own trigger with — a frame
+  // of a stage that never scrolled would picture the very thing this story
+  // exists to rule out.
+  useLayoutEffect(() => {
+    const stage = frame.current?.querySelector(".board-col");
+    if (!(stage instanceof HTMLElement)) {
+      throw new Error(
+        "this frame drew no stage, so there is nothing to scroll",
+      );
+    }
+    stage.scrollTop = SCROLLED_PAST_PX;
+    // A frame that does not bound the surface leaves every stage its full
+    // height, and the story would then picture a head sealing nothing while
+    // reading as though it had.
+    if (stage.scrollTop === 0) {
+      throw new Error("the stage did not scroll: the frame left it unbounded");
+    }
+  }, []);
+
+  return (
+    <div ref={frame} style={{ display: "flex", height: FRAME_H_PX }}>
+      <ListSurface count="7 deals" action={<Button small>New deal</Button>}>
+        <PipelineBoard
+          columns={scrollingStageColumns}
+          cardHref={(d) => `#/deals/${d.id}`}
+          zone="Europe/Berlin"
+        />
+      </ListSurface>
+    </div>
+  );
+}
+
+export const BoardWithAScrolledStage: StoryObj = {
+  render: () => <StageMidScroll />,
 };
 
 /**

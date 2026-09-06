@@ -761,6 +761,73 @@ async function scrollbarStates(page: Page) {
   });
 }
 
+/**
+ * The bars, plus WHAT the pointer is standing on, as `tag.class`.
+ *
+ * The rule under test picks ONE element, so which element it picked is the
+ * claim's premise: a stage that stayed grey because the pointer landed a pixel
+ * outside it is a different defect from one that stayed grey with the pointer
+ * squarely on it, and two lists of colours cannot tell those apart. Asserted
+ * only where the premise is the point — at rest and on a card the claim is
+ * "no stage is lit", which every landing inside the board satisfies equally.
+ */
+async function barsAndPointer(page: Page) {
+  const bars = await scrollbarStates(page);
+  const pointerOver = await page.evaluate(() => {
+    // Document order is ancestor-first along the one hover chain, so the last
+    // match is the element `:not(:has(:hover))` leaves standing.
+    const deepest = Array.from(document.querySelectorAll(":hover")).at(-1);
+    if (deepest === undefined) {
+      return "nothing: the pointer is outside the document";
+    }
+    return [deepest.tagName.toLowerCase(), ...deepest.classList].join(".");
+  });
+  return { ...bars, pointerOver };
+}
+
+/**
+ * A point that is the first stage's OWN box and no other element's.
+ *
+ * Not the corner a reader might reach for. A column's padding edge is one
+ * pixel's rounding from the board behind it — CI hovered `first.x + 4,
+ * first.y + 4` and got the board — and the top inset belongs to the sticky
+ * head, which is a different element again. The empty run below the last thing
+ * in the column has neither problem: inside a list surface a column is
+ * stretched to the surface's height and scrolls its own cards, so a stage the
+ * seed leaves half-empty is its own ground from its last child down to its
+ * bottom edge, and the middle of that run is nowhere near an edge of anything.
+ * A stage full enough to have no such run keeps the flex gap between its first
+ * two cards, which is the same ground.
+ */
+async function pointInsideFirstStage(page: Page) {
+  const point = await page.evaluate(() => {
+    const column = document.querySelector(".board-col");
+    if (column === null) {
+      return "the board drew no stage, so there is nothing to hover";
+    }
+    const box = column.getBoundingClientRect();
+    const x = box.left + box.width / 2;
+    const last = Array.from(column.children).at(-1)?.getBoundingClientRect();
+    // A run thinner than a card's own gap is back to being decided by
+    // rounding, which is the whole reason the padding edge was given up.
+    const roomToStand = 8;
+    if (last !== undefined && box.bottom - last.bottom >= roomToStand) {
+      return { x, y: (last.bottom + box.bottom) / 2 };
+    }
+    const cards = Array.from(column.querySelectorAll(".deal-card"), (card) =>
+      card.getBoundingClientRect(),
+    );
+    if (cards.length >= 2) {
+      return { x, y: (cards[0].bottom + cards[1].top) / 2 };
+    }
+    return "the first stage is filled to its bottom edge by a single card, so it has neither an empty run nor a gap between cards to hover";
+  });
+  if (typeof point === "string") {
+    throw new Error(point);
+  }
+  return point;
+}
+
 // ONE bar takes the accent, and it is the bar the pointer is on.
 //
 // Hover is a chain: the pointer inside a stage is inside the board, the shell's
@@ -797,20 +864,19 @@ test("AC-pipeline-10: the bar under the pointer is the one that lights", async (
     stages: everyStageNeutral,
   });
 
-  // ON THE FIRST STAGE, in the column's own padding. The seeded board holds too
-  // few cards for a stage to overflow, so there is no vertical bar to aim at —
-  // the padding is the strip that bar would be drawn in, and either way it is
-  // the deepest element at that point.
-  const first = await stages.first().boundingBox();
-  if (first === null) {
-    throw new Error("the first stage has no box, so there is nothing to hover");
-  }
-  await page.mouse.move(first.x + 4, first.y + 4);
+  // ON THE FIRST STAGE, on ground that is the column's own box and nothing
+  // else's. The seeded board holds too few cards for a stage to overflow, so
+  // there is no vertical bar to aim at — the empty run below the last card is
+  // the strip that bar would be drawn in, and either way it is the deepest
+  // element at that point.
+  const probe = await pointInsideFirstStage(page);
+  await page.mouse.move(probe.x, probe.y);
   await expect
-    .poll(() => scrollbarStates(page))
+    .poll(() => barsAndPointer(page))
     .toEqual({
       shell: "neutral",
       board: "neutral",
+      pointerOver: "section.board-col",
       stages: resting.stages.map(({ stage }, index) => ({
         stage,
         bar: index === 0 ? "accent" : "neutral",
